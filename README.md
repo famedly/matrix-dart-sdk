@@ -1,14 +1,78 @@
 # famedlysdk
 
-A new Flutter package.
+Matrix SDK for the famedly talk app written in dart.
 
-## Getting Started
+## How to use this
 
-This project is a starting point for a Dart
-[package](https://flutter.dev/developing-packages/),
-a library module containing code that can be shared easily across
-multiple Flutter or Dart projects.
+1. Import the sdk
 
-For help getting started with Flutter, view our 
-[online documentation](https://flutter.dev/docs), which offers tutorials, 
-samples, guidance on mobile development, and a full API reference.
+```yaml
+  fluffyfluttermatrix:
+    git:
+      url: https://gitlab.com/famedly/famedlysdk.git
+      ref: 77be6102f6cbb2e01adc28f9caa3aa583f914235
+```
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:famedlysdk/famedlysdk.dart';
+
+```
+
+2. Access the MatrixState object by calling Matrix.of with your current BuildContext:
+
+```dart
+Client matrix = Client("famedly talk");
+```
+
+3. Connect to a Matrix Homeserver and listen to the streams:
+
+```dart
+matrix.homeserver = "https://yourhomeserveraddress";
+
+matrix.onLoginStateChanged.stream.listen((bool loginState){ 
+  print("LoginState: ${loginState.toString()}");
+});
+
+matrix.onEvent.stream.listen((EventUpdate eventUpdate){ 
+  print("New event update!");
+});
+
+matrix.onRoomUpdate.stream.listen((RoomUpdate eventUpdate){ 
+  print("New room update!");
+});
+
+final loginResp = await matrix.jsonRequest(
+  type: "POST",
+  action: "/client/r0/login",
+  data: {
+    "type": "m.login.password",
+    "user": _usernameController.text,
+    "password": _passwordController.text,
+    "initial_device_display_name": "Fluffy Matrix Client"
+  }
+);
+
+matrix.connect(
+  newToken: loginResp["token"],
+  newUserID: loginResp["user_id"],
+  newHomeserver: matrix.homeserver,
+  newDeviceName: "Fluffy Matrix Client",
+  newDeviceID: loginResp["device_id"],
+  newMatrixVersions: ["r0.4.0"],
+  newLazyLoadMembers: false
+);
+```
+
+4. Send a message to a Room:
+
+```dart
+final resp = await jsonRequest(
+    type: "PUT",
+    action: "/r0/rooms/!fjd823j:example.com/send/m.room.message/$txnId",
+    data: {
+        "msgtype": "m.text",
+        "body": "hello"
+    }
+);
+```
