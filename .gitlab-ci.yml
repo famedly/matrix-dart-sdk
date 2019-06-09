@@ -1,6 +1,7 @@
 stages:
   - coverage
-  - docs
+  - builddocs
+  - publishdocs
 
 variables:
   LC_ALL: "en_US.UTF-8"
@@ -17,15 +18,20 @@ coverage:
     - ./scripts/coverage.sh
     - flutter pub pub publish --dry-run
 
-docs:1:
-  stage: docs
+builddocs:
+  stage: builddocs
   image: cirrusci/flutter
   script:
   - dartdoc
+  artifacts:
+    paths:
+      - doc/api/
   
-docs:2:
+publishdocs:
   stage: docs
   image: ruby:2.3
   script:
   - cd docs/api/ && bundle exec jekyll build -d test
   - cd docs/api/ && bundle exec jekyll build -d public
+  dependencies:
+    - builddocs
