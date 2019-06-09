@@ -1,5 +1,3 @@
-image: cirrusci/flutter
-
 stages:
   - coverage
   - docs
@@ -29,5 +27,3 @@ docs:
     script:
     - cd docs/api/ && bundle exec jekyll build -d test
     - cd docs/api/ && bundle exec jekyll build -d public
-  only:
-  - master
