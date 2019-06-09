@@ -4,8 +4,9 @@ stages:
   - publishdocs
 
 variables:
-  LC_ALL: "en_US.UTF-8"
+  LC_ALL: C.UTF-8
   LANG: "en_US.UTF-8"
+  JEKYLL_ENV: production
 
 coverage:
   image: cirrusci/flutter
@@ -33,6 +34,7 @@ publishdocs:
   stage: publishdocs
   image: ruby:2.3
   script:
+    - bundle install
     - bundle exec jekyll build -d public
   dependencies:
     - builddocs
