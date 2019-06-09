@@ -21,6 +21,8 @@
  * along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// TODO: localize this!
+
 import 'package:intl/intl.dart';
 
 class ChatTime {

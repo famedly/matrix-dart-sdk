@@ -13,12 +13,13 @@ dependencies:
 
   # Database
   sqflite: ^1.1.0
+  path: ^1.6.2
 
   # Connection
   http: ^0.12.0+2
 
   # Time formatting
-  intl_translation: ^0.17.1
+  intl: ^0.15.8
 
 dev_dependencies:
   flutter_test:
