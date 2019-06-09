@@ -25,6 +25,7 @@
 
 import 'package:intl/intl.dart';
 
+/// Used to localize and present time in a chat application manner.
 class ChatTime {
   DateTime dateTime = DateTime.now();
 

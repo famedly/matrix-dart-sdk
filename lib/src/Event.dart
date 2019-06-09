@@ -26,6 +26,7 @@ import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'package:famedlysdk/src/Client.dart';
 import './User.dart';
 
+/// A single Matrix event, e.g. a message in a chat.
 class Event {
   final String id;
   final String roomID;

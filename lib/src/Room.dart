@@ -28,7 +28,7 @@ import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/Event.dart';
 import './User.dart';
 
-/// FIXME use actual Matrix Stuff. This is a placeholder
+/// Represents a Matrix room.
 class Room {
   final String roomID;
   String name;

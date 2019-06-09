@@ -24,6 +24,7 @@
 import 'package:famedlysdk/src/Client.dart';
 import 'dart:core';
 
+/// A file in Matrix presented by a mxc:// uri scheme.
 class MxContent {
 
   final String _mxc;

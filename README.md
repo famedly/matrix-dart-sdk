@@ -7,7 +7,7 @@ Matrix SDK for the famedly talk app written in dart.
 1. Import the sdk
 
 ```yaml
-  fluffyfluttermatrix:
+  famedlysdk:
     git:
       url: https://gitlab.com/famedly/famedlysdk.git
       ref: 77be6102f6cbb2e01adc28f9caa3aa583f914235
@@ -49,7 +49,7 @@ final loginResp = await matrix.jsonRequest(
     "type": "m.login.password",
     "user": _usernameController.text,
     "password": _passwordController.text,
-    "initial_device_display_name": "Fluffy Matrix Client"
+    "initial_device_display_name": "famedly talk"
   }
 );
 
@@ -57,7 +57,7 @@ matrix.connect(
   newToken: loginResp["token"],
   newUserID: loginResp["user_id"],
   newHomeserver: matrix.homeserver,
-  newDeviceName: "Fluffy Matrix Client",
+  newDeviceName: "famedly talk",
   newDeviceID: loginResp["device_id"],
   newMatrixVersions: ["r0.4.0"],
   newLazyLoadMembers: false

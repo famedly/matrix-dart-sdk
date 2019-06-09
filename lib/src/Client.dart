@@ -27,7 +27,7 @@ import 'responses/ErrorResponse.dart';
 import 'Connection.dart';
 import 'Store.dart';
 
-/// Represents a Matrix connection to communicate with a
+/// Represents a Matrix client to communicate with a
 /// [Matrix](https://matrix.org) homeserver and is the entry point for this
 /// SDK.
 class Client {

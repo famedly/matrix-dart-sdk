@@ -33,8 +33,8 @@ import 'User.dart';
 import 'Room.dart';
 import 'Connection.dart';
 
-/// Represents a Matrix connection to communicate with a
-/// [Matrix](https://matrix.org) homeserver.
+/// Responsible to store all data persistent and to query objects from the
+/// database.
 class Store {
 
   final Client client;
