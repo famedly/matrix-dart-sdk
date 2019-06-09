@@ -1,7 +1,7 @@
 stages:
   - coverage
   - builddocs
-  - publishdocs
+  - deploy
 
 variables:
   LC_ALL: C.UTF-8
@@ -30,8 +30,8 @@ builddocs:
   only:
   - master
 
-publishdocs:
-  stage: publishdocs
+pages:
+  stage: deploy
   image: ruby:2.3
   script:
     - mv doc/api/* ./
