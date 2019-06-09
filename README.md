@@ -28,7 +28,6 @@ Client matrix = Client("famedly talk");
 3. Connect to a Matrix Homeserver and listen to the streams:
 
 ```dart
-matrix.homeserver = "https://yourhomeserveraddress";
 
 matrix.connection.onLoginStateChanged.stream.listen((bool loginState){ 
   print("LoginState: ${loginState.toString()}");
@@ -42,26 +41,9 @@ matrix.connection.onRoomUpdate.stream.listen((RoomUpdate eventUpdate){
   print("New room update!");
 });
 
-final loginResp = await matrix.connection.jsonRequest(
-  type: "POST",
-  action: "/client/r0/login",
-  data: {
-    "type": "m.login.password",
-    "user": _usernameController.text,
-    "password": _passwordController.text,
-    "initial_device_display_name": "famedly talk"
-  }
-);
+final bool serverValid = await matrix.checkServer("https://yourhomeserver.abc");
 
-matrix.connection.connect(
-  newToken: loginResp["token"],
-  newUserID: loginResp["user_id"],
-  newHomeserver: matrix.homeserver,
-  newDeviceName: "famedly talk",
-  newDeviceID: loginResp["device_id"],
-  newMatrixVersions: ["r0.4.0"],
-  newLazyLoadMembers: false
-);
+final bool loginValid = await matrix.login("username", "password");
 ```
 
 4. Send a message to a Room:
