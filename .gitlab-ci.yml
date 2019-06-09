@@ -34,6 +34,7 @@ publishdocs:
   stage: publishdocs
   image: ruby:2.3
   script:
+    - mv doc/api/* ./
     - bundle install
     - bundle exec jekyll build -d public
   dependencies:
