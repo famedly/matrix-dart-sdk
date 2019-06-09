@@ -17,13 +17,15 @@ coverage:
     - ./scripts/coverage.sh
     - flutter pub pub publish --dry-run
 
-docs:
+docs:1:
   stage: docs
-  scripts:
-  - image: cirrusci/flutter
-    script:
-    - dartdoc
-  - image: ruby:2.3
-    script:
-    - cd docs/api/ && bundle exec jekyll build -d test
-    - cd docs/api/ && bundle exec jekyll build -d public
+  image: cirrusci/flutter
+  script:
+  - dartdoc
+  
+docs:2:
+  stage: docs
+  image: ruby:2.3
+  script:
+  - cd docs/api/ && bundle exec jekyll build -d test
+  - cd docs/api/ && bundle exec jekyll build -d public
