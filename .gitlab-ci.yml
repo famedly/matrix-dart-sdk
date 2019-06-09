@@ -26,12 +26,18 @@ builddocs:
   artifacts:
     paths:
       - doc/api/
+  only:
+  - master
 
 publishdocs:
   stage: publishdocs
   image: ruby:2.3
   script:
-    - bundle exec jekyll build -d test
     - bundle exec jekyll build -d public
   dependencies:
     - builddocs
+  artifacts:
+    paths:
+    - public
+  only:
+  - master
