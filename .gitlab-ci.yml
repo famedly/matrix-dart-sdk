@@ -31,7 +31,7 @@ publishdocs:
   stage: publishdocs
   image: ruby:2.3
   script:
-  - cd docs/api/ && bundle exec jekyll build -d test
-  - cd docs/api/ && bundle exec jekyll build -d public
+  - bundle exec jekyll build -d test
+  - bundle exec jekyll build -d public
   dependencies:
   - builddocs
