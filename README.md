@@ -30,19 +30,19 @@ Client matrix = Client("famedly talk");
 ```dart
 matrix.homeserver = "https://yourhomeserveraddress";
 
-matrix.onLoginStateChanged.stream.listen((bool loginState){ 
+matrix.connection.onLoginStateChanged.stream.listen((bool loginState){ 
   print("LoginState: ${loginState.toString()}");
 });
 
-matrix.onEvent.stream.listen((EventUpdate eventUpdate){ 
+matrix.connection.onEvent.stream.listen((EventUpdate eventUpdate){ 
   print("New event update!");
 });
 
-matrix.onRoomUpdate.stream.listen((RoomUpdate eventUpdate){ 
+matrix.connection.onRoomUpdate.stream.listen((RoomUpdate eventUpdate){ 
   print("New room update!");
 });
 
-final loginResp = await matrix.jsonRequest(
+final loginResp = await matrix.connection.jsonRequest(
   type: "POST",
   action: "/client/r0/login",
   data: {
@@ -53,7 +53,7 @@ final loginResp = await matrix.jsonRequest(
   }
 );
 
-matrix.connect(
+matrix.connection.connect(
   newToken: loginResp["token"],
   newUserID: loginResp["user_id"],
   newHomeserver: matrix.homeserver,
@@ -67,7 +67,7 @@ matrix.connect(
 4. Send a message to a Room:
 
 ```dart
-final resp = await jsonRequest(
+final resp = await matrix.connection.jsonRequest(
     type: "PUT",
     action: "/r0/rooms/!fjd823j:example.com/send/m.room.message/$txnId",
     data: {
