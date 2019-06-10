@@ -171,7 +171,7 @@ class Connection {
       {String type, String action, dynamic data = "", int timeout}) async {
     if (client.isLogged() == false && client.homeserver == null)
       throw ("No homeserver specified.");
-    if (timeout == null) timeout = syncTimeoutSec;
+    if (timeout == null) timeout = syncTimeoutSec + 5;
     if (!(data is String)) data = jsonEncode(data);
 
     final url = "${client.homeserver}/_matrix${action}";
