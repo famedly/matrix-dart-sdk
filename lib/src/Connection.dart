@@ -38,7 +38,7 @@ class Connection {
 
   Connection(this.client) {
     WidgetsBinding.instance
-        .addObserver(_LifecycleEventHandler(resumeCallBack: () {
+        ?.addObserver(_LifecycleEventHandler(resumeCallBack: () {
       _sync();
     }));
   }

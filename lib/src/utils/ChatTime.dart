@@ -29,15 +29,20 @@ import 'package:intl/intl.dart';
 class ChatTime {
   DateTime dateTime = DateTime.now();
 
+  /// Insert with a timestamp [ts] which represents the milliseconds since
+  /// the Unix epoch.
   ChatTime(num ts) {
     if (ts != null)
-    dateTime = DateTime.fromMicrosecondsSinceEpoch(ts * 1000);
+    dateTime = DateTime.fromMillisecondsSinceEpoch(ts);
   }
 
+  /// Returns a ChatTime object which represents the current time.
   ChatTime.now() {
     dateTime = DateTime.now();
   }
 
+  /// Returns [toTimeString()] if the ChatTime is today, the name of the week
+  /// day if the ChatTime is this week and a date string else.
   String toString() {
     DateTime now = DateTime.now();
 
@@ -74,18 +79,51 @@ class ChatTime {
     }
   }
 
+  /// Returns the milliseconds since the Unix epoch.
   num toTimeStamp() {
-    return dateTime.microsecondsSinceEpoch;
+    return dateTime.millisecondsSinceEpoch;
   }
 
+  operator <(ChatTime other) {
+    return this.toTimeStamp() < other.toTimeStamp();
+  }
+
+  operator >(ChatTime other) {
+    return this.toTimeStamp() > other.toTimeStamp();
+  }
+
+  operator >=(ChatTime other) {
+    return this.toTimeStamp() >= other.toTimeStamp();
+  }
+
+  operator <=(ChatTime other) {
+    return this.toTimeStamp() <= other.toTimeStamp();
+  }
+
+  operator ==(dynamic other) {
+    if (other is ChatTime)
+    return this.toTimeStamp() == other.toTimeStamp();
+    else return false;
+  }
+
+  /// Two message events can belong to the same environment. That means that they
+  /// don't need to display the time they were sent because they are close
+  /// enaugh.
+  static final minutesBetweenEnvironments = 5;
+
+  /// Checks if two ChatTimes are close enough to belong to the same
+  /// environment.
   bool sameEnvironment(ChatTime prevTime) {
-    return toTimeStamp() - prevTime.toTimeStamp() < 1000*60*5;
+    return toTimeStamp() - prevTime.toTimeStamp() < 1000*60*minutesBetweenEnvironments;
   }
 
+  /// Returns a simple time String.
   String toTimeString() {
     return DateFormat('HH:mm').format(dateTime);
   }
 
+  /// If the ChatTime is today, this returns [toTimeString()], if not it also
+  /// shows the date.
   String toEventTimeString() {
     DateTime now = DateTime.now();
 

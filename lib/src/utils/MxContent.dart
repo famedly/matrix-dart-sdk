@@ -26,23 +26,29 @@ import 'dart:core';
 
 /// A file in Matrix presented by a mxc:// uri scheme.
 class MxContent {
-
   final String _mxc;
 
+  /// Insert a mxc:// uri here.
   MxContent(this._mxc);
 
+  /// Returns the mxc uri.
   get mxc => _mxc;
 
-  getDownloadLink (Client matrix) => "https://${matrix.homeserver}/_matrix/media/r0/download/${_mxc.replaceFirst("mxc://","")}/";
+  /// Returns a download Link to this content.
+  String getDownloadLink(Client matrix) =>
+      "${matrix.homeserver}/_matrix/media/r0/download/${_mxc.replaceFirst("mxc://", "")}";
 
-  getThumbnail (Client matrix, {num width, num height, ThumbnailMethod method}) {
+  /// Returns a scaled thumbnail link to this content with the given [width] and
+  /// [height]. [method] can be [ThumbnailMethod.crop] or
+  /// [ThumbnailMethod.scale] and defaults to [ThumbnailMethod.scale].
+  String getThumbnail(Client matrix,
+      {num width, num height, ThumbnailMethod method}) {
     String methodStr = "crop";
     if (method == ThumbnailMethod.scale) methodStr = "scale";
     width = width.round();
     height = height.round();
-    return "${matrix.homeserver}/_matrix/media/r0/thumbnail/${_mxc.replaceFirst("mxc://","")}?width=$width&height=$height&method=$methodStr";
+    return "${matrix.homeserver}/_matrix/media/r0/thumbnail/${_mxc.replaceFirst("mxc://", "")}?width=$width&height=$height&method=$methodStr";
   }
-
 }
 
-enum ThumbnailMethod {crop, scale}
+enum ThumbnailMethod { crop, scale }
