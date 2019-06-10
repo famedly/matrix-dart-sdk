@@ -1,6 +1,12 @@
++++ This SDK is under development and highly experimental +++
+
 # famedlysdk
 
 Matrix SDK for the famedly talk app written in dart.
+
+## API
+
+The API is documented here: [famedly.gitlab.io/famedlysdk](https://famedly.gitlab.io/famedlysdk/)
 
 ## How to use this
 
