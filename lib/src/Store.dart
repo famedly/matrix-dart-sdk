@@ -55,10 +55,19 @@ class Store {
     _db = await openDatabase(path, version: 2,
         onCreate: (Database db, int version) async {
           // When creating the db, create the table
-          await db.execute(ClientScheme);
-          await db.execute(RoomScheme);
-          await db.execute(MemberScheme);
-          await db.execute(EventScheme);
+          await db.execute(ClientsScheme);
+          await db.execute(RoomsScheme);
+          await db.execute(ParticipantsScheme);
+          await db.execute(EventsScheme);
+        },
+        onUpgrade: (Database db, int oldVersion, int newVersion) async{
+          if (oldVersion != newVersion) {
+            await db.rawDelete("DELETE FROM Rooms");
+            await db.rawDelete("DELETE FROM Participants");
+            await db.rawDelete("DELETE FROM Events");
+            db.rawUpdate("UPDATE Clients SET prev_batch='' WHERE client=?",
+                [client.clientName]);
+          }
         });
 
     List<Map> list = await _db
@@ -73,7 +82,7 @@ class Store {
         newDeviceName: clientList["device_name"],
         newLazyLoadMembers: clientList["lazy_load_members"] == 1,
         newMatrixVersions: clientList["matrix_versions"].toString().split(","),
-        newPrevBatch: clientList["prev_batch"],
+        newPrevBatch: clientList["prev_batch"].toString().isEmpty ? null : clientList["prev_batch"],
       );
       print("Restore client credentials of ${client.userID}");
     } else
@@ -105,8 +114,8 @@ class Store {
   /// Clears all tables from the database.
   Future<void> clear() async{
     await _db.rawDelete("DELETE FROM Clients WHERE client=?", [client.clientName]);
-    await _db.rawDelete("DELETE FROM Chats");
-    await _db.rawDelete("DELETE FROM Memberships");
+    await _db.rawDelete("DELETE FROM Rooms");
+    await _db.rawDelete("DELETE FROM Participants");
     await _db.rawDelete("DELETE FROM Events");
     return;
   }
@@ -132,13 +141,13 @@ class Store {
   Future<void> storeRoomUpdate(RoomUpdate roomUpdate) {
     // Insert the chat into the database if not exists
    txn.rawInsert(
-        "INSERT OR IGNORE INTO Chats " +
-            "VALUES(?, ?, '', 0, 0, 0, '', '', '', 0, '', '', '', '', '', '', 0, 50, 50, 0, 50, 50, 0, 50, 100, 50, 50, 50, 100) ",
+        "INSERT OR IGNORE INTO Rooms " +
+            "VALUES(?, ?, '', 0, 0, 0, '', '', '', 0, '', '', '', '', '', '', '', '', 0, 50, 50, 0, 50, 50, 0, 50, 100, 50, 50, 50, 100) ",
         [roomUpdate.id, roomUpdate.membership]);
 
     // Update the notification counts and the limited timeline boolean
     txn.rawUpdate(
-        "UPDATE Chats SET highlight_count=?, notification_count=?, membership=?, limitedTimeline=? WHERE id=? ",
+        "UPDATE Rooms SET highlight_count=?, notification_count=?, membership=?, limitedTimeline=? WHERE id=? ",
         [
           roomUpdate.highlight_count,
           roomUpdate.notification_count,
@@ -151,7 +160,7 @@ class Store {
     // removed from the database!
     if (roomUpdate.limitedTimeline) {
       txn.rawDelete("DELETE FROM Events WHERE chat_id=?", [roomUpdate.id]);
-      txn.rawUpdate("UPDATE Chats SET prev_batch=? WHERE id=?",
+      txn.rawUpdate("UPDATE Rooms SET prev_batch=? WHERE id=?",
           [roomUpdate.prev_batch, roomUpdate.id]);
     }
   }
@@ -197,7 +206,7 @@ class Store {
     switch (eventUpdate.eventType) {
       case "m.receipt":
         if (eventContent["user"] == client.userID) {
-          txn.rawUpdate("UPDATE Chats SET unread=? WHERE id=?",
+          txn.rawUpdate("UPDATE Rooms SET unread=? WHERE id=?",
               [eventContent["ts"], chat_id]);
         } else {
           // Mark all previous received messages as seen
@@ -209,19 +218,19 @@ class Store {
     // This event means, that the name of a room has been changed, so
     // it has to be changed in the database.
       case "m.room.name":
-        txn.rawUpdate("UPDATE Chats SET topic=? WHERE id=?",
+        txn.rawUpdate("UPDATE Rooms SET topic=? WHERE id=?",
             [eventContent["content"]["name"], chat_id]);
         break;
     // This event means, that the topic of a room has been changed, so
     // it has to be changed in the database
       case "m.room.topic":
-        txn.rawUpdate("UPDATE Chats SET description=? WHERE id=?",
+        txn.rawUpdate("UPDATE Rooms SET description=? WHERE id=?",
             [eventContent["content"]["topic"], chat_id]);
         break;
     // This event means, that the topic of a room has been changed, so
     // it has to be changed in the database
       case "m.room.history_visibility":
-        txn.rawUpdate("UPDATE Chats SET history_visibility=? WHERE id=?",
+        txn.rawUpdate("UPDATE Rooms SET history_visibility=? WHERE id=?",
             [eventContent["content"]["history_visibility"], chat_id]);
         break;
     // This event means, that the topic of a room has been changed, so
@@ -233,25 +242,25 @@ class Store {
     // This event means, that the topic of a room has been changed, so
     // it has to be changed in the database
       case "m.room.guest_access":
-        txn.rawUpdate("UPDATE Chats SET guest_access=? WHERE id=?",
+        txn.rawUpdate("UPDATE Rooms SET guest_access=? WHERE id=?",
             [eventContent["content"]["guest_access"], chat_id]);
         break;
     // This event means, that the topic of a room has been changed, so
     // it has to be changed in the database
       case "m.room.join_rules":
-        txn.rawUpdate("UPDATE Chats SET join_rules=? WHERE id=?",
+        txn.rawUpdate("UPDATE Rooms SET join_rules=? WHERE id=?",
             [eventContent["content"]["join_rule"], chat_id]);
         break;
     // This event means, that the avatar of a room has been changed, so
     // it has to be changed in the database
       case "m.room.avatar":
-        txn.rawUpdate("UPDATE Chats SET avatar_url=? WHERE id=?",
+        txn.rawUpdate("UPDATE Rooms SET avatar_url=? WHERE id=?",
             [eventContent["content"]["url"], chat_id]);
         break;
     // This event means, that the aliases of a room has been changed, so
     // it has to be changed in the database
       case "m.fully_read":
-        txn.rawUpdate("UPDATE Chats SET fully_read=? WHERE id=?",
+        txn.rawUpdate("UPDATE Rooms SET fully_read=? WHERE id=?",
             [eventContent["content"]["event_id"], chat_id]);
         break;
     // This event means, that someone joined the room, has left the room
@@ -269,14 +278,14 @@ class Store {
         }
 
         // Update membership table
-       txn.rawInsert("INSERT OR IGNORE INTO Memberships VALUES(?,?,?,?,?,0)", [
+       txn.rawInsert("INSERT OR IGNORE INTO Participants VALUES(?,?,?,?,?,0)", [
           chat_id,
           state_key,
           insertDisplayname,
           insertAvatarUrl,
           membership
         ]);
-        String queryStr = "UPDATE Memberships SET membership=?";
+        String queryStr = "UPDATE Participants SET membership=?";
         List<String> queryArgs = [membership];
 
         if (eventContent["content"]["displayname"] is String) {
@@ -295,7 +304,7 @@ class Store {
         break;
     // This event changes the permissions of the users and the power levels
       case "m.room.power_levels":
-        String query = "UPDATE Chats SET ";
+        String query = "UPDATE Rooms SET ";
         if (eventContent["content"]["ban"] is num)
           query += ", power_ban=" + eventContent["content"]["ban"].toString();
         if (eventContent["content"]["events_default"] is num)
@@ -340,7 +349,7 @@ class Store {
                 eventContent["content"]["events"]["m.room.power_levels"]
                     .toString();
         }
-        if (query != "UPDATE Chats SET ") {
+        if (query != "UPDATE Rooms SET ") {
           query = query.replaceFirst(",", "");
           txn.rawUpdate(query + " WHERE id=?", [chat_id]);
         }
@@ -351,10 +360,10 @@ class Store {
               .forEach((String user, dynamic value) async {
             num power_level = eventContent["content"]["users"][user];
             txn.rawUpdate(
-                "UPDATE Memberships SET power_level=? WHERE matrix_id=? AND chat_id=?",
+                "UPDATE Participants SET power_level=? WHERE matrix_id=? AND chat_id=?",
                 [power_level, user, chat_id]);
            txn.rawInsert(
-                "INSERT OR IGNORE INTO Memberships VALUES(?, ?, '', '', ?, ?)",
+                "INSERT OR IGNORE INTO Participants VALUES(?, ?, '', '', ?, ?)",
                 [chat_id, user, "unknown", power_level]);
           });
         }
@@ -366,7 +375,7 @@ class Store {
   Future<User> getUser(
       {String matrixID, String roomID}) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM Memberships WHERE matrix_id=? AND chat_id=?",
+        "SELECT * FROM Participants WHERE matrix_id=? AND chat_id=?",
         [matrixID, roomID]);
     if (res.length != 1) return null;
     return User.fromJson(res[0]);
@@ -375,7 +384,7 @@ class Store {
   /// Loads all Users in the database to provide a contact list.
   Future<List<User>> loadContacts() async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM Memberships WHERE matrix_id!=? GROUP BY matrix_id ORDER BY displayname",
+        "SELECT * FROM Participants WHERE matrix_id!=? GROUP BY matrix_id ORDER BY displayname",
         [client.userID]);
     List<User> userList = [];
     for (int i = 0; i < res.length; i++) userList.add(User.fromJson(res[i]));
@@ -386,7 +395,7 @@ class Store {
   Future<List<User>> loadParticipants(String roomID) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
         "SELECT * " +
-            " FROM Memberships " +
+            " FROM Participants " +
             " WHERE chat_id=? " +
             " AND membership='join'",
         [roomID]);
@@ -405,7 +414,7 @@ class Store {
     List<Map<String, dynamic>> res = await db.rawQuery(
         "SELECT rooms.id, rooms.topic, rooms.membership, rooms.notification_count, rooms.highlight_count, rooms.avatar_url, rooms.unread, " +
             " events.id AS eventsid, origin_server_ts, events.content_body, events.sender, events.state_key, events.content_json, events.type " +
-            " FROM Chats rooms LEFT JOIN Events events " +
+            " FROM Rooms rooms LEFT JOIN Events events " +
             " ON rooms.id=events.chat_id " +
             " WHERE rooms.membership!='leave' " +
             " GROUP BY rooms.id " +
@@ -427,10 +436,10 @@ class Store {
       String roomID) async {
     String avatarStr = "";
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT avatar_url FROM Memberships " +
-            " WHERE Memberships.chat_id=? " +
-            " AND (Memberships.membership='join' OR Memberships.membership='invite') " +
-            " AND Memberships.matrix_id!=? ",
+        "SELECT avatar_url FROM Participants " +
+            " WHERE Participants.chat_id=? " +
+            " AND (Participants.membership='join' OR Participants.membership='invite') " +
+            " AND Participants.matrix_id!=? ",
         [roomID, client.userID]);
     if (res.length == 1) avatarStr = res[0]["avatar_url"];
     return avatarStr;
@@ -443,10 +452,10 @@ class Store {
       String roomID) async {
     String displayname = 'Empty chat';
     List<Map<String, dynamic>> rs = await db.rawQuery(
-        "SELECT Memberships.displayname, Memberships.matrix_id, Memberships.membership FROM Memberships " +
-            " WHERE Memberships.chat_id=? " +
-            " AND (Memberships.membership='join' OR Memberships.membership='invite') " +
-            " AND Memberships.matrix_id!=? ",
+        "SELECT Participants.displayname, Participants.matrix_id, Participants.membership FROM Participants " +
+            " WHERE Participants.chat_id=? " +
+            " AND (Participants.membership='join' OR Participants.membership='invite') " +
+            " AND Participants.matrix_id!=? ",
         [roomID, client.userID]);
     if (rs.length > 0) {
       displayname = "";
@@ -464,7 +473,7 @@ class Store {
   }
 
   /// The database sheme for the Client class.
-  static final String ClientScheme = 'CREATE TABLE IF NOT EXISTS Clients(' +
+  static final String ClientsScheme = 'CREATE TABLE IF NOT EXISTS Clients(' +
       'client TEXT PRIMARY KEY, ' +
       'token TEXT, ' +
       'homeserver TEXT, ' +
@@ -475,8 +484,9 @@ class Store {
       'matrix_versions TEXT, ' +
       'lazy_load_members INTEGER, ' +
       'UNIQUE(client))';
+
   /// The database sheme for the Room class.
-  static final String RoomScheme = 'CREATE TABLE IF NOT EXISTS Chats(' +
+  static final String RoomsScheme = 'CREATE TABLE IF NOT EXISTS Rooms(' +
       'id TEXT PRIMARY KEY, ' +
       'membership TEXT, ' +
       'topic TEXT, ' +
@@ -490,6 +500,8 @@ class Store {
       'fully_read TEXT, ' + // ID of the fully read marker event
       'description TEXT, ' +
       'canonical_alias TEXT, ' + // The address in the form: #roomname:homeserver.org
+      'direct_chat_matrix_id TEXT, ' + //If this room is a direct chat, this is the matrix ID of the user
+      'notification_settings TEXT, ' + // Must be one of [all, mention]
 
       // Security rules
       'guest_access TEXT, ' +
@@ -515,7 +527,7 @@ class Store {
       'UNIQUE(id))';
 
   /// The database sheme for the Event class.
-  static final String EventScheme = 'CREATE TABLE IF NOT EXISTS Events(' +
+  static final String EventsScheme = 'CREATE TABLE IF NOT EXISTS Events(' +
       'id TEXT PRIMARY KEY, ' +
       'chat_id TEXT, ' +
       'origin_server_ts INTEGER, ' +
@@ -528,7 +540,7 @@ class Store {
       'UNIQUE(id))';
 
   /// The database sheme for the User class.
-  static final String MemberScheme = 'CREATE TABLE IF NOT EXISTS Memberships(' +
+  static final String ParticipantsScheme = 'CREATE TABLE IF NOT EXISTS Participants(' +
       'chat_id TEXT, ' + // The chat id of this membership
       'matrix_id TEXT, ' + // The matrix id of this user
       'displayname TEXT, ' +
