@@ -1,6 +1,6 @@
 # Contributing code to famedly talk
 
-Everyone is welcome to contribute code to matrix-js-sdk, provided that they are willing to license their contributions under the same license as the project itself.
+Everyone is welcome to contribute code to FamedlySDK, provided that they are willing to license their contributions under the same license as the project itself.
 Please follow these rules when contributing code to famedly talk:
 
 ## Merge Requests:
