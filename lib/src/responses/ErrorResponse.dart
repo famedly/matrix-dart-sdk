@@ -21,6 +21,8 @@
  * along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'package:http/http.dart' as http;
+
 /// Represents a special response from the Homeserver for errors.
 class ErrorResponse {
 
@@ -30,11 +32,15 @@ class ErrorResponse {
   /// A human readable error description.
   String error;
 
-  ErrorResponse({this.errcode, this.error});
+  /// The frozen request which triggered this Error
+  http.Request request;
 
-  ErrorResponse.fromJson(Map<String, dynamic> json) {
+  ErrorResponse({this.errcode, this.error, this.request});
+
+  ErrorResponse.fromJson(Map<String, dynamic> json, http.Request newRequest) {
     errcode = json['errcode'];
     error = json['error'] ?? "";
+    request = newRequest;
   }
 
   Map<String, dynamic> toJson() {

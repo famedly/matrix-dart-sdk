@@ -182,7 +182,7 @@ class Connection {
     if (client.isLogged())
       headers["Authorization"] = "Bearer ${client.accessToken}";
 
-    var resp;
+    http.Response resp;
     try {
       switch (type) {
         case "GET":
@@ -207,11 +207,12 @@ class Connection {
           break;
       }
     } on TimeoutException catch (_) {
+
       return ErrorResponse(
-          error: "No connection possible...", errcode: "TIMEOUT");
+          error: "No connection possible...", errcode: "TIMEOUT", request: resp.request);
     } catch (e) {
       return ErrorResponse(
-          error: "No connection possible...", errcode: "NO_CONNECTION");
+          error: "No connection possible...", errcode: "NO_CONNECTION", request: resp.request);
     }
 
     Map<String, dynamic> jsonResp;
@@ -219,11 +220,11 @@ class Connection {
       jsonResp = jsonDecode(resp.body) as Map<String, dynamic>;
     } catch (e) {
       return ErrorResponse(
-          error: "No connection possible...", errcode: "MALFORMED");
+          error: "No connection possible...", errcode: "MALFORMED", request: resp.request);
     }
     if (jsonResp.containsKey("errcode") && jsonResp["errcode"] is String) {
       if (jsonResp["errcode"] == "M_UNKNOWN_TOKEN") clear();
-      return ErrorResponse.fromJson(jsonResp);
+      return ErrorResponse.fromJson(jsonResp, resp.request);
     }
 
     return jsonResp;
