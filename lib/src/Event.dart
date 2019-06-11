@@ -29,29 +29,56 @@ import './Room.dart';
 
 /// A single Matrix event, e.g. a message in a chat.
 class Event {
+
+  /// The Matrix ID for this event in the format '$localpart:server.abc'.
   final String id;
-  final String roomID;
+
+  /// The room this event belongs to.
+  final Room room;
+
+  /// The time this event has received at the server.
   final ChatTime time;
+
+  /// The user who has sent this event.
   final User sender;
+
+  /// The user who is the target of this event e.g. for a m.room.member event.
   final User stateKey;
+
+  /// The type of this event. Mostly this is 'timeline'.
   final String environment;
-  final String text;
-  final String formattedText;
-  final int status;
+
+  /// The status of this event.
+  /// -1=ERROR
+  ///  0=SENDING
+  ///  1=SENT
+  ///  2=RECEIVED
+  int status;
+
+  /// The json payload of the content. The content highly depends on the type.
   final Map<String,dynamic> content;
 
-  const Event(this.id, this.sender, this.time,{
-    this.roomID,
+  Event(this.id, this.sender, this.time,{
+    this.room,
     this.stateKey,
-    this.text,
-    this.formattedText,
     this.status = 2,
-    this.environment = "timeline",
+    this.environment,
     this.content,
   });
 
+  @Deprecated("Use type instead")
+
+
+  /// Returns the body of this event if it has a body.
+  String get text => content["body"] ?? "";
+
+  /// Returns the formatted boy of this event if it has a formatted body.
+  String get formattedText => content["formatted_body"] ?? "";
+
+  /// Use this to get the body.
   String getBody () => formattedText ?? text ?? "*** Unable to parse Content ***";
 
+  /// Get the real type.
   EventTypes get type {
     switch (environment) {
       case "m.room.avatar": return EventTypes.RoomAvatar;
@@ -78,6 +105,7 @@ class Event {
 
   }
 
+  /// Generate a new Event object from a json string, mostly a table row.
   static Event fromJson(Map<String, dynamic> jsonObj, Room room) {
     Map<String,dynamic> content;
     try {
@@ -92,26 +120,15 @@ class Event {
       ChatTime(jsonObj["origin_server_ts"]),
       stateKey: User(jsonObj["state_key"]),
       environment: jsonObj["type"],
-      text: jsonObj["content_body"],
       status: jsonObj["status"],
       content: content,
+      room: room,
     );
   }
 
+  @Deprecated("Use [client.store.getEventList(Room room)] instead!")
   static Future<List<Event>> getEventList(Client matrix, Room room) async{
-    List<Map<String, dynamic>> eventRes = await matrix.store.db.rawQuery(
-        "SELECT * " +
-            " FROM Events events, Participants participants " +
-            " WHERE events.chat_id=?" +
-            " AND events.sender=participants.matrix_id " +
-            " GROUP BY events.id " +
-            " ORDER BY origin_server_ts DESC",
-        [room.id]);
-
-    List<Event> eventList = [];
-
-    for (num i = 0; i < eventRes.length; i++)
-      eventList.add(Event.fromJson(eventRes[i], room));
+    List<Event> eventList = await matrix.store.getEventList(room);
     return eventList;
   }
 
