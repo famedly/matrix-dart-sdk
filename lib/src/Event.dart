@@ -100,9 +100,9 @@ class Event {
   static Future<List<Event>> getEventList(Client matrix, String roomID) async{
     List<Map<String, dynamic>> eventRes = await matrix.store.db.rawQuery(
         "SELECT * " +
-            " FROM Events events, Memberships memberships " +
+            " FROM Events events, Participants participants " +
             " WHERE events.chat_id=?" +
-            " AND events.sender=memberships.matrix_id " +
+            " AND events.sender=participants.matrix_id " +
             " GROUP BY events.id " +
             " ORDER BY origin_server_ts DESC",
         [roomID]);
