@@ -66,9 +66,6 @@ class Event {
     this.content,
   });
 
-  @Deprecated("Use type instead")
-
-
   /// Returns the body of this event if it has a body.
   String get text => content["body"] ?? "";
 

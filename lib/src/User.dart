@@ -82,7 +82,7 @@ class User {
     return User(json['matrix_id'],
         displayName: json['displayname'],
         avatarUrl: MxContent(json['avatar_url']),
-        membership: "",
+        membership: json['membership'],
         room: room);
   }
 
