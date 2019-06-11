@@ -246,25 +246,47 @@ class Room {
   /// Returns a Room from a json String which comes normally from the store.
   static Future<Room> getRoomFromTableRow(
       Map<String, dynamic> row, Client matrix) async {
+
     String name = row["topic"];
-    if (name == "") name = await matrix.store.getChatNameFromMemberNames(row["id"]);
+    if (name == "") name = await matrix.store?.getChatNameFromMemberNames(row["id"]) ?? "";
 
-    String content_body = row["content_body"];
-    if (content_body == null || content_body == "")
-      content_body = "Keine vorhergehenden Nachrichten";
-
-    String avatarMxcUrl = row["avatar_url"];
-
-    if (avatarMxcUrl == "")
-      avatarMxcUrl = await matrix.store.getAvatarFromSingleChat(row["id"]);
+    if (row["avatar_url"] == "")
+      row["avatar_url"] = await matrix.store?.getAvatarFromSingleChat(row["id"]) ?? "";
 
     return Room(
       id: row["id"],
       name: name,
-      avatar: MxContent(avatarMxcUrl),
+      topic: row["description"],
+      avatar: MxContent(row["avatar_url"]),
       notificationCount: row["notification_count"],
       highlightCount: row["highlight_count"],
-      topic: "",
+      unread: ChatTime(row["unread"]),
+      fullyRead: row["fully_read"],
+      notificationSettings: row["notification_settings"],
+      directChatMatrixID: row["direct_chat_matrix_id"],
+      draft: row["draft"],
+      prev_batch: row["prev_batch"],
+
+      guestAccess: row["guest_access"],
+      historyVisibility: row["history_visibility"],
+      joinRules: row["join_rules"],
+
+      powerLevels: {
+        "power_events_default": row["power_events_default"],
+        "power_state_default": row["power_state_default"],
+        "power_redact": row["power_redact"],
+        "power_invite": row["power_invite"],
+        "power_ban": row["power_ban"],
+        "power_kick": row["power_kick"],
+        "power_user_default": row["power_user_default"],
+        "power_event_avatar": row["power_event_avatar"],
+        "power_event_history_visibility": row["power_event_history_visibility"],
+        "power_event_canonical_alias": row["power_event_canonical_alias"],
+        "power_event_aliases": row["power_event_aliases"],
+        "power_event_name": row["power_event_name"],
+        "power_event_power_levels": row["power_event_power_levels"],
+      },
+
       client: matrix,
       events: [],
       participants: [],
