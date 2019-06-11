@@ -531,6 +531,27 @@ class Store {
     return res[0]["id"];
   }
 
+  /// Returns the power level of the user for the given [roomID]. Returns null if
+  /// the room or the own user wasn't found.
+  Future<int> getPowerLevel(String roomID) async {
+    List<Map<String, dynamic>> res = await db.rawQuery(
+        "SELECT power_level FROM Users WHERE matrix_id=? AND chat_id=?",
+        [roomID, client.userID]);
+    if (res.length != 1) return null;
+    return res[0]["power_level"];
+  }
+
+  /// Returns the power levels from all users for the given [roomID].
+  Future<Map<String, int>> getPowerLevels(String roomID) async {
+    List<Map<String, dynamic>> res = await db.rawQuery(
+        "SELECT matrix_id, power_level FROM Users WHERE chat_id=?",
+        [roomID, client.userID]);
+    Map<String, int> powerMap = {};
+    for (int i = 0; i < res.length; i++)
+      powerMap[res[i]["matrix_id"]] = res[i]["power_level"];
+    return powerMap;
+  }
+
   /// The database sheme for the Client class.
   static final String ClientsScheme = 'CREATE TABLE IF NOT EXISTS Clients(' +
       'client TEXT PRIMARY KEY, ' +

@@ -87,6 +87,18 @@ class User {
         room: room);
   }
 
+  /// Checks if the client's user has the permission to kick this user.
+  Future<bool> get canKick async {
+    final int ownPowerLevel = await room.client.store.getPowerLevel(room.id);
+    return ownPowerLevel > powerLevel && ownPowerLevel >= room.powerLevels["power_kick"];
+  }
+
+  /// Checks if the client's user has the permission to ban or unban this user.
+  Future<bool> get canBan async {
+    final int ownPowerLevel = await room.client.store.getPowerLevel(room.id);
+    return ownPowerLevel > powerLevel && ownPowerLevel >= room.powerLevels["power_ban"];
+  }
+
   /// Call the Matrix API to kick this user from this room.
   Future<dynamic> kick() async {
     dynamic res = await room.kick(id);
@@ -102,6 +114,12 @@ class User {
   /// Call the Matrix API to unban this banned user from this room.
   Future<dynamic> unban() async {
     dynamic res = await room.unban(id);
+    return res;
+  }
+
+  /// Call the Matrix API to change the power level of this user.
+  Future<dynamic> setPower(int power) async {
+    dynamic res = await room.setPower(id, power);
     return res;
   }
 

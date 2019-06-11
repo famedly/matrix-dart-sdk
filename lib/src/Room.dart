@@ -232,6 +232,20 @@ class Room {
     return res;
   }
 
+  /// Call the Matrix API to unban a banned user from this room.
+  Future<dynamic> setPower(String userID, int power) async {
+    Map<String,int> powerMap = await client.store.getPowerLevels(id);
+    powerMap[userID] = power;
+
+    dynamic res = await client.connection.jsonRequest(
+        type: "PUT",
+        action:
+        "/client/r0/rooms/$id/state/m.room.power_levels/",
+        data: {"users": powerMap});
+    if (res is ErrorResponse) client.connection.onError.add(res);
+    return res;
+  }
+
   /// Call the Matrix API to invite a user to this room.
   Future<dynamic> invite(String userID) async {
     dynamic res = await client.connection.jsonRequest(
