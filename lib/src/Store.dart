@@ -54,19 +54,16 @@ class Store {
     String path = p.join(databasePath, "FluffyMatrix.db");
     _db = await openDatabase(path, version: 2,
         onCreate: (Database db, int version) async {
-          // When creating the db, create the table
-          await db.execute(ClientsScheme);
-          await db.execute(RoomsScheme);
-          await db.execute(ParticipantsScheme);
-          await db.execute(EventsScheme);
+          await createTables(db);
         },
         onUpgrade: (Database db, int oldVersion, int newVersion) async{
           if (oldVersion != newVersion) {
-            await db.rawDelete("DELETE FROM Rooms");
-            await db.rawDelete("DELETE FROM Participants");
-            await db.rawDelete("DELETE FROM Events");
+            await db.execute("DROP TABLE IF EXISTS Rooms");
+            await db.execute("DROP TABLE IF EXISTS Participants");
+            await db.execute("DROP TABLE IF EXISTS Events");
             db.rawUpdate("UPDATE Clients SET prev_batch='' WHERE client=?",
                 [client.clientName]);
+            createTables(db);
           }
         });
 
@@ -87,6 +84,14 @@ class Store {
       print("Restore client credentials of ${client.userID}");
     } else
       client.connection.onLoginStateChanged.add(LoginState.loggedOut);
+  }
+
+
+  Future<void> createTables(Database db) async{
+    await db.execute(ClientsScheme);
+    await db.execute(RoomsScheme);
+    await db.execute(ParticipantsScheme);
+    await db.execute(EventsScheme);
   }
 
   Future<String> queryPrevBatch() async{

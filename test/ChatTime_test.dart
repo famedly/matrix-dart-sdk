@@ -52,7 +52,7 @@ void main() {
     });
 
     test("Formatting", () async {
-      final int timestamp = 1560144984758;
+      final int timestamp = DateTime.now().millisecondsSinceEpoch;
       final ChatTime chatTime = ChatTime(timestamp);
       //expect(chatTime.toTimeString(),"05:36"); // This depends on the time and your timezone ;)
       expect(chatTime.toTimeString(),chatTime.toEventTimeString());
