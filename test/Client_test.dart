@@ -26,6 +26,7 @@ import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Connection.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/sync/RoomUpdate.dart';
+import 'package:famedlysdk/src/sync/UserUpdate.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'dart:async';
 import 'FakeMatrixApi.dart';
@@ -35,6 +36,7 @@ void main() {
 
   Future<List<RoomUpdate>> roomUpdateListFuture;
   Future<List<EventUpdate>> eventUpdateListFuture;
+  Future<List<UserUpdate>> userUpdateListFuture;
 
   /// All Tests related to the Login
   group("FluffyMatrix", () {
@@ -48,6 +50,7 @@ void main() {
 
       roomUpdateListFuture = matrix.connection.onRoomUpdate.stream.toList();
       eventUpdateListFuture = matrix.connection.onEvent.stream.toList();
+      userUpdateListFuture = matrix.connection.onUserEvent.stream.toList();
     };
     testWidgets('should get created', create);
 
@@ -176,7 +179,7 @@ void main() {
 
       List<EventUpdate> eventUpdateList = await eventUpdateListFuture;
 
-      expect(eventUpdateList.length,10);
+      expect(eventUpdateList.length,7);
 
       expect(eventUpdateList[0].eventType=="m.room.member", true);
       expect(eventUpdateList[0].roomID=="!726s6s6q:example.com", true);
@@ -205,20 +208,23 @@ void main() {
       expect(eventUpdateList[6].eventType=="m.room.member", true);
       expect(eventUpdateList[6].roomID=="!696r7674:example.com", true);
       expect(eventUpdateList[6].type=="invite_state", true);
+    });
 
-      expect(eventUpdateList[7].eventType=="m.presence", true);
-      expect(eventUpdateList[7].roomID=="presence", true);
-      expect(eventUpdateList[7].type=="presence", true);
+    test('User Update Test', () async{
+      matrix.connection.onUserEvent.close();
 
-      expect(eventUpdateList[8].eventType=="org.example.custom.config", true);
-      expect(eventUpdateList[8].roomID=="account_data", true);
-      expect(eventUpdateList[8].type=="account_data", true);
+      List<UserUpdate> eventUpdateList = await userUpdateListFuture;
 
-      expect(eventUpdateList[9].eventType=="m.new_device", true);
-      expect(eventUpdateList[9].roomID=="to_device", true);
-      expect(eventUpdateList[9].type=="to_device", true);
+      expect(eventUpdateList.length,3);
 
+      expect(eventUpdateList[0].eventType=="m.presence", true);
+      expect(eventUpdateList[0].type=="presence", true);
 
+      expect(eventUpdateList[1].eventType=="org.example.custom.config", true);
+      expect(eventUpdateList[1].type=="account_data", true);
+
+      expect(eventUpdateList[2].eventType=="m.new_device", true);
+      expect(eventUpdateList[2].type=="to_device", true);
     });
 
     testWidgets('should get created', create);

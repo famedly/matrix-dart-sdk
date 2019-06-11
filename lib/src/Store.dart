@@ -27,6 +27,7 @@ import 'dart:core';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 import 'sync/EventUpdate.dart';
+import 'sync/UserUpdate.dart';
 import 'sync/RoomUpdate.dart';
 import 'Client.dart';
 import 'User.dart';
@@ -173,8 +174,29 @@ class Store {
     }
   }
 
+  /// Stores an UserUpdate object in the database. Must be called inside of
+  /// [transaction].
+  Future<void> storeUserEventUpdate(UserUpdate userUpdate) {
+    dynamic eventContent = userUpdate.content;
+    String type = userUpdate.type;
+
+    switch (userUpdate.eventType) {
+      case "m.direct":
+        if (userUpdate.content["content"] is Map<String, List<String>>) {
+          Map<String, List<String>> directMap = userUpdate.content["content"];
+          directMap.forEach((String key, List<String> value) {
+            if (value.length > 0)
+              txn.rawUpdate(
+                  "UPDATE Rooms SET direct_chat_matrix_id=? WHERE id=?",
+                  [key, value[0]]);
+          });
+        }
+        break;
+    }
+  }
+
   /// Stores an EventUpdate object in the database. Must be called inside of
-  //  /// [transaction].
+  /// [transaction].
   Future<void> storeEventUpdate(EventUpdate eventUpdate) {
     dynamic eventContent = eventUpdate.content;
     String type = eventUpdate.type;
@@ -212,17 +234,6 @@ class Store {
     if (type == "history") return null;
 
     switch (eventUpdate.eventType) {
-      case "m.direct":
-        if (eventUpdate.content["content"] is Map<String, List<String>>) {
-          Map<String, List<String>> directMap = eventUpdate.content["content"];
-          directMap.forEach((String key, List<String> value) {
-            if (value.length > 0)
-              txn.rawUpdate(
-                  "UPDATE Rooms SET direct_chat_matrix_id=? WHERE id=?",
-                  [key, value[0]]);
-          });
-        }
-        break;
       case "m.receipt":
         if (eventContent["user"] == client.userID) {
           txn.rawUpdate("UPDATE Rooms SET unread=? WHERE id=?",

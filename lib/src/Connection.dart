@@ -28,6 +28,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'responses/ErrorResponse.dart';
 import 'sync/EventUpdate.dart';
+import 'sync/UserUpdate.dart';
 import 'sync/RoomUpdate.dart';
 import 'Client.dart';
 
@@ -61,6 +62,10 @@ class Connection {
   /// are handled by this signal:
   final StreamController<RoomUpdate> onRoomUpdate =
       new StreamController.broadcast();
+
+  /// Outside of rooms there are account updates like account_data or presences.
+  final StreamController<UserUpdate> onUserEvent =
+  new StreamController.broadcast();
 
   /// Called when the login state e.g. user gets logged out.
   final StreamController<LoginState> onLoginStateChanged =
@@ -395,7 +400,15 @@ class Connection {
 
   void _handleGlobalEvents(List<dynamic> events, String type) {
     for (int i = 0; i < events.length; i++)
-      _handleEvent(events[i], type, type);
+      if (events[i]["type"] is String && events[i]["content"] is dynamic) {
+        UserUpdate update = UserUpdate(
+          eventType: events[i]["type"],
+          type: type,
+          content: events[i],
+        );
+        client.store?.storeUserEventUpdate(update);
+        onUserEvent.add(update);
+      }
   }
 
   void _handleEvent(
