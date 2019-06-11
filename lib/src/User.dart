@@ -104,4 +104,21 @@ class User {
     dynamic res = await room.unban(id);
     return res;
   }
+
+  /// Returns an existing direct chat with this user or creates a new one.
+  Future<String> startDirectChat() async {
+    // Try to find an existing direct chat
+    String roomID = await room.client?.store.getDirectChatRoomID(id);
+    if (roomID != null) return roomID;
+
+    // Start a new direct chat
+    Map<String,dynamic> resp = await room.client.connection.jsonRequest(type: "POST", action: "/client/r0/createRoom", data: {
+      "invite": [ id ],
+      "is_direct": true,
+      "preset": "trusted_private_chat"
+    });
+
+    return resp["room_id"];
+  }
+
 }

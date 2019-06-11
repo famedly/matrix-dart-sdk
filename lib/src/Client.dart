@@ -26,12 +26,12 @@ import 'dart:core';
 import 'responses/ErrorResponse.dart';
 import 'Connection.dart';
 import 'Store.dart';
+import 'User.dart';
 
 /// Represents a Matrix client to communicate with a
 /// [Matrix](https://matrix.org) homeserver and is the entry point for this
 /// SDK.
 class Client {
-
   /// Handles the connection for this client.
   Connection connection;
 
@@ -41,8 +41,7 @@ class Client {
   Client(this.clientName) {
     connection = Connection(this);
 
-    if (this.clientName != "testclient")
-      store = Store(this);
+    if (this.clientName != "testclient") store = Store(this);
     connection.onLoginStateChanged.stream.listen((loginState) {
       print("LoginState: ${loginState.toString()}");
     });
@@ -86,7 +85,7 @@ class Client {
     homeserver = serverUrl;
 
     final versionResp =
-    await connection.jsonRequest(type: "GET", action: "/client/versions");
+        await connection.jsonRequest(type: "GET", action: "/client/versions");
     if (versionResp is ErrorResponse) {
       connection.onError.add(ErrorResponse(errcode: "NO_RESPONSE", error: ""));
       return false;
@@ -118,7 +117,7 @@ class Client {
     }
 
     final loginResp =
-    await connection.jsonRequest(type: "GET", action: "/client/r0/login");
+        await connection.jsonRequest(type: "GET", action: "/client/r0/login");
     if (loginResp is ErrorResponse) {
       connection.onError.add(loginResp);
       return false;
@@ -142,9 +141,8 @@ class Client {
   /// Handles the login and allows the client to call all APIs which require
   /// authentication. Returns false if the login was not successful.
   Future<bool> login(String username, String password) async {
-
-    final loginResp =
-    await connection.jsonRequest(type: "POST", action: "/client/r0/login", data: {
+    final loginResp = await connection
+        .jsonRequest(type: "POST", action: "/client/r0/login", data: {
       "type": "m.login.password",
       "user": username,
       "identifier": {
@@ -180,11 +178,24 @@ class Client {
   /// Sends a logout command to the homeserver and clears all local data,
   /// including all persistent data from the store.
   Future<void> logout() async {
-    final dynamic resp =
-    await connection.jsonRequest(type: "POST", action: "/client/r0/logout/all");
+    final dynamic resp = await connection.jsonRequest(
+        type: "POST", action: "/client/r0/logout/all");
     if (resp == null) return;
 
     await connection.clear();
   }
 
+  /// Creates a new group chat and invites the given Users and returns the new
+  /// created room ID.
+  Future<String> createGroup(List<User> users) async {
+    List<String> inviteIDs = [];
+    for (int i = 0; i < users.length; i++) inviteIDs.add(users[i].id);
+
+    Map<String, dynamic> resp = await connection.jsonRequest(
+        type: "POST",
+        action: "/client/r0/createRoom",
+        data: {"invite": inviteIDs, "preset": "private_chat"});
+
+    return resp["room_id"];
+  }
 }
