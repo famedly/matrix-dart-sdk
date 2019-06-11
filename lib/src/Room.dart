@@ -185,7 +185,7 @@ class Room {
 
   static Future<Room> getRoomById(String id, Client matrix) async {
     List<Map<String, dynamic>> res =
-        await matrix.store.db.rawQuery("SELECT * FROM Chats WHERE id=?", [id]);
+        await matrix.store.db.rawQuery("SELECT * FROM Rooms WHERE id=?", [id]);
     if (res.length != 1) return null;
     return getRoomFromTableRow(res[0], matrix);
   }
