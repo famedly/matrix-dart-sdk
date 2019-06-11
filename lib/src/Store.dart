@@ -52,11 +52,12 @@ class Store {
   _init() async{
     var databasePath = await getDatabasesPath();
     String path = p.join(databasePath, "FluffyMatrix.db");
-    _db = await openDatabase(path, version: 2,
+    _db = await openDatabase(path, version: 3,
         onCreate: (Database db, int version) async {
           await createTables(db);
         },
         onUpgrade: (Database db, int oldVersion, int newVersion) async{
+          print("Migrate databse from version $oldVersion to $newVersion");
           if (oldVersion != newVersion) {
             await db.execute("DROP TABLE IF EXISTS Rooms");
             await db.execute("DROP TABLE IF EXISTS Participants");
