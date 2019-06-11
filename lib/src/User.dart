@@ -83,6 +83,7 @@ class User {
         displayName: json['displayname'],
         avatarUrl: MxContent(json['avatar_url']),
         membership: json['membership'],
+        powerLevel: json['power_level'],
         room: room);
   }
 
