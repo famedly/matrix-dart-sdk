@@ -54,7 +54,7 @@ void main() {
     test("Formatting", () async {
       final int timestamp = 1560144984758;
       final ChatTime chatTime = ChatTime(timestamp);
-      expect(chatTime.toTimeString(),"05:36");  // Skip this if you are not UTC+0
+      //expect(chatTime.toTimeString(),"05:36"); // This depends on the time and your timezone ;)
       expect(chatTime.toTimeString(),chatTime.toEventTimeString());
 
       final ChatTime oldChatTime = ChatTime(156014498475);
