@@ -280,6 +280,14 @@ class Room {
     });
   }
 
+  Future<dynamic> sendReadReceipt(String eventID) async {
+    final dynamic resp = client.connection.jsonRequest(
+        type: "fully_read",
+        action: "/client/r0/rooms/$id/read_markers",
+        data: {"m.fully_read": eventID,"m.read": eventID,});
+    return resp;
+  }
+
   /// Returns a Room from a json String which comes normally from the store.
   static Future<Room> getRoomFromTableRow(Map<String, dynamic> row,
       Client matrix) async {
