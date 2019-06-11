@@ -30,12 +30,18 @@ import 'FakeMatrixApi.dart';
 void main() {
   /// All Tests related to the Event
   group("Room", () {
+
+    Client matrix = Client("testclient");
+    matrix.connection.httpClient = FakeMatrixApi();
+    matrix.homeserver = "https://fakeServer.notExisting";
+    Room room;
+
     test("Create from json", () async {
       Client matrix = Client("testclient");
       matrix.connection.httpClient = FakeMatrixApi();
       matrix.homeserver = "https://fakeServer.notExisting";
 
-      final String id = "!jf983jjf:server.abc";
+      final String id = "!localpart:server.abc";
       final String name = "My Room";
       final String topic = "This is my own room";
       final int unread = DateTime.now().millisecondsSinceEpoch;
@@ -46,6 +52,7 @@ void main() {
       final String guestAccess = "forbidden";
       final String historyVisibility = "invite";
       final String joinRules = "invite";
+      final int now = DateTime.now().millisecondsSinceEpoch;
 
       final Map<String, dynamic> jsonObj = {
         "id": id,
@@ -78,7 +85,7 @@ void main() {
         "power_event_power_levels": 0,
       };
 
-      Room room = await Room.getRoomFromTableRow(jsonObj, matrix);
+      room = await Room.getRoomFromTableRow(jsonObj, matrix);
 
       expect(room.id,id);
       expect(room.name,name);
@@ -95,10 +102,13 @@ void main() {
       expect(room.guestAccess,guestAccess);
       expect(room.historyVisibility,historyVisibility);
       expect(room.joinRules,joinRules);
+      expect(room.lastMessage,"");
+      expect(room.timeCreated.toTimeStamp() >= now, true);
       room.powerLevels.forEach((String key, int value) {
         expect(value, 0);
       });
 
     });
+
   });
 }
