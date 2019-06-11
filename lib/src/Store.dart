@@ -31,6 +31,7 @@ import 'sync/RoomUpdate.dart';
 import 'Client.dart';
 import 'User.dart';
 import 'Room.dart';
+import 'Event.dart';
 import 'Connection.dart';
 
 /// Responsible to store all data persistent and to query objects from the
@@ -414,6 +415,24 @@ class Store {
     return participants;
   }
 
+  /// Returns a list of events for the given room and sets all participants.
+  Future<List<Event>> getEventList(String roomID) async{
+    List<Map<String, dynamic>> eventRes = await db.rawQuery(
+        "SELECT * " +
+            " FROM Events events, Participants participants " +
+            " WHERE events.chat_id=?" +
+            " AND events.sender=participants.matrix_id " +
+            " GROUP BY events.id " +
+            " ORDER BY origin_server_ts DESC",
+        [roomID]);
+
+    List<Event> eventList = [];
+
+    for (num i = 0; i < eventRes.length; i++)
+      eventList.add(Event.fromJson(eventRes[i]));
+    return eventList;
+  }
+
   /// Returns all rooms, the client is participating. Excludes left rooms.
   Future<List<Room>> getRoomList() async {
     List<Map<String, dynamic>> res = await db.rawQuery(
@@ -434,6 +453,15 @@ class Store {
       }
     }
     return roomList;
+  }
+
+
+  /// Returns a room without events and participants.
+  Future<Room> getRoomById(String id) async {
+    List<Map<String, dynamic>> res =
+    await db.rawQuery("SELECT * FROM Rooms WHERE id=?", [id]);
+    if (res.length != 1) return null;
+    return Room.getRoomFromTableRow(res[0], client);
   }
 
   /// Calculates and returns an avatar for a direct chat by a given [roomID].
