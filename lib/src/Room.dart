@@ -172,14 +172,60 @@ class Room {
   }
 
   /// Call the Matrix API to send a simple text message.
-  Future<void> sendText(String message) async {
-    dynamic res = await client.connection.jsonRequest(
+  Future<dynamic> sendText(String message, {String txid = null}) async {
+    if (txid == null) txid = "txid${DateTime.now().millisecondsSinceEpoch}";
+    final dynamic res = await client.connection.jsonRequest(
         type: "PUT",
         action:
-        "/client/r0/rooms/${id}/send/m.room.message/${new DateTime.now()}",
+        "/client/r0/rooms/${id}/send/m.room.message/$txid",
         data: {"msgtype": "m.text", "body": message});
     if (res["errcode"] == "M_LIMIT_EXCEEDED")
       client.connection.onError.add(res["error"]);
+    return res;
+  }
+
+  Future<String> sendTextEvent(String message) async {
+
+    final String type = "m.room.message";
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final String messageID = "msg$now";
+
+    EventUpdate eventUpdate = EventUpdate(
+      type: type,
+      roomID: id,
+      eventType: "timeline",
+      content: {
+        "type": type,
+        "id": messageID,
+        "sender": client.userID,
+        "status": 0,
+        "origin_server_ts": now,
+        "content": {
+          "msgtype": "m.text",
+          "body": message,
+        }
+      }
+    );
+    client.connection.onEvent.add(eventUpdate);
+    await client.store.transaction(() {
+      client.store.storeEventUpdate(eventUpdate);
+    });
+    final dynamic res = await sendText(message, txid: messageID);
+    if (res is ErrorResponse) {
+      client.store.db.rawUpdate("UPDATE Events SET status=-1 WHERE id=?", [ messageID ]);
+    }
+    else {
+      final String newEventID = res["event_id"];
+      final List<Map<String,dynamic>> event = await client.store.db.rawQuery("SELECT * FROM Events WHERE id=?", [ newEventID ]);
+      if (event.length > 0) {
+        client.store.db.rawDelete("DELETE FROM Events WHERE id=?", [messageID]);
+      }
+      else {
+        client.store.db.rawUpdate("UPDATE Events SET id=?, status=1 WHERE id=?", [ newEventID, messageID ]);
+      }
+      return newEventID;
+    }
+    return null;
   }
 
   /// Call the Matrix API to leave this room.
