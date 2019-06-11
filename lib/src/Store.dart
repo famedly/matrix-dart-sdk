@@ -435,13 +435,16 @@ class Store {
   }
 
   /// Returns all rooms, the client is participating. Excludes left rooms.
-  Future<List<Room>> getRoomList() async {
+  Future<List<Room>> getRoomList({bool onlyLeft = false, bool onlyDirect = false, bool onlyGroups=false}) async {
+    if (onlyDirect && onlyGroups) return [];
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT rooms.id, rooms.topic, rooms.membership, rooms.notification_count, rooms.highlight_count, rooms.avatar_url, rooms.unread, " +
-            " events.id AS eventsid, origin_server_ts, events.content_body, events.sender, events.state_key, events.content_json, events.type " +
+        "SELECT * " +
             " FROM Rooms rooms LEFT JOIN Events events " +
             " ON rooms.id=events.chat_id " +
-            " WHERE rooms.membership!='leave' " +
+            " WHERE rooms.id!='' " +
+            " AND rooms.membership" + (onlyLeft ? "=" : "!=") +"'left' " +
+            (onlyDirect ? " AND rooms.direct_chat_matrix_id!= '' " : "") +
+            (onlyGroups ? " AND rooms.direct_chat_matrix_id= '' " : "") +
             " GROUP BY rooms.id " +
             " ORDER BY origin_server_ts DESC ");
     List<Room> roomList = [];
