@@ -52,7 +52,7 @@ class Store {
   _init() async{
     var databasePath = await getDatabasesPath();
     String path = p.join(databasePath, "FluffyMatrix.db");
-    _db = await openDatabase(path, version: 3,
+    _db = await openDatabase(path, version: 4,
         onCreate: (Database db, int version) async {
           await createTables(db);
         },
@@ -148,17 +148,16 @@ class Store {
     // Insert the chat into the database if not exists
    txn.rawInsert(
         "INSERT OR IGNORE INTO Rooms " +
-            "VALUES(?, ?, '', 0, 0, 0, '', '', '', 0, '', '', '', '', '', '', '', '', 0, 50, 50, 0, 50, 50, 0, 50, 100, 50, 50, 50, 100) ",
+            "VALUES(?, ?, '', 0, 0, '', '', '', 0, '', '', '', '', '', '', '', '', 0, 50, 50, 0, 50, 50, 0, 50, 100, 50, 50, 50, 100) ",
         [roomUpdate.id, roomUpdate.membership]);
 
     // Update the notification counts and the limited timeline boolean
     txn.rawUpdate(
-        "UPDATE Rooms SET highlight_count=?, notification_count=?, membership=?, limitedTimeline=? WHERE id=? ",
+        "UPDATE Rooms SET highlight_count=?, notification_count=?, membership=? WHERE id=? ",
         [
           roomUpdate.highlight_count,
           roomUpdate.notification_count,
           roomUpdate.membership,
-          roomUpdate.limitedTimeline,
           roomUpdate.id
         ]);
 
@@ -498,7 +497,6 @@ class Store {
       'topic TEXT, ' +
       'highlight_count INTEGER, ' +
       'notification_count INTEGER, ' +
-      'limitedTimeline INTEGER, ' +
       'prev_batch TEXT, ' +
       'avatar_url TEXT, ' +
       'draft TEXT, ' +
