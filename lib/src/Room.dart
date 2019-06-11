@@ -287,7 +287,7 @@ class Room {
   /// Load all events for a given room from the store. This includes all
   /// senders of those events, who will be added to the participants list.
   Future<List<Event>> loadEvents() async {
-    this.events = await client.store.getEventList(id);
+    this.events = await client.store.getEventList(this);
 
     Map<String,bool> participantMap = {};
     for (num i = 0; i < events.length; i++) {
@@ -302,7 +302,7 @@ class Room {
 
   /// Load all participants for a given room from the store.
   Future<List<User>> loadParticipants() async {
-    this.participants = await client.store.loadParticipants(id);
+    this.participants = await client.store.loadParticipants(this);
     return this.participants;
   }
 
@@ -319,11 +319,11 @@ class Room {
     for (num i = 0; i < res["chunk"].length; i++) {
       User newUser = User(res["chunk"][i]["state_key"],
           displayName: res["chunk"][i]["content"]["displayname"] ?? "",
-          status: res["chunk"][i]["content"]["membership"] ?? "",
-          directChatRoomId: "",
-          avatar_url:
-              MxContent(res["chunk"][i]["content"]["avatar_url"] ?? ""));
-      if (newUser.status != "leave") participants.add(newUser);
+          membership: res["chunk"][i]["content"]["membership"] ?? "",
+          avatarUrl:
+              MxContent(res["chunk"][i]["content"]["avatar_url"] ?? ""),
+          room: this);
+      if (newUser.membership != "leave") participants.add(newUser);
     }
 
     this.participants = participants;

@@ -28,43 +28,79 @@ import 'package:famedlysdk/src/Room.dart';
 /// Represents a Matrix User which may be a participant in a Matrix Room.
 class User {
 
-  /// The membership status of the user
-  final String status;
-
-  /// The full qualified Matrix ID in the format @username:server.abc
-  final String mxid;
+  /// The full qualified Matrix ID in the format @username:server.abc.
+  final String id;
 
   /// The displayname of the user if the user has set one.
   final String displayName;
 
+  /// The membership status of the user. One of:
+  /// join
+  /// invite
+  /// leave
+  /// ban
+  String membership;
+
   /// The avatar if the user has one.
-  final MxContent avatar_url;
+  MxContent avatarUrl;
 
-  final String directChatRoomId;
+  /// The powerLevel of the user. Normally:
+  /// 0=Normal user
+  /// 50=Moderator
+  /// 100=Admin
+  int powerLevel = 0;
 
+  /// All users normally belong to a room.
   final Room room;
 
-  const User(
-    this.mxid, {
-    this.status,
+  @Deprecated("Use membership instead!")
+  String get status => membership;
+
+  @Deprecated("Use ID instead!")
+  String get mxid => id;
+
+  @Deprecated("Use avatarUrl instead!")
+  MxContent get avatar_url => avatarUrl;
+
+  User(this.id, {
+    this.membership,
     this.displayName,
-    this.avatar_url,
-    this.directChatRoomId,
+    this.avatarUrl,
+    this.powerLevel,
     this.room,
   });
 
   /// Returns the displayname or the local part of the Matrix ID if the user
   /// has no displayname.
-  String calcDisplayname() => displayName.isEmpty
-      ? mxid.replaceFirst("@", "").split(":")[0]
-      : displayName;
+  String calcDisplayname() =>
+      displayName.isEmpty
+          ? mxid.replaceFirst("@", "").split(":")[0]
+          : displayName;
 
   /// Creates a new User object from a json string like a row from the database.
-  static User fromJson(Map<String, dynamic> json) {
+  static User fromJson(Map<String, dynamic> json, Room room) {
     return User(json['matrix_id'],
         displayName: json['displayname'],
-        avatar_url: MxContent(json['avatar_url']),
-        status: "",
-        directChatRoomId: "");
+        avatarUrl: MxContent(json['avatar_url']),
+        membership: "",
+        room: room);
+  }
+
+  /// Call the Matrix API to kick this user from this room.
+  Future<dynamic> kick() async {
+    dynamic res = await room.kick(id);
+    return res;
+  }
+
+  /// Call the Matrix API to ban this user from this room.
+  Future<dynamic> ban() async {
+    dynamic res = await room.ban(id);
+    return res;
+  }
+
+  /// Call the Matrix API to unban this banned user from this room.
+  Future<dynamic> unban() async {
+    dynamic res = await room.unban(id);
+    return res;
   }
 }

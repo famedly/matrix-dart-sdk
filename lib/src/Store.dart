@@ -62,6 +62,7 @@ class Store {
           if (oldVersion != newVersion) {
             await db.execute("DROP TABLE IF EXISTS Rooms");
             await db.execute("DROP TABLE IF EXISTS Participants");
+            await db.execute("DROP TABLE IF EXISTS User");
             await db.execute("DROP TABLE IF EXISTS Events");
             db.rawUpdate("UPDATE Clients SET prev_batch='' WHERE client=?",
                 [client.clientName]);
@@ -92,7 +93,7 @@ class Store {
   Future<void> createTables(Database db) async{
     await db.execute(ClientsScheme);
     await db.execute(RoomsScheme);
-    await db.execute(ParticipantsScheme);
+    await db.execute(UserScheme);
     await db.execute(EventsScheme);
   }
 
@@ -122,7 +123,7 @@ class Store {
   Future<void> clear() async{
     await _db.rawDelete("DELETE FROM Clients WHERE client=?", [client.clientName]);
     await _db.rawDelete("DELETE FROM Rooms");
-    await _db.rawDelete("DELETE FROM Participants");
+    await _db.rawDelete("DELETE FROM User");
     await _db.rawDelete("DELETE FROM Events");
     return;
   }
@@ -284,14 +285,14 @@ class Store {
         }
 
         // Update membership table
-       txn.rawInsert("INSERT OR IGNORE INTO Participants VALUES(?,?,?,?,?,0)", [
+       txn.rawInsert("INSERT OR IGNORE INTO User VALUES(?,?,?,?,?,0)", [
           chat_id,
           state_key,
           insertDisplayname,
           insertAvatarUrl,
           membership
         ]);
-        String queryStr = "UPDATE Participants SET membership=?";
+        String queryStr = "UPDATE User SET membership=?";
         List<String> queryArgs = [membership];
 
         if (eventContent["content"]["displayname"] is String) {
@@ -366,10 +367,10 @@ class Store {
               .forEach((String user, dynamic value) async {
             num power_level = eventContent["content"]["users"][user];
             txn.rawUpdate(
-                "UPDATE Participants SET power_level=? WHERE matrix_id=? AND chat_id=?",
+                "UPDATE User SET power_level=? WHERE matrix_id=? AND chat_id=?",
                 [power_level, user, chat_id]);
            txn.rawInsert(
-                "INSERT OR IGNORE INTO Participants VALUES(?, ?, '', '', ?, ?)",
+                "INSERT OR IGNORE INTO User VALUES(?, ?, '', '', ?, ?)",
                 [chat_id, user, "unknown", power_level]);
           });
         }
@@ -377,59 +378,59 @@ class Store {
     }
   }
 
-  /// Returns a User object by a given Matrix ID and a Room ID.
+  /// Returns a User object by a given Matrix ID and a Room.
   Future<User> getUser(
-      {String matrixID, String roomID}) async {
+      {String matrixID, Room room}) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM Participants WHERE matrix_id=? AND chat_id=?",
-        [matrixID, roomID]);
+        "SELECT * FROM User WHERE matrix_id=? AND chat_id=?",
+        [matrixID, room.id]);
     if (res.length != 1) return null;
-    return User.fromJson(res[0]);
+    return User.fromJson(res[0], room);
   }
 
   /// Loads all Users in the database to provide a contact list.
   Future<List<User>> loadContacts() async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM Participants WHERE matrix_id!=? GROUP BY matrix_id ORDER BY displayname",
+        "SELECT * FROM User WHERE matrix_id!=? GROUP BY matrix_id ORDER BY displayname",
         [client.userID]);
     List<User> userList = [];
-    for (int i = 0; i < res.length; i++) userList.add(User.fromJson(res[i]));
+    for (int i = 0; i < res.length; i++) userList.add(User.fromJson(res[i], null));
     return userList;
   }
 
   /// Returns all users of a room by a given [roomID].
-  Future<List<User>> loadParticipants(String roomID) async {
+  Future<List<User>> loadParticipants(Room room) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
         "SELECT * " +
-            " FROM Participants " +
+            " FROM User " +
             " WHERE chat_id=? " +
             " AND membership='join'",
-        [roomID]);
+        [room.id]);
 
     List<User> participants = [];
 
     for (num i = 0; i < res.length; i++) {
-      participants.add(User.fromJson(res[i]));
+      participants.add(User.fromJson(res[i], room));
     }
 
     return participants;
   }
 
   /// Returns a list of events for the given room and sets all participants.
-  Future<List<Event>> getEventList(String roomID) async{
+  Future<List<Event>> getEventList(Room room) async{
     List<Map<String, dynamic>> eventRes = await db.rawQuery(
         "SELECT * " +
-            " FROM Events events, Participants participants " +
+            " FROM Events events, User user " +
             " WHERE events.chat_id=?" +
-            " AND events.sender=participants.matrix_id " +
+            " AND events.sender=user.matrix_id " +
             " GROUP BY events.id " +
             " ORDER BY origin_server_ts DESC",
-        [roomID]);
+        [room.id]);
 
     List<Event> eventList = [];
 
     for (num i = 0; i < eventRes.length; i++)
-      eventList.add(Event.fromJson(eventRes[i]));
+      eventList.add(Event.fromJson(eventRes[i], room));
     return eventList;
   }
 
@@ -469,10 +470,10 @@ class Store {
       String roomID) async {
     String avatarStr = "";
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT avatar_url FROM Participants " +
-            " WHERE Participants.chat_id=? " +
-            " AND (Participants.membership='join' OR Participants.membership='invite') " +
-            " AND Participants.matrix_id!=? ",
+        "SELECT avatar_url FROM User " +
+            " WHERE User.chat_id=? " +
+            " AND (User.membership='join' OR User.membership='invite') " +
+            " AND User.matrix_id!=? ",
         [roomID, client.userID]);
     if (res.length == 1) avatarStr = res[0]["avatar_url"];
     return avatarStr;
@@ -485,10 +486,10 @@ class Store {
       String roomID) async {
     String displayname = 'Empty chat';
     List<Map<String, dynamic>> rs = await db.rawQuery(
-        "SELECT Participants.displayname, Participants.matrix_id, Participants.membership FROM Participants " +
-            " WHERE Participants.chat_id=? " +
-            " AND (Participants.membership='join' OR Participants.membership='invite') " +
-            " AND Participants.matrix_id!=? ",
+        "SELECT User.displayname, User.matrix_id, User.membership FROM User " +
+            " WHERE User.chat_id=? " +
+            " AND (User.membership='join' OR User.membership='invite') " +
+            " AND User.matrix_id!=? ",
         [roomID, client.userID]);
     if (rs.length > 0) {
       displayname = "";
@@ -572,7 +573,7 @@ class Store {
       'UNIQUE(id))';
 
   /// The database sheme for the User class.
-  static final String ParticipantsScheme = 'CREATE TABLE IF NOT EXISTS Participants(' +
+  static final String UserScheme = 'CREATE TABLE IF NOT EXISTS User(' +
       'chat_id TEXT, ' + // The chat id of this membership
       'matrix_id TEXT, ' + // The matrix id of this user
       'displayname TEXT, ' +

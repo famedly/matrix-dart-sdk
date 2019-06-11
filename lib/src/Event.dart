@@ -25,6 +25,7 @@ import 'dart:convert';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'package:famedlysdk/src/Client.dart';
 import './User.dart';
+import './Room.dart';
 
 /// A single Matrix event, e.g. a message in a chat.
 class Event {
@@ -77,7 +78,7 @@ class Event {
 
   }
 
-  static Event fromJson(Map<String, dynamic> jsonObj) {
+  static Event fromJson(Map<String, dynamic> jsonObj, Room room) {
     Map<String,dynamic> content;
     try {
       content = json.decode(jsonObj["content_json"]);
@@ -87,7 +88,7 @@ class Event {
     }
     return Event(
       jsonObj["id"],
-      User.fromJson(jsonObj),
+      User.fromJson(jsonObj, room),
       ChatTime(jsonObj["origin_server_ts"]),
       stateKey: User(jsonObj["state_key"]),
       environment: jsonObj["type"],
@@ -97,7 +98,7 @@ class Event {
     );
   }
 
-  static Future<List<Event>> getEventList(Client matrix, String roomID) async{
+  static Future<List<Event>> getEventList(Client matrix, Room room) async{
     List<Map<String, dynamic>> eventRes = await matrix.store.db.rawQuery(
         "SELECT * " +
             " FROM Events events, Participants participants " +
@@ -105,12 +106,12 @@ class Event {
             " AND events.sender=participants.matrix_id " +
             " GROUP BY events.id " +
             " ORDER BY origin_server_ts DESC",
-        [roomID]);
+        [room.id]);
 
     List<Event> eventList = [];
 
     for (num i = 0; i < eventRes.length; i++)
-      eventList.add(Event.fromJson(eventRes[i]));
+      eventList.add(Event.fromJson(eventRes[i], room));
     return eventList;
   }
 
