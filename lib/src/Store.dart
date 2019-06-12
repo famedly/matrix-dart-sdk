@@ -467,10 +467,9 @@ class Store {
         "SELECT rooms.*, events.origin_server_ts, events.content_json, events.type, events.sender, events.status, events.state_key " +
             " FROM Rooms rooms LEFT JOIN Events events " +
             " ON rooms.id=events.chat_id " +
-            " WHERE rooms.id!='' " +
-            " AND rooms.membership" +
+            " WHERE rooms.membership" +
             (onlyLeft ? "=" : "!=") +
-            "'left' " +
+            "'leave' " +
             (onlyDirect ? " AND rooms.direct_chat_matrix_id!= '' " : "") +
             (onlyGroups ? " AND rooms.direct_chat_matrix_id= '' " : "") +
             " GROUP BY rooms.id " +
