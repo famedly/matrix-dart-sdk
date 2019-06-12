@@ -177,11 +177,13 @@ class Store {
   /// Stores an UserUpdate object in the database. Must be called inside of
   /// [transaction].
   Future<void> storeUserEventUpdate(UserUpdate userUpdate) {
+    print("New userUpdate");
     dynamic eventContent = userUpdate.content;
     String type = userUpdate.type;
 
     switch (userUpdate.eventType) {
       case "m.direct":
+        print("New direct update: ${userUpdate.content}");
         if (userUpdate.content["content"] is Map<String, List<String>>) {
           Map<String, List<String>> directMap = userUpdate.content["content"];
           directMap.forEach((String key, List<String> value) {
