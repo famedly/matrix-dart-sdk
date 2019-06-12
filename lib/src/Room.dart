@@ -377,7 +377,7 @@ class Room {
         "power_event_power_levels": row["power_event_power_levels"],
       },
       client: matrix,
-      events: [],
+      events: [Event.fromJson(row, null)],
       participants: [],
     );
   }
