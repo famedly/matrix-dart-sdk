@@ -177,7 +177,7 @@ class Store {
   /// Stores an UserUpdate object in the database. Must be called inside of
   /// [transaction].
   Future<void> storeUserEventUpdate(UserUpdate userUpdate) {
-    print("New userUpdate");
+    print("New userUpdate ${userUpdate.eventType} und ${userUpdate.type}");
     dynamic eventContent = userUpdate.content;
     String type = userUpdate.type;
 
