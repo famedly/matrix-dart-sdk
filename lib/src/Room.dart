@@ -349,7 +349,7 @@ class Room {
       id: row["id"],
       name: name,
       topic: row["description"],
-      avatar: avatarUrl,
+      avatar: MxContent(avatarUrl),
       notificationCount: row["notification_count"],
       highlightCount: row["highlight_count"],
       unread: ChatTime(row["unread"]),
