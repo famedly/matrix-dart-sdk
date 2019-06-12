@@ -74,8 +74,8 @@ class Event {
 
   /// Use this to get the body.
   String getBody () {
-    if (formattedText != "") return formattedText;
     if (text != "") return text;
+    if (formattedText != "") return formattedText;
     return "*** Unable to parse Content ***";
   }
 
