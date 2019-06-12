@@ -66,7 +66,7 @@ void main() {
       expect(event.status, status);
       expect(event.text, body);
       expect(event.formattedText, formatted_body);
-      expect(event.getBody(), formatted_body);
+      expect(event.getBody(), body);
       expect(event.type, EventTypes.Text);
     });
   });

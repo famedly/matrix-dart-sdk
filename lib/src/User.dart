@@ -21,13 +21,13 @@
  * along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
 import 'package:famedlysdk/src/Room.dart';
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
 class User {
-
   /// The full qualified Matrix ID in the format @username:server.abc.
   final String id;
 
@@ -62,7 +62,8 @@ class User {
   @Deprecated("Use avatarUrl instead!")
   MxContent get avatar_url => avatarUrl;
 
-  User(this.id, {
+  User(
+    this.id, {
     this.membership,
     this.displayName,
     this.avatarUrl,
@@ -72,10 +73,9 @@ class User {
 
   /// Returns the displayname or the local part of the Matrix ID if the user
   /// has no displayname.
-  String calcDisplayname() =>
-      displayName.isEmpty
-          ? mxid.replaceFirst("@", "").split(":")[0]
-          : displayName;
+  String calcDisplayname() => displayName.isEmpty
+      ? mxid.replaceFirst("@", "").split(":")[0]
+      : displayName;
 
   /// Creates a new User object from a json string like a row from the database.
   static User fromJson(Map<String, dynamic> json, Room room) {
@@ -90,13 +90,15 @@ class User {
   /// Checks if the client's user has the permission to kick this user.
   Future<bool> get canKick async {
     final int ownPowerLevel = await room.client.store.getPowerLevel(room.id);
-    return ownPowerLevel > powerLevel && ownPowerLevel >= room.powerLevels["power_kick"];
+    return ownPowerLevel > powerLevel &&
+        ownPowerLevel >= room.powerLevels["power_kick"];
   }
 
   /// Checks if the client's user has the permission to ban or unban this user.
   Future<bool> get canBan async {
     final int ownPowerLevel = await room.client.store.getPowerLevel(room.id);
-    return ownPowerLevel > powerLevel && ownPowerLevel >= room.powerLevels["power_ban"];
+    return ownPowerLevel > powerLevel &&
+        ownPowerLevel >= room.powerLevels["power_ban"];
   }
 
   /// Call the Matrix API to kick this user from this room.
@@ -130,8 +132,9 @@ class User {
     if (roomID != null) return roomID;
 
     // Start a new direct chat
-    Map<String,dynamic> resp = await room.client.connection.jsonRequest(type: "POST", action: "/client/r0/createRoom", data: {
-      "invite": [ id ],
+    Map<String, dynamic> resp = await room.client.connection
+        .jsonRequest(type: "POST", action: "/client/r0/createRoom", data: {
+      "invite": [id],
       "is_direct": true,
       "preset": "trusted_private_chat"
     });
@@ -145,5 +148,4 @@ class User {
 
     return resp["room_id"];
   }
-
 }

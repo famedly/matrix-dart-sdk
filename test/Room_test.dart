@@ -107,7 +107,7 @@ void main() {
       expect(room.guestAccess, guestAccess);
       expect(room.historyVisibility, historyVisibility);
       expect(room.joinRules, joinRules);
-      expect(room.lastMessage, "<b>Hello</b> World");
+      expect(room.lastMessage, body);
       expect(room.timeCreated.toTimeStamp() >= now, true);
       room.powerLevels.forEach((String key, int value) {
         expect(value, 0);
