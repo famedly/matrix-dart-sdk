@@ -73,7 +73,11 @@ class Event {
   String get formattedText => content["formatted_body"] ?? "";
 
   /// Use this to get the body.
-  String getBody () => formattedText ?? text ?? "*** Unable to parse Content ***";
+  String getBody () {
+    if (formattedText != "") return formattedText;
+    if (text != "") return text;
+    return "*** Unable to parse Content ***";
+  }
 
   /// Get the real type.
   EventTypes get type {
