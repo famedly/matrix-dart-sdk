@@ -136,6 +136,13 @@ class User {
       "preset": "trusted_private_chat"
     });
 
+    if (resp is ErrorResponse) return null;
+
+    // TODO: Update m.direct data
+    /*room.client.connection.jsonRequest(type: "PUT", action: "/client/r0/user/${room.client.userID}/account_data/m.direct", data: {
+
+    });*/
+
     return resp["room_id"];
   }
 
