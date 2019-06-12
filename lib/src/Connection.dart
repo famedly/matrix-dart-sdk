@@ -65,7 +65,7 @@ class Connection {
 
   /// Outside of rooms there are account updates like account_data or presences.
   final StreamController<UserUpdate> onUserEvent =
-  new StreamController.broadcast();
+      new StreamController.broadcast();
 
   /// Called when the login state e.g. user gets logged out.
   final StreamController<LoginState> onLoginStateChanged =
@@ -187,6 +187,8 @@ class Connection {
     if (client.isLogged())
       headers["Authorization"] = "Bearer ${client.accessToken}";
 
+    if (client.debug) print("[REQUEST $type] Action: $action, Data: $data");
+
     http.Response resp;
     try {
       switch (type) {
@@ -212,12 +214,15 @@ class Connection {
           break;
       }
     } on TimeoutException catch (_) {
-
       return ErrorResponse(
-          error: "No connection possible...", errcode: "TIMEOUT", request: resp?.request);
+          error: "No connection possible...",
+          errcode: "TIMEOUT",
+          request: resp?.request);
     } catch (e) {
       return ErrorResponse(
-          error: "No connection possible...", errcode: "NO_CONNECTION", request: resp.request);
+          error: "No connection possible...",
+          errcode: "NO_CONNECTION",
+          request: resp.request);
     }
 
     Map<String, dynamic> jsonResp;
@@ -225,12 +230,16 @@ class Connection {
       jsonResp = jsonDecode(resp.body) as Map<String, dynamic>;
     } catch (e) {
       return ErrorResponse(
-          error: "No connection possible...", errcode: "MALFORMED", request: resp.request);
+          error: "No connection possible...",
+          errcode: "MALFORMED",
+          request: resp.request);
     }
     if (jsonResp.containsKey("errcode") && jsonResp["errcode"] is String) {
       if (jsonResp["errcode"] == "M_UNKNOWN_TOKEN") clear();
       return ErrorResponse.fromJson(jsonResp, resp.request);
     }
+
+    if (client.debug) print("[RESPONSE] ${jsonResp.toString()}");
 
     return jsonResp;
   }
@@ -339,8 +348,7 @@ class Connection {
 
       if (room["invite_state"] is Map<String, dynamic> &&
           room["invite_state"]["events"] is List<dynamic>)
-        _handleRoomEvents(
-            id, room["invite_state"]["events"], "invite_state");
+        _handleRoomEvents(id, room["invite_state"]["events"], "invite_state");
 
       if (room["timeline"] is Map<String, dynamic> &&
           room["timeline"]["events"] is List<dynamic>)
@@ -352,8 +360,7 @@ class Connection {
 
       if (room["account_data"] is Map<String, dynamic> &&
           room["account_data"]["events"] is List<dynamic>)
-        _handleRoomEvents(
-            id, room["account_data"]["events"], "account_data");
+        _handleRoomEvents(id, room["account_data"]["events"], "account_data");
     });
   }
 
@@ -391,8 +398,7 @@ class Connection {
     }
   }
 
-  void _handleRoomEvents(
-      String chat_id, List<dynamic> events, String type) {
+  void _handleRoomEvents(String chat_id, List<dynamic> events, String type) {
     for (num i = 0; i < events.length; i++) {
       _handleEvent(events[i], chat_id, type);
     }
@@ -411,8 +417,7 @@ class Connection {
       }
   }
 
-  void _handleEvent(
-      Map<String, dynamic> event, String roomID, String type) {
+  void _handleEvent(Map<String, dynamic> event, String roomID, String type) {
     if (event["type"] is String && event["content"] is dynamic) {
       EventUpdate update = EventUpdate(
         eventType: event["type"],

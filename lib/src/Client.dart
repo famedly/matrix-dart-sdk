@@ -38,7 +38,7 @@ class Client {
   /// Optional persistent store for all data.
   Store store;
 
-  Client(this.clientName) {
+  Client(this.clientName, {this.debug = false}) {
     connection = Connection(this);
 
     if (this.clientName != "testclient") store = Store(this);
@@ -46,6 +46,9 @@ class Client {
       print("LoginState: ${loginState.toString()}");
     });
   }
+
+  /// Whether debug prints should be displayed.
+  final bool debug;
 
   /// The required name for this client.
   final String clientName;
