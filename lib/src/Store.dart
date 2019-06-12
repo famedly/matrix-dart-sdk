@@ -185,8 +185,10 @@ class Store {
       case "m.direct":
         print("New direct update: ${userUpdate.content}");
         if (userUpdate.content["content"] is Map<String, List<String>>) {
+          print("Is a Map of String to List of Strings");
           Map<String, List<String>> directMap = userUpdate.content["content"];
           directMap.forEach((String key, List<String> value) {
+            print("Key $key, Value: $value");
             if (value.length > 0)
               txn.rawUpdate(
                   "UPDATE Rooms SET direct_chat_matrix_id=? WHERE id=?",
