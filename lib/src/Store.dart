@@ -184,7 +184,7 @@ class Store {
     switch (userUpdate.eventType) {
       case "m.direct":
         print("New direct update: ${userUpdate.content}");
-        if (userUpdate.content["content"] is Map<String, List<String>>) {
+        if (userUpdate.content["content"] is Map<String, List<dynamic>>) {
           print("Is a Map of String to List of Strings");
           Map<String, List<String>> directMap = userUpdate.content["content"];
           directMap.forEach((String key, List<String> value) {
