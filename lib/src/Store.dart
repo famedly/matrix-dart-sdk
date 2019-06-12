@@ -186,10 +186,10 @@ class Store {
         print("New direct update: type: ${userUpdate.content["content"].runtimeType}");
         if (userUpdate.content["content"] is Map<String, dynamic>) {
           print("Is a Map of String to List of Strings");
-          Map<String, List<String>> directMap = userUpdate.content["content"];
-          directMap.forEach((String key, List<String> value) {
+          final Map<String,dynamic> directMap = userUpdate.content["content"];
+          directMap.forEach((String key, dynamic value) {
             print("Key $key, Value: $value");
-            if (value.length > 0)
+            if (value is List<dynamic> && value.length > 0)
               txn.rawUpdate(
                   "UPDATE Rooms SET direct_chat_matrix_id=? WHERE id=?",
                   [key, value[0]]);
