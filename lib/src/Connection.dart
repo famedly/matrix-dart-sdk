@@ -214,7 +214,7 @@ class Connection {
     } on TimeoutException catch (_) {
 
       return ErrorResponse(
-          error: "No connection possible...", errcode: "TIMEOUT", request: resp.request);
+          error: "No connection possible...", errcode: "TIMEOUT", request: resp?.request);
     } catch (e) {
       return ErrorResponse(
           error: "No connection possible...", errcode: "NO_CONNECTION", request: resp.request);
