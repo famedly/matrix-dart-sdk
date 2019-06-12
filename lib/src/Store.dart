@@ -417,7 +417,7 @@ class Store {
         [client.userID]);
     List<User> userList = [];
     for (int i = 0; i < res.length; i++)
-      userList.add(User.fromJson(res[i], client));
+      userList.add(User.fromJson(res[i], Room(id: "", client: client)));
     return userList;
   }
 
