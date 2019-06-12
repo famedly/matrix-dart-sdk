@@ -125,8 +125,9 @@ class User {
     return res;
   }
 
-  /// Returns an existing direct chat with this user or creates a new one.
-  Future<String> startDirectChat() async {
+  /// Returns an existing direct chat ID with this user or creates a new one.
+  /// May return ErrorResponse on error.
+  Future<dynamic> startDirectChat() async {
     // Try to find an existing direct chat
     String roomID = await room.client?.store.getDirectChatRoomID(id);
     if (roomID != null) return roomID;
@@ -139,7 +140,7 @@ class User {
       "preset": "trusted_private_chat"
     });
 
-    if (resp is ErrorResponse || resp["room_id"] == null) return null;
+    if (resp is ErrorResponse || resp["room_id"] == null) return resp;
 
     final String newRoomID = resp["room_id"];
 
