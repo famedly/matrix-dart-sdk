@@ -576,6 +576,11 @@ class Store {
     return directChats;
   }
 
+  Future<void> forgetRoom(String roomID) async {
+    await db.rawDelete("DELETE FROM Rooms WHERE id=?", [roomID]);
+    return;
+  }
+
   /// The database sheme for the Client class.
   static final String ClientsScheme = 'CREATE TABLE IF NOT EXISTS Clients(' +
       'client TEXT PRIMARY KEY, ' +

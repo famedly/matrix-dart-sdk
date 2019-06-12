@@ -233,6 +233,7 @@ class Room {
 
   /// Call the Matrix API to forget this room if you already left it.
   Future<dynamic> forget() async {
+    client.store.forgetRoom(id);
     dynamic res = await client.connection
         .jsonRequest(type: "POST", action: "/client/r0/rooms/${id}/forget");
     if (res is ErrorResponse) client.connection.onError.add(res);
