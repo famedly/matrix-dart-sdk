@@ -132,20 +132,19 @@ class User {
     if (roomID != null) return roomID;
 
     // Start a new direct chat
-    Map<String, dynamic> resp = await room.client.connection
+    final dynamic resp = await room.client.connection
         .jsonRequest(type: "POST", action: "/client/r0/createRoom", data: {
       "invite": [id],
       "is_direct": true,
       "preset": "trusted_private_chat"
     });
 
-    if (resp is ErrorResponse) return null;
+    if (resp is ErrorResponse || resp["room_id"] == null) return null;
 
-    // TODO: Update m.direct data
-    /*room.client.connection.jsonRequest(type: "PUT", action: "/client/r0/user/${room.client.userID}/account_data/m.direct", data: {
+    final String newRoomID = resp["room_id"];
 
-    });*/
+    await Room(id: newRoomID).addToDirectChat(id);
 
-    return resp["room_id"];
+    return newRoomID;
   }
 }

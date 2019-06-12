@@ -44,7 +44,7 @@ class Room {
   String topic;
 
   /// The avatar of the room if set by a participant.
-  MxContent avatar;
+  MxContent avatar = MxContent("");
 
   /// The count of unread notifications.
   int notificationCount;
