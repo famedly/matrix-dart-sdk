@@ -144,7 +144,7 @@ class User {
 
     final String newRoomID = resp["room_id"];
 
-    await Room(id: newRoomID).addToDirectChat(id);
+    await Room(id: newRoomID, client: room.client).addToDirectChat(id);
 
     return newRoomID;
   }
