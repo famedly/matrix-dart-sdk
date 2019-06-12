@@ -159,7 +159,7 @@ class Room {
     dynamic res = await client.connection.jsonRequest(
         type: "PUT",
         action:
-        "/client/r0/rooms/${id}/send/m.room.topic/${new DateTime.now()}",
+            "/client/r0/rooms/${id}/send/m.room.topic/${new DateTime.now()}",
         data: {"topic": newName});
     if (res is ErrorResponse) client.connection.onError.add(res);
     return res;
@@ -176,8 +176,7 @@ class Room {
     if (txid == null) txid = "txid${DateTime.now().millisecondsSinceEpoch}";
     final dynamic res = await client.connection.jsonRequest(
         type: "PUT",
-        action:
-        "/client/r0/rooms/${id}/send/m.room.message/$txid",
+        action: "/client/r0/rooms/${id}/send/m.room.message/$txid",
         data: {"msgtype": "m.text", "body": message});
     if (res["errcode"] == "M_LIMIT_EXCEEDED")
       client.connection.onError.add(res["error"]);
@@ -185,43 +184,39 @@ class Room {
   }
 
   Future<String> sendTextEvent(String message) async {
-
     final String type = "m.room.message";
     final int now = DateTime.now().millisecondsSinceEpoch;
     final String messageID = "msg$now";
 
-    EventUpdate eventUpdate = EventUpdate(
-      type: type,
-      roomID: id,
-      eventType: "timeline",
-      content: {
-        "type": type,
-        "id": messageID,
-        "sender": client.userID,
-        "status": 0,
-        "origin_server_ts": now,
-        "content": {
-          "msgtype": "m.text",
-          "body": message,
-        }
+    EventUpdate eventUpdate =
+        EventUpdate(type: type, roomID: id, eventType: "timeline", content: {
+      "type": type,
+      "id": messageID,
+      "sender": client.userID,
+      "status": 0,
+      "origin_server_ts": now,
+      "content": {
+        "msgtype": "m.text",
+        "body": message,
       }
-    );
+    });
     client.connection.onEvent.add(eventUpdate);
     await client.store.transaction(() {
       client.store.storeEventUpdate(eventUpdate);
     });
     final dynamic res = await sendText(message, txid: messageID);
     if (res is ErrorResponse) {
-      client.store.db.rawUpdate("UPDATE Events SET status=-1 WHERE id=?", [ messageID ]);
-    }
-    else {
+      client.store.db
+          .rawUpdate("UPDATE Events SET status=-1 WHERE id=?", [messageID]);
+    } else {
       final String newEventID = res["event_id"];
-      final List<Map<String,dynamic>> event = await client.store.db.rawQuery("SELECT * FROM Events WHERE id=?", [ newEventID ]);
+      final List<Map<String, dynamic>> event = await client.store.db
+          .rawQuery("SELECT * FROM Events WHERE id=?", [newEventID]);
       if (event.length > 0) {
         client.store.db.rawDelete("DELETE FROM Events WHERE id=?", [messageID]);
-      }
-      else {
-        client.store.db.rawUpdate("UPDATE Events SET id=?, status=1 WHERE id=?", [ newEventID, messageID ]);
+      } else {
+        client.store.db.rawUpdate("UPDATE Events SET id=?, status=1 WHERE id=?",
+            [newEventID, messageID]);
       }
       return newEventID;
     }
@@ -306,7 +301,8 @@ class Room {
 
     if (resp is ErrorResponse) return;
 
-    if (!(resp["chunk"] is List<dynamic> && resp["chunk"].length > 0 &&
+    if (!(resp["chunk"] is List<dynamic> &&
+        resp["chunk"].length > 0 &&
         resp["end"] is String)) return;
 
     List<dynamic> history = resp["chunk"];
@@ -321,22 +317,42 @@ class Room {
         client.connection.onEvent.add(eventUpdate);
         client.store.storeEventUpdate(eventUpdate);
         client.store.txn.rawUpdate(
-            "UPDATE Rooms SET prev_batch=? WHERE id=?", [ resp["end"], id ]);
+            "UPDATE Rooms SET prev_batch=? WHERE id=?", [resp["end"], id]);
       }
     });
+  }
+
+  Future<dynamic> addToDirectChat(String userID) async {
+    Map<String, List<String>> directChats =
+        await client.store.getAccountDataDirectChats();
+    if (directChats.containsKey(userID)) if (!directChats[userID].contains(id))
+      directChats[userID].add(id);
+    else
+      return null; // Is already in direct chats
+    else
+      directChats[userID] = [id];
+
+    final resp = await client.connection.jsonRequest(
+        type: "PUT",
+        action: "/client/r0/user/${client.userID}/account_data/m.direct",
+        data: directChats);
+    return resp;
   }
 
   Future<dynamic> sendReadReceipt(String eventID) async {
     final dynamic resp = client.connection.jsonRequest(
         type: "fully_read",
         action: "/client/r0/rooms/$id/read_markers",
-        data: {"m.fully_read": eventID,"m.read": eventID,});
+        data: {
+          "m.fully_read": eventID,
+          "m.read": eventID,
+        });
     return resp;
   }
 
   /// Returns a Room from a json String which comes normally from the store.
-  static Future<Room> getRoomFromTableRow(Map<String, dynamic> row,
-      Client matrix) async {
+  static Future<Room> getRoomFromTableRow(
+      Map<String, dynamic> row, Client matrix) async {
     String name = row["topic"];
     if (name == "")
       name = await matrix.store?.getChatNameFromMemberNames(row["id"]) ?? "";

@@ -183,7 +183,7 @@ class Store {
     switch (userUpdate.eventType) {
       case "m.direct":
         if (userUpdate.content["content"] is Map<String, dynamic>) {
-          final Map<String,dynamic> directMap = userUpdate.content["content"];
+          final Map<String, dynamic> directMap = userUpdate.content["content"];
           directMap.forEach((String key, dynamic value) {
             if (value is List<dynamic> && value.length > 0)
               txn.rawUpdate(
@@ -463,17 +463,18 @@ class Store {
       bool onlyDirect = false,
       bool onlyGroups = false}) async {
     if (onlyDirect && onlyGroups) return [];
-    List<Map<String, dynamic>> res = await db.rawQuery("SELECT rooms.*, events.origin_server_ts, events.content_json, events.type, events.sender, events.status, events.state_key " +
-        " FROM Rooms rooms LEFT JOIN Events events " +
-        " ON rooms.id=events.chat_id " +
-        " WHERE rooms.id!='' " +
-        " AND rooms.membership" +
-        (onlyLeft ? "=" : "!=") +
-        "'left' " +
-        (onlyDirect ? " AND rooms.direct_chat_matrix_id!= '' " : "") +
-        (onlyGroups ? " AND rooms.direct_chat_matrix_id= '' " : "") +
-        " GROUP BY rooms.id " +
-        " ORDER BY origin_server_ts DESC ");
+    List<Map<String, dynamic>> res = await db.rawQuery(
+        "SELECT rooms.*, events.origin_server_ts, events.content_json, events.type, events.sender, events.status, events.state_key " +
+            " FROM Rooms rooms LEFT JOIN Events events " +
+            " ON rooms.id=events.chat_id " +
+            " WHERE rooms.id!='' " +
+            " AND rooms.membership" +
+            (onlyLeft ? "=" : "!=") +
+            "'left' " +
+            (onlyDirect ? " AND rooms.direct_chat_matrix_id!= '' " : "") +
+            (onlyGroups ? " AND rooms.direct_chat_matrix_id= '' " : "") +
+            " GROUP BY rooms.id " +
+            " ORDER BY origin_server_ts DESC ");
     List<Room> roomList = [];
     for (num i = 0; i < res.length; i++) {
       try {
@@ -561,6 +562,19 @@ class Store {
     for (int i = 0; i < res.length; i++)
       powerMap[res[i]["matrix_id"]] = res[i]["power_level"];
     return powerMap;
+  }
+
+  Future<Map<String, List<String>>> getAccountDataDirectChats() async {
+    Map<String, List<String>> directChats = {};
+    List<Map<String, dynamic>> res = await db.rawQuery(
+        "SELECT id, direct_chat_matrix_id FROM Rooms WHERE direct_chat_matrix_id!=''");
+    for (int i = 0; i < res.length; i++) {
+      if (directChats.containsKey(res[i]["direct_chat_matrix_id"]))
+        directChats[res[i]["direct_chat_matrix_id"]].add(res[i]["id"]);
+      else
+        directChats[res[i]["direct_chat_matrix_id"]] = [res[i]["id"]];
+    }
+    return directChats;
   }
 
   /// The database sheme for the Client class.
