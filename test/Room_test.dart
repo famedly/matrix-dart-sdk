@@ -42,6 +42,7 @@ void main() {
 
       final String id = "!localpart:server.abc";
       final String name = "My Room";
+      final String membership = "join";
       final String topic = "This is my own room";
       final int unread = DateTime.now().millisecondsSinceEpoch;
       final int notificationCount = 2;
@@ -60,6 +61,7 @@ void main() {
 
       final Map<String, dynamic> jsonObj = {
         "id": id,
+        "membership": membership,
         "topic": name,
         "description": topic,
         "avatar_url": "",
@@ -93,6 +95,7 @@ void main() {
       room = await Room.getRoomFromTableRow(jsonObj, matrix);
 
       expect(room.id, id);
+      expect(room.membership, membership);
       expect(room.name, name);
       expect(room.topic, topic);
       expect(room.avatar.mxc, "");

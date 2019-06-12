@@ -364,6 +364,7 @@ class Room {
     return Room(
       id: row["id"],
       name: name,
+      membership: row["membership"],
       topic: row["description"],
       avatar: MxContent(avatarUrl),
       notificationCount: row["notification_count"],
