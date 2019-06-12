@@ -341,9 +341,9 @@ class Room {
     if (name == "")
       name = await matrix.store?.getChatNameFromMemberNames(row["id"]) ?? "";
 
-    if (row["avatar_url"] == "")
-      row["avatar_url"] =
-          await matrix.store?.getAvatarFromSingleChat(row["id"]) ?? "";
+    String avatarUrl = row["avatar_url"];
+    if (avatarUrl == "")
+      avatarUrl = await matrix.store?.getAvatarFromSingleChat(row["id"]) ?? "";
 
     return Room(
       id: row["id"],
