@@ -183,7 +183,7 @@ class Store {
 
     switch (userUpdate.eventType) {
       case "m.direct":
-        print("New direct update: ${userUpdate.content}, type: ${userUpdate.content["content"].runtimeType}");
+        print("New direct update: type: ${userUpdate.content["content"].runtimeType}");
         if (userUpdate.content["content"] is Map<String, List<dynamic>>) {
           print("Is a Map of String to List of Strings");
           Map<String, List<String>> directMap = userUpdate.content["content"];
