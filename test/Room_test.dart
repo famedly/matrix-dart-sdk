@@ -30,7 +30,6 @@ import 'FakeMatrixApi.dart';
 void main() {
   /// All Tests related to the Event
   group("Room", () {
-
     Client matrix = Client("testclient");
     matrix.connection.httpClient = FakeMatrixApi();
     matrix.homeserver = "https://fakeServer.notExisting";
@@ -53,6 +52,11 @@ void main() {
       final String historyVisibility = "invite";
       final String joinRules = "invite";
       final int now = DateTime.now().millisecondsSinceEpoch;
+      final String msgtype = "m.text";
+      final String body = "Hello World";
+      final String formatted_body = "<b>Hello</b> World";
+      final String contentJson =
+          '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formatted_body"}';
 
       final Map<String, dynamic> jsonObj = {
         "id": id,
@@ -83,32 +87,31 @@ void main() {
         "power_event_aliases": 0,
         "power_event_name": 0,
         "power_event_power_levels": 0,
+        "content_json": contentJson,
       };
 
       room = await Room.getRoomFromTableRow(jsonObj, matrix);
 
-      expect(room.id,id);
-      expect(room.name,name);
-      expect(room.topic,topic);
-      expect(room.avatar.mxc,"");
-      expect(room.notificationCount,notificationCount);
-      expect(room.highlightCount,highlightCount);
-      expect(room.unread.toTimeStamp(),unread);
-      expect(room.fullyRead,fullyRead);
-      expect(room.notificationSettings,notificationSettings);
-      expect(room.directChatMatrixID,"");
-      expect(room.draft,"");
-      expect(room.prev_batch,"");
-      expect(room.guestAccess,guestAccess);
-      expect(room.historyVisibility,historyVisibility);
-      expect(room.joinRules,joinRules);
-      expect(room.lastMessage,"");
+      expect(room.id, id);
+      expect(room.name, name);
+      expect(room.topic, topic);
+      expect(room.avatar.mxc, "");
+      expect(room.notificationCount, notificationCount);
+      expect(room.highlightCount, highlightCount);
+      expect(room.unread.toTimeStamp(), unread);
+      expect(room.fullyRead, fullyRead);
+      expect(room.notificationSettings, notificationSettings);
+      expect(room.directChatMatrixID, "");
+      expect(room.draft, "");
+      expect(room.prev_batch, "");
+      expect(room.guestAccess, guestAccess);
+      expect(room.historyVisibility, historyVisibility);
+      expect(room.joinRules, joinRules);
+      expect(room.lastMessage, "<b>Hello</b> World");
       expect(room.timeCreated.toTimeStamp() >= now, true);
       room.powerLevels.forEach((String key, int value) {
         expect(value, 0);
       });
-
     });
-
   });
 }
