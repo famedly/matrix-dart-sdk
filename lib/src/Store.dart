@@ -185,7 +185,7 @@ class Store {
         if (userUpdate.content["content"] is Map<String, dynamic>) {
           final Map<String, dynamic> directMap = userUpdate.content["content"];
           print("Direct Map =========> $directMap");
-          directMap.forEach((String key, dynamic value) {
+          directMap.forEach((String key, dynamic value) async{
             print("Handle direct Matrix ID ===========> $key");
             if (value is List<dynamic> && value.length > 0)
               for (int i = 0; i < value.length; i++) {
