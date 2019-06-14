@@ -342,7 +342,7 @@ class Room {
 
   Future<dynamic> sendReadReceipt(String eventID) async {
     final dynamic resp = client.connection.jsonRequest(
-        type: "fully_read",
+        type: "POST",
         action: "/client/r0/rooms/$id/read_markers",
         data: {
           "m.fully_read": eventID,
