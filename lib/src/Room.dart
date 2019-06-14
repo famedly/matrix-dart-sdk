@@ -130,7 +130,7 @@ class Room {
 
   /// The last message sent to this room.
   String get lastMessage {
-    if (events.length > 0)
+    if (events?.length > 0)
       return events[0].getBody();
     else
       return "";
@@ -138,7 +138,7 @@ class Room {
 
   /// When the last message received.
   ChatTime get timeCreated {
-    if (events.length > 0)
+    if (events?.length > 0)
       return events[0].time;
     else
       return ChatTime.now();
