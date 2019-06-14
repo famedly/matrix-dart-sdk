@@ -192,7 +192,7 @@ class Store {
                 final changesCount = await txn.rawUpdate(
                     "UPDATE Rooms SET direct_chat_matrix_id=? WHERE id=?",
                     [key, value[i]]);
-                    if (changesCount == 0) print("Direct chat of $key, was not stored");
+                    if (changesCount == 0) print("Direct chat of $key to Room ${value[i]}, was not stored");
               }
           });
         }
