@@ -253,10 +253,10 @@ class Connection {
 
     dynamic args = {};
 
-    String action = "/client/r0/sync?filters=${_firstSyncFilters}";
+    String action = "/client/r0/sync?filters=$_firstSyncFilters";
 
     if (client.prevBatch != null) {
-      action = "/client/r0/sync?filters=${_syncFilters}";
+      action = "/client/r0/sync?filters=$_syncFilters";
       action += "&timeout=30000";
       action += "&since=${client.prevBatch}";
     }
