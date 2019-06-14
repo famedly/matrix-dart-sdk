@@ -184,12 +184,16 @@ class Store {
       case "m.direct":
         if (userUpdate.content["content"] is Map<String, dynamic>) {
           final Map<String, dynamic> directMap = userUpdate.content["content"];
+          print("Direct Map =========> $directMap");
           directMap.forEach((String key, dynamic value) {
+            print("Handle direct Matrix ID ===========> $key");
             if (value is List<dynamic> && value.length > 0)
-              for (int i = 0; i < value.length; i++)
-                txn.rawUpdate(
+              for (int i = 0; i < value.length; i++) {
+                final changesCount = await txn.rawUpdate(
                     "UPDATE Rooms SET direct_chat_matrix_id=? WHERE id=?",
                     [key, value[i]]);
+                    if (changesCount == 0) print("Direct chat of $key, was not stored");
+              }
           });
         }
         break;
