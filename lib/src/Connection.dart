@@ -46,6 +46,8 @@ class Connection {
 
   String get _syncFilters =>
       "{\"room\":{\"state\":{\"lazy_load_members\":${client.lazyLoadMembers ? "1" : "0"}}}";
+  String get _firstSyncFilters =>
+      "{\"room\":{\"include_leave\":true,\"state\":{\"lazy_load_members\":${client.lazyLoadMembers ? "1" : "0"}}}";
 
   /// Handles the connection to the Matrix Homeserver. You can change this to a
   /// MockClient for testing.
@@ -251,9 +253,10 @@ class Connection {
 
     dynamic args = {};
 
-    String action = "/client/r0/sync?filters=${_syncFilters}";
+    String action = "/client/r0/sync?filters=${_firstSyncFilters}";
 
     if (client.prevBatch != null) {
+      action = "/client/r0/sync?filters=${_syncFilters}";
       action += "&timeout=30000";
       action += "&since=${client.prevBatch}";
     }
