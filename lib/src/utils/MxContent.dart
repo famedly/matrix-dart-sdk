@@ -35,8 +35,9 @@ class MxContent {
   get mxc => _mxc;
 
   /// Returns a download Link to this content.
-  String getDownloadLink(Client matrix) =>
-      "${matrix.homeserver}/_matrix/media/r0/download/${_mxc.replaceFirst("mxc://", "")}";
+  String getDownloadLink(Client matrix) => matrix.homeserver != null
+      ? "${matrix.homeserver}/_matrix/media/r0/download/${_mxc.replaceFirst("mxc://", "")}"
+      : "";
 
   /// Returns a scaled thumbnail link to this content with the given [width] and
   /// [height]. [method] can be [ThumbnailMethod.crop] or
@@ -47,7 +48,9 @@ class MxContent {
     if (method == ThumbnailMethod.scale) methodStr = "scale";
     width = width.round();
     height = height.round();
-    return "${matrix.homeserver}/_matrix/media/r0/thumbnail/${_mxc.replaceFirst("mxc://", "")}?width=$width&height=$height&method=$methodStr";
+    return matrix.homeserver != null
+        ? "${matrix.homeserver}/_matrix/media/r0/thumbnail/${_mxc.replaceFirst("mxc://", "")}?width=$width&height=$height&method=$methodStr"
+        : "";
   }
 }
 
