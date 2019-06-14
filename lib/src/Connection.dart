@@ -222,7 +222,7 @@ class Connection {
       return ErrorResponse(
           error: "No connection possible...",
           errcode: "NO_CONNECTION",
-          request: resp.request);
+          request: resp?.request);
     }
 
     Map<String, dynamic> jsonResp;
@@ -232,11 +232,11 @@ class Connection {
       return ErrorResponse(
           error: "No connection possible...",
           errcode: "MALFORMED",
-          request: resp.request);
+          request: resp?.request);
     }
     if (jsonResp.containsKey("errcode") && jsonResp["errcode"] is String) {
       if (jsonResp["errcode"] == "M_UNKNOWN_TOKEN") clear();
-      return ErrorResponse.fromJson(jsonResp, resp.request);
+      return ErrorResponse.fromJson(jsonResp, resp?.request);
     }
 
     if (client.debug) print("[RESPONSE] ${jsonResp.toString()}");
