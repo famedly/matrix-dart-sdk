@@ -183,7 +183,7 @@ class Client {
   Future<void> logout() async {
     final dynamic resp = await connection.jsonRequest(
         type: "POST", action: "/client/r0/logout/all");
-    if (resp == null) return;
+    if (resp is ErrorResponse) connection.onError.add(resp);
 
     await connection.clear();
   }
@@ -194,10 +194,15 @@ class Client {
     List<String> inviteIDs = [];
     for (int i = 0; i < users.length; i++) inviteIDs.add(users[i].id);
 
-    Map<String, dynamic> resp = await connection.jsonRequest(
+    final dynamic resp = await connection.jsonRequest(
         type: "POST",
         action: "/client/r0/createRoom",
         data: {"invite": inviteIDs, "preset": "private_chat"});
+
+    if (resp is ErrorResponse) {
+      connection.onError.add(resp);
+      return null;
+    }
 
     return resp["room_id"];
   }
