@@ -130,7 +130,7 @@ class Room {
 
   /// The last message sent to this room.
   String get lastMessage {
-    if (events?.length > 0)
+    if (events != null && events.length > 0)
       return events[0].getBody();
     else
       return "";

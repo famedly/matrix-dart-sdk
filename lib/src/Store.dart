@@ -186,10 +186,11 @@ class Store {
           final Map<String, dynamic> directMap = userUpdate.content["content"];
           directMap.forEach((String key, dynamic value) {
             if (value is List<dynamic> && value.length > 0)
-              for (int i = 0; i < value.length; i++)
+              for (int i = 0; i < value.length; i++) {
                 txn.rawUpdate(
                     "UPDATE Rooms SET direct_chat_matrix_id=? WHERE id=?",
                     [key, value[i]]);
+              }
           });
         }
         break;
