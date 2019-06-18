@@ -24,22 +24,29 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/Client.dart';
-import 'dart:async';
+import 'package:famedlysdk/src/User.dart';
 import 'FakeMatrixApi.dart';
 
 void main() {
+  Client matrix;
+  Room room;
+
   /// All Tests related to the Event
   group("Room", () {
-    Client matrix = Client("testclient");
-    matrix.connection.httpClient = FakeMatrixApi();
-    matrix.homeserver = "https://fakeServer.notExisting";
-    Room room;
+    test('Login', () async {
+      matrix = Client("testclient", debug: true);
+      matrix.connection.httpClient = FakeMatrixApi();
+
+      final bool checkResp =
+          await matrix.checkServer("https://fakeServer.notExisting");
+
+      final bool loginResp = await matrix.login("test", "1234");
+
+      expect(checkResp, true);
+      expect(loginResp, true);
+    });
 
     test("Create from json", () async {
-      Client matrix = Client("testclient");
-      matrix.connection.httpClient = FakeMatrixApi();
-      matrix.homeserver = "https://fakeServer.notExisting";
-
       final String id = "!localpart:server.abc";
       final String name = "My Room";
       final String membership = "join";
@@ -115,6 +122,23 @@ void main() {
       room.powerLevels.forEach((String key, int value) {
         expect(value, 0);
       });
+    });
+
+    test("sendReadReceipt", () async {
+      final dynamic resp =
+          await room.sendReadReceipt("§1234:fakeServer.notExisting");
+      expect(resp, {});
+    });
+
+    test("requestParticipants", () async {
+      final List<User> participants = await room.requestParticipants();
+      expect(participants.length, 1);
+      User user = participants[0];
+      expect(user.id, "@alice:example.org");
+      expect(user.displayName, "Alice Margatroid");
+      expect(user.membership, "join");
+      expect(user.avatarUrl.mxc, "mxc://example.org/SEsfnsuifSDFSSEF");
+      expect(user.room.id, "!localpart:server.abc");
     });
   });
 }

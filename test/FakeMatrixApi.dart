@@ -71,6 +71,24 @@ class FakeMatrixApi extends MockClient {
               {"type": "m.login.password"}
             ]
           },
+      "/client/r0/rooms/!localpart:server.abc/members": (var req) => {
+            "chunk": [
+              {
+                "content": {
+                  "membership": "join",
+                  "avatar_url": "mxc://example.org/SEsfnsuifSDFSSEF",
+                  "displayname": "Alice Margatroid"
+                },
+                "type": "m.room.member",
+                "event_id": "§143273582443PhrSn:example.org",
+                "room_id": "!636q39766251:example.com",
+                "sender": "@example:example.org",
+                "origin_server_ts": 1432735824653,
+                "unsigned": {"age": 1234},
+                "state_key": "@alice:example.org"
+              }
+            ]
+          },
       "/client/r0/sync": (var req) => {
             "next_batch": Random().nextDouble().toString(),
             "presence": {
@@ -210,7 +228,8 @@ class FakeMatrixApi extends MockClient {
       "/client/r0/logout/all": (var reqI) => {},
       "/client/r0/createRoom": (var reqI) => {
             "room_id": "!1234:fakeServer.notExisting",
-          }
+          },
+      "/client/r0/rooms/!localpart:server.abc/read_markers": (var reqI) => {},
     },
     "PUT": {},
     "DELETE": {

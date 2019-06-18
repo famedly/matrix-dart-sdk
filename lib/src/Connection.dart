@@ -263,6 +263,7 @@ class Connection {
     _syncRequest = jsonRequest(type: "GET", action: action);
     final int hash = _syncRequest.hashCode;
     final syncResp = await _syncRequest;
+    if (hash != _syncRequest.hashCode) return;
     if (syncResp is ErrorResponse) {
       onError.add(syncResp);
       await Future.delayed(Duration(seconds: syncErrorTimeoutSec), () {});

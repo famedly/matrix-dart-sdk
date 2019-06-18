@@ -437,10 +437,10 @@ class Room {
 
   /// Request the full list of participants from the server. The local list
   /// from the store is not complete if the client uses lazy loading.
-  Future<List<User>> requestParticipants(Client matrix) async {
+  Future<List<User>> requestParticipants() async {
     List<User> participants = [];
 
-    dynamic res = await matrix.connection
+    dynamic res = await client.connection
         .jsonRequest(type: "GET", action: "/client/r0/rooms/${id}/members");
     if (res is ErrorResponse || !(res["chunk"] is List<dynamic>))
       return participants;
