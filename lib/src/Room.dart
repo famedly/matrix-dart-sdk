@@ -189,7 +189,7 @@ class Room {
     final String messageID = "msg$now";
 
     EventUpdate eventUpdate =
-        EventUpdate(type: type, roomID: id, eventType: "timeline", content: {
+        EventUpdate(type: "timeline", roomID: id, eventType: type, content: {
       "type": type,
       "id": messageID,
       "sender": client.userID,
