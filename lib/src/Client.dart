@@ -27,6 +27,7 @@ import 'responses/ErrorResponse.dart';
 import 'Connection.dart';
 import 'Store.dart';
 import 'User.dart';
+import 'responses/PushrulesResponse.dart';
 
 /// Represents a Matrix client to communicate with a
 /// [Matrix](https://matrix.org) homeserver and is the entry point for this
@@ -205,5 +206,21 @@ class Client {
     }
 
     return resp["room_id"];
+  }
+
+  /// Fetches the pushrules for the logged in user.
+  /// These are needed for notifications on Android
+  Future<PushrulesResponse> getPushrules() async {
+    final dynamic resp = await connection.jsonRequest(
+      type: "GET",
+      action: "/client/r0/pushrules",
+    );
+
+    if (resp is ErrorResponse) {
+      connection.onError.add(resp);
+      return null;
+    }
+
+    return PushrulesResponse.fromJson(resp);
   }
 }
