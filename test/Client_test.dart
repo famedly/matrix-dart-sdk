@@ -21,6 +21,7 @@
  * along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/src/responses/PushrulesResponse.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Connection.dart';
@@ -236,6 +237,13 @@ void main() {
       ];
       final String newID = await matrix.createGroup(users);
       expect(newID, "!1234:fakeServer.notExisting");
+    });
+
+    test('getPushrules', () async {
+      final PushrulesResponse pushrules = await matrix.getPushrules();
+      final PushrulesResponse awaited_resp = PushrulesResponse.fromJson(
+          FakeMatrixApi.api["GET"]["/client/r0/pushrules"](""));
+      expect(pushrules.toJson(), awaited_resp.toJson());
     });
 
     test('Logout when token is unknown', () async {

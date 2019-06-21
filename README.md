@@ -64,3 +64,13 @@ final resp = await matrix.connection.jsonRequest(
     }
 );
 ```
+
+## Development
+
+### Regenerating JSON Classes
+
+To regenerate the part files of JSON Classes you need to run this command:
+
+```bash
+flutter pub run build_runner build
+```
