@@ -18,7 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+ * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 import 'dart:convert';
@@ -29,7 +29,6 @@ import './Room.dart';
 
 /// A single Matrix event, e.g. a message in a chat.
 class Event {
-
   /// The Matrix ID for this event in the format '$localpart:server.abc'.
   final String id;
 
@@ -56,9 +55,12 @@ class Event {
   int status;
 
   /// The json payload of the content. The content highly depends on the type.
-  final Map<String,dynamic> content;
+  final Map<String, dynamic> content;
 
-  Event(this.id, this.sender, this.time,{
+  Event(
+    this.id,
+    this.sender,
+    this.time, {
     this.room,
     this.stateKey,
     this.status = 2,
@@ -73,7 +75,7 @@ class Event {
   String get formattedText => content["formatted_body"] ?? "";
 
   /// Use this to get the body.
-  String getBody () {
+  String getBody() {
     if (text != "") return text;
     if (formattedText != "") return formattedText;
     return "*** Unable to parse Content ***";
@@ -82,36 +84,52 @@ class Event {
   /// Get the real type.
   EventTypes get type {
     switch (environment) {
-      case "m.room.avatar": return EventTypes.RoomAvatar;
-      case "m.room.name": return EventTypes.RoomName;
-      case "m.room.topic": return EventTypes.RoomTopic;
-      case "m.room.Aliases": return EventTypes.RoomAliases;
-      case "m.room.canonical_alias": return EventTypes.RoomCanonicalAlias;
-      case "m.room.create": return EventTypes.RoomCreate;
-      case "m.room.join_rules": return EventTypes.RoomJoinRules;
-      case "m.room.member": return EventTypes.RoomMember;
-      case "m.room.power_levels": return EventTypes.RoomPowerLevels;
+      case "m.room.avatar":
+        return EventTypes.RoomAvatar;
+      case "m.room.name":
+        return EventTypes.RoomName;
+      case "m.room.topic":
+        return EventTypes.RoomTopic;
+      case "m.room.Aliases":
+        return EventTypes.RoomAliases;
+      case "m.room.canonical_alias":
+        return EventTypes.RoomCanonicalAlias;
+      case "m.room.create":
+        return EventTypes.RoomCreate;
+      case "m.room.join_rules":
+        return EventTypes.RoomJoinRules;
+      case "m.room.member":
+        return EventTypes.RoomMember;
+      case "m.room.power_levels":
+        return EventTypes.RoomPowerLevels;
       case "m.room.message":
-        switch(content["msgtype"] ?? "m.text") {
-          case "m.text": return EventTypes.Text;
-          case "m.notice": return EventTypes.Notice;
-          case "m.emote": return EventTypes.Emote;
-          case "m.image": return EventTypes.Image;
-          case "m.video": return EventTypes.Video;
-          case "m.audio": return EventTypes.Audio;
-          case "m.file": return EventTypes.File;
-          case "m.location": return EventTypes.Location;
+        switch (content["msgtype"] ?? "m.text") {
+          case "m.text":
+            return EventTypes.Text;
+          case "m.notice":
+            return EventTypes.Notice;
+          case "m.emote":
+            return EventTypes.Emote;
+          case "m.image":
+            return EventTypes.Image;
+          case "m.video":
+            return EventTypes.Video;
+          case "m.audio":
+            return EventTypes.Audio;
+          case "m.file":
+            return EventTypes.File;
+          case "m.location":
+            return EventTypes.Location;
         }
     }
-
   }
 
   /// Generate a new Event object from a json string, mostly a table row.
   static Event fromJson(Map<String, dynamic> jsonObj, Room room) {
-    Map<String,dynamic> content;
+    Map<String, dynamic> content;
     try {
       content = json.decode(jsonObj["content_json"]);
-    } catch(e) {
+    } catch (e) {
       print("jsonObj decode of event content failed: ${e.toString()}");
       content = {};
     }
@@ -128,11 +146,10 @@ class Event {
   }
 
   @Deprecated("Use [client.store.getEventList(Room room)] instead!")
-  static Future<List<Event>> getEventList(Client matrix, Room room) async{
+  static Future<List<Event>> getEventList(Client matrix, Room room) async {
     List<Event> eventList = await matrix.store.getEventList(room);
     return eventList;
   }
-
 }
 
 enum EventTypes {
@@ -155,7 +172,7 @@ enum EventTypes {
   RoomAvatar,
 }
 
-final Map<String,int> StatusTypes = {
+final Map<String, int> StatusTypes = {
   "ERROR": -1,
   "SENDING": 0,
   "SENT": 1,

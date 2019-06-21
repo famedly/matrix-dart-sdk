@@ -18,7 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+ * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 import 'package:http/testing.dart';
@@ -90,193 +90,150 @@ class FakeMatrixApi extends MockClient {
             ]
           },
       "/client/r0/pushrules": (var req) => {
-        "global": {
-          "content": [
-            {
-              "actions": [
-                "notify",
+            "global": {
+              "content": [
                 {
-                  "set_tweak": "sound",
-                  "value": "default"
-                },
-                {
-                  "set_tweak": "highlight"
+                  "actions": [
+                    "notify",
+                    {"set_tweak": "sound", "value": "default"},
+                    {"set_tweak": "highlight"}
+                  ],
+                  "default": true,
+                  "enabled": true,
+                  "pattern": "alice",
+                  "rule_id": ".m.rule.contains_user_name"
                 }
               ],
-              "default": true,
-              "enabled": true,
-              "pattern": "alice",
-              "rule_id": ".m.rule.contains_user_name"
+              "override": [
+                {
+                  "actions": ["dont_notify"],
+                  "conditions": [],
+                  "default": true,
+                  "enabled": false,
+                  "rule_id": ".m.rule.master"
+                },
+                {
+                  "actions": ["dont_notify"],
+                  "conditions": [
+                    {
+                      "key": "content.msgtype",
+                      "kind": "event_match",
+                      "pattern": "m.notice"
+                    }
+                  ],
+                  "default": true,
+                  "enabled": true,
+                  "rule_id": ".m.rule.suppress_notices"
+                }
+              ],
+              "room": [],
+              "sender": [],
+              "underride": [
+                {
+                  "actions": [
+                    "notify",
+                    {"set_tweak": "sound", "value": "ring"},
+                    {"set_tweak": "highlight", "value": false}
+                  ],
+                  "conditions": [
+                    {
+                      "key": "type",
+                      "kind": "event_match",
+                      "pattern": "m.call.invite"
+                    }
+                  ],
+                  "default": true,
+                  "enabled": true,
+                  "rule_id": ".m.rule.call"
+                },
+                {
+                  "actions": [
+                    "notify",
+                    {"set_tweak": "sound", "value": "default"},
+                    {"set_tweak": "highlight"}
+                  ],
+                  "conditions": [
+                    {"kind": "contains_display_name"}
+                  ],
+                  "default": true,
+                  "enabled": true,
+                  "rule_id": ".m.rule.contains_display_name"
+                },
+                {
+                  "actions": [
+                    "notify",
+                    {"set_tweak": "sound", "value": "default"},
+                    {"set_tweak": "highlight", "value": false}
+                  ],
+                  "conditions": [
+                    {"is": "2", "kind": "room_member_count"}
+                  ],
+                  "default": true,
+                  "enabled": true,
+                  "rule_id": ".m.rule.room_one_to_one"
+                },
+                {
+                  "actions": [
+                    "notify",
+                    {"set_tweak": "sound", "value": "default"},
+                    {"set_tweak": "highlight", "value": false}
+                  ],
+                  "conditions": [
+                    {
+                      "key": "type",
+                      "kind": "event_match",
+                      "pattern": "m.room.member"
+                    },
+                    {
+                      "key": "content.membership",
+                      "kind": "event_match",
+                      "pattern": "invite"
+                    },
+                    {
+                      "key": "state_key",
+                      "kind": "event_match",
+                      "pattern": "@alice:example.com"
+                    }
+                  ],
+                  "default": true,
+                  "enabled": true,
+                  "rule_id": ".m.rule.invite_for_me"
+                },
+                {
+                  "actions": [
+                    "notify",
+                    {"set_tweak": "highlight", "value": false}
+                  ],
+                  "conditions": [
+                    {
+                      "key": "type",
+                      "kind": "event_match",
+                      "pattern": "m.room.member"
+                    }
+                  ],
+                  "default": true,
+                  "enabled": true,
+                  "rule_id": ".m.rule.member_event"
+                },
+                {
+                  "actions": [
+                    "notify",
+                    {"set_tweak": "highlight", "value": false}
+                  ],
+                  "conditions": [
+                    {
+                      "key": "type",
+                      "kind": "event_match",
+                      "pattern": "m.room.message"
+                    }
+                  ],
+                  "default": true,
+                  "enabled": true,
+                  "rule_id": ".m.rule.message"
+                }
+              ]
             }
-          ],
-          "override": [
-            {
-              "actions": [
-                "dont_notify"
-              ],
-              "conditions": [],
-              "default": true,
-              "enabled": false,
-              "rule_id": ".m.rule.master"
-            },
-            {
-              "actions": [
-                "dont_notify"
-              ],
-              "conditions": [
-                {
-                  "key": "content.msgtype",
-                  "kind": "event_match",
-                  "pattern": "m.notice"
-                }
-              ],
-              "default": true,
-              "enabled": true,
-              "rule_id": ".m.rule.suppress_notices"
-            }
-          ],
-          "room": [],
-          "sender": [],
-          "underride": [
-            {
-              "actions": [
-                "notify",
-                {
-                  "set_tweak": "sound",
-                  "value": "ring"
-                },
-                {
-                  "set_tweak": "highlight",
-                  "value": false
-                }
-              ],
-              "conditions": [
-                {
-                  "key": "type",
-                  "kind": "event_match",
-                  "pattern": "m.call.invite"
-                }
-              ],
-              "default": true,
-              "enabled": true,
-              "rule_id": ".m.rule.call"
-            },
-            {
-              "actions": [
-                "notify",
-                {
-                  "set_tweak": "sound",
-                  "value": "default"
-                },
-                {
-                  "set_tweak": "highlight"
-                }
-              ],
-              "conditions": [
-                {
-                  "kind": "contains_display_name"
-                }
-              ],
-              "default": true,
-              "enabled": true,
-              "rule_id": ".m.rule.contains_display_name"
-            },
-            {
-              "actions": [
-                "notify",
-                {
-                  "set_tweak": "sound",
-                  "value": "default"
-                },
-                {
-                  "set_tweak": "highlight",
-                  "value": false
-                }
-              ],
-              "conditions": [
-                {
-                  "is": "2",
-                  "kind": "room_member_count"
-                }
-              ],
-              "default": true,
-              "enabled": true,
-              "rule_id": ".m.rule.room_one_to_one"
-            },
-            {
-              "actions": [
-                "notify",
-                {
-                  "set_tweak": "sound",
-                  "value": "default"
-                },
-                {
-                  "set_tweak": "highlight",
-                  "value": false
-                }
-              ],
-              "conditions": [
-                {
-                  "key": "type",
-                  "kind": "event_match",
-                  "pattern": "m.room.member"
-                },
-                {
-                  "key": "content.membership",
-                  "kind": "event_match",
-                  "pattern": "invite"
-                },
-                {
-                  "key": "state_key",
-                  "kind": "event_match",
-                  "pattern": "@alice:example.com"
-                }
-              ],
-              "default": true,
-              "enabled": true,
-              "rule_id": ".m.rule.invite_for_me"
-            },
-            {
-              "actions": [
-                "notify",
-                {
-                  "set_tweak": "highlight",
-                  "value": false
-                }
-              ],
-              "conditions": [
-                {
-                  "key": "type",
-                  "kind": "event_match",
-                  "pattern": "m.room.member"
-                }
-              ],
-              "default": true,
-              "enabled": true,
-              "rule_id": ".m.rule.member_event"
-            },
-            {
-              "actions": [
-                "notify",
-                {
-                  "set_tweak": "highlight",
-                  "value": false
-                }
-              ],
-              "conditions": [
-                {
-                  "key": "type",
-                  "kind": "event_match",
-                  "pattern": "m.room.message"
-                }
-              ],
-              "default": true,
-              "enabled": true,
-              "rule_id": ".m.rule.message"
-            }
-          ]
-        }
-      },
+          },
       "/client/r0/sync": (var req) => {
             "next_batch": Random().nextDouble().toString(),
             "presence": {

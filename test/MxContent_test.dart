@@ -18,7 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+ * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 import 'package:flutter_test/flutter_test.dart';
@@ -26,20 +26,22 @@ import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
 
 void main() {
-
-
   /// All Tests related to the MxContent
   group("MxContent", () {
-
     test("Formatting", () async {
       Client client = Client("testclient");
       client.homeserver = "https://testserver.abc";
       final String mxc = "mxc://exampleserver.abc/abcdefghijklmn";
       final MxContent content = MxContent(mxc);
 
-      expect(content.getDownloadLink(client),"${client.homeserver}/_matrix/media/r0/download/exampleserver.abc/abcdefghijklmn");
-      expect(content.getThumbnail(client, width: 50, height: 50),"${client.homeserver}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop");
-      expect(content.getThumbnail(client, width: 50, height: 50, method: ThumbnailMethod.scale),"${client.homeserver}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale");
+      expect(content.getDownloadLink(client),
+          "${client.homeserver}/_matrix/media/r0/download/exampleserver.abc/abcdefghijklmn");
+      expect(content.getThumbnail(client, width: 50, height: 50),
+          "${client.homeserver}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop");
+      expect(
+          content.getThumbnail(client,
+              width: 50, height: 50, method: ThumbnailMethod.scale),
+          "${client.homeserver}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale");
     });
   });
 }
