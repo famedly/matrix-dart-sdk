@@ -25,7 +25,6 @@ import 'dart:async';
 import 'Event.dart';
 import 'Room.dart';
 import 'User.dart';
-import 'utils/ChatTime.dart';
 import 'sync/EventUpdate.dart';
 
 /// Represents the timeline of a room. The callbacks [onUpdate], [onDelete],
@@ -63,11 +62,17 @@ class Timeline {
         events.insert(0, newEvent);
         onInsert(0);
       }
-      onUpdate();
+      sortAndUpdate();
     } catch (e) {
       print("[WARNING] ${e.toString()}");
       sub.cancel();
     }
+  }
+
+  sortAndUpdate() {
+    events
+        ?.sort((a, b) => b.time.toTimeStamp().compareTo(a.time.toTimeStamp()));
+    onUpdate();
   }
 }
 

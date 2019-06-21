@@ -1,0 +1,175 @@
+/*
+ * Copyright (c) 2019 Zender & Kurtz GbR.
+ *
+ * Authors:
+ *   Christian Pauly <krille@famedly.com>
+ *   Marcel Radzio <mtrnord@famedly.com>
+ *
+ * This file is part of famedlysdk.
+ *
+ * famedlysdk is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * famedlysdk is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:famedlysdk/src/Client.dart';
+import 'package:famedlysdk/src/Event.dart';
+import 'package:famedlysdk/src/Room.dart';
+import 'package:famedlysdk/src/RoomList.dart';
+import 'package:famedlysdk/src/User.dart';
+import 'package:famedlysdk/src/sync/EventUpdate.dart';
+import 'package:famedlysdk/src/sync/RoomUpdate.dart';
+import 'package:famedlysdk/src/utils/ChatTime.dart';
+
+void main() {
+  /// All Tests related to the MxContent
+  group("RoomList", () {
+    final roomID = "!1:example.com";
+
+    test("Create and insert one room", () async {
+      final Client client = Client("testclient");
+      client.homeserver = "https://testserver.abc";
+
+      int updateCount = 0;
+      List<int> insertList = [];
+      List<int> removeList = [];
+
+      RoomList roomList = RoomList(
+          client: client,
+          rooms: [],
+          onUpdate: () {
+            updateCount++;
+          },
+          onInsert: (int insertID) {
+            insertList.add(insertID);
+          },
+          onRemove: (int removeID) {
+            insertList.add(removeID);
+          });
+
+      expect(roomList.eventSub != null, true);
+      expect(roomList.roomSub != null, true);
+
+      client.connection.onRoomUpdate.add(RoomUpdate(
+        id: roomID,
+        membership: "join",
+        notification_count: 2,
+        highlight_count: 1,
+        limitedTimeline: false,
+        prev_batch: "1234",
+      ));
+
+      await new Future.delayed(new Duration(milliseconds: 50));
+
+      expect(updateCount, 1);
+      expect(insertList, [0]);
+      expect(removeList, []);
+
+      expect(roomList.rooms.length, 1);
+      expect(roomList.rooms[0].id, roomID);
+      expect(roomList.rooms[0].membership, "join");
+      expect(roomList.rooms[0].notificationCount, 2);
+      expect(roomList.rooms[0].highlightCount, 1);
+      expect(roomList.rooms[0].prev_batch, "1234");
+      expect(roomList.rooms[0].timeCreated, ChatTime.now());
+    });
+
+    test("Restort", () async {
+      final Client client = Client("testclient");
+      client.homeserver = "https://testserver.abc";
+
+      int updateCount = 0;
+      List<int> insertList = [];
+      List<int> removeList = [];
+
+      RoomList roomList = RoomList(
+          client: client,
+          rooms: [],
+          onUpdate: () {
+            updateCount++;
+          },
+          onInsert: (int insertID) {
+            insertList.add(insertID);
+          },
+          onRemove: (int removeID) {
+            insertList.add(removeID);
+          });
+
+      client.connection.onRoomUpdate.add(RoomUpdate(
+        id: "1",
+        membership: "join",
+        notification_count: 2,
+        highlight_count: 1,
+        limitedTimeline: false,
+        prev_batch: "1234",
+      ));
+      client.connection.onRoomUpdate.add(RoomUpdate(
+        id: "2",
+        membership: "join",
+        notification_count: 2,
+        highlight_count: 1,
+        limitedTimeline: false,
+        prev_batch: "1234",
+      ));
+
+      await new Future.delayed(new Duration(milliseconds: 50));
+
+      expect(roomList.eventSub != null, true);
+      expect(roomList.roomSub != null, true);
+      expect(roomList.rooms[0].id, "1");
+      expect(roomList.rooms[1].id, "2");
+
+      ChatTime now = ChatTime.now();
+
+      client.connection.onEvent.add(EventUpdate(
+          type: "timeline",
+          roomID: "1",
+          eventType: "m.room.message",
+          content: {
+            "type": "m.room.message",
+            "content": {"msgtype": "m.text", "body": "Testcase"},
+            "sender": "@alice:example.com",
+            "status": 2,
+            "id": "1",
+            "origin_server_ts": now.toTimeStamp() - 1000
+          }));
+
+      client.connection.onEvent.add(EventUpdate(
+          type: "timeline",
+          roomID: "2",
+          eventType: "m.room.message",
+          content: {
+            "type": "m.room.message",
+            "content": {"msgtype": "m.text", "body": "Testcase 2"},
+            "sender": "@alice:example.com",
+            "status": 2,
+            "id": "2",
+            "origin_server_ts": now.toTimeStamp()
+          }));
+
+      await new Future.delayed(new Duration(milliseconds: 50));
+
+      expect(updateCount, 4);
+      expect(insertList, [0, 1]);
+      expect(removeList, []);
+
+      expect(roomList.rooms.length, 2);
+      expect(
+          roomList.rooms[0].timeCreated > roomList.rooms[1].timeCreated, true);
+      expect(roomList.rooms[0].id, "2");
+      expect(roomList.rooms[1].id, "1");
+      expect(roomList.rooms[0].lastMessage, "Testcase 2");
+      expect(roomList.rooms[0].timeCreated, now);
+    });
+  });
+}

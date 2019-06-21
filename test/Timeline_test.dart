@@ -64,18 +64,32 @@ void main() {
             "origin_server_ts": testTimeStamp
           }));
 
+      client.connection.onEvent.add(EventUpdate(
+          type: "timeline",
+          roomID: roomID,
+          eventType: "m.room.message",
+          content: {
+            "type": "m.room.message",
+            "content": {"msgtype": "m.text", "body": "Testcase"},
+            "sender": "@alice:example.com",
+            "status": 2,
+            "id": "2",
+            "origin_server_ts": testTimeStamp - 1000
+          }));
+
       expect(timeline.sub != null, true);
 
       await new Future.delayed(new Duration(milliseconds: 50));
 
-      expect(updateCount, 1);
-      expect(insertList, [0]);
-      expect(timeline.events.length, 1);
+      expect(updateCount, 2);
+      expect(insertList, [0, 0]);
+      expect(timeline.events.length, 2);
       expect(timeline.events[0].id, "1");
       expect(timeline.events[0].sender.id, "@alice:example.com");
       expect(timeline.events[0].time.toTimeStamp(), testTimeStamp);
       expect(timeline.events[0].environment, "m.room.message");
       expect(timeline.events[0].getBody(), "Testcase");
+      expect(timeline.events[0].time > timeline.events[1].time, true);
     });
   });
 }
