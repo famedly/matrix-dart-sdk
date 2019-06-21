@@ -25,6 +25,8 @@ import 'dart:async';
 import 'dart:core';
 import 'responses/ErrorResponse.dart';
 import 'Connection.dart';
+import 'RoomList.dart';
+import 'Room.dart';
 import 'Store.dart';
 import 'User.dart';
 import 'responses/PushrulesResponse.dart';
@@ -187,6 +189,28 @@ class Client {
     if (resp is ErrorResponse) connection.onError.add(resp);
 
     await connection.clear();
+  }
+
+  /// Loads the Rooms from the [store] and creates a new [RoomList] object.
+  Future<RoomList> getRoomList(
+      {bool onlyLeft = false,
+      bool onlyDirect = false,
+      bool onlyGroups = false,
+      onUpdateCallback onUpdate,
+      onInsertCallback,
+      onInsert,
+      onRemoveCallback onRemove}) async {
+    List<Room> rooms = await store.getRoomList(
+        onlyLeft: onlyLeft, onlyGroups: onlyGroups, onlyDirect: onlyDirect);
+    return RoomList(
+        client: this,
+        onlyLeft: onlyLeft,
+        onlyDirect: onlyDirect,
+        onlyGroups: onlyGroups,
+        onUpdate: onUpdate,
+        onInsert: onInsert,
+        onRemove: onRemove,
+        rooms: rooms);
   }
 
   /// Creates a new group chat and invites the given Users and returns the new

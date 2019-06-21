@@ -126,13 +126,16 @@ class Event {
 
   /// Generate a new Event object from a json string, mostly a table row.
   static Event fromJson(Map<String, dynamic> jsonObj, Room room) {
-    Map<String, dynamic> content;
-    try {
-      content = json.decode(jsonObj["content_json"]);
-    } catch (e) {
-      print("jsonObj decode of event content failed: ${e.toString()}");
-      content = {};
-    }
+    Map<String, dynamic> content = jsonObj["content"];
+
+    if (content == null)
+      try {
+        content = json.decode(jsonObj["content_json"]);
+      } catch (e) {
+        print("jsonObj decode of event content failed: ${e.toString()}");
+        content = {};
+      }
+
     return Event(
       jsonObj["id"],
       User.fromJson(jsonObj, room),
