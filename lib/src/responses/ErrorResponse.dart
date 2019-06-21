@@ -18,14 +18,13 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+ * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 import 'package:http/http.dart' as http;
 
 /// Represents a special response from the Homeserver for errors.
 class ErrorResponse {
-
   /// The unique identifier for this error.
   String errcode;
 

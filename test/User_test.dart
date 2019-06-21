@@ -18,7 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+ * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 import 'package:flutter_test/flutter_test.dart';
@@ -28,14 +28,13 @@ void main() {
   /// All Tests related to the Event
   group("User", () {
     test("Create from json", () async {
-
       final String id = "@alice:server.abc";
       final String membership = "join";
       final String displayName = "Alice";
       final String avatarUrl = "";
       final int powerLevel = 50;
 
-      final Map<String,dynamic> jsonObj = {
+      final Map<String, dynamic> jsonObj = {
         "matrix_id": id,
         "displayname": displayName,
         "avatar_url": avatarUrl,
@@ -45,13 +44,12 @@ void main() {
 
       User user = User.fromJson(jsonObj, null);
 
-      expect(user.id,id);
-      expect(user.membership,membership);
-      expect(user.displayName,displayName);
-      expect(user.avatarUrl.mxc,avatarUrl);
-      expect(user.powerLevel,powerLevel);
-      expect(user.calcDisplayname(),displayName);
-
+      expect(user.id, id);
+      expect(user.membership, membership);
+      expect(user.displayName, displayName);
+      expect(user.avatarUrl.mxc, avatarUrl);
+      expect(user.powerLevel, powerLevel);
+      expect(user.calcDisplayname(), displayName);
     });
   });
 }

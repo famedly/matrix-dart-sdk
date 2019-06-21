@@ -18,7 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+ * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 // TODO: localize this!
@@ -32,8 +32,7 @@ class ChatTime {
   /// Insert with a timestamp [ts] which represents the milliseconds since
   /// the Unix epoch.
   ChatTime(num ts) {
-    if (ts != null)
-    dateTime = DateTime.fromMillisecondsSinceEpoch(ts);
+    if (ts != null) dateTime = DateTime.fromMillisecondsSinceEpoch(ts);
   }
 
   /// Returns a ChatTime object which represents the current time.
@@ -51,12 +50,16 @@ class ChatTime {
     bool sameDay =
         sameYear && now.month == dateTime.month && now.day == dateTime.day;
 
-    bool sameWeek = sameYear && !sameDay && now.millisecondsSinceEpoch - dateTime.millisecondsSinceEpoch < 1000*60*60*24*7;
+    bool sameWeek = sameYear &&
+        !sameDay &&
+        now.millisecondsSinceEpoch - dateTime.millisecondsSinceEpoch <
+            1000 * 60 * 60 * 24 * 7;
 
     if (sameDay) {
       return toTimeString();
     } else if (sameWeek) {
-      switch (dateTime.weekday) { // TODO: Needs localization
+      switch (dateTime.weekday) {
+        // TODO: Needs localization
         case 1:
           return "Montag";
         case 2:
@@ -102,8 +105,9 @@ class ChatTime {
 
   operator ==(dynamic other) {
     if (other is ChatTime)
-    return this.toTimeStamp() == other.toTimeStamp();
-    else return false;
+      return this.toTimeStamp() == other.toTimeStamp();
+    else
+      return false;
   }
 
   /// Two message events can belong to the same environment. That means that they
@@ -114,7 +118,8 @@ class ChatTime {
   /// Checks if two ChatTimes are close enough to belong to the same
   /// environment.
   bool sameEnvironment(ChatTime prevTime) {
-    return toTimeStamp() - prevTime.toTimeStamp() < 1000*60*minutesBetweenEnvironments;
+    return toTimeStamp() - prevTime.toTimeStamp() <
+        1000 * 60 * minutesBetweenEnvironments;
   }
 
   /// Returns a simple time String.
