@@ -28,6 +28,7 @@ import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/Event.dart';
 import './User.dart';
+import 'Timeline.dart';
 
 /// Represents a Matrix room.
 class Room {
@@ -83,14 +84,7 @@ class Room {
   /// The needed power levels for all actions.
   Map<String, int> powerLevels = {};
 
-  /// The list of events in this room. If the room is created by the
-  /// [getRoomList()] of the [Store], this will contain only the last event.
-  List<Event> events = [];
-
-  /// The list of participants in this room. If the room is created by the
-  /// [getRoomList()] of the [Store], this will contain only the sender of the
-  /// last event.
-  List<User> participants = [];
+  Event lastEvent;
 
   /// Your current client instance.
   final Client client;
@@ -123,23 +117,22 @@ class Room {
     this.historyVisibility,
     this.joinRules,
     this.powerLevels,
-    this.events,
-    this.participants,
+    this.lastEvent,
     this.client,
   });
 
   /// The last message sent to this room.
   String get lastMessage {
-    if (events != null && events.length > 0)
-      return events[0].getBody();
+    if (lastEvent != null)
+      return lastEvent.getBody();
     else
       return "";
   }
 
   /// When the last message received.
   ChatTime get timeCreated {
-    if (events?.length > 0)
-      return events[0].time;
+    if (lastEvent != null)
+      return lastEvent.time;
     else
       return ChatTime.now();
   }
@@ -163,12 +156,6 @@ class Room {
         data: {"topic": newName});
     if (res is ErrorResponse) client.connection.onError.add(res);
     return res;
-  }
-
-  @Deprecated("Use the client.connection streams instead!")
-  Stream<List<Event>> get eventsStream {
-    return Stream<List<Event>>.fromIterable(Iterable<List<Event>>.generate(
-        this.events.length, (int index) => this.events)).asBroadcastStream();
   }
 
   /// Call the Matrix API to send a simple text message.
@@ -394,9 +381,8 @@ class Room {
         "power_event_name": row["power_event_name"],
         "power_event_power_levels": row["power_event_power_levels"],
       },
+      lastEvent: Event.fromJson(row, null),
       client: matrix,
-      events: [Event.fromJson(row, null)],
-      participants: [],
     );
   }
 
@@ -413,26 +399,25 @@ class Room {
     return room;
   }
 
+  Future<Timeline> getTimeline({onUpdate, onInsert}) async {
+    List<Event> events = await loadEvents();
+    return Timeline(
+      room: this,
+      events: events,
+      onUpdate: onUpdate,
+      onInsert: onInsert,
+    );
+  }
+
   /// Load all events for a given room from the store. This includes all
   /// senders of those events, who will be added to the participants list.
   Future<List<Event>> loadEvents() async {
-    this.events = await client.store.getEventList(this);
-
-    Map<String, bool> participantMap = {};
-    for (num i = 0; i < events.length; i++) {
-      if (!participantMap.containsKey(events[i].sender.mxid)) {
-        participants.add(events[i].sender);
-        participantMap[events[i].sender.mxid] = true;
-      }
-    }
-
-    return this.events;
+    return await client.store.getEventList(this);
   }
 
   /// Load all participants for a given room from the store.
   Future<List<User>> loadParticipants() async {
-    this.participants = await client.store.loadParticipants(this);
-    return this.participants;
+    return await client.store.loadParticipants(this);
   }
 
   /// Request the full list of participants from the server. The local list
@@ -454,8 +439,6 @@ class Room {
       if (newUser.membership != "leave") participants.add(newUser);
     }
 
-    this.participants = participants;
-
-    return this.participants;
+    return participants;
   }
 }

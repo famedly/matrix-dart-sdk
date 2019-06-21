@@ -79,7 +79,7 @@ class User {
 
   /// Creates a new User object from a json string like a row from the database.
   static User fromJson(Map<String, dynamic> json, Room room) {
-    return User(json['matrix_id'],
+    return User(json['matrix_id'] ?? json['sender'],
         displayName: json['displayname'],
         avatarUrl: MxContent(json['avatar_url']),
         membership: json['membership'],
