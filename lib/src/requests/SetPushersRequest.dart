@@ -20,8 +20,8 @@
  * You should have received a copy of the GNU General Public License
  * along with famedly.  If not, see <http://www.gnu.org/licenses/>.
  */
+import 'package:flutter/widgets.dart';
 import 'package:json_annotation/json_annotation.dart';
-import 'package:meta/meta.dart';
 
 part 'SetPushersRequest.g.dart';
 
