@@ -60,19 +60,18 @@ class Timeline {
         Event newEvent = Event.fromJson(eventUpdate.content, room);
 
         events.insert(0, newEvent);
-        onInsert(0);
+        if (onInsert != null) onInsert(0);
       }
       sortAndUpdate();
     } catch (e) {
-      print("[WARNING] ${e.toString()}");
-      sub.cancel();
+      print("[WARNING] (_handleEventUpdate) ${e.toString()}");
     }
   }
 
   sortAndUpdate() {
     events
         ?.sort((a, b) => b.time.toTimeStamp().compareTo(a.time.toTimeStamp()));
-    onUpdate();
+    if (onUpdate != null) onUpdate();
   }
 }
 

@@ -93,12 +93,12 @@ class RoomList {
           highlightCount: chatUpdate.highlight_count,
           notificationCount: chatUpdate.notification_count);
       rooms.insert(position, newRoom);
-      onInsert(position);
+      if (onInsert != null) onInsert(position);
     }
     // If the membership is "leave" then remove the item and stop here
     else if (found && chatUpdate.membership == "leave") {
       final Room removed = rooms.removeAt(j);
-      onRemove(j);
+      if (onRemove != null) onRemove(j);
     }
     // Update notification and highlight count
     else if (found &&
@@ -156,7 +156,7 @@ class RoomList {
   sortAndUpdate() {
     rooms?.sort((a, b) =>
         b.timeCreated.toTimeStamp().compareTo(a.timeCreated.toTimeStamp()));
-    onUpdate();
+    if (onUpdate != null) onUpdate();
   }
 }
 
