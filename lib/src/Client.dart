@@ -196,10 +196,9 @@ class Client {
       {bool onlyLeft = false,
       bool onlyDirect = false,
       bool onlyGroups = false,
-      onUpdateCallback onUpdate,
-      onInsertCallback,
-      onInsert,
-      onRemoveCallback onRemove}) async {
+      onRoomListUpdateCallback onUpdate,
+      onRoomListInsertCallback onInsert,
+      onRoomListRemoveCallback onRemove}) async {
     List<Room> rooms = await store.getRoomList(
         onlyLeft: onlyLeft, onlyGroups: onlyGroups, onlyDirect: onlyDirect);
     return RoomList(

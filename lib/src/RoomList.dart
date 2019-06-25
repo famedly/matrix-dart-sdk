@@ -46,13 +46,13 @@ class RoomList {
 
   /// Will be called, when the room list has changed. Can be used e.g. to update
   /// the state of a StatefulWidget.
-  final onUpdateCallback onUpdate;
+  final onRoomListUpdateCallback onUpdate;
 
   /// Will be called, when a new room is added to the list.
-  final onInsertCallback onInsert;
+  final onRoomListInsertCallback onInsert;
 
   /// Will be called, when a room has been removed from the list.
-  final onRemoveCallback onRemove;
+  final onRoomListRemoveCallback onRemove;
 
   StreamSubscription<EventUpdate> eventSub;
   StreamSubscription<RoomUpdate> roomSub;
@@ -160,6 +160,6 @@ class RoomList {
   }
 }
 
-typedef onUpdateCallback = void Function();
-typedef onInsertCallback = void Function(int insertID);
-typedef onRemoveCallback = void Function(int insertID);
+typedef onRoomListUpdateCallback = void Function();
+typedef onRoomListInsertCallback = void Function(int insertID);
+typedef onRoomListRemoveCallback = void Function(int insertID);

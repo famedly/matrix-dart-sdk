@@ -34,8 +34,8 @@ class Timeline {
   final Room room;
   List<Event> events = [];
 
-  final onUpdateCallback onUpdate;
-  final onInsertCallback onInsert;
+  final onTimelineUpdateCallback onUpdate;
+  final onTimelineInsertCallback onInsert;
 
   StreamSubscription<EventUpdate> sub;
 
@@ -76,5 +76,5 @@ class Timeline {
   }
 }
 
-typedef onUpdateCallback = void Function();
-typedef onInsertCallback = void Function(int insertID);
+typedef onTimelineUpdateCallback = void Function();
+typedef onTimelineInsertCallback = void Function(int insertID);

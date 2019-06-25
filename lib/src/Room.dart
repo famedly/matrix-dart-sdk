@@ -399,7 +399,9 @@ class Room {
     return room;
   }
 
-  Future<Timeline> getTimeline({onUpdate, onInsert}) async {
+  Future<Timeline> getTimeline(
+      {onTimelineUpdateCallback onUpdate,
+      onTimelineInsertCallback onInsert}) async {
     List<Event> events = await loadEvents();
     return Timeline(
       room: this,
