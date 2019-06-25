@@ -23,6 +23,7 @@
 
 import 'dart:async';
 import 'dart:core';
+import 'requests/SetPushersRequest.dart';
 import 'responses/ErrorResponse.dart';
 import 'Connection.dart';
 import 'RoomList.dart';
@@ -245,5 +246,21 @@ class Client {
     }
 
     return PushrulesResponse.fromJson(resp);
+  }
+
+  /// This endpoint allows the creation, modification and deletion of pushers for this user ID.
+  Future setPushers(SetPushersRequest data) async {
+    final dynamic resp = await connection.jsonRequest(
+      type: "POST",
+      action: "/client/r0/pushers/set",
+      data: data,
+    );
+
+    if (resp is ErrorResponse) {
+      connection.onError.add(resp);
+      return null;
+    }
+
+    return null;
   }
 }
