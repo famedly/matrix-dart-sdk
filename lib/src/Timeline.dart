@@ -37,6 +37,8 @@ class Timeline {
   final onTimelineUpdateCallback onUpdate;
   final onTimelineInsertCallback onInsert;
 
+  Set<String> waitToReplace = {};
+
   StreamSubscription<EventUpdate> sub;
 
   Timeline({this.room, this.events, this.onUpdate, this.onInsert}) {
@@ -47,20 +49,40 @@ class Timeline {
     try {
       if (eventUpdate.roomID != room.id) return;
       if (eventUpdate.type == "timeline" || eventUpdate.type == "history") {
-        if (!eventUpdate.content.containsKey("id"))
-          eventUpdate.content["id"] = eventUpdate.content["event_id"];
+        // Is this event already in the timeline?
+        if (eventUpdate.content["status"] == 1 ||
+            eventUpdate.content["status"] == -1 ||
+            waitToReplace.contains(eventUpdate.content["id"])) {
+          int i;
+          for (i = 0; i < events.length; i++) {
+            if (events[i].content.containsKey("txid") &&
+                    events[i].content["txid"] ==
+                        eventUpdate.content["content"]["txid"] ||
+                events[i].id == eventUpdate.content["id"]) break;
+          }
+          if (i < events.length) {
+            events[i] = Event.fromJson(eventUpdate.content, room);
+            if (eventUpdate.content["content"]["txid"] is String)
+              waitToReplace.add(eventUpdate.content["id"]);
+            else
+              waitToReplace.remove(eventUpdate.content["id"]);
+          }
+        } else {
+          if (!eventUpdate.content.containsKey("id"))
+            eventUpdate.content["id"] = eventUpdate.content["event_id"];
 
-        User user = await room.client.store
-            ?.getUser(matrixID: eventUpdate.content["sender"], room: room);
-        if (user != null) {
-          eventUpdate.content["displayname"] = user.displayName;
-          eventUpdate.content["avatar_url"] = user.avatarUrl.mxc;
+          User user = await room.client.store
+              ?.getUser(matrixID: eventUpdate.content["sender"], room: room);
+          if (user != null) {
+            eventUpdate.content["displayname"] = user.displayName;
+            eventUpdate.content["avatar_url"] = user.avatarUrl.mxc;
+          }
+
+          Event newEvent = Event.fromJson(eventUpdate.content, room);
+
+          events.insert(0, newEvent);
+          if (onInsert != null) onInsert(0);
         }
-
-        Event newEvent = Event.fromJson(eventUpdate.content, room);
-
-        events.insert(0, newEvent);
-        if (onInsert != null) onInsert(0);
       }
       sortAndUpdate();
     } catch (e) {

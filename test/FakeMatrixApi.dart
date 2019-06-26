@@ -376,7 +376,12 @@ class FakeMatrixApi extends MockClient {
           },
       "/client/r0/rooms/!localpart:server.abc/read_markers": (var reqI) => {},
     },
-    "PUT": {},
+    "PUT": {
+      "/client/r0/rooms/!1234:example.com/send/m.room.message/1234":
+          (var reqI) => {
+                "event_id": "42",
+              },
+    },
     "DELETE": {
       "/unknown/token": (var req) => {"errcode": "M_UNKNOWN_TOKEN"},
     },

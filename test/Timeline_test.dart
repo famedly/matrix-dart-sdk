@@ -27,6 +27,7 @@ import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/Timeline.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
+import 'FakeMatrixApi.dart';
 
 void main() {
   /// All Tests related to the MxContent
@@ -36,21 +37,22 @@ void main() {
     int updateCount = 0;
     List<int> insertList = [];
 
+    Client client = Client("testclient", debug: true);
+    client.connection.httpClient = FakeMatrixApi();
+    client.homeserver = "https://fakeServer.notExisting";
+
+    Room room = Room(id: roomID, client: client);
+    Timeline timeline = Timeline(
+        room: room,
+        events: [],
+        onUpdate: () {
+          updateCount++;
+        },
+        onInsert: (int insertID) {
+          insertList.add(insertID);
+        });
+
     test("Create", () async {
-      Client client = Client("testclient");
-      client.homeserver = "https://testserver.abc";
-
-      Room room = Room(id: roomID, client: client);
-      Timeline timeline = Timeline(
-          room: room,
-          events: [],
-          onUpdate: () {
-            updateCount++;
-          },
-          onInsert: (int insertID) {
-            insertList.add(insertID);
-          });
-
       client.connection.onEvent.add(EventUpdate(
           type: "timeline",
           roomID: roomID,
@@ -90,6 +92,38 @@ void main() {
       expect(timeline.events[0].environment, "m.room.message");
       expect(timeline.events[0].getBody(), "Testcase");
       expect(timeline.events[0].time > timeline.events[1].time, true);
+    });
+
+    test("Send message", () async {
+      room.sendTextEvent("test", txid: "1234");
+
+      await new Future.delayed(new Duration(milliseconds: 50));
+
+      expect(updateCount, 4);
+      expect(insertList, [0, 0, 0]);
+      expect(timeline.events[0].content["txid"], "1234");
+      expect(timeline.events[0].id, "42");
+      expect(timeline.events[0].status, 1);
+
+      client.connection.onEvent.add(EventUpdate(
+          type: "timeline",
+          roomID: roomID,
+          eventType: "m.room.message",
+          content: {
+            "type": "m.room.message",
+            "content": {"msgtype": "m.text", "body": "test"},
+            "sender": "@alice:example.com",
+            "status": 2,
+            "id": "42",
+            "origin_server_ts": DateTime.now().millisecondsSinceEpoch
+          }));
+
+      await new Future.delayed(new Duration(milliseconds: 50));
+
+      expect(updateCount, 5);
+      expect(insertList, [0, 0, 0]);
+      expect(timeline.events[0].id, "42");
+      expect(timeline.events[0].status, 2);
     });
   });
 }
