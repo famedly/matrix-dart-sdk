@@ -125,5 +125,16 @@ void main() {
       expect(timeline.events[0].id, "42");
       expect(timeline.events[0].status, 2);
     });
+
+    test("Send message with error", () async {
+      room.sendTextEvent("test", txid: "errortxid");
+
+      await new Future.delayed(new Duration(milliseconds: 50));
+
+      expect(updateCount, 7);
+      expect(insertList, [0, 0, 0, 0]);
+      expect(timeline.events[0].content["txid"], "errortxid");
+      expect(timeline.events[0].status, -1);
+    });
   });
 }
