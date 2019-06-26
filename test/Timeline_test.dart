@@ -85,6 +85,7 @@ void main() {
 
       expect(updateCount, 2);
       expect(insertList, [0, 0]);
+      expect(insertList.length, timeline.events.length);
       expect(timeline.events.length, 2);
       expect(timeline.events[0].id, "1");
       expect(timeline.events[0].sender.id, "@alice:example.com");
@@ -101,6 +102,7 @@ void main() {
 
       expect(updateCount, 4);
       expect(insertList, [0, 0, 0]);
+      expect(insertList.length, timeline.events.length);
       expect(timeline.events[0].content["txid"], "1234");
       expect(timeline.events[0].id, "42");
       expect(timeline.events[0].status, 1);
@@ -123,19 +125,41 @@ void main() {
 
       expect(updateCount, 5);
       expect(insertList, [0, 0, 0]);
+      expect(insertList.length, timeline.events.length);
       expect(timeline.events[0].id, "42");
       expect(timeline.events[0].status, 2);
     });
 
     test("Send message with error", () async {
+      client.connection.onEvent.add(EventUpdate(
+          type: "timeline",
+          roomID: roomID,
+          eventType: "m.room.message",
+          content: {
+            "type": "m.room.message",
+            "content": {"msgtype": "m.text", "body": "Testcase"},
+            "sender": "@alice:example.com",
+            "status": 0,
+            "id": "abc",
+            "origin_server_ts": testTimeStamp
+          }));
+      await new Future.delayed(new Duration(milliseconds: 50));
       room.sendTextEvent("test", txid: "errortxid");
-
+      await new Future.delayed(new Duration(milliseconds: 50));
+      room.sendTextEvent("test", txid: "errortxid2");
+      await new Future.delayed(new Duration(milliseconds: 50));
+      room.sendTextEvent("test", txid: "errortxid3");
       await new Future.delayed(new Duration(milliseconds: 50));
 
-      expect(updateCount, 7);
-      expect(insertList, [0, 0, 0, 0]);
-      expect(timeline.events[0].content["txid"], "errortxid");
+      expect(updateCount, 12);
+      expect(insertList, [0, 0, 0, 0, 0, 0, 0]);
+      expect(insertList.length, timeline.events.length);
+      expect(timeline.events[0].content["txid"], "errortxid3");
       expect(timeline.events[0].status, -1);
+      expect(timeline.events[1].content["txid"], "errortxid2");
+      expect(timeline.events[1].status, -1);
+      expect(timeline.events[2].content["txid"], "errortxid");
+      expect(timeline.events[2].status, -1);
     });
   });
 }

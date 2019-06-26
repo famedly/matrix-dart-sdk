@@ -204,27 +204,17 @@ class Room {
       // On error, set status to -1
       eventUpdate.content["status"] = -1;
       client.connection.onEvent.add(eventUpdate);
-      client.store?.db
-          ?.rawUpdate("UPDATE Events SET status=-1 WHERE id=?", [messageID]);
+      await client.store?.transaction(() {
+        client.store.storeEventUpdate(eventUpdate);
+      });
     } else {
       final String newEventID = res["event_id"];
       eventUpdate.content["status"] = 1;
       eventUpdate.content["id"] = newEventID;
       client.connection.onEvent.add(eventUpdate);
-
-      // Store the result in database
-      if (client.store != null) {
-        final List<Map<String, dynamic>> eventQuery = await client.store.db
-            .rawQuery("SELECT * FROM Events WHERE id=?", [newEventID]);
-        if (eventQuery.length > 0) {
-          client.store.db
-              .rawDelete("DELETE FROM Events WHERE id=?", [messageID]);
-        } else {
-          client.store.db.rawUpdate(
-              "UPDATE Events SET id=?, status=1 WHERE id=?",
-              [newEventID, messageID]);
-        }
-      }
+      await client.store?.transaction(() {
+        client.store.storeEventUpdate(eventUpdate);
+      });
       return newEventID;
     }
     return null;
