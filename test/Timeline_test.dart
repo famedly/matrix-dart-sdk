@@ -115,6 +115,7 @@ void main() {
             "sender": "@alice:example.com",
             "status": 2,
             "id": "42",
+            "unsigned": {"transaction_id": "1234"},
             "origin_server_ts": DateTime.now().millisecondsSinceEpoch
           }));
 
