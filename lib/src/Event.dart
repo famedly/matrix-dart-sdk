@@ -142,7 +142,7 @@ class Event {
       ChatTime(jsonObj["origin_server_ts"]),
       stateKey: User(jsonObj["state_key"]),
       environment: jsonObj["type"],
-      status: jsonObj["status"],
+      status: jsonObj["status"] ?? 2,
       content: content,
       room: room,
     );

@@ -35,7 +35,6 @@ void main() {
       final String empty = "";
       final String membership = "join";
       final String type = "m.room.message";
-      final int status = 2;
       final String msgtype = "m.text";
       final String body = "Hello World";
       final String formatted_body = "<b>Hello</b> World";
@@ -52,7 +51,6 @@ void main() {
         "origin_server_ts": timestamp,
         "state_key": empty,
         "type": type,
-        "status": status,
         "content_json": contentJson,
       };
 
@@ -63,7 +61,7 @@ void main() {
       expect(event.sender.displayName, senderDisplayname);
       expect(event.sender.avatarUrl.mxc, empty);
       expect(event.sender.membership, membership);
-      expect(event.status, status);
+      expect(event.status, 2);
       expect(event.text, body);
       expect(event.formattedText, formatted_body);
       expect(event.getBody(), body);
