@@ -36,7 +36,7 @@ class EventUpdate {
   final String eventType;
 
   // The json payload of the content of this event.
-  final dynamic content;
+  final Map<String, dynamic> content;
 
   EventUpdate({this.eventType, this.roomID, this.type, this.content});
 }

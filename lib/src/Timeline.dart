@@ -37,8 +37,6 @@ class Timeline {
   final onTimelineUpdateCallback onUpdate;
   final onTimelineInsertCallback onInsert;
 
-  Set<String> waitToReplace = {};
-
   StreamSubscription<EventUpdate> sub;
 
   Timeline({this.room, this.events, this.onUpdate, this.onInsert}) {
@@ -52,20 +50,23 @@ class Timeline {
         // Is this event already in the timeline?
         if (eventUpdate.content["status"] == 1 ||
             eventUpdate.content["status"] == -1 ||
-            waitToReplace.contains(eventUpdate.content["id"])) {
+            (eventUpdate.content.containsKey("unsigned") &&
+                eventUpdate.content["unsigned"]["transaction_id"] is String)) {
           int i;
           for (i = 0; i < events.length; i++) {
             if (events[i].content.containsKey("txid") &&
                     events[i].content["txid"] ==
                         eventUpdate.content["content"]["txid"] ||
-                events[i].id == eventUpdate.content["id"]) break;
+                events[i].id == eventUpdate.content["id"] ||
+                (eventUpdate.content.containsKey("unsigned") &&
+                    eventUpdate.content["unsigned"]["transaction_id"]
+                        is String &&
+                    events[i].content["txid"] ==
+                        eventUpdate.content["unsigned"]["transaction_id"]))
+              break;
           }
           if (i < events.length) {
             events[i] = Event.fromJson(eventUpdate.content, room);
-            if (eventUpdate.content["content"]["txid"] is String)
-              waitToReplace.add(eventUpdate.content["id"]);
-            else
-              waitToReplace.remove(eventUpdate.content["id"]);
           }
         } else {
           if (!eventUpdate.content.containsKey("id"))
