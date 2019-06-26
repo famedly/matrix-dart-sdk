@@ -165,45 +165,65 @@ class Room {
         type: "PUT",
         action: "/client/r0/rooms/${id}/send/m.room.message/$txid",
         data: {"msgtype": "m.text", "body": message});
-    if (res["errcode"] == "M_LIMIT_EXCEEDED")
-      client.connection.onError.add(res["error"]);
+    if (res is ErrorResponse) client.connection.onError.add(res);
     return res;
   }
 
-  Future<String> sendTextEvent(String message) async {
+  Future<String> sendTextEvent(String message, {String txid = null}) async {
     final String type = "m.room.message";
+    String messageID;
     final int now = DateTime.now().millisecondsSinceEpoch;
-    final String messageID = "msg$now";
+    if (txid == null) {
+      messageID = "msg$now";
+    } else
+      messageID = txid;
 
+    // Display a *sending* event and store it.
     EventUpdate eventUpdate =
         EventUpdate(type: "timeline", roomID: id, eventType: type, content: {
       "type": type,
-      "id": messageID,
+      "id": null,
       "sender": client.userID,
       "status": 0,
       "origin_server_ts": now,
       "content": {
         "msgtype": "m.text",
         "body": message,
+        "txid": messageID,
       }
     });
     client.connection.onEvent.add(eventUpdate);
-    await client.store.transaction(() {
+    await client.store?.transaction(() {
       client.store.storeEventUpdate(eventUpdate);
     });
+
+    // Send the text and on success, store and display a *sent* event.
     final dynamic res = await sendText(message, txid: messageID);
+
     if (res is ErrorResponse) {
-      client.store.db
-          .rawUpdate("UPDATE Events SET status=-1 WHERE id=?", [messageID]);
+      // On error, set status to -1
+      eventUpdate.content["status"] = -1;
+      client.connection.onEvent.add(eventUpdate);
+      client.store?.db
+          ?.rawUpdate("UPDATE Events SET status=-1 WHERE id=?", [messageID]);
     } else {
       final String newEventID = res["event_id"];
-      final List<Map<String, dynamic>> event = await client.store.db
-          .rawQuery("SELECT * FROM Events WHERE id=?", [newEventID]);
-      if (event.length > 0) {
-        client.store.db.rawDelete("DELETE FROM Events WHERE id=?", [messageID]);
-      } else {
-        client.store.db.rawUpdate("UPDATE Events SET id=?, status=1 WHERE id=?",
-            [newEventID, messageID]);
+      eventUpdate.content["status"] = 1;
+      eventUpdate.content["id"] = newEventID;
+      client.connection.onEvent.add(eventUpdate);
+
+      // Store the result in database
+      if (client.store != null) {
+        final List<Map<String, dynamic>> eventQuery = await client.store.db
+            .rawQuery("SELECT * FROM Events WHERE id=?", [newEventID]);
+        if (eventQuery.length > 0) {
+          client.store.db
+              .rawDelete("DELETE FROM Events WHERE id=?", [messageID]);
+        } else {
+          client.store.db.rawUpdate(
+              "UPDATE Events SET id=?, status=1 WHERE id=?",
+              [newEventID, messageID]);
+        }
       }
       return newEventID;
     }
@@ -310,6 +330,7 @@ class Room {
     });
   }
 
+  /// Sets this room as a direct chat for this user.
   Future<dynamic> addToDirectChat(String userID) async {
     Map<String, List<String>> directChats =
         await client.store.getAccountDataDirectChats();
@@ -327,6 +348,7 @@ class Room {
     return resp;
   }
 
+  /// Sends *m.fully_read* and *m.read* for the given event ID.
   Future<dynamic> sendReadReceipt(String eventID) async {
     final dynamic resp = client.connection.jsonRequest(
         type: "POST",
@@ -399,6 +421,7 @@ class Room {
     return room;
   }
 
+  /// Creates a timeline from the store. Returns a [Timeline] object.
   Future<Timeline> getTimeline(
       {onTimelineUpdateCallback onUpdate,
       onTimelineInsertCallback onInsert}) async {
