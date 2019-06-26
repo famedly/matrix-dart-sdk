@@ -207,6 +207,8 @@ class Store {
     if (type == "timeline" || type == "history") {
       // calculate the status
       num status = 2;
+      if (eventContent["status"] is num) status = eventContent["status"];
+
       // Make unsigned part of the content
       if (eventContent["unsigned"] is Map<String, dynamic>)
         eventContent["content"]["unsigned"] = eventContent["unsigned"];
