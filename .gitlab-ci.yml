@@ -19,6 +19,14 @@ coverage:
     - ./scripts/coverage.sh
     - flutter pub pub publish --dry-run
 
+code_analyze:
+  image: cirrusci/flutter
+  stage: coverage
+  dependencies: []
+  script:
+    - flutter analyze
+  allow_failure: true
+
 builddocs:
   stage: builddocs
   image: cirrusci/flutter
@@ -28,7 +36,7 @@ builddocs:
     paths:
       - doc/api/
   only:
-  - master
+    - master
 
 pages:
   stage: deploy
@@ -41,6 +49,6 @@ pages:
     - builddocs
   artifacts:
     paths:
-    - public
+      - public
   only:
-  - master
+    - master
