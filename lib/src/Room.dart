@@ -330,6 +330,7 @@ class Room {
     });
   }
 
+  /// Sets this room as a direct chat for this user.
   Future<dynamic> addToDirectChat(String userID) async {
     Map<String, List<String>> directChats =
         await client.store.getAccountDataDirectChats();
@@ -347,6 +348,7 @@ class Room {
     return resp;
   }
 
+  /// Sends *m.fully_read* and *m.read* for the given event ID.
   Future<dynamic> sendReadReceipt(String eventID) async {
     final dynamic resp = client.connection.jsonRequest(
         type: "POST",
@@ -419,6 +421,7 @@ class Room {
     return room;
   }
 
+  /// Creates a timeline from the store. Returns a [Timeline] object.
   Future<Timeline> getTimeline(
       {onTimelineUpdateCallback onUpdate,
       onTimelineInsertCallback onInsert}) async {
