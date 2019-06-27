@@ -22,6 +22,7 @@
  */
 
 import 'dart:convert';
+import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'package:famedlysdk/src/Client.dart';
 import './User.dart';
@@ -148,6 +149,28 @@ class Event {
     );
   }
 
+  /// Removes this event if the status is < 1. This event will just be removed
+  /// from the database and the timelines.
+  Future<dynamic> remove() async {
+    if (status < 1) {
+      room.client.connection.onEvent.add(EventUpdate(
+          roomID: room.id,
+          type: "timeline",
+          eventType: environment,
+          content: {
+            "event_id": id,
+            "status": -2,
+          }));
+    }
+  }
+
+  /// Try to send this event again. Only works with events of status -1.
+  Future<dynamic> sendAgain({String txid}) async {
+    if (status != -1) return;
+    remove();
+    room.sendTextEvent(text, txid: txid);
+  }
+
   @Deprecated("Use [client.store.getEventList(Room room)] instead!")
   static Future<List<Event>> getEventList(Client matrix, Room room) async {
     List<Event> eventList = await matrix.store.getEventList(room);
@@ -176,6 +199,7 @@ enum EventTypes {
 }
 
 final Map<String, int> StatusTypes = {
+  "REMOVE": -2,
   "ERROR": -1,
   "SENDING": 0,
   "SENT": 1,

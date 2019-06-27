@@ -220,7 +220,10 @@ class Store {
       }
 
       // Save the event in the database
-      if ((status == 1 || status == -1) &&
+      if (status == -2) {
+        txn.rawDelete(
+            "DELETE FROM Events WHERE id=?", [eventContent["event_id"]]);
+      } else if ((status == 1 || status == -1) &&
           eventUpdate.content["txid"] is String)
         txn.rawUpdate("UPDATE Events SET status=?, id=?, WHERE id=?",
             [status, eventContent["event_id"], eventUpdate.content["txid"]]);

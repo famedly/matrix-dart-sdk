@@ -43,28 +43,37 @@ class Timeline {
     sub ??= room.client.connection.onEvent.stream.listen(_handleEventUpdate);
   }
 
+  int _findEvent({String event_id, String txid, String unsigned_txid}) {
+    int i;
+    for (i = 0; i < events.length; i++) {
+      if (events[i].content.containsKey("txid") &&
+              events[i].content["txid"] == txid ||
+          events[i].id == event_id ||
+          (events[i].content["txid"] == unsigned_txid)) break;
+    }
+    return i;
+  }
+
   void _handleEventUpdate(EventUpdate eventUpdate) async {
     try {
       if (eventUpdate.roomID != room.id) return;
       if (eventUpdate.type == "timeline" || eventUpdate.type == "history") {
+        if (eventUpdate.content["status"] == -2) {
+          int i = _findEvent(event_id: eventUpdate.content["event_id"]);
+          if (i < events.length) events.removeAt(i);
+        }
         // Is this event already in the timeline?
-        if (eventUpdate.content["status"] == 1 ||
+        else if (eventUpdate.content["status"] == 1 ||
             eventUpdate.content["status"] == -1 ||
             (eventUpdate.content.containsKey("unsigned") &&
                 eventUpdate.content["unsigned"]["transaction_id"] is String)) {
-          int i;
-          for (i = 0; i < events.length; i++) {
-            if (events[i].content.containsKey("txid") &&
-                    events[i].content["txid"] ==
-                        eventUpdate.content["content"]["txid"] ||
-                events[i].id == eventUpdate.content["event_id"] ||
-                (eventUpdate.content.containsKey("unsigned") &&
-                    eventUpdate.content["unsigned"]["transaction_id"]
-                        is String &&
-                    events[i].content["txid"] ==
-                        eventUpdate.content["unsigned"]["transaction_id"]))
-              break;
-          }
+          int i = _findEvent(
+              event_id: eventUpdate.content["event_id"],
+              txid: eventUpdate.content["content"]["txid"],
+              unsigned_txid: eventUpdate.content.containsKey("unsigned")
+                  ? eventUpdate.content["unsigned"]["transaction_id"]
+                  : null);
+
           if (i < events.length) {
             events[i] = Event.fromJson(eventUpdate.content, room);
           }

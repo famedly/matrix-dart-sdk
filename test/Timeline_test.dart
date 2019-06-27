@@ -161,5 +161,31 @@ void main() {
       expect(timeline.events[2].content["txid"], "errortxid");
       expect(timeline.events[2].status, -1);
     });
+
+    test("Remove message", () async {
+      timeline.events[0].remove();
+
+      await new Future.delayed(new Duration(milliseconds: 50));
+
+      expect(updateCount, 13);
+
+      expect(insertList, [0, 0, 0, 0, 0, 0, 0]);
+      expect(timeline.events.length, 6);
+      expect(timeline.events[0].content["txid"], "errortxid2");
+      expect(timeline.events[0].status, -1);
+    });
+
+    test("Resend message", () async {
+      timeline.events[0].sendAgain(txid: "1234");
+
+      await new Future.delayed(new Duration(milliseconds: 50));
+
+      expect(updateCount, 16);
+
+      expect(insertList, [0, 0, 0, 0, 0, 0, 0, 0]);
+      expect(timeline.events.length, 6);
+      expect(timeline.events[0].content["txid"], "1234");
+      expect(timeline.events[0].status, 1);
+    });
   });
 }
