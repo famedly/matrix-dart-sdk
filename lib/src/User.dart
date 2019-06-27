@@ -22,7 +22,6 @@
  */
 
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
-import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
 import 'package:famedlysdk/src/Room.dart';
 
@@ -74,7 +73,7 @@ class User {
   /// Returns the displayname or the local part of the Matrix ID if the user
   /// has no displayname.
   String calcDisplayname() => displayName.isEmpty
-      ? mxid.replaceFirst("@", "").split(":")[0]
+      ? id.replaceFirst("@", "").split(":")[0]
       : displayName;
 
   /// Creates a new User object from a json string like a row from the database.
@@ -129,7 +128,7 @@ class User {
   /// Returns null on error.
   Future<String> startDirectChat() async {
     // Try to find an existing direct chat
-    String roomID = await room.client?.store.getDirectChatRoomID(id);
+    String roomID = await room.client?.store?.getDirectChatRoomID(id);
     if (roomID != null) return roomID;
 
     // Start a new direct chat

@@ -77,9 +77,8 @@ class ChatTime {
       }
     } else if (sameYear) {
       return DateFormat('dd.MM').format(dateTime);
-    } else {
-      return DateFormat('dd.MM.yyyy').format(dateTime);
     }
+    return DateFormat('dd.MM.yyyy').format(dateTime);
   }
 
   /// Returns the milliseconds since the Unix epoch.
