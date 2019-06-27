@@ -220,19 +220,29 @@ class Store {
       }
 
       // Save the event in the database
+      if ((status == 1 || status == -1) &&
+          eventUpdate.content["txid"] is String)
+        txn.rawUpdate("UPDATE Events SET status=?, id=?, WHERE id=?",
+            [status, eventContent["id"], eventUpdate.content["txid"]]);
+      else
+        txn.rawInsert(
+            "INSERT OR REPLACE INTO Events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+          eventContent["event_id"],
+          chat_id,
+          eventContent["origin_server_ts"],
+          eventContent["sender"],
+          state_key,
+          eventContent["content"]["body"],
+          eventContent["type"],
+          json.encode(eventContent["content"]),
+          status
+        ]);
 
-      txn.rawInsert(
-          "INSERT OR REPLACE INTO Events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)", [
-        eventContent["event_id"],
-        chat_id,
-        eventContent["origin_server_ts"],
-        eventContent["sender"],
-        state_key,
-        eventContent["content"]["body"],
-        eventContent["type"],
-        json.encode(eventContent["content"]),
-        status
-      ]);
+      // Is there a transaction id? Then delete the event with this id.
+      if (eventUpdate.content.containsKey("unsigned") &&
+          eventUpdate.content["unsigned"]["transaction_id"] is String)
+        txn.rawDelete("DELETE FROM Events WHERE id=?",
+            [eventUpdate.content["unsigned"]["transaction_id"]]);
     }
 
     if (type == "history") return null;

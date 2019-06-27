@@ -171,6 +171,8 @@ class Room {
 
   Future<String> sendTextEvent(String message, {String txid = null}) async {
     final String type = "m.room.message";
+
+    // Create new transaction id
     String messageID;
     final int now = DateTime.now().millisecondsSinceEpoch;
     if (txid == null) {
@@ -182,7 +184,7 @@ class Room {
     EventUpdate eventUpdate =
         EventUpdate(type: "timeline", roomID: id, eventType: type, content: {
       "type": type,
-      "id": null,
+      "id": messageID,
       "sender": client.userID,
       "status": 0,
       "origin_server_ts": now,
