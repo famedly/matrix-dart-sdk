@@ -43,7 +43,7 @@ void main() {
           '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formatted_body"}';
 
       Map<String, dynamic> json = {
-        "id": id,
+        "event_id": id,
         "matrix_id": senderID,
         "displayname": senderDisplayname,
         "avatar_url": empty,
