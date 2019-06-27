@@ -168,5 +168,54 @@ void main() {
       expect(roomList.rooms[0].lastMessage, "Testcase 2");
       expect(roomList.rooms[0].timeCreated, now);
     });
+
+    test("onlyLeft", () async {
+      final Client client = Client("testclient");
+      client.homeserver = "https://testserver.abc";
+
+      int updateCount = 0;
+      List<int> insertList = [];
+      List<int> removeList = [];
+
+      RoomList roomList = RoomList(
+          client: client,
+          onlyLeft: true,
+          rooms: [],
+          onUpdate: () {
+            updateCount++;
+          },
+          onInsert: (int insertID) {
+            insertList.add(insertID);
+          },
+          onRemove: (int removeID) {
+            insertList.add(removeID);
+          });
+
+      client.connection.onRoomUpdate.add(RoomUpdate(
+        id: "1",
+        membership: "join",
+        notification_count: 2,
+        highlight_count: 1,
+        limitedTimeline: false,
+        prev_batch: "1234",
+      ));
+      client.connection.onRoomUpdate.add(RoomUpdate(
+        id: "2",
+        membership: "leave",
+        notification_count: 2,
+        highlight_count: 1,
+        limitedTimeline: false,
+        prev_batch: "1234",
+      ));
+
+      await new Future.delayed(new Duration(milliseconds: 50));
+
+      expect(roomList.eventSub != null, true);
+      expect(roomList.roomSub != null, true);
+      expect(roomList.rooms[0].id, "2");
+      expect(updateCount, 2);
+      expect(insertList, [0]);
+      expect(removeList, []);
+    });
   });
 }

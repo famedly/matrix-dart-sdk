@@ -78,9 +78,10 @@ class RoomList {
       if (rooms[j].id == chatUpdate.id) break;
     }
     final bool found = (j < rooms.length - 1 && rooms[j].id == chatUpdate.id);
+    final bool isLeftRoom = chatUpdate.membership == "leave";
 
     // Does the chat already exist in the list rooms?
-    if (!found && chatUpdate.membership != "leave") {
+    if (!found && ((!onlyLeft && !isLeftRoom) || (onlyLeft && isLeftRoom))) {
       num position = chatUpdate.membership == "invite" ? 0 : j;
       // Add the new chat to the list
       Room newRoom = Room(
@@ -93,8 +94,9 @@ class RoomList {
       rooms.insert(position, newRoom);
       if (onInsert != null) onInsert(position);
     }
-    // If the membership is "leave" then remove the item and stop here
-    else if (found && chatUpdate.membership == "leave") {
+    // If the membership is "leave" or not "leave" but onlyLeft=true then remove the item and stop here
+    else if (found &&
+        ((!onlyLeft && isLeftRoom) || (onlyLeft && !isLeftRoom))) {
       rooms.removeAt(j);
       if (onRemove != null) onRemove(j);
     }
