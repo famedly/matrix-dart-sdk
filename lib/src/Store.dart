@@ -224,9 +224,9 @@ class Store {
         txn.rawDelete(
             "DELETE FROM Events WHERE id=?", [eventContent["event_id"]]);
       } else if ((status == 1 || status == -1) &&
-          eventUpdate.content["txid"] is String)
+          eventContent["txid"] is String)
         txn.rawUpdate("UPDATE Events SET status=?, id=?, WHERE id=?",
-            [status, eventContent["event_id"], eventUpdate.content["txid"]]);
+            [status, eventContent["event_id"], eventContent["txid"]]);
       else
         txn.rawInsert(
             "INSERT OR REPLACE INTO Events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)", [

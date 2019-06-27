@@ -47,9 +47,10 @@ class Timeline {
     int i;
     for (i = 0; i < events.length; i++) {
       if (events[i].content.containsKey("txid") &&
-              events[i].content["txid"] == txid ||
+              (txid != null && events[i].content["txid"] == txid) ||
           events[i].id == event_id ||
-          (events[i].content["txid"] == unsigned_txid)) break;
+          (unsigned_txid != null && events[i].content["txid"] == unsigned_txid))
+        break;
     }
     return i;
   }
