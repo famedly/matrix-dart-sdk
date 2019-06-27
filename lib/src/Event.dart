@@ -153,6 +153,9 @@ class Event {
   /// from the database and the timelines.
   Future<dynamic> remove() async {
     if (status < 1) {
+      if (room.client.store != null)
+        room.client.store.db.rawDelete("DELETE FROM Events WHERE id=?", [id]);
+
       room.client.connection.onEvent.add(EventUpdate(
           roomID: room.id,
           type: "timeline",
