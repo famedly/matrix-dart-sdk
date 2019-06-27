@@ -25,7 +25,6 @@ code_analyze:
   dependencies: []
   script:
     - flutter analyze
-  allow_failure: true
 
 builddocs:
   stage: builddocs
