@@ -157,7 +157,11 @@ class Event {
           roomID: room.id,
           type: "timeline",
           eventType: environment,
-          content: {"event_id": id, "status": -2, "content": {}}));
+          content: {
+            "event_id": id,
+            "status": -2,
+            "content": {"body": "Removed..."}
+          }));
     }
   }
 
