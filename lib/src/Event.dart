@@ -138,7 +138,7 @@ class Event {
       }
 
     return Event(
-      jsonObj["event_id"],
+      jsonObj["event_id"] ?? jsonObj["id"],
       User.fromJson(jsonObj, room),
       ChatTime(jsonObj["origin_server_ts"]),
       stateKey: User(jsonObj["state_key"]),
