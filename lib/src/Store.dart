@@ -144,6 +144,7 @@ class Store {
   Future<void> storePrevBatch(dynamic sync) {
     txn.rawUpdate("UPDATE Clients SET prev_batch=? WHERE client=?",
         [client.prevBatch, client.clientName]);
+    return null;
   }
 
   /// Stores a RoomUpdate object in the database. Must be called inside of
@@ -172,14 +173,12 @@ class Store {
       txn.rawUpdate("UPDATE Rooms SET prev_batch=? WHERE id=?",
           [roomUpdate.prev_batch, roomUpdate.id]);
     }
+    return null;
   }
 
   /// Stores an UserUpdate object in the database. Must be called inside of
   /// [transaction].
   Future<void> storeUserEventUpdate(UserUpdate userUpdate) {
-    dynamic eventContent = userUpdate.content;
-    String type = userUpdate.type;
-
     switch (userUpdate.eventType) {
       case "m.direct":
         if (userUpdate.content["content"] is Map<String, dynamic>) {
@@ -195,6 +194,7 @@ class Store {
         }
         break;
     }
+    return null;
   }
 
   /// Stores an EventUpdate object in the database. Must be called inside of
@@ -412,6 +412,7 @@ class Store {
         }
         break;
     }
+    return null;
   }
 
   /// Returns a User object by a given Matrix ID and a Room.

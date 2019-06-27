@@ -251,8 +251,6 @@ class Connection {
   Future<void> _sync() async {
     if (client.isLogged() == false) return;
 
-    dynamic args = {};
-
     String action = "/client/r0/sync?filters=$_firstSyncFilters";
 
     if (client.prevBatch != null) {
@@ -383,8 +381,6 @@ class Connection {
                     is Map<String, dynamic> &&
                 events[i]["content"][e]["m.read"]["ts"] is num)) return;
 
-            num timestamp = events[i]["content"][e]["m.read"]["ts"];
-
             _handleEvent(events[i], id, "ephemeral");
           });
         });
@@ -410,7 +406,8 @@ class Connection {
 
   void _handleGlobalEvents(List<dynamic> events, String type) {
     for (int i = 0; i < events.length; i++)
-      if (events[i]["type"] is String && events[i]["content"] is dynamic) {
+      if (events[i]["type"] is String &&
+          events[i]["content"] is Map<String, dynamic>) {
         UserUpdate update = UserUpdate(
           eventType: events[i]["type"],
           type: type,
@@ -422,7 +419,7 @@ class Connection {
   }
 
   void _handleEvent(Map<String, dynamic> event, String roomID, String type) {
-    if (event["type"] is String && event["content"] is dynamic) {
+    if (event["type"] is String && event["content"] is Map<String, dynamic>) {
       EventUpdate update = EventUpdate(
         eventType: event["type"],
         roomID: roomID,

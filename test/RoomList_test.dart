@@ -23,10 +23,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:famedlysdk/src/Client.dart';
-import 'package:famedlysdk/src/Event.dart';
-import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/RoomList.dart';
-import 'package:famedlysdk/src/User.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/sync/RoomUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';

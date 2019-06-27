@@ -82,8 +82,6 @@ class RoomList {
     // Does the chat already exist in the list rooms?
     if (!found && chatUpdate.membership != "leave") {
       num position = chatUpdate.membership == "invite" ? 0 : j;
-      ChatTime timestamp =
-          chatUpdate.membership == "invite" ? ChatTime.now() : ChatTime(0);
       // Add the new chat to the list
       Room newRoom = Room(
           id: chatUpdate.id,
@@ -97,7 +95,7 @@ class RoomList {
     }
     // If the membership is "leave" then remove the item and stop here
     else if (found && chatUpdate.membership == "leave") {
-      final Room removed = rooms.removeAt(j);
+      rooms.removeAt(j);
       if (onRemove != null) onRemove(j);
     }
     // Update notification and highlight count
@@ -132,7 +130,6 @@ class RoomList {
 
     if (eventUpdate.type == "timeline") {
       // Update the last message preview
-      String body = eventUpdate.content["content"]["body"] ?? "";
       rooms[j].lastEvent = Event(
         eventUpdate.content["id"],
         User(eventUpdate.content["sender"]),

@@ -249,7 +249,7 @@ void main() {
     test('Logout when token is unknown', () async {
       Future<LoginState> loginStateFuture =
           matrix.connection.onLoginStateChanged.stream.first;
-      final resp = await matrix.connection
+      await matrix.connection
           .jsonRequest(type: "DELETE", action: "/unknown/token");
 
       LoginState state = await loginStateFuture;

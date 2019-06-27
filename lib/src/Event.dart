@@ -123,6 +123,7 @@ class Event {
             return EventTypes.Location;
         }
     }
+    return EventTypes.Text;
   }
 
   /// Generate a new Event object from a json string, mostly a table row.
