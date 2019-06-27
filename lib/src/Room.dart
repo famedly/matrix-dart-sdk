@@ -184,7 +184,7 @@ class Room {
     EventUpdate eventUpdate =
         EventUpdate(type: "timeline", roomID: id, eventType: type, content: {
       "type": type,
-      "id": messageID,
+      "event_id": messageID,
       "sender": client.userID,
       "status": 0,
       "origin_server_ts": now,
@@ -202,7 +202,7 @@ class Room {
     // Send the text and on success, store and display a *sent* event.
     final dynamic res = await sendText(message, txid: messageID);
 
-    if (res is ErrorResponse) {
+    if (res is ErrorResponse || !(res["event_id"] is String)) {
       // On error, set status to -1
       eventUpdate.content["status"] = -1;
       client.connection.onEvent.add(eventUpdate);
@@ -210,14 +210,13 @@ class Room {
         client.store.storeEventUpdate(eventUpdate);
       });
     } else {
-      final String newEventID = res["event_id"];
       eventUpdate.content["status"] = 1;
-      eventUpdate.content["id"] = newEventID;
+      eventUpdate.content["event_id"] = res["event_id"];
       client.connection.onEvent.add(eventUpdate);
       await client.store?.transaction(() {
         client.store.storeEventUpdate(eventUpdate);
       });
-      return newEventID;
+      return res["event_id"];
     }
     return null;
   }

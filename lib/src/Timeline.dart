@@ -57,7 +57,7 @@ class Timeline {
             if (events[i].content.containsKey("txid") &&
                     events[i].content["txid"] ==
                         eventUpdate.content["content"]["txid"] ||
-                events[i].id == eventUpdate.content["id"] ||
+                events[i].id == eventUpdate.content["event_id"] ||
                 (eventUpdate.content.containsKey("unsigned") &&
                     eventUpdate.content["unsigned"]["transaction_id"]
                         is String &&
@@ -69,9 +69,6 @@ class Timeline {
             events[i] = Event.fromJson(eventUpdate.content, room);
           }
         } else {
-          if (!eventUpdate.content.containsKey("id"))
-            eventUpdate.content["id"] = eventUpdate.content["event_id"];
-
           User user = await room.client.store
               ?.getUser(matrixID: eventUpdate.content["sender"], room: room);
           if (user != null) {

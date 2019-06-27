@@ -62,7 +62,7 @@ void main() {
             "content": {"msgtype": "m.text", "body": "Testcase"},
             "sender": "@alice:example.com",
             "status": 2,
-            "id": "1",
+            "event_id": "1",
             "origin_server_ts": testTimeStamp
           }));
 
@@ -75,7 +75,7 @@ void main() {
             "content": {"msgtype": "m.text", "body": "Testcase"},
             "sender": "@alice:example.com",
             "status": 2,
-            "id": "2",
+            "event_id": "2",
             "origin_server_ts": testTimeStamp - 1000
           }));
 
@@ -116,7 +116,7 @@ void main() {
             "content": {"msgtype": "m.text", "body": "test"},
             "sender": "@alice:example.com",
             "status": 2,
-            "id": "42",
+            "event_id": "42",
             "unsigned": {"transaction_id": "1234"},
             "origin_server_ts": DateTime.now().millisecondsSinceEpoch
           }));
@@ -140,7 +140,7 @@ void main() {
             "content": {"msgtype": "m.text", "body": "Testcase"},
             "sender": "@alice:example.com",
             "status": 0,
-            "id": "abc",
+            "event_id": "abc",
             "origin_server_ts": testTimeStamp
           }));
       await new Future.delayed(new Duration(milliseconds: 50));
