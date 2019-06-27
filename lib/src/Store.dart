@@ -223,7 +223,7 @@ class Store {
       if ((status == 1 || status == -1) &&
           eventUpdate.content["txid"] is String)
         txn.rawUpdate("UPDATE Events SET status=?, id=?, WHERE id=?",
-            [status, eventContent["id"], eventUpdate.content["txid"]]);
+            [status, eventContent["event_id"], eventUpdate.content["txid"]]);
       else
         txn.rawInsert(
             "INSERT OR REPLACE INTO Events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)", [
