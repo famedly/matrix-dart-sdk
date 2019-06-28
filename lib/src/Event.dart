@@ -170,10 +170,11 @@ class Event {
   }
 
   /// Try to send this event again. Only works with events of status -1.
-  Future<dynamic> sendAgain({String txid}) async {
-    if (status != -1) return;
+  Future<String> sendAgain({String txid}) async {
+    if (status != -1) return null;
     remove();
-    room.sendTextEvent(text, txid: txid);
+    final String eventID = await room.sendTextEvent(text, txid: txid);
+    return eventID;
   }
 
   @Deprecated("Use [client.store.getEventList(Room room)] instead!")
