@@ -149,6 +149,12 @@ class Store {
     return null;
   }
 
+  Future<void> storeRoomPrevBatch(Room room) async {
+    await _db.rawUpdate(
+        "UPDATE Rooms SET prev_batch=? WHERE id=?", [room.prev_batch, room.id]);
+    return null;
+  }
+
   /// Stores a RoomUpdate object in the database. Must be called inside of
   /// [transaction].
   Future<void> storeRoomUpdate(RoomUpdate roomUpdate) {

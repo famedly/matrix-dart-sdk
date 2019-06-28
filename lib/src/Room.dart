@@ -300,6 +300,9 @@ class Room {
 
     if (resp is ErrorResponse) return;
 
+    prev_batch = resp["end"];
+    client.store?.storeRoomPrevBatch(this);
+
     if (!(resp["chunk"] is List<dynamic> &&
         resp["chunk"].length > 0 &&
         resp["end"] is String)) return;

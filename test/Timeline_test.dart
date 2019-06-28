@@ -198,6 +198,7 @@ void main() {
       expect(timeline.events[6].id, "1143273582443PhrSn:example.org");
       expect(timeline.events[7].id, "2143273582443PhrSn:example.org");
       expect(timeline.events[8].id, "3143273582443PhrSn:example.org");
+      expect(room.prev_batch, "t47409-4357353_219380_26003_2265");
     });
   });
 }
