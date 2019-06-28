@@ -106,7 +106,7 @@ class Room {
     this.avatar,
     this.notificationCount,
     this.highlightCount,
-    this.prev_batch,
+    this.prev_batch = "",
     this.draft,
     this.unread,
     this.fullyRead,
@@ -295,8 +295,8 @@ class Room {
   Future<void> requestHistory({int historyCount = 100}) async {
     final dynamic resp = await client.connection.jsonRequest(
         type: "GET",
-        action: "/client/r0/rooms/$id/messages",
-        data: {"from": prev_batch, "dir": "b", "limit": historyCount});
+        action:
+            "/client/r0/rooms/$id/messages?from=${prev_batch}&dir=b&limit=$historyCount");
 
     if (resp is ErrorResponse) return;
 

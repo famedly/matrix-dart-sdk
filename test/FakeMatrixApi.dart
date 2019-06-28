@@ -31,8 +31,11 @@ class FakeMatrixApi extends MockClient {
   FakeMatrixApi()
       : super((request) async {
           // Collect data from Request
-          final String action = request.url.path.split("/_matrix")[1];
+          String action =
+              request.url.path.split("/_matrix")[1] + "?" + request.url.query;
+          if (action.endsWith("?")) action = action.replaceAll("?", "");
           final String method = request.method;
+          print("Got action: $action");
           final dynamic data =
               method == "GET" ? request.url.queryParameters : request.body;
           var res = {};
@@ -76,64 +79,65 @@ class FakeMatrixApi extends MockClient {
             "origin_server_ts": 1432735824653,
             "unsigned": {"age": 1234}
           },
-      "/client/r0/rooms/!1234:example.com/messages": (var req) => {
-            "start": "t47429-4392820_219380_26003_2265",
-            "end": "t47409-4357353_219380_26003_2265",
-            "chunk": [
-              {
-                "content": {
-                  "body": "This is an example text message",
-                  "msgtype": "m.text",
-                  "format": "org.matrix.custom.html",
-                  "formatted_body": "<b>This is an example text message</b>"
-                },
-                "type": "m.room.message",
-                "event_id": "3143273582443PhrSn:example.org",
-                "room_id": "!1234:example.com",
-                "sender": "@example:example.org",
-                "origin_server_ts": 1432735824653,
-                "unsigned": {"age": 1234}
-              },
-              {
-                "content": {"name": "The room name"},
-                "type": "m.room.name",
-                "event_id": "2143273582443PhrSn:example.org",
-                "room_id": "!1234:example.com",
-                "sender": "@example:example.org",
-                "origin_server_ts": 1432735824653,
-                "unsigned": {"age": 1234},
-                "state_key": ""
-              },
-              {
-                "content": {
-                  "body": "Gangnam Style",
-                  "url": "mxc://example.org/a526eYUSFFxlgbQYZmo442",
-                  "info": {
-                    "thumbnail_url":
-                        "mxc://example.org/FHyPlCeYUSFFxlgbQYZmoEoe",
-                    "thumbnail_info": {
-                      "mimetype": "image/jpeg",
-                      "size": 46144,
-                      "w": 300,
-                      "h": 300
+      "/client/r0/rooms/!1234:example.com/messages?from=1234&dir=b&limit=100":
+          (var req) => {
+                "start": "t47429-4392820_219380_26003_2265",
+                "end": "t47409-4357353_219380_26003_2265",
+                "chunk": [
+                  {
+                    "content": {
+                      "body": "This is an example text message",
+                      "msgtype": "m.text",
+                      "format": "org.matrix.custom.html",
+                      "formatted_body": "<b>This is an example text message</b>"
                     },
-                    "w": 480,
-                    "h": 320,
-                    "duration": 2140786,
-                    "size": 1563685,
-                    "mimetype": "video/mp4"
+                    "type": "m.room.message",
+                    "event_id": "3143273582443PhrSn:example.org",
+                    "room_id": "!1234:example.com",
+                    "sender": "@example:example.org",
+                    "origin_server_ts": 1432735824653,
+                    "unsigned": {"age": 1234}
                   },
-                  "msgtype": "m.video"
-                },
-                "type": "m.room.message",
-                "event_id": "1143273582443PhrSn:example.org",
-                "room_id": "!1234:example.com",
-                "sender": "@example:example.org",
-                "origin_server_ts": 1432735824653,
-                "unsigned": {"age": 1234}
-              }
-            ]
-          },
+                  {
+                    "content": {"name": "The room name"},
+                    "type": "m.room.name",
+                    "event_id": "2143273582443PhrSn:example.org",
+                    "room_id": "!1234:example.com",
+                    "sender": "@example:example.org",
+                    "origin_server_ts": 1432735824653,
+                    "unsigned": {"age": 1234},
+                    "state_key": ""
+                  },
+                  {
+                    "content": {
+                      "body": "Gangnam Style",
+                      "url": "mxc://example.org/a526eYUSFFxlgbQYZmo442",
+                      "info": {
+                        "thumbnail_url":
+                            "mxc://example.org/FHyPlCeYUSFFxlgbQYZmoEoe",
+                        "thumbnail_info": {
+                          "mimetype": "image/jpeg",
+                          "size": 46144,
+                          "w": 300,
+                          "h": 300
+                        },
+                        "w": 480,
+                        "h": 320,
+                        "duration": 2140786,
+                        "size": 1563685,
+                        "mimetype": "video/mp4"
+                      },
+                      "msgtype": "m.video"
+                    },
+                    "type": "m.room.message",
+                    "event_id": "1143273582443PhrSn:example.org",
+                    "room_id": "!1234:example.com",
+                    "sender": "@example:example.org",
+                    "origin_server_ts": 1432735824653,
+                    "unsigned": {"age": 1234}
+                  }
+                ]
+              },
       "/client/versions": (var req) => {
             "versions": ["r0.0.1", "r0.1.0", "r0.2.0", "r0.3.0", "r0.4.0"],
             "unstable_features": {"m.lazy_load_members": true},
