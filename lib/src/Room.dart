@@ -293,7 +293,7 @@ class Room {
 
   /// Request more previous events from the server.
   Future<void> requestHistory({int historyCount = 100}) async {
-    final dynamic resp = client.connection.jsonRequest(
+    final dynamic resp = await client.connection.jsonRequest(
         type: "GET",
         action: "/client/r0/rooms/$id/messages",
         data: {"from": prev_batch, "dir": "b", "limit": historyCount});
@@ -305,12 +305,12 @@ class Room {
         resp["end"] is String)) return;
 
     List<dynamic> history = resp["chunk"];
-    client.store.transaction(() {
+    client.store?.transaction(() {
       for (int i = 0; i < history.length; i++) {
         EventUpdate eventUpdate = EventUpdate(
-          eventType: "history",
+          type: "history",
           roomID: id,
-          type: history[i]["type"],
+          eventType: history[i]["type"],
           content: history[i],
         );
         client.connection.onEvent.add(eventUpdate);
@@ -319,6 +319,17 @@ class Room {
             "UPDATE Rooms SET prev_batch=? WHERE id=?", [resp["end"], id]);
       }
     });
+    if (client.store == null) {
+      for (int i = 0; i < history.length; i++) {
+        EventUpdate eventUpdate = EventUpdate(
+          type: "history",
+          roomID: id,
+          eventType: history[i]["type"],
+          content: history[i],
+        );
+        client.connection.onEvent.add(eventUpdate);
+      }
+    }
   }
 
   /// Sets this room as a direct chat for this user.
