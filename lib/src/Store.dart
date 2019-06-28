@@ -69,6 +69,8 @@ class Store {
       }
     });
 
+    await _db.rawUpdate("UPDATE Events SET status=-1 WHERE status=0");
+
     List<Map> list = await _db
         .rawQuery("SELECT * FROM Clients WHERE client=?", [client.clientName]);
     if (list.length == 1) {
