@@ -187,5 +187,17 @@ void main() {
       expect(timeline.events[0].content["txid"], "1234");
       expect(timeline.events[0].status, 1);
     });
+
+    test("Request history", () async {
+      await room.requestHistory();
+
+      await new Future.delayed(new Duration(milliseconds: 50));
+
+      expect(updateCount, 19);
+      expect(timeline.events.length, 9);
+      expect(timeline.events[6].id, "1143273582443PhrSn:example.org");
+      expect(timeline.events[7].id, "2143273582443PhrSn:example.org");
+      expect(timeline.events[8].id, "3143273582443PhrSn:example.org");
+    });
   });
 }
