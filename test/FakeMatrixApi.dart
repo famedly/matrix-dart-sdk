@@ -310,134 +310,140 @@ class FakeMatrixApi extends MockClient {
               ]
             }
           },
-      "/client/r0/sync": (var req) => {
-            "next_batch": Random().nextDouble().toString(),
-            "presence": {
-              "events": [
-                {
-                  "sender": "@alice:example.com",
-                  "type": "m.presence",
-                  "content": {"presence": "online"}
-                }
-              ]
-            },
-            "account_data": {
-              "events": [
-                {
-                  "type": "org.example.custom.config",
-                  "content": {"custom_config_key": "custom_config_value"}
-                }
-              ]
-            },
-            "to_device": {
-              "events": [
-                {
-                  "sender": "@alice:example.com",
-                  "type": "m.new_device",
-                  "content": {
-                    "device_id": "XYZABCDE",
-                    "rooms": ["!726s6s6q:example.com"]
-                  }
-                }
-              ]
-            },
-            "rooms": {
-              "join": {
-                "!726s6s6q:example.com": {
-                  "unread_notifications": {
-                    "highlight_count": 2,
-                    "notification_count": 2,
-                  },
-                  "state": {
-                    "events": [
-                      {
-                        "sender": "@alice:example.com",
-                        "type": "m.room.member",
-                        "state_key": "@alice:example.com",
-                        "content": {"membership": "join"},
-                        "origin_server_ts": 1417731086795,
-                        "event_id": "66697273743031:example.com"
-                      }
-                    ]
-                  },
-                  "timeline": {
-                    "events": [
-                      {
-                        "sender": "@bob:example.com",
-                        "type": "m.room.member",
-                        "state_key": "@bob:example.com",
-                        "content": {"membership": "join"},
-                        "prev_content": {"membership": "invite"},
-                        "origin_server_ts": 1417731086795,
-                        "event_id": "7365636s6r6432:example.com"
-                      },
-                      {
-                        "sender": "@alice:example.com",
-                        "type": "m.room.message",
-                        "txn_id": "1234",
-                        "content": {"body": "I am a fish", "msgtype": "m.text"},
-                        "origin_server_ts": 1417731086797,
-                        "event_id": "74686972643033:example.com"
-                      }
-                    ],
-                    "limited": true,
-                    "prev_batch": "t34-23535_0_0"
-                  },
-                  "ephemeral": {
-                    "events": [
-                      {
-                        "type": "m.typing",
-                        "content": {
-                          "user_ids": ["@alice:example.com"]
-                        }
-                      }
-                    ]
-                  },
-                  "account_data": {
-                    "events": [
-                      {
-                        "type": "m.tag",
-                        "content": {
-                          "tags": {
-                            "work": {"order": 1}
-                          }
-                        }
-                      },
-                      {
-                        "type": "org.example.custom.room.config",
-                        "content": {"custom_config_key": "custom_config_value"}
-                      }
-                    ]
-                  }
-                }
-              },
-              "invite": {
-                "!696r7674:example.com": {
-                  "invite_state": {
-                    "events": [
-                      {
-                        "sender": "@alice:example.com",
-                        "type": "m.room.name",
-                        "state_key": "",
-                        "content": {"name": "My Room Name"}
-                      },
-                      {
-                        "sender": "@alice:example.com",
-                        "type": "m.room.member",
-                        "state_key": "@bob:example.com",
-                        "content": {"membership": "invite"}
-                      }
-                    ]
-                  }
-                }
-              },
-              "leave": {
-                "!5345234234:example.com": {
-                  "timeline": {"events": []}
+      "/client/r0/sync?filters=%7B%22room%22:%7B%22include_leave%22:true,%22state%22:%7B%22lazy_load_members%22:1%7D%7D":
+          (var req) => {
+                "next_batch": Random().nextDouble().toString(),
+                "presence": {
+                  "events": [
+                    {
+                      "sender": "@alice:example.com",
+                      "type": "m.presence",
+                      "content": {"presence": "online"}
+                    }
+                  ]
                 },
+                "account_data": {
+                  "events": [
+                    {
+                      "type": "org.example.custom.config",
+                      "content": {"custom_config_key": "custom_config_value"}
+                    }
+                  ]
+                },
+                "to_device": {
+                  "events": [
+                    {
+                      "sender": "@alice:example.com",
+                      "type": "m.new_device",
+                      "content": {
+                        "device_id": "XYZABCDE",
+                        "rooms": ["!726s6s6q:example.com"]
+                      }
+                    }
+                  ]
+                },
+                "rooms": {
+                  "join": {
+                    "!726s6s6q:example.com": {
+                      "unread_notifications": {
+                        "highlight_count": 2,
+                        "notification_count": 2,
+                      },
+                      "state": {
+                        "events": [
+                          {
+                            "sender": "@alice:example.com",
+                            "type": "m.room.member",
+                            "state_key": "@alice:example.com",
+                            "content": {"membership": "join"},
+                            "origin_server_ts": 1417731086795,
+                            "event_id": "66697273743031:example.com"
+                          }
+                        ]
+                      },
+                      "timeline": {
+                        "events": [
+                          {
+                            "sender": "@bob:example.com",
+                            "type": "m.room.member",
+                            "state_key": "@bob:example.com",
+                            "content": {"membership": "join"},
+                            "prev_content": {"membership": "invite"},
+                            "origin_server_ts": 1417731086795,
+                            "event_id": "7365636s6r6432:example.com"
+                          },
+                          {
+                            "sender": "@alice:example.com",
+                            "type": "m.room.message",
+                            "txn_id": "1234",
+                            "content": {
+                              "body": "I am a fish",
+                              "msgtype": "m.text"
+                            },
+                            "origin_server_ts": 1417731086797,
+                            "event_id": "74686972643033:example.com"
+                          }
+                        ],
+                        "limited": true,
+                        "prev_batch": "t34-23535_0_0"
+                      },
+                      "ephemeral": {
+                        "events": [
+                          {
+                            "type": "m.typing",
+                            "content": {
+                              "user_ids": ["@alice:example.com"]
+                            }
+                          }
+                        ]
+                      },
+                      "account_data": {
+                        "events": [
+                          {
+                            "type": "m.tag",
+                            "content": {
+                              "tags": {
+                                "work": {"order": 1}
+                              }
+                            }
+                          },
+                          {
+                            "type": "org.example.custom.room.config",
+                            "content": {
+                              "custom_config_key": "custom_config_value"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "invite": {
+                    "!696r7674:example.com": {
+                      "invite_state": {
+                        "events": [
+                          {
+                            "sender": "@alice:example.com",
+                            "type": "m.room.name",
+                            "state_key": "",
+                            "content": {"name": "My Room Name"}
+                          },
+                          {
+                            "sender": "@alice:example.com",
+                            "type": "m.room.member",
+                            "state_key": "@bob:example.com",
+                            "content": {"membership": "invite"}
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "leave": {
+                    "!5345234234:example.com": {
+                      "timeline": {"events": []}
+                    },
+                  },
+                }
               },
-            }
-          },
     },
     "POST": {
       "/client/r0/login": (var req) => {
