@@ -468,4 +468,17 @@ class Room {
 
     return participants;
   }
+
+  /// Searches for the event in the store. If it isn't found, try to request it
+  /// from the server. Returns null if not found.
+  Future<Event> getEventById(String eventID) async {
+    if (client.store != null) {
+      final Event storeEvent = await client.store.getEventById(eventID, this);
+      if (storeEvent != null) return storeEvent;
+    }
+    final dynamic resp = await client.connection.jsonRequest(
+        type: "GET", action: "/client/r0/rooms/$id/event/$eventID");
+    if (resp is ErrorResponse) return null;
+    return Event.fromJson(resp, this);
+  }
 }

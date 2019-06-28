@@ -62,6 +62,20 @@ class FakeMatrixApi extends MockClient {
 
   static final Map<String, Map<String, dynamic>> api = {
     "GET": {
+      "/client/r0/rooms/!localpart:server.abc/event/1234": (var req) => {
+            "content": {
+              "body": "This is an example text message",
+              "msgtype": "m.text",
+              "format": "org.matrix.custom.html",
+              "formatted_body": "<b>This is an example text message</b>"
+            },
+            "type": "m.room.message",
+            "event_id": "143273582443PhrSn:example.org",
+            "room_id": "!localpart:server.abc",
+            "sender": "@example:example.org",
+            "origin_server_ts": 1432735824653,
+            "unsigned": {"age": 1234}
+          },
       "/client/r0/rooms/!1234:example.com/messages": (var req) => {
             "start": "t47429-4392820_219380_26003_2265",
             "end": "t47409-4357353_219380_26003_2265",

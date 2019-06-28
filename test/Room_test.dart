@@ -24,6 +24,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/Client.dart';
+import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/User.dart';
 import 'FakeMatrixApi.dart';
 
@@ -139,6 +140,11 @@ void main() {
       expect(user.membership, "join");
       expect(user.avatarUrl.mxc, "mxc://example.org/SEsfnsuifSDFSSEF");
       expect(user.room.id, "!localpart:server.abc");
+    });
+
+    test("getEventByID", () async {
+      final Event event = await room.getEventById("1234");
+      expect(event.id, "143273582443PhrSn:example.org");
     });
   });
 }
