@@ -44,10 +44,10 @@ class Connection {
     }));
   }
 
-  String get _syncFilters =>
-      "{\"room\":{\"state\":{\"lazy_load_members\":${client.lazyLoadMembers ? "1" : "0"}}}";
-  String get _firstSyncFilters =>
-      "{\"room\":{\"include_leave\":1,\"state\":{\"lazy_load_members\":${client.lazyLoadMembers ? "1" : "0"}}}";
+  String get _syncFilters => Uri.encodeFull(
+      "{\"room\":{\"state\":{\"lazy_load_members\":${client.lazyLoadMembers ? "1" : "0"}}}");
+  String get _firstSyncFilters => Uri.encodeFull(
+      "{\"room\":{\"include_leave\":1,\"state\":{\"lazy_load_members\":${client.lazyLoadMembers ? "1" : "0"}}}");
 
   /// Handles the connection to the Matrix Homeserver. You can change this to a
   /// MockClient for testing.
