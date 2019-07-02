@@ -35,12 +35,11 @@ class FakeMatrixApi extends MockClient {
               request.url.path.split("/_matrix")[1] + "?" + request.url.query;
           if (action.endsWith("?")) action = action.replaceAll("?", "");
           final String method = request.method;
-          print("Got action: $action");
           final dynamic data =
               method == "GET" ? request.url.queryParameters : request.body;
           var res = {};
 
-          //print("$method request to $action with Data: $data");
+          print("$method request to $action with Data: $data");
 
           // Sync requests with timeout
           if (data is Map<String, dynamic> && data["timeout"] is String) {
@@ -310,7 +309,7 @@ class FakeMatrixApi extends MockClient {
               ]
             }
           },
-      "/client/r0/sync?filters=%7B%22room%22:%7B%22include_leave%22:true,%22state%22:%7B%22lazy_load_members%22:1%7D%7D":
+      "/client/r0/sync?filter=%7B%22room%22:%7B%22include_leave%22:true,%22state%22:%7B%22lazy_load_members%22:true%7D%7D%7D":
           (var req) => {
                 "next_batch": Random().nextDouble().toString(),
                 "presence": {
