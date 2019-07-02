@@ -47,7 +47,7 @@ class Connection {
   String get _syncFilters =>
       "{\"room\":{\"state\":{\"lazy_load_members\":${client.lazyLoadMembers ? "1" : "0"}}}";
   String get _firstSyncFilters =>
-      "{\"room\":{\"include_leave\":true,\"state\":{\"lazy_load_members\":${client.lazyLoadMembers ? "1" : "0"}}}";
+      "{\"room\":{\"include_leave\":1,\"state\":{\"lazy_load_members\":${client.lazyLoadMembers ? "1" : "0"}}}";
 
   /// Handles the connection to the Matrix Homeserver. You can change this to a
   /// MockClient for testing.
@@ -310,6 +310,7 @@ class Connection {
   }
 
   void _handleRooms(Map<String, dynamic> rooms, String membership) {
+    print("[DEBUG] Received ${rooms.length} $membership rooms");
     rooms.forEach((String id, dynamic room) async {
       // calculate the notification counts, the limitedTimeline and prevbatch
       num highlight_count = 0;
