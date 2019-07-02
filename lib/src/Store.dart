@@ -163,8 +163,6 @@ class Store {
         "INSERT OR IGNORE INTO Rooms " +
             "VALUES(?, ?, '', 0, 0, '', '', '', 0, '', '', '', '', '', '', '', '', 0, 50, 50, 0, 50, 50, 0, 50, 100, 50, 50, 50, 100) ",
         [roomUpdate.id, roomUpdate.membership]);
-    if (roomUpdate.membership == "leave")
-      print("[DEBUG] Room with Membership 'leave' added to Database!");
 
     // Update the notification counts and the limited timeline boolean
     txn.rawUpdate(
@@ -498,7 +496,6 @@ class Store {
             (onlyGroups ? " AND rooms.direct_chat_matrix_id= '' " : "") +
             " GROUP BY rooms.id " +
             " ORDER BY origin_server_ts DESC ");
-    print("[DEBUG] Found ${res.length} rooms");
     List<Room> roomList = [];
     for (num i = 0; i < res.length; i++) {
       try {

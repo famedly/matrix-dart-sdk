@@ -309,7 +309,6 @@ class Connection {
   }
 
   void _handleRooms(Map<String, dynamic> rooms, String membership) {
-    print("[DEBUG] Received ${rooms.length} $membership rooms");
     rooms.forEach((String id, dynamic room) async {
       // calculate the notification counts, the limitedTimeline and prevbatch
       num highlight_count = 0;
