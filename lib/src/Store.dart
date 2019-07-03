@@ -464,7 +464,7 @@ class Store {
   /// Returns a list of events for the given room and sets all participants.
   Future<List<Event>> getEventList(Room room) async {
     List<Map<String, dynamic>> memberRes = await db.rawQuery(
-        "SELECT * " + " FROM User " + " WHERE users.chat_id=?", [room.id]);
+        "SELECT * " + " FROM User " + " WHERE User.chat_id=?", [room.id]);
     Map<String, User> userMap = {};
     for (num i = 0; i < memberRes.length; i++)
       userMap[memberRes[i]["matrix_id"]] = User.fromJson(memberRes[i], room);
