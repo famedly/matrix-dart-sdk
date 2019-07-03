@@ -51,5 +51,14 @@ void main() {
       expect(user.powerLevel, powerLevel);
       expect(user.calcDisplayname(), displayName);
     });
+
+    test("calcDisplayname", () async {
+      final User user1 = User("@alice:example.com");
+      final User user2 = User("@alice:example.com", displayName: "SuperAlice");
+      final User user3 = User("@alice:example.com", displayName: "");
+      expect(user1.calcDisplayname(), "alice");
+      expect(user2.calcDisplayname(), "SuperAlice");
+      expect(user3.calcDisplayname(), "alice");
+    });
   });
 }

@@ -137,6 +137,8 @@ class Event {
         print("jsonObj decode of event content failed: ${e.toString()}");
         content = {};
       }
+    else
+      content = {};
 
     return Event(
       jsonObj["event_id"] ?? jsonObj["id"],
