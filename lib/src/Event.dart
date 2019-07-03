@@ -130,12 +130,11 @@ class Event {
   static Event fromJson(Map<String, dynamic> jsonObj, Room room) {
     Map<String, dynamic> content = jsonObj["content"];
 
-    if (content == null)
+    if (content == null && jsonObj["content_json"] != null)
       try {
         content = json.decode(jsonObj["content_json"]);
       } catch (e) {
-        print(
-            "jsonObj decode of event content '$jsonObj' failed: ${e.toString()}");
+        print("jsonObj decode of event content failed: ${e.toString()}");
         content = {};
       }
 

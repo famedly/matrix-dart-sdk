@@ -474,10 +474,8 @@ class Store {
 
     List<Event> eventList = [];
 
-    for (num i = 0; i < eventRes.length; i++) {
-      print("Try to parse Event $i of ${eventRes.length}: ${eventRes[i]}");
+    for (num i = 0; i < eventRes.length; i++)
       eventList.add(Event.fromJson(eventRes[i], room));
-    }
 
     return eventList;
   }
