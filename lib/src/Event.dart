@@ -134,7 +134,8 @@ class Event {
       try {
         content = json.decode(jsonObj["content_json"]);
       } catch (e) {
-        print("jsonObj decode of event content '${jsonObj["content_json"]}' failed: ${e.toString()}");
+        print(
+            "jsonObj decode of event content '$jsonObj' failed: ${e.toString()}");
         content = {};
       }
 
