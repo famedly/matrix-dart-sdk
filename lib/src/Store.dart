@@ -576,7 +576,7 @@ class Store {
   /// the room or the own user wasn't found.
   Future<int> getPowerLevel(String roomID) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT power_level FROM Users WHERE matrix_id=? AND chat_id=?",
+        "SELECT power_level FROM User WHERE matrix_id=? AND chat_id=?",
         [roomID, client.userID]);
     if (res.length != 1) return null;
     return res[0]["power_level"];
@@ -585,7 +585,7 @@ class Store {
   /// Returns the power levels from all users for the given [roomID].
   Future<Map<String, int>> getPowerLevels(String roomID) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT matrix_id, power_level FROM Users WHERE chat_id=?",
+        "SELECT matrix_id, power_level FROM User WHERE chat_id=?",
         [roomID, client.userID]);
     Map<String, int> powerMap = {};
     for (int i = 0; i < res.length; i++)
