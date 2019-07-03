@@ -72,7 +72,7 @@ class User {
 
   /// Returns the displayname or the local part of the Matrix ID if the user
   /// has no displayname.
-  String calcDisplayname() => displayName.isEmpty
+  String calcDisplayname() => (displayName == null || displayName.isEmpty)
       ? id.replaceFirst("@", "").split(":")[0]
       : displayName;
 
