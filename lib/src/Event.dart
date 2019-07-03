@@ -140,7 +140,7 @@ class Event {
       }
     else if (content == null) content = {};
 
-    if (senderUser == null) senderUser = User(jsonObj["sender"]);
+    if (senderUser == null) senderUser = User.fromJson(jsonObj, room);
     if (stateKeyUser == null) stateKeyUser = User(jsonObj["state_key"]);
 
     return Event(
