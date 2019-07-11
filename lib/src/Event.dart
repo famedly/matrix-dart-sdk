@@ -22,11 +22,13 @@
  */
 
 import 'dart:convert';
+
+import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
-import 'package:famedlysdk/src/Client.dart';
-import './User.dart';
+
 import './Room.dart';
+import './User.dart';
 
 /// A single Matrix event, e.g. a message in a chat.
 class Event {
@@ -48,6 +50,8 @@ class Event {
   /// The type of this event. Mostly this is 'timeline'.
   final String environment;
 
+  Event replyEvent;
+
   /// The status of this event.
   /// -1=ERROR
   ///  0=SENDING
@@ -67,6 +71,7 @@ class Event {
     this.status = 2,
     this.environment,
     this.content,
+    this.replyEvent,
   });
 
   /// Returns the body of this event if it has a body.
