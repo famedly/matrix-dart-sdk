@@ -21,16 +21,18 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/responses/PushrulesResponse.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'dart:async';
+
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Connection.dart';
 import 'package:famedlysdk/src/User.dart';
+import 'package:famedlysdk/src/responses/ErrorResponse.dart';
+import 'package:famedlysdk/src/responses/PushrulesResponse.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/sync/RoomUpdate.dart';
 import 'package:famedlysdk/src/sync/UserUpdate.dart';
-import 'package:famedlysdk/src/responses/ErrorResponse.dart';
-import 'dart:async';
+import 'package:flutter_test/flutter_test.dart';
+
 import 'FakeMatrixApi.dart';
 
 void main() {
@@ -70,7 +72,7 @@ void main() {
       expect(checkError.errcode, "NO_RESPONSE");
 
       final resp = await matrix.connection
-          .jsonRequest(type: "POST", action: "/client/r0/login", data: {
+          .jsonRequest(type: HTTPType.POST, action: "/client/r0/login", data: {
         "type": "m.login.password",
         "user": "test",
         "password": "1234",
@@ -108,13 +110,13 @@ void main() {
 
     test('Try to get ErrorResponse', () async {
       final resp = await matrix.connection
-          .jsonRequest(type: "PUT", action: "/non/existing/path");
+          .jsonRequest(type: HTTPType.PUT, action: "/non/existing/path");
       expect(resp is ErrorResponse, true);
     });
 
     test('Logout', () async {
       final dynamic resp = await matrix.connection
-          .jsonRequest(type: "POST", action: "/client/r0/logout");
+          .jsonRequest(type: HTTPType.POST, action: "/client/r0/logout");
       expect(resp is ErrorResponse, false);
 
       Future<LoginState> loginStateFuture =
@@ -143,21 +145,21 @@ void main() {
       expect(roomUpdateList.length, 3);
 
       expect(roomUpdateList[0].id == "!726s6s6q:example.com", true);
-      expect(roomUpdateList[0].membership == "join", true);
+      expect(roomUpdateList[0].membership == Membership.join, true);
       expect(roomUpdateList[0].prev_batch == "t34-23535_0_0", true);
       expect(roomUpdateList[0].limitedTimeline == true, true);
       expect(roomUpdateList[0].notification_count == 2, true);
       expect(roomUpdateList[0].highlight_count == 2, true);
 
       expect(roomUpdateList[1].id == "!696r7674:example.com", true);
-      expect(roomUpdateList[1].membership == "invite", true);
+      expect(roomUpdateList[1].membership == Membership.invite, true);
       expect(roomUpdateList[1].prev_batch == "", true);
       expect(roomUpdateList[1].limitedTimeline == false, true);
       expect(roomUpdateList[1].notification_count == 0, true);
       expect(roomUpdateList[1].highlight_count == 0, true);
 
       expect(roomUpdateList[2].id == "!5345234234:example.com", true);
-      expect(roomUpdateList[2].membership == "leave", true);
+      expect(roomUpdateList[2].membership == Membership.leave, true);
       expect(roomUpdateList[2].prev_batch == "", true);
       expect(roomUpdateList[2].limitedTimeline == false, true);
       expect(roomUpdateList[2].notification_count == 0, true);
@@ -250,7 +252,7 @@ void main() {
       Future<LoginState> loginStateFuture =
           matrix.connection.onLoginStateChanged.stream.first;
       await matrix.connection
-          .jsonRequest(type: "DELETE", action: "/unknown/token");
+          .jsonRequest(type: HTTPType.DELETE, action: "/unknown/token");
 
       LoginState state = await loginStateFuture;
       expect(state, LoginState.loggedOut);

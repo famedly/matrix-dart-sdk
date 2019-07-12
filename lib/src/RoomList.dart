@@ -23,14 +23,15 @@
 
 import 'dart:async';
 import 'dart:core';
+
 import 'Client.dart';
 import 'Event.dart';
 import 'Room.dart';
 import 'User.dart';
-import 'utils/ChatTime.dart';
-import 'utils/MxContent.dart';
 import 'sync/EventUpdate.dart';
 import 'sync/RoomUpdate.dart';
+import 'utils/ChatTime.dart';
+import 'utils/MxContent.dart';
 
 /// Represents a list of rooms for this client, which will automatically update
 /// itself and call the [onUpdate], [onInsert] and [onDelete] callbacks. To get
@@ -78,11 +79,11 @@ class RoomList {
       if (rooms[j].id == chatUpdate.id) break;
     }
     final bool found = (j < rooms.length - 1 && rooms[j].id == chatUpdate.id);
-    final bool isLeftRoom = chatUpdate.membership == "leave";
+    final bool isLeftRoom = chatUpdate.membership == Membership.leave;
 
     // Does the chat already exist in the list rooms?
     if (!found && ((!onlyLeft && !isLeftRoom) || (onlyLeft && isLeftRoom))) {
-      num position = chatUpdate.membership == "invite" ? 0 : j;
+      num position = chatUpdate.membership == Membership.invite ? 0 : j;
       // Add the new chat to the list
       Room newRoom = Room(
           id: chatUpdate.id,
@@ -102,7 +103,7 @@ class RoomList {
     }
     // Update notification and highlight count
     else if (found &&
-        chatUpdate.membership != "leave" &&
+        chatUpdate.membership != Membership.leave &&
         (rooms[j].notificationCount != chatUpdate.notification_count ||
             rooms[j].highlightCount != chatUpdate.highlight_count)) {
       rooms[j].notificationCount = chatUpdate.notification_count;

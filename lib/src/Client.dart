@@ -23,13 +23,14 @@
 
 import 'dart:async';
 import 'dart:core';
-import 'requests/SetPushersRequest.dart';
-import 'responses/ErrorResponse.dart';
+
 import 'Connection.dart';
-import 'RoomList.dart';
 import 'Room.dart';
+import 'RoomList.dart';
 import 'Store.dart';
 import 'User.dart';
+import 'requests/SetPushersRequest.dart';
+import 'responses/ErrorResponse.dart';
 import 'responses/PushrulesResponse.dart';
 
 /// Represents a Matrix client to communicate with a
@@ -91,8 +92,8 @@ class Client {
   Future<bool> checkServer(serverUrl) async {
     homeserver = serverUrl;
 
-    final versionResp =
-        await connection.jsonRequest(type: "GET", action: "/client/versions");
+    final versionResp = await connection.jsonRequest(
+        type: HTTPType.GET, action: "/client/versions");
     if (versionResp is ErrorResponse) {
       connection.onError.add(ErrorResponse(errcode: "NO_RESPONSE", error: ""));
       return false;
@@ -123,8 +124,8 @@ class Client {
           : false;
     }
 
-    final loginResp =
-        await connection.jsonRequest(type: "GET", action: "/client/r0/login");
+    final loginResp = await connection.jsonRequest(
+        type: HTTPType.GET, action: "/client/r0/login");
     if (loginResp is ErrorResponse) {
       connection.onError.add(loginResp);
       return false;
@@ -149,7 +150,7 @@ class Client {
   /// authentication. Returns false if the login was not successful.
   Future<bool> login(String username, String password) async {
     final loginResp = await connection
-        .jsonRequest(type: "POST", action: "/client/r0/login", data: {
+        .jsonRequest(type: HTTPType.POST, action: "/client/r0/login", data: {
       "type": "m.login.password",
       "user": username,
       "identifier": {
@@ -186,7 +187,7 @@ class Client {
   /// including all persistent data from the store.
   Future<void> logout() async {
     final dynamic resp = await connection.jsonRequest(
-        type: "POST", action: "/client/r0/logout/all");
+        type: HTTPType.POST, action: "/client/r0/logout/all");
     if (resp is ErrorResponse) connection.onError.add(resp);
 
     await connection.clear();
@@ -213,6 +214,11 @@ class Client {
         rooms: rooms);
   }
 
+  Future<dynamic> joinRoomById(String id) async {
+    return await connection.jsonRequest(
+        type: HTTPType.POST, action: "/client/r0/join/$id");
+  }
+
   /// Creates a new group chat and invites the given Users and returns the new
   /// created room ID.
   Future<String> createGroup(List<User> users) async {
@@ -220,7 +226,7 @@ class Client {
     for (int i = 0; i < users.length; i++) inviteIDs.add(users[i].id);
 
     final dynamic resp = await connection.jsonRequest(
-        type: "POST",
+        type: HTTPType.POST,
         action: "/client/r0/createRoom",
         data: {"invite": inviteIDs, "preset": "private_chat"});
 
@@ -236,7 +242,7 @@ class Client {
   /// These are needed for notifications on Android
   Future<PushrulesResponse> getPushrules() async {
     final dynamic resp = await connection.jsonRequest(
-      type: "GET",
+      type: HTTPType.GET,
       action: "/client/r0/pushrules",
     );
 
@@ -251,7 +257,7 @@ class Client {
   /// This endpoint allows the creation, modification and deletion of pushers for this user ID.
   Future setPushers(SetPushersRequest data) async {
     final dynamic resp = await connection.jsonRequest(
-      type: "POST",
+      type: HTTPType.POST,
       action: "/client/r0/pushers/set",
       data: data,
     );

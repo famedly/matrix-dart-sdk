@@ -22,12 +22,14 @@
  */
 
 import 'package:famedlysdk/src/Client.dart';
-import 'package:famedlysdk/src/utils/ChatTime.dart';
-import 'package:famedlysdk/src/utils/MxContent.dart';
+import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
-import 'package:famedlysdk/src/Event.dart';
+import 'package:famedlysdk/src/utils/ChatTime.dart';
+import 'package:famedlysdk/src/utils/MxContent.dart';
+
 import './User.dart';
+import 'Connection.dart';
 import 'Timeline.dart';
 
 /// Represents a Matrix room.
@@ -36,7 +38,7 @@ class Room {
   final String id;
 
   /// Membership status of the user for this room.
-  String membership;
+  Membership membership;
 
   /// The name of the room if set by a participant.
   String name;
@@ -96,7 +98,7 @@ class Room {
   Client get matrix => this.client;
 
   @Deprecated("Rooms.status is deprecated! Use Rooms.membership instead!")
-  String get status => this.membership;
+  String get status => this.membership.toString().split('.').last;
 
   Room({
     this.id,
@@ -140,7 +142,7 @@ class Room {
   /// Call the Matrix API to change the name of this room.
   Future<dynamic> setName(String newName) async {
     dynamic res = await client.connection.jsonRequest(
-        type: "PUT",
+        type: HTTPType.PUT,
         action: "/client/r0/rooms/${id}/send/m.room.name/${new DateTime.now()}",
         data: {"name": newName});
     if (res is ErrorResponse) client.connection.onError.add(res);
@@ -150,7 +152,7 @@ class Room {
   /// Call the Matrix API to change the topic of this room.
   Future<dynamic> setDescription(String newName) async {
     dynamic res = await client.connection.jsonRequest(
-        type: "PUT",
+        type: HTTPType.PUT,
         action:
             "/client/r0/rooms/${id}/send/m.room.topic/${new DateTime.now()}",
         data: {"topic": newName});
@@ -162,7 +164,7 @@ class Room {
   Future<dynamic> sendText(String message, {String txid = null}) async {
     if (txid == null) txid = "txid${DateTime.now().millisecondsSinceEpoch}";
     final dynamic res = await client.connection.jsonRequest(
-        type: "PUT",
+        type: HTTPType.PUT,
         action: "/client/r0/rooms/${id}/send/m.room.message/$txid",
         data: {"msgtype": "m.text", "body": message});
     if (res is ErrorResponse) client.connection.onError.add(res);
@@ -197,6 +199,7 @@ class Room {
     client.connection.onEvent.add(eventUpdate);
     await client.store?.transaction(() {
       client.store.storeEventUpdate(eventUpdate);
+      return;
     });
 
     // Send the text and on success, store and display a *sent* event.
@@ -208,6 +211,7 @@ class Room {
       client.connection.onEvent.add(eventUpdate);
       await client.store?.transaction(() {
         client.store.storeEventUpdate(eventUpdate);
+        return;
       });
     } else {
       eventUpdate.content["status"] = 1;
@@ -215,6 +219,7 @@ class Room {
       client.connection.onEvent.add(eventUpdate);
       await client.store?.transaction(() {
         client.store.storeEventUpdate(eventUpdate);
+        return;
       });
       return res["event_id"];
     }
@@ -223,8 +228,8 @@ class Room {
 
   /// Call the Matrix API to leave this room.
   Future<dynamic> leave() async {
-    dynamic res = await client.connection
-        .jsonRequest(type: "POST", action: "/client/r0/rooms/${id}/leave");
+    dynamic res = await client.connection.jsonRequest(
+        type: HTTPType.POST, action: "/client/r0/rooms/${id}/leave");
     if (res is ErrorResponse) client.connection.onError.add(res);
     return res;
   }
@@ -232,8 +237,8 @@ class Room {
   /// Call the Matrix API to forget this room if you already left it.
   Future<dynamic> forget() async {
     client.store.forgetRoom(id);
-    dynamic res = await client.connection
-        .jsonRequest(type: "POST", action: "/client/r0/rooms/${id}/forget");
+    dynamic res = await client.connection.jsonRequest(
+        type: HTTPType.POST, action: "/client/r0/rooms/${id}/forget");
     if (res is ErrorResponse) client.connection.onError.add(res);
     return res;
   }
@@ -241,7 +246,7 @@ class Room {
   /// Call the Matrix API to kick a user from this room.
   Future<dynamic> kick(String userID) async {
     dynamic res = await client.connection.jsonRequest(
-        type: "POST",
+        type: HTTPType.POST,
         action: "/client/r0/rooms/${id}/kick",
         data: {"user_id": userID});
     if (res is ErrorResponse) client.connection.onError.add(res);
@@ -251,7 +256,7 @@ class Room {
   /// Call the Matrix API to ban a user from this room.
   Future<dynamic> ban(String userID) async {
     dynamic res = await client.connection.jsonRequest(
-        type: "POST",
+        type: HTTPType.POST,
         action: "/client/r0/rooms/${id}/ban",
         data: {"user_id": userID});
     if (res is ErrorResponse) client.connection.onError.add(res);
@@ -261,7 +266,7 @@ class Room {
   /// Call the Matrix API to unban a banned user from this room.
   Future<dynamic> unban(String userID) async {
     dynamic res = await client.connection.jsonRequest(
-        type: "POST",
+        type: HTTPType.POST,
         action: "/client/r0/rooms/${id}/unban",
         data: {"user_id": userID});
     if (res is ErrorResponse) client.connection.onError.add(res);
@@ -274,7 +279,7 @@ class Room {
     powerMap[userID] = power;
 
     dynamic res = await client.connection.jsonRequest(
-        type: "PUT",
+        type: HTTPType.PUT,
         action: "/client/r0/rooms/$id/state/m.room.power_levels/",
         data: {"users": powerMap});
     if (res is ErrorResponse) client.connection.onError.add(res);
@@ -284,7 +289,7 @@ class Room {
   /// Call the Matrix API to invite a user to this room.
   Future<dynamic> invite(String userID) async {
     dynamic res = await client.connection.jsonRequest(
-        type: "POST",
+        type: HTTPType.POST,
         action: "/client/r0/rooms/${id}/invite",
         data: {"user_id": userID});
     if (res is ErrorResponse) client.connection.onError.add(res);
@@ -294,7 +299,7 @@ class Room {
   /// Request more previous events from the server.
   Future<void> requestHistory({int historyCount = 100}) async {
     final dynamic resp = await client.connection.jsonRequest(
-        type: "GET",
+        type: HTTPType.GET,
         action:
             "/client/r0/rooms/$id/messages?from=${prev_batch}&dir=b&limit=$historyCount");
 
@@ -321,6 +326,7 @@ class Room {
         client.store.txn.rawUpdate(
             "UPDATE Rooms SET prev_batch=? WHERE id=?", [resp["end"], id]);
       }
+      return;
     });
     if (client.store == null) {
       for (int i = 0; i < history.length; i++) {
@@ -347,7 +353,7 @@ class Room {
       directChats[userID] = [id];
 
     final resp = await client.connection.jsonRequest(
-        type: "PUT",
+        type: HTTPType.PUT,
         action: "/client/r0/user/${client.userID}/account_data/m.direct",
         data: directChats);
     return resp;
@@ -356,7 +362,7 @@ class Room {
   /// Sends *m.fully_read* and *m.read* for the given event ID.
   Future<dynamic> sendReadReceipt(String eventID) async {
     final dynamic resp = client.connection.jsonRequest(
-        type: "POST",
+        type: HTTPType.POST,
         action: "/client/r0/rooms/$id/read_markers",
         data: {
           "m.fully_read": eventID,
@@ -379,7 +385,8 @@ class Room {
     return Room(
       id: row["id"],
       name: name,
-      membership: row["membership"],
+      membership: Membership.values
+          .firstWhere((e) => e.toString() == 'Membership.' + row["membership"]),
       topic: row["description"],
       avatar: MxContent(avatarUrl),
       notificationCount: row["notification_count"],
@@ -455,18 +462,21 @@ class Room {
   Future<List<User>> requestParticipants() async {
     List<User> participants = [];
 
-    dynamic res = await client.connection
-        .jsonRequest(type: "GET", action: "/client/r0/rooms/${id}/members");
+    dynamic res = await client.connection.jsonRequest(
+        type: HTTPType.GET, action: "/client/r0/rooms/${id}/members");
     if (res is ErrorResponse || !(res["chunk"] is List<dynamic>))
       return participants;
 
     for (num i = 0; i < res["chunk"].length; i++) {
       User newUser = User(res["chunk"][i]["state_key"],
           displayName: res["chunk"][i]["content"]["displayname"] ?? "",
-          membership: res["chunk"][i]["content"]["membership"] ?? "",
+          membership: Membership.values.firstWhere((e) =>
+              e.toString() ==
+                  'Membership.' + res["chunk"][i]["content"]["membership"] ??
+              ""),
           avatarUrl: MxContent(res["chunk"][i]["content"]["avatar_url"] ?? ""),
           room: this);
-      if (newUser.membership != "leave") participants.add(newUser);
+      if (newUser.membership != Membership.leave) participants.add(newUser);
     }
 
     return participants;
@@ -480,7 +490,7 @@ class Room {
       if (storeEvent != null) return storeEvent;
     }
     final dynamic resp = await client.connection.jsonRequest(
-        type: "GET", action: "/client/r0/rooms/$id/event/$eventID");
+        type: HTTPType.GET, action: "/client/r0/rooms/$id/event/$eventID");
     if (resp is ErrorResponse) return null;
     return Event.fromJson(resp, this);
   }

@@ -21,6 +21,8 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import '../User.dart';
+
 /// Represents a new room or an update for an
 /// already known room.
 class RoomUpdate {
@@ -28,7 +30,7 @@ class RoomUpdate {
   final String id;
 
   /// The current membership state of the user in this room.
-  final String membership;
+  final Membership membership;
 
   /// Represents the number of unead notifications. This probably doesn't fit the number
   /// of unread messages.
