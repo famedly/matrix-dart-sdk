@@ -87,9 +87,6 @@ class Room {
 
   Event lastEvent;
 
-  // The user who created the room based on m.create events
-  User creator;
-
   /// Your current client instance.
   final Client client;
 
@@ -122,7 +119,6 @@ class Room {
     this.joinRules,
     this.powerLevels,
     this.lastEvent,
-    this.creator,
     this.client,
   });
 
@@ -370,13 +366,6 @@ class Room {
     return resp;
   }
 
-  /// Load the creator event of this room
-  Future<Event> getCreatorEvent(Client matrix) async {
-    List<Event> events = await this.loadEvents();
-    return events.firstWhere((event) => event.type == EventTypes.RoomCreate,
-        orElse: null);
-  }
-
   /// Returns a Room from a json String which comes normally from the store.
   static Future<Room> getRoomFromTableRow(
       Map<String, dynamic> row, Client matrix) async {
@@ -388,7 +377,7 @@ class Room {
     if (avatarUrl == "")
       avatarUrl = await matrix.store?.getAvatarFromSingleChat(row["id"]) ?? "";
 
-    Room room = Room(
+    return Room(
       id: row["id"],
       name: name,
       membership: row["membership"],
@@ -423,17 +412,6 @@ class Room {
       lastEvent: Event.fromJson(row, null),
       client: matrix,
     );
-
-    // Lets get the creator too if not a test as tests cant use the stpre :(
-    if (matrix.homeserver != "https://fakeServer.notExisting") {
-      Event creatorEvent = await room.getCreatorEvent(matrix);
-      if (creatorEvent != null) {
-        room.creator = await matrix.store
-            ?.getUser(matrixID: creatorEvent.id, room: row["id"]);
-      }
-    }
-
-    return room;
   }
 
   @Deprecated("Use client.store.getRoomById(String id) instead!")
