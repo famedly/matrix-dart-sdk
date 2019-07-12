@@ -21,9 +21,13 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
-import 'package:famedlysdk/src/Room.dart';
+
+import 'Connection.dart';
+
+enum Membership { join, invite, leave, ban }
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
 class User {
@@ -38,7 +42,7 @@ class User {
   /// invite
   /// leave
   /// ban
-  String membership;
+  Membership membership;
 
   /// The avatar if the user has one.
   MxContent avatarUrl;
@@ -53,7 +57,7 @@ class User {
   final Room room;
 
   @Deprecated("Use membership instead!")
-  String get status => membership;
+  String get status => membership.toString().split('.').last;
 
   @Deprecated("Use ID instead!")
   String get mxid => id;
@@ -81,7 +85,12 @@ class User {
     return User(json['matrix_id'] ?? json['sender'],
         displayName: json['displayname'],
         avatarUrl: MxContent(json['avatar_url']),
-        membership: json['membership'],
+        membership: Membership.values.firstWhere((e) {
+          if (json["membership"] != null) {
+            return e.toString() == 'Membership.' + json['membership'];
+          }
+          return false;
+        }, orElse: () => null),
         powerLevel: json['power_level'],
         room: room);
   }
@@ -132,12 +141,14 @@ class User {
     if (roomID != null) return roomID;
 
     // Start a new direct chat
-    final dynamic resp = await room.client.connection
-        .jsonRequest(type: "POST", action: "/client/r0/createRoom", data: {
-      "invite": [id],
-      "is_direct": true,
-      "preset": "trusted_private_chat"
-    });
+    final dynamic resp = await room.client.connection.jsonRequest(
+        type: HTTPType.POST,
+        action: "/client/r0/createRoom",
+        data: {
+          "invite": [id],
+          "is_direct": true,
+          "preset": "trusted_private_chat"
+        });
 
     if (resp is ErrorResponse) {
       room.client.connection.onError.add(resp);

@@ -24,16 +24,18 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
-import 'package:sqflite/sqflite.dart';
+
 import 'package:path/path.dart' as p;
-import 'sync/EventUpdate.dart';
-import 'sync/UserUpdate.dart';
-import 'sync/RoomUpdate.dart';
+import 'package:sqflite/sqflite.dart';
+
 import 'Client.dart';
-import 'User.dart';
-import 'Room.dart';
-import 'Event.dart';
 import 'Connection.dart';
+import 'Event.dart';
+import 'Room.dart';
+import 'User.dart';
+import 'sync/EventUpdate.dart';
+import 'sync/RoomUpdate.dart';
+import 'sync/UserUpdate.dart';
 
 /// Responsible to store all data persistent and to query objects from the
 /// database.
@@ -53,7 +55,7 @@ class Store {
   _init() async {
     var databasePath = await getDatabasesPath();
     String path = p.join(databasePath, "FluffyMatrix.db");
-    _db = await openDatabase(path, version: 4,
+    _db = await openDatabase(path, version: 5,
         onCreate: (Database db, int version) async {
       await createTables(db);
     }, onUpgrade: (Database db, int oldVersion, int newVersion) async {
@@ -61,7 +63,7 @@ class Store {
       if (oldVersion != newVersion) {
         await db.execute("DROP TABLE IF EXISTS Rooms");
         await db.execute("DROP TABLE IF EXISTS Participants");
-        await db.execute("DROP TABLE IF EXISTS User");
+        await db.execute("DROP TABLE IF EXISTS Users");
         await db.execute("DROP TABLE IF EXISTS Events");
         db.rawUpdate("UPDATE Clients SET prev_batch='' WHERE client=?",
             [client.clientName]);
@@ -127,7 +129,7 @@ class Store {
     await _db
         .rawDelete("DELETE FROM Clients WHERE client=?", [client.clientName]);
     await _db.rawDelete("DELETE FROM Rooms");
-    await _db.rawDelete("DELETE FROM User");
+    await _db.rawDelete("DELETE FROM Users");
     await _db.rawDelete("DELETE FROM Events");
     return;
   }
@@ -162,7 +164,7 @@ class Store {
     txn.rawInsert(
         "INSERT OR IGNORE INTO Rooms " +
             "VALUES(?, ?, '', 0, 0, '', '', '', 0, '', '', '', '', '', '', '', '', 0, 50, 50, 0, 50, 50, 0, 50, 100, 50, 50, 50, 100) ",
-        [roomUpdate.id, roomUpdate.membership]);
+        [roomUpdate.id, roomUpdate.membership.toString().split('.').last]);
 
     // Update the notification counts and the limited timeline boolean
     txn.rawUpdate(
@@ -170,7 +172,7 @@ class Store {
         [
           roomUpdate.highlight_count,
           roomUpdate.notification_count,
-          roomUpdate.membership,
+          roomUpdate.membership.toString().split('.').last,
           roomUpdate.id
         ]);
 
@@ -329,14 +331,14 @@ class Store {
         }
 
         // Update membership table
-        txn.rawInsert("INSERT OR IGNORE INTO User VALUES(?,?,?,?,?,0)", [
+        txn.rawInsert("INSERT OR IGNORE INTO Users VALUES(?,?,?,?,?,0)", [
           chat_id,
           state_key,
           insertDisplayname,
           insertAvatarUrl,
           membership
         ]);
-        String queryStr = "UPDATE User SET membership=?";
+        String queryStr = "UPDATE Users SET membership=?";
         List<String> queryArgs = [membership];
 
         if (eventContent["content"]["displayname"] is String) {
@@ -411,10 +413,10 @@ class Store {
               .forEach((String user, dynamic value) async {
             num power_level = eventContent["content"]["users"][user];
             txn.rawUpdate(
-                "UPDATE User SET power_level=? WHERE matrix_id=? AND chat_id=?",
+                "UPDATE Users SET power_level=? WHERE matrix_id=? AND chat_id=?",
                 [power_level, user, chat_id]);
             txn.rawInsert(
-                "INSERT OR IGNORE INTO User VALUES(?, ?, '', '', ?, ?)",
+                "INSERT OR IGNORE INTO Users VALUES(?, ?, '', '', ?, ?)",
                 [chat_id, user, "unknown", power_level]);
           });
         }
@@ -426,7 +428,7 @@ class Store {
   /// Returns a User object by a given Matrix ID and a Room.
   Future<User> getUser({String matrixID, Room room}) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM User WHERE matrix_id=? AND chat_id=?",
+        "SELECT * FROM Users WHERE matrix_id=? AND chat_id=?",
         [matrixID, room.id]);
     if (res.length != 1) return null;
     return User.fromJson(res[0], room);
@@ -435,7 +437,7 @@ class Store {
   /// Loads all Users in the database to provide a contact list.
   Future<List<User>> loadContacts() async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM User WHERE matrix_id!=? GROUP BY matrix_id ORDER BY displayname",
+        "SELECT * FROM Users WHERE matrix_id!=? GROUP BY matrix_id ORDER BY displayname",
         [client.userID]);
     List<User> userList = [];
     for (int i = 0; i < res.length; i++)
@@ -447,7 +449,7 @@ class Store {
   Future<List<User>> loadParticipants(Room room) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
         "SELECT * " +
-            " FROM User " +
+            " FROM Users " +
             " WHERE chat_id=? " +
             " AND membership='join'",
         [room.id]);
@@ -464,7 +466,7 @@ class Store {
   /// Returns a list of events for the given room and sets all participants.
   Future<List<Event>> getEventList(Room room) async {
     List<Map<String, dynamic>> memberRes = await db.rawQuery(
-        "SELECT * " + " FROM User " + " WHERE User.chat_id=?", [room.id]);
+        "SELECT * " + " FROM Users " + " WHERE Users.chat_id=?", [room.id]);
     Map<String, User> userMap = {};
     for (num i = 0; i < memberRes.length; i++)
       userMap[memberRes[i]["matrix_id"]] = User.fromJson(memberRes[i], room);
@@ -528,10 +530,10 @@ class Store {
   Future<String> getAvatarFromSingleChat(String roomID) async {
     String avatarStr = "";
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT avatar_url FROM User " +
-            " WHERE User.chat_id=? " +
-            " AND (User.membership='join' OR User.membership='invite') " +
-            " AND User.matrix_id!=? ",
+        "SELECT avatar_url FROM Users " +
+            " WHERE Users.chat_id=? " +
+            " AND (Users.membership='join' OR Users.membership='invite') " +
+            " AND Users.matrix_id!=? ",
         [roomID, client.userID]);
     if (res.length == 1) avatarStr = res[0]["avatar_url"];
     return avatarStr;
@@ -543,10 +545,10 @@ class Store {
   Future<String> getChatNameFromMemberNames(String roomID) async {
     String displayname = 'Empty chat';
     List<Map<String, dynamic>> rs = await db.rawQuery(
-        "SELECT User.displayname, User.matrix_id, User.membership FROM User " +
-            " WHERE User.chat_id=? " +
-            " AND (User.membership='join' OR User.membership='invite') " +
-            " AND User.matrix_id!=? ",
+        "SELECT Users.displayname, Users.matrix_id, Users.membership FROM Users " +
+            " WHERE Users.chat_id=? " +
+            " AND (Users.membership='join' OR Users.membership='invite') " +
+            " AND Users.matrix_id!=? ",
         [roomID, client.userID]);
     if (rs.length > 0) {
       displayname = "";
@@ -576,7 +578,7 @@ class Store {
   /// the room or the own user wasn't found.
   Future<int> getPowerLevel(String roomID) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT power_level FROM User WHERE matrix_id=? AND chat_id=?",
+        "SELECT power_level FROM Users WHERE matrix_id=? AND chat_id=?",
         [roomID, client.userID]);
     if (res.length != 1) return null;
     return res[0]["power_level"];
@@ -585,7 +587,7 @@ class Store {
   /// Returns the power levels from all users for the given [roomID].
   Future<Map<String, int>> getPowerLevels(String roomID) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT matrix_id, power_level FROM User WHERE chat_id=?",
+        "SELECT matrix_id, power_level FROM Users WHERE chat_id=?",
         [roomID, client.userID]);
     Map<String, int> powerMap = {};
     for (int i = 0; i < res.length; i++)
@@ -686,7 +688,7 @@ class Store {
       'UNIQUE(id))';
 
   /// The database sheme for the User class.
-  static final String UserScheme = 'CREATE TABLE IF NOT EXISTS User(' +
+  static final String UserScheme = 'CREATE TABLE IF NOT EXISTS Users(' +
       'chat_id TEXT, ' + // The chat id of this membership
       'matrix_id TEXT, ' + // The matrix id of this user
       'displayname TEXT, ' +

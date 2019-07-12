@@ -21,12 +21,13 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/RoomList.dart';
+import 'package:famedlysdk/src/User.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/sync/RoomUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   /// All Tests related to the MxContent
@@ -59,7 +60,7 @@ void main() {
 
       client.connection.onRoomUpdate.add(RoomUpdate(
         id: roomID,
-        membership: "join",
+        membership: Membership.join,
         notification_count: 2,
         highlight_count: 1,
         limitedTimeline: false,
@@ -74,7 +75,7 @@ void main() {
 
       expect(roomList.rooms.length, 1);
       expect(roomList.rooms[0].id, roomID);
-      expect(roomList.rooms[0].membership, "join");
+      expect(roomList.rooms[0].membership, Membership.join);
       expect(roomList.rooms[0].notificationCount, 2);
       expect(roomList.rooms[0].highlightCount, 1);
       expect(roomList.rooms[0].prev_batch, "1234");
@@ -104,7 +105,7 @@ void main() {
 
       client.connection.onRoomUpdate.add(RoomUpdate(
         id: "1",
-        membership: "join",
+        membership: Membership.join,
         notification_count: 2,
         highlight_count: 1,
         limitedTimeline: false,
@@ -112,7 +113,7 @@ void main() {
       ));
       client.connection.onRoomUpdate.add(RoomUpdate(
         id: "2",
-        membership: "join",
+        membership: Membership.join,
         notification_count: 2,
         highlight_count: 1,
         limitedTimeline: false,
@@ -193,7 +194,7 @@ void main() {
 
       client.connection.onRoomUpdate.add(RoomUpdate(
         id: "1",
-        membership: "join",
+        membership: Membership.join,
         notification_count: 2,
         highlight_count: 1,
         limitedTimeline: false,
@@ -201,7 +202,7 @@ void main() {
       ));
       client.connection.onRoomUpdate.add(RoomUpdate(
         id: "2",
-        membership: "leave",
+        membership: Membership.leave,
         notification_count: 2,
         highlight_count: 1,
         limitedTimeline: false,

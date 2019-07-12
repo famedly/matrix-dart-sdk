@@ -22,6 +22,7 @@
  */
 
 import 'dart:async';
+
 import 'Event.dart';
 import 'Room.dart';
 import 'User.dart';
@@ -94,7 +95,9 @@ class Timeline {
       }
       sortAndUpdate();
     } catch (e) {
-      print("[WARNING] (_handleEventUpdate) ${e.toString()}");
+      if (room.client.debug) {
+        print("[WARNING] (_handleEventUpdate) ${e.toString()}");
+      }
     }
   }
 

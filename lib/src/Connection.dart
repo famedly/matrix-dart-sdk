@@ -24,13 +24,18 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+
+import 'Client.dart';
+import 'User.dart';
 import 'responses/ErrorResponse.dart';
 import 'sync/EventUpdate.dart';
-import 'sync/UserUpdate.dart';
 import 'sync/RoomUpdate.dart';
-import 'Client.dart';
+import 'sync/UserUpdate.dart';
+
+enum HTTPType { GET, POST, PUT, DELETE }
 
 /// Represents a Matrix connection to communicate with a
 /// [Matrix](https://matrix.org) homeserver.
@@ -41,10 +46,12 @@ class Connection {
     WidgetsBinding.instance
         ?.addObserver(_LifecycleEventHandler(resumeCallBack: () {
       _sync();
+      return;
     }));
   }
 
   String get _syncFilters => '{"room":{"state":{"lazy_load_members":true}}}';
+
   String get _firstSyncFilters =>
       '{"room":{"include_leave":true,"state":{"lazy_load_members":true}}}';
 
@@ -103,7 +110,7 @@ class Connection {
   ///
   /// ```
   /// final resp = await matrix
-  ///          .jsonRequest(type: "POST", action: "/client/r0/login", data: {
+  ///          .jsonRequest(type: HTTPType.POST, action: "/client/r0/login", data: {
   ///        "type": "m.login.password",
   ///        "user": "test",
   ///        "password": "1234",
@@ -164,7 +171,7 @@ class Connection {
   ///
   /// ```
   /// final resp = await jsonRequest(
-  ///   type: "PUT",
+  ///   type: HTTPType.PUT,
   ///   action: "/r0/rooms/!fjd823j:example.com/send/m.room.message/$txnId",
   ///   data: {
   ///     "msgtype": "m.text",
@@ -174,7 +181,7 @@ class Connection {
   /// ```
   ///
   Future<dynamic> jsonRequest(
-      {String type, String action, dynamic data = "", int timeout}) async {
+      {HTTPType type, String action, dynamic data = "", int timeout}) async {
     if (client.isLogged() == false && client.homeserver == null)
       throw ("No homeserver specified.");
     if (timeout == null) timeout = syncTimeoutSec + 5;
@@ -188,11 +195,13 @@ class Connection {
     if (client.isLogged())
       headers["Authorization"] = "Bearer ${client.accessToken}";
 
-    if (client.debug) print("[REQUEST $type] Action: $action, Data: $data");
+    if (client.debug)
+      print(
+          "[REQUEST ${type.toString().split('.').last}] Action: $action, Data: $data");
 
     http.Response resp;
     try {
-      switch (type) {
+      switch (type.toString().split('.').last) {
         case "GET":
           resp = await httpClient
               .get(url, headers: headers)
@@ -257,7 +266,7 @@ class Connection {
       action += "&timeout=30000";
       action += "&since=${client.prevBatch}";
     }
-    _syncRequest = jsonRequest(type: "GET", action: action);
+    _syncRequest = jsonRequest(type: HTTPType.GET, action: action);
     final int hash = _syncRequest.hashCode;
     final syncResp = await _syncRequest;
     if (hash != _syncRequest.hashCode) return;
@@ -270,6 +279,7 @@ class Connection {
           await client.store.transaction(() {
             _handleSync(syncResp);
             client.store.storePrevBatch(syncResp);
+            return;
           });
         else
           await _handleSync(syncResp);
@@ -287,11 +297,11 @@ class Connection {
   void _handleSync(dynamic sync) {
     if (sync["rooms"] is Map<String, dynamic>) {
       if (sync["rooms"]["join"] is Map<String, dynamic>)
-        _handleRooms(sync["rooms"]["join"], "join");
+        _handleRooms(sync["rooms"]["join"], Membership.join);
       if (sync["rooms"]["invite"] is Map<String, dynamic>)
-        _handleRooms(sync["rooms"]["invite"], "invite");
+        _handleRooms(sync["rooms"]["invite"], Membership.invite);
       if (sync["rooms"]["leave"] is Map<String, dynamic>)
-        _handleRooms(sync["rooms"]["leave"], "leave");
+        _handleRooms(sync["rooms"]["leave"], Membership.leave);
     }
     if (sync["presence"] is Map<String, dynamic> &&
         sync["presence"]["events"] is List<dynamic>) {
@@ -308,7 +318,7 @@ class Connection {
     onSync.add(sync);
   }
 
-  void _handleRooms(Map<String, dynamic> rooms, String membership) {
+  void _handleRooms(Map<String, dynamic> rooms, Membership membership) {
     rooms.forEach((String id, dynamic room) async {
       // calculate the notification counts, the limitedTimeline and prevbatch
       num highlight_count = 0;

@@ -21,11 +21,12 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Event.dart';
+import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/User.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 import 'FakeMatrixApi.dart';
 
 void main() {
@@ -50,7 +51,7 @@ void main() {
     test("Create from json", () async {
       final String id = "!localpart:server.abc";
       final String name = "My Room";
-      final String membership = "join";
+      final Membership membership = Membership.join;
       final String topic = "This is my own room";
       final int unread = DateTime.now().millisecondsSinceEpoch;
       final int notificationCount = 2;
@@ -69,7 +70,7 @@ void main() {
 
       final Map<String, dynamic> jsonObj = {
         "id": id,
-        "membership": membership,
+        "membership": membership.toString().split('.').last,
         "topic": name,
         "description": topic,
         "avatar_url": "",
@@ -137,7 +138,7 @@ void main() {
       User user = participants[0];
       expect(user.id, "@alice:example.org");
       expect(user.displayName, "Alice Margatroid");
-      expect(user.membership, "join");
+      expect(user.membership, Membership.join);
       expect(user.avatarUrl.mxc, "mxc://example.org/SEsfnsuifSDFSSEF");
       expect(user.room.id, "!localpart:server.abc");
     });

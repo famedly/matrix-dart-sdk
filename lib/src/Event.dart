@@ -22,11 +22,13 @@
  */
 
 import 'dart:convert';
+
+import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
-import 'package:famedlysdk/src/Client.dart';
-import './User.dart';
+
 import './Room.dart';
+import './User.dart';
 
 /// A single Matrix event, e.g. a message in a chat.
 class Event {
@@ -106,6 +108,9 @@ class Event {
       case "m.room.message":
         switch (content["msgtype"] ?? "m.text") {
           case "m.text":
+            if (content.containsKey("m.relates_to")) {
+              return EventTypes.Reply;
+            }
             return EventTypes.Text;
           case "m.notice":
             return EventTypes.Notice;
@@ -135,7 +140,9 @@ class Event {
       try {
         content = json.decode(jsonObj["content_json"]);
       } catch (e) {
-        print("jsonObj decode of event content failed: ${e.toString()}");
+        if (room.client.debug) {
+          print("jsonObj decode of event content failed: ${e.toString()}");
+        }
         content = {};
       }
     else if (content == null) content = {};
@@ -198,6 +205,7 @@ enum EventTypes {
   Audio,
   File,
   Location,
+  Reply,
   RoomAliases,
   RoomCanonicalAlias,
   RoomCreate,

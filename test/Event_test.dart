@@ -21,8 +21,9 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:famedlysdk/src/Event.dart';
+import 'package:famedlysdk/src/User.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   /// All Tests related to the Event
@@ -33,7 +34,7 @@ void main() {
       final String senderID = "@alice:server.abc";
       final String senderDisplayname = "Alice";
       final String empty = "";
-      final String membership = "join";
+      final Membership membership = Membership.join;
       final String type = "m.room.message";
       final String msgtype = "m.text";
       final String body = "Hello World";
@@ -47,7 +48,7 @@ void main() {
         "matrix_id": senderID,
         "displayname": senderDisplayname,
         "avatar_url": empty,
-        "membership": membership,
+        "membership": membership.toString().split('.').last,
         "origin_server_ts": timestamp,
         "state_key": empty,
         "type": type,

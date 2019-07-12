@@ -21,15 +21,15 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:famedlysdk/src/User.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   /// All Tests related to the Event
   group("User", () {
     test("Create from json", () async {
       final String id = "@alice:server.abc";
-      final String membership = "join";
+      final Membership membership = Membership.join;
       final String displayName = "Alice";
       final String avatarUrl = "";
       final int powerLevel = 50;
@@ -38,7 +38,7 @@ void main() {
         "matrix_id": id,
         "displayname": displayName,
         "avatar_url": avatarUrl,
-        "membership": membership,
+        "membership": membership.toString().split('.').last,
         "power_level": powerLevel,
       };
 
