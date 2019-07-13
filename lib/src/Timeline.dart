@@ -80,14 +80,41 @@ class Timeline {
             events[i] = Event.fromJson(eventUpdate.content, room);
           }
         } else {
-          User user = await room.client.store
+          Event newEvent;
+          User senderUser = await room.client.store
               ?.getUser(matrixID: eventUpdate.content["sender"], room: room);
-          if (user != null) {
-            eventUpdate.content["displayname"] = user.displayName;
-            eventUpdate.content["avatar_url"] = user.avatarUrl.mxc;
+          if (senderUser != null) {
+            eventUpdate.content["displayname"] = senderUser.displayName;
+            eventUpdate.content["avatar_url"] = senderUser.avatarUrl.mxc;
           }
 
-          Event newEvent = Event.fromJson(eventUpdate.content, room);
+          User stateKeyUser;
+          if (eventUpdate.content.containsKey("state_key")) {
+            stateKeyUser = await room.client.store?.getUser(
+                matrixID: eventUpdate.content["state_key"], room: room);
+          }
+
+          if (senderUser != null && stateKeyUser != null) {
+            newEvent = Event.fromJson(eventUpdate.content, room,
+                senderUser: senderUser, stateKeyUser: stateKeyUser);
+          } else if (senderUser != null) {
+            newEvent = Event.fromJson(eventUpdate.content, room,
+                senderUser: senderUser);
+          } else if (stateKeyUser != null) {
+            newEvent = Event.fromJson(eventUpdate.content, room,
+                stateKeyUser: stateKeyUser);
+          } else {
+            newEvent = Event.fromJson(eventUpdate.content, room);
+          }
+
+          // TODO update to type check when https://gitlab.com/famedly/famedlysdk/merge_requests/28/ is merged
+          if (newEvent.content.containsKey("m.relates_to")) {
+            Map<String, dynamic> relates_to = newEvent.content["m.relates_to"];
+            if (relates_to.containsKey("m.in_reply_to")) {
+              newEvent.replyEvent = await room.getEventById(newEvent
+                  .content["m.relates_to"]["m.in_reply_to"]["event_id"]);
+            }
+          }
 
           events.insert(0, newEvent);
           if (onInsert != null) onInsert(0);

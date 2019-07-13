@@ -50,6 +50,8 @@ class Event {
   /// The type of this event. Mostly this is 'timeline'.
   final String environment;
 
+  Event replyEvent;
+
   /// The status of this event.
   /// -1=ERROR
   ///  0=SENDING
@@ -69,6 +71,7 @@ class Event {
     this.status = 2,
     this.environment,
     this.content,
+    this.replyEvent,
   });
 
   /// Returns the body of this event if it has a body.
