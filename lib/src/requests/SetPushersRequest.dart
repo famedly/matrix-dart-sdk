@@ -25,7 +25,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'SetPushersRequest.g.dart';
 
-@JsonSerializable(explicitToJson: true, nullable: false)
+@JsonSerializable(explicitToJson: true, nullable: false, includeIfNull: false)
 class SetPushersRequest {
   // Required Keys
   @JsonKey(nullable: false)
@@ -65,7 +65,7 @@ class SetPushersRequest {
   Map<String, dynamic> toJson() => _$SetPushersRequestToJson(this);
 }
 
-@JsonSerializable(explicitToJson: true, nullable: false)
+@JsonSerializable(explicitToJson: true, nullable: false, includeIfNull: false)
 class PusherData {
   String url;
   String format;
