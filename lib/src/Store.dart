@@ -633,8 +633,8 @@ class Store {
     return;
   }
 
-  Future<List<Map<String, String>>> getNotificationByRoom(String room_id) async {
-    List<Map<String, String>> res = await db.rawQuery(
+  Future<List<Map<String, dynamic>>> getNotificationByRoom(String room_id) async {
+    List<Map<String, dynamic>> res = await db.rawQuery(
         "SELECT * FROM NotificationsCache WHERE chat_id=?", [room_id]);
     if (res.length == 0) return null;
     return res;
