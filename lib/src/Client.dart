@@ -243,7 +243,7 @@ class Client {
   Future<PushrulesResponse> getPushrules() async {
     final dynamic resp = await connection.jsonRequest(
       type: HTTPType.GET,
-      action: "/client/r0/pushrules",
+      action: "/client/r0/pushrules/",
     );
 
     if (resp is ErrorResponse) {

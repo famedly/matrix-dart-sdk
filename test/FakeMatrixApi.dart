@@ -164,7 +164,7 @@ class FakeMatrixApi extends MockClient {
               }
             ]
           },
-      "/client/r0/pushrules": (var req) => {
+      "/client/r0/pushrules/": (var req) => {
             "global": {
               "content": [
                 {
