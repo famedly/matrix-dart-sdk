@@ -65,6 +65,7 @@ class Store {
         await db.execute("DROP TABLE IF EXISTS Participants");
         await db.execute("DROP TABLE IF EXISTS Users");
         await db.execute("DROP TABLE IF EXISTS Events");
+        await db.execute("DROP TABLE IF EXISTS NotificationsCache");
         db.rawUpdate("UPDATE Clients SET prev_batch='' WHERE client=?",
             [client.clientName]);
         createTables(db);
@@ -621,7 +622,24 @@ class Store {
     return Event.fromJson(res[0], room);
   }
 
-  /// The database sheme for the Client class.
+  Future forgetNotification(String roomID) async {
+    await db.rawDelete("DELETE FROM NotificationsCache WHERE chat_id=?", [roomID]);
+    return;
+  }
+
+  Future addNotification(String roomID, String event_id) async {
+    await db.rawInsert("INSERT INTO NotificationsCache VALUES (?,?)", [roomID, event_id]);
+    return;
+  }
+
+  Future<List<Map<String, String>>> getNotificationByRoom(String room_id) async {
+    List<Map<String, String>> res = await db.rawQuery(
+        "SELECT * FROM NotificationsCache WHERE chat_id=?", [room_id]);
+    if (res.length == 0) return null;
+    return res;
+  }
+
+  /// The database scheme for the Client class.
   static final String ClientsScheme = 'CREATE TABLE IF NOT EXISTS Clients(' +
       'client TEXT PRIMARY KEY, ' +
       'token TEXT, ' +
@@ -634,7 +652,7 @@ class Store {
       'lazy_load_members INTEGER, ' +
       'UNIQUE(client))';
 
-  /// The database sheme for the Room class.
+  /// The database scheme for the Room class.
   static final String RoomsScheme = 'CREATE TABLE IF NOT EXISTS Rooms(' +
       'id TEXT PRIMARY KEY, ' +
       'membership TEXT, ' +
@@ -674,7 +692,7 @@ class Store {
       'power_event_power_levels INTEGER, ' +
       'UNIQUE(id))';
 
-  /// The database sheme for the Event class.
+  /// The database scheme for the Event class.
   static final String EventsScheme = 'CREATE TABLE IF NOT EXISTS Events(' +
       'id TEXT PRIMARY KEY, ' +
       'chat_id TEXT, ' +
@@ -687,7 +705,7 @@ class Store {
       "status INTEGER, " +
       'UNIQUE(id))';
 
-  /// The database sheme for the User class.
+  /// The database scheme for the User class.
   static final String UserScheme = 'CREATE TABLE IF NOT EXISTS Users(' +
       'chat_id TEXT, ' + // The chat id of this membership
       'matrix_id TEXT, ' + // The matrix id of this user
@@ -696,4 +714,10 @@ class Store {
       'membership TEXT, ' + // The status of the membership. Must be one of [join, invite, ban, leave]
       'power_level INTEGER, ' + // The power level of this user. Must be in [0,..,100]
       'UNIQUE(chat_id, matrix_id))';
+
+  /// The database scheme for the NotificationsCache class.
+  static final String NotificationsCache = 'CREATE TABLE IF NOT EXISTS NotificationsCache(' +
+      'chat_id TEXT, ' + // The chat id
+      'event_id TEXT, ' + // The matrix id of the Event
+      'UNIQUE(event_id))';
 }
