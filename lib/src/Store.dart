@@ -624,16 +624,19 @@ class Store {
   }
 
   Future forgetNotification(String roomID) async {
-    await db.rawDelete("DELETE FROM NotificationsCache WHERE chat_id=?", [roomID]);
+    await db
+        .rawDelete("DELETE FROM NotificationsCache WHERE chat_id=?", [roomID]);
     return;
   }
 
   Future addNotification(String roomID, String event_id, int uniqueID) async {
-    await db.rawInsert("INSERT INTO NotificationsCache VALUES (?, ?,?)", [uniqueID, roomID, event_id]);
+    await db.rawInsert("INSERT INTO NotificationsCache VALUES (?, ?,?)",
+        [uniqueID, roomID, event_id]);
     return;
   }
 
-  Future<List<Map<String, dynamic>>> getNotificationByRoom(String room_id) async {
+  Future<List<Map<String, dynamic>>> getNotificationByRoom(
+      String room_id) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
         "SELECT * FROM NotificationsCache WHERE chat_id=?", [room_id]);
     if (res.length == 0) return null;
@@ -717,9 +720,10 @@ class Store {
       'UNIQUE(chat_id, matrix_id))';
 
   /// The database scheme for the NotificationsCache class.
-  static final String NotificationsCacheScheme = 'CREATE TABLE IF NOT EXISTS NotificationsCache(' +
-      'id int PRIMARY KEY'
-      'chat_id TEXT, ' + // The chat id
-      'event_id TEXT, ' + // The matrix id of the Event
-      'UNIQUE(event_id))';
+  static final String NotificationsCacheScheme =
+      'CREATE TABLE IF NOT EXISTS NotificationsCache(' +
+          'id int PRIMARY KEY, ' +
+          'chat_id TEXT, ' + // The chat id
+          'event_id TEXT, ' + // The matrix id of the Event
+          'UNIQUE(event_id))';
 }
