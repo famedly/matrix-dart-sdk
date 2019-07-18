@@ -273,7 +273,7 @@ class Connection {
     final syncResp = await _syncRequest;
     if (hash != _syncRequest.hashCode) return;
     if (syncResp is ErrorResponse) {
-      onError.add(syncResp);
+      //onError.add(syncResp);
       await Future.delayed(Duration(seconds: syncErrorTimeoutSec), () {});
     } else {
       try {
