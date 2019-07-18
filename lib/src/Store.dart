@@ -55,7 +55,7 @@ class Store {
   _init() async {
     var databasePath = await getDatabasesPath();
     String path = p.join(databasePath, "FluffyMatrix.db");
-    _db = await openDatabase(path, version: 5,
+    _db = await openDatabase(path, version: 7,
         onCreate: (Database db, int version) async {
       await createTables(db);
     }, onUpgrade: (Database db, int oldVersion, int newVersion) async {
@@ -627,8 +627,8 @@ class Store {
     return;
   }
 
-  Future addNotification(String roomID, String event_id) async {
-    await db.rawInsert("INSERT INTO NotificationsCache VALUES (?,?)", [roomID, event_id]);
+  Future addNotification(String roomID, String event_id, int uniqueID) async {
+    await db.rawInsert("INSERT INTO NotificationsCache VALUES (?, ?,?)", [uniqueID, roomID, event_id]);
     return;
   }
 
@@ -717,6 +717,7 @@ class Store {
 
   /// The database scheme for the NotificationsCache class.
   static final String NotificationsCache = 'CREATE TABLE IF NOT EXISTS NotificationsCache(' +
+      'id int PRIMARY KEY'
       'chat_id TEXT, ' + // The chat id
       'event_id TEXT, ' + // The matrix id of the Event
       'UNIQUE(event_id))';
