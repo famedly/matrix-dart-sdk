@@ -244,7 +244,7 @@ void main() {
     test('getPushrules', () async {
       final PushrulesResponse pushrules = await matrix.getPushrules();
       final PushrulesResponse awaited_resp = PushrulesResponse.fromJson(
-          FakeMatrixApi.api["GET"]["/client/r0/pushrules"](""));
+          FakeMatrixApi.api["GET"]["/client/r0/pushrules/"](""));
       expect(pushrules.toJson(), awaited_resp.toJson());
     });
 
