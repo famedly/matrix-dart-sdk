@@ -100,6 +100,7 @@ class Store {
     await db.execute(RoomsScheme);
     await db.execute(UserScheme);
     await db.execute(EventsScheme);
+    await db.execute(NotificationsCacheScheme);
   }
 
   Future<String> queryPrevBatch() async {
@@ -716,7 +717,7 @@ class Store {
       'UNIQUE(chat_id, matrix_id))';
 
   /// The database scheme for the NotificationsCache class.
-  static final String NotificationsCache = 'CREATE TABLE IF NOT EXISTS NotificationsCache(' +
+  static final String NotificationsCacheScheme = 'CREATE TABLE IF NOT EXISTS NotificationsCache(' +
       'chat_id TEXT, ' + // The chat id
       'event_id TEXT, ' + // The matrix id of the Event
       'UNIQUE(event_id))';
