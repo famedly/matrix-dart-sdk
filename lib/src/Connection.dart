@@ -185,7 +185,9 @@ class Connection {
     if (client.isLogged() == false && client.homeserver == null)
       throw ("No homeserver specified.");
     if (timeout == null) timeout = syncTimeoutSec + 5;
-    if (!(data is String)) data = jsonEncode(data);
+    dynamic json;
+    if (data is Map) data.removeWhere((k, v) => v == null);
+    (!(data is String)) ? json = jsonEncode(data) : json = data;
 
     final url = "${client.homeserver}/_matrix${action}";
 
@@ -209,12 +211,12 @@ class Connection {
           break;
         case "POST":
           resp = await httpClient
-              .post(url, body: data, headers: headers)
+              .post(url, body: json, headers: headers)
               .timeout(Duration(seconds: timeout));
           break;
         case "PUT":
           resp = await httpClient
-              .put(url, body: data, headers: headers)
+              .put(url, body: json, headers: headers)
               .timeout(Duration(seconds: timeout));
           break;
         case "DELETE":

@@ -259,7 +259,7 @@ class Client {
     final dynamic resp = await connection.jsonRequest(
       type: HTTPType.POST,
       action: "/client/r0/pushers/set",
-      data: data,
+      data: data.toJson(),
     );
 
     if (resp is ErrorResponse) {
