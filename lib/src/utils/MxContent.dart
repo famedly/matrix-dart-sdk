@@ -29,7 +29,7 @@ class MxContent {
   final String _mxc;
 
   /// Insert a mxc:// uri here.
-  MxContent(this._mxc);
+  MxContent(String mxcUrl) : this._mxc = mxcUrl ?? "";
 
   /// Returns the mxc uri.
   get mxc => _mxc;
