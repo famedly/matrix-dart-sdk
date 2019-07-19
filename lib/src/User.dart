@@ -66,13 +66,13 @@ class User {
   MxContent get avatar_url => avatarUrl;
 
   User(
-    this.id, {
+    String id, {
     this.membership,
     this.displayName,
     this.avatarUrl,
     this.powerLevel,
     this.room,
-  });
+  }) : this.id = id ?? "";
 
   /// Returns the displayname or the local part of the Matrix ID if the user
   /// has no displayname.

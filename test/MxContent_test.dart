@@ -43,5 +43,12 @@ void main() {
               width: 50, height: 50, method: ThumbnailMethod.scale),
           "${client.homeserver}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale");
     });
+    test("Not crashing if null", () async {
+      Client client = Client("testclient");
+      client.homeserver = "https://testserver.abc";
+      final MxContent content = MxContent(null);
+      expect(content.getDownloadLink(client),
+          "${client.homeserver}/_matrix/media/r0/download/");
+    });
   });
 }
