@@ -436,11 +436,12 @@ class Store {
     return User.fromJson(res[0], room);
   }
 
-  /// Loads all Users in the database to provide a contact list.
-  Future<List<User>> loadContacts() async {
+  /// Loads all Users in the database to provide a contact list
+  /// except users who are in the Room with the ID [exceptRoomID].
+  Future<List<User>> loadContacts({String exceptRoomID = ""}) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM Users WHERE matrix_id!=? GROUP BY matrix_id ORDER BY displayname",
-        [client.userID]);
+        "SELECT * FROM Users WHERE matrix_id!=? AND chat_id!=? GROUP BY matrix_id ORDER BY displayname",
+        [client.userID, exceptRoomID]);
     List<User> userList = [];
     for (int i = 0; i < res.length; i++)
       userList.add(User.fromJson(res[i], Room(id: "", client: client)));
