@@ -108,6 +108,10 @@ class Event {
         return EventTypes.RoomMember;
       case "m.room.power_levels":
         return EventTypes.RoomPowerLevels;
+      case "m.room.guest_access":
+        return EventTypes.GuestAccess;
+      case "m.room.history_visibility":
+        return EventTypes.HistoryVisibility;
       case "m.room.message":
         switch (content["msgtype"] ?? "m.text") {
           case "m.text":
@@ -131,7 +135,7 @@ class Event {
             return EventTypes.Location;
         }
     }
-    return EventTypes.Text;
+    return EventTypes.Unknown;
   }
 
   /// Generate a new Event object from a json string, mostly a table row.
@@ -218,6 +222,9 @@ enum EventTypes {
   RoomName,
   RoomTopic,
   RoomAvatar,
+  GuestAccess,
+  HistoryVisibility,
+  Unknown,
 }
 
 final Map<String, int> StatusTypes = {
