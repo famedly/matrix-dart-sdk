@@ -303,8 +303,8 @@ class Store {
       // This event means, that the canonical alias of a room has been changed, so
       // it has to be changed in the database
       case "m.room.canonical_alias":
-        txn.rawUpdate("UPDATE Chats SET canonical_alias=? WHERE id=?",
-            [eventContent["content"]["alias"] ?? "", chat_id]);
+        txn.rawUpdate("UPDATE Rooms SET canonical_alias=? WHERE id=?",
+            [eventContent["content"]["alias"], chat_id]);
         break;
       // This event means, that the topic of a room has been changed, so
       // it has to be changed in the database
