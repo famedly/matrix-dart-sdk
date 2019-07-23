@@ -124,19 +124,7 @@ class RoomList {
       if (rooms[j].id == eventUpdate.roomID) break;
     }
     final bool found = (j < rooms.length && rooms[j].id == eventUpdate.roomID);
-    if (!found) {
-      rooms.insert(
-          0,
-          Room(
-              id: eventUpdate.roomID,
-              membership: Membership.join,
-              name: "",
-              prev_batch: "",
-              highlightCount: 0,
-              notificationCount: 0));
-      if (onInsert != null) onInsert(0);
-      j = 0;
-    }
+    if (!found) return;
 
     // Is this an old timeline event? Then stop here...
     /*if (eventUpdate.type == "timeline" &&
@@ -162,6 +150,8 @@ class RoomList {
       // Update the room avatar
       rooms[j].avatar = MxContent(eventUpdate.content["content"]["url"]);
     }
+    if (eventUpdate.eventType == "m.room.member" && !rooms[j].hasName)
+      updateMemberName(j);
     sortAndUpdate();
   }
 
@@ -169,6 +159,11 @@ class RoomList {
     rooms?.sort((a, b) =>
         b.timeCreated.toTimeStamp().compareTo(a.timeCreated.toTimeStamp()));
     if (onUpdate != null) onUpdate();
+  }
+
+  void updateMemberName(int position) async {
+    rooms[position].name =
+        await client.store.getChatNameFromMemberNames(rooms[position].id);
   }
 }
 
