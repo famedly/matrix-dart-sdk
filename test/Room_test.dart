@@ -59,6 +59,7 @@ void main() {
       final String fullyRead = "fjh82jdjifd:server.abc";
       final String notificationSettings = "all";
       final String guestAccess = "forbidden";
+      final String canonicalAlias = "#testroom:example.com";
       final String historyVisibility = "invite";
       final String joinRules = "invite";
       final int now = DateTime.now().millisecondsSinceEpoch;
@@ -85,6 +86,7 @@ void main() {
         "guest_access": guestAccess,
         "history_visibility": historyVisibility,
         "join_rules": joinRules,
+        "canonical_alias": canonicalAlias,
         "power_events_default": 0,
         "power_state_default": 0,
         "power_redact": 0,
@@ -115,6 +117,7 @@ void main() {
       expect(room.notificationSettings, notificationSettings);
       expect(room.directChatMatrixID, "");
       expect(room.draft, "");
+      expect(room.canonicalAlias, canonicalAlias);
       expect(room.prev_batch, "");
       expect(room.guestAccess, guestAccess);
       expect(room.historyVisibility, historyVisibility);
