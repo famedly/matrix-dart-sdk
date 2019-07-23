@@ -125,7 +125,15 @@ class RoomList {
     }
     final bool found = (j < rooms.length && rooms[j].id == eventUpdate.roomID);
     if (!found) {
-      rooms.insert(0, Room(id: eventUpdate.roomID));
+      rooms.insert(
+          0,
+          Room(
+              id: eventUpdate.roomID,
+              membership: Membership.join,
+              name: "",
+              prev_batch: "",
+              highlightCount: 0,
+              notificationCount: 0));
       if (onInsert != null) onInsert(0);
       j = 0;
     }
