@@ -107,7 +107,7 @@ class Room {
     this.id,
     this.membership,
     this.name,
-    this.hasName,
+    this.hasName = false,
     this.topic,
     this.avatar,
     this.notificationCount,
