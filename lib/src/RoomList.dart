@@ -86,12 +86,14 @@ class RoomList {
       num position = chatUpdate.membership == Membership.invite ? 0 : j;
       // Add the new chat to the list
       Room newRoom = Room(
-          id: chatUpdate.id,
-          name: "",
-          membership: chatUpdate.membership,
-          prev_batch: chatUpdate.prev_batch,
-          highlightCount: chatUpdate.highlight_count,
-          notificationCount: chatUpdate.notification_count);
+        id: chatUpdate.id,
+        name: "",
+        membership: chatUpdate.membership,
+        prev_batch: chatUpdate.prev_batch,
+        highlightCount: chatUpdate.highlight_count,
+        notificationCount: chatUpdate.notification_count,
+        hasName: false,
+      );
       rooms.insert(position, newRoom);
       if (onInsert != null) onInsert(position);
     }
@@ -150,6 +152,8 @@ class RoomList {
       // Update the room avatar
       rooms[j].avatar = MxContent(eventUpdate.content["content"]["url"]);
     }
+    if (eventUpdate.eventType == "m.room.member" && !rooms[j].hasName)
+      updateMemberName(j);
     sortAndUpdate();
   }
 
@@ -157,6 +161,11 @@ class RoomList {
     rooms?.sort((a, b) =>
         b.timeCreated.toTimeStamp().compareTo(a.timeCreated.toTimeStamp()));
     if (onUpdate != null) onUpdate();
+  }
+
+  void updateMemberName(int position) async {
+    rooms[position].name =
+        await client.store.getChatNameFromMemberNames(rooms[position].id);
   }
 }
 
