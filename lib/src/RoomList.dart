@@ -86,12 +86,14 @@ class RoomList {
       num position = chatUpdate.membership == Membership.invite ? 0 : j;
       // Add the new chat to the list
       Room newRoom = Room(
-          id: chatUpdate.id,
-          name: "",
-          membership: chatUpdate.membership,
-          prev_batch: chatUpdate.prev_batch,
-          highlightCount: chatUpdate.highlight_count,
-          notificationCount: chatUpdate.notification_count);
+        id: chatUpdate.id,
+        name: "",
+        membership: chatUpdate.membership,
+        prev_batch: chatUpdate.prev_batch,
+        highlightCount: chatUpdate.highlight_count,
+        notificationCount: chatUpdate.notification_count,
+        hasName: false,
+      );
       rooms.insert(position, newRoom);
       if (onInsert != null) onInsert(position);
     }
