@@ -44,14 +44,11 @@ class Timeline {
     sub ??= room.client.connection.onEvent.stream.listen(_handleEventUpdate);
   }
 
-  int _findEvent({String event_id, String txid, String unsigned_txid}) {
+  int _findEvent({String event_id, String unsigned_txid}) {
     int i;
     for (i = 0; i < events.length; i++) {
-      if (events[i].content.containsKey("txid") &&
-              (txid != null && events[i].content["txid"] == txid) ||
-          events[i].id == event_id ||
-          (unsigned_txid != null && events[i].content["txid"] == unsigned_txid))
-        break;
+      if (events[i].id == event_id ||
+          (unsigned_txid != null && events[i].id == unsigned_txid)) break;
     }
     return i;
   }
@@ -65,13 +62,10 @@ class Timeline {
           if (i < events.length) events.removeAt(i);
         }
         // Is this event already in the timeline?
-        else if (eventUpdate.content["status"] == 1 ||
-            eventUpdate.content["status"] == -1 ||
-            (eventUpdate.content.containsKey("unsigned") &&
-                eventUpdate.content["unsigned"]["transaction_id"] is String)) {
+        else if (eventUpdate.content.containsKey("unsigned") &&
+            eventUpdate.content["unsigned"]["transaction_id"] is String) {
           int i = _findEvent(
               event_id: eventUpdate.content["event_id"],
-              txid: eventUpdate.content["content"]["txid"],
               unsigned_txid: eventUpdate.content.containsKey("unsigned")
                   ? eventUpdate.content["unsigned"]["transaction_id"]
                   : null);

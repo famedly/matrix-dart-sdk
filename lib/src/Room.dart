@@ -193,7 +193,6 @@ class Room {
       "content": {
         "msgtype": "m.text",
         "body": message,
-        "txid": messageID,
       }
     });
     client.connection.onEvent.add(eventUpdate);
@@ -208,6 +207,7 @@ class Room {
     if (res is ErrorResponse || !(res["event_id"] is String)) {
       // On error, set status to -1
       eventUpdate.content["status"] = -1;
+      eventUpdate.content["unsigned"] = {"transaction_id": messageID};
       client.connection.onEvent.add(eventUpdate);
       await client.store?.transaction(() {
         client.store.storeEventUpdate(eventUpdate);
@@ -215,6 +215,7 @@ class Room {
       });
     } else {
       eventUpdate.content["status"] = 1;
+      eventUpdate.content["unsigned"] = {"transaction_id": messageID};
       eventUpdate.content["event_id"] = res["event_id"];
       client.connection.onEvent.add(eventUpdate);
       await client.store?.transaction(() {
@@ -375,7 +376,9 @@ class Room {
   static Future<Room> getRoomFromTableRow(
       Map<String, dynamic> row, Client matrix) async {
     String name = row["topic"];
-    if (name == "")
+    if (name == "" && !row["canonical_alias"].isEmpty)
+      name = row["canonical_alias"];
+    else if (name == "")
       name = await matrix.store?.getChatNameFromMemberNames(row["id"]) ?? "";
 
     String avatarUrl = row["avatar_url"];
@@ -400,6 +403,7 @@ class Room {
       guestAccess: row["guest_access"],
       historyVisibility: row["history_visibility"],
       joinRules: row["join_rules"],
+      canonicalAlias: row["canonical_alias"],
       powerLevels: {
         "power_events_default": row["power_events_default"],
         "power_state_default": row["power_state_default"],

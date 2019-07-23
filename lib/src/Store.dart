@@ -55,7 +55,7 @@ class Store {
   _init() async {
     var databasePath = await getDatabasesPath();
     String path = p.join(databasePath, "FluffyMatrix.db");
-    _db = await openDatabase(path, version: 7,
+    _db = await openDatabase(path, version: 8,
         onCreate: (Database db, int version) async {
       await createTables(db);
     }, onUpgrade: (Database db, int oldVersion, int newVersion) async {
@@ -299,6 +299,12 @@ class Store {
       case "m.room.guest_access":
         txn.rawUpdate("UPDATE Rooms SET guest_access=? WHERE id=?",
             [eventContent["content"]["guest_access"], chat_id]);
+        break;
+      // This event means, that the canonical alias of a room has been changed, so
+      // it has to be changed in the database
+      case "m.room.canonical_alias":
+        txn.rawUpdate("UPDATE Chats SET canonical_alias=? WHERE id=?",
+            [eventContent["content"]["alias"] ?? "", chat_id]);
         break;
       // This event means, that the topic of a room has been changed, so
       // it has to be changed in the database
