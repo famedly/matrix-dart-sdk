@@ -141,7 +141,7 @@ class RoomList {
         ChatTime(eventUpdate.content["origin_server_ts"]),
         room: rooms[j],
         content: eventUpdate.content["content"],
-        environment: "timeline",
+        environment: eventUpdate.eventType,
         status: 2,
       );
     }
