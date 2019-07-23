@@ -124,7 +124,11 @@ class RoomList {
       if (rooms[j].id == eventUpdate.roomID) break;
     }
     final bool found = (j < rooms.length && rooms[j].id == eventUpdate.roomID);
-    if (!found) return;
+    if (!found) {
+      rooms.insert(0, Room(id: eventUpdate.roomID));
+      if (onInsert != null) onInsert(0);
+      j = 0;
+    }
 
     // Is this an old timeline event? Then stop here...
     /*if (eventUpdate.type == "timeline" &&
