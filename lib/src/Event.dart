@@ -171,10 +171,11 @@ class Event {
 
   /// Removes this event if the status is < 1. This event will just be removed
   /// from the database and the timelines. Returns false if not removed.
-  bool remove() {
+  Future<bool> remove() async {
     if (status < 1) {
       if (room.client.store != null)
-        room.client.store.db.rawDelete("DELETE FROM Events WHERE id=?", [id]);
+        await room.client.store.db
+            .rawDelete("DELETE FROM Events WHERE id=?", [id]);
 
       room.client.connection.onEvent.add(EventUpdate(
           roomID: room.id,

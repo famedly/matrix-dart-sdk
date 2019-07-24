@@ -164,9 +164,11 @@ void main() {
     test("remove", () async {
       Event event = Event.fromJson(
           jsonObj, Room(id: "1234", client: Client("testclient", debug: true)));
-      expect(event.remove(), false);
+      final bool removed1 = await event.remove();
       event.status = 0;
-      expect(event.remove(), true);
+      final bool removed2 = await event.remove();
+      expect(removed1, false);
+      expect(removed2, true);
     });
 
     test("sendAgain", () async {
