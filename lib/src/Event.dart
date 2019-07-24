@@ -170,8 +170,8 @@ class Event {
   }
 
   /// Removes this event if the status is < 1. This event will just be removed
-  /// from the database and the timelines.
-  Future<dynamic> remove() async {
+  /// from the database and the timelines. Returns false if not removed.
+  bool remove() {
     if (status < 1) {
       if (room.client.store != null)
         room.client.store.db.rawDelete("DELETE FROM Events WHERE id=?", [id]);
@@ -185,7 +185,9 @@ class Event {
             "status": -2,
             "content": {"body": "Removed..."}
           }));
+      return true;
     }
+    return false;
   }
 
   /// Try to send this event again. Only works with events of status -1.
