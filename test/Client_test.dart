@@ -26,6 +26,7 @@ import 'dart:async';
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Connection.dart';
 import 'package:famedlysdk/src/User.dart';
+import 'package:famedlysdk/src/requests/SetPushersRequest.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/responses/PushrulesResponse.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
@@ -246,6 +247,26 @@ void main() {
       final PushrulesResponse awaited_resp = PushrulesResponse.fromJson(
           FakeMatrixApi.api["GET"]["/client/r0/pushrules/"](""));
       expect(pushrules.toJson(), awaited_resp.toJson());
+    });
+
+    test('setPushers', () async {
+      final SetPushersRequest data = SetPushersRequest(
+          app_id: "com.famedly.famedlysdk",
+          device_display_name: "GitLabCi",
+          app_display_name: "famedlySDK",
+          pushkey: "abcdefg",
+          kind: "http",
+          lang: "en",
+          data: PusherData(
+              format: "event_id_only", url: "https://examplepushserver.com"));
+      final dynamic resp = await matrix.setPushers(data);
+      expect(resp is ErrorResponse, false);
+    });
+
+    test('joinRoomById', () async {
+      final String roomID = "1234";
+      final Map<String, dynamic> resp = await matrix.joinRoomById(roomID);
+      expect(resp["room_id"], roomID);
     });
 
     test('Logout when token is unknown', () async {

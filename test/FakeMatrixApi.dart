@@ -451,6 +451,8 @@ class FakeMatrixApi extends MockClient {
             "device_id": "GHTYAJCE"
           },
       "/client/r0/logout": (var reqI) => {},
+      "/client/r0/pushers/set": (var reqI) => {},
+      "/client/r0/join/1234": (var reqI) => {"room_id": "1234"},
       "/client/r0/logout/all": (var reqI) => {},
       "/client/r0/createRoom": (var reqI) => {
             "room_id": "!1234:fakeServer.notExisting",

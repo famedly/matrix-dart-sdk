@@ -23,9 +23,12 @@
 
 import 'dart:convert';
 
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/User.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'FakeMatrixApi.dart';
 
 void main() {
   /// All Tests related to the Event
@@ -156,6 +159,31 @@ void main() {
       };
       event = Event.fromJson(jsonObj, null);
       expect(event.type, EventTypes.Reply);
+    });
+
+    test("remove", () async {
+      Event event = Event.fromJson(
+          jsonObj, Room(id: "1234", client: Client("testclient", debug: true)));
+      final bool removed1 = await event.remove();
+      event.status = 0;
+      final bool removed2 = await event.remove();
+      expect(removed1, false);
+      expect(removed2, true);
+    });
+
+    test("sendAgain", () async {
+      Client matrix = Client("testclient", debug: true);
+      matrix.connection.httpClient = FakeMatrixApi();
+      await matrix.checkServer("https://fakeServer.notExisting");
+      await matrix.login("test", "1234");
+
+      Event event = Event.fromJson(
+          jsonObj, Room(id: "!1234:example.com", client: matrix));
+      final String resp1 = await event.sendAgain();
+      event.status = -1;
+      final String resp2 = await event.sendAgain(txid: "1234");
+      expect(resp1, null);
+      expect(resp2, "42");
     });
   });
 }
