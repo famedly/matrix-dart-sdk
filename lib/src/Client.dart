@@ -255,7 +255,7 @@ class Client {
   }
 
   /// This endpoint allows the creation, modification and deletion of pushers for this user ID.
-  Future setPushers(SetPushersRequest data) async {
+  Future<dynamic> setPushers(SetPushersRequest data) async {
     final dynamic resp = await connection.jsonRequest(
       type: HTTPType.POST,
       action: "/client/r0/pushers/set",
@@ -264,9 +264,8 @@ class Client {
 
     if (resp is ErrorResponse) {
       connection.onError.add(resp);
-      return null;
     }
 
-    return null;
+    return resp;
   }
 }
