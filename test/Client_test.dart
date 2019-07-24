@@ -255,6 +255,7 @@ void main() {
           device_display_name: "GitLabCi",
           app_display_name: "famedlySDK",
           pushkey: "abcdefg",
+          kind: "http",
           lang: "en",
           data: PusherData(
               format: "event_id_only", url: "https://examplepushserver.com"));
