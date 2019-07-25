@@ -212,7 +212,7 @@ class Store {
   /// Stores an EventUpdate object in the database. Must be called inside of
   /// [transaction].
   Future<void> storeEventUpdate(EventUpdate eventUpdate) {
-    dynamic eventContent = eventUpdate.content;
+    Map<String, dynamic> eventContent = eventUpdate.content;
     String type = eventUpdate.type;
     String chat_id = eventUpdate.roomID;
 
@@ -222,8 +222,13 @@ class Store {
       if (eventContent["status"] is num) status = eventContent["status"];
 
       // Make unsigned part of the content
-      if (eventContent["unsigned"] is Map<String, dynamic>)
-        eventContent["content"]["unsigned"] = eventContent["unsigned"];
+      if (eventContent.containsKey("unsigned")) {
+        Map<String, dynamic> newContent = {
+          "unsigned": eventContent["unsigned"]
+        };
+        eventContent["content"].forEach((key, val) => newContent[key] = val);
+        eventContent["content"] = newContent;
+      }
 
       // Get the state_key for m.room.member events
       String state_key = "";
@@ -232,9 +237,14 @@ class Store {
       }
 
       // Save the event in the database
-      if ((status == 1 || status == -1) && eventContent["txid"] is String)
-        txn.rawUpdate("UPDATE Events SET status=?, id=?, WHERE id=?",
-            [status, eventContent["event_id"], eventContent["txid"]]);
+      if ((status == 1 || status == -1) &&
+          eventContent["unsigned"] is Map<String, dynamic> &&
+          eventContent["unsigned"]["transaction_id"] is String)
+        txn.rawUpdate("UPDATE Events SET status=?, id=? WHERE id=?", [
+          status,
+          eventContent["event_id"],
+          eventContent["unsigned"]["transaction_id"]
+        ]);
       else
         txn.rawInsert(
             "INSERT OR REPLACE INTO Events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)", [
@@ -250,7 +260,8 @@ class Store {
         ]);
 
       // Is there a transaction id? Then delete the event with this id.
-      if (eventUpdate.content.containsKey("unsigned") &&
+      if (status != -1 &&
+          eventUpdate.content.containsKey("unsigned") &&
           eventUpdate.content["unsigned"]["transaction_id"] is String)
         txn.rawDelete("DELETE FROM Events WHERE id=?",
             [eventUpdate.content["unsigned"]["transaction_id"]]);
