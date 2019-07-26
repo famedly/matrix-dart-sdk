@@ -219,15 +219,14 @@ class Client {
         type: HTTPType.POST, action: "/client/r0/join/$id");
   }
 
-  /// Loads the contact list for this user excluding the users in
-  /// the given room of id [exceptRoomID] and the user itself. Currently the contacts are
-  /// found by discovering the contacts of the famedlyContactDiscovery room, which is
+  /// Loads the contact list for this user excluding the user itself.
+  /// Currently the contacts are found by discovering the contacts of
+  /// the famedlyContactDiscovery room, which is
   /// defined by the autojoin room feature in Synapse.
-  Future<List<User>> loadFamedlyContacts({String exceptRoomID = ""}) async {
+  Future<List<User>> loadFamedlyContacts() async {
     Room contactDiscoveryRoom = await store
         .getRoomByAlias("#famedlyContactDiscovery:${userID.split(":")[1]}");
     List<User> contacts = await contactDiscoveryRoom.requestParticipants();
-
     return contacts;
   }
 
