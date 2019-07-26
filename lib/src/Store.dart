@@ -458,6 +458,7 @@ class Store {
 
   /// Loads all Users in the database to provide a contact list
   /// except users who are in the Room with the ID [exceptRoomID].
+  @deprecated
   Future<List<User>> loadContacts({String exceptRoomID = ""}) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
         "SELECT * FROM Users WHERE matrix_id!=? AND chat_id!=? GROUP BY matrix_id ORDER BY displayname",
@@ -545,6 +546,14 @@ class Store {
   Future<Room> getRoomById(String id) async {
     List<Map<String, dynamic>> res =
         await db.rawQuery("SELECT * FROM Rooms WHERE id=?", [id]);
+    if (res.length != 1) return null;
+    return Room.getRoomFromTableRow(res[0], client);
+  }
+
+  /// Returns a room without events and participants.
+  Future<Room> getRoomByAlias(String alias) async {
+    List<Map<String, dynamic>> res = await db
+        .rawQuery("SELECT * FROM Rooms WHERE canonical_alias=?", [alias]);
     if (res.length != 1) return null;
     return Room.getRoomFromTableRow(res[0], client);
   }
