@@ -601,7 +601,7 @@ class Store {
   /// the user [userID]. Returns null if there is none.
   Future<String> getDirectChatRoomID(String userID) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT id FROM Rooms WHERE direct_chat_matrix_id=? AND membership='join' LIMIT 1",
+        "SELECT id FROM Rooms WHERE direct_chat_matrix_id=? AND membership!='leave' LIMIT 1",
         [userID]);
     if (res.length != 1) return null;
     return res[0]["id"];
