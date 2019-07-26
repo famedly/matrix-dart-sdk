@@ -53,7 +53,7 @@ class Connection {
   String get _syncFilters => '{"room":{"state":{"lazy_load_members":true}}}';
 
   String get _firstSyncFilters =>
-      '{"room":{"include_leave":true,"state":{"lazy_load_members":false}}}';
+      '{"room":{"include_leave":true,"state":{"lazy_load_members":true}}}';
 
   /// Handles the connection to the Matrix Homeserver. You can change this to a
   /// MockClient for testing.
