@@ -147,7 +147,7 @@ class Room {
   Future<dynamic> setName(String newName) async {
     dynamic res = await client.connection.jsonRequest(
         type: HTTPType.PUT,
-        action: "/client/r0/rooms/${id}/send/m.room.name/${new DateTime.now()}",
+        action: "/client/r0/rooms/${id}/state/m.room.name}",
         data: {"name": newName});
     if (res is ErrorResponse) client.connection.onError.add(res);
     return res;
@@ -157,8 +157,7 @@ class Room {
   Future<dynamic> setDescription(String newName) async {
     dynamic res = await client.connection.jsonRequest(
         type: HTTPType.PUT,
-        action:
-            "/client/r0/rooms/${id}/send/m.room.topic/${new DateTime.now()}",
+        action: "/client/r0/rooms/${id}/state/m.room.topic}",
         data: {"topic": newName});
     if (res is ErrorResponse) client.connection.onError.add(res);
     return res;
@@ -285,7 +284,7 @@ class Room {
 
     dynamic res = await client.connection.jsonRequest(
         type: HTTPType.PUT,
-        action: "/client/r0/rooms/$id/state/m.room.power_levels/",
+        action: "/client/r0/rooms/$id/state/m.room.power_levels",
         data: {"users": powerMap});
     if (res is ErrorResponse) client.connection.onError.add(res);
     return res;
