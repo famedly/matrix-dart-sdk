@@ -458,6 +458,7 @@ class Store {
 
   /// Loads all Users in the database to provide a contact list
   /// except users who are in the Room with the ID [exceptRoomID].
+  @deprecated
   Future<List<User>> loadContacts({String exceptRoomID = ""}) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
         "SELECT * FROM Users WHERE matrix_id!=? AND chat_id!=? GROUP BY matrix_id ORDER BY displayname",
@@ -549,6 +550,14 @@ class Store {
     return Room.getRoomFromTableRow(res[0], client);
   }
 
+  /// Returns a room without events and participants.
+  Future<Room> getRoomByAlias(String alias) async {
+    List<Map<String, dynamic>> res = await db
+        .rawQuery("SELECT * FROM Rooms WHERE canonical_alias=?", [alias]);
+    if (res.length != 1) return null;
+    return Room.getRoomFromTableRow(res[0], client);
+  }
+
   /// Calculates and returns an avatar for a direct chat by a given [roomID].
   Future<String> getAvatarFromSingleChat(String roomID) async {
     String avatarStr = "";
@@ -592,7 +601,8 @@ class Store {
   /// the user [userID]. Returns null if there is none.
   Future<String> getDirectChatRoomID(String userID) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT id FROM Rooms WHERE direct_chat_matrix_id=?", [userID]);
+        "SELECT id FROM Rooms WHERE direct_chat_matrix_id=? AND membership!='leave' LIMIT 1",
+        [userID]);
     if (res.length != 1) return null;
     return res[0]["id"];
   }

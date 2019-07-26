@@ -309,7 +309,7 @@ class FakeMatrixApi extends MockClient {
               ]
             }
           },
-      "/client/r0/sync?filter=%7B%22room%22:%7B%22include_leave%22:true,%22state%22:%7B%22lazy_load_members%22:false%7D%7D%7D":
+      "/client/r0/sync?filter=%7B%22room%22:%7B%22include_leave%22:true,%22state%22:%7B%22lazy_load_members%22:true%7D%7D%7D":
           (var req) => {
                 "next_batch": Random().nextDouble().toString(),
                 "presence": {
