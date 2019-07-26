@@ -55,7 +55,7 @@ class Store {
   _init() async {
     var databasePath = await getDatabasesPath();
     String path = p.join(databasePath, "FluffyMatrix.db");
-    _db = await openDatabase(path, version: 9,
+    _db = await openDatabase(path, version: 8,
         onCreate: (Database db, int version) async {
       await createTables(db);
     }, onUpgrade: (Database db, int oldVersion, int newVersion) async {
@@ -69,7 +69,7 @@ class Store {
         await db.execute("DROP TABLE IF EXISTS NotificationsCache");
         db.rawUpdate("UPDATE Clients SET prev_batch='' WHERE client=?",
             [client.clientName]);
-        createTables(db);
+        await createTables(db);
       }
     });
 
