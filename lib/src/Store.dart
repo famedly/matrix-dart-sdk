@@ -59,7 +59,9 @@ class Store {
         onCreate: (Database db, int version) async {
       await createTables(db);
     }, onUpgrade: (Database db, int oldVersion, int newVersion) async {
-      print("Migrate databse from version $oldVersion to $newVersion");
+      if (client.debug)
+        print(
+            "[Store] Migrate databse from version $oldVersion to $newVersion");
       if (oldVersion != newVersion) {
         await db.execute("DROP TABLE IF EXISTS Rooms");
         await db.execute("DROP TABLE IF EXISTS Participants");
@@ -68,7 +70,7 @@ class Store {
         await db.execute("DROP TABLE IF EXISTS NotificationsCache");
         db.rawUpdate("UPDATE Clients SET prev_batch='' WHERE client=?",
             [client.clientName]);
-        createTables(db);
+        await createTables(db);
       }
     });
 
@@ -90,7 +92,8 @@ class Store {
             ? null
             : clientList["prev_batch"],
       );
-      print("Restore client credentials of ${client.userID}");
+      if (client.debug)
+        print("[Store] Restore client credentials of ${client.userID}");
     } else
       client.connection.onLoginStateChanged.add(LoginState.loggedOut);
   }
