@@ -458,7 +458,6 @@ class Store {
 
   /// Loads all Users in the database to provide a contact list
   /// except users who are in the Room with the ID [exceptRoomID].
-  @deprecated
   Future<List<User>> loadContacts({String exceptRoomID = ""}) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
         "SELECT * FROM Users WHERE matrix_id!=? AND chat_id!=? GROUP BY matrix_id ORDER BY displayname",

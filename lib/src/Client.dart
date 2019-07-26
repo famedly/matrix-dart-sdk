@@ -224,9 +224,13 @@ class Client {
   /// the famedlyContactDiscovery room, which is
   /// defined by the autojoin room feature in Synapse.
   Future<List<User>> loadFamedlyContacts() async {
+    List<User> contacts = [];
     Room contactDiscoveryRoom = await store
         .getRoomByAlias("#famedlyContactDiscovery:${userID.split(":")[1]}");
-    List<User> contacts = await contactDiscoveryRoom.requestParticipants();
+    if (contactDiscoveryRoom != null)
+      contacts = await contactDiscoveryRoom.requestParticipants();
+    else
+      contacts = await store.loadContacts();
     return contacts;
   }
 
