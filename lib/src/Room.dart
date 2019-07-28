@@ -503,6 +503,8 @@ class Room {
     final dynamic resp = await client.connection.jsonRequest(
         type: HTTPType.GET, action: "/client/r0/rooms/$id/event/$eventID");
     if (resp is ErrorResponse) return null;
-    return Event.fromJson(resp, this);
+    return Event.fromJson(resp, this,
+        senderUser:
+            (await client.store.getUser(matrixID: resp["sender"], room: this)));
   }
 }
