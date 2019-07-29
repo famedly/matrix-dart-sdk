@@ -650,7 +650,8 @@ class Store {
     List<Map<String, dynamic>> res = await db.rawQuery(
         "SELECT * FROM Events WHERE id=? AND chat_id=?", [eventID, room.id]);
     if (res.length == 0) return null;
-    return Event.fromJson(res[0], room);
+    return Event.fromJson(res[0], room,
+        senderUser: (await room.getUserByMXID(res[0]["sender"])));
   }
 
   Future forgetNotification(String roomID) async {
