@@ -114,7 +114,7 @@ class RoomList {
     sortAndUpdate();
   }
 
-  void _handleEventUpdate(EventUpdate eventUpdate) {
+  void _handleEventUpdate(EventUpdate eventUpdate) async {
     // Is the event necessary for the chat list? If not, then return
     if (!(eventUpdate.type == "timeline" ||
         eventUpdate.eventType == "m.room.avatar" ||
@@ -134,12 +134,21 @@ class RoomList {
             rooms[j].timeCreated) return;*/
 
     if (eventUpdate.type == "timeline") {
+      User user = await client?.store?.getUser(
+          matrixID: eventUpdate.content["sender"],
+          room: Room(id: eventUpdate.roomID, client: client));
+      User stateKey = null;
+      if (eventUpdate.content.containsKey("state_key"))
+        stateKey = await client?.store?.getUser(
+            matrixID: eventUpdate.content["state_key"],
+            room: Room(id: eventUpdate.roomID, client: client));
       // Update the last message preview
       rooms[j].lastEvent = Event(
         eventUpdate.content["id"],
-        User(eventUpdate.content["sender"]),
+        user ?? User(eventUpdate.content["sender"]),
         ChatTime(eventUpdate.content["origin_server_ts"]),
         room: rooms[j],
+        stateKey: stateKey,
         content: eventUpdate.content["content"],
         environment: eventUpdate.eventType,
         status: 2,
