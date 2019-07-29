@@ -493,6 +493,19 @@ class Room {
     return participants;
   }
 
+  Future<User> getUserByMXID(String mxID) async {
+    if (client.store != null) {
+      final User storeEvent =
+          await client.store.getUser(matrixID: mxID, room: this);
+      if (storeEvent != null) return storeEvent;
+    }
+    final dynamic resp = await client.connection.jsonRequest(
+        type: HTTPType.GET,
+        action: "/client/r0/rooms/$id/state/m.room.member/$mxID");
+    if (resp is ErrorResponse) return null;
+    return User.fromJson(resp, this);
+  }
+
   /// Searches for the event in the store. If it isn't found, try to request it
   /// from the server. Returns null if not found.
   Future<Event> getEventById(String eventID) async {
@@ -504,7 +517,6 @@ class Room {
         type: HTTPType.GET, action: "/client/r0/rooms/$id/event/$eventID");
     if (resp is ErrorResponse) return null;
     return Event.fromJson(resp, this,
-        senderUser:
-            (await client.store.getUser(matrixID: resp["sender"], room: this)));
+        senderUser: (await getUserByMXID(resp["sender"])));
   }
 }
