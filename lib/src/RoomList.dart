@@ -71,7 +71,7 @@ class RoomList {
     roomSub ??= client.connection.onRoomUpdate.stream.listen(_handleRoomUpdate);
   }
 
-  void _handleRoomUpdate(RoomUpdate chatUpdate) async {
+  void _handleRoomUpdate(RoomUpdate chatUpdate) {
     // Update the chat list item.
     // Search the room in the rooms
     num j = 0;
@@ -114,7 +114,7 @@ class RoomList {
     sortAndUpdate();
   }
 
-  void _handleEventUpdate(EventUpdate eventUpdate) async {
+  void _handleEventUpdate(EventUpdate eventUpdate) {
     // Is the event necessary for the chat list? If not, then return
     if (!(eventUpdate.type == "timeline" ||
         eventUpdate.eventType == "m.room.avatar" ||
