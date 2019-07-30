@@ -134,18 +134,13 @@ class RoomList {
             rooms[j].timeCreated) return;*/
 
     if (eventUpdate.type == "timeline") {
-      User user = await client?.store?.getUser(
-          matrixID: eventUpdate.content["sender"],
-          room: Room(id: eventUpdate.roomID, client: client));
       User stateKey = null;
-      if (eventUpdate.content.containsKey("state_key"))
-        stateKey = await client?.store?.getUser(
-            matrixID: eventUpdate.content["state_key"],
-            room: Room(id: eventUpdate.roomID, client: client));
+      if (eventUpdate.content["state_key"] is String)
+        stateKey = User(eventUpdate.content["state_key"]);
       // Update the last message preview
       rooms[j].lastEvent = Event(
         eventUpdate.content["id"],
-        user ?? User(eventUpdate.content["sender"]),
+        User(eventUpdate.content["sender"]),
         ChatTime(eventUpdate.content["origin_server_ts"]),
         room: rooms[j],
         stateKey: stateKey,
