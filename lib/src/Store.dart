@@ -55,7 +55,7 @@ class Store {
   _init() async {
     var databasePath = await getDatabasesPath();
     String path = p.join(databasePath, "FluffyMatrix.db");
-    _db = await openDatabase(path, version: 8,
+    _db = await openDatabase(path, version: 10,
         onCreate: (Database db, int version) async {
       await createTables(db);
     }, onUpgrade: (Database db, int oldVersion, int newVersion) async {
@@ -63,11 +63,9 @@ class Store {
         print(
             "[Store] Migrate databse from version $oldVersion to $newVersion");
       if (oldVersion != newVersion) {
-        await db.execute("DROP TABLE IF EXISTS Rooms");
-        await db.execute("DROP TABLE IF EXISTS Participants");
-        await db.execute("DROP TABLE IF EXISTS Users");
-        await db.execute("DROP TABLE IF EXISTS Events");
-        await db.execute("DROP TABLE IF EXISTS NotificationsCache");
+        await schemes.forEach((String name, String scheme) async {
+          await db.execute("DROP TABLE IF EXISTS $name");
+        });
         db.rawUpdate("UPDATE Clients SET prev_batch='' WHERE client=?",
             [client.clientName]);
         await createTables(db);
@@ -99,11 +97,9 @@ class Store {
   }
 
   Future<void> createTables(Database db) async {
-    await db.execute(ClientsScheme);
-    await db.execute(RoomsScheme);
-    await db.execute(UserScheme);
-    await db.execute(EventsScheme);
-    await db.execute(NotificationsCacheScheme);
+    await schemes.forEach((String name, String scheme) async {
+      await db.execute(scheme);
+    });
   }
 
   Future<String> queryPrevBatch() async {
@@ -133,9 +129,9 @@ class Store {
   Future<void> clear() async {
     await _db
         .rawDelete("DELETE FROM Clients WHERE client=?", [client.clientName]);
-    await _db.rawDelete("DELETE FROM Rooms");
-    await _db.rawDelete("DELETE FROM Users");
-    await _db.rawDelete("DELETE FROM Events");
+    await schemes.forEach((String name, String scheme) async {
+      if (name != "Clients") await db.rawDelete("DELETE FROM $name");
+    });
     return;
   }
 
@@ -674,87 +670,88 @@ class Store {
     return res;
   }
 
-  /// The database scheme for the Client class.
-  static final String ClientsScheme = 'CREATE TABLE IF NOT EXISTS Clients(' +
-      'client TEXT PRIMARY KEY, ' +
-      'token TEXT, ' +
-      'homeserver TEXT, ' +
-      'matrix_id TEXT, ' +
-      'device_id TEXT, ' +
-      'device_name TEXT, ' +
-      'prev_batch TEXT, ' +
-      'matrix_versions TEXT, ' +
-      'lazy_load_members INTEGER, ' +
-      'UNIQUE(client))';
+  static final Map<String, String> schemes = {
+    /// The database scheme for the Client class.
+    "Clients": 'CREATE TABLE IF NOT EXISTS Clients(' +
+        'client TEXT PRIMARY KEY, ' +
+        'token TEXT, ' +
+        'homeserver TEXT, ' +
+        'matrix_id TEXT, ' +
+        'device_id TEXT, ' +
+        'device_name TEXT, ' +
+        'prev_batch TEXT, ' +
+        'matrix_versions TEXT, ' +
+        'lazy_load_members INTEGER, ' +
+        'UNIQUE(client))',
 
-  /// The database scheme for the Room class.
-  static final String RoomsScheme = 'CREATE TABLE IF NOT EXISTS Rooms(' +
-      'id TEXT PRIMARY KEY, ' +
-      'membership TEXT, ' +
-      'topic TEXT, ' +
-      'highlight_count INTEGER, ' +
-      'notification_count INTEGER, ' +
-      'prev_batch TEXT, ' +
-      'avatar_url TEXT, ' +
-      'draft TEXT, ' +
-      'unread INTEGER, ' + // Timestamp of when the user has last read the chat
-      'fully_read TEXT, ' + // ID of the fully read marker event
-      'description TEXT, ' +
-      'canonical_alias TEXT, ' + // The address in the form: #roomname:homeserver.org
-      'direct_chat_matrix_id TEXT, ' + //If this room is a direct chat, this is the matrix ID of the user
-      'notification_settings TEXT, ' + // Must be one of [all, mention]
+    /// The database scheme for the Room class.
+    "Rooms": 'CREATE TABLE IF NOT EXISTS Rooms(' +
+        'id TEXT PRIMARY KEY, ' +
+        'membership TEXT, ' +
+        'topic TEXT, ' +
+        'highlight_count INTEGER, ' +
+        'notification_count INTEGER, ' +
+        'prev_batch TEXT, ' +
+        'avatar_url TEXT, ' +
+        'draft TEXT, ' +
+        'unread INTEGER, ' + // Timestamp of when the user has last read the chat
+        'fully_read TEXT, ' + // ID of the fully read marker event
+        'description TEXT, ' +
+        'canonical_alias TEXT, ' + // The address in the form: #roomname:homeserver.org
+        'direct_chat_matrix_id TEXT, ' + //If this room is a direct chat, this is the matrix ID of the user
+        'notification_settings TEXT, ' + // Must be one of [all, mention]
 
-      // Security rules
-      'guest_access TEXT, ' +
-      'history_visibility TEXT, ' +
-      'join_rules TEXT, ' +
+        // Security rules
+        'guest_access TEXT, ' +
+        'history_visibility TEXT, ' +
+        'join_rules TEXT, ' +
 
-      // Power levels
-      'power_events_default INTEGER, ' +
-      'power_state_default INTEGER, ' +
-      'power_redact INTEGER, ' +
-      'power_invite INTEGER, ' +
-      'power_ban INTEGER, ' +
-      'power_kick INTEGER, ' +
-      'power_user_default INTEGER, ' +
+        // Power levels
+        'power_events_default INTEGER, ' +
+        'power_state_default INTEGER, ' +
+        'power_redact INTEGER, ' +
+        'power_invite INTEGER, ' +
+        'power_ban INTEGER, ' +
+        'power_kick INTEGER, ' +
+        'power_user_default INTEGER, ' +
 
-      // Power levels for events
-      'power_event_avatar INTEGER, ' +
-      'power_event_history_visibility INTEGER, ' +
-      'power_event_canonical_alias INTEGER, ' +
-      'power_event_aliases INTEGER, ' +
-      'power_event_name INTEGER, ' +
-      'power_event_power_levels INTEGER, ' +
-      'UNIQUE(id))';
+        // Power levels for events
+        'power_event_avatar INTEGER, ' +
+        'power_event_history_visibility INTEGER, ' +
+        'power_event_canonical_alias INTEGER, ' +
+        'power_event_aliases INTEGER, ' +
+        'power_event_name INTEGER, ' +
+        'power_event_power_levels INTEGER, ' +
+        'UNIQUE(id))',
 
-  /// The database scheme for the Event class.
-  static final String EventsScheme = 'CREATE TABLE IF NOT EXISTS Events(' +
-      'id TEXT PRIMARY KEY, ' +
-      'chat_id TEXT, ' +
-      'origin_server_ts INTEGER, ' +
-      'sender TEXT, ' +
-      'state_key TEXT, ' +
-      'content_body TEXT, ' +
-      'type TEXT, ' +
-      'content_json TEXT, ' +
-      "status INTEGER, " +
-      'UNIQUE(id))';
+    /// The database scheme for the Event class.
+    "Events": 'CREATE TABLE IF NOT EXISTS Events(' +
+        'id TEXT PRIMARY KEY, ' +
+        'chat_id TEXT, ' +
+        'origin_server_ts INTEGER, ' +
+        'sender TEXT, ' +
+        'state_key TEXT, ' +
+        'content_body TEXT, ' +
+        'type TEXT, ' +
+        'content_json TEXT, ' +
+        "status INTEGER, " +
+        'UNIQUE(id))',
 
-  /// The database scheme for the User class.
-  static final String UserScheme = 'CREATE TABLE IF NOT EXISTS Users(' +
-      'chat_id TEXT, ' + // The chat id of this membership
-      'matrix_id TEXT, ' + // The matrix id of this user
-      'displayname TEXT, ' +
-      'avatar_url TEXT, ' +
-      'membership TEXT, ' + // The status of the membership. Must be one of [join, invite, ban, leave]
-      'power_level INTEGER, ' + // The power level of this user. Must be in [0,..,100]
-      'UNIQUE(chat_id, matrix_id))';
+    /// The database scheme for the User class.
+    "Users": 'CREATE TABLE IF NOT EXISTS Users(' +
+        'chat_id TEXT, ' + // The chat id of this membership
+        'matrix_id TEXT, ' + // The matrix id of this user
+        'displayname TEXT, ' +
+        'avatar_url TEXT, ' +
+        'membership TEXT, ' + // The status of the membership. Must be one of [join, invite, ban, leave]
+        'power_level INTEGER, ' + // The power level of this user. Must be in [0,..,100]
+        'UNIQUE(chat_id, matrix_id))',
 
-  /// The database scheme for the NotificationsCache class.
-  static final String NotificationsCacheScheme =
-      'CREATE TABLE IF NOT EXISTS NotificationsCache(' +
-          'id int PRIMARY KEY, ' +
-          'chat_id TEXT, ' + // The chat id
-          'event_id TEXT, ' + // The matrix id of the Event
-          'UNIQUE(event_id))';
+    /// The database scheme for the NotificationsCache class.
+    "NotificationsCache": 'CREATE TABLE IF NOT EXISTS NotificationsCache(' +
+        'id int PRIMARY KEY, ' +
+        'chat_id TEXT, ' + // The chat id
+        'event_id TEXT, ' + // The matrix id of the Event
+        'UNIQUE(event_id))',
+  };
 }
