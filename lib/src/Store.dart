@@ -55,7 +55,7 @@ class Store {
   _init() async {
     var databasePath = await getDatabasesPath();
     String path = p.join(databasePath, "FluffyMatrix.db");
-    _db = await openDatabase(path, version: 8,
+    _db = await openDatabase(path, version: 9,
         onCreate: (Database db, int version) async {
       await createTables(db);
     }, onUpgrade: (Database db, int oldVersion, int newVersion) async {
@@ -63,7 +63,7 @@ class Store {
         print(
             "[Store] Migrate databse from version $oldVersion to $newVersion");
       if (oldVersion != newVersion) {
-        await schemes.forEach((name, scheme) async {
+        await schemes.forEach((String name, String scheme) async {
           await db.execute("DROP TABLE IF EXISTS ?", [name]);
         });
         db.rawUpdate("UPDATE Clients SET prev_batch='' WHERE client=?",
@@ -97,7 +97,7 @@ class Store {
   }
 
   Future<void> createTables(Database db) async {
-    await schemes.forEach((name, scheme) async {
+    await schemes.forEach((String name, String scheme) async {
       await db.execute(scheme);
     });
   }
@@ -129,8 +129,8 @@ class Store {
   Future<void> clear() async {
     await _db
         .rawDelete("DELETE FROM Clients WHERE client=?", [client.clientName]);
-    await schemes.forEach((name, scheme) async {
-      if (name != "Clients") await db.rawDelete("DELETE FROM ?", [name]);
+    await schemes.forEach((String name, String scheme) async {
+      if (name != "Clients") await db.rawDelete("DELETE FROM $name", [name]);
     });
     return;
   }
