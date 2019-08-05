@@ -64,7 +64,7 @@ class Store {
             "[Store] Migrate databse from version $oldVersion to $newVersion");
       if (oldVersion != newVersion) {
         await schemes.forEach((String name, String scheme) async {
-          await db.execute("DROP TABLE IF EXISTS ?", [name]);
+          await db.execute("DROP TABLE IF EXISTS $name");
         });
         db.rawUpdate("UPDATE Clients SET prev_batch='' WHERE client=?",
             [client.clientName]);
@@ -130,7 +130,7 @@ class Store {
     await _db
         .rawDelete("DELETE FROM Clients WHERE client=?", [client.clientName]);
     await schemes.forEach((String name, String scheme) async {
-      if (name != "Clients") await db.rawDelete("DELETE FROM $name", [name]);
+      if (name != "Clients") await db.rawDelete("DELETE FROM $name");
     });
     return;
   }
