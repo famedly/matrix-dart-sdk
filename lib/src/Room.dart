@@ -503,6 +503,8 @@ class Room {
         type: HTTPType.GET,
         action: "/client/r0/rooms/$id/state/m.room.member/$mxID");
     if (resp is ErrorResponse) return null;
+    // Somehow we miss the mxid in the response and only get the content of the event.
+    resp["matrix_id"] = mxID;
     return User.fromJson(resp, this);
   }
 
