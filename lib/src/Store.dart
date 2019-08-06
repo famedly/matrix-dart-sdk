@@ -64,11 +64,11 @@ class Store {
             "[Store] Migrate databse from version $oldVersion to $newVersion");
       if (oldVersion != newVersion) {
         await schemes.forEach((String name, String scheme) async {
-          await db.execute("DROP TABLE IF EXISTS $name");
+          if (name != "Clients") await db.execute("DROP TABLE IF EXISTS $name");
         });
-        db.rawUpdate("UPDATE Clients SET prev_batch='' WHERE client=?",
-            [client.clientName]);
         await createTables(db);
+        await db.rawUpdate("UPDATE Clients SET prev_batch='' WHERE client=?",
+            [client.clientName]);
       }
     });
 
