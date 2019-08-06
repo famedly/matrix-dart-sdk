@@ -68,8 +68,13 @@ void main() {
       final String formatted_body = "<b>Hello</b> World";
       final String contentJson =
           '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formatted_body"}';
+      final List<String> heroes = [
+        "@alice:matrix.org",
+        "@bob:example.com",
+        "@charley:example.org"
+      ];
 
-      final Map<String, dynamic> jsonObj = {
+      Map<String, dynamic> jsonObj = {
         "id": id,
         "membership": membership.toString().split('.').last,
         "topic": name,
@@ -101,6 +106,9 @@ void main() {
         "power_event_name": 0,
         "power_event_power_levels": 0,
         "content_json": contentJson,
+        "joined_member_count": notificationCount,
+        "invited_member_count": notificationCount,
+        "heroes": heroes.join(","),
       };
 
       room = await Room.getRoomFromTableRow(jsonObj, matrix);
@@ -108,6 +116,7 @@ void main() {
       expect(room.id, id);
       expect(room.membership, membership);
       expect(room.name, name);
+      expect(room.displayname, name);
       expect(room.topic, topic);
       expect(room.avatar.mxc, "");
       expect(room.notificationCount, notificationCount);
@@ -127,6 +136,16 @@ void main() {
       room.powerLevels.forEach((String key, int value) {
         expect(value, 0);
       });
+      expect(room.mJoinedMemberCount, notificationCount);
+      expect(room.mInvitedMemberCount, notificationCount);
+      expect(room.mHeroes, heroes);
+
+      jsonObj["topic"] = "";
+      room = await Room.getRoomFromTableRow(jsonObj, matrix);
+      expect(room.displayname, "testroom");
+      jsonObj["canonical_alias"] = "";
+      room = await Room.getRoomFromTableRow(jsonObj, matrix);
+      expect(room.displayname, "alice, bob, charley");
     });
 
     test("sendReadReceipt", () async {

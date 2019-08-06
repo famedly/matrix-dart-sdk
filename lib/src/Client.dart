@@ -107,7 +107,7 @@ class Client {
     }
 
     for (int i = 0; i < versions.length; i++) {
-      if (versions[i] == "r0.4.0")
+      if (versions[i] == "r0.5.0")
         break;
       else if (i == versions.length - 1) {
         connection.onError.add(ErrorResponse(errcode: "NO_SUPPORT", error: ""));

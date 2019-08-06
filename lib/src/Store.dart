@@ -55,7 +55,7 @@ class Store {
   _init() async {
     var databasePath = await getDatabasesPath();
     String path = p.join(databasePath, "FluffyMatrix.db");
-    _db = await openDatabase(path, version: 10,
+    _db = await openDatabase(path, version: 11,
         onCreate: (Database db, int version) async {
       await createTables(db);
     }, onUpgrade: (Database db, int oldVersion, int newVersion) async {
@@ -164,18 +164,32 @@ class Store {
     // Insert the chat into the database if not exists
     txn.rawInsert(
         "INSERT OR IGNORE INTO Rooms " +
-            "VALUES(?, ?, '', 0, 0, '', '', '', 0, '', '', '', '', '', '', '', '', 0, 50, 50, 0, 50, 50, 0, 50, 100, 50, 50, 50, 100) ",
+            "VALUES(?, ?, '', 0, 0, 0, 0, '', '', '', '', 0, '', '', '', '', '', '', '', '', 0, 50, 50, 0, 50, 50, 0, 50, 100, 50, 50, 50, 100) ",
         [roomUpdate.id, roomUpdate.membership.toString().split('.').last]);
 
-    // Update the notification counts and the limited timeline boolean
-    txn.rawUpdate(
-        "UPDATE Rooms SET highlight_count=?, notification_count=?, membership=? WHERE id=? ",
-        [
-          roomUpdate.highlight_count,
-          roomUpdate.notification_count,
-          roomUpdate.membership.toString().split('.').last,
-          roomUpdate.id
-        ]);
+    // Update the notification counts and the limited timeline boolean and the summary
+    String updateQuery =
+        "UPDATE Rooms SET highlight_count=?, notification_count=?, membership=?";
+    List<dynamic> updateArgs = [
+      roomUpdate.highlight_count,
+      roomUpdate.notification_count,
+      roomUpdate.membership.toString().split('.').last
+    ];
+    if (roomUpdate.summary?.mJoinedMemberCount != null) {
+      updateQuery += ", joined_member_count=?";
+      updateArgs.add(roomUpdate.summary.mJoinedMemberCount);
+    }
+    if (roomUpdate.summary?.mInvitedMemberCount != null) {
+      updateQuery += ", invited_member_count=?";
+      updateArgs.add(roomUpdate.summary.mInvitedMemberCount);
+    }
+    if (roomUpdate.summary?.mHeroes != null) {
+      updateQuery += ", heroes=?";
+      updateArgs.add(roomUpdate.summary.mHeroes.join(","));
+    }
+    updateQuery += " WHERE id=?";
+    updateArgs.add(roomUpdate.id);
+    txn.rawUpdate(updateQuery, updateArgs);
 
     // Is the timeline limited? Then all previous messages should be
     // removed from the database!
@@ -691,6 +705,9 @@ class Store {
         'topic TEXT, ' +
         'highlight_count INTEGER, ' +
         'notification_count INTEGER, ' +
+        'joined_member_count INTEGER, ' +
+        'invited_member_count INTEGER, ' +
+        'heroes TEXT, ' +
         'prev_batch TEXT, ' +
         'avatar_url TEXT, ' +
         'draft TEXT, ' +

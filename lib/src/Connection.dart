@@ -343,6 +343,12 @@ class Connection {
           prev_batch = room["timeline"]["prev_batch"];
       }
 
+      RoomSummary summary;
+
+      if (room["summary"] is Map<String, dynamic>) {
+        summary = RoomSummary.fromJson(room["summary"]);
+      }
+
       RoomUpdate update = RoomUpdate(
         id: id,
         membership: membership,
@@ -350,6 +356,7 @@ class Connection {
         highlight_count: highlight_count,
         limitedTimeline: limitedTimeline,
         prev_batch: prev_batch,
+        summary: summary,
       );
       client.store?.storeRoomUpdate(update);
       onRoomUpdate.add(update);
