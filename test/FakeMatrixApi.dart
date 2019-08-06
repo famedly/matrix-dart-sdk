@@ -138,7 +138,14 @@ class FakeMatrixApi extends MockClient {
                 ]
               },
       "/client/versions": (var req) => {
-            "versions": ["r0.0.1", "r0.1.0", "r0.2.0", "r0.3.0", "r0.4.0"],
+            "versions": [
+              "r0.0.1",
+              "r0.1.0",
+              "r0.2.0",
+              "r0.3.0",
+              "r0.4.0",
+              "r0.5.0"
+            ],
             "unstable_features": {"m.lazy_load_members": true},
           },
       "/client/r0/login": (var req) => {

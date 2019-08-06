@@ -92,7 +92,9 @@ class RoomList {
         prev_batch: chatUpdate.prev_batch,
         highlightCount: chatUpdate.highlight_count,
         notificationCount: chatUpdate.notification_count,
-        hasName: false,
+        mHeroes: chatUpdate.summary?.mHeroes,
+        mJoinedMemberCount: chatUpdate.summary?.mJoinedMemberCount,
+        mInvitedMemberCount: chatUpdate.summary?.mInvitedMemberCount,
       );
       rooms.insert(position, newRoom);
       if (onInsert != null) onInsert(position);
@@ -110,6 +112,14 @@ class RoomList {
             rooms[j].highlightCount != chatUpdate.highlight_count)) {
       rooms[j].notificationCount = chatUpdate.notification_count;
       rooms[j].highlightCount = chatUpdate.highlight_count;
+      if (chatUpdate.summary != null) {
+        if (chatUpdate.summary.mHeroes != null)
+          rooms[j].mHeroes = chatUpdate.summary.mHeroes;
+        if (chatUpdate.summary.mJoinedMemberCount != null)
+          rooms[j].mJoinedMemberCount = chatUpdate.summary.mJoinedMemberCount;
+        if (chatUpdate.summary.mInvitedMemberCount != null)
+          rooms[j].mInvitedMemberCount = chatUpdate.summary.mInvitedMemberCount;
+      }
     }
     sortAndUpdate();
   }
@@ -156,8 +166,6 @@ class RoomList {
       // Update the room avatar
       rooms[j].avatar = MxContent(eventUpdate.content["content"]["url"]);
     }
-    if (eventUpdate.eventType == "m.room.member" && !rooms[j].hasName)
-      updateMemberName(j);
     sortAndUpdate();
   }
 
@@ -165,11 +173,6 @@ class RoomList {
     rooms?.sort((a, b) =>
         b.timeCreated.toTimeStamp().compareTo(a.timeCreated.toTimeStamp()));
     if (onUpdate != null) onUpdate();
-  }
-
-  void updateMemberName(int position) async {
-    rooms[position].name =
-        await client.store.getChatNameFromMemberNames(rooms[position].id);
   }
 }
 

@@ -46,6 +46,8 @@ class RoomUpdate {
   /// Represents the current position of the client in the room history.
   final String prev_batch;
 
+  final RoomSummary summary;
+
   RoomUpdate({
     this.id,
     this.membership,
@@ -53,5 +55,21 @@ class RoomUpdate {
     this.highlight_count,
     this.limitedTimeline,
     this.prev_batch,
+    this.summary,
   });
+}
+
+class RoomSummary {
+  List<String> mHeroes;
+  int mJoinedMemberCount;
+  int mInvitedMemberCount;
+
+  RoomSummary(
+      {this.mHeroes, this.mJoinedMemberCount, this.mInvitedMemberCount});
+
+  RoomSummary.fromJson(Map<String, dynamic> json) {
+    mHeroes = json['m.heroes']?.cast<String>();
+    mJoinedMemberCount = json['m.joined_member_count'];
+    mInvitedMemberCount = json['m.invited_member_count'];
+  }
 }
