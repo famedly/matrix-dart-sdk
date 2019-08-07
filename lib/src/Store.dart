@@ -203,21 +203,10 @@ class Store {
   /// Stores an UserUpdate object in the database. Must be called inside of
   /// [transaction].
   Future<void> storeUserEventUpdate(UserUpdate userUpdate) {
-    switch (userUpdate.eventType) {
-      case "m.direct":
-        if (userUpdate.content["content"] is Map<String, dynamic>) {
-          final Map<String, dynamic> directMap = userUpdate.content["content"];
-          directMap.forEach((String key, dynamic value) {
-            if (value is List<dynamic> && value.length > 0)
-              for (int i = 0; i < value.length; i++) {
-                txn.rawUpdate(
-                    "UPDATE Rooms SET direct_chat_matrix_id=? WHERE id=?",
-                    [key, value[i]]);
-              }
-          });
-        }
-        break;
-    }
+    txn.rawInsert("INSERT OR REPLACE INTO AccountData VALUES(?, ?)", [
+      userUpdate.eventType,
+      json.encode(userUpdate.content["content"]),
+    ]);
     return null;
   }
 
@@ -286,13 +275,11 @@ class Store {
         json.encode(eventContent["content"]),
       ]);
     } else
-      txn.rawInsert(
-          "INSERT OR REPLACE INTO RoomAccountData VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [
-            eventContent["type"],
-            chat_id,
-            json.encode(eventContent["content"]),
-          ]);
+      txn.rawInsert("INSERT OR REPLACE INTO RoomAccountData VALUES(?, ?, ?)", [
+        eventContent["type"],
+        chat_id,
+        json.encode(eventContent["content"]),
+      ]);
 
     return null;
   }
