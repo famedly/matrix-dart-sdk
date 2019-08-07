@@ -699,73 +699,69 @@ class Store {
         'UNIQUE(client))',
 
     /// The database scheme for the Room class.
-    "Rooms": 'CREATE TABLE IF NOT EXISTS Rooms(' +
-        'id TEXT PRIMARY KEY, ' +
+    'Rooms': 'CREATE TABLE IF NOT EXISTS Rooms(' +
+        'room_id TEXT PRIMARY KEY, ' +
         'membership TEXT, ' +
-        'topic TEXT, ' +
         'highlight_count INTEGER, ' +
         'notification_count INTEGER, ' +
+        'prev_batch TEXT, ' +
         'joined_member_count INTEGER, ' +
         'invited_member_count INTEGER, ' +
-        'heroes TEXT, ' +
-        'prev_batch TEXT, ' +
-        'avatar_url TEXT, ' +
-        'draft TEXT, ' +
-        'unread INTEGER, ' + // Timestamp of when the user has last read the chat
-        'fully_read TEXT, ' + // ID of the fully read marker event
-        'description TEXT, ' +
-        'canonical_alias TEXT, ' + // The address in the form: #roomname:homeserver.org
-        'direct_chat_matrix_id TEXT, ' + //If this room is a direct chat, this is the matrix ID of the user
-        'notification_settings TEXT, ' + // Must be one of [all, mention]
-
-        // Security rules
-        'guest_access TEXT, ' +
-        'history_visibility TEXT, ' +
-        'join_rules TEXT, ' +
-
-        // Power levels
-        'power_events_default INTEGER, ' +
-        'power_state_default INTEGER, ' +
-        'power_redact INTEGER, ' +
-        'power_invite INTEGER, ' +
-        'power_ban INTEGER, ' +
-        'power_kick INTEGER, ' +
-        'power_user_default INTEGER, ' +
-
-        // Power levels for events
-        'power_event_avatar INTEGER, ' +
-        'power_event_history_visibility INTEGER, ' +
-        'power_event_canonical_alias INTEGER, ' +
-        'power_event_aliases INTEGER, ' +
-        'power_event_name INTEGER, ' +
-        'power_event_power_levels INTEGER, ' +
         'UNIQUE(id))',
 
-    /// The database scheme for the Event class.
-    "Events": 'CREATE TABLE IF NOT EXISTS Events(' +
-        'id TEXT PRIMARY KEY, ' +
-        'chat_id TEXT, ' +
+    /// The users which can be used to generate a room name if the room does not have one.
+    'Heroes': 'CREATE TABLE IF NOT EXISTS Heroes(' +
+        'room_id TEXT PRIMARY KEY, ' +
+        'matrix_id TEXT, ' +
+        'UNIQUE(room_id,matrix_id))',
+
+    /// The database scheme for the TimelineEvent class.
+    'Events': 'CREATE TABLE IF NOT EXISTS Events(' +
+        'event_id TEXT PRIMARY KEY, ' +
+        'room_id TEXT, ' +
         'origin_server_ts INTEGER, ' +
         'sender TEXT, ' +
-        'state_key TEXT, ' +
-        'content_body TEXT, ' +
         'type TEXT, ' +
-        'content_json TEXT, ' +
+        'unsigned TEXT, ' +
+        'content TEXT, ' +
         "status INTEGER, " +
         'UNIQUE(id))',
 
-    /// The database scheme for the User class.
-    "Users": 'CREATE TABLE IF NOT EXISTS Users(' +
-        'chat_id TEXT, ' + // The chat id of this membership
-        'matrix_id TEXT, ' + // The matrix id of this user
-        'displayname TEXT, ' +
-        'avatar_url TEXT, ' +
-        'membership TEXT, ' + // The status of the membership. Must be one of [join, invite, ban, leave]
-        'power_level INTEGER, ' + // The power level of this user. Must be in [0,..,100]
-        'UNIQUE(chat_id, matrix_id))',
+    /// The database scheme for room states.
+    'State': 'CREATE TABLE IF NOT EXISTS State(' +
+        'event_id TEXT PRIMARY KEY, ' +
+        'room_id TEXT, ' +
+        'origin_server_ts INTEGER, ' +
+        'sender TEXT, ' +
+        'state_key TEXT, ' +
+        'unsigned TEXT, ' +
+        'prev_content TEXT, ' +
+        'type TEXT, ' +
+        'content TEXT, ' +
+        'UNIQUE(room_id,state_key,type))',
+
+    /// The database scheme for room states.
+    'AccountData': 'CREATE TABLE IF NOT EXISTS AccountData(' +
+        'type TEXT PRIMARY KEY, ' +
+        'content TEXT, ' +
+        'UNIQUE(type))',
+
+    /// The database scheme for room states.
+    'RoomAccountData': 'CREATE TABLE IF NOT EXISTS RoomAccountData(' +
+        'type TEXT PRIMARY KEY, ' +
+        'room_id TEXT, ' +
+        'content TEXT, ' +
+        'UNIQUE(type,room_id))',
+
+    /// The database scheme for room states.
+    'Presence': 'CREATE TABLE IF NOT EXISTS Presence(' +
+        'type TEXT PRIMARY KEY, ' +
+        'sender TEXT, ' +
+        'content TEXT, ' +
+        'UNIQUE(sender))',
 
     /// The database scheme for the NotificationsCache class.
-    "NotificationsCache": 'CREATE TABLE IF NOT EXISTS NotificationsCache(' +
+    'NotificationsCache': 'CREATE TABLE IF NOT EXISTS NotificationsCache(' +
         'id int PRIMARY KEY, ' +
         'chat_id TEXT, ' + // The chat id
         'event_id TEXT, ' + // The matrix id of the Event
