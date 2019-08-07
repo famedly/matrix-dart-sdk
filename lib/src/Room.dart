@@ -363,8 +363,7 @@ class Room {
 
   /// Sets this room as a direct chat for this user.
   Future<dynamic> addToDirectChat(String userID) async {
-    Map<String, List<String>> directChats =
-        await client.store.getAccountDataDirectChats();
+    Map<String, List<String>> directChats = client.directChats;
     if (directChats.containsKey(userID)) if (!directChats[userID].contains(id))
       directChats[userID].add(id);
     else

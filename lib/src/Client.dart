@@ -24,6 +24,10 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:famedlysdk/src/AccountData.dart';
+import 'package:famedlysdk/src/Presence.dart';
+import 'package:famedlysdk/src/sync/UserUpdate.dart';
+
 import 'Connection.dart';
 import 'Room.dart';
 import 'RoomList.dart';
@@ -86,7 +90,37 @@ class Client {
   /// Returns the current login state.
   bool isLogged() => accessToken != null;
 
+  /// A list of all rooms the user is participating or invited.
   RoomList roomList;
+
+  /// Key/Value store of account data.
+  Map<String, AccountData> accountData = {};
+
+  /// Presences of users by a given matrix ID
+  Map<String, Presence> presences = {};
+
+  void handleUserUpdate(UserUpdate userUpdate) {
+    if (userUpdate.type == "account_data") {
+      AccountData newAccountData = AccountData.fromJson(userUpdate.content);
+      accountData[newAccountData.typeKey] = newAccountData;
+    }
+    if (userUpdate.type == "presence") {
+      Presence newPresence = Presence.fromJson(userUpdate.content);
+      presences[newPresence.typeKey] = newPresence;
+    }
+  }
+
+  Map<String, List<String>> get directChats =>
+      accountData["m.direct"] != null ? accountData["m.direct"].content : {};
+
+  /// Returns the (first) room ID from the store which is a private chat with the user [userId].
+  /// Returns null if there is none.
+  String getDirectChatFromUserId(String userId) =>
+      accountData["m.direct"] != null &&
+              accountData["m.direct"].content[userId] is List<String> &&
+              accountData["m.direct"].content[userId].length > 0
+          ? accountData["m.direct"].content[userId][0]
+          : null;
 
   /// Checks the supported versions of the Matrix protocol and the supported
   /// login types. Returns false if the server is not compatible with the
@@ -227,7 +261,7 @@ class Client {
   /// defined by the autojoin room feature in Synapse.
   Future<List<User>> loadFamedlyContacts() async {
     List<User> contacts = [];
-    Room contactDiscoveryRoom = await store
+    Room contactDiscoveryRoom = roomList
         .getRoomByAlias("#famedlyContactDiscovery:${userID.split(":")[1]}");
     if (contactDiscoveryRoom != null)
       contacts = await contactDiscoveryRoom.requestParticipants();

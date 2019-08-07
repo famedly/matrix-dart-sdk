@@ -89,7 +89,7 @@ class User extends State {
   /// Returns null on error.
   Future<String> startDirectChat() async {
     // Try to find an existing direct chat
-    String roomID = await room.client?.rooms.getDirectChatRoomID(id);
+    String roomID = await room.client?.getDirectChatFromUserId(id);
     if (roomID != null) return roomID;
 
     // Start a new direct chat

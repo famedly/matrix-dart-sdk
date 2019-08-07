@@ -73,6 +73,13 @@ class RoomList {
     roomSub ??= client.connection.onRoomUpdate.stream.listen(_handleRoomUpdate);
   }
 
+  Room getRoomByAlias(String alias) {
+    for (int i = 0; i < rooms.length; i++) {
+      if (rooms[i].canonicalAlias == alias) return rooms[i];
+    }
+    return null;
+  }
+
   void _handleRoomUpdate(RoomUpdate chatUpdate) {
     // Update the chat list item.
     // Search the room in the rooms

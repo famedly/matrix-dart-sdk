@@ -21,6 +21,8 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/src/RawEvent.dart';
+
 class AccountData {
   /// The json payload of the content. The content highly depends on the type.
   final Map<String, dynamic> content;
@@ -29,4 +31,11 @@ class AccountData {
   final String typeKey;
 
   AccountData({this.content, this.typeKey});
+
+  /// Get a State event from a table row or from the event stream.
+  factory AccountData.fromJson(Map<String, dynamic> jsonPayload) {
+    final Map<String, dynamic> content =
+        RawEvent.getMapFromPayload(jsonPayload['content']);
+    return AccountData(content: content, typeKey: jsonPayload['type']);
+  }
 }

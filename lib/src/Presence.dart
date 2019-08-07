@@ -22,6 +22,7 @@
  */
 
 import 'package:famedlysdk/src/AccountData.dart';
+import 'package:famedlysdk/src/RawEvent.dart';
 
 class Presence extends AccountData {
   /// The user who has sent this event if it is not a global account data event.
@@ -29,4 +30,14 @@ class Presence extends AccountData {
 
   Presence({this.sender, Map<String, dynamic> content, String typeKey})
       : super(content: content, typeKey: typeKey);
+
+  /// Get a State event from a table row or from the event stream.
+  factory Presence.fromJson(Map<String, dynamic> jsonPayload) {
+    final Map<String, dynamic> content =
+        RawEvent.getMapFromPayload(jsonPayload['content']);
+    return Presence(
+        content: content,
+        typeKey: jsonPayload['type'],
+        sender: jsonPayload['sender']);
+  }
 }

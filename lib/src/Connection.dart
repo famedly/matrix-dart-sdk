@@ -149,24 +149,32 @@ class Connection {
     client.lazyLoadMembers = newLazyLoadMembers;
     client.prevBatch = newPrevBatch;
 
-    client.store?.storeClient();
+    if (client.store != null) {
+      client.store.storeClient();
 
-    List<Room> rooms = await client.store
-        ?.getRoomList(onlyLeft: false, onlyGroups: false, onlyDirect: false);
-    client.roomList = RoomList(
-        client: client,
-        onlyLeft: false,
-        onlyDirect: false,
-        onlyGroups: false,
-        onUpdate: null,
-        onInsert: null,
-        onRemove: null,
-        rooms: rooms);
+      List<Room> rooms = await client.store
+          .getRoomList(onlyLeft: false, onlyGroups: false, onlyDirect: false);
+      client.roomList = RoomList(
+          client: client,
+          onlyLeft: false,
+          onlyDirect: false,
+          onlyGroups: false,
+          onUpdate: null,
+          onInsert: null,
+          onRemove: null,
+          rooms: rooms);
+      client.accountData = await client.store.getAccountData();
+      client.presences = await client.store.getPresences();
+    }
+
+    _userEventSub ??= onUserEvent.stream.listen(client.handleUserUpdate);
 
     onLoginStateChanged.add(LoginState.logged);
 
     _sync();
   }
+
+  StreamSubscription _userEventSub;
 
   /// Resets all settings and stops the synchronisation.
   void clear() {

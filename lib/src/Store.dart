@@ -25,6 +25,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 
+import 'package:famedlysdk/src/AccountData.dart';
+import 'package:famedlysdk/src/Presence.dart';
 import 'package:famedlysdk/src/State.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
@@ -396,6 +398,26 @@ class Store {
         "SELECT * FROM Events WHERE id=? AND room_id=?", [eventID, room.id]);
     if (res.length == 0) return null;
     return Event.fromJson(res[0], room);
+  }
+
+  Future<Map<String, AccountData>> getAccountData() async {
+    Map<String, AccountData> newAccountData = {};
+    List<Map<String, dynamic>> rawAccountData =
+        await db.rawQuery("SELECT * FROM AccountData");
+    for (int i = 0; i < rawAccountData.length; i++)
+      newAccountData[rawAccountData[i]["type"]] =
+          AccountData.fromJson(rawAccountData[i]);
+    return newAccountData;
+  }
+
+  Future<Map<String, Presence>> getPresences() async {
+    Map<String, Presence> newPresences = {};
+    List<Map<String, dynamic>> rawPresences =
+        await db.rawQuery("SELECT * FROM Presences");
+    for (int i = 0; i < rawPresences.length; i++)
+      newPresences[rawPresences[i]["type"]] =
+          Presence.fromJson(rawPresences[i]);
+    return newPresences;
   }
 
   Future forgetNotification(String roomID) async {
