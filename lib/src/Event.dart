@@ -21,37 +21,14 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'dart:convert';
-
-import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 
 import './Room.dart';
-import './User.dart';
+import './RawEvent.dart';
 
-/// A single Matrix event, e.g. a message in a chat.
-class Event {
-  /// The Matrix ID for this event in the format '$localpart:server.abc'.
-  final String id;
-
-  /// The room this event belongs to.
-  final Room room;
-
-  /// The time this event has received at the server.
-  final ChatTime time;
-
-  /// The user who has sent this event.
-  final User sender;
-
-  /// The user who is the target of this event e.g. for a m.room.member event.
-  final User stateKey;
-
-  /// The type of this event. Mostly this is 'timeline'.
-  final String environment;
-
-  Event replyEvent;
-
+/// Defines a timeline event for a room.
+class Event extends RawEvent {
   /// The status of this event.
   /// -1=ERROR
   ///  0=SENDING
@@ -59,20 +36,44 @@ class Event {
   ///  2=RECEIVED
   int status;
 
-  /// The json payload of the content. The content highly depends on the type.
-  final Map<String, dynamic> content;
-
   Event(
-    this.id,
-    this.sender,
-    this.time, {
-    this.room,
-    this.stateKey,
-    this.status = 2,
-    this.environment,
-    this.content,
-    this.replyEvent,
-  });
+      {this.status,
+      dynamic content,
+      String typeKey,
+      String eventId,
+      String roomId,
+      String sender,
+      ChatTime time,
+      dynamic unsigned,
+      Room room})
+      : super(
+            content: content,
+            typeKey: typeKey,
+            eventId: eventId,
+            roomId: roomId,
+            sender: sender,
+            time: time,
+            unsigned: unsigned,
+            room: room);
+
+  /// Get a State event from a table row or from the event stream.
+  factory Event.fromJson(
+      Map<String, dynamic> jsonPayload, int status, Room room) {
+    final Map<String, dynamic> content =
+        RawEvent.getMapFromPayload(jsonPayload['content']);
+    final Map<String, dynamic> unsigned =
+        RawEvent.getMapFromPayload(jsonPayload['unsigned']);
+    return Event(
+        status: status,
+        content: content,
+        typeKey: jsonPayload['type'],
+        eventId: jsonPayload['event_id'],
+        roomId: jsonPayload['room_id'],
+        sender: jsonPayload['sender'],
+        time: ChatTime(jsonPayload['origin_server_ts']),
+        unsigned: unsigned,
+        room: room);
+  }
 
   /// Returns the body of this event if it has a body.
   String get text => content["body"] ?? "";
@@ -84,89 +85,7 @@ class Event {
   String getBody() {
     if (text != "") return text;
     if (formattedText != "") return formattedText;
-    return "*** Unable to parse Content ***";
-  }
-
-  /// Get the real type.
-  EventTypes get type {
-    switch (environment) {
-      case "m.room.avatar":
-        return EventTypes.RoomAvatar;
-      case "m.room.name":
-        return EventTypes.RoomName;
-      case "m.room.topic":
-        return EventTypes.RoomTopic;
-      case "m.room.Aliases":
-        return EventTypes.RoomAliases;
-      case "m.room.canonical_alias":
-        return EventTypes.RoomCanonicalAlias;
-      case "m.room.create":
-        return EventTypes.RoomCreate;
-      case "m.room.join_rules":
-        return EventTypes.RoomJoinRules;
-      case "m.room.member":
-        return EventTypes.RoomMember;
-      case "m.room.power_levels":
-        return EventTypes.RoomPowerLevels;
-      case "m.room.guest_access":
-        return EventTypes.GuestAccess;
-      case "m.room.history_visibility":
-        return EventTypes.HistoryVisibility;
-      case "m.room.message":
-        switch (content["msgtype"] ?? "m.text") {
-          case "m.text":
-            if (content.containsKey("m.relates_to")) {
-              return EventTypes.Reply;
-            }
-            return EventTypes.Text;
-          case "m.notice":
-            return EventTypes.Notice;
-          case "m.emote":
-            return EventTypes.Emote;
-          case "m.image":
-            return EventTypes.Image;
-          case "m.video":
-            return EventTypes.Video;
-          case "m.audio":
-            return EventTypes.Audio;
-          case "m.file":
-            return EventTypes.File;
-          case "m.location":
-            return EventTypes.Location;
-        }
-    }
-    return EventTypes.Unknown;
-  }
-
-  /// Generate a new Event object from a json string, mostly a table row.
-  static Event fromJson(Map<String, dynamic> jsonObj, Room room,
-      {User senderUser, User stateKeyUser}) {
-    Map<String, dynamic> content = jsonObj["content"];
-
-    if (content == null && jsonObj["content_json"] != null)
-      try {
-        content = json.decode(jsonObj["content_json"]);
-      } catch (e) {
-        if (room.client.debug) {
-          print("jsonObj decode of event content failed: ${e.toString()}");
-        }
-        content = {};
-      }
-    else if (content == null) content = {};
-
-    if (senderUser == null) senderUser = User.fromJson(jsonObj, room);
-    if (stateKeyUser == null) stateKeyUser = User(jsonObj["state_key"]);
-
-    return Event(
-      jsonObj["event_id"] ?? jsonObj["id"],
-      senderUser,
-      ChatTime(jsonObj["origin_server_ts"]),
-      stateKey: stateKeyUser,
-      environment: jsonObj["type"],
-      status: jsonObj["status"] ?? 2,
-      content: content,
-      room: room,
-    );
+    return "$type";
   }
 
   /// Removes this event if the status is < 1. This event will just be removed
@@ -175,14 +94,14 @@ class Event {
     if (status < 1) {
       if (room.client.store != null)
         await room.client.store.db
-            .rawDelete("DELETE FROM Events WHERE id=?", [id]);
+            .rawDelete("DELETE FROM Events WHERE id=?", [eventId]);
 
       room.client.connection.onEvent.add(EventUpdate(
           roomID: room.id,
           type: "timeline",
-          eventType: environment,
+          eventType: typeKey,
           content: {
-            "event_id": id,
+            "event_id": eventId,
             "status": -2,
             "content": {"body": "Removed..."}
           }));
@@ -198,42 +117,4 @@ class Event {
     final String eventID = await room.sendTextEvent(text, txid: txid);
     return eventID;
   }
-
-  @Deprecated("Use [client.store.getEventList(Room room)] instead!")
-  static Future<List<Event>> getEventList(Client matrix, Room room) async {
-    List<Event> eventList = await matrix.store.getEventList(room);
-    return eventList;
-  }
 }
-
-enum EventTypes {
-  Text,
-  Emote,
-  Notice,
-  Image,
-  Video,
-  Audio,
-  File,
-  Location,
-  Reply,
-  RoomAliases,
-  RoomCanonicalAlias,
-  RoomCreate,
-  RoomJoinRules,
-  RoomMember,
-  RoomPowerLevels,
-  RoomName,
-  RoomTopic,
-  RoomAvatar,
-  GuestAccess,
-  HistoryVisibility,
-  Unknown,
-}
-
-final Map<String, int> StatusTypes = {
-  "REMOVE": -2,
-  "ERROR": -1,
-  "SENDING": 0,
-  "SENT": 1,
-  "RECEIVED": 2,
-};
