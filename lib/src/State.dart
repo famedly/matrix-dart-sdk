@@ -80,7 +80,19 @@ class State extends RawEvent {
         room: room);
   }
 
+  Event get timelineEvent => Event(
+        content: content,
+        typeKey: typeKey,
+        eventId: eventId,
+        room: room,
+        roomId: roomId,
+        senderId: senderId,
+        time: time,
+        unsigned: unsigned,
+        status: 1,
+      );
+
   /// The unique key of this event. For events with a [stateKey], it will be the
   /// stateKey. Otherwise it will be the [type] as a string.
-  String get key => stateKey != null || stateKey.isEmpty ? type : stateKey;
+  String get key => stateKey == null || stateKey.isEmpty ? typeKey : stateKey;
 }

@@ -149,23 +149,24 @@ class Connection {
     client.lazyLoadMembers = newLazyLoadMembers;
     client.prevBatch = newPrevBatch;
 
+    List<Room> rooms = [];
     if (client.store != null) {
       client.store.storeClient();
-
-      List<Room> rooms = await client.store
+      rooms = await client.store
           .getRoomList(onlyLeft: false, onlyGroups: false, onlyDirect: false);
-      client.roomList = RoomList(
-          client: client,
-          onlyLeft: false,
-          onlyDirect: false,
-          onlyGroups: false,
-          onUpdate: null,
-          onInsert: null,
-          onRemove: null,
-          rooms: rooms);
       client.accountData = await client.store.getAccountData();
       client.presences = await client.store.getPresences();
     }
+
+    client.roomList = RoomList(
+        client: client,
+        onlyLeft: false,
+        onlyDirect: false,
+        onlyGroups: false,
+        onUpdate: null,
+        onInsert: null,
+        onRemove: null,
+        rooms: rooms);
 
     _userEventSub ??= onUserEvent.stream.listen(client.handleUserUpdate);
 

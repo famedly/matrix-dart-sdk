@@ -107,6 +107,9 @@ void main() {
       expect(loginState, LoginState.logged);
       expect(firstSync, true);
       expect(sync["next_batch"] == matrix.prevBatch, true);
+
+      expect(matrix.accountData.length, 1);
+      expect(matrix.presences.length, 0);
     });
 
     test('Try to get ErrorResponse', () async {

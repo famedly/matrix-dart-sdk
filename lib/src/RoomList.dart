@@ -103,6 +103,8 @@ class RoomList {
         mHeroes: chatUpdate.summary?.mHeroes,
         mJoinedMemberCount: chatUpdate.summary?.mJoinedMemberCount,
         mInvitedMemberCount: chatUpdate.summary?.mInvitedMemberCount,
+        states: {},
+        roomAccountData: {},
       );
       rooms.insert(position, newRoom);
       if (onInsert != null) onInsert(position);

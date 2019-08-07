@@ -54,9 +54,9 @@ class Room {
   int mJoinedMemberCount;
   int mInvitedMemberCount;
 
-  Map<String, State> states;
+  Map<String, State> states = {};
 
-  Map<String, RoomAccountData> roomAccountData;
+  Map<String, RoomAccountData> roomAccountData = {};
 
   /// Time when the user has last read the chat.
   ChatTime unread;
@@ -105,7 +105,7 @@ class Room {
   /// Must be one of [all, mention]
   String notificationSettings;
 
-  Event get lastEvent => states["m.room.message"] as Event;
+  Event get lastEvent => states["m.room.message"]?.timelineEvent;
 
   /// Your current client instance.
   final Client client;
