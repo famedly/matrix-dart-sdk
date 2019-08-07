@@ -229,45 +229,36 @@ class Store {
     String type = eventUpdate.type;
     String chat_id = eventUpdate.roomID;
 
+    // Get the state_key for m.room.member events
+    String state_key = "";
+    if (eventContent["state_key"] is String) {
+      state_key = eventContent["state_key"];
+    }
+
     if (type == "timeline" || type == "history") {
       // calculate the status
       num status = 2;
       if (eventContent["status"] is num) status = eventContent["status"];
 
-      // Make unsigned part of the content
-      if (eventContent.containsKey("unsigned")) {
-        Map<String, dynamic> newContent = {
-          "unsigned": eventContent["unsigned"]
-        };
-        eventContent["content"].forEach((key, val) => newContent[key] = val);
-        eventContent["content"] = newContent;
-      }
-
-      // Get the state_key for m.room.member events
-      String state_key = "";
-      if (eventContent["state_key"] is String) {
-        state_key = eventContent["state_key"];
-      }
-
       // Save the event in the database
       if ((status == 1 || status == -1) &&
           eventContent["unsigned"] is Map<String, dynamic> &&
           eventContent["unsigned"]["transaction_id"] is String)
-        txn.rawUpdate("UPDATE Events SET status=?, id=? WHERE id=?", [
+        txn.rawUpdate(
+            "UPDATE Events SET status=?, event_id=? WHERE event_id=?", [
           status,
           eventContent["event_id"],
           eventContent["unsigned"]["transaction_id"]
         ]);
       else
         txn.rawInsert(
-            "INSERT OR REPLACE INTO Events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+            "INSERT OR REPLACE INTO Events VALUES(?, ?, ?, ?, ?, ?, ?, ?)", [
           eventContent["event_id"],
           chat_id,
           eventContent["origin_server_ts"],
           eventContent["sender"],
-          state_key,
-          eventContent["content"]["body"],
           eventContent["type"],
+          json.encode(eventContent["unsigned"] ?? ""),
           json.encode(eventContent["content"]),
           status
         ]);
@@ -276,184 +267,34 @@ class Store {
       if (status != -1 &&
           eventUpdate.content.containsKey("unsigned") &&
           eventUpdate.content["unsigned"]["transaction_id"] is String)
-        txn.rawDelete("DELETE FROM Events WHERE id=?",
+        txn.rawDelete("DELETE FROM Events WHERE event_id=?",
             [eventUpdate.content["unsigned"]["transaction_id"]]);
     }
 
     if (type == "history") return null;
 
-    switch (eventUpdate.eventType) {
-      case "m.receipt":
-        if (eventContent["user"] == client.userID) {
-          txn.rawUpdate("UPDATE Rooms SET unread=? WHERE id=?",
-              [eventContent["ts"], chat_id]);
-        } else {
-          // Mark all previous received messages as seen
-          txn.rawUpdate(
-              "UPDATE Events SET status=3 WHERE origin_server_ts<=? AND chat_id=? AND status=2",
-              [eventContent["ts"], chat_id]);
-        }
-        break;
-      // This event means, that the name of a room has been changed, so
-      // it has to be changed in the database.
-      case "m.room.name":
-        txn.rawUpdate("UPDATE Rooms SET topic=? WHERE id=?",
-            [eventContent["content"]["name"], chat_id]);
-        break;
-      // This event means, that the topic of a room has been changed, so
-      // it has to be changed in the database
-      case "m.room.topic":
-        txn.rawUpdate("UPDATE Rooms SET description=? WHERE id=?",
-            [eventContent["content"]["topic"], chat_id]);
-        break;
-      // This event means, that the topic of a room has been changed, so
-      // it has to be changed in the database
-      case "m.room.history_visibility":
-        txn.rawUpdate("UPDATE Rooms SET history_visibility=? WHERE id=?",
-            [eventContent["content"]["history_visibility"], chat_id]);
-        break;
-      // This event means, that the topic of a room has been changed, so
-      // it has to be changed in the database
-      case "m.room.redaction":
-        txn.rawDelete(
-            "DELETE FROM Events WHERE id=?", [eventContent["redacts"]]);
-        break;
-      // This event means, that the topic of a room has been changed, so
-      // it has to be changed in the database
-      case "m.room.guest_access":
-        txn.rawUpdate("UPDATE Rooms SET guest_access=? WHERE id=?",
-            [eventContent["content"]["guest_access"], chat_id]);
-        break;
-      // This event means, that the canonical alias of a room has been changed, so
-      // it has to be changed in the database
-      case "m.room.canonical_alias":
-        txn.rawUpdate("UPDATE Rooms SET canonical_alias=? WHERE id=?",
-            [eventContent["content"]["alias"], chat_id]);
-        break;
-      // This event means, that the topic of a room has been changed, so
-      // it has to be changed in the database
-      case "m.room.join_rules":
-        txn.rawUpdate("UPDATE Rooms SET join_rules=? WHERE id=?",
-            [eventContent["content"]["join_rule"], chat_id]);
-        break;
-      // This event means, that the avatar of a room has been changed, so
-      // it has to be changed in the database
-      case "m.room.avatar":
-        txn.rawUpdate("UPDATE Rooms SET avatar_url=? WHERE id=?",
-            [eventContent["content"]["url"], chat_id]);
-        break;
-      // This event means, that the aliases of a room has been changed, so
-      // it has to be changed in the database
-      case "m.fully_read":
-        txn.rawUpdate("UPDATE Rooms SET fully_read=? WHERE id=?",
-            [eventContent["content"]["event_id"], chat_id]);
-        break;
-      // This event means, that someone joined the room, has left the room
-      // or has changed his nickname
-      case "m.room.member":
-        String membership = eventContent["content"]["membership"];
-        String state_key = eventContent["state_key"];
-        String insertDisplayname = "";
-        String insertAvatarUrl = "";
-        if (eventContent["content"]["displayname"] is String) {
-          insertDisplayname = eventContent["content"]["displayname"];
-        }
-        if (eventContent["content"]["avatar_url"] is String) {
-          insertAvatarUrl = eventContent["content"]["avatar_url"];
-        }
+    if (eventUpdate.content["event_id"] != null) {
+      txn.rawInsert(
+          "INSERT OR REPLACE INTO State VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+        eventContent["event_id"],
+        chat_id,
+        eventContent["origin_server_ts"],
+        eventContent["sender"],
+        state_key,
+        json.encode(eventContent["unsigned"] ?? ""),
+        json.encode(eventContent["prev_content"] ?? ""),
+        eventContent["type"],
+        json.encode(eventContent["content"]),
+      ]);
+    } else
+      txn.rawInsert(
+          "INSERT OR REPLACE INTO RoomAccountData VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [
+            eventContent["type"],
+            chat_id,
+            json.encode(eventContent["content"]),
+          ]);
 
-        // Update membership table
-        txn.rawInsert("INSERT OR IGNORE INTO Users VALUES(?,?,?,?,?,0)", [
-          chat_id,
-          state_key,
-          insertDisplayname,
-          insertAvatarUrl,
-          membership
-        ]);
-        String queryStr = "UPDATE Users SET membership=?";
-        List<String> queryArgs = [membership];
-
-        if (eventContent["content"]["displayname"] is String) {
-          queryStr += " , displayname=?";
-          queryArgs.add(eventContent["content"]["displayname"]);
-        }
-        if (eventContent["content"]["avatar_url"] is String) {
-          queryStr += " , avatar_url=?";
-          queryArgs.add(eventContent["content"]["avatar_url"]);
-        }
-
-        queryStr += " WHERE matrix_id=? AND chat_id=?";
-        queryArgs.add(state_key);
-        queryArgs.add(chat_id);
-        txn.rawUpdate(queryStr, queryArgs);
-        break;
-      // This event changes the permissions of the users and the power levels
-      case "m.room.power_levels":
-        String query = "UPDATE Rooms SET ";
-        if (eventContent["content"]["ban"] is num)
-          query += ", power_ban=" + eventContent["content"]["ban"].toString();
-        if (eventContent["content"]["events_default"] is num)
-          query += ", power_events_default=" +
-              eventContent["content"]["events_default"].toString();
-        if (eventContent["content"]["state_default"] is num)
-          query += ", power_state_default=" +
-              eventContent["content"]["state_default"].toString();
-        if (eventContent["content"]["redact"] is num)
-          query +=
-              ", power_redact=" + eventContent["content"]["redact"].toString();
-        if (eventContent["content"]["invite"] is num)
-          query +=
-              ", power_invite=" + eventContent["content"]["invite"].toString();
-        if (eventContent["content"]["kick"] is num)
-          query += ", power_kick=" + eventContent["content"]["kick"].toString();
-        if (eventContent["content"]["user_default"] is num)
-          query += ", power_user_default=" +
-              eventContent["content"]["user_default"].toString();
-        if (eventContent["content"]["events"] is Map<String, dynamic>) {
-          if (eventContent["content"]["events"]["m.room.avatar"] is num)
-            query += ", power_event_avatar=" +
-                eventContent["content"]["events"]["m.room.avatar"].toString();
-          if (eventContent["content"]["events"]["m.room.history_visibility"]
-              is num)
-            query += ", power_event_history_visibility=" +
-                eventContent["content"]["events"]["m.room.history_visibility"]
-                    .toString();
-          if (eventContent["content"]["events"]["m.room.canonical_alias"]
-              is num)
-            query += ", power_event_canonical_alias=" +
-                eventContent["content"]["events"]["m.room.canonical_alias"]
-                    .toString();
-          if (eventContent["content"]["events"]["m.room.aliases"] is num)
-            query += ", power_event_aliases=" +
-                eventContent["content"]["events"]["m.room.aliases"].toString();
-          if (eventContent["content"]["events"]["m.room.name"] is num)
-            query += ", power_event_name=" +
-                eventContent["content"]["events"]["m.room.name"].toString();
-          if (eventContent["content"]["events"]["m.room.power_levels"] is num)
-            query += ", power_event_power_levels=" +
-                eventContent["content"]["events"]["m.room.power_levels"]
-                    .toString();
-        }
-        if (query != "UPDATE Rooms SET ") {
-          query = query.replaceFirst(",", "");
-          txn.rawUpdate(query + " WHERE id=?", [chat_id]);
-        }
-
-        // Set the users power levels:
-        if (eventContent["content"]["users"] is Map<String, dynamic>) {
-          eventContent["content"]["users"]
-              .forEach((String user, dynamic value) async {
-            num power_level = eventContent["content"]["users"][user];
-            txn.rawUpdate(
-                "UPDATE Users SET power_level=? WHERE matrix_id=? AND chat_id=?",
-                [power_level, user, chat_id]);
-            txn.rawInsert(
-                "INSERT OR IGNORE INTO Users VALUES(?, ?, '', '', ?, ?)",
-                [chat_id, user, "unknown", power_level]);
-          });
-        }
-        break;
-    }
     return null;
   }
 
