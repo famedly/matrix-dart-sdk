@@ -163,7 +163,7 @@ class Store {
   Future<void> storeRoomUpdate(RoomUpdate roomUpdate) {
     // Insert the chat into the database if not exists
     txn.rawInsert(
-        "INSERT OR IGNORE INTO Rooms " + "VALUES(?, ?, 0, 0, '', 0, 0) ",
+        "INSERT OR IGNORE INTO Rooms " + "VALUES(?, ?, 0, 0, '', 0, 0, '') ",
         [roomUpdate.id, roomUpdate.membership.toString().split('.').last]);
 
     // Update the notification counts and the limited timeline boolean and the summary
@@ -294,7 +294,7 @@ class Store {
   /// Returns a User object by a given Matrix ID and a Room.
   Future<User> getUser({String matrixID, Room room}) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM Users WHERE matrix_id=? AND chat_id=?",
+        "SELECT * FROM States WHERE state_key=? AND room_id=?",
         [matrixID, room.id]);
     if (res.length != 1) return null;
     return User.fromJson(res[0], room);
@@ -304,7 +304,7 @@ class Store {
   /// except users who are in the Room with the ID [exceptRoomID].
   Future<List<User>> loadContacts({String exceptRoomID = ""}) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM Users WHERE matrix_id!=? AND chat_id!=? GROUP BY matrix_id ORDER BY displayname",
+        "SELECT * FROM States WHERE state_key!=? AND room_id!=? GROUP BY state_key ORDER BY state_key",
         [client.userID, exceptRoomID]);
     List<User> userList = [];
     for (int i = 0; i < res.length; i++)
@@ -316,9 +316,9 @@ class Store {
   Future<List<User>> loadParticipants(Room room) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
         "SELECT * " +
-            " FROM Users " +
-            " WHERE chat_id=? " +
-            " AND membership='join'",
+            " FROM States " +
+            " WHERE room_id=? " +
+            " AND type='m.room.member'",
         [room.id]);
 
     List<User> participants = [];
@@ -332,26 +332,18 @@ class Store {
 
   /// Returns a list of events for the given room and sets all participants.
   Future<List<Event>> getEventList(Room room) async {
-    List<Map<String, dynamic>> memberRes = await db.rawQuery(
-        "SELECT * " + " FROM Users " + " WHERE Users.chat_id=?", [room.id]);
-    Map<String, User> userMap = {};
-    for (num i = 0; i < memberRes.length; i++)
-      userMap[memberRes[i]["matrix_id"]] = User.fromJson(memberRes[i], room);
-
     List<Map<String, dynamic>> eventRes = await db.rawQuery(
         "SELECT * " +
-            " FROM Events events " +
-            " WHERE events.chat_id=?" +
-            " GROUP BY events.id " +
+            " FROM Events " +
+            " WHERE room_id=?" +
+            " GROUP BY id " +
             " ORDER BY origin_server_ts DESC",
         [room.id]);
 
     List<Event> eventList = [];
 
     for (num i = 0; i < eventRes.length; i++)
-      eventList.add(Event.fromJson(eventRes[i], room,
-          senderUser: userMap[eventRes[i]["sender"]],
-          stateKeyUser: userMap[eventRes[i]["state_key"]]));
+      eventList.add(Event.fromJson(eventRes[i], room));
 
     return eventList;
   }
@@ -362,25 +354,18 @@ class Store {
       bool onlyDirect = false,
       bool onlyGroups = false}) async {
     if (onlyDirect && onlyGroups) return [];
-    List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT rooms.*, events.origin_server_ts, events.content_json, events.type, events.sender, events.status, events.state_key " +
-            " FROM Rooms rooms LEFT JOIN Events events " +
-            " ON rooms.id=events.chat_id " +
-            " WHERE rooms.membership" +
-            (onlyLeft ? "=" : "!=") +
-            "'leave' " +
-            (onlyDirect ? " AND rooms.direct_chat_matrix_id!= '' " : "") +
-            (onlyGroups ? " AND rooms.direct_chat_matrix_id= '' " : "") +
-            " GROUP BY rooms.id " +
-            " ORDER BY origin_server_ts DESC ");
+    List<Map<String, dynamic>> res = await db.rawQuery("SELECT * " +
+        " FROM Rooms" +
+        " WHERE rooms.membership" +
+        (onlyLeft ? "=" : "!=") +
+        "'leave' " +
+        " GROUP BY rooms.id " +
+        " ORDER BY origin_server_ts DESC ");
     List<Room> roomList = [];
     for (num i = 0; i < res.length; i++) {
-      try {
-        Room room = await Room.getRoomFromTableRow(res[i], client);
-        roomList.add(room);
-      } catch (e) {
-        print(e.toString());
-      }
+      Room room = await Room.getRoomFromTableRow(
+          res[i], client); // TODO: Also query the states for a room
+      roomList.add(room);
     }
     return roomList;
   }
@@ -393,97 +378,6 @@ class Store {
     return Room.getRoomFromTableRow(res[0], client);
   }
 
-  /// Returns a room without events and participants.
-  Future<Room> getRoomByAlias(String alias) async {
-    List<Map<String, dynamic>> res = await db
-        .rawQuery("SELECT * FROM Rooms WHERE canonical_alias=?", [alias]);
-    if (res.length != 1) return null;
-    return Room.getRoomFromTableRow(res[0], client);
-  }
-
-  /// Calculates and returns an avatar for a direct chat by a given [roomID].
-  Future<String> getAvatarFromSingleChat(String roomID) async {
-    String avatarStr = "";
-    List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT avatar_url FROM Users " +
-            " WHERE Users.chat_id=? " +
-            " AND (Users.membership='join' OR Users.membership='invite') " +
-            " AND Users.matrix_id!=? ",
-        [roomID, client.userID]);
-    if (res.length == 1) avatarStr = res[0]["avatar_url"];
-    return avatarStr;
-  }
-
-  /// Calculates a chat name for a groupchat without a name. The chat name will
-  /// be the name of all users (excluding the user of this client) divided by
-  /// ','.
-  Future<String> getChatNameFromMemberNames(String roomID) async {
-    String displayname = 'Empty chat';
-    List<Map<String, dynamic>> rs = await db.rawQuery(
-        "SELECT Users.displayname, Users.matrix_id, Users.membership FROM Users " +
-            " WHERE Users.chat_id=? " +
-            " AND (Users.membership='join' OR Users.membership='invite') " +
-            " AND Users.matrix_id!=? ",
-        [roomID, client.userID]);
-    if (rs.length > 0) {
-      displayname = "";
-      for (var i = 0; i < rs.length; i++) {
-        String username = rs[i]["displayname"];
-        if (username == "" || username == null) username = rs[i]["matrix_id"];
-        if (rs[i]["state_key"] != client.userID) displayname += username + ", ";
-      }
-      if (displayname == "" || displayname == null)
-        displayname = 'Empty chat';
-      else
-        displayname = displayname.substring(0, displayname.length - 2);
-    }
-    return displayname;
-  }
-
-  /// Returns the (first) room ID from the store which is a private chat with
-  /// the user [userID]. Returns null if there is none.
-  Future<String> getDirectChatRoomID(String userID) async {
-    List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT id FROM Rooms WHERE direct_chat_matrix_id=? AND membership!='leave' LIMIT 1",
-        [userID]);
-    if (res.length != 1) return null;
-    return res[0]["id"];
-  }
-
-  /// Returns the power level of the user for the given [roomID]. Returns null if
-  /// the room or the own user wasn't found.
-  Future<int> getPowerLevel(String roomID) async {
-    List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT power_level FROM Users WHERE matrix_id=? AND chat_id=?",
-        [roomID, client.userID]);
-    if (res.length != 1) return null;
-    return res[0]["power_level"];
-  }
-
-  /// Returns the power levels from all users for the given [roomID].
-  Future<Map<String, int>> getPowerLevels(String roomID) async {
-    List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT matrix_id, power_level FROM Users WHERE chat_id=?",
-        [roomID, client.userID]);
-    Map<String, int> powerMap = {};
-    for (int i = 0; i < res.length; i++)
-      powerMap[res[i]["matrix_id"]] = res[i]["power_level"];
-    return powerMap;
-  }
-
-  Future<Map<String, List<String>>> getAccountDataDirectChats() async {
-    Map<String, List<String>> directChats = {};
-    List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT id, direct_chat_matrix_id FROM Rooms WHERE direct_chat_matrix_id!=''");
-    for (int i = 0; i < res.length; i++) {
-      if (directChats.containsKey(res[i]["direct_chat_matrix_id"]))
-        directChats[res[i]["direct_chat_matrix_id"]].add(res[i]["id"]);
-      else
-        directChats[res[i]["direct_chat_matrix_id"]] = [res[i]["id"]];
-    }
-    return directChats;
-  }
-
   Future<void> forgetRoom(String roomID) async {
     await db.rawDelete("DELETE FROM Rooms WHERE id=?", [roomID]);
     return;
@@ -492,10 +386,9 @@ class Store {
   /// Searches for the event in the store.
   Future<Event> getEventById(String eventID, Room room) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM Events WHERE id=? AND chat_id=?", [eventID, room.id]);
+        "SELECT * FROM Events WHERE id=? AND room_id=?", [eventID, room.id]);
     if (res.length == 0) return null;
-    return Event.fromJson(res[0], room,
-        senderUser: (await room.getUserByMXID(res[0]["sender"])));
+    return Event.fromJson(res[0], room);
   }
 
   Future forgetNotification(String roomID) async {
@@ -541,13 +434,8 @@ class Store {
         'prev_batch TEXT, ' +
         'joined_member_count INTEGER, ' +
         'invited_member_count INTEGER, ' +
+        'heroes TEXT, ' +
         'UNIQUE(id))',
-
-    /// The users which can be used to generate a room name if the room does not have one.
-    'Heroes': 'CREATE TABLE IF NOT EXISTS Heroes(' +
-        'room_id TEXT PRIMARY KEY, ' +
-        'matrix_id TEXT, ' +
-        'UNIQUE(room_id,matrix_id))',
 
     /// The database scheme for the TimelineEvent class.
     'Events': 'CREATE TABLE IF NOT EXISTS Events(' +
