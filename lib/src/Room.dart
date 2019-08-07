@@ -395,9 +395,11 @@ class Room {
     return resp;
   }
 
-  /// Returns a Room from a json String which comes normally from the store.
+  /// Returns a Room from a json String which comes normally from the store. If the
+  /// state are also given, the method will await them.
   static Future<Room> getRoomFromTableRow(
-      Map<String, dynamic> row, Client matrix) async {
+      Map<String, dynamic> row, Client matrix,
+      {Future<List<Map<String, dynamic>>> states}) async {
     String avatarUrl = row["avatar_url"];
     if (avatarUrl == "")
       avatarUrl = await matrix.store?.getAvatarFromSingleChat(row["id"]) ?? "";

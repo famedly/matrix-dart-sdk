@@ -363,8 +363,8 @@ class Store {
         " ORDER BY origin_server_ts DESC ");
     List<Room> roomList = [];
     for (num i = 0; i < res.length; i++) {
-      Room room = await Room.getRoomFromTableRow(
-          res[i], client); // TODO: Also query the states for a room
+      Room room = await Room.getRoomFromTableRow(res[i], client,
+          states: getStatesFromRoomId(res[i]["id"]));
       roomList.add(room);
     }
     return roomList;
@@ -375,7 +375,12 @@ class Store {
     List<Map<String, dynamic>> res =
         await db.rawQuery("SELECT * FROM Rooms WHERE id=?", [id]);
     if (res.length != 1) return null;
-    return Room.getRoomFromTableRow(res[0], client);
+    return Room.getRoomFromTableRow(res[0], client,
+        states: getStatesFromRoomId(id));
+  }
+
+  Future<List<Map<String, dynamic>>> getStatesFromRoomId(String id) async {
+    return db.rawQuery("SELECT * FROM States WHERE room_id=?", [id]);
   }
 
   Future<void> forgetRoom(String roomID) async {
