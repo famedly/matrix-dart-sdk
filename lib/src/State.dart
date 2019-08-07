@@ -20,6 +20,7 @@
  * You should have received a copy of the GNU General Public License
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 
 import './Room.dart';
@@ -35,6 +36,8 @@ class State extends RawEvent {
   /// the overwriting semantics for this piece of room state.
   final String stateKey;
 
+  User get stateKeyUser => room.states[stateKey] ?? User(stateKey);
+
   State(
       {this.prevContent,
       this.stateKey,
@@ -42,7 +45,7 @@ class State extends RawEvent {
       String typeKey,
       String eventId,
       String roomId,
-      String sender,
+      String senderId,
       ChatTime time,
       dynamic unsigned,
       Room room})
@@ -51,7 +54,7 @@ class State extends RawEvent {
             typeKey: typeKey,
             eventId: eventId,
             roomId: roomId,
-            sender: sender,
+            senderId: senderId,
             time: time,
             unsigned: unsigned,
             room: room);
@@ -71,7 +74,7 @@ class State extends RawEvent {
         typeKey: jsonPayload['type'],
         eventId: jsonPayload['event_id'],
         roomId: jsonPayload['room_id'],
-        sender: jsonPayload['sender'],
+        senderId: jsonPayload['sender'],
         time: ChatTime(jsonPayload['origin_server_ts']),
         unsigned: unsigned,
         room: room);

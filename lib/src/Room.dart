@@ -122,6 +122,7 @@ class Room {
     this.mInvitedMemberCount,
     this.mJoinedMemberCount,
     this.states,
+    this.roomAccountData,
   });
 
   /// Calculates the displayname. First checks if there is a name, then checks for a canonical alias and
@@ -393,7 +394,8 @@ class Room {
   /// state are also given, the method will await them.
   static Future<Room> getRoomFromTableRow(
       Map<String, dynamic> row, Client matrix,
-      {Future<List<Map<String, dynamic>>> states}) async {
+      {Future<List<Map<String, dynamic>>> states,
+      Future<List<Map<String, dynamic>>> roomAccountData}) async {
     Room newRoom = Room(
       id: row["id"],
       notificationCount: row["notification_count"],
@@ -416,20 +418,18 @@ class Room {
       newRoom.states = newStates;
     }
 
+    Map<String, RoomAccountData> newRoomAccountData = {};
+    if (roomAccountData != null) {
+      List<Map<String, dynamic>> rawRoomAccountData = await roomAccountData;
+      for (int i = 0; i < rawRoomAccountData.length; i++) {
+        RoomAccountData newData =
+            RoomAccountData.fromJson(rawRoomAccountData[i], newRoom);
+        newRoomAccountData[newData.typeKey] = newData;
+      }
+      newRoom.roomAccountData = newRoomAccountData;
+    }
+
     return newRoom;
-  }
-
-  @Deprecated("Use client.store.getRoomById(String id) instead!")
-  static Future<Room> getRoomById(String id, Client matrix) async {
-    Room room = await matrix.store.getRoomById(id);
-    return room;
-  }
-
-  /// Load a room from the store including all room events.
-  static Future<Room> loadRoomEvents(String id, Client matrix) async {
-    Room room = await matrix.store.getRoomById(id);
-    await room.loadEvents();
-    return room;
   }
 
   /// Creates a timeline from the store. Returns a [Timeline] object.
@@ -467,14 +467,7 @@ class Room {
       return participants;
 
     for (num i = 0; i < res["chunk"].length; i++) {
-      User newUser = User(res["chunk"][i]["state_key"],
-          displayName: res["chunk"][i]["content"]["displayname"] ?? "",
-          membership: Membership.values.firstWhere((e) =>
-              e.toString() ==
-                  'Membership.' + res["chunk"][i]["content"]["membership"] ??
-              ""),
-          avatarUrl: MxContent(res["chunk"][i]["content"]["avatar_url"] ?? ""),
-          room: this);
+      User newUser = State.fromJson(res["chunk"][i], this) as User;
       if (newUser.membership != Membership.leave) participants.add(newUser);
     }
 
@@ -489,7 +482,7 @@ class Room {
     if (resp is ErrorResponse) return null;
     // Somehow we miss the mxid in the response and only get the content of the event.
     resp["matrix_id"] = mxID;
-    return User.fromJson(resp, this);
+    return State.fromJson(resp, this) as User;
   }
 
   /// Searches for the event in the store. If it isn't found, try to request it

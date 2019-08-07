@@ -22,6 +22,7 @@
  */
 
 import 'dart:convert';
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:meta/meta.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 import './Room.dart';
@@ -41,7 +42,9 @@ class RawEvent {
   final String roomId;
 
   /// The user who has sent this event if it is not a global account data event.
-  final String sender;
+  final String senderId;
+
+  User get sender => room.states[senderId] ?? User(senderId);
 
   /// The time this event has received at the server. May be null for events like
   /// account data.
@@ -58,7 +61,7 @@ class RawEvent {
       @required this.typeKey,
       this.eventId,
       this.roomId,
-      this.sender,
+      this.senderId,
       this.time,
       this.unsigned,
       this.room});
@@ -79,7 +82,7 @@ class RawEvent {
         typeKey: jsonPayload['type'],
         eventId: jsonPayload['event_id'],
         roomId: jsonPayload['room_id'],
-        sender: jsonPayload['sender'],
+        senderId: jsonPayload['sender'],
         time: ChatTime(jsonPayload['origin_server_ts']),
         unsigned: unsigned,
         room: room);

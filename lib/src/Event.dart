@@ -42,7 +42,7 @@ class Event extends RawEvent {
       String typeKey,
       String eventId,
       String roomId,
-      String sender,
+      String senderId,
       ChatTime time,
       dynamic unsigned,
       Room room})
@@ -51,25 +51,24 @@ class Event extends RawEvent {
             typeKey: typeKey,
             eventId: eventId,
             roomId: roomId,
-            sender: sender,
+            senderId: senderId,
             time: time,
             unsigned: unsigned,
             room: room);
 
   /// Get a State event from a table row or from the event stream.
-  factory Event.fromJson(
-      Map<String, dynamic> jsonPayload, int status, Room room) {
+  factory Event.fromJson(Map<String, dynamic> jsonPayload, Room room) {
     final Map<String, dynamic> content =
         RawEvent.getMapFromPayload(jsonPayload['content']);
     final Map<String, dynamic> unsigned =
         RawEvent.getMapFromPayload(jsonPayload['unsigned']);
     return Event(
-        status: status,
+        status: jsonPayload['status'] ?? 1,
         content: content,
         typeKey: jsonPayload['type'],
         eventId: jsonPayload['event_id'],
         roomId: jsonPayload['room_id'],
-        sender: jsonPayload['sender'],
+        senderId: jsonPayload['sender'],
         time: ChatTime(jsonPayload['origin_server_ts']),
         unsigned: unsigned,
         room: room);

@@ -21,12 +21,29 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/AccountData.dart';
+import 'package:famedlysdk/src/RawEvent.dart';
 
 class RoomAccountData extends AccountData {
   /// The user who has sent this event if it is not a global account data event.
-  final String room_id;
+  final String roomId;
 
-  RoomAccountData({this.room_id, Map<String, dynamic> content, String typeKey})
+  final Room room;
+
+  RoomAccountData(
+      {this.roomId, this.room, Map<String, dynamic> content, String typeKey})
       : super(content: content, typeKey: typeKey);
+
+  /// Get a State event from a table row or from the event stream.
+  factory RoomAccountData.fromJson(
+      Map<String, dynamic> jsonPayload, Room room) {
+    final Map<String, dynamic> content =
+        RawEvent.getMapFromPayload(jsonPayload['content']);
+    return RoomAccountData(
+        content: content,
+        typeKey: jsonPayload['type'],
+        roomId: jsonPayload['room_id'],
+        room: room);
+  }
 }
