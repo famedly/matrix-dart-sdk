@@ -497,4 +497,25 @@ class Room {
     if (resp is ErrorResponse) return null;
     return Event.fromJson(resp, this);
   }
+
+  /// Returns the user's own power level.
+  int get ownPowerLevel {
+    int powerLevel = 0;
+    State powerLevelState = states["m.room.power_levels"];
+    if (powerLevelState == null) return powerLevel;
+    if (powerLevelState.content["users_default"] is int)
+      powerLevel = powerLevelState.content["users_default"];
+    if (powerLevelState.content["users"] is Map<String, int> &&
+        powerLevelState.content["users"][client.userID] != null)
+      powerLevel = powerLevelState.content["users"][client.userID];
+    return powerLevel;
+  }
+
+  /// Returns the power levels from all users for this room or null if not given.
+  Map<String, int> get powerLevels {
+    State powerLevelState = states["m.room.power_levels"];
+    if (powerLevelState.content["users"] is Map<String, int>)
+      return powerLevelState.content["users"];
+    return null;
+  }
 }
