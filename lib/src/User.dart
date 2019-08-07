@@ -32,6 +32,8 @@ enum Membership { join, invite, leave, ban }
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
 class User extends State {
+  User(String sender) : super(sender: sender);
+
   /// The full qualified Matrix ID in the format @username:server.abc.
   String get id => stateKey;
 
