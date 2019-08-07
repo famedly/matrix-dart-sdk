@@ -37,8 +37,7 @@ class RawEvent {
   /// The type String of this event. For example 'm.room.message'.
   final String typeKey;
 
-  /// The ID of the room this event belongs to if there is any. Use this to get the room
-  /// if the [room] is null.
+  /// The ID of the room this event belongs to.
   final String roomId;
 
   /// The user who has sent this event if it is not a global account data event.

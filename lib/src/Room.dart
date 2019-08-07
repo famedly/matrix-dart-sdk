@@ -23,6 +23,7 @@
 
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Event.dart';
+import 'package:famedlysdk/src/RoomAccountData.dart';
 import 'package:famedlysdk/src/State.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
@@ -55,6 +56,8 @@ class Room {
 
   Map<String, State> states;
 
+  Map<String, RoomAccountData> roomAccountData;
+
   /// Time when the user has last read the chat.
   ChatTime unread;
 
@@ -86,7 +89,8 @@ class Room {
   MxContent get avatar {
     if (states["m.room.avatar"] != null)
       return MxContent(states["m.room.avatar"].content["avatar_url"]);
-    if (mHeroes.length == 1) return getUserByMXID(mHeroes[0]).avatar;
+    if (mHeroes.length == 1 && states[mHeroes[0]] != null)
+      return (states[mHeroes[0]] as User).avatarUrl;
     return MxContent("");
   }
 
