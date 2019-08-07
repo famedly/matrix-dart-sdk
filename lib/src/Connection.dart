@@ -25,6 +25,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 
+import 'package:famedlysdk/src/Room.dart';
+import 'package:famedlysdk/src/RoomList.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -148,6 +150,18 @@ class Connection {
     client.prevBatch = newPrevBatch;
 
     client.store?.storeClient();
+
+    List<Room> rooms = await client.store
+        ?.getRoomList(onlyLeft: false, onlyGroups: false, onlyDirect: false);
+    client.roomList = RoomList(
+        client: client,
+        onlyLeft: false,
+        onlyDirect: false,
+        onlyGroups: false,
+        onUpdate: null,
+        onInsert: null,
+        onRemove: null,
+        rooms: rooms);
 
     onLoginStateChanged.add(LoginState.logged);
 

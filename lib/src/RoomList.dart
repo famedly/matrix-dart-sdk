@@ -24,6 +24,8 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:famedlysdk/src/State.dart';
+
 import 'Client.dart';
 import 'Event.dart';
 import 'Room.dart';
@@ -87,7 +89,6 @@ class RoomList {
       // Add the new chat to the list
       Room newRoom = Room(
         id: chatUpdate.id,
-        name: "",
         membership: chatUpdate.membership,
         prev_batch: chatUpdate.prev_batch,
         highlightCount: chatUpdate.highlight_count,
@@ -125,11 +126,6 @@ class RoomList {
   }
 
   void _handleEventUpdate(EventUpdate eventUpdate) {
-    // Is the event necessary for the chat list? If not, then return
-    if (!(eventUpdate.type == "timeline" ||
-        eventUpdate.eventType == "m.room.avatar" ||
-        eventUpdate.eventType == "m.room.name")) return;
-
     // Search the room in the rooms
     num j = 0;
     for (j = 0; j < rooms.length; j++) {
@@ -138,34 +134,10 @@ class RoomList {
     final bool found = (j < rooms.length && rooms[j].id == eventUpdate.roomID);
     if (!found) return;
 
-    // Is this an old timeline event? Then stop here...
-    /*if (eventUpdate.type == "timeline" &&
-        ChatTime(eventUpdate.content["origin_server_ts"]) <=
-            rooms[j].timeCreated) return;*/
-
-    if (eventUpdate.type == "timeline") {
-      User stateKey = null;
-      if (eventUpdate.content["state_key"] is String)
-        stateKey = User(eventUpdate.content["state_key"]);
-      // Update the last message preview
-      rooms[j].lastEvent = Event(
-        eventUpdate.content["id"],
-        User(eventUpdate.content["sender"]),
-        ChatTime(eventUpdate.content["origin_server_ts"]),
-        room: rooms[j],
-        stateKey: stateKey,
-        content: eventUpdate.content["content"],
-        environment: eventUpdate.eventType,
-        status: 2,
-      );
-    }
-    if (eventUpdate.eventType == "m.room.name") {
-      // Update the room name
-      rooms[j].name = eventUpdate.content["content"]["name"];
-    } else if (eventUpdate.eventType == "m.room.avatar") {
-      // Update the room avatar
-      rooms[j].avatar = MxContent(eventUpdate.content["content"]["url"]);
-    }
+    State stateEvent = State.fromJson(eventUpdate.content, rooms[j]);
+    if (rooms[j].states[stateEvent.key] != null &&
+        rooms[j].states[stateEvent.key].time > stateEvent.time) return;
+    rooms[j].states[stateEvent.key] = stateEvent;
     sortAndUpdate();
   }
 

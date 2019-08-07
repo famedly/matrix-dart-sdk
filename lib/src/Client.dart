@@ -86,6 +86,8 @@ class Client {
   /// Returns the current login state.
   bool isLogged() => accessToken != null;
 
+  RoomList roomList;
+
   /// Checks the supported versions of the Matrix protocol and the supported
   /// login types. Returns false if the server is not compatible with the
   /// client. Automatically sets [matrixVersions] and [lazyLoadMembers].

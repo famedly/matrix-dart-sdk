@@ -47,8 +47,8 @@ class Timeline {
   int _findEvent({String event_id, String unsigned_txid}) {
     int i;
     for (i = 0; i < events.length; i++) {
-      if (events[i].id == event_id ||
-          (unsigned_txid != null && events[i].id == unsigned_txid)) break;
+      if (events[i].eventId == event_id ||
+          (unsigned_txid != null && events[i].eventId == unsigned_txid)) break;
     }
     return i;
   }
@@ -82,33 +82,7 @@ class Timeline {
             eventUpdate.content["avatar_url"] = senderUser.avatarUrl.mxc;
           }
 
-          User stateKeyUser;
-          if (eventUpdate.content.containsKey("state_key")) {
-            stateKeyUser = await room.client.store?.getUser(
-                matrixID: eventUpdate.content["state_key"], room: room);
-          }
-
-          if (senderUser != null && stateKeyUser != null) {
-            newEvent = Event.fromJson(eventUpdate.content, room,
-                senderUser: senderUser, stateKeyUser: stateKeyUser);
-          } else if (senderUser != null) {
-            newEvent = Event.fromJson(eventUpdate.content, room,
-                senderUser: senderUser);
-          } else if (stateKeyUser != null) {
-            newEvent = Event.fromJson(eventUpdate.content, room,
-                stateKeyUser: stateKeyUser);
-          } else {
-            newEvent = Event.fromJson(eventUpdate.content, room);
-          }
-
-          // TODO update to type check when https://gitlab.com/famedly/famedlysdk/merge_requests/28/ is merged
-          if (newEvent.content.containsKey("m.relates_to")) {
-            Map<String, dynamic> relates_to = newEvent.content["m.relates_to"];
-            if (relates_to.containsKey("m.in_reply_to")) {
-              newEvent.replyEvent = await room.getEventById(newEvent
-                  .content["m.relates_to"]["m.in_reply_to"]["event_id"]);
-            }
-          }
+          newEvent = Event.fromJson(eventUpdate.content, room);
 
           events.insert(0, newEvent);
           if (onInsert != null) onInsert(0);

@@ -294,7 +294,8 @@ class Room {
 
   /// Call the Matrix API to unban a banned user from this room.
   Future<dynamic> setPower(String userID, int power) async {
-    Map<String, int> powerMap = await client.store.getPowerLevels(id);
+    Map<String, int> powerMap = states["m.room.power_levels"].content["users"];
+    if (powerMap == null) return null;
     powerMap[userID] = power;
 
     dynamic res = await client.connection.jsonRequest(
