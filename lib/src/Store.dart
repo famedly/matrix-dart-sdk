@@ -203,10 +203,17 @@ class Store {
   /// Stores an UserUpdate object in the database. Must be called inside of
   /// [transaction].
   Future<void> storeUserEventUpdate(UserUpdate userUpdate) {
-    txn.rawInsert("INSERT OR REPLACE INTO AccountData VALUES(?, ?)", [
-      userUpdate.eventType,
-      json.encode(userUpdate.content["content"]),
-    ]);
+    if (userUpdate.type == "account_data")
+      txn.rawInsert("INSERT OR REPLACE INTO AccountData VALUES(?, ?)", [
+        userUpdate.eventType,
+        json.encode(userUpdate.content["content"]),
+      ]);
+    else if (userUpdate.type == "presence")
+      txn.rawInsert("INSERT OR REPLACE INTO Presence VALUES(?, ?)", [
+        userUpdate.eventType,
+        userUpdate.content["sender"],
+        json.encode(userUpdate.content["content"]),
+      ]);
     return null;
   }
 
