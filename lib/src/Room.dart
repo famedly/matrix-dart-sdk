@@ -50,7 +50,7 @@ class Room {
 
   String prev_batch;
 
-  List<String> mHeroes;
+  List<String> mHeroes = [];
   int mJoinedMemberCount;
   int mInvitedMemberCount;
 
