@@ -105,6 +105,7 @@ class RoomList {
         mInvitedMemberCount: chatUpdate.summary?.mInvitedMemberCount,
         states: {},
         roomAccountData: {},
+        client: client,
       );
       rooms.insert(position, newRoom);
       if (onInsert != null) onInsert(position);

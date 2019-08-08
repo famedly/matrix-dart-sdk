@@ -153,6 +153,24 @@ class FakeMatrixApi extends MockClient {
               {"type": "m.login.password"}
             ]
           },
+      "/client/r0/rooms/!726s6s6q:example.com/members": (var req) => {
+            "chunk": [
+              {
+                "content": {
+                  "membership": "join",
+                  "avatar_url": "mxc://example.org/SEsfnsuifSDFSSEF",
+                  "displayname": "Alice Margatroid"
+                },
+                "type": "m.room.member",
+                "event_id": "§143273582443PhrSn:example.org",
+                "room_id": "!636q39766251:example.com",
+                "sender": "@alice:example.org",
+                "origin_server_ts": 1432735824653,
+                "unsigned": {"age": 1234},
+                "state_key": "@alice:example.org"
+              }
+            ]
+          },
       "/client/r0/rooms/!localpart:server.abc/members": (var req) => {
             "chunk": [
               {
@@ -333,7 +351,16 @@ class FakeMatrixApi extends MockClient {
                     {
                       "type": "org.example.custom.config",
                       "content": {"custom_config_key": "custom_config_value"}
-                    }
+                    },
+                    {
+                      "content": {
+                        "@bob:example.com": [
+                          "!abcdefgh:example.com",
+                          "!hgfedcba:example.com"
+                        ]
+                      },
+                      "type": "m.direct"
+                    },
                   ]
                 },
                 "to_device": {
@@ -364,6 +391,17 @@ class FakeMatrixApi extends MockClient {
                             "content": {"membership": "join"},
                             "origin_server_ts": 1417731086795,
                             "event_id": "66697273743031:example.com"
+                          },
+                          {
+                            "sender": "@alice:example.com",
+                            "type": "m.room.canonical_alias",
+                            "content": {
+                              "alias":
+                                  "#famedlyContactDiscovery:fakeServer.notExisting"
+                            },
+                            "state_key": "",
+                            "origin_server_ts": 1417731086796,
+                            "event_id": "66697273743032:example.com"
                           }
                         ]
                       },

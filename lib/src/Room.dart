@@ -96,7 +96,7 @@ class Room {
 
   /// The address in the format: #roomname:homeserver.org.
   String get canonicalAlias => states["m.room.canonical_alias"] != null
-      ? states["m.room.canonical_alias"].content["canonical_alias"]
+      ? states["m.room.canonical_alias"].content["alias"]
       : "";
 
   /// If this room is a direct chat, this is the matrix ID of the user

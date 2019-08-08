@@ -62,9 +62,9 @@ void main() {
           matrix.connection.onError.stream.first;
 
       final bool checkResp1 =
-          await matrix.checkServer("https://fakeServer.wrongaddress");
+          await matrix.checkServer("https://fakeserver.wrongaddress");
       final bool checkResp2 =
-          await matrix.checkServer("https://fakeServer.notExisting");
+          await matrix.checkServer("https://fakeserver.notexisting");
 
       ErrorResponse checkError = await errorFuture;
 
@@ -108,8 +108,17 @@ void main() {
       expect(firstSync, true);
       expect(sync["next_batch"] == matrix.prevBatch, true);
 
-      expect(matrix.accountData.length, 1);
-      expect(matrix.presences.length, 0);
+      expect(matrix.accountData.length, 2);
+      expect(matrix.getDirectChatFromUserId("@bob:example.com"),
+          "!abcdefgh:example.com");
+      expect(matrix.directChats, matrix.accountData["m.direct"].content);
+      expect(matrix.presences.length, 1);
+      expect(matrix.roomList.rooms.length, 2);
+      expect(matrix.roomList.rooms[1].canonicalAlias,
+          "#famedlyContactDiscovery:${matrix.userID.split(":")[1]}");
+      final List<User> contacts = await matrix.loadFamedlyContacts();
+      expect(contacts.length, 1);
+      expect(contacts[0].senderId, "@alice:example.com");
     });
 
     test('Try to get ErrorResponse', () async {
@@ -212,16 +221,13 @@ void main() {
 
       List<UserUpdate> eventUpdateList = await userUpdateListFuture;
 
-      expect(eventUpdateList.length, 3);
+      expect(eventUpdateList.length, 4);
 
       expect(eventUpdateList[0].eventType == "m.presence", true);
       expect(eventUpdateList[0].type == "presence", true);
 
       expect(eventUpdateList[1].eventType == "org.example.custom.config", true);
       expect(eventUpdateList[1].type == "account_data", true);
-
-      expect(eventUpdateList[2].eventType == "m.new_device", true);
-      expect(eventUpdateList[2].type == "to_device", true);
     });
 
     testWidgets('should get created', create);

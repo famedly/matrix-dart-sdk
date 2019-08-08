@@ -110,14 +110,14 @@ class Client {
     }
   }
 
-  Map<String, List<String>> get directChats =>
+  Map<String, dynamic> get directChats =>
       accountData["m.direct"] != null ? accountData["m.direct"].content : {};
 
   /// Returns the (first) room ID from the store which is a private chat with the user [userId].
   /// Returns null if there is none.
   String getDirectChatFromUserId(String userId) =>
       accountData["m.direct"] != null &&
-              accountData["m.direct"].content[userId] is List<String> &&
+              accountData["m.direct"].content[userId] is List<dynamic> &&
               accountData["m.direct"].content[userId].length > 0
           ? accountData["m.direct"].content[userId][0]
           : null;
@@ -266,7 +266,7 @@ class Client {
     if (contactDiscoveryRoom != null)
       contacts = await contactDiscoveryRoom.requestParticipants();
     else
-      contacts = await store.loadContacts();
+      contacts = await store?.loadContacts();
     return contacts;
   }
 
