@@ -263,8 +263,8 @@ void main() {
 
     test('createGroup', () async {
       final List<User> users = [
-        User(senderId: "@alice:fakeServer.notExisting"),
-        User(senderId: "@bob:fakeServer.notExisting")
+        User("@alice:fakeServer.notExisting"),
+        User("@bob:fakeServer.notExisting")
       ];
       final String newID = await matrix.createGroup(users);
       expect(newID, "!1234:fakeServer.notExisting");

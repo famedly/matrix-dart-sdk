@@ -229,21 +229,21 @@ void main() {
       final dynamic resp = await room.addToDirectChat("Testname");
       expect(resp, {});
     });
-  });
 
-  test("getTimeline", () async {
-    final Timeline timeline = await room.getTimeline();
-    expect(timeline.events, []);
-  });
+    test("getTimeline", () async {
+      final Timeline timeline = await room.getTimeline();
+      expect(timeline.events, []);
+    });
 
-  test("loadEvents", () async {
-    final List<Event> events = await room.loadEvents();
-    expect(events, []);
-  });
+    test("loadEvents", () async {
+      final List<Event> events = await room.loadEvents();
+      expect(events, []);
+    });
 
-  test("getUserByMXID", () async {
-    final User user = await room.getUserByMXID("@getme:example.com");
-    expect(user.stateKey, "@getme:example.com");
-    expect(user.calcDisplayname(), "You got me");
+    test("getUserByMXID", () async {
+      final User user = await room.getUserByMXID("@getme:example.com");
+      expect(user.stateKey, "@getme:example.com");
+      expect(user.calcDisplayname(), "You got me");
+    });
   });
 }

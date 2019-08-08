@@ -33,7 +33,28 @@ enum Membership { join, invite, leave, ban }
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
 class User extends State {
-  User(
+  factory User(
+    String id, {
+    String membership,
+    String displayName,
+    String avatarUrl,
+    Room room,
+  }) {
+    Map<String, String> content = {};
+    if (membership != null) content["membership"] = membership;
+    if (displayName != null) content["displayname"] = displayName;
+    if (avatarUrl != null) content["avatar_url"] = avatarUrl;
+    return User.fromState(
+      stateKey: id,
+      content: content,
+      typeKey: "m.room.member",
+      roomId: room?.id,
+      room: room,
+      time: ChatTime.now(),
+    );
+  }
+
+  User.fromState(
       {dynamic prevContent,
       String stateKey,
       dynamic content,

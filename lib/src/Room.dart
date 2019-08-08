@@ -76,7 +76,7 @@ class Room {
       for (int i = 0; i < mHeroes.length; i++) {
         User hero = states[mHeroes[i]] != null
             ? states[mHeroes[i]].asUser
-            : User(stateKey: mHeroes[i]);
+            : User(mHeroes[i]);
         displayname += hero.calcDisplayname() + ", ";
       }
       return displayname.substring(0, displayname.length - 2);
@@ -155,7 +155,7 @@ class Room {
     if (mHeroes.length > 0) {
       String displayname = "";
       for (int i = 0; i < mHeroes.length; i++)
-        displayname += User(senderId: mHeroes[i]).calcDisplayname() + ", ";
+        displayname += User(mHeroes[i]).calcDisplayname() + ", ";
       return displayname.substring(0, displayname.length - 2);
     }
     return "Empty chat";
