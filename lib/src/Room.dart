@@ -131,17 +131,17 @@ class Room {
 
   Room({
     this.id,
-    this.membership,
-    this.notificationCount,
-    this.highlightCount,
+    this.membership = Membership.join,
+    this.notificationCount = 0,
+    this.highlightCount = 0,
     this.prev_batch = "",
     this.client,
     this.notificationSettings,
-    this.mHeroes,
-    this.mInvitedMemberCount,
-    this.mJoinedMemberCount,
-    this.states,
-    this.roomAccountData,
+    this.mHeroes = const [],
+    this.mInvitedMemberCount = 0,
+    this.mJoinedMemberCount = 0,
+    this.states = const {},
+    this.roomAccountData = const {},
   });
 
   /// Calculates the displayname. First checks if there is a name, then checks for a canonical alias and
