@@ -64,6 +64,20 @@ class FakeMatrixApi extends MockClient {
 
   static final Map<String, Map<String, dynamic>> api = {
     "GET": {
+      "/client/r0/rooms/!localpart:server.abc/state/m.room.member/@getme:example.com":
+          (var req) => {
+                "content": {
+                  "membership": "join",
+                  "displayname": "You got me",
+                },
+                "type": "m.room.member",
+                "event_id": "143273582443PhrSn:example.org",
+                "room_id": "!localpart:server.abc",
+                "sender": "@getme:example.com",
+                "state_key": "@getme:example.com",
+                "origin_server_ts": 1432735824653,
+                "unsigned": {"age": 1234}
+              },
       "/client/r0/rooms/!localpart:server.abc/event/1234": (var req) => {
             "content": {
               "body": "This is an example text message",
@@ -503,12 +517,30 @@ class FakeMatrixApi extends MockClient {
             "room_id": "!1234:fakeServer.notExisting",
           },
       "/client/r0/rooms/!localpart:server.abc/read_markers": (var reqI) => {},
+      "/client/r0/rooms/!localpart:server.abc/kick": (var reqI) => {},
+      "/client/r0/rooms/!localpart:server.abc/ban": (var reqI) => {},
+      "/client/r0/rooms/!localpart:server.abc/unban": (var reqI) => {},
+      "/client/r0/rooms/!localpart:server.abc/invite": (var reqI) => {},
     },
     "PUT": {
       "/client/r0/rooms/!1234:example.com/send/m.room.message/1234":
           (var reqI) => {
                 "event_id": "42",
               },
+      "/client/r0/rooms/!localpart:server.abc/state/m.room.name": (var reqI) =>
+          {
+            "event_id": "42",
+          },
+      "/client/r0/rooms/!localpart:server.abc/state/m.room.topic": (var reqI) =>
+          {
+            "event_id": "42",
+          },
+      "/client/r0/rooms/!localpart:server.abc/state/m.room.power_levels":
+          (var reqI) => {
+                "event_id": "42",
+              },
+      "/client/r0/user/@test:fakeServer.notExisting/account_data/m.direct":
+          (var reqI) => {},
     },
     "DELETE": {
       "/unknown/token": (var req) => {"errcode": "M_UNKNOWN_TOKEN"},

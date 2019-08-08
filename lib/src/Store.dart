@@ -300,7 +300,7 @@ class Store {
         "SELECT * FROM States WHERE state_key=? AND room_id=?",
         [matrixID, room.id]);
     if (res.length != 1) return null;
-    return State.fromJson(res[0], room) as User;
+    return State.fromJson(res[0], room).asUser;
   }
 
   /// Loads all Users in the database to provide a contact list
@@ -311,8 +311,7 @@ class Store {
         [client.userID, exceptRoomID]);
     List<User> userList = [];
     for (int i = 0; i < res.length; i++)
-      userList
-          .add(State.fromJson(res[i], Room(id: "", client: client)) as User);
+      userList.add(State.fromJson(res[i], Room(id: "", client: client)).asUser);
     return userList;
   }
 
@@ -328,7 +327,7 @@ class Store {
     List<User> participants = [];
 
     for (num i = 0; i < res.length; i++) {
-      participants.add(State.fromJson(res[i], room) as User);
+      participants.add(State.fromJson(res[i], room).asUser);
     }
 
     return participants;

@@ -60,7 +60,7 @@ class User extends State {
   String get id => stateKey;
 
   /// The displayname of the user if the user has set one.
-  String get displayName => content["displayname"];
+  String get displayName => content != null ? content["displayname"] : null;
 
   /// The membership status of the user. One of:
   /// join
@@ -75,12 +75,14 @@ class User extends State {
       });
 
   /// The avatar if the user has one.
-  MxContent avatarUrl;
+  MxContent get avatarUrl => content != null && content["avatar_url"] is String
+      ? MxContent(content["avatar_url"])
+      : MxContent("");
 
   /// Returns the displayname or the local part of the Matrix ID if the user
   /// has no displayname.
   String calcDisplayname() => (displayName == null || displayName.isEmpty)
-      ? id.replaceFirst("@", "").split(":")[0]
+      ? stateKey.replaceFirst("@", "").split(":")[0]
       : displayName;
 
   /// Call the Matrix API to kick this user from this room.
