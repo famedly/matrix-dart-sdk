@@ -250,16 +250,19 @@ class Store {
         ]);
       else
         txn.rawInsert(
-            "INSERT OR REPLACE INTO Events VALUES(?, ?, ?, ?, ?, ?, ?, ?)", [
-          eventContent["event_id"],
-          chat_id,
-          eventContent["origin_server_ts"],
-          eventContent["sender"],
-          eventContent["type"],
-          json.encode(eventContent["unsigned"] ?? ""),
-          json.encode(eventContent["content"]),
-          status
-        ]);
+            "INSERT OR REPLACE INTO Events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+              eventContent["event_id"],
+              chat_id,
+              eventContent["origin_server_ts"],
+              eventContent["sender"],
+              eventContent["type"],
+              json.encode(eventContent["unsigned"] ?? ""),
+              json.encode(eventContent["content"]),
+              json.encode(eventContent["prevContent"]),
+              eventContent["state_key"],
+              status
+            ]);
 
       // Is there a transaction id? Then delete the event with this id.
       if (status != -1 &&
@@ -474,6 +477,8 @@ class Store {
         'type TEXT, ' +
         'unsigned TEXT, ' +
         'content TEXT, ' +
+        'prev_content TEXT, ' +
+        'state_key TEXT, ' +
         "status INTEGER, " +
         'UNIQUE(id))',
 

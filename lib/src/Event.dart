@@ -21,6 +21,7 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/src/State.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 
@@ -28,7 +29,7 @@ import './Room.dart';
 import './RawEvent.dart';
 
 /// Defines a timeline event for a room.
-class Event extends RawEvent {
+class Event extends State {
   /// The status of this event.
   /// -1=ERROR
   ///  0=SENDING
@@ -45,6 +46,8 @@ class Event extends RawEvent {
       String senderId,
       ChatTime time,
       dynamic unsigned,
+      dynamic prevContent,
+      String stateKey,
       Room room})
       : super(
             content: content,
@@ -54,6 +57,8 @@ class Event extends RawEvent {
             senderId: senderId,
             time: time,
             unsigned: unsigned,
+            prevContent: prevContent,
+            stateKey: stateKey,
             room: room);
 
   /// Get a State event from a table row or from the event stream.
@@ -62,6 +67,8 @@ class Event extends RawEvent {
         RawEvent.getMapFromPayload(jsonPayload['content']);
     final Map<String, dynamic> unsigned =
         RawEvent.getMapFromPayload(jsonPayload['unsigned']);
+    final Map<String, dynamic> prevContent =
+        RawEvent.getMapFromPayload(jsonPayload['prev_content']);
     return Event(
         status: jsonPayload['status'] ?? 1,
         content: content,
@@ -71,6 +78,8 @@ class Event extends RawEvent {
         senderId: jsonPayload['sender'],
         time: ChatTime(jsonPayload['origin_server_ts']),
         unsigned: unsigned,
+        prevContent: prevContent,
+        stateKey: jsonPayload['state_key'],
         room: room);
   }
 
