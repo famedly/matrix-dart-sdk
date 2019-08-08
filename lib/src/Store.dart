@@ -58,7 +58,7 @@ class Store {
   _init() async {
     var databasePath = await getDatabasesPath();
     String path = p.join(databasePath, "FluffyMatrix.db");
-    _db = await openDatabase(path, version: 13,
+    _db = await openDatabase(path, version: 14,
         onCreate: (Database db, int version) async {
       await createTables(db);
     }, onUpgrade: (Database db, int oldVersion, int newVersion) async {
@@ -276,17 +276,18 @@ class Store {
 
     if (eventUpdate.content["event_id"] != null) {
       txn.rawInsert(
-          "INSERT OR REPLACE INTO State VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)", [
-        eventContent["event_id"],
-        chat_id,
-        eventContent["origin_server_ts"],
-        eventContent["sender"],
-        state_key,
-        json.encode(eventContent["unsigned"] ?? ""),
-        json.encode(eventContent["prev_content"] ?? ""),
-        eventContent["type"],
-        json.encode(eventContent["content"]),
-      ]);
+          "INSERT OR REPLACE INTO RoomStates VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [
+            eventContent["event_id"],
+            chat_id,
+            eventContent["origin_server_ts"],
+            eventContent["sender"],
+            state_key,
+            json.encode(eventContent["unsigned"] ?? ""),
+            json.encode(eventContent["prev_content"] ?? ""),
+            eventContent["type"],
+            json.encode(eventContent["content"]),
+          ]);
     } else
       txn.rawInsert("INSERT OR REPLACE INTO RoomAccountData VALUES(?, ?, ?)", [
         eventContent["type"],
@@ -300,7 +301,7 @@ class Store {
   /// Returns a User object by a given Matrix ID and a Room.
   Future<User> getUser({String matrixID, Room room}) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM States WHERE state_key=? AND room_id=?",
+        "SELECT * FROM RoomStates WHERE state_key=? AND room_id=?",
         [matrixID, room.id]);
     if (res.length != 1) return null;
     return RoomState.fromJson(res[0], room).asUser;
@@ -310,7 +311,7 @@ class Store {
   /// except users who are in the Room with the ID [exceptRoomID].
   Future<List<User>> loadContacts({String exceptRoomID = ""}) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM States WHERE state_key!=? AND room_id!=? GROUP BY state_key ORDER BY state_key",
+        "SELECT * FROM RoomStates WHERE state_key!=? AND room_id!=? GROUP BY state_key ORDER BY state_key",
         [client.userID, exceptRoomID]);
     List<User> userList = [];
     for (int i = 0; i < res.length; i++)
@@ -323,7 +324,7 @@ class Store {
   Future<List<User>> loadParticipants(Room room) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
         "SELECT * " +
-            " FROM States " +
+            " FROM RoomStates " +
             " WHERE room_id=? " +
             " AND type='m.room.member'",
         [room.id]);
@@ -386,7 +387,7 @@ class Store {
   }
 
   Future<List<Map<String, dynamic>>> getStatesFromRoomId(String id) async {
-    return db.rawQuery("SELECT * FROM States WHERE room_id=?", [id]);
+    return db.rawQuery("SELECT * FROM RoomStates WHERE room_id=?", [id]);
   }
 
   Future<void> forgetRoom(String roomID) async {
@@ -483,7 +484,7 @@ class Store {
         'UNIQUE(event_id))',
 
     /// The database scheme for room states.
-    'State': 'CREATE TABLE IF NOT EXISTS State(' +
+    'RoomStates': 'CREATE TABLE IF NOT EXISTS RoomStates(' +
         'event_id TEXT PRIMARY KEY, ' +
         'room_id TEXT, ' +
         'origin_server_ts INTEGER, ' +
