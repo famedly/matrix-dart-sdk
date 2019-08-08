@@ -41,7 +41,12 @@ void main() {
     client.connection.httpClient = FakeMatrixApi();
     client.homeserver = "https://fakeServer.notExisting";
 
-    Room room = Room(id: roomID, client: client, prev_batch: "1234");
+    Room room = Room(
+        id: roomID,
+        client: client,
+        prev_batch: "1234",
+        states: {},
+        roomAccountData: {});
     Timeline timeline = Timeline(
         room: room,
         events: [],
