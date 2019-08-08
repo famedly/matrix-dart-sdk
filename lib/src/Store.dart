@@ -196,7 +196,7 @@ class Store {
     // Is the timeline limited? Then all previous messages should be
     // removed from the database!
     if (roomUpdate.limitedTimeline) {
-      txn.rawDelete("DELETE FROM Events WHERE chat_id=?", [roomUpdate.id]);
+      txn.rawDelete("DELETE FROM Events WHERE room_id=?", [roomUpdate.id]);
       txn.rawUpdate("UPDATE Rooms SET prev_batch=? WHERE id=?",
           [roomUpdate.prev_batch, roomUpdate.id]);
     }
