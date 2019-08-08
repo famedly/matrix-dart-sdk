@@ -197,7 +197,7 @@ class Store {
     // removed from the database!
     if (roomUpdate.limitedTimeline) {
       txn.rawDelete("DELETE FROM Events WHERE room_id=?", [roomUpdate.id]);
-      txn.rawUpdate("UPDATE Rooms SET prev_batch=? WHERE id=?",
+      txn.rawUpdate("UPDATE Rooms SET prev_batch=? WHERE room_id=?",
           [roomUpdate.prev_batch, roomUpdate.id]);
     }
     return null;
