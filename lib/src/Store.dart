@@ -156,8 +156,8 @@ class Store {
   }
 
   Future<void> storeRoomPrevBatch(Room room) async {
-    await _db.rawUpdate(
-        "UPDATE Rooms SET prev_batch=? WHERE id=?", [room.prev_batch, room.id]);
+    await _db.rawUpdate("UPDATE Rooms SET prev_batch=? WHERE room_id=?",
+        [room.prev_batch, room.id]);
     return null;
   }
 
@@ -189,7 +189,7 @@ class Store {
       updateQuery += ", heroes=?";
       updateArgs.add(roomUpdate.summary.mHeroes.join(","));
     }
-    updateQuery += " WHERE id=?";
+    updateQuery += " WHERE room_id=?";
     updateArgs.add(roomUpdate.id);
     txn.rawUpdate(updateQuery, updateArgs);
 
@@ -343,7 +343,7 @@ class Store {
         "SELECT * " +
             " FROM Events " +
             " WHERE room_id=?" +
-            " GROUP BY id " +
+            " GROUP BY event_id " +
             " ORDER BY origin_server_ts DESC",
         [room.id]);
 
@@ -379,7 +379,7 @@ class Store {
   /// Returns a room without events and participants.
   Future<Room> getRoomById(String id) async {
     List<Map<String, dynamic>> res =
-        await db.rawQuery("SELECT * FROM Rooms WHERE id=?", [id]);
+        await db.rawQuery("SELECT * FROM Rooms WHERE room_id=?", [id]);
     if (res.length != 1) return null;
     return Room.getRoomFromTableRow(res[0], client,
         states: getStatesFromRoomId(id));
@@ -390,7 +390,7 @@ class Store {
   }
 
   Future<void> forgetRoom(String roomID) async {
-    await db.rawDelete("DELETE FROM Rooms WHERE id=?", [roomID]);
+    await db.rawDelete("DELETE FROM Rooms WHERE room_id=?", [roomID]);
     return;
   }
 
