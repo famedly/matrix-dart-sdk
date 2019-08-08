@@ -24,6 +24,7 @@
 import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/State.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
+import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
 
 import 'Connection.dart';
@@ -32,7 +33,28 @@ enum Membership { join, invite, leave, ban }
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
 class User extends State {
-  User(String userId) : super(senderId: userId);
+  User(
+      {dynamic prevContent,
+      String stateKey,
+      dynamic content,
+      String typeKey,
+      String eventId,
+      String roomId,
+      String senderId,
+      ChatTime time,
+      dynamic unsigned,
+      Room room})
+      : super(
+            stateKey: stateKey,
+            prevContent: prevContent,
+            content: content,
+            typeKey: typeKey,
+            eventId: eventId,
+            roomId: roomId,
+            senderId: senderId,
+            time: time,
+            unsigned: unsigned,
+            room: room);
 
   /// The full qualified Matrix ID in the format @username:server.abc.
   String get id => stateKey;

@@ -125,12 +125,8 @@ void main() {
       expect(room.fullyRead, fullyRead);
       expect(room.notificationSettings, notificationSettings);
       expect(room.directChatMatrixID, "");
-      expect(room.draft, "");
       expect(room.canonicalAlias, canonicalAlias);
       expect(room.prev_batch, "");
-      expect(room.guestAccess, guestAccess);
-      expect(room.historyVisibility, historyVisibility);
-      expect(room.joinRules, joinRules);
       expect(room.lastMessage, body);
       expect(room.timeCreated.toTimeStamp() >= now, true);
       room.powerLevels.forEach((String key, int value) {
@@ -167,7 +163,7 @@ void main() {
 
     test("getEventByID", () async {
       final Event event = await room.getEventById("1234");
-      expect(event.id, "143273582443PhrSn:example.org");
+      expect(event.eventId, "143273582443PhrSn:example.org");
     });
   });
 }

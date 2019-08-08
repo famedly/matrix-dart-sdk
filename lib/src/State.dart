@@ -36,7 +36,7 @@ class State extends RawEvent {
   /// the overwriting semantics for this piece of room state.
   final String stateKey;
 
-  User get stateKeyUser => room.states[stateKey] ?? User(stateKey);
+  User get stateKeyUser => room.states[stateKey] ?? User(senderId: stateKey);
 
   State(
       {this.prevContent,
@@ -95,4 +95,16 @@ class State extends RawEvent {
   /// The unique key of this event. For events with a [stateKey], it will be the
   /// stateKey. Otherwise it will be the [type] as a string.
   String get key => stateKey == null || stateKey.isEmpty ? typeKey : stateKey;
+
+  User get asUser => User(
+      stateKey: stateKey,
+      prevContent: prevContent,
+      content: content,
+      typeKey: typeKey,
+      eventId: eventId,
+      roomId: roomId,
+      senderId: senderId,
+      time: time,
+      unsigned: unsigned,
+      room: room);
 }

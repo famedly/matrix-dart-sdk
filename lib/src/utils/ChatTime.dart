@@ -59,7 +59,6 @@ class ChatTime {
       return toTimeString();
     } else if (sameWeek) {
       switch (dateTime.weekday) {
-        // TODO: Needs localization
         case 1:
           return "Montag";
         case 2:

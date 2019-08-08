@@ -23,8 +23,10 @@
 
 import 'dart:async';
 
+import 'package:famedlysdk/src/AccountData.dart';
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Connection.dart';
+import 'package:famedlysdk/src/Presence.dart';
 import 'package:famedlysdk/src/User.dart';
 import 'package:famedlysdk/src/requests/SetPushersRequest.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
@@ -60,6 +62,15 @@ void main() {
     test('Login', () async {
       Future<ErrorResponse> errorFuture =
           matrix.connection.onError.stream.first;
+
+      int presenceCounter = 0;
+      int accountDataCounter = 0;
+      matrix.onPresence = (Presence data) {
+        presenceCounter++;
+      };
+      matrix.onAccountData = (AccountData data) {
+        accountDataCounter++;
+      };
 
       final bool checkResp1 =
           await matrix.checkServer("https://fakeserver.wrongaddress");
@@ -110,7 +121,8 @@ void main() {
 
       expect(matrix.accountData.length, 2);
       expect(matrix.getDirectChatFromUserId("@bob:example.com"),
-          "!abcdefgh:example.com");
+          "!726s6s6q:example.com");
+      expect(matrix.roomList.rooms[1].directChatMatrixID, "@bob:example.com");
       expect(matrix.directChats, matrix.accountData["m.direct"].content);
       expect(matrix.presences.length, 1);
       expect(matrix.roomList.rooms.length, 2);
@@ -118,7 +130,11 @@ void main() {
           "#famedlyContactDiscovery:${matrix.userID.split(":")[1]}");
       final List<User> contacts = await matrix.loadFamedlyContacts();
       expect(contacts.length, 1);
-      expect(contacts[0].senderId, "@alice:example.com");
+      expect(contacts[0].senderId, "@alice:example.org");
+      expect(
+          matrix.presences["@alice:example.com"].content["presence"], "online");
+      expect(presenceCounter, 1);
+      expect(accountDataCounter, 2);
     });
 
     test('Try to get ErrorResponse', () async {
@@ -184,36 +200,39 @@ void main() {
 
       List<EventUpdate> eventUpdateList = await eventUpdateListFuture;
 
-      expect(eventUpdateList.length, 7);
+      expect(eventUpdateList.length, 8);
 
-      expect(eventUpdateList[0].eventType == "m.room.member", true);
-      expect(eventUpdateList[0].roomID == "!726s6s6q:example.com", true);
-      expect(eventUpdateList[0].type == "state", true);
+      expect(eventUpdateList[0].eventType, "m.room.member");
+      expect(eventUpdateList[0].roomID, "!726s6s6q:example.com");
+      expect(eventUpdateList[0].type, "state");
 
-      expect(eventUpdateList[1].eventType == "m.room.member", true);
-      expect(eventUpdateList[1].roomID == "!726s6s6q:example.com", true);
-      expect(eventUpdateList[1].type == "timeline", true);
+      expect(eventUpdateList[1].eventType, "m.room.canonical_alias");
+      expect(eventUpdateList[1].roomID, "!726s6s6q:example.com");
+      expect(eventUpdateList[1].type, "state");
 
-      expect(eventUpdateList[2].eventType == "m.room.message", true);
-      expect(eventUpdateList[2].roomID == "!726s6s6q:example.com", true);
-      expect(eventUpdateList[2].type == "timeline", true);
+      expect(eventUpdateList[2].eventType, "m.room.member");
+      expect(eventUpdateList[2].roomID, "!726s6s6q:example.com");
+      expect(eventUpdateList[2].type, "timeline");
 
-      expect(eventUpdateList[3].eventType == "m.tag", true);
-      expect(eventUpdateList[3].roomID == "!726s6s6q:example.com", true);
-      expect(eventUpdateList[3].type == "account_data", true);
+      expect(eventUpdateList[3].eventType, "m.room.message");
+      expect(eventUpdateList[3].roomID, "!726s6s6q:example.com");
+      expect(eventUpdateList[3].type, "timeline");
 
-      expect(eventUpdateList[4].eventType == "org.example.custom.room.config",
-          true);
-      expect(eventUpdateList[4].roomID == "!726s6s6q:example.com", true);
-      expect(eventUpdateList[4].type == "account_data", true);
+      expect(eventUpdateList[4].eventType, "m.tag");
+      expect(eventUpdateList[4].roomID, "!726s6s6q:example.com");
+      expect(eventUpdateList[4].type, "account_data");
 
-      expect(eventUpdateList[5].eventType == "m.room.name", true);
-      expect(eventUpdateList[5].roomID == "!696r7674:example.com", true);
-      expect(eventUpdateList[5].type == "invite_state", true);
+      expect(eventUpdateList[5].eventType, "org.example.custom.room.config");
+      expect(eventUpdateList[5].roomID, "!726s6s6q:example.com");
+      expect(eventUpdateList[5].type, "account_data");
 
-      expect(eventUpdateList[6].eventType == "m.room.member", true);
-      expect(eventUpdateList[6].roomID == "!696r7674:example.com", true);
-      expect(eventUpdateList[6].type == "invite_state", true);
+      expect(eventUpdateList[6].eventType, "m.room.name");
+      expect(eventUpdateList[6].roomID, "!696r7674:example.com");
+      expect(eventUpdateList[6].type, "invite_state");
+
+      expect(eventUpdateList[7].eventType, "m.room.member");
+      expect(eventUpdateList[7].roomID, "!696r7674:example.com");
+      expect(eventUpdateList[7].type, "invite_state");
     });
 
     test('User Update Test', () async {
@@ -244,8 +263,8 @@ void main() {
 
     test('createGroup', () async {
       final List<User> users = [
-        User("@alice:fakeServer.notExisting"),
-        User("@bob:fakeServer.notExisting")
+        User(senderId: "@alice:fakeServer.notExisting"),
+        User(senderId: "@bob:fakeServer.notExisting")
       ];
       final String newID = await matrix.createGroup(users);
       expect(newID, "!1234:fakeServer.notExisting");

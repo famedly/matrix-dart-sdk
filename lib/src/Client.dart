@@ -99,14 +99,22 @@ class Client {
   /// Presences of users by a given matrix ID
   Map<String, Presence> presences = {};
 
+  /// Callback will be called on account data updates.
+  AccountDataEventCB onAccountData;
+
+  /// Callback will be called on presences.
+  PresenceCB onPresence;
+
   void handleUserUpdate(UserUpdate userUpdate) {
     if (userUpdate.type == "account_data") {
       AccountData newAccountData = AccountData.fromJson(userUpdate.content);
       accountData[newAccountData.typeKey] = newAccountData;
+      if (onAccountData != null) onAccountData(newAccountData);
     }
     if (userUpdate.type == "presence") {
       Presence newPresence = Presence.fromJson(userUpdate.content);
-      presences[newPresence.typeKey] = newPresence;
+      presences[newPresence.sender] = newPresence;
+      if (onPresence != null) onPresence(newPresence);
     }
   }
 
@@ -320,3 +328,6 @@ class Client {
     return resp;
   }
 }
+
+typedef AccountDataEventCB = void Function(AccountData accountData);
+typedef PresenceCB = void Function(Presence presence);

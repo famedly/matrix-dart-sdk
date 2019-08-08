@@ -355,7 +355,7 @@ class FakeMatrixApi extends MockClient {
                     {
                       "content": {
                         "@bob:example.com": [
-                          "!abcdefgh:example.com",
+                          "!726s6s6q:example.com",
                           "!hgfedcba:example.com"
                         ]
                       },

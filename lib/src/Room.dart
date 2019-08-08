@@ -74,7 +74,7 @@ class Room {
     if (mHeroes.length > 0) {
       String displayname = "";
       for (int i = 0; i < mHeroes.length; i++)
-        displayname += User(mHeroes[i]).calcDisplayname() + ", ";
+        displayname += User(senderId: mHeroes[i]).calcDisplayname() + ", ";
       return displayname.substring(0, displayname.length - 2);
     }
     return "Empty chat";
@@ -99,8 +99,23 @@ class Room {
       ? states["m.room.canonical_alias"].content["alias"]
       : "";
 
-  /// If this room is a direct chat, this is the matrix ID of the user
-  String get directChatMatrixID => ""; // TODO: Needs account_data in client
+  /// If this room is a direct chat, this is the matrix ID of the user.
+  /// Returns null otherwise.
+  String get directChatMatrixID {
+    String returnUserId = null;
+    if (client.directChats is Map<String, dynamic>) {
+      client.directChats.forEach((String userId, dynamic roomIds) {
+        if (roomIds is List<dynamic>) {
+          for (int i = 0; i < roomIds.length; i++)
+            if (roomIds[i] == this.id) {
+              returnUserId = userId;
+              break;
+            }
+        }
+      });
+    }
+    return returnUserId;
+  }
 
   /// Must be one of [all, mention]
   String notificationSettings;
@@ -136,7 +151,7 @@ class Room {
     if (mHeroes.length > 0) {
       String displayname = "";
       for (int i = 0; i < mHeroes.length; i++)
-        displayname += User(mHeroes[i]).calcDisplayname() + ", ";
+        displayname += User(senderId: mHeroes[i]).calcDisplayname() + ", ";
       return displayname.substring(0, displayname.length - 2);
     }
     return "Empty chat";
@@ -467,7 +482,7 @@ class Room {
       return participants;
 
     for (num i = 0; i < res["chunk"].length; i++) {
-      User newUser = State.fromJson(res["chunk"][i], this) as User;
+      User newUser = State.fromJson(res["chunk"][i], this).asUser;
       if (newUser.membership != Membership.leave) participants.add(newUser);
     }
 

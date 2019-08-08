@@ -21,6 +21,7 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/src/State.dart';
 import 'package:famedlysdk/src/User.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -42,20 +43,19 @@ void main() {
         "power_level": powerLevel,
       };
 
-      User user = User.fromJson(jsonObj, null);
+      User user = State.fromJson(jsonObj, null).asUser;
 
       expect(user.id, id);
       expect(user.membership, membership);
       expect(user.displayName, displayName);
       expect(user.avatarUrl.mxc, avatarUrl);
-      expect(user.powerLevel, powerLevel);
       expect(user.calcDisplayname(), displayName);
     });
 
     test("calcDisplayname", () async {
-      final User user1 = User("@alice:example.com");
-      final User user2 = User("@alice:example.com", displayName: "SuperAlice");
-      final User user3 = User("@alice:example.com", displayName: "");
+      final User user1 = User(senderId: "@alice:example.com");
+      final User user2 = User(senderId: "@alice:example.com");
+      final User user3 = User(senderId: "@alice:example.com");
       expect(user1.calcDisplayname(), "alice");
       expect(user2.calcDisplayname(), "SuperAlice");
       expect(user3.calcDisplayname(), "alice");

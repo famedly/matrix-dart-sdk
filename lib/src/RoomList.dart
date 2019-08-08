@@ -27,13 +27,10 @@ import 'dart:core';
 import 'package:famedlysdk/src/State.dart';
 
 import 'Client.dart';
-import 'Event.dart';
 import 'Room.dart';
 import 'User.dart';
 import 'sync/EventUpdate.dart';
 import 'sync/RoomUpdate.dart';
-import 'utils/ChatTime.dart';
-import 'utils/MxContent.dart';
 
 /// Represents a list of rooms for this client, which will automatically update
 /// itself and call the [onUpdate], [onInsert] and [onDelete] callbacks. To get
