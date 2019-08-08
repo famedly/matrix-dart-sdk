@@ -466,7 +466,7 @@ class Store {
         'joined_member_count INTEGER, ' +
         'invited_member_count INTEGER, ' +
         'heroes TEXT, ' +
-        'UNIQUE(id))',
+        'UNIQUE(room_id))',
 
     /// The database scheme for the TimelineEvent class.
     'Events': 'CREATE TABLE IF NOT EXISTS Events(' +
@@ -480,7 +480,7 @@ class Store {
         'prev_content TEXT, ' +
         'state_key TEXT, ' +
         "status INTEGER, " +
-        'UNIQUE(id))',
+        'UNIQUE(event_id))',
 
     /// The database scheme for room states.
     'State': 'CREATE TABLE IF NOT EXISTS State(' +
