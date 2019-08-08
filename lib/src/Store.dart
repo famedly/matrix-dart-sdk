@@ -363,10 +363,10 @@ class Store {
     if (onlyDirect && onlyGroups) return [];
     List<Map<String, dynamic>> res = await db.rawQuery("SELECT * " +
         " FROM Rooms" +
-        " WHERE rooms.membership" +
+        " WHERE membership" +
         (onlyLeft ? "=" : "!=") +
         "'leave' " +
-        " GROUP BY rooms.id ");
+        " GROUP BY room_id ");
     List<Room> roomList = [];
     for (num i = 0; i < res.length; i++) {
       Room room = await Room.getRoomFromTableRow(res[i], client,
