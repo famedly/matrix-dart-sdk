@@ -340,7 +340,11 @@ class Store {
   /// Returns a list of events for the given room and sets all participants.
   Future<List<Event>> getEventList(Room room) async {
     List<Map<String, dynamic>> eventRes = await db.rawQuery(
-        "SELECT * " + " FROM Events " + " WHERE room_id=?" + " GROUP BY id",
+        "SELECT * " +
+            " FROM Events " +
+            " WHERE room_id=?" +
+            " GROUP BY id " +
+            " ORDER BY origin_server_ts DESC",
         [room.id]);
 
     List<Event> eventList = [];
@@ -362,8 +366,7 @@ class Store {
         " WHERE rooms.membership" +
         (onlyLeft ? "=" : "!=") +
         "'leave' " +
-        " GROUP BY rooms.id " +
-        " ORDER BY origin_server_ts DESC ");
+        " GROUP BY rooms.id ");
     List<Room> roomList = [];
     for (num i = 0; i < res.length; i++) {
       Room room = await Room.getRoomFromTableRow(res[i], client,
