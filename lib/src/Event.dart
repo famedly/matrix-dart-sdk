@@ -21,7 +21,7 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/State.dart';
+import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 
@@ -29,7 +29,7 @@ import './Room.dart';
 import './RawEvent.dart';
 
 /// Defines a timeline event for a room.
-class Event extends State {
+class Event extends RoomState {
   /// The status of this event.
   /// -1=ERROR
   ///  0=SENDING

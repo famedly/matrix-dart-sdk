@@ -27,7 +27,7 @@ import 'dart:core';
 
 import 'package:famedlysdk/src/AccountData.dart';
 import 'package:famedlysdk/src/Presence.dart';
-import 'package:famedlysdk/src/State.dart';
+import 'package:famedlysdk/src/RoomState.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
@@ -303,7 +303,7 @@ class Store {
         "SELECT * FROM States WHERE state_key=? AND room_id=?",
         [matrixID, room.id]);
     if (res.length != 1) return null;
-    return State.fromJson(res[0], room).asUser;
+    return RoomState.fromJson(res[0], room).asUser;
   }
 
   /// Loads all Users in the database to provide a contact list
@@ -314,7 +314,8 @@ class Store {
         [client.userID, exceptRoomID]);
     List<User> userList = [];
     for (int i = 0; i < res.length; i++)
-      userList.add(State.fromJson(res[i], Room(id: "", client: client)).asUser);
+      userList
+          .add(RoomState.fromJson(res[i], Room(id: "", client: client)).asUser);
     return userList;
   }
 
@@ -330,7 +331,7 @@ class Store {
     List<User> participants = [];
 
     for (num i = 0; i < res.length; i++) {
-      participants.add(State.fromJson(res[i], room).asUser);
+      participants.add(RoomState.fromJson(res[i], room).asUser);
     }
 
     return participants;

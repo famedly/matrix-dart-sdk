@@ -24,7 +24,7 @@
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/RoomAccountData.dart';
-import 'package:famedlysdk/src/State.dart';
+import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
@@ -54,7 +54,7 @@ class Room {
   int mJoinedMemberCount;
   int mInvitedMemberCount;
 
-  Map<String, State> states = {};
+  Map<String, RoomState> states = {};
 
   Map<String, RoomAccountData> roomAccountData = {};
 
@@ -431,11 +431,11 @@ class Room {
       roomAccountData: {},
     );
 
-    Map<String, State> newStates = {};
+    Map<String, RoomState> newStates = {};
     if (states != null) {
       List<Map<String, dynamic>> rawStates = await states;
       for (int i = 0; i < rawStates.length; i++) {
-        State newState = State.fromJson(rawStates[i], newRoom);
+        RoomState newState = RoomState.fromJson(rawStates[i], newRoom);
         newStates[newState.key] = newState;
       }
       newRoom.states = newStates;
@@ -492,7 +492,7 @@ class Room {
       return participants;
 
     for (num i = 0; i < res["chunk"].length; i++) {
-      User newUser = State.fromJson(res["chunk"][i], this).asUser;
+      User newUser = RoomState.fromJson(res["chunk"][i], this).asUser;
       if (newUser.membership != Membership.leave) participants.add(newUser);
     }
 
@@ -507,7 +507,7 @@ class Room {
     if (resp is ErrorResponse) return null;
     // Somehow we miss the mxid in the response and only get the content of the event.
     resp["matrix_id"] = mxID;
-    return State.fromJson(resp, this).asUser;
+    return RoomState.fromJson(resp, this).asUser;
   }
 
   /// Searches for the event in the store. If it isn't found, try to request it
@@ -526,7 +526,7 @@ class Room {
   /// Returns the user's own power level.
   int getPowerLevelByUserId(String userId) {
     int powerLevel = 0;
-    State powerLevelState = states["m.room.power_levels"];
+    RoomState powerLevelState = states["m.room.power_levels"];
     if (powerLevelState == null) return powerLevel;
     if (powerLevelState.content["users_default"] is int)
       powerLevel = powerLevelState.content["users_default"];
@@ -541,7 +541,7 @@ class Room {
 
   /// Returns the power levels from all users for this room or null if not given.
   Map<String, int> get powerLevels {
-    State powerLevelState = states["m.room.power_levels"];
+    RoomState powerLevelState = states["m.room.power_levels"];
     if (powerLevelState.content["users"] is Map<String, int>)
       return powerLevelState.content["users"];
     return null;

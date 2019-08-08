@@ -24,7 +24,7 @@
 import 'dart:async';
 import 'dart:core';
 
-import 'package:famedlysdk/src/State.dart';
+import 'package:famedlysdk/src/RoomState.dart';
 
 import 'Client.dart';
 import 'Room.dart';
@@ -141,7 +141,7 @@ class RoomList {
     final bool found = (j < rooms.length && rooms[j].id == eventUpdate.roomID);
     if (!found) return;
 
-    State stateEvent = State.fromJson(eventUpdate.content, rooms[j]);
+    RoomState stateEvent = RoomState.fromJson(eventUpdate.content, rooms[j]);
     if (rooms[j].states[stateEvent.key] != null &&
         rooms[j].states[stateEvent.key].time > stateEvent.time) return;
     rooms[j].states[stateEvent.key] = stateEvent;

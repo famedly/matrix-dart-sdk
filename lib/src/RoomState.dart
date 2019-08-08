@@ -26,7 +26,7 @@ import 'package:famedlysdk/src/utils/ChatTime.dart';
 import './Room.dart';
 import './RawEvent.dart';
 
-class State extends RawEvent {
+class RoomState extends RawEvent {
   /// Optional. The previous content for this state.
   /// This will be present only for state events appearing in the timeline.
   /// If this is not a state event, or there is no previous content, this key will be null.
@@ -38,7 +38,7 @@ class State extends RawEvent {
 
   User get stateKeyUser => room.states[stateKey] ?? User(stateKey);
 
-  State(
+  RoomState(
       {this.prevContent,
       this.stateKey,
       dynamic content,
@@ -60,14 +60,14 @@ class State extends RawEvent {
             room: room);
 
   /// Get a State event from a table row or from the event stream.
-  factory State.fromJson(Map<String, dynamic> jsonPayload, Room room) {
+  factory RoomState.fromJson(Map<String, dynamic> jsonPayload, Room room) {
     final Map<String, dynamic> content =
         RawEvent.getMapFromPayload(jsonPayload['content']);
     final Map<String, dynamic> unsigned =
         RawEvent.getMapFromPayload(jsonPayload['unsigned']);
     final Map<String, dynamic> prevContent =
         RawEvent.getMapFromPayload(jsonPayload['prev_content']);
-    return State(
+    return RoomState(
         stateKey: jsonPayload['state_key'],
         prevContent: prevContent,
         content: content,

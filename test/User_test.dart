@@ -21,7 +21,7 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/State.dart';
+import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/User.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -49,7 +49,7 @@ void main() {
         "state_key": id
       };
 
-      User user = State.fromJson(jsonObj, null).asUser;
+      User user = RoomState.fromJson(jsonObj, null).asUser;
 
       expect(user.id, id);
       expect(user.membership, membership);

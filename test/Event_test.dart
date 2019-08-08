@@ -25,7 +25,7 @@ import 'dart:convert';
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/RawEvent.dart';
-import 'package:famedlysdk/src/State.dart';
+import 'package:famedlysdk/src/RoomState.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'FakeMatrixApi.dart';
@@ -64,7 +64,7 @@ void main() {
       expect(event.getBody(), body);
       expect(event.type, EventTypes.Text);
       jsonObj["state_key"] = "";
-      State state = State.fromJson(jsonObj, null);
+      RoomState state = RoomState.fromJson(jsonObj, null);
       expect(state.eventId, id);
       expect(state.stateKey, "");
       expect(state.key, "m.room.message");

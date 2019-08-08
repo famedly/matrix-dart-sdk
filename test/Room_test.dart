@@ -24,7 +24,7 @@
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/Room.dart';
-import 'package:famedlysdk/src/State.dart';
+import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/Timeline.dart';
 import 'package:famedlysdk/src/User.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
@@ -85,7 +85,7 @@ void main() {
       expect(room.mHeroes, heroes);
       expect(room.displayname, "alice, bob, charley");
 
-      room.states["m.room.canonical_alias"] = State(
+      room.states["m.room.canonical_alias"] = RoomState(
           senderId: "@test:example.com",
           typeKey: "m.room.canonical_alias",
           roomId: room.id,
@@ -96,7 +96,7 @@ void main() {
       expect(room.displayname, "testalias");
       expect(room.canonicalAlias, "#testalias:example.com");
 
-      room.states["m.room.name"] = State(
+      room.states["m.room.name"] = RoomState(
           senderId: "@test:example.com",
           typeKey: "m.room.name",
           roomId: room.id,
@@ -107,7 +107,7 @@ void main() {
       expect(room.displayname, "testname");
 
       expect(room.topic, "");
-      room.states["m.room.topic"] = State(
+      room.states["m.room.topic"] = RoomState(
           senderId: "@test:example.com",
           typeKey: "m.room.topic",
           roomId: room.id,
@@ -118,7 +118,7 @@ void main() {
       expect(room.topic, "testtopic");
 
       expect(room.avatar.mxc, "");
-      room.states["m.room.avatar"] = State(
+      room.states["m.room.avatar"] = RoomState(
           senderId: "@test:example.com",
           typeKey: "m.room.avatar",
           roomId: room.id,
@@ -129,7 +129,7 @@ void main() {
       expect(room.avatar.mxc, "mxc://testurl");
 
       expect(room.lastEvent, null);
-      room.states["m.room.message"] = State(
+      room.states["m.room.message"] = RoomState(
           senderId: "@test:example.com",
           typeKey: "m.room.message",
           roomId: room.id,
@@ -191,7 +191,7 @@ void main() {
     });
 
     test("PowerLevels", () async {
-      room.states["m.room.power_levels"] = State(
+      room.states["m.room.power_levels"] = RoomState(
           senderId: "@test:example.com",
           typeKey: "m.room.power_levels",
           roomId: room.id,

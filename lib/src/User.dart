@@ -22,7 +22,7 @@
  */
 
 import 'package:famedlysdk/src/Room.dart';
-import 'package:famedlysdk/src/State.dart';
+import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
@@ -32,7 +32,7 @@ import 'Connection.dart';
 enum Membership { join, invite, leave, ban }
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
-class User extends State {
+class User extends RoomState {
   factory User(
     String id, {
     String membership,
