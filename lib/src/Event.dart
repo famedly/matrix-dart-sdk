@@ -38,7 +38,7 @@ class Event extends RoomState {
   int status;
 
   Event(
-      {this.status,
+      {this.status = 2,
       dynamic content,
       String typeKey,
       String eventId,
