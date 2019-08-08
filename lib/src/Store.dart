@@ -509,7 +509,7 @@ class Store {
         'UNIQUE(type,room_id))',
 
     /// The database scheme for room states.
-    'Presence': 'CREATE TABLE IF NOT EXISTS Presence(' +
+    'Presences': 'CREATE TABLE IF NOT EXISTS Presences(' +
         'type TEXT PRIMARY KEY, ' +
         'sender TEXT, ' +
         'content TEXT, ' +
