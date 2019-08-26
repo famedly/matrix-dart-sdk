@@ -23,7 +23,6 @@
 
 import 'dart:convert';
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:meta/meta.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 import './Room.dart';
 
@@ -57,8 +56,8 @@ class RawEvent {
   final Room room;
 
   RawEvent(
-      {@required this.content,
-      @required this.typeKey,
+      {this.content,
+      this.typeKey,
       this.eventId,
       this.roomId,
       this.senderId,
