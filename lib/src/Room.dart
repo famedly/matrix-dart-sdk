@@ -71,7 +71,7 @@ class Room {
       return states["m.room.name"].content["name"];
     if (canonicalAlias != null && !canonicalAlias.isEmpty)
       return canonicalAlias.substring(1, canonicalAlias.length).split(":")[0];
-    if (mHeroes.length > 0) {
+    if (mHeroes != null && mHeroes.length > 0) {
       String displayname = "";
       for (int i = 0; i < mHeroes.length; i++) {
         User hero = states[mHeroes[i]] != null
@@ -93,7 +93,7 @@ class Room {
   MxContent get avatar {
     if (states["m.room.avatar"] != null)
       return MxContent(states["m.room.avatar"].content["url"]);
-    if (mHeroes.length == 1 && states[mHeroes[0]] != null)
+    if (mHeroes != null && mHeroes.length == 1 && states[mHeroes[0]] != null)
       return states[mHeroes[0]].asUser.avatarUrl;
     return MxContent("");
   }
