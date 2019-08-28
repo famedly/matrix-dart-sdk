@@ -63,7 +63,7 @@ void main() {
       ];
 
       Map<String, dynamic> jsonObj = {
-        "id": id,
+        "room_id": id,
         "membership": membership.toString().split('.').last,
         "avatar_url": "",
         "notification_count": notificationCount,

@@ -416,7 +416,7 @@ class Room {
       {Future<List<Map<String, dynamic>>> states,
       Future<List<Map<String, dynamic>>> roomAccountData}) async {
     Room newRoom = Room(
-      id: row["id"],
+      id: row["room_id"],
       membership: Membership.values
           .firstWhere((e) => e.toString() == 'Membership.' + row["membership"]),
       notificationCount: row["notification_count"],
