@@ -65,10 +65,11 @@ class RawEvent {
       this.unsigned,
       this.room});
 
-  static Map<String, dynamic> getMapFromPayload(dynamic payload) =>
-      payload is String
-          ? json.decode(payload)
-          : payload is Map<String, dynamic> ? payload : null;
+  static Map<String, dynamic> getMapFromPayload(dynamic payload) {
+    if (payload is String) return json.decode(payload);
+    if (payload is Map<String, dynamic>) return payload;
+    return null;
+  }
 
   /// Get a State event from a table row or from the event stream.
   factory RawEvent.fromJson(Map<String, dynamic> jsonPayload, Room room) {
