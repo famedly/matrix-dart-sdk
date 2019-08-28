@@ -371,7 +371,7 @@ class Store {
     List<Room> roomList = [];
     for (num i = 0; i < res.length; i++) {
       Room room = await Room.getRoomFromTableRow(res[i], client,
-          states: getStatesFromRoomId(res[i]["id"]));
+          states: getStatesFromRoomId(res[i]["room_id"]));
       roomList.add(room);
     }
     return roomList;
