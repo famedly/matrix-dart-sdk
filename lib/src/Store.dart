@@ -212,7 +212,7 @@ class Store {
         json.encode(userUpdate.content["content"]),
       ]);
     else if (userUpdate.type == "presence")
-      txn.rawInsert("INSERT OR REPLACE INTO Presence VALUES(?, ?)", [
+      txn.rawInsert("INSERT OR REPLACE INTO Presences VALUES(?, ?)", [
         userUpdate.eventType,
         userUpdate.content["sender"],
         json.encode(userUpdate.content["content"]),
