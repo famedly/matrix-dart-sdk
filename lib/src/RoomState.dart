@@ -64,6 +64,8 @@ class RoomState {
   /// the overwriting semantics for this piece of room state.
   final String stateKey;
 
+  User get stateKeyUser => room.states[stateKey]?.asUser ?? User(stateKey);
+
   RoomState(
       {this.content,
       this.typeKey,
