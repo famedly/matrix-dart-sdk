@@ -134,6 +134,7 @@ class RoomList {
   }
 
   void _handleEventUpdate(EventUpdate eventUpdate) {
+    print("_handleEventUpdate");
     // Search the room in the rooms
     num j = 0;
     for (j = 0; j < rooms.length; j++) {
@@ -141,10 +142,12 @@ class RoomList {
     }
     final bool found = (j < rooms.length && rooms[j].id == eventUpdate.roomID);
     if (!found) return;
+    print("found!");
 
     RoomState stateEvent = RoomState.fromJson(eventUpdate.content, rooms[j]);
     if (rooms[j].states[stateEvent.key] != null &&
         rooms[j].states[stateEvent.key].time > stateEvent.time) return;
+    print("is a new eventupdate");
     rooms[j].states[stateEvent.key] = stateEvent;
     sortAndUpdate();
   }
