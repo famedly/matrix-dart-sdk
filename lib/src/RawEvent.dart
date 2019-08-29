@@ -67,7 +67,7 @@ class RawEvent {
 
   static Map<String, dynamic> getMapFromPayload(dynamic payload) {
     print("getMapFromPayload: $payload");
-    if (payload is String) return json.decode(payload);
+    if (payload is String && !payload.isEmpty) return json.decode(payload);
     if (payload is Map<String, dynamic>) return payload;
     return null;
   }
