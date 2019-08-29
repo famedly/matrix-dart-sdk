@@ -68,6 +68,7 @@ class RoomList {
       this.onlyGroups = false}) {
     eventSub ??= client.connection.onEvent.stream.listen(_handleEventUpdate);
     roomSub ??= client.connection.onRoomUpdate.stream.listen(_handleRoomUpdate);
+    sort();
   }
 
   Room getRoomByAlias(String alias) {
@@ -148,9 +149,13 @@ class RoomList {
     sortAndUpdate();
   }
 
-  sortAndUpdate() {
+  sort() {
     rooms?.sort((a, b) =>
         b.timeCreated.toTimeStamp().compareTo(a.timeCreated.toTimeStamp()));
+  }
+
+  sortAndUpdate() {
+    sort();
     if (onUpdate != null) onUpdate();
   }
 }
