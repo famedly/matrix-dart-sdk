@@ -66,11 +66,10 @@ class RawEvent {
       this.room});
 
   static Map<String, dynamic> getMapFromPayload(dynamic payload) {
-    print("getMapFromPayload: $payload");
-    if (payload == null || (payload is String && payload.isEmpty)) return null;
+    if (payload == null || payload == "") return {};
     if (payload is String) return json.decode(payload);
     if (payload is Map<String, dynamic>) return payload;
-    return null;
+    return {};
   }
 
   /// Get a State event from a table row or from the event stream.
