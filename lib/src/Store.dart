@@ -311,7 +311,7 @@ class Store {
   /// except users who are in the Room with the ID [exceptRoomID].
   Future<List<User>> loadContacts({String exceptRoomID = ""}) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM RoomStates WHERE state_key!=? AND room_id!=? GROUP BY state_key ORDER BY state_key",
+        "SELECT * FROM RoomStates WHERE state_key LIKE '@%:%' AND state_key!=? AND room_id!=? GROUP BY state_key ORDER BY state_key",
         [client.userID, exceptRoomID]);
     List<User> userList = [];
     for (int i = 0; i < res.length; i++)
