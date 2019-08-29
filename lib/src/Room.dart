@@ -121,6 +121,9 @@ class Room {
     return returnUserId;
   }
 
+  /// Wheither this is a direct chat or not
+  bool get isDirectChat => directChatMatrixID != null;
+
   /// Must be one of [all, mention]
   String notificationSettings;
 
