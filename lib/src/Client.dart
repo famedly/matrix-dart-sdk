@@ -123,14 +123,22 @@ class Client {
 
   /// Returns the (first) room ID from the store which is a private chat with the user [userId].
   /// Returns null if there is none.
-  String getDirectChatFromUserId(String userId) => accountData["m.direct"] !=
-              null &&
-          accountData["m.direct"].content[userId] is List<dynamic> &&
-          accountData["m.direct"].content[userId].length > 0 &&
-          roomList.getRoomById(accountData["m.direct"].content[userId][0]) !=
-              null
-      ? accountData["m.direct"].content[userId][0]
-      : null;
+  String getDirectChatFromUserId(String userId) {
+    if (accountData["m.direct"] != null &&
+        accountData["m.direct"].content[userId] is List<dynamic> &&
+        accountData["m.direct"].content[userId].length > 0) {
+      if (roomList.getRoomById(accountData["m.direct"].content[userId][0]) !=
+          null) return accountData["m.direct"].content[userId][0];
+      (accountData["m.direct"].content[userId] as List<dynamic>)
+          .remove(accountData["m.direct"].content[userId][0]);
+      connection.jsonRequest(
+          type: HTTPType.PUT,
+          action: "/client/r0/user/${userID}/account_data/m.direct",
+          data: directChats);
+      return getDirectChatFromUserId(userId);
+    }
+    return null;
+  }
 
   /// Checks the supported versions of the Matrix protocol and the supported
   /// login types. Returns false if the server is not compatible with the
