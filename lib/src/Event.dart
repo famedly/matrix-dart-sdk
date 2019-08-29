@@ -37,8 +37,10 @@ class Event extends RoomState {
   ///  2=RECEIVED
   int status;
 
+  static const int defaultStatus = 2;
+
   Event(
-      {this.status = 2,
+      {this.status = defaultStatus,
       dynamic content,
       String typeKey,
       String eventId,
@@ -70,7 +72,7 @@ class Event extends RoomState {
     final Map<String, dynamic> prevContent =
         RawEvent.getMapFromPayload(jsonPayload['prev_content']);
     return Event(
-        status: jsonPayload['status'] ?? 1,
+        status: jsonPayload['status'] ?? defaultStatus,
         content: content,
         typeKey: jsonPayload['type'],
         eventId: jsonPayload['event_id'],
