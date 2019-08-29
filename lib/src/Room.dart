@@ -353,7 +353,7 @@ class Room {
     final dynamic resp = await client.connection.jsonRequest(
         type: HTTPType.GET,
         action:
-            "/client/r0/rooms/$id/messages?from=${prev_batch}&dir=b&limit=$historyCount");
+            "/client/r0/rooms/$id/messages?from=${prev_batch}&dir=b&limit=$historyCount&filter=${Connection.syncFilters}");
 
     if (resp is ErrorResponse) return;
 
@@ -363,6 +363,33 @@ class Room {
     if (!(resp["chunk"] is List<dynamic> &&
         resp["chunk"].length > 0 &&
         resp["end"] is String)) return;
+
+    if (resp["state"] is List<dynamic>) {
+      client.store?.transaction(() {
+        for (int i = 0; i < resp["state"].length; i++) {
+          EventUpdate eventUpdate = EventUpdate(
+            type: "state",
+            roomID: id,
+            eventType: resp["state"][i]["type"],
+            content: resp["state"][i],
+          );
+          client.connection.onEvent.add(eventUpdate);
+          client.store.storeEventUpdate(eventUpdate);
+        }
+        return;
+      });
+      if (client.store == null) {
+        for (int i = 0; i < resp["state"].length; i++) {
+          EventUpdate eventUpdate = EventUpdate(
+            type: "state",
+            roomID: id,
+            eventType: resp["state"][i]["type"],
+            content: resp["state"][i],
+          );
+          client.connection.onEvent.add(eventUpdate);
+        }
+      }
+    }
 
     List<dynamic> history = resp["chunk"];
     client.store?.transaction(() {

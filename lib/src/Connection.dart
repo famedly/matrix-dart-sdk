@@ -52,9 +52,9 @@ class Connection {
     }));
   }
 
-  String get _syncFilters => '{"room":{"state":{"lazy_load_members":true}}}';
+  static String syncFilters = '{"room":{"state":{"lazy_load_members":true}}}';
 
-  String get _firstSyncFilters =>
+  static String firstSyncFilters =
       '{"room":{"include_leave":true,"state":{"lazy_load_members":true}}}';
 
   /// Handles the connection to the Matrix Homeserver. You can change this to a
@@ -284,10 +284,10 @@ class Connection {
   Future<void> _sync() async {
     if (client.isLogged() == false) return;
 
-    String action = "/client/r0/sync?filter=$_firstSyncFilters";
+    String action = "/client/r0/sync?filter=$firstSyncFilters";
 
     if (client.prevBatch != null) {
-      action = "/client/r0/sync?filter=$_syncFilters";
+      action = "/client/r0/sync?filter=$syncFilters";
       action += "&timeout=30000";
       action += "&since=${client.prevBatch}";
     }

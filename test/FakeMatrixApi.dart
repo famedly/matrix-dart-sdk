@@ -39,7 +39,7 @@ class FakeMatrixApi extends MockClient {
               method == "GET" ? request.url.queryParameters : request.body;
           var res = {};
 
-          print("$method request to $action with Data: $data");
+          //print("$method request to $action with Data: $data");
 
           // Sync requests with timeout
           if (data is Map<String, dynamic> && data["timeout"] is String) {
@@ -92,7 +92,7 @@ class FakeMatrixApi extends MockClient {
             "origin_server_ts": 1432735824653,
             "unsigned": {"age": 1234}
           },
-      "/client/r0/rooms/!1234:example.com/messages?from=1234&dir=b&limit=100":
+      "/client/r0/rooms/!1234:example.com/messages?from=1234&dir=b&limit=100&filter=%7B%22room%22:%7B%22state%22:%7B%22lazy_load_members%22:true%7D%7D%7D":
           (var req) => {
                 "start": "t47429-4392820_219380_26003_2265",
                 "end": "t47409-4357353_219380_26003_2265",
