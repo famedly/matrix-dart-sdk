@@ -126,7 +126,7 @@ class Room {
 
   Event get lastEvent {
     ChatTime lastTime = ChatTime(0);
-    Event lastEvent = Event();
+    Event lastEvent = null;
     states.forEach((String key, RoomState state) {
       if (state.time > lastTime) {
         lastTime = state.time;
