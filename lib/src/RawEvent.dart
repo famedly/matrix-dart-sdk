@@ -66,8 +66,12 @@ class RawEvent {
       this.room});
 
   static Map<String, dynamic> getMapFromPayload(dynamic payload) {
-    if (payload == null || payload == "") return {};
-    if (payload is String) return json.decode(payload);
+    if (payload is String)
+      try {
+        return json.decode(payload);
+      } catch (e) {
+        return {};
+      }
     if (payload is Map<String, dynamic>) return payload;
     return {};
   }
