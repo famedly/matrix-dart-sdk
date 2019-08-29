@@ -124,7 +124,14 @@ class Room {
   /// Must be one of [all, mention]
   String notificationSettings;
 
-  Event get lastEvent => states["m.room.message"]?.timelineEvent;
+  Event get lastEvent {
+    ChatTime lastTime = ChatTime(0);
+    Event lastEvent = null;
+    states.forEach((String key, RoomState value) {
+      if (value.time > lastTime) lastEvent = value.timelineEvent;
+    });
+    return lastEvent;
+  }
 
   /// Your current client instance.
   final Client client;
