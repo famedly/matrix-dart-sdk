@@ -33,7 +33,6 @@ export 'package:famedlysdk/src/utils/MxContent.dart';
 export 'package:famedlysdk/src/Client.dart';
 export 'package:famedlysdk/src/Connection.dart';
 export 'package:famedlysdk/src/Event.dart';
-export 'package:famedlysdk/src/RawEvent.dart';
 export 'package:famedlysdk/src/Room.dart';
 export 'package:famedlysdk/src/RoomList.dart';
 export 'package:famedlysdk/src/RoomState.dart';

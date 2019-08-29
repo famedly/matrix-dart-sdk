@@ -20,13 +20,41 @@
  * You should have received a copy of the GNU General Public License
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+import 'dart:convert';
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
-
 import './Room.dart';
-import './RawEvent.dart';
 
-class RoomState extends RawEvent {
+class RoomState {
+  /// The Matrix ID for this event in the format '$localpart:server.abc'. Please not
+  /// that account data, presence and other events may not have an eventId.
+  final String eventId;
+
+  /// The json payload of the content. The content highly depends on the type.
+  final Map<String, dynamic> content;
+
+  /// The type String of this event. For example 'm.room.message'.
+  final String typeKey;
+
+  /// The ID of the room this event belongs to.
+  final String roomId;
+
+  /// The user who has sent this event if it is not a global account data event.
+  final String senderId;
+
+  User get sender => room.states[senderId]?.asUser ?? User(senderId);
+
+  /// The time this event has received at the server. May be null for events like
+  /// account data.
+  final ChatTime time;
+
+  /// Optional additional content for this event.
+  final Map<String, dynamic> unsigned;
+
+  /// The room this event belongs to. May be null.
+  final Room room;
+
   /// Optional. The previous content for this state.
   /// This will be present only for state events appearing in the timeline.
   /// If this is not a state event, or there is no previous content, this key will be null.
@@ -36,37 +64,37 @@ class RoomState extends RawEvent {
   /// the overwriting semantics for this piece of room state.
   final String stateKey;
 
-  User get stateKeyUser => room.states[stateKey]?.asUser ?? User(stateKey);
-
   RoomState(
-      {this.prevContent,
+      {this.content,
+      this.typeKey,
+      this.eventId,
+      this.roomId,
+      this.senderId,
+      this.time,
+      this.unsigned,
+      this.prevContent,
       this.stateKey,
-      dynamic content,
-      String typeKey,
-      String eventId,
-      String roomId,
-      String senderId,
-      ChatTime time,
-      dynamic unsigned,
-      Room room})
-      : super(
-            content: content,
-            typeKey: typeKey,
-            eventId: eventId,
-            roomId: roomId,
-            senderId: senderId,
-            time: time,
-            unsigned: unsigned,
-            room: room);
+      this.room});
+
+  static Map<String, dynamic> getMapFromPayload(dynamic payload) {
+    if (payload is String)
+      try {
+        return json.decode(payload);
+      } catch (e) {
+        return {};
+      }
+    if (payload is Map<String, dynamic>) return payload;
+    return {};
+  }
 
   /// Get a State event from a table row or from the event stream.
   factory RoomState.fromJson(Map<String, dynamic> jsonPayload, Room room) {
     final Map<String, dynamic> content =
-        RawEvent.getMapFromPayload(jsonPayload['content']);
+        RoomState.getMapFromPayload(jsonPayload['content']);
     final Map<String, dynamic> unsigned =
-        RawEvent.getMapFromPayload(jsonPayload['unsigned']);
+        RoomState.getMapFromPayload(jsonPayload['unsigned']);
     final Map<String, dynamic> prevContent =
-        RawEvent.getMapFromPayload(jsonPayload['prev_content']);
+        RoomState.getMapFromPayload(jsonPayload['prev_content']);
     return RoomState(
         stateKey: jsonPayload['state_key'],
         prevContent: prevContent,
@@ -107,4 +135,79 @@ class RoomState extends RawEvent {
       time: time,
       unsigned: unsigned,
       room: room);
+
+  /// Get the real type.
+  EventTypes get type {
+    switch (typeKey) {
+      case "m.room.avatar":
+        return EventTypes.RoomAvatar;
+      case "m.room.name":
+        return EventTypes.RoomName;
+      case "m.room.topic":
+        return EventTypes.RoomTopic;
+      case "m.room.Aliases":
+        return EventTypes.RoomAliases;
+      case "m.room.canonical_alias":
+        return EventTypes.RoomCanonicalAlias;
+      case "m.room.create":
+        return EventTypes.RoomCreate;
+      case "m.room.join_rules":
+        return EventTypes.RoomJoinRules;
+      case "m.room.member":
+        return EventTypes.RoomMember;
+      case "m.room.power_levels":
+        return EventTypes.RoomPowerLevels;
+      case "m.room.guest_access":
+        return EventTypes.GuestAccess;
+      case "m.room.history_visibility":
+        return EventTypes.HistoryVisibility;
+      case "m.room.message":
+        switch (content["msgtype"] ?? "m.text") {
+          case "m.text":
+            if (content.containsKey("m.relates_to")) {
+              return EventTypes.Reply;
+            }
+            return EventTypes.Text;
+          case "m.notice":
+            return EventTypes.Notice;
+          case "m.emote":
+            return EventTypes.Emote;
+          case "m.image":
+            return EventTypes.Image;
+          case "m.video":
+            return EventTypes.Video;
+          case "m.audio":
+            return EventTypes.Audio;
+          case "m.file":
+            return EventTypes.File;
+          case "m.location":
+            return EventTypes.Location;
+        }
+    }
+    return EventTypes.Unknown;
+  }
+}
+
+enum EventTypes {
+  Text,
+  Emote,
+  Notice,
+  Image,
+  Video,
+  Audio,
+  File,
+  Location,
+  Reply,
+  RoomAliases,
+  RoomCanonicalAlias,
+  RoomCreate,
+  RoomJoinRules,
+  RoomMember,
+  RoomPowerLevels,
+  RoomName,
+  RoomTopic,
+  RoomAvatar,
+  GuestAccess,
+  HistoryVisibility,
+  Unknown,
 }

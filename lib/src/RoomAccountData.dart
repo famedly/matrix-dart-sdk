@@ -23,7 +23,7 @@
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/AccountData.dart';
-import 'package:famedlysdk/src/RawEvent.dart';
+import 'package:famedlysdk/src/RoomState.dart';
 
 class RoomAccountData extends AccountData {
   /// The user who has sent this event if it is not a global account data event.
@@ -39,7 +39,7 @@ class RoomAccountData extends AccountData {
   factory RoomAccountData.fromJson(
       Map<String, dynamic> jsonPayload, Room room) {
     final Map<String, dynamic> content =
-        RawEvent.getMapFromPayload(jsonPayload['content']);
+        RoomState.getMapFromPayload(jsonPayload['content']);
     return RoomAccountData(
         content: content,
         typeKey: jsonPayload['type'],

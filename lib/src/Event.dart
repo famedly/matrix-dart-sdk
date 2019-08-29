@@ -26,7 +26,6 @@ import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 
 import './Room.dart';
-import './RawEvent.dart';
 
 /// Defines a timeline event for a room.
 class Event extends RoomState {
@@ -66,11 +65,11 @@ class Event extends RoomState {
   /// Get a State event from a table row or from the event stream.
   factory Event.fromJson(Map<String, dynamic> jsonPayload, Room room) {
     final Map<String, dynamic> content =
-        RawEvent.getMapFromPayload(jsonPayload['content']);
+        RoomState.getMapFromPayload(jsonPayload['content']);
     final Map<String, dynamic> unsigned =
-        RawEvent.getMapFromPayload(jsonPayload['unsigned']);
+        RoomState.getMapFromPayload(jsonPayload['unsigned']);
     final Map<String, dynamic> prevContent =
-        RawEvent.getMapFromPayload(jsonPayload['prev_content']);
+        RoomState.getMapFromPayload(jsonPayload['prev_content']);
     return Event(
         status: jsonPayload['status'] ?? defaultStatus,
         content: content,
