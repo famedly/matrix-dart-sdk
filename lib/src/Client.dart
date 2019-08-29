@@ -123,12 +123,14 @@ class Client {
 
   /// Returns the (first) room ID from the store which is a private chat with the user [userId].
   /// Returns null if there is none.
-  String getDirectChatFromUserId(String userId) =>
-      accountData["m.direct"] != null &&
-              accountData["m.direct"].content[userId] is List<dynamic> &&
-              accountData["m.direct"].content[userId].length > 0
-          ? accountData["m.direct"].content[userId][0]
-          : null;
+  String getDirectChatFromUserId(String userId) => accountData["m.direct"] !=
+              null &&
+          accountData["m.direct"].content[userId] is List<dynamic> &&
+          accountData["m.direct"].content[userId].length > 0 &&
+          roomList.getRoomById(accountData["m.direct"].content[userId][0]) !=
+              null
+      ? accountData["m.direct"].content[userId][0]
+      : null;
 
   /// Checks the supported versions of the Matrix protocol and the supported
   /// login types. Returns false if the server is not compatible with the

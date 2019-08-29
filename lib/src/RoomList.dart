@@ -78,6 +78,13 @@ class RoomList {
     return null;
   }
 
+  Room getRoomById(String id) {
+    for (int j = 0; j < rooms.length; j++) {
+      if (rooms[j].id == id) return rooms[j];
+    }
+    return null;
+  }
+
   void _handleRoomUpdate(RoomUpdate chatUpdate) {
     // Update the chat list item.
     // Search the room in the rooms
