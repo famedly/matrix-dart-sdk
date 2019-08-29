@@ -363,7 +363,7 @@ class Room {
         client.connection.onEvent.add(eventUpdate);
         client.store.storeEventUpdate(eventUpdate);
         client.store.txn.rawUpdate(
-            "UPDATE Rooms SET prev_batch=? WHERE id=?", [resp["end"], id]);
+            "UPDATE Rooms SET prev_batch=? WHERE room_id=?", [resp["end"], id]);
       }
       return;
     });
