@@ -36,7 +36,7 @@ class RoomState extends RawEvent {
   /// the overwriting semantics for this piece of room state.
   final String stateKey;
 
-  User get stateKeyUser => room.states[stateKey] ?? User(stateKey);
+  User get stateKeyUser => room.states[stateKey].asUser ?? User(stateKey);
 
   RoomState(
       {this.prevContent,
