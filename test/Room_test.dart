@@ -225,6 +225,21 @@ void main() {
       expect(resp, {});
     });
 
+    test("getParticipants", () async {
+      room.states["@alice:test.abc"] = RoomState(
+          senderId: "@alice:test.abc",
+          typeKey: "m.room.member",
+          roomId: room.id,
+          room: room,
+          eventId: "12345",
+          time: ChatTime.now(),
+          content: {"displayname": "alice"},
+          stateKey: "@alice:test.abc");
+      final List<User> userList = room.getParticipants();
+      expect(userList.length, 1);
+      expect(userList[0].displayName, "alice");
+    });
+
     test("addToDirectChat", () async {
       final dynamic resp = await room.addToDirectChat("Testname");
       expect(resp, {});

@@ -515,6 +515,17 @@ class Room {
     return await client.store.loadParticipants(this);
   }
 
+  /// Returns all participants for this room. With lazy loading this
+  /// list may not be complete. User [requestParticipants] in this
+  /// case.
+  List<User> getParticipants() {
+    List<User> userList = [];
+    for (var entry in states.entries)
+      if (entry.value.type == EventTypes.RoomMember)
+        userList.add(entry.value.asUser);
+    return userList;
+  }
+
   /// Request the full list of participants from the server. The local list
   /// from the store is not complete if the client uses lazy loading.
   Future<List<User>> requestParticipants() async {
