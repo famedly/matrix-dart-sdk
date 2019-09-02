@@ -23,6 +23,8 @@
 
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Event.dart';
+import 'package:famedlysdk/src/RoomAccountData.dart';
+import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
@@ -40,15 +42,6 @@ class Room {
   /// Membership status of the user for this room.
   Membership membership;
 
-  /// The name of the room if set by a participant.
-  String name;
-
-  /// The topic of the room if set by a participant.
-  String topic;
-
-  /// The avatar of the room if set by a participant.
-  MxContent avatar = MxContent("");
-
   /// The count of unread notifications.
   int notificationCount;
 
@@ -57,7 +50,13 @@ class Room {
 
   String prev_batch;
 
-  String draft;
+  List<String> mHeroes = [];
+  int mJoinedMemberCount;
+  int mInvitedMemberCount;
+
+  Map<String, RoomState> states = {};
+
+  Map<String, RoomAccountData> roomAccountData = {};
 
   /// Time when the user has last read the chat.
   ChatTime unread;
@@ -65,69 +64,97 @@ class Room {
   /// ID of the fully read marker event.
   String fullyRead;
 
-  /// The address in the format: #roomname:homeserver.org.
-  String canonicalAlias;
+  /// The name of the room if set by a participant.
+  String get name {
+    if (states["m.room.name"] != null &&
+        !states["m.room.name"].content["name"].isEmpty)
+      return states["m.room.name"].content["name"];
+    if (canonicalAlias != null && !canonicalAlias.isEmpty)
+      return canonicalAlias.substring(1, canonicalAlias.length).split(":")[0];
+    if (mHeroes != null && mHeroes.length > 0) {
+      String displayname = "";
+      for (int i = 0; i < mHeroes.length; i++) {
+        User hero = states[mHeroes[i]] != null
+            ? states[mHeroes[i]].asUser
+            : User(mHeroes[i]);
+        displayname += hero.calcDisplayname() + ", ";
+      }
+      return displayname.substring(0, displayname.length - 2);
+    }
+    return "Empty chat";
+  }
 
-  /// If this room is a direct chat, this is the matrix ID of the user
-  String directChatMatrixID;
+  /// The topic of the room if set by a participant.
+  String get topic => states["m.room.topic"] != null
+      ? states["m.room.topic"].content["topic"]
+      : "";
+
+  /// The avatar of the room if set by a participant.
+  MxContent get avatar {
+    if (states["m.room.avatar"] != null)
+      return MxContent(states["m.room.avatar"].content["url"]);
+    if (mHeroes != null && mHeroes.length == 1 && states[mHeroes[0]] != null)
+      return states[mHeroes[0]].asUser.avatarUrl;
+    return MxContent("");
+  }
+
+  /// The address in the format: #roomname:homeserver.org.
+  String get canonicalAlias => states["m.room.canonical_alias"] != null
+      ? states["m.room.canonical_alias"].content["alias"]
+      : "";
+
+  /// If this room is a direct chat, this is the matrix ID of the user.
+  /// Returns null otherwise.
+  String get directChatMatrixID {
+    String returnUserId = null;
+    if (client.directChats is Map<String, dynamic>) {
+      client.directChats.forEach((String userId, dynamic roomIds) {
+        if (roomIds is List<dynamic>) {
+          for (int i = 0; i < roomIds.length; i++)
+            if (roomIds[i] == this.id) {
+              returnUserId = userId;
+              break;
+            }
+        }
+      });
+    }
+    return returnUserId;
+  }
+
+  /// Wheither this is a direct chat or not
+  bool get isDirectChat => directChatMatrixID != null;
 
   /// Must be one of [all, mention]
   String notificationSettings;
 
-  /// Are guest users allowed?
-  String guestAccess;
-
-  /// Who can see the history of this room?
-  String historyVisibility;
-
-  /// Who is allowed to join this room?
-  String joinRules;
-
-  /// The needed power levels for all actions.
-  Map<String, int> powerLevels = {};
-
-  List<String> mHeroes;
-  int mJoinedMemberCount;
-  int mInvitedMemberCount;
-
-  Event lastEvent;
+  Event get lastEvent {
+    ChatTime lastTime = ChatTime(0);
+    Event lastEvent = null;
+    states.forEach((String key, RoomState state) {
+      if (state.time != null && state.time > lastTime) {
+        lastTime = state.time;
+        lastEvent = state.timelineEvent;
+      }
+    });
+    return lastEvent;
+  }
 
   /// Your current client instance.
   final Client client;
 
-  @Deprecated("Rooms.roomID is deprecated! Use Rooms.id instead!")
-  String get roomID => this.id;
-
-  @Deprecated("Rooms.matrix is deprecated! Use Rooms.client instead!")
-  Client get matrix => this.client;
-
-  @Deprecated("Rooms.status is deprecated! Use Rooms.membership instead!")
-  String get status => this.membership.toString().split('.').last;
-
   Room({
     this.id,
-    this.membership,
-    this.name,
-    this.topic,
-    this.avatar,
-    this.notificationCount,
-    this.highlightCount,
+    this.membership = Membership.join,
+    this.notificationCount = 0,
+    this.highlightCount = 0,
     this.prev_batch = "",
-    this.draft,
-    this.unread,
-    this.fullyRead,
-    this.canonicalAlias,
-    this.directChatMatrixID,
-    this.notificationSettings,
-    this.guestAccess,
-    this.historyVisibility,
-    this.joinRules,
-    this.powerLevels,
-    this.lastEvent,
     this.client,
-    this.mHeroes,
-    this.mInvitedMemberCount,
-    this.mJoinedMemberCount,
+    this.notificationSettings,
+    this.mHeroes = const [],
+    this.mInvitedMemberCount = 0,
+    this.mJoinedMemberCount = 0,
+    this.states = const {},
+    this.roomAccountData = const {},
   });
 
   /// Calculates the displayname. First checks if there is a name, then checks for a canonical alias and
@@ -297,9 +324,10 @@ class Room {
     return res;
   }
 
-  /// Call the Matrix API to unban a banned user from this room.
+  /// Set the power level of the user with the [userID] to the value [power].
   Future<dynamic> setPower(String userID, int power) async {
-    Map<String, int> powerMap = await client.store.getPowerLevels(id);
+    if (states["m.room.power_levels"] == null) return null;
+    Map<String, int> powerMap = states["m.room.power_levels"].content["users"];
     powerMap[userID] = power;
 
     dynamic res = await client.connection.jsonRequest(
@@ -325,7 +353,7 @@ class Room {
     final dynamic resp = await client.connection.jsonRequest(
         type: HTTPType.GET,
         action:
-            "/client/r0/rooms/$id/messages?from=${prev_batch}&dir=b&limit=$historyCount");
+            "/client/r0/rooms/$id/messages?from=${prev_batch}&dir=b&limit=$historyCount&filter=${Connection.syncFilters}");
 
     if (resp is ErrorResponse) return;
 
@@ -335,6 +363,33 @@ class Room {
     if (!(resp["chunk"] is List<dynamic> &&
         resp["chunk"].length > 0 &&
         resp["end"] is String)) return;
+
+    if (resp["state"] is List<dynamic>) {
+      client.store?.transaction(() {
+        for (int i = 0; i < resp["state"].length; i++) {
+          EventUpdate eventUpdate = EventUpdate(
+            type: "state",
+            roomID: id,
+            eventType: resp["state"][i]["type"],
+            content: resp["state"][i],
+          );
+          client.connection.onEvent.add(eventUpdate);
+          client.store.storeEventUpdate(eventUpdate);
+        }
+        return;
+      });
+      if (client.store == null) {
+        for (int i = 0; i < resp["state"].length; i++) {
+          EventUpdate eventUpdate = EventUpdate(
+            type: "state",
+            roomID: id,
+            eventType: resp["state"][i]["type"],
+            content: resp["state"][i],
+          );
+          client.connection.onEvent.add(eventUpdate);
+        }
+      }
+    }
 
     List<dynamic> history = resp["chunk"];
     client.store?.transaction(() {
@@ -348,7 +403,7 @@ class Room {
         client.connection.onEvent.add(eventUpdate);
         client.store.storeEventUpdate(eventUpdate);
         client.store.txn.rawUpdate(
-            "UPDATE Rooms SET prev_batch=? WHERE id=?", [resp["end"], id]);
+            "UPDATE Rooms SET prev_batch=? WHERE room_id=?", [resp["end"], id]);
       }
       return;
     });
@@ -367,8 +422,7 @@ class Room {
 
   /// Sets this room as a direct chat for this user.
   Future<dynamic> addToDirectChat(String userID) async {
-    Map<String, List<String>> directChats =
-        await client.store.getAccountDataDirectChats();
+    Map<String, dynamic> directChats = client.directChats;
     if (directChats.containsKey(userID)) if (!directChats[userID].contains(id))
       directChats[userID].add(id);
     else
@@ -395,73 +449,58 @@ class Room {
     return resp;
   }
 
-  /// Returns a Room from a json String which comes normally from the store.
+  /// Returns a Room from a json String which comes normally from the store. If the
+  /// state are also given, the method will await them.
   static Future<Room> getRoomFromTableRow(
-      Map<String, dynamic> row, Client matrix) async {
-    String avatarUrl = row["avatar_url"];
-    if (avatarUrl == "")
-      avatarUrl = await matrix.store?.getAvatarFromSingleChat(row["id"]) ?? "";
-
-    return Room(
-      id: row["id"],
-      name: row["topic"],
+      Map<String, dynamic> row, Client matrix,
+      {Future<List<Map<String, dynamic>>> states,
+      Future<List<Map<String, dynamic>>> roomAccountData}) async {
+    Room newRoom = Room(
+      id: row["room_id"],
       membership: Membership.values
           .firstWhere((e) => e.toString() == 'Membership.' + row["membership"]),
-      topic: row["description"],
-      avatar: MxContent(avatarUrl),
       notificationCount: row["notification_count"],
       highlightCount: row["highlight_count"],
-      unread: ChatTime(row["unread"]),
-      fullyRead: row["fully_read"],
       notificationSettings: row["notification_settings"],
-      directChatMatrixID: row["direct_chat_matrix_id"],
-      draft: row["draft"],
       prev_batch: row["prev_batch"],
-      guestAccess: row["guest_access"],
-      historyVisibility: row["history_visibility"],
-      joinRules: row["join_rules"],
-      canonicalAlias: row["canonical_alias"],
       mInvitedMemberCount: row["invited_member_count"],
       mJoinedMemberCount: row["joined_member_count"],
       mHeroes: row["heroes"]?.split(",") ?? [],
-      powerLevels: {
-        "power_events_default": row["power_events_default"],
-        "power_state_default": row["power_state_default"],
-        "power_redact": row["power_redact"],
-        "power_invite": row["power_invite"],
-        "power_ban": row["power_ban"],
-        "power_kick": row["power_kick"],
-        "power_user_default": row["power_user_default"],
-        "power_event_avatar": row["power_event_avatar"],
-        "power_event_history_visibility": row["power_event_history_visibility"],
-        "power_event_canonical_alias": row["power_event_canonical_alias"],
-        "power_event_aliases": row["power_event_aliases"],
-        "power_event_name": row["power_event_name"],
-        "power_event_power_levels": row["power_event_power_levels"],
-      },
-      lastEvent: Event.fromJson(row, null),
       client: matrix,
+      states: {},
+      roomAccountData: {},
     );
-  }
 
-  @Deprecated("Use client.store.getRoomById(String id) instead!")
-  static Future<Room> getRoomById(String id, Client matrix) async {
-    Room room = await matrix.store.getRoomById(id);
-    return room;
-  }
+    Map<String, RoomState> newStates = {};
+    if (states != null) {
+      List<Map<String, dynamic>> rawStates = await states;
+      for (int i = 0; i < rawStates.length; i++) {
+        RoomState newState = RoomState.fromJson(rawStates[i], newRoom);
+        newStates[newState.key] = newState;
+      }
+      newRoom.states = newStates;
+    }
 
-  /// Load a room from the store including all room events.
-  static Future<Room> loadRoomEvents(String id, Client matrix) async {
-    Room room = await matrix.store.getRoomById(id);
-    await room.loadEvents();
-    return room;
+    Map<String, RoomAccountData> newRoomAccountData = {};
+    if (roomAccountData != null) {
+      List<Map<String, dynamic>> rawRoomAccountData = await roomAccountData;
+      for (int i = 0; i < rawRoomAccountData.length; i++) {
+        RoomAccountData newData =
+            RoomAccountData.fromJson(rawRoomAccountData[i], newRoom);
+        newRoomAccountData[newData.typeKey] = newData;
+      }
+      newRoom.roomAccountData = newRoomAccountData;
+    }
+
+    return newRoom;
   }
 
   /// Creates a timeline from the store. Returns a [Timeline] object.
   Future<Timeline> getTimeline(
       {onTimelineUpdateCallback onUpdate,
       onTimelineInsertCallback onInsert}) async {
-    List<Event> events = await loadEvents();
+    List<Event> events = [];
+    if (client.store != null) events = await client.store.getEventList(this);
     return Timeline(
       room: this,
       events: events,
@@ -470,15 +509,21 @@ class Room {
     );
   }
 
-  /// Load all events for a given room from the store. This includes all
-  /// senders of those events, who will be added to the participants list.
-  Future<List<Event>> loadEvents() async {
-    return await client.store.getEventList(this);
-  }
-
   /// Load all participants for a given room from the store.
+  @deprecated
   Future<List<User>> loadParticipants() async {
     return await client.store.loadParticipants(this);
+  }
+
+  /// Returns all participants for this room. With lazy loading this
+  /// list may not be complete. User [requestParticipants] in this
+  /// case.
+  List<User> getParticipants() {
+    List<User> userList = [];
+    for (var entry in states.entries)
+      if (entry.value.type == EventTypes.RoomMember)
+        userList.add(entry.value.asUser);
+    return userList;
   }
 
   /// Request the full list of participants from the server. The local list
@@ -492,14 +537,7 @@ class Room {
       return participants;
 
     for (num i = 0; i < res["chunk"].length; i++) {
-      User newUser = User(res["chunk"][i]["state_key"],
-          displayName: res["chunk"][i]["content"]["displayname"] ?? "",
-          membership: Membership.values.firstWhere((e) =>
-              e.toString() ==
-                  'Membership.' + res["chunk"][i]["content"]["membership"] ??
-              ""),
-          avatarUrl: MxContent(res["chunk"][i]["content"]["avatar_url"] ?? ""),
-          room: this);
+      User newUser = RoomState.fromJson(res["chunk"][i], this).asUser;
       if (newUser.membership != Membership.leave) participants.add(newUser);
     }
 
@@ -507,18 +545,14 @@ class Room {
   }
 
   Future<User> getUserByMXID(String mxID) async {
-    if (client.store != null) {
-      final User storeEvent =
-          await client.store.getUser(matrixID: mxID, room: this);
-      if (storeEvent != null) return storeEvent;
-    }
+    if (states[mxID] != null) return states[mxID].asUser;
     final dynamic resp = await client.connection.jsonRequest(
         type: HTTPType.GET,
         action: "/client/r0/rooms/$id/state/m.room.member/$mxID");
     if (resp is ErrorResponse) return null;
     // Somehow we miss the mxid in the response and only get the content of the event.
     resp["matrix_id"] = mxID;
-    return User.fromJson(resp, this);
+    return RoomState.fromJson(resp, this).asUser;
   }
 
   /// Searches for the event in the store. If it isn't found, try to request it
@@ -531,7 +565,30 @@ class Room {
     final dynamic resp = await client.connection.jsonRequest(
         type: HTTPType.GET, action: "/client/r0/rooms/$id/event/$eventID");
     if (resp is ErrorResponse) return null;
-    return Event.fromJson(resp, this,
-        senderUser: (await getUserByMXID(resp["sender"])));
+    return Event.fromJson(resp, this);
+  }
+
+  /// Returns the user's own power level.
+  int getPowerLevelByUserId(String userId) {
+    int powerLevel = 0;
+    RoomState powerLevelState = states["m.room.power_levels"];
+    if (powerLevelState == null) return powerLevel;
+    if (powerLevelState.content["users_default"] is int)
+      powerLevel = powerLevelState.content["users_default"];
+    if (powerLevelState.content["users"] is Map<String, dynamic> &&
+        powerLevelState.content["users"][userId] != null)
+      powerLevel = powerLevelState.content["users"][userId];
+    return powerLevel;
+  }
+
+  /// Returns the user's own power level.
+  int get ownPowerLevel => getPowerLevelByUserId(client.userID);
+
+  /// Returns the power levels from all users for this room or null if not given.
+  Map<String, int> get powerLevels {
+    RoomState powerLevelState = states["m.room.power_levels"];
+    if (powerLevelState.content["users"] is Map<String, int>)
+      return powerLevelState.content["users"];
+    return null;
   }
 }

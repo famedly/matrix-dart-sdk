@@ -25,6 +25,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 
+import 'package:famedlysdk/src/Room.dart';
+import 'package:famedlysdk/src/RoomList.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -50,9 +52,9 @@ class Connection {
     }));
   }
 
-  String get _syncFilters => '{"room":{"state":{"lazy_load_members":true}}}';
+  static String syncFilters = '{"room":{"state":{"lazy_load_members":true}}}';
 
-  String get _firstSyncFilters =>
+  static String firstSyncFilters =
       '{"room":{"include_leave":true,"state":{"lazy_load_members":true}}}';
 
   /// Handles the connection to the Matrix Homeserver. You can change this to a
@@ -147,12 +149,33 @@ class Connection {
     client.lazyLoadMembers = newLazyLoadMembers;
     client.prevBatch = newPrevBatch;
 
-    client.store?.storeClient();
+    List<Room> rooms = [];
+    if (client.store != null) {
+      client.store.storeClient();
+      rooms = await client.store
+          .getRoomList(onlyLeft: false, onlyGroups: false, onlyDirect: false);
+      client.accountData = await client.store.getAccountData();
+      client.presences = await client.store.getPresences();
+    }
+
+    client.roomList = RoomList(
+        client: client,
+        onlyLeft: false,
+        onlyDirect: false,
+        onlyGroups: false,
+        onUpdate: null,
+        onInsert: null,
+        onRemove: null,
+        rooms: rooms);
+
+    _userEventSub ??= onUserEvent.stream.listen(client.handleUserUpdate);
 
     onLoginStateChanged.add(LoginState.logged);
 
     _sync();
   }
+
+  StreamSubscription _userEventSub;
 
   /// Resets all settings and stops the synchronisation.
   void clear() {
@@ -261,10 +284,10 @@ class Connection {
   Future<void> _sync() async {
     if (client.isLogged() == false) return;
 
-    String action = "/client/r0/sync?filter=$_firstSyncFilters";
+    String action = "/client/r0/sync?filter=$firstSyncFilters";
 
     if (client.prevBatch != null) {
-      action = "/client/r0/sync?filter=$_syncFilters";
+      action = "/client/r0/sync?filter=$syncFilters";
       action += "&timeout=30000";
       action += "&since=${client.prevBatch}";
     }
@@ -450,6 +473,8 @@ class Connection {
   }
 }
 
+typedef _FutureVoidCallback = Future<void> Function();
+
 class _LifecycleEventHandler extends WidgetsBindingObserver {
   _LifecycleEventHandler({this.resumeCallBack, this.suspendingCallBack});
 
@@ -470,7 +495,5 @@ class _LifecycleEventHandler extends WidgetsBindingObserver {
     }
   }
 }
-
-typedef _FutureVoidCallback = Future<void> Function();
 
 enum LoginState { logged, loggedOut }

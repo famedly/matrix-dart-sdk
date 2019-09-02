@@ -41,7 +41,12 @@ void main() {
     client.connection.httpClient = FakeMatrixApi();
     client.homeserver = "https://fakeServer.notExisting";
 
-    Room room = Room(id: roomID, client: client, prev_batch: "1234");
+    Room room = Room(
+        id: roomID,
+        client: client,
+        prev_batch: "1234",
+        states: {},
+        roomAccountData: {});
     Timeline timeline = Timeline(
         room: room,
         events: [],
@@ -87,10 +92,9 @@ void main() {
       expect(insertList, [0, 0]);
       expect(insertList.length, timeline.events.length);
       expect(timeline.events.length, 2);
-      expect(timeline.events[0].id, "1");
+      expect(timeline.events[0].eventId, "1");
       expect(timeline.events[0].sender.id, "@alice:example.com");
       expect(timeline.events[0].time.toTimeStamp(), testTimeStamp);
-      expect(timeline.events[0].environment, "m.room.message");
       expect(timeline.events[0].getBody(), "Testcase");
       expect(timeline.events[0].time > timeline.events[1].time, true);
     });
@@ -103,7 +107,7 @@ void main() {
       expect(updateCount, 4);
       expect(insertList, [0, 0, 0]);
       expect(insertList.length, timeline.events.length);
-      expect(timeline.events[0].id, "42");
+      expect(timeline.events[0].eventId, "42");
       expect(timeline.events[0].status, 1);
 
       client.connection.onEvent.add(EventUpdate(
@@ -125,7 +129,7 @@ void main() {
       expect(updateCount, 5);
       expect(insertList, [0, 0, 0]);
       expect(insertList.length, timeline.events.length);
-      expect(timeline.events[0].id, "42");
+      expect(timeline.events[0].eventId, "42");
       expect(timeline.events[0].status, 2);
     });
 
@@ -189,9 +193,9 @@ void main() {
 
       expect(updateCount, 19);
       expect(timeline.events.length, 9);
-      expect(timeline.events[6].id, "1143273582443PhrSn:example.org");
-      expect(timeline.events[7].id, "2143273582443PhrSn:example.org");
-      expect(timeline.events[8].id, "3143273582443PhrSn:example.org");
+      expect(timeline.events[6].eventId, "1143273582443PhrSn:example.org");
+      expect(timeline.events[7].eventId, "2143273582443PhrSn:example.org");
+      expect(timeline.events[8].eventId, "3143273582443PhrSn:example.org");
       expect(room.prev_batch, "t47409-4357353_219380_26003_2265");
     });
   });

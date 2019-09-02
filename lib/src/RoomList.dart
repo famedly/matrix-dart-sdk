@@ -24,14 +24,17 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:famedlysdk/src/RoomState.dart';
+
 import 'Client.dart';
-import 'Event.dart';
 import 'Room.dart';
 import 'User.dart';
 import 'sync/EventUpdate.dart';
 import 'sync/RoomUpdate.dart';
-import 'utils/ChatTime.dart';
-import 'utils/MxContent.dart';
+
+typedef onRoomListUpdateCallback = void Function();
+typedef onRoomListInsertCallback = void Function(int insertID);
+typedef onRoomListRemoveCallback = void Function(int insertID);
 
 /// Represents a list of rooms for this client, which will automatically update
 /// itself and call the [onUpdate], [onInsert] and [onDelete] callbacks. To get
@@ -69,6 +72,21 @@ class RoomList {
       this.onlyGroups = false}) {
     eventSub ??= client.connection.onEvent.stream.listen(_handleEventUpdate);
     roomSub ??= client.connection.onRoomUpdate.stream.listen(_handleRoomUpdate);
+    sort();
+  }
+
+  Room getRoomByAlias(String alias) {
+    for (int i = 0; i < rooms.length; i++) {
+      if (rooms[i].canonicalAlias == alias) return rooms[i];
+    }
+    return null;
+  }
+
+  Room getRoomById(String id) {
+    for (int j = 0; j < rooms.length; j++) {
+      if (rooms[j].id == id) return rooms[j];
+    }
+    return null;
   }
 
   void _handleRoomUpdate(RoomUpdate chatUpdate) {
@@ -87,7 +105,6 @@ class RoomList {
       // Add the new chat to the list
       Room newRoom = Room(
         id: chatUpdate.id,
-        name: "",
         membership: chatUpdate.membership,
         prev_batch: chatUpdate.prev_batch,
         highlightCount: chatUpdate.highlight_count,
@@ -95,6 +112,9 @@ class RoomList {
         mHeroes: chatUpdate.summary?.mHeroes,
         mJoinedMemberCount: chatUpdate.summary?.mJoinedMemberCount,
         mInvitedMemberCount: chatUpdate.summary?.mInvitedMemberCount,
+        states: {},
+        roomAccountData: {},
+        client: client,
       );
       rooms.insert(position, newRoom);
       if (onInsert != null) onInsert(position);
@@ -125,11 +145,7 @@ class RoomList {
   }
 
   void _handleEventUpdate(EventUpdate eventUpdate) {
-    // Is the event necessary for the chat list? If not, then return
-    if (!(eventUpdate.type == "timeline" ||
-        eventUpdate.eventType == "m.room.avatar" ||
-        eventUpdate.eventType == "m.room.name")) return;
-
+    if (eventUpdate.type != "timeline" && eventUpdate.type != "state") return;
     // Search the room in the rooms
     num j = 0;
     for (j = 0; j < rooms.length; j++) {
@@ -138,44 +154,20 @@ class RoomList {
     final bool found = (j < rooms.length && rooms[j].id == eventUpdate.roomID);
     if (!found) return;
 
-    // Is this an old timeline event? Then stop here...
-    /*if (eventUpdate.type == "timeline" &&
-        ChatTime(eventUpdate.content["origin_server_ts"]) <=
-            rooms[j].timeCreated) return;*/
-
-    if (eventUpdate.type == "timeline") {
-      User stateKey = null;
-      if (eventUpdate.content["state_key"] is String)
-        stateKey = User(eventUpdate.content["state_key"]);
-      // Update the last message preview
-      rooms[j].lastEvent = Event(
-        eventUpdate.content["id"],
-        User(eventUpdate.content["sender"]),
-        ChatTime(eventUpdate.content["origin_server_ts"]),
-        room: rooms[j],
-        stateKey: stateKey,
-        content: eventUpdate.content["content"],
-        environment: eventUpdate.eventType,
-        status: 2,
-      );
-    }
-    if (eventUpdate.eventType == "m.room.name") {
-      // Update the room name
-      rooms[j].name = eventUpdate.content["content"]["name"];
-    } else if (eventUpdate.eventType == "m.room.avatar") {
-      // Update the room avatar
-      rooms[j].avatar = MxContent(eventUpdate.content["content"]["url"]);
-    }
+    RoomState stateEvent = RoomState.fromJson(eventUpdate.content, rooms[j]);
+    if (rooms[j].states[stateEvent.key] != null &&
+        rooms[j].states[stateEvent.key].time > stateEvent.time) return;
+    rooms[j].states[stateEvent.key] = stateEvent;
     sortAndUpdate();
   }
 
-  sortAndUpdate() {
+  sort() {
     rooms?.sort((a, b) =>
         b.timeCreated.toTimeStamp().compareTo(a.timeCreated.toTimeStamp()));
+  }
+
+  sortAndUpdate() {
+    sort();
     if (onUpdate != null) onUpdate();
   }
 }
-
-typedef onRoomListUpdateCallback = void Function();
-typedef onRoomListInsertCallback = void Function(int insertID);
-typedef onRoomListRemoveCallback = void Function(int insertID);

@@ -22,7 +22,9 @@
  */
 
 import 'package:famedlysdk/src/Room.dart';
+import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
+import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
 
 import 'Connection.dart';
@@ -30,84 +32,79 @@ import 'Connection.dart';
 enum Membership { join, invite, leave, ban }
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
-class User {
+class User extends RoomState {
+  factory User(
+    String id, {
+    String membership,
+    String displayName,
+    String avatarUrl,
+    Room room,
+  }) {
+    Map<String, String> content = {};
+    if (membership != null) content["membership"] = membership;
+    if (displayName != null) content["displayname"] = displayName;
+    if (avatarUrl != null) content["avatar_url"] = avatarUrl;
+    return User.fromState(
+      stateKey: id,
+      content: content,
+      typeKey: "m.room.member",
+      roomId: room?.id,
+      room: room,
+      time: ChatTime.now(),
+    );
+  }
+
+  User.fromState(
+      {dynamic prevContent,
+      String stateKey,
+      dynamic content,
+      String typeKey,
+      String eventId,
+      String roomId,
+      String senderId,
+      ChatTime time,
+      dynamic unsigned,
+      Room room})
+      : super(
+            stateKey: stateKey,
+            prevContent: prevContent,
+            content: content,
+            typeKey: typeKey,
+            eventId: eventId,
+            roomId: roomId,
+            senderId: senderId,
+            time: time,
+            unsigned: unsigned,
+            room: room);
+
   /// The full qualified Matrix ID in the format @username:server.abc.
-  final String id;
+  String get id => stateKey;
 
   /// The displayname of the user if the user has set one.
-  final String displayName;
+  String get displayName => content != null ? content["displayname"] : null;
 
   /// The membership status of the user. One of:
   /// join
   /// invite
   /// leave
   /// ban
-  Membership membership;
+  Membership get membership => Membership.values.firstWhere((e) {
+        if (content["membership"] != null) {
+          return e.toString() == 'Membership.' + content['membership'];
+        }
+        return false;
+      });
 
   /// The avatar if the user has one.
-  MxContent avatarUrl;
-
-  /// The powerLevel of the user. Normally:
-  /// 0=Normal user
-  /// 50=Moderator
-  /// 100=Admin
-  int powerLevel = 0;
-
-  /// All users normally belong to a room.
-  final Room room;
-
-  @Deprecated("Use membership instead!")
-  String get status => membership.toString().split('.').last;
-
-  @Deprecated("Use ID instead!")
-  String get mxid => id;
-
-  @Deprecated("Use avatarUrl instead!")
-  MxContent get avatar_url => avatarUrl;
-
-  User(
-    String id, {
-    this.membership,
-    this.displayName,
-    this.avatarUrl,
-    this.powerLevel,
-    this.room,
-  }) : this.id = id ?? "";
+  MxContent get avatarUrl => content != null && content["avatar_url"] is String
+      ? MxContent(content["avatar_url"])
+      : MxContent("");
 
   /// Returns the displayname or the local part of the Matrix ID if the user
   /// has no displayname.
   String calcDisplayname() => (displayName == null || displayName.isEmpty)
-      ? id.replaceFirst("@", "").split(":")[0]
+      ? stateKey.replaceFirst("@", "").split(":")[0]
       : displayName;
-
-  /// Creates a new User object from a json string like a row from the database.
-  static User fromJson(Map<String, dynamic> json, Room room) {
-    return User(json['matrix_id'] ?? json['sender'],
-        displayName: json['displayname'],
-        avatarUrl: MxContent(json['avatar_url']),
-        membership: Membership.values.firstWhere((e) {
-          if (json["membership"] != null) {
-            return e.toString() == 'Membership.' + json['membership'];
-          }
-          return false;
-        }, orElse: () => null),
-        powerLevel: json['power_level'],
-        room: room);
-  }
-
-  /// Checks if the client's user has the permission to kick this user.
-  Future<bool> get canKick async {
-    final int ownPowerLevel = await room.client.store.getPowerLevel(room.id);
-    return ownPowerLevel > powerLevel &&
-        ownPowerLevel >= room.powerLevels["power_kick"];
-  }
-
-  /// Checks if the client's user has the permission to ban or unban this user.
-  Future<bool> get canBan async {
-    final int ownPowerLevel = await room.client.store.getPowerLevel(room.id);
-    return ownPowerLevel > powerLevel &&
-        ownPowerLevel >= room.powerLevels["power_ban"];
-  }
 
   /// Call the Matrix API to kick this user from this room.
   Future<dynamic> kick() async {
@@ -137,7 +134,7 @@ class User {
   /// Returns null on error.
   Future<String> startDirectChat() async {
     // Try to find an existing direct chat
-    String roomID = await room.client?.store?.getDirectChatRoomID(id);
+    String roomID = await room.client?.getDirectChatFromUserId(id);
     if (roomID != null) return roomID;
 
     // Start a new direct chat

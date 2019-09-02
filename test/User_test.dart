@@ -21,6 +21,7 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/User.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -32,30 +33,35 @@ void main() {
       final Membership membership = Membership.join;
       final String displayName = "Alice";
       final String avatarUrl = "";
-      final int powerLevel = 50;
 
       final Map<String, dynamic> jsonObj = {
-        "matrix_id": id,
-        "displayname": displayName,
-        "avatar_url": avatarUrl,
-        "membership": membership.toString().split('.').last,
-        "power_level": powerLevel,
+        "content": {
+          "membership": "join",
+          "avatar_url": avatarUrl,
+          "displayname": displayName
+        },
+        "type": "m.room.member",
+        "event_id": "143273582443PhrSn:example.org",
+        "room_id": "!636q39766251:example.com",
+        "sender": id,
+        "origin_server_ts": 1432735824653,
+        "unsigned": {"age": 1234},
+        "state_key": id
       };
 
-      User user = User.fromJson(jsonObj, null);
+      User user = RoomState.fromJson(jsonObj, null).asUser;
 
       expect(user.id, id);
       expect(user.membership, membership);
       expect(user.displayName, displayName);
       expect(user.avatarUrl.mxc, avatarUrl);
-      expect(user.powerLevel, powerLevel);
       expect(user.calcDisplayname(), displayName);
     });
 
     test("calcDisplayname", () async {
       final User user1 = User("@alice:example.com");
-      final User user2 = User("@alice:example.com", displayName: "SuperAlice");
-      final User user3 = User("@alice:example.com", displayName: "");
+      final User user2 = User("@SuperAlice:example.com");
+      final User user3 = User("@alice:example.com");
       expect(user1.calcDisplayname(), "alice");
       expect(user2.calcDisplayname(), "SuperAlice");
       expect(user3.calcDisplayname(), "alice");

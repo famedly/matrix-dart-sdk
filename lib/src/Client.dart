@@ -24,6 +24,10 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:famedlysdk/src/AccountData.dart';
+import 'package:famedlysdk/src/Presence.dart';
+import 'package:famedlysdk/src/sync/UserUpdate.dart';
+
 import 'Connection.dart';
 import 'Room.dart';
 import 'RoomList.dart';
@@ -32,6 +36,9 @@ import 'User.dart';
 import 'requests/SetPushersRequest.dart';
 import 'responses/ErrorResponse.dart';
 import 'responses/PushrulesResponse.dart';
+
+typedef AccountDataEventCB = void Function(AccountData accountData);
+typedef PresenceCB = void Function(Presence presence);
 
 /// Represents a Matrix client to communicate with a
 /// [Matrix](https://matrix.org) homeserver and is the entry point for this
@@ -85,6 +92,56 @@ class Client {
 
   /// Returns the current login state.
   bool isLogged() => accessToken != null;
+
+  /// A list of all rooms the user is participating or invited.
+  RoomList roomList;
+
+  /// Key/Value store of account data.
+  Map<String, AccountData> accountData = {};
+
+  /// Presences of users by a given matrix ID
+  Map<String, Presence> presences = {};
+
+  /// Callback will be called on account data updates.
+  AccountDataEventCB onAccountData;
+
+  /// Callback will be called on presences.
+  PresenceCB onPresence;
+
+  void handleUserUpdate(UserUpdate userUpdate) {
+    if (userUpdate.type == "account_data") {
+      AccountData newAccountData = AccountData.fromJson(userUpdate.content);
+      accountData[newAccountData.typeKey] = newAccountData;
+      if (onAccountData != null) onAccountData(newAccountData);
+    }
+    if (userUpdate.type == "presence") {
+      Presence newPresence = Presence.fromJson(userUpdate.content);
+      presences[newPresence.sender] = newPresence;
+      if (onPresence != null) onPresence(newPresence);
+    }
+  }
+
+  Map<String, dynamic> get directChats =>
+      accountData["m.direct"] != null ? accountData["m.direct"].content : {};
+
+  /// Returns the (first) room ID from the store which is a private chat with the user [userId].
+  /// Returns null if there is none.
+  String getDirectChatFromUserId(String userId) {
+    if (accountData["m.direct"] != null &&
+        accountData["m.direct"].content[userId] is List<dynamic> &&
+        accountData["m.direct"].content[userId].length > 0) {
+      if (roomList.getRoomById(accountData["m.direct"].content[userId][0]) !=
+          null) return accountData["m.direct"].content[userId][0];
+      (accountData["m.direct"].content[userId] as List<dynamic>)
+          .remove(accountData["m.direct"].content[userId][0]);
+      connection.jsonRequest(
+          type: HTTPType.PUT,
+          action: "/client/r0/user/${userID}/account_data/m.direct",
+          data: directChats);
+      return getDirectChatFromUserId(userId);
+    }
+    return null;
+  }
 
   /// Checks the supported versions of the Matrix protocol and the supported
   /// login types. Returns false if the server is not compatible with the
@@ -225,12 +282,12 @@ class Client {
   /// defined by the autojoin room feature in Synapse.
   Future<List<User>> loadFamedlyContacts() async {
     List<User> contacts = [];
-    Room contactDiscoveryRoom = await store
+    Room contactDiscoveryRoom = roomList
         .getRoomByAlias("#famedlyContactDiscovery:${userID.split(":")[1]}");
     if (contactDiscoveryRoom != null)
       contacts = await contactDiscoveryRoom.requestParticipants();
     else
-      contacts = await store.loadContacts();
+      contacts = await store?.loadContacts();
     return contacts;
   }
 

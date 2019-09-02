@@ -24,7 +24,10 @@
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/Room.dart';
+import 'package:famedlysdk/src/RoomState.dart';
+import 'package:famedlysdk/src/Timeline.dart';
 import 'package:famedlysdk/src/User.dart';
+import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'FakeMatrixApi.dart';
@@ -50,24 +53,9 @@ void main() {
 
     test("Create from json", () async {
       final String id = "!localpart:server.abc";
-      final String name = "My Room";
       final Membership membership = Membership.join;
-      final String topic = "This is my own room";
-      final int unread = DateTime.now().millisecondsSinceEpoch;
       final int notificationCount = 2;
       final int highlightCount = 1;
-      final String fullyRead = "fjh82jdjifd:server.abc";
-      final String notificationSettings = "all";
-      final String guestAccess = "forbidden";
-      final String canonicalAlias = "#testroom:example.com";
-      final String historyVisibility = "invite";
-      final String joinRules = "invite";
-      final int now = DateTime.now().millisecondsSinceEpoch;
-      final String msgtype = "m.text";
-      final String body = "Hello World";
-      final String formatted_body = "<b>Hello</b> World";
-      final String contentJson =
-          '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formatted_body"}';
       final List<String> heroes = [
         "@alice:matrix.org",
         "@bob:example.com",
@@ -75,37 +63,12 @@ void main() {
       ];
 
       Map<String, dynamic> jsonObj = {
-        "id": id,
+        "room_id": id,
         "membership": membership.toString().split('.').last,
-        "topic": name,
-        "description": topic,
         "avatar_url": "",
         "notification_count": notificationCount,
         "highlight_count": highlightCount,
-        "unread": unread,
-        "fully_read": fullyRead,
-        "notification_settings": notificationSettings,
-        "direct_chat_matrix_id": "",
-        "draft": "",
         "prev_batch": "",
-        "guest_access": guestAccess,
-        "history_visibility": historyVisibility,
-        "join_rules": joinRules,
-        "canonical_alias": canonicalAlias,
-        "power_events_default": 0,
-        "power_state_default": 0,
-        "power_redact": 0,
-        "power_invite": 0,
-        "power_ban": 0,
-        "power_kick": 0,
-        "power_user_default": 0,
-        "power_event_avatar": 0,
-        "power_event_history_visibility": 0,
-        "power_event_canonical_alias": 0,
-        "power_event_aliases": 0,
-        "power_event_name": 0,
-        "power_event_power_levels": 0,
-        "content_json": contentJson,
         "joined_member_count": notificationCount,
         "invited_member_count": notificationCount,
         "heroes": heroes.join(","),
@@ -115,37 +78,69 @@ void main() {
 
       expect(room.id, id);
       expect(room.membership, membership);
-      expect(room.name, name);
-      expect(room.displayname, name);
-      expect(room.topic, topic);
-      expect(room.avatar.mxc, "");
       expect(room.notificationCount, notificationCount);
       expect(room.highlightCount, highlightCount);
-      expect(room.unread.toTimeStamp(), unread);
-      expect(room.fullyRead, fullyRead);
-      expect(room.notificationSettings, notificationSettings);
-      expect(room.directChatMatrixID, "");
-      expect(room.draft, "");
-      expect(room.canonicalAlias, canonicalAlias);
-      expect(room.prev_batch, "");
-      expect(room.guestAccess, guestAccess);
-      expect(room.historyVisibility, historyVisibility);
-      expect(room.joinRules, joinRules);
-      expect(room.lastMessage, body);
-      expect(room.timeCreated.toTimeStamp() >= now, true);
-      room.powerLevels.forEach((String key, int value) {
-        expect(value, 0);
-      });
       expect(room.mJoinedMemberCount, notificationCount);
       expect(room.mInvitedMemberCount, notificationCount);
       expect(room.mHeroes, heroes);
-
-      jsonObj["topic"] = "";
-      room = await Room.getRoomFromTableRow(jsonObj, matrix);
-      expect(room.displayname, "testroom");
-      jsonObj["canonical_alias"] = "";
-      room = await Room.getRoomFromTableRow(jsonObj, matrix);
       expect(room.displayname, "alice, bob, charley");
+
+      room.states["m.room.canonical_alias"] = RoomState(
+          senderId: "@test:example.com",
+          typeKey: "m.room.canonical_alias",
+          roomId: room.id,
+          room: room,
+          eventId: "123",
+          content: {"alias": "#testalias:example.com"},
+          stateKey: "");
+      expect(room.displayname, "testalias");
+      expect(room.canonicalAlias, "#testalias:example.com");
+
+      room.states["m.room.name"] = RoomState(
+          senderId: "@test:example.com",
+          typeKey: "m.room.name",
+          roomId: room.id,
+          room: room,
+          eventId: "123",
+          content: {"name": "testname"},
+          stateKey: "");
+      expect(room.displayname, "testname");
+
+      expect(room.topic, "");
+      room.states["m.room.topic"] = RoomState(
+          senderId: "@test:example.com",
+          typeKey: "m.room.topic",
+          roomId: room.id,
+          room: room,
+          eventId: "123",
+          content: {"topic": "testtopic"},
+          stateKey: "");
+      expect(room.topic, "testtopic");
+
+      expect(room.avatar.mxc, "");
+      room.states["m.room.avatar"] = RoomState(
+          senderId: "@test:example.com",
+          typeKey: "m.room.avatar",
+          roomId: room.id,
+          room: room,
+          eventId: "123",
+          content: {"url": "mxc://testurl"},
+          stateKey: "");
+      expect(room.avatar.mxc, "mxc://testurl");
+
+      expect(room.lastEvent, null);
+      room.states["m.room.message"] = RoomState(
+          senderId: "@test:example.com",
+          typeKey: "m.room.message",
+          roomId: room.id,
+          room: room,
+          eventId: "12345",
+          time: ChatTime.now(),
+          content: {"msgtype": "m.text", "body": "test"},
+          stateKey: "");
+      expect(room.lastEvent.eventId, "12345");
+      expect(room.lastMessage, "test");
+      expect(room.timeCreated, room.lastEvent.time);
     });
 
     test("sendReadReceipt", () async {
@@ -167,7 +162,98 @@ void main() {
 
     test("getEventByID", () async {
       final Event event = await room.getEventById("1234");
-      expect(event.id, "143273582443PhrSn:example.org");
+      expect(event.eventId, "143273582443PhrSn:example.org");
+    });
+
+    test("setName", () async {
+      final dynamic resp = await room.setName("Testname");
+      expect(resp["event_id"], "42");
+    });
+
+    test("setDescription", () async {
+      final dynamic resp = await room.setDescription("Testname");
+      expect(resp["event_id"], "42");
+    });
+
+    test("kick", () async {
+      final dynamic resp = await room.kick("Testname");
+      expect(resp, {});
+    });
+
+    test("ban", () async {
+      final dynamic resp = await room.ban("Testname");
+      expect(resp, {});
+    });
+
+    test("unban", () async {
+      final dynamic resp = await room.unban("Testname");
+      expect(resp, {});
+    });
+
+    test("PowerLevels", () async {
+      room.states["m.room.power_levels"] = RoomState(
+          senderId: "@test:example.com",
+          typeKey: "m.room.power_levels",
+          roomId: room.id,
+          room: room,
+          eventId: "123",
+          content: {
+            "ban": 50,
+            "events": {"m.room.name": 100, "m.room.power_levels": 100},
+            "events_default": 0,
+            "invite": 50,
+            "kick": 50,
+            "notifications": {"room": 20},
+            "redact": 50,
+            "state_default": 50,
+            "users": {"@test:fakeServer.notExisting": 100},
+            "users_default": 10
+          },
+          stateKey: "");
+      expect(room.ownPowerLevel, 100);
+      expect(room.getPowerLevelByUserId(matrix.userID), room.ownPowerLevel);
+      expect(room.getPowerLevelByUserId("@nouser:example.com"), 10);
+      expect(room.powerLevels,
+          room.states["m.room.power_levels"].content["users"]);
+      final dynamic resp =
+          await room.setPower("@test:fakeServer.notExisting", 90);
+      expect(resp["event_id"], "42");
+    });
+
+    test("invite", () async {
+      final dynamic resp = await room.invite("Testname");
+      expect(resp, {});
+    });
+
+    test("getParticipants", () async {
+      room.states["@alice:test.abc"] = RoomState(
+          senderId: "@alice:test.abc",
+          typeKey: "m.room.member",
+          roomId: room.id,
+          room: room,
+          eventId: "12345",
+          time: ChatTime.now(),
+          content: {"displayname": "alice"},
+          stateKey: "@alice:test.abc");
+      final List<User> userList = room.getParticipants();
+      expect(userList.length, 1);
+      expect(userList[0].displayName, "alice");
+    });
+
+    test("addToDirectChat", () async {
+      final dynamic resp = await room.addToDirectChat("Testname");
+      expect(resp, {});
+    });
+
+    test("getTimeline", () async {
+      final Timeline timeline = await room.getTimeline();
+      expect(timeline.events, []);
+    });
+
+    test("getUserByMXID", () async {
+      final User user = await room.getUserByMXID("@getme:example.com");
+      expect(user.stateKey, "@getme:example.com");
+      expect(user.calcDisplayname(), "You got me");
     });
   });
 }

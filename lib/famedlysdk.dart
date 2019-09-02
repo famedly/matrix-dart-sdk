@@ -35,6 +35,7 @@ export 'package:famedlysdk/src/Connection.dart';
 export 'package:famedlysdk/src/Event.dart';
 export 'package:famedlysdk/src/Room.dart';
 export 'package:famedlysdk/src/RoomList.dart';
+export 'package:famedlysdk/src/RoomState.dart';
 export 'package:famedlysdk/src/Store.dart';
 export 'package:famedlysdk/src/Timeline.dart';
 export 'package:famedlysdk/src/User.dart';

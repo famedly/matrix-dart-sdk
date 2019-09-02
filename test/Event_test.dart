@@ -24,8 +24,7 @@
 import 'dart:convert';
 
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/Event.dart';
-import 'package:famedlysdk/src/User.dart';
+import 'package:famedlysdk/src/RoomState.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'FakeMatrixApi.dart';
@@ -36,9 +35,6 @@ void main() {
     final int timestamp = DateTime.now().millisecondsSinceEpoch;
     final String id = "!4fsdfjisjf:server.abc";
     final String senderID = "@alice:server.abc";
-    final String senderDisplayname = "Alice";
-    final String empty = "";
-    final Membership membership = Membership.join;
     final String type = "m.room.message";
     final String msgtype = "m.text";
     final String body = "Hello World";
@@ -49,29 +45,29 @@ void main() {
 
     Map<String, dynamic> jsonObj = {
       "event_id": id,
-      "matrix_id": senderID,
-      "displayname": senderDisplayname,
-      "avatar_url": empty,
-      "membership": membership.toString().split('.').last,
+      "sender": senderID,
       "origin_server_ts": timestamp,
-      "state_key": empty,
       "type": type,
-      "content_json": contentJson,
+      "status": 2,
+      "content": contentJson,
     };
 
     test("Create from json", () async {
       Event event = Event.fromJson(jsonObj, null);
 
-      expect(event.id, id);
-      expect(event.sender.id, senderID);
-      expect(event.sender.displayName, senderDisplayname);
-      expect(event.sender.avatarUrl.mxc, empty);
-      expect(event.sender.membership, membership);
+      expect(event.eventId, id);
+      expect(event.senderId, senderID);
       expect(event.status, 2);
       expect(event.text, body);
       expect(event.formattedText, formatted_body);
       expect(event.getBody(), body);
       expect(event.type, EventTypes.Text);
+      jsonObj["state_key"] = "";
+      RoomState state = RoomState.fromJson(jsonObj, null);
+      expect(state.eventId, id);
+      expect(state.stateKey, "");
+      expect(state.key, "m.room.message");
+      expect(state.timelineEvent.status, 1);
     });
     test("Test all EventTypes", () async {
       Event event;
@@ -121,7 +117,7 @@ void main() {
       expect(event.type, EventTypes.HistoryVisibility);
 
       jsonObj["type"] = "m.room.message";
-      jsonObj["content"] = json.decode(jsonObj["content_json"]);
+      jsonObj["content"] = json.decode(jsonObj["content"]);
 
       jsonObj["content"]["msgtype"] = "m.notice";
       event = Event.fromJson(jsonObj, null);

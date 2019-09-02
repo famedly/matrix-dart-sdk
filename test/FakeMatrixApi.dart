@@ -39,7 +39,7 @@ class FakeMatrixApi extends MockClient {
               method == "GET" ? request.url.queryParameters : request.body;
           var res = {};
 
-          print("$method request to $action with Data: $data");
+          //print("$method request to $action with Data: $data");
 
           // Sync requests with timeout
           if (data is Map<String, dynamic> && data["timeout"] is String) {
@@ -64,6 +64,20 @@ class FakeMatrixApi extends MockClient {
 
   static final Map<String, Map<String, dynamic>> api = {
     "GET": {
+      "/client/r0/rooms/!localpart:server.abc/state/m.room.member/@getme:example.com":
+          (var req) => {
+                "content": {
+                  "membership": "join",
+                  "displayname": "You got me",
+                },
+                "type": "m.room.member",
+                "event_id": "143273582443PhrSn:example.org",
+                "room_id": "!localpart:server.abc",
+                "sender": "@getme:example.com",
+                "state_key": "@getme:example.com",
+                "origin_server_ts": 1432735824653,
+                "unsigned": {"age": 1234}
+              },
       "/client/r0/rooms/!localpart:server.abc/event/1234": (var req) => {
             "content": {
               "body": "This is an example text message",
@@ -78,7 +92,7 @@ class FakeMatrixApi extends MockClient {
             "origin_server_ts": 1432735824653,
             "unsigned": {"age": 1234}
           },
-      "/client/r0/rooms/!1234:example.com/messages?from=1234&dir=b&limit=100":
+      "/client/r0/rooms/!1234:example.com/messages?from=1234&dir=b&limit=100&filter=%7B%22room%22:%7B%22state%22:%7B%22lazy_load_members%22:true%7D%7D%7D":
           (var req) => {
                 "start": "t47429-4392820_219380_26003_2265",
                 "end": "t47409-4357353_219380_26003_2265",
@@ -151,6 +165,24 @@ class FakeMatrixApi extends MockClient {
       "/client/r0/login": (var req) => {
             "flows": [
               {"type": "m.login.password"}
+            ]
+          },
+      "/client/r0/rooms/!726s6s6q:example.com/members": (var req) => {
+            "chunk": [
+              {
+                "content": {
+                  "membership": "join",
+                  "avatar_url": "mxc://example.org/SEsfnsuifSDFSSEF",
+                  "displayname": "Alice Margatroid"
+                },
+                "type": "m.room.member",
+                "event_id": "§143273582443PhrSn:example.org",
+                "room_id": "!636q39766251:example.com",
+                "sender": "@alice:example.org",
+                "origin_server_ts": 1432735824653,
+                "unsigned": {"age": 1234},
+                "state_key": "@alice:example.org"
+              }
             ]
           },
       "/client/r0/rooms/!localpart:server.abc/members": (var req) => {
@@ -333,7 +365,16 @@ class FakeMatrixApi extends MockClient {
                     {
                       "type": "org.example.custom.config",
                       "content": {"custom_config_key": "custom_config_value"}
-                    }
+                    },
+                    {
+                      "content": {
+                        "@bob:example.com": [
+                          "!726s6s6q:example.com",
+                          "!hgfedcba:example.com"
+                        ]
+                      },
+                      "type": "m.direct"
+                    },
                   ]
                 },
                 "to_device": {
@@ -364,6 +405,17 @@ class FakeMatrixApi extends MockClient {
                             "content": {"membership": "join"},
                             "origin_server_ts": 1417731086795,
                             "event_id": "66697273743031:example.com"
+                          },
+                          {
+                            "sender": "@alice:example.com",
+                            "type": "m.room.canonical_alias",
+                            "content": {
+                              "alias":
+                                  "#famedlyContactDiscovery:fakeServer.notExisting"
+                            },
+                            "state_key": "",
+                            "origin_server_ts": 1417731086796,
+                            "event_id": "66697273743032:example.com"
                           }
                         ]
                       },
@@ -465,12 +517,30 @@ class FakeMatrixApi extends MockClient {
             "room_id": "!1234:fakeServer.notExisting",
           },
       "/client/r0/rooms/!localpart:server.abc/read_markers": (var reqI) => {},
+      "/client/r0/rooms/!localpart:server.abc/kick": (var reqI) => {},
+      "/client/r0/rooms/!localpart:server.abc/ban": (var reqI) => {},
+      "/client/r0/rooms/!localpart:server.abc/unban": (var reqI) => {},
+      "/client/r0/rooms/!localpart:server.abc/invite": (var reqI) => {},
     },
     "PUT": {
       "/client/r0/rooms/!1234:example.com/send/m.room.message/1234":
           (var reqI) => {
                 "event_id": "42",
               },
+      "/client/r0/rooms/!localpart:server.abc/state/m.room.name": (var reqI) =>
+          {
+            "event_id": "42",
+          },
+      "/client/r0/rooms/!localpart:server.abc/state/m.room.topic": (var reqI) =>
+          {
+            "event_id": "42",
+          },
+      "/client/r0/rooms/!localpart:server.abc/state/m.room.power_levels":
+          (var reqI) => {
+                "event_id": "42",
+              },
+      "/client/r0/user/@test:fakeServer.notExisting/account_data/m.direct":
+          (var reqI) => {},
     },
     "DELETE": {
       "/unknown/token": (var req) => {"errcode": "M_UNKNOWN_TOKEN"},
