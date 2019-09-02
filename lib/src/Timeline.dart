@@ -28,6 +28,9 @@ import 'Room.dart';
 import 'User.dart';
 import 'sync/EventUpdate.dart';
 
+typedef onTimelineUpdateCallback = void Function();
+typedef onTimelineInsertCallback = void Function(int insertID);
+
 /// Represents the timeline of a room. The callbacks [onUpdate], [onDelete],
 /// [onInsert] and [onResort] will be triggered automatically. The initial
 /// event list will be retreived when created by the [room.getTimeline] method.
@@ -102,6 +105,3 @@ class Timeline {
     if (onUpdate != null) onUpdate();
   }
 }
-
-typedef onTimelineUpdateCallback = void Function();
-typedef onTimelineInsertCallback = void Function(int insertID);

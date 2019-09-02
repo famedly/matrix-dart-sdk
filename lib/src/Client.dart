@@ -37,6 +37,9 @@ import 'requests/SetPushersRequest.dart';
 import 'responses/ErrorResponse.dart';
 import 'responses/PushrulesResponse.dart';
 
+typedef AccountDataEventCB = void Function(AccountData accountData);
+typedef PresenceCB = void Function(Presence presence);
+
 /// Represents a Matrix client to communicate with a
 /// [Matrix](https://matrix.org) homeserver and is the entry point for this
 /// SDK.
@@ -338,6 +341,3 @@ class Client {
     return resp;
   }
 }
-
-typedef AccountDataEventCB = void Function(AccountData accountData);
-typedef PresenceCB = void Function(Presence presence);

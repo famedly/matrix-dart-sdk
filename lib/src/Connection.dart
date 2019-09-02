@@ -473,6 +473,8 @@ class Connection {
   }
 }
 
+typedef _FutureVoidCallback = Future<void> Function();
+
 class _LifecycleEventHandler extends WidgetsBindingObserver {
   _LifecycleEventHandler({this.resumeCallBack, this.suspendingCallBack});
 
@@ -493,7 +495,5 @@ class _LifecycleEventHandler extends WidgetsBindingObserver {
     }
   }
 }
-
-typedef _FutureVoidCallback = Future<void> Function();
 
 enum LoginState { logged, loggedOut }

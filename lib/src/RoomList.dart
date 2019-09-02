@@ -32,6 +32,10 @@ import 'User.dart';
 import 'sync/EventUpdate.dart';
 import 'sync/RoomUpdate.dart';
 
+typedef onRoomListUpdateCallback = void Function();
+typedef onRoomListInsertCallback = void Function(int insertID);
+typedef onRoomListRemoveCallback = void Function(int insertID);
+
 /// Represents a list of rooms for this client, which will automatically update
 /// itself and call the [onUpdate], [onInsert] and [onDelete] callbacks. To get
 /// the initial room list, use the store or create a RoomList instance by using
@@ -167,7 +171,3 @@ class RoomList {
     if (onUpdate != null) onUpdate();
   }
 }
-
-typedef onRoomListUpdateCallback = void Function();
-typedef onRoomListInsertCallback = void Function(int insertID);
-typedef onRoomListRemoveCallback = void Function(int insertID);
