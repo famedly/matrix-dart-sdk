@@ -499,20 +499,14 @@ class Room {
   Future<Timeline> getTimeline(
       {onTimelineUpdateCallback onUpdate,
       onTimelineInsertCallback onInsert}) async {
-    List<Event> events = await loadEvents();
+    List<Event> events = [];
+    if (client.store != null) events = await client.store.getEventList(this);
     return Timeline(
       room: this,
       events: events,
       onUpdate: onUpdate,
       onInsert: onInsert,
     );
-  }
-
-  /// Load all events for a given room from the store. This includes all
-  /// senders of those events, who will be added to the participants list.
-  Future<List<Event>> loadEvents() async {
-    if (client.store != null) return await client.store.getEventList(this);
-    return [];
   }
 
   /// Load all participants for a given room from the store.

@@ -235,11 +235,6 @@ void main() {
       expect(timeline.events, []);
     });
 
-    test("loadEvents", () async {
-      final List<Event> events = await room.loadEvents();
-      expect(events, []);
-    });
-
     test("getUserByMXID", () async {
       final User user = await room.getUserByMXID("@getme:example.com");
       expect(user.stateKey, "@getme:example.com");
