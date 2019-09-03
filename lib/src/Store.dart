@@ -398,7 +398,7 @@ class Store {
   /// Searches for the event in the store.
   Future<Event> getEventById(String eventID, Room room) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM Events WHERE id=? AND room_id=?", [eventID, room.id]);
+        "SELECT * FROM Events WHERE event_id=? AND room_id=?", [eventID, room.id]);
     if (res.length == 0) return null;
     return Event.fromJson(res[0], room);
   }
