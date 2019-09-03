@@ -83,6 +83,9 @@ class User extends RoomState {
   /// The displayname of the user if the user has set one.
   String get displayName => content != null ? content["displayname"] : null;
 
+  /// Returns the power level of this user.
+  int get powerLevel => room?.getPowerLevelByUserId(id);
+
   /// The membership status of the user. One of:
   /// join
   /// invite
