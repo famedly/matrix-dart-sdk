@@ -70,7 +70,7 @@ class Room {
   Map<String, RoomAccountData> roomAccountData = {};
 
   /// ID of the fully read marker event.
-  String get fullyRead => roomAccountData["m.fully_read"].content["event_id"];
+  String get fullyRead => roomAccountData["m.fully_read"] != null ? roomAccountData["m.fully_read"].content["event_id"] : "";
 
   /// If something changes, this callback will be triggered.
   onRoomUpdate onUpdate;
