@@ -34,6 +34,8 @@ import './User.dart';
 import 'Connection.dart';
 import 'Timeline.dart';
 
+typedef onRoomUpdate = void Function();
+
 /// Represents a Matrix room.
 class Room {
   /// The full qualified Matrix ID for the room in the format '!localid:server.abc'.
@@ -63,6 +65,9 @@ class Room {
 
   /// ID of the fully read marker event.
   String fullyRead;
+
+  /// If something changes, this callback will be triggered.
+  onRoomUpdate onUpdate;
 
   /// The name of the room if set by a participant.
   String get name {
