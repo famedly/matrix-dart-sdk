@@ -70,7 +70,9 @@ class Room {
   Map<String, RoomAccountData> roomAccountData = {};
 
   /// ID of the fully read marker event.
-  String get fullyRead => roomAccountData["m.fully_read"] != null ? roomAccountData["m.fully_read"].content["event_id"] : "";
+  String get fullyRead => roomAccountData["m.fully_read"] != null
+      ? roomAccountData["m.fully_read"].content["event_id"]
+      : "";
 
   /// If something changes, this callback will be triggered.
   onRoomUpdate onUpdate;
@@ -579,7 +581,7 @@ class Room {
     return Event.fromJson(resp, this);
   }
 
-  /// Returns the user's own power level.
+  /// Returns the power level of the given user ID.
   int getPowerLevelByUserId(String userId) {
     int powerLevel = 0;
     RoomState powerLevelState = states["m.room.power_levels"];
