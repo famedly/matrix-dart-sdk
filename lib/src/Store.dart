@@ -378,6 +378,7 @@ class Store {
   }
 
   /// Returns a room without events and participants.
+  @deprecated
   Future<Room> getRoomById(String id) async {
     List<Map<String, dynamic>> res =
         await db.rawQuery("SELECT * FROM Rooms WHERE room_id=?", [id]);

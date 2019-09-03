@@ -140,6 +140,7 @@ class RoomList {
         if (chatUpdate.summary.mInvitedMemberCount != null)
           rooms[j].mInvitedMemberCount = chatUpdate.summary.mInvitedMemberCount;
       }
+      if (rooms[j].onUpdate != null) rooms[j].onUpdate();
     }
     sortAndUpdate();
   }
@@ -158,6 +159,7 @@ class RoomList {
     if (rooms[j].states[stateEvent.key] != null &&
         rooms[j].states[stateEvent.key].time > stateEvent.time) return;
     rooms[j].states[stateEvent.key] = stateEvent;
+    if (rooms[j].onUpdate != null) rooms[j].onUpdate();
     sortAndUpdate();
   }
 

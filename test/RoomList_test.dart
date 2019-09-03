@@ -129,6 +129,15 @@ void main() {
 
       ChatTime now = ChatTime.now();
 
+      int roomUpdates = 0;
+
+      roomList.rooms[0].onUpdate = () {
+        roomUpdates++;
+      };
+      roomList.rooms[1].onUpdate = () {
+        roomUpdates++;
+      };
+
       client.connection.onEvent.add(EventUpdate(
           type: "timeline",
           roomID: "1",
@@ -158,6 +167,7 @@ void main() {
       await new Future.delayed(new Duration(milliseconds: 50));
 
       expect(updateCount, 4);
+      expect(roomUpdates, 2);
       expect(insertList, [0, 1]);
       expect(removeList, []);
 
