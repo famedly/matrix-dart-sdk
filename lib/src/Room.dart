@@ -50,21 +50,27 @@ class Room {
   /// The count of highlighted notifications.
   int highlightCount;
 
+  /// A token that can be supplied to the from parameter of the rooms/{roomId}/messages endpoint.
   String prev_batch;
 
+  /// The users which can be used to generate a room name if the room does not have one.
+  /// Required if the room's m.room.name or m.room.canonical_alias state events are unset or empty.
   List<String> mHeroes = [];
+
+  /// The number of users with membership of join, including the client's own user ID.
   int mJoinedMemberCount;
+
+  /// The number of users with membership of invite.
   int mInvitedMemberCount;
 
+  /// Key-Value store for room states.
   Map<String, RoomState> states = {};
 
+  /// Key-Value store for private account data only visible for this user.
   Map<String, RoomAccountData> roomAccountData = {};
 
-  /// Time when the user has last read the chat.
-  ChatTime unread;
-
   /// ID of the fully read marker event.
-  String fullyRead;
+  String get fullyRead => roomAccountData["m.fully_read"].content["event_id"];
 
   /// If something changes, this callback will be triggered.
   onRoomUpdate onUpdate;
