@@ -103,7 +103,7 @@ class Event extends RoomState {
     if (status < 1) {
       if (room.client.store != null)
         await room.client.store.db
-            .rawDelete("DELETE FROM Events WHERE id=?", [eventId]);
+            .rawDelete("DELETE FROM Events WHERE event_id=?", [eventId]);
 
       room.client.connection.onEvent.add(EventUpdate(
           roomID: room.id,
