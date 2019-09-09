@@ -21,6 +21,8 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'dart:io';
+
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/RoomAccountData.dart';
@@ -29,6 +31,8 @@ import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
+import 'package:image/image.dart';
+import 'package:mime_type/mime_type.dart';
 
 import './User.dart';
 import 'Connection.dart';
@@ -223,18 +227,100 @@ class Room {
     return res;
   }
 
-  /// Call the Matrix API to send a simple text message.
-  Future<dynamic> sendText(String message, {String txid = null}) async {
+  Future<dynamic> _sendRawEventNow(Map<String, dynamic> content,
+      {String txid = null}) async {
     if (txid == null) txid = "txid${DateTime.now().millisecondsSinceEpoch}";
     final dynamic res = await client.connection.jsonRequest(
         type: HTTPType.PUT,
         action: "/client/r0/rooms/${id}/send/m.room.message/$txid",
-        data: {"msgtype": "m.text", "body": message});
+        data: content);
     if (res is ErrorResponse) client.connection.onError.add(res);
     return res;
   }
 
-  Future<String> sendTextEvent(String message, {String txid = null}) async {
+  Future<String> sendTextEvent(String message, {String txid = null}) =>
+      sendEvent({"msgtype": "m.text", "body": message}, txid: txid);
+
+  Future<String> sendFileEvent(File file, String msgType,
+      {String txid = null}) async {
+    // Try to get the size of the file
+    int size;
+    try {
+      size = (await file.readAsBytes()).length;
+    } catch (e) {
+      print("[UPLOAD] Could not get size. Reason: ${e.toString()}");
+    }
+
+    // Upload file
+    String fileName = file.path.split("/").last;
+    String mimeType = mime(fileName);
+    final dynamic uploadResp = await client.connection.upload(file);
+    if (uploadResp is ErrorResponse) return null;
+
+    // Send event
+    Map<String, dynamic> content = {
+      "msgtype": msgType,
+      "body": fileName,
+      "filename": fileName,
+      "url": uploadResp,
+      "info": {
+        "mimetype": mimeType,
+      }
+    };
+    if (size != null)
+      content["info"] = {
+        "size": size,
+        "mimetype": mimeType,
+      };
+    return await sendEvent(content, txid: txid);
+  }
+
+  Future<String> sendImageEvent(File file, {String txid = null}) async {
+    String fileName = file.path.split("/").last;
+    Map<String, dynamic> info;
+
+    // Try to manipulate the file size and create a thumbnail
+    try {
+      Image image = copyResize(decodeImage(file.readAsBytesSync()), width: 800);
+      Image thumbnail = copyResize(image, width: 236);
+
+      file = File(fileName)..writeAsBytesSync(encodePng(image));
+      File thumbnailFile = File(fileName)
+        ..writeAsBytesSync(encodePng(thumbnail));
+      final dynamic uploadThumbnailResp =
+          await client.connection.upload(thumbnailFile);
+      if (uploadThumbnailResp is ErrorResponse) throw (uploadThumbnailResp);
+      info = {
+        "size": image.getBytes().length,
+        "mimetype": mime(file.path),
+        "w": image.width,
+        "h": image.height,
+        "thumbnail_url": uploadThumbnailResp,
+        "thumbnail_info": {
+          "w": thumbnail.width,
+          "h": thumbnail.height,
+          "mimetype": mime(thumbnailFile.path),
+          "size": thumbnail.getBytes().length
+        },
+      };
+    } catch (e) {
+      print(
+          "[UPLOAD] Could not create thumbnail of image. Try to upload the unchanged file...");
+    }
+
+    final dynamic uploadResp = await client.connection.upload(file);
+    if (uploadResp is ErrorResponse) return null;
+    Map<String, dynamic> content = {
+      "msgtype": "m.image",
+      "body": fileName,
+      "url": uploadResp,
+    };
+    if (info != null) content["info"] = info;
+    return await sendEvent(content, txid: txid);
+  }
+
+  Future<String> sendEvent(Map<String, dynamic> content,
+      {String txid = null}) async {
     final String type = "m.room.message";
 
     // Create new transaction id
@@ -253,10 +339,7 @@ class Room {
       "sender": client.userID,
       "status": 0,
       "origin_server_ts": now,
-      "content": {
-        "msgtype": "m.text",
-        "body": message,
-      }
+      "content": content
     });
     client.connection.onEvent.add(eventUpdate);
     await client.store?.transaction(() {
@@ -265,7 +348,7 @@ class Room {
     });
 
     // Send the text and on success, store and display a *sent* event.
-    final dynamic res = await sendText(message, txid: messageID);
+    final dynamic res = await _sendRawEventNow(content, txid: messageID);
 
     if (res is ErrorResponse || !(res["event_id"] is String)) {
       // On error, set status to -1
@@ -603,5 +686,18 @@ class Room {
     if (powerLevelState.content["users"] is Map<String, int>)
       return powerLevelState.content["users"];
     return null;
+  }
+
+  /// Uploads a new user avatar for this room. Returns ErrorResponse if something went wrong
+  /// and the event ID otherwise.
+  Future<dynamic> setAvatar(File file) async {
+    final uploadResp = await client.connection.upload(file);
+    if (uploadResp is ErrorResponse) return uploadResp;
+    final setAvatarResp = await client.connection.jsonRequest(
+        type: HTTPType.PUT,
+        action: "/client/r0/rooms/$id/state/m.room.avatar/",
+        data: {"url": uploadResp});
+    if (setAvatarResp is ErrorResponse) return setAvatarResp;
+    return setAvatarResp["event_id"];
   }
 }
