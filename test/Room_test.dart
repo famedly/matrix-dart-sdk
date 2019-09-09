@@ -21,6 +21,8 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'dart:io';
+
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/Room.dart';
@@ -254,6 +256,40 @@ void main() {
       final User user = await room.getUserByMXID("@getme:example.com");
       expect(user.stateKey, "@getme:example.com");
       expect(user.calcDisplayname(), "You got me");
+    });
+
+    test('setAvatar', () async {
+      final File testFile = File.fromUri(Uri.parse("fake/path/file.jpeg"));
+      final dynamic resp = await room.setAvatar(testFile);
+      expect(resp, "YUwRidLecu:example.com");
+    });
+
+    test('sendEvent', () async {
+      final dynamic resp = await room.sendEvent(
+          {"msgtype": "m.text", "body": "hello world"},
+          txid: "testtxid");
+      expect(resp, "42");
+    });
+
+    test('sendEvent', () async {
+      final dynamic resp =
+          await room.sendTextEvent("Hello world", txid: "testtxid");
+      expect(resp, "42");
+    });
+
+    // Not working because there is no real file to test it...
+    test('sendImageEvent', () async {
+      final File testFile = File.fromUri(Uri.parse("fake/path/file.jpeg"));
+      final dynamic resp =
+          await room.sendImageEvent(testFile, txid: "testtxid");
+      expect(resp, "42");
+    });
+
+    test('sendFileEvent', () async {
+      final File testFile = File.fromUri(Uri.parse("fake/path/file.jpeg"));
+      final dynamic resp =
+          await room.sendFileEvent(testFile, "m.file", txid: "testtxid");
+      expect(resp, "42");
     });
   });
 }

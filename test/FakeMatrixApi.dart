@@ -509,6 +509,8 @@ class FakeMatrixApi extends MockClient {
             "access_token": "abc123",
             "device_id": "GHTYAJCE"
           },
+      "/media/r0/upload?filename=file.jpeg": (var req) =>
+          {"content_uri": "mxc://example.com/AQwafuaFswefuhsfAFAgsw"},
       "/client/r0/logout": (var reqI) => {},
       "/client/r0/pushers/set": (var reqI) => {},
       "/client/r0/join/1234": (var reqI) => {"room_id": "1234"},
@@ -523,10 +525,18 @@ class FakeMatrixApi extends MockClient {
       "/client/r0/rooms/!localpart:server.abc/invite": (var reqI) => {},
     },
     "PUT": {
+      "/client/r0/rooms/!localpart:server.abc/send/m.room.message/testtxid":
+          (var reqI) => {
+                "event_id": "42",
+              },
       "/client/r0/rooms/!1234:example.com/send/m.room.message/1234":
           (var reqI) => {
                 "event_id": "42",
               },
+      "/client/r0/profile/@test:fakeServer.notExisting/avatar_url":
+          (var reqI) => {},
+      "/client/r0/rooms/!localpart:server.abc/state/m.room.avatar/":
+          (var reqI) => {"event_id": "YUwRidLecu:example.com"},
       "/client/r0/rooms/!localpart:server.abc/state/m.room.name": (var reqI) =>
           {
             "event_id": "42",

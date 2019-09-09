@@ -23,6 +23,7 @@
 
 import 'dart:async';
 import 'dart:core';
+import 'dart:io';
 
 import 'package:famedlysdk/src/AccountData.dart';
 import 'package:famedlysdk/src/Presence.dart';
@@ -308,6 +309,18 @@ class Client {
     }
 
     return resp["room_id"];
+  }
+
+  /// Uploads a new user avatar for this user. Returns ErrorResponse if something went wrong.
+  Future<dynamic> setAvatar(File file) async {
+    final uploadResp = await connection.upload(file);
+    if (uploadResp is ErrorResponse) return uploadResp;
+    final setAvatarResp = await connection.jsonRequest(
+        type: HTTPType.PUT,
+        action: "/client/r0/profile/$userID/avatar_url",
+        data: {"avatar_url": uploadResp});
+    if (setAvatarResp is ErrorResponse) return setAvatarResp;
+    return null;
   }
 
   /// Fetches the pushrules for the logged in user.

@@ -22,6 +22,7 @@
  */
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:famedlysdk/src/AccountData.dart';
 import 'package:famedlysdk/src/Client.dart';
@@ -268,6 +269,18 @@ void main() {
       ];
       final String newID = await matrix.createGroup(users);
       expect(newID, "!1234:fakeServer.notExisting");
+    });
+
+    test('upload', () async {
+      final File testFile = File.fromUri(Uri.parse("fake/path/file.jpeg"));
+      final dynamic resp = await matrix.connection.upload(testFile);
+      expect(resp, "mxc://example.com/AQwafuaFswefuhsfAFAgsw");
+    });
+
+    test('setAvatar', () async {
+      final File testFile = File.fromUri(Uri.parse("fake/path/file.jpeg"));
+      final dynamic resp = await matrix.setAvatar(testFile);
+      expect(resp, null);
     });
 
     test('getPushrules', () async {

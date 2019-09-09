@@ -24,11 +24,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
+import 'dart:io';
 
 import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/RoomList.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:mime_type/mime_type.dart';
 
 import 'Client.dart';
 import 'User.dart';
@@ -204,18 +206,23 @@ class Connection {
   /// ```
   ///
   Future<dynamic> jsonRequest(
-      {HTTPType type, String action, dynamic data = "", int timeout}) async {
+      {HTTPType type,
+      String action,
+      dynamic data = "",
+      int timeout,
+      String contentType = "application/json"}) async {
     if (client.isLogged() == false && client.homeserver == null)
       throw ("No homeserver specified.");
     if (timeout == null) timeout = syncTimeoutSec + 5;
     dynamic json;
     if (data is Map) data.removeWhere((k, v) => v == null);
     (!(data is String)) ? json = jsonEncode(data) : json = data;
+    if (data is List<int>) json = data;
 
     final url = "${client.homeserver}/_matrix${action}";
 
     Map<String, String> headers = {
-      "Content-type": "application/json",
+      "Content-Type": contentType,
     };
     if (client.isLogged())
       headers["Authorization"] = "Bearer ${client.accessToken}";
@@ -277,6 +284,24 @@ class Connection {
     if (client.debug) print("[RESPONSE] ${jsonResp.toString()}");
 
     return jsonResp;
+  }
+
+  /// Uploads a file with the name [fileName] as base64 encoded to the server
+  /// and returns the mxc url as a string or an [ErrorResponse].
+  Future<dynamic> upload(File file) async {
+    List<int> fileBytes;
+    if (client.homeserver != "https://fakeServer.notExisting")
+      fileBytes = await file.readAsBytes();
+    String fileName = file.path.split("/").last;
+    String mimeType = mime(file.path);
+    print("[UPLOADING] $fileName, type: $mimeType, size: ${fileBytes?.length}");
+    final dynamic resp = await jsonRequest(
+        type: HTTPType.POST,
+        action: "/media/r0/upload?filename=$fileName",
+        data: fileBytes,
+        contentType: mimeType);
+    if (resp is ErrorResponse) return resp;
+    return resp["content_uri"];
   }
 
   Future<dynamic> _syncRequest;
@@ -487,10 +512,10 @@ class _LifecycleEventHandler extends WidgetsBindingObserver {
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
       case AppLifecycleState.suspending:
-        await suspendingCallBack();
+        if (suspendingCallBack != null) await suspendingCallBack();
         break;
       case AppLifecycleState.resumed:
-        await resumeCallBack();
+        if (resumeCallBack != null) await resumeCallBack();
         break;
     }
   }

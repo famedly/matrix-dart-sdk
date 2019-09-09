@@ -17,6 +17,8 @@ dependencies:
 
   # Connection
   http: ^0.12.0+2
+  mime_type: ^0.2.4
+  image: ^2.1.4
 
   # Time formatting
   intl: ^0.15.8
