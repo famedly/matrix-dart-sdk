@@ -596,7 +596,12 @@ class Room {
       {onTimelineUpdateCallback onUpdate,
       onTimelineInsertCallback onInsert}) async {
     List<Event> events = [];
-    if (client.store != null) events = await client.store.getEventList(this);
+    if (client.store != null)
+      events = await client.store.getEventList(this);
+    else {
+      prev_batch = "";
+      requestHistory();
+    }
     return Timeline(
       room: this,
       events: events,
