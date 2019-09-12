@@ -96,7 +96,7 @@ class RoomList {
     for (j = 0; j < rooms.length; j++) {
       if (rooms[j].id == chatUpdate.id) break;
     }
-    final bool found = (j < rooms.length - 1 && rooms[j].id == chatUpdate.id);
+    final bool found = (j < rooms.length && rooms[j].id == chatUpdate.id);
     final bool isLeftRoom = chatUpdate.membership == Membership.leave;
 
     // Does the chat already exist in the list rooms?
