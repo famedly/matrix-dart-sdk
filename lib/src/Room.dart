@@ -276,7 +276,8 @@ class Room {
   }
 
   Future<String> sendImageEvent(File file, {String txid = null}) async {
-    String fileName = file.path.split("/").last;
+    String path = file.path;
+    String fileName = path.split("/").last;
     Map<String, dynamic> info;
 
     // Try to manipulate the file size and create a thumbnail
@@ -284,8 +285,8 @@ class Room {
       Image image = copyResize(decodeImage(file.readAsBytesSync()), width: 800);
       Image thumbnail = copyResize(image, width: 236);
 
-      file = File(fileName)..writeAsBytesSync(encodePng(image));
-      File thumbnailFile = File(fileName)
+      file = File(path)..writeAsBytesSync(encodePng(image));
+      File thumbnailFile = File(path)
         ..writeAsBytesSync(encodePng(thumbnail));
       final dynamic uploadThumbnailResp =
           await client.connection.upload(thumbnailFile);
