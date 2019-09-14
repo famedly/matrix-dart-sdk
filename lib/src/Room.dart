@@ -282,8 +282,8 @@ class Room {
 
     // Try to manipulate the file size and create a thumbnail
     try {
-      Image image = copyResize(decodeImage(file.readAsBytesSync()), width: 800);
-      Image thumbnail = copyResize(image, width: 236);
+      Image image = copyResize(decodeImage(file.readAsBytesSync()), width: 1200);
+      Image thumbnail = copyResize(image, width: 800);
 
       file = File(path)..writeAsBytesSync(encodePng(image));
       File thumbnailFile = File(path)
