@@ -282,12 +282,12 @@ class Room {
 
     // Try to manipulate the file size and create a thumbnail
     try {
-      Image image = copyResize(decodeImage(file.readAsBytesSync()), width: 1200);
+      Image image =
+          copyResize(decodeImage(file.readAsBytesSync()), width: 1200);
       Image thumbnail = copyResize(image, width: 800);
 
       file = File(path)..writeAsBytesSync(encodePng(image));
-      File thumbnailFile = File(path)
-        ..writeAsBytesSync(encodePng(thumbnail));
+      File thumbnailFile = File(path)..writeAsBytesSync(encodePng(thumbnail));
       final dynamic uploadThumbnailResp =
           await client.connection.upload(thumbnailFile);
       if (uploadThumbnailResp is ErrorResponse) throw (uploadThumbnailResp);
@@ -652,9 +652,10 @@ class Room {
         type: HTTPType.GET,
         action: "/client/r0/rooms/$id/state/m.room.member/$mxID");
     if (resp is ErrorResponse) return null;
-    // Somehow we miss the mxid in the response and only get the content of the event.
-    resp["matrix_id"] = mxID;
-    return RoomState.fromJson(resp, this).asUser;
+    return User(mxID,
+        displayName: resp["displayname"],
+        avatarUrl: resp["avatar_url"],
+        room: this);
   }
 
   /// Searches for the event in the store. If it isn't found, try to request it

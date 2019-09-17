@@ -66,17 +66,8 @@ class FakeMatrixApi extends MockClient {
     "GET": {
       "/client/r0/rooms/!localpart:server.abc/state/m.room.member/@getme:example.com":
           (var req) => {
-                "content": {
-                  "membership": "join",
-                  "displayname": "You got me",
-                },
-                "type": "m.room.member",
-                "event_id": "143273582443PhrSn:example.org",
-                "room_id": "!localpart:server.abc",
-                "sender": "@getme:example.com",
-                "state_key": "@getme:example.com",
-                "origin_server_ts": 1432735824653,
-                "unsigned": {"age": 1234}
+                "avatar_url": "mxc://test",
+                "displayname": "You got me",
               },
       "/client/r0/rooms/!localpart:server.abc/event/1234": (var req) => {
             "content": {
