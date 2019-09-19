@@ -97,6 +97,9 @@ class Client {
   /// A list of all rooms the user is participating or invited.
   RoomList roomList;
 
+  /// A list of all rooms the user is not participating anymore.
+  RoomList archive;
+
   /// Key/Value store of account data.
   Map<String, AccountData> accountData = {};
 
@@ -251,25 +254,27 @@ class Client {
     await connection.clear();
   }
 
-  /// Loads the Rooms from the [store] and creates a new [RoomList] object.
-  Future<RoomList> getRoomList(
+  /// Creates a new [RoomList] object.
+  RoomList getRoomList(
       {bool onlyLeft = false,
-      bool onlyDirect = false,
-      bool onlyGroups = false,
       onRoomListUpdateCallback onUpdate,
       onRoomListInsertCallback onInsert,
-      onRoomListRemoveCallback onRemove}) async {
-    List<Room> rooms = await store.getRoomList(
-        onlyLeft: onlyLeft, onlyGroups: onlyGroups, onlyDirect: onlyDirect);
+      onRoomListRemoveCallback onRemove}) {
+    List<Room> rooms = onlyLeft ? archive.rooms : roomList.rooms;
     return RoomList(
         client: this,
         onlyLeft: onlyLeft,
-        onlyDirect: onlyDirect,
-        onlyGroups: onlyGroups,
         onUpdate: onUpdate,
         onInsert: onInsert,
         onRemove: onRemove,
         rooms: rooms);
+  }
+
+  /// Searches in the roomList and in the archive for a room with the given [id].
+  Room getRoomById(String id) {
+    Room room = roomList.getRoomById(id);
+    if (room == null) room = archive.getRoomById(id);
+    return room;
   }
 
   Future<dynamic> joinRoomById(String id) async {

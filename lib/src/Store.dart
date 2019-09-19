@@ -357,11 +357,7 @@ class Store {
   }
 
   /// Returns all rooms, the client is participating. Excludes left rooms.
-  Future<List<Room>> getRoomList(
-      {bool onlyLeft = false,
-      bool onlyDirect = false,
-      bool onlyGroups = false}) async {
-    if (onlyDirect && onlyGroups) return [];
+  Future<List<Room>> getRoomList({bool onlyLeft = false}) async {
     List<Map<String, dynamic>> res = await db.rawQuery("SELECT * " +
         " FROM Rooms" +
         " WHERE membership" +
@@ -399,7 +395,8 @@ class Store {
   /// Searches for the event in the store.
   Future<Event> getEventById(String eventID, Room room) async {
     List<Map<String, dynamic>> res = await db.rawQuery(
-        "SELECT * FROM Events WHERE event_id=? AND room_id=?", [eventID, room.id]);
+        "SELECT * FROM Events WHERE event_id=? AND room_id=?",
+        [eventID, room.id]);
     if (res.length == 0) return null;
     return Event.fromJson(res[0], room);
   }
