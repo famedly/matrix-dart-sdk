@@ -45,8 +45,6 @@ class RoomList {
   List<Room> rooms = [];
 
   final bool onlyLeft;
-  final bool onlyDirect;
-  final bool onlyGroups;
 
   /// Will be called, when the room list has changed. Can be used e.g. to update
   /// the state of a StatefulWidget.
@@ -67,9 +65,7 @@ class RoomList {
       this.onUpdate,
       this.onInsert,
       this.onRemove,
-      this.onlyLeft = false,
-      this.onlyDirect = false,
-      this.onlyGroups = false}) {
+      this.onlyLeft = false}) {
     eventSub ??= client.connection.onEvent.stream.listen(_handleEventUpdate);
     roomSub ??= client.connection.onRoomUpdate.stream.listen(_handleRoomUpdate);
     sort();
@@ -125,13 +121,16 @@ class RoomList {
       rooms.removeAt(j);
       if (onRemove != null) onRemove(j);
     }
-    // Update notification and highlight count
+    // Update notification, highlight count and/or additional informations
     else if (found &&
         chatUpdate.membership != Membership.leave &&
         (rooms[j].notificationCount != chatUpdate.notification_count ||
-            rooms[j].highlightCount != chatUpdate.highlight_count)) {
+            rooms[j].highlightCount != chatUpdate.highlight_count ||
+            chatUpdate.summary != null)) {
       rooms[j].notificationCount = chatUpdate.notification_count;
       rooms[j].highlightCount = chatUpdate.highlight_count;
+      if (chatUpdate.prev_batch != null)
+        rooms[j].prev_batch = chatUpdate.prev_batch;
       if (chatUpdate.summary != null) {
         if (chatUpdate.summary.mHeroes != null)
           rooms[j].mHeroes = chatUpdate.summary.mHeroes;

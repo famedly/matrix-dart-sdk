@@ -152,10 +152,11 @@ class Connection {
     client.prevBatch = newPrevBatch;
 
     List<Room> rooms = [];
+    List<Room> archivedRooms = [];
     if (client.store != null) {
       client.store.storeClient();
-      rooms = await client.store
-          .getRoomList(onlyLeft: false, onlyGroups: false, onlyDirect: false);
+      rooms = await client.store.getRoomList(onlyLeft: false);
+      archivedRooms = await client.store.getRoomList(onlyLeft: true);
       client.accountData = await client.store.getAccountData();
       client.presences = await client.store.getPresences();
     }
@@ -163,12 +164,18 @@ class Connection {
     client.roomList = RoomList(
         client: client,
         onlyLeft: false,
-        onlyDirect: false,
-        onlyGroups: false,
         onUpdate: null,
         onInsert: null,
         onRemove: null,
         rooms: rooms);
+
+    client.archive = RoomList(
+        client: client,
+        onlyLeft: true,
+        onUpdate: null,
+        onInsert: null,
+        onRemove: null,
+        rooms: archivedRooms);
 
     _userEventSub ??= onUserEvent.stream.listen(client.handleUserUpdate);
 

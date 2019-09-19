@@ -119,6 +119,17 @@ void main() {
         limitedTimeline: false,
         prev_batch: "1234",
       ));
+      client.connection.onRoomUpdate.add(RoomUpdate(
+          id: "1",
+          membership: Membership.join,
+          notification_count: 2,
+          highlight_count: 1,
+          limitedTimeline: false,
+          prev_batch: "12345",
+          summary: RoomSummary(
+              mHeroes: ["@alice:example.com"],
+              mJoinedMemberCount: 1,
+              mInvitedMemberCount: 1)));
 
       await new Future.delayed(new Duration(milliseconds: 50));
 
@@ -126,6 +137,10 @@ void main() {
       expect(roomList.roomSub != null, true);
       expect(roomList.rooms[0].id, "1");
       expect(roomList.rooms[1].id, "2");
+      expect(roomList.rooms[0].prev_batch, "12345");
+      expect(roomList.rooms[0].displayname, "alice");
+      expect(roomList.rooms[0].mJoinedMemberCount, 1);
+      expect(roomList.rooms[0].mInvitedMemberCount, 1);
 
       ChatTime now = ChatTime.now();
 
@@ -166,7 +181,7 @@ void main() {
 
       await new Future.delayed(new Duration(milliseconds: 50));
 
-      expect(updateCount, 4);
+      expect(updateCount, 5);
       expect(roomUpdates, 2);
       expect(insertList, [0, 1]);
       expect(removeList, []);
