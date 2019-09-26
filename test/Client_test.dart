@@ -262,12 +262,12 @@ void main() {
       expect(loginResp, true);
     });
 
-    test('createGroup', () async {
+    test('createRoom', () async {
       final List<User> users = [
         User("@alice:fakeServer.notExisting"),
         User("@bob:fakeServer.notExisting")
       ];
-      final String newID = await matrix.createGroup(users);
+      final String newID = await matrix.createRoom(invite: users);
       expect(newID, "!1234:fakeServer.notExisting");
     });
 

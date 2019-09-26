@@ -297,16 +297,26 @@ class Client {
     return contacts;
   }
 
+  @Deprecated('Please use [createRoom] instead!')
+  Future<String> createGroup(List<User> users) => createRoom(invite: users);
+
   /// Creates a new group chat and invites the given Users and returns the new
-  /// created room ID.
-  Future<String> createGroup(List<User> users) async {
+  /// created room ID. If [params] are provided, invite will be ignored. For the
+  /// moment please look at https://matrix.org/docs/spec/client_server/r0.5.0#post-matrix-client-r0-createroom
+  /// to configure [params].
+  Future<String> createRoom(
+      {List<User> invite, Map<String, dynamic> params}) async {
     List<String> inviteIDs = [];
-    for (int i = 0; i < users.length; i++) inviteIDs.add(users[i].id);
+    for (int i = 0; i < invite.length; i++) inviteIDs.add(invite[i].id);
 
     final dynamic resp = await connection.jsonRequest(
         type: HTTPType.POST,
         action: "/client/r0/createRoom",
-        data: {"invite": inviteIDs, "preset": "private_chat"});
+        data: params == null
+            ? {
+                "invite": inviteIDs,
+              }
+            : params);
 
     if (resp is ErrorResponse) {
       connection.onError.add(resp);
