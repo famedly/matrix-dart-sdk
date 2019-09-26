@@ -43,6 +43,14 @@ class Timeline {
 
   StreamSubscription<EventUpdate> sub;
 
+  Future<void> requestHistory({int historyCount = Room.DefaultHistoryCount}) {
+    return room.requestHistory(
+        historyCount: historyCount,
+        onHistoryReceived: () {
+          if (room.prev_batch.isEmpty || room.prev_batch == null) events = [];
+        });
+  }
+
   Timeline({this.room, this.events, this.onUpdate, this.onInsert}) {
     sub ??= room.client.connection.onEvent.stream.listen(_handleEventUpdate);
   }
