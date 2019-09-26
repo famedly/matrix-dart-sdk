@@ -174,6 +174,10 @@ class Room {
     this.roomAccountData = const {},
   });
 
+  /// The default count of how much events should be requested when requesting the
+  /// history of this room.
+  static const int DefaultHistoryCount = 100;
+
   /// Calculates the displayname. First checks if there is a name, then checks for a canonical alias and
   /// then generates a name from the heroes.
   String get displayname {
@@ -445,8 +449,11 @@ class Room {
     return res;
   }
 
-  /// Request more previous events from the server.
-  Future<void> requestHistory({int historyCount = 100}) async {
+  /// Request more previous events from the server. [historyCount] defines how much events should
+  /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
+  /// the historical events will be published in the onEvent stream.
+  Future<void> requestHistory(
+      {int historyCount = DefaultHistoryCount, onHistoryReceived}) async {
     final dynamic resp = await client.connection.jsonRequest(
         type: HTTPType.GET,
         action:
@@ -454,6 +461,7 @@ class Room {
 
     if (resp is ErrorResponse) return;
 
+    if (onHistoryReceived != null) onHistoryReceived();
     prev_batch = resp["end"];
     client.store?.storeRoomPrevBatch(this);
 
