@@ -307,7 +307,8 @@ class Client {
   Future<String> createRoom(
       {List<User> invite, Map<String, dynamic> params}) async {
     List<String> inviteIDs = [];
-    for (int i = 0; i < invite.length; i++) inviteIDs.add(invite[i].id);
+    if (params == null && invite != null) 
+      for (int i = 0; i < invite.length; i++) inviteIDs.add(invite[i].id);
 
     final dynamic resp = await connection.jsonRequest(
         type: HTTPType.POST,
