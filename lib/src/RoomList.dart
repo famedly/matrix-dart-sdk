@@ -124,9 +124,11 @@ class RoomList {
     // Update notification, highlight count and/or additional informations
     else if (found &&
         chatUpdate.membership != Membership.leave &&
-        (rooms[j].notificationCount != chatUpdate.notification_count ||
+        (rooms[j].membership != chatUpdate.membership ||
+            rooms[j].notificationCount != chatUpdate.notification_count ||
             rooms[j].highlightCount != chatUpdate.highlight_count ||
             chatUpdate.summary != null)) {
+      rooms[j].membership = chatUpdate.membership;
       rooms[j].notificationCount = chatUpdate.notification_count;
       rooms[j].highlightCount = chatUpdate.highlight_count;
       if (chatUpdate.prev_batch != null)
@@ -145,7 +147,9 @@ class RoomList {
   }
 
   void _handleEventUpdate(EventUpdate eventUpdate) {
-    if (eventUpdate.type != "timeline" && eventUpdate.type != "state") return;
+    if (eventUpdate.type != "timeline" &&
+        eventUpdate.type != "state" &&
+        eventUpdate.type != "invite_state") return;
     // Search the room in the rooms
     num j = 0;
     for (j = 0; j < rooms.length; j++) {
