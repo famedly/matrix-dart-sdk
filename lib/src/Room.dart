@@ -98,6 +98,9 @@ class Room {
       }
       return displayname.substring(0, displayname.length - 2);
     }
+    if (membership == Membership.invite && states.containsKey(client.userID)) {
+      return states[client.userID].sender.calcDisplayname();
+    }
     return "Empty chat";
   }
 
@@ -112,6 +115,9 @@ class Room {
       return MxContent(states["m.room.avatar"].content["url"]);
     if (mHeroes != null && mHeroes.length == 1 && states[mHeroes[0]] != null)
       return states[mHeroes[0]].asUser.avatarUrl;
+    if (membership == Membership.invite && states.containsKey(client.userID)) {
+      return states[client.userID].sender.avatarUrl;
+    }
     return MxContent("");
   }
 
@@ -378,8 +384,24 @@ class Room {
     return null;
   }
 
-  /// Call the Matrix API to leave this room.
+  /// Call the Matrix API to join this room if the user is not already a member.
+  /// If this room is intended to be a direct chat, the direct chat flag will
+  /// automatically be set.
+  Future<dynamic> join() async {
+    dynamic res = await client.connection.jsonRequest(
+        type: HTTPType.POST, action: "/client/r0/rooms/${id}/join");
+    if (res is ErrorResponse) client.connection.onError.add(res);
+    if (states.containsKey(client.userID) &&
+        states[client.userID].content["is_direct"] is bool &&
+        states[client.userID].content["is_direct"])
+      addToDirectChat(states[client.userID].sender.id);
+    return res;
+  }
+
+  /// Call the Matrix API to leave this room. If this room is set as a direct
+  /// chat, this will be removed too.
   Future<dynamic> leave() async {
+    if (directChatMatrixID != "") await removeFromDirectChat();
     dynamic res = await client.connection.jsonRequest(
         type: HTTPType.POST, action: "/client/r0/rooms/${id}/leave");
     if (res is ErrorResponse) client.connection.onError.add(res);
@@ -534,6 +556,22 @@ class Room {
       return null; // Is already in direct chats
     else
       directChats[userID] = [id];
+
+    final resp = await client.connection.jsonRequest(
+        type: HTTPType.PUT,
+        action: "/client/r0/user/${client.userID}/account_data/m.direct",
+        data: directChats);
+    return resp;
+  }
+
+  /// Sets this room as a direct chat for this user.
+  Future<dynamic> removeFromDirectChat() async {
+    Map<String, dynamic> directChats = client.directChats;
+    if (directChats.containsKey(directChatMatrixID) &&
+        directChats[directChatMatrixID].contains(id))
+      directChats[directChatMatrixID].remove(id);
+    else
+      return null; // Nothing to do here
 
     final resp = await client.connection.jsonRequest(
         type: HTTPType.PUT,
