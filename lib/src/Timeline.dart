@@ -42,13 +42,20 @@ class Timeline {
   final onTimelineInsertCallback onInsert;
 
   StreamSubscription<EventUpdate> sub;
+  bool _requestingHistoryLock = false;
 
-  Future<void> requestHistory({int historyCount = Room.DefaultHistoryCount}) {
-    return room.requestHistory(
+  Future<void> requestHistory(
+      {int historyCount = Room.DefaultHistoryCount}) async {
+    if (!_requestingHistoryLock) {
+      _requestingHistoryLock = true;
+      await room.requestHistory(
         historyCount: historyCount,
         onHistoryReceived: () {
           if (room.prev_batch.isEmpty || room.prev_batch == null) events = [];
-        });
+        },
+      );
+      _requestingHistoryLock = false;
+    }
   }
 
   Timeline({this.room, this.events, this.onUpdate, this.onInsert}) {
@@ -94,6 +101,11 @@ class Timeline {
           }
 
           newEvent = Event.fromJson(eventUpdate.content, room);
+
+          if (eventUpdate.type == "history" &&
+              events.indexWhere(
+                      (e) => e.eventId == eventUpdate.content["event_id"]) !=
+                  -1) return;
 
           events.insert(0, newEvent);
           if (onInsert != null) onInsert(0);
