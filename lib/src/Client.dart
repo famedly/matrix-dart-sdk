@@ -144,6 +144,11 @@ class Client {
           data: directChats);
       return getDirectChatFromUserId(userId);
     }
+    for (int i = 0; i < roomList.rooms.length; i++)
+      if (roomList.rooms[i].membership == Membership.invite &&
+          roomList.rooms[i].states[userID]?.senderId == userId &&
+          roomList.rooms[i].states[userID].content["is_direct"] == true)
+        return roomList.rooms[i].id;
     return null;
   }
 
@@ -307,7 +312,7 @@ class Client {
   Future<String> createRoom(
       {List<User> invite, Map<String, dynamic> params}) async {
     List<String> inviteIDs = [];
-    if (params == null && invite != null) 
+    if (params == null && invite != null)
       for (int i = 0; i < invite.length; i++) inviteIDs.add(invite[i].id);
 
     final dynamic resp = await connection.jsonRequest(

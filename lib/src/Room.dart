@@ -22,7 +22,6 @@
  */
 
 import 'dart:io';
-
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/RoomAccountData.dart';
@@ -288,36 +287,8 @@ class Room {
   Future<String> sendImageEvent(File file, {String txid = null}) async {
     String path = file.path;
     String fileName = path.split("/").last;
-    Map<String, dynamic> info;
 
-    // Try to manipulate the file size and create a thumbnail
-    try {
-      Image image =
-          copyResize(decodeImage(file.readAsBytesSync()), width: 1200);
-      Image thumbnail = copyResize(image, width: 800);
-
-      file = File(path)..writeAsBytesSync(encodePng(image));
-      File thumbnailFile = File(path)..writeAsBytesSync(encodePng(thumbnail));
-      final dynamic uploadThumbnailResp =
-          await client.connection.upload(thumbnailFile);
-      if (uploadThumbnailResp is ErrorResponse) throw (uploadThumbnailResp);
-      info = {
-        "size": image.getBytes().length,
-        "mimetype": mime(file.path),
-        "w": image.width,
-        "h": image.height,
-        "thumbnail_url": uploadThumbnailResp,
-        "thumbnail_info": {
-          "w": thumbnail.width,
-          "h": thumbnail.height,
-          "mimetype": mime(thumbnailFile.path),
-          "size": thumbnail.getBytes().length
-        },
-      };
-    } catch (e) {
-      print(
-          "[UPLOAD] Could not create thumbnail of image. Try to upload the unchanged file...");
-    }
+    Image image = await decodeImage(await file.readAsBytes());
 
     final dynamic uploadResp = await client.connection.upload(file);
     if (uploadResp is ErrorResponse) return null;
@@ -325,8 +296,13 @@ class Room {
       "msgtype": "m.image",
       "body": fileName,
       "url": uploadResp,
+      "info": {
+        "size": image.getBytes().length,
+        "mimetype": mime(file.path),
+        "w": image.width,
+        "h": image.height,
+      },
     };
-    if (info != null) content["info"] = info;
     return await sendEvent(content, txid: txid);
   }
 
