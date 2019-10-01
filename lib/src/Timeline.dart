@@ -119,9 +119,18 @@ class Timeline {
     }
   }
 
-  sortAndUpdate() {
+  bool sortLock = false;
+
+  sort() {
+    if (sortLock) return;
+    sortLock = true;
     events
         ?.sort((a, b) => b.time.toTimeStamp().compareTo(a.time.toTimeStamp()));
+    sortLock = false;
+  }
+
+  sortAndUpdate() {
+    sort();
     if (onUpdate != null) onUpdate();
   }
 }
