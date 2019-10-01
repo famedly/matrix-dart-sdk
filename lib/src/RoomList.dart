@@ -166,9 +166,14 @@ class RoomList {
     sortAndUpdate();
   }
 
+  bool sortLock = false;
+
   sort() {
+    if (sortLock) return;
+    sortLock = true;
     rooms?.sort((a, b) =>
         b.timeCreated.toTimeStamp().compareTo(a.timeCreated.toTimeStamp()));
+    sortLock = false;
   }
 
   sortAndUpdate() {
