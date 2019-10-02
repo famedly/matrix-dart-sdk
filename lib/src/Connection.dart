@@ -24,10 +24,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
-import 'dart:io';
 
 import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/RoomList.dart';
+import 'package:famedlysdk/src/utils/MatrixFile.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mime_type/mime_type.dart';
@@ -295,7 +295,7 @@ class Connection {
 
   /// Uploads a file with the name [fileName] as base64 encoded to the server
   /// and returns the mxc url as a string or an [ErrorResponse].
-  Future<dynamic> upload(File file) async {
+  Future<dynamic> upload(MatrixFile file) async {
     List<int> fileBytes;
     if (client.homeserver != "https://fakeServer.notExisting")
       fileBytes = await file.readAsBytes();
