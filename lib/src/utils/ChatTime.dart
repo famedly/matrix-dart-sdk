@@ -21,10 +21,6 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// TODO: localize this!
-
-import 'package:intl/intl.dart';
-
 /// Used to localize and present time in a chat application manner.
 class ChatTime {
   DateTime dateTime = DateTime.now();
@@ -75,9 +71,9 @@ class ChatTime {
           return "Sonntag";
       }
     } else if (sameYear) {
-      return DateFormat('dd.MM').format(dateTime);
+      return "${_z(dateTime.day)}.${_z(dateTime.month)}";
     }
-    return DateFormat('dd.MM.yyyy').format(dateTime);
+    return "${_z(dateTime.day)}.${_z(dateTime.month)}.${_z(dateTime.year)}";
   }
 
   /// Returns the milliseconds since the Unix epoch.
@@ -122,7 +118,7 @@ class ChatTime {
 
   /// Returns a simple time String.
   String toTimeString() {
-    return DateFormat('HH:mm').format(dateTime);
+    return "${_z(dateTime.hour)}.${_z(dateTime.minute)}";
   }
 
   /// If the ChatTime is today, this returns [toTimeString()], if not it also
@@ -136,6 +132,8 @@ class ChatTime {
         sameYear && now.month == dateTime.month && now.day == dateTime.day;
 
     if (sameDay) return toTimeString();
-    return "${toString()}, ${DateFormat('HH:mm').format(dateTime)}";
+    return "${toString()}, ${toTimeString()}";
   }
+
+  static String _z(int i) => i < 10 ? "0${i.toString()}" : i.toString();
 }
