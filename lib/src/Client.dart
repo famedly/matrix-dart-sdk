@@ -23,16 +23,17 @@
 
 import 'dart:async';
 import 'dart:core';
-import 'dart:io';
 
 import 'package:famedlysdk/src/AccountData.dart';
 import 'package:famedlysdk/src/Presence.dart';
+import 'package:famedlysdk/src/StoreAPI.dart';
 import 'package:famedlysdk/src/sync/UserUpdate.dart';
+import 'package:famedlysdk/src/utils/MatrixFile.dart';
 
 import 'Connection.dart';
 import 'Room.dart';
 import 'RoomList.dart';
-import 'Store.dart';
+//import 'Store.dart';
 import 'User.dart';
 import 'requests/SetPushersRequest.dart';
 import 'responses/ErrorResponse.dart';
@@ -49,12 +50,12 @@ class Client {
   Connection connection;
 
   /// Optional persistent store for all data.
-  Store store;
+  StoreAPI store;
 
-  Client(this.clientName, {this.debug = false}) {
+  Client(this.clientName, {this.debug = false, this.store}) {
     connection = Connection(this);
 
-    if (this.clientName != "testclient") store = Store(this);
+    if (this.clientName != "testclient") store = null; //Store(this);
     connection.onLoginStateChanged.stream.listen((loginState) {
       print("LoginState: ${loginState.toString()}");
     });
@@ -333,7 +334,7 @@ class Client {
   }
 
   /// Uploads a new user avatar for this user. Returns ErrorResponse if something went wrong.
-  Future<dynamic> setAvatar(File file) async {
+  Future<dynamic> setAvatar(MatrixFile file) async {
     final uploadResp = await connection.upload(file);
     if (uploadResp is ErrorResponse) return uploadResp;
     final setAvatarResp = await connection.jsonRequest(

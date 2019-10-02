@@ -21,7 +21,6 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'dart:io';
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/RoomAccountData.dart';
@@ -29,8 +28,9 @@ import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
+import 'package:famedlysdk/src/utils/MatrixFile.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
-import 'package:image/image.dart';
+//import 'package:image/image.dart';
 import 'package:mime_type/mime_type.dart';
 
 import './User.dart';
@@ -250,19 +250,19 @@ class Room {
   Future<String> sendTextEvent(String message, {String txid = null}) =>
       sendEvent({"msgtype": "m.text", "body": message}, txid: txid);
 
-  Future<String> sendFileEvent(File file, String msgType,
+  Future<String> sendFileEvent(MatrixFile file, String msgType,
       {String txid = null}) async {
+    String fileName = file.path.split("/").last;
     // Try to get the size of the file
     int size;
     try {
-      size = (await file.readAsBytes()).length;
+      size = file.bytes.length;
     } catch (e) {
       print("[UPLOAD] Could not get size. Reason: ${e.toString()}");
     }
 
     // Upload file
-    String fileName = file.path.split("/").last;
-    String mimeType = mime(fileName);
+    String mimeType = mime(file.path);
     final dynamic uploadResp = await client.connection.upload(file);
     if (uploadResp is ErrorResponse) return null;
 
@@ -284,12 +284,9 @@ class Room {
     return await sendEvent(content, txid: txid);
   }
 
-  Future<String> sendImageEvent(File file, {String txid = null}) async {
-    String path = file.path;
-    String fileName = path.split("/").last;
-
-    Image image = await decodeImage(await file.readAsBytes());
-
+  Future<String> sendImageEvent(MatrixFile file,
+      {String txid = null, int width, int height}) async {
+    String fileName = file.path.split("/").last;
     final dynamic uploadResp = await client.connection.upload(file);
     if (uploadResp is ErrorResponse) return null;
     Map<String, dynamic> content = {
@@ -297,10 +294,10 @@ class Room {
       "body": fileName,
       "url": uploadResp,
       "info": {
-        "size": image.getBytes().length,
-        "mimetype": mime(file.path),
-        "w": image.width,
-        "h": image.height,
+        "size": file.bytes.length,
+        "mimetype": mime(fileName),
+        "w": width,
+        "h": height,
       },
     };
     return await sendEvent(content, txid: txid);
@@ -719,7 +716,7 @@ class Room {
 
   /// Uploads a new user avatar for this room. Returns ErrorResponse if something went wrong
   /// and the event ID otherwise.
-  Future<dynamic> setAvatar(File file) async {
+  Future<dynamic> setAvatar(MatrixFile file) async {
     final uploadResp = await client.connection.upload(file);
     if (uploadResp is ErrorResponse) return uploadResp;
     final setAvatarResp = await client.connection.jsonRequest(
