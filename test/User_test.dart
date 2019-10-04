@@ -23,7 +23,7 @@
 
 import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/User.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   /// All Tests related to the Event

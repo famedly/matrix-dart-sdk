@@ -20,7 +20,6 @@
  * You should have received a copy of the GNU General Public License
  * along with famedly.  If not, see <http://www.gnu.org/licenses/>.
  */
-import 'package:flutter/widgets.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'SetPushersRequest.g.dart';
@@ -48,13 +47,13 @@ class SetPushersRequest {
   bool append;
 
   SetPushersRequest({
-    @required this.lang,
-    @required this.device_display_name,
-    @required this.app_display_name,
-    @required this.app_id,
-    @required this.kind,
-    @required this.pushkey,
-    @required this.data,
+    this.lang,
+    this.device_display_name,
+    this.app_display_name,
+    this.app_id,
+    this.kind,
+    this.pushkey,
+    this.data,
     this.profile_tag,
     this.append,
   });

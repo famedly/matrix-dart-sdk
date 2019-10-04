@@ -28,7 +28,6 @@ import 'dart:core';
 import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/RoomList.dart';
 import 'package:famedlysdk/src/utils/MatrixFile.dart';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mime_type/mime_type.dart';
 
@@ -46,13 +45,7 @@ enum HTTPType { GET, POST, PUT, DELETE }
 class Connection {
   final Client client;
 
-  Connection(this.client) {
-    WidgetsBinding.instance
-        ?.addObserver(_LifecycleEventHandler(resumeCallBack: () {
-      _sync();
-      return;
-    }));
-  }
+  Connection(this.client);
 
   static String syncFilters = '{"room":{"state":{"lazy_load_members":true}}}';
 
@@ -134,11 +127,11 @@ class Connection {
   ///
   /// Sends [LoginState.logged] to [onLoginStateChanged].
   void connect(
-      {@required String newToken,
-      @required String newHomeserver,
-      @required String newUserID,
-      @required String newDeviceName,
-      @required String newDeviceID,
+      {String newToken,
+      String newHomeserver,
+      String newUserID,
+      String newDeviceName,
+      String newDeviceID,
       List<String> newMatrixVersions,
       bool newLazyLoadMembers,
       String newPrevBatch}) async {
@@ -501,29 +494,6 @@ class Connection {
       );
       client.store?.storeEventUpdate(update);
       onEvent.add(update);
-    }
-  }
-}
-
-typedef _FutureVoidCallback = Future<void> Function();
-
-class _LifecycleEventHandler extends WidgetsBindingObserver {
-  _LifecycleEventHandler({this.resumeCallBack, this.suspendingCallBack});
-
-  final _FutureVoidCallback resumeCallBack;
-  final _FutureVoidCallback suspendingCallBack;
-
-  @override
-  Future<Null> didChangeAppLifecycleState(AppLifecycleState state) async {
-    switch (state) {
-      case AppLifecycleState.inactive:
-      case AppLifecycleState.paused:
-      case AppLifecycleState.suspending:
-        if (suspendingCallBack != null) await suspendingCallBack();
-        break;
-      case AppLifecycleState.resumed:
-        if (resumeCallBack != null) await resumeCallBack();
-        break;
     }
   }
 }

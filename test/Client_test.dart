@@ -35,7 +35,7 @@ import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/sync/RoomUpdate.dart';
 import 'package:famedlysdk/src/sync/UserUpdate.dart';
 import 'package:famedlysdk/src/utils/MatrixFile.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 import 'FakeMatrixApi.dart';
 
@@ -50,15 +50,12 @@ void main() {
   group("FluffyMatrix", () {
     /// Check if all Elements get created
 
-    final create = (WidgetTester tester) {
-      matrix = Client("testclient", debug: true);
-      matrix.connection.httpClient = FakeMatrixApi();
+    matrix = Client("testclient", debug: true);
+    matrix.connection.httpClient = FakeMatrixApi();
 
-      roomUpdateListFuture = matrix.connection.onRoomUpdate.stream.toList();
-      eventUpdateListFuture = matrix.connection.onEvent.stream.toList();
-      userUpdateListFuture = matrix.connection.onUserEvent.stream.toList();
-    };
-    testWidgets('should get created', create);
+    roomUpdateListFuture = matrix.connection.onRoomUpdate.stream.toList();
+    eventUpdateListFuture = matrix.connection.onEvent.stream.toList();
+    userUpdateListFuture = matrix.connection.onUserEvent.stream.toList();
 
     test('Login', () async {
       Future<ErrorResponse> errorFuture =
@@ -250,9 +247,13 @@ void main() {
       expect(eventUpdateList[1].type == "account_data", true);
     });
 
-    testWidgets('should get created', create);
-
     test('Login', () async {
+      matrix = Client("testclient", debug: true);
+      matrix.connection.httpClient = FakeMatrixApi();
+
+      roomUpdateListFuture = matrix.connection.onRoomUpdate.stream.toList();
+      eventUpdateListFuture = matrix.connection.onEvent.stream.toList();
+      userUpdateListFuture = matrix.connection.onUserEvent.stream.toList();
       final bool checkResp =
           await matrix.checkServer("https://fakeServer.notExisting");
 

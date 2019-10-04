@@ -14,10 +14,8 @@ coverage:
   coverage: '/^\s+lines.+: (\d+.\d*%)/'
   dependencies: []
   script:
-    - sudo apt-get update -qq && sudo apt-get install -qq apt-transport-https curl gnupg lcov git
-    - ./scripts/test.sh
-    - ./scripts/coverage.sh
-    - flutter pub pub publish --dry-run
+    - flutter pub get
+    - flutter pub run test
 
 code_analyze:
   image: cirrusci/flutter

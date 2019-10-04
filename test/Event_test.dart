@@ -25,7 +25,7 @@ import 'dart:convert';
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/RoomState.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 import 'FakeMatrixApi.dart';
 
