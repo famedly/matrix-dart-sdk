@@ -29,7 +29,7 @@ import 'package:famedlysdk/src/Timeline.dart';
 import 'package:famedlysdk/src/User.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'package:famedlysdk/src/utils/MatrixFile.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 import 'FakeMatrixApi.dart';
 

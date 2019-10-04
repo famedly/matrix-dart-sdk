@@ -21,7 +21,7 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/Timeline.dart';

@@ -33,7 +33,6 @@ The Detail part of the pattern should be a short description of what the branch 
 ## Commit Messages
 
 Commit Messages should get written in this pattern: `[[Module Name]] [Commit Message]`.
-
 That means for example: "[users] add fetch users endpoint".
 
 
