@@ -254,7 +254,7 @@ class Client {
   /// including all persistent data from the store.
   Future<void> logout() async {
     final dynamic resp = await connection.jsonRequest(
-        type: HTTPType.POST, action: "/client/r0/logout/all");
+        type: HTTPType.POST, action: "/client/r0/logout");
     if (resp is ErrorResponse) connection.onError.add(resp);
 
     await connection.clear();
