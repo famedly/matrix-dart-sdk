@@ -133,6 +133,31 @@ void main() {
           matrix.presences["@alice:example.com"].content["presence"], "online");
       expect(presenceCounter, 1);
       expect(accountDataCounter, 2);
+
+      matrix.connection.onEvent.add(
+        EventUpdate(
+          roomID: "!726s6s6q:example.com",
+          type: "state",
+          eventType: "m.room.canonical_alias",
+          content: {
+            "sender": "@alice:example.com",
+            "type": "m.room.canonical_alias",
+            "content": {"alias": ""},
+            "state_key": "",
+            "origin_server_ts": 1417731086799,
+            "event_id": "66697273743033:example.com"
+          },
+        ),
+      );
+      await new Future.delayed(new Duration(milliseconds: 50));
+
+      expect(
+          matrix.roomList.getRoomByAlias(
+              "#famedlyContactDiscovery:${matrix.userID.split(":")[1]}"),
+          null);
+      final List<User> altContacts = await matrix.loadFamedlyContacts();
+      expect(altContacts.length, 2);
+      expect(altContacts[0].senderId, "@alice:example.com");
     });
 
     test('Try to get ErrorResponse', () async {
@@ -198,7 +223,7 @@ void main() {
 
       List<EventUpdate> eventUpdateList = await eventUpdateListFuture;
 
-      expect(eventUpdateList.length, 8);
+      expect(eventUpdateList.length, 9);
 
       expect(eventUpdateList[0].eventType, "m.room.member");
       expect(eventUpdateList[0].roomID, "!726s6s6q:example.com");
