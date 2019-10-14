@@ -298,8 +298,15 @@ class Client {
         .getRoomByAlias("#famedlyContactDiscovery:${userID.split(":")[1]}");
     if (contactDiscoveryRoom != null)
       contacts = await contactDiscoveryRoom.requestParticipants();
-    else
-      contacts = await store?.loadContacts();
+    else {
+      Map<String, User> userMap = {};
+      for (int i = 0; i < roomList.rooms.length; i++) {
+        List<User> roomUsers = roomList.rooms[i].getParticipants();
+        for (int j = 0; j < roomUsers.length; j++)
+          userMap[roomUsers[i].id] = roomUsers[i];
+      }
+      userMap.forEach((String id, User user) => contacts.add(user));
+    }
     return contacts;
   }
 
