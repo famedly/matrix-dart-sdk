@@ -299,13 +299,14 @@ class Client {
     if (contactDiscoveryRoom != null)
       contacts = await contactDiscoveryRoom.requestParticipants();
     else {
-      Map<String, User> userMap = {};
+      Map<String, bool> userMap = {};
       for (int i = 0; i < roomList.rooms.length; i++) {
         List<User> roomUsers = roomList.rooms[i].getParticipants();
-        for (int j = 0; j < roomUsers.length; j++)
-          userMap[roomUsers[i].id] = roomUsers[i];
+        for (int j = 0; j < roomUsers.length; j++) {
+          if (userMap[roomUsers[j].id] != true) contacts.add(roomUsers[j]);
+          userMap[roomUsers[j].id] = true;
+        }
       }
-      userMap.forEach((String id, User user) => contacts.add(user));
     }
     return contacts;
   }
