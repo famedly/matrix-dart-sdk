@@ -221,9 +221,9 @@ class Connection {
 
     final url = "${client.homeserver}/_matrix${action}";
 
-    Map<String, String> headers = {
-      "Content-Type": contentType,
-    };
+    Map<String, String> headers = {};
+    if (type == HTTPType.PUT || type == HTTPType.POST)
+      headers["Content-Type"] = contentType;
     if (client.isLogged())
       headers["Authorization"] = "Bearer ${client.accessToken}";
 
