@@ -118,7 +118,7 @@ class ChatTime {
 
   /// Returns a simple time String.
   String toTimeString() {
-    return "${_z(dateTime.hour)}.${_z(dateTime.minute)}";
+    return "${_z(dateTime.hour)}:${_z(dateTime.minute)}";
   }
 
   /// If the ChatTime is today, this returns [toTimeString()], if not it also
