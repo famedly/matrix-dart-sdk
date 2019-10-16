@@ -21,6 +21,8 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'dart:io';
+
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/Room.dart';
@@ -28,7 +30,6 @@ import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/Timeline.dart';
 import 'package:famedlysdk/src/User.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
-import 'package:famedlysdk/src/utils/MatrixFile.dart';
 import 'package:test/test.dart';
 
 import 'FakeMatrixApi.dart';
@@ -258,8 +259,7 @@ void main() {
     });
 
     test('setAvatar', () async {
-      final MatrixFile testFile =
-          MatrixFile(bytes: [], path: "/root/file.jpeg");
+      final File testFile = File.fromUri(Uri.parse("fake/path/file.jpeg"));
       final dynamic resp = await room.setAvatar(testFile);
       expect(resp, "YUwRidLecu:example.com");
     });
@@ -286,8 +286,7 @@ void main() {
     });*/
 
     test('sendFileEvent', () async {
-      final MatrixFile testFile =
-          MatrixFile(bytes: [], path: "/root/file.jpeg");
+      final File testFile = File.fromUri(Uri.parse("fake/path/file.jpeg"));
       final dynamic resp =
           await room.sendFileEvent(testFile, "m.file", txid: "testtxid");
       expect(resp, "42");

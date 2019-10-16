@@ -21,6 +21,8 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'dart:io';
+
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/RoomAccountData.dart';
@@ -28,7 +30,6 @@ import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
-import 'package:famedlysdk/src/utils/MatrixFile.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
 //import 'package:image/image.dart';
 import 'package:mime_type/mime_type.dart';
@@ -250,13 +251,13 @@ class Room {
   Future<String> sendTextEvent(String message, {String txid = null}) =>
       sendEvent({"msgtype": "m.text", "body": message}, txid: txid);
 
-  Future<String> sendFileEvent(MatrixFile file, String msgType,
+  Future<String> sendFileEvent(File file, String msgType,
       {String txid = null}) async {
     String fileName = file.path.split("/").last;
     // Try to get the size of the file
     int size;
     try {
-      size = file.bytes.length;
+      size = file.readAsBytesSync().length;
     } catch (e) {
       print("[UPLOAD] Could not get size. Reason: ${e.toString()}");
     }
@@ -284,7 +285,7 @@ class Room {
     return await sendEvent(content, txid: txid);
   }
 
-  Future<String> sendImageEvent(MatrixFile file,
+  Future<String> sendImageEvent(File file,
       {String txid = null, int width, int height}) async {
     String fileName = file.path.split("/").last;
     final dynamic uploadResp = await client.connection.upload(file);
@@ -294,7 +295,7 @@ class Room {
       "body": fileName,
       "url": uploadResp,
       "info": {
-        "size": file.bytes.length,
+        "size": file.readAsBytesSync().length,
         "mimetype": mime(fileName),
         "w": width,
         "h": height,
@@ -716,7 +717,7 @@ class Room {
 
   /// Uploads a new user avatar for this room. Returns ErrorResponse if something went wrong
   /// and the event ID otherwise.
-  Future<dynamic> setAvatar(MatrixFile file) async {
+  Future<dynamic> setAvatar(File file) async {
     final uploadResp = await client.connection.upload(file);
     if (uploadResp is ErrorResponse) return uploadResp;
     final setAvatarResp = await client.connection.jsonRequest(
