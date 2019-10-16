@@ -22,6 +22,7 @@
  */
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:famedlysdk/src/AccountData.dart';
 import 'package:famedlysdk/src/Client.dart';
@@ -34,7 +35,6 @@ import 'package:famedlysdk/src/responses/PushrulesResponse.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/sync/RoomUpdate.dart';
 import 'package:famedlysdk/src/sync/UserUpdate.dart';
-import 'package:famedlysdk/src/utils/MatrixFile.dart';
 import 'package:test/test.dart';
 
 import 'FakeMatrixApi.dart';
@@ -298,15 +298,14 @@ void main() {
     });
 
     test('upload', () async {
-      final MatrixFile testFile =
-          MatrixFile(bytes: [], path: "/root/file.jpeg");
+      final File testFile = File.fromUri(Uri.parse("fake/path/file.jpeg"));
+
       final dynamic resp = await matrix.connection.upload(testFile);
       expect(resp, "mxc://example.com/AQwafuaFswefuhsfAFAgsw");
     });
 
     test('setAvatar', () async {
-      final MatrixFile testFile =
-          MatrixFile(bytes: [], path: "/root/file.jpeg");
+      final File testFile = File.fromUri(Uri.parse("fake/path/file.jpeg"));
       final dynamic resp = await matrix.setAvatar(testFile);
       expect(resp, null);
     });
