@@ -24,10 +24,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
-import 'dart:io';
 
 import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/RoomList.dart';
+import 'package:famedlysdk/src/utils/MatrixFile.dart';
 import 'package:http/http.dart' as http;
 import 'package:mime_type/mime_type.dart';
 
@@ -217,7 +217,7 @@ class Connection {
     dynamic json;
     if (data is Map) data.removeWhere((k, v) => v == null);
     (!(data is String)) ? json = jsonEncode(data) : json = data;
-    if (data is List<int>) json = data;
+    if (data is List<int> || action.startsWith("/media/r0/upload")) json = data;
 
     final url = "${client.homeserver}/_matrix${action}";
 
@@ -288,10 +288,10 @@ class Connection {
 
   /// Uploads a file with the name [fileName] as base64 encoded to the server
   /// and returns the mxc url as a string or an [ErrorResponse].
-  Future<dynamic> upload(File file) async {
-    List<int> fileBytes;
+  Future<dynamic> upload(MatrixFile file) async {
+    dynamic fileBytes;
     if (client.homeserver != "https://fakeServer.notExisting")
-      fileBytes = await file.readAsBytes();
+      fileBytes = file.bytes;
     String fileName = file.path.split("/").last;
     String mimeType = mime(file.path);
     print("[UPLOADING] $fileName, type: $mimeType, size: ${fileBytes?.length}");
