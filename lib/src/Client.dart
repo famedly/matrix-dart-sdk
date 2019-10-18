@@ -23,12 +23,12 @@
 
 import 'dart:async';
 import 'dart:core';
-import 'dart:io';
 
 import 'package:famedlysdk/src/AccountData.dart';
 import 'package:famedlysdk/src/Presence.dart';
 import 'package:famedlysdk/src/StoreAPI.dart';
 import 'package:famedlysdk/src/sync/UserUpdate.dart';
+import 'package:famedlysdk/src/utils/MatrixFile.dart';
 
 import 'Connection.dart';
 import 'Room.dart';
@@ -342,7 +342,7 @@ class Client {
   }
 
   /// Uploads a new user avatar for this user. Returns ErrorResponse if something went wrong.
-  Future<dynamic> setAvatar(File file) async {
+  Future<dynamic> setAvatar(MatrixFile file) async {
     final uploadResp = await connection.upload(file);
     if (uploadResp is ErrorResponse) return uploadResp;
     final setAvatarResp = await connection.jsonRequest(
