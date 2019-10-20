@@ -103,6 +103,7 @@ void main() {
           newDeviceID: resp["device_id"],
           newMatrixVersions: matrix.matrixVersions,
           newLazyLoadMembers: matrix.lazyLoadMembers);
+      await new Future.delayed(new Duration(milliseconds: 50));
 
       expect(matrix.accessToken == resp["access_token"], true);
       expect(matrix.deviceName == "Text Matrix Client", true);
@@ -123,6 +124,15 @@ void main() {
       expect(matrix.roomList.rooms[1].directChatMatrixID, "@bob:example.com");
       expect(matrix.directChats, matrix.accountData["m.direct"].content);
       expect(matrix.presences.length, 1);
+      expect(matrix.roomList.rooms[1].ephemerals.length, 2);
+      expect(matrix.roomList.rooms[1].typingUsers.length, 1);
+      expect(matrix.roomList.rooms[1].typingUsers[0].id, "@alice:example.com");
+      expect(matrix.roomList.rooms[1].roomAccountData.length, 3);
+      expect(
+          matrix.roomList.rooms[1].roomAccountData["m.receipt"]
+                  .content["7365636s6r6432:example.com"]["m.read"]
+              ["@alice:example.com"]["ts"],
+          1436451550453);
       expect(matrix.roomList.rooms.length, 2);
       expect(matrix.roomList.rooms[1].canonicalAlias,
           "#famedlyContactDiscovery:${matrix.userID.split(":")[1]}");
@@ -223,7 +233,7 @@ void main() {
 
       List<EventUpdate> eventUpdateList = await eventUpdateListFuture;
 
-      expect(eventUpdateList.length, 9);
+      expect(eventUpdateList.length, 12);
 
       expect(eventUpdateList[0].eventType, "m.room.member");
       expect(eventUpdateList[0].roomID, "!726s6s6q:example.com");
@@ -241,21 +251,33 @@ void main() {
       expect(eventUpdateList[3].roomID, "!726s6s6q:example.com");
       expect(eventUpdateList[3].type, "timeline");
 
-      expect(eventUpdateList[4].eventType, "m.tag");
+      expect(eventUpdateList[4].eventType, "m.typing");
       expect(eventUpdateList[4].roomID, "!726s6s6q:example.com");
-      expect(eventUpdateList[4].type, "account_data");
+      expect(eventUpdateList[4].type, "ephemeral");
 
-      expect(eventUpdateList[5].eventType, "org.example.custom.room.config");
+      expect(eventUpdateList[5].eventType, "m.receipt");
       expect(eventUpdateList[5].roomID, "!726s6s6q:example.com");
-      expect(eventUpdateList[5].type, "account_data");
+      expect(eventUpdateList[5].type, "ephemeral");
 
-      expect(eventUpdateList[6].eventType, "m.room.name");
-      expect(eventUpdateList[6].roomID, "!696r7674:example.com");
-      expect(eventUpdateList[6].type, "invite_state");
+      expect(eventUpdateList[6].eventType, "m.receipt");
+      expect(eventUpdateList[6].roomID, "!726s6s6q:example.com");
+      expect(eventUpdateList[6].type, "account_data");
 
-      expect(eventUpdateList[7].eventType, "m.room.member");
-      expect(eventUpdateList[7].roomID, "!696r7674:example.com");
-      expect(eventUpdateList[7].type, "invite_state");
+      expect(eventUpdateList[7].eventType, "m.tag");
+      expect(eventUpdateList[7].roomID, "!726s6s6q:example.com");
+      expect(eventUpdateList[7].type, "account_data");
+
+      expect(eventUpdateList[8].eventType, "org.example.custom.room.config");
+      expect(eventUpdateList[8].roomID, "!726s6s6q:example.com");
+      expect(eventUpdateList[8].type, "account_data");
+
+      expect(eventUpdateList[9].eventType, "m.room.name");
+      expect(eventUpdateList[9].roomID, "!696r7674:example.com");
+      expect(eventUpdateList[9].type, "invite_state");
+
+      expect(eventUpdateList[10].eventType, "m.room.member");
+      expect(eventUpdateList[10].roomID, "!696r7674:example.com");
+      expect(eventUpdateList[10].type, "invite_state");
     });
 
     test('User Update Test', () async {

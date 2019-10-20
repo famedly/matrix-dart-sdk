@@ -422,9 +422,9 @@ class Connection {
           room["timeline"]["events"] is List<dynamic>)
         _handleRoomEvents(id, room["timeline"]["events"], "timeline");
 
-      if (room["ephemetal"] is Map<String, dynamic> &&
-          room["ephemetal"]["events"] is List<dynamic>)
-        _handleEphemerals(id, room["ephemetal"]["events"]);
+      if (room["ephemeral"] is Map<String, dynamic> &&
+          room["ephemeral"]["events"] is List<dynamic>)
+        _handleEphemerals(id, room["ephemeral"]["events"]);
 
       if (room["account_data"] is Map<String, dynamic> &&
           room["account_data"]["events"] is List<dynamic>)
@@ -434,32 +434,48 @@ class Connection {
 
   void _handleEphemerals(String id, List<dynamic> events) {
     for (num i = 0; i < events.length; i++) {
-      if (!(events[i]["type"] is String &&
-          events[i]["content"] is Map<String, dynamic>)) continue;
+      _handleEvent(events[i], id, "ephemeral");
+
+      // Receipt events are deltas between two states. We will create a
+      // fake room account data event for this and store the difference
+      // there.
       if (events[i]["type"] == "m.receipt") {
-        events[i]["content"].forEach((String e, dynamic value) {
-          if (!(events[i]["content"][e] is Map<String, dynamic> &&
-              events[i]["content"][e]["m.read"] is Map<String, dynamic>))
-            return;
-          events[i]["content"][e]["m.read"]
-              .forEach((String user, dynamic value) async {
-            if (!(events[i]["content"][e]["m.read"]["user"]
-                    is Map<String, dynamic> &&
-                events[i]["content"][e]["m.read"]["ts"] is num)) return;
+        Room room = client.roomList.getRoomById(id);
+        if (room == null) room = Room(id: id);
 
-            _handleEvent(events[i], id, "ephemeral");
-          });
-        });
-      } else if (events[i]["type"] == "m.typing") {
-        if (!(events[i]["content"]["user_ids"] is List<String>)) continue;
+        Map<String, dynamic> receiptStateContent =
+            room.roomAccountData["m.receipt"]?.content ?? {};
+        for (var eventEntry in events[i]["content"].entries) {
+          final String eventID = eventEntry.key;
+          if (events[i]["content"][eventID]["m.read"] != null) {
+            final Map<String, dynamic> userTimestampMap =
+                events[i]["content"][eventID]["m.read"];
+            for (var userTimestampMapEntry in userTimestampMap.entries) {
+              final String mxid = userTimestampMapEntry.key;
 
-        List<String> user_ids = events[i]["content"]["user_ids"];
+              // Remove previous receipt event from this user
+              for (var entry in receiptStateContent.entries) {
+                if (entry.value["m.read"] is Map<String, dynamic> &&
+                    entry.value["m.read"].containsKey(mxid)) {
+                  entry.value["m.read"].remove(mxid);
+                  break;
+                }
+              }
 
-        /// If the user is typing, remove his id from the list of typing users
-        var ownTyping = user_ids.indexOf(client.userID);
-        if (ownTyping != -1) user_ids.removeAt(1);
-
-        _handleEvent(events[i], id, "ephemeral");
+              if (userTimestampMap[mxid]["ts"] is int) {
+                if (receiptStateContent[eventID] == null)
+                  receiptStateContent[eventID] = {"m.read": {}};
+                else if (receiptStateContent[eventID]["m.read"])
+                  receiptStateContent[eventID]["m.read"] = {};
+                receiptStateContent[eventID]["m.read"][mxid] = {
+                  "ts": userTimestampMap[mxid]["ts"],
+                };
+              }
+            }
+          }
+        }
+        events[i]["content"] = receiptStateContent;
+        _handleEvent(events[i], id, "account_data");
       }
     }
   }

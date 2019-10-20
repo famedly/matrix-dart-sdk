@@ -21,6 +21,7 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/src/RoomAccountData.dart';
 import 'package:test/test.dart';
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Room.dart';
@@ -97,6 +98,24 @@ void main() {
       expect(timeline.events[0].time.toTimeStamp(), testTimeStamp);
       expect(timeline.events[0].getBody(), "Testcase");
       expect(timeline.events[0].time > timeline.events[1].time, true);
+      expect(timeline.events[0].receipts, []);
+
+      room.roomAccountData["m.receipt"] = RoomAccountData.fromJson({
+        "type": "m.receipt",
+        "content": {
+          "1": {
+            "m.read": {
+              "@alice:example.com": {"ts": 1436451550453}
+            }
+          }
+        },
+        "room_id": roomID,
+      }, room);
+
+      await new Future.delayed(new Duration(milliseconds: 50));
+
+      expect(timeline.events[0].receipts.length, 1);
+      expect(timeline.events[0].receipts[0].user.id, "@alice:example.com");
     });
 
     test("Send message", () async {

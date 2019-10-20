@@ -443,6 +443,17 @@ class FakeMatrixApi extends MockClient {
                             "content": {
                               "user_ids": ["@alice:example.com"]
                             }
+                          },
+                          {
+                            "content": {
+                              "7365636s6r6432:example.com": {
+                                "m.read": {
+                                  "@alice:example.com": {"ts": 1436451550453}
+                                }
+                              }
+                            },
+                            "room_id": "!726s6s6q:example.com",
+                            "type": "m.receipt"
                           }
                         ]
                       },

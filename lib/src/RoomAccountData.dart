@@ -25,6 +25,7 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/AccountData.dart';
 import 'package:famedlysdk/src/RoomState.dart';
 
+/// Stripped down events for account data and ephemrals of a room.
 class RoomAccountData extends AccountData {
   /// The user who has sent this event if it is not a global account data event.
   final String roomId;
