@@ -24,6 +24,7 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/RoomState.dart';
 
 import 'Client.dart';
@@ -147,9 +148,6 @@ class RoomList {
   }
 
   void _handleEventUpdate(EventUpdate eventUpdate) {
-    if (eventUpdate.type != "timeline" &&
-        eventUpdate.type != "state" &&
-        eventUpdate.type != "invite_state") return;
     // Search the room in the rooms
     num j = 0;
     for (j = 0; j < rooms.length; j++) {
@@ -157,11 +155,20 @@ class RoomList {
     }
     final bool found = (j < rooms.length && rooms[j].id == eventUpdate.roomID);
     if (!found) return;
-
-    RoomState stateEvent = RoomState.fromJson(eventUpdate.content, rooms[j]);
-    if (rooms[j].states[stateEvent.key] != null &&
-        rooms[j].states[stateEvent.key].time > stateEvent.time) return;
-    rooms[j].states[stateEvent.key] = stateEvent;
+    if (eventUpdate.type == "timeline" ||
+        eventUpdate.type == "state" ||
+        eventUpdate.type == "invite_state") {
+      RoomState stateEvent = RoomState.fromJson(eventUpdate.content, rooms[j]);
+      if (rooms[j].states[stateEvent.key] != null &&
+          rooms[j].states[stateEvent.key].time > stateEvent.time) return;
+      rooms[j].states[stateEvent.key] = stateEvent;
+    } else if (eventUpdate.type == "account_data") {
+      rooms[j].roomAccountData[eventUpdate.eventType] =
+          RoomAccountData.fromJson(eventUpdate.content, rooms[j]);
+    } else if (eventUpdate.type == "ephemeral") {
+      rooms[j].ephemerals[eventUpdate.eventType] =
+          RoomAccountData.fromJson(eventUpdate.content, rooms[j]);
+    }
     if (rooms[j].onUpdate != null) rooms[j].onUpdate();
     sortAndUpdate();
   }

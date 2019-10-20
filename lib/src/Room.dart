@@ -69,6 +69,9 @@ class Room {
   /// Key-Value store for room states.
   Map<String, RoomState> states = {};
 
+  /// Key-Value store for ephemerals.
+  Map<String, RoomAccountData> ephemerals = {};
+
   /// Key-Value store for private account data only visible for this user.
   Map<String, RoomAccountData> roomAccountData = {};
 
@@ -159,6 +162,17 @@ class Room {
       }
     });
     return lastEvent;
+  }
+
+  /// Returns a list of all current typing users.
+  List<User> get typingUsers {
+    if (!ephemerals.containsKey("m.typing")) return [];
+    List<dynamic> typingMxid = ephemerals["m.typing"].content["user_ids"];
+    List<User> typingUsers = [];
+    for (int i = 0; i < typingMxid.length; i++)
+      typingUsers.add(
+          states[typingMxid[i]]?.asUser ?? User(typingMxid[i], room: this));
+    return typingUsers;
   }
 
   /// Your current client instance.

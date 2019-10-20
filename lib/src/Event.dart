@@ -24,8 +24,10 @@
 import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
+import 'package:famedlysdk/src/utils/Receipt.dart';
 
 import './Room.dart';
+import 'User.dart';
 
 /// Defines a timeline event for a room.
 class Event extends RoomState {
@@ -95,6 +97,21 @@ class Event extends RoomState {
     if (text != "") return text;
     if (formattedText != "") return formattedText;
     return "$type";
+  }
+
+  /// Returns a list of [Receipt] instances for this event.
+  List<Receipt> get receipts {
+    if (!(room.roomAccountData.containsKey("m.receipt") &&
+        room.roomAccountData["m.receipt"].content.containsKey(eventId)))
+      return [];
+    List<Receipt> receiptsList = [];
+    for (var entry in room
+        .roomAccountData["m.receipt"].content[eventId]["m.read"].entries) {
+      receiptsList.add(Receipt(
+          room.states[entry.key]?.asUser ?? User(entry.key),
+          ChatTime(entry.value["ts"])));
+    }
+    return receiptsList;
   }
 
   /// Removes this event if the status is < 1. This event will just be removed
