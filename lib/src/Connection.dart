@@ -465,7 +465,7 @@ class Connection {
               if (userTimestampMap[mxid]["ts"] is int) {
                 if (receiptStateContent[eventID] == null)
                   receiptStateContent[eventID] = {"m.read": {}};
-                else if (receiptStateContent[eventID]["m.read"])
+                else if (receiptStateContent[eventID]["m.read"] == null)
                   receiptStateContent[eventID]["m.read"] = {};
                 receiptStateContent[eventID]["m.read"][mxid] = {
                   "ts": userTimestampMap[mxid]["ts"],
