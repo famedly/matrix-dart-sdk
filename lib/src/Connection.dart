@@ -292,7 +292,7 @@ class Connection {
     dynamic fileBytes;
     if (client.homeserver != "https://fakeServer.notExisting")
       fileBytes = file.bytes;
-    String fileName = file.path.split("/").last;
+    String fileName = file.path.split("/").last.toLowerCase();
     String mimeType = mime(file.path);
     print("[UPLOADING] $fileName, type: $mimeType, size: ${fileBytes?.length}");
     final dynamic resp = await jsonRequest(
