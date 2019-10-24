@@ -37,6 +37,7 @@ void main() {
     test("Create and insert one room", () async {
       final Client client = Client("testclient");
       client.homeserver = "https://testserver.abc";
+      client.prevBatch = "1234";
 
       int updateCount = 0;
       List<int> insertList = [];
@@ -85,6 +86,7 @@ void main() {
     test("Restort", () async {
       final Client client = Client("testclient");
       client.homeserver = "https://testserver.abc";
+      client.prevBatch = "1234";
 
       int updateCount = 0;
       List<int> insertList = [];
@@ -198,6 +200,7 @@ void main() {
     test("onlyLeft", () async {
       final Client client = Client("testclient");
       client.homeserver = "https://testserver.abc";
+      client.prevBatch = "1234";
 
       int updateCount = 0;
       List<int> insertList = [];

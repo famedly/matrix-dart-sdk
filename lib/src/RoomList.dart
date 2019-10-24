@@ -59,6 +59,7 @@ class RoomList {
 
   StreamSubscription<EventUpdate> eventSub;
   StreamSubscription<RoomUpdate> roomSub;
+  StreamSubscription<bool> firstSyncSub;
 
   RoomList(
       {this.client,
@@ -69,6 +70,8 @@ class RoomList {
       this.onlyLeft = false}) {
     eventSub ??= client.connection.onEvent.stream.listen(_handleEventUpdate);
     roomSub ??= client.connection.onRoomUpdate.stream.listen(_handleRoomUpdate);
+    firstSyncSub ??=
+        client.connection.onFirstSync.stream.listen((b) => sortAndUpdate());
     sort();
   }
 
@@ -148,6 +151,7 @@ class RoomList {
   }
 
   void _handleEventUpdate(EventUpdate eventUpdate) {
+    if (eventUpdate.type == "history") return;
     // Search the room in the rooms
     num j = 0;
     for (j = 0; j < rooms.length; j++) {
@@ -170,7 +174,7 @@ class RoomList {
           RoomAccountData.fromJson(eventUpdate.content, rooms[j]);
     }
     if (rooms[j].onUpdate != null) rooms[j].onUpdate();
-    sortAndUpdate();
+    if (eventUpdate.type == "timeline") sortAndUpdate();
   }
 
   bool sortLock = false;
@@ -184,6 +188,7 @@ class RoomList {
   }
 
   sortAndUpdate() {
+    if (client.prevBatch == null) return;
     sort();
     if (onUpdate != null) onUpdate();
   }
