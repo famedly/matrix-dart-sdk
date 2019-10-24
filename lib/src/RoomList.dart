@@ -180,7 +180,7 @@ class RoomList {
   bool sortLock = false;
 
   sort() {
-    if (sortLock) return;
+    if (sortLock || rooms.length < 2) return;
     sortLock = true;
     rooms?.sort((a, b) =>
         b.timeCreated.toTimeStamp().compareTo(a.timeCreated.toTimeStamp()));
