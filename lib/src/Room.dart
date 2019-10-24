@@ -27,6 +27,7 @@ import 'package:famedlysdk/src/RoomAccountData.dart';
 import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
+import 'package:famedlysdk/src/sync/RoomUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'package:famedlysdk/src/utils/MatrixFile.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
@@ -532,6 +533,15 @@ class Room {
         client.connection.onEvent.add(eventUpdate);
       }
     }
+    client.connection.onRoomUpdate.add(
+      RoomUpdate(
+        id: id,
+        membership: membership,
+        prev_batch: resp["end"],
+        notification_count: notificationCount,
+        highlight_count: highlightCount,
+      ),
+    );
   }
 
   /// Sets this room as a direct chat for this user.
