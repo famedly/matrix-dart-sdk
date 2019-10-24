@@ -462,7 +462,7 @@ class Connection {
                 }
               }
 
-              if (userTimestampMap[mxid]["ts"] is int) {
+              if (userTimestampMap[mxid].containsKey("ts")) {
                 if (receiptStateContent[eventID] == null)
                   receiptStateContent[eventID] = {"m.read": {}};
                 else if (receiptStateContent[eventID]["m.read"] == null)

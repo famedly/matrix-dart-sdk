@@ -122,7 +122,7 @@ class Timeline {
   bool sortLock = false;
 
   sort() {
-    if (sortLock) return;
+    if (sortLock || events.length < 2) return;
     sortLock = true;
     events
         ?.sort((a, b) => b.time.toTimeStamp().compareTo(a.time.toTimeStamp()));
