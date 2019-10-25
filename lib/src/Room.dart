@@ -87,7 +87,7 @@ class Room {
   /// The name of the room if set by a participant.
   String get name {
     if (states["m.room.name"] != null &&
-        !states["m.room.name"].content["name"].isEmpty)
+        !(states["m.room.name"].content["name"]?.isEmpty ?? true))
       return states["m.room.name"].content["name"];
     if (canonicalAlias != null && !canonicalAlias.isEmpty)
       return canonicalAlias.substring(1, canonicalAlias.length).split(":")[0];
