@@ -130,9 +130,12 @@ void main() {
       expect(matrix.roomList.rooms[1].roomAccountData.length, 3);
       expect(
           matrix.roomList.rooms[1].roomAccountData["m.receipt"]
-                  .content["7365636s6r6432:example.com"]["m.read"]
-              ["@alice:example.com"]["ts"],
+              .content["@alice:example.com"]["ts"],
           1436451550453);
+      expect(
+          matrix.roomList.rooms[1].roomAccountData["m.receipt"]
+              .content["@alice:example.com"]["event_id"],
+          "7365636s6r6432:example.com");
       expect(matrix.roomList.rooms.length, 2);
       expect(matrix.roomList.rooms[1].canonicalAlias,
           "#famedlyContactDiscovery:${matrix.userID.split(":")[1]}");

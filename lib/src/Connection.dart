@@ -461,15 +461,13 @@ class Connection {
                   break;
                 }
               }
-
               if (userTimestampMap[mxid].containsKey("ts")) {
-                if (receiptStateContent[eventID] == null)
-                  receiptStateContent[eventID] = {"m.read": {}};
-                else if (receiptStateContent[eventID]["m.read"] == null)
-                  receiptStateContent[eventID]["m.read"] = {};
-                receiptStateContent[eventID]["m.read"][mxid] = {
+                receiptStateContent[mxid] = {
+                  "event_id": eventID,
                   "ts": userTimestampMap[mxid]["ts"],
                 };
+                print(
+                    "$mxid hat $eventID um ${userTimestampMap[mxid]["ts"]} gelesen!");
               }
             }
           }
