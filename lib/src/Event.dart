@@ -101,15 +101,13 @@ class Event extends RoomState {
 
   /// Returns a list of [Receipt] instances for this event.
   List<Receipt> get receipts {
-    if (!(room.roomAccountData.containsKey("m.receipt") &&
-        room.roomAccountData["m.receipt"].content.containsKey(eventId)))
-      return [];
+    if (!(room.roomAccountData.containsKey("m.receipt"))) return [];
     List<Receipt> receiptsList = [];
-    for (var entry in room
-        .roomAccountData["m.receipt"].content[eventId]["m.read"].entries) {
-      receiptsList.add(Receipt(
-          room.states[entry.key]?.asUser ?? User(entry.key),
-          ChatTime(entry.value["ts"])));
+    for (var entry in room.roomAccountData["m.receipt"].content.entries) {
+      if (entry.value["event_id"] == eventId)
+        receiptsList.add(Receipt(
+            room.states[entry.key]?.asUser ?? User(entry.key),
+            ChatTime(entry.value["ts"])));
     }
     return receiptsList;
   }

@@ -103,10 +103,9 @@ void main() {
       room.roomAccountData["m.receipt"] = RoomAccountData.fromJson({
         "type": "m.receipt",
         "content": {
-          "1": {
-            "m.read": {
-              "@alice:example.com": {"ts": 1436451550453}
-            }
+          "@alice:example.com": {
+            "event_id": "1",
+            "ts": 1436451550453,
           }
         },
         "room_id": roomID,
