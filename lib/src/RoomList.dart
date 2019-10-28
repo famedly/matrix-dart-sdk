@@ -75,6 +75,24 @@ class RoomList {
     sort();
   }
 
+  RoomList copyWith({
+    Client client,
+    List<Room> rooms,
+    onRoomListUpdateCallback onUpdate,
+    onRoomListInsertCallback onInsert,
+    onRoomListRemoveCallback onRemove,
+    bool onlyLeft,
+  }) {
+    return RoomList(
+      client: client ?? this.client,
+      rooms: rooms ?? this.rooms,
+      onUpdate: onUpdate ?? this.onUpdate,
+      onInsert: onInsert ?? this.onInsert,
+      onRemove: onRemove ?? this.onRemove,
+      onlyLeft: onlyLeft ?? this.onlyLeft,
+    );
+  }
+
   Room getRoomByAlias(String alias) {
     for (int i = 0; i < rooms.length; i++) {
       if (rooms[i].canonicalAlias == alias) return rooms[i];
