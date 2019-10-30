@@ -466,8 +466,6 @@ class Connection {
                   "event_id": eventID,
                   "ts": userTimestampMap[mxid]["ts"],
                 };
-                print(
-                    "$mxid hat $eventID um ${userTimestampMap[mxid]["ts"]} gelesen!");
               }
             }
           }
