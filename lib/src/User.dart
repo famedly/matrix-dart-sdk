@@ -106,7 +106,9 @@ class User extends RoomState {
   /// Returns the displayname or the local part of the Matrix ID if the user
   /// has no displayname.
   String calcDisplayname() => (displayName == null || displayName.isEmpty)
-      ? stateKey.replaceFirst("@", "").split(":")[0]
+      ? (stateKey != null
+          ? stateKey.replaceFirst("@", "").split(":")[0]
+          : "Unknown User")
       : displayName;
 
   /// Call the Matrix API to kick this user from this room.
