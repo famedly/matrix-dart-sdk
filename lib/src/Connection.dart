@@ -461,7 +461,8 @@ class Connection {
                   break;
                 }
               }
-              if (userTimestampMap[mxid].containsKey("ts")) {
+              if (userTimestampMap[mxid] is Map<String, dynamic> &&
+                  userTimestampMap[mxid].containsKey("ts")) {
                 receiptStateContent[mxid] = {
                   "event_id": eventID,
                   "ts": userTimestampMap[mxid]["ts"],
