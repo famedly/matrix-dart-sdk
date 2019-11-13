@@ -156,12 +156,17 @@ class Room {
   Event get lastEvent {
     ChatTime lastTime = ChatTime(0);
     Event lastEvent = null;
-    states.forEach((String key, RoomState state) {
-      if (state.time != null && state.time > lastTime) {
+    for (final entry in states.entries) {
+      final RoomState state = entry.value;
+      if ((state.time != null && state.time > lastTime) ||
+          state.typeKey == "m.room.message") {
         lastTime = state.time;
         lastEvent = state.timelineEvent;
+        if (state.typeKey == "m.room.message") {
+          break;
+        }
       }
-    });
+    }
     return lastEvent;
   }
 
