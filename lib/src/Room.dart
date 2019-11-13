@@ -378,7 +378,20 @@ class Room {
   Future<dynamic> join() async {
     dynamic res = await client.connection.jsonRequest(
         type: HTTPType.POST, action: "/client/r0/rooms/${id}/join");
-    if (res is ErrorResponse) client.connection.onError.add(res);
+    if (res is ErrorResponse) {
+      client.connection.onError.add(res);
+      if (res.error == "No known servers") {
+        client.store?.forgetRoom(id);
+        client.connection.onRoomUpdate.add(
+          RoomUpdate(
+              id: id,
+              membership: Membership.leave,
+              notification_count: 0,
+              highlight_count: 0),
+        );
+      }
+      return res;
+    }
     if (states.containsKey(client.userID) &&
         states[client.userID].content["is_direct"] is bool &&
         states[client.userID].content["is_direct"])
