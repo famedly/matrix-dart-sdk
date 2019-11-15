@@ -43,7 +43,7 @@ class RoomState {
   /// The user who has sent this event if it is not a global account data event.
   final String senderId;
 
-  User get sender => room.states[senderId]?.asUser ?? User(senderId);
+  User get sender => room.getUserByMXIDSync(senderId);
 
   /// The time this event has received at the server. May be null for events like
   /// account data.
@@ -64,7 +64,7 @@ class RoomState {
   /// the overwriting semantics for this piece of room state.
   final String stateKey;
 
-  User get stateKeyUser => room.states[stateKey]?.asUser ?? User(stateKey);
+  User get stateKeyUser => room.getUserByMXIDSync(stateKey);
 
   RoomState(
       {this.content,
