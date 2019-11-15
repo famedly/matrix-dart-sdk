@@ -176,8 +176,7 @@ class Room {
     List<dynamic> typingMxid = ephemerals["m.typing"].content["user_ids"];
     List<User> typingUsers = [];
     for (int i = 0; i < typingMxid.length; i++)
-      typingUsers.add(
-          states[typingMxid[i]]?.asUser ?? User(typingMxid[i], room: this));
+      typingUsers.add(getUserByMXIDSync(typingMxid[i]));
     return typingUsers;
   }
 
@@ -707,16 +706,56 @@ class Room {
     return participants;
   }
 
+  /// Returns the [User] object for the given [mxID] or requests it from
+  /// the homeserver and waits for a response.
   Future<User> getUserByMXID(String mxID) async {
     if (states[mxID] != null) return states[mxID].asUser;
+    return requestUser(mxID);
+  }
+
+  /// Returns the [User] object for the given [mxID] or requests it from
+  /// the homeserver and returns a default [User] object while waiting.
+  User getUserByMXIDSync(String mxID) {
+    if (states[mxID] != null)
+      return states[mxID].asUser;
+    else {
+      requestUser(mxID);
+      return User(mxID, room: this);
+    }
+  }
+
+  Set<String> _requestingMatrixIds = Set();
+
+  /// Requests a missing [User] for this room. Important for clients using
+  /// lazy loading.
+  Future<User> requestUser(String mxID) async {
+    if (mxID == null || !_requestingMatrixIds.add(mxID)) return null;
     final dynamic resp = await client.connection.jsonRequest(
         type: HTTPType.GET,
         action: "/client/r0/rooms/$id/state/m.room.member/$mxID");
-    if (resp is ErrorResponse) return null;
-    return User(mxID,
+    if (resp is ErrorResponse) {
+      _requestingMatrixIds.remove(mxID);
+      return null;
+    }
+    final User user = User(mxID,
         displayName: resp["displayname"],
         avatarUrl: resp["avatar_url"],
         room: this);
+    states[mxID] = user;
+    if (client.store != null)
+      client.store.transaction(() {
+        client.store.storeEventUpdate(
+          EventUpdate(
+              content: resp,
+              roomID: id,
+              type: "state",
+              eventType: "m.room.member"),
+        );
+        return;
+      });
+    if (onUpdate != null) onUpdate();
+    _requestingMatrixIds.remove(mxID);
+    return user;
   }
 
   /// Searches for the event in the store. If it isn't found, try to request it

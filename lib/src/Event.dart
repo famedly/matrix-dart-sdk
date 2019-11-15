@@ -27,7 +27,6 @@ import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'package:famedlysdk/src/utils/Receipt.dart';
 
 import './Room.dart';
-import 'User.dart';
 
 /// Defines a timeline event for a room.
 class Event extends RoomState {
@@ -106,8 +105,7 @@ class Event extends RoomState {
     for (var entry in room.roomAccountData["m.receipt"].content.entries) {
       if (entry.value["event_id"] == eventId)
         receiptsList.add(Receipt(
-            room.states[entry.key]?.asUser ?? User(entry.key),
-            ChatTime(entry.value["ts"])));
+            room.getUserByMXIDSync(entry.key), ChatTime(entry.value["ts"])));
     }
     return receiptsList;
   }
