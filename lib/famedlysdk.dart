@@ -32,6 +32,7 @@ export 'package:famedlysdk/src/sync/UserUpdate.dart';
 export 'package:famedlysdk/src/utils/ChatTime.dart';
 export 'package:famedlysdk/src/utils/MatrixFile.dart';
 export 'package:famedlysdk/src/utils/MxContent.dart';
+export 'package:famedlysdk/src/utils/StatesMap.dart';
 export 'package:famedlysdk/src/AccountData.dart';
 export 'package:famedlysdk/src/Client.dart';
 export 'package:famedlysdk/src/Connection.dart';

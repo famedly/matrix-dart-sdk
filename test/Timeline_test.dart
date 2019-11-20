@@ -43,11 +43,7 @@ void main() {
     client.homeserver = "https://fakeServer.notExisting";
 
     Room room = Room(
-        id: roomID,
-        client: client,
-        prev_batch: "1234",
-        states: {},
-        roomAccountData: {});
+        id: roomID, client: client, prev_batch: "1234", roomAccountData: {});
     Timeline timeline = Timeline(
         room: room,
         events: [],

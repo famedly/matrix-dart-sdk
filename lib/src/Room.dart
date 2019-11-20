@@ -37,6 +37,7 @@ import 'package:mime_type/mime_type.dart';
 import './User.dart';
 import 'Connection.dart';
 import 'Timeline.dart';
+import 'utils/StatesMap.dart';
 
 typedef onRoomUpdate = void Function();
 
@@ -67,8 +68,7 @@ class Room {
   /// The number of users with membership of invite.
   int mInvitedMemberCount;
 
-  /// Key-Value store for room states.
-  Map<String, RoomState> states = {};
+  StatesMap states = StatesMap();
 
   /// Key-Value store for ephemerals.
   Map<String, RoomAccountData> ephemerals = {};
@@ -155,18 +155,16 @@ class Room {
 
   Event get lastEvent {
     ChatTime lastTime = ChatTime(0);
-    Event lastEvent = null;
-    for (final entry in states.entries) {
-      final RoomState state = entry.value;
-      if ((state.time != null && state.time > lastTime) ||
-          state.typeKey == "m.room.message") {
-        lastTime = state.time;
-        lastEvent = state.timelineEvent;
-        if (state.typeKey == "m.room.message") {
-          break;
+    Event lastEvent = states["m.room.message"]?.timelineEvent;
+    if (lastEvent == null)
+      states.forEach((final String key, final entry) {
+        if (!entry.containsKey("")) return;
+        final RoomState state = entry[""];
+        if (state.time != null && state.time > lastTime) {
+          lastTime = state.time;
+          lastEvent = state.timelineEvent;
         }
-      }
-    }
+      });
     return lastEvent;
   }
 
@@ -194,7 +192,6 @@ class Room {
     this.mHeroes = const [],
     this.mInvitedMemberCount = 0,
     this.mJoinedMemberCount = 0,
-    this.states = const {},
     this.roomAccountData = const {},
   });
 
@@ -624,7 +621,6 @@ class Room {
       mJoinedMemberCount: row["joined_member_count"],
       mHeroes: row["heroes"]?.split(",") ?? [],
       client: matrix,
-      states: {},
       roomAccountData: {},
     );
 
@@ -635,7 +631,8 @@ class Room {
         RoomState newState = RoomState.fromJson(rawStates[i], newRoom);
         newStates[newState.key] = newState;
       }
-      newRoom.states = newStates;
+      for (var entry in newStates.entries)
+        newRoom.states[entry.key] = entry.value;
     }
 
     Map<String, RoomAccountData> newRoomAccountData = {};
@@ -682,9 +679,13 @@ class Room {
   /// case.
   List<User> getParticipants() {
     List<User> userList = [];
-    for (var entry in states.entries)
-      if (entry.value.type == EventTypes.RoomMember)
-        userList.add(entry.value.asUser);
+    if (states["m.room.member"] is Map<String, dynamic>) {
+      print('Check members: ${states["m.room.member"].length}');
+      for (var entry in states["m.room.member"].entries) {
+        RoomState state = entry.value;
+        if (state.type == EventTypes.RoomMember) userList.add(state.asUser);
+      }
+    }
     return userList;
   }
 
