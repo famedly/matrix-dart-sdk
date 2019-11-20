@@ -76,6 +76,18 @@ class Room {
   /// Key-Value store for private account data only visible for this user.
   Map<String, RoomAccountData> roomAccountData = {};
 
+  /// Returns the [RoomState] for the given [typeKey] and optional [stateKey].
+  /// If no [stateKey] is provided, it defaults to an empty string.
+  RoomState getState(String typeKey, [String stateKey = ""]) =>
+      states.states[typeKey] != null ? states.states[typeKey][stateKey] : null;
+
+  /// Sets the [RoomState] for the given [typeKey] and optional [stateKey].
+  /// If no [stateKey] is provided, it defaults to an empty string.
+  void setState(RoomState state, String typeKey, [String stateKey = ""]) {
+    if (!states.states.containsKey(typeKey)) states.states[typeKey] = {};
+    states.states[typeKey][stateKey] = state;
+  }
+
   /// ID of the fully read marker event.
   String get fullyRead => roomAccountData["m.fully_read"] != null
       ? roomAccountData["m.fully_read"].content["event_id"]
