@@ -81,11 +81,12 @@ class Room {
   RoomState getState(String typeKey, [String stateKey = ""]) =>
       states.states[typeKey] != null ? states.states[typeKey][stateKey] : null;
 
-  /// Sets the [RoomState] for the given [typeKey] and optional [stateKey].
-  /// If no [stateKey] is provided, it defaults to an empty string.
-  void setState(RoomState state, String typeKey, [String stateKey = ""]) {
-    if (!states.states.containsKey(typeKey)) states.states[typeKey] = {};
-    states.states[typeKey][stateKey] = state;
+  /// Adds the [state] to this room and overwrites a state with the same
+  /// typeKey/stateKey key pair if there is one.
+  void setState(RoomState state) {
+    if (!states.states.containsKey(state.typeKey))
+      states.states[state.typeKey] = {};
+    states.states[state.typeKey][state.stateKey ?? ""] = state;
   }
 
   /// ID of the fully read marker event.
@@ -167,7 +168,7 @@ class Room {
 
   Event get lastEvent {
     ChatTime lastTime = ChatTime(0);
-    Event lastEvent = states["m.room.message"]?.timelineEvent;
+    Event lastEvent = getState("m.room.message")?.timelineEvent;
     if (lastEvent == null)
       states.forEach((final String key, final entry) {
         if (!entry.containsKey("")) return;
@@ -636,15 +637,13 @@ class Room {
       roomAccountData: {},
     );
 
-    Map<String, RoomState> newStates = {};
+    StatesMap newStates = StatesMap();
     if (states != null) {
       List<Map<String, dynamic>> rawStates = await states;
       for (int i = 0; i < rawStates.length; i++) {
         RoomState newState = RoomState.fromJson(rawStates[i], newRoom);
-        newStates[newState.key] = newState;
+        newStates.states[newState.typeKey][newState.stateKey] = newState;
       }
-      for (var entry in newStates.entries)
-        newRoom.states[entry.key] = entry.value;
     }
 
     Map<String, RoomAccountData> newRoomAccountData = {};

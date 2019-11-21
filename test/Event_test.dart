@@ -66,7 +66,6 @@ void main() {
       RoomState state = RoomState.fromJson(jsonObj, null);
       expect(state.eventId, id);
       expect(state.stateKey, "");
-      expect(state.key, "m.room.message");
       expect(state.timelineEvent.status, 1);
     });
     test("Test all EventTypes", () async {
