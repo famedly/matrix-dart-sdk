@@ -180,9 +180,10 @@ class RoomList {
         eventUpdate.type == "state" ||
         eventUpdate.type == "invite_state") {
       RoomState stateEvent = RoomState.fromJson(eventUpdate.content, rooms[j]);
-      if (rooms[j].states[stateEvent.key] != null &&
-          rooms[j].states[stateEvent.key].time > stateEvent.time) return;
-      rooms[j].states[stateEvent.key] = stateEvent;
+      RoomState prevState =
+          rooms[j].getState(stateEvent.typeKey, stateEvent.stateKey);
+      if (prevState != null && prevState.time > stateEvent.time) return;
+      rooms[j].setState(stateEvent);
     } else if (eventUpdate.type == "account_data") {
       rooms[j].roomAccountData[eventUpdate.eventType] =
           RoomAccountData.fromJson(eventUpdate.content, rooms[j]);

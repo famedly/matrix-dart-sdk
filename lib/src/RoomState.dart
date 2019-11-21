@@ -124,6 +124,7 @@ class RoomState {
 
   /// The unique key of this event. For events with a [stateKey], it will be the
   /// stateKey. Otherwise it will be the [type] as a string.
+  @deprecated
   String get key => stateKey == null || stateKey.isEmpty ? typeKey : stateKey;
 
   User get asUser => User.fromState(
