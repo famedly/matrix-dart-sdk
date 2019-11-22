@@ -637,12 +637,11 @@ class Room {
       roomAccountData: {},
     );
 
-    StatesMap newStates = StatesMap();
     if (states != null) {
       List<Map<String, dynamic>> rawStates = await states;
       for (int i = 0; i < rawStates.length; i++) {
         RoomState newState = RoomState.fromJson(rawStates[i], newRoom);
-        newStates.states[newState.typeKey][newState.stateKey] = newState;
+        newRoom.setState(newState);
       }
     }
 
