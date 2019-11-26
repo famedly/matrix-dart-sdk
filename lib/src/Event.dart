@@ -138,4 +138,7 @@ class Event extends RoomState {
     final String eventID = await room.sendTextEvent(text, txid: txid);
     return eventID;
   }
+
+  /// Whether the client is allowed to redact this event.
+  bool get canRedact => senderId == room.client.userID || room.canRedact;
 }

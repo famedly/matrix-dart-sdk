@@ -214,8 +214,51 @@ void main() {
       expect(room.ownPowerLevel, 100);
       expect(room.getPowerLevelByUserId(matrix.userID), room.ownPowerLevel);
       expect(room.getPowerLevelByUserId("@nouser:example.com"), 10);
+      expect(room.ownPowerLevel, 100);
+      expect(room.canBan, true);
+      expect(room.canInvite, true);
+      expect(room.canKick, true);
+      expect(room.canRedact, true);
+      expect(room.canSendDefaultMessages, true);
+      expect(room.canSendDefaultStates, true);
+      expect(room.canChangePowerLevel, true);
+      expect(room.canSendEvent("m.room.name"), true);
+      expect(room.canSendEvent("m.room.power_levels"), true);
+      expect(room.canSendEvent("m.room.member"), true);
       expect(room.powerLevels,
           room.states["m.room.power_levels"].content["users"]);
+
+      room.states["m.room.power_levels"] = RoomState(
+          senderId: "@test:example.com",
+          typeKey: "m.room.power_levels",
+          roomId: room.id,
+          room: room,
+          eventId: "123abc",
+          content: {
+            "ban": 50,
+            "events": {"m.room.name": 0, "m.room.power_levels": 100},
+            "events_default": 0,
+            "invite": 50,
+            "kick": 50,
+            "notifications": {"room": 20},
+            "redact": 50,
+            "state_default": 50,
+            "users": {},
+            "users_default": 0
+          },
+          stateKey: "");
+      expect(room.ownPowerLevel, 0);
+      expect(room.canBan, false);
+      expect(room.canInvite, false);
+      expect(room.canKick, false);
+      expect(room.canRedact, false);
+      expect(room.canSendDefaultMessages, true);
+      expect(room.canSendDefaultStates, false);
+      expect(room.canChangePowerLevel, false);
+      expect(room.canSendEvent("m.room.name"), true);
+      expect(room.canSendEvent("m.room.power_levels"), false);
+      expect(room.canSendEvent("m.room.member"), false);
+      expect(room.canSendEvent("m.room.message"), true);
       final dynamic resp =
           await room.setPower("@test:fakeServer.notExisting", 90);
       expect(resp["event_id"], "42");
