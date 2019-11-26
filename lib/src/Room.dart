@@ -465,7 +465,7 @@ class Room {
   /// Set the power level of the user with the [userID] to the value [power].
   Future<dynamic> setPower(String userID, int power) async {
     if (states["m.room.power_levels"] == null) return null;
-    Map<String, int> powerMap = states["m.room.power_levels"].content["users"];
+    Map powerMap = states["m.room.power_levels"].content["users"];
     powerMap[userID] = power;
 
     dynamic res = await client.connection.jsonRequest(
@@ -818,5 +818,42 @@ class Room {
         data: {"url": uploadResp});
     if (setAvatarResp is ErrorResponse) return setAvatarResp;
     return setAvatarResp["event_id"];
+  }
+
+  bool _hasPermissionFor(String action) {
+    if (getState("m.room.power_levels") == null ||
+        getState("m.room.power_levels").content[action] == null) return false;
+    return ownPowerLevel >= getState("m.room.power_levels").content[action];
+  }
+
+  /// The level required to ban a user.
+  bool get canBan => _hasPermissionFor("ban");
+
+  /// The default level required to send message events. Can be overridden by the events key.
+  bool get canSendDefaultMessages => _hasPermissionFor("events_default");
+
+  /// The level required to invite a user.
+  bool get canInvite => _hasPermissionFor("invite");
+
+  /// The level required to kick a user.
+  bool get canKick => _hasPermissionFor("kick");
+
+  /// The level required to redact an event.
+  bool get canRedact => _hasPermissionFor("redact");
+
+  ///  	The default level required to send state events. Can be overridden by the events key.
+  bool get canSendDefaultStates => _hasPermissionFor("state_default");
+
+  bool get canChangePowerLevel => canSendEvent("m.room.power_levels");
+
+  bool canSendEvent(String eventType) {
+    if (getState("m.room.power_levels") == null ||
+        getState("m.room.power_levels").content["events"] == null) return false;
+    if (getState("m.room.power_levels").content["events"][eventType] == null)
+      return eventType == "m.room.message"
+          ? canSendDefaultMessages
+          : canSendDefaultStates;
+    return ownPowerLevel >=
+        getState("m.room.power_levels").content["events"][eventType];
   }
 }

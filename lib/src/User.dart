@@ -165,4 +165,15 @@ class User extends RoomState {
 
     return newRoomID;
   }
+
+  /// Whether the client is allowed to ban/unban this user.
+  bool get canBan => room.canBan && powerLevel < room.ownPowerLevel;
+
+  /// Whether the client is allowed to kick this user.
+  bool get canKick => room.canKick && powerLevel < room.ownPowerLevel;
+
+  /// Whether the client is allowed to change the power level of this user.
+  /// Please be aware that you can only set the power level to at least your own!
+  bool get canChangePowerLevel =>
+      room.canChangePowerLevel && powerLevel < room.ownPowerLevel;
 }
