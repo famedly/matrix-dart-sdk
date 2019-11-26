@@ -98,27 +98,9 @@ class Room {
   onRoomUpdate onUpdate;
 
   /// The name of the room if set by a participant.
-  String get name {
-    if (states["m.room.name"] != null &&
-        !(states["m.room.name"].content["name"]?.isEmpty ?? true))
-      return states["m.room.name"].content["name"];
-    if (canonicalAlias != null && !canonicalAlias.isEmpty)
-      return canonicalAlias.substring(1, canonicalAlias.length).split(":")[0];
-    if (mHeroes != null && mHeroes.length > 0) {
-      String displayname = "";
-      for (int i = 0; i < mHeroes.length; i++) {
-        User hero = states[mHeroes[i]] != null
-            ? states[mHeroes[i]].asUser
-            : User(mHeroes[i]);
-        displayname += hero.calcDisplayname() + ", ";
-      }
-      return displayname.substring(0, displayname.length - 2);
-    }
-    if (membership == Membership.invite && states.containsKey(client.userID)) {
-      return states[client.userID].sender.calcDisplayname();
-    }
-    return "Empty chat";
-  }
+  String get name => states["m.room.name"] != null
+      ? states["m.room.name"].content["name"]
+      : "";
 
   /// The topic of the room if set by a participant.
   String get topic => states["m.room.topic"] != null
@@ -131,8 +113,9 @@ class Room {
       return MxContent(states["m.room.avatar"].content["url"]);
     if (mHeroes != null && mHeroes.length == 1 && states[mHeroes[0]] != null)
       return states[mHeroes[0]].asUser.avatarUrl;
-    if (membership == Membership.invite && states.containsKey(client.userID)) {
-      return states[client.userID].sender.avatarUrl;
+    if (membership == Membership.invite &&
+        getState("m.room.member", client.userID) != null) {
+      return getState("m.room.member", client.userID).sender.avatarUrl;
     }
     return MxContent("");
   }
@@ -215,16 +198,22 @@ class Room {
   /// Calculates the displayname. First checks if there is a name, then checks for a canonical alias and
   /// then generates a name from the heroes.
   String get displayname {
-    if (name != null && !name.isEmpty) return name;
+    if (name != null && name.isNotEmpty) return name;
     if (canonicalAlias != null &&
         !canonicalAlias.isEmpty &&
         canonicalAlias.length > 3)
       return canonicalAlias.substring(1, canonicalAlias.length).split(":")[0];
-    if (mHeroes.length > 0) {
+    if (mHeroes.length > 0 && mHeroes.any((h) => h.isNotEmpty)) {
       String displayname = "";
-      for (int i = 0; i < mHeroes.length; i++)
+      for (int i = 0; i < mHeroes.length; i++) {
+        if (mHeroes[i].isEmpty) continue;
         displayname += User(mHeroes[i]).calcDisplayname() + ", ";
+      }
       return displayname.substring(0, displayname.length - 2);
+    }
+    if (membership == Membership.invite &&
+        getState("m.room.member", client.userID) != null) {
+      return getState("m.room.member", client.userID).sender.calcDisplayname();
     }
     return "Empty chat";
   }
