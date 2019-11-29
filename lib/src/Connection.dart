@@ -49,9 +49,6 @@ class Connection {
 
   static String syncFilters = '{"room":{"state":{"lazy_load_members":true}}}';
 
-  static String firstSyncFilters =
-      '{"room":{"include_leave":true,"state":{"lazy_load_members":true}}}';
-
   /// Handles the connection to the Matrix Homeserver. You can change this to a
   /// MockClient for testing.
   http.Client httpClient = http.Client();
@@ -145,11 +142,9 @@ class Connection {
     client.prevBatch = newPrevBatch;
 
     List<Room> rooms = [];
-    List<Room> archivedRooms = [];
     if (client.store != null) {
       client.store.storeClient();
       rooms = await client.store.getRoomList(onlyLeft: false);
-      archivedRooms = await client.store.getRoomList(onlyLeft: true);
       client.accountData = await client.store.getAccountData();
       client.presences = await client.store.getPresences();
     }
@@ -161,14 +156,6 @@ class Connection {
         onInsert: null,
         onRemove: null,
         rooms: rooms);
-
-    client.archive = RoomList(
-        client: client,
-        onlyLeft: true,
-        onUpdate: null,
-        onInsert: null,
-        onRemove: null,
-        rooms: archivedRooms);
 
     _userEventSub ??= onUserEvent.stream.listen(client.handleUserUpdate);
 
@@ -309,10 +296,9 @@ class Connection {
   Future<void> _sync() async {
     if (client.isLogged() == false) return;
 
-    String action = "/client/r0/sync?filter=$firstSyncFilters";
+    String action = "/client/r0/sync?filter=$syncFilters";
 
     if (client.prevBatch != null) {
-      action = "/client/r0/sync?filter=$syncFilters";
       action += "&timeout=30000";
       action += "&since=${client.prevBatch}";
     }
@@ -327,12 +313,12 @@ class Connection {
       try {
         if (client.store != null)
           await client.store.transaction(() {
-            _handleSync(syncResp);
+            handleSync(syncResp);
             client.store.storePrevBatch(syncResp);
             return;
           });
         else
-          await _handleSync(syncResp);
+          await handleSync(syncResp);
         if (client.prevBatch == null) client.connection.onFirstSync.add(true);
         client.prevBatch = syncResp["next_batch"];
       } catch (e) {
@@ -344,7 +330,7 @@ class Connection {
     if (hash == _syncRequest.hashCode) _sync();
   }
 
-  void _handleSync(dynamic sync) {
+  void handleSync(dynamic sync) {
     if (sync["rooms"] is Map<String, dynamic>) {
       if (sync["rooms"]["join"] is Map<String, dynamic>)
         _handleRooms(sync["rooms"]["join"], Membership.join);

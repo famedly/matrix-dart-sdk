@@ -98,9 +98,6 @@ class Client {
   /// A list of all rooms the user is participating or invited.
   RoomList roomList;
 
-  /// A list of all rooms the user is not participating anymore.
-  RoomList archive;
-
   /// Key/Value store of account data.
   Map<String, AccountData> accountData = {};
 
@@ -262,26 +259,32 @@ class Client {
 
   /// Creates a new [RoomList] object.
   RoomList getRoomList(
-      {bool onlyLeft = false,
-      onRoomListUpdateCallback onUpdate,
+      {onRoomListUpdateCallback onUpdate,
       onRoomListInsertCallback onInsert,
       onRoomListRemoveCallback onRemove}) {
-    List<Room> rooms = onlyLeft ? archive.rooms : roomList.rooms;
+    List<Room> rooms = roomList.rooms;
     return RoomList(
         client: this,
-        onlyLeft: onlyLeft,
+        onlyLeft: false,
         onUpdate: onUpdate,
         onInsert: onInsert,
         onRemove: onRemove,
         rooms: rooms);
   }
 
-  /// Searches in the roomList and in the archive for a room with the given [id].
-  Room getRoomById(String id) {
-    Room room = roomList.getRoomById(id);
-    if (room == null) room = archive.getRoomById(id);
-    return room;
+  Future<RoomList> get archive async {
+    RoomList archiveList = RoomList(client: this, rooms: [], onlyLeft: true);
+    String syncFilters =
+        '{"room":{"include_leave":true,"timeline":{"limit":1}}}';
+    String action = "/client/r0/sync?filter=$syncFilters&timeout=0";
+    final syncResp =
+        await connection.jsonRequest(type: HTTPType.GET, action: action);
+    if (!(syncResp is ErrorResponse)) await connection.handleSync(syncResp);
+    return archiveList;
   }
+
+  /// Searches in the roomList and in the archive for a room with the given [id].
+  Room getRoomById(String id) => roomList.getRoomById(id);
 
   Future<dynamic> joinRoomById(String id) async {
     return await connection.jsonRequest(
