@@ -203,11 +203,25 @@ class Room {
         !canonicalAlias.isEmpty &&
         canonicalAlias.length > 3)
       return canonicalAlias.substring(1, canonicalAlias.length).split(":")[0];
-    if (mHeroes != null && mHeroes.length > 0 && mHeroes.any((h) => h.isNotEmpty)) {
+    List<String> heroes = [];
+    if (mHeroes != null &&
+        mHeroes.length > 0 &&
+        mHeroes.any((h) => h.isNotEmpty)) {
+      heroes = mHeroes;
+    } else {
+      if (states["m.room.member"] is Map<String, dynamic>) {
+        for (var entry in states["m.room.member"].entries) {
+          RoomState state = entry.value;
+          if (state.type == EventTypes.RoomMember &&
+              state.stateKey != client?.userID) heroes.add(state.stateKey);
+        }
+      }
+    }
+    if (heroes.length > 0) {
       String displayname = "";
-      for (int i = 0; i < mHeroes.length; i++) {
-        if (mHeroes[i].isEmpty) continue;
-        displayname += User(mHeroes[i]).calcDisplayname() + ", ";
+      for (int i = 0; i < heroes.length; i++) {
+        if (heroes[i].isEmpty) continue;
+        displayname += User(heroes[i]).calcDisplayname() + ", ";
       }
       return displayname.substring(0, displayname.length - 2);
     }
@@ -679,7 +693,6 @@ class Room {
   List<User> getParticipants() {
     List<User> userList = [];
     if (states["m.room.member"] is Map<String, dynamic>) {
-      print('Check members: ${states["m.room.member"].length}');
       for (var entry in states["m.room.member"].entries) {
         RoomState state = entry.value;
         if (state.type == EventTypes.RoomMember) userList.add(state.asUser);

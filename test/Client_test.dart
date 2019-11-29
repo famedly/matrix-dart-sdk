@@ -27,6 +27,7 @@ import 'package:famedlysdk/src/AccountData.dart';
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Connection.dart';
 import 'package:famedlysdk/src/Presence.dart';
+import 'package:famedlysdk/src/RoomList.dart';
 import 'package:famedlysdk/src/User.dart';
 import 'package:famedlysdk/src/requests/SetPushersRequest.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
@@ -207,7 +208,7 @@ void main() {
 
       List<RoomUpdate> roomUpdateList = await roomUpdateListFuture;
 
-      expect(roomUpdateList.length, 3);
+      expect(roomUpdateList.length, 2);
 
       expect(roomUpdateList[0].id == "!726s6s6q:example.com", true);
       expect(roomUpdateList[0].membership == Membership.join, true);
@@ -222,13 +223,6 @@ void main() {
       expect(roomUpdateList[1].limitedTimeline == false, true);
       expect(roomUpdateList[1].notification_count == 0, true);
       expect(roomUpdateList[1].highlight_count == 0, true);
-
-      expect(roomUpdateList[2].id == "!5345234234:example.com", true);
-      expect(roomUpdateList[2].membership == Membership.leave, true);
-      expect(roomUpdateList[2].prev_batch == "", true);
-      expect(roomUpdateList[2].limitedTimeline == false, true);
-      expect(roomUpdateList[2].notification_count == 0, true);
-      expect(roomUpdateList[2].highlight_count == 0, true);
     });
 
     test('Event Update Test', () async {
@@ -362,6 +356,15 @@ void main() {
       final String roomID = "1234";
       final Map<String, dynamic> resp = await matrix.joinRoomById(roomID);
       expect(resp["room_id"], roomID);
+    });
+
+    test('get archive', () async {
+      RoomList archive = await matrix.archive;
+
+      await new Future.delayed(new Duration(milliseconds: 50));
+      expect(archive.rooms.length, 1);
+      expect(archive.rooms[0].id, "!5345234234:example.com");
+      expect(archive.rooms[0].membership, Membership.leave);
     });
 
     test('Logout when token is unknown', () async {
