@@ -44,6 +44,22 @@ class Timeline {
   StreamSubscription<EventUpdate> sub;
   bool _requestingHistoryLock = false;
 
+  Map<String, Event> _eventCache = {};
+
+  /// Searches for the event in this timeline. If not
+  /// found, requests from the server. Requested events
+  /// are cached.
+  Future<Event> getEventById(String id) async {
+    for (int i = 0; i < events.length; i++) {
+      if (events[i].eventId == id) return events[i];
+    }
+    if (_eventCache.containsKey(id)) return _eventCache[id];
+    final Event requestedEvent = await room.getEventById(id);
+    if (requestedEvent == null) return null;
+    _eventCache[id] = requestedEvent;
+    return _eventCache[id];
+  }
+
   Future<void> requestHistory(
       {int historyCount = Room.DefaultHistoryCount}) async {
     if (!_requestingHistoryLock) {
