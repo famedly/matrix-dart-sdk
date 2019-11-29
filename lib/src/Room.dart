@@ -203,7 +203,7 @@ class Room {
         !canonicalAlias.isEmpty &&
         canonicalAlias.length > 3)
       return canonicalAlias.substring(1, canonicalAlias.length).split(":")[0];
-    if (mHeroes.length > 0 && mHeroes.any((h) => h.isNotEmpty)) {
+    if (mHeroes != null && mHeroes.length > 0 && mHeroes.any((h) => h.isNotEmpty)) {
       String displayname = "";
       for (int i = 0; i < mHeroes.length; i++) {
         if (mHeroes[i].isEmpty) continue;
