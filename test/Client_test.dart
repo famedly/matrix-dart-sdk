@@ -36,6 +36,7 @@ import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/sync/RoomUpdate.dart';
 import 'package:famedlysdk/src/sync/UserUpdate.dart';
 import 'package:famedlysdk/src/utils/MatrixFile.dart';
+import 'package:famedlysdk/src/utils/Profile.dart';
 import 'package:test/test.dart';
 
 import 'FakeMatrixApi.dart';
@@ -365,6 +366,15 @@ void main() {
       expect(archive.rooms.length, 1);
       expect(archive.rooms[0].id, "!5345234234:example.com");
       expect(archive.rooms[0].membership, Membership.leave);
+    });
+
+    test('getProfileFromUserId', () async {
+      final Profile profile =
+          await matrix.getProfileFromUserId("@getme:example.com");
+      expect(profile.avatarUrl.mxc, "mxc://test");
+      expect(profile.displayname, "You got me");
+      expect(profile.content["avatar_url"], profile.avatarUrl.mxc);
+      expect(profile.content["displayname"], profile.displayname);
     });
 
     test('Logout when token is unknown', () async {
