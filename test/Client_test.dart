@@ -144,7 +144,7 @@ void main() {
       expect(contacts.length, 1);
       expect(contacts[0].senderId, "@alice:example.org");
       expect(
-          matrix.presences["@alice:example.com"].content["presence"], "online");
+          matrix.presences["@alice:example.com"].presence, PresenceType.online);
       expect(presenceCounter, 1);
       expect(accountDataCounter, 2);
 

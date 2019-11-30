@@ -21,23 +21,34 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/AccountData.dart';
-import 'package:famedlysdk/src/RoomState.dart';
+import 'package:famedlysdk/famedlysdk.dart';
 
-class Presence extends AccountData {
-  /// The user who has sent this event if it is not a global account data event.
+enum PresenceType { online, offline, unavailable }
+
+/// Informs the client of a user's presence state change.
+class Presence {
+  /// The user who sent this presence.
   final String sender;
 
-  Presence({this.sender, Map<String, dynamic> content, String typeKey})
-      : super(content: content, typeKey: typeKey);
+  /// The current display name for this user, if any.
+  final String displayname;
 
-  /// Get a State event from a table row or from the event stream.
-  factory Presence.fromJson(Map<String, dynamic> jsonPayload) {
-    final Map<String, dynamic> content =
-        RoomState.getMapFromPayload(jsonPayload['content']);
-    return Presence(
-        content: content,
-        typeKey: jsonPayload['type'],
-        sender: jsonPayload['sender']);
-  }
+  /// The current avatar URL for this user, if any.
+  final MxContent avatarUrl;
+  final bool currentlyActive;
+  final int lastActiveAgo;
+  final PresenceType presence;
+  final String statusMsg;
+
+  Presence.fromJson(Map<String, dynamic> json)
+      : sender = json['sender'],
+        displayname = json['content']['avatar_url'],
+        avatarUrl = MxContent(json['content']['avatar_url']),
+        currentlyActive = json['content']['currently_active'],
+        lastActiveAgo = json['content']['last_active_ago'],
+        presence = PresenceType.values.firstWhere(
+            (e) =>
+                e.toString() == "PresenceType.${json['content']['presence']}",
+            orElse: () => null),
+        statusMsg = json['content']['status_msg'];
 }

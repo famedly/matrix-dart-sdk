@@ -32,7 +32,7 @@ class MxContent {
   MxContent(String mxcUrl) : this._mxc = mxcUrl ?? "";
 
   /// Returns the mxc uri.
-  get mxc => _mxc;
+  String get mxc => _mxc;
 
   /// Returns a download Link to this content.
   String getDownloadLink(Client matrix) => matrix.homeserver != null
