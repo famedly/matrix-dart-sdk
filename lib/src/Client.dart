@@ -38,6 +38,7 @@ import 'User.dart';
 import 'requests/SetPushersRequest.dart';
 import 'responses/ErrorResponse.dart';
 import 'responses/PushrulesResponse.dart';
+import 'utils/Profile.dart';
 
 typedef AccountDataEventCB = void Function(AccountData accountData);
 typedef PresenceCB = void Function(Presence presence);
@@ -255,6 +256,19 @@ class Client {
     if (resp is ErrorResponse) connection.onError.add(resp);
 
     await connection.clear();
+  }
+
+  /// Get the combined profile information for this user. This API may be used to
+  /// fetch the user's own profile information or other users; either locally
+  /// or on remote homeservers.
+  Future<Profile> getProfileFromUserId(String userId) async {
+    final dynamic resp = await connection.jsonRequest(
+        type: HTTPType.GET, action: "/client/r0/profile/${userId}");
+    if (resp is ErrorResponse) {
+      connection.onError.add(resp);
+      return null;
+    }
+    return Profile.fromJson(resp);
   }
 
   /// Creates a new [RoomList] object.

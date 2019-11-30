@@ -234,6 +234,10 @@ class FakeMatrixApi extends MockClient {
 
   static final Map<String, Map<String, dynamic>> api = {
     "GET": {
+      "/client/r0/profile/@getme:example.com": (var req) => {
+            "avatar_url": "mxc://test",
+            "displayname": "You got me",
+          },
       "/client/r0/rooms/!localpart:server.abc/state/m.room.member/@getme:example.com":
           (var req) => {
                 "avatar_url": "mxc://test",
