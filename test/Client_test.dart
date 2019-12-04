@@ -120,7 +120,7 @@ void main() {
       expect(firstSync, true);
       expect(sync["next_batch"] == matrix.prevBatch, true);
 
-      expect(matrix.accountData.length, 2);
+      expect(matrix.accountData.length, 3);
       expect(matrix.getDirectChatFromUserId("@bob:example.com"),
           "!726s6s6q:example.com");
       expect(matrix.roomList.rooms[1].directChatMatrixID, "@bob:example.com");
@@ -147,7 +147,7 @@ void main() {
       expect(
           matrix.presences["@alice:example.com"].presence, PresenceType.online);
       expect(presenceCounter, 1);
-      expect(accountDataCounter, 2);
+      expect(accountDataCounter, 3);
 
       matrix.connection.onEvent.add(
         EventUpdate(
@@ -283,13 +283,16 @@ void main() {
 
       List<UserUpdate> eventUpdateList = await userUpdateListFuture;
 
-      expect(eventUpdateList.length, 4);
+      expect(eventUpdateList.length, 5);
 
-      expect(eventUpdateList[0].eventType == "m.presence", true);
-      expect(eventUpdateList[0].type == "presence", true);
+      expect(eventUpdateList[0].eventType, "m.presence");
+      expect(eventUpdateList[0].type, "presence");
 
-      expect(eventUpdateList[1].eventType == "org.example.custom.config", true);
-      expect(eventUpdateList[1].type == "account_data", true);
+      expect(eventUpdateList[1].eventType, "m.push_rules");
+      expect(eventUpdateList[1].type, "account_data");
+
+      expect(eventUpdateList[2].eventType, "org.example.custom.config");
+      expect(eventUpdateList[2].type, "account_data");
     });
 
     test('Login', () async {

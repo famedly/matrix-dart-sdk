@@ -852,4 +852,107 @@ class Room {
     return ownPowerLevel >=
         getState("m.room.power_levels").content["events"][eventType];
   }
+
+  /// Returns the [PushRuleState] for this room, based on the m.push_rules stored in
+  /// the account_data.
+  PushRuleState get pushRuleState {
+    if (!client.accountData.containsKey("m.push_rules") ||
+        !(client.accountData["m.push_rules"].content["global"] is Map))
+      return PushRuleState.notify;
+    final Map<String, dynamic> globalPushRules =
+        client.accountData["m.push_rules"].content["global"];
+    if (globalPushRules == null) return PushRuleState.notify;
+
+    if (globalPushRules["override"] is List) {
+      for (var i = 0; i < globalPushRules["override"].length; i++) {
+        if (globalPushRules["override"][i]["rule_id"] == id) {
+          if (globalPushRules["override"][i]["actions"]
+                  .indexOf("dont_notify") !=
+              -1) {
+            return PushRuleState.dont_notify;
+          }
+          break;
+        }
+      }
+    }
+
+    if (globalPushRules["room"] is List) {
+      for (var i = 0; i < globalPushRules["room"].length; i++) {
+        if (globalPushRules["room"][i]["rule_id"] == id) {
+          if (globalPushRules["room"][i]["actions"].indexOf("dont_notify") !=
+              -1) {
+            return PushRuleState.mentions_only;
+          }
+          break;
+        }
+      }
+    }
+
+    return PushRuleState.notify;
+  }
+
+  /// Sends a request to the homeserver to set the [PushRuleState] for this room.
+  /// Returns ErrorResponse if something goes wrong.
+  Future<dynamic> setPushRuleState(PushRuleState newState) async {
+    if (newState == pushRuleState) return null;
+    dynamic resp;
+    switch (newState) {
+      // All push notifications should be sent to the user
+      case PushRuleState.notify:
+        if (pushRuleState == PushRuleState.dont_notify)
+          resp = await client.connection.jsonRequest(
+              type: HTTPType.DELETE,
+              action: "/client/r0/pushrules/global/override/$id",
+              data: {});
+        else if (pushRuleState == PushRuleState.mentions_only)
+          resp = await client.connection.jsonRequest(
+              type: HTTPType.DELETE,
+              action: "/client/r0/pushrules/global/room/$id",
+              data: {});
+        break;
+      // Only when someone mentions the user, a push notification should be sent
+      case PushRuleState.mentions_only:
+        if (pushRuleState == PushRuleState.dont_notify) {
+          resp = await client.connection.jsonRequest(
+              type: HTTPType.DELETE,
+              action: "/client/r0/pushrules/global/override/$id",
+              data: {});
+          if (resp == ErrorResponse) return resp;
+          resp = await client.connection.jsonRequest(
+              type: HTTPType.PUT,
+              action: "/client/r0/pushrules/global/room/$id",
+              data: {
+                "actions": ["dont_notify"]
+              });
+        } else if (pushRuleState == PushRuleState.notify)
+          resp = await client.connection.jsonRequest(
+              type: HTTPType.PUT,
+              action: "/client/r0/pushrules/global/room/$id",
+              data: {
+                "actions": ["dont_notify"]
+              });
+        break;
+      // No push notification should be ever sent for this room.
+      case PushRuleState.dont_notify:
+        if (pushRuleState == PushRuleState.mentions_only) {
+          resp = await client.connection.jsonRequest(
+              type: HTTPType.DELETE,
+              action: "/client/r0/pushrules/global/room/$id",
+              data: {});
+          if (resp == ErrorResponse) return resp;
+        }
+        resp = await client.connection.jsonRequest(
+            type: HTTPType.PUT,
+            action: "/client/r0/pushrules/global/override/$id",
+            data: {
+              "actions": ["dont_notify"],
+              "conditions": [
+                {"key": "room_id", "kind": "event_match", "pattern": id}
+              ]
+            });
+    }
+    return resp;
+  }
 }
+
+enum PushRuleState { notify, mentions_only, dont_notify }
