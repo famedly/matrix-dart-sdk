@@ -335,5 +335,12 @@ void main() {
           await room.sendFileEvent(testFile, "m.file", txid: "testtxid");
       expect(resp, "42");
     });
+
+    test('pushRuleState', () async {
+      expect(room.pushRuleState, PushRuleState.mentions_only);
+      matrix.accountData["m.push_rules"].content["global"]["override"]
+          .add(matrix.accountData["m.push_rules"].content["global"]["room"][0]);
+      expect(room.pushRuleState, PushRuleState.dont_notify);
+    });
   });
 }
