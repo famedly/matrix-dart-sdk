@@ -21,6 +21,7 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
@@ -165,6 +166,9 @@ class User extends RoomState {
 
     return newRoomID;
   }
+
+  /// The newest presence of this user if there is any and null if not.
+  Presence get presence => room.client.presences[id];
 
   /// Whether the client is allowed to ban/unban this user.
   bool get canBan => room.canBan && powerLevel < room.ownPowerLevel;
