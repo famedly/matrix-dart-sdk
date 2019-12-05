@@ -221,7 +221,7 @@ class Room {
       String displayname = "";
       for (int i = 0; i < heroes.length; i++) {
         if (heroes[i].isEmpty) continue;
-        displayname += User(heroes[i]).calcDisplayname() + ", ";
+        displayname += getUserByMXIDSync(heroes[i]).calcDisplayname() + ", ";
       }
       return displayname.substring(0, displayname.length - 2);
     }
