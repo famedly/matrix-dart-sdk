@@ -468,13 +468,15 @@ class Room {
   /// Set the power level of the user with the [userID] to the value [power].
   Future<dynamic> setPower(String userID, int power) async {
     if (states["m.room.power_levels"] == null) return null;
-    Map powerMap = states["m.room.power_levels"].content["users"];
-    powerMap[userID] = power;
+    Map<String, dynamic> powerMap = {}
+      ..addAll(states["m.room.power_levels"].content);
+    if (powerMap["users"] == null) powerMap["users"] = {};
+    powerMap["users"][userID] = power;
 
     dynamic res = await client.connection.jsonRequest(
         type: HTTPType.PUT,
         action: "/client/r0/rooms/$id/state/m.room.power_levels",
-        data: {"users": powerMap});
+        data: powerMap);
     if (res is ErrorResponse) client.connection.onError.add(res);
     return res;
   }
@@ -843,9 +845,9 @@ class Room {
   bool get canChangePowerLevel => canSendEvent("m.room.power_levels");
 
   bool canSendEvent(String eventType) {
-    if (getState("m.room.power_levels") == null ||
-        getState("m.room.power_levels").content["events"] == null) return false;
-    if (getState("m.room.power_levels").content["events"][eventType] == null)
+    if (getState("m.room.power_levels") == null) return false;
+    if (getState("m.room.power_levels").content["events"] == null ||
+        getState("m.room.power_levels").content["events"][eventType] == null)
       return eventType == "m.room.message"
           ? canSendDefaultMessages
           : canSendDefaultStates;
