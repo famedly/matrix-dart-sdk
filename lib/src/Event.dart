@@ -50,7 +50,8 @@ class Event extends RoomState {
       dynamic unsigned,
       dynamic prevContent,
       String stateKey,
-      Room room})
+      Room room,
+      Event redactedBecause})
       : super(
             content: content,
             typeKey: typeKey,
@@ -71,6 +72,9 @@ class Event extends RoomState {
         RoomState.getMapFromPayload(jsonPayload['unsigned']);
     final Map<String, dynamic> prevContent =
         RoomState.getMapFromPayload(jsonPayload['prev_content']);
+    Event redactedBecause = null;
+    if (unsigned.containsKey("redacted_because"))
+      redactedBecause = Event.fromJson(unsigned["redacted_because"], room);
     return Event(
         status: jsonPayload['status'] ?? defaultStatus,
         content: content,
@@ -82,7 +86,8 @@ class Event extends RoomState {
         unsigned: unsigned,
         prevContent: prevContent,
         stateKey: jsonPayload['state_key'],
-        room: room);
+        room: room,
+        redactedBecause: redactedBecause);
   }
 
   /// Returns the body of this event if it has a body.
@@ -93,6 +98,7 @@ class Event extends RoomState {
 
   /// Use this to get the body.
   String getBody() {
+    if (redacted) return "Redacted";
     if (text != "") return text;
     if (formattedText != "") return formattedText;
     return "$type";
@@ -141,4 +147,8 @@ class Event extends RoomState {
 
   /// Whether the client is allowed to redact this event.
   bool get canRedact => senderId == room.client.userID || room.canRedact;
+
+  /// Redacts this event. Returns [ErrorResponse] on error.
+  Future<dynamic> redact({String reason, String txid}) =>
+      room.redactEvent(eventId, reason: reason, txid: txid);
 }

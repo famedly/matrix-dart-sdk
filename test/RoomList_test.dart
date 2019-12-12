@@ -163,8 +163,9 @@ void main() {
             "type": "m.room.message",
             "content": {"msgtype": "m.text", "body": "Testcase"},
             "sender": "@alice:example.com",
+            "room_id": "1",
             "status": 2,
-            "id": "1",
+            "event_id": "1",
             "origin_server_ts": now.toTimeStamp() - 1000
           }));
 
@@ -176,8 +177,9 @@ void main() {
             "type": "m.room.message",
             "content": {"msgtype": "m.text", "body": "Testcase 2"},
             "sender": "@alice:example.com",
+            "room_id": "1",
             "status": 2,
-            "id": "2",
+            "event_id": "2",
             "origin_server_ts": now.toTimeStamp()
           }));
 
@@ -195,6 +197,30 @@ void main() {
       expect(roomList.rooms[1].id, "1");
       expect(roomList.rooms[0].lastMessage, "Testcase 2");
       expect(roomList.rooms[0].timeCreated, now);
+
+      client.connection.onEvent.add(EventUpdate(
+          type: "timeline",
+          roomID: "1",
+          eventType: "m.room.redaction",
+          content: {
+            "content": {"reason": "Spamming"},
+            "event_id": "143273582443PhrSn:example.org",
+            "origin_server_ts": 1432735824653,
+            "redacts": "1",
+            "room_id": "1",
+            "sender": "@example:example.org",
+            "type": "m.room.redaction",
+            "unsigned": {"age": 1234}
+          }));
+
+      await new Future.delayed(new Duration(milliseconds: 50));
+
+      expect(updateCount, 6);
+      expect(insertList, [0, 1]);
+      expect(removeList, []);
+      expect(roomList.rooms.length, 2);
+      expect(roomList.rooms[1].getState("m.room.message").eventId, "1");
+      expect(roomList.rooms[1].getState("m.room.message").redacted, true);
     });
 
     test("onlyLeft", () async {

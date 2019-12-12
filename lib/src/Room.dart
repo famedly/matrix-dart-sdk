@@ -955,6 +955,25 @@ class Room {
     }
     return resp;
   }
+
+  /// Redacts this event. Returns [ErrorResponse] on error.
+  Future<dynamic> redactEvent(String eventId,
+      {String reason, String txid}) async {
+    // Create new transaction id
+    String messageID;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    if (txid == null) {
+      messageID = "msg$now";
+    } else
+      messageID = txid;
+    Map<String, dynamic> data = {};
+    if (reason != null) data["reason"] = reason;
+    final dynamic resp = await client.connection.jsonRequest(
+        type: HTTPType.PUT,
+        action: "/client/r0/rooms/$id/redact/$eventId/$messageID",
+        data: data);
+    return resp;
+  }
 }
 
 enum PushRuleState { notify, mentions_only, dont_notify }

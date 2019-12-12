@@ -91,7 +91,15 @@ class Timeline {
     try {
       if (eventUpdate.roomID != room.id) return;
       if (eventUpdate.type == "timeline" || eventUpdate.type == "history") {
-        if (eventUpdate.content["status"] == -2) {
+        // Redaction events are handled as modification for existing events.
+        if (eventUpdate.eventType == "m.room.redaction") {
+          final int eventId =
+              _findEvent(event_id: eventUpdate.content["redacts"]);
+          if (eventId != null) {
+            events[eventId]
+                .setRedactionEvent(Event.fromJson(eventUpdate.content, room));
+          }
+        } else if (eventUpdate.content["status"] == -2) {
           int i = _findEvent(event_id: eventUpdate.content["event_id"]);
           if (i < events.length) events.removeAt(i);
         }

@@ -180,10 +180,23 @@ class RoomList {
         eventUpdate.type == "state" ||
         eventUpdate.type == "invite_state") {
       RoomState stateEvent = RoomState.fromJson(eventUpdate.content, rooms[j]);
-      RoomState prevState =
-          rooms[j].getState(stateEvent.typeKey, stateEvent.stateKey);
-      if (prevState != null && prevState.time > stateEvent.time) return;
-      rooms[j].setState(stateEvent);
+      if (stateEvent.type == EventTypes.Redaction) {
+        final String redacts = eventUpdate.content["redacts"];
+        rooms[j].states.states.forEach(
+              (String key, Map<String, RoomState> states) => states.forEach(
+                (String key, RoomState state) {
+                  if (state.eventId == redacts) {
+                    state.setRedactionEvent(stateEvent);
+                  }
+                },
+              ),
+            );
+      } else {
+        RoomState prevState =
+            rooms[j].getState(stateEvent.typeKey, stateEvent.stateKey);
+        if (prevState != null && prevState.time > stateEvent.time) return;
+        rooms[j].setState(stateEvent);
+      }
     } else if (eventUpdate.type == "account_data") {
       rooms[j].roomAccountData[eventUpdate.eventType] =
           RoomAccountData.fromJson(eventUpdate.content, rooms[j]);
