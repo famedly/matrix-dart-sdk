@@ -111,6 +111,27 @@ void main() {
 
       expect(timeline.events[0].receipts.length, 1);
       expect(timeline.events[0].receipts[0].user.id, "@alice:example.com");
+
+      client.connection.onEvent.add(EventUpdate(
+          type: "timeline",
+          roomID: roomID,
+          eventType: "m.room.redaction",
+          content: {
+            "type": "m.room.redaction",
+            "content": {"reason": "spamming"},
+            "sender": "@alice:example.com",
+            "redacts": "2",
+            "event_id": "3",
+            "origin_server_ts": testTimeStamp + 1000
+          }));
+
+      await new Future.delayed(new Duration(milliseconds: 50));
+
+      expect(updateCount, 3);
+      expect(insertList, [0, 0]);
+      expect(insertList.length, timeline.events.length);
+      expect(timeline.events.length, 2);
+      expect(timeline.events[1].redacted, true);
     });
 
     test("Send message", () async {
@@ -118,7 +139,7 @@ void main() {
 
       await new Future.delayed(new Duration(milliseconds: 50));
 
-      expect(updateCount, 4);
+      expect(updateCount, 5);
       expect(insertList, [0, 0, 0]);
       expect(insertList.length, timeline.events.length);
       expect(timeline.events[0].eventId, "42");
@@ -140,7 +161,7 @@ void main() {
 
       await new Future.delayed(new Duration(milliseconds: 50));
 
-      expect(updateCount, 5);
+      expect(updateCount, 6);
       expect(insertList, [0, 0, 0]);
       expect(insertList.length, timeline.events.length);
       expect(timeline.events[0].eventId, "42");
@@ -168,7 +189,7 @@ void main() {
       room.sendTextEvent("test", txid: "errortxid3");
       await new Future.delayed(new Duration(milliseconds: 50));
 
-      expect(updateCount, 12);
+      expect(updateCount, 13);
       expect(insertList, [0, 0, 0, 0, 0, 0, 0]);
       expect(insertList.length, timeline.events.length);
       expect(timeline.events[0].status, -1);
@@ -181,7 +202,7 @@ void main() {
 
       await new Future.delayed(new Duration(milliseconds: 50));
 
-      expect(updateCount, 13);
+      expect(updateCount, 14);
 
       expect(insertList, [0, 0, 0, 0, 0, 0, 0]);
       expect(timeline.events.length, 6);
@@ -193,7 +214,7 @@ void main() {
 
       await new Future.delayed(new Duration(milliseconds: 50));
 
-      expect(updateCount, 16);
+      expect(updateCount, 17);
 
       expect(insertList, [0, 0, 0, 0, 0, 0, 0, 0]);
       expect(timeline.events.length, 6);
@@ -205,7 +226,7 @@ void main() {
 
       await new Future.delayed(new Duration(milliseconds: 50));
 
-      expect(updateCount, 19);
+      expect(updateCount, 20);
       expect(timeline.events.length, 9);
       expect(timeline.events[6].eventId, "1143273582443PhrSn:example.org");
       expect(timeline.events[7].eventId, "2143273582443PhrSn:example.org");

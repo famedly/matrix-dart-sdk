@@ -48,12 +48,17 @@ void main() {
       "sender": senderID,
       "origin_server_ts": timestamp,
       "type": type,
+      "room_id": "1234",
       "status": 2,
       "content": contentJson,
     };
 
     test("Create from json", () async {
       Event event = Event.fromJson(jsonObj, null);
+      jsonObj.remove("status");
+      jsonObj["content"] = json.decode(contentJson);
+      expect(event.toJson(), jsonObj);
+      jsonObj["content"] = contentJson;
 
       expect(event.eventId, id);
       expect(event.senderId, senderID);
@@ -154,6 +159,29 @@ void main() {
       };
       event = Event.fromJson(jsonObj, null);
       expect(event.type, EventTypes.Reply);
+    });
+
+    test("redact", () async {
+      final Room room =
+          Room(id: "1234", client: Client("testclient", debug: true));
+      final Map<String, dynamic> redactionEventJson = {
+        "content": {"reason": "Spamming"},
+        "event_id": "143273582443PhrSn:example.org",
+        "origin_server_ts": 1432735824653,
+        "redacts": id,
+        "room_id": "1234",
+        "sender": "@example:example.org",
+        "type": "m.room.redaction",
+        "unsigned": {"age": 1234}
+      };
+      RoomState redactedBecause = RoomState.fromJson(redactionEventJson, room);
+      Event event = Event.fromJson(jsonObj, room);
+      event.setRedactionEvent(redactedBecause);
+      expect(event.redacted, true);
+      expect(event.redactedBecause.toJson(), redactedBecause.toJson());
+      expect(event.content.isEmpty, true);
+      redactionEventJson.remove("redacts");
+      expect(event.unsigned["redacted_because"], redactionEventJson);
     });
 
     test("remove", () async {

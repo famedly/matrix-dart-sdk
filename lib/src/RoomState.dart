@@ -32,7 +32,7 @@ class RoomState {
   final String eventId;
 
   /// The json payload of the content. The content highly depends on the type.
-  final Map<String, dynamic> content;
+  Map<String, dynamic> content;
 
   /// The type String of this event. For example 'm.room.message'.
   final String typeKey;
@@ -50,7 +50,7 @@ class RoomState {
   final ChatTime time;
 
   /// Optional additional content for this event.
-  final Map<String, dynamic> unsigned;
+  Map<String, dynamic> unsigned;
 
   /// The room this event belongs to. May be null.
   final Room room;
@@ -58,11 +58,19 @@ class RoomState {
   /// Optional. The previous content for this state.
   /// This will be present only for state events appearing in the timeline.
   /// If this is not a state event, or there is no previous content, this key will be null.
-  final Map<String, dynamic> prevContent;
+  Map<String, dynamic> prevContent;
 
   /// Optional. This key will only be present for state events. A unique key which defines
   /// the overwriting semantics for this piece of room state.
   final String stateKey;
+
+  /// Optional. The event that redacted this event, if any. Otherwise null.
+  RoomState get redactedBecause =>
+      unsigned != null && unsigned.containsKey("redacted_because")
+          ? RoomState.fromJson(unsigned["redacted_because"], room)
+          : null;
+
+  bool get redacted => redactedBecause != null;
 
   User get stateKeyUser => room.getUserByMXIDSync(stateKey);
 
@@ -98,16 +106,33 @@ class RoomState {
     final Map<String, dynamic> prevContent =
         RoomState.getMapFromPayload(jsonPayload['prev_content']);
     return RoomState(
-        stateKey: jsonPayload['state_key'],
-        prevContent: prevContent,
-        content: content,
-        typeKey: jsonPayload['type'],
-        eventId: jsonPayload['event_id'],
-        roomId: jsonPayload['room_id'],
-        senderId: jsonPayload['sender'],
-        time: ChatTime(jsonPayload['origin_server_ts']),
-        unsigned: unsigned,
-        room: room);
+      stateKey: jsonPayload['state_key'],
+      prevContent: prevContent,
+      content: content,
+      typeKey: jsonPayload['type'],
+      eventId: jsonPayload['event_id'],
+      roomId: jsonPayload['room_id'],
+      senderId: jsonPayload['sender'],
+      time: ChatTime(jsonPayload['origin_server_ts']),
+      unsigned: unsigned,
+      room: room,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    if (this.stateKey != null) data['state_key'] = this.stateKey;
+    if (this.prevContent != null && this.prevContent.isNotEmpty)
+      data['prev_content'] = this.prevContent;
+    data['content'] = this.content;
+    data['type'] = this.typeKey;
+    data['event_id'] = this.eventId;
+    data['room_id'] = this.roomId;
+    data['sender'] = this.senderId;
+    data['origin_server_ts'] = this.time.toTimeStamp();
+    if (this.unsigned != null && this.unsigned.isNotEmpty)
+      data['unsigned'] = this.unsigned;
+    return data;
   }
 
   Event get timelineEvent => Event(
@@ -154,6 +179,8 @@ class RoomState {
         return EventTypes.RoomCanonicalAlias;
       case "m.room.create":
         return EventTypes.RoomCreate;
+      case "m.room.redaction":
+        return EventTypes.Redaction;
       case "m.room.join_rules":
         return EventTypes.RoomJoinRules;
       case "m.room.member":
@@ -189,6 +216,53 @@ class RoomState {
     }
     return EventTypes.Unknown;
   }
+
+  void setRedactionEvent(RoomState redactedBecause) {
+    unsigned = {
+      "redacted_because": redactedBecause.toJson(),
+    };
+    prevContent = null;
+    List<String> contentKeyWhiteList = [];
+    switch (type) {
+      case EventTypes.RoomMember:
+        contentKeyWhiteList.add("membership");
+        break;
+      case EventTypes.RoomMember:
+        contentKeyWhiteList.add("membership");
+        break;
+      case EventTypes.RoomCreate:
+        contentKeyWhiteList.add("creator");
+        break;
+      case EventTypes.RoomJoinRules:
+        contentKeyWhiteList.add("join_rule");
+        break;
+      case EventTypes.RoomPowerLevels:
+        contentKeyWhiteList.add("ban");
+        contentKeyWhiteList.add("events");
+        contentKeyWhiteList.add("events_default");
+        contentKeyWhiteList.add("kick");
+        contentKeyWhiteList.add("redact");
+        contentKeyWhiteList.add("state_default");
+        contentKeyWhiteList.add("users");
+        contentKeyWhiteList.add("users_default");
+        break;
+      case EventTypes.RoomAliases:
+        contentKeyWhiteList.add("aliases");
+        break;
+      case EventTypes.HistoryVisibility:
+        contentKeyWhiteList.add("history_visibility");
+        break;
+      default:
+        break;
+    }
+    List<String> toRemoveList = [];
+    for (var entry in content.entries) {
+      if (contentKeyWhiteList.indexOf(entry.key) == -1) {
+        toRemoveList.add(entry.key);
+      }
+    }
+    toRemoveList.forEach((s) => content.remove(s));
+  }
 }
 
 enum EventTypes {
@@ -198,6 +272,7 @@ enum EventTypes {
   Image,
   Video,
   Audio,
+  Redaction,
   File,
   Location,
   Reply,
