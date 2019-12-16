@@ -974,6 +974,18 @@ class Room {
         data: data);
     return resp;
   }
+
+  Future<dynamic> sendTypingInfo(bool isTyping, {int timeout}) {
+    Map<String,dynamic> data = {
+      "typing": isTyping,
+    };
+    if (timeout != null) data["timeout"] = timeout;
+    return client.connection.jsonRequest(
+      type: HTTPType.PUT,
+      action: "/client/r0/rooms/${this.id}/typing/${client.userID}",
+      data: data,
+    );
+  }
 }
 
 enum PushRuleState { notify, mentions_only, dont_notify }
