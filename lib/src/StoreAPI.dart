@@ -92,6 +92,8 @@ abstract class StoreAPI {
 
   Future<void> forgetRoom(String roomID);
 
+  Future<void> resetNotificationCount(String roomID);
+
   /// Searches for the event in the store.
   Future<Event> getEventById(String eventID, Room room);
 
