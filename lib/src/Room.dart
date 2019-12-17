@@ -611,6 +611,8 @@ class Room {
 
   /// Sends *m.fully_read* and *m.read* for the given event ID.
   Future<dynamic> sendReadReceipt(String eventID) async {
+    this.notificationCount = 0;
+    client?.store?.resetNotificationCount(this.id);
     final dynamic resp = client.connection.jsonRequest(
         type: HTTPType.POST,
         action: "/client/r0/rooms/$id/read_markers",
@@ -976,7 +978,7 @@ class Room {
   }
 
   Future<dynamic> sendTypingInfo(bool isTyping, {int timeout}) {
-    Map<String,dynamic> data = {
+    Map<String, dynamic> data = {
       "typing": isTyping,
     };
     if (timeout != null) data["timeout"] = timeout;
