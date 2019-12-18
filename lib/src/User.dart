@@ -97,7 +97,7 @@ class User extends RoomState {
           return e.toString() == 'Membership.' + content['membership'];
         }
         return false;
-      });
+      }, orElse: () => Membership.join);
 
   /// The avatar if the user has one.
   MxContent get avatarUrl => content != null && content["avatar_url"] is String
