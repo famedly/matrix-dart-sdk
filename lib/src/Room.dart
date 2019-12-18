@@ -282,19 +282,15 @@ class Room {
   Future<String> sendTextEvent(String message, {String txid = null}) =>
       sendEvent({"msgtype": "m.text", "body": message}, txid: txid);
 
-  Future<String> sendFileEvent(MatrixFile file, String msgType,
-      {String txid = null}) async {
+  /// Sends a [file] to this room after uploading it. The [msgType] is optional
+  /// and will be detected by the mimetype of the file.
+  Future<String> sendFileEvent(MatrixFile file,
+      {String msgType = "m.file", String txid = null}) async {
+    if (msgType == "m.image") return sendImageEvent(file);
+    if (msgType == "m.audio") return sendVideoEvent(file);
+    if (msgType == "m.video") return sendAudioEvent(file);
     String fileName = file.path.split("/").last;
-    // Try to get the size of the file
-    int size;
-    try {
-      size = file.size;
-    } catch (e) {
-      print("[UPLOAD] Could not get size. Reason: ${e.toString()}");
-    }
 
-    // Upload file
-    String mimeType = mime(file.path);
     final dynamic uploadResp = await client.connection.upload(file);
     if (uploadResp is ErrorResponse) return null;
 
@@ -305,14 +301,28 @@ class Room {
       "filename": fileName,
       "url": uploadResp,
       "info": {
-        "mimetype": mimeType,
+        "mimetype": mime(file.path),
+        "size": file.size,
       }
     };
-    if (size != null)
-      content["info"] = {
-        "size": size,
-        "mimetype": mimeType,
-      };
+    return await sendEvent(content, txid: txid);
+  }
+
+  Future<String> sendAudioEvent(MatrixFile file,
+      {String txid = null, int width, int height}) async {
+    String fileName = file.path.split("/").last;
+    final dynamic uploadResp = await client.connection.upload(file);
+    if (uploadResp is ErrorResponse) return null;
+    Map<String, dynamic> content = {
+      "msgtype": "m.audio",
+      "body": fileName,
+      "filename": fileName,
+      "url": uploadResp,
+      "info": {
+        "mimetype": mime(fileName),
+        "size": file.size,
+      }
+    };
     return await sendEvent(content, txid: txid);
   }
 
@@ -332,6 +342,54 @@ class Room {
         "h": height,
       },
     };
+    return await sendEvent(content, txid: txid);
+  }
+
+  Future<String> sendVideoEvent(MatrixFile file,
+      {String txid = null,
+      int videoWidth,
+      int videoHeight,
+      int duration,
+      MatrixFile thumbnail,
+      int thumbnailWidth,
+      int thumbnailHeight}) async {
+    String fileName = file.path.split("/").last;
+    final dynamic uploadResp = await client.connection.upload(file);
+    if (uploadResp is ErrorResponse) return null;
+    Map<String, dynamic> content = {
+      "msgtype": "m.video",
+      "body": fileName,
+      "url": uploadResp,
+      "info": {
+        "size": file.size,
+        "mimetype": mime(fileName),
+      },
+    };
+    if (videoWidth != null) {
+      content["info"]["w"] = videoWidth;
+    }
+    if (thumbnailHeight != null) {
+      content["info"]["h"] = thumbnailHeight;
+    }
+    if (duration != null) {
+      content["info"]["duration"] = duration;
+    }
+    if (thumbnail != null) {
+      String thumbnailName = file.path.split("/").last;
+      final dynamic thumbnailUploadResp = await client.connection.upload(file);
+      if (thumbnailUploadResp is ErrorResponse) return null;
+      content["info"]["thumbnail_url"] = thumbnailUploadResp;
+      content["info"]["thumbnail_info"] = {
+        "size": thumbnail.size,
+        "mimetype": mime(thumbnailName),
+      };
+      if (thumbnailWidth != null) {
+        content["info"]["thumbnail_info"]["w"] = thumbnailWidth;
+      }
+      if (thumbnailHeight != null) {
+        content["info"]["thumbnail_info"]["h"] = thumbnailHeight;
+      }
+    }
     return await sendEvent(content, txid: txid);
   }
 

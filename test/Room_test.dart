@@ -331,8 +331,8 @@ void main() {
     test('sendFileEvent', () async {
       final MatrixFile testFile =
           MatrixFile(bytes: [], path: "fake/path/file.jpeg");
-      final dynamic resp =
-          await room.sendFileEvent(testFile, "m.file", txid: "testtxid");
+      final dynamic resp = await room.sendFileEvent(testFile,
+          msgType: "m.file", txid: "testtxid");
       expect(resp, "42");
     });
 
