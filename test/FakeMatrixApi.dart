@@ -393,7 +393,63 @@ class FakeMatrixApi extends MockClient {
       "invite": {},
       "leave": {
         "!5345234234:example.com": {
-          "timeline": {"events": []}
+          "timeline": {
+            "events": [
+              {
+                "content": {
+                  "body": "This is an example text message",
+                  "msgtype": "m.text",
+                  "format": "org.matrix.custom.html",
+                  "formatted_body": "<b>This is an example text message</b>"
+                },
+                "type": "m.room.message",
+                "event_id": "143273582443PhrSn:example.org",
+                "room_id": "!5345234234:example.com",
+                "sender": "@example:example.org",
+                "origin_server_ts": 1432735824653,
+                "unsigned": {"age": 1234}
+              },
+            ]
+          },
+          "state": {
+            "events": [
+              {
+                "content": {"name": "The room name"},
+                "type": "m.room.name",
+                "event_id": "2143273582443PhrSn:example.org",
+                "room_id": "!5345234234:example.com",
+                "sender": "@example:example.org",
+                "origin_server_ts": 1432735824653,
+                "unsigned": {"age": 1234},
+                "state_key": ""
+              },
+            ]
+          },
+          "account_data": {
+            "events": [
+              {
+                "type": "test.type.data",
+                "content": {"foo": "bar"},
+              },
+            ],
+          },
+        },
+        "!5345234235:example.com": {
+          "timeline": {"events": []},
+          "state": {
+            "events": [
+              {
+                "content": {"name": "The room name 2"},
+                "type": "m.room.name",
+                "event_id": "2143273582443PhrSn:example.org",
+                "room_id": "!5345234235:example.com",
+                "sender": "@example:example.org",
+                "origin_server_ts": 1432735824653,
+                "unsigned": {"age": 1234},
+                "state_key": ""
+              },
+            ]
+          }
         },
       },
     }
@@ -680,7 +736,7 @@ class FakeMatrixApi extends MockClient {
               ]
             }
           },
-      "/client/r0/sync?filter=%7B%22room%22:%7B%22include_leave%22:true,%22timeline%22:%7B%22limit%22:1%7D%7D%7D&timeout=0":
+      "/client/r0/sync?filter=%7B%22room%22:%7B%22include_leave%22:true,%22timeline%22:%7B%22limit%22:10%7D%7D%7D&timeout=0":
           (var req) => archiveSyncResponse,
       "/client/r0/sync?filter=%7B%22room%22:%7B%22state%22:%7B%22lazy_load_members%22:true%7D%7D%7D":
           (var req) => syncResponse,

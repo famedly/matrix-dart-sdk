@@ -27,7 +27,7 @@ import 'package:famedlysdk/src/AccountData.dart';
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Connection.dart';
 import 'package:famedlysdk/src/Presence.dart';
-import 'package:famedlysdk/src/RoomList.dart';
+import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/User.dart';
 import 'package:famedlysdk/src/requests/SetPushersRequest.dart';
 import 'package:famedlysdk/src/responses/ErrorResponse.dart';
@@ -363,12 +363,18 @@ void main() {
     });
 
     test('get archive', () async {
-      RoomList archive = await matrix.archive;
+      List<Room> archive = await matrix.archive;
 
       await new Future.delayed(new Duration(milliseconds: 50));
-      expect(archive.rooms.length, 1);
-      expect(archive.rooms[0].id, "!5345234234:example.com");
-      expect(archive.rooms[0].membership, Membership.leave);
+      expect(archive.length, 2);
+      expect(archive[0].id, "!5345234234:example.com");
+      expect(archive[0].membership, Membership.leave);
+      expect(archive[0].name, "The room name");
+      expect(archive[0].lastMessage, "This is an example text message");
+      expect(archive[0].roomAccountData.length, 1);
+      expect(archive[1].id, "!5345234235:example.com");
+      expect(archive[1].membership, Membership.leave);
+      expect(archive[1].name, "The room name 2");
     });
 
     test('getProfileFromUserId', () async {

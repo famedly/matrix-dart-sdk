@@ -24,6 +24,7 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/AccountData.dart';
 import 'package:famedlysdk/src/Presence.dart';
 import 'package:famedlysdk/src/StoreAPI.dart';
@@ -34,6 +35,7 @@ import 'Connection.dart';
 import 'Room.dart';
 import 'RoomList.dart';
 //import 'Store.dart';
+import 'RoomState.dart';
 import 'User.dart';
 import 'requests/SetPushersRequest.dart';
 import 'responses/ErrorResponse.dart';
@@ -286,14 +288,48 @@ class Client {
         rooms: rooms);
   }
 
-  Future<RoomList> get archive async {
-    RoomList archiveList = RoomList(client: this, rooms: [], onlyLeft: true);
+  Future<List<Room>> get archive async {
+    List<Room> archiveList = [];
     String syncFilters =
-        '{"room":{"include_leave":true,"timeline":{"limit":1}}}';
+        '{"room":{"include_leave":true,"timeline":{"limit":10}}}';
     String action = "/client/r0/sync?filter=$syncFilters&timeout=0";
-    final syncResp =
+    final sync =
         await connection.jsonRequest(type: HTTPType.GET, action: action);
-    if (!(syncResp is ErrorResponse)) await connection.handleSync(syncResp);
+    if (!(sync is ErrorResponse) &&
+        sync["rooms"]["leave"] is Map<String, dynamic>) {
+      for (var entry in sync["rooms"]["leave"].entries) {
+        final String id = entry.key;
+        final dynamic room = entry.value;
+        print(id);
+        print(room.toString());
+        Room leftRoom = Room(
+            id: id,
+            membership: Membership.leave,
+            client: this,
+            roomAccountData: {},
+            mHeroes: []);
+        if (room["account_data"] is Map<String, dynamic> &&
+            room["account_data"]["events"] is List<dynamic>) {
+          for (dynamic event in room["account_data"]["events"]) {
+            leftRoom.roomAccountData[event["type"]] =
+                RoomAccountData.fromJson(event, leftRoom);
+          }
+        }
+        if (room["timeline"] is Map<String, dynamic> &&
+            room["timeline"]["events"] is List<dynamic>) {
+          for (dynamic event in room["timeline"]["events"]) {
+            leftRoom.setState(RoomState.fromJson(event, leftRoom));
+          }
+        }
+        if (room["state"] is Map<String, dynamic> &&
+            room["state"]["events"] is List<dynamic>) {
+          for (dynamic event in room["state"]["events"]) {
+            leftRoom.setState(RoomState.fromJson(event, leftRoom));
+          }
+        }
+        archiveList.add(leftRoom);
+      }
+    }
     return archiveList;
   }
 
