@@ -145,9 +145,7 @@ void main() {
     });
 
     test("sendReadReceipt", () async {
-      final dynamic resp =
-          await room.sendReadReceipt("§1234:fakeServer.notExisting");
-      expect(resp, {});
+      await room.sendReadReceipt("§1234:fakeServer.notExisting");
     });
 
     test("requestParticipants", () async {
@@ -167,28 +165,25 @@ void main() {
     });
 
     test("setName", () async {
-      final dynamic resp = await room.setName("Testname");
-      expect(resp["event_id"], "42");
+      final String eventId = await room.setName("Testname");
+      expect(eventId, "42");
     });
 
     test("setDescription", () async {
-      final dynamic resp = await room.setDescription("Testname");
-      expect(resp["event_id"], "42");
+      final String eventId = await room.setDescription("Testname");
+      expect(eventId, "42");
     });
 
     test("kick", () async {
-      final dynamic resp = await room.kick("Testname");
-      expect(resp, {});
+      await room.kick("Testname");
     });
 
     test("ban", () async {
-      final dynamic resp = await room.ban("Testname");
-      expect(resp, {});
+      await room.ban("Testname");
     });
 
     test("unban", () async {
-      final dynamic resp = await room.unban("Testname");
-      expect(resp, {});
+      await room.unban("Testname");
     });
 
     test("PowerLevels", () async {
@@ -259,18 +254,17 @@ void main() {
       expect(room.canSendEvent("m.room.power_levels"), false);
       expect(room.canSendEvent("m.room.member"), false);
       expect(room.canSendEvent("m.room.message"), true);
-      final dynamic resp =
+      final String resp =
           await room.setPower("@test:fakeServer.notExisting", 90);
-      expect(resp["event_id"], "42");
+      expect(resp, "42");
     });
 
     test("invite", () async {
-      final dynamic resp = await room.invite("Testname");
-      expect(resp, {});
+      await room.invite("Testname");
     });
 
     test("getParticipants", () async {
-      room.states["@alice:test.abc"] = RoomState(
+      room.setState(RoomState(
           senderId: "@alice:test.abc",
           typeKey: "m.room.member",
           roomId: room.id,
@@ -278,15 +272,14 @@ void main() {
           eventId: "12345",
           time: ChatTime.now(),
           content: {"displayname": "alice"},
-          stateKey: "@alice:test.abc");
+          stateKey: "@alice:test.abc"));
       final List<User> userList = room.getParticipants();
-      expect(userList.length, 1);
-      expect(userList[0].displayName, "alice");
+      expect(userList.length, 4);
+      expect(userList[3].displayName, "alice");
     });
 
     test("addToDirectChat", () async {
-      final dynamic resp = await room.addToDirectChat("Testname");
-      expect(resp, {});
+      await room.addToDirectChat("Testname");
     });
 
     test("getTimeline", () async {
@@ -295,7 +288,10 @@ void main() {
     });
 
     test("getUserByMXID", () async {
-      final User user = await room.getUserByMXID("@getme:example.com");
+      User user;
+      try {
+        user = await room.getUserByMXID("@getme:example.com");
+      } catch (_) {}
       expect(user.stateKey, "@getme:example.com");
       expect(user.calcDisplayname(), "You got me");
     });

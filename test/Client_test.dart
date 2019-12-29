@@ -30,11 +30,11 @@ import 'package:famedlysdk/src/Presence.dart';
 import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/User.dart';
 import 'package:famedlysdk/src/requests/SetPushersRequest.dart';
-import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/responses/PushrulesResponse.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/sync/RoomUpdate.dart';
 import 'package:famedlysdk/src/sync/UserUpdate.dart';
+import 'package:famedlysdk/src/utils/MatrixException.dart';
 import 'package:famedlysdk/src/utils/MatrixFile.dart';
 import 'package:famedlysdk/src/utils/Profile.dart';
 import 'package:test/test.dart';
@@ -60,9 +60,6 @@ void main() {
     userUpdateListFuture = matrix.connection.onUserEvent.stream.toList();
 
     test('Login', () async {
-      Future<ErrorResponse> errorFuture =
-          matrix.connection.onError.stream.first;
-
       int presenceCounter = 0;
       int accountDataCounter = 0;
       matrix.onPresence = (Presence data) {
@@ -72,25 +69,26 @@ void main() {
         accountDataCounter++;
       };
 
-      final bool checkResp1 =
-          await matrix.checkServer("https://fakeserver.wrongaddress");
-      final bool checkResp2 =
-          await matrix.checkServer("https://fakeserver.notexisting");
+      expect(matrix.homeserver, null);
+      expect(matrix.matrixVersions, null);
 
-      ErrorResponse checkError = await errorFuture;
+      try {
+        await matrix.checkServer("https://fakeserver.wrongaddress");
+      } on FormatException catch (exception) {
+        expect(exception != null, true);
+      }
+      await matrix.checkServer("https://fakeserver.notexisting");
+      expect(matrix.homeserver, "https://fakeserver.notexisting");
+      expect(matrix.matrixVersions,
+          ["r0.0.1", "r0.1.0", "r0.2.0", "r0.3.0", "r0.4.0", "r0.5.0"]);
 
-      expect(checkResp1, false);
-      expect(checkResp2, true);
-      expect(checkError.errcode, "NO_RESPONSE");
-
-      final resp = await matrix.connection
+      final Map<String, dynamic> resp = await matrix.connection
           .jsonRequest(type: HTTPType.POST, action: "/client/r0/login", data: {
         "type": "m.login.password",
         "user": "test",
         "password": "1234",
         "initial_device_display_name": "Fluffy Matrix Client"
       });
-      expect(resp is ErrorResponse, false);
 
       Future<LoginState> loginStateFuture =
           matrix.connection.onLoginStateChanged.stream.first;
@@ -176,15 +174,19 @@ void main() {
     });
 
     test('Try to get ErrorResponse', () async {
-      final resp = await matrix.connection
-          .jsonRequest(type: HTTPType.PUT, action: "/non/existing/path");
-      expect(resp is ErrorResponse, true);
+      MatrixException expectedException;
+      try {
+        await matrix.connection
+            .jsonRequest(type: HTTPType.PUT, action: "/non/existing/path");
+      } on MatrixException catch (exception) {
+        expectedException = exception;
+      }
+      expect(expectedException.error, MatrixError.M_UNRECOGNIZED);
     });
 
     test('Logout', () async {
-      final dynamic resp = await matrix.connection
+      await matrix.connection
           .jsonRequest(type: HTTPType.POST, action: "/client/r0/logout");
-      expect(resp is ErrorResponse, false);
 
       Future<LoginState> loginStateFuture =
           matrix.connection.onLoginStateChanged.stream.first;
@@ -331,8 +333,7 @@ void main() {
     test('setAvatar', () async {
       final MatrixFile testFile =
           MatrixFile(bytes: [], path: "fake/path/file.jpeg");
-      final dynamic resp = await matrix.setAvatar(testFile);
-      expect(resp, null);
+      await matrix.setAvatar(testFile);
     });
 
     test('getPushrules', () async {
@@ -352,8 +353,7 @@ void main() {
           lang: "en",
           data: PusherData(
               format: "event_id_only", url: "https://examplepushserver.com"));
-      final dynamic resp = await matrix.setPushers(data);
-      expect(resp is ErrorResponse, false);
+      await matrix.setPushers(data);
     });
 
     test('joinRoomById', () async {
@@ -389,8 +389,13 @@ void main() {
     test('Logout when token is unknown', () async {
       Future<LoginState> loginStateFuture =
           matrix.connection.onLoginStateChanged.stream.first;
-      await matrix.connection
-          .jsonRequest(type: HTTPType.DELETE, action: "/unknown/token");
+
+      try {
+        await matrix.connection
+            .jsonRequest(type: HTTPType.DELETE, action: "/unknown/token");
+      } on MatrixException catch (exception) {
+        expect(exception.error, MatrixError.M_UNKNOWN_TOKEN);
+      }
 
       LoginState state = await loginStateFuture;
       expect(state, LoginState.loggedOut);

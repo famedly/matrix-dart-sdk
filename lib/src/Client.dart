@@ -38,7 +38,6 @@ import 'RoomList.dart';
 import 'RoomState.dart';
 import 'User.dart';
 import 'requests/SetPushersRequest.dart';
-import 'responses/ErrorResponse.dart';
 import 'responses/PushrulesResponse.dart';
 import 'utils/Profile.dart';
 
@@ -156,65 +155,56 @@ class Client {
   /// Checks the supported versions of the Matrix protocol and the supported
   /// login types. Returns false if the server is not compatible with the
   /// client. Automatically sets [matrixVersions] and [lazyLoadMembers].
+  /// Throws FormatException, TimeoutException and MatrixException on error.
   Future<bool> checkServer(serverUrl) async {
-    homeserver = serverUrl;
+    try {
+      homeserver = serverUrl;
+      final versionResp = await connection.jsonRequest(
+          type: HTTPType.GET, action: "/client/versions");
 
-    final versionResp = await connection.jsonRequest(
-        type: HTTPType.GET, action: "/client/versions");
-    if (versionResp is ErrorResponse) {
-      connection.onError.add(ErrorResponse(errcode: "NO_RESPONSE", error: ""));
-      return false;
-    }
+      final List<String> versions = List<String>.from(versionResp["versions"]);
 
-    final List<String> versions = List<String>.from(versionResp["versions"]);
-
-    if (versions == null) {
-      connection.onError.add(ErrorResponse(errcode: "NO_RESPONSE", error: ""));
-      return false;
-    }
-
-    for (int i = 0; i < versions.length; i++) {
-      if (versions[i] == "r0.5.0")
-        break;
-      else if (i == versions.length - 1) {
-        connection.onError.add(ErrorResponse(errcode: "NO_SUPPORT", error: ""));
-        return false;
+      for (int i = 0; i < versions.length; i++) {
+        if (versions[i] == "r0.5.0")
+          break;
+        else if (i == versions.length - 1) {
+          return false;
+        }
       }
-    }
 
-    matrixVersions = versions;
+      matrixVersions = versions;
 
-    if (versionResp.containsKey("unstable_features") &&
-        versionResp["unstable_features"].containsKey("m.lazy_load_members")) {
-      lazyLoadMembers = versionResp["unstable_features"]["m.lazy_load_members"]
-          ? true
-          : false;
-    }
-
-    final loginResp = await connection.jsonRequest(
-        type: HTTPType.GET, action: "/client/r0/login");
-    if (loginResp is ErrorResponse) {
-      connection.onError.add(loginResp);
-      return false;
-    }
-
-    final List<dynamic> flows = loginResp["flows"];
-
-    for (int i = 0; i < flows.length; i++) {
-      if (flows[i].containsKey("type") &&
-          flows[i]["type"] == "m.login.password")
-        break;
-      else if (i == flows.length - 1) {
-        connection.onError.add(ErrorResponse(errcode: "NO_SUPPORT", error: ""));
-        return false;
+      if (versionResp.containsKey("unstable_features") &&
+          versionResp["unstable_features"].containsKey("m.lazy_load_members")) {
+        lazyLoadMembers = versionResp["unstable_features"]
+                ["m.lazy_load_members"]
+            ? true
+            : false;
       }
-    }
 
-    return true;
+      final loginResp = await connection.jsonRequest(
+          type: HTTPType.GET, action: "/client/r0/login");
+
+      final List<dynamic> flows = loginResp["flows"];
+
+      for (int i = 0; i < flows.length; i++) {
+        if (flows[i].containsKey("type") &&
+            flows[i]["type"] == "m.login.password")
+          break;
+        else if (i == flows.length - 1) {
+          return false;
+        }
+      }
+      return true;
+    } catch (_) {
+      this.homeserver = this.matrixVersions = null;
+      rethrow;
+    }
   }
 
   /// Handles the login and allows the client to call all APIs which require
-  /// authentication. Returns false if the login was not successful.
+  /// authentication. Returns false if the login was not successful. Throws
+  /// MatrixException if login was not successful.
   Future<bool> login(String username, String password) async {
     final loginResp = await connection
         .jsonRequest(type: HTTPType.POST, action: "/client/r0/login", data: {
@@ -228,15 +218,10 @@ class Client {
       "initial_device_display_name": "Famedly Talk"
     });
 
-    if (loginResp is ErrorResponse) {
-      connection.onError.add(loginResp);
-      return false;
-    }
-
     final userID = loginResp["user_id"];
     final accessToken = loginResp["access_token"];
     if (userID == null || accessToken == null) {
-      connection.onError.add(ErrorResponse(errcode: "NO_SUPPORT", error: ""));
+      return false;
     }
 
     await connection.connect(
@@ -253,11 +238,14 @@ class Client {
   /// Sends a logout command to the homeserver and clears all local data,
   /// including all persistent data from the store.
   Future<void> logout() async {
-    final dynamic resp = await connection.jsonRequest(
-        type: HTTPType.POST, action: "/client/r0/logout");
-    if (resp is ErrorResponse) connection.onError.add(resp);
-
-    await connection.clear();
+    try {
+      await connection.jsonRequest(
+          type: HTTPType.POST, action: "/client/r0/logout");
+    } catch (exception) {
+      rethrow;
+    } finally {
+      await connection.clear();
+    }
   }
 
   /// Get the combined profile information for this user. This API may be used to
@@ -266,10 +254,6 @@ class Client {
   Future<Profile> getProfileFromUserId(String userId) async {
     final dynamic resp = await connection.jsonRequest(
         type: HTTPType.GET, action: "/client/r0/profile/${userId}");
-    if (resp is ErrorResponse) {
-      connection.onError.add(resp);
-      return null;
-    }
     return Profile.fromJson(resp);
   }
 
@@ -295,8 +279,7 @@ class Client {
     String action = "/client/r0/sync?filter=$syncFilters&timeout=0";
     final sync =
         await connection.jsonRequest(type: HTTPType.GET, action: action);
-    if (!(sync is ErrorResponse) &&
-        sync["rooms"]["leave"] is Map<String, dynamic>) {
+    if (sync["rooms"]["leave"] is Map<String, dynamic>) {
       for (var entry in sync["rooms"]["leave"].entries) {
         final String id = entry.key;
         final dynamic room = entry.value;
@@ -377,33 +360,29 @@ class Client {
     if (params == null && invite != null)
       for (int i = 0; i < invite.length; i++) inviteIDs.add(invite[i].id);
 
-    final dynamic resp = await connection.jsonRequest(
-        type: HTTPType.POST,
-        action: "/client/r0/createRoom",
-        data: params == null
-            ? {
-                "invite": inviteIDs,
-              }
-            : params);
-
-    if (resp is ErrorResponse) {
-      connection.onError.add(resp);
-      return null;
+    try {
+      final dynamic resp = await connection.jsonRequest(
+          type: HTTPType.POST,
+          action: "/client/r0/createRoom",
+          data: params == null
+              ? {
+                  "invite": inviteIDs,
+                }
+              : params);
+      return resp["room_id"];
+    } catch (e) {
+      rethrow;
     }
-
-    return resp["room_id"];
   }
 
-  /// Uploads a new user avatar for this user. Returns ErrorResponse if something went wrong.
-  Future<dynamic> setAvatar(MatrixFile file) async {
+  /// Uploads a new user avatar for this user.
+  Future<void> setAvatar(MatrixFile file) async {
     final uploadResp = await connection.upload(file);
-    if (uploadResp is ErrorResponse) return uploadResp;
-    final setAvatarResp = await connection.jsonRequest(
+    await connection.jsonRequest(
         type: HTTPType.PUT,
         action: "/client/r0/profile/$userID/avatar_url",
         data: {"avatar_url": uploadResp});
-    if (setAvatarResp is ErrorResponse) return setAvatarResp;
-    return null;
+    return;
   }
 
   /// Fetches the pushrules for the logged in user.
@@ -414,26 +393,16 @@ class Client {
       action: "/client/r0/pushrules/",
     );
 
-    if (resp is ErrorResponse) {
-      connection.onError.add(resp);
-      return null;
-    }
-
     return PushrulesResponse.fromJson(resp);
   }
 
   /// This endpoint allows the creation, modification and deletion of pushers for this user ID.
-  Future<dynamic> setPushers(SetPushersRequest data) async {
-    final dynamic resp = await connection.jsonRequest(
+  Future<void> setPushers(SetPushersRequest data) async {
+    await connection.jsonRequest(
       type: HTTPType.POST,
       action: "/client/r0/pushers/set",
       data: data.toJson(),
     );
-
-    if (resp is ErrorResponse) {
-      connection.onError.add(resp);
-    }
-
-    return resp;
+    return;
   }
 }

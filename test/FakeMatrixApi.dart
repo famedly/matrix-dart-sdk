@@ -48,12 +48,17 @@ class FakeMatrixApi extends MockClient {
 
           if (request.url.origin != "https://fakeserver.notexisting")
             return Response(
-                "<html><head></head><body>Not found...</body></html>", 50);
+                "<html><head></head><body>Not found...</body></html>", 404);
 
           // Call API
           if (api.containsKey(method) && api[method].containsKey(action))
             res = api[method][action](data);
-          else
+          else if (method == "GET" &&
+              action.contains("/client/r0/rooms/") &&
+              action.contains("/state/m.room.member/")) {
+            res = {"displayname": ""};
+            return Response(json.encode(res), 200);
+          } else
             res = {
               "errcode": "M_UNRECOGNIZED",
               "error": "Unrecognized request"
@@ -61,6 +66,64 @@ class FakeMatrixApi extends MockClient {
 
           return Response(json.encode(res), 100);
         });
+
+  static Map<String, dynamic> messagesResponse = {
+    "start": "t47429-4392820_219380_26003_2265",
+    "end": "t47409-4357353_219380_26003_2265",
+    "chunk": [
+      {
+        "content": {
+          "body": "This is an example text message",
+          "msgtype": "m.text",
+          "format": "org.matrix.custom.html",
+          "formatted_body": "<b>This is an example text message</b>"
+        },
+        "type": "m.room.message",
+        "event_id": "3143273582443PhrSn:example.org",
+        "room_id": "!1234:example.com",
+        "sender": "@example:example.org",
+        "origin_server_ts": 1432735824653,
+        "unsigned": {"age": 1234}
+      },
+      {
+        "content": {"name": "The room name"},
+        "type": "m.room.name",
+        "event_id": "2143273582443PhrSn:example.org",
+        "room_id": "!1234:example.com",
+        "sender": "@example:example.org",
+        "origin_server_ts": 1432735824653,
+        "unsigned": {"age": 1234},
+        "state_key": ""
+      },
+      {
+        "content": {
+          "body": "Gangnam Style",
+          "url": "mxc://example.org/a526eYUSFFxlgbQYZmo442",
+          "info": {
+            "thumbnail_url": "mxc://example.org/FHyPlCeYUSFFxlgbQYZmoEoe",
+            "thumbnail_info": {
+              "mimetype": "image/jpeg",
+              "size": 46144,
+              "w": 300,
+              "h": 300
+            },
+            "w": 480,
+            "h": 320,
+            "duration": 2140786,
+            "size": 1563685,
+            "mimetype": "video/mp4"
+          },
+          "msgtype": "m.video"
+        },
+        "type": "m.room.message",
+        "event_id": "1143273582443PhrSn:example.org",
+        "room_id": "!1234:example.com",
+        "sender": "@example:example.org",
+        "origin_server_ts": 1432735824653,
+        "unsigned": {"age": 1234}
+      }
+    ]
+  };
 
   static Map<String, dynamic> syncResponse = {
     "next_batch": Random().nextDouble().toString(),
@@ -457,6 +520,8 @@ class FakeMatrixApi extends MockClient {
 
   static final Map<String, Map<String, dynamic>> api = {
     "GET": {
+      "/client/r0/rooms/1/state/m.room.member/@alice:example.com": (var req) =>
+          {"displayname": "Alice"},
       "/client/r0/profile/@getme:example.com": (var req) => {
             "avatar_url": "mxc://test",
             "displayname": "You got me",
@@ -480,65 +545,10 @@ class FakeMatrixApi extends MockClient {
             "origin_server_ts": 1432735824653,
             "unsigned": {"age": 1234}
           },
+      "/client/r0/rooms/!localpart:server.abc/messages?from=&dir=b&limit=100&filter=%7B%22room%22:%7B%22state%22:%7B%22lazy_load_members%22:true%7D%7D%7D":
+          (var req) => messagesResponse,
       "/client/r0/rooms/!1234:example.com/messages?from=1234&dir=b&limit=100&filter=%7B%22room%22:%7B%22state%22:%7B%22lazy_load_members%22:true%7D%7D%7D":
-          (var req) => {
-                "start": "t47429-4392820_219380_26003_2265",
-                "end": "t47409-4357353_219380_26003_2265",
-                "chunk": [
-                  {
-                    "content": {
-                      "body": "This is an example text message",
-                      "msgtype": "m.text",
-                      "format": "org.matrix.custom.html",
-                      "formatted_body": "<b>This is an example text message</b>"
-                    },
-                    "type": "m.room.message",
-                    "event_id": "3143273582443PhrSn:example.org",
-                    "room_id": "!1234:example.com",
-                    "sender": "@example:example.org",
-                    "origin_server_ts": 1432735824653,
-                    "unsigned": {"age": 1234}
-                  },
-                  {
-                    "content": {"name": "The room name"},
-                    "type": "m.room.name",
-                    "event_id": "2143273582443PhrSn:example.org",
-                    "room_id": "!1234:example.com",
-                    "sender": "@example:example.org",
-                    "origin_server_ts": 1432735824653,
-                    "unsigned": {"age": 1234},
-                    "state_key": ""
-                  },
-                  {
-                    "content": {
-                      "body": "Gangnam Style",
-                      "url": "mxc://example.org/a526eYUSFFxlgbQYZmo442",
-                      "info": {
-                        "thumbnail_url":
-                            "mxc://example.org/FHyPlCeYUSFFxlgbQYZmoEoe",
-                        "thumbnail_info": {
-                          "mimetype": "image/jpeg",
-                          "size": 46144,
-                          "w": 300,
-                          "h": 300
-                        },
-                        "w": 480,
-                        "h": 320,
-                        "duration": 2140786,
-                        "size": 1563685,
-                        "mimetype": "video/mp4"
-                      },
-                      "msgtype": "m.video"
-                    },
-                    "type": "m.room.message",
-                    "event_id": "1143273582443PhrSn:example.org",
-                    "room_id": "!1234:example.com",
-                    "sender": "@example:example.org",
-                    "origin_server_ts": 1432735824653,
-                    "unsigned": {"age": 1234}
-                  }
-                ]
-              },
+          (var req) => messagesResponse,
       "/client/versions": (var req) => {
             "versions": [
               "r0.0.1",

@@ -33,10 +33,10 @@ import 'package:mime_type/mime_type.dart';
 
 import 'Client.dart';
 import 'User.dart';
-import 'responses/ErrorResponse.dart';
 import 'sync/EventUpdate.dart';
 import 'sync/RoomUpdate.dart';
 import 'sync/UserUpdate.dart';
+import 'utils/MatrixException.dart';
 
 enum HTTPType { GET, POST, PUT, DELETE }
 
@@ -74,7 +74,7 @@ class Connection {
       new StreamController.broadcast();
 
   /// Synchronization erros are coming here.
-  final StreamController<ErrorResponse> onError =
+  final StreamController<MatrixException> onError =
       new StreamController.broadcast();
 
   /// This is called once, when the first sync has received.
@@ -177,6 +177,8 @@ class Connection {
 
   /// Used for all Matrix json requests using the [c2s API](https://matrix.org/docs/spec/client_server/r0.4.0.html).
   ///
+  /// Throws: TimeoutException, FormatException, MatrixException
+  ///
   /// You must first call [this.connect()] or set [this.homeserver] before you can use
   /// this! For example to send a message to a Matrix room with the id
   /// '!fjd823j:example.com' you call:
@@ -192,7 +194,7 @@ class Connection {
   ///  );
   /// ```
   ///
-  Future<dynamic> jsonRequest(
+  Future<Map<String, dynamic>> jsonRequest(
       {HTTPType type,
       String action,
       dynamic data = "",
@@ -219,6 +221,7 @@ class Connection {
           "[REQUEST ${type.toString().split('.').last}] Action: $action, Data: $data");
 
     http.Response resp;
+    Map<String, dynamic> jsonResp = {};
     try {
       switch (type.toString().split('.').last) {
         case "GET":
@@ -242,52 +245,47 @@ class Connection {
               .timeout(Duration(seconds: timeout));
           break;
       }
-    } on TimeoutException catch (_) {
-      return ErrorResponse(
-          error: "No connection possible...",
-          errcode: "TIMEOUT",
-          request: resp?.request);
-    } catch (e) {
-      return ErrorResponse(
-          error: "No connection possible...",
-          errcode: "NO_CONNECTION",
-          request: resp?.request);
-    }
+      jsonResp = jsonDecode(resp.body)
+          as Map<String, dynamic>; // May throw FormatException
 
-    Map<String, dynamic> jsonResp;
-    try {
-      jsonResp = jsonDecode(resp.body) as Map<String, dynamic>;
-    } catch (e) {
-      return ErrorResponse(
-          error: "No connection possible...",
-          errcode: "MALFORMED",
-          request: resp?.request);
-    }
-    if (jsonResp.containsKey("errcode") && jsonResp["errcode"] is String) {
-      if (jsonResp["errcode"] == "M_UNKNOWN_TOKEN") clear();
-      return ErrorResponse.fromJson(jsonResp, resp?.request);
-    }
+      if (jsonResp.containsKey("errcode") && jsonResp["errcode"] is String) {
+        // The server has responsed with an matrix related error.
+        MatrixException exception = MatrixException(resp);
+        if (exception.error == MatrixError.M_UNKNOWN_TOKEN) {
+          // The token is no longer valid. Need to sign off....
+          onError.add(exception);
+          clear();
+        }
 
-    if (client.debug) print("[RESPONSE] ${jsonResp.toString()}");
+        throw exception;
+      }
+
+      if (client.debug) print("[RESPONSE] ${jsonResp.toString()}");
+    } on ArgumentError catch (exception) {
+      print(exception);
+      // Ignore this error
+    } catch (_) {
+      print(_);
+      rethrow;
+    }
 
     return jsonResp;
   }
 
   /// Uploads a file with the name [fileName] as base64 encoded to the server
-  /// and returns the mxc url as a string or an [ErrorResponse].
-  Future<dynamic> upload(MatrixFile file) async {
+  /// and returns the mxc url as a string.
+  Future<String> upload(MatrixFile file) async {
     dynamic fileBytes;
     if (client.homeserver != "https://fakeServer.notExisting")
       fileBytes = file.bytes;
     String fileName = file.path.split("/").last.toLowerCase();
     String mimeType = mime(file.path);
     print("[UPLOADING] $fileName, type: $mimeType, size: ${fileBytes?.length}");
-    final dynamic resp = await jsonRequest(
+    final Map<String, dynamic> resp = await jsonRequest(
         type: HTTPType.POST,
         action: "/media/r0/upload?filename=$fileName",
         data: fileBytes,
         contentType: mimeType);
-    if (resp is ErrorResponse) return resp;
     return resp["content_uri"];
   }
 
@@ -302,32 +300,28 @@ class Connection {
       action += "&timeout=30000";
       action += "&since=${client.prevBatch}";
     }
-    _syncRequest = jsonRequest(type: HTTPType.GET, action: action);
-    final int hash = _syncRequest.hashCode;
-    final syncResp = await _syncRequest;
-    if (hash != _syncRequest.hashCode) return;
-    if (syncResp is ErrorResponse) {
-      //onError.add(syncResp);
-      await Future.delayed(Duration(seconds: syncErrorTimeoutSec), () {});
-    } else {
-      try {
-        if (client.store != null)
-          await client.store.transaction(() {
-            handleSync(syncResp);
-            client.store.storePrevBatch(syncResp);
-            return;
-          });
-        else
-          await handleSync(syncResp);
-        if (client.prevBatch == null) client.connection.onFirstSync.add(true);
-        client.prevBatch = syncResp["next_batch"];
-      } catch (e) {
-        onError
-            .add(ErrorResponse(errcode: "CRITICAL_ERROR", error: e.toString()));
-        await Future.delayed(Duration(seconds: syncErrorTimeoutSec), () {});
-      }
+    try {
+      _syncRequest = jsonRequest(type: HTTPType.GET, action: action);
+      final int hash = _syncRequest.hashCode;
+      final syncResp = await _syncRequest;
+      if (hash != _syncRequest.hashCode) return;
+      if (client.store != null)
+        await client.store.transaction(() {
+          handleSync(syncResp);
+          client.store.storePrevBatch(syncResp);
+          return;
+        });
+      else
+        await handleSync(syncResp);
+      if (client.prevBatch == null) client.connection.onFirstSync.add(true);
+      client.prevBatch = syncResp["next_batch"];
+      if (hash == _syncRequest.hashCode) _sync();
+    } on MatrixException catch (exception) {
+      onError.add(exception);
+      await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
+    } catch (exception) {
+      await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
     }
-    if (hash == _syncRequest.hashCode) _sync();
   }
 
   void handleSync(dynamic sync) {
