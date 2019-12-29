@@ -29,14 +29,17 @@ import 'package:famedlysdk/src/sync/RoomUpdate.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'package:test/test.dart';
 
+import 'FakeMatrixApi.dart';
+
 void main() {
   /// All Tests related to the MxContent
   group("RoomList", () {
     final roomID = "!1:example.com";
 
     test("Create and insert one room", () async {
-      final Client client = Client("testclient");
-      client.homeserver = "https://testserver.abc";
+      final Client client = Client("testclient", debug: true);
+      client.connection.httpClient = FakeMatrixApi();
+      await client.checkServer("https://fakeserver.notexisting");
       client.prevBatch = "1234";
 
       int updateCount = 0;
@@ -84,8 +87,9 @@ void main() {
     });
 
     test("Restort", () async {
-      final Client client = Client("testclient");
-      client.homeserver = "https://testserver.abc";
+      final Client client = Client("testclient", debug: true);
+      client.connection.httpClient = FakeMatrixApi();
+      await client.checkServer("https://fakeserver.notexisting");
       client.prevBatch = "1234";
 
       int updateCount = 0;
@@ -186,7 +190,7 @@ void main() {
       await new Future.delayed(new Duration(milliseconds: 50));
 
       expect(updateCount, 5);
-      expect(roomUpdates, 2);
+      expect(roomUpdates, 3);
       expect(insertList, [0, 1]);
       expect(removeList, []);
 
@@ -224,8 +228,9 @@ void main() {
     });
 
     test("onlyLeft", () async {
-      final Client client = Client("testclient");
-      client.homeserver = "https://testserver.abc";
+      final Client client = Client("testclient", debug: true);
+      client.connection.httpClient = FakeMatrixApi();
+      await client.checkServer("https://fakeserver.notexisting");
       client.prevBatch = "1234";
 
       int updateCount = 0;
@@ -268,9 +273,9 @@ void main() {
       expect(roomList.eventSub != null, true);
       expect(roomList.roomSub != null, true);
       expect(roomList.rooms[0].id, "2");
-      expect(updateCount, 2);
       expect(insertList, [0]);
       expect(removeList, []);
+      expect(updateCount, 2);
     });
   });
 }

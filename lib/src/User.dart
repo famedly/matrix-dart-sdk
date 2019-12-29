@@ -24,7 +24,6 @@
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/RoomState.dart';
-import 'package:famedlysdk/src/responses/ErrorResponse.dart';
 import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
 
@@ -113,28 +112,16 @@ class User extends RoomState {
       : displayName;
 
   /// Call the Matrix API to kick this user from this room.
-  Future<dynamic> kick() async {
-    dynamic res = await room.kick(id);
-    return res;
-  }
+  Future<void> kick() => room.kick(id);
 
   /// Call the Matrix API to ban this user from this room.
-  Future<dynamic> ban() async {
-    dynamic res = await room.ban(id);
-    return res;
-  }
+  Future<void> ban() => room.ban(id);
 
   /// Call the Matrix API to unban this banned user from this room.
-  Future<dynamic> unban() async {
-    dynamic res = await room.unban(id);
-    return res;
-  }
+  Future<void> unban() => room.unban(id);
 
   /// Call the Matrix API to change the power level of this user.
-  Future<dynamic> setPower(int power) async {
-    dynamic res = await room.setPower(id, power);
-    return res;
-  }
+  Future<void> setPower(int power) => room.setPower(id, power);
 
   /// Returns an existing direct chat ID with this user or creates a new one.
   /// Returns null on error.
@@ -152,11 +139,6 @@ class User extends RoomState {
           "is_direct": true,
           "preset": "trusted_private_chat"
         });
-
-    if (resp is ErrorResponse) {
-      room.client.connection.onError.add(resp);
-      return null;
-    }
 
     final String newRoomID = resp["room_id"];
 

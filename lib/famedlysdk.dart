@@ -24,12 +24,12 @@
 library famedlysdk;
 
 export 'package:famedlysdk/src/requests/SetPushersRequest.dart';
-export 'package:famedlysdk/src/responses/ErrorResponse.dart';
 export 'package:famedlysdk/src/responses/PushrulesResponse.dart';
 export 'package:famedlysdk/src/sync/RoomUpdate.dart';
 export 'package:famedlysdk/src/sync/EventUpdate.dart';
 export 'package:famedlysdk/src/sync/UserUpdate.dart';
 export 'package:famedlysdk/src/utils/ChatTime.dart';
+export 'package:famedlysdk/src/utils/MatrixException.dart';
 export 'package:famedlysdk/src/utils/MatrixFile.dart';
 export 'package:famedlysdk/src/utils/MxContent.dart';
 export 'package:famedlysdk/src/utils/StatesMap.dart';
