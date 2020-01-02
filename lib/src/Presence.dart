@@ -42,8 +42,8 @@ class Presence {
 
   Presence.fromJson(Map<String, dynamic> json)
       : sender = json['sender'],
-        displayname = json['content']['avatar_url'],
-        avatarUrl = MxContent(json['content']['avatar_url']),
+        displayname = json['content']['displayname'],
+        avatarUrl = MxContent(json['content']['avatar_url'] ?? ""),
         currentlyActive = json['content']['currently_active'],
         lastActiveAgo = json['content']['last_active_ago'],
         presence = PresenceType.values.firstWhere(

@@ -25,12 +25,9 @@ import 'dart:async';
 
 import 'package:famedlysdk/src/AccountData.dart';
 import 'package:famedlysdk/src/Client.dart';
-import 'package:famedlysdk/src/Connection.dart';
 import 'package:famedlysdk/src/Presence.dart';
 import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/User.dart';
-import 'package:famedlysdk/src/requests/SetPushersRequest.dart';
-import 'package:famedlysdk/src/responses/PushrulesResponse.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
 import 'package:famedlysdk/src/sync/RoomUpdate.dart';
 import 'package:famedlysdk/src/sync/UserUpdate.dart';
@@ -53,11 +50,11 @@ void main() {
     /// Check if all Elements get created
 
     matrix = Client("testclient", debug: true);
-    matrix.connection.httpClient = FakeMatrixApi();
+    matrix.httpClient = FakeMatrixApi();
 
-    roomUpdateListFuture = matrix.connection.onRoomUpdate.stream.toList();
-    eventUpdateListFuture = matrix.connection.onEvent.stream.toList();
-    userUpdateListFuture = matrix.connection.onUserEvent.stream.toList();
+    roomUpdateListFuture = matrix.onRoomUpdate.stream.toList();
+    eventUpdateListFuture = matrix.onEvent.stream.toList();
+    userUpdateListFuture = matrix.onUserEvent.stream.toList();
 
     test('Login', () async {
       int presenceCounter = 0;
@@ -82,7 +79,7 @@ void main() {
       expect(matrix.matrixVersions,
           ["r0.0.1", "r0.1.0", "r0.2.0", "r0.3.0", "r0.4.0", "r0.5.0"]);
 
-      final Map<String, dynamic> resp = await matrix.connection
+      final Map<String, dynamic> resp = await matrix
           .jsonRequest(type: HTTPType.POST, action: "/client/r0/login", data: {
         "type": "m.login.password",
         "user": "test",
@@ -91,11 +88,11 @@ void main() {
       });
 
       Future<LoginState> loginStateFuture =
-          matrix.connection.onLoginStateChanged.stream.first;
-      Future<bool> firstSyncFuture = matrix.connection.onFirstSync.stream.first;
-      Future<dynamic> syncFuture = matrix.connection.onSync.stream.first;
+          matrix.onLoginStateChanged.stream.first;
+      Future<bool> firstSyncFuture = matrix.onFirstSync.stream.first;
+      Future<dynamic> syncFuture = matrix.onSync.stream.first;
 
-      matrix.connection.connect(
+      matrix.connect(
           newToken: resp["access_token"],
           newUserID: resp["user_id"],
           newHomeserver: matrix.homeserver,
@@ -121,23 +118,23 @@ void main() {
       expect(matrix.accountData.length, 3);
       expect(matrix.getDirectChatFromUserId("@bob:example.com"),
           "!726s6s6q:example.com");
-      expect(matrix.roomList.rooms[1].directChatMatrixID, "@bob:example.com");
+      expect(matrix.rooms[1].directChatMatrixID, "@bob:example.com");
       expect(matrix.directChats, matrix.accountData["m.direct"].content);
       expect(matrix.presences.length, 1);
-      expect(matrix.roomList.rooms[1].ephemerals.length, 2);
-      expect(matrix.roomList.rooms[1].typingUsers.length, 1);
-      expect(matrix.roomList.rooms[1].typingUsers[0].id, "@alice:example.com");
-      expect(matrix.roomList.rooms[1].roomAccountData.length, 3);
+      expect(matrix.rooms[1].ephemerals.length, 2);
+      expect(matrix.rooms[1].typingUsers.length, 1);
+      expect(matrix.rooms[1].typingUsers[0].id, "@alice:example.com");
+      expect(matrix.rooms[1].roomAccountData.length, 3);
       expect(
-          matrix.roomList.rooms[1].roomAccountData["m.receipt"]
+          matrix.rooms[1].roomAccountData["m.receipt"]
               .content["@alice:example.com"]["ts"],
           1436451550453);
       expect(
-          matrix.roomList.rooms[1].roomAccountData["m.receipt"]
+          matrix.rooms[1].roomAccountData["m.receipt"]
               .content["@alice:example.com"]["event_id"],
           "7365636s6r6432:example.com");
-      expect(matrix.roomList.rooms.length, 2);
-      expect(matrix.roomList.rooms[1].canonicalAlias,
+      expect(matrix.rooms.length, 2);
+      expect(matrix.rooms[1].canonicalAlias,
           "#famedlyContactDiscovery:${matrix.userID.split(":")[1]}");
       final List<User> contacts = await matrix.loadFamedlyContacts();
       expect(contacts.length, 1);
@@ -147,25 +144,30 @@ void main() {
       expect(presenceCounter, 1);
       expect(accountDataCounter, 3);
 
-      matrix.connection.onEvent.add(
-        EventUpdate(
-          roomID: "!726s6s6q:example.com",
-          type: "state",
-          eventType: "m.room.canonical_alias",
-          content: {
-            "sender": "@alice:example.com",
-            "type": "m.room.canonical_alias",
-            "content": {"alias": ""},
-            "state_key": "",
-            "origin_server_ts": 1417731086799,
-            "event_id": "66697273743033:example.com"
-          },
-        ),
-      );
+      matrix.handleSync({
+        "rooms": {
+          "join": {
+            "!726s6s6q:example.com": {
+              "state": {
+                "events": [
+                  {
+                    "sender": "@alice:example.com",
+                    "type": "m.room.canonical_alias",
+                    "content": {"alias": ""},
+                    "state_key": "",
+                    "origin_server_ts": 1417731086799,
+                    "event_id": "66697273743033:example.com"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      });
       await new Future.delayed(new Duration(milliseconds: 50));
 
       expect(
-          matrix.roomList.getRoomByAlias(
+          matrix.getRoomByAlias(
               "#famedlyContactDiscovery:${matrix.userID.split(":")[1]}"),
           null);
       final List<User> altContacts = await matrix.loadFamedlyContacts();
@@ -176,8 +178,8 @@ void main() {
     test('Try to get ErrorResponse', () async {
       MatrixException expectedException;
       try {
-        await matrix.connection
-            .jsonRequest(type: HTTPType.PUT, action: "/non/existing/path");
+        await matrix.jsonRequest(
+            type: HTTPType.PUT, action: "/non/existing/path");
       } on MatrixException catch (exception) {
         expectedException = exception;
       }
@@ -185,13 +187,13 @@ void main() {
     });
 
     test('Logout', () async {
-      await matrix.connection
-          .jsonRequest(type: HTTPType.POST, action: "/client/r0/logout");
+      await matrix.jsonRequest(
+          type: HTTPType.POST, action: "/client/r0/logout");
 
       Future<LoginState> loginStateFuture =
-          matrix.connection.onLoginStateChanged.stream.first;
+          matrix.onLoginStateChanged.stream.first;
 
-      matrix.connection.clear();
+      matrix.clear();
 
       expect(matrix.accessToken == null, true);
       expect(matrix.homeserver == null, true);
@@ -207,11 +209,11 @@ void main() {
     });
 
     test('Room Update Test', () async {
-      matrix.connection.onRoomUpdate.close();
+      matrix.onRoomUpdate.close();
 
       List<RoomUpdate> roomUpdateList = await roomUpdateListFuture;
 
-      expect(roomUpdateList.length, 2);
+      expect(roomUpdateList.length, 3);
 
       expect(roomUpdateList[0].id == "!726s6s6q:example.com", true);
       expect(roomUpdateList[0].membership == Membership.join, true);
@@ -229,7 +231,7 @@ void main() {
     });
 
     test('Event Update Test', () async {
-      matrix.connection.onEvent.close();
+      matrix.onEvent.close();
 
       List<EventUpdate> eventUpdateList = await eventUpdateListFuture;
 
@@ -281,7 +283,7 @@ void main() {
     });
 
     test('User Update Test', () async {
-      matrix.connection.onUserEvent.close();
+      matrix.onUserEvent.close();
 
       List<UserUpdate> eventUpdateList = await userUpdateListFuture;
 
@@ -299,11 +301,11 @@ void main() {
 
     test('Login', () async {
       matrix = Client("testclient", debug: true);
-      matrix.connection.httpClient = FakeMatrixApi();
+      matrix.httpClient = FakeMatrixApi();
 
-      roomUpdateListFuture = matrix.connection.onRoomUpdate.stream.toList();
-      eventUpdateListFuture = matrix.connection.onEvent.stream.toList();
-      userUpdateListFuture = matrix.connection.onUserEvent.stream.toList();
+      roomUpdateListFuture = matrix.onRoomUpdate.stream.toList();
+      eventUpdateListFuture = matrix.onEvent.stream.toList();
+      userUpdateListFuture = matrix.onUserEvent.stream.toList();
       final bool checkResp =
           await matrix.checkServer("https://fakeServer.notExisting");
 
@@ -326,7 +328,7 @@ void main() {
       final MatrixFile testFile =
           MatrixFile(bytes: [], path: "fake/path/file.jpeg");
 
-      final dynamic resp = await matrix.connection.upload(testFile);
+      final dynamic resp = await matrix.upload(testFile);
       expect(resp, "mxc://example.com/AQwafuaFswefuhsfAFAgsw");
     });
 
@@ -337,23 +339,14 @@ void main() {
     });
 
     test('getPushrules', () async {
-      final PushrulesResponse pushrules = await matrix.getPushrules();
-      final PushrulesResponse awaited_resp = PushrulesResponse.fromJson(
-          FakeMatrixApi.api["GET"]["/client/r0/pushrules/"](""));
-      expect(pushrules.toJson(), awaited_resp.toJson());
+      final pushrules = await matrix.getPushrules();
+      expect(pushrules != null, true);
     });
 
     test('setPushers', () async {
-      final SetPushersRequest data = SetPushersRequest(
-          app_id: "com.famedly.famedlysdk",
-          device_display_name: "GitLabCi",
-          app_display_name: "famedlySDK",
-          pushkey: "abcdefg",
-          kind: "http",
-          lang: "en",
-          data: PusherData(
-              format: "event_id_only", url: "https://examplepushserver.com"));
-      await matrix.setPushers(data);
+      await matrix.setPushers("abcdefg", "http", "com.famedly.famedlysdk",
+          "famedlySDK", "GitLabCi", "en", "https://examplepushserver.com",
+          format: "event_id_only");
     });
 
     test('joinRoomById', () async {
@@ -388,11 +381,11 @@ void main() {
 
     test('Logout when token is unknown', () async {
       Future<LoginState> loginStateFuture =
-          matrix.connection.onLoginStateChanged.stream.first;
+          matrix.onLoginStateChanged.stream.first;
 
       try {
-        await matrix.connection
-            .jsonRequest(type: HTTPType.DELETE, action: "/unknown/token");
+        await matrix.jsonRequest(
+            type: HTTPType.DELETE, action: "/unknown/token");
       } on MatrixException catch (exception) {
         expect(exception.error, MatrixError.M_UNKNOWN_TOKEN);
       }

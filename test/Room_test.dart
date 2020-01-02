@@ -24,10 +24,8 @@
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/Room.dart';
-import 'package:famedlysdk/src/RoomState.dart';
 import 'package:famedlysdk/src/Timeline.dart';
 import 'package:famedlysdk/src/User.dart';
-import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'package:famedlysdk/src/utils/MatrixFile.dart';
 import 'package:test/test.dart';
 
@@ -41,7 +39,7 @@ void main() {
   group("Room", () {
     test('Login', () async {
       matrix = Client("testclient", debug: true);
-      matrix.connection.httpClient = FakeMatrixApi();
+      matrix.httpClient = FakeMatrixApi();
 
       final bool checkResp =
           await matrix.checkServer("https://fakeServer.notExisting");
@@ -86,7 +84,7 @@ void main() {
       expect(room.mHeroes, heroes);
       expect(room.displayname, "alice, bob, charley");
 
-      room.states["m.room.canonical_alias"] = RoomState(
+      room.states["m.room.canonical_alias"] = Event(
           senderId: "@test:example.com",
           typeKey: "m.room.canonical_alias",
           roomId: room.id,
@@ -97,7 +95,7 @@ void main() {
       expect(room.displayname, "testalias");
       expect(room.canonicalAlias, "#testalias:example.com");
 
-      room.states["m.room.name"] = RoomState(
+      room.states["m.room.name"] = Event(
           senderId: "@test:example.com",
           typeKey: "m.room.name",
           roomId: room.id,
@@ -108,7 +106,7 @@ void main() {
       expect(room.displayname, "testname");
 
       expect(room.topic, "");
-      room.states["m.room.topic"] = RoomState(
+      room.states["m.room.topic"] = Event(
           senderId: "@test:example.com",
           typeKey: "m.room.topic",
           roomId: room.id,
@@ -119,7 +117,7 @@ void main() {
       expect(room.topic, "testtopic");
 
       expect(room.avatar.mxc, "");
-      room.states["m.room.avatar"] = RoomState(
+      room.states["m.room.avatar"] = Event(
           senderId: "@test:example.com",
           typeKey: "m.room.avatar",
           roomId: room.id,
@@ -130,13 +128,13 @@ void main() {
       expect(room.avatar.mxc, "mxc://testurl");
 
       expect(room.lastEvent, null);
-      room.states["m.room.message"] = RoomState(
+      room.states["m.room.message"] = Event(
           senderId: "@test:example.com",
           typeKey: "m.room.message",
           roomId: room.id,
           room: room,
           eventId: "12345",
-          time: ChatTime.now(),
+          time: DateTime.now(),
           content: {"msgtype": "m.text", "body": "test"},
           stateKey: "");
       expect(room.lastEvent.eventId, "12345");
@@ -187,7 +185,7 @@ void main() {
     });
 
     test("PowerLevels", () async {
-      room.states["m.room.power_levels"] = RoomState(
+      room.states["m.room.power_levels"] = Event(
           senderId: "@test:example.com",
           typeKey: "m.room.power_levels",
           roomId: room.id,
@@ -223,7 +221,7 @@ void main() {
       expect(room.powerLevels,
           room.states["m.room.power_levels"].content["users"]);
 
-      room.states["m.room.power_levels"] = RoomState(
+      room.states["m.room.power_levels"] = Event(
           senderId: "@test:example.com",
           typeKey: "m.room.power_levels",
           roomId: room.id,
@@ -264,13 +262,13 @@ void main() {
     });
 
     test("getParticipants", () async {
-      room.setState(RoomState(
+      room.setState(Event(
           senderId: "@alice:test.abc",
           typeKey: "m.room.member",
           roomId: room.id,
           room: room,
           eventId: "12345",
-          time: ChatTime.now(),
+          time: DateTime.now(),
           content: {"displayname": "alice"},
           stateKey: "@alice:test.abc"));
       final List<User> userList = room.getParticipants();

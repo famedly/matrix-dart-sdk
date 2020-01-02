@@ -30,35 +30,40 @@ import 'package:famedlysdk/src/Presence.dart';
 import 'package:famedlysdk/src/StoreAPI.dart';
 import 'package:famedlysdk/src/sync/UserUpdate.dart';
 import 'package:famedlysdk/src/utils/MatrixFile.dart';
-
-import 'Connection.dart';
 import 'Room.dart';
-import 'RoomList.dart';
-//import 'Store.dart';
-import 'RoomState.dart';
+import 'Event.dart';
 import 'User.dart';
-import 'requests/SetPushersRequest.dart';
-import 'responses/PushrulesResponse.dart';
 import 'utils/Profile.dart';
+import 'dart:convert';
+import 'package:famedlysdk/src/Room.dart';
+import 'package:http/http.dart' as http;
+import 'package:mime_type/mime_type.dart';
+import 'sync/EventUpdate.dart';
+import 'sync/RoomUpdate.dart';
+import 'sync/UserUpdate.dart';
+import 'utils/MatrixException.dart';
 
 typedef AccountDataEventCB = void Function(AccountData accountData);
 typedef PresenceCB = void Function(Presence presence);
+
+enum HTTPType { GET, POST, PUT, DELETE }
+
+enum LoginState { logged, loggedOut }
 
 /// Represents a Matrix client to communicate with a
 /// [Matrix](https://matrix.org) homeserver and is the entry point for this
 /// SDK.
 class Client {
   /// Handles the connection for this client.
-  Connection connection;
+  @deprecated
+  Client get connection => this;
 
   /// Optional persistent store for all data.
   StoreAPI store;
 
   Client(this.clientName, {this.debug = false, this.store}) {
-    connection = Connection(this);
-
     if (this.clientName != "testclient") store = null; //Store(this);
-    connection.onLoginStateChanged.stream.listen((loginState) {
+    this.onLoginStateChanged.stream.listen((loginState) {
       print("LoginState: ${loginState.toString()}");
     });
   }
@@ -70,35 +75,43 @@ class Client {
   final String clientName;
 
   /// The homeserver this client is communicating with.
-  String homeserver;
+  String get homeserver => _homeserver;
+  String _homeserver;
 
   /// The Matrix ID of the current logged user.
-  String userID;
+  String get userID => _userID;
+  String _userID;
 
   /// This is the access token for the matrix client. When it is undefined, then
   /// the user needs to sign in first.
-  String accessToken;
+  String get accessToken => _accessToken;
+  String _accessToken;
 
   /// This points to the position in the synchronization history.
   String prevBatch;
 
   /// The device ID is an unique identifier for this device.
-  String deviceID;
+  String get deviceID => _deviceID;
+  String _deviceID;
 
   /// The device name is a human readable identifier for this device.
-  String deviceName;
+  String get deviceName => _deviceName;
+  String _deviceName;
 
   /// Which version of the matrix specification does this server support?
-  List<String> matrixVersions;
+  List<String> get matrixVersions => _matrixVersions;
+  List<String> _matrixVersions;
 
   /// Wheither the server supports lazy load members.
-  bool lazyLoadMembers = false;
+  bool get lazyLoadMembers => _lazyLoadMembers;
+  bool _lazyLoadMembers = false;
 
   /// Returns the current login state.
   bool isLogged() => accessToken != null;
 
   /// A list of all rooms the user is participating or invited.
-  RoomList roomList;
+  List<Room> get rooms => _rooms;
+  List<Room> _rooms = [];
 
   /// Key/Value store of account data.
   Map<String, AccountData> accountData = {};
@@ -111,6 +124,20 @@ class Client {
 
   /// Callback will be called on presences.
   PresenceCB onPresence;
+
+  Room getRoomByAlias(String alias) {
+    for (int i = 0; i < rooms.length; i++) {
+      if (rooms[i].canonicalAlias == alias) return rooms[i];
+    }
+    return null;
+  }
+
+  Room getRoomById(String id) {
+    for (int j = 0; j < rooms.length; j++) {
+      if (rooms[j].id == id) return rooms[j];
+    }
+    return null;
+  }
 
   void handleUserUpdate(UserUpdate userUpdate) {
     if (userUpdate.type == "account_data") {
@@ -134,21 +161,21 @@ class Client {
     if (accountData["m.direct"] != null &&
         accountData["m.direct"].content[userId] is List<dynamic> &&
         accountData["m.direct"].content[userId].length > 0) {
-      if (roomList.getRoomById(accountData["m.direct"].content[userId][0]) !=
-          null) return accountData["m.direct"].content[userId][0];
+      if (getRoomById(accountData["m.direct"].content[userId][0]) != null)
+        return accountData["m.direct"].content[userId][0];
       (accountData["m.direct"].content[userId] as List<dynamic>)
           .remove(accountData["m.direct"].content[userId][0]);
-      connection.jsonRequest(
+      this.jsonRequest(
           type: HTTPType.PUT,
           action: "/client/r0/user/${userID}/account_data/m.direct",
           data: directChats);
       return getDirectChatFromUserId(userId);
     }
-    for (int i = 0; i < roomList.rooms.length; i++)
-      if (roomList.rooms[i].membership == Membership.invite &&
-          roomList.rooms[i].states[userID]?.senderId == userId &&
-          roomList.rooms[i].states[userID].content["is_direct"] == true)
-        return roomList.rooms[i].id;
+    for (int i = 0; i < this.rooms.length; i++)
+      if (this.rooms[i].membership == Membership.invite &&
+          this.rooms[i].states[userID]?.senderId == userId &&
+          this.rooms[i].states[userID].content["is_direct"] == true)
+        return this.rooms[i].id;
     return null;
   }
 
@@ -158,9 +185,9 @@ class Client {
   /// Throws FormatException, TimeoutException and MatrixException on error.
   Future<bool> checkServer(serverUrl) async {
     try {
-      homeserver = serverUrl;
-      final versionResp = await connection.jsonRequest(
-          type: HTTPType.GET, action: "/client/versions");
+      _homeserver = serverUrl;
+      final versionResp = await this
+          .jsonRequest(type: HTTPType.GET, action: "/client/versions");
 
       final List<String> versions = List<String>.from(versionResp["versions"]);
 
@@ -172,18 +199,18 @@ class Client {
         }
       }
 
-      matrixVersions = versions;
+      _matrixVersions = versions;
 
       if (versionResp.containsKey("unstable_features") &&
           versionResp["unstable_features"].containsKey("m.lazy_load_members")) {
-        lazyLoadMembers = versionResp["unstable_features"]
+        _lazyLoadMembers = versionResp["unstable_features"]
                 ["m.lazy_load_members"]
             ? true
             : false;
       }
 
-      final loginResp = await connection.jsonRequest(
-          type: HTTPType.GET, action: "/client/r0/login");
+      final loginResp = await this
+          .jsonRequest(type: HTTPType.GET, action: "/client/r0/login");
 
       final List<dynamic> flows = loginResp["flows"];
 
@@ -197,7 +224,7 @@ class Client {
       }
       return true;
     } catch (_) {
-      this.homeserver = this.matrixVersions = null;
+      this._homeserver = this._matrixVersions = null;
       rethrow;
     }
   }
@@ -206,17 +233,19 @@ class Client {
   /// authentication. Returns false if the login was not successful. Throws
   /// MatrixException if login was not successful.
   Future<bool> login(String username, String password) async {
-    final loginResp = await connection
-        .jsonRequest(type: HTTPType.POST, action: "/client/r0/login", data: {
-      "type": "m.login.password",
-      "user": username,
-      "identifier": {
-        "type": "m.id.user",
-        "user": username,
-      },
-      "password": password,
-      "initial_device_display_name": "Famedly Talk"
-    });
+    final loginResp = await jsonRequest(
+        type: HTTPType.POST,
+        action: "/client/r0/login",
+        data: {
+          "type": "m.login.password",
+          "user": username,
+          "identifier": {
+            "type": "m.id.user",
+            "user": username,
+          },
+          "password": password,
+          "initial_device_display_name": "Famedly Talk"
+        });
 
     final userID = loginResp["user_id"];
     final accessToken = loginResp["access_token"];
@@ -224,7 +253,7 @@ class Client {
       return false;
     }
 
-    await connection.connect(
+    await this.connect(
         newToken: accessToken,
         newUserID: userID,
         newHomeserver: homeserver,
@@ -239,12 +268,11 @@ class Client {
   /// including all persistent data from the store.
   Future<void> logout() async {
     try {
-      await connection.jsonRequest(
-          type: HTTPType.POST, action: "/client/r0/logout");
+      await this.jsonRequest(type: HTTPType.POST, action: "/client/r0/logout");
     } catch (exception) {
       rethrow;
     } finally {
-      await connection.clear();
+      await this.clear();
     }
   }
 
@@ -252,24 +280,9 @@ class Client {
   /// fetch the user's own profile information or other users; either locally
   /// or on remote homeservers.
   Future<Profile> getProfileFromUserId(String userId) async {
-    final dynamic resp = await connection.jsonRequest(
+    final dynamic resp = await this.jsonRequest(
         type: HTTPType.GET, action: "/client/r0/profile/${userId}");
     return Profile.fromJson(resp);
-  }
-
-  /// Creates a new [RoomList] object.
-  RoomList getRoomList(
-      {onRoomListUpdateCallback onUpdate,
-      onRoomListInsertCallback onInsert,
-      onRoomListRemoveCallback onRemove}) {
-    List<Room> rooms = roomList.rooms;
-    return RoomList(
-        client: this,
-        onlyLeft: false,
-        onUpdate: onUpdate,
-        onInsert: onInsert,
-        onRemove: onRemove,
-        rooms: rooms);
   }
 
   Future<List<Room>> get archive async {
@@ -277,8 +290,7 @@ class Client {
     String syncFilters =
         '{"room":{"include_leave":true,"timeline":{"limit":10}}}';
     String action = "/client/r0/sync?filter=$syncFilters&timeout=0";
-    final sync =
-        await connection.jsonRequest(type: HTTPType.GET, action: action);
+    final sync = await this.jsonRequest(type: HTTPType.GET, action: action);
     if (sync["rooms"]["leave"] is Map<String, dynamic>) {
       for (var entry in sync["rooms"]["leave"].entries) {
         final String id = entry.key;
@@ -301,13 +313,13 @@ class Client {
         if (room["timeline"] is Map<String, dynamic> &&
             room["timeline"]["events"] is List<dynamic>) {
           for (dynamic event in room["timeline"]["events"]) {
-            leftRoom.setState(RoomState.fromJson(event, leftRoom));
+            leftRoom.setState(Event.fromJson(event, leftRoom));
           }
         }
         if (room["state"] is Map<String, dynamic> &&
             room["state"]["events"] is List<dynamic>) {
           for (dynamic event in room["state"]["events"]) {
-            leftRoom.setState(RoomState.fromJson(event, leftRoom));
+            leftRoom.setState(Event.fromJson(event, leftRoom));
           }
         }
         archiveList.add(leftRoom);
@@ -316,12 +328,9 @@ class Client {
     return archiveList;
   }
 
-  /// Searches in the roomList and in the archive for a room with the given [id].
-  Room getRoomById(String id) => roomList.getRoomById(id);
-
   Future<dynamic> joinRoomById(String id) async {
-    return await connection.jsonRequest(
-        type: HTTPType.POST, action: "/client/r0/join/$id");
+    return await this
+        .jsonRequest(type: HTTPType.POST, action: "/client/r0/join/$id");
   }
 
   /// Loads the contact list for this user excluding the user itself.
@@ -330,14 +339,14 @@ class Client {
   /// defined by the autojoin room feature in Synapse.
   Future<List<User>> loadFamedlyContacts() async {
     List<User> contacts = [];
-    Room contactDiscoveryRoom = roomList
-        .getRoomByAlias("#famedlyContactDiscovery:${userID.split(":")[1]}");
+    Room contactDiscoveryRoom =
+        this.getRoomByAlias("#famedlyContactDiscovery:${userID.split(":")[1]}");
     if (contactDiscoveryRoom != null)
       contacts = await contactDiscoveryRoom.requestParticipants();
     else {
       Map<String, bool> userMap = {};
-      for (int i = 0; i < roomList.rooms.length; i++) {
-        List<User> roomUsers = roomList.rooms[i].getParticipants();
+      for (int i = 0; i < this.rooms.length; i++) {
+        List<User> roomUsers = this.rooms[i].getParticipants();
         for (int j = 0; j < roomUsers.length; j++) {
           if (userMap[roomUsers[j].id] != true) contacts.add(roomUsers[j]);
           userMap[roomUsers[j].id] = true;
@@ -361,7 +370,7 @@ class Client {
       for (int i = 0; i < invite.length; i++) inviteIDs.add(invite[i].id);
 
     try {
-      final dynamic resp = await connection.jsonRequest(
+      final dynamic resp = await this.jsonRequest(
           type: HTTPType.POST,
           action: "/client/r0/createRoom",
           data: params == null
@@ -377,8 +386,8 @@ class Client {
 
   /// Uploads a new user avatar for this user.
   Future<void> setAvatar(MatrixFile file) async {
-    final uploadResp = await connection.upload(file);
-    await connection.jsonRequest(
+    final uploadResp = await this.upload(file);
+    await this.jsonRequest(
         type: HTTPType.PUT,
         action: "/client/r0/profile/$userID/avatar_url",
         data: {"avatar_url": uploadResp});
@@ -387,22 +396,584 @@ class Client {
 
   /// Fetches the pushrules for the logged in user.
   /// These are needed for notifications on Android
-  Future<PushrulesResponse> getPushrules() async {
-    final dynamic resp = await connection.jsonRequest(
+  Future<PushRules> getPushrules() async {
+    final dynamic resp = await this.jsonRequest(
       type: HTTPType.GET,
       action: "/client/r0/pushrules/",
     );
 
-    return PushrulesResponse.fromJson(resp);
+    return PushRules.fromJson(resp);
   }
 
   /// This endpoint allows the creation, modification and deletion of pushers for this user ID.
-  Future<void> setPushers(SetPushersRequest data) async {
-    await connection.jsonRequest(
+  Future<void> setPushers(String pushKey, String kind, String appId,
+      String appDisplayName, String deviceDisplayName, String lang, String url,
+      {bool append, String profileTag, String format}) async {
+    Map<String, dynamic> data = {
+      "lang": lang,
+      "kind": kind,
+      "app_display_name": appDisplayName,
+      "device_display_name": deviceDisplayName,
+      "profile_tag": profileTag,
+      "app_id": appId,
+      "pushkey": pushKey,
+      "data": {"url": url}
+    };
+
+    if (format != null) data["data"]["format"] = format;
+    if (profileTag != null) data["profile_tag"] = profileTag;
+    if (append != null) data["append"] = append;
+
+    await this.jsonRequest(
       type: HTTPType.POST,
       action: "/client/r0/pushers/set",
-      data: data.toJson(),
+      data: data,
     );
     return;
+  }
+
+  static String syncFilters = '{"room":{"state":{"lazy_load_members":true}}}';
+
+  http.Client httpClient = http.Client();
+
+  /// The newEvent signal is the most important signal in this concept. Every time
+  /// the app receives a new synchronization, this event is called for every signal
+  /// to update the GUI. For example, for a new message, it is called:
+  /// onRoomEvent( "m.room.message", "!chat_id:server.com", "timeline", {sender: "@bob:server.com", body: "Hello world"} )
+  final StreamController<EventUpdate> onEvent =
+      new StreamController.broadcast();
+
+  /// Outside of the events there are updates for the global chat states which
+  /// are handled by this signal:
+  final StreamController<RoomUpdate> onRoomUpdate =
+      new StreamController.broadcast();
+
+  /// Outside of rooms there are account updates like account_data or presences.
+  final StreamController<UserUpdate> onUserEvent =
+      new StreamController.broadcast();
+
+  /// Called when the login state e.g. user gets logged out.
+  final StreamController<LoginState> onLoginStateChanged =
+      new StreamController.broadcast();
+
+  /// Synchronization erros are coming here.
+  final StreamController<MatrixException> onError =
+      new StreamController.broadcast();
+
+  /// This is called once, when the first sync has received.
+  final StreamController<bool> onFirstSync = new StreamController.broadcast();
+
+  /// When a new sync response is coming in, this gives the complete payload.
+  final StreamController<dynamic> onSync = new StreamController.broadcast();
+
+  /// Matrix synchronisation is done with https long polling. This needs a
+  /// timeout which is usually 30 seconds.
+  int syncTimeoutSec = 30;
+
+  /// How long should the app wait until it retrys the synchronisation after
+  /// an error?
+  int syncErrorTimeoutSec = 3;
+
+  /// Sets the user credentials and starts the synchronisation.
+  ///
+  /// Before you can connect you need at least an [accessToken], a [homeserver],
+  /// a [userID], a [deviceID], and a [deviceName].
+  ///
+  /// You get this informations
+  /// by logging in to your Matrix account, using the [login API](https://matrix.org/docs/spec/client_server/r0.4.0.html#post-matrix-client-r0-login).
+  ///
+  /// To log in you can use [jsonRequest()] after you have set the [homeserver]
+  /// to a valid url. For example:
+  ///
+  /// ```
+  /// final resp = await matrix
+  ///          .jsonRequest(type: HTTPType.POST, action: "/client/r0/login", data: {
+  ///        "type": "m.login.password",
+  ///        "user": "test",
+  ///        "password": "1234",
+  ///        "initial_device_display_name": "Fluffy Matrix Client"
+  ///      });
+  /// ```
+  ///
+  /// Returns:
+  ///
+  /// ```
+  /// {
+  ///  "user_id": "@cheeky_monkey:matrix.org",
+  ///  "access_token": "abc123",
+  ///  "device_id": "GHTYAJCE"
+  /// }
+  /// ```
+  ///
+  /// Sends [LoginState.logged] to [onLoginStateChanged].
+  void connect(
+      {String newToken,
+      String newHomeserver,
+      String newUserID,
+      String newDeviceName,
+      String newDeviceID,
+      List<String> newMatrixVersions,
+      bool newLazyLoadMembers,
+      String newPrevBatch}) async {
+    this._accessToken = newToken;
+    this._homeserver = newHomeserver;
+    this._userID = newUserID;
+    this._deviceID = newDeviceID;
+    this._deviceName = newDeviceName;
+    this._matrixVersions = newMatrixVersions;
+    this._lazyLoadMembers = newLazyLoadMembers;
+    this.prevBatch = newPrevBatch;
+
+    if (this.store != null) {
+      this.store.storeClient();
+      this._rooms = await this.store.getRoomList(onlyLeft: false);
+      this.accountData = await this.store.getAccountData();
+      this.presences = await this.store.getPresences();
+    }
+
+    _userEventSub ??= onUserEvent.stream.listen(this.handleUserUpdate);
+
+    onLoginStateChanged.add(LoginState.logged);
+
+    _sync();
+  }
+
+  StreamSubscription _userEventSub;
+
+  /// Resets all settings and stops the synchronisation.
+  void clear() {
+    this.store?.clear();
+    this._accessToken = this._homeserver = this._userID = this._deviceID = this
+            ._deviceName =
+        this._matrixVersions = this._lazyLoadMembers = this.prevBatch = null;
+    onLoginStateChanged.add(LoginState.loggedOut);
+  }
+
+  /// Used for all Matrix json requests using the [c2s API](https://matrix.org/docs/spec/client_server/r0.4.0.html).
+  ///
+  /// Throws: TimeoutException, FormatException, MatrixException
+  ///
+  /// You must first call [this.connect()] or set [this.homeserver] before you can use
+  /// this! For example to send a message to a Matrix room with the id
+  /// '!fjd823j:example.com' you call:
+  ///
+  /// ```
+  /// final resp = await jsonRequest(
+  ///   type: HTTPType.PUT,
+  ///   action: "/r0/rooms/!fjd823j:example.com/send/m.room.message/$txnId",
+  ///   data: {
+  ///     "msgtype": "m.text",
+  ///     "body": "hello"
+  ///   }
+  ///  );
+  /// ```
+  ///
+  Future<Map<String, dynamic>> jsonRequest(
+      {HTTPType type,
+      String action,
+      dynamic data = "",
+      int timeout,
+      String contentType = "application/json"}) async {
+    if (this.isLogged() == false && this.homeserver == null)
+      throw ("No homeserver specified.");
+    if (timeout == null) timeout = syncTimeoutSec + 5;
+    dynamic json;
+    if (data is Map) data.removeWhere((k, v) => v == null);
+    (!(data is String)) ? json = jsonEncode(data) : json = data;
+    if (data is List<int> || action.startsWith("/media/r0/upload")) json = data;
+
+    final url = "${this.homeserver}/_matrix${action}";
+
+    Map<String, String> headers = {};
+    if (type == HTTPType.PUT || type == HTTPType.POST)
+      headers["Content-Type"] = contentType;
+    if (this.isLogged())
+      headers["Authorization"] = "Bearer ${this.accessToken}";
+
+    if (this.debug)
+      print(
+          "[REQUEST ${type.toString().split('.').last}] Action: $action, Data: $data");
+
+    http.Response resp;
+    Map<String, dynamic> jsonResp = {};
+    try {
+      switch (type.toString().split('.').last) {
+        case "GET":
+          resp = await httpClient
+              .get(url, headers: headers)
+              .timeout(Duration(seconds: timeout));
+          break;
+        case "POST":
+          resp = await httpClient
+              .post(url, body: json, headers: headers)
+              .timeout(Duration(seconds: timeout));
+          break;
+        case "PUT":
+          resp = await httpClient
+              .put(url, body: json, headers: headers)
+              .timeout(Duration(seconds: timeout));
+          break;
+        case "DELETE":
+          resp = await httpClient
+              .delete(url, headers: headers)
+              .timeout(Duration(seconds: timeout));
+          break;
+      }
+      jsonResp = jsonDecode(resp.body)
+          as Map<String, dynamic>; // May throw FormatException
+
+      if (jsonResp.containsKey("errcode") && jsonResp["errcode"] is String) {
+        // The server has responsed with an matrix related error.
+        MatrixException exception = MatrixException(resp);
+        if (exception.error == MatrixError.M_UNKNOWN_TOKEN) {
+          // The token is no longer valid. Need to sign off....
+          onError.add(exception);
+          clear();
+        }
+
+        throw exception;
+      }
+
+      if (this.debug) print("[RESPONSE] ${jsonResp.toString()}");
+    } on ArgumentError catch (exception) {
+      print(exception);
+      // Ignore this error
+    } catch (_) {
+      print(_);
+      rethrow;
+    }
+
+    return jsonResp;
+  }
+
+  /// Uploads a file with the name [fileName] as base64 encoded to the server
+  /// and returns the mxc url as a string.
+  Future<String> upload(MatrixFile file) async {
+    dynamic fileBytes;
+    if (this.homeserver != "https://fakeServer.notExisting")
+      fileBytes = file.bytes;
+    String fileName = file.path.split("/").last.toLowerCase();
+    String mimeType = mime(file.path);
+    print("[UPLOADING] $fileName, type: $mimeType, size: ${fileBytes?.length}");
+    final Map<String, dynamic> resp = await jsonRequest(
+        type: HTTPType.POST,
+        action: "/media/r0/upload?filename=$fileName",
+        data: fileBytes,
+        contentType: mimeType);
+    return resp["content_uri"];
+  }
+
+  Future<dynamic> _syncRequest;
+
+  Future<void> _sync() async {
+    if (this.isLogged() == false) return;
+
+    String action = "/client/r0/sync?filter=$syncFilters";
+
+    if (this.prevBatch != null) {
+      action += "&timeout=30000";
+      action += "&since=${this.prevBatch}";
+    }
+    try {
+      _syncRequest = jsonRequest(type: HTTPType.GET, action: action);
+      final int hash = _syncRequest.hashCode;
+      final syncResp = await _syncRequest;
+      if (hash != _syncRequest.hashCode) return;
+      if (this.store != null)
+        await this.store.transaction(() {
+          handleSync(syncResp);
+          this.store.storePrevBatch(syncResp);
+          return;
+        });
+      else
+        await handleSync(syncResp);
+      if (this.prevBatch == null) this.onFirstSync.add(true);
+      this.prevBatch = syncResp["next_batch"];
+      if (hash == _syncRequest.hashCode) _sync();
+    } on MatrixException catch (exception) {
+      onError.add(exception);
+      await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
+    } catch (exception) {
+      await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
+    }
+  }
+
+  void handleSync(dynamic sync) {
+    if (sync["rooms"] is Map<String, dynamic>) {
+      if (sync["rooms"]["join"] is Map<String, dynamic>)
+        _handleRooms(sync["rooms"]["join"], Membership.join);
+      if (sync["rooms"]["invite"] is Map<String, dynamic>)
+        _handleRooms(sync["rooms"]["invite"], Membership.invite);
+      if (sync["rooms"]["leave"] is Map<String, dynamic>)
+        _handleRooms(sync["rooms"]["leave"], Membership.leave);
+    }
+    if (sync["presence"] is Map<String, dynamic> &&
+        sync["presence"]["events"] is List<dynamic>) {
+      _handleGlobalEvents(sync["presence"]["events"], "presence");
+    }
+    if (sync["account_data"] is Map<String, dynamic> &&
+        sync["account_data"]["events"] is List<dynamic>) {
+      _handleGlobalEvents(sync["account_data"]["events"], "account_data");
+    }
+    if (sync["to_device"] is Map<String, dynamic> &&
+        sync["to_device"]["events"] is List<dynamic>) {
+      _handleGlobalEvents(sync["to_device"]["events"], "to_device");
+    }
+    onSync.add(sync);
+  }
+
+  void _handleRooms(Map<String, dynamic> rooms, Membership membership) {
+    rooms.forEach((String id, dynamic room) async {
+      // calculate the notification counts, the limitedTimeline and prevbatch
+      num highlight_count = 0;
+      num notification_count = 0;
+      String prev_batch = "";
+      bool limitedTimeline = false;
+
+      if (room["unread_notifications"] is Map<String, dynamic>) {
+        if (room["unread_notifications"]["highlight_count"] is num)
+          highlight_count = room["unread_notifications"]["highlight_count"];
+        if (room["unread_notifications"]["notification_count"] is num)
+          notification_count =
+              room["unread_notifications"]["notification_count"];
+      }
+
+      if (room["timeline"] is Map<String, dynamic>) {
+        if (room["timeline"]["limited"] is bool)
+          limitedTimeline = room["timeline"]["limited"];
+        if (room["timeline"]["prev_batch"] is String)
+          prev_batch = room["timeline"]["prev_batch"];
+      }
+
+      RoomSummary summary;
+
+      if (room["summary"] is Map<String, dynamic>) {
+        summary = RoomSummary.fromJson(room["summary"]);
+      }
+
+      RoomUpdate update = RoomUpdate(
+        id: id,
+        membership: membership,
+        notification_count: notification_count,
+        highlight_count: highlight_count,
+        limitedTimeline: limitedTimeline,
+        prev_batch: prev_batch,
+        summary: summary,
+      );
+      _updateRoomsByRoomUpdate(update);
+      this.store?.storeRoomUpdate(update);
+      onRoomUpdate.add(update);
+
+      /// Handle now all room events and save them in the database
+      if (room["state"] is Map<String, dynamic> &&
+          room["state"]["events"] is List<dynamic>)
+        _handleRoomEvents(id, room["state"]["events"], "state");
+
+      if (room["invite_state"] is Map<String, dynamic> &&
+          room["invite_state"]["events"] is List<dynamic>)
+        _handleRoomEvents(id, room["invite_state"]["events"], "invite_state");
+
+      if (room["timeline"] is Map<String, dynamic> &&
+          room["timeline"]["events"] is List<dynamic>)
+        _handleRoomEvents(id, room["timeline"]["events"], "timeline");
+
+      if (room["ephemeral"] is Map<String, dynamic> &&
+          room["ephemeral"]["events"] is List<dynamic>)
+        _handleEphemerals(id, room["ephemeral"]["events"]);
+
+      if (room["account_data"] is Map<String, dynamic> &&
+          room["account_data"]["events"] is List<dynamic>)
+        _handleRoomEvents(id, room["account_data"]["events"], "account_data");
+    });
+  }
+
+  void _handleEphemerals(String id, List<dynamic> events) {
+    for (num i = 0; i < events.length; i++) {
+      _handleEvent(events[i], id, "ephemeral");
+
+      // Receipt events are deltas between two states. We will create a
+      // fake room account data event for this and store the difference
+      // there.
+      if (events[i]["type"] == "m.receipt") {
+        Room room = this.getRoomById(id);
+        if (room == null) room = Room(id: id);
+
+        Map<String, dynamic> receiptStateContent =
+            room.roomAccountData["m.receipt"]?.content ?? {};
+        for (var eventEntry in events[i]["content"].entries) {
+          final String eventID = eventEntry.key;
+          if (events[i]["content"][eventID]["m.read"] != null) {
+            final Map<String, dynamic> userTimestampMap =
+                events[i]["content"][eventID]["m.read"];
+            for (var userTimestampMapEntry in userTimestampMap.entries) {
+              final String mxid = userTimestampMapEntry.key;
+
+              // Remove previous receipt event from this user
+              for (var entry in receiptStateContent.entries) {
+                if (entry.value["m.read"] is Map<String, dynamic> &&
+                    entry.value["m.read"].containsKey(mxid)) {
+                  entry.value["m.read"].remove(mxid);
+                  break;
+                }
+              }
+              if (userTimestampMap[mxid] is Map<String, dynamic> &&
+                  userTimestampMap[mxid].containsKey("ts")) {
+                receiptStateContent[mxid] = {
+                  "event_id": eventID,
+                  "ts": userTimestampMap[mxid]["ts"],
+                };
+              }
+            }
+          }
+        }
+        events[i]["content"] = receiptStateContent;
+        _handleEvent(events[i], id, "account_data");
+      }
+    }
+  }
+
+  void _handleRoomEvents(String chat_id, List<dynamic> events, String type) {
+    for (num i = 0; i < events.length; i++) {
+      _handleEvent(events[i], chat_id, type);
+    }
+  }
+
+  void _handleGlobalEvents(List<dynamic> events, String type) {
+    for (int i = 0; i < events.length; i++)
+      if (events[i]["type"] is String &&
+          events[i]["content"] is Map<String, dynamic>) {
+        UserUpdate update = UserUpdate(
+          eventType: events[i]["type"],
+          type: type,
+          content: events[i],
+        );
+        this.store?.storeUserEventUpdate(update);
+        onUserEvent.add(update);
+      }
+  }
+
+  void _handleEvent(Map<String, dynamic> event, String roomID, String type) {
+    if (event["type"] is String && event["content"] is Map<String, dynamic>) {
+      EventUpdate update = EventUpdate(
+        eventType: event["type"],
+        roomID: roomID,
+        type: type,
+        content: event,
+      );
+      _updateRoomsByEventUpdate(update);
+      this.store?.storeEventUpdate(update);
+      onEvent.add(update);
+    }
+  }
+
+  void _updateRoomsByRoomUpdate(RoomUpdate chatUpdate) {
+    // Update the chat list item.
+    // Search the room in the rooms
+    num j = 0;
+    for (j = 0; j < rooms.length; j++) {
+      if (rooms[j].id == chatUpdate.id) break;
+    }
+    final bool found = (j < rooms.length && rooms[j].id == chatUpdate.id);
+    final bool isLeftRoom = chatUpdate.membership == Membership.leave;
+
+    // Does the chat already exist in the list rooms?
+    if (!found && !isLeftRoom) {
+      num position = chatUpdate.membership == Membership.invite ? 0 : j;
+      // Add the new chat to the list
+      Room newRoom = Room(
+        id: chatUpdate.id,
+        membership: chatUpdate.membership,
+        prev_batch: chatUpdate.prev_batch,
+        highlightCount: chatUpdate.highlight_count,
+        notificationCount: chatUpdate.notification_count,
+        mHeroes: chatUpdate.summary?.mHeroes,
+        mJoinedMemberCount: chatUpdate.summary?.mJoinedMemberCount,
+        mInvitedMemberCount: chatUpdate.summary?.mInvitedMemberCount,
+        roomAccountData: {},
+        client: this,
+      );
+      rooms.insert(position, newRoom);
+    }
+    // If the membership is "leave" then remove the item and stop here
+    else if (found && isLeftRoom) {
+      rooms.removeAt(j);
+    }
+    // Update notification, highlight count and/or additional informations
+    else if (found &&
+        chatUpdate.membership != Membership.leave &&
+        (rooms[j].membership != chatUpdate.membership ||
+            rooms[j].notificationCount != chatUpdate.notification_count ||
+            rooms[j].highlightCount != chatUpdate.highlight_count ||
+            chatUpdate.summary != null)) {
+      rooms[j].membership = chatUpdate.membership;
+      rooms[j].notificationCount = chatUpdate.notification_count;
+      rooms[j].highlightCount = chatUpdate.highlight_count;
+      if (chatUpdate.prev_batch != null)
+        rooms[j].prev_batch = chatUpdate.prev_batch;
+      if (chatUpdate.summary != null) {
+        if (chatUpdate.summary.mHeroes != null)
+          rooms[j].mHeroes = chatUpdate.summary.mHeroes;
+        if (chatUpdate.summary.mJoinedMemberCount != null)
+          rooms[j].mJoinedMemberCount = chatUpdate.summary.mJoinedMemberCount;
+        if (chatUpdate.summary.mInvitedMemberCount != null)
+          rooms[j].mInvitedMemberCount = chatUpdate.summary.mInvitedMemberCount;
+      }
+      if (rooms[j].onUpdate != null) rooms[j].onUpdate();
+    }
+    sortAndUpdate();
+  }
+
+  void _updateRoomsByEventUpdate(EventUpdate eventUpdate) {
+    if (eventUpdate.type == "history") return;
+    // Search the room in the rooms
+    num j = 0;
+    for (j = 0; j < rooms.length; j++) {
+      if (rooms[j].id == eventUpdate.roomID) break;
+    }
+    final bool found = (j < rooms.length && rooms[j].id == eventUpdate.roomID);
+    if (!found) return;
+    if (eventUpdate.type == "timeline" ||
+        eventUpdate.type == "state" ||
+        eventUpdate.type == "invite_state") {
+      Event stateEvent = Event.fromJson(eventUpdate.content, rooms[j]);
+      if (stateEvent.type == EventTypes.Redaction) {
+        final String redacts = eventUpdate.content["redacts"];
+        rooms[j].states.states.forEach(
+              (String key, Map<String, Event> states) => states.forEach(
+                (String key, Event state) {
+                  if (state.eventId == redacts) {
+                    state.setRedactionEvent(stateEvent);
+                  }
+                },
+              ),
+            );
+      } else {
+        Event prevState =
+            rooms[j].getState(stateEvent.typeKey, stateEvent.stateKey);
+        if (prevState != null &&
+            prevState.time.millisecondsSinceEpoch >
+                stateEvent.time.millisecondsSinceEpoch) return;
+        rooms[j].setState(stateEvent);
+      }
+    } else if (eventUpdate.type == "account_data") {
+      rooms[j].roomAccountData[eventUpdate.eventType] =
+          RoomAccountData.fromJson(eventUpdate.content, rooms[j]);
+    } else if (eventUpdate.type == "ephemeral") {
+      rooms[j].ephemerals[eventUpdate.eventType] =
+          RoomAccountData.fromJson(eventUpdate.content, rooms[j]);
+    }
+    if (rooms[j].onUpdate != null) rooms[j].onUpdate();
+    if (eventUpdate.type == "timeline") sortAndUpdate();
+  }
+
+  bool sortLock = false;
+
+  sortAndUpdate() {
+    if (prevBatch == null) return;
+    if (sortLock || rooms.length < 2) return;
+    sortLock = true;
+    rooms?.sort((a, b) => b.timeCreated.millisecondsSinceEpoch
+        .compareTo(a.timeCreated.millisecondsSinceEpoch));
+    sortLock = false;
   }
 }

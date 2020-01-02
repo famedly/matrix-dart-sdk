@@ -25,12 +25,15 @@ import 'package:test/test.dart';
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
 
+import 'FakeMatrixApi.dart';
+
 void main() {
   /// All Tests related to the MxContent
   group("MxContent", () {
     test("Formatting", () async {
       Client client = Client("testclient");
-      client.homeserver = "https://testserver.abc";
+      client.httpClient = FakeMatrixApi();
+      await client.checkServer("https://fakeserver.notexisting");
       final String mxc = "mxc://exampleserver.abc/abcdefghijklmn";
       final MxContent content = MxContent(mxc);
 
@@ -45,7 +48,8 @@ void main() {
     });
     test("Not crashing if null", () async {
       Client client = Client("testclient");
-      client.homeserver = "https://testserver.abc";
+      client.httpClient = FakeMatrixApi();
+      await client.checkServer("https://fakeserver.notexisting");
       final MxContent content = MxContent(null);
       expect(content.getDownloadLink(client),
           "${client.homeserver}/_matrix/media/r0/download/");

@@ -75,7 +75,7 @@ class Timeline {
   }
 
   Timeline({this.room, this.events, this.onUpdate, this.onInsert}) {
-    sub ??= room.client.connection.onEvent.stream.listen(_handleEventUpdate);
+    sub ??= room.client.onEvent.stream.listen(_handleEventUpdate);
   }
 
   int _findEvent({String event_id, String unsigned_txid}) {
@@ -148,8 +148,8 @@ class Timeline {
   sort() {
     if (sortLock || events.length < 2) return;
     sortLock = true;
-    events
-        ?.sort((a, b) => b.time.toTimeStamp().compareTo(a.time.toTimeStamp()));
+    events?.sort((a, b) =>
+        b.time.millisecondsSinceEpoch.compareTo(a.time.millisecondsSinceEpoch));
     sortLock = false;
   }
 
