@@ -23,7 +23,7 @@
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/AccountData.dart';
-import 'package:famedlysdk/src/RoomState.dart';
+import 'package:famedlysdk/src/Event.dart';
 
 /// Stripped down events for account data and ephemrals of a room.
 class RoomAccountData extends AccountData {
@@ -40,7 +40,7 @@ class RoomAccountData extends AccountData {
   factory RoomAccountData.fromJson(
       Map<String, dynamic> jsonPayload, Room room) {
     final Map<String, dynamic> content =
-        RoomState.getMapFromPayload(jsonPayload['content']);
+        Event.getMapFromPayload(jsonPayload['content']);
     return RoomAccountData(
         content: content,
         typeKey: jsonPayload['type'],

@@ -23,16 +23,13 @@
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/Room.dart';
-import 'package:famedlysdk/src/RoomState.dart';
-import 'package:famedlysdk/src/utils/ChatTime.dart';
+import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
-
-import 'Connection.dart';
 
 enum Membership { join, invite, leave, ban }
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
-class User extends RoomState {
+class User extends Event {
   factory User(
     String id, {
     String membership,
@@ -50,7 +47,7 @@ class User extends RoomState {
       typeKey: "m.room.member",
       roomId: room?.id,
       room: room,
-      time: ChatTime.now(),
+      time: DateTime.now(),
     );
   }
 
@@ -62,7 +59,7 @@ class User extends RoomState {
       String eventId,
       String roomId,
       String senderId,
-      ChatTime time,
+      DateTime time,
       dynamic unsigned,
       Room room})
       : super(
@@ -131,7 +128,7 @@ class User extends RoomState {
     if (roomID != null) return roomID;
 
     // Start a new direct chat
-    final dynamic resp = await room.client.connection.jsonRequest(
+    final dynamic resp = await room.client.jsonRequest(
         type: HTTPType.POST,
         action: "/client/r0/createRoom",
         data: {

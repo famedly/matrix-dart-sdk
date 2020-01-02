@@ -30,7 +30,7 @@ void main() {
   group("StateKeys", () {
     test("Operator overload", () async {
       StatesMap states = StatesMap();
-      states["m.room.name"] = RoomState(
+      states["m.room.name"] = Event(
           eventId: "1",
           content: {"name": "test"},
           typeKey: "m.room.name",
@@ -38,7 +38,7 @@ void main() {
           roomId: "!test:test.test",
           senderId: "@alice:test.test");
 
-      states["@alice:test.test"] = RoomState(
+      states["@alice:test.test"] = Event(
           eventId: "2",
           content: {"membership": "join"},
           typeKey: "m.room.name",
@@ -46,7 +46,7 @@ void main() {
           roomId: "!test:test.test",
           senderId: "@alice:test.test");
 
-      states["m.room.member"]["@bob:test.test"] = RoomState(
+      states["m.room.member"]["@bob:test.test"] = Event(
           eventId: "3",
           content: {"membership": "join"},
           typeKey: "m.room.name",
@@ -54,7 +54,7 @@ void main() {
           roomId: "!test:test.test",
           senderId: "@bob:test.test");
 
-      states["com.test.custom"] = RoomState(
+      states["com.test.custom"] = Event(
           eventId: "4",
           content: {"custom": "stuff"},
           typeKey: "com.test.custom",

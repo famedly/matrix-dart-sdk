@@ -39,15 +39,15 @@ Client matrix = Client("HappyChat", store: Store(this));
 3. Connect to a Matrix Homeserver and listen to the streams:
 
 ```dart
-matrix.connection.onLoginStateChanged.stream.listen((bool loginState){ 
+matrix.onLoginStateChanged.stream.listen((bool loginState){ 
   print("LoginState: ${loginState.toString()}");
 });
 
-matrix.connection.onEvent.stream.listen((EventUpdate eventUpdate){ 
+matrix.onEvent.stream.listen((EventUpdate eventUpdate){ 
   print("New event update!");
 });
 
-matrix.connection.onRoomUpdate.stream.listen((RoomUpdate eventUpdate){ 
+matrix.onRoomUpdate.stream.listen((RoomUpdate eventUpdate){ 
   print("New room update!");
 });
 
@@ -59,7 +59,7 @@ final bool loginValid = await matrix.login("username", "password");
 4. Send a message to a Room:
 
 ```dart
-final resp = await matrix.connection.jsonRequest(
+final resp = await matrix.jsonRequest(
     type: "PUT",
     action: "/r0/rooms/!fjd823j:example.com/send/m.room.message/$txnId",
     data: {

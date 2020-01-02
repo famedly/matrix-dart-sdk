@@ -24,7 +24,7 @@
 import 'dart:convert';
 
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/RoomState.dart';
+import 'package:famedlysdk/src/Event.dart';
 import 'package:test/test.dart';
 
 import 'FakeMatrixApi.dart';
@@ -68,7 +68,7 @@ void main() {
       expect(event.getBody(), body);
       expect(event.type, EventTypes.Text);
       jsonObj["state_key"] = "";
-      RoomState state = RoomState.fromJson(jsonObj, null);
+      Event state = Event.fromJson(jsonObj, null);
       expect(state.eventId, id);
       expect(state.stateKey, "");
       expect(state.timelineEvent.status, 1);
@@ -174,7 +174,7 @@ void main() {
         "type": "m.room.redaction",
         "unsigned": {"age": 1234}
       };
-      RoomState redactedBecause = RoomState.fromJson(redactionEventJson, room);
+      Event redactedBecause = Event.fromJson(redactionEventJson, room);
       Event event = Event.fromJson(jsonObj, room);
       event.setRedactionEvent(redactedBecause);
       expect(event.redacted, true);
@@ -196,7 +196,7 @@ void main() {
 
     test("sendAgain", () async {
       Client matrix = Client("testclient", debug: true);
-      matrix.connection.httpClient = FakeMatrixApi();
+      matrix.httpClient = FakeMatrixApi();
       await matrix.checkServer("https://fakeServer.notExisting");
       await matrix.login("test", "1234");
 

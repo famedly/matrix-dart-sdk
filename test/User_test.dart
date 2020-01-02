@@ -21,7 +21,7 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/RoomState.dart';
+import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/User.dart';
 import 'package:test/test.dart';
 
@@ -49,7 +49,7 @@ void main() {
         "state_key": id
       };
 
-      User user = RoomState.fromJson(jsonObj, null).asUser;
+      User user = Event.fromJson(jsonObj, null).asUser;
 
       expect(user.id, id);
       expect(user.membership, membership);

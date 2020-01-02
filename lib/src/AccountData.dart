@@ -21,8 +21,9 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/RoomState.dart';
+import 'package:famedlysdk/famedlysdk.dart';
 
+/// The global private data created by this user.
 class AccountData {
   /// The json payload of the content. The content highly depends on the type.
   final Map<String, dynamic> content;
@@ -35,7 +36,7 @@ class AccountData {
   /// Get a State event from a table row or from the event stream.
   factory AccountData.fromJson(Map<String, dynamic> jsonPayload) {
     final Map<String, dynamic> content =
-        RoomState.getMapFromPayload(jsonPayload['content']);
+        Event.getMapFromPayload(jsonPayload['content']);
     return AccountData(content: content, typeKey: jsonPayload['type']);
   }
 }

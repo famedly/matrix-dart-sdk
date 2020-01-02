@@ -27,20 +27,18 @@ import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Room.dart';
 import 'package:famedlysdk/src/Timeline.dart';
 import 'package:famedlysdk/src/sync/EventUpdate.dart';
-import 'package:famedlysdk/src/utils/ChatTime.dart';
 import 'FakeMatrixApi.dart';
 
 void main() {
   /// All Tests related to the MxContent
   group("Timeline", () {
     final String roomID = "!1234:example.com";
-    final testTimeStamp = ChatTime.now().toTimeStamp();
+    final testTimeStamp = DateTime.now().millisecondsSinceEpoch;
     int updateCount = 0;
     List<int> insertList = [];
 
     Client client = Client("testclient", debug: true);
-    client.connection.httpClient = FakeMatrixApi();
-    client.homeserver = "https://fakeServer.notExisting";
+    client.httpClient = FakeMatrixApi();
 
     Room room = Room(
         id: roomID, client: client, prev_batch: "1234", roomAccountData: {});
@@ -55,7 +53,8 @@ void main() {
         });
 
     test("Create", () async {
-      client.connection.onEvent.add(EventUpdate(
+      await client.checkServer("https://fakeServer.notExisting");
+      client.onEvent.add(EventUpdate(
           type: "timeline",
           roomID: roomID,
           eventType: "m.room.message",
@@ -68,7 +67,7 @@ void main() {
             "origin_server_ts": testTimeStamp
           }));
 
-      client.connection.onEvent.add(EventUpdate(
+      client.onEvent.add(EventUpdate(
           type: "timeline",
           roomID: roomID,
           eventType: "m.room.message",
@@ -91,9 +90,12 @@ void main() {
       expect(timeline.events.length, 2);
       expect(timeline.events[0].eventId, "1");
       expect(timeline.events[0].sender.id, "@alice:example.com");
-      expect(timeline.events[0].time.toTimeStamp(), testTimeStamp);
+      expect(timeline.events[0].time.millisecondsSinceEpoch, testTimeStamp);
       expect(timeline.events[0].getBody(), "Testcase");
-      expect(timeline.events[0].time > timeline.events[1].time, true);
+      expect(
+          timeline.events[0].time.millisecondsSinceEpoch >
+              timeline.events[1].time.millisecondsSinceEpoch,
+          true);
       expect(timeline.events[0].receipts, []);
 
       room.roomAccountData["m.receipt"] = RoomAccountData.fromJson({
@@ -112,7 +114,7 @@ void main() {
       expect(timeline.events[0].receipts.length, 1);
       expect(timeline.events[0].receipts[0].user.id, "@alice:example.com");
 
-      client.connection.onEvent.add(EventUpdate(
+      client.onEvent.add(EventUpdate(
           type: "timeline",
           roomID: roomID,
           eventType: "m.room.redaction",
@@ -145,7 +147,7 @@ void main() {
       expect(timeline.events[0].eventId, "42");
       expect(timeline.events[0].status, 1);
 
-      client.connection.onEvent.add(EventUpdate(
+      client.onEvent.add(EventUpdate(
           type: "timeline",
           roomID: roomID,
           eventType: "m.room.message",
@@ -169,7 +171,7 @@ void main() {
     });
 
     test("Send message with error", () async {
-      client.connection.onEvent.add(EventUpdate(
+      client.onEvent.add(EventUpdate(
           type: "timeline",
           roomID: roomID,
           eventType: "m.room.message",

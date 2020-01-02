@@ -23,25 +23,21 @@
 
 library famedlysdk;
 
-export 'package:famedlysdk/src/requests/SetPushersRequest.dart';
-export 'package:famedlysdk/src/responses/PushrulesResponse.dart';
 export 'package:famedlysdk/src/sync/RoomUpdate.dart';
 export 'package:famedlysdk/src/sync/EventUpdate.dart';
 export 'package:famedlysdk/src/sync/UserUpdate.dart';
-export 'package:famedlysdk/src/utils/ChatTime.dart';
 export 'package:famedlysdk/src/utils/MatrixException.dart';
 export 'package:famedlysdk/src/utils/MatrixFile.dart';
 export 'package:famedlysdk/src/utils/MxContent.dart';
+export 'package:famedlysdk/src/utils/Profile.dart';
+export 'package:famedlysdk/src/utils/PushRules.dart';
 export 'package:famedlysdk/src/utils/StatesMap.dart';
 export 'package:famedlysdk/src/AccountData.dart';
 export 'package:famedlysdk/src/Client.dart';
-export 'package:famedlysdk/src/Connection.dart';
 export 'package:famedlysdk/src/Event.dart';
 export 'package:famedlysdk/src/Presence.dart';
 export 'package:famedlysdk/src/Room.dart';
 export 'package:famedlysdk/src/RoomAccountData.dart';
-export 'package:famedlysdk/src/RoomList.dart';
-export 'package:famedlysdk/src/RoomState.dart';
 export 'package:famedlysdk/src/StoreAPI.dart';
 export 'package:famedlysdk/src/Timeline.dart';
 export 'package:famedlysdk/src/User.dart';
