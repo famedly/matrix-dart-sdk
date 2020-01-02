@@ -43,26 +43,28 @@ class FakeMatrixApi extends MockClient {
 
           // Sync requests with timeout
           if (data is Map<String, dynamic> && data["timeout"] is String) {
-            await new Future.delayed(Duration(seconds: 5));
+            await Future.delayed(Duration(seconds: 5));
           }
 
-          if (request.url.origin != "https://fakeserver.notexisting")
+          if (request.url.origin != "https://fakeserver.notexisting") {
             return Response(
                 "<html><head></head><body>Not found...</body></html>", 404);
+          }
 
           // Call API
-          if (api.containsKey(method) && api[method].containsKey(action))
+          if (api.containsKey(method) && api[method].containsKey(action)) {
             res = api[method][action](data);
-          else if (method == "GET" &&
+          } else if (method == "GET" &&
               action.contains("/client/r0/rooms/") &&
               action.contains("/state/m.room.member/")) {
             res = {"displayname": ""};
             return Response(json.encode(res), 200);
-          } else
+          } else {
             res = {
               "errcode": "M_UNRECOGNIZED",
               "error": "Unrecognized request"
             };
+          }
 
           return Response(json.encode(res), 100);
         });

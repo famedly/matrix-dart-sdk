@@ -100,7 +100,7 @@ void main() {
           newDeviceID: resp["device_id"],
           newMatrixVersions: matrix.matrixVersions,
           newLazyLoadMembers: matrix.lazyLoadMembers);
-      await new Future.delayed(new Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 50));
 
       expect(matrix.accessToken == resp["access_token"], true);
       expect(matrix.deviceName == "Text Matrix Client", true);
@@ -164,7 +164,7 @@ void main() {
           }
         }
       });
-      await new Future.delayed(new Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 50));
 
       expect(
           matrix.getRoomByAlias(
@@ -209,7 +209,7 @@ void main() {
     });
 
     test('Room Update Test', () async {
-      matrix.onRoomUpdate.close();
+      await matrix.onRoomUpdate.close();
 
       List<RoomUpdate> roomUpdateList = await roomUpdateListFuture;
 
@@ -231,7 +231,7 @@ void main() {
     });
 
     test('Event Update Test', () async {
-      matrix.onEvent.close();
+      await matrix.onEvent.close();
 
       List<EventUpdate> eventUpdateList = await eventUpdateListFuture;
 
@@ -283,7 +283,7 @@ void main() {
     });
 
     test('User Update Test', () async {
-      matrix.onUserEvent.close();
+      await matrix.onUserEvent.close();
 
       List<UserUpdate> eventUpdateList = await userUpdateListFuture;
 
@@ -358,7 +358,7 @@ void main() {
     test('get archive', () async {
       List<Room> archive = await matrix.archive;
 
-      await new Future.delayed(new Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 50));
       expect(archive.length, 2);
       expect(archive[0].id, "!5345234234:example.com");
       expect(archive[0].membership, Membership.leave);
