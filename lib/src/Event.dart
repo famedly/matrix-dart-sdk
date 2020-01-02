@@ -105,12 +105,13 @@ class Event {
       this.room});
 
   static Map<String, dynamic> getMapFromPayload(dynamic payload) {
-    if (payload is String)
+    if (payload is String) {
       try {
         return json.decode(payload);
       } catch (e) {
         return {};
       }
+    }
     if (payload is Map<String, dynamic>) return payload;
     return {};
   }
@@ -141,18 +142,20 @@ class Event {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
+    final Map<String, dynamic> data = Map<String, dynamic>();
     if (this.stateKey != null) data['state_key'] = this.stateKey;
-    if (this.prevContent != null && this.prevContent.isNotEmpty)
+    if (this.prevContent != null && this.prevContent.isNotEmpty) {
       data['prev_content'] = this.prevContent;
+    }
     data['content'] = this.content;
     data['type'] = this.typeKey;
     data['event_id'] = this.eventId;
     data['room_id'] = this.roomId;
     data['sender'] = this.senderId;
     data['origin_server_ts'] = this.time.millisecondsSinceEpoch;
-    if (this.unsigned != null && this.unsigned.isNotEmpty)
+    if (this.unsigned != null && this.unsigned.isNotEmpty) {
       data['unsigned'] = this.unsigned;
+    }
     return data;
   }
 
@@ -248,9 +251,6 @@ class Event {
       case EventTypes.RoomMember:
         contentKeyWhiteList.add("membership");
         break;
-      case EventTypes.RoomMember:
-        contentKeyWhiteList.add("membership");
-        break;
       case EventTypes.RoomCreate:
         contentKeyWhiteList.add("creator");
         break;
@@ -278,7 +278,7 @@ class Event {
     }
     List<String> toRemoveList = [];
     for (var entry in content.entries) {
-      if (contentKeyWhiteList.indexOf(entry.key) == -1) {
+      if (!contentKeyWhiteList.contains(entry.key)) {
         toRemoveList.add(entry.key);
       }
     }
@@ -304,9 +304,10 @@ class Event {
     if (!(room.roomAccountData.containsKey("m.receipt"))) return [];
     List<Receipt> receiptsList = [];
     for (var entry in room.roomAccountData["m.receipt"].content.entries) {
-      if (entry.value["event_id"] == eventId)
+      if (entry.value["event_id"] == eventId) {
         receiptsList.add(Receipt(room.getUserByMXIDSync(entry.key),
             DateTime.fromMillisecondsSinceEpoch(entry.value["ts"])));
+      }
     }
     return receiptsList;
   }
@@ -315,8 +316,9 @@ class Event {
   /// from the database and the timelines. Returns false if not removed.
   Future<bool> remove() async {
     if (status < 1) {
-      if (room.client.store != null)
+      if (room.client.store != null) {
         await room.client.store.removeEvent(eventId);
+      }
 
       room.client.onEvent.add(EventUpdate(
           roomID: room.id,
@@ -335,7 +337,7 @@ class Event {
   /// Try to send this event again. Only works with events of status -1.
   Future<String> sendAgain({String txid}) async {
     if (status != -1) return null;
-    remove();
+    await remove();
     final String eventID = await room.sendTextEvent(text, txid: txid);
     return eventID;
   }

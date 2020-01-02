@@ -29,7 +29,6 @@ import 'package:famedlysdk/src/sync/RoomUpdate.dart';
 import 'package:famedlysdk/src/utils/MatrixException.dart';
 import 'package:famedlysdk/src/utils/MatrixFile.dart';
 import 'package:famedlysdk/src/utils/MxContent.dart';
-//import 'package:image/image.dart';
 import 'package:mime_type/mime_type.dart';
 
 import './User.dart';
@@ -81,8 +80,9 @@ class Room {
   /// Adds the [state] to this room and overwrites a state with the same
   /// typeKey/stateKey key pair if there is one.
   void setState(Event state) {
-    if (!states.states.containsKey(state.typeKey))
+    if (!states.states.containsKey(state.typeKey)) {
       states.states[state.typeKey] = {};
+    }
     states.states[state.typeKey][state.stateKey ?? ""] = state;
   }
 
@@ -106,10 +106,12 @@ class Room {
 
   /// The avatar of the room if set by a participant.
   MxContent get avatar {
-    if (states["m.room.avatar"] != null)
+    if (states["m.room.avatar"] != null) {
       return MxContent(states["m.room.avatar"].content["url"]);
-    if (mHeroes != null && mHeroes.length == 1 && states[mHeroes[0]] != null)
+    }
+    if (mHeroes != null && mHeroes.length == 1 && states[mHeroes[0]] != null) {
       return states[mHeroes[0]].asUser.avatarUrl;
+    }
     if (membership == Membership.invite &&
         getState("m.room.member", client.userID) != null) {
       return getState("m.room.member", client.userID).sender.avatarUrl;
@@ -125,15 +127,16 @@ class Room {
   /// If this room is a direct chat, this is the matrix ID of the user.
   /// Returns null otherwise.
   String get directChatMatrixID {
-    String returnUserId = null;
+    String returnUserId;
     if (client.directChats is Map<String, dynamic>) {
       client.directChats.forEach((String userId, dynamic roomIds) {
         if (roomIds is List<dynamic>) {
-          for (int i = 0; i < roomIds.length; i++)
+          for (int i = 0; i < roomIds.length; i++) {
             if (roomIds[i] == this.id) {
               returnUserId = userId;
               break;
             }
+          }
         }
       });
     }
@@ -149,7 +152,7 @@ class Room {
   Event get lastEvent {
     DateTime lastTime = DateTime.fromMillisecondsSinceEpoch(0);
     Event lastEvent = getState("m.room.message")?.timelineEvent;
-    if (lastEvent == null)
+    if (lastEvent == null) {
       states.forEach((final String key, final entry) {
         if (!entry.containsKey("")) return;
         final Event state = entry[""];
@@ -160,6 +163,7 @@ class Room {
           lastEvent = state.timelineEvent;
         }
       });
+    }
     return lastEvent;
   }
 
@@ -168,8 +172,9 @@ class Room {
     if (!ephemerals.containsKey("m.typing")) return [];
     List<dynamic> typingMxid = ephemerals["m.typing"].content["user_ids"];
     List<User> typingUsers = [];
-    for (int i = 0; i < typingMxid.length; i++)
+    for (int i = 0; i < typingMxid.length; i++) {
       typingUsers.add(getUserByMXIDSync(typingMxid[i]));
+    }
     return typingUsers;
   }
 
@@ -199,12 +204,13 @@ class Room {
   String get displayname {
     if (name != null && name.isNotEmpty) return name;
     if (canonicalAlias != null &&
-        !canonicalAlias.isEmpty &&
-        canonicalAlias.length > 3)
+        canonicalAlias.isNotEmpty &&
+        canonicalAlias.length > 3) {
       return canonicalAlias.substring(1, canonicalAlias.length).split(":")[0];
+    }
     List<String> heroes = [];
     if (mHeroes != null &&
-        mHeroes.length > 0 &&
+        mHeroes.isNotEmpty &&
         mHeroes.any((h) => h.isNotEmpty)) {
       heroes = mHeroes;
     } else {
@@ -216,7 +222,7 @@ class Room {
         }
       }
     }
-    if (heroes.length > 0) {
+    if (heroes.isNotEmpty) {
       String displayname = "";
       for (int i = 0; i < heroes.length; i++) {
         if (heroes[i].isEmpty) continue;
@@ -233,18 +239,19 @@ class Room {
 
   /// The last message sent to this room.
   String get lastMessage {
-    if (lastEvent != null)
+    if (lastEvent != null) {
       return lastEvent.getBody();
-    else
+    } else {
       return "";
+    }
   }
 
   /// When the last message received.
   DateTime get timeCreated {
-    if (lastEvent != null)
+    if (lastEvent != null) {
       return lastEvent.time;
-    else
-      return DateTime.now();
+    }
+    return DateTime.now();
   }
 
   /// Call the Matrix API to change the name of this room. Returns the event ID of the
@@ -267,7 +274,7 @@ class Room {
   }
 
   Future<String> _sendRawEventNow(Map<String, dynamic> content,
-      {String txid = null}) async {
+      {String txid}) async {
     if (txid == null) txid = "txid${DateTime.now().millisecondsSinceEpoch}";
     final Map<String, dynamic> res = await client.jsonRequest(
         type: HTTPType.PUT,
@@ -276,13 +283,13 @@ class Room {
     return res["event_id"];
   }
 
-  Future<String> sendTextEvent(String message, {String txid = null}) =>
+  Future<String> sendTextEvent(String message, {String txid}) =>
       sendEvent({"msgtype": "m.text", "body": message}, txid: txid);
 
   /// Sends a [file] to this room after uploading it. The [msgType] is optional
   /// and will be detected by the mimetype of the file.
   Future<String> sendFileEvent(MatrixFile file,
-      {String msgType = "m.file", String txid = null}) async {
+      {String msgType = "m.file", String txid}) async {
     if (msgType == "m.image") return sendImageEvent(file);
     if (msgType == "m.audio") return sendVideoEvent(file);
     if (msgType == "m.video") return sendAudioEvent(file);
@@ -305,7 +312,7 @@ class Room {
   }
 
   Future<String> sendAudioEvent(MatrixFile file,
-      {String txid = null, int width, int height}) async {
+      {String txid, int width, int height}) async {
     String fileName = file.path.split("/").last;
     final String uploadResp = await client.upload(file);
     Map<String, dynamic> content = {
@@ -322,7 +329,7 @@ class Room {
   }
 
   Future<String> sendImageEvent(MatrixFile file,
-      {String txid = null, int width, int height}) async {
+      {String txid, int width, int height}) async {
     String fileName = file.path.split("/").last;
     final String uploadResp = await client.upload(file);
     Map<String, dynamic> content = {
@@ -340,7 +347,7 @@ class Room {
   }
 
   Future<String> sendVideoEvent(MatrixFile file,
-      {String txid = null,
+      {String txid,
       int videoWidth,
       int videoHeight,
       int duration,
@@ -385,8 +392,7 @@ class Room {
     return await sendEvent(content, txid: txid);
   }
 
-  Future<String> sendEvent(Map<String, dynamic> content,
-      {String txid = null}) async {
+  Future<String> sendEvent(Map<String, dynamic> content, {String txid}) async {
     final String type = "m.room.message";
 
     // Create new transaction id
@@ -394,8 +400,9 @@ class Room {
     final int now = DateTime.now().millisecondsSinceEpoch;
     if (txid == null) {
       messageID = "msg$now";
-    } else
+    } else {
       messageID = txid;
+    }
 
     // Display a *sending* event and store it.
     EventUpdate eventUpdate =
@@ -447,11 +454,12 @@ class Room {
           type: HTTPType.POST, action: "/client/r0/rooms/${id}/join");
       if (states.containsKey(client.userID) &&
           states[client.userID].content["is_direct"] is bool &&
-          states[client.userID].content["is_direct"])
-        addToDirectChat(states[client.userID].sender.id);
+          states[client.userID].content["is_direct"]) {
+        await addToDirectChat(states[client.userID].sender.id);
+      }
     } on MatrixException catch (exception) {
       if (exception.errorMessage == "No known servers") {
-        client.store?.forgetRoom(id);
+        await client.store?.forgetRoom(id);
         client.onRoomUpdate.add(
           RoomUpdate(
               id: id,
@@ -475,7 +483,7 @@ class Room {
 
   /// Call the Matrix API to forget this room if you already left it.
   Future<void> forget() async {
-    client.store.forgetRoom(id);
+    await client.store?.forgetRoom(id);
     await client.jsonRequest(
         type: HTTPType.POST, action: "/client/r0/rooms/${id}/forget");
     return;
@@ -546,14 +554,14 @@ class Room {
 
     if (onHistoryReceived != null) onHistoryReceived();
     prev_batch = resp["end"];
-    client.store?.storeRoomPrevBatch(this);
+    await client.store?.storeRoomPrevBatch(this);
 
     if (!(resp["chunk"] is List<dynamic> &&
         resp["chunk"].length > 0 &&
         resp["end"] is String)) return;
 
     if (resp["state"] is List<dynamic>) {
-      client.store?.transaction(() {
+      await client.store?.transaction(() {
         for (int i = 0; i < resp["state"].length; i++) {
           EventUpdate eventUpdate = EventUpdate(
             type: "state",
@@ -580,7 +588,7 @@ class Room {
     }
 
     List<dynamic> history = resp["chunk"];
-    client.store?.transaction(() {
+    await client.store?.transaction(() {
       for (int i = 0; i < history.length; i++) {
         EventUpdate eventUpdate = EventUpdate(
           type: "history",
@@ -620,12 +628,15 @@ class Room {
   /// Sets this room as a direct chat for this user if not already.
   Future<void> addToDirectChat(String userID) async {
     Map<String, dynamic> directChats = client.directChats;
-    if (directChats.containsKey(userID)) if (!directChats[userID].contains(id))
-      directChats[userID].add(id);
-    else
-      return; // Is already in direct chats
-    else
+    if (directChats.containsKey(userID)) {
+      if (!directChats[userID].contains(id)) {
+        directChats[userID].add(id);
+      } else {
+        return;
+      } // Is already in direct chats
+    } else {
       directChats[userID] = [id];
+    }
 
     await client.jsonRequest(
         type: HTTPType.PUT,
@@ -638,10 +649,11 @@ class Room {
   Future<void> removeFromDirectChat() async {
     Map<String, dynamic> directChats = client.directChats;
     if (directChats.containsKey(directChatMatrixID) &&
-        directChats[directChatMatrixID].contains(id))
+        directChats[directChatMatrixID].contains(id)) {
       directChats[directChatMatrixID].remove(id);
-    else
-      return; // Nothing to do here
+    } else {
+      return;
+    } // Nothing to do here
 
     await client.jsonRequest(
         type: HTTPType.PUT,
@@ -653,8 +665,8 @@ class Room {
   /// Sends *m.fully_read* and *m.read* for the given event ID.
   Future<void> sendReadReceipt(String eventID) async {
     this.notificationCount = 0;
-    client?.store?.resetNotificationCount(this.id);
-    client.jsonRequest(
+    await client?.store?.resetNotificationCount(this.id);
+    await client.jsonRequest(
         type: HTTPType.POST,
         action: "/client/r0/rooms/$id/read_markers",
         data: {
@@ -712,11 +724,11 @@ class Room {
       {onTimelineUpdateCallback onUpdate,
       onTimelineInsertCallback onInsert}) async {
     List<Event> events = [];
-    if (client.store != null)
+    if (client.store != null) {
       events = await client.store.getEventList(this);
-    else {
+    } else {
       prev_batch = "";
-      requestHistory();
+      await requestHistory();
     }
     return Timeline(
       room: this,
@@ -772,9 +784,9 @@ class Room {
   /// Returns the [User] object for the given [mxID] or requests it from
   /// the homeserver and returns a default [User] object while waiting.
   User getUserByMXIDSync(String mxID) {
-    if (states[mxID] != null)
+    if (states[mxID] != null) {
       return states[mxID].asUser;
-    else {
+    } else {
       try {
         requestUser(mxID);
       } catch (_) {}
@@ -802,8 +814,8 @@ class Room {
         avatarUrl: resp["avatar_url"],
         room: this);
     states[mxID] = user;
-    if (client.store != null)
-      client.store.transaction(() {
+    if (client.store != null) {
+      await client.store.transaction(() {
         client.store.storeEventUpdate(
           EventUpdate(
               content: resp,
@@ -813,6 +825,7 @@ class Room {
         );
         return;
       });
+    }
     if (onUpdate != null) onUpdate();
     _requestingMatrixIds.remove(mxID);
     return user;
@@ -830,11 +843,13 @@ class Room {
     int powerLevel = 0;
     Event powerLevelState = states["m.room.power_levels"];
     if (powerLevelState == null) return powerLevel;
-    if (powerLevelState.content["users_default"] is int)
+    if (powerLevelState.content["users_default"] is int) {
       powerLevel = powerLevelState.content["users_default"];
+    }
     if (powerLevelState.content["users"] is Map<String, dynamic> &&
-        powerLevelState.content["users"][userId] != null)
+        powerLevelState.content["users"][userId] != null) {
       powerLevel = powerLevelState.content["users"][userId];
+    }
     return powerLevel;
   }
 
@@ -844,8 +859,9 @@ class Room {
   /// Returns the power levels from all users for this room or null if not given.
   Map<String, int> get powerLevels {
     Event powerLevelState = states["m.room.power_levels"];
-    if (powerLevelState.content["users"] is Map<String, int>)
+    if (powerLevelState.content["users"] is Map<String, int>) {
       return powerLevelState.content["users"];
+    }
     return null;
   }
 
@@ -889,10 +905,11 @@ class Room {
   bool canSendEvent(String eventType) {
     if (getState("m.room.power_levels") == null) return false;
     if (getState("m.room.power_levels").content["events"] == null ||
-        getState("m.room.power_levels").content["events"][eventType] == null)
+        getState("m.room.power_levels").content["events"][eventType] == null) {
       return eventType == "m.room.message"
           ? canSendDefaultMessages
           : canSendDefaultStates;
+    }
     return ownPowerLevel >=
         getState("m.room.power_levels").content["events"][eventType];
   }
@@ -901,8 +918,9 @@ class Room {
   /// the account_data.
   PushRuleState get pushRuleState {
     if (!client.accountData.containsKey("m.push_rules") ||
-        !(client.accountData["m.push_rules"].content["global"] is Map))
+        !(client.accountData["m.push_rules"].content["global"] is Map)) {
       return PushRuleState.notify;
+    }
     final Map<String, dynamic> globalPushRules =
         client.accountData["m.push_rules"].content["global"];
     if (globalPushRules == null) return PushRuleState.notify;
@@ -943,16 +961,17 @@ class Room {
     switch (newState) {
       // All push notifications should be sent to the user
       case PushRuleState.notify:
-        if (pushRuleState == PushRuleState.dont_notify)
+        if (pushRuleState == PushRuleState.dont_notify) {
           resp = await client.jsonRequest(
               type: HTTPType.DELETE,
               action: "/client/r0/pushrules/global/override/$id",
               data: {});
-        else if (pushRuleState == PushRuleState.mentions_only)
+        } else if (pushRuleState == PushRuleState.mentions_only) {
           resp = await client.jsonRequest(
               type: HTTPType.DELETE,
               action: "/client/r0/pushrules/global/room/$id",
               data: {});
+        }
         break;
       // Only when someone mentions the user, a push notification should be sent
       case PushRuleState.mentions_only:
@@ -967,13 +986,14 @@ class Room {
               data: {
                 "actions": ["dont_notify"]
               });
-        } else if (pushRuleState == PushRuleState.notify)
+        } else if (pushRuleState == PushRuleState.notify) {
           resp = await client.jsonRequest(
               type: HTTPType.PUT,
               action: "/client/r0/pushrules/global/room/$id",
               data: {
                 "actions": ["dont_notify"]
               });
+        }
         break;
       // No push notification should be ever sent for this room.
       case PushRuleState.dont_notify:
@@ -1004,8 +1024,9 @@ class Room {
     final int now = DateTime.now().millisecondsSinceEpoch;
     if (txid == null) {
       messageID = "msg$now";
-    } else
+    } else {
       messageID = txid;
+    }
     Map<String, dynamic> data = {};
     if (reason != null) data["reason"] = reason;
     final dynamic resp = await client.jsonRequest(

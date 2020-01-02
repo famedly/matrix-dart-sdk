@@ -82,7 +82,7 @@ void main() {
 
       expect(timeline.sub != null, true);
 
-      await new Future.delayed(new Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 50));
 
       expect(updateCount, 2);
       expect(insertList, [0, 0]);
@@ -109,7 +109,7 @@ void main() {
         "room_id": roomID,
       }, room);
 
-      await new Future.delayed(new Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 50));
 
       expect(timeline.events[0].receipts.length, 1);
       expect(timeline.events[0].receipts[0].user.id, "@alice:example.com");
@@ -127,7 +127,7 @@ void main() {
             "origin_server_ts": testTimeStamp + 1000
           }));
 
-      await new Future.delayed(new Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 50));
 
       expect(updateCount, 3);
       expect(insertList, [0, 0]);
@@ -137,9 +137,9 @@ void main() {
     });
 
     test("Send message", () async {
-      room.sendTextEvent("test", txid: "1234");
+      await room.sendTextEvent("test", txid: "1234");
 
-      await new Future.delayed(new Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 50));
 
       expect(updateCount, 5);
       expect(insertList, [0, 0, 0]);
@@ -161,7 +161,7 @@ void main() {
             "origin_server_ts": DateTime.now().millisecondsSinceEpoch
           }));
 
-      await new Future.delayed(new Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 50));
 
       expect(updateCount, 6);
       expect(insertList, [0, 0, 0]);
@@ -183,13 +183,13 @@ void main() {
             "event_id": "abc",
             "origin_server_ts": testTimeStamp
           }));
-      await new Future.delayed(new Duration(milliseconds: 50));
-      room.sendTextEvent("test", txid: "errortxid");
-      await new Future.delayed(new Duration(milliseconds: 50));
-      room.sendTextEvent("test", txid: "errortxid2");
-      await new Future.delayed(new Duration(milliseconds: 50));
-      room.sendTextEvent("test", txid: "errortxid3");
-      await new Future.delayed(new Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 50));
+      await room.sendTextEvent("test", txid: "errortxid");
+      await Future.delayed(Duration(milliseconds: 50));
+      await room.sendTextEvent("test", txid: "errortxid2");
+      await Future.delayed(Duration(milliseconds: 50));
+      await room.sendTextEvent("test", txid: "errortxid3");
+      await Future.delayed(Duration(milliseconds: 50));
 
       expect(updateCount, 13);
       expect(insertList, [0, 0, 0, 0, 0, 0, 0]);
@@ -200,9 +200,9 @@ void main() {
     });
 
     test("Remove message", () async {
-      timeline.events[0].remove();
+      await timeline.events[0].remove();
 
-      await new Future.delayed(new Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 50));
 
       expect(updateCount, 14);
 
@@ -212,9 +212,9 @@ void main() {
     });
 
     test("Resend message", () async {
-      timeline.events[0].sendAgain(txid: "1234");
+      await timeline.events[0].sendAgain(txid: "1234");
 
-      await new Future.delayed(new Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 50));
 
       expect(updateCount, 17);
 
@@ -226,7 +226,7 @@ void main() {
     test("Request history", () async {
       await room.requestHistory();
 
-      await new Future.delayed(new Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 50));
 
       expect(updateCount, 20);
       expect(timeline.events.length, 9);

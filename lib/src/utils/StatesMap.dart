@@ -14,12 +14,13 @@ class StatesMap {
       return states["m.room.member"][key];
     }
     if (!states.containsKey(key)) states[key] = {};
-    if (states[key][""] is Event)
+    if (states[key][""] is Event) {
       return states[key][""];
-    else if (states[key].length == 0)
+    } else if (states[key].isEmpty) {
       return null;
-    else
+    } else {
       return states[key];
+    }
   }
 
   void operator []=(String key, Event val) {

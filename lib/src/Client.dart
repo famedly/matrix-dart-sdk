@@ -30,6 +30,7 @@ import 'package:famedlysdk/src/Presence.dart';
 import 'package:famedlysdk/src/StoreAPI.dart';
 import 'package:famedlysdk/src/sync/UserUpdate.dart';
 import 'package:famedlysdk/src/utils/MatrixFile.dart';
+import 'package:pedantic/pedantic.dart';
 import 'Room.dart';
 import 'Event.dart';
 import 'User.dart';
@@ -161,8 +162,9 @@ class Client {
     if (accountData["m.direct"] != null &&
         accountData["m.direct"].content[userId] is List<dynamic> &&
         accountData["m.direct"].content[userId].length > 0) {
-      if (getRoomById(accountData["m.direct"].content[userId][0]) != null)
+      if (getRoomById(accountData["m.direct"].content[userId][0]) != null) {
         return accountData["m.direct"].content[userId][0];
+      }
       (accountData["m.direct"].content[userId] as List<dynamic>)
           .remove(accountData["m.direct"].content[userId][0]);
       this.jsonRequest(
@@ -171,11 +173,13 @@ class Client {
           data: directChats);
       return getDirectChatFromUserId(userId);
     }
-    for (int i = 0; i < this.rooms.length; i++)
+    for (int i = 0; i < this.rooms.length; i++) {
       if (this.rooms[i].membership == Membership.invite &&
           this.rooms[i].states[userID]?.senderId == userId &&
-          this.rooms[i].states[userID].content["is_direct"] == true)
+          this.rooms[i].states[userID].content["is_direct"] == true) {
         return this.rooms[i].id;
+      }
+    }
     return null;
   }
 
@@ -192,9 +196,9 @@ class Client {
       final List<String> versions = List<String>.from(versionResp["versions"]);
 
       for (int i = 0; i < versions.length; i++) {
-        if (versions[i] == "r0.5.0")
+        if (versions[i] == "r0.5.0") {
           break;
-        else if (i == versions.length - 1) {
+        } else if (i == versions.length - 1) {
           return false;
         }
       }
@@ -216,9 +220,9 @@ class Client {
 
       for (int i = 0; i < flows.length; i++) {
         if (flows[i].containsKey("type") &&
-            flows[i]["type"] == "m.login.password")
+            flows[i]["type"] == "m.login.password") {
           break;
-        else if (i == flows.length - 1) {
+        } else if (i == flows.length - 1) {
           return false;
         }
       }
@@ -341,9 +345,9 @@ class Client {
     List<User> contacts = [];
     Room contactDiscoveryRoom =
         this.getRoomByAlias("#famedlyContactDiscovery:${userID.split(":")[1]}");
-    if (contactDiscoveryRoom != null)
+    if (contactDiscoveryRoom != null) {
       contacts = await contactDiscoveryRoom.requestParticipants();
-    else {
+    } else {
       Map<String, bool> userMap = {};
       for (int i = 0; i < this.rooms.length; i++) {
         List<User> roomUsers = this.rooms[i].getParticipants();
@@ -366,8 +370,11 @@ class Client {
   Future<String> createRoom(
       {List<User> invite, Map<String, dynamic> params}) async {
     List<String> inviteIDs = [];
-    if (params == null && invite != null)
-      for (int i = 0; i < invite.length; i++) inviteIDs.add(invite[i].id);
+    if (params == null && invite != null) {
+      for (int i = 0; i < invite.length; i++) {
+        inviteIDs.add(invite[i].id);
+      }
+    }
 
     try {
       final dynamic resp = await this.jsonRequest(
@@ -440,31 +447,29 @@ class Client {
   /// the app receives a new synchronization, this event is called for every signal
   /// to update the GUI. For example, for a new message, it is called:
   /// onRoomEvent( "m.room.message", "!chat_id:server.com", "timeline", {sender: "@bob:server.com", body: "Hello world"} )
-  final StreamController<EventUpdate> onEvent =
-      new StreamController.broadcast();
+  final StreamController<EventUpdate> onEvent = StreamController.broadcast();
 
   /// Outside of the events there are updates for the global chat states which
   /// are handled by this signal:
   final StreamController<RoomUpdate> onRoomUpdate =
-      new StreamController.broadcast();
+      StreamController.broadcast();
 
   /// Outside of rooms there are account updates like account_data or presences.
-  final StreamController<UserUpdate> onUserEvent =
-      new StreamController.broadcast();
+  final StreamController<UserUpdate> onUserEvent = StreamController.broadcast();
 
   /// Called when the login state e.g. user gets logged out.
   final StreamController<LoginState> onLoginStateChanged =
-      new StreamController.broadcast();
+      StreamController.broadcast();
 
   /// Synchronization erros are coming here.
   final StreamController<MatrixException> onError =
-      new StreamController.broadcast();
+      StreamController.broadcast();
 
   /// This is called once, when the first sync has received.
-  final StreamController<bool> onFirstSync = new StreamController.broadcast();
+  final StreamController<bool> onFirstSync = StreamController.broadcast();
 
   /// When a new sync response is coming in, this gives the complete payload.
-  final StreamController<dynamic> onSync = new StreamController.broadcast();
+  final StreamController<dynamic> onSync = StreamController.broadcast();
 
   /// Matrix synchronisation is done with https long polling. This needs a
   /// timeout which is usually 30 seconds.
@@ -525,7 +530,7 @@ class Client {
     this.prevBatch = newPrevBatch;
 
     if (this.store != null) {
-      this.store.storeClient();
+      await this.store.storeClient();
       this._rooms = await this.store.getRoomList(onlyLeft: false);
       this.accountData = await this.store.getAccountData();
       this.presences = await this.store.getPresences();
@@ -535,7 +540,7 @@ class Client {
 
     onLoginStateChanged.add(LoginState.logged);
 
-    _sync();
+    return _sync();
   }
 
   StreamSubscription _userEventSub;
@@ -574,8 +579,9 @@ class Client {
       dynamic data = "",
       int timeout,
       String contentType = "application/json"}) async {
-    if (this.isLogged() == false && this.homeserver == null)
+    if (this.isLogged() == false && this.homeserver == null) {
       throw ("No homeserver specified.");
+    }
     if (timeout == null) timeout = syncTimeoutSec + 5;
     dynamic json;
     if (data is Map) data.removeWhere((k, v) => v == null);
@@ -585,14 +591,17 @@ class Client {
     final url = "${this.homeserver}/_matrix${action}";
 
     Map<String, String> headers = {};
-    if (type == HTTPType.PUT || type == HTTPType.POST)
+    if (type == HTTPType.PUT || type == HTTPType.POST) {
       headers["Content-Type"] = contentType;
-    if (this.isLogged())
+    }
+    if (this.isLogged()) {
       headers["Authorization"] = "Bearer ${this.accessToken}";
+    }
 
-    if (this.debug)
+    if (this.debug) {
       print(
           "[REQUEST ${type.toString().split('.').last}] Action: $action, Data: $data");
+    }
 
     http.Response resp;
     Map<String, dynamic> jsonResp = {};
@@ -650,8 +659,9 @@ class Client {
   /// and returns the mxc url as a string.
   Future<String> upload(MatrixFile file) async {
     dynamic fileBytes;
-    if (this.homeserver != "https://fakeServer.notExisting")
+    if (this.homeserver != "https://fakeServer.notExisting") {
       fileBytes = file.bytes;
+    }
     String fileName = file.path.split("/").last.toLowerCase();
     String mimeType = mime(file.path);
     print("[UPLOADING] $fileName, type: $mimeType, size: ${fileBytes?.length}");
@@ -679,17 +689,18 @@ class Client {
       final int hash = _syncRequest.hashCode;
       final syncResp = await _syncRequest;
       if (hash != _syncRequest.hashCode) return;
-      if (this.store != null)
+      if (this.store != null) {
         await this.store.transaction(() {
           handleSync(syncResp);
           this.store.storePrevBatch(syncResp);
           return;
         });
-      else
+      } else {
         await handleSync(syncResp);
+      }
       if (this.prevBatch == null) this.onFirstSync.add(true);
       this.prevBatch = syncResp["next_batch"];
-      if (hash == _syncRequest.hashCode) _sync();
+      if (hash == _syncRequest.hashCode) unawaited(_sync());
     } on MatrixException catch (exception) {
       onError.add(exception);
       await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
@@ -700,12 +711,15 @@ class Client {
 
   void handleSync(dynamic sync) {
     if (sync["rooms"] is Map<String, dynamic>) {
-      if (sync["rooms"]["join"] is Map<String, dynamic>)
+      if (sync["rooms"]["join"] is Map<String, dynamic>) {
         _handleRooms(sync["rooms"]["join"], Membership.join);
-      if (sync["rooms"]["invite"] is Map<String, dynamic>)
+      }
+      if (sync["rooms"]["invite"] is Map<String, dynamic>) {
         _handleRooms(sync["rooms"]["invite"], Membership.invite);
-      if (sync["rooms"]["leave"] is Map<String, dynamic>)
+      }
+      if (sync["rooms"]["leave"] is Map<String, dynamic>) {
         _handleRooms(sync["rooms"]["leave"], Membership.leave);
+      }
     }
     if (sync["presence"] is Map<String, dynamic> &&
         sync["presence"]["events"] is List<dynamic>) {
@@ -731,18 +745,22 @@ class Client {
       bool limitedTimeline = false;
 
       if (room["unread_notifications"] is Map<String, dynamic>) {
-        if (room["unread_notifications"]["highlight_count"] is num)
+        if (room["unread_notifications"]["highlight_count"] is num) {
           highlight_count = room["unread_notifications"]["highlight_count"];
-        if (room["unread_notifications"]["notification_count"] is num)
+        }
+        if (room["unread_notifications"]["notification_count"] is num) {
           notification_count =
               room["unread_notifications"]["notification_count"];
+        }
       }
 
       if (room["timeline"] is Map<String, dynamic>) {
-        if (room["timeline"]["limited"] is bool)
+        if (room["timeline"]["limited"] is bool) {
           limitedTimeline = room["timeline"]["limited"];
-        if (room["timeline"]["prev_batch"] is String)
+        }
+        if (room["timeline"]["prev_batch"] is String) {
           prev_batch = room["timeline"]["prev_batch"];
+        }
       }
 
       RoomSummary summary;
@@ -761,29 +779,34 @@ class Client {
         summary: summary,
       );
       _updateRoomsByRoomUpdate(update);
-      this.store?.storeRoomUpdate(update);
+      unawaited(this.store?.storeRoomUpdate(update));
       onRoomUpdate.add(update);
 
       /// Handle now all room events and save them in the database
       if (room["state"] is Map<String, dynamic> &&
-          room["state"]["events"] is List<dynamic>)
+          room["state"]["events"] is List<dynamic>) {
         _handleRoomEvents(id, room["state"]["events"], "state");
+      }
 
       if (room["invite_state"] is Map<String, dynamic> &&
-          room["invite_state"]["events"] is List<dynamic>)
+          room["invite_state"]["events"] is List<dynamic>) {
         _handleRoomEvents(id, room["invite_state"]["events"], "invite_state");
+      }
 
       if (room["timeline"] is Map<String, dynamic> &&
-          room["timeline"]["events"] is List<dynamic>)
+          room["timeline"]["events"] is List<dynamic>) {
         _handleRoomEvents(id, room["timeline"]["events"], "timeline");
+      }
 
       if (room["ephemeral"] is Map<String, dynamic> &&
-          room["ephemeral"]["events"] is List<dynamic>)
+          room["ephemeral"]["events"] is List<dynamic>) {
         _handleEphemerals(id, room["ephemeral"]["events"]);
+      }
 
       if (room["account_data"] is Map<String, dynamic> &&
-          room["account_data"]["events"] is List<dynamic>)
+          room["account_data"]["events"] is List<dynamic>) {
         _handleRoomEvents(id, room["account_data"]["events"], "account_data");
+      }
     });
   }
 
@@ -839,7 +862,7 @@ class Client {
   }
 
   void _handleGlobalEvents(List<dynamic> events, String type) {
-    for (int i = 0; i < events.length; i++)
+    for (int i = 0; i < events.length; i++) {
       if (events[i]["type"] is String &&
           events[i]["content"] is Map<String, dynamic>) {
         UserUpdate update = UserUpdate(
@@ -850,6 +873,7 @@ class Client {
         this.store?.storeUserEventUpdate(update);
         onUserEvent.add(update);
       }
+    }
   }
 
   void _handleEvent(Map<String, dynamic> event, String roomID, String type) {
@@ -908,15 +932,19 @@ class Client {
       rooms[j].membership = chatUpdate.membership;
       rooms[j].notificationCount = chatUpdate.notification_count;
       rooms[j].highlightCount = chatUpdate.highlight_count;
-      if (chatUpdate.prev_batch != null)
+      if (chatUpdate.prev_batch != null) {
         rooms[j].prev_batch = chatUpdate.prev_batch;
+      }
       if (chatUpdate.summary != null) {
-        if (chatUpdate.summary.mHeroes != null)
+        if (chatUpdate.summary.mHeroes != null) {
           rooms[j].mHeroes = chatUpdate.summary.mHeroes;
-        if (chatUpdate.summary.mJoinedMemberCount != null)
+        }
+        if (chatUpdate.summary.mJoinedMemberCount != null) {
           rooms[j].mJoinedMemberCount = chatUpdate.summary.mJoinedMemberCount;
-        if (chatUpdate.summary.mInvitedMemberCount != null)
+        }
+        if (chatUpdate.summary.mInvitedMemberCount != null) {
           rooms[j].mInvitedMemberCount = chatUpdate.summary.mInvitedMemberCount;
+        }
       }
       if (rooms[j].onUpdate != null) rooms[j].onUpdate();
     }
