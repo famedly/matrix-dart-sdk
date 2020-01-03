@@ -46,6 +46,7 @@ import 'utils/MatrixException.dart';
 
 typedef AccountDataEventCB = void Function(AccountData accountData);
 typedef PresenceCB = void Function(Presence presence);
+typedef RoomSorter = int Function(Room a, Room b);
 
 enum HTTPType { GET, POST, PUT, DELETE }
 
@@ -532,6 +533,7 @@ class Client {
     if (this.store != null) {
       await this.store.storeClient();
       this._rooms = await this.store.getRoomList(onlyLeft: false);
+      this._sortRooms();
       this.accountData = await this.store.getAccountData();
       this.presences = await this.store.getPresences();
     }
@@ -948,7 +950,7 @@ class Client {
       }
       if (rooms[j].onUpdate != null) rooms[j].onUpdate();
     }
-    sortAndUpdate();
+    _sortRooms();
   }
 
   void _updateRoomsByEventUpdate(EventUpdate eventUpdate) {
@@ -991,17 +993,22 @@ class Client {
           RoomAccountData.fromJson(eventUpdate.content, rooms[j]);
     }
     if (rooms[j].onUpdate != null) rooms[j].onUpdate();
-    if (eventUpdate.type == "timeline") sortAndUpdate();
+    if (eventUpdate.type == "timeline") _sortRooms();
   }
 
-  bool sortLock = false;
+  bool _sortLock = false;
 
-  sortAndUpdate() {
+  /// The compare function how the rooms should be sorted internally. By default
+  /// rooms are sorted by timestamp of the last m.room.message event or the last
+  /// event if there is no known message.
+  RoomSorter sortRoomsBy = (a, b) => b.timeCreated.millisecondsSinceEpoch
+      .compareTo(a.timeCreated.millisecondsSinceEpoch);
+
+  _sortRooms() {
     if (prevBatch == null) return;
-    if (sortLock || rooms.length < 2) return;
-    sortLock = true;
-    rooms?.sort((a, b) => b.timeCreated.millisecondsSinceEpoch
-        .compareTo(a.timeCreated.millisecondsSinceEpoch));
-    sortLock = false;
+    if (_sortLock || rooms.length < 2) return;
+    _sortLock = true;
+    rooms?.sort(sortRoomsBy);
+    _sortLock = false;
   }
 }
