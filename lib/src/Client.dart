@@ -630,7 +630,7 @@ class Client {
               .timeout(Duration(seconds: timeout));
           break;
       }
-      jsonResp = jsonDecode(resp.body)
+      jsonResp = jsonDecode(String.fromCharCodes(resp.body.runes))
           as Map<String, dynamic>; // May throw FormatException
 
       if (jsonResp.containsKey("errcode") && jsonResp["errcode"] is String) {
