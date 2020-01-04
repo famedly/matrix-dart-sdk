@@ -21,8 +21,8 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/Event.dart';
-import 'package:famedlysdk/src/User.dart';
+import 'package:famedlysdk/src/event.dart';
+import 'package:famedlysdk/src/user.dart';
 import 'package:test/test.dart';
 
 void main() {

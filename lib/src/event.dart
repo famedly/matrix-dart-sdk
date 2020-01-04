@@ -23,8 +23,8 @@
 
 import 'dart:convert';
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/utils/Receipt.dart';
-import './Room.dart';
+import 'package:famedlysdk/src/utils/receipt.dart';
+import './room.dart';
 
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
 class Event {

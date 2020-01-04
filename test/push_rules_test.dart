@@ -21,7 +21,7 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/utils/PushRules.dart';
+import 'package:famedlysdk/src/utils/push_rules.dart';
 import 'package:test/test.dart';
 
 void main() {

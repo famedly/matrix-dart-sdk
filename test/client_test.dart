@@ -23,20 +23,20 @@
 
 import 'dart:async';
 
-import 'package:famedlysdk/src/AccountData.dart';
-import 'package:famedlysdk/src/Client.dart';
-import 'package:famedlysdk/src/Presence.dart';
-import 'package:famedlysdk/src/Room.dart';
-import 'package:famedlysdk/src/User.dart';
-import 'package:famedlysdk/src/sync/EventUpdate.dart';
-import 'package:famedlysdk/src/sync/RoomUpdate.dart';
-import 'package:famedlysdk/src/sync/UserUpdate.dart';
-import 'package:famedlysdk/src/utils/MatrixException.dart';
-import 'package:famedlysdk/src/utils/MatrixFile.dart';
-import 'package:famedlysdk/src/utils/Profile.dart';
+import 'package:famedlysdk/src/account_data.dart';
+import 'package:famedlysdk/src/client.dart';
+import 'package:famedlysdk/src/presence.dart';
+import 'package:famedlysdk/src/room.dart';
+import 'package:famedlysdk/src/user.dart';
+import 'package:famedlysdk/src/sync/event_update.dart';
+import 'package:famedlysdk/src/sync/room_update.dart';
+import 'package:famedlysdk/src/sync/user_update.dart';
+import 'package:famedlysdk/src/utils/matrix_exception.dart';
+import 'package:famedlysdk/src/utils/matrix_file.dart';
+import 'package:famedlysdk/src/utils/profile.dart';
 import 'package:test/test.dart';
 
-import 'FakeMatrixApi.dart';
+import 'fake_matrix_api.dart';
 
 void main() {
   Client matrix;

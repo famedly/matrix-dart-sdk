@@ -21,13 +21,13 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/RoomAccountData.dart';
+import 'package:famedlysdk/src/room_account_data.dart';
 import 'package:test/test.dart';
-import 'package:famedlysdk/src/Client.dart';
-import 'package:famedlysdk/src/Room.dart';
-import 'package:famedlysdk/src/Timeline.dart';
-import 'package:famedlysdk/src/sync/EventUpdate.dart';
-import 'FakeMatrixApi.dart';
+import 'package:famedlysdk/src/client.dart';
+import 'package:famedlysdk/src/room.dart';
+import 'package:famedlysdk/src/timeline.dart';
+import 'package:famedlysdk/src/sync/event_update.dart';
+import 'fake_matrix_api.dart';
 
 void main() {
   /// All Tests related to the MxContent

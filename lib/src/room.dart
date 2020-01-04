@@ -23,19 +23,19 @@
 
 import 'dart:async';
 
-import 'package:famedlysdk/src/Client.dart';
-import 'package:famedlysdk/src/Event.dart';
-import 'package:famedlysdk/src/RoomAccountData.dart';
-import 'package:famedlysdk/src/sync/EventUpdate.dart';
-import 'package:famedlysdk/src/sync/RoomUpdate.dart';
-import 'package:famedlysdk/src/utils/MatrixException.dart';
-import 'package:famedlysdk/src/utils/MatrixFile.dart';
-import 'package:famedlysdk/src/utils/MxContent.dart';
+import 'package:famedlysdk/src/client.dart';
+import 'package:famedlysdk/src/event.dart';
+import 'package:famedlysdk/src/room_account_data.dart';
+import 'package:famedlysdk/src/sync/event_update.dart';
+import 'package:famedlysdk/src/sync/room_update.dart';
+import 'package:famedlysdk/src/utils/matrix_exception.dart';
+import 'package:famedlysdk/src/utils/matrix_file.dart';
+import 'package:famedlysdk/src/utils/mx_content.dart';
 import 'package:mime_type/mime_type.dart';
 
-import './User.dart';
-import 'Timeline.dart';
-import 'utils/StatesMap.dart';
+import './user.dart';
+import 'timeline.dart';
+import 'utils/states_map.dart';
 
 /// Represents a Matrix room.
 class Room {

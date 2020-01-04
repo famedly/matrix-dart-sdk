@@ -22,8 +22,8 @@
  */
 
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/AccountData.dart';
-import 'package:famedlysdk/src/Event.dart';
+import 'package:famedlysdk/src/account_data.dart';
+import 'package:famedlysdk/src/event.dart';
 
 /// Stripped down events for account data and ephemrals of a room.
 class RoomAccountData extends AccountData {

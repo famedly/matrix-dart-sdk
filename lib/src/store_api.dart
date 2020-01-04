@@ -23,15 +23,15 @@
 
 import 'dart:async';
 import 'dart:core';
-import 'package:famedlysdk/src/AccountData.dart';
-import 'package:famedlysdk/src/Presence.dart';
-import 'Client.dart';
-import 'Event.dart';
-import 'Room.dart';
-import 'User.dart';
-import 'sync/EventUpdate.dart';
-import 'sync/RoomUpdate.dart';
-import 'sync/UserUpdate.dart';
+import 'package:famedlysdk/src/account_data.dart';
+import 'package:famedlysdk/src/presence.dart';
+import 'client.dart';
+import 'event.dart';
+import 'room.dart';
+import 'user.dart';
+import 'sync/event_update.dart';
+import 'sync/room_update.dart';
+import 'sync/user_update.dart';
 
 /// Responsible to store all data persistent and to query objects from the
 /// database.

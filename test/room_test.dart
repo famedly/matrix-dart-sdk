@@ -21,15 +21,15 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/Client.dart';
-import 'package:famedlysdk/src/Event.dart';
-import 'package:famedlysdk/src/Room.dart';
-import 'package:famedlysdk/src/Timeline.dart';
-import 'package:famedlysdk/src/User.dart';
-import 'package:famedlysdk/src/utils/MatrixFile.dart';
+import 'package:famedlysdk/src/client.dart';
+import 'package:famedlysdk/src/event.dart';
+import 'package:famedlysdk/src/room.dart';
+import 'package:famedlysdk/src/timeline.dart';
+import 'package:famedlysdk/src/user.dart';
+import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:test/test.dart';
 
-import 'FakeMatrixApi.dart';
+import 'fake_matrix_api.dart';
 
 void main() {
   Client matrix;

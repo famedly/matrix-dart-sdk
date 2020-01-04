@@ -1,4 +1,4 @@
-import 'package:famedlysdk/src/utils/MxContent.dart';
+import 'package:famedlysdk/src/utils/mx_content.dart';
 
 /// Represents a user profile returned by a /profile request.
 class Profile {
