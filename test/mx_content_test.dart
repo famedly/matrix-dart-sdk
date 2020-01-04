@@ -22,10 +22,10 @@
  */
 
 import 'package:test/test.dart';
-import 'package:famedlysdk/src/Client.dart';
-import 'package:famedlysdk/src/utils/MxContent.dart';
+import 'package:famedlysdk/src/client.dart';
+import 'package:famedlysdk/src/utils/mx_content.dart';
 
-import 'FakeMatrixApi.dart';
+import 'fake_matrix_api.dart';
 
 void main() {
   /// All Tests related to the MxContent

@@ -21,7 +21,7 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import '../User.dart';
+import '../user.dart';
 
 /// Represents a new room or an update for an
 /// already known room.

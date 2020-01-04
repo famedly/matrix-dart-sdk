@@ -21,7 +21,7 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/Client.dart';
+import 'package:famedlysdk/src/client.dart';
 import 'dart:core';
 
 /// A file in Matrix presented by a mxc:// uri scheme.

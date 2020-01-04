@@ -24,10 +24,10 @@
 import 'dart:convert';
 
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/Event.dart';
+import 'package:famedlysdk/src/event.dart';
 import 'package:test/test.dart';
 
-import 'FakeMatrixApi.dart';
+import 'fake_matrix_api.dart';
 
 void main() {
   /// All Tests related to the Event

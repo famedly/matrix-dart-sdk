@@ -23,7 +23,7 @@
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:test/test.dart';
-import 'package:famedlysdk/src/utils/StatesMap.dart';
+import 'package:famedlysdk/src/utils/states_map.dart';
 
 void main() {
   /// All Tests related to the ChatTime

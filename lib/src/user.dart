@@ -22,9 +22,9 @@
  */
 
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/Room.dart';
-import 'package:famedlysdk/src/Event.dart';
-import 'package:famedlysdk/src/utils/MxContent.dart';
+import 'package:famedlysdk/src/room.dart';
+import 'package:famedlysdk/src/event.dart';
+import 'package:famedlysdk/src/utils/mx_content.dart';
 
 enum Membership { join, invite, leave, ban }
 

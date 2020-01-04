@@ -1,4 +1,4 @@
-import '../User.dart';
+import '../user.dart';
 
 /// Represents a receipt.
 /// This [user] has read an event at the given [time].

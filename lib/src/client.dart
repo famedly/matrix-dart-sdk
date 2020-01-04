@@ -25,24 +25,24 @@ import 'dart:async';
 import 'dart:core';
 
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/AccountData.dart';
-import 'package:famedlysdk/src/Presence.dart';
-import 'package:famedlysdk/src/StoreAPI.dart';
-import 'package:famedlysdk/src/sync/UserUpdate.dart';
-import 'package:famedlysdk/src/utils/MatrixFile.dart';
+import 'package:famedlysdk/src/account_data.dart';
+import 'package:famedlysdk/src/presence.dart';
+import 'package:famedlysdk/src/store_api.dart';
+import 'package:famedlysdk/src/sync/user_update.dart';
+import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:pedantic/pedantic.dart';
-import 'Room.dart';
-import 'Event.dart';
-import 'User.dart';
-import 'utils/Profile.dart';
+import 'room.dart';
+import 'event.dart';
+import 'user.dart';
+import 'utils/profile.dart';
 import 'dart:convert';
-import 'package:famedlysdk/src/Room.dart';
+import 'package:famedlysdk/src/room.dart';
 import 'package:http/http.dart' as http;
 import 'package:mime_type/mime_type.dart';
-import 'sync/EventUpdate.dart';
-import 'sync/RoomUpdate.dart';
-import 'sync/UserUpdate.dart';
-import 'utils/MatrixException.dart';
+import 'sync/event_update.dart';
+import 'sync/room_update.dart';
+import 'sync/user_update.dart';
+import 'utils/matrix_exception.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -705,9 +705,7 @@ class Client {
       } else {
         await handleSync(syncResp);
       }
-      if (this.prevBatch == null) {
-        this.onFirstSync.add(true);
-      }
+      if (this.prevBatch == null) this.onFirstSync.add(true);
       this.prevBatch = syncResp["next_batch"];
       if (hash == _syncRequest.hashCode) unawaited(_sync());
     } on MatrixException catch (exception) {

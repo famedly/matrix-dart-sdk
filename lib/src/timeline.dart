@@ -23,10 +23,10 @@
 
 import 'dart:async';
 
-import 'Event.dart';
-import 'Room.dart';
-import 'User.dart';
-import 'sync/EventUpdate.dart';
+import 'event.dart';
+import 'room.dart';
+import 'user.dart';
+import 'sync/event_update.dart';
 
 typedef onTimelineUpdateCallback = void Function();
 typedef onTimelineInsertCallback = void Function(int insertID);
