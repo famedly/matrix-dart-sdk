@@ -26,6 +26,7 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/utils/Receipt.dart';
 import './Room.dart';
 
+/// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
 class Event {
   /// The Matrix ID for this event in the format '$localpart:server.abc'. Please not
   /// that account data, presence and other events may not have an eventId.
@@ -215,30 +216,44 @@ class Event {
         return EventTypes.GuestAccess;
       case "m.room.history_visibility":
         return EventTypes.HistoryVisibility;
+      case "m.sticker":
+        return EventTypes.Sticker;
       case "m.room.message":
-        switch (content["msgtype"] ?? "m.text") {
-          case "m.text":
-            if (content.containsKey("m.relates_to")) {
-              return EventTypes.Reply;
-            }
-            return EventTypes.Text;
-          case "m.notice":
-            return EventTypes.Notice;
-          case "m.emote":
-            return EventTypes.Emote;
-          case "m.image":
-            return EventTypes.Image;
-          case "m.video":
-            return EventTypes.Video;
-          case "m.audio":
-            return EventTypes.Audio;
-          case "m.file":
-            return EventTypes.File;
-          case "m.location":
-            return EventTypes.Location;
-        }
+        return EventTypes.Message;
     }
     return EventTypes.Unknown;
+  }
+
+  ///
+  MessageTypes get messageType {
+    switch (content["msgtype"] ?? "m.text") {
+      case "m.text":
+        if (content.containsKey("m.relates_to")) {
+          return MessageTypes.Reply;
+        }
+        return MessageTypes.Text;
+      case "m.notice":
+        return MessageTypes.Notice;
+      case "m.emote":
+        return MessageTypes.Emote;
+      case "m.image":
+        return MessageTypes.Image;
+      case "m.video":
+        return MessageTypes.Video;
+      case "m.audio":
+        return MessageTypes.Audio;
+      case "m.file":
+        return MessageTypes.File;
+      case "m.sticker":
+        return MessageTypes.Sticker;
+      case "m.location":
+        return MessageTypes.Location;
+      default:
+        if (type == EventTypes.Message) {
+          return MessageTypes.Text;
+        }
+        return MessageTypes.None;
+    }
   }
 
   void setRedactionEvent(Event redactedBecause) {
@@ -350,17 +365,24 @@ class Event {
       room.redactEvent(eventId, reason: reason, txid: txid);
 }
 
-enum EventTypes {
+enum MessageTypes {
   Text,
   Emote,
   Notice,
   Image,
   Video,
   Audio,
-  Redaction,
   File,
   Location,
   Reply,
+  Sticker,
+  None,
+}
+
+enum EventTypes {
+  Message,
+  Sticker,
+  Redaction,
   RoomAliases,
   RoomCanonicalAlias,
   RoomCreate,

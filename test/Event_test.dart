@@ -66,7 +66,7 @@ void main() {
       expect(event.text, body);
       expect(event.formattedText, formatted_body);
       expect(event.getBody(), body);
-      expect(event.type, EventTypes.Text);
+      expect(event.type, EventTypes.Message);
       jsonObj["state_key"] = "";
       Event state = Event.fromJson(jsonObj, null);
       expect(state.eventId, id);
@@ -125,31 +125,31 @@ void main() {
 
       jsonObj["content"]["msgtype"] = "m.notice";
       event = Event.fromJson(jsonObj, null);
-      expect(event.type, EventTypes.Notice);
+      expect(event.messageType, MessageTypes.Notice);
 
       jsonObj["content"]["msgtype"] = "m.emote";
       event = Event.fromJson(jsonObj, null);
-      expect(event.type, EventTypes.Emote);
+      expect(event.messageType, MessageTypes.Emote);
 
       jsonObj["content"]["msgtype"] = "m.image";
       event = Event.fromJson(jsonObj, null);
-      expect(event.type, EventTypes.Image);
+      expect(event.messageType, MessageTypes.Image);
 
       jsonObj["content"]["msgtype"] = "m.video";
       event = Event.fromJson(jsonObj, null);
-      expect(event.type, EventTypes.Video);
+      expect(event.messageType, MessageTypes.Video);
 
       jsonObj["content"]["msgtype"] = "m.audio";
       event = Event.fromJson(jsonObj, null);
-      expect(event.type, EventTypes.Audio);
+      expect(event.messageType, MessageTypes.Audio);
 
       jsonObj["content"]["msgtype"] = "m.file";
       event = Event.fromJson(jsonObj, null);
-      expect(event.type, EventTypes.File);
+      expect(event.messageType, MessageTypes.File);
 
       jsonObj["content"]["msgtype"] = "m.location";
       event = Event.fromJson(jsonObj, null);
-      expect(event.type, EventTypes.Location);
+      expect(event.messageType, MessageTypes.Location);
 
       jsonObj["type"] = "m.room.message";
       jsonObj["content"]["msgtype"] = "m.text";
@@ -158,7 +158,7 @@ void main() {
         "event_id": "1234",
       };
       event = Event.fromJson(jsonObj, null);
-      expect(event.type, EventTypes.Reply);
+      expect(event.messageType, MessageTypes.Reply);
     });
 
     test("redact", () async {
