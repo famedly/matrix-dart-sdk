@@ -705,7 +705,9 @@ class Client {
       } else {
         await handleSync(syncResp);
       }
-      if (this.prevBatch == null) this.onFirstSync.add(true);
+      if (this.prevBatch == null) {
+        this.onFirstSync.add(true);
+      }
       this.prevBatch = syncResp["next_batch"];
       if (hash == _syncRequest.hashCode) unawaited(_sync());
     } on MatrixException catch (exception) {
@@ -1010,7 +1012,6 @@ class Client {
       .compareTo(a.timeCreated.millisecondsSinceEpoch);
 
   _sortRooms() {
-    if (prevBatch == null) return;
     if (_sortLock || rooms.length < 2) return;
     _sortLock = true;
     rooms?.sort(sortRoomsBy);
