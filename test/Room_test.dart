@@ -73,7 +73,33 @@ void main() {
         "heroes": heroes.join(","),
       };
 
-      room = await Room.getRoomFromTableRow(jsonObj, matrix);
+      Function states = () async => [
+            {
+              "content": {"join_rule": "public"},
+              "event_id": "143273582443PhrSn:example.org",
+              "origin_server_ts": 1432735824653,
+              "room_id": id,
+              "sender": "@example:example.org",
+              "state_key": "",
+              "type": "m.room.join_rules",
+              "unsigned": {"age": 1234}
+            }
+          ];
+
+      Function roomAccountData = () async => [
+            {
+              "content": {"foo": "bar"},
+              "room_id": id,
+              "type": "com.test.foo"
+            }
+          ];
+
+      room = await Room.getRoomFromTableRow(
+        jsonObj,
+        matrix,
+        states: states(),
+        roomAccountData: roomAccountData(),
+      );
 
       expect(room.id, id);
       expect(room.membership, membership);
@@ -83,6 +109,8 @@ void main() {
       expect(room.mInvitedMemberCount, notificationCount);
       expect(room.mHeroes, heroes);
       expect(room.displayname, "alice, bob, charley");
+      expect(room.getState("m.room.join_rules").content["join_rule"], "public");
+      expect(room.roomAccountData["com.test.foo"].content["foo"], "bar");
 
       room.states["m.room.canonical_alias"] = Event(
           senderId: "@test:example.com",
@@ -126,8 +154,6 @@ void main() {
           content: {"url": "mxc://testurl"},
           stateKey: "");
       expect(room.avatar.mxc, "mxc://testurl");
-
-      expect(room.lastEvent, null);
       room.states["m.room.message"] = Event(
           senderId: "@test:example.com",
           typeKey: "m.room.message",
