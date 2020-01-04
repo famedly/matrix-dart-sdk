@@ -220,6 +220,18 @@ class Event {
         return EventTypes.Sticker;
       case "m.room.message":
         return EventTypes.Message;
+      case "m.call.encrypted":
+        return EventTypes.Encrypted;
+      case "m.call.encryption":
+        return EventTypes.Encryption;
+      case "m.call.invite":
+        return EventTypes.CallInvite;
+      case "m.call.answer":
+        return EventTypes.CallAnswer;
+      case "m.call.candidates":
+        return EventTypes.CallCandidates;
+      case "m.call.hangup":
+        return EventTypes.CallHangup;
     }
     return EventTypes.Unknown;
   }
@@ -394,5 +406,11 @@ enum EventTypes {
   RoomAvatar,
   GuestAccess,
   HistoryVisibility,
+  Encryption,
+  Encrypted,
+  CallInvite,
+  CallAnswer,
+  CallCandidates,
+  CallHangup,
   Unknown,
 }

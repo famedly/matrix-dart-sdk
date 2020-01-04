@@ -30,6 +30,7 @@ import 'package:famedlysdk/src/presence.dart';
 import 'package:famedlysdk/src/store_api.dart';
 import 'package:famedlysdk/src/sync/user_update.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
+import 'package:famedlysdk/src/utils/turn_server_credentials.dart';
 import 'package:pedantic/pedantic.dart';
 import 'room.dart';
 import 'event.dart';
@@ -400,6 +401,15 @@ class Client {
     return;
   }
 
+  /// Get credentials for the client to use when initiating calls.
+  Future<TurnServerCredentials> getTurnServerCredentials() async {
+    final Map<String, dynamic> response = await this.jsonRequest(
+      type: HTTPType.GET,
+      action: "/client/r0/voip/turnServer",
+    );
+    return TurnServerCredentials.fromJson(response);
+  }
+
   /// Fetches the pushrules for the logged in user.
   /// These are needed for notifications on Android
   Future<PushRules> getPushrules() async {
@@ -476,6 +486,18 @@ class Client {
   /// Callback will be called on account data updates.
   final StreamController<AccountData> onAccountData =
       StreamController.broadcast();
+
+  /// Will be called on call invites.
+  final StreamController<Event> onCallInvite = StreamController.broadcast();
+
+  /// Will be called on call hangups.
+  final StreamController<Event> onCallHangup = StreamController.broadcast();
+
+  /// Will be called on call candidates.
+  final StreamController<Event> onCallCandidates = StreamController.broadcast();
+
+  /// Will be called on call answers.
+  final StreamController<Event> onCallAnswer = StreamController.broadcast();
 
   /// Matrix synchronisation is done with https long polling. This needs a
   /// timeout which is usually 30 seconds.
@@ -894,6 +916,16 @@ class Client {
       _updateRoomsByEventUpdate(update);
       this.store?.storeEventUpdate(update);
       onEvent.add(update);
+
+      if (event["type"] == "m.call.invite") {
+        onCallInvite.add(Event.fromJson(event, getRoomById(roomID)));
+      } else if (event["type"] == "m.call.hangup") {
+        onCallHangup.add(Event.fromJson(event, getRoomById(roomID)));
+      } else if (event["type"] == "m.call.answer") {
+        onCallAnswer.add(Event.fromJson(event, getRoomById(roomID)));
+      } else if (event["type"] == "m.call.candidates") {
+        onCallCandidates.add(Event.fromJson(event, getRoomById(roomID)));
+      }
     }
   }
 
