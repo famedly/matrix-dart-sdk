@@ -6,7 +6,7 @@ Matrix SDK for the famedly talk app written in dart.
 
 ## API
 
-The API is documented here: [famedly.gitlab.io/famedlysdk](https://famedly.gitlab.io/famedlysdk/)
+The API is documented here: [famedly.gitlab.io/famedlysdk/famedlysdk/famedlysdk-library.html](https://famedly.gitlab.io/famedlysdk/famedlysdk/famedlysdk-library.html)
 
 ## How to use this
 
@@ -30,10 +30,10 @@ Client matrix = Client("HappyChat");
 ```
 
 Take a look here for an example store:
-https://gitlab.com/famedly/famedlysdk/snippets/1904187
+[https://gitlab.com/ChristianPauly/fluffychat-flutter/snippets](https://gitlab.com/ChristianPauly/fluffychat-flutter/snippets)
 
 ```dart
-Client matrix = Client("HappyChat", store: Store(this));
+Client matrix = Client("HappyChat");
 ```
 
 3. Connect to a Matrix Homeserver and listen to the streams:
@@ -67,14 +67,4 @@ final resp = await matrix.jsonRequest(
         "body": "hello"
     }
 );
-```
-
-## Development
-
-### Regenerating JSON Classes
-
-To regenerate the part files of JSON Classes you need to run this command:
-
-```bash
-flutter pub run build_runner build
 ```
