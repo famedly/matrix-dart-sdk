@@ -1048,6 +1048,103 @@ class Room {
       data: data,
     );
   }
+
+  /// This is sent by the caller when they wish to establish a call.
+  /// [callId] is a unique identifier for the call.
+  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 0.
+  /// [lifetime] is the time in milliseconds that the invite is valid for. Once the invite age exceeds this value,
+  /// clients should discard it. They should also no longer show the call as awaiting an answer in the UI.
+  /// [type] The type of session description. Must be 'offer'.
+  /// [sdp] The SDP text of the session description.
+  Future<String> inviteToCall(String callId, int lifetime, String sdp,
+      {String type = "offer", int version = 0, String txid}) async {
+    if (txid == null) txid = "txid${DateTime.now().millisecondsSinceEpoch}";
+    final Map<String, dynamic> response = await client.jsonRequest(
+      type: HTTPType.PUT,
+      action: "/client/r0/rooms/$id/send/m.call.invite/$txid",
+      data: {
+        "call_id": callId,
+        "lifetime": lifetime,
+        "offer": {"sdp": sdp, "type": type},
+        "version": version,
+      },
+    );
+    return response["event_id"];
+  }
+
+  /// This is sent by callers after sending an invite and by the callee after answering.
+  /// Its purpose is to give the other party additional ICE candidates to try using to communicate.
+  ///
+  /// [callId] The ID of the call this event relates to.
+  ///
+  /// [version] The version of the VoIP specification this messages adheres to. This specification is version 0.
+  ///
+  /// [candidates] Array of objects describing the candidates. Example:
+  ///
+  /// ```
+  /// [
+  ///       {
+  ///           "candidate": "candidate:863018703 1 udp 2122260223 10.9.64.156 43670 typ host generation 0",
+  ///           "sdpMLineIndex": 0,
+  ///           "sdpMid": "audio"
+  ///       }
+  ///   ],
+  /// ```
+  Future<String> sendCallCandidates(
+    String callId,
+    List<Map<String, dynamic>> candidates, {
+    int version = 0,
+    String txid,
+  }) async {
+    if (txid == null) txid = "txid${DateTime.now().millisecondsSinceEpoch}";
+    final Map<String, dynamic> response = await client.jsonRequest(
+      type: HTTPType.PUT,
+      action: "/client/r0/rooms/$id/send/m.call.candidates/$txid",
+      data: {
+        "call_id": callId,
+        "candidates": candidates,
+        "version": version,
+      },
+    );
+    return response["event_id"];
+  }
+
+  /// This event is sent by the callee when they wish to answer the call.
+  /// [callId] is a unique identifier for the call.
+  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 0.
+  /// [type] The type of session description. Must be 'answer'.
+  /// [sdp] The SDP text of the session description.
+  Future<String> answerCall(String callId, String sdp,
+      {String type = "answer", int version = 0, String txid}) async {
+    if (txid == null) txid = "txid${DateTime.now().millisecondsSinceEpoch}";
+    final Map<String, dynamic> response = await client.jsonRequest(
+      type: HTTPType.PUT,
+      action: "/client/r0/rooms/$id/send/m.call.answer/$txid",
+      data: {
+        "call_id": callId,
+        "answer": {"sdp": sdp, "type": type},
+        "version": version,
+      },
+    );
+    return response["event_id"];
+  }
+
+  /// This event is sent by the callee when they wish to answer the call.
+  /// [callId] The ID of the call this event relates to.
+  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 0.
+  Future<String> hangupCall(String callId,
+      {int version = 0, String txid}) async {
+    if (txid == null) txid = "txid${DateTime.now().millisecondsSinceEpoch}";
+    final Map<String, dynamic> response = await client.jsonRequest(
+      type: HTTPType.PUT,
+      action: "/client/r0/rooms/$id/send/m.call.hangup/$txid",
+      data: {
+        "call_id": callId,
+        "version": version,
+      },
+    );
+    return response["event_id"];
+  }
 }
 
 enum PushRuleState { notify, mentions_only, dont_notify }
