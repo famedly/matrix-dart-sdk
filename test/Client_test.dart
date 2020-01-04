@@ -59,12 +59,12 @@ void main() {
     test('Login', () async {
       int presenceCounter = 0;
       int accountDataCounter = 0;
-      matrix.onPresence = (Presence data) {
+      matrix.onPresence.stream.listen((Presence data) {
         presenceCounter++;
-      };
-      matrix.onAccountData = (AccountData data) {
+      });
+      matrix.onAccountData.stream.listen((AccountData data) {
         accountDataCounter++;
-      };
+      });
 
       expect(matrix.homeserver, null);
       expect(matrix.matrixVersions, null);

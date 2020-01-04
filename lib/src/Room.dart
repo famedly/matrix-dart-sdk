@@ -21,6 +21,8 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
+
 import 'package:famedlysdk/src/Client.dart';
 import 'package:famedlysdk/src/Event.dart';
 import 'package:famedlysdk/src/RoomAccountData.dart';
@@ -34,8 +36,6 @@ import 'package:mime_type/mime_type.dart';
 import './User.dart';
 import 'Timeline.dart';
 import 'utils/StatesMap.dart';
-
-typedef onRoomUpdate = void Function();
 
 /// Represents a Matrix room.
 class Room {
@@ -91,8 +91,9 @@ class Room {
       ? roomAccountData["m.fully_read"].content["event_id"]
       : "";
 
-  /// If something changes, this callback will be triggered.
-  onRoomUpdate onUpdate;
+  /// If something changes, this callback will be triggered. Will return the
+  /// room id.
+  final StreamController<String> onUpdate = StreamController.broadcast();
 
   /// The name of the room if set by a participant.
   String get name => states["m.room.name"] != null
@@ -826,7 +827,7 @@ class Room {
         return;
       });
     }
-    if (onUpdate != null) onUpdate();
+    if (onUpdate != null) onUpdate.add(id);
     _requestingMatrixIds.remove(mxID);
     return user;
   }
