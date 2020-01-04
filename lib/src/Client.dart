@@ -44,8 +44,6 @@ import 'sync/RoomUpdate.dart';
 import 'sync/UserUpdate.dart';
 import 'utils/MatrixException.dart';
 
-typedef AccountDataEventCB = void Function(AccountData accountData);
-typedef PresenceCB = void Function(Presence presence);
 typedef RoomSorter = int Function(Room a, Room b);
 
 enum HTTPType { GET, POST, PUT, DELETE }
@@ -121,12 +119,6 @@ class Client {
   /// Presences of users by a given matrix ID
   Map<String, Presence> presences = {};
 
-  /// Callback will be called on account data updates.
-  AccountDataEventCB onAccountData;
-
-  /// Callback will be called on presences.
-  PresenceCB onPresence;
-
   Room getRoomByAlias(String alias) {
     for (int i = 0; i < rooms.length; i++) {
       if (rooms[i].canonicalAlias == alias) return rooms[i];
@@ -145,12 +137,12 @@ class Client {
     if (userUpdate.type == "account_data") {
       AccountData newAccountData = AccountData.fromJson(userUpdate.content);
       accountData[newAccountData.typeKey] = newAccountData;
-      if (onAccountData != null) onAccountData(newAccountData);
+      if (onAccountData != null) onAccountData.add(newAccountData);
     }
     if (userUpdate.type == "presence") {
       Presence newPresence = Presence.fromJson(userUpdate.content);
       presences[newPresence.sender] = newPresence;
-      if (onPresence != null) onPresence(newPresence);
+      if (onPresence != null) onPresence.add(newPresence);
     }
   }
 
@@ -471,6 +463,13 @@ class Client {
 
   /// When a new sync response is coming in, this gives the complete payload.
   final StreamController<dynamic> onSync = StreamController.broadcast();
+
+  /// Callback will be called on presences.
+  final StreamController<Presence> onPresence = StreamController.broadcast();
+
+  /// Callback will be called on account data updates.
+  final StreamController<AccountData> onAccountData =
+      StreamController.broadcast();
 
   /// Matrix synchronisation is done with https long polling. This needs a
   /// timeout which is usually 30 seconds.
@@ -948,7 +947,7 @@ class Client {
           rooms[j].mInvitedMemberCount = chatUpdate.summary.mInvitedMemberCount;
         }
       }
-      if (rooms[j].onUpdate != null) rooms[j].onUpdate();
+      if (rooms[j].onUpdate != null) rooms[j].onUpdate.add(rooms[j].id);
     }
     _sortRooms();
   }
@@ -992,7 +991,7 @@ class Client {
       rooms[j].ephemerals[eventUpdate.eventType] =
           RoomAccountData.fromJson(eventUpdate.content, rooms[j]);
     }
-    if (rooms[j].onUpdate != null) rooms[j].onUpdate();
+    if (rooms[j].onUpdate != null) rooms[j].onUpdate.add(rooms[j].id);
     if (eventUpdate.type == "timeline") _sortRooms();
   }
 
