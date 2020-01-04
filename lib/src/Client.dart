@@ -113,6 +113,12 @@ class Client {
   List<Room> get rooms => _rooms;
   List<Room> _rooms = [];
 
+  /// Warning! This endpoint is for testing only!
+  set rooms(List<Room> newList) {
+    print("Warning! This endpoint is for testing only!");
+    _rooms = newList;
+  }
+
   /// Key/Value store of account data.
   Map<String, AccountData> accountData = {};
 
