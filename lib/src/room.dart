@@ -879,7 +879,7 @@ class Room {
 
   bool _hasPermissionFor(String action) {
     if (getState("m.room.power_levels") == null ||
-        getState("m.room.power_levels").content[action] == null) return false;
+        getState("m.room.power_levels").content[action] == null) return true;
     return ownPowerLevel >= getState("m.room.power_levels").content[action];
   }
 
@@ -904,7 +904,7 @@ class Room {
   bool get canChangePowerLevel => canSendEvent("m.room.power_levels");
 
   bool canSendEvent(String eventType) {
-    if (getState("m.room.power_levels") == null) return false;
+    if (getState("m.room.power_levels") == null) return true;
     if (getState("m.room.power_levels").content["events"] == null ||
         getState("m.room.power_levels").content["events"][eventType] == null) {
       return eventType == "m.room.message"
