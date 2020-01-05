@@ -31,6 +31,7 @@ export 'package:famedlysdk/src/utils/matrix_file.dart';
 export 'package:famedlysdk/src/utils/mx_content.dart';
 export 'package:famedlysdk/src/utils/profile.dart';
 export 'package:famedlysdk/src/utils/push_rules.dart';
+export 'package:famedlysdk/src/utils/receipt.dart';
 export 'package:famedlysdk/src/utils/states_map.dart';
 export 'package:famedlysdk/src/utils/turn_server_credentials.dart';
 export 'package:famedlysdk/src/account_data.dart';
