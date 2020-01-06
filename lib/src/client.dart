@@ -721,13 +721,16 @@ class Client {
       if (this.store != null) {
         await this.store.transaction(() {
           handleSync(syncResp);
-          this.store.storePrevBatch(syncResp);
-          return;
+          this.store.storePrevBatch(syncResp["next_batch"]);
         });
       } else {
         await handleSync(syncResp);
       }
-      if (this.prevBatch == null) this.onFirstSync.add(true);
+      if (this.prevBatch == null) {
+        this.onFirstSync.add(true);
+        this.prevBatch = syncResp["next_batch"];
+        _sortRooms();
+      }
       this.prevBatch = syncResp["next_batch"];
       if (hash == _syncRequest.hashCode) unawaited(_sync());
     } on MatrixException catch (exception) {
@@ -1042,7 +1045,7 @@ class Client {
       .compareTo(a.timeCreated.millisecondsSinceEpoch);
 
   _sortRooms() {
-    if (_sortLock || rooms.length < 2) return;
+    if (prevBatch == null || _sortLock || rooms.length < 2) return;
     _sortLock = true;
     rooms?.sort(sortRoomsBy);
     _sortLock = false;

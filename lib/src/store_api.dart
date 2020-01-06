@@ -48,11 +48,11 @@ abstract class StoreAPI {
 
   var txn;
 
-  Future<void> transaction(Future<void> queries());
+  Future<void> transaction(void queries());
 
   /// Will be automatically called on every synchronisation. Must be called inside of
   //  /// [transaction].
-  Future<void> storePrevBatch(dynamic sync);
+  void storePrevBatch(String prevBatch);
 
   Future<void> storeRoomPrevBatch(Room room);
 
