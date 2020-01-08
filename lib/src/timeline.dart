@@ -70,6 +70,7 @@ class Timeline {
           if (room.prev_batch.isEmpty || room.prev_batch == null) events = [];
         },
       );
+      await Future.delayed(const Duration(seconds: 2));
       _requestingHistoryLock = false;
     }
   }
