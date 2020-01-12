@@ -29,6 +29,7 @@ export 'package:famedlysdk/src/sync/user_update.dart';
 export 'package:famedlysdk/src/utils/matrix_exception.dart';
 export 'package:famedlysdk/src/utils/matrix_file.dart';
 export 'package:famedlysdk/src/utils/mx_content.dart';
+export 'package:famedlysdk/src/utils/open_id_credentials.dart';
 export 'package:famedlysdk/src/utils/profile.dart';
 export 'package:famedlysdk/src/utils/push_rules.dart';
 export 'package:famedlysdk/src/utils/receipt.dart';
