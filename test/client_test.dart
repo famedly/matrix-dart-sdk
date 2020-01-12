@@ -23,6 +23,7 @@
 
 import 'dart:async';
 
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/account_data.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/presence.dart';
@@ -313,6 +314,14 @@ void main() {
 
       expect(checkResp, true);
       expect(loginResp, true);
+    });
+
+    test('createRoom', () async {
+      final OpenIdCredentials openId = await matrix.requestOpenIdCredentials();
+      expect(openId.accessToken, "SomeT0kenHere");
+      expect(openId.tokenType, "Bearer");
+      expect(openId.matrixServerName, "example.com");
+      expect(openId.expiresIn, 3600);
     });
 
     test('createRoom', () async {

@@ -30,6 +30,7 @@ import 'package:famedlysdk/src/presence.dart';
 import 'package:famedlysdk/src/store_api.dart';
 import 'package:famedlysdk/src/sync/user_update.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
+import 'package:famedlysdk/src/utils/open_id_credentials.dart';
 import 'package:famedlysdk/src/utils/turn_server_credentials.dart';
 import 'package:pedantic/pedantic.dart';
 import 'room.dart';
@@ -1049,5 +1050,14 @@ class Client {
     _sortLock = true;
     rooms?.sort(sortRoomsBy);
     _sortLock = false;
+  }
+
+  /// Gets an OpenID token object that the requester may supply to another service to verify their identity in Matrix.
+  /// The generated token is only valid for exchanging for user information from the federation API for OpenID.
+  Future<OpenIdCredentials> requestOpenIdCredentials() async {
+    final Map<String, dynamic> response = await jsonRequest(
+        type: HTTPType.GET,
+        action: "/client/r0/user/$userID/openid/request_token");
+    return OpenIdCredentials.fromJson(response);
   }
 }
