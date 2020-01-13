@@ -1056,7 +1056,7 @@ class Client {
   /// The generated token is only valid for exchanging for user information from the federation API for OpenID.
   Future<OpenIdCredentials> requestOpenIdCredentials() async {
     final Map<String, dynamic> response = await jsonRequest(
-        type: HTTPType.GET,
+        type: HTTPType.POST,
         action: "/client/r0/user/$userID/openid/request_token");
     return OpenIdCredentials.fromJson(response);
   }
