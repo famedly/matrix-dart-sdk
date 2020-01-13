@@ -522,13 +522,6 @@ class FakeMatrixApi extends MockClient {
 
   static final Map<String, Map<String, dynamic>> api = {
     "GET": {
-      "/client/r0/user/@test:fakeServer.notExisting/openid/request_token":
-          (var req) => {
-                "access_token": "SomeT0kenHere",
-                "token_type": "Bearer",
-                "matrix_server_name": "example.com",
-                "expires_in": 3600
-              },
       "/client/r0/rooms/1/state/m.room.member/@alice:example.com": (var req) =>
           {"displayname": "Alice"},
       "/client/r0/profile/@getme:example.com": (var req) => {
@@ -761,6 +754,13 @@ class FakeMatrixApi extends MockClient {
           (var req) => syncResponse,
     },
     "POST": {
+      "/client/r0/user/@test:fakeServer.notExisting/openid/request_token":
+          (var req) => {
+                "access_token": "SomeT0kenHere",
+                "token_type": "Bearer",
+                "matrix_server_name": "example.com",
+                "expires_in": 3600
+              },
       "/client/r0/login": (var req) => {
             "user_id": "@test:fakeServer.notExisting",
             "access_token": "abc123",
