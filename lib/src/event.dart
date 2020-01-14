@@ -160,18 +160,6 @@ class Event {
     return data;
   }
 
-  Event get timelineEvent => Event(
-        content: content,
-        typeKey: typeKey,
-        eventId: eventId,
-        room: room,
-        roomId: roomId,
-        senderId: senderId,
-        time: time,
-        unsigned: unsigned,
-        status: 1,
-      );
-
   /// The unique key of this event. For events with a [stateKey], it will be the
   /// stateKey. Otherwise it will be the [type] as a string.
   @deprecated
@@ -318,8 +306,11 @@ class Event {
   /// Returns the formatted boy of this event if it has a formatted body.
   String get formattedText => content["formatted_body"] ?? "";
 
+  @Deprecated("Use [body] instead.")
+  String getBody() => body;
+
   /// Use this to get the body.
-  String getBody() {
+  String get body {
     if (redacted) return "Redacted";
     if (text != "") return text;
     if (formattedText != "") return formattedText;

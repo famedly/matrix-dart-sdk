@@ -91,7 +91,7 @@ void main() {
       expect(timeline.events[0].eventId, "1");
       expect(timeline.events[0].sender.id, "@alice:example.com");
       expect(timeline.events[0].time.millisecondsSinceEpoch, testTimeStamp);
-      expect(timeline.events[0].getBody(), "Testcase");
+      expect(timeline.events[0].body, "Testcase");
       expect(
           timeline.events[0].time.millisecondsSinceEpoch >
               timeline.events[1].time.millisecondsSinceEpoch,

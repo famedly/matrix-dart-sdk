@@ -65,13 +65,13 @@ void main() {
       expect(event.status, 2);
       expect(event.text, body);
       expect(event.formattedText, formatted_body);
-      expect(event.getBody(), body);
+      expect(event.body, body);
       expect(event.type, EventTypes.Message);
       jsonObj["state_key"] = "";
       Event state = Event.fromJson(jsonObj, null);
       expect(state.eventId, id);
       expect(state.stateKey, "");
-      expect(state.timelineEvent.status, 1);
+      expect(state.status, 2);
     });
     test("Test all EventTypes", () async {
       Event event;

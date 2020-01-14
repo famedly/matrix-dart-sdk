@@ -347,11 +347,6 @@ void main() {
       await matrix.setAvatar(testFile);
     });
 
-    test('getPushrules', () async {
-      final pushrules = await matrix.getPushrules();
-      expect(pushrules != null, true);
-    });
-
     test('setPushers', () async {
       await matrix.setPushers("abcdefg", "http", "com.famedly.famedlysdk",
           "famedlySDK", "GitLabCi", "en", "https://examplepushserver.com",

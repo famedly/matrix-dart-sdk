@@ -413,6 +413,7 @@ class Client {
 
   /// Fetches the pushrules for the logged in user.
   /// These are needed for notifications on Android
+  @Deprecated("Use [pushRules] instead.")
   Future<PushRules> getPushrules() async {
     final dynamic resp = await this.jsonRequest(
       type: HTTPType.GET,
@@ -421,6 +422,11 @@ class Client {
 
     return PushRules.fromJson(resp);
   }
+
+  /// Returns the push rules for the logged in user.
+  PushRules get pushRules => accountData.containsKey("m.push_rules")
+      ? PushRules.fromJson(accountData["m.push_rules"].content)
+      : null;
 
   /// This endpoint allows the creation, modification and deletion of pushers for this user ID.
   Future<void> setPushers(String pushKey, String kind, String appId,
@@ -661,7 +667,7 @@ class Client {
       jsonResp = jsonDecode(String.fromCharCodes(resp.body.runes))
           as Map<String, dynamic>; // May throw FormatException
 
-      if (jsonResp.containsKey("errcode") && jsonResp["errcode"] is String) {
+      if (resp.statusCode >= 400 && resp.statusCode < 500) {
         // The server has responsed with an matrix related error.
         MatrixException exception = MatrixException(resp);
         if (exception.error == MatrixError.M_UNKNOWN_TOKEN) {

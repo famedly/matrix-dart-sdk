@@ -47,10 +47,16 @@ class MatrixException implements Exception {
   final Map<String, dynamic> raw;
 
   /// The unique identifier for this error.
-  String get errcode => raw["errcode"];
+  String get errcode =>
+      raw["errcode"] ??
+      (requireAdditionalAuthentication ? "M_FORBIDDEN" : "M_UNKNOWN");
 
   /// A human readable error description.
-  String get errorMessage => raw["error"];
+  String get errorMessage =>
+      raw["error"] ??
+      (requireAdditionalAuthentication
+          ? "Require additional authentication"
+          : "Unknown error");
 
   /// The frozen request which triggered this Error
   http.Response response;

@@ -152,7 +152,7 @@ class Room {
 
   Event get lastEvent {
     DateTime lastTime = DateTime.fromMillisecondsSinceEpoch(0);
-    Event lastEvent = getState("m.room.message")?.timelineEvent;
+    Event lastEvent = getState("m.room.message");
     if (lastEvent == null) {
       states.forEach((final String key, final entry) {
         if (!entry.containsKey("")) return;
@@ -161,7 +161,7 @@ class Room {
             state.time.millisecondsSinceEpoch >
                 lastTime.millisecondsSinceEpoch) {
           lastTime = state.time;
-          lastEvent = state.timelineEvent;
+          lastEvent = state;
         }
       });
     }
@@ -241,7 +241,7 @@ class Room {
   /// The last message sent to this room.
   String get lastMessage {
     if (lastEvent != null) {
-      return lastEvent.getBody();
+      return lastEvent.body;
     } else {
       return "";
     }
