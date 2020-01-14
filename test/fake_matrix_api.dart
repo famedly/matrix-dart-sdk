@@ -54,6 +54,9 @@ class FakeMatrixApi extends MockClient {
           // Call API
           if (api.containsKey(method) && api[method].containsKey(action)) {
             res = api[method][action](data);
+            if (res.containsKey("errcode")) {
+              return Response(json.encode(res), 405);
+            }
           } else if (method == "GET" &&
               action.contains("/client/r0/rooms/") &&
               action.contains("/state/m.room.member/")) {
@@ -64,9 +67,10 @@ class FakeMatrixApi extends MockClient {
               "errcode": "M_UNRECOGNIZED",
               "error": "Unrecognized request"
             };
+            return Response(json.encode(res), 405);
           }
 
-          return Response(json.encode(res), 100);
+          return Response(json.encode(res), 200);
         });
 
   static Map<String, dynamic> messagesResponse = {
