@@ -88,6 +88,18 @@ void main() {
         "initial_device_display_name": "Fluffy Matrix Client"
       });
 
+      final bool available = await matrix.usernameAvailable("testuser");
+      expect(available, true);
+
+      Map registerResponse = await matrix.register(username: "testuser");
+      expect(registerResponse["user_id"], "@testuser:example.com");
+      registerResponse =
+          await matrix.register(username: "testuser", kind: "user");
+      expect(registerResponse["user_id"], "@testuser:example.com");
+      registerResponse =
+          await matrix.register(username: "testuser", kind: "guest");
+      expect(registerResponse["user_id"], "@testuser:example.com");
+
       Future<LoginState> loginStateFuture =
           matrix.onLoginStateChanged.stream.first;
       Future<bool> firstSyncFuture = matrix.onFirstSync.stream.first;

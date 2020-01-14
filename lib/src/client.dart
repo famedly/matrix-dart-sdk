@@ -234,39 +234,99 @@ class Client {
     }
   }
 
+  /// Checks to see if a username is available, and valid, for the server.
+  /// You have to call [checkServer] first to set a homeserver.
+  Future<bool> usernameAvailable(String username) async {
+    final Map<String, dynamic> response = await this.jsonRequest(
+      type: HTTPType.GET,
+      action: "/client/r0/register/available?username=$username",
+    );
+    return response["available"];
+  }
+
+  /// Checks to see if a username is available, and valid, for the server.
+  /// Returns the fully-qualified Matrix user ID (MXID) that has been registered.
+  /// You have to call [checkServer] first to set a homeserver.
+  Future<Map<String, dynamic>> register({
+    String kind,
+    String username,
+    String password,
+    Map<String, dynamic> auth,
+    String deviceId,
+    String initialDeviceDisplayName,
+    bool inhibitLogin,
+  }) async {
+    final String action =
+        "/client/r0/register" + (kind != null ? "?kind=$kind" : "");
+    Map<String, dynamic> data = {};
+    if (username != null) data["username"] = username;
+    if (password != null) data["password"] = password;
+    if (auth != null) data["auth"] = auth;
+    if (deviceId != null) data["device_id"] = deviceId;
+    if (initialDeviceDisplayName != null) {
+      data["initial_device_display_name"] = initialDeviceDisplayName;
+    }
+    if (inhibitLogin != null) data["inhibit_login"] = inhibitLogin;
+    final Map<String, dynamic> response =
+        await this.jsonRequest(type: HTTPType.POST, action: action, data: data);
+
+    // Connect if there is an access token in the response.
+    if (response.containsKey("access_token") &&
+        response.containsKey("device_id") &&
+        response.containsKey("user_id")) {
+      await this.connect(
+          newToken: response["access_token"],
+          newUserID: response["user_id"],
+          newHomeserver: homeserver,
+          newDeviceName: initialDeviceDisplayName ?? "",
+          newDeviceID: response["device_id"],
+          newMatrixVersions: matrixVersions,
+          newLazyLoadMembers: lazyLoadMembers);
+    }
+    return response;
+  }
+
   /// Handles the login and allows the client to call all APIs which require
   /// authentication. Returns false if the login was not successful. Throws
   /// MatrixException if login was not successful.
-  Future<bool> login(String username, String password) async {
-    final loginResp = await jsonRequest(
-        type: HTTPType.POST,
-        action: "/client/r0/login",
-        data: {
-          "type": "m.login.password",
-          "user": username,
-          "identifier": {
-            "type": "m.id.user",
-            "user": username,
-          },
-          "password": password,
-          "initial_device_display_name": "Famedly Talk"
-        });
-
-    final userID = loginResp["user_id"];
-    final accessToken = loginResp["access_token"];
-    if (userID == null || accessToken == null) {
-      return false;
+  /// You have to call [checkServer] first to set a homeserver.
+  Future<bool> login(
+    String username,
+    String password, {
+    String initialDeviceDisplayName,
+    String deviceId,
+  }) async {
+    Map<String, dynamic> data = {
+      "type": "m.login.password",
+      "user": username,
+      "identifier": {
+        "type": "m.id.user",
+        "user": username,
+      },
+      "password": password,
+    };
+    if (deviceId != null) data["device_id"] = deviceId;
+    if (initialDeviceDisplayName != null) {
+      data["initial_device_display_name"] = initialDeviceDisplayName;
     }
 
-    await this.connect(
-        newToken: accessToken,
-        newUserID: userID,
-        newHomeserver: homeserver,
-        newDeviceName: "",
-        newDeviceID: "",
-        newMatrixVersions: matrixVersions,
-        newLazyLoadMembers: lazyLoadMembers);
-    return true;
+    final loginResp = await jsonRequest(
+        type: HTTPType.POST, action: "/client/r0/login", data: data);
+
+    if (loginResp.containsKey("user_id") &&
+        loginResp.containsKey("access_token") &&
+        loginResp.containsKey("device_id")) {
+      await this.connect(
+          newToken: loginResp["access_token"],
+          newUserID: loginResp["user_id"],
+          newHomeserver: homeserver,
+          newDeviceName: initialDeviceDisplayName ?? "",
+          newDeviceID: loginResp["device_id"],
+          newMatrixVersions: matrixVersions,
+          newLazyLoadMembers: lazyLoadMembers);
+      return true;
+    }
+    return false;
   }
 
   /// Sends a logout command to the homeserver and clears all local data,
