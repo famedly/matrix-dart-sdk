@@ -756,8 +756,15 @@ class FakeMatrixApi extends MockClient {
           (var req) => archiveSyncResponse,
       "/client/r0/sync?filter=%7B%22room%22:%7B%22state%22:%7B%22lazy_load_members%22:true%7D%7D%7D":
           (var req) => syncResponse,
+      "/client/r0/register/available?username=testuser": (var req) =>
+          {"available": true},
     },
     "POST": {
+      "/client/r0/register": (var req) => {"user_id": "@testuser:example.com"},
+      "/client/r0/register?kind=user": (var req) =>
+          {"user_id": "@testuser:example.com"},
+      "/client/r0/register?kind=guest": (var req) =>
+          {"user_id": "@testuser:example.com"},
       "/client/r0/user/@test:fakeServer.notExisting/openid/request_token":
           (var req) => {
                 "access_token": "SomeT0kenHere",

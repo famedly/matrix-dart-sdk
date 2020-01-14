@@ -87,8 +87,8 @@ class MatrixException implements Exception {
     if (!raw.containsKey("flows") || !(raw["flows"] is List)) return null;
     List<AuthenticationFlow> flows = [];
     for (Map<String, dynamic> flow in raw["flows"]) {
-      if (flow["stages"] is List<String>) {
-        flows.add(AuthenticationFlow(flow["stages"]));
+      if (flow["stages"] is List) {
+        flows.add(AuthenticationFlow(List<String>.from(flow["stages"])));
       }
     }
     return flows;
