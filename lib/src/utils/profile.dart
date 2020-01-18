@@ -15,4 +15,8 @@ class Profile {
       : avatarUrl = MxContent(json['avatar_url']),
         displayname = json['displayname'],
         content = json;
+
+  bool operator ==(dynamic other) =>
+      this.avatarUrl.mxc == other.avatarUrl.mxc &&
+      this.displayname == other.displayname;
 }

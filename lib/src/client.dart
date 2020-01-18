@@ -341,6 +341,22 @@ class Client {
     }
   }
 
+  /// Returns the user's own displayname and avatar url. In Matrix it is possible that
+  /// one user can have different displaynames and avatar urls in different rooms. So
+  /// this endpoint first checks if the profile is the same in all rooms. If not, the
+  /// profile will be requested from the homserver.
+  Future<Profile> get ownProfile async {
+    if (rooms.isNotEmpty) {
+      Set<Profile> profileSet = {};
+      for (Room room in rooms) {
+        final user = room.getUserByMXIDSync(userID);
+        profileSet.add(Profile.fromJson(user.content));
+      }
+      if (profileSet.length == 1) return profileSet.first;
+    }
+    return getProfileFromUserId(userID);
+  }
+
   /// Get the combined profile information for this user. This API may be used to
   /// fetch the user's own profile information or other users; either locally
   /// or on remote homeservers.
@@ -450,6 +466,15 @@ class Client {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Changes the user's displayname.
+  Future<void> setDisplayname(String displayname) async {
+    await this.jsonRequest(
+        type: HTTPType.PUT,
+        action: "/client/r0/profile/$userID/displayname",
+        data: {"displayname": displayname});
+    return;
   }
 
   /// Uploads a new user avatar for this user.
