@@ -37,6 +37,11 @@ import './user.dart';
 import 'timeline.dart';
 import 'utils/states_map.dart';
 
+enum PushRuleState { notify, mentions_only, dont_notify }
+enum JoinRules { public, knock, invite, private }
+enum GuestAccess { can_join, forbidden }
+enum HistoryVisibility { invited, joined, shared, world_readable }
+
 /// Represents a Matrix room.
 class Room {
   /// The full qualified Matrix ID for the room in the format '!localid:server.abc'.
@@ -1145,6 +1150,95 @@ class Room {
     );
     return response["event_id"];
   }
-}
 
-enum PushRuleState { notify, mentions_only, dont_notify }
+  /// Returns all aliases for this room.
+  List<String> get aliases {
+    List<String> aliases = [];
+    for (Event aliasEvent in states.states["m.room.aliases"].values) {
+      if (aliasEvent.content["aliases"] is List) {
+        aliases.addAll(aliasEvent.content["aliases"]);
+      }
+    }
+    return aliases;
+  }
+
+  /// A room may be public meaning anyone can join the room without any prior action. Alternatively,
+  /// it can be invite meaning that a user who wishes to join the room must first receive an invite
+  /// to the room from someone already inside of the room. Currently, knock and private are reserved
+  /// keywords which are not implemented.
+  JoinRules get joinRules => getState("m.room.join_rules") != null
+      ? JoinRules.values.firstWhere(
+          (r) =>
+              r.toString().replaceAll("JoinRules.", "") ==
+              getState("m.room.join_rules").content["join_rule"],
+          orElse: () => null)
+      : null;
+
+  /// Changes the join rules. You should check first if the user is able to change it.
+  Future<void> setJoinRules(JoinRules joinRules) async {
+    await client.jsonRequest(
+      type: HTTPType.PUT,
+      action: "/client/r0/rooms/$id/state/m.room.join_rules/",
+      data: {
+        "join_rule": joinRules.toString().replaceAll("JoinRules.", ""),
+      },
+    );
+    return;
+  }
+
+  /// Whether the user has the permission to change the join rules.
+  bool get canChangeJoinRules => canSendEvent("m.room.join_rules");
+
+  /// This event controls whether guest users are allowed to join rooms. If this event
+  /// is absent, servers should act as if it is present and has the guest_access value "forbidden".
+  GuestAccess get guestAccess => getState("m.room.guest_access") != null
+      ? GuestAccess.values.firstWhere(
+          (r) =>
+              r.toString().replaceAll("GuestAccess.", "") ==
+              getState("m.room.guest_access").content["guest_access"],
+          orElse: () => GuestAccess.forbidden)
+      : GuestAccess.forbidden;
+
+  /// Changes the guest access. You should check first if the user is able to change it.
+  Future<void> setGuestAccess(GuestAccess guestAccess) async {
+    await client.jsonRequest(
+      type: HTTPType.PUT,
+      action: "/client/r0/rooms/$id/state/m.room.guest_access/",
+      data: {
+        "guest_access": guestAccess.toString().replaceAll("GuestAccess.", ""),
+      },
+    );
+    return;
+  }
+
+  /// Whether the user has the permission to change the guest access.
+  bool get canChangeGuestAccess => canSendEvent("m.room.guest_access");
+
+  /// This event controls whether a user can see the events that happened in a room from before they joined.
+  HistoryVisibility get historyVisibility =>
+      getState("m.room.history_visibility") != null
+          ? HistoryVisibility.values.firstWhere(
+              (r) =>
+                  r.toString().replaceAll("HistoryVisibility.", "") ==
+                  getState("m.room.history_visibility")
+                      .content["history_visibility"],
+              orElse: () => null)
+          : null;
+
+  /// Changes the history visibility. You should check first if the user is able to change it.
+  Future<void> setHistoryVisibility(HistoryVisibility historyVisibility) async {
+    await client.jsonRequest(
+      type: HTTPType.PUT,
+      action: "/client/r0/rooms/$id/state/m.room.history_visibility/",
+      data: {
+        "history_visibility":
+            historyVisibility.toString().replaceAll("HistoryVisibility.", ""),
+      },
+    );
+    return;
+  }
+
+  /// Whether the user has the permission to change the history visibility.
+  bool get canChangeHistoryVisibility =>
+      canSendEvent("m.room.history_visibility");
+}
