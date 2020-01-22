@@ -376,8 +376,6 @@ class Client {
       for (var entry in sync["rooms"]["leave"].entries) {
         final String id = entry.key;
         final dynamic room = entry.value;
-        print(id);
-        print(room.toString());
         Room leftRoom = Room(
             id: id,
             membership: Membership.leave,
