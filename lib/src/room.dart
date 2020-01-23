@@ -729,19 +729,19 @@ class Room {
   Future<Timeline> getTimeline(
       {onTimelineUpdateCallback onUpdate,
       onTimelineInsertCallback onInsert}) async {
-    List<Event> events = [];
-    if (client.store != null) {
-      events = await client.store.getEventList(this);
-    } else {
-      prev_batch = "";
-      await requestHistory();
-    }
-    return Timeline(
+    List<Event> events =
+        client.store != null ? await client.store.getEventList(this) : [];
+    Timeline timeline = Timeline(
       room: this,
       events: events,
       onUpdate: onUpdate,
       onInsert: onInsert,
     );
+    if (client.store == null) {
+      prev_batch = "";
+      await requestHistory();
+    }
+    return timeline;
   }
 
   /// Load all participants for a given room from the store.
