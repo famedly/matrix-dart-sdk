@@ -61,10 +61,11 @@ class Client {
   Client get connection => this;
 
   /// Optional persistent store for all data.
-  StoreAPI store;
+  ExtendedStoreAPI get store => (storeAPI?.extended ?? false) ? storeAPI : null;
 
-  Client(this.clientName, {this.debug = false, this.store}) {
-    if (this.clientName != "testclient") store = null; //Store(this);
+  StoreAPI storeAPI;
+
+  Client(this.clientName, {this.debug = false, this.storeAPI}) {
     this.onLoginStateChanged.stream.listen((loginState) {
       print("LoginState: ${loginState.toString()}");
     });
@@ -647,12 +648,14 @@ class Client {
     this._lazyLoadMembers = newLazyLoadMembers;
     this.prevBatch = newPrevBatch;
 
-    if (this.store != null) {
-      await this.store.storeClient();
-      this._rooms = await this.store.getRoomList(onlyLeft: false);
-      this._sortRooms();
-      this.accountData = await this.store.getAccountData();
-      this.presences = await this.store.getPresences();
+    if (this.storeAPI != null) {
+      await this.storeAPI.storeClient();
+      if (this.store != null) {
+        this._rooms = await this.store.getRoomList(onlyLeft: false);
+        this._sortRooms();
+        this.accountData = await this.store.getAccountData();
+        this.presences = await this.store.getPresences();
+      }
     }
 
     _userEventSub ??= onUserEvent.stream.listen(this.handleUserUpdate);
@@ -666,7 +669,7 @@ class Client {
 
   /// Resets all settings and stops the synchronisation.
   void clear() {
-    this.store?.clear();
+    this.storeAPI?.clear();
     this._accessToken = this._homeserver = this._userID = this._deviceID = this
             ._deviceName =
         this._matrixVersions = this._lazyLoadMembers = this.prevBatch = null;
