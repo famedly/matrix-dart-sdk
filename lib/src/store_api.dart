@@ -33,9 +33,12 @@ import 'sync/event_update.dart';
 import 'sync/room_update.dart';
 import 'sync/user_update.dart';
 
-/// Responsible to store all data persistent and to query objects from the
-/// database.
 abstract class StoreAPI {
+  /// Whether this is a simple store which only stores the client credentials and
+  /// end to end encryption stuff or the whole sync payloads.
+  final bool extended = false;
+
+  /// Link back to the client.
   Client client;
 
   /// Will be automatically called when the client is logged in successfully.
@@ -43,6 +46,14 @@ abstract class StoreAPI {
 
   /// Clears all tables from the database.
   Future<void> clear();
+}
+
+/// Responsible to store all data persistent and to query objects from the
+/// database.
+abstract class ExtendedStoreAPI extends StoreAPI {
+  /// Whether this is a simple store which only stores the client credentials and
+  /// end to end encryption stuff or the whole sync payloads.
+  final bool extended = true;
 
   /// The current trans
   Future<void> setRoomPrevBatch(String roomId, String prevBatch);
