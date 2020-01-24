@@ -604,8 +604,7 @@ class Room {
         );
         client.onEvent.add(eventUpdate);
         client.store.storeEventUpdate(eventUpdate);
-        client.store.txn.rawUpdate(
-            "UPDATE Rooms SET prev_batch=? WHERE room_id=?", [resp["end"], id]);
+        client.store.setRoomPrevBatch(id, resp["end"]);
       }
       return;
     });
@@ -742,12 +741,6 @@ class Room {
       await requestHistory();
     }
     return timeline;
-  }
-
-  /// Load all participants for a given room from the store.
-  @deprecated
-  Future<List<User>> loadParticipants() async {
-    return await client.store.loadParticipants(this);
   }
 
   /// Returns all participants for this room. With lazy loading this

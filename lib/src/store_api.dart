@@ -38,16 +38,16 @@ import 'sync/user_update.dart';
 abstract class StoreAPI {
   Client client;
 
-  Future<String> queryPrevBatch();
-
   /// Will be automatically called when the client is logged in successfully.
   Future<void> storeClient();
 
   /// Clears all tables from the database.
   Future<void> clear();
 
-  var txn;
+  /// The current trans
+  Future<void> setRoomPrevBatch(String roomId, String prevBatch);
 
+  /// Performs these query or queries inside of an transaction.
   Future<void> transaction(void queries());
 
   /// Will be automatically called on every synchronisation. Must be called inside of
@@ -71,41 +71,27 @@ abstract class StoreAPI {
   /// Returns a User object by a given Matrix ID and a Room.
   Future<User> getUser({String matrixID, Room room});
 
-  /// Loads all Users in the database to provide a contact list
-  /// except users who are in the Room with the ID [exceptRoomID].
-  Future<List<User>> loadContacts({String exceptRoomID = ""});
-
-  /// Returns all users of a room by a given [roomID].
-  Future<List<User>> loadParticipants(Room room);
-
   /// Returns a list of events for the given room and sets all participants.
   Future<List<Event>> getEventList(Room room);
 
   /// Returns all rooms, the client is participating. Excludes left rooms.
   Future<List<Room>> getRoomList({bool onlyLeft = false});
 
-  /// Returns a room without events and participants.
-  @deprecated
-  Future<Room> getRoomById(String id);
-
-  Future<List<Map<String, dynamic>>> getStatesFromRoomId(String id);
-
+  /// Deletes this room from the database.
   Future<void> forgetRoom(String roomID);
 
+  /// Sets notification and highlight count to 0 for this room.
   Future<void> resetNotificationCount(String roomID);
 
   /// Searches for the event in the store.
   Future<Event> getEventById(String eventID, Room room);
 
+  /// Returns all account data for this client.
   Future<Map<String, AccountData>> getAccountData();
 
+  /// Returns all stored presences for this client.
   Future<Map<String, Presence>> getPresences();
 
+  /// Removes this event from the store.
   Future removeEvent(String eventId);
-
-  Future forgetNotification(String roomID);
-
-  Future addNotification(String roomID, String event_id, int uniqueID);
-
-  Future<List<Map<String, dynamic>>> getNotificationByRoom(String room_id);
 }
