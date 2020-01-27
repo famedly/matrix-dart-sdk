@@ -149,11 +149,17 @@ class User extends Event {
   /// The newest presence of this user if there is any and null if not.
   Presence get presence => room.client.presences[id];
 
-  /// Whether the client is allowed to ban/unban this user.
-  bool get canBan => room.canBan && powerLevel < room.ownPowerLevel;
+  /// Whether the client is able to ban/unban this user.
+  bool get canBan =>
+      membership != Membership.ban &&
+      room.canBan &&
+      powerLevel < room.ownPowerLevel;
 
-  /// Whether the client is allowed to kick this user.
-  bool get canKick => room.canKick && powerLevel < room.ownPowerLevel;
+  /// Whether the client is able to kick this user.
+  bool get canKick =>
+      [Membership.join, Membership.invite].contains(membership) &&
+      room.canKick &&
+      powerLevel < room.ownPowerLevel;
 
   /// Whether the client is allowed to change the power level of this user.
   /// Please be aware that you can only set the power level to at least your own!
