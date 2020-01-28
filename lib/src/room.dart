@@ -458,10 +458,11 @@ class Room {
     try {
       await client.jsonRequest(
           type: HTTPType.POST, action: "/client/r0/rooms/${id}/join");
-      if (states.containsKey(client.userID) &&
-          states[client.userID].content["is_direct"] is bool &&
-          states[client.userID].content["is_direct"]) {
-        await addToDirectChat(states[client.userID].sender.id);
+      final Event invitation = getState("m.room.member", client.userID);
+      if (invitation != null &&
+          invitation.content["is_direct"] is bool &&
+          invitation.content["is_direct"]) {
+        await addToDirectChat(invitation.sender.id);
       }
     } on MatrixException catch (exception) {
       if (exception.errorMessage == "No known servers") {
