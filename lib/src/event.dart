@@ -186,7 +186,7 @@ class Event {
         return EventTypes.RoomName;
       case "m.room.topic":
         return EventTypes.RoomTopic;
-      case "m.room.Aliases":
+      case "m.room.aliases":
         return EventTypes.RoomAliases;
       case "m.room.canonical_alias":
         return EventTypes.RoomCanonicalAlias;
