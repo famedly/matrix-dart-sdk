@@ -88,7 +88,7 @@ void main() {
       event = Event.fromJson(jsonObj, null);
       expect(event.type, EventTypes.RoomTopic);
 
-      jsonObj["type"] = "m.room.Aliases";
+      jsonObj["type"] = "m.room.aliases";
       event = Event.fromJson(jsonObj, null);
       expect(event.type, EventTypes.RoomAliases);
 
