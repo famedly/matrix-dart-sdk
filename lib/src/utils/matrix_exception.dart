@@ -100,7 +100,7 @@ class MatrixException implements Exception {
   Map<String, dynamic> get authenticationParams => raw["params"];
 
   /// Returns the list of already completed authentication flows from previous requests.
-  List<String> get completedAuthenticationFlows => List<String>.from(raw["completed"]);
+  List<String> get completedAuthenticationFlows => List<String>.from(raw["completed"] ?? []);
 }
 
 /// For each endpoint, a server offers one or more 'flows' that the client can use
