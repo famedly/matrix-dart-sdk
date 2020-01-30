@@ -4,8 +4,6 @@ stages:
   - deploy
 
 variables:
-  LC_ALL: C.UTF-8
-  LANG: "en_US.UTF-8"
   JEKYLL_ENV: production
 
 coverage:
