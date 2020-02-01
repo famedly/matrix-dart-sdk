@@ -345,14 +345,6 @@ void main() {
       expect(newID, "!1234:fakeServer.notExisting");
     });
 
-    test('upload', () async {
-      final MatrixFile testFile =
-          MatrixFile(bytes: [], path: "fake/path/file.jpeg");
-
-      final dynamic resp = await matrix.upload(testFile);
-      expect(resp, "mxc://example.com/AQwafuaFswefuhsfAFAgsw");
-    });
-
     test('setAvatar', () async {
       final MatrixFile testFile =
           MatrixFile(bytes: [], path: "fake/path/file.jpeg");
