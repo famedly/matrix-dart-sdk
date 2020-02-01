@@ -781,18 +781,26 @@ class Client {
   /// and returns the mxc url as a string.
   Future<String> upload(MatrixFile file) async {
     dynamic fileBytes;
-    if (this.homeserver != "https://fakeServer.notExisting") {
-      fileBytes = file.bytes;
+    // For testing
+    if (this.homeserver.toLowerCase() == "https://fakeserver.notexisting") {
+      return "mxc://example.com/AQwafuaFswefuhsfAFAgsw";
     }
+    Map<String, String> headers = {};
+    headers["Authorization"] = "Bearer $accessToken";
+    headers["Content-Type"] = mime(file.path);
     String fileName = file.path.split("/").last.toLowerCase();
-    String mimeType = mime(file.path);
-    print("[UPLOADING] $fileName, type: $mimeType, size: ${fileBytes?.length}");
-    final Map<String, dynamic> resp = await jsonRequest(
-        type: HTTPType.POST,
-        action: "/media/r0/upload?filename=$fileName",
-        data: fileBytes,
-        contentType: mimeType);
-    return resp["content_uri"];
+    final url = "$homeserver/_matrix/media/r0/upload?filename=$fileName";
+    final streamedRequest = http.StreamedRequest('POST', Uri.parse(url))
+      ..headers.addAll(headers);
+    streamedRequest.contentLength = await file.bytes.length;
+    streamedRequest.sink.add(file.bytes);
+    streamedRequest.sink.close();
+    print("[UPLOADING] $fileName, size: ${fileBytes?.length}");
+    var streamedResponse = await streamedRequest.send();
+    Map<String, dynamic> jsonResponse = json.decode(
+      String.fromCharCodes(await streamedResponse.stream.first),
+    );
+    return jsonResponse["content_uri"];
   }
 
   Future<dynamic> _syncRequest;
