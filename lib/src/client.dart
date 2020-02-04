@@ -29,6 +29,7 @@ import 'package:famedlysdk/src/account_data.dart';
 import 'package:famedlysdk/src/presence.dart';
 import 'package:famedlysdk/src/store_api.dart';
 import 'package:famedlysdk/src/sync/user_update.dart';
+import 'package:famedlysdk/src/utils/device_keys_list.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:famedlysdk/src/utils/open_id_credentials.dart';
 import 'package:famedlysdk/src/utils/turn_server_credentials.dart';
@@ -540,6 +541,12 @@ class Client {
   }
 
   static String syncFilters = '{"room":{"state":{"lazy_load_members":true}}}';
+  static const List<String> supportedDirectEncryptionAlgorithms = [
+    "m.olm.v1.curve25519-aes-sha2"
+  ];
+  static const List<String> supportedGroupEncryptionAlgorithms = [
+    "m.megolm.v1.aes-sha2"
+  ];
 
   http.Client httpClient = http.Client();
 
@@ -630,15 +637,16 @@ class Client {
   /// ```
   ///
   /// Sends [LoginState.logged] to [onLoginStateChanged].
-  void connect(
-      {String newToken,
-      String newHomeserver,
-      String newUserID,
-      String newDeviceName,
-      String newDeviceID,
-      List<String> newMatrixVersions,
-      bool newLazyLoadMembers,
-      String newPrevBatch}) async {
+  void connect({
+    String newToken,
+    String newHomeserver,
+    String newUserID,
+    String newDeviceName,
+    String newDeviceID,
+    List<String> newMatrixVersions,
+    bool newLazyLoadMembers,
+    String newPrevBatch,
+  }) async {
     this._accessToken = newToken;
     this._homeserver = newHomeserver;
     this._userID = newUserID;
@@ -650,6 +658,7 @@ class Client {
 
     if (this.storeAPI != null) {
       await this.storeAPI.storeClient();
+      _userDeviceKeys = await this.storeAPI.getUserDeviceKeys();
       if (this.store != null) {
         this._rooms = await this.store.getRoomList(onlyLeft: false);
         this._sortRooms();
@@ -833,6 +842,7 @@ class Client {
         _sortRooms();
       }
       this.prevBatch = syncResp["next_batch"];
+      unawaited(_updateUserDeviceKeys());
       if (hash == _syncRequest.hashCode) unawaited(_sync());
     } on MatrixException catch (exception) {
       onError.add(exception);
@@ -866,7 +876,27 @@ class Client {
         sync["to_device"]["events"] is List<dynamic>) {
       _handleGlobalEvents(sync["to_device"]["events"], "to_device");
     }
+    if (sync["device_lists"] is Map<String, dynamic>) {
+      _handleDeviceListsEvents(sync["device_lists"]);
+    }
     onSync.add(sync);
+  }
+
+  void _handleDeviceListsEvents(Map<String, dynamic> deviceLists) {
+    if (deviceLists["changed"] is List) {
+      for (final userId in deviceLists["changed"]) {
+        print("The device list of $userId has changed. Mark as outdated!");
+        if (_userDeviceKeys.containsKey(userId)) {
+          _userDeviceKeys[userId].outdated = true;
+        }
+      }
+      for (final userId in deviceLists["left"]) {
+        print("The device list of $userId is no longer relevant! Remove it!");
+        if (_userDeviceKeys.containsKey(userId)) {
+          _userDeviceKeys.remove(userId);
+        }
+      }
+    }
   }
 
   void _handleRooms(Map<String, dynamic> rooms, Membership membership) {
@@ -1011,6 +1041,13 @@ class Client {
 
   void _handleEvent(Map<String, dynamic> event, String roomID, String type) {
     if (event["type"] is String && event["content"] is Map<String, dynamic>) {
+      // The client must ignore any new m.room.encryption event to prevent
+      // man-in-the-middle attacks!
+      if (event["type"] == "m.room.encryption" &&
+          getRoomById(roomID).encrypted) {
+        return;
+      }
+
       EventUpdate update = EventUpdate(
         eventType: event["type"],
         roomID: roomID,
@@ -1161,5 +1198,66 @@ class Client {
       data: {},
     );
     return OpenIdCredentials.fromJson(response);
+  }
+
+  /// A map of known device keys per user.
+  Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
+  Map<String, DeviceKeysList> _userDeviceKeys = {};
+
+  Future<Set<String>> _getUserIdsInEncryptedRooms() async {
+    Set<String> userIds = {};
+    for (int i = 0; i < rooms.length; i++) {
+      if (rooms[i].encrypted) {
+        List<User> userList = await rooms[i].requestParticipants();
+        for (User user in userList) {
+          userIds.add(user.id);
+        }
+      }
+    }
+    return userIds;
+  }
+
+  Future<void> _updateUserDeviceKeys() async {
+    Set<String> trackedUserIds = await _getUserIdsInEncryptedRooms();
+    print("We are tracking the devices of these users:");
+    print(trackedUserIds);
+
+    // Remove all userIds we no longer need to track the devices of.
+    _userDeviceKeys
+        .removeWhere((String userId, v) => !trackedUserIds.contains(userId));
+
+    // Check if there are outdated device key lists. Add it to the set.
+    Map<String, dynamic> outdatedLists = {};
+    for (String userId in trackedUserIds) {
+      if (!userDeviceKeys.containsKey(userId)) {
+        print("Create new device list for user $userId");
+        _userDeviceKeys[userId] = DeviceKeysList(userId);
+      }
+      DeviceKeysList deviceKeysList = userDeviceKeys[userId];
+      if (deviceKeysList.outdated) {
+        print(
+            "The device keys list of $userId is outdated. Add to the request");
+        outdatedLists[userId] = [];
+      }
+    }
+
+    // Request the missing device key lists.
+    if (outdatedLists.isNotEmpty) {
+      final Map<String, dynamic> response = await this.jsonRequest(
+          type: HTTPType.POST,
+          action: "/client/r0/keys/query",
+          data: {"timeout": 10000, "device_keys": outdatedLists});
+      for (final rawDeviceKeyListEntry in response["device_keys"].entries) {
+        final String userId = rawDeviceKeyListEntry.key;
+        _userDeviceKeys[userId].deviceKeys = {};
+        print("Got device key list of $userId. Store it now!");
+        for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
+          _userDeviceKeys[userId].deviceKeys[rawDeviceKeyEntry.key] =
+              DeviceKeys.fromJson(rawDeviceKeyEntry.value);
+        }
+        _userDeviceKeys[userId].outdated = false;
+      }
+    }
+    await this.storeAPI?.storeUserDeviceKeys(userDeviceKeys);
   }
 }

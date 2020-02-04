@@ -298,8 +298,8 @@ void main() {
           content: {"displayname": "alice"},
           stateKey: "@alice:test.abc"));
       final List<User> userList = room.getParticipants();
-      expect(userList.length, 4);
-      expect(userList[3].displayName, "alice");
+      expect(userList.length, 5);
+      expect(userList[3].displayName, "Alice Margatroid");
     });
 
     test("addToDirectChat", () async {

@@ -25,6 +25,7 @@ import 'dart:async';
 import 'dart:core';
 import 'package:famedlysdk/src/account_data.dart';
 import 'package:famedlysdk/src/presence.dart';
+import 'package:famedlysdk/src/utils/device_keys_list.dart';
 import 'client.dart';
 import 'event.dart';
 import 'room.dart';
@@ -46,6 +47,10 @@ abstract class StoreAPI {
 
   /// Clears all tables from the database.
   Future<void> clear();
+
+  Future<void> storeUserDeviceKeys(Map<String, DeviceKeysList> userDeviceKeys);
+
+  Future<Map<String, DeviceKeysList>> getUserDeviceKeys();
 }
 
 /// Responsible to store all data persistent and to query objects from the

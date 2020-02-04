@@ -23,6 +23,7 @@
 
 import 'dart:async';
 
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/event.dart';
 import 'package:famedlysdk/src/room_account_data.dart';
@@ -761,6 +762,7 @@ class Room {
   /// Request the full list of participants from the server. The local list
   /// from the store is not complete if the client uses lazy loading.
   Future<List<User>> requestParticipants() async {
+    if (participantListComplete) return getParticipants();
     List<User> participants = [];
 
     dynamic res = await client.jsonRequest(
@@ -768,10 +770,22 @@ class Room {
 
     for (num i = 0; i < res["chunk"].length; i++) {
       User newUser = Event.fromJson(res["chunk"][i], this).asUser;
-      if (newUser.membership != Membership.leave) participants.add(newUser);
+      if (![Membership.leave, Membership.ban].contains(newUser.membership)) {
+        participants.add(newUser);
+        setState(newUser);
+      }
     }
 
     return participants;
+  }
+
+  /// Checks if the local participant list of joined and invited users is complete.
+  bool get participantListComplete {
+    List<User> knownParticipants = getParticipants();
+    knownParticipants.removeWhere(
+        (u) => ![Membership.join, Membership.invite].contains(u.membership));
+    return knownParticipants.length ==
+        (this.mJoinedMemberCount ?? 0) + (this.mInvitedMemberCount ?? 0);
   }
 
   /// Returns the [User] object for the given [mxID] or requests it from
@@ -1235,4 +1249,42 @@ class Room {
   /// Whether the user has the permission to change the history visibility.
   bool get canChangeHistoryVisibility =>
       canSendEvent("m.room.history_visibility");
+
+  /// Returns the encryption algorithm. Currently only `m.megolm.v1.aes-sha2` is supported.
+  /// Returns null if there is no encryption algorithm.
+  String get encryptionAlgorithm => getState("m.room.encryption") != null
+      ? getState("m.room.encryption").content["algorithm"].toString()
+      : null;
+
+  /// Checks if this room is encrypted.
+  bool get encrypted => encryptionAlgorithm != null;
+
+  Future<void> enableEncryption({int algorithmIndex = 0}) async {
+    if (encrypted) throw ("Encryption is already enabled!");
+    final String algorithm =
+        Client.supportedGroupEncryptionAlgorithms[algorithmIndex];
+    await client.jsonRequest(
+      type: HTTPType.PUT,
+      action: "/client/r0/rooms/$id/state/m.room.encryption/",
+      data: {
+        "algorithm": algorithm,
+      },
+    );
+    return;
+  }
+
+  Future<List<DeviceKeys>> getUserDeviceKeys() async {
+    List<DeviceKeys> deviceKeys = [];
+    List<User> users = await requestParticipants();
+    for (final userDeviceKeyEntry in client.userDeviceKeys.entries) {
+      if (users.indexWhere((u) => u.id == userDeviceKeyEntry.key) == -1) {
+        continue;
+      }
+      for (DeviceKeys deviceKeyEntry
+          in userDeviceKeyEntry.value.deviceKeys.values) {
+        deviceKeys.add(deviceKeyEntry);
+      }
+    }
+    return deviceKeys;
+  }
 }
