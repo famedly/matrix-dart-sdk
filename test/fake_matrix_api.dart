@@ -364,7 +364,15 @@ class FakeMatrixApi extends MockClient {
                 "state_key": "",
                 "origin_server_ts": 1417731086796,
                 "event_id": "66697273743032:example.com"
-              }
+              },
+              {
+                "sender": "@alice:example.com",
+                "type": "m.room.encryption",
+                "state_key": "",
+                "content": {"algorithm": "m.megolm.v1.aes-sha2"},
+                "origin_server_ts": 1417731086795,
+                "event_id": "666972737430353:example.com"
+              },
             ]
           },
           "timeline": {
@@ -582,10 +590,10 @@ class FakeMatrixApi extends MockClient {
                 "type": "m.room.member",
                 "event_id": "§143273582443PhrSn:example.org",
                 "room_id": "!636q39766251:example.com",
-                "sender": "@alice:example.org",
+                "sender": "@alice:example.com",
                 "origin_server_ts": 1432735824653,
                 "unsigned": {"age": 1234},
-                "state_key": "@alice:example.org"
+                "state_key": "@alice:example.com"
               }
             ]
           },
@@ -760,6 +768,34 @@ class FakeMatrixApi extends MockClient {
           {"available": true},
     },
     "POST": {
+      "/client/r0/keys/query": (var req) => {
+            "failures": {},
+            "device_keys": {
+              "@alice:example.com": {
+                "JLAFKJWSCS": {
+                  "user_id": "@alice:example.com",
+                  "device_id": "JLAFKJWSCS",
+                  "algorithms": [
+                    "m.olm.v1.curve25519-aes-sha2",
+                    "m.megolm.v1.aes-sha2"
+                  ],
+                  "keys": {
+                    "curve25519:JLAFKJWSCS":
+                        "3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI",
+                    "ed25519:JLAFKJWSCS":
+                        "lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI"
+                  },
+                  "signatures": {
+                    "@alice:example.com": {
+                      "ed25519:JLAFKJWSCS":
+                          "dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA"
+                    }
+                  },
+                  "unsigned": {"device_display_name": "Alice's mobile phone"}
+                }
+              }
+            }
+          },
       "/client/r0/register": (var req) => {"user_id": "@testuser:example.com"},
       "/client/r0/register?kind=user": (var req) =>
           {"user_id": "@testuser:example.com"},

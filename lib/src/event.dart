@@ -208,9 +208,9 @@ class Event {
         return EventTypes.Sticker;
       case "m.room.message":
         return EventTypes.Message;
-      case "m.call.encrypted":
+      case "m.room.encrypted":
         return EventTypes.Encrypted;
-      case "m.call.encryption":
+      case "m.room.encryption":
         return EventTypes.Encryption;
       case "m.call.invite":
         return EventTypes.CallInvite;
