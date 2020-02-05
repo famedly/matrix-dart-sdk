@@ -1219,6 +1219,7 @@ class Client {
 
   Future<void> _updateUserDeviceKeys() async {
     Set<String> trackedUserIds = await _getUserIdsInEncryptedRooms();
+    trackedUserIds.add(this.userID);
     print("We are tracking the devices of these users:");
     print(trackedUserIds);
 
