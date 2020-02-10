@@ -213,7 +213,7 @@ class Room {
     if (canonicalAlias != null &&
         canonicalAlias.isNotEmpty &&
         canonicalAlias.length > 3) {
-      return canonicalAlias.substring(1, canonicalAlias.length).split(":")[0];
+      return canonicalAlias.localpart;
     }
     List<String> heroes = [];
     if (mHeroes != null &&

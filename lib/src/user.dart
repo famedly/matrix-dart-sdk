@@ -103,9 +103,7 @@ class User extends Event {
   /// Returns the displayname or the local part of the Matrix ID if the user
   /// has no displayname.
   String calcDisplayname() => (displayName == null || displayName.isEmpty)
-      ? (stateKey != null
-          ? stateKey.replaceFirst("@", "").split(":")[0]
-          : "Unknown User")
+      ? (stateKey != null ? stateKey.localpart : "Unknown User")
       : displayName;
 
   /// Call the Matrix API to kick this user from this room.

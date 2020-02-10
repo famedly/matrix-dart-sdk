@@ -421,7 +421,7 @@ class Client {
   Future<List<User>> loadFamedlyContacts() async {
     List<User> contacts = [];
     Room contactDiscoveryRoom =
-        this.getRoomByAlias("#famedlyContactDiscovery:${userID.split(":")[1]}");
+        this.getRoomByAlias("#famedlyContactDiscovery:${userID.domain}");
     if (contactDiscoveryRoom != null) {
       contacts = await contactDiscoveryRoom.requestParticipants();
     } else {
