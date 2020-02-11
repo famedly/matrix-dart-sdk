@@ -41,7 +41,7 @@ void main() {
     final String formatted_body = "<b>Hello</b> World";
 
     final String contentJson =
-        '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formatted_body"}';
+        '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formatted_body","m.relates_to":{"m.in_reply_to":{"event_id":"\$1234:example.com"}}}';
 
     Map<String, dynamic> jsonObj = {
       "event_id": id,
@@ -67,6 +67,7 @@ void main() {
       expect(event.formattedText, formatted_body);
       expect(event.body, body);
       expect(event.type, EventTypes.Message);
+      expect(event.isReply, true);
       jsonObj["state_key"] = "";
       Event state = Event.fromJson(jsonObj, null);
       expect(state.eventId, id);

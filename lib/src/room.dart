@@ -290,13 +290,15 @@ class Room {
     return res["event_id"];
   }
 
-  Future<String> sendTextEvent(String message, {String txid}) =>
-      sendEvent({"msgtype": "m.text", "body": message}, txid: txid);
+  Future<String> sendTextEvent(String message,
+          {String txid, Event inReplyTo}) =>
+      sendEvent({"msgtype": "m.text", "body": message},
+          txid: txid, inReplyTo: inReplyTo);
 
   /// Sends a [file] to this room after uploading it. The [msgType] is optional
   /// and will be detected by the mimetype of the file.
   Future<String> sendFileEvent(MatrixFile file,
-      {String msgType = "m.file", String txid}) async {
+      {String msgType = "m.file", String txid, Event inReplyTo}) async {
     if (msgType == "m.image") return sendImageEvent(file);
     if (msgType == "m.audio") return sendVideoEvent(file);
     if (msgType == "m.video") return sendAudioEvent(file);
@@ -315,11 +317,11 @@ class Room {
         "size": file.size,
       }
     };
-    return await sendEvent(content, txid: txid);
+    return await sendEvent(content, txid: txid, inReplyTo: inReplyTo);
   }
 
   Future<String> sendAudioEvent(MatrixFile file,
-      {String txid, int width, int height}) async {
+      {String txid, int width, int height, Event inReplyTo}) async {
     String fileName = file.path.split("/").last;
     final String uploadResp = await client.upload(file);
     Map<String, dynamic> content = {
@@ -332,11 +334,11 @@ class Room {
         "size": file.size,
       }
     };
-    return await sendEvent(content, txid: txid);
+    return await sendEvent(content, txid: txid, inReplyTo: inReplyTo);
   }
 
   Future<String> sendImageEvent(MatrixFile file,
-      {String txid, int width, int height}) async {
+      {String txid, int width, int height, Event inReplyTo}) async {
     String fileName = file.path.split("/").last;
     final String uploadResp = await client.upload(file);
     Map<String, dynamic> content = {
@@ -350,7 +352,7 @@ class Room {
         "h": height,
       },
     };
-    return await sendEvent(content, txid: txid);
+    return await sendEvent(content, txid: txid, inReplyTo: inReplyTo);
   }
 
   Future<String> sendVideoEvent(MatrixFile file,
@@ -360,7 +362,8 @@ class Room {
       int duration,
       MatrixFile thumbnail,
       int thumbnailWidth,
-      int thumbnailHeight}) async {
+      int thumbnailHeight,
+      Event inReplyTo}) async {
     String fileName = file.path.split("/").last;
     final String uploadResp = await client.upload(file);
     Map<String, dynamic> content = {
@@ -396,10 +399,11 @@ class Room {
         content["info"]["thumbnail_info"]["h"] = thumbnailHeight;
       }
     }
-    return await sendEvent(content, txid: txid);
+    return await sendEvent(content, txid: txid, inReplyTo: inReplyTo);
   }
 
-  Future<String> sendEvent(Map<String, dynamic> content, {String txid}) async {
+  Future<String> sendEvent(Map<String, dynamic> content,
+      {String txid, Event inReplyTo}) async {
     final String type = "m.room.message";
 
     // Create new transaction id
@@ -409,6 +413,23 @@ class Room {
       messageID = "msg$now";
     } else {
       messageID = txid;
+    }
+
+    if (inReplyTo != null) {
+      String replyText = "<${inReplyTo.senderId}> " + inReplyTo.body;
+      List<String> replyTextLines = replyText.split("\n");
+      for (int i = 0; i < replyTextLines.length; i++) {
+        replyTextLines[i] = "> " + replyTextLines[i];
+      }
+      replyText = replyTextLines.join("\n");
+      content["format"] = "org.matrix.custom.html";
+      content["formatted_body"] = '<mx-reply><blockquote><a href="https://matrix.to/#/${inReplyTo.room.id}/${inReplyTo.eventId}">In reply to</a> <a href="https://matrix.to/#/${inReplyTo.senderId}">${inReplyTo.senderId}</a><br>${inReplyTo.body}</blockquote></mx-reply>${content["formatted_body"] ?? content["body"]}';
+      content["body"] = replyText + "\n\n${content["body"] ?? ""}";
+      content["m.relates_to"] = {
+        "m.in_reply_to": {
+          "event_id": inReplyTo.eventId,
+        },
+      };
     }
 
     // Display a *sending* event and store it.
