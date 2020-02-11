@@ -885,13 +885,11 @@ class Client {
   void _handleDeviceListsEvents(Map<String, dynamic> deviceLists) {
     if (deviceLists["changed"] is List) {
       for (final userId in deviceLists["changed"]) {
-        print("The device list of $userId has changed. Mark as outdated!");
         if (_userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys[userId].outdated = true;
         }
       }
       for (final userId in deviceLists["left"]) {
-        print("The device list of $userId is no longer relevant! Remove it!");
         if (_userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys.remove(userId);
         }
@@ -1220,8 +1218,6 @@ class Client {
   Future<void> _updateUserDeviceKeys() async {
     Set<String> trackedUserIds = await _getUserIdsInEncryptedRooms();
     trackedUserIds.add(this.userID);
-    print("We are tracking the devices of these users:");
-    print(trackedUserIds);
 
     // Remove all userIds we no longer need to track the devices of.
     _userDeviceKeys
@@ -1231,13 +1227,10 @@ class Client {
     Map<String, dynamic> outdatedLists = {};
     for (String userId in trackedUserIds) {
       if (!userDeviceKeys.containsKey(userId)) {
-        print("Create new device list for user $userId");
         _userDeviceKeys[userId] = DeviceKeysList(userId);
       }
       DeviceKeysList deviceKeysList = userDeviceKeys[userId];
       if (deviceKeysList.outdated) {
-        print(
-            "The device keys list of $userId is outdated. Add to the request");
         outdatedLists[userId] = [];
       }
     }
@@ -1251,7 +1244,6 @@ class Client {
       for (final rawDeviceKeyListEntry in response["device_keys"].entries) {
         final String userId = rawDeviceKeyListEntry.key;
         _userDeviceKeys[userId].deviceKeys = {};
-        print("Got device key list of $userId. Store it now!");
         for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
           _userDeviceKeys[userId].deviceKeys[rawDeviceKeyEntry.key] =
               DeviceKeys.fromJson(rawDeviceKeyEntry.value);
