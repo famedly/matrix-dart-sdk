@@ -23,6 +23,7 @@
 
 import 'dart:convert';
 import 'package:famedlysdk/famedlysdk.dart';
+import 'package:famedlysdk/src/utils/matrix_id_string_extension.dart';
 import 'package:famedlysdk/src/utils/receipt.dart';
 import './room.dart';
 
@@ -366,6 +367,23 @@ class Event {
   /// Redacts this event. Returns [ErrorResponse] on error.
   Future<dynamic> redact({String reason, String txid}) =>
       room.redactEvent(eventId, reason: reason, txid: txid);
+
+  /// Whether this event is in reply to another event.
+  bool get isReply =>
+      content['m.relates_to'] is Map<String, dynamic> &&
+      content['m.relates_to']['m.in_reply_to'] is Map<String, dynamic> &&
+      content['m.relates_to']['m.in_reply_to']['event_id'] is String &&
+      (content['m.relates_to']['m.in_reply_to']['event_id'] as String)
+          .isValidMatrixId &&
+      (content['m.relates_to']['m.in_reply_to']['event_id'] as String).sigil ==
+          "\$";
+
+  /// Searches for the reply event in the given timeline.
+  Future<Event> getReplyEvent(Timeline timeline) async {
+    if (!isReply) return null;
+    final String replyEventId = content['m.relates_to']['m.in_reply_to'];
+    return await timeline.getEventById(replyEventId);
+  }
 }
 
 enum MessageTypes {
