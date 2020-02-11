@@ -23,7 +23,6 @@
 
 import 'dart:convert';
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/utils/matrix_id_string_extension.dart';
 import 'package:famedlysdk/src/utils/receipt.dart';
 import './room.dart';
 
@@ -374,9 +373,7 @@ class Event {
       content['m.relates_to']['m.in_reply_to'] is Map<String, dynamic> &&
       content['m.relates_to']['m.in_reply_to']['event_id'] is String &&
       (content['m.relates_to']['m.in_reply_to']['event_id'] as String)
-          .isValidMatrixId &&
-      (content['m.relates_to']['m.in_reply_to']['event_id'] as String).sigil ==
-          "\$";
+          .isNotEmpty;
 
   /// Searches for the reply event in the given timeline.
   Future<Event> getReplyEvent(Timeline timeline) async {
