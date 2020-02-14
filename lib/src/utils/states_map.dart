@@ -9,6 +9,7 @@ class StatesMap {
   /// If you just enter a MatrixID, it will try to return the corresponding m.room.member event.
   dynamic operator [](String key) {
     //print("[Warning] This method will be depracated in the future!");
+    if (key == null) return null;
     if (key.startsWith("@") && key.contains(":")) {
       if (!states.containsKey("m.room.member")) states["m.room.member"] = {};
       return states["m.room.member"][key];
