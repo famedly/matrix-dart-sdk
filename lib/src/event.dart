@@ -44,7 +44,7 @@ class Event {
   /// The user who has sent this event if it is not a global account data event.
   final String senderId;
 
-  User get sender => room.getUserByMXIDSync(senderId);
+  User get sender => room.getUserByMXIDSync(senderId ?? "@unknown");
 
   /// The time this event has received at the server. May be null for events like
   /// account data.
