@@ -92,18 +92,6 @@ class Timeline {
     try {
       if (eventUpdate.roomID != room.id) return;
 
-      if (eventUpdate.eventType == "m.room.encrypted") {
-        Event decrypted =
-            room.decryptGroupMessage(Event.fromJson(eventUpdate.content, room));
-        eventUpdate = EventUpdate(
-          eventType: decrypted.typeKey,
-          content: eventUpdate.content,
-          type: eventUpdate.type,
-          roomID: eventUpdate.roomID,
-        );
-        eventUpdate.content["content"] = decrypted.content;
-      }
-
       if (eventUpdate.type == "timeline" || eventUpdate.type == "history") {
         // Redaction events are handled as modification for existing events.
         if (eventUpdate.eventType == "m.room.redaction") {

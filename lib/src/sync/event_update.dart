@@ -21,6 +21,8 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import '../../famedlysdk.dart';
+
 /// Represents a new event (e.g. a message in a room) or an update for an
 /// already known event.
 class EventUpdate {
@@ -39,4 +41,23 @@ class EventUpdate {
   final Map<String, dynamic> content;
 
   EventUpdate({this.eventType, this.roomID, this.type, this.content});
+
+  EventUpdate decrypt(Room room) {
+    if (eventType != "m.room.encrypted") {
+      return this;
+    }
+    try {
+      Event decrpytedEvent =
+          room.decryptGroupMessage(Event.fromJson(content, room));
+      return EventUpdate(
+        eventType: eventType,
+        roomID: roomID,
+        type: type,
+        content: decrpytedEvent.toJson(),
+      );
+    } catch (e) {
+      print("[LibOlm] Could not decrypt megolm event: " + e.toString());
+      return this;
+    }
+  }
 }

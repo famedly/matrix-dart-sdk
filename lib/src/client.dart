@@ -1178,20 +1178,7 @@ class Client {
       );
       this.store?.storeEventUpdate(update);
       if (event["type"] == "m.room.encrypted") {
-        Room room = getRoomById(roomID);
-        try {
-          Event decrpytedEvent =
-              room.decryptGroupMessage(Event.fromJson(event, room));
-          event = decrpytedEvent.toJson();
-          update = EventUpdate(
-            eventType: event["type"],
-            roomID: roomID,
-            type: type,
-            content: event,
-          );
-        } catch (e) {
-          print("[LibOlm] Could not decrypt megolm event: " + e.toString());
-        }
+        update = update.decrypt(this.getRoomById(update.roomID));
       }
       _updateRoomsByEventUpdate(update);
       onEvent.add(update);
