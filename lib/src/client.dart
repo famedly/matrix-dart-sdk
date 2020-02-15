@@ -24,6 +24,7 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:canonical_json/canonical_json.dart';
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/account_data.dart';
 import 'package:famedlysdk/src/presence.dart';
@@ -32,7 +33,9 @@ import 'package:famedlysdk/src/sync/user_update.dart';
 import 'package:famedlysdk/src/utils/device_keys_list.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:famedlysdk/src/utils/open_id_credentials.dart';
+import 'package:famedlysdk/src/utils/to_device_event.dart';
 import 'package:famedlysdk/src/utils/turn_server_credentials.dart';
+import 'package:olm/olm.dart' as olm;
 import 'package:pedantic/pedantic.dart';
 import 'room.dart';
 import 'event.dart';
@@ -116,6 +119,16 @@ class Client {
   /// A list of all rooms the user is participating or invited.
   List<Room> get rooms => _rooms;
   List<Room> _rooms = [];
+
+  olm.Account _olmAccount;
+
+  /// Returns the base64 encoded keys to store them in a store.
+  /// This String should **never** leave the device!
+  String get pickledOlmAccount =>
+      encryptionEnabled ? _olmAccount.pickle(userID) : null;
+
+  /// Whether this client supports end-to-end encryption using olm.
+  bool get encryptionEnabled => _olmAccount != null;
 
   /// Warning! This endpoint is for testing only!
   set rooms(List<Room> newList) {
@@ -284,6 +297,9 @@ class Client {
           newDeviceID: response["device_id"],
           newMatrixVersions: matrixVersions,
           newLazyLoadMembers: lazyLoadMembers);
+      if (await this._uploadKeys(uploadDeviceKeys: true) == false) {
+        await this.logout();
+      }
     }
     return response;
   }
@@ -319,13 +335,18 @@ class Client {
         loginResp.containsKey("access_token") &&
         loginResp.containsKey("device_id")) {
       await this.connect(
-          newToken: loginResp["access_token"],
-          newUserID: loginResp["user_id"],
-          newHomeserver: homeserver,
-          newDeviceName: initialDeviceDisplayName ?? "",
-          newDeviceID: loginResp["device_id"],
-          newMatrixVersions: matrixVersions,
-          newLazyLoadMembers: lazyLoadMembers);
+        newToken: loginResp["access_token"],
+        newUserID: loginResp["user_id"],
+        newHomeserver: homeserver,
+        newDeviceName: initialDeviceDisplayName ?? "",
+        newDeviceID: loginResp["device_id"],
+        newMatrixVersions: matrixVersions,
+        newLazyLoadMembers: lazyLoadMembers,
+      );
+      if (await this._uploadKeys(uploadDeviceKeys: true) == false) {
+        await this.logout();
+        return false;
+      }
       return true;
     }
     return false;
@@ -564,6 +585,11 @@ class Client {
   /// Outside of rooms there are account updates like account_data or presences.
   final StreamController<UserUpdate> onUserEvent = StreamController.broadcast();
 
+  /// The onToDeviceEvent is called when there comes a new to device event. It is
+  /// already decrypted if necessary.
+  final StreamController<ToDeviceEvent> onToDeviceEvent =
+      StreamController.broadcast();
+
   /// Called when the login state e.g. user gets logged out.
   final StreamController<LoginState> onLoginStateChanged =
       StreamController.broadcast();
@@ -646,6 +672,7 @@ class Client {
     List<String> newMatrixVersions,
     bool newLazyLoadMembers,
     String newPrevBatch,
+    String newOlmAccount,
   }) async {
     this._accessToken = newToken;
     this._homeserver = newHomeserver;
@@ -656,9 +683,46 @@ class Client {
     this._lazyLoadMembers = newLazyLoadMembers;
     this.prevBatch = newPrevBatch;
 
+    // Try to create a new olm account or restore a previous one.
+    if (newOlmAccount == null) {
+      try {
+        await olm.init();
+        this._olmAccount = olm.Account();
+        this._olmAccount.create();
+      } catch (_) {
+        this._olmAccount = null;
+      }
+    } else {
+      try {
+        await olm.init();
+        this._olmAccount = olm.Account();
+        this._olmAccount.unpickle(userID, newOlmAccount);
+      } catch (_) {
+        this._olmAccount = null;
+      }
+    }
+
     if (this.storeAPI != null) {
       await this.storeAPI.storeClient();
       _userDeviceKeys = await this.storeAPI.getUserDeviceKeys();
+      final String olmSessionPickleString =
+          await storeAPI.getItem("/clients/$userID/olm-sessions");
+      if (olmSessionPickleString != null) {
+        final Map<String, List<String>> pickleMap =
+            json.decode(olmSessionPickleString);
+        for (var entry in pickleMap.entries) {
+          for (String pickle in entry.value) {
+            _olmSessions[entry.key] = [];
+            try {
+              olm.Session session = olm.Session();
+              session.unpickle(userID, pickle);
+              _olmSessions[entry.key].add(session);
+            } catch (e) {
+              print("[LibOlm] Could not unpickle olm session: " + e.toString());
+            }
+          }
+        }
+      }
       if (this.store != null) {
         this._rooms = await this.store.getRoomList(onlyLeft: false);
         this._sortRooms();
@@ -852,6 +916,7 @@ class Client {
     }
   }
 
+  /// Use this method only for testing utilities!
   void handleSync(dynamic sync) {
     if (sync["rooms"] is Map<String, dynamic>) {
       if (sync["rooms"]["join"] is Map<String, dynamic>) {
@@ -874,26 +939,85 @@ class Client {
     }
     if (sync["to_device"] is Map<String, dynamic> &&
         sync["to_device"]["events"] is List<dynamic>) {
-      _handleGlobalEvents(sync["to_device"]["events"], "to_device");
+      _handleToDeviceEvents(sync["to_device"]["events"]);
     }
     if (sync["device_lists"] is Map<String, dynamic>) {
       _handleDeviceListsEvents(sync["device_lists"]);
     }
+    if (sync["device_one_time_keys_count"] is Map<String, dynamic>) {
+      _handleDeviceOneTimeKeysCount(sync["device_one_time_keys_count"]);
+    }
     onSync.add(sync);
+  }
+
+  void _handleDeviceOneTimeKeysCount(
+      Map<String, dynamic> deviceOneTimeKeysCount) {
+    if (!encryptionEnabled) return;
+    // Check if there are at least half of max_number_of_one_time_keys left on the server
+    // and generate and upload more if not.
+    if (deviceOneTimeKeysCount["signed_curve25519"] is int) {
+      final int oneTimeKeysCount = deviceOneTimeKeysCount["signed_curve25519"];
+      if (oneTimeKeysCount < (_olmAccount.max_number_of_one_time_keys() / 2)) {
+        // Generate and upload more one time keys:
+        _uploadKeys();
+      }
+    }
+  }
+
+  /// Clears the outboundGroupSession from all rooms where this user is
+  /// participating. Should be called when the user's devices list has changed.
+  void _clearOutboundGroupSessionsByUserId(String userId) {
+    for (Room room in rooms) {
+      if (!room.encrypted) continue;
+      room.requestParticipants().then((List<User> users) {
+        if (users.indexWhere((u) =>
+                u.id == userId &&
+                [Membership.join, Membership.invite].contains(u.membership)) !=
+            -1) {
+          room.clearOutboundGroupSession();
+        }
+      });
+    }
   }
 
   void _handleDeviceListsEvents(Map<String, dynamic> deviceLists) {
     if (deviceLists["changed"] is List) {
       for (final userId in deviceLists["changed"]) {
+        _clearOutboundGroupSessionsByUserId(userId);
         if (_userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys[userId].outdated = true;
         }
       }
       for (final userId in deviceLists["left"]) {
+        _clearOutboundGroupSessionsByUserId(userId);
         if (_userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys.remove(userId);
         }
       }
+    }
+  }
+
+  void _handleToDeviceEvents(List<dynamic> events) {
+    for (int i = 0; i < events.length; i++) {
+      bool isValid = events[i] is Map &&
+          events[i]["type"] is String &&
+          events[i]["sender"] is String &&
+          events[i]["content"] is Map;
+      if (!isValid) {
+        print("[Sync] Invalid To Device Event! ${events[i]}");
+        continue;
+      }
+      ToDeviceEvent toDeviceEvent = ToDeviceEvent.fromJson(events[i]);
+      if (toDeviceEvent.type == "m.room.encrypted") {
+        try {
+          toDeviceEvent = decryptToDeviceEvent(toDeviceEvent);
+        } catch (e) {
+          print("[LibOlm] Could not decrypt to device event: " + e.toString());
+          toDeviceEvent = ToDeviceEvent.fromJson(events[i]);
+        }
+      }
+      _updateRoomsByToDeviceEvent(toDeviceEvent);
+      onToDeviceEvent.add(toDeviceEvent);
     }
   }
 
@@ -1052,8 +1176,24 @@ class Client {
         type: type,
         content: event,
       );
-      _updateRoomsByEventUpdate(update);
       this.store?.storeEventUpdate(update);
+      if (event["type"] == "m.room.encrypted") {
+        Room room = getRoomById(roomID);
+        try {
+          Event decrpytedEvent =
+              room.decryptGroupMessage(Event.fromJson(event, room));
+          event = decrpytedEvent.toJson();
+          update = EventUpdate(
+            eventType: event["type"],
+            roomID: roomID,
+            type: type,
+            content: event,
+          );
+        } catch (e) {
+          print("[LibOlm] Could not decrypt megolm event: " + e.toString());
+        }
+      }
+      _updateRoomsByEventUpdate(update);
       onEvent.add(update);
 
       if (event["type"] == "m.call.invite") {
@@ -1094,6 +1234,7 @@ class Client {
         roomAccountData: {},
         client: this,
       );
+      newRoom.restoreGroupSessionKeys();
       rooms.insert(position, newRoom);
     }
     // If the membership is "leave" then remove the item and stop here
@@ -1170,6 +1311,22 @@ class Client {
     }
     if (rooms[j].onUpdate != null) rooms[j].onUpdate.add(rooms[j].id);
     if (eventUpdate.type == "timeline") _sortRooms();
+  }
+
+  void _updateRoomsByToDeviceEvent(ToDeviceEvent toDeviceEvent) {
+    try {
+      switch (toDeviceEvent.type) {
+        case "m.room_key":
+          Room room = getRoomById(toDeviceEvent.content["room_id"]);
+          if (room != null && toDeviceEvent.content["session_id"] is String) {
+            final String sessionId = toDeviceEvent.content["session_id"];
+            room.setSessionKey(sessionId, toDeviceEvent.content);
+          }
+          break;
+      }
+    } catch (e) {
+      print(e);
+    }
   }
 
   bool _sortLock = false;
@@ -1252,5 +1409,303 @@ class Client {
       }
     }
     await this.storeAPI?.storeUserDeviceKeys(userDeviceKeys);
+  }
+
+  String get fingerprintKey => encryptionEnabled
+      ? json.decode(_olmAccount.identity_keys())["ed25519"]
+      : null;
+  String get identityKey => encryptionEnabled
+      ? json.decode(_olmAccount.identity_keys())["curve25519"]
+      : null;
+
+  /// Adds a signature to this json from this olm account.
+  Map<String, dynamic> signJson(Map<String, dynamic> payload) {
+    if (!encryptionEnabled) throw ("Encryption is disabled");
+    final Map<String, dynamic> unsigned = payload["unsigned"];
+    final Map<String, dynamic> signatures = payload["signatures"];
+    payload.remove("unsigned");
+    payload.remove("signatures");
+    final List<int> canonical = canonicalJson.encode(payload);
+    final String signature = _olmAccount.sign(String.fromCharCodes(canonical));
+    if (signatures != null) {
+      payload["signatures"] = signatures;
+    } else {
+      payload["signatures"] = Map<String, dynamic>();
+    }
+    payload["signatures"][userID] = Map<String, dynamic>();
+    payload["signatures"][userID]["ed25519:$deviceID"] = signature;
+    if (unsigned != null) {
+      payload["unsigned"] = unsigned;
+    }
+    return payload;
+  }
+
+  /// Checks the signature of a signed json object.
+  bool checkJsonSignature(String key, Map<String, dynamic> signedJson,
+      String userId, String deviceId) {
+    if (!encryptionEnabled) throw ("Encryption is disabled");
+    final Map<String, dynamic> signatures = signedJson["signatures"];
+    if (signatures == null || !signatures.containsKey(userId)) return false;
+    signedJson.remove("unsigned");
+    signedJson.remove("signatures");
+    if (!signatures[userId].containsKey("ed25519:$deviceId")) return false;
+    final String signature = signatures[userId]["ed25519:$deviceId"];
+    final List<int> canonical = canonicalJson.encode(signedJson);
+    final String message = String.fromCharCodes(canonical);
+    bool isValid = true;
+    try {
+      olm.Utility()
+        ..ed25519_verify(key, message, signature)
+        ..free();
+    } catch (e) {
+      isValid = false;
+      print("[LibOlm] Signature check failed: " + e.toString());
+    }
+    return isValid;
+  }
+
+  DateTime lastTimeKeysUploaded;
+
+  /// Generates new one time keys, signs everything and upload it to the server.
+  Future<bool> _uploadKeys({bool uploadDeviceKeys = false}) async {
+    if (!encryptionEnabled) return true;
+
+    final int oneTimeKeysCount = _olmAccount.max_number_of_one_time_keys();
+    _olmAccount.generate_one_time_keys(oneTimeKeysCount);
+    final Map<String, dynamic> oneTimeKeys =
+        json.decode(_olmAccount.one_time_keys());
+
+    Map<String, dynamic> signedOneTimeKeys = Map<String, dynamic>();
+
+    for (String key in oneTimeKeys["curve25519"].keys) {
+      signedOneTimeKeys["signed_curve25519:$key"] = Map<String, dynamic>();
+      signedOneTimeKeys["signed_curve25519:$key"]["key"] =
+          oneTimeKeys["curve25519"][key];
+      signedOneTimeKeys["signed_curve25519:$key"] =
+          signJson(signedOneTimeKeys["signed_curve25519:$key"]);
+    }
+
+    Map<String, dynamic> keysContent = {
+      if (uploadDeviceKeys)
+        "device_keys": {
+          "user_id": userID,
+          "device_id": deviceID,
+          "algorithms": [
+            "m.olm.v1.curve25519-aes-sha2",
+            "m.megolm.v1.aes-sha2"
+          ],
+          "keys": Map<String, dynamic>(),
+        },
+      "one_time_keys": signedOneTimeKeys,
+    };
+    if (uploadDeviceKeys) {
+      final Map<String, dynamic> keys =
+          json.decode(_olmAccount.identity_keys());
+      for (String algorithm in keys.keys) {
+        keysContent["device_keys"]["keys"]["$algorithm:$deviceID"] =
+            keys[algorithm];
+      }
+      keysContent["device_keys"] =
+          signJson(keysContent["device_keys"] as Map<String, dynamic>);
+    }
+
+    final Map<String, dynamic> response = await jsonRequest(
+      type: HTTPType.POST,
+      action: "/client/r0/keys/upload",
+      data: keysContent,
+    );
+    if (response["one_time_key_counts"]["signed_curve25519"] !=
+        oneTimeKeysCount) {
+      return false;
+    }
+    _olmAccount.mark_keys_as_published();
+    await storeAPI?.storeClient();
+    lastTimeKeysUploaded = DateTime.now();
+    return true;
+  }
+
+  /// Try to decrypt a ToDeviceEvent encrypted with olm.
+  ToDeviceEvent decryptToDeviceEvent(ToDeviceEvent toDeviceEvent) {
+    if (toDeviceEvent.content["algorithm"] != "m.olm.v1.curve25519-aes-sha2") {
+      throw ("Unknown algorithm: ${toDeviceEvent.content["algorithm"]}");
+    }
+    if (!toDeviceEvent.content["ciphertext"].containsKey(identityKey)) {
+      throw ("The message isn't sent for this device");
+    }
+    String plaintext;
+    final String senderKey = toDeviceEvent.content["sender_key"];
+    final String body =
+        toDeviceEvent.content["ciphertext"][identityKey]["body"];
+    final int type = toDeviceEvent.content["ciphertext"][identityKey]["type"];
+    if (type != 0 && type != 1) {
+      throw ("Unknown message type");
+    }
+    List<olm.Session> existingSessions = olmSessions[senderKey];
+    if (existingSessions != null) {
+      for (olm.Session session in existingSessions) {
+        if ((type == 0 && session.matches_inbound(body) == 1) || type == 1) {
+          plaintext = session.decrypt(type, body);
+        }
+      }
+    }
+    if (plaintext == null && type != 0) {
+      throw ("No existing sessions found");
+    }
+
+    if (plaintext == null) {
+      olm.Session newSession = olm.Session();
+      newSession.create_inbound_from(_olmAccount, senderKey, body);
+      _olmAccount.remove_one_time_keys(newSession);
+      storeAPI?.storeClient();
+      storeOlmSession(senderKey, newSession);
+      plaintext = newSession.decrypt(type, body);
+    }
+    final Map<String, dynamic> plainContent = json.decode(plaintext);
+    if (plainContent.containsKey("sender") &&
+        plainContent["sender"] != toDeviceEvent.sender) {
+      throw ("Message was decrypted but sender doesn't match");
+    }
+    if (plainContent.containsKey("recipient") &&
+        plainContent["recipient"] != userID) {
+      throw ("Message was decrypted but recipient doesn't match");
+    }
+    if (plainContent["recipient_keys"] is Map &&
+        plainContent["recipient_keys"]["ed25519"] is String &&
+        plainContent["recipient_keys"]["ed25519"] != fingerprintKey) {
+      throw ("Message was decrypted but own fingerprint Key doesn't match");
+    }
+    return ToDeviceEvent(
+      content: plainContent["content"],
+      type: plainContent["type"],
+      sender: toDeviceEvent.sender,
+    );
+  }
+
+  /// A map from Curve25519 identity keys to existing olm sessions.
+  Map<String, List<olm.Session>> get olmSessions => _olmSessions;
+  Map<String, List<olm.Session>> _olmSessions = {};
+
+  void storeOlmSession(String curve25519IdentityKey, olm.Session session) {
+    if (!_olmSessions.containsKey(curve25519IdentityKey)) {
+      _olmSessions[curve25519IdentityKey] = [];
+    }
+    _olmSessions[curve25519IdentityKey].add(session);
+    Map<String, List<String>> pickleMap = {};
+    for (var entry in olmSessions.entries) {
+      pickleMap[entry.key] = [];
+      for (olm.Session session in entry.value) {
+        try {
+          pickleMap[entry.key].add(session.pickle(userID));
+        } catch (e) {
+          print("[LibOlm] Could not pickle olm session: " + e.toString());
+        }
+      }
+    }
+    storeAPI?.setItem("/clients/$userID/olm-sessions", json.encode(pickleMap));
+  }
+
+  /// Sends an encrypted [message] of this [type] to these [deviceKeys].
+  Future<void> sendToDevice(List<DeviceKeys> deviceKeys, String type,
+      Map<String, dynamic> message) async {
+    if (!encryptionEnabled) return;
+    // Don't send this message to blocked devices.
+    if (deviceKeys?.isEmpty ?? true) return;
+    deviceKeys.removeWhere((DeviceKeys deviceKeys) =>
+        deviceKeys.blocked || deviceKeys.deviceId == deviceID);
+    if (deviceKeys?.isEmpty ?? true) return;
+
+    // Create new sessions with devices if there is no existing session yet.
+    List<DeviceKeys> deviceKeysWithoutSession =
+        List<DeviceKeys>.from(deviceKeys);
+    deviceKeysWithoutSession.removeWhere((DeviceKeys deviceKeys) =>
+        olmSessions.containsKey(deviceKeys.curve25519Key));
+    if (deviceKeysWithoutSession.isNotEmpty) {
+      await startOutgoingOlmSessions(deviceKeysWithoutSession);
+    }
+    Map<String, dynamic> encryptedMessage = {
+      "algorithm": "m.olm.v1.curve25519-aes-sha2",
+      "sender_key": identityKey,
+      "ciphertext": Map<String, dynamic>(),
+    };
+    for (DeviceKeys device in deviceKeys) {
+      List<olm.Session> existingSessions = olmSessions[device.curve25519Key];
+      if (existingSessions == null || existingSessions.isEmpty) continue;
+      existingSessions.sort((a, b) => a.session_id().compareTo(b.session_id()));
+
+      final Map<String, dynamic> payload = {
+        "type": type,
+        "content": message,
+        "sender": this.userID,
+        "sender_keys": {"ed25519": fingerprintKey},
+        "recipient": device.userId,
+        "recipient_keys": {"ed25519": device.ed25519Key},
+      };
+      final olm.EncryptResult encryptResult =
+          existingSessions.first.encrypt(json.encode(payload));
+      encryptedMessage["ciphertext"][device.curve25519Key] = {
+        "type": encryptResult.type,
+        "body": encryptResult.body,
+      };
+    }
+
+    // Send with send-to-device messaging
+    Map<String, dynamic> data = {
+      "messages": Map<String, dynamic>(),
+    };
+    for (DeviceKeys device in deviceKeys) {
+      if (!data["messages"].containsKey(device.userId)) {
+        data["messages"][device.userId] = Map<String, dynamic>();
+      }
+      data["messages"][device.userId][device.deviceId] = encryptedMessage;
+    }
+    final String messageID = "msg${DateTime.now().millisecondsSinceEpoch}";
+    await jsonRequest(
+      type: HTTPType.PUT,
+      action: "/client/r0/sendToDevice/m.room.encrypted/$messageID",
+      data: data,
+    );
+  }
+
+  Future<void> startOutgoingOlmSessions(List<DeviceKeys> deviceKeys,
+      {bool checkSignature = true}) async {
+    Map<String, Map<String, String>> requestingKeysFrom = {};
+    for (DeviceKeys device in deviceKeys) {
+      if (requestingKeysFrom[device.userId] == null) {
+        requestingKeysFrom[device.userId] = {};
+      }
+      requestingKeysFrom[device.userId][device.deviceId] = "signed_curve25519";
+    }
+
+    final Map<String, dynamic> response = await jsonRequest(
+      type: HTTPType.POST,
+      action: "/client/r0/keys/claim",
+      data: {"timeout": 10000, "one_time_keys": requestingKeysFrom},
+    );
+
+    for (var userKeysEntry in response["one_time_keys"].entries) {
+      final String userId = userKeysEntry.key;
+      for (var deviceKeysEntry in userKeysEntry.value.entries) {
+        final String deviceId = deviceKeysEntry.key;
+        final String fingerprintKey =
+            userDeviceKeys[userId].deviceKeys[deviceId].ed25519Key;
+        final String identityKey =
+            userDeviceKeys[userId].deviceKeys[deviceId].curve25519Key;
+        for (Map<String, dynamic> deviceKey in deviceKeysEntry.value.values) {
+          if (checkSignature &&
+              checkJsonSignature(fingerprintKey, deviceKey, userId, deviceId) ==
+                  false) {
+            continue;
+          }
+          try {
+            olm.Session session = olm.Session();
+            session.create_outbound(_olmAccount, identityKey, deviceKey["key"]);
+            await storeOlmSession(identityKey, session);
+          } catch (e) {
+            print("[LibOlm] Could not create new outbound olm session: " +
+                e.toString());
+          }
+        }
+      }
+    }
   }
 }

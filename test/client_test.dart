@@ -22,6 +22,7 @@
  */
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/account_data.dart';
@@ -35,9 +36,11 @@ import 'package:famedlysdk/src/sync/user_update.dart';
 import 'package:famedlysdk/src/utils/matrix_exception.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:famedlysdk/src/utils/profile.dart';
+import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
 import 'fake_matrix_api.dart';
+import 'fake_store.dart';
 
 void main() {
   Client matrix;
@@ -45,6 +48,12 @@ void main() {
   Future<List<RoomUpdate>> roomUpdateListFuture;
   Future<List<EventUpdate>> eventUpdateListFuture;
   Future<List<UserUpdate>> userUpdateListFuture;
+  Future<List<ToDeviceEvent>> toDeviceUpdateListFuture;
+
+  const String pickledOlmAccount =
+      "N2v1MkIFGcl0mQpo2OCwSopxPQJ0wnl7oe7PKiT4141AijfdTIhRu+ceXzXKy3Kr00nLqXtRv7kid6hU4a+V0rfJWLL0Y51+3Rp/ORDVnQy+SSeo6Fn4FHcXrxifJEJ0djla5u98fBcJ8BSkhIDmtXRPi5/oJAvpiYn+8zMjFHobOeZUAxYR0VfQ9JzSYBsSovoQ7uFkNks1M4EDUvHtuweStA+EKZvvHZO0SnwRp0Hw7sv8UMYvXw";
+  const String identityKey = "7rvl3jORJkBiK4XX1e5TnGnqz068XfYJ0W++Ml63rgk";
+  const String fingerprintKey = "gjL//fyaFHADt9KBADGag8g7F8Up78B/K1zXeiEPLJo";
 
   /// All Tests related to the Login
   group("FluffyMatrix", () {
@@ -56,6 +65,16 @@ void main() {
     roomUpdateListFuture = matrix.onRoomUpdate.stream.toList();
     eventUpdateListFuture = matrix.onEvent.stream.toList();
     userUpdateListFuture = matrix.onUserEvent.stream.toList();
+    toDeviceUpdateListFuture = matrix.onToDeviceEvent.stream.toList();
+    bool olmEnabled = true;
+    try {
+      olm.init();
+      olm.Account();
+    } catch (_) {
+      olmEnabled = false;
+      print("[LibOlm] Failed to load LibOlm: " + _.toString());
+    }
+    print("[LibOlm] Enabled: $olmEnabled");
 
     test('Login', () async {
       int presenceCounter = 0;
@@ -106,13 +125,16 @@ void main() {
       Future<dynamic> syncFuture = matrix.onSync.stream.first;
 
       matrix.connect(
-          newToken: resp["access_token"],
-          newUserID: resp["user_id"],
-          newHomeserver: matrix.homeserver,
-          newDeviceName: "Text Matrix Client",
-          newDeviceID: resp["device_id"],
-          newMatrixVersions: matrix.matrixVersions,
-          newLazyLoadMembers: matrix.lazyLoadMembers);
+        newToken: resp["access_token"],
+        newUserID: resp["user_id"],
+        newHomeserver: matrix.homeserver,
+        newDeviceName: "Text Matrix Client",
+        newDeviceID: resp["device_id"],
+        newMatrixVersions: matrix.matrixVersions,
+        newLazyLoadMembers: matrix.lazyLoadMembers,
+        newOlmAccount: pickledOlmAccount,
+      );
+
       await Future.delayed(Duration(milliseconds: 50));
 
       expect(matrix.accessToken == resp["access_token"], true);
@@ -126,6 +148,12 @@ void main() {
 
       expect(loginState, LoginState.logged);
       expect(firstSync, true);
+      expect(matrix.encryptionEnabled, olmEnabled);
+      if (olmEnabled) {
+        expect(matrix.pickledOlmAccount, pickledOlmAccount);
+        expect(matrix.identityKey, identityKey);
+        expect(matrix.fingerprintKey, fingerprintKey);
+      }
       expect(sync["next_batch"] == matrix.prevBatch, true);
 
       expect(matrix.accountData.length, 3);
@@ -135,6 +163,22 @@ void main() {
       expect(matrix.directChats, matrix.accountData["m.direct"].content);
       expect(matrix.presences.length, 1);
       expect(matrix.rooms[1].ephemerals.length, 2);
+      expect(matrix.rooms[1].sessionKeys.length, 1);
+      expect(
+          matrix
+              .rooms[1]
+              .sessionKeys["ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU"]
+              .content["session_key"],
+          "AgAAAAAQcQ6XrFJk6Prm8FikZDqfry/NbDz8Xw7T6e+/9Yf/q3YHIPEQlzv7IZMNcYb51ifkRzFejVvtphS7wwG2FaXIp4XS2obla14iKISR0X74ugB2vyb1AydIHE/zbBQ1ic5s3kgjMFlWpu/S3FQCnCrv+DPFGEt3ERGWxIl3Bl5X53IjPyVkz65oljz2TZESwz0GH/QFvyOOm8ci0q/gceaF3S7Dmafg3dwTKYwcA5xkcc+BLyrLRzB6Hn+oMAqSNSscnm4mTeT5zYibIhrzqyUTMWr32spFtI9dNR/RFSzfCw");
+      if (olmEnabled) {
+        expect(
+            matrix
+                    .rooms[1]
+                    .sessionKeys["ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU"]
+                    .inboundGroupSession !=
+                null,
+            true);
+      }
       expect(matrix.rooms[1].typingUsers.length, 1);
       expect(matrix.rooms[1].typingUsers[0].id, "@alice:example.com");
       expect(matrix.rooms[1].roomAccountData.length, 3);
@@ -330,7 +374,7 @@ void main() {
 
       List<UserUpdate> eventUpdateList = await userUpdateListFuture;
 
-      expect(eventUpdateList.length, 5);
+      expect(eventUpdateList.length, 4);
 
       expect(eventUpdateList[0].eventType, "m.presence");
       expect(eventUpdateList[0].type, "presence");
@@ -340,6 +384,17 @@ void main() {
 
       expect(eventUpdateList[2].eventType, "org.example.custom.config");
       expect(eventUpdateList[2].type, "account_data");
+    });
+
+    test('To Device Update Test', () async {
+      await matrix.onToDeviceEvent.close();
+
+      List<ToDeviceEvent> eventUpdateList = await toDeviceUpdateListFuture;
+
+      expect(eventUpdateList.length, 2);
+
+      expect(eventUpdateList[0].type, "m.new_device");
+      expect(eventUpdateList[1].type, "m.room_key");
     });
 
     test('Login', () async {
@@ -417,6 +472,147 @@ void main() {
       expect(profile.content["displayname"], profile.displayname);
     });
 
+    test('signJson', () {
+      if (matrix.encryptionEnabled) {
+        expect(matrix.fingerprintKey.isNotEmpty, true);
+        expect(matrix.identityKey.isNotEmpty, true);
+        Map<String, dynamic> payload = {
+          "unsigned": {
+            "foo": "bar",
+          },
+          "auth": {
+            "success": true,
+            "mxid": "@john.doe:example.com",
+            "profile": {
+              "display_name": "John Doe",
+              "three_pids": [
+                {"medium": "email", "address": "john.doe@example.org"},
+                {"medium": "msisdn", "address": "123456789"}
+              ]
+            }
+          }
+        };
+        Map<String, dynamic> payloadWithoutUnsigned = Map.from(payload);
+        payloadWithoutUnsigned.remove("unsigned");
+
+        expect(
+            matrix.checkJsonSignature(
+                matrix.fingerprintKey, payload, matrix.userID, matrix.deviceID),
+            false);
+        expect(
+            matrix.checkJsonSignature(matrix.fingerprintKey,
+                payloadWithoutUnsigned, matrix.userID, matrix.deviceID),
+            false);
+        payload = matrix.signJson(payload);
+        payloadWithoutUnsigned = matrix.signJson(payloadWithoutUnsigned);
+        expect(payload["signatures"], payloadWithoutUnsigned["signatures"]);
+        print(payload["signatures"]);
+        expect(
+            matrix.checkJsonSignature(
+                matrix.fingerprintKey, payload, matrix.userID, matrix.deviceID),
+            true);
+        expect(
+            matrix.checkJsonSignature(matrix.fingerprintKey,
+                payloadWithoutUnsigned, matrix.userID, matrix.deviceID),
+            true);
+      }
+    });
+    test('Track oneTimeKeys', () async {
+      if (matrix.encryptionEnabled) {
+        DateTime last = matrix.lastTimeKeysUploaded ?? DateTime.now();
+        matrix.handleSync({
+          "device_one_time_keys_count": {"signed_curve25519": 49}
+        });
+        await Future.delayed(Duration(milliseconds: 50));
+        expect(
+            matrix.lastTimeKeysUploaded.millisecondsSinceEpoch >
+                last.millisecondsSinceEpoch,
+            true);
+      }
+    });
+    test('Test invalidate outboundGroupSessions', () async {
+      if (matrix.encryptionEnabled) {
+        expect(matrix.rooms[1].outboundGroupSession == null, true);
+        await matrix.rooms[1].createOutboundGroupSession();
+        expect(matrix.rooms[1].outboundGroupSession != null, true);
+        matrix.handleSync({
+          "device_lists": {
+            "changed": [
+              "@alice:example.com",
+            ],
+            "left": [
+              "@bob:example.com",
+            ],
+          }
+        });
+        await Future.delayed(Duration(milliseconds: 50));
+        expect(matrix.rooms[1].outboundGroupSession == null, true);
+      }
+    });
+    test('Test invalidate outboundGroupSessions', () async {
+      if (matrix.encryptionEnabled) {
+        expect(matrix.rooms[1].outboundGroupSession == null, true);
+        await matrix.rooms[1].createOutboundGroupSession();
+        expect(matrix.rooms[1].outboundGroupSession != null, true);
+        matrix.handleSync({
+          "rooms": {
+            "join": {
+              "!726s6s6q:example.com": {
+                "state": {
+                  "events": [
+                    {
+                      "content": {"membership": "leave"},
+                      "event_id": "143273582443PhrSn:example.org",
+                      "origin_server_ts": 1432735824653,
+                      "room_id": "!726s6s6q:example.com",
+                      "sender": "@alice:example.com",
+                      "state_key": "@alice:example.com",
+                      "type": "m.room.member"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        });
+        await Future.delayed(Duration(milliseconds: 50));
+        expect(matrix.rooms[1].outboundGroupSession == null, true);
+      }
+    });
+    DeviceKeys deviceKeys = DeviceKeys.fromJson({
+      "user_id": "@alice:example.com",
+      "device_id": "JLAFKJWSCS",
+      "algorithms": ["m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2"],
+      "keys": {
+        "curve25519:JLAFKJWSCS": "3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI",
+        "ed25519:JLAFKJWSCS": "lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI"
+      },
+      "signatures": {
+        "@alice:example.com": {
+          "ed25519:JLAFKJWSCS":
+              "dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA"
+        }
+      }
+    });
+    test('startOutgoingOlmSessions', () async {
+      expect(matrix.olmSessions.length, 0);
+      if (olmEnabled) {
+        await matrix
+            .startOutgoingOlmSessions([deviceKeys], checkSignature: false);
+        expect(matrix.olmSessions.length, 1);
+        expect(matrix.olmSessions.entries.first.key,
+            "3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI");
+      }
+    });
+    test('sendToDevice', () async {
+      await matrix.sendToDevice(
+          [deviceKeys],
+          "m.message",
+          {
+            "msgtype": "m.text",
+            "body": "Hello world",
+          });
+    });
     test('Logout when token is unknown', () async {
       Future<LoginState> loginStateFuture =
           matrix.onLoginStateChanged.stream.first;
@@ -431,6 +627,64 @@ void main() {
       LoginState state = await loginStateFuture;
       expect(state, LoginState.loggedOut);
       expect(matrix.isLogged(), false);
+    });
+    test('Test the fake store api', () async {
+      Client client1 = Client("testclient", debug: true);
+      client1.httpClient = FakeMatrixApi();
+      FakeStore fakeStore = FakeStore(client1, {});
+      client1.storeAPI = fakeStore;
+
+      client1.connect(
+        newToken: "abc123",
+        newUserID: "@test:fakeServer.notExisting",
+        newHomeserver: "https://fakeServer.notExisting",
+        newDeviceName: "Text Matrix Client",
+        newDeviceID: "GHTYAJCE",
+        newMatrixVersions: [
+          "r0.0.1",
+          "r0.1.0",
+          "r0.2.0",
+          "r0.3.0",
+          "r0.4.0",
+          "r0.5.0"
+        ],
+        newLazyLoadMembers: true,
+        newOlmAccount: pickledOlmAccount,
+      );
+
+      await Future.delayed(Duration(milliseconds: 50));
+
+      String sessionKey;
+      if (client1.encryptionEnabled) {
+        await client1.rooms[1].createOutboundGroupSession();
+
+        sessionKey = client1.rooms[1].outboundGroupSession.session_key();
+      }
+
+      expect(client1.isLogged(), true);
+      expect(client1.rooms.length, 2);
+
+      Client client2 = Client("testclient", debug: true);
+      client2.httpClient = FakeMatrixApi();
+      client2.storeAPI = FakeStore(client2, fakeStore.storeMap);
+
+      await Future.delayed(Duration(milliseconds: 100));
+
+      expect(client2.isLogged(), true);
+      expect(client2.accessToken, client1.accessToken);
+      expect(client2.userID, client1.userID);
+      expect(client2.homeserver, client1.homeserver);
+      expect(client2.deviceID, client1.deviceID);
+      expect(client2.deviceName, client1.deviceName);
+      expect(client2.matrixVersions, client1.matrixVersions);
+      expect(client2.lazyLoadMembers, client1.lazyLoadMembers);
+      if (client2.encryptionEnabled) {
+        expect(client2.pickledOlmAccount, client1.pickledOlmAccount);
+        expect(json.encode(client2.rooms[1].sessionKeys[sessionKey]),
+            json.encode(client1.rooms[1].sessionKeys[sessionKey]));
+        expect(client2.rooms[1].id, client1.rooms[1].id);
+        expect(client2.rooms[1].outboundGroupSession.session_key(), sessionKey);
+      }
     });
   });
 }

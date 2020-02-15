@@ -362,5 +362,79 @@ void main() {
           .add(matrix.accountData["m.push_rules"].content["global"]["room"][0]);
       expect(room.pushRuleState, PushRuleState.dont_notify);
     });
+
+    test('Enable encryption', () async {
+      room.setState(
+        Event(
+            senderId: "@alice:test.abc",
+            typeKey: "m.room.encryption",
+            roomId: room.id,
+            room: room,
+            eventId: "12345",
+            time: DateTime.now(),
+            content: {
+              "algorithm": "m.megolm.v1.aes-sha2",
+              "rotation_period_ms": 604800000,
+              "rotation_period_msgs": 100
+            },
+            stateKey: ""),
+      );
+      expect(room.encrypted, true);
+      expect(room.encryptionAlgorithm, "m.megolm.v1.aes-sha2");
+      expect(room.outboundGroupSession, null);
+    });
+
+    test('createOutboundGroupSession', () async {
+      if (!room.client.encryptionEnabled) return;
+      await room.createOutboundGroupSession();
+      expect(room.outboundGroupSession != null, true);
+      expect(room.outboundGroupSession.session_id().isNotEmpty, true);
+      expect(
+          room.sessionKeys.containsKey(room.outboundGroupSession.session_id()),
+          true);
+      expect(
+          room.sessionKeys[room.outboundGroupSession.session_id()]
+              .content["session_key"],
+          room.outboundGroupSession.session_key());
+      expect(
+          room.sessionKeys[room.outboundGroupSession.session_id()].indexes
+              .length,
+          0);
+    });
+
+    test('clearOutboundGroupSession', () async {
+      if (!room.client.encryptionEnabled) return;
+      await room.clearOutboundGroupSession();
+      expect(room.outboundGroupSession == null, true);
+    });
+
+    test('encryptGroupMessagePayload and decryptGroupMessage', () async {
+      if (!room.client.encryptionEnabled) return;
+      final Map<String, dynamic> payload = {
+        "msgtype": "m.text",
+        "body": "Hello world",
+      };
+      final Map<String, dynamic> encryptedPayload =
+          await room.encryptGroupMessagePayload(payload);
+      expect(encryptedPayload["algorithm"], "m.megolm.v1.aes-sha2");
+      expect(encryptedPayload["ciphertext"].isNotEmpty, true);
+      expect(encryptedPayload["device_id"], room.client.deviceID);
+      expect(encryptedPayload["sender_key"], room.client.identityKey);
+      expect(encryptedPayload["session_id"],
+          room.outboundGroupSession.session_id());
+
+      Event encryptedEvent = Event(
+        content: encryptedPayload,
+        typeKey: "m.room.encrypted",
+        senderId: room.client.userID,
+        eventId: "1234",
+        roomId: room.id,
+        room: room,
+        time: DateTime.now(),
+      );
+      Event decryptedEvent = room.decryptGroupMessage(encryptedEvent);
+      expect(decryptedEvent.typeKey, "m.room.message");
+      expect(decryptedEvent.content, payload);
+    });
   });
 }

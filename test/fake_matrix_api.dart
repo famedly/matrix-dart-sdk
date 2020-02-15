@@ -57,6 +57,9 @@ class FakeMatrixApi extends MockClient {
             if (res.containsKey("errcode")) {
               return Response(json.encode(res), 405);
             }
+          } else if (method == "PUT" &&
+              action.contains("/client/r0/sendToDevice/m.room.encrypted/")) {
+            return Response(json.encode({}), 200);
           } else if (method == "GET" &&
               action.contains("/client/r0/rooms/") &&
               action.contains("/state/m.room.member/")) {
@@ -335,7 +338,18 @@ class FakeMatrixApi extends MockClient {
             "device_id": "XYZABCDE",
             "rooms": ["!726s6s6q:example.com"]
           }
-        }
+        },
+        {
+          "sender": "@alice:example.com",
+          "content": {
+            "algorithm": "m.megolm.v1.aes-sha2",
+            "room_id": "!726s6s6q:example.com",
+            "session_id": "ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU",
+            "session_key":
+                "AgAAAAAQcQ6XrFJk6Prm8FikZDqfry/NbDz8Xw7T6e+/9Yf/q3YHIPEQlzv7IZMNcYb51ifkRzFejVvtphS7wwG2FaXIp4XS2obla14iKISR0X74ugB2vyb1AydIHE/zbBQ1ic5s3kgjMFlWpu/S3FQCnCrv+DPFGEt3ERGWxIl3Bl5X53IjPyVkz65oljz2TZESwz0GH/QFvyOOm8ci0q/gceaF3S7Dmafg3dwTKYwcA5xkcc+BLyrLRzB6Hn+oMAqSNSscnm4mTeT5zYibIhrzqyUTMWr32spFtI9dNR/RFSzfCw"
+          },
+          "type": "m.room_key"
+        },
       ]
     },
     "rooms": {
@@ -768,6 +782,30 @@ class FakeMatrixApi extends MockClient {
           {"available": true},
     },
     "POST": {
+      "/client/r0/keys/claim": (var req) => {
+            "failures": {},
+            "one_time_keys": {
+              "@alice:example.com": {
+                "JLAFKJWSCS": {
+                  "signed_curve25519:AAAAHg": {
+                    "key": "zKbLg+NrIjpnagy+pIY6uPL4ZwEG2v+8F9lmgsnlZzs",
+                    "signatures": {
+                      "@alice:example.com": {
+                        "ed25519:JLAFKJWSCS":
+                            "FLWxXqGbwrb8SM3Y795eB6OA8bwBcoMZFXBqnTn58AYWZSqiD45tlBVcDa2L7RwdKXebW/VzDlnfVJ+9jok1Bw"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+      "/client/r0/keys/upload": (var req) => {
+            "one_time_key_counts": {
+              "curve25519": 10,
+              "signed_curve25519": 100,
+            }
+          },
       "/client/r0/keys/query": (var req) => {
             "failures": {},
             "device_keys": {
