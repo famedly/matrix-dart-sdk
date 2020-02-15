@@ -498,7 +498,8 @@ class Room {
 
   Future<String> sendEvent(Map<String, dynamic> content,
       {String txid, Event inReplyTo}) async {
-    final String type = this.encrypted ? "m.room.encrypted" : "m.room.message";
+    final String type = "m.room.message";
+    final String sendType = this.encrypted ? "m.room.encrypted" : type;
 
     // Create new transaction id
     String messageID;
@@ -547,7 +548,7 @@ class Room {
     try {
       final Map<String, dynamic> response = await client.jsonRequest(
           type: HTTPType.PUT,
-          action: "/client/r0/rooms/${id}/send/$type/$messageID",
+          action: "/client/r0/rooms/${id}/send/$sendType/$messageID",
           data: await encryptGroupMessagePayload(content));
       final String res = response["event_id"];
       eventUpdate.content["status"] = 1;
