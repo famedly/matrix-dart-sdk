@@ -45,6 +45,9 @@ class DeviceKeys {
   bool verified;
   bool blocked;
 
+  String get curve25519Key => keys["curve25519:$deviceId"];
+  String get ed25519Key => keys["ed25519:$deviceId"];
+
   Future<void> setVerified(bool newVerified, Client client) {
     verified = newVerified;
     return client.storeAPI.storeUserDeviceKeys(client.userDeviceKeys);

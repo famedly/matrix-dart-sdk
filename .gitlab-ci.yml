@@ -7,6 +7,26 @@ variables:
   JEKYLL_ENV: production
 
 coverage:
+  image: debian:testing
+  stage: coverage
+  coverage: '/^\s+lines.+: (\d+.\d*%)/'
+  dependencies: []
+  script:
+    - apt update
+    - apt install -y curl gnupg2 git
+    - curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+    - curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list
+    - apt update
+    - apt install -y dart chromium lcov libolm3
+    - ln -s /usr/lib/dart/bin/pub /usr/bin/
+    - useradd -m test
+    - chown -R 'test:' '.'
+    - chmod +x ./prepare.sh
+    - chmod +x ./test.sh
+    - su -c ./prepare.sh test
+    - su -c ./test.sh test
+
+coverage_without_olm:
   image: cirrusci/flutter
   stage: coverage
   coverage: '/^\s+lines.+: (\d+.\d*%)/'

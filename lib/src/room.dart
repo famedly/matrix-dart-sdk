@@ -22,6 +22,7 @@
  */
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/client.dart';
@@ -32,7 +33,9 @@ import 'package:famedlysdk/src/sync/room_update.dart';
 import 'package:famedlysdk/src/utils/matrix_exception.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:famedlysdk/src/utils/mx_content.dart';
+import 'package:famedlysdk/src/utils/session_key.dart';
 import 'package:mime_type/mime_type.dart';
+import 'package:olm/olm.dart' as olm;
 
 import './user.dart';
 import 'timeline.dart';
@@ -78,6 +81,97 @@ class Room {
   /// Key-Value store for private account data only visible for this user.
   Map<String, RoomAccountData> roomAccountData = {};
 
+  olm.OutboundGroupSession get outboundGroupSession => _outboundGroupSession;
+  olm.OutboundGroupSession _outboundGroupSession;
+
+  /// Clears the existing outboundGroupSession, tries to create a new one and
+  /// stores it as an ingoingGroupSession in the [sessionKeys]. Then sends the
+  /// new session encrypted with olm to all non-blocked devices using
+  /// to-device-messaging.
+  Future<void> createOutboundGroupSession() async {
+    await clearOutboundGroupSession();
+    try {
+      _outboundGroupSession = olm.OutboundGroupSession();
+      _outboundGroupSession.create();
+    } catch (e) {
+      _outboundGroupSession = null;
+      print("[LibOlm] Unable to create new outboundGroupSession: " +
+          e.toString());
+    }
+
+    if (_outboundGroupSession == null) return;
+
+    await client.storeAPI?.setItem(
+        "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session",
+        _outboundGroupSession.pickle(client.userID));
+    // Add as an inboundSession to the [sessionKeys].
+    Map<String, dynamic> rawSession = {
+      "algorithm": "m.megolm.v1.aes-sha2",
+      "room_id": this.id,
+      "session_id": _outboundGroupSession.session_id(),
+      "session_key": _outboundGroupSession.session_key(),
+    };
+    setSessionKey(rawSession["session_id"], rawSession);
+    List<DeviceKeys> deviceKeys = await getUserDeviceKeys();
+    try {
+      // TODO: Fix type '_InternalLinkedHashMap<String, dynamic>' is not a subtype of type 'Iterable<dynamic>'
+      await client.sendToDevice(deviceKeys, "m.room_key", rawSession);
+    } catch (e) {
+      print(
+          "[LibOlm] Unable to send the session key to the participating devices: " +
+              e.toString());
+      await clearOutboundGroupSession();
+    }
+    return;
+  }
+
+  /// Clears the existing outboundGroupSession.
+  Future<void> clearOutboundGroupSession() async {
+    await client.storeAPI?.setItem(
+        "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session",
+        null);
+    this._outboundGroupSession?.free();
+    this._outboundGroupSession = null;
+    return;
+  }
+
+  /// Key-Value store of session ids to the session keys. Only m.megolm.v1.aes-sha2
+  /// session keys are supported. They are stored as a Map with the following keys:
+  /// {
+  ///   "algorithm": "m.megolm.v1.aes-sha2",
+  ///   "room_id": "!Cuyf34gef24t:localhost",
+  ///   "session_id": "X3lUlvLELLYxeTx4yOVu6UDpasGEVO0Jbu+QFnm0cKQ",
+  ///   "session_key": "AgAAAADxKHa9uFxcXzwYoNueL5Xqi69IkD4sni8LlfJL7qNBEY..."
+  /// }
+  Map<String, SessionKey> get sessionKeys => _sessionKeys;
+  Map<String, SessionKey> _sessionKeys = {};
+
+  /// Add a new session key to the [sessionKeys].
+  void setSessionKey(String sessionId, Map<String, dynamic> content) {
+    if (sessionKeys.containsKey(sessionId)) return;
+    olm.InboundGroupSession inboundGroupSession;
+    if (content["algorithm"] == "m.megolm.v1.aes-sha2") {
+      try {
+        inboundGroupSession = olm.InboundGroupSession();
+        inboundGroupSession.create(content["session_key"]);
+      } catch (e) {
+        inboundGroupSession = null;
+        print("[LibOlm] Could not create new InboundGroupSession: " +
+            e.toString());
+      }
+    }
+    _sessionKeys[sessionId] = SessionKey(
+      content: content,
+      inboundGroupSession: inboundGroupSession,
+      indexes: {},
+      key: client.userID,
+    );
+
+    client.storeAPI?.setItem(
+        "/clients/${client.deviceID}/rooms/${this.id}/session_keys",
+        json.encode(sessionKeys));
+  }
+
   /// Returns the [Event] for the given [typeKey] and optional [stateKey].
   /// If no [stateKey] is provided, it defaults to an empty string.
   Event getState(String typeKey, [String stateKey = ""]) =>
@@ -86,6 +180,16 @@ class Room {
   /// Adds the [state] to this room and overwrites a state with the same
   /// typeKey/stateKey key pair if there is one.
   void setState(Event state) {
+    // Check if this is a member change and we need to clear the outboundGroupSession.
+    if (encrypted &&
+        outboundGroupSession != null &&
+        state.type == EventTypes.RoomMember) {
+      User newUser = state.asUser;
+      User oldUser = getState("m.room.member", newUser.id)?.asUser;
+      if (oldUser == null || oldUser.membership != newUser.membership) {
+        clearOutboundGroupSession();
+      }
+    }
     if (!states.states.containsKey(state.typeKey)) {
       states.states[state.typeKey] = {};
     }
@@ -280,16 +384,6 @@ class Room {
     return resp["event_id"];
   }
 
-  Future<String> _sendRawEventNow(Map<String, dynamic> content,
-      {String txid}) async {
-    if (txid == null) txid = "txid${DateTime.now().millisecondsSinceEpoch}";
-    final Map<String, dynamic> res = await client.jsonRequest(
-        type: HTTPType.PUT,
-        action: "/client/r0/rooms/${id}/send/m.room.message/$txid",
-        data: content);
-    return res["event_id"];
-  }
-
   Future<String> sendTextEvent(String message,
           {String txid, Event inReplyTo}) =>
       sendEvent({"msgtype": "m.text", "body": message},
@@ -404,7 +498,7 @@ class Room {
 
   Future<String> sendEvent(Map<String, dynamic> content,
       {String txid, Event inReplyTo}) async {
-    final String type = "m.room.message";
+    final String type = this.encrypted ? "m.room.encrypted" : "m.room.message";
 
     // Create new transaction id
     String messageID;
@@ -423,7 +517,8 @@ class Room {
       }
       replyText = replyTextLines.join("\n");
       content["format"] = "org.matrix.custom.html";
-      content["formatted_body"] = '<mx-reply><blockquote><a href="https://matrix.to/#/${inReplyTo.room.id}/${inReplyTo.eventId}">In reply to</a> <a href="https://matrix.to/#/${inReplyTo.senderId}">${inReplyTo.senderId}</a><br>${inReplyTo.body}</blockquote></mx-reply>${content["formatted_body"] ?? content["body"]}';
+      content["formatted_body"] =
+          '<mx-reply><blockquote><a href="https://matrix.to/#/${inReplyTo.room.id}/${inReplyTo.eventId}">In reply to</a> <a href="https://matrix.to/#/${inReplyTo.senderId}">${inReplyTo.senderId}</a><br>${inReplyTo.body}</blockquote></mx-reply>${content["formatted_body"] ?? content["body"]}';
       content["body"] = replyText + "\n\n${content["body"] ?? ""}";
       content["m.relates_to"] = {
         "m.in_reply_to": {
@@ -450,7 +545,11 @@ class Room {
 
     // Send the text and on success, store and display a *sent* event.
     try {
-      final String res = await _sendRawEventNow(content, txid: messageID);
+      final Map<String, dynamic> response = await client.jsonRequest(
+          type: HTTPType.PUT,
+          action: "/client/r0/rooms/${id}/send/$type/$messageID",
+          data: await encryptGroupMessagePayload(content));
+      final String res = response["event_id"];
       eventUpdate.content["status"] = 1;
       eventUpdate.content["unsigned"] = {"transaction_id": messageID};
       eventUpdate.content["event_id"] = res;
@@ -461,6 +560,7 @@ class Room {
       });
       return res;
     } catch (exception) {
+      print("[Client] Error while sending: " + exception.toString());
       // On error, set status to -1
       eventUpdate.content["status"] = -1;
       eventUpdate.content["unsigned"] = {"transaction_id": messageID};
@@ -704,6 +804,41 @@ class Room {
     return;
   }
 
+  void restoreGroupSessionKeys() async {
+    // Restore the inbound and outbound session keys
+    if (client.encryptionEnabled && client.storeAPI != null) {
+      final String outboundGroupSessionPickle = await client.storeAPI.getItem(
+          "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session");
+      if (outboundGroupSessionPickle != null) {
+        try {
+          this._outboundGroupSession = olm.OutboundGroupSession();
+          this
+              ._outboundGroupSession
+              .unpickle(client.userID, outboundGroupSessionPickle);
+        } catch (e) {
+          this._outboundGroupSession = null;
+          print("[LibOlm] Unable to unpickle outboundGroupSession: " +
+              e.toString());
+        }
+      }
+      final String sessionKeysPickle = await client.storeAPI
+          .getItem("/clients/${client.deviceID}/rooms/${this.id}/session_keys");
+      if (sessionKeysPickle?.isNotEmpty ?? false) {
+        final Map<String, dynamic> map = json.decode(sessionKeysPickle);
+        this._sessionKeys = {};
+        for (var entry in map.entries) {
+          try {
+            this._sessionKeys[entry.key] =
+                SessionKey.fromJson(entry.value, client.userID);
+          } catch (e) {
+            print("[LibOlm] Could not unpickle inboundGroupSession: " +
+                e.toString());
+          }
+        }
+      }
+    }
+  }
+
   /// Returns a Room from a json String which comes normally from the store. If the
   /// state are also given, the method will await them.
   static Future<Room> getRoomFromTableRow(
@@ -724,6 +859,9 @@ class Room {
       client: matrix,
       roomAccountData: {},
     );
+
+    // Restore the inbound and outbound session keys
+    await newRoom.restoreGroupSessionKeys();
 
     if (states != null) {
       List<Map<String, dynamic>> rawStates = await states;
@@ -753,6 +891,15 @@ class Room {
       onTimelineInsertCallback onInsert}) async {
     List<Event> events =
         client.store != null ? await client.store.getEventList(this) : [];
+    if (this.encrypted) {
+      for (int i = 0; i < events.length; i++) {
+        try {
+          events[i] = decryptGroupMessage(events[i]);
+        } catch (e) {
+          print("[LibOlm] Could not decrypt group message: " + e.toString());
+        }
+      }
+    }
     Timeline timeline = Timeline(
       room: this,
       events: events,
@@ -1294,6 +1441,7 @@ class Room {
     return;
   }
 
+  /// Returns all known device keys for all participants in this room.
   Future<List<DeviceKeys>> getUserDeviceKeys() async {
     List<DeviceKeys> deviceKeys = [];
     List<User> users = await requestParticipants();
@@ -1307,5 +1455,74 @@ class Room {
       }
     }
     return deviceKeys;
+  }
+
+  /// Encrypts the given json payload and creates a send-ready m.room.encrypted
+  /// payload. This will create a new outgoingGroupSession if necessary.
+  Future<Map<String, dynamic>> encryptGroupMessagePayload(
+      Map<String, dynamic> payload,
+      {String type = "m.room.message"}) async {
+    if (!this.encrypted) return payload;
+    if (!client.encryptionEnabled) throw ("Encryption is not enabled");
+    if (this.encryptionAlgorithm != "m.megolm.v1.aes-sha2") {
+      throw ("Unknown encryption algorithm");
+    }
+    if (_outboundGroupSession == null) {
+      await createOutboundGroupSession();
+    }
+    final Map<String, dynamic> payloadContent = {
+      "content": payload,
+      "type": type,
+      "room_id": id,
+    };
+    Map<String, dynamic> encryptedPayload = {
+      "algorithm": "m.megolm.v1.aes-sha2",
+      "ciphertext": _outboundGroupSession.encrypt(json.encode(payloadContent)),
+      "device_id": client.deviceID,
+      "sender_key": client.identityKey,
+      "session_id": _outboundGroupSession.session_id(),
+    };
+    return encryptedPayload;
+  }
+
+  /// Decrypts the given [event] with one of the available ingoingGroupSessions.
+  Event decryptGroupMessage(Event event) {
+    if (!client.encryptionEnabled) throw ("Encryption is not enabled");
+    if (event.content["algorithm"] != "m.megolm.v1.aes-sha2") {
+      throw ("Unknown encryption algorithm");
+    }
+    final String sessionId = event.content["session_id"];
+    if (!sessionKeys.containsKey(sessionId)) {
+      throw ("Unknown session id");
+    }
+    final olm.DecryptResult decryptResult = sessionKeys[sessionId]
+        .inboundGroupSession
+        .decrypt(event.content["ciphertext"]);
+    final String messageIndexKey =
+        event.eventId + event.time.millisecondsSinceEpoch.toString();
+    if (sessionKeys[sessionId].indexes.containsKey(messageIndexKey) &&
+        sessionKeys[sessionId].indexes[messageIndexKey] !=
+            decryptResult.message_index) {
+      throw ("Invalid message index");
+    }
+    sessionKeys[sessionId].indexes[messageIndexKey] =
+        decryptResult.message_index;
+    // TODO: The client should check that the sender's fingerprint key matches the keys.ed25519 property of the event which established the Megolm session when marking the event as verified.
+
+    final Map<String, dynamic> decryptedPayload =
+        json.decode(decryptResult.plaintext);
+    return Event(
+      content: decryptedPayload["content"],
+      typeKey: decryptedPayload["type"],
+      senderId: event.senderId,
+      eventId: event.eventId,
+      roomId: event.roomId,
+      room: event.room,
+      time: event.time,
+      unsigned: event.unsigned,
+      stateKey: event.stateKey,
+      prevContent: event.prevContent,
+      status: event.status,
+    );
   }
 }

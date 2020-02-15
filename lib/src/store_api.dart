@@ -48,9 +48,13 @@ abstract class StoreAPI {
   /// Clears all tables from the database.
   Future<void> clear();
 
-  Future<void> storeUserDeviceKeys(Map<String, DeviceKeysList> userDeviceKeys);
+  Future<dynamic> getItem(String key);
+
+  Future<void> setItem(String key, String value);
 
   Future<Map<String, DeviceKeysList>> getUserDeviceKeys();
+
+  Future<void> storeUserDeviceKeys(Map<String, DeviceKeysList> userDeviceKeys);
 }
 
 /// Responsible to store all data persistent and to query objects from the
