@@ -698,7 +698,7 @@ class Room {
             eventType: resp["state"][i]["type"],
             content: resp["state"][i],
           );
-          client.onEvent.add(eventUpdate);
+          client.onEvent.add(eventUpdate.decrypt(this));
           client.store.storeEventUpdate(eventUpdate);
         }
         return;
@@ -711,7 +711,7 @@ class Room {
             eventType: resp["state"][i]["type"],
             content: resp["state"][i],
           );
-          client.onEvent.add(eventUpdate);
+          client.onEvent.add(eventUpdate.decrypt(this));
         }
       }
     }
@@ -725,7 +725,7 @@ class Room {
           eventType: history[i]["type"],
           content: history[i],
         );
-        client.onEvent.add(eventUpdate);
+        client.onEvent.add(eventUpdate.decrypt(this));
         client.store.storeEventUpdate(eventUpdate);
         client.store.setRoomPrevBatch(id, resp["end"]);
       }
@@ -739,7 +739,7 @@ class Room {
           eventType: history[i]["type"],
           content: history[i],
         );
-        client.onEvent.add(eventUpdate);
+        client.onEvent.add(eventUpdate.decrypt(this));
       }
     }
     client.onRoomUpdate.add(
