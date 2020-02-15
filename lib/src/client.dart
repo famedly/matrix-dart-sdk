@@ -1389,8 +1389,14 @@ class Client {
         final String userId = rawDeviceKeyListEntry.key;
         _userDeviceKeys[userId].deviceKeys = {};
         for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
-          _userDeviceKeys[userId].deviceKeys[rawDeviceKeyEntry.key] =
+          final String deviceId = rawDeviceKeyEntry.key;
+          _userDeviceKeys[userId].deviceKeys[deviceId] =
               DeviceKeys.fromJson(rawDeviceKeyEntry.value);
+          if (deviceId == this.deviceID &&
+              _userDeviceKeys[userId].deviceKeys[deviceId].ed25519Key ==
+                  this.fingerprintKey) {
+            _userDeviceKeys[userId].deviceKeys[deviceId].verified = true;
+          }
         }
         _userDeviceKeys[userId].outdated = false;
       }
