@@ -20,7 +20,7 @@ class DeviceKeysList {
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = Map<String, dynamic>();
     data['user_id'] = this.userId;
-    data['outdated'] = this.outdated;
+    data['outdated'] = this.outdated ?? true;
 
     Map<String, dynamic> rawDeviceKeys = {};
     for (final deviceKeyEntry in this.deviceKeys.entries) {
