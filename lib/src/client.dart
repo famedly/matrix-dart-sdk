@@ -1391,6 +1391,8 @@ class Client {
           type: HTTPType.POST,
           action: "/client/r0/keys/query",
           data: {"timeout": 10000, "device_keys": outdatedLists});
+      final Map<String, DeviceKeysList> oldUserDeviceKeys =
+          Map<String, DeviceKeysList>.from(_userDeviceKeys);
       for (final rawDeviceKeyListEntry in response["device_keys"].entries) {
         final String userId = rawDeviceKeyListEntry.key;
         _userDeviceKeys[userId].deviceKeys = {};
@@ -1398,7 +1400,13 @@ class Client {
           final String deviceId = rawDeviceKeyEntry.key;
           _userDeviceKeys[userId].deviceKeys[deviceId] =
               DeviceKeys.fromJson(rawDeviceKeyEntry.value);
-          if (deviceId == this.deviceID &&
+          if (oldUserDeviceKeys.containsKey(userId) &&
+              _userDeviceKeys[userId].deviceKeys.containsKey(deviceId)) {
+            _userDeviceKeys[userId].deviceKeys[deviceId].verified =
+                _userDeviceKeys[userId].deviceKeys[deviceId].verified;
+            _userDeviceKeys[userId].deviceKeys[deviceId].blocked =
+                _userDeviceKeys[userId].deviceKeys[deviceId].blocked;
+          } else if (deviceId == this.deviceID &&
               _userDeviceKeys[userId].deviceKeys[deviceId].ed25519Key ==
                   this.fingerprintKey) {
             _userDeviceKeys[userId].deviceKeys[deviceId].verified = true;
