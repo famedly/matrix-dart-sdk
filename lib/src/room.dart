@@ -114,7 +114,6 @@ class Room {
     setSessionKey(rawSession["session_id"], rawSession);
     List<DeviceKeys> deviceKeys = await getUserDeviceKeys();
     try {
-      // TODO: Fix type '_InternalLinkedHashMap<String, dynamic>' is not a subtype of type 'Iterable<dynamic>'
       await client.sendToDevice(deviceKeys, "m.room_key", rawSession);
     } catch (e) {
       print(

@@ -142,6 +142,8 @@ class Client {
   /// Presences of users by a given matrix ID
   Map<String, Presence> presences = {};
 
+  int _timeoutFactor = 1;
+
   Room getRoomByAlias(String alias) {
     for (int i = 0; i < rooms.length; i++) {
       if (rooms[i].canonicalAlias == alias) return rooms[i];
@@ -777,7 +779,7 @@ class Client {
     if (this.isLogged() == false && this.homeserver == null) {
       throw ("No homeserver specified.");
     }
-    if (timeout == null) timeout = syncTimeoutSec + 5;
+    if (timeout == null) timeout = (_timeoutFactor * syncTimeoutSec) + 5;
     dynamic json;
     if (data is Map) data.removeWhere((k, v) => v == null);
     (!(data is String)) ? json = jsonEncode(data) : json = data;
@@ -842,6 +844,9 @@ class Client {
     } on ArgumentError catch (exception) {
       print(exception);
       // Ignore this error
+    } on TimeoutException catch (_) {
+      _timeoutFactor *= 2;
+      rethrow;
     } catch (_) {
       print(_);
       rethrow;
@@ -892,6 +897,7 @@ class Client {
       final int hash = _syncRequest.hashCode;
       final syncResp = await _syncRequest;
       if (hash != _syncRequest.hashCode) return;
+      _timeoutFactor = 1;
       if (this.store != null) {
         await this.store.transaction(() {
           handleSync(syncResp);
