@@ -299,9 +299,6 @@ class Client {
           newDeviceID: response["device_id"],
           newMatrixVersions: matrixVersions,
           newLazyLoadMembers: lazyLoadMembers);
-      if (await this._uploadKeys(uploadDeviceKeys: true) == false) {
-        await this.logout();
-      }
     }
     return response;
   }
@@ -345,10 +342,6 @@ class Client {
         newMatrixVersions: matrixVersions,
         newLazyLoadMembers: lazyLoadMembers,
       );
-      if (await this._uploadKeys(uploadDeviceKeys: true) == false) {
-        await this.logout();
-        return false;
-      }
       return true;
     }
     return false;
@@ -691,6 +684,9 @@ class Client {
         await olm.init();
         this._olmAccount = olm.Account();
         this._olmAccount.create();
+        if (await this._uploadKeys(uploadDeviceKeys: true) == false) {
+          throw ("Upload key failed");
+        }
       } catch (_) {
         this._olmAccount = null;
       }
