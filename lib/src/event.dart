@@ -378,7 +378,7 @@ class Event {
   /// Searches for the reply event in the given timeline.
   Future<Event> getReplyEvent(Timeline timeline) async {
     if (!isReply) return null;
-    final String replyEventId = content['m.relates_to']['m.in_reply_to'];
+    final String replyEventId = content['m.relates_to']['m.in_reply_to']['event_id'];
     return await timeline.getEventById(replyEventId);
   }
 }
