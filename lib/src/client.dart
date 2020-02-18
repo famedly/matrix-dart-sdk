@@ -1639,7 +1639,7 @@ class Client {
         "type": type,
         "content": message,
         "sender": this.userID,
-        "sender_keys": {"ed25519": fingerprintKey},
+        "keys": {"ed25519": fingerprintKey},
         "recipient": device.userId,
         "recipient_keys": {"ed25519": device.ed25519Key},
       };
