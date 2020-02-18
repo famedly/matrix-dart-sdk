@@ -101,9 +101,7 @@ class Room {
 
     if (_outboundGroupSession == null) return;
 
-    await client.storeAPI?.setItem(
-        "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session",
-        _outboundGroupSession.pickle(client.userID));
+    await _storeOutboundGroupSession();
     // Add as an inboundSession to the [sessionKeys].
     Map<String, dynamic> rawSession = {
       "algorithm": "m.megolm.v1.aes-sha2",
@@ -121,6 +119,13 @@ class Room {
               e.toString());
       await clearOutboundGroupSession();
     }
+    return;
+  }
+
+  Future<void> _storeOutboundGroupSession() async {
+    await client.storeAPI?.setItem(
+        "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session",
+        _outboundGroupSession.pickle(client.userID));
     return;
   }
 
@@ -1482,6 +1487,7 @@ class Room {
       "sender_key": client.identityKey,
       "session_id": _outboundGroupSession.session_id(),
     };
+    await _storeOutboundGroupSession();
     return encryptedPayload;
   }
 
@@ -1489,13 +1495,15 @@ class Room {
   Event decryptGroupMessage(Event event) {
     Map<String, dynamic> decryptedPayload;
     try {
-      if (!client.encryptionEnabled) throw ("Encryption is not enabled");
+      if (!client.encryptionEnabled) {
+        throw ("Encryption is not enabled in your client.");
+      }
       if (event.content["algorithm"] != "m.megolm.v1.aes-sha2") {
-        throw ("Unknown encryption algorithm");
+        throw ("Unknown encryption algorithm.");
       }
       final String sessionId = event.content["session_id"];
       if (!sessionKeys.containsKey(sessionId)) {
-        throw ("Unknown session id");
+        throw ("The sender has not sent us the session key.");
       }
       final olm.DecryptResult decryptResult = sessionKeys[sessionId]
           .inboundGroupSession
@@ -1505,10 +1513,14 @@ class Room {
       if (sessionKeys[sessionId].indexes.containsKey(messageIndexKey) &&
           sessionKeys[sessionId].indexes[messageIndexKey] !=
               decryptResult.message_index) {
-        throw ("Invalid message index");
+        if ((_outboundGroupSession?.session_id() ?? "") == sessionId) {
+          clearOutboundGroupSession();
+        }
+        throw ("The secure channel with the sender was corrupted.");
       }
       sessionKeys[sessionId].indexes[messageIndexKey] =
           decryptResult.message_index;
+      _storeOutboundGroupSession();
       // TODO: The client should check that the sender's fingerprint key matches the keys.ed25519 property of the event which established the Megolm session when marking the event as verified.
 
       decryptedPayload = json.decode(decryptResult.plaintext);
