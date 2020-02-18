@@ -33,6 +33,7 @@ import 'package:famedlysdk/src/sync/user_update.dart';
 import 'package:famedlysdk/src/utils/device_keys_list.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:famedlysdk/src/utils/open_id_credentials.dart';
+import 'package:famedlysdk/src/utils/session_key.dart';
 import 'package:famedlysdk/src/utils/to_device_event.dart';
 import 'package:famedlysdk/src/utils/turn_server_credentials.dart';
 import 'package:olm/olm.dart' as olm;
@@ -740,6 +741,16 @@ class Client {
 
   /// Resets all settings and stops the synchronisation.
   void clear() {
+    olmSessions.values.forEach((List<olm.Session> sessions) {
+      sessions.forEach((olm.Session session) => session?.free());
+    });
+    rooms.forEach((Room room) {
+      room.clearOutboundGroupSession();
+      room.sessionKeys.values.forEach((SessionKey sessionKey) {
+        sessionKey.inboundGroupSession?.free();
+      });
+    });
+    this._olmAccount?.free();
     this.storeAPI?.clear();
     this._accessToken = this._homeserver = this._userID = this._deviceID = this
             ._deviceName =
@@ -1603,9 +1614,11 @@ class Client {
     if (!_olmSessions.containsKey(curve25519IdentityKey)) {
       _olmSessions[curve25519IdentityKey] = [];
     }
-    _olmSessions[curve25519IdentityKey]
-        .removeWhere((olm.Session s) => s.session_id() == session.session_id());
-    _olmSessions[curve25519IdentityKey].add(session);
+    if (_olmSessions[curve25519IdentityKey]
+            .indexWhere((s) => s.session_id() == session.session_id()) ==
+        -1) {
+      _olmSessions[curve25519IdentityKey].add(session);
+    }
     Map<String, List<String>> pickleMap = {};
     for (var entry in olmSessions.entries) {
       pickleMap[entry.key] = [];
