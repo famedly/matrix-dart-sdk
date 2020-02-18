@@ -1487,30 +1487,40 @@ class Room {
 
   /// Decrypts the given [event] with one of the available ingoingGroupSessions.
   Event decryptGroupMessage(Event event) {
-    if (!client.encryptionEnabled) throw ("Encryption is not enabled");
-    if (event.content["algorithm"] != "m.megolm.v1.aes-sha2") {
-      throw ("Unknown encryption algorithm");
-    }
-    final String sessionId = event.content["session_id"];
-    if (!sessionKeys.containsKey(sessionId)) {
-      throw ("Unknown session id");
-    }
-    final olm.DecryptResult decryptResult = sessionKeys[sessionId]
-        .inboundGroupSession
-        .decrypt(event.content["ciphertext"]);
-    final String messageIndexKey =
-        event.eventId + event.time.millisecondsSinceEpoch.toString();
-    if (sessionKeys[sessionId].indexes.containsKey(messageIndexKey) &&
-        sessionKeys[sessionId].indexes[messageIndexKey] !=
-            decryptResult.message_index) {
-      throw ("Invalid message index");
-    }
-    sessionKeys[sessionId].indexes[messageIndexKey] =
-        decryptResult.message_index;
-    // TODO: The client should check that the sender's fingerprint key matches the keys.ed25519 property of the event which established the Megolm session when marking the event as verified.
+    Map<String, dynamic> decryptedPayload;
+    try {
+      if (!client.encryptionEnabled) throw ("Encryption is not enabled");
+      if (event.content["algorithm"] != "m.megolm.v1.aes-sha2") {
+        throw ("Unknown encryption algorithm");
+      }
+      final String sessionId = event.content["session_id"];
+      if (!sessionKeys.containsKey(sessionId)) {
+        throw ("Unknown session id");
+      }
+      final olm.DecryptResult decryptResult = sessionKeys[sessionId]
+          .inboundGroupSession
+          .decrypt(event.content["ciphertext"]);
+      final String messageIndexKey =
+          event.eventId + event.time.millisecondsSinceEpoch.toString();
+      if (sessionKeys[sessionId].indexes.containsKey(messageIndexKey) &&
+          sessionKeys[sessionId].indexes[messageIndexKey] !=
+              decryptResult.message_index) {
+        throw ("Invalid message index");
+      }
+      sessionKeys[sessionId].indexes[messageIndexKey] =
+          decryptResult.message_index;
+      // TODO: The client should check that the sender's fingerprint key matches the keys.ed25519 property of the event which established the Megolm session when marking the event as verified.
 
-    final Map<String, dynamic> decryptedPayload =
-        json.decode(decryptResult.plaintext);
+      decryptedPayload = json.decode(decryptResult.plaintext);
+    } catch (exception) {
+      decryptedPayload = {
+        "content": {
+          "msgtype": "m.bad.encrypted",
+          "body": exception.toString(),
+        },
+        "type": "m.room.message",
+      };
+    }
     return Event(
       content: decryptedPayload["content"],
       typeKey: decryptedPayload["type"],

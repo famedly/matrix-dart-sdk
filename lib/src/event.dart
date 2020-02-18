@@ -248,6 +248,8 @@ class Event {
         return MessageTypes.Sticker;
       case "m.location":
         return MessageTypes.Location;
+      case "m.bad.encrypted":
+        return MessageTypes.BadEncrypted;
       default:
         if (type == EventTypes.Message) {
           return MessageTypes.Text;
@@ -378,7 +380,8 @@ class Event {
   /// Searches for the reply event in the given timeline.
   Future<Event> getReplyEvent(Timeline timeline) async {
     if (!isReply) return null;
-    final String replyEventId = content['m.relates_to']['m.in_reply_to']['event_id'];
+    final String replyEventId =
+        content['m.relates_to']['m.in_reply_to']['event_id'];
     return await timeline.getEventById(replyEventId);
   }
 }
@@ -394,6 +397,7 @@ enum MessageTypes {
   Location,
   Reply,
   Sticker,
+  BadEncrypted,
   None,
 }
 
