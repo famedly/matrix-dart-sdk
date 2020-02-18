@@ -1552,7 +1552,13 @@ class Client {
     if (existingSessions != null) {
       for (olm.Session session in existingSessions) {
         if ((type == 0 && session.matches_inbound(body) == 1) || type == 1) {
-          plaintext = session.decrypt(type, body);
+          try {
+            plaintext = session.decrypt(type, body);
+            storeOlmSession(senderKey, session);
+            break;
+          } catch (_) {
+            plaintext = null;
+          }
         }
       }
     }
@@ -1565,8 +1571,8 @@ class Client {
       newSession.create_inbound_from(_olmAccount, senderKey, body);
       _olmAccount.remove_one_time_keys(newSession);
       storeAPI?.storeClient();
-      storeOlmSession(senderKey, newSession);
       plaintext = newSession.decrypt(type, body);
+      storeOlmSession(senderKey, newSession);
     }
     final Map<String, dynamic> plainContent = json.decode(plaintext);
     if (plainContent.containsKey("sender") &&
@@ -1597,6 +1603,8 @@ class Client {
     if (!_olmSessions.containsKey(curve25519IdentityKey)) {
       _olmSessions[curve25519IdentityKey] = [];
     }
+    _olmSessions[curve25519IdentityKey]
+        .removeWhere((olm.Session s) => s.session_id() == session.session_id());
     _olmSessions[curve25519IdentityKey].add(session);
     Map<String, List<String>> pickleMap = {};
     for (var entry in olmSessions.entries) {
