@@ -123,6 +123,7 @@ class Room {
   }
 
   Future<void> _storeOutboundGroupSession() async {
+    if (_outboundGroupSession == null) return;
     await client.storeAPI?.setItem(
         "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session",
         _outboundGroupSession.pickle(client.userID));
@@ -170,10 +171,11 @@ class Room {
       indexes: {},
       key: client.userID,
     );
-
-    client.storeAPI?.setItem(
-        "/clients/${client.deviceID}/rooms/${this.id}/session_keys",
-        json.encode(sessionKeys));
+    if (_fullyRestored) {
+      client.storeAPI?.setItem(
+          "/clients/${client.deviceID}/rooms/${this.id}/session_keys",
+          json.encode(sessionKeys));
+    }
   }
 
   /// Returns the [Event] for the given [typeKey] and optional [stateKey].
@@ -842,7 +844,10 @@ class Room {
         }
       }
     }
+    _fullyRestored = true;
   }
+
+  bool _fullyRestored = false;
 
   /// Returns a Room from a json String which comes normally from the store. If the
   /// state are also given, the method will await them.
