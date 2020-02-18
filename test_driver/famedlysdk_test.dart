@@ -11,6 +11,9 @@ const String testPasswordB = "test";
 const String testMessage = "Hello world";
 const String testMessage2 = "Hello moon";
 const String testMessage3 = "Hello sun";
+const String testMessage4 = "Hello star";
+const String testMessage5 = "Hello earth";
+const String testMessage6 = "Hello mars";
 
 void test() async {
   print("++++ Login $testUserA ++++");
@@ -81,7 +84,7 @@ void test() async {
   await room.sendTextEvent(testMessage);
   await Future.delayed(Duration(seconds: 5));
   assert(room.outboundGroupSession != null);
-  final String currentSessionIdA = room.outboundGroupSession.session_id();
+  String currentSessionIdA = room.outboundGroupSession.session_id();
   assert(room.sessionKeys.containsKey(room.outboundGroupSession.session_id()));
   assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
   assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
@@ -126,6 +129,57 @@ void test() async {
   print(
       "++++ ($testUserA) Received decrypted message: '${room.lastMessage}' ++++");
 
+  print("++++ Login $testUserB in another client ++++");
+  Client testClientC = Client("TestClient", debug: false);
+  testClientC.storeAPI = FakeStore(testClientC, Map<String, dynamic>());
+  await testClientC.checkServer(homeserver);
+  await testClientC.login(testUserB, testPasswordA);
+  await Future.delayed(Duration(seconds: 3));
+  assert(room.outboundGroupSession == null);
+
+  print("++++ ($testUserA) Send again encrypted message: '$testMessage4' ++++");
+  await room.sendTextEvent(testMessage4);
+  await Future.delayed(Duration(seconds: 5));
+  assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
+  assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
+  assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
+      testClientB.olmSessions[testClientA.identityKey].first.session_id());
+  assert(testClientA.olmSessions[testClientC.identityKey].length == 1);
+  assert(testClientC.olmSessions[testClientA.identityKey].length == 1);
+  assert(testClientA.olmSessions[testClientC.identityKey].first.session_id() ==
+      testClientC.olmSessions[testClientA.identityKey].first.session_id());
+  assert(room.outboundGroupSession.session_id() != currentSessionIdA);
+  currentSessionIdA = room.outboundGroupSession.session_id();
+  assert(inviteRoom.sessionKeys
+      .containsKey(room.outboundGroupSession.session_id()));
+  assert(room.lastMessage == testMessage4);
+  assert(inviteRoom.lastMessage == testMessage4);
+  print(
+      "++++ ($testUserB) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
+
+  print("++++ Logout $testUserB another client ++++");
+  await testClientC.logout();
+  testClientC = null;
+  await Future.delayed(Duration(seconds: 5));
+  assert(room.outboundGroupSession == null);
+  assert(inviteRoom.outboundGroupSession == null);
+
+  print("++++ ($testUserA) Send again encrypted message: '$testMessage6' ++++");
+  await room.sendTextEvent(testMessage6);
+  await Future.delayed(Duration(seconds: 5));
+  assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
+  assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
+  assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
+      testClientB.olmSessions[testClientA.identityKey].first.session_id());
+  assert(room.outboundGroupSession.session_id() != currentSessionIdA);
+  currentSessionIdA = room.outboundGroupSession.session_id();
+  assert(inviteRoom.sessionKeys
+      .containsKey(room.outboundGroupSession.session_id()));
+  assert(room.lastMessage == testMessage6);
+  assert(inviteRoom.lastMessage == testMessage6);
+  print(
+      "++++ ($testUserB) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
+
   print("++++ ($testUserA) Restore user ++++");
   FakeStore clientAStore = testClientA.storeAPI;
   testClientA = null;
@@ -137,26 +191,30 @@ void test() async {
   assert(restoredRoom.id == room.id);
   assert(restoredRoom.outboundGroupSession.session_id() ==
       room.outboundGroupSession.session_id());
-  assert(restoredRoom.sessionKeys.length == 2);
-  assert(restoredRoom.sessionKeys.keys.first == room.sessionKeys.keys.first);
-  assert(restoredRoom.sessionKeys.keys.last == room.sessionKeys.keys.last);
+  assert(restoredRoom.sessionKeys.length == 4);
+  assert(restoredRoom.sessionKeys.length == room.sessionKeys.length);
+  for (int i = 0; i < restoredRoom.sessionKeys.length; i++) {
+    assert(restoredRoom.sessionKeys.keys.toList()[i] ==
+        room.sessionKeys.keys.toList()[i]);
+  }
   assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
   assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
   assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
       testClientB.olmSessions[testClientA.identityKey].first.session_id());
 
-  print("++++ ($testUserA) Send again encrypted message: '$testMessage2' ++++");
-  await restoredRoom.sendTextEvent(testMessage2);
+  print("++++ ($testUserA) Send again encrypted message: '$testMessage5' ++++");
+  await restoredRoom.sendTextEvent(testMessage5);
   await Future.delayed(Duration(seconds: 5));
   assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
   assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
   assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
       testClientB.olmSessions[testClientA.identityKey].first.session_id());
-  assert(restoredRoom.outboundGroupSession.session_id() == currentSessionIdA);
+  /*assert(restoredRoom.outboundGroupSession.session_id() == currentSessionIdA);
   assert(inviteRoom.sessionKeys
-      .containsKey(restoredRoom.outboundGroupSession.session_id()));
-  assert(restoredRoom.lastMessage == testMessage2);
-  assert(inviteRoom.lastMessage == testMessage2);
+      .containsKey(restoredRoom.outboundGroupSession.session_id()));*/
+  assert(restoredRoom.lastMessage == testMessage5);
+  assert(inviteRoom.lastMessage == testMessage5);
+  assert(testClientB.getRoomById(roomId).lastMessage == testMessage5);
   print(
       "++++ ($testUserB) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
 
