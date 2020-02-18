@@ -31,20 +31,25 @@ void test() async {
     if (room.canonicalAlias?.isNotEmpty ?? false) {
       break;
     }
-    await room.leave();
-    await room.forget();
+    try {
+      await room.leave();
+      await room.forget();
+    } catch (e) {
+      print(e);
+    }
   }
 
   print("++++ ($testUserB) Leave all rooms ++++");
-  if (testClientB.rooms.isNotEmpty) {
-    Room room = testClientB.rooms.first;
-    await room.leave();
-    await room.forget();
-  }
-  if (testClientB.rooms.isNotEmpty) {
-    Room room = testClientB.rooms.first;
-    await room.leave();
-    await room.forget();
+  for (int i = 0; i < 3; i++) {
+    if (testClientB.rooms.isNotEmpty) {
+      Room room = testClientB.rooms.first;
+      try {
+        await room.leave();
+        await room.forget();
+      } catch (e) {
+        print(e);
+      }
+    }
   }
 
   print("++++ ($testUserA) Create room and invite $testUserB ++++");
@@ -80,6 +85,8 @@ void test() async {
   assert(room.sessionKeys.containsKey(room.outboundGroupSession.session_id()));
   assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
   assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
+  assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
+      testClientB.olmSessions[testClientA.identityKey].first.session_id());
   assert(inviteRoom.sessionKeys
       .containsKey(room.outboundGroupSession.session_id()));
   assert(room.lastMessage == testMessage);
@@ -92,6 +99,9 @@ void test() async {
   await Future.delayed(Duration(seconds: 5));
   assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
   assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
+  assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
+      testClientB.olmSessions[testClientA.identityKey].first.session_id());
+
   assert(room.outboundGroupSession.session_id() == currentSessionIdA);
   assert(inviteRoom.sessionKeys
       .containsKey(room.outboundGroupSession.session_id()));
@@ -115,6 +125,40 @@ void test() async {
   assert(room.lastMessage == testMessage3);
   print(
       "++++ ($testUserA) Received decrypted message: '${room.lastMessage}' ++++");
+
+  print("++++ ($testUserA) Restore user ++++");
+  FakeStore clientAStore = testClientA.storeAPI;
+  testClientA = null;
+  testClientA = Client("TestClient", debug: false);
+  testClientA.storeAPI = FakeStore(testClientA, clientAStore.storeMap);
+  await Future.delayed(Duration(seconds: 3));
+  Room restoredRoom = testClientA.rooms.first;
+  assert(room != null);
+  assert(restoredRoom.id == room.id);
+  assert(restoredRoom.outboundGroupSession.session_id() ==
+      room.outboundGroupSession.session_id());
+  assert(restoredRoom.sessionKeys.length == 2);
+  assert(restoredRoom.sessionKeys.keys.first == room.sessionKeys.keys.first);
+  assert(restoredRoom.sessionKeys.keys.last == room.sessionKeys.keys.last);
+  assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
+  assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
+  assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
+      testClientB.olmSessions[testClientA.identityKey].first.session_id());
+
+  print("++++ ($testUserA) Send again encrypted message: '$testMessage2' ++++");
+  await restoredRoom.sendTextEvent(testMessage2);
+  await Future.delayed(Duration(seconds: 5));
+  assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
+  assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
+  assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
+      testClientB.olmSessions[testClientA.identityKey].first.session_id());
+  assert(restoredRoom.outboundGroupSession.session_id() == currentSessionIdA);
+  assert(inviteRoom.sessionKeys
+      .containsKey(restoredRoom.outboundGroupSession.session_id()));
+  assert(restoredRoom.lastMessage == testMessage2);
+  assert(inviteRoom.lastMessage == testMessage2);
+  print(
+      "++++ ($testUserB) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
 
   print("++++ Logout $testUserA and $testUserB ++++");
   await room.leave();

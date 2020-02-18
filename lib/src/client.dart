@@ -706,7 +706,7 @@ class Client {
       final String olmSessionPickleString =
           await storeAPI.getItem("/clients/$userID/olm-sessions");
       if (olmSessionPickleString != null) {
-        final Map<String, List<String>> pickleMap =
+        final Map<String, dynamic> pickleMap =
             json.decode(olmSessionPickleString);
         for (var entry in pickleMap.entries) {
           for (String pickle in entry.value) {
@@ -1362,56 +1362,61 @@ class Client {
   }
 
   Future<void> _updateUserDeviceKeys() async {
-    Set<String> trackedUserIds = await _getUserIdsInEncryptedRooms();
-    trackedUserIds.add(this.userID);
+    try {
+      if (!this.isLogged()) return;
+      Set<String> trackedUserIds = await _getUserIdsInEncryptedRooms();
+      trackedUserIds.add(this.userID);
 
-    // Remove all userIds we no longer need to track the devices of.
-    _userDeviceKeys
-        .removeWhere((String userId, v) => !trackedUserIds.contains(userId));
+      // Remove all userIds we no longer need to track the devices of.
+      _userDeviceKeys
+          .removeWhere((String userId, v) => !trackedUserIds.contains(userId));
 
-    // Check if there are outdated device key lists. Add it to the set.
-    Map<String, dynamic> outdatedLists = {};
-    for (String userId in trackedUserIds) {
-      if (!userDeviceKeys.containsKey(userId)) {
-        _userDeviceKeys[userId] = DeviceKeysList(userId);
-      }
-      DeviceKeysList deviceKeysList = userDeviceKeys[userId];
-      if (deviceKeysList.outdated) {
-        outdatedLists[userId] = [];
-      }
-    }
-
-    // Request the missing device key lists.
-    if (outdatedLists.isNotEmpty) {
-      final Map<String, dynamic> response = await this.jsonRequest(
-          type: HTTPType.POST,
-          action: "/client/r0/keys/query",
-          data: {"timeout": 10000, "device_keys": outdatedLists});
-      final Map<String, DeviceKeysList> oldUserDeviceKeys =
-          Map<String, DeviceKeysList>.from(_userDeviceKeys);
-      for (final rawDeviceKeyListEntry in response["device_keys"].entries) {
-        final String userId = rawDeviceKeyListEntry.key;
-        _userDeviceKeys[userId].deviceKeys = {};
-        for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
-          final String deviceId = rawDeviceKeyEntry.key;
-          _userDeviceKeys[userId].deviceKeys[deviceId] =
-              DeviceKeys.fromJson(rawDeviceKeyEntry.value);
-          if (oldUserDeviceKeys.containsKey(userId) &&
-              _userDeviceKeys[userId].deviceKeys.containsKey(deviceId)) {
-            _userDeviceKeys[userId].deviceKeys[deviceId].verified =
-                _userDeviceKeys[userId].deviceKeys[deviceId].verified;
-            _userDeviceKeys[userId].deviceKeys[deviceId].blocked =
-                _userDeviceKeys[userId].deviceKeys[deviceId].blocked;
-          } else if (deviceId == this.deviceID &&
-              _userDeviceKeys[userId].deviceKeys[deviceId].ed25519Key ==
-                  this.fingerprintKey) {
-            _userDeviceKeys[userId].deviceKeys[deviceId].verified = true;
-          }
+      // Check if there are outdated device key lists. Add it to the set.
+      Map<String, dynamic> outdatedLists = {};
+      for (String userId in trackedUserIds) {
+        if (!userDeviceKeys.containsKey(userId)) {
+          _userDeviceKeys[userId] = DeviceKeysList(userId);
         }
-        _userDeviceKeys[userId].outdated = false;
+        DeviceKeysList deviceKeysList = userDeviceKeys[userId];
+        if (deviceKeysList.outdated) {
+          outdatedLists[userId] = [];
+        }
       }
+
+      // Request the missing device key lists.
+      if (outdatedLists.isNotEmpty) {
+        final Map<String, dynamic> response = await this.jsonRequest(
+            type: HTTPType.POST,
+            action: "/client/r0/keys/query",
+            data: {"timeout": 10000, "device_keys": outdatedLists});
+        final Map<String, DeviceKeysList> oldUserDeviceKeys =
+            Map<String, DeviceKeysList>.from(_userDeviceKeys);
+        for (final rawDeviceKeyListEntry in response["device_keys"].entries) {
+          final String userId = rawDeviceKeyListEntry.key;
+          _userDeviceKeys[userId].deviceKeys = {};
+          for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
+            final String deviceId = rawDeviceKeyEntry.key;
+            _userDeviceKeys[userId].deviceKeys[deviceId] =
+                DeviceKeys.fromJson(rawDeviceKeyEntry.value);
+            if (oldUserDeviceKeys.containsKey(userId) &&
+                _userDeviceKeys[userId].deviceKeys.containsKey(deviceId)) {
+              _userDeviceKeys[userId].deviceKeys[deviceId].verified =
+                  _userDeviceKeys[userId].deviceKeys[deviceId].verified;
+              _userDeviceKeys[userId].deviceKeys[deviceId].blocked =
+                  _userDeviceKeys[userId].deviceKeys[deviceId].blocked;
+            } else if (deviceId == this.deviceID &&
+                _userDeviceKeys[userId].deviceKeys[deviceId].ed25519Key ==
+                    this.fingerprintKey) {
+              _userDeviceKeys[userId].deviceKeys[deviceId].verified = true;
+            }
+          }
+          _userDeviceKeys[userId].outdated = false;
+        }
+      }
+      await this.storeAPI?.storeUserDeviceKeys(userDeviceKeys);
+    } catch (e) {
+      print("[LibOlm] Unable to update user device keys: " + e.toString());
     }
-    await this.storeAPI?.storeUserDeviceKeys(userDeviceKeys);
   }
 
   String get fingerprintKey => encryptionEnabled
