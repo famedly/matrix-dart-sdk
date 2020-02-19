@@ -1394,8 +1394,8 @@ class Client {
         }
       }
 
-      // Request the missing device key lists.
       if (outdatedLists.isNotEmpty) {
+        // Request the missing device key lists from the server.
         final Map<String, dynamic> response = await this.jsonRequest(
             type: HTTPType.POST,
             action: "/client/r0/keys/query",
@@ -1407,17 +1407,23 @@ class Client {
           _userDeviceKeys[userId].deviceKeys = {};
           for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
             final String deviceId = rawDeviceKeyEntry.key;
+
+            // Set the new device key for this device
             _userDeviceKeys[userId].deviceKeys[deviceId] =
                 DeviceKeys.fromJson(rawDeviceKeyEntry.value);
+
+            // Restore verified and blocked flags
             if (oldUserDeviceKeys.containsKey(userId) &&
                 _userDeviceKeys[userId].deviceKeys.containsKey(deviceId)) {
               _userDeviceKeys[userId].deviceKeys[deviceId].verified =
                   _userDeviceKeys[userId].deviceKeys[deviceId].verified;
               _userDeviceKeys[userId].deviceKeys[deviceId].blocked =
                   _userDeviceKeys[userId].deviceKeys[deviceId].blocked;
-            } else if (deviceId == this.deviceID &&
+            }
+            if (deviceId == this.deviceID &&
                 _userDeviceKeys[userId].deviceKeys[deviceId].ed25519Key ==
                     this.fingerprintKey) {
+              // Always trust the own device
               _userDeviceKeys[userId].deviceKeys[deviceId].verified = true;
             }
           }
