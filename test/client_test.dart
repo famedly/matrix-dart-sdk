@@ -36,6 +36,7 @@ import 'package:famedlysdk/src/sync/user_update.dart';
 import 'package:famedlysdk/src/utils/matrix_exception.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:famedlysdk/src/utils/profile.dart';
+import 'package:famedlysdk/src/utils/user_device.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
@@ -446,6 +447,16 @@ void main() {
       final String roomID = "1234";
       final Map<String, dynamic> resp = await matrix.joinRoomById(roomID);
       expect(resp["room_id"], roomID);
+    });
+
+    test('requestUserDevices', () async {
+      final List<UserDevice> userDevices = await matrix.requestUserDevices();
+      expect(userDevices.length, 1);
+      expect(userDevices.first.deviceId, "QBUAZIFURK");
+      expect(userDevices.first.displayName, "android");
+      expect(userDevices.first.lastSeenIp, "1.2.3.4");
+      expect(
+          userDevices.first.lastSeenTs.millisecondsSinceEpoch, 1474491775024);
     });
 
     test('get archive', () async {
