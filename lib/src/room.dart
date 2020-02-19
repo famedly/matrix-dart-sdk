@@ -1502,6 +1502,7 @@ class Room {
 
   /// Decrypts the given [event] with one of the available ingoingGroupSessions.
   Event decryptGroupMessage(Event event) {
+    if (event.type != EventTypes.Encrypted) return event;
     Map<String, dynamic> decryptedPayload;
     try {
       if (!client.encryptionEnabled) {
