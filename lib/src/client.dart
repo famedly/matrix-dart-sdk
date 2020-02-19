@@ -36,6 +36,7 @@ import 'package:famedlysdk/src/utils/open_id_credentials.dart';
 import 'package:famedlysdk/src/utils/session_key.dart';
 import 'package:famedlysdk/src/utils/to_device_event.dart';
 import 'package:famedlysdk/src/utils/turn_server_credentials.dart';
+import 'package:famedlysdk/src/utils/user_device.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:pedantic/pedantic.dart';
 import 'room.dart';
@@ -1744,5 +1745,39 @@ class Client {
         }
       }
     }
+  }
+
+  /// Gets information about all devices for the current user.
+  Future<List<UserDevice>> requestUserDevices() async {
+    final Map<String, dynamic> response =
+        await jsonRequest(type: HTTPType.GET, action: "/client/r0/devices");
+    List<UserDevice> userDevices = [];
+    for (final rawDevice in response["devices"]) {
+      userDevices.add(
+        UserDevice.fromJson(rawDevice, this),
+      );
+    }
+    return userDevices;
+  }
+
+  /// Gets information about all devices for the current user.
+  Future<UserDevice> requestUserDevice(String deviceId) async {
+    final Map<String, dynamic> response = await jsonRequest(
+        type: HTTPType.GET, action: "/client/r0/devices/$deviceId");
+    return UserDevice.fromJson(response, this);
+  }
+
+  /// Deletes the given devices, and invalidates any access token associated with them.
+  Future<void> deleteDevices(List<String> deviceIds,
+      {Map<String, dynamic> auth}) async {
+    await jsonRequest(
+      type: HTTPType.POST,
+      action: "/client/r0/delete_devices",
+      data: {
+        "devices": deviceIds,
+        if (auth != null) "auth": auth,
+      },
+    );
+    return;
   }
 }

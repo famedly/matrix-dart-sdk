@@ -548,6 +548,16 @@ class FakeMatrixApi extends MockClient {
 
   static final Map<String, Map<String, dynamic>> api = {
     "GET": {
+      "/client/r0/devices": (var req) => {
+            "devices": [
+              {
+                "device_id": "QBUAZIFURK",
+                "display_name": "android",
+                "last_seen_ip": "1.2.3.4",
+                "last_seen_ts": 1474491775024
+              }
+            ]
+          },
       "/client/r0/rooms/1/state/m.room.member/@alice:example.com": (var req) =>
           {"displayname": "Alice"},
       "/client/r0/profile/@getme:example.com": (var req) => {
