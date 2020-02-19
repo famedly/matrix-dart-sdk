@@ -1476,8 +1476,7 @@ class Room {
   Future<Map<String, dynamic>> encryptGroupMessagePayload(
       Map<String, dynamic> payload,
       {String type = "m.room.message"}) async {
-    if (!this.encrypted) return payload;
-    if (!client.encryptionEnabled) throw ("Encryption is not enabled");
+    if (!this.encrypted || !client.encryptionEnabled) return payload;
     if (this.encryptionAlgorithm != "m.megolm.v1.aes-sha2") {
       throw ("Unknown encryption algorithm");
     }
