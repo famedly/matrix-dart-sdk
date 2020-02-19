@@ -292,8 +292,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "09eb49dbdb1ad9ed71c6bf74562250ecd3d4198b"
-      resolved-ref: "09eb49dbdb1ad9ed71c6bf74562250ecd3d4198b"
+      ref: "307dc133867eb5bf80d4f5c7412e58621dfca3cf"
+      resolved-ref: "307dc133867eb5bf80d4f5c7412e58621dfca3cf"
       url: "https://gitlab.com/famedly/libraries/dart-olm.git"
     source: git
     version: "0.0.0"
