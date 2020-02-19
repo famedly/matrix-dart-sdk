@@ -21,12 +21,14 @@ void test() async {
   testClientA.storeAPI = FakeStore(testClientA, Map<String, dynamic>());
   await testClientA.checkServer(homeserver);
   await testClientA.login(testUserA, testPasswordA);
+  assert(testClientA.encryptionEnabled);
 
   print("++++ Login $testUserB ++++");
   Client testClientB = Client("TestClient", debug: false);
   testClientB.storeAPI = FakeStore(testClientB, Map<String, dynamic>());
   await testClientB.checkServer(homeserver);
   await testClientB.login(testUserB, testPasswordA);
+  assert(testClientB.encryptionEnabled);
 
   print("++++ ($testUserA) Leave all rooms ++++");
   while (testClientA.rooms.isNotEmpty) {
@@ -55,6 +57,22 @@ void test() async {
     }
   }
 
+  print("++++ Check if own olm device is verified by default ++++");
+  assert(testClientA.userDeviceKeys.containsKey(testUserA));
+  assert(testClientA.userDeviceKeys[testUserA].deviceKeys
+      .containsKey(testClientA.deviceID));
+  assert(testClientA
+      .userDeviceKeys[testUserA].deviceKeys[testClientA.deviceID].verified);
+  assert(!testClientA
+      .userDeviceKeys[testUserA].deviceKeys[testClientA.deviceID].blocked);
+  assert(testClientB.userDeviceKeys.containsKey(testUserB));
+  assert(testClientB.userDeviceKeys[testUserB].deviceKeys
+      .containsKey(testClientB.deviceID));
+  assert(testClientB
+      .userDeviceKeys[testUserB].deviceKeys[testClientB.deviceID].verified);
+  assert(!testClientB
+      .userDeviceKeys[testUserB].deviceKeys[testClientB.deviceID].blocked);
+
   print("++++ ($testUserA) Create room and invite $testUserB ++++");
   await testClientA.createRoom(invite: [User(testUserB)]);
   await Future.delayed(Duration(seconds: 1));
@@ -79,6 +97,31 @@ void test() async {
   assert(testClientA.userDeviceKeys.containsKey(testUserB));
   assert(testClientA.userDeviceKeys[testUserB].deviceKeys
       .containsKey(testClientB.deviceID));
+  assert(!testClientA
+      .userDeviceKeys[testUserB].deviceKeys[testClientB.deviceID].verified);
+  assert(!testClientA
+      .userDeviceKeys[testUserB].deviceKeys[testClientB.deviceID].blocked);
+  assert(testClientB.userDeviceKeys.containsKey(testUserA));
+  assert(testClientB.userDeviceKeys[testUserA].deviceKeys
+      .containsKey(testClientA.deviceID));
+  assert(!testClientB
+      .userDeviceKeys[testUserA].deviceKeys[testClientA.deviceID].verified);
+  assert(!testClientB
+      .userDeviceKeys[testUserA].deviceKeys[testClientA.deviceID].blocked);
+  await testClientA.userDeviceKeys[testUserB].deviceKeys[testClientB.deviceID]
+      .setVerified(true, testClientA);
+
+  print("++++ Check if own olm device is verified by default ++++");
+  assert(testClientA.userDeviceKeys.containsKey(testUserA));
+  assert(testClientA.userDeviceKeys[testUserA].deviceKeys
+      .containsKey(testClientA.deviceID));
+  assert(testClientA
+      .userDeviceKeys[testUserA].deviceKeys[testClientA.deviceID].verified);
+  assert(testClientB.userDeviceKeys.containsKey(testUserB));
+  assert(testClientB.userDeviceKeys[testUserB].deviceKeys
+      .containsKey(testClientB.deviceID));
+  assert(testClientB
+      .userDeviceKeys[testUserB].deviceKeys[testClientB.deviceID].verified);
 
   print("++++ ($testUserA) Send encrypted message: '$testMessage' ++++");
   await room.sendTextEvent(testMessage);
@@ -230,4 +273,5 @@ void test() async {
       type: HTTPType.POST, action: "/client/r0/logout/all");
   testClientA = null;
   testClientB = null;
+  return;
 }
