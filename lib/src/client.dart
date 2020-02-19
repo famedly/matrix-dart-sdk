@@ -1365,7 +1365,9 @@ class Client {
       if (rooms[i].encrypted) {
         List<User> userList = await rooms[i].requestParticipants();
         for (User user in userList) {
-          userIds.add(user.id);
+          if ([Membership.join, Membership.invite].contains(user.membership)) {
+            userIds.add(user.id);
+          }
         }
       }
     }
