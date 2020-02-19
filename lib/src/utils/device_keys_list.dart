@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../client.dart';
+import '../room.dart';
 
 class DeviceKeysList {
   String userId;
@@ -55,6 +56,12 @@ class DeviceKeys {
 
   Future<void> setBlocked(bool newBlocked, Client client) {
     blocked = newBlocked;
+    for (Room room in client.rooms) {
+      if (!room.encrypted) continue;
+      if (room.getParticipants().indexWhere((u) => u.id == userId) != -1) {
+        room.clearOutboundGroupSession();
+      }
+    }
     return client.storeAPI.storeUserDeviceKeys(client.userDeviceKeys);
   }
 
