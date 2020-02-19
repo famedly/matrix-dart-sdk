@@ -38,6 +38,7 @@ export 'package:famedlysdk/src/utils/receipt.dart';
 export 'package:famedlysdk/src/utils/states_map.dart';
 export 'package:famedlysdk/src/utils/to_device_event.dart';
 export 'package:famedlysdk/src/utils/turn_server_credentials.dart';
+export 'package:famedlysdk/src/utils/user_device.dart';
 export 'package:famedlysdk/src/account_data.dart';
 export 'package:famedlysdk/src/client.dart';
 export 'package:famedlysdk/src/event.dart';
