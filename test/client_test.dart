@@ -557,11 +557,12 @@ void main() {
           }
         });
         await Future.delayed(Duration(milliseconds: 50));
-        expect(matrix.rooms[1].outboundGroupSession == null, true);
+        expect(matrix.rooms[1].outboundGroupSession != null, true);
       }
     });
     test('Test invalidate outboundGroupSessions', () async {
       if (matrix.encryptionEnabled) {
+        await matrix.rooms[1].clearOutboundGroupSession();
         expect(matrix.rooms[1].outboundGroupSession == null, true);
         await matrix.rooms[1].createOutboundGroupSession();
         expect(matrix.rooms[1].outboundGroupSession != null, true);

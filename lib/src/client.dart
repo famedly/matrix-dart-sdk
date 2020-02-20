@@ -920,7 +920,7 @@ class Client {
         _sortRooms();
       }
       this.prevBatch = syncResp["next_batch"];
-      unawaited(_updateUserDeviceKeys());
+      await _updateUserDeviceKeys();
       if (hash == _syncRequest.hashCode) unawaited(_sync());
     } on MatrixException catch (exception) {
       onError.add(exception);
@@ -997,7 +997,6 @@ class Client {
   void _handleDeviceListsEvents(Map<String, dynamic> deviceLists) {
     if (deviceLists["changed"] is List) {
       for (final userId in deviceLists["changed"]) {
-        _clearOutboundGroupSessionsByUserId(userId);
         if (_userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys[userId].outdated = true;
         }
@@ -1403,34 +1402,34 @@ class Client {
             type: HTTPType.POST,
             action: "/client/r0/keys/query",
             data: {"timeout": 10000, "device_keys": outdatedLists});
-        final Map<String, DeviceKeysList> oldUserDeviceKeys =
-            Map<String, DeviceKeysList>.from(_userDeviceKeys);
+
         for (final rawDeviceKeyListEntry in response["device_keys"].entries) {
           final String userId = rawDeviceKeyListEntry.key;
+          final Map<String, DeviceKeys> oldKeys =
+              Map<String, DeviceKeys>.from(_userDeviceKeys[userId].deviceKeys);
           _userDeviceKeys[userId].deviceKeys = {};
           for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
             final String deviceId = rawDeviceKeyEntry.key;
 
             // Set the new device key for this device
-            _userDeviceKeys[userId].deviceKeys[deviceId] =
-                DeviceKeys.fromJson(rawDeviceKeyEntry.value);
-
-            // Restore verified and blocked flags
-            if (oldUserDeviceKeys.containsKey(userId) &&
-                _userDeviceKeys[userId].deviceKeys.containsKey(deviceId)) {
-              _userDeviceKeys[userId].deviceKeys[deviceId].verified =
-                  _userDeviceKeys[userId].deviceKeys[deviceId].verified;
-              _userDeviceKeys[userId].deviceKeys[deviceId].blocked =
-                  _userDeviceKeys[userId].deviceKeys[deviceId].blocked;
-            }
-            if (deviceId == this.deviceID &&
-                _userDeviceKeys[userId].deviceKeys[deviceId].ed25519Key ==
-                    this.fingerprintKey) {
-              // Always trust the own device
-              _userDeviceKeys[userId].deviceKeys[deviceId].verified = true;
+            if (!oldKeys.containsKey(deviceId)) {
+              _userDeviceKeys[userId].deviceKeys[deviceId] =
+                  DeviceKeys.fromJson(rawDeviceKeyEntry.value);
+              if (deviceId == this.deviceID &&
+                  _userDeviceKeys[userId].deviceKeys[deviceId].ed25519Key ==
+                      this.fingerprintKey) {
+                // Always trust the own device
+                _userDeviceKeys[userId].deviceKeys[deviceId].verified = true;
+              }
+            } else {
+              _userDeviceKeys[userId].deviceKeys[deviceId] = oldKeys[deviceId];
             }
           }
           _userDeviceKeys[userId].outdated = false;
+          if (_userDeviceKeys[userId].deviceKeys.toString() !=
+              oldKeys.toString()) {
+            _clearOutboundGroupSessionsByUserId(userId);
+          }
         }
       }
       await this.storeAPI?.storeUserDeviceKeys(userDeviceKeys);
