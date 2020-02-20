@@ -836,7 +836,7 @@ class Room {
           .getItem("/clients/${client.deviceID}/rooms/${this.id}/session_keys");
       if (sessionKeysPickle?.isNotEmpty ?? false) {
         final Map<String, dynamic> map = json.decode(sessionKeysPickle);
-        this._sessionKeys = {};
+        if (this._sessionKeys == null) this._sessionKeys = {};
         for (var entry in map.entries) {
           try {
             this._sessionKeys[entry.key] =
@@ -848,6 +848,9 @@ class Room {
         }
       }
     }
+    await client.storeAPI?.setItem(
+        "/clients/${client.deviceID}/rooms/${this.id}/session_keys",
+        json.encode(sessionKeys));
     _fullyRestored = true;
   }
 
