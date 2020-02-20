@@ -1025,7 +1025,10 @@ class Client {
         try {
           toDeviceEvent = decryptToDeviceEvent(toDeviceEvent);
         } catch (e) {
-          print("[LibOlm] Could not decrypt to device event: " + e.toString());
+          print(
+              "[LibOlm] Could not decrypt to device event from ${toDeviceEvent.sender}: " +
+                  e.toString());
+          print(toDeviceEvent.sender);
           toDeviceEvent = ToDeviceEvent.fromJson(events[i]);
         }
       }
@@ -1320,7 +1323,9 @@ class Client {
           Room room = getRoomById(toDeviceEvent.content["room_id"]);
           if (room != null && toDeviceEvent.content["session_id"] is String) {
             final String sessionId = toDeviceEvent.content["session_id"];
-            room.setSessionKey(sessionId, toDeviceEvent.content);
+            if (room != null) {
+              room.setSessionKey(sessionId, toDeviceEvent.content);
+            }
           }
           break;
       }
@@ -1570,7 +1575,11 @@ class Client {
     List<olm.Session> existingSessions = olmSessions[senderKey];
     if (existingSessions != null) {
       for (olm.Session session in existingSessions) {
-        if ((type == 0 && session.matches_inbound(body) == 1) || type == 1) {
+        if (type == 0 && session.matches_inbound(body) != 0) {
+          plaintext = session.decrypt(type, body);
+          storeOlmSession(senderKey, session);
+          break;
+        } else if (type == 1) {
           try {
             plaintext = session.decrypt(type, body);
             storeOlmSession(senderKey, session);
@@ -1679,6 +1688,7 @@ class Client {
       };
       final olm.EncryptResult encryptResult =
           existingSessions.first.encrypt(json.encode(payload));
+      storeOlmSession(device.curve25519Key, existingSessions.first);
       encryptedMessage["ciphertext"][device.curve25519Key] = {
         "type": encryptResult.type,
         "body": encryptResult.body,
