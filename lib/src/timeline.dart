@@ -42,6 +42,7 @@ class Timeline {
   final onTimelineInsertCallback onInsert;
 
   StreamSubscription<EventUpdate> sub;
+  StreamSubscription<String> sessionIdReceivedSub;
   bool _requestingHistoryLock = false;
 
   Map<String, Event> _eventCache = {};
@@ -77,6 +78,30 @@ class Timeline {
 
   Timeline({this.room, this.events, this.onUpdate, this.onInsert}) {
     sub ??= room.client.onEvent.stream.listen(_handleEventUpdate);
+    sessionIdReceivedSub ??=
+        room.onSessionKeyReceived.stream.listen(_sessionKeyReceived);
+  }
+
+  /// Don't forget to call this before you dismiss this object!
+  void cancelSubscriptions() {
+    sub?.cancel();
+    sessionIdReceivedSub?.cancel();
+  }
+
+  void _sessionKeyReceived(String sessionId) {
+    bool decryptAtLeastOneEvent = false;
+    for (int i = 0; i < events.length; i++) {
+      if (events[i].type == EventTypes.Encrypted &&
+          events[i].messageType == MessageTypes.BadEncrypted &&
+          events[i].content["body"] == DecryptError.UNKNOWN_SESSION &&
+          events[i].content["session_id"] == sessionId) {
+        events[i] = events[i].decrypted;
+        if (events[i].type != EventTypes.Encrypted) {
+          decryptAtLeastOneEvent = true;
+        }
+      }
+    }
+    if (decryptAtLeastOneEvent) onUpdate();
   }
 
   int _findEvent({String event_id, String unsigned_txid}) {

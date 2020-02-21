@@ -58,7 +58,7 @@ class FakeMatrixApi extends MockClient {
               return Response(json.encode(res), 405);
             }
           } else if (method == "PUT" &&
-              action.contains("/client/r0/sendToDevice/m.room.encrypted/")) {
+              action.contains("/client/r0/sendToDevice/")) {
             return Response(json.encode({}), 200);
           } else if (method == "GET" &&
               action.contains("/client/r0/rooms/") &&

@@ -35,6 +35,7 @@ export 'package:famedlysdk/src/utils/open_id_credentials.dart';
 export 'package:famedlysdk/src/utils/profile.dart';
 export 'package:famedlysdk/src/utils/push_rules.dart';
 export 'package:famedlysdk/src/utils/receipt.dart';
+export 'package:famedlysdk/src/utils/room_key_request.dart';
 export 'package:famedlysdk/src/utils/states_map.dart';
 export 'package:famedlysdk/src/utils/to_device_event.dart';
 export 'package:famedlysdk/src/utils/turn_server_credentials.dart';
