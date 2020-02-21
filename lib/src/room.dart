@@ -921,9 +921,10 @@ class Room {
     if (this.encrypted && client.store != null) {
       await client.store.transaction(() {
         for (int i = 0; i < events.length; i++) {
-          if (events[i].type == EventTypes.Encrypted) {
+          if (events[i].type == EventTypes.Encrypted &&
+              events[i].content["body"] == DecryptError.UNKNOWN_SESSION) {
             events[i] = events[i].decrypted;
-            if (events[i].type == EventTypes.Encrypted) {
+            if (events[i].type != EventTypes.Encrypted) {
               client.store.storeEventUpdate(
                 EventUpdate(
                   eventType: events[i].typeKey,
@@ -1531,14 +1532,14 @@ class Room {
     Map<String, dynamic> decryptedPayload;
     try {
       if (!client.encryptionEnabled) {
-        throw ("Encryption is not enabled in your client.");
+        throw (DecryptError.NOT_ENABLED);
       }
       if (event.content["algorithm"] != "m.megolm.v1.aes-sha2") {
-        throw ("Unknown encryption algorithm.");
+        throw (DecryptError.UNKNOWN_ALGORITHM);
       }
       final String sessionId = event.content["session_id"];
       if (!sessionKeys.containsKey(sessionId)) {
-        throw ("The sender has not sent us the session key.");
+        throw (DecryptError.UNKNOWN_SESSION);
       }
       final olm.DecryptResult decryptResult = sessionKeys[sessionId]
           .inboundGroupSession
@@ -1551,7 +1552,7 @@ class Room {
         if ((_outboundGroupSession?.session_id() ?? "") == sessionId) {
           clearOutboundGroupSession();
         }
-        throw ("The secure channel with the sender was corrupted.");
+        throw (DecryptError.CHANNEL_CORRUPTED);
       }
       sessionKeys[sessionId].indexes[messageIndexKey] =
           decryptResult.message_index;
@@ -1560,8 +1561,7 @@ class Room {
 
       decryptedPayload = json.decode(decryptResult.plaintext);
     } catch (exception) {
-      if (exception.toString() ==
-          "The sender has not sent us the session key.") {
+      if (exception.toString() == DecryptError.UNKNOWN_SESSION) {
         decryptedPayload = {
           "content": event.content,
           "type": "m.room.encrypted",
@@ -1592,4 +1592,13 @@ class Room {
       status: event.status,
     );
   }
+}
+
+abstract class DecryptError {
+  static const String NOT_ENABLED = "Encryption is not enabled in your client.";
+  static const String UNKNOWN_ALGORITHM = "Unknown encryption algorithm.";
+  static const String UNKNOWN_SESSION =
+      "The sender has not sent us the session key.";
+  static const String CHANNEL_CORRUPTED =
+      "The secure channel with the sender was corrupted.";
 }
