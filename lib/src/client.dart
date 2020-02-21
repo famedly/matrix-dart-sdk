@@ -1192,10 +1192,10 @@ class Client {
         type: type,
         content: event,
       );
-      this.store?.storeEventUpdate(update);
       if (event["type"] == "m.room.encrypted") {
         update = update.decrypt(this.getRoomById(update.roomID));
       }
+      this.store?.storeEventUpdate(update);
       _updateRoomsByEventUpdate(update);
       onEvent.add(update);
 
