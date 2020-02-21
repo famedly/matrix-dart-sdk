@@ -186,6 +186,14 @@ class Room {
   /// Adds the [state] to this room and overwrites a state with the same
   /// typeKey/stateKey key pair if there is one.
   void setState(Event state) {
+    // Decrypt if necessary
+    if (state.type == EventTypes.Encrypted) {
+      try {
+        state = decryptGroupMessage(state);
+      } catch (e) {
+        print("[LibOlm] Could not decrypt room state: " + e.toString());
+      }
+    }
     // Check if this is a member change and we need to clear the outboundGroupSession.
     if (encrypted &&
         outboundGroupSession != null &&
@@ -708,8 +716,8 @@ class Room {
             roomID: id,
             eventType: resp["state"][i]["type"],
             content: resp["state"][i],
-          );
-          client.onEvent.add(eventUpdate.decrypt(this));
+          ).decrypt(this);
+          client.onEvent.add(eventUpdate);
           client.store.storeEventUpdate(eventUpdate);
         }
         return;
@@ -721,8 +729,8 @@ class Room {
             roomID: id,
             eventType: resp["state"][i]["type"],
             content: resp["state"][i],
-          );
-          client.onEvent.add(eventUpdate.decrypt(this));
+          ).decrypt(this);
+          client.onEvent.add(eventUpdate);
         }
       }
     }
@@ -735,8 +743,8 @@ class Room {
           roomID: id,
           eventType: history[i]["type"],
           content: history[i],
-        );
-        client.onEvent.add(eventUpdate.decrypt(this));
+        ).decrypt(this);
+        client.onEvent.add(eventUpdate);
         client.store.storeEventUpdate(eventUpdate);
         client.store.setRoomPrevBatch(id, resp["end"]);
       }
@@ -749,8 +757,8 @@ class Room {
           roomID: id,
           eventType: history[i]["type"],
           content: history[i],
-        );
-        client.onEvent.add(eventUpdate.decrypt(this));
+        ).decrypt(this);
+        client.onEvent.add(eventUpdate);
       }
     }
     client.onRoomUpdate.add(
@@ -908,15 +916,28 @@ class Room {
       onTimelineInsertCallback onInsert}) async {
     List<Event> events =
         client.store != null ? await client.store.getEventList(this) : [];
-    if (this.encrypted) {
-      for (int i = 0; i < events.length; i++) {
-        try {
-          events[i] = decryptGroupMessage(events[i]);
-        } catch (e) {
-          print("[LibOlm] Could not decrypt group message: " + e.toString());
+
+    // Try again to decrypt encrypted events and update the database.
+    if (this.encrypted && client.store != null) {
+      await client.store.transaction(() {
+        for (int i = 0; i < events.length; i++) {
+          if (events[i].type == EventTypes.Encrypted) {
+            events[i] = events[i].decrypted;
+            if (events[i].type == EventTypes.Encrypted) {
+              client.store.storeEventUpdate(
+                EventUpdate(
+                  eventType: events[i].typeKey,
+                  content: events[i].toJson(),
+                  roomID: events[i].roomId,
+                  type: "timeline",
+                ),
+              );
+            }
+          }
         }
-      }
+      });
     }
+
     Timeline timeline = Timeline(
       room: this,
       events: events,
@@ -1503,6 +1524,8 @@ class Room {
   }
 
   /// Decrypts the given [event] with one of the available ingoingGroupSessions.
+  /// Returns a m.bad.encrypted event if it fails and does nothing if the event
+  /// was not encrypted.
   Event decryptGroupMessage(Event event) {
     if (event.type != EventTypes.Encrypted) return event;
     Map<String, dynamic> decryptedPayload;
@@ -1537,13 +1560,23 @@ class Room {
 
       decryptedPayload = json.decode(decryptResult.plaintext);
     } catch (exception) {
-      decryptedPayload = {
-        "content": {
-          "msgtype": "m.bad.encrypted",
-          "body": exception.toString(),
-        },
-        "type": "m.room.message",
-      };
+      if (exception.toString() ==
+          "The sender has not sent us the session key.") {
+        decryptedPayload = {
+          "content": event.content,
+          "type": "m.room.encrypted",
+        };
+        decryptedPayload["content"]["body"] = exception.toString();
+        decryptedPayload["content"]["msgtype"] = "m.bad.encrypted";
+      } else {
+        decryptedPayload = {
+          "content": {
+            "msgtype": "m.bad.encrypted",
+            "body": exception.toString(),
+          },
+          "type": "m.room.encrypted",
+        };
+      }
     }
     return Event(
       content: decryptedPayload["content"],

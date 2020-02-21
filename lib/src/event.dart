@@ -384,6 +384,10 @@ class Event {
         content['m.relates_to']['m.in_reply_to']['event_id'];
     return await timeline.getEventById(replyEventId);
   }
+
+  /// Trys to decrypt this event. Returns a m.bad.encrypted event
+  /// if it fails and does nothing if the event was not encrypted.
+  Event get decrypted => room.decryptGroupMessage(this);
 }
 
 enum MessageTypes {
