@@ -33,6 +33,7 @@ import 'package:famedlysdk/src/sync/user_update.dart';
 import 'package:famedlysdk/src/utils/device_keys_list.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:famedlysdk/src/utils/open_id_credentials.dart';
+import 'package:famedlysdk/src/utils/room_key_request.dart';
 import 'package:famedlysdk/src/utils/session_key.dart';
 import 'package:famedlysdk/src/utils/to_device_event.dart';
 import 'package:famedlysdk/src/utils/turn_server_credentials.dart';
@@ -619,6 +620,10 @@ class Client {
 
   /// Will be called on call answers.
   final StreamController<Event> onCallAnswer = StreamController.broadcast();
+
+  /// Will be called when another device is requesting session keys for a room.
+  final StreamController<RoomKeyRequest> onRoomKeyRequest =
+      StreamController.broadcast();
 
   /// Matrix synchronisation is done with https long polling. This needs a
   /// timeout which is usually 30 seconds.
@@ -1320,17 +1325,67 @@ class Client {
     try {
       switch (toDeviceEvent.type) {
         case "m.room_key":
+        case "m.forwarded_room_key":
           Room room = getRoomById(toDeviceEvent.content["room_id"]);
-          if (room != null && toDeviceEvent.content["session_id"] is String) {
+          if (room != null) {
             final String sessionId = toDeviceEvent.content["session_id"];
             if (room != null) {
-              room.setSessionKey(sessionId, toDeviceEvent.content);
+              if (toDeviceEvent.type == "m.room_key" &&
+                  userDeviceKeys.containsKey(toDeviceEvent.sender) &&
+                  userDeviceKeys[toDeviceEvent.sender].deviceKeys.containsKey(
+                      toDeviceEvent.content["requesting_device_id"])) {
+                toDeviceEvent.content["sender_claimed_ed25519_key"] =
+                    userDeviceKeys[toDeviceEvent.sender]
+                        .deviceKeys[
+                            toDeviceEvent.content["requesting_device_id"]]
+                        .ed25519Key;
+              }
+              room.setSessionKey(
+                sessionId,
+                toDeviceEvent.content,
+                forwarded: toDeviceEvent.type == "m.forwarded_room_key",
+              );
+              if (toDeviceEvent.type == "m.forwarded_room_key") {
+                sendToDevice(
+                    [],
+                    "m.room_key_request",
+                    {
+                      "action": "request_cancellation",
+                      "request_id": base64.encode(
+                          utf8.encode(toDeviceEvent.content["room_id"])),
+                      "requesting_device_id": room.client.deviceID,
+                    });
+              }
+            }
+          }
+          break;
+        case "m.room_key_request":
+          if (!toDeviceEvent.content.containsKey("body")) break;
+          Room room = getRoomById(toDeviceEvent.content["body"]["room_id"]);
+          DeviceKeys deviceKeys;
+          final String sessionId = toDeviceEvent.content["body"]["session_id"];
+          if (userDeviceKeys.containsKey(toDeviceEvent.sender) &&
+              userDeviceKeys[toDeviceEvent.sender]
+                  .deviceKeys
+                  .containsKey(toDeviceEvent.content["requesting_device_id"])) {
+            deviceKeys = userDeviceKeys[toDeviceEvent.sender]
+                .deviceKeys[toDeviceEvent.content["requesting_device_id"]];
+            if (room.sessionKeys.containsKey(sessionId)) {
+              final RoomKeyRequest roomKeyRequest =
+                  RoomKeyRequest.fromToDeviceEvent(toDeviceEvent, this);
+              if (deviceKeys.userId == userID &&
+                  deviceKeys.verified &&
+                  !deviceKeys.blocked) {
+                roomKeyRequest.forwardKey();
+              } else {
+                onRoomKeyRequest.add(roomKeyRequest);
+              }
             }
           }
           break;
       }
     } catch (e) {
-      print(e);
+      print("[Matrix] Error while processing to-device-event: " + e.toString());
     }
   }
 
@@ -1650,65 +1705,80 @@ class Client {
     storeAPI?.setItem("/clients/$userID/olm-sessions", json.encode(pickleMap));
   }
 
-  /// Sends an encrypted [message] of this [type] to these [deviceKeys].
-  Future<void> sendToDevice(List<DeviceKeys> deviceKeys, String type,
-      Map<String, dynamic> message) async {
-    if (!encryptionEnabled) return;
+  /// Sends an encrypted [message] of this [type] to these [deviceKeys]. To send
+  /// the request to all devices of the current user, pass an empty list to [deviceKeys].
+  Future<void> sendToDevice(
+      List<DeviceKeys> deviceKeys, String type, Map<String, dynamic> message,
+      {bool encrypted = true}) async {
+    if (encrypted && !encryptionEnabled) return;
     // Don't send this message to blocked devices.
-    if (deviceKeys?.isEmpty ?? true) return;
-    deviceKeys.removeWhere((DeviceKeys deviceKeys) =>
-        deviceKeys.blocked || deviceKeys.deviceId == deviceID);
-    if (deviceKeys?.isEmpty ?? true) return;
-
-    // Create new sessions with devices if there is no existing session yet.
-    List<DeviceKeys> deviceKeysWithoutSession =
-        List<DeviceKeys>.from(deviceKeys);
-    deviceKeysWithoutSession.removeWhere((DeviceKeys deviceKeys) =>
-        olmSessions.containsKey(deviceKeys.curve25519Key));
-    if (deviceKeysWithoutSession.isNotEmpty) {
-      await startOutgoingOlmSessions(deviceKeysWithoutSession);
+    if (deviceKeys.isNotEmpty) {
+      deviceKeys.removeWhere((DeviceKeys deviceKeys) =>
+          deviceKeys.blocked || deviceKeys.deviceId == deviceID);
+      if (deviceKeys.isEmpty) return;
     }
-    Map<String, dynamic> encryptedMessage = {
-      "algorithm": "m.olm.v1.curve25519-aes-sha2",
-      "sender_key": identityKey,
-      "ciphertext": Map<String, dynamic>(),
-    };
-    for (DeviceKeys device in deviceKeys) {
-      List<olm.Session> existingSessions = olmSessions[device.curve25519Key];
-      if (existingSessions == null || existingSessions.isEmpty) continue;
-      existingSessions.sort((a, b) => a.session_id().compareTo(b.session_id()));
 
-      final Map<String, dynamic> payload = {
-        "type": type,
-        "content": message,
-        "sender": this.userID,
-        "keys": {"ed25519": fingerprintKey},
-        "recipient": device.userId,
-        "recipient_keys": {"ed25519": device.ed25519Key},
+    Map<String, dynamic> sendToDeviceMessage = message;
+
+    if (encrypted) {
+      // Create new sessions with devices if there is no existing session yet.
+      List<DeviceKeys> deviceKeysWithoutSession =
+          List<DeviceKeys>.from(deviceKeys);
+      deviceKeysWithoutSession.removeWhere((DeviceKeys deviceKeys) =>
+          olmSessions.containsKey(deviceKeys.curve25519Key));
+      if (deviceKeysWithoutSession.isNotEmpty) {
+        await startOutgoingOlmSessions(deviceKeysWithoutSession);
+      }
+      sendToDeviceMessage = {
+        "algorithm": "m.olm.v1.curve25519-aes-sha2",
+        "sender_key": identityKey,
+        "ciphertext": Map<String, dynamic>(),
       };
-      final olm.EncryptResult encryptResult =
-          existingSessions.first.encrypt(json.encode(payload));
-      storeOlmSession(device.curve25519Key, existingSessions.first);
-      encryptedMessage["ciphertext"][device.curve25519Key] = {
-        "type": encryptResult.type,
-        "body": encryptResult.body,
-      };
+      for (DeviceKeys device in deviceKeys) {
+        List<olm.Session> existingSessions = olmSessions[device.curve25519Key];
+        if (existingSessions == null || existingSessions.isEmpty) continue;
+        existingSessions
+            .sort((a, b) => a.session_id().compareTo(b.session_id()));
+
+        final Map<String, dynamic> payload = {
+          "type": type,
+          "content": message,
+          "sender": this.userID,
+          "keys": {"ed25519": fingerprintKey},
+          "recipient": device.userId,
+          "recipient_keys": {"ed25519": device.ed25519Key},
+        };
+        final olm.EncryptResult encryptResult =
+            existingSessions.first.encrypt(json.encode(payload));
+        storeOlmSession(device.curve25519Key, existingSessions.first);
+        sendToDeviceMessage["ciphertext"][device.curve25519Key] = {
+          "type": encryptResult.type,
+          "body": encryptResult.body,
+        };
+      }
+      type = "m.room.encrypted";
     }
 
     // Send with send-to-device messaging
     Map<String, dynamic> data = {
       "messages": Map<String, dynamic>(),
     };
-    for (DeviceKeys device in deviceKeys) {
-      if (!data["messages"].containsKey(device.userId)) {
-        data["messages"][device.userId] = Map<String, dynamic>();
+    if (deviceKeys.isEmpty) {
+      data["messages"][this.userID] = Map<String, dynamic>();
+      data["messages"][this.userID]["*"] = sendToDeviceMessage;
+    } else {
+      for (int i = 0; i < deviceKeys.length; i++) {
+        DeviceKeys device = deviceKeys[i];
+        if (!data["messages"].containsKey(device.userId)) {
+          data["messages"][device.userId] = Map<String, dynamic>();
+        }
+        data["messages"][device.userId][device.deviceId] = sendToDeviceMessage;
       }
-      data["messages"][device.userId][device.deviceId] = encryptedMessage;
     }
     final String messageID = "msg${DateTime.now().millisecondsSinceEpoch}";
     await jsonRequest(
       type: HTTPType.PUT,
-      action: "/client/r0/sendToDevice/m.room.encrypted/$messageID",
+      action: "/client/r0/sendToDevice/$type/$messageID",
       data: data,
     );
   }

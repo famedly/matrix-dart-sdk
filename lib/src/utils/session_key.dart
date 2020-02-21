@@ -7,6 +7,10 @@ class SessionKey {
   Map<String, int> indexes;
   InboundGroupSession inboundGroupSession;
   final String key;
+  List<dynamic> get forwardingCurve25519KeyChain =>
+      content["forwarding_curve25519_key_chain"] ?? [];
+  String get senderClaimedEd25519Key =>
+      content["sender_claimed_ed25519_key"] ?? "";
 
   SessionKey({this.content, this.inboundGroupSession, this.key, this.indexes});
 

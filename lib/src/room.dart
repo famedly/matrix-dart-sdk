@@ -152,13 +152,18 @@ class Room {
   Map<String, SessionKey> _sessionKeys = {};
 
   /// Add a new session key to the [sessionKeys].
-  void setSessionKey(String sessionId, Map<String, dynamic> content) {
+  void setSessionKey(String sessionId, Map<String, dynamic> content,
+      {bool forwarded = false}) {
     if (sessionKeys.containsKey(sessionId)) return;
     olm.InboundGroupSession inboundGroupSession;
     if (content["algorithm"] == "m.megolm.v1.aes-sha2") {
       try {
         inboundGroupSession = olm.InboundGroupSession();
-        inboundGroupSession.create(content["session_key"]);
+        if (forwarded) {
+          inboundGroupSession.import_session(content["session_key"]);
+        } else {
+          inboundGroupSession.create(content["session_key"]);
+        }
       } catch (e) {
         inboundGroupSession = null;
         print("[LibOlm] Could not create new InboundGroupSession: " +
@@ -176,6 +181,7 @@ class Room {
           "/clients/${client.deviceID}/rooms/${this.id}/session_keys",
           json.encode(sessionKeys));
     }
+    onSessionKeyReceived.add(sessionId);
   }
 
   /// Returns the [Event] for the given [typeKey] and optional [stateKey].
@@ -218,6 +224,11 @@ class Room {
   /// If something changes, this callback will be triggered. Will return the
   /// room id.
   final StreamController<String> onUpdate = StreamController.broadcast();
+
+  /// If there is a new session key received, this will be triggered with
+  /// the session ID.
+  final StreamController<String> onSessionKeyReceived =
+      StreamController.broadcast();
 
   /// The name of the room if set by a participant.
   String get name => states["m.room.name"] != null

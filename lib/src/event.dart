@@ -388,6 +388,42 @@ class Event {
   /// Trys to decrypt this event. Returns a m.bad.encrypted event
   /// if it fails and does nothing if the event was not encrypted.
   Event get decrypted => room.decryptGroupMessage(this);
+
+  /// If this event is encrypted and the decryption was not successful because
+  /// the session is unknown, this requests the session key from other devices
+  /// in the room. If the event is not encrypted or the decryption failed because
+  /// of a different error, this throws an exception.
+  Future<void> requestKey() async {
+    if (this.type != EventTypes.Encrypted ||
+        this.messageType != MessageTypes.BadEncrypted ||
+        this.content["body"] != DecryptError.UNKNOWN_SESSION) {
+      throw ("Session key not unknown");
+    }
+    await room.client.sendToDevice(
+        [],
+        "m.room_key_request",
+        {
+          "action": "request_cancellation",
+          "request_id": base64.encode(utf8.encode(content["session_id"])),
+          "requesting_device_id": room.client.deviceID,
+        });
+    await room.client.sendToDevice(
+        [],
+        "m.room_key_request",
+        {
+          "action": "request",
+          "body": {
+            "algorithm": "m.megolm.v1.aes-sha2",
+            "room_id": roomId,
+            "sender_key": content["sender_key"],
+            "session_id": content["session_id"],
+          },
+          "request_id": base64.encode(utf8.encode(content["session_id"])),
+          "requesting_device_id": room.client.deviceID,
+        },
+        encrypted: false);
+    return;
+  }
 }
 
 enum MessageTypes {

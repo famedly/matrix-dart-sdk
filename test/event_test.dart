@@ -209,5 +209,42 @@ void main() {
       expect(resp1, null);
       expect(resp2, "42");
     });
+
+    test("requestKey", () async {
+      Client matrix = Client("testclient", debug: true);
+      matrix.httpClient = FakeMatrixApi();
+      await matrix.checkServer("https://fakeServer.notExisting");
+      await matrix.login("test", "1234");
+
+      Event event = Event.fromJson(
+          jsonObj, Room(id: "!1234:example.com", client: matrix));
+      String exception;
+      try {
+        await event.requestKey();
+      } catch (e) {
+        exception = e;
+      }
+      expect(exception, "Session key not unknown");
+
+      event = Event.fromJson({
+        "event_id": id,
+        "sender": senderID,
+        "origin_server_ts": timestamp,
+        "type": "m.room.encrypted",
+        "room_id": "1234",
+        "status": 2,
+        "content": json.encode({
+          "msgtype": "m.bad.encrypted",
+          "body": DecryptError.UNKNOWN_SESSION,
+          "algorithm": "m.megolm.v1.aes-sha2",
+          "ciphertext": "AwgAEnACgAkLmt6qF84IK++J7UDH2Za1YVchHyprqTqsg...",
+          "device_id": "RJYKSTBOIE",
+          "sender_key": "IlRMeOPX2e0MurIyfWEucYBRVOEEUMrOHqn/8mLqMjA",
+          "session_id": "X3lUlvLELLYxeTx4yOVu6UDpasGEVO0Jbu+QFnm0cKQ"
+        }),
+      }, Room(id: "!1234:example.com", client: matrix));
+
+      await event.requestKey();
+    });
   });
 }
