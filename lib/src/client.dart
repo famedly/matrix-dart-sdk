@@ -33,6 +33,7 @@ import 'package:famedlysdk/src/sync/user_update.dart';
 import 'package:famedlysdk/src/utils/device_keys_list.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:famedlysdk/src/utils/open_id_credentials.dart';
+import 'package:famedlysdk/src/utils/public_rooms_response.dart';
 import 'package:famedlysdk/src/utils/room_key_request.dart';
 import 'package:famedlysdk/src/utils/session_key.dart';
 import 'package:famedlysdk/src/utils/to_device_event.dart';
@@ -428,9 +429,12 @@ class Client {
     return archiveList;
   }
 
-  Future<dynamic> joinRoomById(String id) async {
-    return await this
-        .jsonRequest(type: HTTPType.POST, action: "/client/r0/join/$id");
+  /// This API starts a user participating in a particular room, if that user is allowed to participate in that room.
+  /// After this call, the client is allowed to see all current state events in the room, and all subsequent events
+  /// associated with the room until the user leaves the room.
+  Future<dynamic> joinRoomById(String roomIdOrAlias) async {
+    return await this.jsonRequest(
+        type: HTTPType.POST, action: "/client/r0/join/$roomIdOrAlias");
   }
 
   /// Loads the contact list for this user excluding the user itself.
@@ -1869,5 +1873,35 @@ class Client {
       },
     );
     return;
+  }
+
+  /// Lists the public rooms on the server, with optional filter.
+  Future<PublicRoomsResponse> requestPublicRooms({
+    int limit,
+    String since,
+    String genericSearchTerm,
+    String server,
+    bool includeAllNetworks,
+    String thirdPartyInstanceId,
+  }) async {
+    String action = "/client/r0/publicRooms";
+    if (server != null) {
+      action += "?server=$server";
+    }
+    final Map<String, dynamic> response = await jsonRequest(
+      type: HTTPType.POST,
+      action: action,
+      data: {
+        if (limit != null) "limit": 10,
+        if (since != null) "since": since,
+        if (genericSearchTerm != null)
+          "filter": {"generic_search_term": genericSearchTerm},
+        if (includeAllNetworks != null)
+          "include_all_networks": includeAllNetworks,
+        if (thirdPartyInstanceId != null)
+          "third_party_instance_id": thirdPartyInstanceId,
+      },
+    );
+    return PublicRoomsResponse.fromJson(response, this);
   }
 }
