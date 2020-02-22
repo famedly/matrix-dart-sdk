@@ -40,7 +40,7 @@ class PublicRoomEntry {
   final bool worldReadable;
   Client client;
 
-  Future<void> join(Client client) => client.joinRoomById(roomId);
+  Future<void> join() => client.joinRoomById(roomId);
 
   PublicRoomEntry({
     this.aliases,
