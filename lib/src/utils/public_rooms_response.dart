@@ -55,7 +55,8 @@ class PublicRoomEntry {
   });
 
   PublicRoomEntry.fromJson(Map<String, dynamic> json, Client client)
-      : aliases = json['aliases'].cast<String>(),
+      : aliases =
+            json.containsKey('aliases') ? json['aliases'].cast<String>() : [],
         avatarUrl = json['avatar_url'],
         guestCanJoin = json['guest_can_join'],
         name = json['name'],
