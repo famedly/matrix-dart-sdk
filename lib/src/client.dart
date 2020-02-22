@@ -1708,8 +1708,12 @@ class Client {
   /// Sends an encrypted [message] of this [type] to these [deviceKeys]. To send
   /// the request to all devices of the current user, pass an empty list to [deviceKeys].
   Future<void> sendToDevice(
-      List<DeviceKeys> deviceKeys, String type, Map<String, dynamic> message,
-      {bool encrypted = true}) async {
+    List<DeviceKeys> deviceKeys,
+    String type,
+    Map<String, dynamic> message, {
+    bool encrypted = true,
+    List<User> toUsers,
+  }) async {
     if (encrypted && !encryptionEnabled) return;
     // Don't send this message to blocked devices.
     if (deviceKeys.isNotEmpty) {
@@ -1764,8 +1768,15 @@ class Client {
       "messages": Map<String, dynamic>(),
     };
     if (deviceKeys.isEmpty) {
-      data["messages"][this.userID] = Map<String, dynamic>();
-      data["messages"][this.userID]["*"] = sendToDeviceMessage;
+      if (toUsers == null) {
+        data["messages"][this.userID] = Map<String, dynamic>();
+        data["messages"][this.userID]["*"] = sendToDeviceMessage;
+      } else {
+        for (User user in toUsers) {
+          data["messages"][user.id] = Map<String, dynamic>();
+          data["messages"][user.id]["*"] = sendToDeviceMessage;
+        }
+      }
     } else {
       for (int i = 0; i < deviceKeys.length; i++) {
         DeviceKeys device = deviceKeys[i];

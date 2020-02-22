@@ -399,6 +399,7 @@ class Event {
         this.content["body"] != DecryptError.UNKNOWN_SESSION) {
       throw ("Session key not unknown");
     }
+    final List<User> users = await room.requestParticipants();
     await room.client.sendToDevice(
         [],
         "m.room_key_request",
@@ -406,7 +407,8 @@ class Event {
           "action": "request_cancellation",
           "request_id": base64.encode(utf8.encode(content["session_id"])),
           "requesting_device_id": room.client.deviceID,
-        });
+        },
+        toUsers: users);
     await room.client.sendToDevice(
         [],
         "m.room_key_request",
@@ -421,7 +423,8 @@ class Event {
           "request_id": base64.encode(utf8.encode(content["session_id"])),
           "requesting_device_id": room.client.deviceID,
         },
-        encrypted: false);
+        encrypted: false,
+        toUsers: users);
     return;
   }
 }
