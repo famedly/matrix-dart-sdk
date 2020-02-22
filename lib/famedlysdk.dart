@@ -33,6 +33,7 @@ export 'package:famedlysdk/src/utils/matrix_id_string_extension.dart';
 export 'package:famedlysdk/src/utils/mx_content.dart';
 export 'package:famedlysdk/src/utils/open_id_credentials.dart';
 export 'package:famedlysdk/src/utils/profile.dart';
+export 'package:famedlysdk/src/utils/public_rooms_response.dart';
 export 'package:famedlysdk/src/utils/push_rules.dart';
 export 'package:famedlysdk/src/utils/receipt.dart';
 export 'package:famedlysdk/src/utils/room_key_request.dart';
