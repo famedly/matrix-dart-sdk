@@ -31,6 +31,8 @@ import 'package:test/test.dart';
 
 import 'fake_matrix_api.dart';
 
+import 'dart:typed_data';
+
 void main() {
   Client matrix;
   Room room;
@@ -322,7 +324,7 @@ void main() {
 
     test('setAvatar', () async {
       final MatrixFile testFile =
-          MatrixFile(bytes: [], path: "fake/path/file.jpeg");
+          MatrixFile(bytes: Uint8List(0), path: "fake/path/file.jpeg");
       final dynamic resp = await room.setAvatar(testFile);
       expect(resp, "YUwRidLecu:example.com");
     });
@@ -350,7 +352,7 @@ void main() {
 
     test('sendFileEvent', () async {
       final MatrixFile testFile =
-          MatrixFile(bytes: [], path: "fake/path/file.jpeg");
+          MatrixFile(bytes: Uint8List(0), path: "fake/path/file.jpeg");
       final dynamic resp = await room.sendFileEvent(testFile,
           msgType: "m.file", txid: "testtxid");
       expect(resp, "42");
