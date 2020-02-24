@@ -181,6 +181,12 @@ class Room {
           "/clients/${client.deviceID}/rooms/${this.id}/session_keys",
           json.encode(sessionKeys));
     }
+    if (getState("m.room.encrypted") != null) {
+      final Event decrypted = getState("m.room.encrypted").decrypted;
+      if (decrypted.type != EventTypes.Encrypted) {
+        setState(decrypted);
+      }
+    }
     onSessionKeyReceived.add(sessionId);
   }
 
@@ -209,6 +215,10 @@ class Room {
       if (oldUser == null || oldUser.membership != newUser.membership) {
         clearOutboundGroupSession();
       }
+    }
+    if ((getState(state.typeKey)?.time?.millisecondsSinceEpoch ?? 0) >
+        state.time.millisecondsSinceEpoch) {
+      return;
     }
     if (!states.states.containsKey(state.typeKey)) {
       states.states[state.typeKey] = {};
