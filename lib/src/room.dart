@@ -217,7 +217,7 @@ class Room {
       }
     }
     if ((getState(state.typeKey)?.time?.millisecondsSinceEpoch ?? 0) >
-        state.time.millisecondsSinceEpoch) {
+        (state.time?.millisecondsSinceEpoch ?? 1)) {
       return;
     }
     if (!states.states.containsKey(state.typeKey)) {
