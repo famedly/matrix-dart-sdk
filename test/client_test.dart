@@ -23,6 +23,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/account_data.dart';
@@ -433,7 +434,7 @@ void main() {
 
     test('setAvatar', () async {
       final MatrixFile testFile =
-          MatrixFile(bytes: [], path: "fake/path/file.jpeg");
+          MatrixFile(bytes: Uint8List(0), path: "fake/path/file.jpeg");
       await matrix.setAvatar(testFile);
     });
 
