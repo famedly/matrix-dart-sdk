@@ -406,7 +406,7 @@ void main() {
 
     test('clearOutboundGroupSession', () async {
       if (!room.client.encryptionEnabled) return;
-      await room.clearOutboundGroupSession();
+      await room.clearOutboundGroupSession(wipe: true);
       expect(room.outboundGroupSession == null, true);
     });
 
