@@ -603,6 +603,24 @@ class FakeMatrixApi extends MockClient {
               {"type": "m.login.password"}
             ]
           },
+      "/client/r0/rooms/!696r7674:example.com/members": (var req) => {
+            "chunk": [
+              {
+                "content": {
+                  "membership": "join",
+                  "avatar_url": "mxc://example.org/SEsfnsuifSDFSSEF",
+                  "displayname": "Alice Margatroid"
+                },
+                "type": "m.room.member",
+                "event_id": "§143273582443PhrSn:example.org",
+                "room_id": "!636q39766251:example.com",
+                "sender": "@alice:example.com",
+                "origin_server_ts": 1432735824653,
+                "unsigned": {"age": 1234},
+                "state_key": "@alice:example.com"
+              }
+            ]
+          },
       "/client/r0/rooms/!726s6s6q:example.com/members": (var req) => {
             "chunk": [
               {

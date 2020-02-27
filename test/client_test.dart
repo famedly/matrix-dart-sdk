@@ -563,7 +563,7 @@ void main() {
     });
     test('Test invalidate outboundGroupSessions', () async {
       if (matrix.encryptionEnabled) {
-        await matrix.rooms[1].clearOutboundGroupSession();
+        await matrix.rooms[1].clearOutboundGroupSession(wipe: true);
         expect(matrix.rooms[1].outboundGroupSession == null, true);
         await matrix.rooms[1].createOutboundGroupSession();
         expect(matrix.rooms[1].outboundGroupSession != null, true);
@@ -589,7 +589,7 @@ void main() {
           }
         });
         await Future.delayed(Duration(milliseconds: 50));
-        expect(matrix.rooms[1].outboundGroupSession == null, true);
+        expect(matrix.rooms[1].outboundGroupSession != null, true);
       }
     });
     DeviceKeys deviceKeys = DeviceKeys.fromJson({

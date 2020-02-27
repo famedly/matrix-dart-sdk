@@ -84,12 +84,20 @@ class Room {
   olm.OutboundGroupSession get outboundGroupSession => _outboundGroupSession;
   olm.OutboundGroupSession _outboundGroupSession;
 
+  List<String> _outboundGroupSessionDevices;
+
   /// Clears the existing outboundGroupSession, tries to create a new one and
   /// stores it as an ingoingGroupSession in the [sessionKeys]. Then sends the
   /// new session encrypted with olm to all non-blocked devices using
   /// to-device-messaging.
   Future<void> createOutboundGroupSession() async {
-    await clearOutboundGroupSession();
+    await clearOutboundGroupSession(wipe: true);
+    List<DeviceKeys> deviceKeys = await getUserDeviceKeys();
+    _outboundGroupSessionDevices = [];
+    for (DeviceKeys keys in deviceKeys) {
+      _outboundGroupSessionDevices.add(keys.deviceId);
+    }
+    _outboundGroupSessionDevices.sort();
     try {
       _outboundGroupSession = olm.OutboundGroupSession();
       _outboundGroupSession.create();
@@ -110,7 +118,6 @@ class Room {
       "session_key": _outboundGroupSession.session_key(),
     };
     setSessionKey(rawSession["session_id"], rawSession);
-    List<DeviceKeys> deviceKeys = await getUserDeviceKeys();
     try {
       await client.sendToDevice(deviceKeys, "m.room_key", rawSession);
     } catch (e) {
@@ -127,17 +134,35 @@ class Room {
     await client.storeAPI?.setItem(
         "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session",
         _outboundGroupSession.pickle(client.userID));
+    await client.storeAPI?.setItem(
+        "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session_devices",
+        json.encode(_outboundGroupSessionDevices));
     return;
   }
 
-  /// Clears the existing outboundGroupSession.
-  Future<void> clearOutboundGroupSession() async {
+  /// Clears the existing outboundGroupSession but first checks if the participating
+  /// devices have been changed. Returns false if the session has not been cleared because
+  /// it wasn't necessary.
+  Future<bool> clearOutboundGroupSession({bool wipe = false}) async {
+    if (!wipe && this._outboundGroupSessionDevices != null) {
+      List<DeviceKeys> deviceKeys = await getUserDeviceKeys();
+      List<String> outboundGroupSessionDevices = [];
+      for (DeviceKeys keys in deviceKeys) {
+        outboundGroupSessionDevices.add(keys.deviceId);
+      }
+      outboundGroupSessionDevices.sort();
+      if (outboundGroupSessionDevices.toString() ==
+          this._outboundGroupSessionDevices.toString()) {
+        return false;
+      }
+    }
+    this._outboundGroupSessionDevices == null;
     await client.storeAPI?.setItem(
         "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session",
         null);
     this._outboundGroupSession?.free();
     this._outboundGroupSession = null;
-    return;
+    return true;
   }
 
   /// Key-Value store of session ids to the session keys. Only m.megolm.v1.aes-sha2
@@ -860,6 +885,13 @@ class Room {
           print("[LibOlm] Unable to unpickle outboundGroupSession: " +
               e.toString());
         }
+      }
+      final String outboundGroupSessionDevicesString = await client.storeAPI
+          .getItem(
+              "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session_devices");
+      if (outboundGroupSessionDevicesString != null) {
+        this._outboundGroupSessionDevices =
+            List<String>.from(json.decode(outboundGroupSessionDevicesString));
       }
       final String sessionKeysPickle = await client.storeAPI
           .getItem("/clients/${client.deviceID}/rooms/${this.id}/session_keys");

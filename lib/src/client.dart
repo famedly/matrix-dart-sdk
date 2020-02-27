@@ -755,7 +755,7 @@ class Client {
       sessions.forEach((olm.Session session) => session?.free());
     });
     rooms.forEach((Room room) {
-      room.clearOutboundGroupSession();
+      room.clearOutboundGroupSession(wipe: true);
       room.sessionKeys.values.forEach((SessionKey sessionKey) {
         sessionKey.inboundGroupSession?.free();
       });
@@ -986,22 +986,6 @@ class Client {
     }
   }
 
-  /// Clears the outboundGroupSession from all rooms where this user is
-  /// participating. Should be called when the user's devices list has changed.
-  void _clearOutboundGroupSessionsByUserId(String userId) {
-    for (Room room in rooms) {
-      if (!room.encrypted) continue;
-      room.requestParticipants().then((List<User> users) {
-        if (users.indexWhere((u) =>
-                u.id == userId &&
-                [Membership.join, Membership.invite].contains(u.membership)) !=
-            -1) {
-          room.clearOutboundGroupSession();
-        }
-      });
-    }
-  }
-
   void _handleDeviceListsEvents(Map<String, dynamic> deviceLists) {
     if (deviceLists["changed"] is List) {
       for (final userId in deviceLists["changed"]) {
@@ -1010,7 +994,6 @@ class Client {
         }
       }
       for (final userId in deviceLists["left"]) {
-        _clearOutboundGroupSessionsByUserId(userId);
         if (_userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys.remove(userId);
         }
@@ -1489,13 +1472,14 @@ class Client {
             }
           }
           _userDeviceKeys[userId].outdated = false;
-          if (_userDeviceKeys[userId].deviceKeys.toString() !=
-              oldKeys.toString()) {
-            _clearOutboundGroupSessionsByUserId(userId);
-          }
         }
       }
       await this.storeAPI?.storeUserDeviceKeys(userDeviceKeys);
+      rooms.forEach((Room room) {
+        if (room.encrypted) {
+          room.clearOutboundGroupSession();
+        }
+      });
     } catch (e) {
       print("[LibOlm] Unable to update user device keys: " + e.toString());
     }
