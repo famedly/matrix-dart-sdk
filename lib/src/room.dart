@@ -95,7 +95,7 @@ class Room {
     List<DeviceKeys> deviceKeys = await getUserDeviceKeys();
     _outboundGroupSessionDevices = [];
     for (DeviceKeys keys in deviceKeys) {
-      _outboundGroupSessionDevices.add(keys.deviceId);
+      if (!keys.blocked) _outboundGroupSessionDevices.add(keys.deviceId);
     }
     _outboundGroupSessionDevices.sort();
     try {
@@ -148,7 +148,7 @@ class Room {
       List<DeviceKeys> deviceKeys = await getUserDeviceKeys();
       List<String> outboundGroupSessionDevices = [];
       for (DeviceKeys keys in deviceKeys) {
-        outboundGroupSessionDevices.add(keys.deviceId);
+        if (!keys.blocked) outboundGroupSessionDevices.add(keys.deviceId);
       }
       outboundGroupSessionDevices.sort();
       if (outboundGroupSessionDevices.toString() ==
@@ -159,6 +159,9 @@ class Room {
     this._outboundGroupSessionDevices == null;
     await client.storeAPI?.setItem(
         "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session",
+        null);
+    await client.storeAPI?.setItem(
+        "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session_devices",
         null);
     this._outboundGroupSession?.free();
     this._outboundGroupSession = null;
