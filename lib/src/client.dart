@@ -875,7 +875,6 @@ class Client {
   /// Uploads a file with the name [fileName] as base64 encoded to the server
   /// and returns the mxc url as a string.
   Future<String> upload(MatrixFile file) async {
-    dynamic fileBytes;
     // For testing
     if (this.homeserver.toLowerCase() == "https://fakeserver.notexisting") {
       return "mxc://example.com/AQwafuaFswefuhsfAFAgsw";
@@ -890,7 +889,7 @@ class Client {
     streamedRequest.contentLength = await file.bytes.length;
     streamedRequest.sink.add(file.bytes);
     streamedRequest.sink.close();
-    print("[UPLOADING] $fileName, size: ${fileBytes?.length}");
+    print("[UPLOADING] $fileName");
     var streamedResponse = await streamedRequest.send();
     Map<String, dynamic> jsonResponse = json.decode(
       String.fromCharCodes(await streamedResponse.stream.first),
