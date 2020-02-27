@@ -124,7 +124,7 @@ class Room {
       print(
           "[LibOlm] Unable to send the session key to the participating devices: " +
               e.toString());
-      await clearOutboundGroupSession();
+      await clearOutboundGroupSession(wipe: true);
     }
     return;
   }
