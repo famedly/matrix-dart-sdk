@@ -15,7 +15,7 @@ dependencies:
   olm:
     git:
       url: https://gitlab.com/famedly/libraries/dart-olm.git
-      ref: 307dc133867eb5bf80d4f5c7412e58621dfca3cf
+      ref: bbc7ce10a52be5d5c10d2eb6c3591aade71356e2
 
 dev_dependencies:
   test: ^1.0.0

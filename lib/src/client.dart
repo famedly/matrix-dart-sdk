@@ -1617,7 +1617,7 @@ class Client {
     List<olm.Session> existingSessions = olmSessions[senderKey];
     if (existingSessions != null) {
       for (olm.Session session in existingSessions) {
-        if (type == 0 && session.matches_inbound(body) != 0) {
+        if (type == 0 && session.matches_inbound(body) == true) {
           plaintext = session.decrypt(type, body);
           storeOlmSession(senderKey, session);
           break;
