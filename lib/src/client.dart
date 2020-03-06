@@ -814,7 +814,7 @@ class Client {
 
     if (this.debug) {
       print(
-          "[REQUEST ${type.toString().split('.').last}] Action: $action, Data: $data");
+          "[REQUEST ${type.toString().split('.').last}] Action: $action, Data: ${jsonEncode(data)}");
     }
 
     http.Response resp;
@@ -1711,45 +1711,6 @@ class Client {
 
     Map<String, dynamic> sendToDeviceMessage = message;
 
-    if (encrypted) {
-      // Create new sessions with devices if there is no existing session yet.
-      List<DeviceKeys> deviceKeysWithoutSession =
-          List<DeviceKeys>.from(deviceKeys);
-      deviceKeysWithoutSession.removeWhere((DeviceKeys deviceKeys) =>
-          olmSessions.containsKey(deviceKeys.curve25519Key));
-      if (deviceKeysWithoutSession.isNotEmpty) {
-        await startOutgoingOlmSessions(deviceKeysWithoutSession);
-      }
-      sendToDeviceMessage = {
-        "algorithm": "m.olm.v1.curve25519-aes-sha2",
-        "sender_key": identityKey,
-        "ciphertext": Map<String, dynamic>(),
-      };
-      for (DeviceKeys device in deviceKeys) {
-        List<olm.Session> existingSessions = olmSessions[device.curve25519Key];
-        if (existingSessions == null || existingSessions.isEmpty) continue;
-        existingSessions
-            .sort((a, b) => a.session_id().compareTo(b.session_id()));
-
-        final Map<String, dynamic> payload = {
-          "type": type,
-          "content": message,
-          "sender": this.userID,
-          "keys": {"ed25519": fingerprintKey},
-          "recipient": device.userId,
-          "recipient_keys": {"ed25519": device.ed25519Key},
-        };
-        final olm.EncryptResult encryptResult =
-            existingSessions.first.encrypt(json.encode(payload));
-        storeOlmSession(device.curve25519Key, existingSessions.first);
-        sendToDeviceMessage["ciphertext"][device.curve25519Key] = {
-          "type": encryptResult.type,
-          "body": encryptResult.body,
-        };
-      }
-      type = "m.room.encrypted";
-    }
-
     // Send with send-to-device messaging
     Map<String, dynamic> data = {
       "messages": Map<String, dynamic>(),
@@ -1770,9 +1731,48 @@ class Client {
         if (!data["messages"].containsKey(device.userId)) {
           data["messages"][device.userId] = Map<String, dynamic>();
         }
+
+        if (encrypted) {
+          // Create new sessions with devices if there is no existing session yet.
+          List<DeviceKeys> deviceKeysWithoutSession =
+              List<DeviceKeys>.from(deviceKeys);
+          deviceKeysWithoutSession.removeWhere((DeviceKeys deviceKeys) =>
+              olmSessions.containsKey(deviceKeys.curve25519Key));
+          if (deviceKeysWithoutSession.isNotEmpty) {
+            await startOutgoingOlmSessions(deviceKeysWithoutSession);
+          }
+          List<olm.Session> existingSessions =
+              olmSessions[device.curve25519Key];
+          if (existingSessions == null || existingSessions.isEmpty) continue;
+          existingSessions
+              .sort((a, b) => a.session_id().compareTo(b.session_id()));
+
+          final Map<String, dynamic> payload = {
+            "type": type,
+            "content": message,
+            "sender": this.userID,
+            "keys": {"ed25519": fingerprintKey},
+            "recipient": device.userId,
+            "recipient_keys": {"ed25519": device.ed25519Key},
+          };
+          final olm.EncryptResult encryptResult =
+              existingSessions.first.encrypt(json.encode(payload));
+          storeOlmSession(device.curve25519Key, existingSessions.first);
+          sendToDeviceMessage = {
+            "algorithm": "m.olm.v1.curve25519-aes-sha2",
+            "sender_key": identityKey,
+            "ciphertext": Map<String, dynamic>(),
+          };
+          sendToDeviceMessage["ciphertext"][device.curve25519Key] = {
+            "type": encryptResult.type,
+            "body": encryptResult.body,
+          };
+        }
+
         data["messages"][device.userId][device.deviceId] = sendToDeviceMessage;
       }
     }
+    if (encrypted) type = "m.room.encrypted";
     final String messageID = "msg${DateTime.now().millisecondsSinceEpoch}";
     await jsonRequest(
       type: HTTPType.PUT,
