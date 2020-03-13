@@ -211,13 +211,17 @@ class Room {
           "/clients/${client.deviceID}/rooms/${this.id}/session_keys",
           json.encode(sessionKeys));
     }
+    _tryAgainDecryptLastMessage();
+    onSessionKeyReceived.add(sessionId);
+  }
+
+  void _tryAgainDecryptLastMessage() {
     if (getState("m.room.encrypted") != null) {
       final Event decrypted = getState("m.room.encrypted").decrypted;
       if (decrypted.type != EventTypes.Encrypted) {
         setState(decrypted);
       }
     }
-    onSessionKeyReceived.add(sessionId);
   }
 
   /// Returns the [Event] for the given [typeKey] and optional [stateKey].
@@ -917,6 +921,7 @@ class Room {
     await client.storeAPI?.setItem(
         "/clients/${client.deviceID}/rooms/${this.id}/session_keys",
         json.encode(sessionKeys));
+    _tryAgainDecryptLastMessage();
     _fullyRestored = true;
   }
 
