@@ -93,38 +93,40 @@ class Room {
   Future<void> createOutboundGroupSession() async {
     await clearOutboundGroupSession(wipe: true);
     List<DeviceKeys> deviceKeys = await getUserDeviceKeys();
-    _outboundGroupSessionDevices = [];
+    olm.OutboundGroupSession outboundGroupSession;
+    List<String> outboundGroupSessionDevices = [];
     for (DeviceKeys keys in deviceKeys) {
-      if (!keys.blocked) _outboundGroupSessionDevices.add(keys.deviceId);
+      if (!keys.blocked) outboundGroupSessionDevices.add(keys.deviceId);
     }
-    _outboundGroupSessionDevices.sort();
+    outboundGroupSessionDevices.sort();
     try {
-      _outboundGroupSession = olm.OutboundGroupSession();
-      _outboundGroupSession.create();
+      outboundGroupSession = olm.OutboundGroupSession();
+      outboundGroupSession.create();
     } catch (e) {
-      _outboundGroupSession = null;
+      outboundGroupSession = null;
       print("[LibOlm] Unable to create new outboundGroupSession: " +
           e.toString());
     }
 
-    if (_outboundGroupSession == null) return;
-
-    await _storeOutboundGroupSession();
+    if (outboundGroupSession == null) return;
     // Add as an inboundSession to the [sessionKeys].
     Map<String, dynamic> rawSession = {
       "algorithm": "m.megolm.v1.aes-sha2",
       "room_id": this.id,
-      "session_id": _outboundGroupSession.session_id(),
-      "session_key": _outboundGroupSession.session_key(),
+      "session_id": outboundGroupSession.session_id(),
+      "session_key": outboundGroupSession.session_key(),
     };
     setSessionKey(rawSession["session_id"], rawSession);
     try {
       await client.sendToDevice(deviceKeys, "m.room_key", rawSession);
+      _outboundGroupSession = outboundGroupSession;
+      _outboundGroupSessionDevices = outboundGroupSessionDevices;
+      await _storeOutboundGroupSession();
     } catch (e) {
       print(
           "[LibOlm] Unable to send the session key to the participating devices: " +
               e.toString());
-      await clearOutboundGroupSession(wipe: true);
+      await this.clearOutboundGroupSession();
     }
     return;
   }
