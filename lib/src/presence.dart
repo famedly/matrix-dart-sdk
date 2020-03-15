@@ -39,6 +39,7 @@ class Presence {
   final int lastActiveAgo;
   final PresenceType presence;
   final String statusMsg;
+  final DateTime time;
 
   Presence.fromJson(Map<String, dynamic> json)
       : sender = json['sender'],
@@ -46,6 +47,9 @@ class Presence {
         avatarUrl = MxContent(json['content']['avatar_url'] ?? ""),
         currentlyActive = json['content']['currently_active'],
         lastActiveAgo = json['content']['last_active_ago'],
+        time = DateTime.fromMillisecondsSinceEpoch(
+            DateTime.now().millisecondsSinceEpoch -
+                (json['content']['last_active_ago'] ?? 0)),
         presence = PresenceType.values.firstWhere(
             (e) =>
                 e.toString() == "PresenceType.${json['content']['presence']}",
