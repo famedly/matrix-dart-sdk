@@ -22,8 +22,11 @@
  */
 
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/utils/receipt.dart';
+import 'package:http/http.dart' as http;
+import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 import './room.dart';
 
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
@@ -426,6 +429,59 @@ class Event {
         encrypted: false,
         toUsers: users);
     return;
+  }
+
+  /// Downloads (and decryptes if necessary) the attachment of this
+  /// event and returns it as a [MatrixFile]. If this event doesn't
+  /// contain an attachment, this throws an error.
+  Future<MatrixFile> downloadAndDecryptAttachment() async {
+    if (![EventTypes.Message, EventTypes.Sticker].contains(this.type)) {
+      throw ("This event has the type '$typeKey' and so it can't contain an attachment.");
+    }
+    if (!content.containsKey("url") && !content.containsKey("file")) {
+      throw ("This event hasn't any attachment.");
+    }
+    final bool isEncrypted = !content.containsKey("url");
+
+    if (isEncrypted && !room.client.encryptionEnabled) {
+      throw ("Encryption is not enabled in your Client.");
+    }
+    MxContent mxContent =
+        MxContent(isEncrypted ? content["file"]["url"] : content["url"]);
+
+    Uint8List uint8list;
+
+    // Is this file storeable?
+    final bool storeable = room.client.storeAPI.extended &&
+        content["info"] is Map<String, dynamic> &&
+        content["info"]["size"] is int &&
+        content["info"]["size"] <= ExtendedStoreAPI.MAX_FILE_SIZE;
+
+    if (storeable) {
+      uint8list = await room.client.store.getFile(mxContent.mxc);
+    }
+
+    // Download the file
+    if (uint8list == null) {
+      uint8list =
+          (await http.get(mxContent.getDownloadLink(room.client))).bodyBytes;
+      await room.client.store.storeFile(uint8list, mxContent.mxc);
+    }
+
+    // Decrypt the file
+    if (isEncrypted) {
+      if (!content.containsKey("file") ||
+          !content["file"]["key"]["key_ops"].contains("decrypt")) {
+        throw ("Missing 'decrypt' in 'key_ops'.");
+      }
+      final EncryptedFile encryptedFile = EncryptedFile();
+      encryptedFile.data = uint8list;
+      encryptedFile.iv = content["file"]["iv"];
+      encryptedFile.k = content["file"]["key"]["k"];
+      encryptedFile.sha256 = content["file"]["hashes"]["sha256"];
+      uint8list = await decryptFile(encryptedFile);
+    }
+    return MatrixFile(bytes: uint8list, path: "/$body");
   }
 }
 

@@ -15,6 +15,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.5.2"
+  asn1lib:
+    dependency: transitive
+    description:
+      name: asn1lib
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.5.15"
   async:
     dependency: transitive
     description:
@@ -99,6 +106,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.1.2"
+  clock:
+    dependency: transitive
+    description:
+      name: clock
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.0.1"
   code_builder:
     dependency: transitive
     description:
@@ -148,6 +162,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.2.7"
+  encrypt:
+    dependency: transitive
+    description:
+      name: encrypt
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "4.0.0"
   ffi:
     dependency: transitive
     description:
@@ -253,6 +274,15 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.12.6"
+  matrix_file_e2ee:
+    dependency: "direct main"
+    description:
+      path: "."
+      ref: "1.x.y"
+      resolved-ref: "2ca458afed599e1421229460d7c9e9248bb86140"
+      url: "https://gitlab.com/famedly/libraries/matrix_file_e2ee.git"
+    source: git
+    version: "1.0.1"
   meta:
     dependency: transitive
     description:
@@ -292,11 +322,11 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: bbc7ce10a52be5d5c10d2eb6c3591aade71356e2
-      resolved-ref: bbc7ce10a52be5d5c10d2eb6c3591aade71356e2
+      ref: "1.x.y"
+      resolved-ref: "79868b06b3ea156f90b73abafb3bbf3ac4114cc6"
       url: "https://gitlab.com/famedly/libraries/dart-olm.git"
     source: git
-    version: "0.0.0"
+    version: "1.0.0"
   package_config:
     dependency: transitive
     description:
@@ -325,6 +355,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.8.0+1"
+  pointycastle:
+    dependency: transitive
+    description:
+      name: pointycastle
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.0.2"
   pool:
     dependency: transitive
     description:
