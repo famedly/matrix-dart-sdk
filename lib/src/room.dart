@@ -34,6 +34,7 @@ import 'package:famedlysdk/src/utils/matrix_exception.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:famedlysdk/src/utils/mx_content.dart';
 import 'package:famedlysdk/src/utils/session_key.dart';
+import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 import 'package:mime_type/mime_type.dart';
 import 'package:olm/olm.dart' as olm;
 
@@ -453,20 +454,29 @@ class Room {
     return resp["event_id"];
   }
 
-  Future<String> sendTextEvent(String message,
-          {String txid, Event inReplyTo}) =>
-      sendEvent({"msgtype": "m.text", "body": message},
-          txid: txid, inReplyTo: inReplyTo);
+  Future<String> sendTextEvent(String message, {String txid, Event inReplyTo}) {
+    String type = "m.text";
+    if (message.startsWith("/me ")) {
+      type = "m.emote";
+      message = message.substring(4);
+    }
+    return sendEvent({"msgtype": type, "body": message},
+        txid: txid, inReplyTo: inReplyTo);
+  }
 
   /// Sends a [file] to this room after uploading it. The [msgType] is optional
   /// and will be detected by the mimetype of the file.
   Future<String> sendFileEvent(MatrixFile file,
-      {String msgType = "m.file", String txid, Event inReplyTo}) async {
-    if (msgType == "m.image") return sendImageEvent(file);
-    if (msgType == "m.audio") return sendVideoEvent(file);
-    if (msgType == "m.video") return sendAudioEvent(file);
+      {String msgType = "m.file",
+      String txid,
+      Event inReplyTo,
+      Map<String, dynamic> info}) async {
     String fileName = file.path.split("/").last;
-
+    final bool sendEncrypted = this.encrypted && client.fileEncryptionEnabled;
+    EncryptedFile encryptedFile;
+    if (sendEncrypted) {
+      encryptedFile = await file.encrypt();
+    }
     final String uploadResp = await client.upload(file);
 
     // Send event
@@ -474,48 +484,50 @@ class Room {
       "msgtype": msgType,
       "body": fileName,
       "filename": fileName,
-      "url": uploadResp,
-      "info": {
-        "mimetype": mime(file.path),
-        "size": file.size,
-      }
+      if (!sendEncrypted) "url": uploadResp,
+      if (sendEncrypted)
+        "file": {
+          "url": uploadResp,
+          "mimetype": mime(file.path),
+          "v": "v2",
+          "key": {
+            "alg": "A256CTR",
+            "ext": true,
+            "k": encryptedFile.k,
+            "key_ops": ["encrypt", "decrypt"],
+            "kty": "oct"
+          },
+          "iv": encryptedFile.iv,
+          "hashes": {"sha256": encryptedFile.sha256}
+        },
+      "info": info != null
+          ? info
+          : {
+              "mimetype": mime(file.path),
+              "size": file.size,
+            }
     };
     return await sendEvent(content, txid: txid, inReplyTo: inReplyTo);
   }
 
   Future<String> sendAudioEvent(MatrixFile file,
-      {String txid, int width, int height, Event inReplyTo}) async {
-    String fileName = file.path.split("/").last;
-    final String uploadResp = await client.upload(file);
-    Map<String, dynamic> content = {
-      "msgtype": "m.audio",
-      "body": fileName,
-      "filename": fileName,
-      "url": uploadResp,
-      "info": {
-        "mimetype": mime(fileName),
-        "size": file.size,
-      }
-    };
-    return await sendEvent(content, txid: txid, inReplyTo: inReplyTo);
+      {String txid, Event inReplyTo}) async {
+    return await sendFileEvent(file,
+        msgType: "m.audio", txid: txid, inReplyTo: inReplyTo);
   }
 
   Future<String> sendImageEvent(MatrixFile file,
       {String txid, int width, int height, Event inReplyTo}) async {
-    String fileName = file.path.split("/").last;
-    final String uploadResp = await client.upload(file);
-    Map<String, dynamic> content = {
-      "msgtype": "m.image",
-      "body": fileName,
-      "url": uploadResp,
-      "info": {
-        "size": file.size,
-        "mimetype": mime(fileName),
-        "w": width,
-        "h": height,
-      },
-    };
-    return await sendEvent(content, txid: txid, inReplyTo: inReplyTo);
+    return await sendFileEvent(file,
+        msgType: "m.image",
+        txid: txid,
+        inReplyTo: inReplyTo,
+        info: {
+          "size": file.size,
+          "mimetype": mime(file.path.split("/").last),
+          "w": width,
+          "h": height,
+        });
   }
 
   Future<String> sendVideoEvent(MatrixFile file,
@@ -528,41 +540,37 @@ class Room {
       int thumbnailHeight,
       Event inReplyTo}) async {
     String fileName = file.path.split("/").last;
-    final String uploadResp = await client.upload(file);
-    Map<String, dynamic> content = {
-      "msgtype": "m.video",
-      "body": fileName,
-      "url": uploadResp,
-      "info": {
-        "size": file.size,
-        "mimetype": mime(fileName),
-      },
+    Map<String, dynamic> info = {
+      "size": file.size,
+      "mimetype": mime(fileName),
     };
     if (videoWidth != null) {
-      content["info"]["w"] = videoWidth;
+      info["w"] = videoWidth;
     }
     if (thumbnailHeight != null) {
-      content["info"]["h"] = thumbnailHeight;
+      info["h"] = thumbnailHeight;
     }
     if (duration != null) {
-      content["info"]["duration"] = duration;
+      info["duration"] = duration;
     }
-    if (thumbnail != null) {
+    if (thumbnail != null && !(this.encrypted && client.encryptionEnabled)) {
       String thumbnailName = file.path.split("/").last;
-      final String thumbnailUploadResp = await client.upload(file);
-      content["info"]["thumbnail_url"] = thumbnailUploadResp;
-      content["info"]["thumbnail_info"] = {
+      final String thumbnailUploadResp = await client.upload(thumbnail);
+      info["thumbnail_url"] = thumbnailUploadResp;
+      info["thumbnail_info"] = {
         "size": thumbnail.size,
         "mimetype": mime(thumbnailName),
       };
       if (thumbnailWidth != null) {
-        content["info"]["thumbnail_info"]["w"] = thumbnailWidth;
+        info["thumbnail_info"]["w"] = thumbnailWidth;
       }
       if (thumbnailHeight != null) {
-        content["info"]["thumbnail_info"]["h"] = thumbnailHeight;
+        info["thumbnail_info"]["h"] = thumbnailHeight;
       }
     }
-    return await sendEvent(content, txid: txid, inReplyTo: inReplyTo);
+
+    return await sendFileEvent(file,
+        msgType: "m.video", txid: txid, inReplyTo: inReplyTo, info: info);
   }
 
   Future<String> sendEvent(Map<String, dynamic> content,

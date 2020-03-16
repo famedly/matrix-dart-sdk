@@ -23,6 +23,7 @@
 
 import 'dart:async';
 import 'dart:core';
+import 'dart:typed_data';
 import 'package:famedlysdk/src/account_data.dart';
 import 'package:famedlysdk/src/presence.dart';
 import 'package:famedlysdk/src/utils/device_keys_list.dart';
@@ -60,6 +61,9 @@ abstract class StoreAPI {
 /// Responsible to store all data persistent and to query objects from the
 /// database.
 abstract class ExtendedStoreAPI extends StoreAPI {
+  /// The maximum size of files which should be stored in bytes.
+  static const int MAX_FILE_SIZE = 10 * 1024 * 1024;
+
   /// Whether this is a simple store which only stores the client credentials and
   /// end to end encryption stuff or the whole sync payloads.
   final bool extended = true;
@@ -114,4 +118,11 @@ abstract class ExtendedStoreAPI extends StoreAPI {
 
   /// Removes this event from the store.
   Future removeEvent(String eventId);
+
+  /// Stores the bytes of this file indexed by the [mxcUri]. Throws an
+  /// exception if the bytes are more than [MAX_FILE_SIZE].
+  Future<void> storeFile(Uint8List bytes, String mxcUri);
+
+  /// Returns the file bytes indexed by [mxcUri]. Returns null if not found.
+  Future<Uint8List> getFile(String mxcUri);
 }

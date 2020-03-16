@@ -134,6 +134,9 @@ class Client {
   /// Whether this client supports end-to-end encryption using olm.
   bool get encryptionEnabled => _olmAccount != null;
 
+  /// Whether this client is able to encrypt and decrypt files.
+  bool get fileEncryptionEnabled => false;
+
   /// Warning! This endpoint is for testing only!
   set rooms(List<Room> newList) {
     print("Warning! This endpoint is for testing only!");
