@@ -37,6 +37,7 @@ import 'package:famedlysdk/src/utils/session_key.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 import 'package:mime_type/mime_type.dart';
 import 'package:olm/olm.dart' as olm;
+import 'package:pedantic/pedantic.dart';
 
 import './user.dart';
 import 'timeline.dart';
@@ -454,6 +455,8 @@ class Room {
     return resp["event_id"];
   }
 
+  /// Sends a normal text message to this room. Returns the event ID generated
+  /// by the server for this message.
   Future<String> sendTextEvent(String message, {String txid, Event inReplyTo}) {
     String type = "m.text";
     if (message.startsWith("/me ")) {
@@ -465,7 +468,8 @@ class Room {
   }
 
   /// Sends a [file] to this room after uploading it. The [msgType] is optional
-  /// and will be detected by the mimetype of the file.
+  /// and will be detected by the mimetype of the file. Returns the mxc uri of
+  /// the uploaded file.
   Future<String> sendFileEvent(MatrixFile file,
       {String msgType = "m.file",
       String txid,
@@ -507,15 +511,18 @@ class Room {
               "size": file.size,
             }
     };
-    return await sendEvent(content, txid: txid, inReplyTo: inReplyTo);
+    unawaited(sendEvent(content, txid: txid, inReplyTo: inReplyTo));
+    return uploadResp;
   }
 
+  /// Sends an audio file to this room and returns the mxc uri.
   Future<String> sendAudioEvent(MatrixFile file,
       {String txid, Event inReplyTo}) async {
     return await sendFileEvent(file,
         msgType: "m.audio", txid: txid, inReplyTo: inReplyTo);
   }
 
+  /// Sends an image to this room and returns the mxc uri.
   Future<String> sendImageEvent(MatrixFile file,
       {String txid, int width, int height, Event inReplyTo}) async {
     return await sendFileEvent(file,
@@ -530,6 +537,7 @@ class Room {
         });
   }
 
+  /// Sends an video to this room and returns the mxc uri.
   Future<String> sendVideoEvent(MatrixFile file,
       {String txid,
       int videoWidth,
@@ -569,10 +577,17 @@ class Room {
       }
     }
 
-    return await sendFileEvent(file,
-        msgType: "m.video", txid: txid, inReplyTo: inReplyTo, info: info);
+    return await sendFileEvent(
+      file,
+      msgType: "m.video",
+      txid: txid,
+      inReplyTo: inReplyTo,
+      info: info,
+    );
   }
 
+  /// Sends an event to this room with this json as a content. Returns the
+  /// event ID generated from the server.
   Future<String> sendEvent(Map<String, dynamic> content,
       {String txid, Event inReplyTo}) async {
     final String type = "m.room.message";
