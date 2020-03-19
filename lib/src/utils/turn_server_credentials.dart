@@ -10,7 +10,7 @@ class TurnServerCredentials {
   final List<String> uris;
 
   /// The time-to-live in seconds
-  final int ttl;
+  final double ttl;
 
   const TurnServerCredentials(
       this.username, this.password, this.uris, this.ttl);
