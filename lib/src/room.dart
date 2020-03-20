@@ -1033,7 +1033,7 @@ class Room {
     );
     if (client.store == null) {
       prev_batch = "";
-      await requestHistory();
+      await requestHistory(historyCount: 10);
     }
     return timeline;
   }
