@@ -1729,6 +1729,16 @@ class Client {
         }
       }
     } else {
+      if (encrypted) {
+        // Create new sessions with devices if there is no existing session yet.
+        List<DeviceKeys> deviceKeysWithoutSession =
+            List<DeviceKeys>.from(deviceKeys);
+        deviceKeysWithoutSession.removeWhere((DeviceKeys deviceKeys) =>
+            olmSessions.containsKey(deviceKeys.curve25519Key));
+        if (deviceKeysWithoutSession.isNotEmpty) {
+          await startOutgoingOlmSessions(deviceKeysWithoutSession);
+        }
+      }
       for (int i = 0; i < deviceKeys.length; i++) {
         DeviceKeys device = deviceKeys[i];
         if (!data["messages"].containsKey(device.userId)) {
@@ -1736,14 +1746,6 @@ class Client {
         }
 
         if (encrypted) {
-          // Create new sessions with devices if there is no existing session yet.
-          List<DeviceKeys> deviceKeysWithoutSession =
-              List<DeviceKeys>.from(deviceKeys);
-          deviceKeysWithoutSession.removeWhere((DeviceKeys deviceKeys) =>
-              olmSessions.containsKey(deviceKeys.curve25519Key));
-          if (deviceKeysWithoutSession.isNotEmpty) {
-            await startOutgoingOlmSessions(deviceKeysWithoutSession);
-          }
           List<olm.Session> existingSessions =
               olmSessions[device.curve25519Key];
           if (existingSessions == null || existingSessions.isEmpty) continue;
