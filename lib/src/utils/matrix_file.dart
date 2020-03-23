@@ -8,10 +8,10 @@ class MatrixFile {
   Uint8List bytes;
   String path;
 
+  /// Encrypts this file, changes the [bytes] and returns the
+  /// encryption information as an [EncryptedFile].
   Future<EncryptedFile> encrypt() async {
-    print("[Matrix] Encrypt file with a size of ${bytes.length} bytes");
     final EncryptedFile encryptedFile = await encryptFile(bytes);
-    print("[Matrix] File encryption successfull");
     this.bytes = encryptedFile.data;
     return encryptedFile;
   }
