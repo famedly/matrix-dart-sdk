@@ -1901,4 +1901,34 @@ class Client {
     );
     return PublicRoomsResponse.fromJson(response, this);
   }
+
+  /// Whether all push notifications are muted using the [.m.rule.master]
+  /// rule of the push rules: https://matrix.org/docs/spec/client_server/r0.6.0#m-rule-master
+  bool get allPushNotificationsMuted {
+    if (!this.accountData.containsKey("m.push_rules") ||
+        !(this.accountData["m.push_rules"].content["global"] is Map)) {
+      return false;
+    }
+    final Map<String, dynamic> globalPushRules =
+        this.accountData["m.push_rules"].content["global"];
+    if (globalPushRules == null) return false;
+
+    if (globalPushRules["override"] is List) {
+      for (var i = 0; i < globalPushRules["override"].length; i++) {
+        if (globalPushRules["override"][i]["rule_id"] == ".m.rule.master") {
+          return globalPushRules["override"][i]["enabled"];
+        }
+      }
+    }
+    return false;
+  }
+
+  Future<void> setMuteAllPushNotifications(bool muted) async {
+    await jsonRequest(
+      type: HTTPType.PUT,
+      action: "/client/r0/pushrules/global/override/.m.rule.master/enabled",
+      data: {"enabled": muted},
+    );
+    return;
+  }
 }
