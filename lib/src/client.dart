@@ -1603,8 +1603,13 @@ class Client {
 
   /// Try to decrypt a ToDeviceEvent encrypted with olm.
   ToDeviceEvent decryptToDeviceEvent(ToDeviceEvent toDeviceEvent) {
+    if (toDeviceEvent.type != "m.room.encrypted") {
+      print(
+          "[LibOlm] Warning! Tried to decrypt a not-encrypted to-device-event");
+      return toDeviceEvent;
+    }
     if (toDeviceEvent.content["algorithm"] != "m.olm.v1.curve25519-aes-sha2") {
-      throw ("Unknown algorithm: ${toDeviceEvent.content["algorithm"]}");
+      throw ("Unknown algorithm: ${toDeviceEvent.content}");
     }
     if (!toDeviceEvent.content["ciphertext"].containsKey(identityKey)) {
       throw ("The message isn't sent for this device");
