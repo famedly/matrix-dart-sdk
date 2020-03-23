@@ -481,7 +481,10 @@ class Room {
     if (sendEncrypted) {
       encryptedFile = await file.encrypt();
     }
-    final String uploadResp = await client.upload(file);
+    final String uploadResp = await client.upload(
+      file,
+      contentType: sendEncrypted ? "application/octet-stream" : null,
+    );
 
     // Send event
     Map<String, dynamic> content = {

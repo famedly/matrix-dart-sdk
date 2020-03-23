@@ -257,7 +257,7 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "1.x.y"
+      ref: HEAD
       resolved-ref: b043fcc29031979dc65e5b08e10ebb9b8d2fae30
       url: "https://gitlab.com/famedly/libraries/matrix_file_e2ee.git"
     source: git

@@ -135,7 +135,7 @@ class Client {
   bool get encryptionEnabled => _olmAccount != null;
 
   /// Whether this client is able to encrypt and decrypt files.
-  bool get fileEncryptionEnabled => false;
+  bool get fileEncryptionEnabled => true;
 
   /// Warning! This endpoint is for testing only!
   set rooms(List<Room> newList) {
@@ -877,15 +877,15 @@ class Client {
 
   /// Uploads a file with the name [fileName] as base64 encoded to the server
   /// and returns the mxc url as a string.
-  Future<String> upload(MatrixFile file) async {
+  Future<String> upload(MatrixFile file, {String contentType}) async {
     // For testing
     if (this.homeserver.toLowerCase() == "https://fakeserver.notexisting") {
       return "mxc://example.com/AQwafuaFswefuhsfAFAgsw";
     }
     Map<String, String> headers = {};
     headers["Authorization"] = "Bearer $accessToken";
-    headers["Content-Type"] = mime(file.path);
-    String fileName = file.path.split("/").last.toLowerCase();
+    headers["Content-Type"] = contentType ?? mime(file.path);
+    String fileName = Uri.encodeFull(file.path.split("/").last.toLowerCase());
     final url = "$homeserver/_matrix/media/r0/upload?filename=$fileName";
     final streamedRequest = http.StreamedRequest('POST', Uri.parse(url))
       ..headers.addAll(headers);
@@ -897,6 +897,10 @@ class Client {
     Map<String, dynamic> jsonResponse = json.decode(
       String.fromCharCodes(await streamedResponse.stream.first),
     );
+    if (!(jsonResponse["content_uri"] is String &&
+        jsonResponse["content_uri"].isNotEmpty)) {
+      throw ("Missing json key: 'content_uri' ${jsonResponse.toString()}");
+    }
     return jsonResponse["content_uri"];
   }
 
