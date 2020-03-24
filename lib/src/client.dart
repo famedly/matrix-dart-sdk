@@ -1340,14 +1340,16 @@ class Client {
               );
               if (toDeviceEvent.type == "m.forwarded_room_key") {
                 sendToDevice(
-                    [],
-                    "m.room_key_request",
-                    {
-                      "action": "request_cancellation",
-                      "request_id": base64.encode(
-                          utf8.encode(toDeviceEvent.content["room_id"])),
-                      "requesting_device_id": room.client.deviceID,
-                    });
+                  [],
+                  "m.room_key_request",
+                  {
+                    "action": "request_cancellation",
+                    "request_id": base64
+                        .encode(utf8.encode(toDeviceEvent.content["room_id"])),
+                    "requesting_device_id": room.client.deviceID,
+                  },
+                  encrypted: false,
+                );
               }
             }
           }
