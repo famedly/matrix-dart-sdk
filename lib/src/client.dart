@@ -825,25 +825,34 @@ class Client {
     try {
       switch (type.toString().split('.').last) {
         case "GET":
-          resp = await httpClient
-              .get(url, headers: headers)
-              .timeout(Duration(seconds: timeout));
+          resp = await httpClient.get(url, headers: headers).timeout(
+                Duration(seconds: timeout),
+                onTimeout: () => null,
+              );
           break;
         case "POST":
-          resp = await httpClient
-              .post(url, body: json, headers: headers)
-              .timeout(Duration(seconds: timeout));
+          resp =
+              await httpClient.post(url, body: json, headers: headers).timeout(
+                    Duration(seconds: timeout),
+                    onTimeout: () => null,
+                  );
           break;
         case "PUT":
-          resp = await httpClient
-              .put(url, body: json, headers: headers)
-              .timeout(Duration(seconds: timeout));
+          resp =
+              await httpClient.put(url, body: json, headers: headers).timeout(
+                    Duration(seconds: timeout),
+                    onTimeout: () => null,
+                  );
           break;
         case "DELETE":
-          resp = await httpClient
-              .delete(url, headers: headers)
-              .timeout(Duration(seconds: timeout));
+          resp = await httpClient.delete(url, headers: headers).timeout(
+                Duration(seconds: timeout),
+                onTimeout: () => null,
+              );
           break;
+      }
+      if (resp == null) {
+        throw TimeoutException;
       }
       jsonResp = jsonDecode(String.fromCharCodes(resp.body.runes))
           as Map<String, dynamic>; // May throw FormatException
