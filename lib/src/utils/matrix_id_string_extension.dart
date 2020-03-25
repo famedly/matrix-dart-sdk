@@ -4,6 +4,7 @@ extension MatrixIdExtension on String {
   static const int MAX_LENGTH = 255;
 
   bool get isValidMatrixId {
+    if (this?.isEmpty ?? true) return false;
     if (this.length > MAX_LENGTH) return false;
     if (!VALID_SIGILS.contains(this.substring(0, 1))) {
       return false;
@@ -22,5 +23,5 @@ extension MatrixIdExtension on String {
 
   String get domain => isValidMatrixId ? this.substring(1).split(":")[1] : null;
 
-  bool equals(String other) => this.toLowerCase() == other.toLowerCase();
+  bool equals(String other) => this?.toLowerCase() == other?.toLowerCase();
 }
