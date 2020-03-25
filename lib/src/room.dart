@@ -1097,9 +1097,7 @@ class Room {
     if (states[mxID] != null) {
       return states[mxID].asUser;
     } else {
-      try {
-        requestUser(mxID);
-      } catch (_) {}
+      requestUser(mxID, ignoreErrors: true);
       return User(mxID, room: this);
     }
   }
@@ -1108,7 +1106,7 @@ class Room {
 
   /// Requests a missing [User] for this room. Important for clients using
   /// lazy loading.
-  Future<User> requestUser(String mxID) async {
+  Future<User> requestUser(String mxID, {bool ignoreErrors = false}) async {
     if (mxID == null || !_requestingMatrixIds.add(mxID)) return null;
     Map<String, dynamic> resp;
     try {
@@ -1117,7 +1115,7 @@ class Room {
           action: "/client/r0/rooms/$id/state/m.room.member/$mxID");
     } catch (exception) {
       _requestingMatrixIds.remove(mxID);
-      rethrow;
+      if (!ignoreErrors) rethrow;
     }
     final User user = User(mxID,
         displayName: resp["displayname"],
