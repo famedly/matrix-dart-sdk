@@ -1606,11 +1606,11 @@ class Client {
       action: "/client/r0/keys/upload",
       data: keysContent,
     );
+    _olmAccount.mark_keys_as_published();
     if (response["one_time_key_counts"]["signed_curve25519"] !=
         oneTimeKeysCount) {
       return false;
     }
-    _olmAccount.mark_keys_as_published();
     await storeAPI?.storeClient();
     lastTimeKeysUploaded = DateTime.now();
     return true;
