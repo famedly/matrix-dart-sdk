@@ -1601,12 +1601,12 @@ class Client {
           signJson(keysContent["device_keys"] as Map<String, dynamic>);
     }
 
+    _olmAccount.mark_keys_as_published();
     final Map<String, dynamic> response = await jsonRequest(
       type: HTTPType.POST,
       action: "/client/r0/keys/upload",
       data: keysContent,
     );
-    _olmAccount.mark_keys_as_published();
     if (response["one_time_key_counts"]["signed_curve25519"] !=
         oneTimeKeysCount) {
       return false;
