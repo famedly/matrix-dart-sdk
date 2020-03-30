@@ -37,7 +37,6 @@ import 'package:famedlysdk/src/utils/session_key.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 import 'package:mime_type/mime_type.dart';
 import 'package:olm/olm.dart' as olm;
-import 'package:pedantic/pedantic.dart';
 
 import './user.dart';
 import 'timeline.dart';
@@ -468,12 +467,17 @@ class Room {
 
   /// Sends a [file] to this room after uploading it. The [msgType] is optional
   /// and will be detected by the mimetype of the file. Returns the mxc uri of
-  /// the uploaded file.
-  Future<String> sendFileEvent(MatrixFile file,
-      {String msgType = 'm.file',
-      String txid,
-      Event inReplyTo,
-      Map<String, dynamic> info}) async {
+  /// the uploaded file. If [waitUntilSent] is true, the future will wait until
+  /// the message event has received the server. Otherwise the future will only
+  /// wait until the file has been uploaded.
+  Future<String> sendFileEvent(
+    MatrixFile file, {
+    String msgType,
+    String txid,
+    Event inReplyTo,
+    Map<String, dynamic> info,
+    bool waitUntilSent = false,
+  }) async {
     var fileName = file.path.split('/').last;
     final sendEncrypted = encrypted && client.fileEncryptionEnabled;
     EncryptedFile encryptedFile;
@@ -485,6 +489,21 @@ class Room {
       contentType: sendEncrypted ? 'application/octet-stream' : null,
     );
 
+    final mimeType = mime(file.path) ?? '';
+    if (msgType == null) {
+      final metaType = (mimeType).split('/')[0];
+      switch (metaType) {
+        case 'image':
+        case 'audio':
+        case 'video':
+          msgType = 'm.$metaType';
+          break;
+        default:
+          msgType = 'm.file';
+          break;
+      }
+    }
+
     // Send event
     var content = <String, dynamic>{
       'msgtype': msgType,
@@ -494,7 +513,7 @@ class Room {
       if (sendEncrypted)
         'file': {
           'url': uploadResp,
-          'mimetype': mime(file.path),
+          'mimetype': mimeType,
           'v': 'v2',
           'key': {
             'alg': 'A256CTR',
@@ -508,11 +527,18 @@ class Room {
         },
       'info': info ??
           {
-            'mimetype': mime(file.path),
+            'mimetype': mimeType,
             'size': file.size,
           }
     };
-    unawaited(sendEvent(content, txid: txid, inReplyTo: inReplyTo));
+    final sendResponse = sendEvent(
+      content,
+      txid: txid,
+      inReplyTo: inReplyTo,
+    );
+    if (waitUntilSent) {
+      await sendResponse;
+    }
     return uploadResp;
   }
 
