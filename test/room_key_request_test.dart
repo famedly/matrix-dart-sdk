@@ -29,39 +29,39 @@ import 'fake_store.dart';
 
 void main() {
   /// All Tests related to device keys
-  group("Room Key Request", () {
-    test("fromJson", () async {
-      Map<String, dynamic> rawJson = {
-        "content": {
-          "action": "request",
-          "body": {
-            "algorithm": "m.megolm.v1.aes-sha2",
-            "room_id": "!726s6s6q:example.com",
-            "sender_key": "RF3s+E7RkTQTGF2d8Deol0FkQvgII2aJDf3/Jp5mxVU",
-            "session_id": "X3lUlvLELLYxeTx4yOVu6UDpasGEVO0Jbu+QFnm0cKQ"
+  group('Room Key Request', () {
+    test('fromJson', () async {
+      var rawJson = <String, dynamic>{
+        'content': {
+          'action': 'request',
+          'body': {
+            'algorithm': 'm.megolm.v1.aes-sha2',
+            'room_id': '!726s6s6q:example.com',
+            'sender_key': 'RF3s+E7RkTQTGF2d8Deol0FkQvgII2aJDf3/Jp5mxVU',
+            'session_id': 'X3lUlvLELLYxeTx4yOVu6UDpasGEVO0Jbu+QFnm0cKQ'
           },
-          "request_id": "1495474790150.19",
-          "requesting_device_id": "JLAFKJWSCS"
+          'request_id': '1495474790150.19',
+          'requesting_device_id': 'JLAFKJWSCS'
         },
-        "type": "m.room_key_request",
-        "sender": "@alice:example.com"
+        'type': 'm.room_key_request',
+        'sender': '@alice:example.com'
       };
-      ToDeviceEvent toDeviceEvent = ToDeviceEvent.fromJson(rawJson);
-      expect(toDeviceEvent.content, rawJson["content"]);
-      expect(toDeviceEvent.sender, rawJson["sender"]);
-      expect(toDeviceEvent.type, rawJson["type"]);
+      var toDeviceEvent = ToDeviceEvent.fromJson(rawJson);
+      expect(toDeviceEvent.content, rawJson['content']);
+      expect(toDeviceEvent.sender, rawJson['sender']);
+      expect(toDeviceEvent.type, rawJson['type']);
 
-      Client matrix = Client("testclient", debug: true);
+      var matrix = Client('testclient', debug: true);
       matrix.httpClient = FakeMatrixApi();
       matrix.storeAPI = FakeStore(matrix, {});
-      await matrix.checkServer("https://fakeServer.notExisting");
-      await matrix.login("test", "1234");
-      Room room = matrix.getRoomById("!726s6s6q:example.com");
+      await matrix.checkServer('https://fakeServer.notExisting');
+      await matrix.login('test', '1234');
+      var room = matrix.getRoomById('!726s6s6q:example.com');
       if (matrix.encryptionEnabled) {
         await room.createOutboundGroupSession();
-        rawJson["content"]["body"]["session_id"] = room.sessionKeys.keys.first;
+        rawJson['content']['body']['session_id'] = room.sessionKeys.keys.first;
 
-        RoomKeyRequest roomKeyRequest = RoomKeyRequest.fromToDeviceEvent(
+        var roomKeyRequest = RoomKeyRequest.fromToDeviceEvent(
             ToDeviceEvent.fromJson(rawJson), matrix);
         await roomKeyRequest.forwardKey();
       }

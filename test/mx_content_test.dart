@@ -29,30 +29,30 @@ import 'fake_matrix_api.dart';
 
 void main() {
   /// All Tests related to the MxContent
-  group("MxContent", () {
-    test("Formatting", () async {
-      Client client = Client("testclient");
+  group('MxContent', () {
+    test('Formatting', () async {
+      var client = Client('testclient');
       client.httpClient = FakeMatrixApi();
-      await client.checkServer("https://fakeserver.notexisting");
-      final String mxc = "mxc://exampleserver.abc/abcdefghijklmn";
-      final MxContent content = MxContent(mxc);
+      await client.checkServer('https://fakeserver.notexisting');
+      final mxc = 'mxc://exampleserver.abc/abcdefghijklmn';
+      final content = MxContent(mxc);
 
       expect(content.getDownloadLink(client),
-          "${client.homeserver}/_matrix/media/r0/download/exampleserver.abc/abcdefghijklmn");
+          '${client.homeserver}/_matrix/media/r0/download/exampleserver.abc/abcdefghijklmn');
       expect(content.getThumbnail(client, width: 50, height: 50),
-          "${client.homeserver}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop");
+          '${client.homeserver}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop');
       expect(
           content.getThumbnail(client,
               width: 50, height: 50, method: ThumbnailMethod.scale),
-          "${client.homeserver}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale");
+          '${client.homeserver}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale');
     });
-    test("Not crashing if null", () async {
-      Client client = Client("testclient");
+    test('Not crashing if null', () async {
+      var client = Client('testclient');
       client.httpClient = FakeMatrixApi();
-      await client.checkServer("https://fakeserver.notexisting");
-      final MxContent content = MxContent(null);
+      await client.checkServer('https://fakeserver.notexisting');
+      final content = MxContent(null);
       expect(content.getDownloadLink(client),
-          "${client.homeserver}/_matrix/media/r0/download/");
+          '${client.homeserver}/_matrix/media/r0/download/');
     });
   });
 }

@@ -43,11 +43,11 @@ class EventUpdate {
   EventUpdate({this.eventType, this.roomID, this.type, this.content});
 
   EventUpdate decrypt(Room room) {
-    if (eventType != "m.room.encrypted") {
+    if (eventType != 'm.room.encrypted') {
       return this;
     }
     try {
-      Event decrpytedEvent =
+      var decrpytedEvent =
           room.decryptGroupMessage(Event.fromJson(content, room));
       return EventUpdate(
         eventType: eventType,
@@ -56,7 +56,7 @@ class EventUpdate {
         content: decrpytedEvent.toJson(),
       );
     } catch (e) {
-      print("[LibOlm] Could not decrypt megolm event: " + e.toString());
+      print('[LibOlm] Could not decrypt megolm event: ' + e.toString());
       return this;
     }
   }

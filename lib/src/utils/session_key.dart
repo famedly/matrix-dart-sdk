@@ -8,35 +8,36 @@ class SessionKey {
   InboundGroupSession inboundGroupSession;
   final String key;
   List<dynamic> get forwardingCurve25519KeyChain =>
-      content["forwarding_curve25519_key_chain"] ?? [];
+      content['forwarding_curve25519_key_chain'] ?? [];
   String get senderClaimedEd25519Key =>
-      content["sender_claimed_ed25519_key"] ?? "";
+      content['sender_claimed_ed25519_key'] ?? '';
 
   SessionKey({this.content, this.inboundGroupSession, this.key, this.indexes});
 
-  SessionKey.fromJson(Map<String, dynamic> json, String key) : this.key = key {
+  SessionKey.fromJson(Map<String, dynamic> json, String key) : key = key {
     content = json['content'] != null
         ? Map<String, dynamic>.from(json['content'])
         : null;
     indexes = json['indexes'] != null
         ? Map<String, int>.from(json['indexes'])
-        : Map<String, int>();
-    InboundGroupSession newInboundGroupSession = InboundGroupSession();
+        : <String, int>{};
+    var newInboundGroupSession = InboundGroupSession();
     newInboundGroupSession.unpickle(key, json['inboundGroupSession']);
     inboundGroupSession = newInboundGroupSession;
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
-    if (this.content != null) {
-      data['content'] = this.content;
+    final data = <String, dynamic>{};
+    if (content != null) {
+      data['content'] = content;
     }
-    if (this.indexes != null) {
-      data['indexes'] = this.indexes;
+    if (indexes != null) {
+      data['indexes'] = indexes;
     }
-    data['inboundGroupSession'] = this.inboundGroupSession.pickle(this.key);
+    data['inboundGroupSession'] = inboundGroupSession.pickle(key);
     return data;
   }
 
-  String toString() => json.encode(this.toJson());
+  @override
+  String toString() => json.encode(toJson());
 }

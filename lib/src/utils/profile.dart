@@ -16,7 +16,7 @@ class Profile {
         displayname = json['displayname'],
         content = json;
 
+  @override
   bool operator ==(dynamic other) =>
-      this.avatarUrl.mxc == other.avatarUrl.mxc &&
-      this.displayname == other.displayname;
+      avatarUrl.mxc == other.avatarUrl.mxc && displayname == other.displayname;
 }

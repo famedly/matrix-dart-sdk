@@ -66,13 +66,14 @@ abstract class ExtendedStoreAPI extends StoreAPI {
 
   /// Whether this is a simple store which only stores the client credentials and
   /// end to end encryption stuff or the whole sync payloads.
+  @override
   final bool extended = true;
 
   /// The current trans
   Future<void> setRoomPrevBatch(String roomId, String prevBatch);
 
   /// Performs these query or queries inside of an transaction.
-  Future<void> transaction(void queries());
+  Future<void> transaction(void Function() queries);
 
   /// Will be automatically called on every synchronisation. Must be called inside of
   //  /// [transaction].

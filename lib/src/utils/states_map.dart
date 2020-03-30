@@ -10,13 +10,13 @@ class StatesMap {
   dynamic operator [](String key) {
     //print("[Warning] This method will be depracated in the future!");
     if (key == null) return null;
-    if (key.startsWith("@") && key.contains(":")) {
-      if (!states.containsKey("m.room.member")) states["m.room.member"] = {};
-      return states["m.room.member"][key];
+    if (key.startsWith('@') && key.contains(':')) {
+      if (!states.containsKey('m.room.member')) states['m.room.member'] = {};
+      return states['m.room.member'][key];
     }
     if (!states.containsKey(key)) states[key] = {};
-    if (states[key][""] is Event) {
-      return states[key][""];
+    if (states[key][''] is Event) {
+      return states[key][''];
     } else if (states[key].isEmpty) {
       return null;
     } else {
@@ -26,12 +26,12 @@ class StatesMap {
 
   void operator []=(String key, Event val) {
     //print("[Warning] This method will be depracated in the future!");
-    if (key.startsWith("@") && key.contains(":")) {
-      if (!states.containsKey("m.room.member")) states["m.room.member"] = {};
-      states["m.room.member"][key] = val;
+    if (key.startsWith('@') && key.contains(':')) {
+      if (!states.containsKey('m.room.member')) states['m.room.member'] = {};
+      states['m.room.member'][key] = val;
     }
     if (!states.containsKey(key)) states[key] = {};
-    states[key][val.stateKey ?? ""] = val;
+    states[key][val.stateKey ?? ''] = val;
   }
 
   bool containsKey(String key) => states.containsKey(key);

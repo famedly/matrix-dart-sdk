@@ -11,11 +11,12 @@ class MatrixFile {
   /// Encrypts this file, changes the [bytes] and returns the
   /// encryption information as an [EncryptedFile].
   Future<EncryptedFile> encrypt() async {
-    final EncryptedFile encryptedFile = await encryptFile(bytes);
-    this.bytes = encryptedFile.data;
+    var encryptFile2 = encryptFile(bytes);
+    final encryptedFile = await encryptFile2;
+    bytes = encryptedFile.data;
     return encryptedFile;
   }
 
-  MatrixFile({this.bytes, String path}) : this.path = path.toLowerCase();
+  MatrixFile({this.bytes, String path}) : path = path.toLowerCase();
   int get size => bytes.length;
 }

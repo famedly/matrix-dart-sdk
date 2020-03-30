@@ -20,8 +20,8 @@ class UserDevice {
   Future<void> updateMetaData(String newName) async {
     await _client.jsonRequest(
       type: HTTPType.PUT,
-      action: "/client/r0/devices/$deviceId",
-      data: {"display_name": newName},
+      action: '/client/r0/devices/$deviceId',
+      data: {'display_name': newName},
     );
     return;
   }
@@ -30,8 +30,8 @@ class UserDevice {
   Future<void> deleteDevice(Map<String, dynamic> auth) async {
     await _client.jsonRequest(
       type: HTTPType.DELETE,
-      action: "/client/r0/devices/$deviceId",
-      data: auth != null ? {"auth": auth} : null,
+      action: '/client/r0/devices/$deviceId',
+      data: auth != null ? {'auth': auth} : null,
     );
     return;
   }

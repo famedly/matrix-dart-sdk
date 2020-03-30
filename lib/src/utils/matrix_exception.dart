@@ -48,34 +48,34 @@ class MatrixException implements Exception {
 
   /// The unique identifier for this error.
   String get errcode =>
-      raw["errcode"] ??
-      (requireAdditionalAuthentication ? "M_FORBIDDEN" : "M_UNKNOWN");
+      raw['errcode'] ??
+      (requireAdditionalAuthentication ? 'M_FORBIDDEN' : 'M_UNKNOWN');
 
   /// A human readable error description.
   String get errorMessage =>
-      raw["error"] ??
+      raw['error'] ??
       (requireAdditionalAuthentication
-          ? "Require additional authentication"
-          : "Unknown error");
+          ? 'Require additional authentication'
+          : 'Unknown error');
 
   /// The frozen request which triggered this Error
   http.Response response;
 
-  MatrixException(this.response) : this.raw = json.decode(response.body);
+  MatrixException(this.response) : raw = json.decode(response.body);
 
   @override
-  String toString() => "$errcode: $errorMessage";
+  String toString() => '$errcode: $errorMessage';
 
   /// Returns the [ResponseError]. Is ResponseError.NONE if there wasn't an error.
   MatrixError get error => MatrixError.values.firstWhere(
       (e) => e.toString() == 'MatrixError.${(raw["errcode"] ?? "")}',
       orElse: () => MatrixError.M_UNKNOWN);
 
-  int get retryAfterMs => raw["retry_after_ms"];
+  int get retryAfterMs => raw['retry_after_ms'];
 
   /// This is a session identifier that the client must pass back to the homeserver, if one is provided,
   /// in subsequent attempts to authenticate in the same API call.
-  String get session => raw["session"];
+  String get session => raw['session'];
 
   /// Returns true if the server requires additional authentication.
   bool get requireAdditionalAuthentication => response.statusCode == 401;
@@ -84,11 +84,11 @@ class MatrixException implements Exception {
   /// to authenticate itself. Each flow comprises a series of stages. If this request
   /// doesn't need additional authentication, then this is null.
   List<AuthenticationFlow> get authenticationFlows {
-    if (!raw.containsKey("flows") || !(raw["flows"] is List)) return null;
-    List<AuthenticationFlow> flows = [];
-    for (Map<String, dynamic> flow in raw["flows"]) {
-      if (flow["stages"] is List) {
-        flows.add(AuthenticationFlow(List<String>.from(flow["stages"])));
+    if (!raw.containsKey('flows') || !(raw['flows'] is List)) return null;
+    var flows = <AuthenticationFlow>[];
+    for (Map<String, dynamic> flow in raw['flows']) {
+      if (flow['stages'] is List) {
+        flows.add(AuthenticationFlow(List<String>.from(flow['stages'])));
       }
     }
     return flows;
@@ -97,10 +97,11 @@ class MatrixException implements Exception {
   /// This section contains any information that the client will need to know in order to use a given type
   /// of authentication. For each authentication type presented, that type may be present as a key in this
   /// dictionary. For example, the public part of an OAuth client ID could be given here.
-  Map<String, dynamic> get authenticationParams => raw["params"];
+  Map<String, dynamic> get authenticationParams => raw['params'];
 
   /// Returns the list of already completed authentication flows from previous requests.
-  List<String> get completedAuthenticationFlows => List<String>.from(raw["completed"] ?? []);
+  List<String> get completedAuthenticationFlows =>
+      List<String>.from(raw['completed'] ?? []);
 }
 
 /// For each endpoint, a server offers one or more 'flows' that the client can use

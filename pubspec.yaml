@@ -25,4 +25,4 @@ dependencies:
 dev_dependencies:
   test: ^1.0.0
   build_runner: ^1.5.2
-  pedantic: ^1.5.0 # DO NOT UPDATE AS THIS WOULD CAUSE FLUTTER TO FAIL
+  pedantic: ^1.9.0 # DO NOT UPDATE AS THIS WOULD CAUSE FLUTTER TO FAIL

@@ -37,14 +37,14 @@ class User extends Event {
     String avatarUrl,
     Room room,
   }) {
-    Map<String, String> content = {};
-    if (membership != null) content["membership"] = membership;
-    if (displayName != null) content["displayname"] = displayName;
-    if (avatarUrl != null) content["avatar_url"] = avatarUrl;
+    var content = <String, String>{};
+    if (membership != null) content['membership'] = membership;
+    if (displayName != null) content['displayname'] = displayName;
+    if (avatarUrl != null) content['avatar_url'] = avatarUrl;
     return User.fromState(
       stateKey: id,
       content: content,
-      typeKey: "m.room.member",
+      typeKey: 'm.room.member',
       roomId: room?.id,
       room: room,
       time: DateTime.now(),
@@ -78,7 +78,7 @@ class User extends Event {
   String get id => stateKey;
 
   /// The displayname of the user if the user has set one.
-  String get displayName => content != null ? content["displayname"] : null;
+  String get displayName => content != null ? content['displayname'] : null;
 
   /// Returns the power level of this user.
   int get powerLevel => room?.getPowerLevelByUserId(id);
@@ -89,21 +89,21 @@ class User extends Event {
   /// leave
   /// ban
   Membership get membership => Membership.values.firstWhere((e) {
-        if (content["membership"] != null) {
+        if (content['membership'] != null) {
           return e.toString() == 'Membership.' + content['membership'];
         }
         return false;
       }, orElse: () => Membership.join);
 
   /// The avatar if the user has one.
-  MxContent get avatarUrl => content != null && content["avatar_url"] is String
-      ? MxContent(content["avatar_url"])
-      : MxContent("");
+  MxContent get avatarUrl => content != null && content['avatar_url'] is String
+      ? MxContent(content['avatar_url'])
+      : MxContent('');
 
   /// Returns the displayname or the local part of the Matrix ID if the user
   /// has no displayname.
   String calcDisplayname() => (displayName == null || displayName.isEmpty)
-      ? (stateKey != null ? stateKey.localpart : "Unknown User")
+      ? (stateKey != null ? stateKey.localpart : 'Unknown User')
       : displayName;
 
   /// Call the Matrix API to kick this user from this room.
@@ -122,20 +122,20 @@ class User extends Event {
   /// Returns null on error.
   Future<String> startDirectChat() async {
     // Try to find an existing direct chat
-    String roomID = await room.client?.getDirectChatFromUserId(id);
+    var roomID = await room.client?.getDirectChatFromUserId(id);
     if (roomID != null) return roomID;
 
     // Start a new direct chat
     final dynamic resp = await room.client.jsonRequest(
         type: HTTPType.POST,
-        action: "/client/r0/createRoom",
+        action: '/client/r0/createRoom',
         data: {
-          "invite": [id],
-          "is_direct": true,
-          "preset": "trusted_private_chat"
+          'invite': [id],
+          'is_direct': true,
+          'preset': 'trusted_private_chat'
         });
 
-    final String newRoomID = resp["room_id"];
+    final String newRoomID = resp['room_id'];
 
     if (newRoomID == null) return newRoomID;
 

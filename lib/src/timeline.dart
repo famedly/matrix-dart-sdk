@@ -25,7 +25,6 @@ import 'dart:async';
 
 import 'event.dart';
 import 'room.dart';
-import 'user.dart';
 import 'sync/event_update.dart';
 
 typedef onTimelineUpdateCallback = void Function();
@@ -45,17 +44,17 @@ class Timeline {
   StreamSubscription<String> sessionIdReceivedSub;
   bool _requestingHistoryLock = false;
 
-  Map<String, Event> _eventCache = {};
+  final Map<String, Event> _eventCache = {};
 
   /// Searches for the event in this timeline. If not
   /// found, requests from the server. Requested events
   /// are cached.
   Future<Event> getEventById(String id) async {
-    for (int i = 0; i < events.length; i++) {
+    for (var i = 0; i < events.length; i++) {
       if (events[i].eventId == id) return events[i];
     }
     if (_eventCache.containsKey(id)) return _eventCache[id];
-    final Event requestedEvent = await room.getEventById(id);
+    final requestedEvent = await room.getEventById(id);
     if (requestedEvent == null) return null;
     _eventCache[id] = requestedEvent;
     return _eventCache[id];
@@ -89,12 +88,12 @@ class Timeline {
   }
 
   void _sessionKeyReceived(String sessionId) {
-    bool decryptAtLeastOneEvent = false;
-    for (int i = 0; i < events.length; i++) {
+    var decryptAtLeastOneEvent = false;
+    for (var i = 0; i < events.length; i++) {
       if (events[i].type == EventTypes.Encrypted &&
           events[i].messageType == MessageTypes.BadEncrypted &&
-          events[i].content["body"] == DecryptError.UNKNOWN_SESSION &&
-          events[i].content["session_id"] == sessionId) {
+          events[i].content['body'] == DecryptError.UNKNOWN_SESSION &&
+          events[i].content['session_id'] == sessionId) {
         events[i] = events[i].decrypted;
         if (events[i].type != EventTypes.Encrypted) {
           decryptAtLeastOneEvent = true;
@@ -117,26 +116,25 @@ class Timeline {
     try {
       if (eventUpdate.roomID != room.id) return;
 
-      if (eventUpdate.type == "timeline" || eventUpdate.type == "history") {
+      if (eventUpdate.type == 'timeline' || eventUpdate.type == 'history') {
         // Redaction events are handled as modification for existing events.
-        if (eventUpdate.eventType == "m.room.redaction") {
-          final int eventId =
-              _findEvent(event_id: eventUpdate.content["redacts"]);
+        if (eventUpdate.eventType == 'm.room.redaction') {
+          final eventId = _findEvent(event_id: eventUpdate.content['redacts']);
           if (eventId != null) {
             events[eventId]
                 .setRedactionEvent(Event.fromJson(eventUpdate.content, room));
           }
-        } else if (eventUpdate.content["status"] == -2) {
-          int i = _findEvent(event_id: eventUpdate.content["event_id"]);
+        } else if (eventUpdate.content['status'] == -2) {
+          var i = _findEvent(event_id: eventUpdate.content['event_id']);
           if (i < events.length) events.removeAt(i);
         }
         // Is this event already in the timeline?
-        else if (eventUpdate.content.containsKey("unsigned") &&
-            eventUpdate.content["unsigned"]["transaction_id"] is String) {
-          int i = _findEvent(
-              event_id: eventUpdate.content["event_id"],
-              unsigned_txid: eventUpdate.content.containsKey("unsigned")
-                  ? eventUpdate.content["unsigned"]["transaction_id"]
+        else if (eventUpdate.content.containsKey('unsigned') &&
+            eventUpdate.content['unsigned']['transaction_id'] is String) {
+          var i = _findEvent(
+              event_id: eventUpdate.content['event_id'],
+              unsigned_txid: eventUpdate.content.containsKey('unsigned')
+                  ? eventUpdate.content['unsigned']['transaction_id']
                   : null);
 
           if (i < events.length) {
@@ -144,18 +142,18 @@ class Timeline {
           }
         } else {
           Event newEvent;
-          User senderUser = await room.client.store
-              ?.getUser(matrixID: eventUpdate.content["sender"], room: room);
+          var senderUser = await room.client.store
+              ?.getUser(matrixID: eventUpdate.content['sender'], room: room);
           if (senderUser != null) {
-            eventUpdate.content["displayname"] = senderUser.displayName;
-            eventUpdate.content["avatar_url"] = senderUser.avatarUrl.mxc;
+            eventUpdate.content['displayname'] = senderUser.displayName;
+            eventUpdate.content['avatar_url'] = senderUser.avatarUrl.mxc;
           }
 
           newEvent = Event.fromJson(eventUpdate.content, room);
 
-          if (eventUpdate.type == "history" &&
+          if (eventUpdate.type == 'history' &&
               events.indexWhere(
-                      (e) => e.eventId == eventUpdate.content["event_id"]) !=
+                      (e) => e.eventId == eventUpdate.content['event_id']) !=
                   -1) return;
 
           events.insert(0, newEvent);
@@ -165,14 +163,14 @@ class Timeline {
       sortAndUpdate();
     } catch (e) {
       if (room.client.debug) {
-        print("[WARNING] (_handleEventUpdate) ${e.toString()}");
+        print('[WARNING] (_handleEventUpdate) ${e.toString()}');
       }
     }
   }
 
   bool sortLock = false;
 
-  sort() {
+  void sort() {
     if (sortLock || events.length < 2) return;
     sortLock = true;
     events?.sort((a, b) =>
@@ -180,7 +178,7 @@ class Timeline {
     sortLock = false;
   }
 
-  sortAndUpdate() {
+  void sortAndUpdate() async {
     sort();
     if (onUpdate != null) onUpdate();
   }

@@ -94,10 +94,10 @@ class Room {
   /// to-device-messaging.
   Future<void> createOutboundGroupSession() async {
     await clearOutboundGroupSession(wipe: true);
-    List<DeviceKeys> deviceKeys = await getUserDeviceKeys();
+    var deviceKeys = await getUserDeviceKeys();
     olm.OutboundGroupSession outboundGroupSession;
-    List<String> outboundGroupSessionDevices = [];
-    for (DeviceKeys keys in deviceKeys) {
+    var outboundGroupSessionDevices = <String>[];
+    for (var keys in deviceKeys) {
       if (!keys.blocked) outboundGroupSessionDevices.add(keys.deviceId);
     }
     outboundGroupSessionDevices.sort();
@@ -106,29 +106,29 @@ class Room {
       outboundGroupSession.create();
     } catch (e) {
       outboundGroupSession = null;
-      print("[LibOlm] Unable to create new outboundGroupSession: " +
+      print('[LibOlm] Unable to create new outboundGroupSession: ' +
           e.toString());
     }
 
     if (outboundGroupSession == null) return;
     // Add as an inboundSession to the [sessionKeys].
-    Map<String, dynamic> rawSession = {
-      "algorithm": "m.megolm.v1.aes-sha2",
-      "room_id": this.id,
-      "session_id": outboundGroupSession.session_id(),
-      "session_key": outboundGroupSession.session_key(),
+    var rawSession = <String, dynamic>{
+      'algorithm': 'm.megolm.v1.aes-sha2',
+      'room_id': id,
+      'session_id': outboundGroupSession.session_id(),
+      'session_key': outboundGroupSession.session_key(),
     };
-    setSessionKey(rawSession["session_id"], rawSession);
+    setSessionKey(rawSession['session_id'], rawSession);
     try {
-      await client.sendToDevice(deviceKeys, "m.room_key", rawSession);
+      await client.sendToDevice(deviceKeys, 'm.room_key', rawSession);
       _outboundGroupSession = outboundGroupSession;
       _outboundGroupSessionDevices = outboundGroupSessionDevices;
       await _storeOutboundGroupSession();
     } catch (e) {
       print(
-          "[LibOlm] Unable to send the session key to the participating devices: " +
+          '[LibOlm] Unable to send the session key to the participating devices: ' +
               e.toString());
-      await this.clearOutboundGroupSession();
+      await clearOutboundGroupSession();
     }
     return;
   }
@@ -136,10 +136,10 @@ class Room {
   Future<void> _storeOutboundGroupSession() async {
     if (_outboundGroupSession == null) return;
     await client.storeAPI?.setItem(
-        "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session",
+        '/clients/${client.deviceID}/rooms/${id}/outbound_group_session',
         _outboundGroupSession.pickle(client.userID));
     await client.storeAPI?.setItem(
-        "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session_devices",
+        '/clients/${client.deviceID}/rooms/${id}/outbound_group_session_devices',
         json.encode(_outboundGroupSessionDevices));
     return;
   }
@@ -148,27 +148,26 @@ class Room {
   /// devices have been changed. Returns false if the session has not been cleared because
   /// it wasn't necessary.
   Future<bool> clearOutboundGroupSession({bool wipe = false}) async {
-    if (!wipe && this._outboundGroupSessionDevices != null) {
-      List<DeviceKeys> deviceKeys = await getUserDeviceKeys();
-      List<String> outboundGroupSessionDevices = [];
-      for (DeviceKeys keys in deviceKeys) {
+    if (!wipe && _outboundGroupSessionDevices != null) {
+      var deviceKeys = await getUserDeviceKeys();
+      var outboundGroupSessionDevices = <String>[];
+      for (var keys in deviceKeys) {
         if (!keys.blocked) outboundGroupSessionDevices.add(keys.deviceId);
       }
       outboundGroupSessionDevices.sort();
       if (outboundGroupSessionDevices.toString() ==
-          this._outboundGroupSessionDevices.toString()) {
+          _outboundGroupSessionDevices.toString()) {
         return false;
       }
     }
-    this._outboundGroupSessionDevices == null;
+    _outboundGroupSessionDevices == null;
     await client.storeAPI?.setItem(
-        "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session",
-        null);
+        '/clients/${client.deviceID}/rooms/${id}/outbound_group_session', null);
     await client.storeAPI?.setItem(
-        "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session_devices",
+        '/clients/${client.deviceID}/rooms/${id}/outbound_group_session_devices',
         null);
-    this._outboundGroupSession?.free();
-    this._outboundGroupSession = null;
+    _outboundGroupSession?.free();
+    _outboundGroupSession = null;
     return true;
   }
 
@@ -188,17 +187,17 @@ class Room {
       {bool forwarded = false}) {
     if (sessionKeys.containsKey(sessionId)) return;
     olm.InboundGroupSession inboundGroupSession;
-    if (content["algorithm"] == "m.megolm.v1.aes-sha2") {
+    if (content['algorithm'] == 'm.megolm.v1.aes-sha2') {
       try {
         inboundGroupSession = olm.InboundGroupSession();
         if (forwarded) {
-          inboundGroupSession.import_session(content["session_key"]);
+          inboundGroupSession.import_session(content['session_key']);
         } else {
-          inboundGroupSession.create(content["session_key"]);
+          inboundGroupSession.create(content['session_key']);
         }
       } catch (e) {
         inboundGroupSession = null;
-        print("[LibOlm] Could not create new InboundGroupSession: " +
+        print('[LibOlm] Could not create new InboundGroupSession: ' +
             e.toString());
       }
     }
@@ -210,7 +209,7 @@ class Room {
     );
     if (_fullyRestored) {
       client.storeAPI?.setItem(
-          "/clients/${client.deviceID}/rooms/${this.id}/session_keys",
+          '/clients/${client.deviceID}/rooms/${id}/session_keys',
           json.encode(sessionKeys));
     }
     _tryAgainDecryptLastMessage();
@@ -218,8 +217,8 @@ class Room {
   }
 
   void _tryAgainDecryptLastMessage() {
-    if (getState("m.room.encrypted") != null) {
-      final Event decrypted = getState("m.room.encrypted").decrypted;
+    if (getState('m.room.encrypted') != null) {
+      final decrypted = getState('m.room.encrypted').decrypted;
       if (decrypted.type != EventTypes.Encrypted) {
         setState(decrypted);
       }
@@ -228,7 +227,7 @@ class Room {
 
   /// Returns the [Event] for the given [typeKey] and optional [stateKey].
   /// If no [stateKey] is provided, it defaults to an empty string.
-  Event getState(String typeKey, [String stateKey = ""]) =>
+  Event getState(String typeKey, [String stateKey = '']) =>
       states.states[typeKey] != null ? states.states[typeKey][stateKey] : null;
 
   /// Adds the [state] to this room and overwrites a state with the same
@@ -239,15 +238,15 @@ class Room {
       try {
         state = decryptGroupMessage(state);
       } catch (e) {
-        print("[LibOlm] Could not decrypt room state: " + e.toString());
+        print('[LibOlm] Could not decrypt room state: ' + e.toString());
       }
     }
     // Check if this is a member change and we need to clear the outboundGroupSession.
     if (encrypted &&
         outboundGroupSession != null &&
         state.type == EventTypes.RoomMember) {
-      User newUser = state.asUser;
-      User oldUser = getState("m.room.member", newUser.id)?.asUser;
+      var newUser = state.asUser;
+      var oldUser = getState('m.room.member', newUser.id)?.asUser;
       if (oldUser == null || oldUser.membership != newUser.membership) {
         clearOutboundGroupSession();
       }
@@ -259,13 +258,13 @@ class Room {
     if (!states.states.containsKey(state.typeKey)) {
       states.states[state.typeKey] = {};
     }
-    states.states[state.typeKey][state.stateKey ?? ""] = state;
+    states.states[state.typeKey][state.stateKey ?? ''] = state;
   }
 
   /// ID of the fully read marker event.
-  String get fullyRead => roomAccountData["m.fully_read"] != null
-      ? roomAccountData["m.fully_read"].content["event_id"]
-      : "";
+  String get fullyRead => roomAccountData['m.fully_read'] != null
+      ? roomAccountData['m.fully_read'].content['event_id']
+      : '';
 
   /// If something changes, this callback will be triggered. Will return the
   /// room id.
@@ -277,34 +276,34 @@ class Room {
       StreamController.broadcast();
 
   /// The name of the room if set by a participant.
-  String get name => states["m.room.name"] != null
-      ? states["m.room.name"].content["name"]
-      : "";
+  String get name => states['m.room.name'] != null
+      ? states['m.room.name'].content['name']
+      : '';
 
   /// The topic of the room if set by a participant.
-  String get topic => states["m.room.topic"] != null
-      ? states["m.room.topic"].content["topic"]
-      : "";
+  String get topic => states['m.room.topic'] != null
+      ? states['m.room.topic'].content['topic']
+      : '';
 
   /// The avatar of the room if set by a participant.
   MxContent get avatar {
-    if (states["m.room.avatar"] != null) {
-      return MxContent(states["m.room.avatar"].content["url"]);
+    if (states['m.room.avatar'] != null) {
+      return MxContent(states['m.room.avatar'].content['url']);
     }
     if (mHeroes != null && mHeroes.length == 1 && states[mHeroes[0]] != null) {
       return states[mHeroes[0]].asUser.avatarUrl;
     }
     if (membership == Membership.invite &&
-        getState("m.room.member", client.userID) != null) {
-      return getState("m.room.member", client.userID).sender.avatarUrl;
+        getState('m.room.member', client.userID) != null) {
+      return getState('m.room.member', client.userID).sender.avatarUrl;
     }
-    return MxContent("");
+    return MxContent('');
   }
 
   /// The address in the format: #roomname:homeserver.org.
-  String get canonicalAlias => states["m.room.canonical_alias"] != null
-      ? states["m.room.canonical_alias"].content["alias"]
-      : "";
+  String get canonicalAlias => states['m.room.canonical_alias'] != null
+      ? states['m.room.canonical_alias'].content['alias']
+      : '';
 
   /// If this room is a direct chat, this is the matrix ID of the user.
   /// Returns null otherwise.
@@ -313,8 +312,8 @@ class Room {
     if (client.directChats is Map<String, dynamic>) {
       client.directChats.forEach((String userId, dynamic roomIds) {
         if (roomIds is List<dynamic>) {
-          for (int i = 0; i < roomIds.length; i++) {
-            if (roomIds[i] == this.id) {
+          for (var i = 0; i < roomIds.length; i++) {
+            if (roomIds[i] == id) {
               returnUserId = userId;
               break;
             }
@@ -332,12 +331,12 @@ class Room {
   String notificationSettings;
 
   Event get lastEvent {
-    DateTime lastTime = DateTime.fromMillisecondsSinceEpoch(0);
-    Event lastEvent = getState("m.room.message");
+    var lastTime = DateTime.fromMillisecondsSinceEpoch(0);
+    var lastEvent = getState('m.room.message');
     if (lastEvent == null) {
       states.forEach((final String key, final entry) {
-        if (!entry.containsKey("")) return;
-        final Event state = entry[""];
+        if (!entry.containsKey('')) return;
+        final Event state = entry[''];
         if (state.time != null &&
             state.time.millisecondsSinceEpoch >
                 lastTime.millisecondsSinceEpoch) {
@@ -351,10 +350,10 @@ class Room {
 
   /// Returns a list of all current typing users.
   List<User> get typingUsers {
-    if (!ephemerals.containsKey("m.typing")) return [];
-    List<dynamic> typingMxid = ephemerals["m.typing"].content["user_ids"];
-    List<User> typingUsers = [];
-    for (int i = 0; i < typingMxid.length; i++) {
+    if (!ephemerals.containsKey('m.typing')) return [];
+    List<dynamic> typingMxid = ephemerals['m.typing'].content['user_ids'];
+    var typingUsers = <User>[];
+    for (var i = 0; i < typingMxid.length; i++) {
       typingUsers.add(getUserByMXIDSync(typingMxid[i]));
     }
     return typingUsers;
@@ -368,7 +367,7 @@ class Room {
     this.membership = Membership.join,
     this.notificationCount = 0,
     this.highlightCount = 0,
-    this.prev_batch = "",
+    this.prev_batch = '',
     this.client,
     this.notificationSettings,
     this.mHeroes = const [],
@@ -390,14 +389,14 @@ class Room {
         canonicalAlias.length > 3) {
       return canonicalAlias.localpart;
     }
-    List<String> heroes = [];
+    var heroes = <String>[];
     if (mHeroes != null &&
         mHeroes.isNotEmpty &&
         mHeroes.any((h) => h.isNotEmpty)) {
       heroes = mHeroes;
     } else {
-      if (states["m.room.member"] is Map<String, dynamic>) {
-        for (var entry in states["m.room.member"].entries) {
+      if (states['m.room.member'] is Map<String, dynamic>) {
+        for (var entry in states['m.room.member'].entries) {
           Event state = entry.value;
           if (state.type == EventTypes.RoomMember &&
               state.stateKey != client?.userID) heroes.add(state.stateKey);
@@ -405,18 +404,18 @@ class Room {
       }
     }
     if (heroes.isNotEmpty) {
-      String displayname = "";
-      for (int i = 0; i < heroes.length; i++) {
+      var displayname = '';
+      for (var i = 0; i < heroes.length; i++) {
         if (heroes[i].isEmpty) continue;
-        displayname += getUserByMXIDSync(heroes[i]).calcDisplayname() + ", ";
+        displayname += getUserByMXIDSync(heroes[i]).calcDisplayname() + ', ';
       }
       return displayname.substring(0, displayname.length - 2);
     }
     if (membership == Membership.invite &&
-        getState("m.room.member", client.userID) != null) {
-      return getState("m.room.member", client.userID).sender.calcDisplayname();
+        getState('m.room.member', client.userID) != null) {
+      return getState('m.room.member', client.userID).sender.calcDisplayname();
     }
-    return "Empty chat";
+    return 'Empty chat';
   }
 
   /// The last message sent to this room.
@@ -424,7 +423,7 @@ class Room {
     if (lastEvent != null) {
       return lastEvent.body;
     } else {
-      return "";
+      return '';
     }
   }
 
@@ -439,31 +438,31 @@ class Room {
   /// Call the Matrix API to change the name of this room. Returns the event ID of the
   /// new m.room.name event.
   Future<String> setName(String newName) async {
-    final Map<String, dynamic> resp = await client.jsonRequest(
+    final resp = await client.jsonRequest(
         type: HTTPType.PUT,
-        action: "/client/r0/rooms/${id}/state/m.room.name",
-        data: {"name": newName});
-    return resp["event_id"];
+        action: '/client/r0/rooms/${id}/state/m.room.name',
+        data: {'name': newName});
+    return resp['event_id'];
   }
 
   /// Call the Matrix API to change the topic of this room.
   Future<String> setDescription(String newName) async {
-    final Map<String, dynamic> resp = await client.jsonRequest(
+    final resp = await client.jsonRequest(
         type: HTTPType.PUT,
-        action: "/client/r0/rooms/${id}/state/m.room.topic",
-        data: {"topic": newName});
-    return resp["event_id"];
+        action: '/client/r0/rooms/${id}/state/m.room.topic',
+        data: {'topic': newName});
+    return resp['event_id'];
   }
 
   /// Sends a normal text message to this room. Returns the event ID generated
   /// by the server for this message.
   Future<String> sendTextEvent(String message, {String txid, Event inReplyTo}) {
-    String type = "m.text";
-    if (message.startsWith("/me ")) {
-      type = "m.emote";
+    var type = 'm.text';
+    if (message.startsWith('/me ')) {
+      type = 'm.emote';
       message = message.substring(4);
     }
-    return sendEvent({"msgtype": type, "body": message},
+    return sendEvent({'msgtype': type, 'body': message},
         txid: txid, inReplyTo: inReplyTo);
   }
 
@@ -471,48 +470,47 @@ class Room {
   /// and will be detected by the mimetype of the file. Returns the mxc uri of
   /// the uploaded file.
   Future<String> sendFileEvent(MatrixFile file,
-      {String msgType = "m.file",
+      {String msgType = 'm.file',
       String txid,
       Event inReplyTo,
       Map<String, dynamic> info}) async {
-    String fileName = file.path.split("/").last;
-    final bool sendEncrypted = this.encrypted && client.fileEncryptionEnabled;
+    var fileName = file.path.split('/').last;
+    final sendEncrypted = encrypted && client.fileEncryptionEnabled;
     EncryptedFile encryptedFile;
     if (sendEncrypted) {
       encryptedFile = await file.encrypt();
     }
-    final String uploadResp = await client.upload(
+    final uploadResp = await client.upload(
       file,
-      contentType: sendEncrypted ? "application/octet-stream" : null,
+      contentType: sendEncrypted ? 'application/octet-stream' : null,
     );
 
     // Send event
-    Map<String, dynamic> content = {
-      "msgtype": msgType,
-      "body": fileName,
-      "filename": fileName,
-      if (!sendEncrypted) "url": uploadResp,
+    var content = <String, dynamic>{
+      'msgtype': msgType,
+      'body': fileName,
+      'filename': fileName,
+      if (!sendEncrypted) 'url': uploadResp,
       if (sendEncrypted)
-        "file": {
-          "url": uploadResp,
-          "mimetype": mime(file.path),
-          "v": "v2",
-          "key": {
-            "alg": "A256CTR",
-            "ext": true,
-            "k": encryptedFile.k,
-            "key_ops": ["encrypt", "decrypt"],
-            "kty": "oct"
+        'file': {
+          'url': uploadResp,
+          'mimetype': mime(file.path),
+          'v': 'v2',
+          'key': {
+            'alg': 'A256CTR',
+            'ext': true,
+            'k': encryptedFile.k,
+            'key_ops': ['encrypt', 'decrypt'],
+            'kty': 'oct'
           },
-          "iv": encryptedFile.iv,
-          "hashes": {"sha256": encryptedFile.sha256}
+          'iv': encryptedFile.iv,
+          'hashes': {'sha256': encryptedFile.sha256}
         },
-      "info": info != null
-          ? info
-          : {
-              "mimetype": mime(file.path),
-              "size": file.size,
-            }
+      'info': info ??
+          {
+            'mimetype': mime(file.path),
+            'size': file.size,
+          }
     };
     unawaited(sendEvent(content, txid: txid, inReplyTo: inReplyTo));
     return uploadResp;
@@ -522,21 +520,21 @@ class Room {
   Future<String> sendAudioEvent(MatrixFile file,
       {String txid, Event inReplyTo}) async {
     return await sendFileEvent(file,
-        msgType: "m.audio", txid: txid, inReplyTo: inReplyTo);
+        msgType: 'm.audio', txid: txid, inReplyTo: inReplyTo);
   }
 
   /// Sends an image to this room and returns the mxc uri.
   Future<String> sendImageEvent(MatrixFile file,
       {String txid, int width, int height, Event inReplyTo}) async {
     return await sendFileEvent(file,
-        msgType: "m.image",
+        msgType: 'm.image',
         txid: txid,
         inReplyTo: inReplyTo,
         info: {
-          "size": file.size,
-          "mimetype": mime(file.path.split("/").last),
-          "w": width,
-          "h": height,
+          'size': file.size,
+          'mimetype': mime(file.path.split('/').last),
+          'w': width,
+          'h': height,
         });
   }
 
@@ -550,39 +548,39 @@ class Room {
       int thumbnailWidth,
       int thumbnailHeight,
       Event inReplyTo}) async {
-    String fileName = file.path.split("/").last;
-    Map<String, dynamic> info = {
-      "size": file.size,
-      "mimetype": mime(fileName),
+    var fileName = file.path.split('/').last;
+    var info = <String, dynamic>{
+      'size': file.size,
+      'mimetype': mime(fileName),
     };
     if (videoWidth != null) {
-      info["w"] = videoWidth;
+      info['w'] = videoWidth;
     }
     if (thumbnailHeight != null) {
-      info["h"] = thumbnailHeight;
+      info['h'] = thumbnailHeight;
     }
     if (duration != null) {
-      info["duration"] = duration;
+      info['duration'] = duration;
     }
-    if (thumbnail != null && !(this.encrypted && client.encryptionEnabled)) {
-      String thumbnailName = file.path.split("/").last;
-      final String thumbnailUploadResp = await client.upload(thumbnail);
-      info["thumbnail_url"] = thumbnailUploadResp;
-      info["thumbnail_info"] = {
-        "size": thumbnail.size,
-        "mimetype": mime(thumbnailName),
+    if (thumbnail != null && !(encrypted && client.encryptionEnabled)) {
+      var thumbnailName = file.path.split('/').last;
+      final thumbnailUploadResp = await client.upload(thumbnail);
+      info['thumbnail_url'] = thumbnailUploadResp;
+      info['thumbnail_info'] = {
+        'size': thumbnail.size,
+        'mimetype': mime(thumbnailName),
       };
       if (thumbnailWidth != null) {
-        info["thumbnail_info"]["w"] = thumbnailWidth;
+        info['thumbnail_info']['w'] = thumbnailWidth;
       }
       if (thumbnailHeight != null) {
-        info["thumbnail_info"]["h"] = thumbnailHeight;
+        info['thumbnail_info']['h'] = thumbnailHeight;
       }
     }
 
     return await sendFileEvent(
       file,
-      msgType: "m.video",
+      msgType: 'm.video',
       txid: txid,
       inReplyTo: inReplyTo,
       info: info,
@@ -593,47 +591,46 @@ class Room {
   /// event ID generated from the server.
   Future<String> sendEvent(Map<String, dynamic> content,
       {String txid, Event inReplyTo}) async {
-    final String type = "m.room.message";
-    final String sendType = (this.encrypted && client.encryptionEnabled)
-        ? "m.room.encrypted"
-        : type;
+    final type = 'm.room.message';
+    final sendType =
+        (encrypted && client.encryptionEnabled) ? 'm.room.encrypted' : type;
 
     // Create new transaction id
     String messageID;
-    final int now = DateTime.now().millisecondsSinceEpoch;
+    final now = DateTime.now().millisecondsSinceEpoch;
     if (txid == null) {
-      messageID = "msg$now";
+      messageID = 'msg$now';
     } else {
       messageID = txid;
     }
 
     if (inReplyTo != null) {
-      String replyText = "<${inReplyTo.senderId}> " + inReplyTo.body;
-      List<String> replyTextLines = replyText.split("\n");
-      for (int i = 0; i < replyTextLines.length; i++) {
-        replyTextLines[i] = "> " + replyTextLines[i];
+      var replyText = '<${inReplyTo.senderId}> ' + inReplyTo.body;
+      var replyTextLines = replyText.split('\n');
+      for (var i = 0; i < replyTextLines.length; i++) {
+        replyTextLines[i] = '> ' + replyTextLines[i];
       }
-      replyText = replyTextLines.join("\n");
-      content["format"] = "org.matrix.custom.html";
-      content["formatted_body"] =
+      replyText = replyTextLines.join('\n');
+      content['format'] = 'org.matrix.custom.html';
+      content['formatted_body'] =
           '<mx-reply><blockquote><a href="https://matrix.to/#/${inReplyTo.room.id}/${inReplyTo.eventId}">In reply to</a> <a href="https://matrix.to/#/${inReplyTo.senderId}">${inReplyTo.senderId}</a><br>${inReplyTo.body}</blockquote></mx-reply>${content["formatted_body"] ?? content["body"]}';
-      content["body"] = replyText + "\n\n${content["body"] ?? ""}";
-      content["m.relates_to"] = {
-        "m.in_reply_to": {
-          "event_id": inReplyTo.eventId,
+      content['body'] = replyText + "\n\n${content["body"] ?? ""}";
+      content['m.relates_to'] = {
+        'm.in_reply_to': {
+          'event_id': inReplyTo.eventId,
         },
       };
     }
 
     // Display a *sending* event and store it.
-    EventUpdate eventUpdate =
-        EventUpdate(type: "timeline", roomID: id, eventType: type, content: {
-      "type": type,
-      "event_id": messageID,
-      "sender": client.userID,
-      "status": 0,
-      "origin_server_ts": now,
-      "content": content
+    var eventUpdate =
+        EventUpdate(type: 'timeline', roomID: id, eventType: type, content: {
+      'type': type,
+      'event_id': messageID,
+      'sender': client.userID,
+      'status': 0,
+      'origin_server_ts': now,
+      'content': content
     });
     client.onEvent.add(eventUpdate);
     await client.store?.transaction(() {
@@ -643,16 +640,16 @@ class Room {
 
     // Send the text and on success, store and display a *sent* event.
     try {
-      final Map<String, dynamic> response = await client.jsonRequest(
+      final response = await client.jsonRequest(
           type: HTTPType.PUT,
-          action: "/client/r0/rooms/${id}/send/$sendType/$messageID",
+          action: '/client/r0/rooms/${id}/send/$sendType/$messageID',
           data: client.encryptionEnabled
               ? await encryptGroupMessagePayload(content)
               : content);
-      final String res = response["event_id"];
-      eventUpdate.content["status"] = 1;
-      eventUpdate.content["unsigned"] = {"transaction_id": messageID};
-      eventUpdate.content["event_id"] = res;
+      final String res = response['event_id'];
+      eventUpdate.content['status'] = 1;
+      eventUpdate.content['unsigned'] = {'transaction_id': messageID};
+      eventUpdate.content['event_id'] = res;
       client.onEvent.add(eventUpdate);
       await client.store?.transaction(() {
         client.store.storeEventUpdate(eventUpdate);
@@ -660,10 +657,10 @@ class Room {
       });
       return res;
     } catch (exception) {
-      print("[Client] Error while sending: " + exception.toString());
+      print('[Client] Error while sending: ' + exception.toString());
       // On error, set status to -1
-      eventUpdate.content["status"] = -1;
-      eventUpdate.content["unsigned"] = {"transaction_id": messageID};
+      eventUpdate.content['status'] = -1;
+      eventUpdate.content['unsigned'] = {'transaction_id': messageID};
       client.onEvent.add(eventUpdate);
       await client.store?.transaction(() {
         client.store.storeEventUpdate(eventUpdate);
@@ -679,15 +676,15 @@ class Room {
   Future<void> join() async {
     try {
       await client.jsonRequest(
-          type: HTTPType.POST, action: "/client/r0/rooms/${id}/join");
-      final Event invitation = getState("m.room.member", client.userID);
+          type: HTTPType.POST, action: '/client/r0/rooms/${id}/join');
+      final invitation = getState('m.room.member', client.userID);
       if (invitation != null &&
-          invitation.content["is_direct"] is bool &&
-          invitation.content["is_direct"]) {
+          invitation.content['is_direct'] is bool &&
+          invitation.content['is_direct']) {
         await addToDirectChat(invitation.sender.id);
       }
     } on MatrixException catch (exception) {
-      if (exception.errorMessage == "No known servers") {
+      if (exception.errorMessage == 'No known servers') {
         await client.store?.forgetRoom(id);
         client.onRoomUpdate.add(
           RoomUpdate(
@@ -704,9 +701,9 @@ class Room {
   /// Call the Matrix API to leave this room. If this room is set as a direct
   /// chat, this will be removed too.
   Future<void> leave() async {
-    if (directChatMatrixID != "") await removeFromDirectChat();
+    if (directChatMatrixID != '') await removeFromDirectChat();
     await client.jsonRequest(
-        type: HTTPType.POST, action: "/client/r0/rooms/${id}/leave");
+        type: HTTPType.POST, action: '/client/r0/rooms/${id}/leave');
     return;
   }
 
@@ -714,7 +711,7 @@ class Room {
   Future<void> forget() async {
     await client.store?.forgetRoom(id);
     await client.jsonRequest(
-        type: HTTPType.POST, action: "/client/r0/rooms/${id}/forget");
+        type: HTTPType.POST, action: '/client/r0/rooms/${id}/forget');
     return;
   }
 
@@ -722,8 +719,8 @@ class Room {
   Future<void> kick(String userID) async {
     await client.jsonRequest(
         type: HTTPType.POST,
-        action: "/client/r0/rooms/${id}/kick",
-        data: {"user_id": userID});
+        action: '/client/r0/rooms/${id}/kick',
+        data: {'user_id': userID});
     return;
   }
 
@@ -731,8 +728,8 @@ class Room {
   Future<void> ban(String userID) async {
     await client.jsonRequest(
         type: HTTPType.POST,
-        action: "/client/r0/rooms/${id}/ban",
-        data: {"user_id": userID});
+        action: '/client/r0/rooms/${id}/ban',
+        data: {'user_id': userID});
     return;
   }
 
@@ -740,8 +737,8 @@ class Room {
   Future<void> unban(String userID) async {
     await client.jsonRequest(
         type: HTTPType.POST,
-        action: "/client/r0/rooms/${id}/unban",
-        data: {"user_id": userID});
+        action: '/client/r0/rooms/${id}/unban',
+        data: {'user_id': userID});
     return;
   }
 
@@ -749,25 +746,24 @@ class Room {
   /// Returns the event ID of the new state event. If there is no known
   /// power level event, there might something broken and this returns null.
   Future<String> setPower(String userID, int power) async {
-    if (states["m.room.power_levels"] == null) return null;
-    Map<String, dynamic> powerMap = {}
-      ..addAll(states["m.room.power_levels"].content);
-    if (powerMap["users"] == null) powerMap["users"] = {};
-    powerMap["users"][userID] = power;
+    if (states['m.room.power_levels'] == null) return null;
+    var powerMap = {}..addAll(states['m.room.power_levels'].content);
+    if (powerMap['users'] == null) powerMap['users'] = {};
+    powerMap['users'][userID] = power;
 
-    final Map<String, dynamic> resp = await client.jsonRequest(
+    final resp = await client.jsonRequest(
         type: HTTPType.PUT,
-        action: "/client/r0/rooms/$id/state/m.room.power_levels",
+        action: '/client/r0/rooms/$id/state/m.room.power_levels',
         data: powerMap);
-    return resp["event_id"];
+    return resp['event_id'];
   }
 
   /// Call the Matrix API to invite a user to this room.
   Future<void> invite(String userID) async {
     await client.jsonRequest(
         type: HTTPType.POST,
-        action: "/client/r0/rooms/${id}/invite",
-        data: {"user_id": userID});
+        action: '/client/r0/rooms/${id}/invite',
+        data: {'user_id': userID});
     return;
   }
 
@@ -779,24 +775,24 @@ class Room {
     final dynamic resp = await client.jsonRequest(
         type: HTTPType.GET,
         action:
-            "/client/r0/rooms/$id/messages?from=${prev_batch}&dir=b&limit=$historyCount&filter=${Client.syncFilters}");
+            '/client/r0/rooms/$id/messages?from=${prev_batch}&dir=b&limit=$historyCount&filter=${Client.syncFilters}');
 
     if (onHistoryReceived != null) onHistoryReceived();
-    prev_batch = resp["end"];
+    prev_batch = resp['end'];
     await client.store?.storeRoomPrevBatch(this);
 
-    if (!(resp["chunk"] is List<dynamic> &&
-        resp["chunk"].length > 0 &&
-        resp["end"] is String)) return;
+    if (!(resp['chunk'] is List<dynamic> &&
+        resp['chunk'].length > 0 &&
+        resp['end'] is String)) return;
 
-    if (resp["state"] is List<dynamic>) {
+    if (resp['state'] is List<dynamic>) {
       await client.store?.transaction(() {
-        for (int i = 0; i < resp["state"].length; i++) {
-          EventUpdate eventUpdate = EventUpdate(
-            type: "state",
+        for (var i = 0; i < resp['state'].length; i++) {
+          var eventUpdate = EventUpdate(
+            type: 'state',
             roomID: id,
-            eventType: resp["state"][i]["type"],
-            content: resp["state"][i],
+            eventType: resp['state'][i]['type'],
+            content: resp['state'][i],
           ).decrypt(this);
           client.onEvent.add(eventUpdate);
           client.store.storeEventUpdate(eventUpdate);
@@ -804,39 +800,39 @@ class Room {
         return;
       });
       if (client.store == null) {
-        for (int i = 0; i < resp["state"].length; i++) {
-          EventUpdate eventUpdate = EventUpdate(
-            type: "state",
+        for (var i = 0; i < resp['state'].length; i++) {
+          var eventUpdate = EventUpdate(
+            type: 'state',
             roomID: id,
-            eventType: resp["state"][i]["type"],
-            content: resp["state"][i],
+            eventType: resp['state'][i]['type'],
+            content: resp['state'][i],
           ).decrypt(this);
           client.onEvent.add(eventUpdate);
         }
       }
     }
 
-    List<dynamic> history = resp["chunk"];
+    List<dynamic> history = resp['chunk'];
     await client.store?.transaction(() {
-      for (int i = 0; i < history.length; i++) {
-        EventUpdate eventUpdate = EventUpdate(
-          type: "history",
+      for (var i = 0; i < history.length; i++) {
+        var eventUpdate = EventUpdate(
+          type: 'history',
           roomID: id,
-          eventType: history[i]["type"],
+          eventType: history[i]['type'],
           content: history[i],
         ).decrypt(this);
         client.onEvent.add(eventUpdate);
         client.store.storeEventUpdate(eventUpdate);
-        client.store.setRoomPrevBatch(id, resp["end"]);
+        client.store.setRoomPrevBatch(id, resp['end']);
       }
       return;
     });
     if (client.store == null) {
-      for (int i = 0; i < history.length; i++) {
-        EventUpdate eventUpdate = EventUpdate(
-          type: "history",
+      for (var i = 0; i < history.length; i++) {
+        var eventUpdate = EventUpdate(
+          type: 'history',
           roomID: id,
-          eventType: history[i]["type"],
+          eventType: history[i]['type'],
           content: history[i],
         ).decrypt(this);
         client.onEvent.add(eventUpdate);
@@ -846,7 +842,7 @@ class Room {
       RoomUpdate(
         id: id,
         membership: membership,
-        prev_batch: resp["end"],
+        prev_batch: resp['end'],
         notification_count: notificationCount,
         highlight_count: highlightCount,
       ),
@@ -855,7 +851,7 @@ class Room {
 
   /// Sets this room as a direct chat for this user if not already.
   Future<void> addToDirectChat(String userID) async {
-    Map<String, dynamic> directChats = client.directChats;
+    var directChats = client.directChats;
     if (directChats.containsKey(userID)) {
       if (!directChats[userID].contains(id)) {
         directChats[userID].add(id);
@@ -868,14 +864,14 @@ class Room {
 
     await client.jsonRequest(
         type: HTTPType.PUT,
-        action: "/client/r0/user/${client.userID}/account_data/m.direct",
+        action: '/client/r0/user/${client.userID}/account_data/m.direct',
         data: directChats);
     return;
   }
 
   /// Removes this room from all direct chat tags.
   Future<void> removeFromDirectChat() async {
-    Map<String, dynamic> directChats = client.directChats;
+    var directChats = client.directChats;
     if (directChats.containsKey(directChatMatrixID) &&
         directChats[directChatMatrixID].contains(id)) {
       directChats[directChatMatrixID].remove(id);
@@ -885,21 +881,21 @@ class Room {
 
     await client.jsonRequest(
         type: HTTPType.PUT,
-        action: "/client/r0/user/${client.userID}/account_data/m.direct",
+        action: '/client/r0/user/${client.userID}/account_data/m.direct',
         data: directChats);
     return;
   }
 
   /// Sends *m.fully_read* and *m.read* for the given event ID.
   Future<void> sendReadReceipt(String eventID) async {
-    this.notificationCount = 0;
-    await client?.store?.resetNotificationCount(this.id);
+    notificationCount = 0;
+    await client?.store?.resetNotificationCount(id);
     await client.jsonRequest(
         type: HTTPType.POST,
-        action: "/client/r0/rooms/$id/read_markers",
+        action: '/client/r0/rooms/$id/read_markers',
         data: {
-          "m.fully_read": eventID,
-          "m.read": eventID,
+          'm.fully_read': eventID,
+          'm.read': eventID,
         });
     return;
   }
@@ -908,44 +904,43 @@ class Room {
     // Restore the inbound and outbound session keys
     if (client.encryptionEnabled && client.storeAPI != null) {
       final String outboundGroupSessionPickle = await client.storeAPI.getItem(
-          "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session");
+          '/clients/${client.deviceID}/rooms/${id}/outbound_group_session');
       if (outboundGroupSessionPickle != null) {
         try {
-          this._outboundGroupSession = olm.OutboundGroupSession();
-          this
-              ._outboundGroupSession
-              .unpickle(client.userID, outboundGroupSessionPickle);
+          _outboundGroupSession = olm.OutboundGroupSession();
+          _outboundGroupSession.unpickle(
+              client.userID, outboundGroupSessionPickle);
         } catch (e) {
-          this._outboundGroupSession = null;
-          print("[LibOlm] Unable to unpickle outboundGroupSession: " +
+          _outboundGroupSession = null;
+          print('[LibOlm] Unable to unpickle outboundGroupSession: ' +
               e.toString());
         }
       }
       final String outboundGroupSessionDevicesString = await client.storeAPI
           .getItem(
-              "/clients/${client.deviceID}/rooms/${this.id}/outbound_group_session_devices");
+              '/clients/${client.deviceID}/rooms/${id}/outbound_group_session_devices');
       if (outboundGroupSessionDevicesString != null) {
-        this._outboundGroupSessionDevices =
+        _outboundGroupSessionDevices =
             List<String>.from(json.decode(outboundGroupSessionDevicesString));
       }
       final String sessionKeysPickle = await client.storeAPI
-          .getItem("/clients/${client.deviceID}/rooms/${this.id}/session_keys");
+          .getItem('/clients/${client.deviceID}/rooms/${id}/session_keys');
       if (sessionKeysPickle?.isNotEmpty ?? false) {
         final Map<String, dynamic> map = json.decode(sessionKeysPickle);
-        if (this._sessionKeys == null) this._sessionKeys = {};
+        _sessionKeys ??= {};
         for (var entry in map.entries) {
           try {
-            this._sessionKeys[entry.key] =
+            _sessionKeys[entry.key] =
                 SessionKey.fromJson(entry.value, client.userID);
           } catch (e) {
-            print("[LibOlm] Could not unpickle inboundGroupSession: " +
+            print('[LibOlm] Could not unpickle inboundGroupSession: ' +
                 e.toString());
           }
         }
       }
     }
     await client.storeAPI?.setItem(
-        "/clients/${client.deviceID}/rooms/${this.id}/session_keys",
+        '/clients/${client.deviceID}/rooms/${id}/session_keys',
         json.encode(sessionKeys));
     _tryAgainDecryptLastMessage();
     _fullyRestored = true;
@@ -959,17 +954,17 @@ class Room {
       Map<String, dynamic> row, Client matrix,
       {Future<List<Map<String, dynamic>>> states,
       Future<List<Map<String, dynamic>>> roomAccountData}) async {
-    Room newRoom = Room(
-      id: row["room_id"],
+    var newRoom = Room(
+      id: row['room_id'],
       membership: Membership.values
-          .firstWhere((e) => e.toString() == 'Membership.' + row["membership"]),
-      notificationCount: row["notification_count"],
-      highlightCount: row["highlight_count"],
-      notificationSettings: row["notification_settings"],
-      prev_batch: row["prev_batch"],
-      mInvitedMemberCount: row["invited_member_count"],
-      mJoinedMemberCount: row["joined_member_count"],
-      mHeroes: row["heroes"]?.split(",") ?? [],
+          .firstWhere((e) => e.toString() == 'Membership.' + row['membership']),
+      notificationCount: row['notification_count'],
+      highlightCount: row['highlight_count'],
+      notificationSettings: row['notification_settings'],
+      prev_batch: row['prev_batch'],
+      mInvitedMemberCount: row['invited_member_count'],
+      mJoinedMemberCount: row['joined_member_count'],
+      mHeroes: row['heroes']?.split(',') ?? [],
       client: matrix,
       roomAccountData: {},
     );
@@ -978,19 +973,18 @@ class Room {
     await newRoom.restoreGroupSessionKeys();
 
     if (states != null) {
-      List<Map<String, dynamic>> rawStates = await states;
-      for (int i = 0; i < rawStates.length; i++) {
-        Event newState = Event.fromJson(rawStates[i], newRoom);
+      var rawStates = await states;
+      for (var i = 0; i < rawStates.length; i++) {
+        var newState = Event.fromJson(rawStates[i], newRoom);
         newRoom.setState(newState);
       }
     }
 
-    Map<String, RoomAccountData> newRoomAccountData = {};
+    var newRoomAccountData = <String, RoomAccountData>{};
     if (roomAccountData != null) {
-      List<Map<String, dynamic>> rawRoomAccountData = await roomAccountData;
-      for (int i = 0; i < rawRoomAccountData.length; i++) {
-        RoomAccountData newData =
-            RoomAccountData.fromJson(rawRoomAccountData[i], newRoom);
+      var rawRoomAccountData = await roomAccountData;
+      for (var i = 0; i < rawRoomAccountData.length; i++) {
+        var newData = RoomAccountData.fromJson(rawRoomAccountData[i], newRoom);
         newRoomAccountData[newData.typeKey] = newData;
       }
       newRoom.roomAccountData = newRoomAccountData;
@@ -1003,15 +997,16 @@ class Room {
   Future<Timeline> getTimeline(
       {onTimelineUpdateCallback onUpdate,
       onTimelineInsertCallback onInsert}) async {
-    List<Event> events =
-        client.store != null ? await client.store.getEventList(this) : [];
+    var events = client.store != null
+        ? await client.store.getEventList(this)
+        : <Event>[];
 
     // Try again to decrypt encrypted events and update the database.
-    if (this.encrypted && client.store != null) {
+    if (encrypted && client.store != null) {
       await client.store.transaction(() {
-        for (int i = 0; i < events.length; i++) {
+        for (var i = 0; i < events.length; i++) {
           if (events[i].type == EventTypes.Encrypted &&
-              events[i].content["body"] == DecryptError.UNKNOWN_SESSION) {
+              events[i].content['body'] == DecryptError.UNKNOWN_SESSION) {
             events[i] = events[i].decrypted;
             if (events[i].type != EventTypes.Encrypted) {
               client.store.storeEventUpdate(
@@ -1019,7 +1014,7 @@ class Room {
                   eventType: events[i].typeKey,
                   content: events[i].toJson(),
                   roomID: events[i].roomId,
-                  type: "timeline",
+                  type: 'timeline',
                 ),
               );
             }
@@ -1028,14 +1023,14 @@ class Room {
       });
     }
 
-    Timeline timeline = Timeline(
+    var timeline = Timeline(
       room: this,
       events: events,
       onUpdate: onUpdate,
       onInsert: onInsert,
     );
     if (client.store == null) {
-      prev_batch = "";
+      prev_batch = '';
       await requestHistory(historyCount: 10);
     }
     return timeline;
@@ -1045,9 +1040,9 @@ class Room {
   /// list may not be complete. User [requestParticipants] in this
   /// case.
   List<User> getParticipants() {
-    List<User> userList = [];
-    if (states["m.room.member"] is Map<String, dynamic>) {
-      for (var entry in states["m.room.member"].entries) {
+    var userList = <User>[];
+    if (states['m.room.member'] is Map<String, dynamic>) {
+      for (var entry in states['m.room.member'].entries) {
         Event state = entry.value;
         if (state.type == EventTypes.RoomMember) userList.add(state.asUser);
       }
@@ -1059,13 +1054,13 @@ class Room {
   /// from the store is not complete if the client uses lazy loading.
   Future<List<User>> requestParticipants() async {
     if (participantListComplete) return getParticipants();
-    List<User> participants = [];
+    var participants = <User>[];
 
     dynamic res = await client.jsonRequest(
-        type: HTTPType.GET, action: "/client/r0/rooms/${id}/members");
+        type: HTTPType.GET, action: '/client/r0/rooms/${id}/members');
 
-    for (num i = 0; i < res["chunk"].length; i++) {
-      User newUser = Event.fromJson(res["chunk"][i], this).asUser;
+    for (num i = 0; i < res['chunk'].length; i++) {
+      var newUser = Event.fromJson(res['chunk'][i], this).asUser;
       if (![Membership.leave, Membership.ban].contains(newUser.membership)) {
         participants.add(newUser);
         setState(newUser);
@@ -1077,11 +1072,11 @@ class Room {
 
   /// Checks if the local participant list of joined and invited users is complete.
   bool get participantListComplete {
-    List<User> knownParticipants = getParticipants();
+    var knownParticipants = getParticipants();
     knownParticipants.removeWhere(
         (u) => ![Membership.join, Membership.invite].contains(u.membership));
     return knownParticipants.length ==
-        (this.mJoinedMemberCount ?? 0) + (this.mInvitedMemberCount ?? 0);
+        (mJoinedMemberCount ?? 0) + (mInvitedMemberCount ?? 0);
   }
 
   /// Returns the [User] object for the given [mxID] or requests it from
@@ -1102,7 +1097,7 @@ class Room {
     }
   }
 
-  Set<String> _requestingMatrixIds = Set();
+  final Set<String> _requestingMatrixIds = {};
 
   /// Requests a missing [User] for this room. Important for clients using
   /// lazy loading.
@@ -1112,14 +1107,14 @@ class Room {
     try {
       resp = await client.jsonRequest(
           type: HTTPType.GET,
-          action: "/client/r0/rooms/$id/state/m.room.member/$mxID");
+          action: '/client/r0/rooms/$id/state/m.room.member/$mxID');
     } catch (exception) {
       _requestingMatrixIds.remove(mxID);
       if (!ignoreErrors) rethrow;
     }
-    final User user = User(mxID,
-        displayName: resp["displayname"],
-        avatarUrl: resp["avatar_url"],
+    final user = User(mxID,
+        displayName: resp['displayname'],
+        avatarUrl: resp['avatar_url'],
         room: this);
     states[mxID] = user;
     if (client.store != null) {
@@ -1128,8 +1123,8 @@ class Room {
           EventUpdate(
               content: resp,
               roomID: id,
-              type: "state",
-              eventType: "m.room.member"),
+              type: 'state',
+              eventType: 'm.room.member'),
         );
         return;
       });
@@ -1142,21 +1137,21 @@ class Room {
   /// Searches for the event on the server. Returns null if not found.
   Future<Event> getEventById(String eventID) async {
     final dynamic resp = await client.jsonRequest(
-        type: HTTPType.GET, action: "/client/r0/rooms/$id/event/$eventID");
+        type: HTTPType.GET, action: '/client/r0/rooms/$id/event/$eventID');
     return Event.fromJson(resp, this);
   }
 
   /// Returns the power level of the given user ID.
   int getPowerLevelByUserId(String userId) {
-    int powerLevel = 0;
-    Event powerLevelState = states["m.room.power_levels"];
+    var powerLevel = 0;
+    Event powerLevelState = states['m.room.power_levels'];
     if (powerLevelState == null) return powerLevel;
-    if (powerLevelState.content["users_default"] is int) {
-      powerLevel = powerLevelState.content["users_default"];
+    if (powerLevelState.content['users_default'] is int) {
+      powerLevel = powerLevelState.content['users_default'];
     }
-    if (powerLevelState.content["users"] is Map<String, dynamic> &&
-        powerLevelState.content["users"][userId] != null) {
-      powerLevel = powerLevelState.content["users"][userId];
+    if (powerLevelState.content['users'] is Map<String, dynamic> &&
+        powerLevelState.content['users'][userId] != null) {
+      powerLevel = powerLevelState.content['users'][userId];
     }
     return powerLevel;
   }
@@ -1166,9 +1161,9 @@ class Room {
 
   /// Returns the power levels from all users for this room or null if not given.
   Map<String, int> get powerLevels {
-    Event powerLevelState = states["m.room.power_levels"];
-    if (powerLevelState.content["users"] is Map<String, int>) {
-      return powerLevelState.content["users"];
+    Event powerLevelState = states['m.room.power_levels'];
+    if (powerLevelState.content['users'] is Map<String, int>) {
+      return powerLevelState.content['users'];
     }
     return null;
   }
@@ -1176,68 +1171,68 @@ class Room {
   /// Uploads a new user avatar for this room. Returns the event ID of the new
   /// m.room.avatar event.
   Future<String> setAvatar(MatrixFile file) async {
-    final String uploadResp = await client.upload(file);
-    final Map<String, dynamic> setAvatarResp = await client.jsonRequest(
+    final uploadResp = await client.upload(file);
+    final setAvatarResp = await client.jsonRequest(
         type: HTTPType.PUT,
-        action: "/client/r0/rooms/$id/state/m.room.avatar/",
-        data: {"url": uploadResp});
-    return setAvatarResp["event_id"];
+        action: '/client/r0/rooms/$id/state/m.room.avatar/',
+        data: {'url': uploadResp});
+    return setAvatarResp['event_id'];
   }
 
   bool _hasPermissionFor(String action) {
-    if (getState("m.room.power_levels") == null ||
-        getState("m.room.power_levels").content[action] == null) return true;
-    return ownPowerLevel >= getState("m.room.power_levels").content[action];
+    if (getState('m.room.power_levels') == null ||
+        getState('m.room.power_levels').content[action] == null) return true;
+    return ownPowerLevel >= getState('m.room.power_levels').content[action];
   }
 
   /// The level required to ban a user.
-  bool get canBan => _hasPermissionFor("ban");
+  bool get canBan => _hasPermissionFor('ban');
 
   /// The default level required to send message events. Can be overridden by the events key.
-  bool get canSendDefaultMessages => _hasPermissionFor("events_default");
+  bool get canSendDefaultMessages => _hasPermissionFor('events_default');
 
   /// The level required to invite a user.
-  bool get canInvite => _hasPermissionFor("invite");
+  bool get canInvite => _hasPermissionFor('invite');
 
   /// The level required to kick a user.
-  bool get canKick => _hasPermissionFor("kick");
+  bool get canKick => _hasPermissionFor('kick');
 
   /// The level required to redact an event.
-  bool get canRedact => _hasPermissionFor("redact");
+  bool get canRedact => _hasPermissionFor('redact');
 
   ///  	The default level required to send state events. Can be overridden by the events key.
-  bool get canSendDefaultStates => _hasPermissionFor("state_default");
+  bool get canSendDefaultStates => _hasPermissionFor('state_default');
 
-  bool get canChangePowerLevel => canSendEvent("m.room.power_levels");
+  bool get canChangePowerLevel => canSendEvent('m.room.power_levels');
 
   bool canSendEvent(String eventType) {
-    if (getState("m.room.power_levels") == null) return true;
-    if (getState("m.room.power_levels").content["events"] == null ||
-        getState("m.room.power_levels").content["events"][eventType] == null) {
-      return eventType == "m.room.message"
+    if (getState('m.room.power_levels') == null) return true;
+    if (getState('m.room.power_levels').content['events'] == null ||
+        getState('m.room.power_levels').content['events'][eventType] == null) {
+      return eventType == 'm.room.message'
           ? canSendDefaultMessages
           : canSendDefaultStates;
     }
     return ownPowerLevel >=
-        getState("m.room.power_levels").content["events"][eventType];
+        getState('m.room.power_levels').content['events'][eventType];
   }
 
   /// Returns the [PushRuleState] for this room, based on the m.push_rules stored in
   /// the account_data.
   PushRuleState get pushRuleState {
-    if (!client.accountData.containsKey("m.push_rules") ||
-        !(client.accountData["m.push_rules"].content["global"] is Map)) {
+    if (!client.accountData.containsKey('m.push_rules') ||
+        !(client.accountData['m.push_rules'].content['global'] is Map)) {
       return PushRuleState.notify;
     }
     final Map<String, dynamic> globalPushRules =
-        client.accountData["m.push_rules"].content["global"];
+        client.accountData['m.push_rules'].content['global'];
     if (globalPushRules == null) return PushRuleState.notify;
 
-    if (globalPushRules["override"] is List) {
-      for (var i = 0; i < globalPushRules["override"].length; i++) {
-        if (globalPushRules["override"][i]["rule_id"] == id) {
-          if (globalPushRules["override"][i]["actions"]
-                  .indexOf("dont_notify") !=
+    if (globalPushRules['override'] is List) {
+      for (var i = 0; i < globalPushRules['override'].length; i++) {
+        if (globalPushRules['override'][i]['rule_id'] == id) {
+          if (globalPushRules['override'][i]['actions']
+                  .indexOf('dont_notify') !=
               -1) {
             return PushRuleState.dont_notify;
           }
@@ -1246,10 +1241,10 @@ class Room {
       }
     }
 
-    if (globalPushRules["room"] is List) {
-      for (var i = 0; i < globalPushRules["room"].length; i++) {
-        if (globalPushRules["room"][i]["rule_id"] == id) {
-          if (globalPushRules["room"][i]["actions"].indexOf("dont_notify") !=
+    if (globalPushRules['room'] is List) {
+      for (var i = 0; i < globalPushRules['room'].length; i++) {
+        if (globalPushRules['room'][i]['rule_id'] == id) {
+          if (globalPushRules['room'][i]['actions'].indexOf('dont_notify') !=
               -1) {
             return PushRuleState.mentions_only;
           }
@@ -1272,12 +1267,12 @@ class Room {
         if (pushRuleState == PushRuleState.dont_notify) {
           resp = await client.jsonRequest(
               type: HTTPType.DELETE,
-              action: "/client/r0/pushrules/global/override/$id",
+              action: '/client/r0/pushrules/global/override/$id',
               data: {});
         } else if (pushRuleState == PushRuleState.mentions_only) {
           resp = await client.jsonRequest(
               type: HTTPType.DELETE,
-              action: "/client/r0/pushrules/global/room/$id",
+              action: '/client/r0/pushrules/global/room/$id',
               data: {});
         }
         break;
@@ -1286,20 +1281,20 @@ class Room {
         if (pushRuleState == PushRuleState.dont_notify) {
           resp = await client.jsonRequest(
               type: HTTPType.DELETE,
-              action: "/client/r0/pushrules/global/override/$id",
+              action: '/client/r0/pushrules/global/override/$id',
               data: {});
           resp = await client.jsonRequest(
               type: HTTPType.PUT,
-              action: "/client/r0/pushrules/global/room/$id",
+              action: '/client/r0/pushrules/global/room/$id',
               data: {
-                "actions": ["dont_notify"]
+                'actions': ['dont_notify']
               });
         } else if (pushRuleState == PushRuleState.notify) {
           resp = await client.jsonRequest(
               type: HTTPType.PUT,
-              action: "/client/r0/pushrules/global/room/$id",
+              action: '/client/r0/pushrules/global/room/$id',
               data: {
-                "actions": ["dont_notify"]
+                'actions': ['dont_notify']
               });
         }
         break;
@@ -1308,16 +1303,16 @@ class Room {
         if (pushRuleState == PushRuleState.mentions_only) {
           resp = await client.jsonRequest(
               type: HTTPType.DELETE,
-              action: "/client/r0/pushrules/global/room/$id",
+              action: '/client/r0/pushrules/global/room/$id',
               data: {});
         }
         resp = await client.jsonRequest(
             type: HTTPType.PUT,
-            action: "/client/r0/pushrules/global/override/$id",
+            action: '/client/r0/pushrules/global/override/$id',
             data: {
-              "actions": ["dont_notify"],
-              "conditions": [
-                {"key": "room_id", "kind": "event_match", "pattern": id}
+              'actions': ['dont_notify'],
+              'conditions': [
+                {'key': 'room_id', 'kind': 'event_match', 'pattern': id}
               ]
             });
     }
@@ -1329,29 +1324,29 @@ class Room {
       {String reason, String txid}) async {
     // Create new transaction id
     String messageID;
-    final int now = DateTime.now().millisecondsSinceEpoch;
+    final now = DateTime.now().millisecondsSinceEpoch;
     if (txid == null) {
-      messageID = "msg$now";
+      messageID = 'msg$now';
     } else {
       messageID = txid;
     }
-    Map<String, dynamic> data = {};
-    if (reason != null) data["reason"] = reason;
+    var data = <String, dynamic>{};
+    if (reason != null) data['reason'] = reason;
     final dynamic resp = await client.jsonRequest(
         type: HTTPType.PUT,
-        action: "/client/r0/rooms/$id/redact/$eventId/$messageID",
+        action: '/client/r0/rooms/$id/redact/$eventId/$messageID',
         data: data);
     return resp;
   }
 
   Future<dynamic> sendTypingInfo(bool isTyping, {int timeout}) {
-    Map<String, dynamic> data = {
-      "typing": isTyping,
+    var data = <String, dynamic>{
+      'typing': isTyping,
     };
-    if (timeout != null) data["timeout"] = timeout;
+    if (timeout != null) data['timeout'] = timeout;
     return client.jsonRequest(
       type: HTTPType.PUT,
-      action: "/client/r0/rooms/${this.id}/typing/${client.userID}",
+      action: '/client/r0/rooms/${id}/typing/${client.userID}',
       data: data,
     );
   }
@@ -1364,19 +1359,19 @@ class Room {
   /// [type] The type of session description. Must be 'offer'.
   /// [sdp] The SDP text of the session description.
   Future<String> inviteToCall(String callId, int lifetime, String sdp,
-      {String type = "offer", int version = 0, String txid}) async {
-    if (txid == null) txid = "txid${DateTime.now().millisecondsSinceEpoch}";
-    final Map<String, dynamic> response = await client.jsonRequest(
+      {String type = 'offer', int version = 0, String txid}) async {
+    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
+    final response = await client.jsonRequest(
       type: HTTPType.PUT,
-      action: "/client/r0/rooms/$id/send/m.call.invite/$txid",
+      action: '/client/r0/rooms/$id/send/m.call.invite/$txid',
       data: {
-        "call_id": callId,
-        "lifetime": lifetime,
-        "offer": {"sdp": sdp, "type": type},
-        "version": version,
+        'call_id': callId,
+        'lifetime': lifetime,
+        'offer': {'sdp': sdp, 'type': type},
+        'version': version,
       },
     );
-    return response["event_id"];
+    return response['event_id'];
   }
 
   /// This is sent by callers after sending an invite and by the callee after answering.
@@ -1403,17 +1398,17 @@ class Room {
     int version = 0,
     String txid,
   }) async {
-    if (txid == null) txid = "txid${DateTime.now().millisecondsSinceEpoch}";
-    final Map<String, dynamic> response = await client.jsonRequest(
+    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
+    final response = await client.jsonRequest(
       type: HTTPType.PUT,
-      action: "/client/r0/rooms/$id/send/m.call.candidates/$txid",
+      action: '/client/r0/rooms/$id/send/m.call.candidates/$txid',
       data: {
-        "call_id": callId,
-        "candidates": candidates,
-        "version": version,
+        'call_id': callId,
+        'candidates': candidates,
+        'version': version,
       },
     );
-    return response["event_id"];
+    return response['event_id'];
   }
 
   /// This event is sent by the callee when they wish to answer the call.
@@ -1422,18 +1417,18 @@ class Room {
   /// [type] The type of session description. Must be 'answer'.
   /// [sdp] The SDP text of the session description.
   Future<String> answerCall(String callId, String sdp,
-      {String type = "answer", int version = 0, String txid}) async {
-    if (txid == null) txid = "txid${DateTime.now().millisecondsSinceEpoch}";
-    final Map<String, dynamic> response = await client.jsonRequest(
+      {String type = 'answer', int version = 0, String txid}) async {
+    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
+    final response = await client.jsonRequest(
       type: HTTPType.PUT,
-      action: "/client/r0/rooms/$id/send/m.call.answer/$txid",
+      action: '/client/r0/rooms/$id/send/m.call.answer/$txid',
       data: {
-        "call_id": callId,
-        "answer": {"sdp": sdp, "type": type},
-        "version": version,
+        'call_id': callId,
+        'answer': {'sdp': sdp, 'type': type},
+        'version': version,
       },
     );
-    return response["event_id"];
+    return response['event_id'];
   }
 
   /// This event is sent by the callee when they wish to answer the call.
@@ -1441,24 +1436,24 @@ class Room {
   /// [version] is the version of the VoIP specification this message adheres to. This specification is version 0.
   Future<String> hangupCall(String callId,
       {int version = 0, String txid}) async {
-    if (txid == null) txid = "txid${DateTime.now().millisecondsSinceEpoch}";
-    final Map<String, dynamic> response = await client.jsonRequest(
+    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
+    final response = await client.jsonRequest(
       type: HTTPType.PUT,
-      action: "/client/r0/rooms/$id/send/m.call.hangup/$txid",
+      action: '/client/r0/rooms/$id/send/m.call.hangup/$txid',
       data: {
-        "call_id": callId,
-        "version": version,
+        'call_id': callId,
+        'version': version,
       },
     );
-    return response["event_id"];
+    return response['event_id'];
   }
 
   /// Returns all aliases for this room.
   List<String> get aliases {
-    List<String> aliases = [];
-    for (Event aliasEvent in states.states["m.room.aliases"].values) {
-      if (aliasEvent.content["aliases"] is List) {
-        aliases.addAll(aliasEvent.content["aliases"]);
+    var aliases = <String>[];
+    for (var aliasEvent in states.states['m.room.aliases'].values) {
+      if (aliasEvent.content['aliases'] is List) {
+        aliases.addAll(aliasEvent.content['aliases']);
       }
     }
     return aliases;
@@ -1468,11 +1463,11 @@ class Room {
   /// it can be invite meaning that a user who wishes to join the room must first receive an invite
   /// to the room from someone already inside of the room. Currently, knock and private are reserved
   /// keywords which are not implemented.
-  JoinRules get joinRules => getState("m.room.join_rules") != null
+  JoinRules get joinRules => getState('m.room.join_rules') != null
       ? JoinRules.values.firstWhere(
           (r) =>
-              r.toString().replaceAll("JoinRules.", "") ==
-              getState("m.room.join_rules").content["join_rule"],
+              r.toString().replaceAll('JoinRules.', '') ==
+              getState('m.room.join_rules').content['join_rule'],
           orElse: () => null)
       : null;
 
@@ -1480,24 +1475,24 @@ class Room {
   Future<void> setJoinRules(JoinRules joinRules) async {
     await client.jsonRequest(
       type: HTTPType.PUT,
-      action: "/client/r0/rooms/$id/state/m.room.join_rules/",
+      action: '/client/r0/rooms/$id/state/m.room.join_rules/',
       data: {
-        "join_rule": joinRules.toString().replaceAll("JoinRules.", ""),
+        'join_rule': joinRules.toString().replaceAll('JoinRules.', ''),
       },
     );
     return;
   }
 
   /// Whether the user has the permission to change the join rules.
-  bool get canChangeJoinRules => canSendEvent("m.room.join_rules");
+  bool get canChangeJoinRules => canSendEvent('m.room.join_rules');
 
   /// This event controls whether guest users are allowed to join rooms. If this event
   /// is absent, servers should act as if it is present and has the guest_access value "forbidden".
-  GuestAccess get guestAccess => getState("m.room.guest_access") != null
+  GuestAccess get guestAccess => getState('m.room.guest_access') != null
       ? GuestAccess.values.firstWhere(
           (r) =>
-              r.toString().replaceAll("GuestAccess.", "") ==
-              getState("m.room.guest_access").content["guest_access"],
+              r.toString().replaceAll('GuestAccess.', '') ==
+              getState('m.room.guest_access').content['guest_access'],
           orElse: () => GuestAccess.forbidden)
       : GuestAccess.forbidden;
 
@@ -1505,25 +1500,25 @@ class Room {
   Future<void> setGuestAccess(GuestAccess guestAccess) async {
     await client.jsonRequest(
       type: HTTPType.PUT,
-      action: "/client/r0/rooms/$id/state/m.room.guest_access/",
+      action: '/client/r0/rooms/$id/state/m.room.guest_access/',
       data: {
-        "guest_access": guestAccess.toString().replaceAll("GuestAccess.", ""),
+        'guest_access': guestAccess.toString().replaceAll('GuestAccess.', ''),
       },
     );
     return;
   }
 
   /// Whether the user has the permission to change the guest access.
-  bool get canChangeGuestAccess => canSendEvent("m.room.guest_access");
+  bool get canChangeGuestAccess => canSendEvent('m.room.guest_access');
 
   /// This event controls whether a user can see the events that happened in a room from before they joined.
   HistoryVisibility get historyVisibility =>
-      getState("m.room.history_visibility") != null
+      getState('m.room.history_visibility') != null
           ? HistoryVisibility.values.firstWhere(
               (r) =>
-                  r.toString().replaceAll("HistoryVisibility.", "") ==
-                  getState("m.room.history_visibility")
-                      .content["history_visibility"],
+                  r.toString().replaceAll('HistoryVisibility.', '') ==
+                  getState('m.room.history_visibility')
+                      .content['history_visibility'],
               orElse: () => null)
           : null;
 
@@ -1531,10 +1526,10 @@ class Room {
   Future<void> setHistoryVisibility(HistoryVisibility historyVisibility) async {
     await client.jsonRequest(
       type: HTTPType.PUT,
-      action: "/client/r0/rooms/$id/state/m.room.history_visibility/",
+      action: '/client/r0/rooms/$id/state/m.room.history_visibility/',
       data: {
-        "history_visibility":
-            historyVisibility.toString().replaceAll("HistoryVisibility.", ""),
+        'history_visibility':
+            historyVisibility.toString().replaceAll('HistoryVisibility.', ''),
       },
     );
     return;
@@ -1542,26 +1537,25 @@ class Room {
 
   /// Whether the user has the permission to change the history visibility.
   bool get canChangeHistoryVisibility =>
-      canSendEvent("m.room.history_visibility");
+      canSendEvent('m.room.history_visibility');
 
   /// Returns the encryption algorithm. Currently only `m.megolm.v1.aes-sha2` is supported.
   /// Returns null if there is no encryption algorithm.
-  String get encryptionAlgorithm => getState("m.room.encryption") != null
-      ? getState("m.room.encryption").content["algorithm"].toString()
+  String get encryptionAlgorithm => getState('m.room.encryption') != null
+      ? getState('m.room.encryption').content['algorithm'].toString()
       : null;
 
   /// Checks if this room is encrypted.
   bool get encrypted => encryptionAlgorithm != null;
 
   Future<void> enableEncryption({int algorithmIndex = 0}) async {
-    if (encrypted) throw ("Encryption is already enabled!");
-    final String algorithm =
-        Client.supportedGroupEncryptionAlgorithms[algorithmIndex];
+    if (encrypted) throw ('Encryption is already enabled!');
+    final algorithm = Client.supportedGroupEncryptionAlgorithms[algorithmIndex];
     await client.jsonRequest(
       type: HTTPType.PUT,
-      action: "/client/r0/rooms/$id/state/m.room.encryption/",
+      action: '/client/r0/rooms/$id/state/m.room.encryption/',
       data: {
-        "algorithm": algorithm,
+        'algorithm': algorithm,
       },
     );
     return;
@@ -1569,14 +1563,13 @@ class Room {
 
   /// Returns all known device keys for all participants in this room.
   Future<List<DeviceKeys>> getUserDeviceKeys() async {
-    List<DeviceKeys> deviceKeys = [];
-    List<User> users = await requestParticipants();
+    var deviceKeys = <DeviceKeys>[];
+    var users = await requestParticipants();
     for (final userDeviceKeyEntry in client.userDeviceKeys.entries) {
       if (users.indexWhere((u) => u.id == userDeviceKeyEntry.key) == -1) {
         continue;
       }
-      for (DeviceKeys deviceKeyEntry
-          in userDeviceKeyEntry.value.deviceKeys.values) {
+      for (var deviceKeyEntry in userDeviceKeyEntry.value.deviceKeys.values) {
         deviceKeys.add(deviceKeyEntry);
       }
     }
@@ -1587,25 +1580,25 @@ class Room {
   /// payload. This will create a new outgoingGroupSession if necessary.
   Future<Map<String, dynamic>> encryptGroupMessagePayload(
       Map<String, dynamic> payload,
-      {String type = "m.room.message"}) async {
-    if (!this.encrypted || !client.encryptionEnabled) return payload;
-    if (this.encryptionAlgorithm != "m.megolm.v1.aes-sha2") {
-      throw ("Unknown encryption algorithm");
+      {String type = 'm.room.message'}) async {
+    if (!encrypted || !client.encryptionEnabled) return payload;
+    if (encryptionAlgorithm != 'm.megolm.v1.aes-sha2') {
+      throw ('Unknown encryption algorithm');
     }
     if (_outboundGroupSession == null) {
       await createOutboundGroupSession();
     }
-    final Map<String, dynamic> payloadContent = {
-      "content": payload,
-      "type": type,
-      "room_id": id,
+    final payloadContent = {
+      'content': payload,
+      'type': type,
+      'room_id': id,
     };
-    Map<String, dynamic> encryptedPayload = {
-      "algorithm": "m.megolm.v1.aes-sha2",
-      "ciphertext": _outboundGroupSession.encrypt(json.encode(payloadContent)),
-      "device_id": client.deviceID,
-      "sender_key": client.identityKey,
-      "session_id": _outboundGroupSession.session_id(),
+    var encryptedPayload = <String, dynamic>{
+      'algorithm': 'm.megolm.v1.aes-sha2',
+      'ciphertext': _outboundGroupSession.encrypt(json.encode(payloadContent)),
+      'device_id': client.deviceID,
+      'sender_key': client.identityKey,
+      'session_id': _outboundGroupSession.session_id(),
     };
     await _storeOutboundGroupSession();
     return encryptedPayload;
@@ -1621,22 +1614,22 @@ class Room {
       if (!client.encryptionEnabled) {
         throw (DecryptError.NOT_ENABLED);
       }
-      if (event.content["algorithm"] != "m.megolm.v1.aes-sha2") {
+      if (event.content['algorithm'] != 'm.megolm.v1.aes-sha2') {
         throw (DecryptError.UNKNOWN_ALGORITHM);
       }
-      final String sessionId = event.content["session_id"];
+      final String sessionId = event.content['session_id'];
       if (!sessionKeys.containsKey(sessionId)) {
         throw (DecryptError.UNKNOWN_SESSION);
       }
-      final olm.DecryptResult decryptResult = sessionKeys[sessionId]
+      final decryptResult = sessionKeys[sessionId]
           .inboundGroupSession
-          .decrypt(event.content["ciphertext"]);
-      final String messageIndexKey =
+          .decrypt(event.content['ciphertext']);
+      final messageIndexKey =
           event.eventId + event.time.millisecondsSinceEpoch.toString();
       if (sessionKeys[sessionId].indexes.containsKey(messageIndexKey) &&
           sessionKeys[sessionId].indexes[messageIndexKey] !=
               decryptResult.message_index) {
-        if ((_outboundGroupSession?.session_id() ?? "") == sessionId) {
+        if ((_outboundGroupSession?.session_id() ?? '') == sessionId) {
           clearOutboundGroupSession();
         }
         throw (DecryptError.CHANNEL_CORRUPTED);
@@ -1644,30 +1637,28 @@ class Room {
       sessionKeys[sessionId].indexes[messageIndexKey] =
           decryptResult.message_index;
       _storeOutboundGroupSession();
-      // TODO: The client should check that the sender's fingerprint key matches the keys.ed25519 property of the event which established the Megolm session when marking the event as verified.
-
       decryptedPayload = json.decode(decryptResult.plaintext);
     } catch (exception) {
       if (exception.toString() == DecryptError.UNKNOWN_SESSION) {
         decryptedPayload = {
-          "content": event.content,
-          "type": "m.room.encrypted",
+          'content': event.content,
+          'type': 'm.room.encrypted',
         };
-        decryptedPayload["content"]["body"] = exception.toString();
-        decryptedPayload["content"]["msgtype"] = "m.bad.encrypted";
+        decryptedPayload['content']['body'] = exception.toString();
+        decryptedPayload['content']['msgtype'] = 'm.bad.encrypted';
       } else {
         decryptedPayload = {
-          "content": {
-            "msgtype": "m.bad.encrypted",
-            "body": exception.toString(),
+          'content': {
+            'msgtype': 'm.bad.encrypted',
+            'body': exception.toString(),
           },
-          "type": "m.room.encrypted",
+          'type': 'm.room.encrypted',
         };
       }
     }
     return Event(
-      content: decryptedPayload["content"],
-      typeKey: decryptedPayload["type"],
+      content: decryptedPayload['content'],
+      typeKey: decryptedPayload['type'],
       senderId: event.senderId,
       eventId: event.eventId,
       roomId: event.roomId,
@@ -1682,10 +1673,10 @@ class Room {
 }
 
 abstract class DecryptError {
-  static const String NOT_ENABLED = "Encryption is not enabled in your client.";
-  static const String UNKNOWN_ALGORITHM = "Unknown encryption algorithm.";
+  static const String NOT_ENABLED = 'Encryption is not enabled in your client.';
+  static const String UNKNOWN_ALGORITHM = 'Unknown encryption algorithm.';
   static const String UNKNOWN_SESSION =
-      "The sender has not sent us the session key.";
+      'The sender has not sent us the session key.';
   static const String CHANNEL_CORRUPTED =
-      "The secure channel with the sender was corrupted.";
+      'The secure channel with the sender was corrupted.';
 }

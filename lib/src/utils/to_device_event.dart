@@ -14,11 +14,12 @@ class ToDeviceEvent {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
-    data['sender'] = this.sender;
-    data['type'] = this.type;
-    if (this.content != null) {
-      data['content'] = this.content;
+    var map = <String, dynamic>{};
+    final data = map;
+    data['sender'] = sender;
+    data['type'] = type;
+    if (content != null) {
+      data['content'] = content;
     }
     return data;
   }

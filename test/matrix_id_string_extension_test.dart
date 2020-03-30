@@ -26,25 +26,25 @@ import 'package:famedlysdk/src/utils/matrix_id_string_extension.dart';
 
 void main() {
   /// All Tests related to the ChatTime
-  group("Matrix ID String Extension", () {
-    test("Matrix ID String Extension", () async {
-      final String mxId = "@test:example.com";
+  group('Matrix ID String Extension', () {
+    test('Matrix ID String Extension', () async {
+      final mxId = '@test:example.com';
       expect(mxId.isValidMatrixId, true);
-      expect("#test:example.com".isValidMatrixId, true);
-      expect("!test:example.com".isValidMatrixId, true);
-      expect("+test:example.com".isValidMatrixId, true);
-      expect("\$test:example.com".isValidMatrixId, true);
-      expect("test:example.com".isValidMatrixId, false);
-      expect("@testexample.com".isValidMatrixId, false);
-      expect("@:example.com".isValidMatrixId, false);
-      expect("@test:".isValidMatrixId, false);
-      expect(mxId.sigil, "@");
-      expect("#test:example.com".sigil, "#");
-      expect("!test:example.com".sigil, "!");
-      expect("+test:example.com".sigil, "+");
-      expect("\$test:example.com".sigil, "\$");
-      expect(mxId.localpart, "test");
-      expect(mxId.domain, "example.com");
+      expect('#test:example.com'.isValidMatrixId, true);
+      expect('!test:example.com'.isValidMatrixId, true);
+      expect('+test:example.com'.isValidMatrixId, true);
+      expect('\$test:example.com'.isValidMatrixId, true);
+      expect('test:example.com'.isValidMatrixId, false);
+      expect('@testexample.com'.isValidMatrixId, false);
+      expect('@:example.com'.isValidMatrixId, false);
+      expect('@test:'.isValidMatrixId, false);
+      expect(mxId.sigil, '@');
+      expect('#test:example.com'.sigil, '#');
+      expect('!test:example.com'.sigil, '!');
+      expect('+test:example.com'.sigil, '+');
+      expect('\$test:example.com'.sigil, '\$');
+      expect(mxId.localpart, 'test');
+      expect(mxId.domain, 'example.com');
     });
   });
 }
