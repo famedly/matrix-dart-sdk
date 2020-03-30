@@ -18,11 +18,12 @@ class OpenIdCredentials {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
-    data['access_token'] = this.accessToken;
-    data['token_type'] = this.tokenType;
-    data['matrix_server_name'] = this.matrixServerName;
-    data['expires_in'] = this.expiresIn;
+    var map = <String, dynamic>{};
+    final data = map;
+    data['access_token'] = accessToken;
+    data['token_type'] = tokenType;
+    data['matrix_server_name'] = matrixServerName;
+    data['expires_in'] = expiresIn;
     return data;
   }
 }

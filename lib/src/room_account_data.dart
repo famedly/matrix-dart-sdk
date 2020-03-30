@@ -39,8 +39,7 @@ class RoomAccountData extends AccountData {
   /// Get a State event from a table row or from the event stream.
   factory RoomAccountData.fromJson(
       Map<String, dynamic> jsonPayload, Room room) {
-    final Map<String, dynamic> content =
-        Event.getMapFromPayload(jsonPayload['content']);
+    final content = Event.getMapFromPayload(jsonPayload['content']);
     return RoomAccountData(
         content: content,
         typeKey: jsonPayload['type'],

@@ -21,7 +21,7 @@ class PublicRoomsResponse {
         client = client,
         totalRoomCountEstimate = json['total_room_count_estimate'] {
     if (json['chunk'] != null) {
-      publicRooms = List<PublicRoomEntry>();
+      publicRooms = <PublicRoomEntry>[];
       json['chunk'].forEach((v) {
         publicRooms.add(PublicRoomEntry.fromJson(v, client));
       });

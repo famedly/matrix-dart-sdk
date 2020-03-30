@@ -3,36 +3,36 @@ import '../test/fake_store.dart';
 
 void main() => test();
 
-const String homeserver = "https://matrix.test.famedly.de";
-const String testUserA = "@tick:test.famedly.de";
-const String testPasswordA = "test";
-const String testUserB = "@trick:test.famedly.de";
-const String testPasswordB = "test";
-const String testMessage = "Hello world";
-const String testMessage2 = "Hello moon";
-const String testMessage3 = "Hello sun";
-const String testMessage4 = "Hello star";
-const String testMessage5 = "Hello earth";
-const String testMessage6 = "Hello mars";
+const String homeserver = 'https://matrix.test.famedly.de';
+const String testUserA = '@tick:test.famedly.de';
+const String testPasswordA = 'test';
+const String testUserB = '@trick:test.famedly.de';
+const String testPasswordB = 'test';
+const String testMessage = 'Hello world';
+const String testMessage2 = 'Hello moon';
+const String testMessage3 = 'Hello sun';
+const String testMessage4 = 'Hello star';
+const String testMessage5 = 'Hello earth';
+const String testMessage6 = 'Hello mars';
 
 void test() async {
-  print("++++ Login $testUserA ++++");
-  Client testClientA = Client("TestClient", debug: false);
-  testClientA.storeAPI = FakeStore(testClientA, Map<String, dynamic>());
+  print('++++ Login $testUserA ++++');
+  var testClientA = Client('TestClient', debug: false);
+  testClientA.storeAPI = FakeStore(testClientA, <String, dynamic>{});
   await testClientA.checkServer(homeserver);
   await testClientA.login(testUserA, testPasswordA);
   assert(testClientA.encryptionEnabled);
 
-  print("++++ Login $testUserB ++++");
-  Client testClientB = Client("TestClient", debug: false);
-  testClientB.storeAPI = FakeStore(testClientB, Map<String, dynamic>());
+  print('++++ Login $testUserB ++++');
+  var testClientB = Client('TestClient', debug: false);
+  testClientB.storeAPI = FakeStore(testClientB, <String, dynamic>{});
   await testClientB.checkServer(homeserver);
   await testClientB.login(testUserB, testPasswordA);
   assert(testClientB.encryptionEnabled);
 
-  print("++++ ($testUserA) Leave all rooms ++++");
+  print('++++ ($testUserA) Leave all rooms ++++');
   while (testClientA.rooms.isNotEmpty) {
-    Room room = testClientA.rooms.first;
+    var room = testClientA.rooms.first;
     if (room.canonicalAlias?.isNotEmpty ?? false) {
       break;
     }
@@ -44,10 +44,10 @@ void test() async {
     }
   }
 
-  print("++++ ($testUserB) Leave all rooms ++++");
-  for (int i = 0; i < 3; i++) {
+  print('++++ ($testUserB) Leave all rooms ++++');
+  for (var i = 0; i < 3; i++) {
     if (testClientB.rooms.isNotEmpty) {
-      Room room = testClientB.rooms.first;
+      var room = testClientB.rooms.first;
       try {
         await room.leave();
         await room.forget();
@@ -57,7 +57,7 @@ void test() async {
     }
   }
 
-  print("++++ Check if own olm device is verified by default ++++");
+  print('++++ Check if own olm device is verified by default ++++');
   assert(testClientA.userDeviceKeys.containsKey(testUserA));
   assert(testClientA.userDeviceKeys[testUserA].deviceKeys
       .containsKey(testClientA.deviceID));
@@ -73,27 +73,27 @@ void test() async {
   assert(!testClientB
       .userDeviceKeys[testUserB].deviceKeys[testClientB.deviceID].blocked);
 
-  print("++++ ($testUserA) Create room and invite $testUserB ++++");
+  print('++++ ($testUserA) Create room and invite $testUserB ++++');
   await testClientA.createRoom(invite: [User(testUserB)]);
   await Future.delayed(Duration(seconds: 1));
-  Room room = testClientA.rooms.first;
+  var room = testClientA.rooms.first;
   assert(room != null);
-  final String roomId = room.id;
+  final roomId = room.id;
 
-  print("++++ ($testUserB) Join room ++++");
-  Room inviteRoom = testClientB.getRoomById(roomId);
+  print('++++ ($testUserB) Join room ++++');
+  var inviteRoom = testClientB.getRoomById(roomId);
   await inviteRoom.join();
   await Future.delayed(Duration(seconds: 1));
   assert(inviteRoom.membership == Membership.join);
 
-  print("++++ ($testUserA) Enable encryption ++++");
+  print('++++ ($testUserA) Enable encryption ++++');
   assert(room.encrypted == false);
   await room.enableEncryption();
   await Future.delayed(Duration(seconds: 5));
   assert(room.encrypted == true);
   assert(room.outboundGroupSession == null);
 
-  print("++++ ($testUserA) Check known olm devices ++++");
+  print('++++ ($testUserA) Check known olm devices ++++');
   assert(testClientA.userDeviceKeys.containsKey(testUserB));
   assert(testClientA.userDeviceKeys[testUserB].deviceKeys
       .containsKey(testClientB.deviceID));
@@ -111,7 +111,7 @@ void test() async {
   await testClientA.userDeviceKeys[testUserB].deviceKeys[testClientB.deviceID]
       .setVerified(true, testClientA);
 
-  print("++++ Check if own olm device is verified by default ++++");
+  print('++++ Check if own olm device is verified by default ++++');
   assert(testClientA.userDeviceKeys.containsKey(testUserA));
   assert(testClientA.userDeviceKeys[testUserA].deviceKeys
       .containsKey(testClientA.deviceID));
@@ -127,7 +127,7 @@ void test() async {
   await room.sendTextEvent(testMessage);
   await Future.delayed(Duration(seconds: 5));
   assert(room.outboundGroupSession != null);
-  String currentSessionIdA = room.outboundGroupSession.session_id();
+  var currentSessionIdA = room.outboundGroupSession.session_id();
   assert(room.sessionKeys.containsKey(room.outboundGroupSession.session_id()));
   assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
   assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
@@ -172,9 +172,9 @@ void test() async {
   print(
       "++++ ($testUserA) Received decrypted message: '${room.lastMessage}' ++++");
 
-  print("++++ Login $testUserB in another client ++++");
-  Client testClientC = Client("TestClient", debug: false);
-  testClientC.storeAPI = FakeStore(testClientC, Map<String, dynamic>());
+  print('++++ Login $testUserB in another client ++++');
+  var testClientC = Client('TestClient', debug: false);
+  testClientC.storeAPI = FakeStore(testClientC, <String, dynamic>{});
   await testClientC.checkServer(homeserver);
   await testClientC.login(testUserB, testPasswordA);
   await Future.delayed(Duration(seconds: 3));
@@ -200,7 +200,7 @@ void test() async {
   print(
       "++++ ($testUserB) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
 
-  print("++++ Logout $testUserB another client ++++");
+  print('++++ Logout $testUserB another client ++++');
   await testClientC.logout();
   testClientC = null;
   await Future.delayed(Duration(seconds: 5));
@@ -223,20 +223,20 @@ void test() async {
   print(
       "++++ ($testUserB) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
 
-  print("++++ ($testUserA) Restore user ++++");
+  print('++++ ($testUserA) Restore user ++++');
   FakeStore clientAStore = testClientA.storeAPI;
   testClientA = null;
-  testClientA = Client("TestClient", debug: false);
+  testClientA = Client('TestClient', debug: false);
   testClientA.storeAPI = FakeStore(testClientA, clientAStore.storeMap);
   await Future.delayed(Duration(seconds: 3));
-  Room restoredRoom = testClientA.rooms.first;
+  var restoredRoom = testClientA.rooms.first;
   assert(room != null);
   assert(restoredRoom.id == room.id);
   assert(restoredRoom.outboundGroupSession.session_id() ==
       room.outboundGroupSession.session_id());
   assert(restoredRoom.sessionKeys.length == 4);
   assert(restoredRoom.sessionKeys.length == room.sessionKeys.length);
-  for (int i = 0; i < restoredRoom.sessionKeys.length; i++) {
+  for (var i = 0; i < restoredRoom.sessionKeys.length; i++) {
     assert(restoredRoom.sessionKeys.keys.toList()[i] ==
         room.sessionKeys.keys.toList()[i]);
   }
@@ -261,16 +261,16 @@ void test() async {
   print(
       "++++ ($testUserB) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
 
-  print("++++ Logout $testUserA and $testUserB ++++");
+  print('++++ Logout $testUserA and $testUserB ++++');
   await room.leave();
   await room.forget();
   await inviteRoom.leave();
   await inviteRoom.forget();
   await Future.delayed(Duration(seconds: 1));
   await testClientA.jsonRequest(
-      type: HTTPType.POST, action: "/client/r0/logout/all");
+      type: HTTPType.POST, action: '/client/r0/logout/all');
   await testClientB.jsonRequest(
-      type: HTTPType.POST, action: "/client/r0/logout/all");
+      type: HTTPType.POST, action: '/client/r0/logout/all');
   testClientA = null;
   testClientB = null;
   return;

@@ -26,26 +26,26 @@ import 'package:test/test.dart';
 
 void main() {
   /// All Tests related to the ChatTime
-  group("Presence", () {
-    test("fromJson", () async {
-      Map<String, dynamic> rawPresence = {
-        "content": {
-          "avatar_url": "mxc://localhost:wefuiwegh8742w",
-          "currently_active": false,
-          "last_active_ago": 2478593,
-          "presence": "online",
-          "status_msg": "Making cupcakes"
+  group('Presence', () {
+    test('fromJson', () async {
+      var rawPresence = <String, dynamic>{
+        'content': {
+          'avatar_url': 'mxc://localhost:wefuiwegh8742w',
+          'currently_active': false,
+          'last_active_ago': 2478593,
+          'presence': 'online',
+          'status_msg': 'Making cupcakes'
         },
-        "sender": "@example:localhost",
-        "type": "m.presence"
+        'sender': '@example:localhost',
+        'type': 'm.presence'
       };
-      Presence presence = Presence.fromJson(rawPresence);
-      expect(presence.sender, "@example:localhost");
-      expect(presence.avatarUrl.mxc, "mxc://localhost:wefuiwegh8742w");
+      var presence = Presence.fromJson(rawPresence);
+      expect(presence.sender, '@example:localhost');
+      expect(presence.avatarUrl.mxc, 'mxc://localhost:wefuiwegh8742w');
       expect(presence.currentlyActive, false);
       expect(presence.lastActiveAgo, 2478593);
       expect(presence.presence, PresenceType.online);
-      expect(presence.statusMsg, "Making cupcakes");
+      expect(presence.statusMsg, 'Making cupcakes');
     });
   });
 }

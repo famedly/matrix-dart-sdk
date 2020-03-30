@@ -35,8 +35,7 @@ class AccountData {
 
   /// Get a State event from a table row or from the event stream.
   factory AccountData.fromJson(Map<String, dynamic> jsonPayload) {
-    final Map<String, dynamic> content =
-        Event.getMapFromPayload(jsonPayload['content']);
+    final content = Event.getMapFromPayload(jsonPayload['content']);
     return AccountData(content: content, typeKey: jsonPayload['type']);
   }
 }

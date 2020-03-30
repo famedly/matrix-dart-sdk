@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import '../client.dart';
-import '../room.dart';
 
 class DeviceKeysList {
   String userId;
@@ -19,18 +18,20 @@ class DeviceKeysList {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
-    data['user_id'] = this.userId;
-    data['outdated'] = this.outdated ?? true;
+    var map = <String, dynamic>{};
+    final data = map;
+    data['user_id'] = userId;
+    data['outdated'] = outdated ?? true;
 
-    Map<String, dynamic> rawDeviceKeys = {};
-    for (final deviceKeyEntry in this.deviceKeys.entries) {
+    var rawDeviceKeys = <String, dynamic>{};
+    for (final deviceKeyEntry in deviceKeys.entries) {
       rawDeviceKeys[deviceKeyEntry.key] = deviceKeyEntry.value.toJson();
     }
     data['device_keys'] = rawDeviceKeys;
     return data;
   }
 
+  @override
   String toString() => json.encode(toJson());
 
   DeviceKeysList(this.userId);
@@ -46,8 +47,8 @@ class DeviceKeys {
   bool verified;
   bool blocked;
 
-  String get curve25519Key => keys["curve25519:$deviceId"];
-  String get ed25519Key => keys["ed25519:$deviceId"];
+  String get curve25519Key => keys['curve25519:$deviceId'];
+  String get ed25519Key => keys['ed25519:$deviceId'];
 
   Future<void> setVerified(bool newVerified, Client client) {
     verified = newVerified;
@@ -56,7 +57,7 @@ class DeviceKeys {
 
   Future<void> setBlocked(bool newBlocked, Client client) {
     blocked = newBlocked;
-    for (Room room in client.rooms) {
+    for (var room in client.rooms) {
       if (!room.encrypted) continue;
       if (room.getParticipants().indexWhere((u) => u.id == userId) != -1) {
         room.clearOutboundGroupSession();
@@ -92,21 +93,21 @@ class DeviceKeys {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
-    data['user_id'] = this.userId;
-    data['device_id'] = this.deviceId;
-    data['algorithms'] = this.algorithms;
-    if (this.keys != null) {
-      data['keys'] = this.keys;
+    final data = <String, dynamic>{};
+    data['user_id'] = userId;
+    data['device_id'] = deviceId;
+    data['algorithms'] = algorithms;
+    if (keys != null) {
+      data['keys'] = keys;
     }
-    if (this.signatures != null) {
-      data['signatures'] = this.signatures;
+    if (signatures != null) {
+      data['signatures'] = signatures;
     }
-    if (this.unsigned != null) {
-      data['unsigned'] = this.unsigned;
+    if (unsigned != null) {
+      data['unsigned'] = unsigned;
     }
-    data['verified'] = this.verified;
-    data['blocked'] = this.blocked;
+    data['verified'] = verified;
+    data['blocked'] = blocked;
     return data;
   }
 }

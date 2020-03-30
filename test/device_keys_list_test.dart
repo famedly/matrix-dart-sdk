@@ -28,38 +28,38 @@ import 'package:test/test.dart';
 
 void main() {
   /// All Tests related to device keys
-  group("Device keys", () {
-    test("fromJson", () async {
-      Map<String, dynamic> rawJson = {
-        "user_id": "@alice:example.com",
-        "device_id": "JLAFKJWSCS",
-        "algorithms": ["m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2"],
-        "keys": {
-          "curve25519:JLAFKJWSCS":
-              "3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI",
-          "ed25519:JLAFKJWSCS": "lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI"
+  group('Device keys', () {
+    test('fromJson', () async {
+      var rawJson = <String, dynamic>{
+        'user_id': '@alice:example.com',
+        'device_id': 'JLAFKJWSCS',
+        'algorithms': ['m.olm.v1.curve25519-aes-sha2', 'm.megolm.v1.aes-sha2'],
+        'keys': {
+          'curve25519:JLAFKJWSCS':
+              '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',
+          'ed25519:JLAFKJWSCS': 'lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI'
         },
-        "signatures": {
-          "@alice:example.com": {
-            "ed25519:JLAFKJWSCS":
-                "dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA"
+        'signatures': {
+          '@alice:example.com': {
+            'ed25519:JLAFKJWSCS':
+                'dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA'
           }
         },
-        "unsigned": {"device_display_name": "Alice's mobile phone"},
-        "verified": false,
-        "blocked": true,
+        'unsigned': {'device_display_name': "Alice's mobile phone"},
+        'verified': false,
+        'blocked': true,
       };
-      Map<String, dynamic> rawListJson = {
-        "user_id": "@alice:example.com",
-        "outdated": true,
-        "device_keys": {"JLAFKJWSCS": rawJson},
+      var rawListJson = <String, dynamic>{
+        'user_id': '@alice:example.com',
+        'outdated': true,
+        'device_keys': {'JLAFKJWSCS': rawJson},
       };
 
-      Map<String, DeviceKeysList> userDeviceKeys = {
-        "@alice:example.com": DeviceKeysList.fromJson(rawListJson),
+      var userDeviceKeys = <String, DeviceKeysList>{
+        '@alice:example.com': DeviceKeysList.fromJson(rawListJson),
       };
-      Map<String, dynamic> userDeviceKeyRaw = {
-        "@alice:example.com": rawListJson,
+      var userDeviceKeyRaw = <String, dynamic>{
+        '@alice:example.com': rawListJson,
       };
 
       expect(json.encode(DeviceKeys.fromJson(rawJson).toJson()),
@@ -67,7 +67,7 @@ void main() {
       expect(json.encode(DeviceKeysList.fromJson(rawListJson).toJson()),
           json.encode(rawListJson));
 
-      Map<String, DeviceKeysList> mapFromRaw = {};
+      var mapFromRaw = <String, DeviceKeysList>{};
       for (final rawListEntry in userDeviceKeyRaw.entries) {
         mapFromRaw[rawListEntry.key] =
             DeviceKeysList.fromJson(rawListEntry.value);

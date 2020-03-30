@@ -74,8 +74,8 @@ class Client {
   StoreAPI storeAPI;
 
   Client(this.clientName, {this.debug = false, this.storeAPI}) {
-    this.onLoginStateChanged.stream.listen((loginState) {
-      print("LoginState: ${loginState.toString()}");
+    onLoginStateChanged.stream.listen((loginState) {
+      print('LoginState: ${loginState.toString()}');
     });
   }
 
@@ -139,7 +139,7 @@ class Client {
 
   /// Warning! This endpoint is for testing only!
   set rooms(List<Room> newList) {
-    print("Warning! This endpoint is for testing only!");
+    print('Warning! This endpoint is for testing only!');
     _rooms = newList;
   }
 
@@ -152,57 +152,57 @@ class Client {
   int _timeoutFactor = 1;
 
   Room getRoomByAlias(String alias) {
-    for (int i = 0; i < rooms.length; i++) {
+    for (var i = 0; i < rooms.length; i++) {
       if (rooms[i].canonicalAlias == alias) return rooms[i];
     }
     return null;
   }
 
   Room getRoomById(String id) {
-    for (int j = 0; j < rooms.length; j++) {
+    for (var j = 0; j < rooms.length; j++) {
       if (rooms[j].id == id) return rooms[j];
     }
     return null;
   }
 
   void handleUserUpdate(UserUpdate userUpdate) {
-    if (userUpdate.type == "account_data") {
-      AccountData newAccountData = AccountData.fromJson(userUpdate.content);
+    if (userUpdate.type == 'account_data') {
+      var newAccountData = AccountData.fromJson(userUpdate.content);
       accountData[newAccountData.typeKey] = newAccountData;
       if (onAccountData != null) onAccountData.add(newAccountData);
     }
-    if (userUpdate.type == "presence") {
-      Presence newPresence = Presence.fromJson(userUpdate.content);
+    if (userUpdate.type == 'presence') {
+      var newPresence = Presence.fromJson(userUpdate.content);
       presences[newPresence.sender] = newPresence;
       if (onPresence != null) onPresence.add(newPresence);
     }
   }
 
   Map<String, dynamic> get directChats =>
-      accountData["m.direct"] != null ? accountData["m.direct"].content : {};
+      accountData['m.direct'] != null ? accountData['m.direct'].content : {};
 
   /// Returns the (first) room ID from the store which is a private chat with the user [userId].
   /// Returns null if there is none.
   String getDirectChatFromUserId(String userId) {
-    if (accountData["m.direct"] != null &&
-        accountData["m.direct"].content[userId] is List<dynamic> &&
-        accountData["m.direct"].content[userId].length > 0) {
-      if (getRoomById(accountData["m.direct"].content[userId][0]) != null) {
-        return accountData["m.direct"].content[userId][0];
+    if (accountData['m.direct'] != null &&
+        accountData['m.direct'].content[userId] is List<dynamic> &&
+        accountData['m.direct'].content[userId].length > 0) {
+      if (getRoomById(accountData['m.direct'].content[userId][0]) != null) {
+        return accountData['m.direct'].content[userId][0];
       }
-      (accountData["m.direct"].content[userId] as List<dynamic>)
-          .remove(accountData["m.direct"].content[userId][0]);
-      this.jsonRequest(
+      (accountData['m.direct'].content[userId] as List<dynamic>)
+          .remove(accountData['m.direct'].content[userId][0]);
+      jsonRequest(
           type: HTTPType.PUT,
-          action: "/client/r0/user/${userID}/account_data/m.direct",
+          action: '/client/r0/user/${userID}/account_data/m.direct',
           data: directChats);
       return getDirectChatFromUserId(userId);
     }
-    for (int i = 0; i < this.rooms.length; i++) {
-      if (this.rooms[i].membership == Membership.invite &&
-          this.rooms[i].states[userID]?.senderId == userId &&
-          this.rooms[i].states[userID].content["is_direct"] == true) {
-        return this.rooms[i].id;
+    for (var i = 0; i < rooms.length; i++) {
+      if (rooms[i].membership == Membership.invite &&
+          rooms[i].states[userID]?.senderId == userId &&
+          rooms[i].states[userID].content['is_direct'] == true) {
+        return rooms[i].id;
       }
     }
     return null;
@@ -215,13 +215,13 @@ class Client {
   Future<bool> checkServer(serverUrl) async {
     try {
       _homeserver = serverUrl;
-      final versionResp = await this
-          .jsonRequest(type: HTTPType.GET, action: "/client/versions");
+      final versionResp =
+          await jsonRequest(type: HTTPType.GET, action: '/client/versions');
 
-      final List<String> versions = List<String>.from(versionResp["versions"]);
+      final versions = List<String>.from(versionResp['versions']);
 
-      for (int i = 0; i < versions.length; i++) {
-        if (versions[i] == "r0.5.0") {
+      for (var i = 0; i < versions.length; i++) {
+        if (versions[i] == 'r0.5.0') {
           break;
         } else if (i == versions.length - 1) {
           return false;
@@ -230,22 +230,22 @@ class Client {
 
       _matrixVersions = versions;
 
-      if (versionResp.containsKey("unstable_features") &&
-          versionResp["unstable_features"].containsKey("m.lazy_load_members")) {
-        _lazyLoadMembers = versionResp["unstable_features"]
-                ["m.lazy_load_members"]
+      if (versionResp.containsKey('unstable_features') &&
+          versionResp['unstable_features'].containsKey('m.lazy_load_members')) {
+        _lazyLoadMembers = versionResp['unstable_features']
+                ['m.lazy_load_members']
             ? true
             : false;
       }
 
-      final loginResp = await this
-          .jsonRequest(type: HTTPType.GET, action: "/client/r0/login");
+      final loginResp =
+          await jsonRequest(type: HTTPType.GET, action: '/client/r0/login');
 
-      final List<dynamic> flows = loginResp["flows"];
+      final List<dynamic> flows = loginResp['flows'];
 
-      for (int i = 0; i < flows.length; i++) {
-        if (flows[i].containsKey("type") &&
-            flows[i]["type"] == "m.login.password") {
+      for (var i = 0; i < flows.length; i++) {
+        if (flows[i].containsKey('type') &&
+            flows[i]['type'] == 'm.login.password') {
           break;
         } else if (i == flows.length - 1) {
           return false;
@@ -253,7 +253,7 @@ class Client {
       }
       return true;
     } catch (_) {
-      this._homeserver = this._matrixVersions = null;
+      _homeserver = _matrixVersions = null;
       rethrow;
     }
   }
@@ -261,11 +261,11 @@ class Client {
   /// Checks to see if a username is available, and valid, for the server.
   /// You have to call [checkServer] first to set a homeserver.
   Future<bool> usernameAvailable(String username) async {
-    final Map<String, dynamic> response = await this.jsonRequest(
+    final response = await jsonRequest(
       type: HTTPType.GET,
-      action: "/client/r0/register/available?username=$username",
+      action: '/client/r0/register/available?username=$username',
     );
-    return response["available"];
+    return response['available'];
   }
 
   /// Checks to see if a username is available, and valid, for the server.
@@ -280,30 +280,29 @@ class Client {
     String initialDeviceDisplayName,
     bool inhibitLogin,
   }) async {
-    final String action =
-        "/client/r0/register" + (kind != null ? "?kind=$kind" : "");
-    Map<String, dynamic> data = {};
-    if (username != null) data["username"] = username;
-    if (password != null) data["password"] = password;
-    if (auth != null) data["auth"] = auth;
-    if (deviceId != null) data["device_id"] = deviceId;
+    final action = '/client/r0/register' + (kind != null ? '?kind=$kind' : '');
+    var data = <String, dynamic>{};
+    if (username != null) data['username'] = username;
+    if (password != null) data['password'] = password;
+    if (auth != null) data['auth'] = auth;
+    if (deviceId != null) data['device_id'] = deviceId;
     if (initialDeviceDisplayName != null) {
-      data["initial_device_display_name"] = initialDeviceDisplayName;
+      data['initial_device_display_name'] = initialDeviceDisplayName;
     }
-    if (inhibitLogin != null) data["inhibit_login"] = inhibitLogin;
-    final Map<String, dynamic> response =
-        await this.jsonRequest(type: HTTPType.POST, action: action, data: data);
+    if (inhibitLogin != null) data['inhibit_login'] = inhibitLogin;
+    final response =
+        await jsonRequest(type: HTTPType.POST, action: action, data: data);
 
     // Connect if there is an access token in the response.
-    if (response.containsKey("access_token") &&
-        response.containsKey("device_id") &&
-        response.containsKey("user_id")) {
-      await this.connect(
-          newToken: response["access_token"],
-          newUserID: response["user_id"],
+    if (response.containsKey('access_token') &&
+        response.containsKey('device_id') &&
+        response.containsKey('user_id')) {
+      await connect(
+          newToken: response['access_token'],
+          newUserID: response['user_id'],
           newHomeserver: homeserver,
-          newDeviceName: initialDeviceDisplayName ?? "",
-          newDeviceID: response["device_id"],
+          newDeviceName: initialDeviceDisplayName ?? '',
+          newDeviceID: response['device_id'],
           newMatrixVersions: matrixVersions,
           newLazyLoadMembers: lazyLoadMembers);
     }
@@ -320,32 +319,32 @@ class Client {
     String initialDeviceDisplayName,
     String deviceId,
   }) async {
-    Map<String, dynamic> data = {
-      "type": "m.login.password",
-      "user": username,
-      "identifier": {
-        "type": "m.id.user",
-        "user": username,
+    var data = <String, dynamic>{
+      'type': 'm.login.password',
+      'user': username,
+      'identifier': {
+        'type': 'm.id.user',
+        'user': username,
       },
-      "password": password,
+      'password': password,
     };
-    if (deviceId != null) data["device_id"] = deviceId;
+    if (deviceId != null) data['device_id'] = deviceId;
     if (initialDeviceDisplayName != null) {
-      data["initial_device_display_name"] = initialDeviceDisplayName;
+      data['initial_device_display_name'] = initialDeviceDisplayName;
     }
 
     final loginResp = await jsonRequest(
-        type: HTTPType.POST, action: "/client/r0/login", data: data);
+        type: HTTPType.POST, action: '/client/r0/login', data: data);
 
-    if (loginResp.containsKey("user_id") &&
-        loginResp.containsKey("access_token") &&
-        loginResp.containsKey("device_id")) {
-      await this.connect(
-        newToken: loginResp["access_token"],
-        newUserID: loginResp["user_id"],
+    if (loginResp.containsKey('user_id') &&
+        loginResp.containsKey('access_token') &&
+        loginResp.containsKey('device_id')) {
+      await connect(
+        newToken: loginResp['access_token'],
+        newUserID: loginResp['user_id'],
         newHomeserver: homeserver,
-        newDeviceName: initialDeviceDisplayName ?? "",
-        newDeviceID: loginResp["device_id"],
+        newDeviceName: initialDeviceDisplayName ?? '',
+        newDeviceID: loginResp['device_id'],
         newMatrixVersions: matrixVersions,
         newLazyLoadMembers: lazyLoadMembers,
       );
@@ -358,11 +357,11 @@ class Client {
   /// including all persistent data from the store.
   Future<void> logout() async {
     try {
-      await this.jsonRequest(type: HTTPType.POST, action: "/client/r0/logout");
+      await jsonRequest(type: HTTPType.POST, action: '/client/r0/logout');
     } catch (exception) {
       rethrow;
     } finally {
-      await this.clear();
+      await clear();
     }
   }
 
@@ -372,8 +371,8 @@ class Client {
   /// profile will be requested from the homserver.
   Future<Profile> get ownProfile async {
     if (rooms.isNotEmpty) {
-      Set<Profile> profileSet = {};
-      for (Room room in rooms) {
+      var profileSet = <Profile>{};
+      for (var room in rooms) {
         final user = room.getUserByMXIDSync(userID);
         profileSet.add(Profile.fromJson(user.content));
       }
@@ -386,43 +385,42 @@ class Client {
   /// fetch the user's own profile information or other users; either locally
   /// or on remote homeservers.
   Future<Profile> getProfileFromUserId(String userId) async {
-    final dynamic resp = await this.jsonRequest(
-        type: HTTPType.GET, action: "/client/r0/profile/${userId}");
+    final dynamic resp = await jsonRequest(
+        type: HTTPType.GET, action: '/client/r0/profile/${userId}');
     return Profile.fromJson(resp);
   }
 
   Future<List<Room>> get archive async {
-    List<Room> archiveList = [];
-    String syncFilters =
-        '{"room":{"include_leave":true,"timeline":{"limit":10}}}';
-    String action = "/client/r0/sync?filter=$syncFilters&timeout=0";
-    final sync = await this.jsonRequest(type: HTTPType.GET, action: action);
-    if (sync["rooms"]["leave"] is Map<String, dynamic>) {
-      for (var entry in sync["rooms"]["leave"].entries) {
+    var archiveList = <Room>[];
+    var syncFilters = '{"room":{"include_leave":true,"timeline":{"limit":10}}}';
+    var action = '/client/r0/sync?filter=$syncFilters&timeout=0';
+    final sync = await jsonRequest(type: HTTPType.GET, action: action);
+    if (sync['rooms']['leave'] is Map<String, dynamic>) {
+      for (var entry in sync['rooms']['leave'].entries) {
         final String id = entry.key;
         final dynamic room = entry.value;
-        Room leftRoom = Room(
+        var leftRoom = Room(
             id: id,
             membership: Membership.leave,
             client: this,
             roomAccountData: {},
             mHeroes: []);
-        if (room["account_data"] is Map<String, dynamic> &&
-            room["account_data"]["events"] is List<dynamic>) {
-          for (dynamic event in room["account_data"]["events"]) {
-            leftRoom.roomAccountData[event["type"]] =
+        if (room['account_data'] is Map<String, dynamic> &&
+            room['account_data']['events'] is List<dynamic>) {
+          for (dynamic event in room['account_data']['events']) {
+            leftRoom.roomAccountData[event['type']] =
                 RoomAccountData.fromJson(event, leftRoom);
           }
         }
-        if (room["timeline"] is Map<String, dynamic> &&
-            room["timeline"]["events"] is List<dynamic>) {
-          for (dynamic event in room["timeline"]["events"]) {
+        if (room['timeline'] is Map<String, dynamic> &&
+            room['timeline']['events'] is List<dynamic>) {
+          for (dynamic event in room['timeline']['events']) {
             leftRoom.setState(Event.fromJson(event, leftRoom));
           }
         }
-        if (room["state"] is Map<String, dynamic> &&
-            room["state"]["events"] is List<dynamic>) {
-          for (dynamic event in room["state"]["events"]) {
+        if (room['state'] is Map<String, dynamic> &&
+            room['state']['events'] is List<dynamic>) {
+          for (dynamic event in room['state']['events']) {
             leftRoom.setState(Event.fromJson(event, leftRoom));
           }
         }
@@ -436,8 +434,8 @@ class Client {
   /// After this call, the client is allowed to see all current state events in the room, and all subsequent events
   /// associated with the room until the user leaves the room.
   Future<dynamic> joinRoomById(String roomIdOrAlias) async {
-    return await this.jsonRequest(
-        type: HTTPType.POST, action: "/client/r0/join/$roomIdOrAlias");
+    return await jsonRequest(
+        type: HTTPType.POST, action: '/client/r0/join/$roomIdOrAlias');
   }
 
   /// Loads the contact list for this user excluding the user itself.
@@ -445,16 +443,16 @@ class Client {
   /// the famedlyContactDiscovery room, which is
   /// defined by the autojoin room feature in Synapse.
   Future<List<User>> loadFamedlyContacts() async {
-    List<User> contacts = [];
-    Room contactDiscoveryRoom =
-        this.getRoomByAlias("#famedlyContactDiscovery:${userID.domain}");
+    var contacts = <User>[];
+    var contactDiscoveryRoom =
+        getRoomByAlias('#famedlyContactDiscovery:${userID.domain}');
     if (contactDiscoveryRoom != null) {
       contacts = await contactDiscoveryRoom.requestParticipants();
     } else {
-      Map<String, bool> userMap = {};
-      for (int i = 0; i < this.rooms.length; i++) {
-        List<User> roomUsers = this.rooms[i].getParticipants();
-        for (int j = 0; j < roomUsers.length; j++) {
+      var userMap = <String, bool>{};
+      for (var i = 0; i < rooms.length; i++) {
+        var roomUsers = rooms[i].getParticipants();
+        for (var j = 0; j < roomUsers.length; j++) {
           if (userMap[roomUsers[j].id] != true) contacts.add(roomUsers[j]);
           userMap[roomUsers[j].id] = true;
         }
@@ -472,23 +470,22 @@ class Client {
   /// to configure [params].
   Future<String> createRoom(
       {List<User> invite, Map<String, dynamic> params}) async {
-    List<String> inviteIDs = [];
+    var inviteIDs = <String>[];
     if (params == null && invite != null) {
-      for (int i = 0; i < invite.length; i++) {
+      for (var i = 0; i < invite.length; i++) {
         inviteIDs.add(invite[i].id);
       }
     }
 
     try {
-      final dynamic resp = await this.jsonRequest(
+      final dynamic resp = await jsonRequest(
           type: HTTPType.POST,
-          action: "/client/r0/createRoom",
-          data: params == null
-              ? {
-                  "invite": inviteIDs,
-                }
-              : params);
-      return resp["room_id"];
+          action: '/client/r0/createRoom',
+          data: params ??
+              {
+                'invite': inviteIDs,
+              });
+      return resp['room_id'];
     } catch (e) {
       rethrow;
     }
@@ -496,71 +493,71 @@ class Client {
 
   /// Changes the user's displayname.
   Future<void> setDisplayname(String displayname) async {
-    await this.jsonRequest(
+    await jsonRequest(
         type: HTTPType.PUT,
-        action: "/client/r0/profile/$userID/displayname",
-        data: {"displayname": displayname});
+        action: '/client/r0/profile/$userID/displayname',
+        data: {'displayname': displayname});
     return;
   }
 
   /// Uploads a new user avatar for this user.
   Future<void> setAvatar(MatrixFile file) async {
-    final uploadResp = await this.upload(file);
-    await this.jsonRequest(
+    final uploadResp = await upload(file);
+    await jsonRequest(
         type: HTTPType.PUT,
-        action: "/client/r0/profile/$userID/avatar_url",
-        data: {"avatar_url": uploadResp});
+        action: '/client/r0/profile/$userID/avatar_url',
+        data: {'avatar_url': uploadResp});
     return;
   }
 
   /// Get credentials for the client to use when initiating calls.
   Future<TurnServerCredentials> getTurnServerCredentials() async {
-    final Map<String, dynamic> response = await this.jsonRequest(
+    final response = await jsonRequest(
       type: HTTPType.GET,
-      action: "/client/r0/voip/turnServer",
+      action: '/client/r0/voip/turnServer',
     );
     return TurnServerCredentials.fromJson(response);
   }
 
   /// Fetches the pushrules for the logged in user.
   /// These are needed for notifications on Android
-  @Deprecated("Use [pushRules] instead.")
+  @Deprecated('Use [pushRules] instead.')
   Future<PushRules> getPushrules() async {
-    final dynamic resp = await this.jsonRequest(
+    final dynamic resp = await jsonRequest(
       type: HTTPType.GET,
-      action: "/client/r0/pushrules/",
+      action: '/client/r0/pushrules/',
     );
 
     return PushRules.fromJson(resp);
   }
 
   /// Returns the push rules for the logged in user.
-  PushRules get pushRules => accountData.containsKey("m.push_rules")
-      ? PushRules.fromJson(accountData["m.push_rules"].content)
+  PushRules get pushRules => accountData.containsKey('m.push_rules')
+      ? PushRules.fromJson(accountData['m.push_rules'].content)
       : null;
 
   /// This endpoint allows the creation, modification and deletion of pushers for this user ID.
   Future<void> setPushers(String pushKey, String kind, String appId,
       String appDisplayName, String deviceDisplayName, String lang, String url,
       {bool append, String profileTag, String format}) async {
-    Map<String, dynamic> data = {
-      "lang": lang,
-      "kind": kind,
-      "app_display_name": appDisplayName,
-      "device_display_name": deviceDisplayName,
-      "profile_tag": profileTag,
-      "app_id": appId,
-      "pushkey": pushKey,
-      "data": {"url": url}
+    var data = <String, dynamic>{
+      'lang': lang,
+      'kind': kind,
+      'app_display_name': appDisplayName,
+      'device_display_name': deviceDisplayName,
+      'profile_tag': profileTag,
+      'app_id': appId,
+      'pushkey': pushKey,
+      'data': {'url': url}
     };
 
-    if (format != null) data["data"]["format"] = format;
-    if (profileTag != null) data["profile_tag"] = profileTag;
-    if (append != null) data["append"] = append;
+    if (format != null) data['data']['format'] = format;
+    if (profileTag != null) data['profile_tag'] = profileTag;
+    if (append != null) data['append'] = append;
 
-    await this.jsonRequest(
+    await jsonRequest(
       type: HTTPType.POST,
-      action: "/client/r0/pushers/set",
+      action: '/client/r0/pushers/set',
       data: data,
     );
     return;
@@ -568,10 +565,10 @@ class Client {
 
   static String syncFilters = '{"room":{"state":{"lazy_load_members":true}}}';
   static const List<String> supportedDirectEncryptionAlgorithms = [
-    "m.olm.v1.curve25519-aes-sha2"
+    'm.olm.v1.curve25519-aes-sha2'
   ];
   static const List<String> supportedGroupEncryptionAlgorithms = [
-    "m.megolm.v1.aes-sha2"
+    'm.megolm.v1.aes-sha2'
   ];
 
   http.Client httpClient = http.Client();
@@ -683,42 +680,42 @@ class Client {
     String newPrevBatch,
     String newOlmAccount,
   }) async {
-    this._accessToken = newToken;
-    this._homeserver = newHomeserver;
-    this._userID = newUserID;
-    this._deviceID = newDeviceID;
-    this._deviceName = newDeviceName;
-    this._matrixVersions = newMatrixVersions;
-    this._lazyLoadMembers = newLazyLoadMembers;
-    this.prevBatch = newPrevBatch;
+    _accessToken = newToken;
+    _homeserver = newHomeserver;
+    _userID = newUserID;
+    _deviceID = newDeviceID;
+    _deviceName = newDeviceName;
+    _matrixVersions = newMatrixVersions;
+    _lazyLoadMembers = newLazyLoadMembers;
+    prevBatch = newPrevBatch;
 
     // Try to create a new olm account or restore a previous one.
     if (newOlmAccount == null) {
       try {
         await olm.init();
-        this._olmAccount = olm.Account();
-        this._olmAccount.create();
-        if (await this._uploadKeys(uploadDeviceKeys: true) == false) {
-          throw ("Upload key failed");
+        _olmAccount = olm.Account();
+        _olmAccount.create();
+        if (await _uploadKeys(uploadDeviceKeys: true) == false) {
+          throw ('Upload key failed');
         }
       } catch (_) {
-        this._olmAccount = null;
+        _olmAccount = null;
       }
     } else {
       try {
         await olm.init();
-        this._olmAccount = olm.Account();
-        this._olmAccount.unpickle(userID, newOlmAccount);
+        _olmAccount = olm.Account();
+        _olmAccount.unpickle(userID, newOlmAccount);
       } catch (_) {
-        this._olmAccount = null;
+        _olmAccount = null;
       }
     }
 
-    if (this.storeAPI != null) {
-      await this.storeAPI.storeClient();
-      _userDeviceKeys = await this.storeAPI.getUserDeviceKeys();
+    if (storeAPI != null) {
+      await storeAPI.storeClient();
+      _userDeviceKeys = await storeAPI.getUserDeviceKeys();
       final String olmSessionPickleString =
-          await storeAPI.getItem("/clients/$userID/olm-sessions");
+          await storeAPI.getItem('/clients/$userID/olm-sessions');
       if (olmSessionPickleString != null) {
         final Map<String, dynamic> pickleMap =
             json.decode(olmSessionPickleString);
@@ -726,24 +723,24 @@ class Client {
           for (String pickle in entry.value) {
             _olmSessions[entry.key] = [];
             try {
-              olm.Session session = olm.Session();
+              var session = olm.Session();
               session.unpickle(userID, pickle);
               _olmSessions[entry.key].add(session);
             } catch (e) {
-              print("[LibOlm] Could not unpickle olm session: " + e.toString());
+              print('[LibOlm] Could not unpickle olm session: ' + e.toString());
             }
           }
         }
       }
-      if (this.store != null) {
-        this._rooms = await this.store.getRoomList(onlyLeft: false);
-        this._sortRooms();
-        this.accountData = await this.store.getAccountData();
-        this.presences = await this.store.getPresences();
+      if (store != null) {
+        _rooms = await store.getRoomList(onlyLeft: false);
+        _sortRooms();
+        accountData = await store.getAccountData();
+        presences = await store.getPresences();
       }
     }
 
-    _userEventSub ??= onUserEvent.stream.listen(this.handleUserUpdate);
+    _userEventSub ??= onUserEvent.stream.listen(handleUserUpdate);
 
     onLoginStateChanged.add(LoginState.logged);
 
@@ -763,11 +760,10 @@ class Client {
         sessionKey.inboundGroupSession?.free();
       });
     });
-    this._olmAccount?.free();
-    this.storeAPI?.clear();
-    this._accessToken = this._homeserver = this._userID = this._deviceID = this
-            ._deviceName =
-        this._matrixVersions = this._lazyLoadMembers = this.prevBatch = null;
+    _olmAccount?.free();
+    storeAPI?.clear();
+    _accessToken = _homeserver = _userID = _deviceID =
+        _deviceName = _matrixVersions = _lazyLoadMembers = prevBatch = null;
     onLoginStateChanged.add(LoginState.loggedOut);
   }
 
@@ -793,58 +789,58 @@ class Client {
   Future<Map<String, dynamic>> jsonRequest(
       {HTTPType type,
       String action,
-      dynamic data = "",
+      dynamic data = '',
       int timeout,
-      String contentType = "application/json"}) async {
-    if (this.isLogged() == false && this.homeserver == null) {
-      throw ("No homeserver specified.");
+      String contentType = 'application/json'}) async {
+    if (isLogged() == false && homeserver == null) {
+      throw ('No homeserver specified.');
     }
-    if (timeout == null) timeout = (_timeoutFactor * syncTimeoutSec) + 5;
+    timeout ??= (_timeoutFactor * syncTimeoutSec) + 5;
     dynamic json;
     if (data is Map) data.removeWhere((k, v) => v == null);
     (!(data is String)) ? json = jsonEncode(data) : json = data;
-    if (data is List<int> || action.startsWith("/media/r0/upload")) json = data;
+    if (data is List<int> || action.startsWith('/media/r0/upload')) json = data;
 
-    final url = "${this.homeserver}/_matrix${action}";
+    final url = '${homeserver}/_matrix${action}';
 
-    Map<String, String> headers = {};
+    var headers = <String, String>{};
     if (type == HTTPType.PUT || type == HTTPType.POST) {
-      headers["Content-Type"] = contentType;
+      headers['Content-Type'] = contentType;
     }
-    if (this.isLogged()) {
-      headers["Authorization"] = "Bearer ${this.accessToken}";
+    if (isLogged()) {
+      headers['Authorization'] = 'Bearer ${accessToken}';
     }
 
-    if (this.debug) {
+    if (debug) {
       print(
           "[REQUEST ${type.toString().split('.').last}] Action: $action, Data: ${jsonEncode(data)}");
     }
 
     http.Response resp;
-    Map<String, dynamic> jsonResp = {};
+    var jsonResp = <String, dynamic>{};
     try {
       switch (type.toString().split('.').last) {
-        case "GET":
+        case 'GET':
           resp = await httpClient.get(url, headers: headers).timeout(
                 Duration(seconds: timeout),
                 onTimeout: () => null,
               );
           break;
-        case "POST":
+        case 'POST':
           resp =
               await httpClient.post(url, body: json, headers: headers).timeout(
                     Duration(seconds: timeout),
                     onTimeout: () => null,
                   );
           break;
-        case "PUT":
+        case 'PUT':
           resp =
               await httpClient.put(url, body: json, headers: headers).timeout(
                     Duration(seconds: timeout),
                     onTimeout: () => null,
                   );
           break;
-        case "DELETE":
+        case 'DELETE':
           resp = await httpClient.delete(url, headers: headers).timeout(
                 Duration(seconds: timeout),
                 onTimeout: () => null,
@@ -859,7 +855,7 @@ class Client {
 
       if (resp.statusCode >= 400 && resp.statusCode < 500) {
         // The server has responsed with an matrix related error.
-        MatrixException exception = MatrixException(resp);
+        var exception = MatrixException(resp);
         if (exception.error == MatrixError.M_UNKNOWN_TOKEN) {
           // The token is no longer valid. Need to sign off....
           onError.add(exception);
@@ -869,7 +865,7 @@ class Client {
         throw exception;
       }
 
-      if (this.debug) print("[RESPONSE] ${jsonResp.toString()}");
+      if (debug) print('[RESPONSE] ${jsonResp.toString()}');
     } on ArgumentError catch (exception) {
       print(exception);
       // Ignore this error
@@ -888,62 +884,62 @@ class Client {
   /// and returns the mxc url as a string.
   Future<String> upload(MatrixFile file, {String contentType}) async {
     // For testing
-    if (this.homeserver.toLowerCase() == "https://fakeserver.notexisting") {
-      return "mxc://example.com/AQwafuaFswefuhsfAFAgsw";
+    if (homeserver.toLowerCase() == 'https://fakeserver.notexisting') {
+      return 'mxc://example.com/AQwafuaFswefuhsfAFAgsw';
     }
-    Map<String, String> headers = {};
-    headers["Authorization"] = "Bearer $accessToken";
-    headers["Content-Type"] = contentType ?? mime(file.path);
-    String fileName = Uri.encodeFull(file.path.split("/").last.toLowerCase());
-    final url = "$homeserver/_matrix/media/r0/upload?filename=$fileName";
+    var headers = <String, String>{};
+    headers['Authorization'] = 'Bearer $accessToken';
+    headers['Content-Type'] = contentType ?? mime(file.path);
+    var fileName = Uri.encodeFull(file.path.split('/').last.toLowerCase());
+    final url = '$homeserver/_matrix/media/r0/upload?filename=$fileName';
     final streamedRequest = http.StreamedRequest('POST', Uri.parse(url))
       ..headers.addAll(headers);
     streamedRequest.contentLength = await file.bytes.length;
     streamedRequest.sink.add(file.bytes);
     streamedRequest.sink.close();
-    print("[UPLOADING] $fileName");
+    print('[UPLOADING] $fileName');
     var streamedResponse = await streamedRequest.send();
     Map<String, dynamic> jsonResponse = json.decode(
       String.fromCharCodes(await streamedResponse.stream.first),
     );
-    if (!(jsonResponse["content_uri"] is String &&
-        jsonResponse["content_uri"].isNotEmpty)) {
+    if (!(jsonResponse['content_uri'] is String &&
+        jsonResponse['content_uri'].isNotEmpty)) {
       throw ("Missing json key: 'content_uri' ${jsonResponse.toString()}");
     }
-    return jsonResponse["content_uri"];
+    return jsonResponse['content_uri'];
   }
 
   Future<dynamic> _syncRequest;
 
   Future<void> _sync() async {
-    if (this.isLogged() == false) return;
+    if (isLogged() == false) return;
 
-    String action = "/client/r0/sync?filter=$syncFilters";
+    var action = '/client/r0/sync?filter=$syncFilters';
 
-    if (this.prevBatch != null) {
-      action += "&timeout=30000";
-      action += "&since=${this.prevBatch}";
+    if (prevBatch != null) {
+      action += '&timeout=30000';
+      action += '&since=${prevBatch}';
     }
     try {
       _syncRequest = jsonRequest(type: HTTPType.GET, action: action);
-      final int hash = _syncRequest.hashCode;
+      final hash = _syncRequest.hashCode;
       final syncResp = await _syncRequest;
       if (hash != _syncRequest.hashCode) return;
       _timeoutFactor = 1;
-      if (this.store != null) {
-        await this.store.transaction(() {
+      if (store != null) {
+        await store.transaction(() {
           handleSync(syncResp);
-          this.store.storePrevBatch(syncResp["next_batch"]);
+          store.storePrevBatch(syncResp['next_batch']);
         });
       } else {
         await handleSync(syncResp);
       }
-      if (this.prevBatch == null) {
-        this.onFirstSync.add(true);
-        this.prevBatch = syncResp["next_batch"];
+      if (prevBatch == null) {
+        onFirstSync.add(true);
+        prevBatch = syncResp['next_batch'];
         _sortRooms();
       }
-      this.prevBatch = syncResp["next_batch"];
+      prevBatch = syncResp['next_batch'];
       await _updateUserDeviceKeys();
       if (hash == _syncRequest.hashCode) unawaited(_sync());
     } on MatrixException catch (exception) {
@@ -956,34 +952,34 @@ class Client {
 
   /// Use this method only for testing utilities!
   void handleSync(dynamic sync) {
-    if (sync["rooms"] is Map<String, dynamic>) {
-      if (sync["rooms"]["join"] is Map<String, dynamic>) {
-        _handleRooms(sync["rooms"]["join"], Membership.join);
+    if (sync['rooms'] is Map<String, dynamic>) {
+      if (sync['rooms']['join'] is Map<String, dynamic>) {
+        _handleRooms(sync['rooms']['join'], Membership.join);
       }
-      if (sync["rooms"]["invite"] is Map<String, dynamic>) {
-        _handleRooms(sync["rooms"]["invite"], Membership.invite);
+      if (sync['rooms']['invite'] is Map<String, dynamic>) {
+        _handleRooms(sync['rooms']['invite'], Membership.invite);
       }
-      if (sync["rooms"]["leave"] is Map<String, dynamic>) {
-        _handleRooms(sync["rooms"]["leave"], Membership.leave);
+      if (sync['rooms']['leave'] is Map<String, dynamic>) {
+        _handleRooms(sync['rooms']['leave'], Membership.leave);
       }
     }
-    if (sync["presence"] is Map<String, dynamic> &&
-        sync["presence"]["events"] is List<dynamic>) {
-      _handleGlobalEvents(sync["presence"]["events"], "presence");
+    if (sync['presence'] is Map<String, dynamic> &&
+        sync['presence']['events'] is List<dynamic>) {
+      _handleGlobalEvents(sync['presence']['events'], 'presence');
     }
-    if (sync["account_data"] is Map<String, dynamic> &&
-        sync["account_data"]["events"] is List<dynamic>) {
-      _handleGlobalEvents(sync["account_data"]["events"], "account_data");
+    if (sync['account_data'] is Map<String, dynamic> &&
+        sync['account_data']['events'] is List<dynamic>) {
+      _handleGlobalEvents(sync['account_data']['events'], 'account_data');
     }
-    if (sync["to_device"] is Map<String, dynamic> &&
-        sync["to_device"]["events"] is List<dynamic>) {
-      _handleToDeviceEvents(sync["to_device"]["events"]);
+    if (sync['to_device'] is Map<String, dynamic> &&
+        sync['to_device']['events'] is List<dynamic>) {
+      _handleToDeviceEvents(sync['to_device']['events']);
     }
-    if (sync["device_lists"] is Map<String, dynamic>) {
-      _handleDeviceListsEvents(sync["device_lists"]);
+    if (sync['device_lists'] is Map<String, dynamic>) {
+      _handleDeviceListsEvents(sync['device_lists']);
     }
-    if (sync["device_one_time_keys_count"] is Map<String, dynamic>) {
-      _handleDeviceOneTimeKeysCount(sync["device_one_time_keys_count"]);
+    if (sync['device_one_time_keys_count'] is Map<String, dynamic>) {
+      _handleDeviceOneTimeKeysCount(sync['device_one_time_keys_count']);
     }
     onSync.add(sync);
   }
@@ -993,8 +989,8 @@ class Client {
     if (!encryptionEnabled) return;
     // Check if there are at least half of max_number_of_one_time_keys left on the server
     // and generate and upload more if not.
-    if (deviceOneTimeKeysCount["signed_curve25519"] is int) {
-      final int oneTimeKeysCount = deviceOneTimeKeysCount["signed_curve25519"];
+    if (deviceOneTimeKeysCount['signed_curve25519'] is int) {
+      final int oneTimeKeysCount = deviceOneTimeKeysCount['signed_curve25519'];
       if (oneTimeKeysCount < (_olmAccount.max_number_of_one_time_keys() / 2)) {
         // Generate and upload more one time keys:
         _uploadKeys();
@@ -1003,13 +999,13 @@ class Client {
   }
 
   void _handleDeviceListsEvents(Map<String, dynamic> deviceLists) {
-    if (deviceLists["changed"] is List) {
-      for (final userId in deviceLists["changed"]) {
+    if (deviceLists['changed'] is List) {
+      for (final userId in deviceLists['changed']) {
         if (_userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys[userId].outdated = true;
         }
       }
-      for (final userId in deviceLists["left"]) {
+      for (final userId in deviceLists['left']) {
         if (_userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys.remove(userId);
         }
@@ -1018,22 +1014,22 @@ class Client {
   }
 
   void _handleToDeviceEvents(List<dynamic> events) {
-    for (int i = 0; i < events.length; i++) {
-      bool isValid = events[i] is Map &&
-          events[i]["type"] is String &&
-          events[i]["sender"] is String &&
-          events[i]["content"] is Map;
+    for (var i = 0; i < events.length; i++) {
+      var isValid = events[i] is Map &&
+          events[i]['type'] is String &&
+          events[i]['sender'] is String &&
+          events[i]['content'] is Map;
       if (!isValid) {
-        print("[Sync] Invalid To Device Event! ${events[i]}");
+        print('[Sync] Invalid To Device Event! ${events[i]}');
         continue;
       }
-      ToDeviceEvent toDeviceEvent = ToDeviceEvent.fromJson(events[i]);
-      if (toDeviceEvent.type == "m.room.encrypted") {
+      var toDeviceEvent = ToDeviceEvent.fromJson(events[i]);
+      if (toDeviceEvent.type == 'm.room.encrypted') {
         try {
           toDeviceEvent = decryptToDeviceEvent(toDeviceEvent);
         } catch (e) {
           print(
-              "[LibOlm] Could not decrypt to device event from ${toDeviceEvent.sender}: " +
+              '[LibOlm] Could not decrypt to device event from ${toDeviceEvent.sender}: ' +
                   e.toString());
           print(toDeviceEvent.sender);
           toDeviceEvent = ToDeviceEvent.fromJson(events[i]);
@@ -1049,35 +1045,35 @@ class Client {
       // calculate the notification counts, the limitedTimeline and prevbatch
       num highlight_count = 0;
       num notification_count = 0;
-      String prev_batch = "";
-      bool limitedTimeline = false;
+      var prev_batch = '';
+      var limitedTimeline = false;
 
-      if (room["unread_notifications"] is Map<String, dynamic>) {
-        if (room["unread_notifications"]["highlight_count"] is num) {
-          highlight_count = room["unread_notifications"]["highlight_count"];
+      if (room['unread_notifications'] is Map<String, dynamic>) {
+        if (room['unread_notifications']['highlight_count'] is num) {
+          highlight_count = room['unread_notifications']['highlight_count'];
         }
-        if (room["unread_notifications"]["notification_count"] is num) {
+        if (room['unread_notifications']['notification_count'] is num) {
           notification_count =
-              room["unread_notifications"]["notification_count"];
+              room['unread_notifications']['notification_count'];
         }
       }
 
-      if (room["timeline"] is Map<String, dynamic>) {
-        if (room["timeline"]["limited"] is bool) {
-          limitedTimeline = room["timeline"]["limited"];
+      if (room['timeline'] is Map<String, dynamic>) {
+        if (room['timeline']['limited'] is bool) {
+          limitedTimeline = room['timeline']['limited'];
         }
-        if (room["timeline"]["prev_batch"] is String) {
-          prev_batch = room["timeline"]["prev_batch"];
+        if (room['timeline']['prev_batch'] is String) {
+          prev_batch = room['timeline']['prev_batch'];
         }
       }
 
       RoomSummary summary;
 
-      if (room["summary"] is Map<String, dynamic>) {
-        summary = RoomSummary.fromJson(room["summary"]);
+      if (room['summary'] is Map<String, dynamic>) {
+        summary = RoomSummary.fromJson(room['summary']);
       }
 
-      RoomUpdate update = RoomUpdate(
+      var update = RoomUpdate(
         id: id,
         membership: membership,
         notification_count: notification_count,
@@ -1087,78 +1083,78 @@ class Client {
         summary: summary,
       );
       _updateRoomsByRoomUpdate(update);
-      unawaited(this.store?.storeRoomUpdate(update));
+      unawaited(store?.storeRoomUpdate(update));
       onRoomUpdate.add(update);
 
       /// Handle now all room events and save them in the database
-      if (room["state"] is Map<String, dynamic> &&
-          room["state"]["events"] is List<dynamic>) {
-        _handleRoomEvents(id, room["state"]["events"], "state");
+      if (room['state'] is Map<String, dynamic> &&
+          room['state']['events'] is List<dynamic>) {
+        _handleRoomEvents(id, room['state']['events'], 'state');
       }
 
-      if (room["invite_state"] is Map<String, dynamic> &&
-          room["invite_state"]["events"] is List<dynamic>) {
-        _handleRoomEvents(id, room["invite_state"]["events"], "invite_state");
+      if (room['invite_state'] is Map<String, dynamic> &&
+          room['invite_state']['events'] is List<dynamic>) {
+        _handleRoomEvents(id, room['invite_state']['events'], 'invite_state');
       }
 
-      if (room["timeline"] is Map<String, dynamic> &&
-          room["timeline"]["events"] is List<dynamic>) {
-        _handleRoomEvents(id, room["timeline"]["events"], "timeline");
+      if (room['timeline'] is Map<String, dynamic> &&
+          room['timeline']['events'] is List<dynamic>) {
+        _handleRoomEvents(id, room['timeline']['events'], 'timeline');
       }
 
-      if (room["ephemeral"] is Map<String, dynamic> &&
-          room["ephemeral"]["events"] is List<dynamic>) {
-        _handleEphemerals(id, room["ephemeral"]["events"]);
+      if (room['ephemeral'] is Map<String, dynamic> &&
+          room['ephemeral']['events'] is List<dynamic>) {
+        _handleEphemerals(id, room['ephemeral']['events']);
       }
 
-      if (room["account_data"] is Map<String, dynamic> &&
-          room["account_data"]["events"] is List<dynamic>) {
-        _handleRoomEvents(id, room["account_data"]["events"], "account_data");
+      if (room['account_data'] is Map<String, dynamic> &&
+          room['account_data']['events'] is List<dynamic>) {
+        _handleRoomEvents(id, room['account_data']['events'], 'account_data');
       }
     });
   }
 
   void _handleEphemerals(String id, List<dynamic> events) {
     for (num i = 0; i < events.length; i++) {
-      _handleEvent(events[i], id, "ephemeral");
+      _handleEvent(events[i], id, 'ephemeral');
 
       // Receipt events are deltas between two states. We will create a
       // fake room account data event for this and store the difference
       // there.
-      if (events[i]["type"] == "m.receipt") {
-        Room room = this.getRoomById(id);
-        if (room == null) room = Room(id: id);
+      if (events[i]['type'] == 'm.receipt') {
+        var room = getRoomById(id);
+        room ??= Room(id: id);
 
-        Map<String, dynamic> receiptStateContent =
-            room.roomAccountData["m.receipt"]?.content ?? {};
-        for (var eventEntry in events[i]["content"].entries) {
+        var receiptStateContent =
+            room.roomAccountData['m.receipt']?.content ?? {};
+        for (var eventEntry in events[i]['content'].entries) {
           final String eventID = eventEntry.key;
-          if (events[i]["content"][eventID]["m.read"] != null) {
+          if (events[i]['content'][eventID]['m.read'] != null) {
             final Map<String, dynamic> userTimestampMap =
-                events[i]["content"][eventID]["m.read"];
+                events[i]['content'][eventID]['m.read'];
             for (var userTimestampMapEntry in userTimestampMap.entries) {
-              final String mxid = userTimestampMapEntry.key;
+              final mxid = userTimestampMapEntry.key;
 
               // Remove previous receipt event from this user
               for (var entry in receiptStateContent.entries) {
-                if (entry.value["m.read"] is Map<String, dynamic> &&
-                    entry.value["m.read"].containsKey(mxid)) {
-                  entry.value["m.read"].remove(mxid);
+                if (entry.value['m.read'] is Map<String, dynamic> &&
+                    entry.value['m.read'].containsKey(mxid)) {
+                  entry.value['m.read'].remove(mxid);
                   break;
                 }
               }
               if (userTimestampMap[mxid] is Map<String, dynamic> &&
-                  userTimestampMap[mxid].containsKey("ts")) {
+                  userTimestampMap[mxid].containsKey('ts')) {
                 receiptStateContent[mxid] = {
-                  "event_id": eventID,
-                  "ts": userTimestampMap[mxid]["ts"],
+                  'event_id': eventID,
+                  'ts': userTimestampMap[mxid]['ts'],
                 };
               }
             }
           }
         }
-        events[i]["content"] = receiptStateContent;
-        _handleEvent(events[i], id, "account_data");
+        events[i]['content'] = receiptStateContent;
+        _handleEvent(events[i], id, 'account_data');
       }
     }
   }
@@ -1170,49 +1166,49 @@ class Client {
   }
 
   void _handleGlobalEvents(List<dynamic> events, String type) {
-    for (int i = 0; i < events.length; i++) {
-      if (events[i]["type"] is String &&
-          events[i]["content"] is Map<String, dynamic>) {
-        UserUpdate update = UserUpdate(
-          eventType: events[i]["type"],
+    for (var i = 0; i < events.length; i++) {
+      if (events[i]['type'] is String &&
+          events[i]['content'] is Map<String, dynamic>) {
+        var update = UserUpdate(
+          eventType: events[i]['type'],
           type: type,
           content: events[i],
         );
-        this.store?.storeUserEventUpdate(update);
+        store?.storeUserEventUpdate(update);
         onUserEvent.add(update);
       }
     }
   }
 
   void _handleEvent(Map<String, dynamic> event, String roomID, String type) {
-    if (event["type"] is String && event["content"] is Map<String, dynamic>) {
+    if (event['type'] is String && event['content'] is Map<String, dynamic>) {
       // The client must ignore any new m.room.encryption event to prevent
       // man-in-the-middle attacks!
-      if (event["type"] == "m.room.encryption" &&
+      if (event['type'] == 'm.room.encryption' &&
           getRoomById(roomID).encrypted) {
         return;
       }
 
-      EventUpdate update = EventUpdate(
-        eventType: event["type"],
+      var update = EventUpdate(
+        eventType: event['type'],
         roomID: roomID,
         type: type,
         content: event,
       );
-      if (event["type"] == "m.room.encrypted") {
-        update = update.decrypt(this.getRoomById(update.roomID));
+      if (event['type'] == 'm.room.encrypted') {
+        update = update.decrypt(getRoomById(update.roomID));
       }
-      this.store?.storeEventUpdate(update);
+      store?.storeEventUpdate(update);
       _updateRoomsByEventUpdate(update);
       onEvent.add(update);
 
-      if (event["type"] == "m.call.invite") {
+      if (event['type'] == 'm.call.invite') {
         onCallInvite.add(Event.fromJson(event, getRoomById(roomID)));
-      } else if (event["type"] == "m.call.hangup") {
+      } else if (event['type'] == 'm.call.hangup') {
         onCallHangup.add(Event.fromJson(event, getRoomById(roomID)));
-      } else if (event["type"] == "m.call.answer") {
+      } else if (event['type'] == 'm.call.answer') {
         onCallAnswer.add(Event.fromJson(event, getRoomById(roomID)));
-      } else if (event["type"] == "m.call.candidates") {
+      } else if (event['type'] == 'm.call.candidates') {
         onCallCandidates.add(Event.fromJson(event, getRoomById(roomID)));
       }
     }
@@ -1225,14 +1221,14 @@ class Client {
     for (j = 0; j < rooms.length; j++) {
       if (rooms[j].id == chatUpdate.id) break;
     }
-    final bool found = (j < rooms.length && rooms[j].id == chatUpdate.id);
-    final bool isLeftRoom = chatUpdate.membership == Membership.leave;
+    final found = (j < rooms.length && rooms[j].id == chatUpdate.id);
+    final isLeftRoom = chatUpdate.membership == Membership.leave;
 
     // Does the chat already exist in the list rooms?
     if (!found && !isLeftRoom) {
-      num position = chatUpdate.membership == Membership.invite ? 0 : j;
+      var position = chatUpdate.membership == Membership.invite ? 0 : j;
       // Add the new chat to the list
-      Room newRoom = Room(
+      var newRoom = Room(
         id: chatUpdate.id,
         membership: chatUpdate.membership,
         prev_batch: chatUpdate.prev_batch,
@@ -1281,20 +1277,20 @@ class Client {
   }
 
   void _updateRoomsByEventUpdate(EventUpdate eventUpdate) {
-    if (eventUpdate.type == "history") return;
+    if (eventUpdate.type == 'history') return;
     // Search the room in the rooms
     num j = 0;
     for (j = 0; j < rooms.length; j++) {
       if (rooms[j].id == eventUpdate.roomID) break;
     }
-    final bool found = (j < rooms.length && rooms[j].id == eventUpdate.roomID);
+    final found = (j < rooms.length && rooms[j].id == eventUpdate.roomID);
     if (!found) return;
-    if (eventUpdate.type == "timeline" ||
-        eventUpdate.type == "state" ||
-        eventUpdate.type == "invite_state") {
-      Event stateEvent = Event.fromJson(eventUpdate.content, rooms[j]);
+    if (eventUpdate.type == 'timeline' ||
+        eventUpdate.type == 'state' ||
+        eventUpdate.type == 'invite_state') {
+      var stateEvent = Event.fromJson(eventUpdate.content, rooms[j]);
       if (stateEvent.type == EventTypes.Redaction) {
-        final String redacts = eventUpdate.content["redacts"];
+        final String redacts = eventUpdate.content['redacts'];
         rooms[j].states.states.forEach(
               (String key, Map<String, Event> states) => states.forEach(
                 (String key, Event state) {
@@ -1305,57 +1301,57 @@ class Client {
               ),
             );
       } else {
-        Event prevState =
+        var prevState =
             rooms[j].getState(stateEvent.typeKey, stateEvent.stateKey);
         if (prevState != null &&
             prevState.time.millisecondsSinceEpoch >
                 stateEvent.time.millisecondsSinceEpoch) return;
         rooms[j].setState(stateEvent);
       }
-    } else if (eventUpdate.type == "account_data") {
+    } else if (eventUpdate.type == 'account_data') {
       rooms[j].roomAccountData[eventUpdate.eventType] =
           RoomAccountData.fromJson(eventUpdate.content, rooms[j]);
-    } else if (eventUpdate.type == "ephemeral") {
+    } else if (eventUpdate.type == 'ephemeral') {
       rooms[j].ephemerals[eventUpdate.eventType] =
           RoomAccountData.fromJson(eventUpdate.content, rooms[j]);
     }
     if (rooms[j].onUpdate != null) rooms[j].onUpdate.add(rooms[j].id);
-    if (eventUpdate.type == "timeline") _sortRooms();
+    if (eventUpdate.type == 'timeline') _sortRooms();
   }
 
   void _updateRoomsByToDeviceEvent(ToDeviceEvent toDeviceEvent) {
     try {
       switch (toDeviceEvent.type) {
-        case "m.room_key":
-        case "m.forwarded_room_key":
-          Room room = getRoomById(toDeviceEvent.content["room_id"]);
+        case 'm.room_key':
+        case 'm.forwarded_room_key':
+          var room = getRoomById(toDeviceEvent.content['room_id']);
           if (room != null) {
-            final String sessionId = toDeviceEvent.content["session_id"];
+            final String sessionId = toDeviceEvent.content['session_id'];
             if (room != null) {
-              if (toDeviceEvent.type == "m.room_key" &&
+              if (toDeviceEvent.type == 'm.room_key' &&
                   userDeviceKeys.containsKey(toDeviceEvent.sender) &&
                   userDeviceKeys[toDeviceEvent.sender].deviceKeys.containsKey(
-                      toDeviceEvent.content["requesting_device_id"])) {
-                toDeviceEvent.content["sender_claimed_ed25519_key"] =
+                      toDeviceEvent.content['requesting_device_id'])) {
+                toDeviceEvent.content['sender_claimed_ed25519_key'] =
                     userDeviceKeys[toDeviceEvent.sender]
                         .deviceKeys[
-                            toDeviceEvent.content["requesting_device_id"]]
+                            toDeviceEvent.content['requesting_device_id']]
                         .ed25519Key;
               }
               room.setSessionKey(
                 sessionId,
                 toDeviceEvent.content,
-                forwarded: toDeviceEvent.type == "m.forwarded_room_key",
+                forwarded: toDeviceEvent.type == 'm.forwarded_room_key',
               );
-              if (toDeviceEvent.type == "m.forwarded_room_key") {
+              if (toDeviceEvent.type == 'm.forwarded_room_key') {
                 sendToDevice(
                   [],
-                  "m.room_key_request",
+                  'm.room_key_request',
                   {
-                    "action": "request_cancellation",
-                    "request_id": base64
-                        .encode(utf8.encode(toDeviceEvent.content["room_id"])),
-                    "requesting_device_id": room.client.deviceID,
+                    'action': 'request_cancellation',
+                    'request_id': base64
+                        .encode(utf8.encode(toDeviceEvent.content['room_id'])),
+                    'requesting_device_id': room.client.deviceID,
                   },
                   encrypted: false,
                 );
@@ -1363,19 +1359,19 @@ class Client {
             }
           }
           break;
-        case "m.room_key_request":
-          if (!toDeviceEvent.content.containsKey("body")) break;
-          Room room = getRoomById(toDeviceEvent.content["body"]["room_id"]);
+        case 'm.room_key_request':
+          if (!toDeviceEvent.content.containsKey('body')) break;
+          var room = getRoomById(toDeviceEvent.content['body']['room_id']);
           DeviceKeys deviceKeys;
-          final String sessionId = toDeviceEvent.content["body"]["session_id"];
+          final String sessionId = toDeviceEvent.content['body']['session_id'];
           if (userDeviceKeys.containsKey(toDeviceEvent.sender) &&
               userDeviceKeys[toDeviceEvent.sender]
                   .deviceKeys
-                  .containsKey(toDeviceEvent.content["requesting_device_id"])) {
+                  .containsKey(toDeviceEvent.content['requesting_device_id'])) {
             deviceKeys = userDeviceKeys[toDeviceEvent.sender]
-                .deviceKeys[toDeviceEvent.content["requesting_device_id"]];
+                .deviceKeys[toDeviceEvent.content['requesting_device_id']];
             if (room.sessionKeys.containsKey(sessionId)) {
-              final RoomKeyRequest roomKeyRequest =
+              final roomKeyRequest =
                   RoomKeyRequest.fromToDeviceEvent(toDeviceEvent, this);
               if (deviceKeys.userId == userID &&
                   deviceKeys.verified &&
@@ -1389,7 +1385,7 @@ class Client {
           break;
       }
     } catch (e) {
-      print("[Matrix] Error while processing to-device-event: " + e.toString());
+      print('[Matrix] Error while processing to-device-event: ' + e.toString());
     }
   }
 
@@ -1401,7 +1397,7 @@ class Client {
   RoomSorter sortRoomsBy = (a, b) => b.timeCreated.millisecondsSinceEpoch
       .compareTo(a.timeCreated.millisecondsSinceEpoch);
 
-  _sortRooms() {
+  void _sortRooms() {
     if (prevBatch == null || _sortLock || rooms.length < 2) return;
     _sortLock = true;
     rooms?.sort(sortRoomsBy);
@@ -1411,9 +1407,9 @@ class Client {
   /// Gets an OpenID token object that the requester may supply to another service to verify their identity in Matrix.
   /// The generated token is only valid for exchanging for user information from the federation API for OpenID.
   Future<OpenIdCredentials> requestOpenIdCredentials() async {
-    final Map<String, dynamic> response = await jsonRequest(
+    final response = await jsonRequest(
       type: HTTPType.POST,
-      action: "/client/r0/user/$userID/openid/request_token",
+      action: '/client/r0/user/$userID/openid/request_token',
       data: {},
     );
     return OpenIdCredentials.fromJson(response);
@@ -1424,11 +1420,11 @@ class Client {
   Map<String, DeviceKeysList> _userDeviceKeys = {};
 
   Future<Set<String>> _getUserIdsInEncryptedRooms() async {
-    Set<String> userIds = {};
-    for (int i = 0; i < rooms.length; i++) {
+    var userIds = <String>{};
+    for (var i = 0; i < rooms.length; i++) {
       if (rooms[i].encrypted) {
-        List<User> userList = await rooms[i].requestParticipants();
-        for (User user in userList) {
+        var userList = await rooms[i].requestParticipants();
+        for (var user in userList) {
           if ([Membership.join, Membership.invite].contains(user.membership)) {
             userIds.add(user.id);
           }
@@ -1440,21 +1436,21 @@ class Client {
 
   Future<void> _updateUserDeviceKeys() async {
     try {
-      if (!this.isLogged()) return;
-      Set<String> trackedUserIds = await _getUserIdsInEncryptedRooms();
-      trackedUserIds.add(this.userID);
+      if (!isLogged()) return;
+      var trackedUserIds = await _getUserIdsInEncryptedRooms();
+      trackedUserIds.add(userID);
 
       // Remove all userIds we no longer need to track the devices of.
       _userDeviceKeys
           .removeWhere((String userId, v) => !trackedUserIds.contains(userId));
 
       // Check if there are outdated device key lists. Add it to the set.
-      Map<String, dynamic> outdatedLists = {};
-      for (String userId in trackedUserIds) {
+      var outdatedLists = <String, dynamic>{};
+      for (var userId in trackedUserIds) {
         if (!userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys[userId] = DeviceKeysList(userId);
         }
-        DeviceKeysList deviceKeysList = userDeviceKeys[userId];
+        var deviceKeysList = userDeviceKeys[userId];
         if (deviceKeysList.outdated) {
           outdatedLists[userId] = [];
         }
@@ -1462,14 +1458,14 @@ class Client {
 
       if (outdatedLists.isNotEmpty) {
         // Request the missing device key lists from the server.
-        final Map<String, dynamic> response = await this.jsonRequest(
+        final response = await jsonRequest(
             type: HTTPType.POST,
-            action: "/client/r0/keys/query",
-            data: {"timeout": 10000, "device_keys": outdatedLists});
+            action: '/client/r0/keys/query',
+            data: {'timeout': 10000, 'device_keys': outdatedLists});
 
-        for (final rawDeviceKeyListEntry in response["device_keys"].entries) {
+        for (final rawDeviceKeyListEntry in response['device_keys'].entries) {
           final String userId = rawDeviceKeyListEntry.key;
-          final Map<String, DeviceKeys> oldKeys =
+          final oldKeys =
               Map<String, DeviceKeys>.from(_userDeviceKeys[userId].deviceKeys);
           _userDeviceKeys[userId].deviceKeys = {};
           for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
@@ -1479,9 +1475,9 @@ class Client {
             if (!oldKeys.containsKey(deviceId)) {
               _userDeviceKeys[userId].deviceKeys[deviceId] =
                   DeviceKeys.fromJson(rawDeviceKeyEntry.value);
-              if (deviceId == this.deviceID &&
+              if (deviceId == deviceID &&
                   _userDeviceKeys[userId].deviceKeys[deviceId].ed25519Key ==
-                      this.fingerprintKey) {
+                      fingerprintKey) {
                 // Always trust the own device
                 _userDeviceKeys[userId].deviceKeys[deviceId].verified = true;
               }
@@ -1492,42 +1488,42 @@ class Client {
           _userDeviceKeys[userId].outdated = false;
         }
       }
-      await this.storeAPI?.storeUserDeviceKeys(userDeviceKeys);
+      await storeAPI?.storeUserDeviceKeys(userDeviceKeys);
       rooms.forEach((Room room) {
         if (room.encrypted) {
           room.clearOutboundGroupSession();
         }
       });
     } catch (e) {
-      print("[LibOlm] Unable to update user device keys: " + e.toString());
+      print('[LibOlm] Unable to update user device keys: ' + e.toString());
     }
   }
 
   String get fingerprintKey => encryptionEnabled
-      ? json.decode(_olmAccount.identity_keys())["ed25519"]
+      ? json.decode(_olmAccount.identity_keys())['ed25519']
       : null;
   String get identityKey => encryptionEnabled
-      ? json.decode(_olmAccount.identity_keys())["curve25519"]
+      ? json.decode(_olmAccount.identity_keys())['curve25519']
       : null;
 
   /// Adds a signature to this json from this olm account.
   Map<String, dynamic> signJson(Map<String, dynamic> payload) {
-    if (!encryptionEnabled) throw ("Encryption is disabled");
-    final Map<String, dynamic> unsigned = payload["unsigned"];
-    final Map<String, dynamic> signatures = payload["signatures"];
-    payload.remove("unsigned");
-    payload.remove("signatures");
-    final List<int> canonical = canonicalJson.encode(payload);
-    final String signature = _olmAccount.sign(String.fromCharCodes(canonical));
+    if (!encryptionEnabled) throw ('Encryption is disabled');
+    final Map<String, dynamic> unsigned = payload['unsigned'];
+    final Map<String, dynamic> signatures = payload['signatures'];
+    payload.remove('unsigned');
+    payload.remove('signatures');
+    final canonical = canonicalJson.encode(payload);
+    final signature = _olmAccount.sign(String.fromCharCodes(canonical));
     if (signatures != null) {
-      payload["signatures"] = signatures;
+      payload['signatures'] = signatures;
     } else {
-      payload["signatures"] = Map<String, dynamic>();
+      payload['signatures'] = <String, dynamic>{};
     }
-    payload["signatures"][userID] = Map<String, dynamic>();
-    payload["signatures"][userID]["ed25519:$deviceID"] = signature;
+    payload['signatures'][userID] = <String, dynamic>{};
+    payload['signatures'][userID]['ed25519:$deviceID'] = signature;
     if (unsigned != null) {
-      payload["unsigned"] = unsigned;
+      payload['unsigned'] = unsigned;
     }
     return payload;
   }
@@ -1535,23 +1531,23 @@ class Client {
   /// Checks the signature of a signed json object.
   bool checkJsonSignature(String key, Map<String, dynamic> signedJson,
       String userId, String deviceId) {
-    if (!encryptionEnabled) throw ("Encryption is disabled");
-    final Map<String, dynamic> signatures = signedJson["signatures"];
+    if (!encryptionEnabled) throw ('Encryption is disabled');
+    final Map<String, dynamic> signatures = signedJson['signatures'];
     if (signatures == null || !signatures.containsKey(userId)) return false;
-    signedJson.remove("unsigned");
-    signedJson.remove("signatures");
-    if (!signatures[userId].containsKey("ed25519:$deviceId")) return false;
-    final String signature = signatures[userId]["ed25519:$deviceId"];
-    final List<int> canonical = canonicalJson.encode(signedJson);
-    final String message = String.fromCharCodes(canonical);
-    bool isValid = true;
+    signedJson.remove('unsigned');
+    signedJson.remove('signatures');
+    if (!signatures[userId].containsKey('ed25519:$deviceId')) return false;
+    final String signature = signatures[userId]['ed25519:$deviceId'];
+    final canonical = canonicalJson.encode(signedJson);
+    final message = String.fromCharCodes(canonical);
+    var isValid = true;
     try {
       olm.Utility()
         ..ed25519_verify(key, message, signature)
         ..free();
     } catch (e) {
       isValid = false;
-      print("[LibOlm] Signature check failed: " + e.toString());
+      print('[LibOlm] Signature check failed: ' + e.toString());
     }
     return isValid;
   }
@@ -1562,52 +1558,52 @@ class Client {
   Future<bool> _uploadKeys({bool uploadDeviceKeys = false}) async {
     if (!encryptionEnabled) return true;
 
-    final int oneTimeKeysCount = _olmAccount.max_number_of_one_time_keys();
+    final oneTimeKeysCount = _olmAccount.max_number_of_one_time_keys();
     _olmAccount.generate_one_time_keys(oneTimeKeysCount);
     final Map<String, dynamic> oneTimeKeys =
         json.decode(_olmAccount.one_time_keys());
 
-    Map<String, dynamic> signedOneTimeKeys = Map<String, dynamic>();
+    var signedOneTimeKeys = <String, dynamic>{};
 
-    for (String key in oneTimeKeys["curve25519"].keys) {
-      signedOneTimeKeys["signed_curve25519:$key"] = Map<String, dynamic>();
-      signedOneTimeKeys["signed_curve25519:$key"]["key"] =
-          oneTimeKeys["curve25519"][key];
-      signedOneTimeKeys["signed_curve25519:$key"] =
-          signJson(signedOneTimeKeys["signed_curve25519:$key"]);
+    for (String key in oneTimeKeys['curve25519'].keys) {
+      signedOneTimeKeys['signed_curve25519:$key'] = <String, dynamic>{};
+      signedOneTimeKeys['signed_curve25519:$key']['key'] =
+          oneTimeKeys['curve25519'][key];
+      signedOneTimeKeys['signed_curve25519:$key'] =
+          signJson(signedOneTimeKeys['signed_curve25519:$key']);
     }
 
-    Map<String, dynamic> keysContent = {
+    var keysContent = <String, dynamic>{
       if (uploadDeviceKeys)
-        "device_keys": {
-          "user_id": userID,
-          "device_id": deviceID,
-          "algorithms": [
-            "m.olm.v1.curve25519-aes-sha2",
-            "m.megolm.v1.aes-sha2"
+        'device_keys': {
+          'user_id': userID,
+          'device_id': deviceID,
+          'algorithms': [
+            'm.olm.v1.curve25519-aes-sha2',
+            'm.megolm.v1.aes-sha2'
           ],
-          "keys": Map<String, dynamic>(),
+          'keys': <String, dynamic>{},
         },
-      "one_time_keys": signedOneTimeKeys,
+      'one_time_keys': signedOneTimeKeys,
     };
     if (uploadDeviceKeys) {
       final Map<String, dynamic> keys =
           json.decode(_olmAccount.identity_keys());
-      for (String algorithm in keys.keys) {
-        keysContent["device_keys"]["keys"]["$algorithm:$deviceID"] =
+      for (var algorithm in keys.keys) {
+        keysContent['device_keys']['keys']['$algorithm:$deviceID'] =
             keys[algorithm];
       }
-      keysContent["device_keys"] =
-          signJson(keysContent["device_keys"] as Map<String, dynamic>);
+      keysContent['device_keys'] =
+          signJson(keysContent['device_keys'] as Map<String, dynamic>);
     }
 
     _olmAccount.mark_keys_as_published();
-    final Map<String, dynamic> response = await jsonRequest(
+    final response = await jsonRequest(
       type: HTTPType.POST,
-      action: "/client/r0/keys/upload",
+      action: '/client/r0/keys/upload',
       data: keysContent,
     );
-    if (response["one_time_key_counts"]["signed_curve25519"] !=
+    if (response['one_time_key_counts']['signed_curve25519'] !=
         oneTimeKeysCount) {
       return false;
     }
@@ -1618,28 +1614,28 @@ class Client {
 
   /// Try to decrypt a ToDeviceEvent encrypted with olm.
   ToDeviceEvent decryptToDeviceEvent(ToDeviceEvent toDeviceEvent) {
-    if (toDeviceEvent.type != "m.room.encrypted") {
+    if (toDeviceEvent.type != 'm.room.encrypted') {
       print(
-          "[LibOlm] Warning! Tried to decrypt a not-encrypted to-device-event");
+          '[LibOlm] Warning! Tried to decrypt a not-encrypted to-device-event');
       return toDeviceEvent;
     }
-    if (toDeviceEvent.content["algorithm"] != "m.olm.v1.curve25519-aes-sha2") {
-      throw ("Unknown algorithm: ${toDeviceEvent.content}");
+    if (toDeviceEvent.content['algorithm'] != 'm.olm.v1.curve25519-aes-sha2') {
+      throw ('Unknown algorithm: ${toDeviceEvent.content}');
     }
-    if (!toDeviceEvent.content["ciphertext"].containsKey(identityKey)) {
+    if (!toDeviceEvent.content['ciphertext'].containsKey(identityKey)) {
       throw ("The message isn't sent for this device");
     }
     String plaintext;
-    final String senderKey = toDeviceEvent.content["sender_key"];
+    final String senderKey = toDeviceEvent.content['sender_key'];
     final String body =
-        toDeviceEvent.content["ciphertext"][identityKey]["body"];
-    final int type = toDeviceEvent.content["ciphertext"][identityKey]["type"];
+        toDeviceEvent.content['ciphertext'][identityKey]['body'];
+    final int type = toDeviceEvent.content['ciphertext'][identityKey]['type'];
     if (type != 0 && type != 1) {
-      throw ("Unknown message type");
+      throw ('Unknown message type');
     }
-    List<olm.Session> existingSessions = olmSessions[senderKey];
+    var existingSessions = olmSessions[senderKey];
     if (existingSessions != null) {
-      for (olm.Session session in existingSessions) {
+      for (var session in existingSessions) {
         if (type == 0 && session.matches_inbound(body) == true) {
           plaintext = session.decrypt(type, body);
           storeOlmSession(senderKey, session);
@@ -1656,11 +1652,11 @@ class Client {
       }
     }
     if (plaintext == null && type != 0) {
-      throw ("No existing sessions found");
+      throw ('No existing sessions found');
     }
 
     if (plaintext == null) {
-      olm.Session newSession = olm.Session();
+      var newSession = olm.Session();
       newSession.create_inbound_from(_olmAccount, senderKey, body);
       _olmAccount.remove_one_time_keys(newSession);
       storeAPI?.storeClient();
@@ -1668,29 +1664,29 @@ class Client {
       storeOlmSession(senderKey, newSession);
     }
     final Map<String, dynamic> plainContent = json.decode(plaintext);
-    if (plainContent.containsKey("sender") &&
-        plainContent["sender"] != toDeviceEvent.sender) {
+    if (plainContent.containsKey('sender') &&
+        plainContent['sender'] != toDeviceEvent.sender) {
       throw ("Message was decrypted but sender doesn't match");
     }
-    if (plainContent.containsKey("recipient") &&
-        plainContent["recipient"] != userID) {
+    if (plainContent.containsKey('recipient') &&
+        plainContent['recipient'] != userID) {
       throw ("Message was decrypted but recipient doesn't match");
     }
-    if (plainContent["recipient_keys"] is Map &&
-        plainContent["recipient_keys"]["ed25519"] is String &&
-        plainContent["recipient_keys"]["ed25519"] != fingerprintKey) {
+    if (plainContent['recipient_keys'] is Map &&
+        plainContent['recipient_keys']['ed25519'] is String &&
+        plainContent['recipient_keys']['ed25519'] != fingerprintKey) {
       throw ("Message was decrypted but own fingerprint Key doesn't match");
     }
     return ToDeviceEvent(
-      content: plainContent["content"],
-      type: plainContent["type"],
+      content: plainContent['content'],
+      type: plainContent['type'],
       sender: toDeviceEvent.sender,
     );
   }
 
   /// A map from Curve25519 identity keys to existing olm sessions.
   Map<String, List<olm.Session>> get olmSessions => _olmSessions;
-  Map<String, List<olm.Session>> _olmSessions = {};
+  final Map<String, List<olm.Session>> _olmSessions = {};
 
   void storeOlmSession(String curve25519IdentityKey, olm.Session session) {
     if (!_olmSessions.containsKey(curve25519IdentityKey)) {
@@ -1701,18 +1697,18 @@ class Client {
         -1) {
       _olmSessions[curve25519IdentityKey].add(session);
     }
-    Map<String, List<String>> pickleMap = {};
+    var pickleMap = <String, List<String>>{};
     for (var entry in olmSessions.entries) {
       pickleMap[entry.key] = [];
-      for (olm.Session session in entry.value) {
+      for (var session in entry.value) {
         try {
           pickleMap[entry.key].add(session.pickle(userID));
         } catch (e) {
-          print("[LibOlm] Could not pickle olm session: " + e.toString());
+          print('[LibOlm] Could not pickle olm session: ' + e.toString());
         }
       }
     }
-    storeAPI?.setItem("/clients/$userID/olm-sessions", json.encode(pickleMap));
+    storeAPI?.setItem('/clients/$userID/olm-sessions', json.encode(pickleMap));
   }
 
   /// Sends an encrypted [message] of this [type] to these [deviceKeys]. To send
@@ -1732,103 +1728,101 @@ class Client {
       if (deviceKeys.isEmpty) return;
     }
 
-    Map<String, dynamic> sendToDeviceMessage = message;
+    var sendToDeviceMessage = message;
 
     // Send with send-to-device messaging
-    Map<String, dynamic> data = {
-      "messages": Map<String, dynamic>(),
+    var data = <String, dynamic>{
+      'messages': <String, dynamic>{},
     };
     if (deviceKeys.isEmpty) {
       if (toUsers == null) {
-        data["messages"][this.userID] = Map<String, dynamic>();
-        data["messages"][this.userID]["*"] = sendToDeviceMessage;
+        data['messages'][userID] = <String, dynamic>{};
+        data['messages'][userID]['*'] = sendToDeviceMessage;
       } else {
-        for (User user in toUsers) {
-          data["messages"][user.id] = Map<String, dynamic>();
-          data["messages"][user.id]["*"] = sendToDeviceMessage;
+        for (var user in toUsers) {
+          data['messages'][user.id] = <String, dynamic>{};
+          data['messages'][user.id]['*'] = sendToDeviceMessage;
         }
       }
     } else {
       if (encrypted) {
         // Create new sessions with devices if there is no existing session yet.
-        List<DeviceKeys> deviceKeysWithoutSession =
-            List<DeviceKeys>.from(deviceKeys);
+        var deviceKeysWithoutSession = List<DeviceKeys>.from(deviceKeys);
         deviceKeysWithoutSession.removeWhere((DeviceKeys deviceKeys) =>
             olmSessions.containsKey(deviceKeys.curve25519Key));
         if (deviceKeysWithoutSession.isNotEmpty) {
           await startOutgoingOlmSessions(deviceKeysWithoutSession);
         }
       }
-      for (int i = 0; i < deviceKeys.length; i++) {
-        DeviceKeys device = deviceKeys[i];
-        if (!data["messages"].containsKey(device.userId)) {
-          data["messages"][device.userId] = Map<String, dynamic>();
+      for (var i = 0; i < deviceKeys.length; i++) {
+        var device = deviceKeys[i];
+        if (!data['messages'].containsKey(device.userId)) {
+          data['messages'][device.userId] = <String, dynamic>{};
         }
 
         if (encrypted) {
-          List<olm.Session> existingSessions =
-              olmSessions[device.curve25519Key];
+          var existingSessions = olmSessions[device.curve25519Key];
           if (existingSessions == null || existingSessions.isEmpty) continue;
           existingSessions
               .sort((a, b) => a.session_id().compareTo(b.session_id()));
 
-          final Map<String, dynamic> payload = {
-            "type": type,
-            "content": message,
-            "sender": this.userID,
-            "keys": {"ed25519": fingerprintKey},
-            "recipient": device.userId,
-            "recipient_keys": {"ed25519": device.ed25519Key},
+          final payload = {
+            'type': type,
+            'content': message,
+            'sender': userID,
+            'keys': {'ed25519': fingerprintKey},
+            'recipient': device.userId,
+            'recipient_keys': {'ed25519': device.ed25519Key},
           };
-          final olm.EncryptResult encryptResult =
+          final encryptResult =
               existingSessions.first.encrypt(json.encode(payload));
           storeOlmSession(device.curve25519Key, existingSessions.first);
           sendToDeviceMessage = {
-            "algorithm": "m.olm.v1.curve25519-aes-sha2",
-            "sender_key": identityKey,
-            "ciphertext": Map<String, dynamic>(),
+            'algorithm': 'm.olm.v1.curve25519-aes-sha2',
+            'sender_key': identityKey,
+            'ciphertext': <String, dynamic>{},
           };
-          sendToDeviceMessage["ciphertext"][device.curve25519Key] = {
-            "type": encryptResult.type,
-            "body": encryptResult.body,
+          sendToDeviceMessage['ciphertext'][device.curve25519Key] = {
+            'type': encryptResult.type,
+            'body': encryptResult.body,
           };
         }
 
-        data["messages"][device.userId][device.deviceId] = sendToDeviceMessage;
+        data['messages'][device.userId][device.deviceId] = sendToDeviceMessage;
       }
     }
-    if (encrypted) type = "m.room.encrypted";
-    final String messageID = "msg${DateTime.now().millisecondsSinceEpoch}";
+    if (encrypted) type = 'm.room.encrypted';
+    final messageID = 'msg${DateTime.now().millisecondsSinceEpoch}';
     await jsonRequest(
       type: HTTPType.PUT,
-      action: "/client/r0/sendToDevice/$type/$messageID",
+      action: '/client/r0/sendToDevice/$type/$messageID',
       data: data,
     );
   }
 
   Future<void> startOutgoingOlmSessions(List<DeviceKeys> deviceKeys,
       {bool checkSignature = true}) async {
-    Map<String, Map<String, String>> requestingKeysFrom = {};
-    for (DeviceKeys device in deviceKeys) {
+    var requestingKeysFrom = <String, Map<String, String>>{};
+    for (var device in deviceKeys) {
       if (requestingKeysFrom[device.userId] == null) {
         requestingKeysFrom[device.userId] = {};
       }
-      requestingKeysFrom[device.userId][device.deviceId] = "signed_curve25519";
+      requestingKeysFrom[device.userId][device.deviceId] = 'signed_curve25519';
     }
 
-    final Map<String, dynamic> response = await jsonRequest(
+    final response = await jsonRequest(
       type: HTTPType.POST,
-      action: "/client/r0/keys/claim",
-      data: {"timeout": 10000, "one_time_keys": requestingKeysFrom},
+      action: '/client/r0/keys/claim',
+      data: {'timeout': 10000, 'one_time_keys': requestingKeysFrom},
     );
 
-    for (var userKeysEntry in response["one_time_keys"].entries) {
+    for (var userKeysEntry in response['one_time_keys'].entries) {
       final String userId = userKeysEntry.key;
       for (var deviceKeysEntry in userKeysEntry.value.entries) {
         final String deviceId = deviceKeysEntry.key;
-        final String fingerprintKey =
+        final fingerprintKey =
             userDeviceKeys[userId].deviceKeys[deviceId].ed25519Key;
-        final String identityKey =
+        final identityKey =
             userDeviceKeys[userId].deviceKeys[deviceId].curve25519Key;
         for (Map<String, dynamic> deviceKey in deviceKeysEntry.value.values) {
           if (checkSignature &&
@@ -1837,11 +1831,11 @@ class Client {
             continue;
           }
           try {
-            olm.Session session = olm.Session();
-            session.create_outbound(_olmAccount, identityKey, deviceKey["key"]);
+            var session = olm.Session();
+            session.create_outbound(_olmAccount, identityKey, deviceKey['key']);
             await storeOlmSession(identityKey, session);
           } catch (e) {
-            print("[LibOlm] Could not create new outbound olm session: " +
+            print('[LibOlm] Could not create new outbound olm session: ' +
                 e.toString());
           }
         }
@@ -1851,10 +1845,10 @@ class Client {
 
   /// Gets information about all devices for the current user.
   Future<List<UserDevice>> requestUserDevices() async {
-    final Map<String, dynamic> response =
-        await jsonRequest(type: HTTPType.GET, action: "/client/r0/devices");
-    List<UserDevice> userDevices = [];
-    for (final rawDevice in response["devices"]) {
+    final response =
+        await jsonRequest(type: HTTPType.GET, action: '/client/r0/devices');
+    var userDevices = <UserDevice>[];
+    for (final rawDevice in response['devices']) {
       userDevices.add(
         UserDevice.fromJson(rawDevice, this),
       );
@@ -1864,8 +1858,8 @@ class Client {
 
   /// Gets information about all devices for the current user.
   Future<UserDevice> requestUserDevice(String deviceId) async {
-    final Map<String, dynamic> response = await jsonRequest(
-        type: HTTPType.GET, action: "/client/r0/devices/$deviceId");
+    final response = await jsonRequest(
+        type: HTTPType.GET, action: '/client/r0/devices/$deviceId');
     return UserDevice.fromJson(response, this);
   }
 
@@ -1874,10 +1868,10 @@ class Client {
       {Map<String, dynamic> auth}) async {
     await jsonRequest(
       type: HTTPType.POST,
-      action: "/client/r0/delete_devices",
+      action: '/client/r0/delete_devices',
       data: {
-        "devices": deviceIds,
-        if (auth != null) "auth": auth,
+        'devices': deviceIds,
+        if (auth != null) 'auth': auth,
       },
     );
     return;
@@ -1892,22 +1886,22 @@ class Client {
     bool includeAllNetworks,
     String thirdPartyInstanceId,
   }) async {
-    String action = "/client/r0/publicRooms";
+    var action = '/client/r0/publicRooms';
     if (server != null) {
-      action += "?server=$server";
+      action += '?server=$server';
     }
-    final Map<String, dynamic> response = await jsonRequest(
+    final response = await jsonRequest(
       type: HTTPType.POST,
       action: action,
       data: {
-        if (limit != null) "limit": 10,
-        if (since != null) "since": since,
+        if (limit != null) 'limit': 10,
+        if (since != null) 'since': since,
         if (genericSearchTerm != null)
-          "filter": {"generic_search_term": genericSearchTerm},
+          'filter': {'generic_search_term': genericSearchTerm},
         if (includeAllNetworks != null)
-          "include_all_networks": includeAllNetworks,
+          'include_all_networks': includeAllNetworks,
         if (thirdPartyInstanceId != null)
-          "third_party_instance_id": thirdPartyInstanceId,
+          'third_party_instance_id': thirdPartyInstanceId,
       },
     );
     return PublicRoomsResponse.fromJson(response, this);
@@ -1916,18 +1910,18 @@ class Client {
   /// Whether all push notifications are muted using the [.m.rule.master]
   /// rule of the push rules: https://matrix.org/docs/spec/client_server/r0.6.0#m-rule-master
   bool get allPushNotificationsMuted {
-    if (!this.accountData.containsKey("m.push_rules") ||
-        !(this.accountData["m.push_rules"].content["global"] is Map)) {
+    if (!accountData.containsKey('m.push_rules') ||
+        !(accountData['m.push_rules'].content['global'] is Map)) {
       return false;
     }
     final Map<String, dynamic> globalPushRules =
-        this.accountData["m.push_rules"].content["global"];
+        accountData['m.push_rules'].content['global'];
     if (globalPushRules == null) return false;
 
-    if (globalPushRules["override"] is List) {
-      for (var i = 0; i < globalPushRules["override"].length; i++) {
-        if (globalPushRules["override"][i]["rule_id"] == ".m.rule.master") {
-          return globalPushRules["override"][i]["enabled"];
+    if (globalPushRules['override'] is List) {
+      for (var i = 0; i < globalPushRules['override'].length; i++) {
+        if (globalPushRules['override'][i]['rule_id'] == '.m.rule.master') {
+          return globalPushRules['override'][i]['enabled'];
         }
       }
     }
@@ -1937,8 +1931,8 @@ class Client {
   Future<void> setMuteAllPushNotifications(bool muted) async {
     await jsonRequest(
       type: HTTPType.PUT,
-      action: "/client/r0/pushrules/global/override/.m.rule.master/enabled",
-      data: {"enabled": muted},
+      action: '/client/r0/pushrules/global/override/.m.rule.master/enabled',
+      data: {'enabled': muted},
     );
     return;
   }

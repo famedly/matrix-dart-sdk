@@ -27,29 +27,29 @@ import 'package:test/test.dart';
 
 void main() {
   /// All Tests related to the Event
-  group("User", () {
-    test("Create from json", () async {
-      final String id = "@alice:server.abc";
-      final Membership membership = Membership.join;
-      final String displayName = "Alice";
-      final String avatarUrl = "";
+  group('User', () {
+    test('Create from json', () async {
+      final id = '@alice:server.abc';
+      final membership = Membership.join;
+      final displayName = 'Alice';
+      final avatarUrl = '';
 
-      final Map<String, dynamic> jsonObj = {
-        "content": {
-          "membership": "join",
-          "avatar_url": avatarUrl,
-          "displayname": displayName
+      final jsonObj = {
+        'content': {
+          'membership': 'join',
+          'avatar_url': avatarUrl,
+          'displayname': displayName
         },
-        "type": "m.room.member",
-        "event_id": "143273582443PhrSn:example.org",
-        "room_id": "!636q39766251:example.com",
-        "sender": id,
-        "origin_server_ts": 1432735824653,
-        "unsigned": {"age": 1234},
-        "state_key": id
+        'type': 'm.room.member',
+        'event_id': '143273582443PhrSn:example.org',
+        'room_id': '!636q39766251:example.com',
+        'sender': id,
+        'origin_server_ts': 1432735824653,
+        'unsigned': {'age': 1234},
+        'state_key': id
       };
 
-      User user = Event.fromJson(jsonObj, null).asUser;
+      var user = Event.fromJson(jsonObj, null).asUser;
 
       expect(user.id, id);
       expect(user.membership, membership);
@@ -58,13 +58,13 @@ void main() {
       expect(user.calcDisplayname(), displayName);
     });
 
-    test("calcDisplayname", () async {
-      final User user1 = User("@alice:example.com");
-      final User user2 = User("@SuperAlice:example.com");
-      final User user3 = User("@alice:example.com");
-      expect(user1.calcDisplayname(), "alice");
-      expect(user2.calcDisplayname(), "SuperAlice");
-      expect(user3.calcDisplayname(), "alice");
+    test('calcDisplayname', () async {
+      final user1 = User('@alice:example.com');
+      final user2 = User('@SuperAlice:example.com');
+      final user3 = User('@alice:example.com');
+      expect(user1.calcDisplayname(), 'alice');
+      expect(user2.calcDisplayname(), 'SuperAlice');
+      expect(user3.calcDisplayname(), 'alice');
     });
   });
 }

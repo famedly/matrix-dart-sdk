@@ -3,7 +3,7 @@ class PushRules {
   final GlobalPushRules global;
 
   PushRules.fromJson(Map<String, dynamic> json)
-      : this.global = GlobalPushRules.fromJson(json["global"]);
+      : global = GlobalPushRules.fromJson(json['global']);
 }
 
 /// The global ruleset.
@@ -15,20 +15,20 @@ class GlobalPushRules {
   final List<PushRule> underride;
 
   GlobalPushRules.fromJson(Map<String, dynamic> json)
-      : this.content = json.containsKey("content")
-            ? PushRule.fromJsonList(json["content"])
+      : content = json.containsKey('content')
+            ? PushRule.fromJsonList(json['content'])
             : null,
-        this.override = json.containsKey("override")
-            ? PushRule.fromJsonList(json["content"])
+        override = json.containsKey('override')
+            ? PushRule.fromJsonList(json['content'])
             : null,
-        this.room = json.containsKey("room")
-            ? PushRule.fromJsonList(json["room"])
+        room = json.containsKey('room')
+            ? PushRule.fromJsonList(json['room'])
             : null,
-        this.sender = json.containsKey("sender")
-            ? PushRule.fromJsonList(json["sender"])
+        sender = json.containsKey('sender')
+            ? PushRule.fromJsonList(json['sender'])
             : null,
-        this.underride = json.containsKey("underride")
-            ? PushRule.fromJsonList(json["underride"])
+        underride = json.containsKey('underride')
+            ? PushRule.fromJsonList(json['underride'])
             : null;
 }
 
@@ -42,7 +42,7 @@ class PushRule {
   final String pattern;
 
   static List<PushRule> fromJsonList(List<dynamic> list) {
-    List<PushRule> objList = [];
+    var objList = <PushRule>[];
     list.forEach((json) {
       objList.add(PushRule.fromJson(json));
     });
@@ -50,14 +50,14 @@ class PushRule {
   }
 
   PushRule.fromJson(Map<String, dynamic> json)
-      : this.actions = json["actions"],
-        this.isDefault = json["default"],
-        this.enabled = json["enabled"],
-        this.ruleId = json["rule_id"],
-        this.conditions = json.containsKey("conditions")
-            ? PushRuleConditions.fromJsonList(json["conditions"])
+      : actions = json['actions'],
+        isDefault = json['default'],
+        enabled = json['enabled'],
+        ruleId = json['rule_id'],
+        conditions = json.containsKey('conditions')
+            ? PushRuleConditions.fromJsonList(json['conditions'])
             : null,
-        this.pattern = json["pattern"];
+        pattern = json['pattern'];
 }
 
 /// Conditions when this pushrule should be active.
@@ -68,7 +68,7 @@ class PushRuleConditions {
   final String is_;
 
   static List<PushRuleConditions> fromJsonList(List<dynamic> list) {
-    List<PushRuleConditions> objList = [];
+    var objList = <PushRuleConditions>[];
     list.forEach((json) {
       objList.add(PushRuleConditions.fromJson(json));
     });
@@ -76,8 +76,8 @@ class PushRuleConditions {
   }
 
   PushRuleConditions.fromJson(Map<String, dynamic> json)
-      : this.kind = json["kind"],
-        this.key = json["key"],
-        this.pattern = json["pattern"],
-        this.is_ = json["is"];
+      : kind = json['kind'],
+        key = json['key'],
+        pattern = json['pattern'],
+        is_ = json['is'];
 }

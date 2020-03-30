@@ -47,7 +47,7 @@ class Event {
   /// The user who has sent this event if it is not a global account data event.
   final String senderId;
 
-  User get sender => room.getUserByMXIDSync(senderId ?? "@unknown");
+  User get sender => room.getUserByMXIDSync(senderId ?? '@unknown');
 
   /// The time this event has received at the server. May be null for events like
   /// account data.
@@ -78,17 +78,17 @@ class Event {
 
   static const int defaultStatus = 2;
   static const Map<String, int> STATUS_TYPE = {
-    "ERROR": -1,
-    "SENDING": 0,
-    "SENT": 1,
-    "TIMELINE": 2,
-    "ROOM_STATE": 3,
+    'ERROR': -1,
+    'SENDING': 0,
+    'SENT': 1,
+    'TIMELINE': 2,
+    'ROOM_STATE': 3,
   };
 
   /// Optional. The event that redacted this event, if any. Otherwise null.
   Event get redactedBecause =>
-      unsigned != null && unsigned.containsKey("redacted_because")
-          ? Event.fromJson(unsigned["redacted_because"], room)
+      unsigned != null && unsigned.containsKey('redacted_because')
+          ? Event.fromJson(unsigned['redacted_because'], room)
           : null;
 
   bool get redacted => redactedBecause != null;
@@ -122,12 +122,9 @@ class Event {
 
   /// Get a State event from a table row or from the event stream.
   factory Event.fromJson(Map<String, dynamic> jsonPayload, Room room) {
-    final Map<String, dynamic> content =
-        Event.getMapFromPayload(jsonPayload['content']);
-    final Map<String, dynamic> unsigned =
-        Event.getMapFromPayload(jsonPayload['unsigned']);
-    final Map<String, dynamic> prevContent =
-        Event.getMapFromPayload(jsonPayload['prev_content']);
+    final content = Event.getMapFromPayload(jsonPayload['content']);
+    final unsigned = Event.getMapFromPayload(jsonPayload['unsigned']);
+    final prevContent = Event.getMapFromPayload(jsonPayload['prev_content']);
     return Event(
       status: jsonPayload['status'] ?? defaultStatus,
       stateKey: jsonPayload['state_key'],
@@ -146,19 +143,19 @@ class Event {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = Map<String, dynamic>();
-    if (this.stateKey != null) data['state_key'] = this.stateKey;
-    if (this.prevContent != null && this.prevContent.isNotEmpty) {
-      data['prev_content'] = this.prevContent;
+    final data = <String, dynamic>{};
+    if (stateKey != null) data['state_key'] = stateKey;
+    if (prevContent != null && prevContent.isNotEmpty) {
+      data['prev_content'] = prevContent;
     }
-    data['content'] = this.content;
-    data['type'] = this.typeKey;
-    data['event_id'] = this.eventId;
-    data['room_id'] = this.roomId;
-    data['sender'] = this.senderId;
-    data['origin_server_ts'] = this.time.millisecondsSinceEpoch;
-    if (this.unsigned != null && this.unsigned.isNotEmpty) {
-      data['unsigned'] = this.unsigned;
+    data['content'] = content;
+    data['type'] = typeKey;
+    data['event_id'] = eventId;
+    data['room_id'] = roomId;
+    data['sender'] = senderId;
+    data['origin_server_ts'] = time.millisecondsSinceEpoch;
+    if (unsigned != null && unsigned.isNotEmpty) {
+      data['unsigned'] = unsigned;
     }
     return data;
   }
@@ -183,45 +180,45 @@ class Event {
   /// Get the real type.
   EventTypes get type {
     switch (typeKey) {
-      case "m.room.avatar":
+      case 'm.room.avatar':
         return EventTypes.RoomAvatar;
-      case "m.room.name":
+      case 'm.room.name':
         return EventTypes.RoomName;
-      case "m.room.topic":
+      case 'm.room.topic':
         return EventTypes.RoomTopic;
-      case "m.room.aliases":
+      case 'm.room.aliases':
         return EventTypes.RoomAliases;
-      case "m.room.canonical_alias":
+      case 'm.room.canonical_alias':
         return EventTypes.RoomCanonicalAlias;
-      case "m.room.create":
+      case 'm.room.create':
         return EventTypes.RoomCreate;
-      case "m.room.redaction":
+      case 'm.room.redaction':
         return EventTypes.Redaction;
-      case "m.room.join_rules":
+      case 'm.room.join_rules':
         return EventTypes.RoomJoinRules;
-      case "m.room.member":
+      case 'm.room.member':
         return EventTypes.RoomMember;
-      case "m.room.power_levels":
+      case 'm.room.power_levels':
         return EventTypes.RoomPowerLevels;
-      case "m.room.guest_access":
+      case 'm.room.guest_access':
         return EventTypes.GuestAccess;
-      case "m.room.history_visibility":
+      case 'm.room.history_visibility':
         return EventTypes.HistoryVisibility;
-      case "m.sticker":
+      case 'm.sticker':
         return EventTypes.Sticker;
-      case "m.room.message":
+      case 'm.room.message':
         return EventTypes.Message;
-      case "m.room.encrypted":
+      case 'm.room.encrypted':
         return EventTypes.Encrypted;
-      case "m.room.encryption":
+      case 'm.room.encryption':
         return EventTypes.Encryption;
-      case "m.call.invite":
+      case 'm.call.invite':
         return EventTypes.CallInvite;
-      case "m.call.answer":
+      case 'm.call.answer':
         return EventTypes.CallAnswer;
-      case "m.call.candidates":
+      case 'm.call.candidates':
         return EventTypes.CallCandidates;
-      case "m.call.hangup":
+      case 'm.call.hangup':
         return EventTypes.CallHangup;
     }
     return EventTypes.Unknown;
@@ -229,29 +226,29 @@ class Event {
 
   ///
   MessageTypes get messageType {
-    switch (content["msgtype"] ?? "m.text") {
-      case "m.text":
-        if (content.containsKey("m.relates_to")) {
+    switch (content['msgtype'] ?? 'm.text') {
+      case 'm.text':
+        if (content.containsKey('m.relates_to')) {
           return MessageTypes.Reply;
         }
         return MessageTypes.Text;
-      case "m.notice":
+      case 'm.notice':
         return MessageTypes.Notice;
-      case "m.emote":
+      case 'm.emote':
         return MessageTypes.Emote;
-      case "m.image":
+      case 'm.image':
         return MessageTypes.Image;
-      case "m.video":
+      case 'm.video':
         return MessageTypes.Video;
-      case "m.audio":
+      case 'm.audio':
         return MessageTypes.Audio;
-      case "m.file":
+      case 'm.file':
         return MessageTypes.File;
-      case "m.sticker":
+      case 'm.sticker':
         return MessageTypes.Sticker;
-      case "m.location":
+      case 'm.location':
         return MessageTypes.Location;
-      case "m.bad.encrypted":
+      case 'm.bad.encrypted':
         return MessageTypes.BadEncrypted;
       default:
         if (type == EventTypes.Message) {
@@ -263,40 +260,40 @@ class Event {
 
   void setRedactionEvent(Event redactedBecause) {
     unsigned = {
-      "redacted_because": redactedBecause.toJson(),
+      'redacted_because': redactedBecause.toJson(),
     };
     prevContent = null;
-    List<String> contentKeyWhiteList = [];
+    var contentKeyWhiteList = <String>[];
     switch (type) {
       case EventTypes.RoomMember:
-        contentKeyWhiteList.add("membership");
+        contentKeyWhiteList.add('membership');
         break;
       case EventTypes.RoomCreate:
-        contentKeyWhiteList.add("creator");
+        contentKeyWhiteList.add('creator');
         break;
       case EventTypes.RoomJoinRules:
-        contentKeyWhiteList.add("join_rule");
+        contentKeyWhiteList.add('join_rule');
         break;
       case EventTypes.RoomPowerLevels:
-        contentKeyWhiteList.add("ban");
-        contentKeyWhiteList.add("events");
-        contentKeyWhiteList.add("events_default");
-        contentKeyWhiteList.add("kick");
-        contentKeyWhiteList.add("redact");
-        contentKeyWhiteList.add("state_default");
-        contentKeyWhiteList.add("users");
-        contentKeyWhiteList.add("users_default");
+        contentKeyWhiteList.add('ban');
+        contentKeyWhiteList.add('events');
+        contentKeyWhiteList.add('events_default');
+        contentKeyWhiteList.add('kick');
+        contentKeyWhiteList.add('redact');
+        contentKeyWhiteList.add('state_default');
+        contentKeyWhiteList.add('users');
+        contentKeyWhiteList.add('users_default');
         break;
       case EventTypes.RoomAliases:
-        contentKeyWhiteList.add("aliases");
+        contentKeyWhiteList.add('aliases');
         break;
       case EventTypes.HistoryVisibility:
-        contentKeyWhiteList.add("history_visibility");
+        contentKeyWhiteList.add('history_visibility');
         break;
       default:
         break;
     }
-    List<String> toRemoveList = [];
+    var toRemoveList = <String>[];
     for (var entry in content.entries) {
       if (!contentKeyWhiteList.contains(entry.key)) {
         toRemoveList.add(entry.key);
@@ -306,30 +303,30 @@ class Event {
   }
 
   /// Returns the body of this event if it has a body.
-  String get text => content["body"] ?? "";
+  String get text => content['body'] ?? '';
 
   /// Returns the formatted boy of this event if it has a formatted body.
-  String get formattedText => content["formatted_body"] ?? "";
+  String get formattedText => content['formatted_body'] ?? '';
 
-  @Deprecated("Use [body] instead.")
+  @Deprecated('Use [body] instead.')
   String getBody() => body;
 
   /// Use this to get the body.
   String get body {
-    if (redacted) return "Redacted";
-    if (text != "") return text;
-    if (formattedText != "") return formattedText;
-    return "$type";
+    if (redacted) return 'Redacted';
+    if (text != '') return text;
+    if (formattedText != '') return formattedText;
+    return '$type';
   }
 
   /// Returns a list of [Receipt] instances for this event.
   List<Receipt> get receipts {
-    if (!(room.roomAccountData.containsKey("m.receipt"))) return [];
-    List<Receipt> receiptsList = [];
-    for (var entry in room.roomAccountData["m.receipt"].content.entries) {
-      if (entry.value["event_id"] == eventId) {
+    if (!(room.roomAccountData.containsKey('m.receipt'))) return [];
+    var receiptsList = <Receipt>[];
+    for (var entry in room.roomAccountData['m.receipt'].content.entries) {
+      if (entry.value['event_id'] == eventId) {
         receiptsList.add(Receipt(room.getUserByMXIDSync(entry.key),
-            DateTime.fromMillisecondsSinceEpoch(entry.value["ts"])));
+            DateTime.fromMillisecondsSinceEpoch(entry.value['ts'])));
       }
     }
     return receiptsList;
@@ -345,12 +342,12 @@ class Event {
 
       room.client.onEvent.add(EventUpdate(
           roomID: room.id,
-          type: "timeline",
+          type: 'timeline',
           eventType: typeKey,
           content: {
-            "event_id": eventId,
-            "status": -2,
-            "content": {"body": "Removed..."}
+            'event_id': eventId,
+            'status': -2,
+            'content': {'body': 'Removed...'}
           }));
       return true;
     }
@@ -361,7 +358,7 @@ class Event {
   Future<String> sendAgain({String txid}) async {
     if (status != -1) return null;
     await remove();
-    final String eventID = await room.sendTextEvent(text, txid: txid);
+    final eventID = await room.sendTextEvent(text, txid: txid);
     return eventID;
   }
 
@@ -397,34 +394,34 @@ class Event {
   /// in the room. If the event is not encrypted or the decryption failed because
   /// of a different error, this throws an exception.
   Future<void> requestKey() async {
-    if (this.type != EventTypes.Encrypted ||
-        this.messageType != MessageTypes.BadEncrypted ||
-        this.content["body"] != DecryptError.UNKNOWN_SESSION) {
-      throw ("Session key not unknown");
+    if (type != EventTypes.Encrypted ||
+        messageType != MessageTypes.BadEncrypted ||
+        content['body'] != DecryptError.UNKNOWN_SESSION) {
+      throw ('Session key not unknown');
     }
-    final List<User> users = await room.requestParticipants();
+    final users = await room.requestParticipants();
     await room.client.sendToDevice(
         [],
-        "m.room_key_request",
+        'm.room_key_request',
         {
-          "action": "request_cancellation",
-          "request_id": base64.encode(utf8.encode(content["session_id"])),
-          "requesting_device_id": room.client.deviceID,
+          'action': 'request_cancellation',
+          'request_id': base64.encode(utf8.encode(content['session_id'])),
+          'requesting_device_id': room.client.deviceID,
         },
         toUsers: users);
     await room.client.sendToDevice(
         [],
-        "m.room_key_request",
+        'm.room_key_request',
         {
-          "action": "request",
-          "body": {
-            "algorithm": "m.megolm.v1.aes-sha2",
-            "room_id": roomId,
-            "sender_key": content["sender_key"],
-            "session_id": content["session_id"],
+          'action': 'request',
+          'body': {
+            'algorithm': 'm.megolm.v1.aes-sha2',
+            'room_id': roomId,
+            'sender_key': content['sender_key'],
+            'session_id': content['session_id'],
           },
-          "request_id": base64.encode(utf8.encode(content["session_id"])),
-          "requesting_device_id": room.client.deviceID,
+          'request_id': base64.encode(utf8.encode(content['session_id'])),
+          'requesting_device_id': room.client.deviceID,
         },
         encrypted: false,
         toUsers: users);
@@ -435,27 +432,27 @@ class Event {
   /// event and returns it as a [MatrixFile]. If this event doesn't
   /// contain an attachment, this throws an error.
   Future<MatrixFile> downloadAndDecryptAttachment() async {
-    if (![EventTypes.Message, EventTypes.Sticker].contains(this.type)) {
+    if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
       throw ("This event has the type '$typeKey' and so it can't contain an attachment.");
     }
-    if (!content.containsKey("url") && !content.containsKey("file")) {
+    if (!content.containsKey('url') && !content.containsKey('file')) {
       throw ("This event hasn't any attachment.");
     }
-    final bool isEncrypted = !content.containsKey("url");
+    final isEncrypted = !content.containsKey('url');
 
     if (isEncrypted && !room.client.encryptionEnabled) {
-      throw ("Encryption is not enabled in your Client.");
+      throw ('Encryption is not enabled in your Client.');
     }
-    MxContent mxContent =
-        MxContent(isEncrypted ? content["file"]["url"] : content["url"]);
+    var mxContent =
+        MxContent(isEncrypted ? content['file']['url'] : content['url']);
 
     Uint8List uint8list;
 
     // Is this file storeable?
-    final bool storeable = room.client.storeAPI.extended &&
-        content["info"] is Map<String, dynamic> &&
-        content["info"]["size"] is int &&
-        content["info"]["size"] <= ExtendedStoreAPI.MAX_FILE_SIZE;
+    final storeable = room.client.storeAPI.extended &&
+        content['info'] is Map<String, dynamic> &&
+        content['info']['size'] is int &&
+        content['info']['size'] <= ExtendedStoreAPI.MAX_FILE_SIZE;
 
     if (storeable) {
       uint8list = await room.client.store.getFile(mxContent.mxc);
@@ -470,18 +467,18 @@ class Event {
 
     // Decrypt the file
     if (isEncrypted) {
-      if (!content.containsKey("file") ||
-          !content["file"]["key"]["key_ops"].contains("decrypt")) {
+      if (!content.containsKey('file') ||
+          !content['file']['key']['key_ops'].contains('decrypt')) {
         throw ("Missing 'decrypt' in 'key_ops'.");
       }
-      final EncryptedFile encryptedFile = EncryptedFile();
+      final encryptedFile = EncryptedFile();
       encryptedFile.data = uint8list;
-      encryptedFile.iv = content["file"]["iv"];
-      encryptedFile.k = content["file"]["key"]["k"];
-      encryptedFile.sha256 = content["file"]["hashes"]["sha256"];
+      encryptedFile.iv = content['file']['iv'];
+      encryptedFile.k = content['file']['key']['k'];
+      encryptedFile.sha256 = content['file']['hashes']['sha256'];
       uint8list = await decryptFile(encryptedFile);
     }
-    return MatrixFile(bytes: uint8list, path: "/$body");
+    return MatrixFile(bytes: uint8list, path: '/$body');
   }
 }
 
