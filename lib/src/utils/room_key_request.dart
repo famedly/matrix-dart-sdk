@@ -21,7 +21,7 @@ class RoomKeyRequest extends ToDeviceEvent {
     for (final key in session.forwardingCurve25519KeyChain) {
       forwardedKeys.add(key);
     }
-    await requestingDevice.setVerified(true, client);
+    await requestingDevice?.setVerified(true, client);
     var message = session.content;
     message['forwarding_curve25519_key_chain'] = forwardedKeys;
     
