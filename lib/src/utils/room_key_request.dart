@@ -24,7 +24,8 @@ class RoomKeyRequest extends ToDeviceEvent {
     await requestingDevice.setVerified(true, client);
     var message = session.content;
     message['forwarding_curve25519_key_chain'] = forwardedKeys;
-    message['session_key'] = session.inboundGroupSession.export_session(0);
+    
+    message['session_key'] = session.inboundGroupSession.export_session(session.inboundGroupSession.first_known_index());
     await client.sendToDevice(
       [requestingDevice],
       'm.forwarded_room_key',
