@@ -408,6 +408,7 @@ class Event {
           'request_id': base64.encode(utf8.encode(content['session_id'])),
           'requesting_device_id': room.client.deviceID,
         },
+        encrypted: false,
         toUsers: users);
     await room.client.sendToDevice(
         [],
