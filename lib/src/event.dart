@@ -463,7 +463,9 @@ class Event {
     if (uint8list == null) {
       uint8list =
           (await http.get(mxContent.getDownloadLink(room.client))).bodyBytes;
-      await room.client.store.storeFile(uint8list, mxContent.mxc);
+      if (storeable) {
+        await room.client.store.storeFile(uint8list, mxContent.mxc);
+      }
     }
 
     // Decrypt the file
