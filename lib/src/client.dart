@@ -952,6 +952,10 @@ class Client {
 
   /// Use this method only for testing utilities!
   void handleSync(dynamic sync) {
+    if (sync['to_device'] is Map<String, dynamic> &&
+        sync['to_device']['events'] is List<dynamic>) {
+      _handleToDeviceEvents(sync['to_device']['events']);
+    }
     if (sync['rooms'] is Map<String, dynamic>) {
       if (sync['rooms']['join'] is Map<String, dynamic>) {
         _handleRooms(sync['rooms']['join'], Membership.join);
@@ -971,15 +975,17 @@ class Client {
         sync['account_data']['events'] is List<dynamic>) {
       _handleGlobalEvents(sync['account_data']['events'], 'account_data');
     }
-    if (sync['to_device'] is Map<String, dynamic> &&
-        sync['to_device']['events'] is List<dynamic>) {
-      _handleToDeviceEvents(sync['to_device']['events']);
-    }
     if (sync['device_lists'] is Map<String, dynamic>) {
       _handleDeviceListsEvents(sync['device_lists']);
     }
     if (sync['device_one_time_keys_count'] is Map<String, dynamic>) {
       _handleDeviceOneTimeKeysCount(sync['device_one_time_keys_count']);
+    }
+    while (_pendingToDeviceEvents.isNotEmpty) {
+      _updateRoomsByToDeviceEvent(
+        _pendingToDeviceEvents.removeLast(),
+        addToPendingIfNotFound: false,
+      );
     }
     onSync.add(sync);
   }
@@ -1319,44 +1325,47 @@ class Client {
     if (eventUpdate.type == 'timeline') _sortRooms();
   }
 
-  void _updateRoomsByToDeviceEvent(ToDeviceEvent toDeviceEvent) {
+  final List<ToDeviceEvent> _pendingToDeviceEvents = [];
+
+  void _updateRoomsByToDeviceEvent(ToDeviceEvent toDeviceEvent,
+      {addToPendingIfNotFound = true}) async {
     try {
       switch (toDeviceEvent.type) {
         case 'm.room_key':
         case 'm.forwarded_room_key':
-          var room = getRoomById(toDeviceEvent.content['room_id']);
-          if (room != null) {
-            final String sessionId = toDeviceEvent.content['session_id'];
-            if (room != null) {
-              if (toDeviceEvent.type == 'm.room_key' &&
-                  userDeviceKeys.containsKey(toDeviceEvent.sender) &&
-                  userDeviceKeys[toDeviceEvent.sender].deviceKeys.containsKey(
-                      toDeviceEvent.content['requesting_device_id'])) {
-                toDeviceEvent.content['sender_claimed_ed25519_key'] =
-                    userDeviceKeys[toDeviceEvent.sender]
-                        .deviceKeys[
-                            toDeviceEvent.content['requesting_device_id']]
-                        .ed25519Key;
-              }
-              room.setSessionKey(
-                sessionId,
-                toDeviceEvent.content,
-                forwarded: toDeviceEvent.type == 'm.forwarded_room_key',
-              );
-              if (toDeviceEvent.type == 'm.forwarded_room_key') {
-                sendToDevice(
-                  [],
-                  'm.room_key_request',
-                  {
-                    'action': 'request_cancellation',
-                    'request_id': base64
-                        .encode(utf8.encode(toDeviceEvent.content['room_id'])),
-                    'requesting_device_id': room.client.deviceID,
-                  },
-                  encrypted: false,
-                );
-              }
-            }
+          final roomId = toDeviceEvent.content['room_id'];
+          var room = getRoomById(roomId);
+          if (room == null && addToPendingIfNotFound) {
+            _pendingToDeviceEvents.add(toDeviceEvent);
+          }
+          final String sessionId = toDeviceEvent.content['session_id'];
+          if (toDeviceEvent.type == 'm.room_key' &&
+              userDeviceKeys.containsKey(toDeviceEvent.sender) &&
+              userDeviceKeys[toDeviceEvent.sender]
+                  .deviceKeys
+                  .containsKey(toDeviceEvent.content['requesting_device_id'])) {
+            toDeviceEvent.content['sender_claimed_ed25519_key'] =
+                userDeviceKeys[toDeviceEvent.sender]
+                    .deviceKeys[toDeviceEvent.content['requesting_device_id']]
+                    .ed25519Key;
+          }
+          room.setSessionKey(
+            sessionId,
+            toDeviceEvent.content,
+            forwarded: toDeviceEvent.type == 'm.forwarded_room_key',
+          );
+          if (toDeviceEvent.type == 'm.forwarded_room_key') {
+            await sendToDevice(
+              [],
+              'm.room_key_request',
+              {
+                'action': 'request_cancellation',
+                'request_id': base64
+                    .encode(utf8.encode(toDeviceEvent.content['room_id'])),
+                'requesting_device_id': room.client.deviceID,
+              },
+              encrypted: false,
+            );
           }
           break;
         case 'm.room_key_request':
@@ -1376,7 +1385,7 @@ class Client {
               if (deviceKeys.userId == userID &&
                   deviceKeys.verified &&
                   !deviceKeys.blocked) {
-                roomKeyRequest.forwardKey();
+                await roomKeyRequest.forwardKey();
               } else {
                 onRoomKeyRequest.add(roomKeyRequest);
               }

@@ -926,7 +926,7 @@ class Room {
     return;
   }
 
-  void restoreGroupSessionKeys() async {
+  Future<void> restoreGroupSessionKeys() async {
     // Restore the inbound and outbound session keys
     if (client.encryptionEnabled && client.storeAPI != null) {
       final String outboundGroupSessionPickle = await client.storeAPI.getItem(
@@ -970,6 +970,7 @@ class Room {
         json.encode(sessionKeys));
     _tryAgainDecryptLastMessage();
     _fullyRestored = true;
+    return;
   }
 
   bool _fullyRestored = false;
