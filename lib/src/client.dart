@@ -113,10 +113,6 @@ class Client {
   List<String> get matrixVersions => _matrixVersions;
   List<String> _matrixVersions;
 
-  /// Wheither the server supports lazy load members.
-  bool get lazyLoadMembers => _lazyLoadMembers;
-  bool _lazyLoadMembers = false;
-
   /// Returns the current login state.
   bool isLogged() => accessToken != null;
 
@@ -210,7 +206,7 @@ class Client {
 
   /// Checks the supported versions of the Matrix protocol and the supported
   /// login types. Returns false if the server is not compatible with the
-  /// client. Automatically sets [matrixVersions] and [lazyLoadMembers].
+  /// client. Automatically sets [matrixVersions].
   /// Throws FormatException, TimeoutException and MatrixException on error.
   Future<bool> checkServer(serverUrl) async {
     try {
@@ -229,14 +225,6 @@ class Client {
       }
 
       _matrixVersions = versions;
-
-      if (versionResp.containsKey('unstable_features') &&
-          versionResp['unstable_features'].containsKey('m.lazy_load_members')) {
-        _lazyLoadMembers = versionResp['unstable_features']
-                ['m.lazy_load_members']
-            ? true
-            : false;
-      }
 
       final loginResp =
           await jsonRequest(type: HTTPType.GET, action: '/client/r0/login');
@@ -303,8 +291,7 @@ class Client {
           newHomeserver: homeserver,
           newDeviceName: initialDeviceDisplayName ?? '',
           newDeviceID: response['device_id'],
-          newMatrixVersions: matrixVersions,
-          newLazyLoadMembers: lazyLoadMembers);
+          newMatrixVersions: matrixVersions);
     }
     return response;
   }
@@ -346,7 +333,6 @@ class Client {
         newDeviceName: initialDeviceDisplayName ?? '',
         newDeviceID: loginResp['device_id'],
         newMatrixVersions: matrixVersions,
-        newLazyLoadMembers: lazyLoadMembers,
       );
       return true;
     }
@@ -676,7 +662,6 @@ class Client {
     String newDeviceName,
     String newDeviceID,
     List<String> newMatrixVersions,
-    bool newLazyLoadMembers,
     String newPrevBatch,
     String newOlmAccount,
   }) async {
@@ -686,7 +671,6 @@ class Client {
     _deviceID = newDeviceID;
     _deviceName = newDeviceName;
     _matrixVersions = newMatrixVersions;
-    _lazyLoadMembers = newLazyLoadMembers;
     prevBatch = newPrevBatch;
 
     // Try to create a new olm account or restore a previous one.
@@ -762,8 +746,8 @@ class Client {
     });
     _olmAccount?.free();
     storeAPI?.clear();
-    _accessToken = _homeserver = _userID = _deviceID =
-        _deviceName = _matrixVersions = _lazyLoadMembers = prevBatch = null;
+    _accessToken = _homeserver =
+        _userID = _deviceID = _deviceName = _matrixVersions = prevBatch = null;
     onLoginStateChanged.add(LoginState.loggedOut);
   }
 

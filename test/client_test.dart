@@ -129,7 +129,6 @@ void main() {
         newDeviceName: 'Text Matrix Client',
         newDeviceID: resp['device_id'],
         newMatrixVersions: matrix.matrixVersions,
-        newLazyLoadMembers: matrix.lazyLoadMembers,
         newOlmAccount: pickledOlmAccount,
       );
 
@@ -281,7 +280,6 @@ void main() {
       expect(matrix.deviceID == null, true);
       expect(matrix.deviceName == null, true);
       expect(matrix.matrixVersions == null, true);
-      expect(matrix.lazyLoadMembers == null, true);
       expect(matrix.prevBatch == null, true);
 
       var loginState = await loginStateFuture;
@@ -654,7 +652,6 @@ void main() {
           'r0.4.0',
           'r0.5.0'
         ],
-        newLazyLoadMembers: true,
         newOlmAccount: pickledOlmAccount,
       );
 
@@ -683,7 +680,6 @@ void main() {
       expect(client2.deviceID, client1.deviceID);
       expect(client2.deviceName, client1.deviceName);
       expect(client2.matrixVersions, client1.matrixVersions);
-      expect(client2.lazyLoadMembers, client1.lazyLoadMembers);
       if (client2.encryptionEnabled) {
         expect(client2.pickledOlmAccount, client1.pickledOlmAccount);
         expect(json.encode(client2.rooms[1].sessionKeys[sessionKey]),
