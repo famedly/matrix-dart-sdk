@@ -23,10 +23,12 @@
 
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/utils/receipt.dart';
 import 'package:http/http.dart' as http;
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
+
 import './room.dart';
 
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
@@ -220,6 +222,8 @@ class Event {
         return EventTypes.CallCandidates;
       case 'm.call.hangup':
         return EventTypes.CallHangup;
+      case 'm.reaction':
+        return EventTypes.Reaction;
     }
     return EventTypes.Unknown;
   }
@@ -504,6 +508,7 @@ enum EventTypes {
   Message,
   Sticker,
   Redaction,
+  Reaction,
   RoomAliases,
   RoomCanonicalAlias,
   RoomCreate,
