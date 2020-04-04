@@ -381,12 +381,25 @@ class Event {
       (content['m.relates_to']['m.in_reply_to']['event_id'] as String)
           .isNotEmpty;
 
+  /// Whether this event is in reaction to another event.
+  bool get isReaction =>
+      content['m.relates_to'] is Map<String, dynamic> &&
+      content['m.relates_to']['event_id'] is String &&
+      (content['m.relates_to']['event_id'] as String).isNotEmpty;
+
   /// Searches for the reply event in the given timeline.
   Future<Event> getReplyEvent(Timeline timeline) async {
     if (!isReply) return null;
     final String replyEventId =
         content['m.relates_to']['m.in_reply_to']['event_id'];
     return await timeline.getEventById(replyEventId);
+  }
+
+  /// Searches for the reply event in the given timeline.
+  Future<Event> getReactionEvent(Timeline timeline) async {
+    if (!isReaction) return null;
+    final String reactionEventId = content['m.relates_to']['event_id'];
+    return await timeline.getEventById(reactionEventId);
   }
 
   /// Trys to decrypt this event. Returns a m.bad.encrypted event
