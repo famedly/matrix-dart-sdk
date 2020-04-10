@@ -217,7 +217,7 @@ class Client {
       final versions = List<String>.from(versionResp['versions']);
 
       for (var i = 0; i < versions.length; i++) {
-        if (versions[i] == 'r0.5.0') {
+        if (versions[i] == 'r0.5.0' || versions[i] == 'r0.6.0') {
           break;
         } else if (i == versions.length - 1) {
           return false;
