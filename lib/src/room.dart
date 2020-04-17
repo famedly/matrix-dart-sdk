@@ -578,7 +578,7 @@ class Room {
               'thumbnail_info': {
                 'h': thumbnailImage.height,
                 'mimetype': mimeType,
-                'size': thumbnailImage.length,
+                'size': thumbnail.size,
                 'w': thumbnailImage.width,
               }
           }
