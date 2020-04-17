@@ -34,6 +34,7 @@ import 'package:famedlysdk/src/utils/matrix_exception.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:famedlysdk/src/utils/mx_content.dart';
 import 'package:famedlysdk/src/utils/session_key.dart';
+import 'package:image/image.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 import 'package:mime_type/mime_type.dart';
 import 'package:olm/olm.dart' as olm;
@@ -478,17 +479,13 @@ class Room {
     Map<String, dynamic> info,
     bool waitUntilSent = false,
   }) async {
-    var fileName = file.path.split('/').last;
-    final sendEncrypted = encrypted && client.fileEncryptionEnabled;
-    EncryptedFile encryptedFile;
-    if (sendEncrypted) {
-      encryptedFile = await file.encrypt();
-    }
-    final uploadResp = await client.upload(
-      file,
-      contentType: sendEncrypted ? 'application/octet-stream' : null,
-    );
+    Image fileImage;
+    Image thumbnailImage;
+    MatrixFile thumbnail;
+    EncryptedFile encryptedThumbnail;
+    String thumbnailUploadResp;
 
+    var fileName = file.path.split('/').last;
     final mimeType = mime(file.path) ?? '';
     if (msgType == null) {
       final metaType = (mimeType).split('/')[0];
@@ -502,6 +499,35 @@ class Room {
           msgType = 'm.file';
           break;
       }
+    }
+
+    if (msgType == 'm.image') {
+      var thumbnailPathParts = file.path.split('/');
+      thumbnailPathParts.last = 'thumbnail_' + thumbnailPathParts.last;
+      final thumbnailPath = thumbnailPathParts.join('/');
+      thumbnail = MatrixFile(bytes: file.bytes, path: thumbnailPath);
+      await thumbnail.resize(width: 512);
+      fileImage = decodeImage(file.bytes.toList());
+      thumbnailImage = decodeImage(thumbnail.bytes.toList());
+    }
+
+    final sendEncrypted = encrypted && client.fileEncryptionEnabled;
+    EncryptedFile encryptedFile;
+    if (sendEncrypted) {
+      encryptedFile = await file.encrypt();
+      if (thumbnail != null) {
+        encryptedThumbnail = await thumbnail.encrypt();
+      }
+    }
+    final uploadResp = await client.upload(
+      file,
+      contentType: sendEncrypted ? 'application/octet-stream' : null,
+    );
+    if (thumbnail != null) {
+      thumbnailUploadResp = await client.upload(
+        thumbnail,
+        contentType: sendEncrypted ? 'application/octet-stream' : null,
+      );
     }
 
     // Send event
@@ -529,6 +555,32 @@ class Room {
           {
             'mimetype': mimeType,
             'size': file.size,
+            if (fileImage != null) 'h': fileImage.height,
+            if (fileImage != null) 'w': fileImage.width,
+            if (thumbnailUploadResp != null && !sendEncrypted)
+              'thumbnail_url': thumbnailUploadResp,
+            if (thumbnailUploadResp != null && sendEncrypted)
+              'thumbnail_file': {
+                'url': thumbnailUploadResp,
+                'mimetype': mimeType,
+                'v': 'v2',
+                'key': {
+                  'alg': 'A256CTR',
+                  'ext': true,
+                  'k': encryptedThumbnail.k,
+                  'key_ops': ['encrypt', 'decrypt'],
+                  'kty': 'oct'
+                },
+                'iv': encryptedThumbnail.iv,
+                'hashes': {'sha256': encryptedThumbnail.sha256}
+              },
+            if (thumbnailImage != null)
+              'thumbnail_info': {
+                'h': thumbnailImage.height,
+                'mimetype': mimeType,
+                'size': thumbnailImage.length,
+                'w': thumbnailImage.width,
+              }
           }
     };
     final sendResponse = sendEvent(
@@ -1198,6 +1250,7 @@ class Room {
   /// Uploads a new user avatar for this room. Returns the event ID of the new
   /// m.room.avatar event.
   Future<String> setAvatar(MatrixFile file) async {
+    await file.resize(width: 256);
     final uploadResp = await client.upload(file);
     final setAvatarResp = await client.jsonRequest(
         type: HTTPType.PUT,
