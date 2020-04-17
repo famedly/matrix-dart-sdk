@@ -429,31 +429,50 @@ class Event {
     return;
   }
 
+  bool get hasThumbnail =>
+      content['info'] is Map<String, dynamic> &&
+      (content['info'].containsKey('thumbnail_url') ||
+          content['info'].containsKey('thumbnail_file'));
+
   /// Downloads (and decryptes if necessary) the attachment of this
   /// event and returns it as a [MatrixFile]. If this event doesn't
-  /// contain an attachment, this throws an error.
-  Future<MatrixFile> downloadAndDecryptAttachment() async {
+  /// contain an attachment, this throws an error. Set [getThumbnail] to
+  /// true to download the thumbnail instead.
+  Future<MatrixFile> downloadAndDecryptAttachment(
+      {bool getThumbnail = false}) async {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
       throw ("This event has the type '$typeKey' and so it can't contain an attachment.");
     }
-    if (!content.containsKey('url') && !content.containsKey('file')) {
+    if (!getThumbnail &&
+        !content.containsKey('url') &&
+        !content.containsKey('file')) {
       throw ("This event hasn't any attachment.");
     }
-    final isEncrypted = !content.containsKey('url');
+    if (getThumbnail && !hasThumbnail) {
+      throw ("This event hasn't any thumbnail.");
+    }
+    final isEncrypted = getThumbnail
+        ? !content['info'].containsKey('thumbnail_url')
+        : !content.containsKey('url');
 
     if (isEncrypted && !room.client.encryptionEnabled) {
       throw ('Encryption is not enabled in your Client.');
     }
-    var mxContent =
-        MxContent(isEncrypted ? content['file']['url'] : content['url']);
+    var mxContent = getThumbnail
+        ? MxContent(isEncrypted
+            ? content['info']['thumbnail_file']['url']
+            : content['info']['thumbnail_url'])
+        : MxContent(isEncrypted ? content['file']['url'] : content['url']);
 
     Uint8List uint8list;
 
     // Is this file storeable?
+    final infoMap =
+        getThumbnail ? content['info']['thumbnail_info'] : content['info'];
     final storeable = room.client.storeAPI.extended &&
-        content['info'] is Map<String, dynamic> &&
-        content['info']['size'] is int &&
-        content['info']['size'] <= ExtendedStoreAPI.MAX_FILE_SIZE;
+        infoMap is Map<String, dynamic> &&
+        infoMap['size'] is int &&
+        infoMap['size'] <= ExtendedStoreAPI.MAX_FILE_SIZE;
 
     if (storeable) {
       uint8list = await room.client.store.getFile(mxContent.mxc);
@@ -470,15 +489,16 @@ class Event {
 
     // Decrypt the file
     if (isEncrypted) {
-      if (!content.containsKey('file') ||
-          !content['file']['key']['key_ops'].contains('decrypt')) {
+      final fileMap =
+          getThumbnail ? content['info']['thumbnail_file'] : content['file'];
+      if (!fileMap['key']['key_ops'].contains('decrypt')) {
         throw ("Missing 'decrypt' in 'key_ops'.");
       }
       final encryptedFile = EncryptedFile();
       encryptedFile.data = uint8list;
-      encryptedFile.iv = content['file']['iv'];
-      encryptedFile.k = content['file']['key']['k'];
-      encryptedFile.sha256 = content['file']['hashes']['sha256'];
+      encryptedFile.iv = fileMap['iv'];
+      encryptedFile.k = fileMap['key']['k'];
+      encryptedFile.sha256 = fileMap['hashes']['sha256'];
       uint8list = await decryptFile(encryptedFile);
     }
     return MatrixFile(bytes: uint8list, path: '/$body');
