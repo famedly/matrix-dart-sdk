@@ -1668,6 +1668,7 @@ class Room {
     if (_outboundGroupSession == null) {
       await createOutboundGroupSession();
     }
+    final Map<String, dynamic> mRelatesTo = payload.remove('m.relates_to');
     final payloadContent = {
       'content': payload,
       'type': type,
@@ -1679,6 +1680,7 @@ class Room {
       'device_id': client.deviceID,
       'sender_key': client.identityKey,
       'session_id': _outboundGroupSession.session_id(),
+      if (mRelatesTo != null) 'm.relates_to': mRelatesTo,
     };
     await _storeOutboundGroupSession();
     return encryptedPayload;
@@ -1735,6 +1737,10 @@ class Room {
           'type': 'm.room.encrypted',
         };
       }
+    }
+    if (event.content['m.relates_to'] != null) {
+      decryptedPayload['content']['m.relates_to'] =
+          event.content['m.relates_to'];
     }
     return Event(
       content: decryptedPayload['content'],
