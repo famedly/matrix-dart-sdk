@@ -109,7 +109,7 @@ void main() {
       expect(room.mJoinedMemberCount, notificationCount);
       expect(room.mInvitedMemberCount, notificationCount);
       expect(room.mHeroes, heroes);
-      expect(room.displayname, 'alice, bob, charley');
+      expect(room.displayname, 'Alice, Bob, Charley');
       expect(room.getState('m.room.join_rules').content['join_rule'], 'public');
       expect(room.roomAccountData['com.test.foo'].content['foo'], 'bar');
 
