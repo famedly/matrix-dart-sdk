@@ -101,10 +101,27 @@ class User extends Event {
       : MxContent('');
 
   /// Returns the displayname or the local part of the Matrix ID if the user
-  /// has no displayname.
-  String calcDisplayname() => (displayName == null || displayName.isEmpty)
-      ? (stateKey != null ? stateKey.localpart : 'Unknown User')
-      : displayName;
+  /// has no displayname. If [formatLocalpart] is true, then the localpart will
+  /// be formatted in the way, that all "_" characters are becomming white spaces and
+  /// the first character of each word becomes uppercase.
+  String calcDisplayname({bool formatLocalpart = true}) {
+    if (displayName?.isNotEmpty ?? false) {
+      return displayName;
+    }
+    if (stateKey != null) {
+      if (!formatLocalpart) {
+        return stateKey.localpart;
+      }
+      var words = stateKey.localpart.replaceAll('_', ' ').split(' ');
+      for (var i = 0; i < words.length; i++) {
+        if (words[i].isNotEmpty) {
+          words[i] = words[i][0].toUpperCase() + words[i].substring(1);
+        }
+      }
+      return words.join(' ');
+    }
+    return 'Unknown User';
+  }
 
   /// Call the Matrix API to kick this user from this room.
   Future<void> kick() => room.kick(id);
