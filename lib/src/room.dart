@@ -503,10 +503,10 @@ class Room {
 
     if (msgType == 'm.image') {
       var thumbnailPathParts = file.path.split('/');
-      thumbnailPathParts.last = 'thumbnail_' + thumbnailPathParts.last;
+      thumbnailPathParts.last = 'thumbnail_' + thumbnailPathParts.last + '.jpg';
       final thumbnailPath = thumbnailPathParts.join('/');
       thumbnail = MatrixFile(bytes: file.bytes, path: thumbnailPath);
-      await thumbnail.resize(width: 512);
+      await thumbnail.resize(width: Client.defaultThumbnailSize);
       fileImage = decodeImage(file.bytes.toList());
       thumbnailImage = decodeImage(thumbnail.bytes.toList());
     }
@@ -1250,7 +1250,7 @@ class Room {
   /// Uploads a new user avatar for this room. Returns the event ID of the new
   /// m.room.avatar event.
   Future<String> setAvatar(MatrixFile file) async {
-    await file.resize(width: 256);
+    await file.resize(width: Client.defaultThumbnailSize);
     final uploadResp = await client.upload(file);
     final setAvatarResp = await client.jsonRequest(
         type: HTTPType.PUT,
