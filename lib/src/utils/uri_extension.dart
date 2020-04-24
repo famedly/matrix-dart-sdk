@@ -24,32 +24,25 @@
 import 'package:famedlysdk/src/client.dart';
 import 'dart:core';
 
-/// A file in Matrix presented by a mxc:// uri scheme.
-class MxContent {
-  final String _mxc;
-
-  /// Insert a mxc:// uri here.
-  MxContent(String mxcUrl) : _mxc = mxcUrl ?? '';
-
-  /// Returns the mxc uri.
-  String get mxc => _mxc;
-
+extension MxcUriExtension on Uri {
   /// Returns a download Link to this content.
-  String getDownloadLink(Client matrix) => matrix.homeserver != null
-      ? "${matrix.homeserver}/_matrix/media/r0/download/${_mxc.replaceFirst("mxc://", "")}"
-      : '';
+  String getDownloadLink(Client matrix) => isScheme('mxc')
+      ? matrix.homeserver != null
+          ? '${matrix.homeserver}/_matrix/media/r0/download/$host$path'
+          : ''
+      : toString();
 
   /// Returns a scaled thumbnail link to this content with the given [width] and
   /// [height]. [method] can be [ThumbnailMethod.crop] or
   /// [ThumbnailMethod.scale] and defaults to [ThumbnailMethod.scale].
   String getThumbnail(Client matrix,
-      {num width, num height, ThumbnailMethod method}) {
-    var methodStr = 'crop';
-    if (method == ThumbnailMethod.scale) methodStr = 'scale';
+      {num width, num height, ThumbnailMethod method = ThumbnailMethod.crop}) {
+    if (!isScheme('mxc')) return toString();
+    final methodStr = method.toString().split('.').last;
     width = width.round();
     height = height.round();
     return matrix.homeserver != null
-        ? "${matrix.homeserver}/_matrix/media/r0/thumbnail/${_mxc.replaceFirst("mxc://", "")}?width=$width&height=$height&method=$methodStr"
+        ? '${matrix.homeserver}/_matrix/media/r0/thumbnail/$host$path?width=$width&height=$height&method=$methodStr'
         : '';
   }
 }

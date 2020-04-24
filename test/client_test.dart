@@ -470,9 +470,9 @@ void main() {
 
     test('getProfileFromUserId', () async {
       final profile = await matrix.getProfileFromUserId('@getme:example.com');
-      expect(profile.avatarUrl.mxc, 'mxc://test');
+      expect(profile.avatarUrl.toString(), 'mxc://test');
       expect(profile.displayname, 'You got me');
-      expect(profile.content['avatar_url'], profile.avatarUrl.mxc);
+      expect(profile.content['avatar_url'], profile.avatarUrl.toString());
       expect(profile.content['displayname'], profile.displayname);
     });
 

@@ -23,7 +23,7 @@
 
 import 'package:test/test.dart';
 import 'package:famedlysdk/src/client.dart';
-import 'package:famedlysdk/src/utils/mx_content.dart';
+import 'package:famedlysdk/src/utils/uri_extension.dart';
 
 import 'fake_matrix_api.dart';
 
@@ -35,7 +35,8 @@ void main() {
       client.httpClient = FakeMatrixApi();
       await client.checkServer('https://fakeserver.notexisting');
       final mxc = 'mxc://exampleserver.abc/abcdefghijklmn';
-      final content = MxContent(mxc);
+      final content = Uri.parse(mxc);
+      expect(content.isScheme('mxc'), true);
 
       expect(content.getDownloadLink(client),
           '${client.homeserver}/_matrix/media/r0/download/exampleserver.abc/abcdefghijklmn');
@@ -45,14 +46,6 @@ void main() {
           content.getThumbnail(client,
               width: 50, height: 50, method: ThumbnailMethod.scale),
           '${client.homeserver}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale');
-    });
-    test('Not crashing if null', () async {
-      var client = Client('testclient');
-      client.httpClient = FakeMatrixApi();
-      await client.checkServer('https://fakeserver.notexisting');
-      final content = MxContent(null);
-      expect(content.getDownloadLink(client),
-          '${client.homeserver}/_matrix/media/r0/download/');
     });
   });
 }

@@ -32,7 +32,6 @@ import 'package:famedlysdk/src/sync/event_update.dart';
 import 'package:famedlysdk/src/sync/room_update.dart';
 import 'package:famedlysdk/src/utils/matrix_exception.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
-import 'package:famedlysdk/src/utils/mx_content.dart';
 import 'package:famedlysdk/src/utils/session_key.dart';
 import 'package:image/image.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
@@ -286,9 +285,10 @@ class Room {
       : '';
 
   /// The avatar of the room if set by a participant.
-  MxContent get avatar {
-    if (states['m.room.avatar'] != null) {
-      return MxContent(states['m.room.avatar'].content['url']);
+  Uri get avatar {
+    if (states['m.room.avatar'] != null &&
+        states['m.room.avatar'].content['url'] != null) {
+      return Uri.parse(states['m.room.avatar'].content['url']);
     }
     if (mHeroes != null && mHeroes.length == 1 && states[mHeroes[0]] != null) {
       return states[mHeroes[0]].asUser.avatarUrl;
@@ -297,7 +297,7 @@ class Room {
         getState('m.room.member', client.userID) != null) {
       return getState('m.room.member', client.userID).sender.avatarUrl;
     }
-    return MxContent('');
+    return null;
   }
 
   /// The address in the format: #roomname:homeserver.org.

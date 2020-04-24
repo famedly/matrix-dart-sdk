@@ -30,7 +30,7 @@ void main() {
     test('fromJson', () async {
       var rawPresence = <String, dynamic>{
         'content': {
-          'avatar_url': 'mxc://localhost:wefuiwegh8742w',
+          'avatar_url': 'mxc://example.org/wefuiwegh8742w',
           'currently_active': false,
           'last_active_ago': 2478593,
           'presence': 'online',
@@ -41,7 +41,7 @@ void main() {
       };
       var presence = Presence.fromJson(rawPresence);
       expect(presence.sender, '@example:localhost');
-      expect(presence.avatarUrl.mxc, 'mxc://localhost:wefuiwegh8742w');
+      expect(presence.avatarUrl.toString(), 'mxc://example.org/wefuiwegh8742w');
       expect(presence.currentlyActive, false);
       expect(presence.lastActiveAgo, 2478593);
       expect(presence.presence, PresenceType.online);

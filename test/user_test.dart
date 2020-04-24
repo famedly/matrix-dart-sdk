@@ -54,7 +54,7 @@ void main() {
       expect(user.id, id);
       expect(user.membership, membership);
       expect(user.displayName, displayName);
-      expect(user.avatarUrl.mxc, avatarUrl);
+      expect(user.avatarUrl.toString(), avatarUrl);
       expect(user.calcDisplayname(), displayName);
     });
 
