@@ -21,8 +21,6 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/famedlysdk.dart';
-
 enum PresenceType { online, offline, unavailable }
 
 /// Informs the client of a user's presence state change.
@@ -34,7 +32,7 @@ class Presence {
   final String displayname;
 
   /// The current avatar URL for this user, if any.
-  final MxContent avatarUrl;
+  final Uri avatarUrl;
   final bool currentlyActive;
   final int lastActiveAgo;
   final PresenceType presence;
@@ -44,7 +42,9 @@ class Presence {
   Presence.fromJson(Map<String, dynamic> json)
       : sender = json['sender'],
         displayname = json['content']['displayname'],
-        avatarUrl = MxContent(json['content']['avatar_url'] ?? ''),
+        avatarUrl = json['content']['avatar_url'] != null
+            ? Uri.parse(json['content']['avatar_url'])
+            : null,
         currentlyActive = json['content']['currently_active'],
         lastActiveAgo = json['content']['last_active_ago'],
         time = DateTime.fromMillisecondsSinceEpoch(

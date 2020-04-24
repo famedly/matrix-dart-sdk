@@ -145,7 +145,7 @@ void main() {
           stateKey: '');
       expect(room.topic, 'testtopic');
 
-      expect(room.avatar.mxc, '');
+      expect(room.avatar, null);
       room.states['m.room.avatar'] = Event(
           senderId: '@test:example.com',
           typeKey: 'm.room.avatar',
@@ -154,7 +154,7 @@ void main() {
           eventId: '123',
           content: {'url': 'mxc://testurl'},
           stateKey: '');
-      expect(room.avatar.mxc, 'mxc://testurl');
+      expect(room.avatar.toString(), 'mxc://testurl');
       room.states['m.room.message'] = Event(
           senderId: '@test:example.com',
           typeKey: 'm.room.message',
@@ -180,7 +180,7 @@ void main() {
       expect(user.id, '@alice:example.org');
       expect(user.displayName, 'Alice Margatroid');
       expect(user.membership, Membership.join);
-      expect(user.avatarUrl.mxc, 'mxc://example.org/SEsfnsuifSDFSSEF');
+      expect(user.avatarUrl.toString(), 'mxc://example.org/SEsfnsuifSDFSSEF');
       expect(user.room.id, '!localpart:server.abc');
     });
 

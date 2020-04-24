@@ -146,7 +146,7 @@ class Timeline {
               ?.getUser(matrixID: eventUpdate.content['sender'], room: room);
           if (senderUser != null) {
             eventUpdate.content['displayname'] = senderUser.displayName;
-            eventUpdate.content['avatar_url'] = senderUser.avatarUrl.mxc;
+            eventUpdate.content['avatar_url'] = senderUser.avatarUrl.toString();
           }
 
           newEvent = Event.fromJson(eventUpdate.content, room);

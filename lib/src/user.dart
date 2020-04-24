@@ -24,7 +24,6 @@
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/room.dart';
 import 'package:famedlysdk/src/event.dart';
-import 'package:famedlysdk/src/utils/mx_content.dart';
 
 enum Membership { join, invite, leave, ban }
 
@@ -96,9 +95,9 @@ class User extends Event {
       }, orElse: () => Membership.join);
 
   /// The avatar if the user has one.
-  MxContent get avatarUrl => content != null && content['avatar_url'] is String
-      ? MxContent(content['avatar_url'])
-      : MxContent('');
+  Uri get avatarUrl => content != null && content['avatar_url'] is String
+      ? Uri.parse(content['avatar_url'])
+      : null;
 
   /// Returns the displayname or the local part of the Matrix ID if the user
   /// has no displayname. If [formatLocalpart] is true, then the localpart will

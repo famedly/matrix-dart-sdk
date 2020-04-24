@@ -459,10 +459,10 @@ class Event {
       throw ('Encryption is not enabled in your Client.');
     }
     var mxContent = getThumbnail
-        ? MxContent(isEncrypted
+        ? Uri.parse(isEncrypted
             ? content['info']['thumbnail_file']['url']
             : content['info']['thumbnail_url'])
-        : MxContent(isEncrypted ? content['file']['url'] : content['url']);
+        : Uri.parse(isEncrypted ? content['file']['url'] : content['url']);
 
     Uint8List uint8list;
 
@@ -475,7 +475,7 @@ class Event {
         infoMap['size'] <= ExtendedStoreAPI.MAX_FILE_SIZE;
 
     if (storeable) {
-      uint8list = await room.client.store.getFile(mxContent.mxc);
+      uint8list = await room.client.store.getFile(mxContent.toString());
     }
 
     // Download the file
@@ -483,7 +483,7 @@ class Event {
       uint8list =
           (await http.get(mxContent.getDownloadLink(room.client))).bodyBytes;
       if (storeable) {
-        await room.client.store.storeFile(uint8list, mxContent.mxc);
+        await room.client.store.storeFile(uint8list, mxContent.toString());
       }
     }
 
