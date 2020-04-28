@@ -472,7 +472,7 @@ class Event {
     final storeable = room.client.storeAPI.extended &&
         infoMap is Map<String, dynamic> &&
         infoMap['size'] is int &&
-        infoMap['size'] <= ExtendedStoreAPI.MAX_FILE_SIZE;
+        infoMap['size'] <= room.client.store.maxFileSize;
 
     if (storeable) {
       uint8list = await room.client.store.getFile(mxContent.toString());
