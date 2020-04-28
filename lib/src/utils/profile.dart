@@ -10,7 +10,7 @@ class Profile {
   final Map<String, dynamic> content;
 
   Profile.fromJson(Map<String, dynamic> json)
-      : avatarUrl = Uri.parse(json['avatar_url']),
+      : avatarUrl = json['avatar_url'] != null ? Uri.parse(json['avatar_url']) : null,
         displayname = json['displayname'],
         content = json;
 
