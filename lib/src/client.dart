@@ -1931,4 +1931,49 @@ class Client {
     );
     return;
   }
+
+  /// Changes the password. You should either set oldPasswort or another authentication flow.
+  Future<void> changePassword(String newPassword,
+      {String oldPassword, Map<String, dynamic> auth}) async {
+    try {
+      await jsonRequest(
+        type: HTTPType.POST,
+        action: '/client/r0/account/password',
+        data: {
+          'new_password': newPassword,
+          if (oldPassword != null)
+            'auth': {
+              'type': 'm.login.password',
+              'user': userID,
+              'password': oldPassword,
+            },
+          if (auth != null) 'auth': auth,
+        },
+      );
+    } on MatrixException catch (matrixException) {
+      if (!matrixException.requireAdditionalAuthentication) {
+        rethrow;
+      }
+      if (matrixException.authenticationFlows.length != 1 ||
+          !matrixException.authenticationFlows.first.stages
+              .contains('m.login.password')) {
+        rethrow;
+      }
+      if (oldPassword == null) {
+        rethrow;
+      }
+      return changePassword(
+        newPassword,
+        auth: {
+          'type': 'm.login.password',
+          'user': userID,
+          'identifier': {'type': 'm.id.user', 'user': userID},
+          'password': oldPassword,
+          'session': matrixException.session,
+        },
+      );
+    } catch (_) {
+      rethrow;
+    }
+  }
 }
