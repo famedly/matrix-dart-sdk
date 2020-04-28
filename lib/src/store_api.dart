@@ -62,7 +62,7 @@ abstract class StoreAPI {
 /// database.
 abstract class ExtendedStoreAPI extends StoreAPI {
   /// The maximum size of files which should be stored in bytes.
-  static const int MAX_FILE_SIZE = 10 * 1024 * 1024;
+  int get maxFileSize => 1 * 1024 * 1024;
 
   /// Whether this is a simple store which only stores the client credentials and
   /// end to end encryption stuff or the whole sync payloads.
