@@ -21,11 +21,12 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'package:http/testing.dart';
 import 'dart:convert';
 import 'dart:core';
 import 'dart:math';
+
 import 'package:http/http.dart';
+import 'package:http/testing.dart';
 
 class FakeMatrixApi extends MockClient {
   FakeMatrixApi()
@@ -583,9 +584,9 @@ class FakeMatrixApi extends MockClient {
             'origin_server_ts': 1432735824653,
             'unsigned': {'age': 1234}
           },
-      '/client/r0/rooms/!localpart:server.abc/messages?from=&dir=b&limit=10&filter=%7B%22room%22:%7B%22state%22:%7B%22lazy_load_members%22:true%7D%7D%7D':
+      '/client/r0/rooms/!localpart:server.abc/messages?from=&dir=b&limit=10&filter=%7B%22lazy_load_members%22:true%7D':
           (var req) => messagesResponse,
-      '/client/r0/rooms/!1234:example.com/messages?from=1234&dir=b&limit=100&filter=%7B%22room%22:%7B%22state%22:%7B%22lazy_load_members%22:true%7D%7D%7D':
+      '/client/r0/rooms/!1234:example.com/messages?from=1234&dir=b&limit=100&filter=%7B%22lazy_load_members%22:true%7D':
           (var req) => messagesResponse,
       '/client/versions': (var req) => {
             'versions': [
