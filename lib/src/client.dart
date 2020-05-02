@@ -22,12 +22,14 @@
  */
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:core';
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/account_data.dart';
 import 'package:famedlysdk/src/presence.dart';
+import 'package:famedlysdk/src/room.dart';
 import 'package:famedlysdk/src/store_api.dart';
 import 'package:famedlysdk/src/sync/user_update.dart';
 import 'package:famedlysdk/src/utils/device_keys_list.dart';
@@ -39,20 +41,19 @@ import 'package:famedlysdk/src/utils/session_key.dart';
 import 'package:famedlysdk/src/utils/to_device_event.dart';
 import 'package:famedlysdk/src/utils/turn_server_credentials.dart';
 import 'package:famedlysdk/src/utils/user_device.dart';
-import 'package:olm/olm.dart' as olm;
-import 'package:pedantic/pedantic.dart';
-import 'room.dart';
-import 'event.dart';
-import 'user.dart';
-import 'utils/profile.dart';
-import 'dart:convert';
-import 'package:famedlysdk/src/room.dart';
 import 'package:http/http.dart' as http;
 import 'package:mime_type/mime_type.dart';
+import 'package:olm/olm.dart' as olm;
+import 'package:pedantic/pedantic.dart';
+
+import 'event.dart';
+import 'room.dart';
 import 'sync/event_update.dart';
 import 'sync/room_update.dart';
 import 'sync/user_update.dart';
+import 'user.dart';
 import 'utils/matrix_exception.dart';
+import 'utils/profile.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -551,6 +552,7 @@ class Client {
   }
 
   static String syncFilters = '{"room":{"state":{"lazy_load_members":true}}}';
+  static String messagesFilters = '{"lazy_load_members":true}';
   static const List<String> supportedDirectEncryptionAlgorithms = [
     'm.olm.v1.curve25519-aes-sha2'
   ];

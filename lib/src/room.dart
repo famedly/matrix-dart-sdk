@@ -853,7 +853,7 @@ class Room {
     final dynamic resp = await client.jsonRequest(
         type: HTTPType.GET,
         action:
-            '/client/r0/rooms/$id/messages?from=${prev_batch}&dir=b&limit=$historyCount&filter=${Client.syncFilters}');
+            '/client/r0/rooms/$id/messages?from=${prev_batch}&dir=b&limit=$historyCount&filter=${Client.messagesFilters}');
 
     if (onHistoryReceived != null) onHistoryReceived();
     prev_batch = resp['end'];
