@@ -478,7 +478,9 @@ class Room {
     Event inReplyTo,
     Map<String, dynamic> info,
     bool waitUntilSent = false,
-    int thumbnailSize = Client.defaultThumbnailSize,
+    int thumbnailMaxWidth = 800,
+    int thumbnailMaxHeight = 600,
+    int thumbnailQuality = 50,
   }) async {
     Image fileImage;
     Image thumbnailImage;
@@ -507,7 +509,11 @@ class Room {
       thumbnailPathParts.last = 'thumbnail_' + thumbnailPathParts.last + '.jpg';
       final thumbnailPath = thumbnailPathParts.join('/');
       thumbnail = MatrixFile(bytes: file.bytes, path: thumbnailPath);
-      await thumbnail.resize(width: thumbnailSize);
+      await thumbnail.resize(
+        width: thumbnailMaxWidth,
+        height: thumbnailMaxHeight,
+        quality: thumbnailQuality,
+      );
       fileImage = decodeImage(file.bytes.toList());
       thumbnailImage = decodeImage(thumbnail.bytes.toList());
     }
