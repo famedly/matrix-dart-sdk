@@ -478,13 +478,10 @@ class Room {
     Event inReplyTo,
     Map<String, dynamic> info,
     bool waitUntilSent = false,
-    int thumbnailMaxWidth = 800,
-    int thumbnailMaxHeight = 600,
-    int thumbnailQuality = 50,
+    MatrixFile thumbnail,
   }) async {
     Image fileImage;
     Image thumbnailImage;
-    MatrixFile thumbnail;
     EncryptedFile encryptedThumbnail;
     String thumbnailUploadResp;
 
@@ -505,17 +502,10 @@ class Room {
     }
 
     if (msgType == 'm.image') {
-      var thumbnailPathParts = file.path.split('/');
-      thumbnailPathParts.last = 'thumbnail_' + thumbnailPathParts.last + '.jpg';
-      final thumbnailPath = thumbnailPathParts.join('/');
-      thumbnail = MatrixFile(bytes: file.bytes, path: thumbnailPath);
-      await thumbnail.resize(
-        width: thumbnailMaxWidth,
-        height: thumbnailMaxHeight,
-        quality: thumbnailQuality,
-      );
       fileImage = decodeImage(file.bytes.toList());
-      thumbnailImage = decodeImage(thumbnail.bytes.toList());
+      if (thumbnail != null) {
+        thumbnailImage = decodeImage(thumbnail.bytes.toList());
+      }
     }
 
     final sendEncrypted = encrypted && client.fileEncryptionEnabled;
@@ -1257,7 +1247,6 @@ class Room {
   /// Uploads a new user avatar for this room. Returns the event ID of the new
   /// m.room.avatar event.
   Future<String> setAvatar(MatrixFile file) async {
-    await file.resize(width: Client.defaultThumbnailSize);
     final uploadResp = await client.upload(file);
     final setAvatarResp = await client.jsonRequest(
         type: HTTPType.PUT,
