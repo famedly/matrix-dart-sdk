@@ -480,7 +480,7 @@ class Room {
     bool waitUntilSent = false,
     int thumbnailMaxWidth = 800,
     int thumbnailMaxHeight = 600,
-    int thumbnailQuality = 10,
+    int thumbnailQuality = 50,
   }) async {
     Image fileImage;
     Image thumbnailImage;
