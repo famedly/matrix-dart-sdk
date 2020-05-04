@@ -21,7 +21,7 @@ dependencies:
   matrix_file_e2ee:
     git:
       url: https://gitlab.com/famedly/libraries/matrix_file_e2ee.git
-      #ref: 1.x.y
+      ref: 1.x.y
 
 dev_dependencies:
   test: ^1.0.0
