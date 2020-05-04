@@ -489,7 +489,6 @@ class Client {
 
   /// Uploads a new user avatar for this user.
   Future<void> setAvatar(MatrixFile file) async {
-    await file.resize(width: Client.defaultThumbnailSize);
     final uploadResp = await upload(file);
     await jsonRequest(
         type: HTTPType.PUT,
