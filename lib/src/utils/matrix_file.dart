@@ -13,7 +13,11 @@ class MatrixFile {
   /// given width and height. Otherwise returns false.
   /// At least width or height must be set!
   /// The bytes will be encoded as jpg.
-  Future<bool> resize({int width, int height}) async {
+  Future<bool> resize({
+    int width,
+    int height,
+    int quality = 50,
+  }) async {
     if (width == null && height == null) {
       throw ('At least width or height must be set!');
     }
@@ -24,7 +28,7 @@ class MatrixFile {
       return false;
     }
     final resizedImage = copyResize(image, width: width, height: height);
-    bytes = encodeJpg(resizedImage, quality: 10);
+    bytes = encodeJpg(resizedImage, quality: quality);
     return true;
   }
 
