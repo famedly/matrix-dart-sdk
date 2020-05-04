@@ -752,6 +752,7 @@ class Client {
     storeAPI?.clear();
     _accessToken = _homeserver =
         _userID = _deviceID = _deviceName = _matrixVersions = prevBatch = null;
+    _rooms = [];
     onLoginStateChanged.add(LoginState.loggedOut);
   }
 
