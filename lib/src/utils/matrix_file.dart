@@ -27,7 +27,13 @@ class MatrixFile {
     } catch (_) {
       return false;
     }
-    final resizedImage = copyResize(image, width: width, height: height);
+    var resizedImage = image;
+    if (image.width > width) {
+      resizedImage = copyResize(image, width: width);
+    }
+    if (image.height > height) {
+      resizedImage = copyResize(image, height: height);
+    }
     bytes = encodeJpg(resizedImage, quality: quality);
     return true;
   }
