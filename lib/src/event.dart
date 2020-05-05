@@ -469,7 +469,7 @@ class Event {
     // Is this file storeable?
     final infoMap =
         getThumbnail ? content['info']['thumbnail_info'] : content['info'];
-    final storeable = room.client.storeAPI.extended &&
+    final storeable = (room.client.storeAPI?.extended ?? false) &&
         infoMap is Map<String, dynamic> &&
         infoMap['size'] is int &&
         infoMap['size'] <= room.client.store.maxFileSize;
