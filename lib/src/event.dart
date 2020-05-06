@@ -28,6 +28,7 @@ import 'package:famedlysdk/src/utils/receipt.dart';
 import 'package:http/http.dart' as http;
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 import './room.dart';
+import 'utils/matrix_localizations.dart';
 
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
 class Event {
@@ -503,6 +504,236 @@ class Event {
     }
     return MatrixFile(bytes: uint8list, path: '/$body');
   }
+
+  /// Returns a localized String representation of this event. For a
+  /// room list you may find [withSenderNamePrefix] useful. Set [hideReply] to
+  /// crop all lines starting with '>'.
+  String getLocalizedBody(MatrixLocalizations i18n,
+      {bool withSenderNamePrefix = false, bool hideReply = false}) {
+    if (redacted) {
+      return i18n.removedBy(redactedBecause.sender.calcDisplayname());
+    }
+    var localizedBody = body;
+    final senderName = sender.calcDisplayname();
+    switch (type) {
+      case EventTypes.Sticker:
+        localizedBody = i18n.sentASticker(senderName);
+        break;
+      case EventTypes.Redaction:
+        localizedBody = i18n.redactedAnEvent(senderName);
+        break;
+      case EventTypes.RoomAliases:
+        localizedBody = i18n.changedTheRoomAliases(senderName);
+        break;
+      case EventTypes.RoomCanonicalAlias:
+        localizedBody = i18n.changedTheRoomInvitationLink(senderName);
+        break;
+      case EventTypes.RoomCreate:
+        localizedBody = i18n.createdTheChat(senderName);
+        break;
+      case EventTypes.RoomJoinRules:
+        var joinRules = JoinRules.values.firstWhere(
+            (r) =>
+                r.toString().replaceAll('JoinRules.', '') ==
+                content['join_rule'],
+            orElse: () => null);
+        if (joinRules == null) {
+          localizedBody = i18n.changedTheJoinRules(senderName);
+        } else {
+          localizedBody = i18n.changedTheJoinRulesTo(
+              senderName, joinRules.getLocalizedString(i18n));
+        }
+        break;
+      case EventTypes.RoomMember:
+        var text = 'Failed to parse member event';
+        final targetName = stateKeyUser.calcDisplayname();
+        // Has the membership changed?
+        final newMembership = content['membership'] ?? '';
+        final oldMembership = unsigned['prev_content'] is Map<String, dynamic>
+            ? unsigned['prev_content']['membership'] ?? ''
+            : '';
+        if (newMembership != oldMembership) {
+          if (oldMembership == 'invite' && newMembership == 'join') {
+            text = i18n.acceptedTheInvitation(targetName);
+          } else if (oldMembership == 'invite' && newMembership == 'leave') {
+            if (stateKey == senderId) {
+              text = i18n.rejectedTheInvitation(targetName);
+            } else {
+              text = i18n.hasWithdrawnTheInvitationFor(senderName, targetName);
+            }
+          } else if (oldMembership == 'leave' && newMembership == 'join') {
+            text = i18n.joinedTheChat(targetName);
+          } else if (oldMembership == 'join' && newMembership == 'ban') {
+            text = i18n.kickedAndBanned(senderName, targetName);
+          } else if (oldMembership == 'join' &&
+              newMembership == 'leave' &&
+              stateKey != senderId) {
+            text = i18n.kicked(senderName, targetName);
+          } else if (oldMembership == 'join' &&
+              newMembership == 'leave' &&
+              stateKey == senderId) {
+            text = i18n.userLeftTheChat(targetName);
+          } else if (oldMembership == 'invite' && newMembership == 'ban') {
+            text = i18n.bannedUser(senderName, targetName);
+          } else if (oldMembership == 'leave' && newMembership == 'ban') {
+            text = i18n.bannedUser(senderName, targetName);
+          } else if (oldMembership == 'ban' && newMembership == 'leave') {
+            text = i18n.unbannedUser(senderName, targetName);
+          } else if (newMembership == 'invite') {
+            text = i18n.invitedUser(senderName, targetName);
+          } else if (newMembership == 'join') {
+            text = i18n.joinedTheChat(targetName);
+          }
+        } else if (newMembership == 'join') {
+          final newAvatar = content['avatar_url'] ?? '';
+          final oldAvatar = unsigned['prev_content'] is Map<String, dynamic>
+              ? unsigned['prev_content']['avatar_url'] ?? ''
+              : '';
+
+          final newDisplayname = content['displayname'] ?? '';
+          final oldDisplayname =
+              unsigned['prev_content'] is Map<String, dynamic>
+                  ? unsigned['prev_content']['displayname'] ?? ''
+                  : '';
+
+          // Has the user avatar changed?
+          if (newAvatar != oldAvatar) {
+            text = i18n.changedTheProfileAvatar(targetName);
+          }
+          // Has the user avatar changed?
+          else if (newDisplayname != oldDisplayname) {
+            text = i18n.changedTheDisplaynameTo(targetName, newDisplayname);
+          }
+        }
+        localizedBody = text;
+        break;
+      case EventTypes.RoomPowerLevels:
+        localizedBody = i18n.changedTheChatPermissions(senderName);
+        break;
+      case EventTypes.RoomName:
+        localizedBody = i18n.changedTheChatNameTo(senderName, content['name']);
+        break;
+      case EventTypes.RoomTopic:
+        localizedBody =
+            i18n.changedTheChatDescriptionTo(senderName, content['topic']);
+        break;
+      case EventTypes.RoomAvatar:
+        localizedBody = i18n.changedTheChatAvatar(senderName);
+        break;
+      case EventTypes.GuestAccess:
+        var guestAccess = GuestAccess.values.firstWhere(
+            (r) =>
+                r.toString().replaceAll('GuestAccess.', '') ==
+                content['guest_access'],
+            orElse: () => null);
+        if (guestAccess == null) {
+          localizedBody = i18n.changedTheGuestAccessRules(senderName);
+        } else {
+          localizedBody = i18n.changedTheGuestAccessRulesTo(
+              senderName, guestAccess.getLocalizedString(i18n));
+        }
+        break;
+      case EventTypes.HistoryVisibility:
+        var historyVisibility = HistoryVisibility.values.firstWhere(
+            (r) =>
+                r.toString().replaceAll('HistoryVisibility.', '') ==
+                content['history_visibility'],
+            orElse: () => null);
+        if (historyVisibility == null) {
+          localizedBody = i18n.changedTheHistoryVisibility(senderName);
+        } else {
+          localizedBody = i18n.changedTheHistoryVisibilityTo(
+              senderName, historyVisibility.getLocalizedString(i18n));
+        }
+        break;
+      case EventTypes.Encryption:
+        localizedBody = i18n.activatedEndToEndEncryption(senderName);
+        if (!room.client.encryptionEnabled) {
+          localizedBody += '. ' + i18n.needPantalaimonWarning;
+        }
+        break;
+      case EventTypes.Encrypted:
+      case EventTypes.Message:
+        switch (messageType) {
+          case MessageTypes.Image:
+            localizedBody = i18n.sentAPicture(senderName);
+            break;
+          case MessageTypes.File:
+            localizedBody = i18n.sentAFile(senderName);
+            break;
+          case MessageTypes.Audio:
+            localizedBody = i18n.sentAnAudio(senderName);
+            break;
+          case MessageTypes.Video:
+            localizedBody = i18n.sentAVideo(senderName);
+            break;
+          case MessageTypes.Location:
+            localizedBody = i18n.sharedTheLocation(senderName);
+            break;
+          case MessageTypes.Sticker:
+            localizedBody = i18n.sentASticker(senderName);
+            break;
+          case MessageTypes.Emote:
+            localizedBody = '* $body';
+            break;
+          case MessageTypes.BadEncrypted:
+            String errorText;
+            switch (body) {
+              case DecryptError.CHANNEL_CORRUPTED:
+                errorText = i18n.channelCorruptedDecryptError + '.';
+                break;
+              case DecryptError.NOT_ENABLED:
+                errorText = i18n.encryptionNotEnabled + '.';
+                break;
+              case DecryptError.UNKNOWN_ALGORITHM:
+                errorText = i18n.unknownEncryptionAlgorithm + '.';
+                break;
+              case DecryptError.UNKNOWN_SESSION:
+                errorText = i18n.noPermission + '.';
+                break;
+              default:
+                errorText = body;
+                break;
+            }
+            localizedBody = i18n.couldNotDecryptMessage(errorText);
+            break;
+          case MessageTypes.Text:
+          case MessageTypes.Notice:
+          case MessageTypes.None:
+          case MessageTypes.Reply:
+            localizedBody = body;
+            break;
+        }
+        break;
+      default:
+        localizedBody = i18n.unknownEvent(typeKey);
+    }
+
+    // Hide reply fallback
+    if (hideReply) {
+      localizedBody = localizedBody.replaceFirst(
+          RegExp(r'^>( \*)? <[^>]+>[^\n\r]+\r?\n(> [^\n]*\r?\n)*\r?\n'), '');
+    }
+
+    // Add the sender name prefix
+    if (withSenderNamePrefix &&
+        type == EventTypes.Message &&
+        textOnlyMessageTypes.contains(messageType)) {
+      final senderNameOrYou =
+          senderId == room.client.userID ? i18n.you : senderName;
+      localizedBody = '$senderNameOrYou: $localizedBody';
+    }
+
+    return localizedBody;
+  }
+
+  static const Set<MessageTypes> textOnlyMessageTypes = {
+    MessageTypes.Text,
+    MessageTypes.Reply,
+    MessageTypes.Notice,
+    MessageTypes.Emote,
+    MessageTypes.None,
+  };
 }
 
 enum MessageTypes {

@@ -40,6 +40,7 @@ import 'package:olm/olm.dart' as olm;
 
 import './user.dart';
 import 'timeline.dart';
+import 'utils/matrix_localizations.dart';
 import 'utils/states_map.dart';
 
 enum PushRuleState { notify, mentions_only, dont_notify }
@@ -278,6 +279,27 @@ class Room {
   String get name => states['m.room.name'] != null
       ? states['m.room.name'].content['name']
       : '';
+
+  /// Returns a localized displayname for this server. If the room is a groupchat
+  /// without a name, then it will return the localized version of 'Group with Alice' instead
+  /// of just 'Alice' to make it different to a direct chat.
+  /// Empty chats will become the localized version of 'Empty Chat'.
+  /// This method requires a localization class which implements [MatrixLocalizations]
+  String getLocalizedDisplayname(MatrixLocalizations i18n) {
+    if ((name?.isEmpty ?? true) &&
+        (canonicalAlias?.isEmpty ?? true) &&
+        !isDirectChat &&
+        (mHeroes != null && mHeroes.isNotEmpty)) {
+      return i18n.groupWith(displayname);
+    }
+    if ((name?.isEmpty ?? true) &&
+        (canonicalAlias?.isEmpty ?? true) &&
+        !isDirectChat &&
+        (mHeroes?.isEmpty ?? true)) {
+      return i18n.emptyChat;
+    }
+    return displayname;
+  }
 
   /// The topic of the room if set by a participant.
   String get topic => states['m.room.topic'] != null

@@ -14,10 +14,10 @@ coverage:
   script:
     - apt update
     - apt install -y curl gnupg2 git
-    - curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
-    - curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list
+    - curl https://storage.googleapis.com/dart-archive/channels/stable/release/2.7.2/linux_packages/dart_2.7.2-1_amd64.deb > dart.deb
+    - apt install -y ./dart.deb
     - apt update
-    - apt install -y dart chromium lcov libolm3
+    - apt install -y chromium lcov libolm3
     - ln -s /usr/lib/dart/bin/pub /usr/bin/
     - useradd -m test
     - chown -R 'test:' '.'
