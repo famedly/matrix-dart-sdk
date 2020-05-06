@@ -31,6 +31,7 @@ export 'package:famedlysdk/src/utils/matrix_exception.dart';
 export 'package:famedlysdk/src/utils/matrix_file.dart';
 export 'package:famedlysdk/src/utils/matrix_id_string_extension.dart';
 export 'package:famedlysdk/src/utils/uri_extension.dart';
+export 'package:famedlysdk/src/utils/matrix_localizations.dart';
 export 'package:famedlysdk/src/utils/open_id_credentials.dart';
 export 'package:famedlysdk/src/utils/profile.dart';
 export 'package:famedlysdk/src/utils/public_rooms_response.dart';
