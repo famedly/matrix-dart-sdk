@@ -156,30 +156,19 @@ class Timeline {
                       (e) => e.eventId == eventUpdate.content['event_id']) !=
                   -1) return;
 
-          events.insert(0, newEvent);
+          if (eventUpdate.type == 'history') {
+            events.add(newEvent);
+          } else {
+            events.insert(0, newEvent);
+          }
           if (onInsert != null) onInsert(0);
         }
       }
-      sortAndUpdate();
+      if (onUpdate != null) onUpdate();
     } catch (e) {
       if (room.client.debug) {
         print('[WARNING] (_handleEventUpdate) ${e.toString()}');
       }
     }
-  }
-
-  bool sortLock = false;
-
-  void sort() {
-    if (sortLock || events.length < 2) return;
-    sortLock = true;
-    events?.sort((a, b) =>
-        b.time.millisecondsSinceEpoch.compareTo(a.time.millisecondsSinceEpoch));
-    sortLock = false;
-  }
-
-  void sortAndUpdate() async {
-    sort();
-    if (onUpdate != null) onUpdate();
   }
 }
