@@ -27,13 +27,21 @@ coverage:
     - su -c ./test.sh test
 
 coverage_without_olm:
-  image: cirrusci/flutter
+  image: debian:testing
   stage: coverage
   coverage: '/^\s+lines.+: (\d+.\d*%)/'
   dependencies: []
-  script:
-    - flutter pub get
-    - flutter pub run test
+  script:    
+    - apt update
+    - apt install -y curl git
+    - curl https://storage.googleapis.com/dart-archive/channels/stable/release/2.7.2/linux_packages/dart_2.7.2-1_amd64.deb > dart.deb
+    - apt install -y ./dart.deb
+    - ln -s /usr/lib/dart/bin/pub /usr/bin/
+    - useradd -m test
+    - chown -R 'test:' '.'
+    - chmod +x ./test.sh
+    - pub get
+    - pub run test
 
 code_analyze:
   image: cirrusci/flutter
