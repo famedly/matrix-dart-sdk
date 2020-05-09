@@ -37,11 +37,13 @@ import 'package:image/image.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 import 'package:mime_type/mime_type.dart';
 import 'package:olm/olm.dart' as olm;
+import 'package:html_unescape/html_unescape.dart';
 
 import './user.dart';
 import 'timeline.dart';
 import 'utils/matrix_localizations.dart';
 import 'utils/states_map.dart';
+import './utils/markdown.dart';
 
 enum PushRuleState { notify, mentions_only, dont_notify }
 enum JoinRules { public, knock, invite, private }
@@ -478,14 +480,42 @@ class Room {
 
   /// Sends a normal text message to this room. Returns the event ID generated
   /// by the server for this message.
-  Future<String> sendTextEvent(String message, {String txid, Event inReplyTo}) {
-    var type = 'm.text';
+  Future<String> sendTextEvent(String message, {String txid, Event inReplyTo, bool parseMarkdown = true}) {
+    final event = <String, dynamic>{
+      'msgtype': 'm.text',
+      'body': message,
+    };
     if (message.startsWith('/me ')) {
-      type = 'm.emote';
-      message = message.substring(4);
+      event['type'] = 'm.emote';
+      event['body'] = message.substring(4);
     }
-    return sendEvent({'msgtype': type, 'body': message},
-        txid: txid, inReplyTo: inReplyTo);
+    if (parseMarkdown) {
+      // load the emote packs
+      final emotePacks = <String, Map<String, String>>{};
+      final addEmotePack = (String packName, Map<String, dynamic> content) {
+        emotePacks[packName] = <String, String>{};
+        content.forEach((key, value) {
+          if (key is String && value is String && value.startsWith('mxc://')) {
+            emotePacks[packName][key] = value;
+          }
+        });
+      };
+      final roomEmotes = getState('im.ponies.room_emotes');
+      final userEmotes = client.accountData['im.ponies.user_emotes'];
+      if (roomEmotes != null && roomEmotes.content['short'] is Map) {
+        addEmotePack('room', roomEmotes.content['short']);
+      }
+      if (userEmotes != null && userEmotes.content['short'] is Map) {
+        addEmotePack('user', userEmotes.content['short']);
+      }
+      final html = markdown(event['body'], emotePacks);
+      // if the decoded html is the same as the body, there is no need in sending a formatted message
+      if (HtmlUnescape().convert(html) != event['body']) {
+        event['format'] = 'org.matrix.custom.html';
+        event['formatted_body'] = html;
+      }
+    }
+    return sendEvent(event, txid: txid, inReplyTo: inReplyTo);
   }
 
   /// Sends a [file] to this room after uploading it. The [msgType] is optional
