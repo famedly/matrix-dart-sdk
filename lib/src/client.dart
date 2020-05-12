@@ -54,6 +54,7 @@ import 'sync/user_update.dart';
 import 'user.dart';
 import 'utils/matrix_exception.dart';
 import 'utils/profile.dart';
+import 'utils/pusher.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -522,6 +523,17 @@ class Client {
   PushRules get pushRules => accountData.containsKey('m.push_rules')
       ? PushRules.fromJson(accountData['m.push_rules'].content)
       : null;
+
+  /// Gets all currently active pushers for the authenticated user.
+  Future<List<Pusher>> getPushers() async {
+    final response =
+        await jsonRequest(type: HTTPType.GET, action: '/client/r0/pushers');
+    var list = <Pusher>[];
+    for (final pusherJson in response['pushers']) {
+      list.add(Pusher.fromJson(pusherJson));
+    }
+    return list;
+  }
 
   /// This endpoint allows the creation, modification and deletion of pushers for this user ID.
   Future<void> setPushers(String pushKey, String kind, String appId,
