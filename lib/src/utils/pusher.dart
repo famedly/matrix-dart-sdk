@@ -47,16 +47,19 @@ class Pusher {
 
 class PusherData {
   String url;
+  String format;
 
-  PusherData({this.url});
+  PusherData({this.url, this.format});
 
   PusherData.fromJson(Map<String, dynamic> json) {
     url = json['url'];
+    format = json['format'];
   }
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     data['url'] = url;
+    data['format'] = format;
     return data;
   }
 }
