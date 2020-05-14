@@ -298,6 +298,11 @@ class Room {
         (canonicalAlias?.isEmpty ?? true) &&
         !isDirectChat &&
         (mHeroes?.isEmpty ?? true)) {
+      if (membership == Membership.invite) {
+        final sender =
+            getState('m.room.member', client.userID)?.sender?.calcDisplayname();
+        if (sender != null) return sender;
+      }
       return i18n.emptyChat;
     }
     return displayname;
