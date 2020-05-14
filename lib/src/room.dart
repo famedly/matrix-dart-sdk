@@ -294,18 +294,10 @@ class Room {
         (mHeroes != null && mHeroes.isNotEmpty)) {
       return i18n.groupWith(displayname);
     }
-    if ((name?.isEmpty ?? true) &&
-        (canonicalAlias?.isEmpty ?? true) &&
-        !isDirectChat &&
-        (mHeroes?.isEmpty ?? true)) {
-      if (membership == Membership.invite) {
-        final sender =
-            getState('m.room.member', client.userID)?.sender?.calcDisplayname();
-        if (sender != null) return sender;
-      }
-      return i18n.emptyChat;
+    if (displayname?.isNotEmpty ?? false) {
+      return displayname;
     }
-    return displayname;
+    return i18n.emptyChat;
   }
 
   /// The topic of the room if set by a participant.
