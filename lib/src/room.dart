@@ -483,7 +483,7 @@ class Room {
       'body': message,
     };
     if (message.startsWith('/me ')) {
-      event['type'] = 'm.emote';
+      event['msgtype'] = 'm.emote';
       event['body'] = message.substring(4);
     }
     if (parseMarkdown) {
