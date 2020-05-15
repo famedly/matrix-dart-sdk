@@ -497,9 +497,31 @@ class Room {
     return resp['event_id'];
   }
 
+  /// return all current emote packs for this room
+  Map<String, Map<String, String>> get emotePacks {
+    final packs = <String, Map<String, String>>{};
+    final addEmotePack = (String packName, Map<String, dynamic> content) {
+      packs[packName] = <String, String>{};
+      content.forEach((key, value) {
+        if (key is String && value is String && value.startsWith('mxc://')) {
+          packs[packName][key] = value;
+        }
+      });
+    };
+    final roomEmotes = getState('im.ponies.room_emotes');
+    final userEmotes = client.accountData['im.ponies.user_emotes'];
+    if (roomEmotes != null && roomEmotes.content['short'] is Map) {
+      addEmotePack('room', roomEmotes.content['short']);
+    }
+    if (userEmotes != null && userEmotes.content['short'] is Map) {
+      addEmotePack('user', userEmotes.content['short']);
+    }
+    return packs;
+  }
+
   /// Sends a normal text message to this room. Returns the event ID generated
   /// by the server for this message.
-  Future<String> sendTextEvent(String message, {String txid, Event inReplyTo, bool parseMarkdown = true}) {
+  Future<String> sendTextEvent(String message, {String txid, Event inReplyTo, bool parseMarkdown = true, Map<String, Map<String, String>> emotePacks}) {
     final event = <String, dynamic>{
       'msgtype': 'm.text',
       'body': message,
@@ -509,25 +531,7 @@ class Room {
       event['body'] = message.substring(4);
     }
     if (parseMarkdown) {
-      // load the emote packs
-      final emotePacks = <String, Map<String, String>>{};
-      final addEmotePack = (String packName, Map<String, dynamic> content) {
-        emotePacks[packName] = <String, String>{};
-        content.forEach((key, value) {
-          if (key is String && value is String && value.startsWith('mxc://')) {
-            emotePacks[packName][key] = value;
-          }
-        });
-      };
-      final roomEmotes = getState('im.ponies.room_emotes');
-      final userEmotes = client.accountData['im.ponies.user_emotes'];
-      if (roomEmotes != null && roomEmotes.content['short'] is Map) {
-        addEmotePack('room', roomEmotes.content['short']);
-      }
-      if (userEmotes != null && userEmotes.content['short'] is Map) {
-        addEmotePack('user', userEmotes.content['short']);
-      }
-      final html = markdown(event['body'], emotePacks);
+      final html = markdown(event['body'], emotePacks ?? this.emotePacks);
       // if the decoded html is the same as the body, there is no need in sending a formatted message
       if (HtmlUnescape().convert(html) != event['body']) {
         event['format'] = 'org.matrix.custom.html';
