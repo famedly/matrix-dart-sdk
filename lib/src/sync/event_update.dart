@@ -40,7 +40,10 @@ class EventUpdate {
   // The json payload of the content of this event.
   final Map<String, dynamic> content;
 
-  EventUpdate({this.eventType, this.roomID, this.type, this.content});
+  // the order where to stort this event
+  final double sortOrder;
+
+  EventUpdate({this.eventType, this.roomID, this.type, this.content, this.sortOrder});
 
   EventUpdate decrypt(Room room) {
     if (eventType != 'm.room.encrypted') {
@@ -48,12 +51,13 @@ class EventUpdate {
     }
     try {
       var decrpytedEvent =
-          room.decryptGroupMessage(Event.fromJson(content, room));
+          room.decryptGroupMessage(Event.fromJson(content, room, sortOrder));
       return EventUpdate(
         eventType: eventType,
         roomID: roomID,
         type: type,
         content: decrpytedEvent.toJson(),
+        sortOrder: sortOrder,
       );
     } catch (e) {
       print('[LibOlm] Could not decrypt megolm event: ' + e.toString());

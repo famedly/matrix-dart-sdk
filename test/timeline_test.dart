@@ -65,7 +65,8 @@ void main() {
             'status': 2,
             'event_id': '1',
             'origin_server_ts': testTimeStamp
-          }));
+          },
+          sortOrder: room.newSortOrder));
 
       client.onEvent.add(EventUpdate(
           type: 'timeline',
@@ -78,7 +79,8 @@ void main() {
             'status': 2,
             'event_id': '2',
             'origin_server_ts': testTimeStamp - 1000
-          }));
+          },
+          sortOrder: room.oldSortOrder));
 
       expect(timeline.sub != null, true);
 
@@ -125,7 +127,8 @@ void main() {
             'redacts': '2',
             'event_id': '3',
             'origin_server_ts': testTimeStamp + 1000
-          }));
+          },
+          sortOrder: room.newSortOrder));
 
       await Future.delayed(Duration(milliseconds: 50));
 
@@ -159,7 +162,8 @@ void main() {
             'event_id': '42',
             'unsigned': {'transaction_id': '1234'},
             'origin_server_ts': DateTime.now().millisecondsSinceEpoch
-          }));
+          },
+          sortOrder: room.newSortOrder));
 
       await Future.delayed(Duration(milliseconds: 50));
 
@@ -182,7 +186,8 @@ void main() {
             'status': 0,
             'event_id': 'abc',
             'origin_server_ts': testTimeStamp
-          }));
+          },
+          sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
       await room.sendTextEvent('test', txid: 'errortxid');
       await Future.delayed(Duration(milliseconds: 50));
@@ -230,9 +235,9 @@ void main() {
 
       expect(updateCount, 20);
       expect(timeline.events.length, 9);
-      expect(timeline.events[6].eventId, '1143273582443PhrSn:example.org');
+      expect(timeline.events[6].eventId, '3143273582443PhrSn:example.org');
       expect(timeline.events[7].eventId, '2143273582443PhrSn:example.org');
-      expect(timeline.events[8].eventId, '3143273582443PhrSn:example.org');
+      expect(timeline.events[8].eventId, '1143273582443PhrSn:example.org');
       expect(room.prev_batch, 't47409-4357353_219380_26003_2265');
     });
   });

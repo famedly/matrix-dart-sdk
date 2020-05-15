@@ -44,6 +44,7 @@ import 'timeline.dart';
 import 'utils/matrix_localizations.dart';
 import 'utils/states_map.dart';
 import './utils/markdown.dart';
+import './database/database.dart' show DbRoom;
 
 enum PushRuleState { notify, mentions_only, dont_notify }
 enum JoinRules { public, knock, invite, private }
@@ -90,6 +91,27 @@ class Room {
 
   List<String> _outboundGroupSessionDevices;
 
+  double _newestSortOrder;
+  double _oldestSortOrder;
+
+  double get newSortOrder {
+    _newestSortOrder++;
+    return _newestSortOrder;
+  }
+
+  double get oldSortOrder {
+    _oldestSortOrder--;
+    return _oldestSortOrder;
+  }
+
+  void resetSortOrder() {
+    _oldestSortOrder = _newestSortOrder = 0.0;
+  }
+
+  Future<void> updateSortOrder() async {
+    await client.database?.updateRoomSortOrder(_oldestSortOrder, _newestSortOrder, client.id, id);
+  }
+
   /// Clears the existing outboundGroupSession, tries to create a new one and
   /// stores it as an ingoingGroupSession in the [sessionKeys]. Then sends the
   /// new session encrypted with olm to all non-blocked devices using
@@ -120,7 +142,7 @@ class Room {
       'session_id': outboundGroupSession.session_id(),
       'session_key': outboundGroupSession.session_key(),
     };
-    setSessionKey(rawSession['session_id'], rawSession);
+    setInboundGroupSession(rawSession['session_id'], rawSession);
     try {
       await client.sendToDevice(deviceKeys, 'm.room_key', rawSession);
       _outboundGroupSession = outboundGroupSession;
@@ -137,12 +159,10 @@ class Room {
 
   Future<void> _storeOutboundGroupSession() async {
     if (_outboundGroupSession == null) return;
-    await client.storeAPI?.setItem(
-        '/clients/${client.deviceID}/rooms/${id}/outbound_group_session',
-        _outboundGroupSession.pickle(client.userID));
-    await client.storeAPI?.setItem(
-        '/clients/${client.deviceID}/rooms/${id}/outbound_group_session_devices',
-        json.encode(_outboundGroupSessionDevices));
+    await client.database?.storeOutboundGroupSession(
+      client.id, id, _outboundGroupSession.pickle(client.userID),
+      json.encode(_outboundGroupSessionDevices),
+    );
     return;
   }
 
@@ -162,12 +182,11 @@ class Room {
         return false;
       }
     }
-    _outboundGroupSessionDevices == null;
-    await client.storeAPI?.setItem(
-        '/clients/${client.deviceID}/rooms/${id}/outbound_group_session', null);
-    await client.storeAPI?.setItem(
-        '/clients/${client.deviceID}/rooms/${id}/outbound_group_session_devices',
-        null);
+    if (!wipe && _outboundGroupSessionDevices == null && _outboundGroupSession == null) {
+      return true; // let's just short-circuit out of here, no need to do DB stuff
+    }
+    _outboundGroupSessionDevices = null;
+    await client.database?.removeOutboundGroupSession(client.id, id);
     _outboundGroupSession?.free();
     _outboundGroupSession = null;
     return true;
@@ -181,13 +200,13 @@ class Room {
   ///   "session_id": "X3lUlvLELLYxeTx4yOVu6UDpasGEVO0Jbu+QFnm0cKQ",
   ///   "session_key": "AgAAAADxKHa9uFxcXzwYoNueL5Xqi69IkD4sni8LlfJL7qNBEY..."
   /// }
-  Map<String, SessionKey> get sessionKeys => _sessionKeys;
-  Map<String, SessionKey> _sessionKeys = {};
+  Map<String, SessionKey> get inboundGroupSessions => _inboundGroupSessions;
+  Map<String, SessionKey> _inboundGroupSessions = {};
 
   /// Add a new session key to the [sessionKeys].
-  void setSessionKey(String sessionId, Map<String, dynamic> content,
+  void setInboundGroupSession(String sessionId, Map<String, dynamic> content,
       {bool forwarded = false}) {
-    if (sessionKeys.containsKey(sessionId)) return;
+    if (inboundGroupSessions.containsKey(sessionId)) return;
     olm.InboundGroupSession inboundGroupSession;
     if (content['algorithm'] == 'm.megolm.v1.aes-sha2') {
       try {
@@ -203,16 +222,17 @@ class Room {
             e.toString());
       }
     }
-    _sessionKeys[sessionId] = SessionKey(
+    _inboundGroupSessions[sessionId] = SessionKey(
       content: content,
       inboundGroupSession: inboundGroupSession,
       indexes: {},
       key: client.userID,
     );
     if (_fullyRestored) {
-      client.storeAPI?.setItem(
-          '/clients/${client.deviceID}/rooms/${id}/session_keys',
-          json.encode(sessionKeys));
+      client.database?.storeInboundGroupSession(client.id, id, sessionId,
+        inboundGroupSession.pickle(client.userID), json.encode(content),
+        json.encode({}),
+      );
     }
     _tryAgainDecryptLastMessage();
     onSessionKeyReceived.add(sessionId);
@@ -395,7 +415,9 @@ class Room {
     this.mInvitedMemberCount = 0,
     this.mJoinedMemberCount = 0,
     this.roomAccountData = const {},
-  });
+    double newestSortOrder = 0.0,
+    double oldestSortOrder = 0.0,
+  }) : _newestSortOrder = newestSortOrder, _oldestSortOrder = oldestSortOrder;
 
   /// The default count of how much events should be requested when requesting the
   /// history of this room.
@@ -746,20 +768,22 @@ class Room {
       };
     }
 
+    final sortOrder = newSortOrder;
     // Display a *sending* event and store it.
-    var eventUpdate =
-        EventUpdate(type: 'timeline', roomID: id, eventType: type, content: {
-      'type': type,
-      'event_id': messageID,
-      'sender': client.userID,
-      'status': 0,
-      'origin_server_ts': now,
-      'content': content
-    });
+    var eventUpdate = EventUpdate(type: 'timeline', roomID: id, eventType: type, sortOrder: sortOrder,
+      content: {
+        'type': type,
+        'event_id': messageID,
+        'sender': client.userID,
+        'status': 0,
+        'origin_server_ts': now,
+        'content': content
+      },
+    );
     client.onEvent.add(eventUpdate);
-    await client.store?.transaction(() {
-      client.store.storeEventUpdate(eventUpdate);
-      return;
+    await client.database?.transaction(() async {
+      await client.database.storeEventUpdate(client.id, eventUpdate);
+      await updateSortOrder();
     });
 
     // Send the text and on success, store and display a *sent* event.
@@ -767,7 +791,7 @@ class Room {
       final response = await client.jsonRequest(
           type: HTTPType.PUT,
           action: '/client/r0/rooms/${id}/send/$sendType/$messageID',
-          data: client.encryptionEnabled
+          data: encrypted && client.encryptionEnabled
               ? await encryptGroupMessagePayload(content)
               : content);
       final String res = response['event_id'];
@@ -775,9 +799,8 @@ class Room {
       eventUpdate.content['unsigned'] = {'transaction_id': messageID};
       eventUpdate.content['event_id'] = res;
       client.onEvent.add(eventUpdate);
-      await client.store?.transaction(() {
-        client.store.storeEventUpdate(eventUpdate);
-        return;
+      await client.database?.transaction(() async {
+        await client.database.storeEventUpdate(client.id, eventUpdate);
       });
       return res;
     } catch (exception) {
@@ -786,9 +809,8 @@ class Room {
       eventUpdate.content['status'] = -1;
       eventUpdate.content['unsigned'] = {'transaction_id': messageID};
       client.onEvent.add(eventUpdate);
-      await client.store?.transaction(() {
-        client.store.storeEventUpdate(eventUpdate);
-        return;
+      await client.database?.transaction(() async {
+        await client.database.storeEventUpdate(client.id, eventUpdate);
       });
     }
     return null;
@@ -809,7 +831,7 @@ class Room {
       }
     } on MatrixException catch (exception) {
       if (exception.errorMessage == 'No known servers') {
-        await client.store?.forgetRoom(id);
+        await client.database?.forgetRoom(client.id, id);
         client.onRoomUpdate.add(
           RoomUpdate(
               id: id,
@@ -833,7 +855,7 @@ class Room {
 
   /// Call the Matrix API to forget this room if you already left it.
   Future<void> forget() async {
-    await client.store?.forgetRoom(id);
+    await client.database?.forgetRoom(client.id, id);
     await client.jsonRequest(
         type: HTTPType.POST, action: '/client/r0/rooms/${id}/forget');
     return;
@@ -903,65 +925,55 @@ class Room {
 
     if (onHistoryReceived != null) onHistoryReceived();
     prev_batch = resp['end'];
-    await client.store?.storeRoomPrevBatch(this);
+
+    final dbActions = <Future<dynamic> Function()>[];
+    if (client.database != null) {
+      dbActions.add(() => client.database.setRoomPrevBatch(prev_batch, client.id, id));
+    }
 
     if (!(resp['chunk'] is List<dynamic> &&
         resp['chunk'].length > 0 &&
         resp['end'] is String)) return;
 
     if (resp['state'] is List<dynamic>) {
-      await client.store?.transaction(() {
-        for (var i = 0; i < resp['state'].length; i++) {
-          var eventUpdate = EventUpdate(
-            type: 'state',
-            roomID: id,
-            eventType: resp['state'][i]['type'],
-            content: resp['state'][i],
-          ).decrypt(this);
-          client.onEvent.add(eventUpdate);
-          client.store.storeEventUpdate(eventUpdate);
-        }
-        return;
-      });
-      if (client.store == null) {
-        for (var i = 0; i < resp['state'].length; i++) {
-          var eventUpdate = EventUpdate(
-            type: 'state',
-            roomID: id,
-            eventType: resp['state'][i]['type'],
-            content: resp['state'][i],
-          ).decrypt(this);
-          client.onEvent.add(eventUpdate);
+      for (final state in resp['state']) {
+        var eventUpdate = EventUpdate(
+          type: 'state',
+          roomID: id,
+          eventType: state['type'],
+          content: state,
+          sortOrder: oldSortOrder,
+        ).decrypt(this);
+        client.onEvent.add(eventUpdate);
+        if (client.database != null) {
+          dbActions.add(() => client.database.storeEventUpdate(client.id, eventUpdate));
         }
       }
     }
 
     List<dynamic> history = resp['chunk'];
-    await client.store?.transaction(() {
-      for (var i = 0; i < history.length; i++) {
-        var eventUpdate = EventUpdate(
-          type: 'history',
-          roomID: id,
-          eventType: history[i]['type'],
-          content: history[i],
-        ).decrypt(this);
-        client.onEvent.add(eventUpdate);
-        client.store.storeEventUpdate(eventUpdate);
-        client.store.setRoomPrevBatch(id, resp['end']);
-      }
-      return;
-    });
-    if (client.store == null) {
-      for (var i = 0; i < history.length; i++) {
-        var eventUpdate = EventUpdate(
-          type: 'history',
-          roomID: id,
-          eventType: history[i]['type'],
-          content: history[i],
-        ).decrypt(this);
-        client.onEvent.add(eventUpdate);
+    for (final hist in history) {
+      var eventUpdate = EventUpdate(
+        type: 'history',
+        roomID: id,
+        eventType: hist['type'],
+        content: hist,
+        sortOrder: oldSortOrder,
+      ).decrypt(this);
+      client.onEvent.add(eventUpdate);
+      if (client.database != null) {
+        dbActions.add(() => client.database.storeEventUpdate(client.id, eventUpdate));
       }
     }
+    if (client.database != null) {
+      dbActions.add(() => client.database.setRoomPrevBatch(resp['end'], client.id, id));
+    }
+    await client.database?.transaction(() async {
+      for (final f in dbActions) {
+        await f();
+      }
+      await updateSortOrder();
+    });
     client.onRoomUpdate.add(
       RoomUpdate(
         id: id,
@@ -1013,7 +1025,7 @@ class Room {
   /// Sends *m.fully_read* and *m.read* for the given event ID.
   Future<void> sendReadReceipt(String eventID) async {
     notificationCount = 0;
-    await client?.store?.resetNotificationCount(id);
+    await client.database?.resetNotificationCount(client.id, id);
     await client.jsonRequest(
         type: HTTPType.POST,
         action: '/client/r0/rooms/$id/read_markers',
@@ -1024,48 +1036,44 @@ class Room {
     return;
   }
 
-  Future<void> restoreGroupSessionKeys() async {
+  Future<void> restoreGroupSessionKeys({
+    dynamic outboundGroupSession, // DbOutboundGroupSession, optionally as future
+    dynamic inboundGroupSessions, // DbSessionKey, as iterator and optionally as future
+  }) async {
     // Restore the inbound and outbound session keys
-    if (client.encryptionEnabled && client.storeAPI != null) {
-      final String outboundGroupSessionPickle = await client.storeAPI.getItem(
-          '/clients/${client.deviceID}/rooms/${id}/outbound_group_session');
-      if (outboundGroupSessionPickle != null) {
+    if (client.encryptionEnabled && client.database != null) {
+      outboundGroupSession ??= client.database.getDbOutboundGroupSession(client.id, id);
+      inboundGroupSessions ??= client.database.getDbInboundGroupSessions(client.id, id);
+      if (outboundGroupSession is Future) {
+        outboundGroupSession = await outboundGroupSession;
+      }
+      if (inboundGroupSessions is Future) {
+        inboundGroupSessions = await inboundGroupSessions;
+      }
+      if (outboundGroupSession != false && outboundGroupSession != null) {
         try {
           _outboundGroupSession = olm.OutboundGroupSession();
           _outboundGroupSession.unpickle(
-              client.userID, outboundGroupSessionPickle);
+              client.userID, outboundGroupSession.pickle);
         } catch (e) {
           _outboundGroupSession = null;
           print('[LibOlm] Unable to unpickle outboundGroupSession: ' +
               e.toString());
         }
-      }
-      final String outboundGroupSessionDevicesString = await client.storeAPI
-          .getItem(
-              '/clients/${client.deviceID}/rooms/${id}/outbound_group_session_devices');
-      if (outboundGroupSessionDevicesString != null) {
         _outboundGroupSessionDevices =
-            List<String>.from(json.decode(outboundGroupSessionDevicesString));
+            List<String>.from(json.decode(outboundGroupSession.deviceIds));
       }
-      final String sessionKeysPickle = await client.storeAPI
-          .getItem('/clients/${client.deviceID}/rooms/${id}/session_keys');
-      if (sessionKeysPickle?.isNotEmpty ?? false) {
-        final Map<String, dynamic> map = json.decode(sessionKeysPickle);
-        _sessionKeys ??= {};
-        for (var entry in map.entries) {
+      if (inboundGroupSessions?.isNotEmpty ?? false) {
+        _inboundGroupSessions ??= {};
+        for (final sessionKey in inboundGroupSessions) {
           try {
-            _sessionKeys[entry.key] =
-                SessionKey.fromJson(entry.value, client.userID);
+            _inboundGroupSessions[sessionKey.sessionId] = SessionKey.fromDb(sessionKey, client.userID);
           } catch (e) {
-            print('[LibOlm] Could not unpickle inboundGroupSession: ' +
-                e.toString());
+            print('[LibOlm] Could not unpickle inboundGroupSession: ' + e.toString());
           }
         }
       }
     }
-    await client.storeAPI?.setItem(
-        '/clients/${client.deviceID}/rooms/${id}/session_keys',
-        json.encode(sessionKeys));
     _tryAgainDecryptLastMessage();
     _fullyRestored = true;
     return;
@@ -1076,44 +1084,64 @@ class Room {
   /// Returns a Room from a json String which comes normally from the store. If the
   /// state are also given, the method will await them.
   static Future<Room> getRoomFromTableRow(
-      Map<String, dynamic> row, Client matrix,
-      {Future<List<Map<String, dynamic>>> states,
-      Future<List<Map<String, dynamic>>> roomAccountData}) async {
-    var newRoom = Room(
-      id: row['room_id'],
+      DbRoom row, // either Map<String, dynamic> or DbRoom
+      Client matrix,
+      {
+        dynamic states, // DbRoomState, as iterator and optionally as future
+        dynamic roomAccountData, // DbRoomAccountData, as iterator and optionally as future
+        dynamic outboundGroupSession, // DbOutboundGroupSession, optionally as future
+        dynamic inboundGroupSessions, // DbSessionKey, as iterator and optionally as future
+      }) async {
+    final newRoom = Room(
+      id: row.roomId,
       membership: Membership.values
-          .firstWhere((e) => e.toString() == 'Membership.' + row['membership']),
-      notificationCount: row['notification_count'],
-      highlightCount: row['highlight_count'],
-      notificationSettings: row['notification_settings'],
-      prev_batch: row['prev_batch'],
-      mInvitedMemberCount: row['invited_member_count'],
-      mJoinedMemberCount: row['joined_member_count'],
-      mHeroes: row['heroes']?.split(',') ?? [],
+          .firstWhere((e) => e.toString() == 'Membership.' + row.membership),
+      notificationCount: row.notificationCount,
+      highlightCount: row.highlightCount,
+      notificationSettings: 'mention', // TODO: do proper things
+      prev_batch: row.prevBatch,
+      mInvitedMemberCount: row.invitedMemberCount,
+      mJoinedMemberCount: row.joinedMemberCount,
+      mHeroes: row.heroes?.split(',') ?? [],
       client: matrix,
       roomAccountData: {},
+      newestSortOrder: row.newestSortOrder,
+      oldestSortOrder: row.oldestSortOrder,
     );
 
-    // Restore the inbound and outbound session keys
-    await newRoom.restoreGroupSessionKeys();
-
     if (states != null) {
-      var rawStates = await states;
-      for (var i = 0; i < rawStates.length; i++) {
-        var newState = Event.fromJson(rawStates[i], newRoom);
+      var rawStates;
+      if (states is Future) {
+        rawStates = await states;
+      } else {
+        rawStates = states;
+      }
+      for (final rawState in rawStates) {
+        final newState = Event.fromDb(rawState, newRoom);;
         newRoom.setState(newState);
       }
     }
 
     var newRoomAccountData = <String, RoomAccountData>{};
     if (roomAccountData != null) {
-      var rawRoomAccountData = await roomAccountData;
-      for (var i = 0; i < rawRoomAccountData.length; i++) {
-        var newData = RoomAccountData.fromJson(rawRoomAccountData[i], newRoom);
+      var rawRoomAccountData;
+      if (roomAccountData is Future) {
+        rawRoomAccountData = await roomAccountData;
+      } else {
+        rawRoomAccountData = roomAccountData;
+      }
+      for (final singleAccountData in rawRoomAccountData) {
+        final newData = RoomAccountData.fromDb(singleAccountData, newRoom);
         newRoomAccountData[newData.typeKey] = newData;
       }
-      newRoom.roomAccountData = newRoomAccountData;
     }
+    newRoom.roomAccountData = newRoomAccountData;
+
+    // Restore the inbound and outbound session keys
+    await newRoom.restoreGroupSessionKeys(
+      outboundGroupSession: outboundGroupSession,
+      inboundGroupSessions: inboundGroupSessions,
+    );
 
     return newRoom;
   }
@@ -1122,24 +1150,28 @@ class Room {
   Future<Timeline> getTimeline(
       {onTimelineUpdateCallback onUpdate,
       onTimelineInsertCallback onInsert}) async {
-    var events = client.store != null
-        ? await client.store.getEventList(this)
-        : <Event>[];
+    var events;
+    if (client.database != null) {
+      events = await client.database.getEventList(client.id, this);
+    } else {
+      events = <Event>[];
+    }
 
     // Try again to decrypt encrypted events and update the database.
-    if (encrypted && client.store != null) {
-      await client.store.transaction(() {
+    if (encrypted && client.database != null) {
+      await client.database.transaction(() async {
         for (var i = 0; i < events.length; i++) {
           if (events[i].type == EventTypes.Encrypted &&
               events[i].content['body'] == DecryptError.UNKNOWN_SESSION) {
             events[i] = events[i].decrypted;
             if (events[i].type != EventTypes.Encrypted) {
-              client.store.storeEventUpdate(
+              await client.database.storeEventUpdate(client.id,
                 EventUpdate(
                   eventType: events[i].typeKey,
                   content: events[i].toJson(),
                   roomID: events[i].roomId,
                   type: 'timeline',
+                  sortOrder: events[i].sortOrder,
                 ),
               );
             }
@@ -1154,7 +1186,7 @@ class Room {
       onUpdate: onUpdate,
       onInsert: onInsert,
     );
-    if (client.store == null) {
+    if (client.database == null) {
       prev_batch = '';
       await requestHistory(historyCount: 10);
     }
@@ -1227,6 +1259,9 @@ class Room {
   /// Requests a missing [User] for this room. Important for clients using
   /// lazy loading.
   Future<User> requestUser(String mxID, {bool ignoreErrors = false}) async {
+    if (getState('m.room.member', mxID) != null) {
+      return getState('m.room.member', mxID).asUser;
+    }
     if (mxID == null || !_requestingMatrixIds.add(mxID)) return null;
     Map<String, dynamic> resp;
     try {
@@ -1237,23 +1272,30 @@ class Room {
       _requestingMatrixIds.remove(mxID);
       if (!ignoreErrors) rethrow;
     }
+    if (resp == null) {
+      return null;
+    }
     final user = User(mxID,
         displayName: resp['displayname'],
         avatarUrl: resp['avatar_url'],
         room: this);
     states[mxID] = user;
-    if (client.store != null) {
-      await client.store.transaction(() {
-        client.store.storeEventUpdate(
-          EventUpdate(
-              content: resp,
-              roomID: id,
-              type: 'state',
-              eventType: 'm.room.member'),
-        );
-        return;
-      });
-    }
+    await client.database?.transaction(() async {
+      final content = <String, dynamic>{
+        'sender': mxID,
+        'type': 'm.room.member',
+        'content': resp,
+        'state_key': mxID,
+      };
+      await client.database.storeEventUpdate(client.id,
+        EventUpdate(
+            content: content,
+            roomID: id,
+            type: 'state',
+            eventType: 'm.room.member',
+            sortOrder: 0.0),
+      );
+    });
     if (onUpdate != null) onUpdate.add(id);
     _requestingMatrixIds.remove(mxID);
     return user;
@@ -1690,12 +1732,11 @@ class Room {
   Future<List<DeviceKeys>> getUserDeviceKeys() async {
     var deviceKeys = <DeviceKeys>[];
     var users = await requestParticipants();
-    for (final userDeviceKeyEntry in client.userDeviceKeys.entries) {
-      if (users.indexWhere((u) => u.id == userDeviceKeyEntry.key) == -1) {
-        continue;
-      }
-      for (var deviceKeyEntry in userDeviceKeyEntry.value.deviceKeys.values) {
-        deviceKeys.add(deviceKeyEntry);
+    for (final user in users) {
+      if (client.userDeviceKeys.containsKey(user.id)) {
+        for (var deviceKeyEntry in client.userDeviceKeys[user.id].deviceKeys.values) {
+          deviceKeys.add(deviceKeyEntry);
+        }
       }
     }
     return deviceKeys;
@@ -1745,23 +1786,23 @@ class Room {
         throw (DecryptError.UNKNOWN_ALGORITHM);
       }
       final String sessionId = event.content['session_id'];
-      if (!sessionKeys.containsKey(sessionId)) {
+      if (!inboundGroupSessions.containsKey(sessionId)) {
         throw (DecryptError.UNKNOWN_SESSION);
       }
-      final decryptResult = sessionKeys[sessionId]
+      final decryptResult = inboundGroupSessions[sessionId]
           .inboundGroupSession
           .decrypt(event.content['ciphertext']);
       final messageIndexKey =
           event.eventId + event.time.millisecondsSinceEpoch.toString();
-      if (sessionKeys[sessionId].indexes.containsKey(messageIndexKey) &&
-          sessionKeys[sessionId].indexes[messageIndexKey] !=
+      if (inboundGroupSessions[sessionId].indexes.containsKey(messageIndexKey) &&
+          inboundGroupSessions[sessionId].indexes[messageIndexKey] !=
               decryptResult.message_index) {
         if ((_outboundGroupSession?.session_id() ?? '') == sessionId) {
           clearOutboundGroupSession();
         }
         throw (DecryptError.CHANNEL_CORRUPTED);
       }
-      sessionKeys[sessionId].indexes[messageIndexKey] =
+      inboundGroupSessions[sessionId].indexes[messageIndexKey] =
           decryptResult.message_index;
       _storeOutboundGroupSession();
       decryptedPayload = json.decode(decryptResult.plaintext);
@@ -1799,6 +1840,7 @@ class Room {
       stateKey: event.stateKey,
       prevContent: event.prevContent,
       status: event.status,
+      sortOrder: event.sortOrder,
     );
   }
 }

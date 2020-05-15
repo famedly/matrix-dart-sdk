@@ -122,7 +122,7 @@ class Timeline {
           final eventId = _findEvent(event_id: eventUpdate.content['redacts']);
           if (eventId != null) {
             events[eventId]
-                .setRedactionEvent(Event.fromJson(eventUpdate.content, room));
+                .setRedactionEvent(Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder));
           }
         } else if (eventUpdate.content['status'] == -2) {
           var i = _findEvent(event_id: eventUpdate.content['event_id']);
@@ -138,18 +138,18 @@ class Timeline {
                   : null);
 
           if (i < events.length) {
-            events[i] = Event.fromJson(eventUpdate.content, room);
+            events[i] = Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder);
           }
         } else {
           Event newEvent;
-          var senderUser = await room.client.store
-              ?.getUser(matrixID: eventUpdate.content['sender'], room: room);
+          var senderUser = room.getState('m.room.member', eventUpdate.content['sender'])?.asUser ?? await room.client.database
+              ?.getUser(room.client.id, eventUpdate.content['sender'], room);
           if (senderUser != null) {
             eventUpdate.content['displayname'] = senderUser.displayName;
             eventUpdate.content['avatar_url'] = senderUser.avatarUrl.toString();
           }
 
-          newEvent = Event.fromJson(eventUpdate.content, room);
+          newEvent = Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder);
 
           if (eventUpdate.type == 'history' &&
               events.indexWhere(
@@ -173,8 +173,7 @@ class Timeline {
   void sort() {
     if (sortLock || events.length < 2) return;
     sortLock = true;
-    events?.sort((a, b) =>
-        b.time.millisecondsSinceEpoch.compareTo(a.time.millisecondsSinceEpoch));
+    events?.sort((a, b) => b.sortOrder - a.sortOrder > 0 ? 1 : -1);
     sortLock = false;
   }
 

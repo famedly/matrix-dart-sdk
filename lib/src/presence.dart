@@ -21,6 +21,9 @@
  * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/famedlysdk.dart';
+import './database/database.dart' show DbPresence;
+
 enum PresenceType { online, offline, unavailable }
 
 /// Informs the client of a user's presence state change.
@@ -39,6 +42,8 @@ class Presence {
   final String statusMsg;
   final DateTime time;
 
+  Presence({this.sender, this.displayname, this.avatarUrl, this.currentlyActive, this.lastActiveAgo, this.presence, this.statusMsg, this.time});
+
   Presence.fromJson(Map<String, dynamic> json)
       : sender = json['sender'],
         displayname = json['content']['displayname'],
@@ -55,4 +60,23 @@ class Presence {
                 e.toString() == "PresenceType.${json['content']['presence']}",
             orElse: () => null),
         statusMsg = json['content']['status_msg'];
+
+  factory Presence.fromDb(DbPresence dbEntry) {
+    final content = Event.getMapFromPayload(dbEntry.content);
+    return Presence(
+      sender: dbEntry.sender,
+      displayname: content['displayname'],
+      avatarUrl: content['avatar_url'] != null ? Uri.parse(content['avatar_url']) : null,
+      currentlyActive: content['currently_active'],
+      lastActiveAgo: content['last_active_ago'],
+      time: DateTime.fromMillisecondsSinceEpoch(
+          DateTime.now().millisecondsSinceEpoch -
+              (content['last_active_ago'] ?? 0)),
+      presence: PresenceType.values.firstWhere(
+          (e) =>
+              e.toString() == "PresenceType.${content['presence']}",
+          orElse: () => null),
+      statusMsg: content['status_msg'],
+    );
+  }
 }

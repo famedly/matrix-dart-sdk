@@ -24,6 +24,7 @@
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/account_data.dart';
 import 'package:famedlysdk/src/event.dart';
+import './database/database.dart' show DbRoomAccountData;
 
 /// Stripped down events for account data and ephemrals of a room.
 class RoomAccountData extends AccountData {
@@ -44,6 +45,16 @@ class RoomAccountData extends AccountData {
         content: content,
         typeKey: jsonPayload['type'],
         roomId: jsonPayload['room_id'],
+        room: room);
+  }
+
+  /// get room account data from DbRoomAccountData
+  factory RoomAccountData.fromDb(DbRoomAccountData dbEntry, Room room) {
+    final content = Event.getMapFromPayload(dbEntry.content);
+    return RoomAccountData(
+        content: content,
+        typeKey: dbEntry.type,
+        roomId: dbEntry.roomId,
         room: room);
   }
 }

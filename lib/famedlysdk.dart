@@ -48,6 +48,6 @@ export 'package:famedlysdk/src/event.dart';
 export 'package:famedlysdk/src/presence.dart';
 export 'package:famedlysdk/src/room.dart';
 export 'package:famedlysdk/src/room_account_data.dart';
-export 'package:famedlysdk/src/store_api.dart';
 export 'package:famedlysdk/src/timeline.dart';
 export 'package:famedlysdk/src/user.dart';
+export 'package:famedlysdk/src/database/database.dart' show Database;

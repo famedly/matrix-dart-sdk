@@ -1,11 +1,22 @@
 import 'dart:convert';
 
 import '../client.dart';
+import '../database/database.dart' show DbUserDeviceKey, DbUserDeviceKeysKey;
+import '../event.dart';
 
 class DeviceKeysList {
   String userId;
   bool outdated = true;
   Map<String, DeviceKeys> deviceKeys = {};
+
+  DeviceKeysList.fromDb(DbUserDeviceKey dbEntry, List<DbUserDeviceKeysKey> childEntries) {
+    userId = dbEntry.userId;
+    outdated = dbEntry.outdated;
+    deviceKeys = {};
+    for (final childEntry in childEntries) {
+      deviceKeys[childEntry.deviceId] = DeviceKeys.fromDb(childEntry);
+    }
+  }
 
   DeviceKeysList.fromJson(Map<String, dynamic> json) {
     userId = json['user_id'];
@@ -52,7 +63,7 @@ class DeviceKeys {
 
   Future<void> setVerified(bool newVerified, Client client) {
     verified = newVerified;
-    return client.storeAPI.storeUserDeviceKeys(client.userDeviceKeys);
+    return client.database?.setVerifiedUserDeviceKey(newVerified, client.id, userId, deviceId);
   }
 
   Future<void> setBlocked(bool newBlocked, Client client) {
@@ -63,7 +74,7 @@ class DeviceKeys {
         room.clearOutboundGroupSession();
       }
     }
-    return client.storeAPI.storeUserDeviceKeys(client.userDeviceKeys);
+    return client.database?.setBlockedUserDeviceKey(newBlocked, client.id, userId, deviceId);
   }
 
   DeviceKeys({
@@ -76,6 +87,22 @@ class DeviceKeys {
     this.verified,
     this.blocked,
   });
+
+  DeviceKeys.fromDb(DbUserDeviceKeysKey dbEntry) {
+    final content = Event.getMapFromPayload(dbEntry.content);
+    userId = dbEntry.userId;
+    deviceId = dbEntry.deviceId;
+    algorithms = content['algorithms'].cast<String>();
+    keys = content['keys'] != null ? Map<String, String>.from(content['keys']) : null;
+    signatures = content['signatures'] != null
+        ? Map<String, dynamic>.from(content['signatures'])
+        : null;
+    unsigned = content['unsigned'] != null
+        ? Map<String, dynamic>.from(content['unsigned'])
+        : null;
+    verified = dbEntry.verified;
+    blocked = dbEntry.blocked;
+  }
 
   DeviceKeys.fromJson(Map<String, dynamic> json) {
     userId = json['user_id'];
