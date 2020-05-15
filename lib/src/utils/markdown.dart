@@ -73,12 +73,24 @@ class EmoteSyntax extends InlineSyntax {
   }
 }
 
+class PillSyntax extends InlineSyntax {
+  PillSyntax() : super(r'([@#!][^\s:]*:[^\s]+\.\w+)');
+
+  @override
+  bool onMatch(InlineParser parser, Match match) {
+    final identifier = match[1];
+    final element = Element.text('a', identifier);
+    element.attributes['href'] = 'https://matrix.to/#/${identifier}';
+    parser.addNode(element);
+    return true;
+  }
+}
 
 String markdown(String text, [Map<String, Map<String, String>> emotePacks]) {
   emotePacks ??= <String, Map<String, String>>{};
   var ret = markdownToHtml(text,
     extensionSet: ExtensionSet.commonMark,
-    inlineSyntaxes: [StrikethroughSyntax(), LinebreakSyntax(), SpoilerSyntax(), EmoteSyntax(emotePacks)],
+    inlineSyntaxes: [StrikethroughSyntax(), LinebreakSyntax(), SpoilerSyntax(), EmoteSyntax(emotePacks), PillSyntax()],
   );
     
   var stripPTags = '<p>'.allMatches(ret).length <= 1;

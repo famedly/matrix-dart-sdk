@@ -38,5 +38,10 @@ void main() {
       expect(markdown(':invalid:', emotePacks), ':invalid:');
       expect(markdown(':room~invalid:', emotePacks), ':room~invalid:');
     });
+    test('pills', () {
+      expect(markdown('Hey @sorunome:sorunome.de!'), 'Hey <a href="https://matrix.to/#/@sorunome:sorunome.de">@sorunome:sorunome.de</a>!');
+      expect(markdown('#fox:sorunome.de: you all are awesome'), '<a href="https://matrix.to/#/#fox:sorunome.de">#fox:sorunome.de</a>: you all are awesome');
+      expect(markdown('!blah:example.org'), '<a href="https://matrix.to/#/!blah:example.org">!blah:example.org</a>');
+    });
   });
 }
