@@ -39,7 +39,7 @@ import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
 import 'fake_matrix_api.dart';
-import 'fake_store.dart';
+import 'fake_database.dart';
 
 void main() {
   Client matrix;
@@ -86,7 +86,6 @@ void main() {
       });
 
       expect(matrix.homeserver, null);
-      expect(matrix.matrixVersions, null);
 
       try {
         await matrix.checkServer('https://fakeserver.wrongaddress');
@@ -95,8 +94,6 @@ void main() {
       }
       await matrix.checkServer('https://fakeserver.notexisting');
       expect(matrix.homeserver, 'https://fakeserver.notexisting');
-      expect(matrix.matrixVersions,
-          ['r0.0.1', 'r0.1.0', 'r0.2.0', 'r0.3.0', 'r0.4.0', 'r0.5.0']);
 
       final resp = await matrix
           .jsonRequest(type: HTTPType.POST, action: '/client/r0/login', data: {
@@ -128,7 +125,6 @@ void main() {
         newHomeserver: matrix.homeserver,
         newDeviceName: 'Text Matrix Client',
         newDeviceID: resp['device_id'],
-        newMatrixVersions: matrix.matrixVersions,
         newOlmAccount: pickledOlmAccount,
       );
 
@@ -160,18 +156,18 @@ void main() {
       expect(matrix.directChats, matrix.accountData['m.direct'].content);
       expect(matrix.presences.length, 1);
       expect(matrix.rooms[1].ephemerals.length, 2);
-      expect(matrix.rooms[1].sessionKeys.length, 1);
+      expect(matrix.rooms[1].inboundGroupSessions.length, 1);
       expect(
           matrix
               .rooms[1]
-              .sessionKeys['ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU']
+              .inboundGroupSessions['ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU']
               .content['session_key'],
           'AgAAAAAQcQ6XrFJk6Prm8FikZDqfry/NbDz8Xw7T6e+/9Yf/q3YHIPEQlzv7IZMNcYb51ifkRzFejVvtphS7wwG2FaXIp4XS2obla14iKISR0X74ugB2vyb1AydIHE/zbBQ1ic5s3kgjMFlWpu/S3FQCnCrv+DPFGEt3ERGWxIl3Bl5X53IjPyVkz65oljz2TZESwz0GH/QFvyOOm8ci0q/gceaF3S7Dmafg3dwTKYwcA5xkcc+BLyrLRzB6Hn+oMAqSNSscnm4mTeT5zYibIhrzqyUTMWr32spFtI9dNR/RFSzfCw');
       if (olmEnabled) {
         expect(
             matrix
                     .rooms[1]
-                    .sessionKeys['ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU']
+                    .inboundGroupSessions['ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU']
                     .inboundGroupSession !=
                 null,
             true);
@@ -279,7 +275,6 @@ void main() {
       expect(matrix.userID == null, true);
       expect(matrix.deviceID == null, true);
       expect(matrix.deviceName == null, true);
-      expect(matrix.matrixVersions == null, true);
       expect(matrix.prevBatch == null, true);
 
       var loginState = await loginStateFuture;
@@ -635,8 +630,7 @@ void main() {
     test('Test the fake store api', () async {
       var client1 = Client('testclient', debug: true);
       client1.httpClient = FakeMatrixApi();
-      var fakeStore = FakeStore(client1, {});
-      client1.storeAPI = fakeStore;
+      client1.database = getDatabase();
 
       client1.connect(
         newToken: 'abc123',
@@ -644,14 +638,6 @@ void main() {
         newHomeserver: 'https://fakeServer.notExisting',
         newDeviceName: 'Text Matrix Client',
         newDeviceID: 'GHTYAJCE',
-        newMatrixVersions: [
-          'r0.0.1',
-          'r0.1.0',
-          'r0.2.0',
-          'r0.3.0',
-          'r0.4.0',
-          'r0.5.0'
-        ],
         newOlmAccount: pickledOlmAccount,
       );
 
@@ -669,8 +655,9 @@ void main() {
 
       var client2 = Client('testclient', debug: true);
       client2.httpClient = FakeMatrixApi();
-      client2.storeAPI = FakeStore(client2, fakeStore.storeMap);
+      client2.database = client1.database;
 
+      client2.connect();
       await Future.delayed(Duration(milliseconds: 100));
 
       expect(client2.isLogged(), true);
@@ -679,11 +666,10 @@ void main() {
       expect(client2.homeserver, client1.homeserver);
       expect(client2.deviceID, client1.deviceID);
       expect(client2.deviceName, client1.deviceName);
-      expect(client2.matrixVersions, client1.matrixVersions);
       if (client2.encryptionEnabled) {
         expect(client2.pickledOlmAccount, client1.pickledOlmAccount);
-        expect(json.encode(client2.rooms[1].sessionKeys[sessionKey]),
-            json.encode(client1.rooms[1].sessionKeys[sessionKey]));
+        expect(json.encode(client2.rooms[1].inboundGroupSessions[sessionKey]),
+            json.encode(client1.rooms[1].inboundGroupSessions[sessionKey]));
         expect(client2.rooms[1].id, client1.rooms[1].id);
         expect(client2.rooms[1].outboundGroupSession.session_key(), sessionKey);
       }

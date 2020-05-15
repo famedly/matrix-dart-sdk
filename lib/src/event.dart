@@ -29,6 +29,7 @@ import 'package:http/http.dart' as http;
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 import './room.dart';
 import 'utils/matrix_localizations.dart';
+import './database/database.dart' show DbRoomState, DbEvent;
 
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
 class Event {
@@ -96,6 +97,8 @@ class Event {
 
   User get stateKeyUser => room.getUserByMXIDSync(stateKey);
 
+  double sortOrder;
+
   Event(
       {this.status = defaultStatus,
       this.content,
@@ -107,7 +110,8 @@ class Event {
       this.unsigned,
       this.prevContent,
       this.stateKey,
-      this.room});
+      this.room,
+      this.sortOrder = 0.0});
 
   static Map<String, dynamic> getMapFromPayload(dynamic payload) {
     if (payload is String) {
@@ -122,7 +126,7 @@ class Event {
   }
 
   /// Get a State event from a table row or from the event stream.
-  factory Event.fromJson(Map<String, dynamic> jsonPayload, Room room) {
+  factory Event.fromJson(Map<String, dynamic> jsonPayload, Room room, [double sortOrder]) {
     final content = Event.getMapFromPayload(jsonPayload['content']);
     final unsigned = Event.getMapFromPayload(jsonPayload['unsigned']);
     final prevContent = Event.getMapFromPayload(jsonPayload['prev_content']);
@@ -140,6 +144,31 @@ class Event {
           : DateTime.now(),
       unsigned: unsigned,
       room: room,
+      sortOrder: sortOrder ?? 0.0,
+    );
+  }
+
+  /// Get an event from either DbRoomState or DbEvent
+  factory Event.fromDb(dynamic dbEntry, Room room) {
+    if (!(dbEntry is DbRoomState || dbEntry is DbEvent)) {
+      throw('Unknown db type');
+    }
+    final content = Event.getMapFromPayload(dbEntry.content);
+    final unsigned = Event.getMapFromPayload(dbEntry.unsigned);
+    final prevContent = Event.getMapFromPayload(dbEntry.prevContent);
+    return Event(
+      status: (dbEntry is DbEvent ? dbEntry.status : null) ?? defaultStatus,
+      stateKey: dbEntry.stateKey,
+      prevContent: prevContent,
+      content: content,
+      typeKey: dbEntry.type,
+      eventId: dbEntry.eventId,
+      roomId: dbEntry.roomId,
+      senderId: dbEntry.sender,
+      time: dbEntry.originServerTs ?? DateTime.now(),
+      unsigned: unsigned,
+      room: room,
+      sortOrder: dbEntry.sortOrder ?? 0.0,
     );
   }
 
@@ -337,9 +366,7 @@ class Event {
   /// from the database and the timelines. Returns false if not removed.
   Future<bool> remove() async {
     if (status < 1) {
-      if (room.client.store != null) {
-        await room.client.store.removeEvent(eventId);
-      }
+      await room.client.database?.removeEvent(room.client.id, eventId, room.id);
 
       room.client.onEvent.add(EventUpdate(
           roomID: room.id,
@@ -349,7 +376,8 @@ class Event {
             'event_id': eventId,
             'status': -2,
             'content': {'body': 'Removed...'}
-          }));
+          },
+          sortOrder: sortOrder));
       return true;
     }
     return false;
@@ -470,13 +498,13 @@ class Event {
     // Is this file storeable?
     final infoMap =
         getThumbnail ? content['info']['thumbnail_info'] : content['info'];
-    final storeable = (room.client.storeAPI?.extended ?? false) &&
+    final storeable = room.client.database != null &&
         infoMap is Map<String, dynamic> &&
         infoMap['size'] is int &&
-        infoMap['size'] <= room.client.store.maxFileSize;
+        infoMap['size'] <= room.client.database.maxFileSize ;
 
     if (storeable) {
-      uint8list = await room.client.store.getFile(mxContent.toString());
+      uint8list = await room.client.database.getFile(mxContent.toString());
     }
 
     // Download the file
@@ -484,7 +512,7 @@ class Event {
       uint8list =
           (await http.get(mxContent.getDownloadLink(room.client))).bodyBytes;
       if (storeable) {
-        await room.client.store.storeFile(uint8list, mxContent.toString());
+        await room.client.database.storeFile(mxContent.toString(), uint8list, DateTime.now());
       }
     }
 

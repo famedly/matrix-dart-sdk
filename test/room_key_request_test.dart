@@ -25,7 +25,7 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:test/test.dart';
 
 import 'fake_matrix_api.dart';
-import 'fake_store.dart';
+import 'fake_database.dart';
 
 void main() {
   /// All Tests related to device keys
@@ -53,13 +53,13 @@ void main() {
 
       var matrix = Client('testclient', debug: true);
       matrix.httpClient = FakeMatrixApi();
-      matrix.storeAPI = FakeStore(matrix, {});
+      matrix.database = getDatabase();
       await matrix.checkServer('https://fakeServer.notExisting');
       await matrix.login('test', '1234');
       var room = matrix.getRoomById('!726s6s6q:example.com');
       if (matrix.encryptionEnabled) {
         await room.createOutboundGroupSession();
-        rawJson['content']['body']['session_id'] = room.sessionKeys.keys.first;
+        rawJson['content']['body']['session_id'] = room.inboundGroupSessions.keys.first;
 
         var roomKeyRequest = RoomKeyRequest.fromToDeviceEvent(
             ToDeviceEvent.fromJson(rawJson), matrix);

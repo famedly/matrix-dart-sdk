@@ -22,6 +22,7 @@
  */
 
 import 'package:famedlysdk/famedlysdk.dart';
+import './database/database.dart' show DbAccountData;
 
 /// The global private data created by this user.
 class AccountData {
@@ -37,5 +38,11 @@ class AccountData {
   factory AccountData.fromJson(Map<String, dynamic> jsonPayload) {
     final content = Event.getMapFromPayload(jsonPayload['content']);
     return AccountData(content: content, typeKey: jsonPayload['type']);
+  }
+
+  /// Get account data from DbAccountData
+  factory AccountData.fromDb(DbAccountData dbEntry) {
+    final content = Event.getMapFromPayload(dbEntry.content);
+    return AccountData(content: content, typeKey: dbEntry.type);
   }
 }

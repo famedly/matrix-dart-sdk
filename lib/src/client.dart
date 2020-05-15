@@ -30,7 +30,6 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/account_data.dart';
 import 'package:famedlysdk/src/presence.dart';
 import 'package:famedlysdk/src/room.dart';
-import 'package:famedlysdk/src/store_api.dart';
 import 'package:famedlysdk/src/sync/user_update.dart';
 import 'package:famedlysdk/src/utils/device_keys_list.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
@@ -54,6 +53,7 @@ import 'sync/user_update.dart';
 import 'user.dart';
 import 'utils/matrix_exception.dart';
 import 'utils/profile.dart';
+import 'database/database.dart' show Database;
 import 'utils/pusher.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
@@ -70,12 +70,12 @@ class Client {
   @deprecated
   Client get connection => this;
 
-  /// Optional persistent store for all data.
-  ExtendedStoreAPI get store => (storeAPI?.extended ?? false) ? storeAPI : null;
+  int _id;
+  int get id => _id;
 
-  StoreAPI storeAPI;
+  Database database;
 
-  Client(this.clientName, {this.debug = false, this.storeAPI}) {
+  Client(this.clientName, {this.debug = false, this.database}) {
     onLoginStateChanged.stream.listen((loginState) {
       print('LoginState: ${loginState.toString()}');
     });
@@ -110,10 +110,6 @@ class Client {
   /// The device name is a human readable identifier for this device.
   String get deviceName => _deviceName;
   String _deviceName;
-
-  /// Which version of the matrix specification does this server support?
-  List<String> get matrixVersions => _matrixVersions;
-  List<String> _matrixVersions;
 
   /// Returns the current login state.
   bool isLogged() => accessToken != null;
@@ -208,7 +204,7 @@ class Client {
 
   /// Checks the supported versions of the Matrix protocol and the supported
   /// login types. Returns false if the server is not compatible with the
-  /// client. Automatically sets [matrixVersions].
+  /// client.
   /// Throws FormatException, TimeoutException and MatrixException on error.
   Future<bool> checkServer(serverUrl) async {
     try {
@@ -226,8 +222,6 @@ class Client {
         }
       }
 
-      _matrixVersions = versions;
-
       final loginResp =
           await jsonRequest(type: HTTPType.GET, action: '/client/r0/login');
 
@@ -243,7 +237,7 @@ class Client {
       }
       return true;
     } catch (_) {
-      _homeserver = _matrixVersions = null;
+      _homeserver = null;
       rethrow;
     }
   }
@@ -292,8 +286,7 @@ class Client {
           newUserID: response['user_id'],
           newHomeserver: homeserver,
           newDeviceName: initialDeviceDisplayName ?? '',
-          newDeviceID: response['device_id'],
-          newMatrixVersions: matrixVersions);
+          newDeviceID: response['device_id']);
     }
     return response;
   }
@@ -334,7 +327,6 @@ class Client {
         newHomeserver: homeserver,
         newDeviceName: initialDeviceDisplayName ?? '',
         newDeviceID: loginResp['device_id'],
-        newMatrixVersions: matrixVersions,
       );
       return true;
     }
@@ -676,20 +668,39 @@ class Client {
     String newUserID,
     String newDeviceName,
     String newDeviceID,
-    List<String> newMatrixVersions,
     String newPrevBatch,
     String newOlmAccount,
   }) async {
-    _accessToken = newToken;
-    _homeserver = newHomeserver;
-    _userID = newUserID;
-    _deviceID = newDeviceID;
-    _deviceName = newDeviceName;
-    _matrixVersions = newMatrixVersions;
-    prevBatch = newPrevBatch;
+    String olmAccount;
+    if (database != null) {
+      final account = await database.getClient(clientName);
+      if (account != null) {
+        _id = account.clientId;
+        _homeserver = account.homeserverUrl;
+        _accessToken = account.token;
+        _userID = account.userId;
+        _deviceID = account.deviceId;
+        _deviceName = account.deviceName;
+        prevBatch = account.prevBatch;
+        olmAccount = account.olmAccount;
+      }
+    }
+    _accessToken = newToken ?? _accessToken;
+    _homeserver = newHomeserver ?? _homeserver;
+    _userID = newUserID ?? _userID;
+    _deviceID = newDeviceID ?? _deviceID;
+    _deviceName = newDeviceName ?? _deviceName;
+    prevBatch = newPrevBatch ?? prevBatch;
+    olmAccount = newOlmAccount ?? olmAccount;
+
+    if (_accessToken == null || _homeserver == null || _userID == null) {
+      // we aren't logged in
+      onLoginStateChanged.add(LoginState.logged);
+      return;
+    }
 
     // Try to create a new olm account or restore a previous one.
-    if (newOlmAccount == null) {
+    if (olmAccount == null) {
       try {
         await olm.init();
         _olmAccount = olm.Account();
@@ -704,39 +715,30 @@ class Client {
       try {
         await olm.init();
         _olmAccount = olm.Account();
-        _olmAccount.unpickle(userID, newOlmAccount);
+        _olmAccount.unpickle(userID, olmAccount);
       } catch (_) {
         _olmAccount = null;
       }
     }
 
-    if (storeAPI != null) {
-      await storeAPI.storeClient();
-      _userDeviceKeys = await storeAPI.getUserDeviceKeys();
-      final String olmSessionPickleString =
-          await storeAPI.getItem('/clients/$userID/olm-sessions');
-      if (olmSessionPickleString != null) {
-        final Map<String, dynamic> pickleMap =
-            json.decode(olmSessionPickleString);
-        for (var entry in pickleMap.entries) {
-          for (String pickle in entry.value) {
-            _olmSessions[entry.key] = [];
-            try {
-              var session = olm.Session();
-              session.unpickle(userID, pickle);
-              _olmSessions[entry.key].add(session);
-            } catch (e) {
-              print('[LibOlm] Could not unpickle olm session: ' + e.toString());
-            }
-          }
-        }
+    if (database != null) {
+      if (id != null) {
+        await database.updateClient(
+          _homeserver, _accessToken, _userID, _deviceID,
+          _deviceName, prevBatch, pickledOlmAccount, id,
+        );
+      } else {
+        _id = await database.insertClient(
+          clientName, _homeserver, _accessToken, _userID, _deviceID,
+          _deviceName, prevBatch, pickledOlmAccount,
+        );
       }
-      if (store != null) {
-        _rooms = await store.getRoomList(onlyLeft: false);
-        _sortRooms();
-        accountData = await store.getAccountData();
-        presences = await store.getPresences();
-      }
+      _userDeviceKeys = await database.getUserDeviceKeys(id);
+      _olmSessions = await database.getOlmSessions(id, _userID);
+      _rooms = await database.getRoomList(this, onlyLeft: false);
+      _sortRooms();
+      accountData = await database.getAccountData(id);
+      presences = await database.getPresences(id);
     }
 
     _userEventSub ??= onUserEvent.stream.listen(handleUserUpdate);
@@ -755,14 +757,14 @@ class Client {
     });
     rooms.forEach((Room room) {
       room.clearOutboundGroupSession(wipe: true);
-      room.sessionKeys.values.forEach((SessionKey sessionKey) {
+      room.inboundGroupSessions.values.forEach((SessionKey sessionKey) {
         sessionKey.inboundGroupSession?.free();
       });
     });
     _olmAccount?.free();
-    storeAPI?.clear();
-    _accessToken = _homeserver =
-        _userID = _deviceID = _deviceName = _matrixVersions = prevBatch = null;
+    database?.clear(id);
+    _id = _accessToken = _homeserver =
+        _userID = _deviceID = _deviceName = prevBatch = null;
     _rooms = [];
     onLoginStateChanged.add(LoginState.loggedOut);
   }
@@ -858,6 +860,7 @@ class Client {
         var exception = MatrixException(resp);
         if (exception.error == MatrixError.M_UNKNOWN_TOKEN) {
           // The token is no longer valid. Need to sign off....
+          // TODO: add a way to export keys prior logout?
           onError.add(exception);
           clear();
         }
@@ -926,14 +929,15 @@ class Client {
       final syncResp = await _syncRequest;
       if (hash != _syncRequest.hashCode) return;
       _timeoutFactor = 1;
-      if (store != null) {
-        await store.transaction(() {
-          handleSync(syncResp);
-          store.storePrevBatch(syncResp['next_batch']);
-        });
-      } else {
-        await handleSync(syncResp);
-      }
+      final futures = handleSync(syncResp);
+      await database?.transaction(() async {
+        for (final f in futures) {
+          await f();
+        }
+        if (prevBatch != syncResp['next_batch']) {
+          await database.storePrevBatch(syncResp['next_batch'], id);
+        }
+      });
       if (prevBatch == null) {
         onFirstSync.add(true);
         prevBatch = syncResp['next_batch'];
@@ -946,37 +950,39 @@ class Client {
       onError.add(exception);
       await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
     } catch (exception) {
+      print('Error during processing events: ' + exception.toString());
       await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
     }
   }
 
   /// Use this method only for testing utilities!
-  void handleSync(dynamic sync) {
+  List<Future<dynamic> Function()> handleSync(dynamic sync) {
+    final dbActions = <Future<dynamic> Function()>[];
     if (sync['to_device'] is Map<String, dynamic> &&
         sync['to_device']['events'] is List<dynamic>) {
       _handleToDeviceEvents(sync['to_device']['events']);
     }
     if (sync['rooms'] is Map<String, dynamic>) {
       if (sync['rooms']['join'] is Map<String, dynamic>) {
-        _handleRooms(sync['rooms']['join'], Membership.join);
+        _handleRooms(sync['rooms']['join'], Membership.join, dbActions);
       }
       if (sync['rooms']['invite'] is Map<String, dynamic>) {
-        _handleRooms(sync['rooms']['invite'], Membership.invite);
+        _handleRooms(sync['rooms']['invite'], Membership.invite, dbActions);
       }
       if (sync['rooms']['leave'] is Map<String, dynamic>) {
-        _handleRooms(sync['rooms']['leave'], Membership.leave);
+        _handleRooms(sync['rooms']['leave'], Membership.leave, dbActions);
       }
     }
     if (sync['presence'] is Map<String, dynamic> &&
         sync['presence']['events'] is List<dynamic>) {
-      _handleGlobalEvents(sync['presence']['events'], 'presence');
+      _handleGlobalEvents(sync['presence']['events'], 'presence', dbActions);
     }
     if (sync['account_data'] is Map<String, dynamic> &&
         sync['account_data']['events'] is List<dynamic>) {
-      _handleGlobalEvents(sync['account_data']['events'], 'account_data');
+      _handleGlobalEvents(sync['account_data']['events'], 'account_data', dbActions);
     }
     if (sync['device_lists'] is Map<String, dynamic>) {
-      _handleDeviceListsEvents(sync['device_lists']);
+      _handleDeviceListsEvents(sync['device_lists'], dbActions);
     }
     if (sync['device_one_time_keys_count'] is Map<String, dynamic>) {
       _handleDeviceOneTimeKeysCount(sync['device_one_time_keys_count']);
@@ -988,6 +994,7 @@ class Client {
       );
     }
     onSync.add(sync);
+    return dbActions;
   }
 
   void _handleDeviceOneTimeKeysCount(
@@ -1004,11 +1011,14 @@ class Client {
     }
   }
 
-  void _handleDeviceListsEvents(Map<String, dynamic> deviceLists) {
+  void _handleDeviceListsEvents(Map<String, dynamic> deviceLists, List<Future<dynamic> Function()> dbActions) {
     if (deviceLists['changed'] is List) {
       for (final userId in deviceLists['changed']) {
         if (_userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys[userId].outdated = true;
+          if (database != null) {
+            dbActions.add(() => database.storeUserDeviceKeysInfo(id, userId, true));
+          }
         }
       }
       for (final userId in deviceLists['left']) {
@@ -1046,8 +1056,8 @@ class Client {
     }
   }
 
-  void _handleRooms(Map<String, dynamic> rooms, Membership membership) {
-    rooms.forEach((String id, dynamic room) async {
+  void _handleRooms(Map<String, dynamic> rooms, Membership membership, List<Future<dynamic> Function()> dbActions) {
+    rooms.forEach((String id, dynamic room) {
       // calculate the notification counts, the limitedTimeline and prevbatch
       num highlight_count = 0;
       num notification_count = 0;
@@ -1089,40 +1099,55 @@ class Client {
         summary: summary,
       );
       _updateRoomsByRoomUpdate(update);
-      unawaited(store?.storeRoomUpdate(update));
+      final roomObj = getRoomById(id);
+      if (limitedTimeline && roomObj != null) {
+        roomObj.resetSortOrder();
+      }
+      if (database != null) {
+        dbActions.add(() => database.storeRoomUpdate(this.id, update, getRoomById(id)));
+      }
       onRoomUpdate.add(update);
 
+      var handledEvents = false;
       /// Handle now all room events and save them in the database
       if (room['state'] is Map<String, dynamic> &&
-          room['state']['events'] is List<dynamic>) {
-        _handleRoomEvents(id, room['state']['events'], 'state');
+          room['state']['events'] is List<dynamic> &&
+          room['state']['events'].isNotEmpty) {
+        _handleRoomEvents(id, room['state']['events'], 'state', dbActions);
+        handledEvents = true;
       }
 
       if (room['invite_state'] is Map<String, dynamic> &&
           room['invite_state']['events'] is List<dynamic>) {
-        _handleRoomEvents(id, room['invite_state']['events'], 'invite_state');
+        _handleRoomEvents(id, room['invite_state']['events'], 'invite_state', dbActions);
       }
 
       if (room['timeline'] is Map<String, dynamic> &&
-          room['timeline']['events'] is List<dynamic>) {
-        _handleRoomEvents(id, room['timeline']['events'], 'timeline');
+          room['timeline']['events'] is List<dynamic> &&
+          room['timeline']['events'].isNotEmpty) {
+        _handleRoomEvents(id, room['timeline']['events'], 'timeline', dbActions);
+        handledEvents = true;
       }
 
       if (room['ephemeral'] is Map<String, dynamic> &&
           room['ephemeral']['events'] is List<dynamic>) {
-        _handleEphemerals(id, room['ephemeral']['events']);
+        _handleEphemerals(id, room['ephemeral']['events'], dbActions);
       }
 
       if (room['account_data'] is Map<String, dynamic> &&
           room['account_data']['events'] is List<dynamic>) {
-        _handleRoomEvents(id, room['account_data']['events'], 'account_data');
+        _handleRoomEvents(id, room['account_data']['events'], 'account_data', dbActions);
+      }
+
+      if (handledEvents && database != null && roomObj != null) {
+        dbActions.add(() => roomObj.updateSortOrder());
       }
     });
   }
 
-  void _handleEphemerals(String id, List<dynamic> events) {
+  void _handleEphemerals(String id, List<dynamic> events, List<Future<dynamic> Function()> dbActions) {
     for (num i = 0; i < events.length; i++) {
-      _handleEvent(events[i], id, 'ephemeral');
+      _handleEvent(events[i], id, 'ephemeral', dbActions);
 
       // Receipt events are deltas between two states. We will create a
       // fake room account data event for this and store the difference
@@ -1142,12 +1167,12 @@ class Client {
               final mxid = userTimestampMapEntry.key;
 
               // Remove previous receipt event from this user
-              for (var entry in receiptStateContent.entries) {
-                if (entry.value['m.read'] is Map<String, dynamic> &&
-                    entry.value['m.read'].containsKey(mxid)) {
-                  entry.value['m.read'].remove(mxid);
-                  break;
-                }
+              if (
+                receiptStateContent[eventID] is Map<String, dynamic> &&
+                receiptStateContent[eventID]['m.read'] is Map<String, dynamic> &&
+                receiptStateContent[eventID]['m.read'].containsKey(mxid)
+              ) {
+                receiptStateContent[eventID]['m.read'].remove(mxid);
               }
               if (userTimestampMap[mxid] is Map<String, dynamic> &&
                   userTimestampMap[mxid].containsKey('ts')) {
@@ -1160,18 +1185,18 @@ class Client {
           }
         }
         events[i]['content'] = receiptStateContent;
-        _handleEvent(events[i], id, 'account_data');
+        _handleEvent(events[i], id, 'account_data', dbActions);
       }
     }
   }
 
-  void _handleRoomEvents(String chat_id, List<dynamic> events, String type) {
+  void _handleRoomEvents(String chat_id, List<dynamic> events, String type, List<Future<dynamic> Function()> dbActions) {
     for (num i = 0; i < events.length; i++) {
-      _handleEvent(events[i], chat_id, type);
+      _handleEvent(events[i], chat_id, type, dbActions);
     }
   }
 
-  void _handleGlobalEvents(List<dynamic> events, String type) {
+  void _handleGlobalEvents(List<dynamic> events, String type, List<Future<dynamic> Function()> dbActions) {
     for (var i = 0; i < events.length; i++) {
       if (events[i]['type'] is String &&
           events[i]['content'] is Map<String, dynamic>) {
@@ -1180,42 +1205,51 @@ class Client {
           type: type,
           content: events[i],
         );
-        store?.storeUserEventUpdate(update);
+        if (database != null) {
+          dbActions.add(() => database.storeUserEventUpdate(id, update));
+        }
         onUserEvent.add(update);
       }
     }
   }
 
-  void _handleEvent(Map<String, dynamic> event, String roomID, String type) {
+  void _handleEvent(Map<String, dynamic> event, String roomID, String type, List<Future<dynamic> Function()> dbActions) {
     if (event['type'] is String && event['content'] is Map<String, dynamic>) {
       // The client must ignore any new m.room.encryption event to prevent
       // man-in-the-middle attacks!
-      if (event['type'] == 'm.room.encryption' &&
-          getRoomById(roomID).encrypted) {
+      final room = getRoomById(roomID);
+      if (room == null || (event['type'] == 'm.room.encryption' &&
+          room.encrypted)) {
         return;
       }
 
+      // ephemeral events aren't persisted and don't need a sort order - they are
+      // expected to be processed as soon as they come in
+      final sortOrder = type != 'ephemeral' ? room.newSortOrder : 0.0;
       var update = EventUpdate(
         eventType: event['type'],
         roomID: roomID,
         type: type,
         content: event,
+        sortOrder: sortOrder,
       );
       if (event['type'] == 'm.room.encrypted') {
-        update = update.decrypt(getRoomById(update.roomID));
+        update = update.decrypt(room);
       }
-      store?.storeEventUpdate(update);
+      if (type != 'ephemeral' && database != null) {
+        dbActions.add(() => database.storeEventUpdate(id, update));
+      }
       _updateRoomsByEventUpdate(update);
       onEvent.add(update);
 
       if (event['type'] == 'm.call.invite') {
-        onCallInvite.add(Event.fromJson(event, getRoomById(roomID)));
+        onCallInvite.add(Event.fromJson(event, room, sortOrder));
       } else if (event['type'] == 'm.call.hangup') {
-        onCallHangup.add(Event.fromJson(event, getRoomById(roomID)));
+        onCallHangup.add(Event.fromJson(event, room, sortOrder));
       } else if (event['type'] == 'm.call.answer') {
-        onCallAnswer.add(Event.fromJson(event, getRoomById(roomID)));
+        onCallAnswer.add(Event.fromJson(event, room, sortOrder));
       } else if (event['type'] == 'm.call.candidates') {
-        onCallCandidates.add(Event.fromJson(event, getRoomById(roomID)));
+        onCallCandidates.add(Event.fromJson(event, room, sortOrder));
       }
     }
   }
@@ -1294,7 +1328,7 @@ class Client {
     if (eventUpdate.type == 'timeline' ||
         eventUpdate.type == 'state' ||
         eventUpdate.type == 'invite_state') {
-      var stateEvent = Event.fromJson(eventUpdate.content, rooms[j]);
+      var stateEvent = Event.fromJson(eventUpdate.content, rooms[j], eventUpdate.sortOrder);
       if (stateEvent.type == EventTypes.Redaction) {
         final String redacts = eventUpdate.content['redacts'];
         rooms[j].states.states.forEach(
@@ -1337,6 +1371,7 @@ class Client {
           var room = getRoomById(roomId);
           if (room == null && addToPendingIfNotFound) {
             _pendingToDeviceEvents.add(toDeviceEvent);
+            break;
           }
           final String sessionId = toDeviceEvent.content['session_id'];
           if (toDeviceEvent.type == 'm.room_key' &&
@@ -1349,7 +1384,7 @@ class Client {
                     .deviceKeys[toDeviceEvent.content['requesting_device_id']]
                     .ed25519Key;
           }
-          room.setSessionKey(
+          room.setInboundGroupSession(
             sessionId,
             toDeviceEvent.content,
             forwarded: toDeviceEvent.type == 'm.forwarded_room_key',
@@ -1379,7 +1414,7 @@ class Client {
                   .containsKey(toDeviceEvent.content['requesting_device_id'])) {
             deviceKeys = userDeviceKeys[toDeviceEvent.sender]
                 .deviceKeys[toDeviceEvent.content['requesting_device_id']];
-            if (room.sessionKeys.containsKey(sessionId)) {
+            if (room.inboundGroupSessions.containsKey(sessionId)) {
               final roomKeyRequest =
                   RoomKeyRequest.fromToDeviceEvent(toDeviceEvent, this);
               if (deviceKeys.userId == userID &&
@@ -1446,6 +1481,7 @@ class Client {
   Future<void> _updateUserDeviceKeys() async {
     try {
       if (!isLogged()) return;
+      final dbActions = <Future<dynamic> Function()>[];
       var trackedUserIds = await _getUserIdsInEncryptedRooms();
       trackedUserIds.add(userID);
 
@@ -1481,6 +1517,7 @@ class Client {
             final String deviceId = rawDeviceKeyEntry.key;
 
             // Set the new device key for this device
+            
             if (!oldKeys.containsKey(deviceId)) {
               _userDeviceKeys[userId].deviceKeys[deviceId] =
                   DeviceKeys.fromJson(rawDeviceKeyEntry.value);
@@ -1493,11 +1530,34 @@ class Client {
             } else {
               _userDeviceKeys[userId].deviceKeys[deviceId] = oldKeys[deviceId];
             }
+            if (database != null) {
+              dbActions.add(() => database.storeUserDeviceKey(id, userId, deviceId,
+                json.encode(_userDeviceKeys[userId].deviceKeys[deviceId].toJson()),
+                _userDeviceKeys[userId].deviceKeys[deviceId].verified,
+                _userDeviceKeys[userId].deviceKeys[deviceId].blocked,
+              ));
+            }
+          }
+          if (database != null) {
+            for (final oldDeviceKeyEntry in oldKeys.entries) {
+              final deviceId = oldDeviceKeyEntry.key;
+              if (!_userDeviceKeys[userId].deviceKeys.containsKey(deviceId)) {
+                // we need to remove an old key
+                dbActions.add(() => database.removeUserDeviceKey(id, userId, deviceId));
+              }
+            }
           }
           _userDeviceKeys[userId].outdated = false;
+          if (database != null) {
+            dbActions.add(() => database.storeUserDeviceKeysInfo(id, userId, false));
+          }
         }
       }
-      await storeAPI?.storeUserDeviceKeys(userDeviceKeys);
+      await database?.transaction(() async {
+        for (final f in dbActions) {
+          await f();
+        }
+      });
       rooms.forEach((Room room) {
         if (room.encrypted) {
           room.clearOutboundGroupSession();
@@ -1616,7 +1676,7 @@ class Client {
         oneTimeKeysCount) {
       return false;
     }
-    await storeAPI?.storeClient();
+    await database?.updateClientKeys(pickledOlmAccount, id);
     lastTimeKeysUploaded = DateTime.now();
     return true;
   }
@@ -1668,7 +1728,7 @@ class Client {
       var newSession = olm.Session();
       newSession.create_inbound_from(_olmAccount, senderKey, body);
       _olmAccount.remove_one_time_keys(newSession);
-      storeAPI?.storeClient();
+      database?.updateClientKeys(pickledOlmAccount, id);
       plaintext = newSession.decrypt(type, body);
       storeOlmSession(senderKey, newSession);
     }
@@ -1695,29 +1755,24 @@ class Client {
 
   /// A map from Curve25519 identity keys to existing olm sessions.
   Map<String, List<olm.Session>> get olmSessions => _olmSessions;
-  final Map<String, List<olm.Session>> _olmSessions = {};
+  Map<String, List<olm.Session>> _olmSessions = {};
 
   void storeOlmSession(String curve25519IdentityKey, olm.Session session) {
     if (!_olmSessions.containsKey(curve25519IdentityKey)) {
       _olmSessions[curve25519IdentityKey] = [];
     }
-    if (_olmSessions[curve25519IdentityKey]
-            .indexWhere((s) => s.session_id() == session.session_id()) ==
+    final ix = _olmSessions[curve25519IdentityKey]
+            .indexWhere((s) => s.session_id() == session.session_id());
+    if (ix ==
         -1) {
+      // add a new session
       _olmSessions[curve25519IdentityKey].add(session);
+    } else {
+      // update an existing session
+      _olmSessions[curve25519IdentityKey][ix] = session;
     }
-    var pickleMap = <String, List<String>>{};
-    for (var entry in olmSessions.entries) {
-      pickleMap[entry.key] = [];
-      for (var session in entry.value) {
-        try {
-          pickleMap[entry.key].add(session.pickle(userID));
-        } catch (e) {
-          print('[LibOlm] Could not pickle olm session: ' + e.toString());
-        }
-      }
-    }
-    storeAPI?.setItem('/clients/$userID/olm-sessions', json.encode(pickleMap));
+    final pickle = session.pickle(userID);
+    database?.storeOlmSession(id, curve25519IdentityKey, session.session_id(), pickle);
   }
 
   /// Sends an encrypted [message] of this [type] to these [deviceKeys]. To send

@@ -1,0 +1,193 @@
+-- Table definitions
+
+CREATE TABLE clients (
+  client_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  homeserver_url TEXT NOT NULL,
+  token TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  device_id TEXT,
+  device_name TEXT,
+  prev_batch TEXT,
+  olm_account TEXT,
+  UNIQUE(name)
+) AS DbClient;
+
+CREATE TABLE user_device_keys (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  user_id TEXT NOT NULL,
+  outdated BOOLEAN DEFAULT true,
+  UNIQUE(client_id, user_id)
+) as DbUserDeviceKey;
+CREATE INDEX user_device_keys_index ON user_device_keys(client_id);
+
+CREATE TABLE user_device_keys_key (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  user_id TEXT NOT NULL,
+  device_id TEXT NOT NULL,
+  content TEXT NOT NULL,
+  verified BOOLEAN DEFAULT false,
+  blocked BOOLEAN DEFAULT false,
+  UNIQUE(client_id, user_id, device_id)
+) as DbUserDeviceKeysKey;
+CREATE INDEX user_device_keys_key_index ON user_device_keys_key(client_id);
+
+CREATE TABLE olm_sessions (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  identity_key TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  pickle TEXT NOT NULL,
+  UNIQUE(client_id, identity_key, session_id)
+) AS DbOlmSessions;
+CREATE INDEX olm_sessions_index ON olm_sessions(client_id);
+
+CREATE TABLE outbound_group_sessions (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  room_id TEXT NOT NULL,
+  pickle TEXT NOT NULL,
+  device_ids TEXT NOT NULL,
+  UNIQUE(client_id, room_id)
+) AS DbOutboundGroupSession;
+CREATE INDEX outbound_group_sessions_index ON outbound_group_sessions(client_id);
+
+CREATE TABLE inbound_group_sessions (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  room_id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  pickle TEXT NOT NULL,
+  content TEXT,
+  indexes TEXT,
+  UNIQUE(client_id, room_id, session_id)
+) AS DbInboundGroupSession;
+CREATE INDEX inbound_group_sessions_index ON inbound_group_sessions(client_id);
+
+CREATE TABLE rooms (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  room_id TEXT NOT NULL,
+  membership TEXT NOT NULL,
+  highlight_count INTEGER NOT NULL DEFAULT '0',
+  notification_count INTEGER NOT NULL DEFAULT '0',
+  prev_batch TEXT DEFAULT '',
+  joined_member_count INTEGER NOT NULL DEFAULT '0',
+  invited_member_count INTEGER NOT NULL DEFAULT '0',
+  newest_sort_order DOUBLE NOT NULL DEFAULT '0',
+  oldest_sort_order DOUBLE NOT NULL DEFAULT '0',
+  heroes TEXT DEFAULT '',
+  UNIQUE(client_id, room_id)
+) AS DbRoom;
+CREATE INDEX rooms_index ON rooms(client_id);
+
+CREATE TABLE events (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  event_id TEXT NOT NULL,
+  room_id TEXT NOT NULL,
+  sort_order DOUBLE NOT NULL,
+  origin_server_ts DATETIME NOT NULL,
+  sender TEXT NOT NULL,
+  type TEXT NOT NULL,
+  unsigned TEXT,
+  content TEXT,
+  prev_content TEXT,
+  state_key TEXT,
+  status INTEGER,
+  UNIQUE(client_id, event_id, room_id)
+) AS DbEvent;
+CREATE INDEX events_index ON events(client_id, room_id);
+
+CREATE TABLE room_states (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  event_id TEXT NOT NULL,
+  room_id TEXT NOT NULL,
+  sort_order DOUBLE NOT NULL,
+  origin_server_ts DATETIME NOT NULL,
+  sender TEXT NOT NULL,
+  type TEXT NOT NULL,
+  unsigned TEXT,
+  content TEXT,
+  prev_content TEXT,
+  state_key TEXT NOT NULL,
+  UNIQUE(client_id, event_id, room_id),
+  UNIQUE(client_id, room_id, state_key, type)
+) AS DbRoomState;
+CREATE INDEX room_states_index ON room_states(client_id);
+
+CREATE TABLE account_data (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  type TEXT NOT NULL,
+  content TEXT,
+  UNIQUE(client_id, type)
+) AS DbAccountData;
+CREATE INDEX account_data_index ON account_data(client_id);
+
+CREATE TABLE room_account_data (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  type TEXT NOT NULL,
+  room_id TEXT NOT NULL,
+  content TEXT,
+  UNIQUE(client_id, type, room_id)
+) AS DbRoomAccountData;
+CREATE INDEX room_account_data_index ON room_account_data(client_id);
+
+CREATE TABLE presences (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  type TEXT NOT NULL,
+  sender TEXT NOT NULL,
+  content TEXT,
+  UNIQUE(client_id, type, sender)
+) AS DbPresence;
+CREATE INDEX presences_index ON presences(client_id);
+
+CREATE TABLE files (
+  mxc_uri TEXT NOT NULL PRIMARY KEY,
+  bytes BLOB,
+  saved_at DATETIME,
+  UNIQUE(mxc_uri)
+) AS DbFile;
+
+-- named queries
+
+dbGetClient: SELECT * FROM clients WHERE name = :name;
+updateClient: UPDATE clients SET homeserver_url = :homeserver_url, token = :token, user_id = :user_id, device_id = :device_id, device_name = :device_name, prev_batch = :prev_batch, olm_account = :olm_account WHERE client_id = :client_id;
+updateClientKeys: UPDATE clients SET olm_account = :olm_account WHERE client_id = :client_id;
+storePrevBatch: UPDATE clients SET prev_batch = :prev_batch WHERE client_id = :client_id;
+getAllUserDeviceKeys: SELECT * FROM user_device_keys WHERE client_id = :client_id;
+getAllUserDeviceKeysKeys: SELECT * FROM user_device_keys_key WHERE client_id = :client_id;
+getAllOlmSessions: SELECT * FROM olm_sessions WHERE client_id = :client_id;
+storeOlmSession: INSERT OR REPLACE INTO olm_sessions (client_id, identity_key, session_id, pickle) VALUES (:client_id, :identitiy_key, :session_id, :pickle);
+getAllOutboundGroupSessions: SELECT * FROM outbound_group_sessions WHERE client_id = :client_id;
+dbGetOutboundGroupSession: SELECT * FROM outbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id;
+storeOutboundGroupSession: INSERT OR REPLACE INTO outbound_group_sessions (client_id, room_id, pickle, device_ids) VALUES (:client_id, :room_id, :pickle, :device_ids);
+removeOutboundGroupSession: DELETE FROM outbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id;
+dbGetInboundGroupSessionKeys: SELECT * FROM inbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id;
+getAllInboundGroupSessions: SELECT * FROM inbound_group_sessions WHERE client_id = :client_id;
+storeInboundGroupSession: INSERT OR REPLACE INTO inbound_group_sessions (client_id, room_id, session_id, pickle, content, indexes) VALUES (:client_id, :room_id, :session_id, :pickle, :content, :indexes);
+storeUserDeviceKeysInfo: INSERT OR REPLACE INTO user_device_keys (client_id, user_id, outdated) VALUES (:client_id, :user_id, :outdated);
+setVerifiedUserDeviceKey: UPDATE user_device_keys_key SET verified = :verified WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
+setBlockedUserDeviceKey: UPDATE user_device_keys_key SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
+storeUserDeviceKey: INSERT OR REPLACE INTO user_device_keys_key (client_id, user_id, device_id, content, verified, blocked) VALUES (:client_id, :user_id, :device_id, :content, :verified, :blocked);
+removeUserDeviceKey: DELETE FROM user_device_keys_key WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
+insertClient: INSERT INTO clients (name, homeserver_url, token, user_id, device_id, device_name, prev_batch, olm_account) VALUES (:name, :homeserver_url, :token, :user_id, :device_id, :device_name, :prev_batch, :olm_account);
+ensureRoomExists: INSERT OR IGNORE INTO rooms (client_id, room_id, membership) VALUES (:client_id, :room_id, :membership);
+setRoomPrevBatch: UPDATE rooms SET prev_batch = :prev_batch WHERE client_id = :client_id AND room_id = :room_id;
+updateRoomSortOrder: UPDATE rooms SET oldest_sort_order = :oldest_sort_order, newest_sort_order = :newest_sort_order WHERE client_id = :client_id AND room_id = :room_id;
+getAllAccountData: SELECT * FROM account_data WHERE client_id = :client_id;
+storeAccountData: INSERT OR REPLACE INTO account_data (client_id, type, content) VALUES (:client_id, :type, :content);
+getAllPresences: SELECT * FROM presences WHERE client_id = :client_id;
+storePresence: INSERT OR REPLACE INTO presences (client_id, type, sender, content) VALUES (:client_id, :type, :sender, :content);
+updateEvent: UPDATE events SET unsigned = :unsigned, content = :content, prev_content = :prev_content WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id;
+updateEventStatus: UPDATE events SET status = :status, event_id = :new_event_id WHERE client_id = :client_id AND event_id = :old_event_id AND room_id = :room_id;
+getAllRoomStates: SELECT * FROM room_states WHERE client_id = :client_id;
+storeEvent: INSERT OR REPLACE INTO events (client_id, event_id, room_id, sort_order, origin_server_ts, sender, type, unsigned, content, prev_content, state_key, status) VALUES (:client_id, :event_id, :room_id, :sort_order, :origin_server_ts, :sender, :type, :unsigned, :content, :prev_content, :state_key, :status);
+storeRoomState: INSERT OR REPLACE INTO room_states (client_id, event_id, room_id, sort_order, origin_server_ts, sender, type, unsigned, content, prev_content, state_key) VALUES (:client_id, :event_id, :room_id, :sort_order, :origin_server_ts, :sender, :type, :unsigned, :content, :prev_content, :state_key);
+getAllRoomAccountData: SELECT * FROM room_account_data WHERE client_id = :client_id;
+storeRoomAccountData: INSERT OR REPLACE INTO room_account_data (client_id, type, room_id, content) VALUES (:client_id, :type, :room_id, :content);
+dbGetUser: SELECT * FROM room_states WHERE client_id = :client_id AND type = 'm.room.member' AND state_key = :state_key AND room_id = :room_id;
+dbGetEventList: SELECT * FROM events WHERE client_id = :client_id AND room_id = :room_id GROUP BY event_id ORDER BY sort_order DESC;
+getStates: SELECT * FROM room_states WHERE client_id = :client_id AND room_id = :room_id;
+resetNotificationCount: UPDATE rooms SET notification_count = 0, highlight_count = 0 WHERE client_id = :client_id AND room_id = :room_id;
+getEvent: SELECT * FROM events WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id;
+removeEvent: DELETE FROM events WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id;
+removeRoom: DELETE FROM rooms WHERE client_id = :client_id AND room_id = :room_id;
+removeRoomEvents: DELETE FROM events WHERE client_id = :client_id AND room_id = :room_id;
+storeFile: INSERT OR REPLACE INTO files (mxc_uri, bytes, saved_at) VALUES (:mxc_uri, :bytes, :time);
+dbGetFile: SELECT * FROM files WHERE mxc_uri = :mxc_uri;

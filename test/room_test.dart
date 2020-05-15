@@ -26,6 +26,7 @@ import 'package:famedlysdk/src/event.dart';
 import 'package:famedlysdk/src/room.dart';
 import 'package:famedlysdk/src/user.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
+import 'package:famedlysdk/src/database/database.dart' show DbRoom, DbRoomState, DbRoomAccountData;
 import 'package:test/test.dart';
 
 import 'fake_matrix_api.dart';
@@ -62,44 +63,50 @@ void main() {
         '@charley:example.org'
       ];
 
-      var jsonObj = <String, dynamic>{
-        'room_id': id,
-        'membership': membership.toString().split('.').last,
-        'avatar_url': '',
-        'notification_count': notificationCount,
-        'highlight_count': highlightCount,
-        'prev_batch': '',
-        'joined_member_count': notificationCount,
-        'invited_member_count': notificationCount,
-        'heroes': heroes.join(','),
-      };
+      var dbRoom = DbRoom(
+        clientId: 1,
+        roomId: id,
+        membership: membership.toString().split('.').last,
+        highlightCount: highlightCount,
+        notificationCount: notificationCount,
+        prevBatch: '',
+        joinedMemberCount: notificationCount,
+        invitedMemberCount: notificationCount,
+        newestSortOrder: 0.0,
+        oldestSortOrder: 0.0,
+        heroes: heroes.join(','),
+      );
 
-      Function states = () async => [
-            {
-              'content': {'join_rule': 'public'},
-              'event_id': '143273582443PhrSn:example.org',
-              'origin_server_ts': 1432735824653,
-              'room_id': id,
-              'sender': '@example:example.org',
-              'state_key': '',
-              'type': 'm.room.join_rules',
-              'unsigned': {'age': 1234}
-            }
-          ];
+      var states = [
+        DbRoomState(
+          clientId: 1,
+          eventId: '143273582443PhrSn:example.org',
+          roomId: id,
+          sortOrder: 0.0,
+          originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
+          sender: '@example:example.org',
+          type: 'm.room.join_rules',
+          unsigned: '{"age": 1234}',
+          content: '{"join_rule": "public"}',
+          prevContent: '',
+          stateKey: '',
+        ),
+      ];
 
-      Function roomAccountData = () async => [
-            {
-              'content': {'foo': 'bar'},
-              'room_id': id,
-              'type': 'com.test.foo'
-            }
-          ];
+      var roomAccountData = [
+        DbRoomAccountData(
+          clientId: 1,
+          type: 'com.test.foo',
+          roomId: id,
+          content: '{"foo": "bar"}',
+        ),
+      ];
 
       room = await Room.getRoomFromTableRow(
-        jsonObj,
+        dbRoom,
         matrix,
-        states: states(),
-        roomAccountData: roomAccountData(),
+        states: states,
+        roomAccountData: roomAccountData,
       );
 
       expect(room.id, id);
@@ -390,14 +397,14 @@ void main() {
       expect(room.outboundGroupSession != null, true);
       expect(room.outboundGroupSession.session_id().isNotEmpty, true);
       expect(
-          room.sessionKeys.containsKey(room.outboundGroupSession.session_id()),
+          room.inboundGroupSessions.containsKey(room.outboundGroupSession.session_id()),
           true);
       expect(
-          room.sessionKeys[room.outboundGroupSession.session_id()]
+          room.inboundGroupSessions[room.outboundGroupSession.session_id()]
               .content['session_key'],
           room.outboundGroupSession.session_key());
       expect(
-          room.sessionKeys[room.outboundGroupSession.session_id()].indexes
+          room.inboundGroupSessions[room.outboundGroupSession.session_id()].indexes
               .length,
           0);
     });
