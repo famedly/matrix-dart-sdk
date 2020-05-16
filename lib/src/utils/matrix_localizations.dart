@@ -31,6 +31,8 @@ abstract class MatrixLocalizations {
 
   String get you;
 
+  String get roomHasBeenUpgraded;
+
   String groupWith(String displayname);
 
   String removedBy(String calcDisplayname);
