@@ -706,7 +706,7 @@ class Client {
 
     if (_accessToken == null || _homeserver == null || _userID == null) {
       // we aren't logged in
-      onLoginStateChanged.add(LoginState.logged);
+      onLoginStateChanged.add(LoginState.loggedOut);
       return;
     }
 
