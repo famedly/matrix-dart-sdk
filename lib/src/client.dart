@@ -55,6 +55,7 @@ import 'utils/matrix_exception.dart';
 import 'utils/profile.dart';
 import 'database/database.dart' show Database;
 import 'utils/pusher.dart';
+import 'utils/well_known_informations.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -200,6 +201,16 @@ class Client {
       }
     }
     return null;
+  }
+
+  /// Gets discovery information about the domain. The file may include additional keys.
+  Future<WellKnownInformations> getWellKnownInformationsByUserId(
+    String MatrixIdOrDomain,
+  ) async {
+    final response = await http
+        .get('https://${MatrixIdOrDomain.domain}/.well-known/matrix/client');
+    final rawJson = json.decode(response.body);
+    return WellKnownInformations.fromJson(rawJson);
   }
 
   /// Checks the supported versions of the Matrix protocol and the supported
@@ -724,13 +735,25 @@ class Client {
     if (database != null) {
       if (id != null) {
         await database.updateClient(
-          _homeserver, _accessToken, _userID, _deviceID,
-          _deviceName, prevBatch, pickledOlmAccount, id,
+          _homeserver,
+          _accessToken,
+          _userID,
+          _deviceID,
+          _deviceName,
+          prevBatch,
+          pickledOlmAccount,
+          id,
         );
       } else {
         _id = await database.insertClient(
-          clientName, _homeserver, _accessToken, _userID, _deviceID,
-          _deviceName, prevBatch, pickledOlmAccount,
+          clientName,
+          _homeserver,
+          _accessToken,
+          _userID,
+          _deviceID,
+          _deviceName,
+          prevBatch,
+          pickledOlmAccount,
         );
       }
       _userDeviceKeys = await database.getUserDeviceKeys(id);
@@ -763,8 +786,8 @@ class Client {
     });
     _olmAccount?.free();
     database?.clear(id);
-    _id = _accessToken = _homeserver =
-        _userID = _deviceID = _deviceName = prevBatch = null;
+    _id = _accessToken =
+        _homeserver = _userID = _deviceID = _deviceName = prevBatch = null;
     _rooms = [];
     onLoginStateChanged.add(LoginState.loggedOut);
   }
@@ -979,7 +1002,8 @@ class Client {
     }
     if (sync['account_data'] is Map<String, dynamic> &&
         sync['account_data']['events'] is List<dynamic>) {
-      _handleGlobalEvents(sync['account_data']['events'], 'account_data', dbActions);
+      _handleGlobalEvents(
+          sync['account_data']['events'], 'account_data', dbActions);
     }
     if (sync['device_lists'] is Map<String, dynamic>) {
       _handleDeviceListsEvents(sync['device_lists'], dbActions);
@@ -1011,13 +1035,15 @@ class Client {
     }
   }
 
-  void _handleDeviceListsEvents(Map<String, dynamic> deviceLists, List<Future<dynamic> Function()> dbActions) {
+  void _handleDeviceListsEvents(Map<String, dynamic> deviceLists,
+      List<Future<dynamic> Function()> dbActions) {
     if (deviceLists['changed'] is List) {
       for (final userId in deviceLists['changed']) {
         if (_userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys[userId].outdated = true;
           if (database != null) {
-            dbActions.add(() => database.storeUserDeviceKeysInfo(id, userId, true));
+            dbActions
+                .add(() => database.storeUserDeviceKeysInfo(id, userId, true));
           }
         }
       }
@@ -1056,7 +1082,8 @@ class Client {
     }
   }
 
-  void _handleRooms(Map<String, dynamic> rooms, Membership membership, List<Future<dynamic> Function()> dbActions) {
+  void _handleRooms(Map<String, dynamic> rooms, Membership membership,
+      List<Future<dynamic> Function()> dbActions) {
     rooms.forEach((String id, dynamic room) {
       // calculate the notification counts, the limitedTimeline and prevbatch
       num highlight_count = 0;
@@ -1104,11 +1131,13 @@ class Client {
         roomObj.resetSortOrder();
       }
       if (database != null) {
-        dbActions.add(() => database.storeRoomUpdate(this.id, update, getRoomById(id)));
+        dbActions.add(
+            () => database.storeRoomUpdate(this.id, update, getRoomById(id)));
       }
       onRoomUpdate.add(update);
 
       var handledEvents = false;
+
       /// Handle now all room events and save them in the database
       if (room['state'] is Map<String, dynamic> &&
           room['state']['events'] is List<dynamic> &&
@@ -1119,13 +1148,15 @@ class Client {
 
       if (room['invite_state'] is Map<String, dynamic> &&
           room['invite_state']['events'] is List<dynamic>) {
-        _handleRoomEvents(id, room['invite_state']['events'], 'invite_state', dbActions);
+        _handleRoomEvents(
+            id, room['invite_state']['events'], 'invite_state', dbActions);
       }
 
       if (room['timeline'] is Map<String, dynamic> &&
           room['timeline']['events'] is List<dynamic> &&
           room['timeline']['events'].isNotEmpty) {
-        _handleRoomEvents(id, room['timeline']['events'], 'timeline', dbActions);
+        _handleRoomEvents(
+            id, room['timeline']['events'], 'timeline', dbActions);
         handledEvents = true;
       }
 
@@ -1136,7 +1167,8 @@ class Client {
 
       if (room['account_data'] is Map<String, dynamic> &&
           room['account_data']['events'] is List<dynamic>) {
-        _handleRoomEvents(id, room['account_data']['events'], 'account_data', dbActions);
+        _handleRoomEvents(
+            id, room['account_data']['events'], 'account_data', dbActions);
       }
 
       if (handledEvents && database != null && roomObj != null) {
@@ -1145,7 +1177,8 @@ class Client {
     });
   }
 
-  void _handleEphemerals(String id, List<dynamic> events, List<Future<dynamic> Function()> dbActions) {
+  void _handleEphemerals(String id, List<dynamic> events,
+      List<Future<dynamic> Function()> dbActions) {
     for (num i = 0; i < events.length; i++) {
       _handleEvent(events[i], id, 'ephemeral', dbActions);
 
@@ -1167,11 +1200,10 @@ class Client {
               final mxid = userTimestampMapEntry.key;
 
               // Remove previous receipt event from this user
-              if (
-                receiptStateContent[eventID] is Map<String, dynamic> &&
-                receiptStateContent[eventID]['m.read'] is Map<String, dynamic> &&
-                receiptStateContent[eventID]['m.read'].containsKey(mxid)
-              ) {
+              if (receiptStateContent[eventID] is Map<String, dynamic> &&
+                  receiptStateContent[eventID]['m.read']
+                      is Map<String, dynamic> &&
+                  receiptStateContent[eventID]['m.read'].containsKey(mxid)) {
                 receiptStateContent[eventID]['m.read'].remove(mxid);
               }
               if (userTimestampMap[mxid] is Map<String, dynamic> &&
@@ -1190,13 +1222,15 @@ class Client {
     }
   }
 
-  void _handleRoomEvents(String chat_id, List<dynamic> events, String type, List<Future<dynamic> Function()> dbActions) {
+  void _handleRoomEvents(String chat_id, List<dynamic> events, String type,
+      List<Future<dynamic> Function()> dbActions) {
     for (num i = 0; i < events.length; i++) {
       _handleEvent(events[i], chat_id, type, dbActions);
     }
   }
 
-  void _handleGlobalEvents(List<dynamic> events, String type, List<Future<dynamic> Function()> dbActions) {
+  void _handleGlobalEvents(List<dynamic> events, String type,
+      List<Future<dynamic> Function()> dbActions) {
     for (var i = 0; i < events.length; i++) {
       if (events[i]['type'] is String &&
           events[i]['content'] is Map<String, dynamic>) {
@@ -1213,13 +1247,14 @@ class Client {
     }
   }
 
-  void _handleEvent(Map<String, dynamic> event, String roomID, String type, List<Future<dynamic> Function()> dbActions) {
+  void _handleEvent(Map<String, dynamic> event, String roomID, String type,
+      List<Future<dynamic> Function()> dbActions) {
     if (event['type'] is String && event['content'] is Map<String, dynamic>) {
       // The client must ignore any new m.room.encryption event to prevent
       // man-in-the-middle attacks!
       final room = getRoomById(roomID);
-      if (room == null || (event['type'] == 'm.room.encryption' &&
-          room.encrypted)) {
+      if (room == null ||
+          (event['type'] == 'm.room.encryption' && room.encrypted)) {
         return;
       }
 
@@ -1328,7 +1363,8 @@ class Client {
     if (eventUpdate.type == 'timeline' ||
         eventUpdate.type == 'state' ||
         eventUpdate.type == 'invite_state') {
-      var stateEvent = Event.fromJson(eventUpdate.content, rooms[j], eventUpdate.sortOrder);
+      var stateEvent =
+          Event.fromJson(eventUpdate.content, rooms[j], eventUpdate.sortOrder);
       if (stateEvent.type == EventTypes.Redaction) {
         final String redacts = eventUpdate.content['redacts'];
         rooms[j].states.states.forEach(
@@ -1517,7 +1553,7 @@ class Client {
             final String deviceId = rawDeviceKeyEntry.key;
 
             // Set the new device key for this device
-            
+
             if (!oldKeys.containsKey(deviceId)) {
               _userDeviceKeys[userId].deviceKeys[deviceId] =
                   DeviceKeys.fromJson(rawDeviceKeyEntry.value);
@@ -1531,11 +1567,15 @@ class Client {
               _userDeviceKeys[userId].deviceKeys[deviceId] = oldKeys[deviceId];
             }
             if (database != null) {
-              dbActions.add(() => database.storeUserDeviceKey(id, userId, deviceId,
-                json.encode(_userDeviceKeys[userId].deviceKeys[deviceId].toJson()),
-                _userDeviceKeys[userId].deviceKeys[deviceId].verified,
-                _userDeviceKeys[userId].deviceKeys[deviceId].blocked,
-              ));
+              dbActions.add(() => database.storeUserDeviceKey(
+                    id,
+                    userId,
+                    deviceId,
+                    json.encode(
+                        _userDeviceKeys[userId].deviceKeys[deviceId].toJson()),
+                    _userDeviceKeys[userId].deviceKeys[deviceId].verified,
+                    _userDeviceKeys[userId].deviceKeys[deviceId].blocked,
+                  ));
             }
           }
           if (database != null) {
@@ -1543,13 +1583,15 @@ class Client {
               final deviceId = oldDeviceKeyEntry.key;
               if (!_userDeviceKeys[userId].deviceKeys.containsKey(deviceId)) {
                 // we need to remove an old key
-                dbActions.add(() => database.removeUserDeviceKey(id, userId, deviceId));
+                dbActions.add(
+                    () => database.removeUserDeviceKey(id, userId, deviceId));
               }
             }
           }
           _userDeviceKeys[userId].outdated = false;
           if (database != null) {
-            dbActions.add(() => database.storeUserDeviceKeysInfo(id, userId, false));
+            dbActions
+                .add(() => database.storeUserDeviceKeysInfo(id, userId, false));
           }
         }
       }
@@ -1762,9 +1804,8 @@ class Client {
       _olmSessions[curve25519IdentityKey] = [];
     }
     final ix = _olmSessions[curve25519IdentityKey]
-            .indexWhere((s) => s.session_id() == session.session_id());
-    if (ix ==
-        -1) {
+        .indexWhere((s) => s.session_id() == session.session_id());
+    if (ix == -1) {
       // add a new session
       _olmSessions[curve25519IdentityKey].add(session);
     } else {
@@ -1772,7 +1813,8 @@ class Client {
       _olmSessions[curve25519IdentityKey][ix] = session;
     }
     final pickle = session.pickle(userID);
-    database?.storeOlmSession(id, curve25519IdentityKey, session.session_id(), pickle);
+    database?.storeOlmSession(
+        id, curve25519IdentityKey, session.session_id(), pickle);
   }
 
   /// Sends an encrypted [message] of this [type] to these [deviceKeys]. To send
