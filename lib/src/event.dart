@@ -126,7 +126,8 @@ class Event {
   }
 
   /// Get a State event from a table row or from the event stream.
-  factory Event.fromJson(Map<String, dynamic> jsonPayload, Room room, [double sortOrder]) {
+  factory Event.fromJson(Map<String, dynamic> jsonPayload, Room room,
+      [double sortOrder]) {
     final content = Event.getMapFromPayload(jsonPayload['content']);
     final unsigned = Event.getMapFromPayload(jsonPayload['unsigned']);
     final prevContent = Event.getMapFromPayload(jsonPayload['prev_content']);
@@ -151,7 +152,7 @@ class Event {
   /// Get an event from either DbRoomState or DbEvent
   factory Event.fromDb(dynamic dbEntry, Room room) {
     if (!(dbEntry is DbRoomState || dbEntry is DbEvent)) {
-      throw('Unknown db type');
+      throw ('Unknown db type');
     }
     final content = Event.getMapFromPayload(dbEntry.content);
     final unsigned = Event.getMapFromPayload(dbEntry.unsigned);
@@ -242,6 +243,8 @@ class Event {
         return EventTypes.Encrypted;
       case 'm.room.encryption':
         return EventTypes.Encryption;
+      case 'm.room.tombsone':
+        return EventTypes.RoomTombstone;
       case 'm.call.invite':
         return EventTypes.CallInvite;
       case 'm.call.answer':
@@ -501,7 +504,7 @@ class Event {
     final storeable = room.client.database != null &&
         infoMap is Map<String, dynamic> &&
         infoMap['size'] is int &&
-        infoMap['size'] <= room.client.database.maxFileSize ;
+        infoMap['size'] <= room.client.database.maxFileSize;
 
     if (storeable) {
       uint8list = await room.client.database.getFile(mxContent.toString());
@@ -512,7 +515,8 @@ class Event {
       uint8list =
           (await http.get(mxContent.getDownloadLink(room.client))).bodyBytes;
       if (storeable) {
-        await room.client.database.storeFile(mxContent.toString(), uint8list, DateTime.now());
+        await room.client.database
+            .storeFile(mxContent.toString(), uint8list, DateTime.now());
       }
     }
 
@@ -558,6 +562,9 @@ class Event {
         break;
       case EventTypes.RoomCreate:
         localizedBody = i18n.createdTheChat(senderName);
+        break;
+      case EventTypes.RoomTombstone:
+        localizedBody = i18n.roomHasBeenUpgraded;
         break;
       case EventTypes.RoomJoinRules:
         var joinRules = JoinRules.values.firstWhere(
@@ -792,6 +799,7 @@ enum EventTypes {
   RoomName,
   RoomTopic,
   RoomAvatar,
+  RoomTombstone,
   GuestAccess,
   HistoryVisibility,
   Encryption,
