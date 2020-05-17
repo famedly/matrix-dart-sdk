@@ -56,6 +56,7 @@ import 'utils/profile.dart';
 import 'database/database.dart' show Database;
 import 'utils/pusher.dart';
 import 'utils/well_known_informations.dart';
+import 'utils/key_verification.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -633,6 +634,11 @@ class Client {
   final StreamController<RoomKeyRequest> onRoomKeyRequest =
       StreamController.broadcast();
 
+  /// Will be called when another device is requesting verification with this device.
+  final StreamController<KeyVerification> onKeyVerificationRequest = StreamController.broadcast();
+
+  final Map<String, KeyVerification> _keyVerificationRequests = {};
+
   /// Matrix synchronisation is done with https long polling. This needs a
   /// timeout which is usually 30 seconds.
   int syncTimeoutSec = 30;
@@ -968,6 +974,7 @@ class Client {
       }
       prevBatch = syncResp['next_batch'];
       await _updateUserDeviceKeys();
+      _cleanupKeyVerificationRequests();
       if (hash == _syncRequest.hashCode) unawaited(_sync());
     } on MatrixException catch (exception) {
       onError.add(exception);
@@ -1055,6 +1062,28 @@ class Client {
     }
   }
 
+  void _cleanupKeyVerificationRequests() {
+    for (final entry in _keyVerificationRequests.entries) {
+      (() async {
+        var dispose = entry.value.canceled || entry.value.state == KeyVerificationState.done || entry.value.state == KeyVerificationState.error;
+        if (!dispose) {
+          dispose = !(await entry.value.verifyActivity());
+        }
+        if (dispose) {
+          entry.value.dispose();
+          _keyVerificationRequests.remove(entry.key);
+        }
+      })();
+    }
+  }
+
+  void addKeyVerificationRequest(KeyVerification request) {
+    if (request.transactionId == null) {
+      return;
+    }
+    _keyVerificationRequests[request.transactionId] = request;
+  }
+
   void _handleToDeviceEvents(List<dynamic> events) {
     for (var i = 0; i < events.length; i++) {
       var isValid = events[i] is Map &&
@@ -1078,7 +1107,35 @@ class Client {
         }
       }
       _updateRoomsByToDeviceEvent(toDeviceEvent);
+      if (toDeviceEvent.type.startsWith('m.key.verification.')) {
+        _handleToDeviceKeyVerificationRequest(toDeviceEvent);
+      }
       onToDeviceEvent.add(toDeviceEvent);
+    }
+  }
+
+  void _handleToDeviceKeyVerificationRequest(ToDeviceEvent toDeviceEvent) {
+    if (!toDeviceEvent.type.startsWith('m.key.verification.')) {
+      return;
+    }
+    // we have key verification going on!
+    final transactionId = KeyVerification.getTransactionId(toDeviceEvent.content);
+    if (transactionId != null) {
+      if (_keyVerificationRequests.containsKey(transactionId)) {
+        _keyVerificationRequests[transactionId].handlePayload(toDeviceEvent.type, toDeviceEvent.content);
+      } else {
+        final newKeyRequest = KeyVerification(client: this, userId: toDeviceEvent.sender);
+        newKeyRequest.handlePayload(toDeviceEvent.type, toDeviceEvent.content).then((res) {
+          if (newKeyRequest.state != KeyVerificationState.askAccept) {
+            // okay, something went wrong (unknown transaction id?), just dispose it
+            newKeyRequest.dispose();
+          } else {
+            // we have a new request! Let's broadcast it!
+            _keyVerificationRequests[transactionId] = newKeyRequest;
+            onKeyVerificationRequest.add(newKeyRequest);
+          }
+        });
+      }
     }
   }
 

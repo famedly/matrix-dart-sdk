@@ -15,16 +15,18 @@ dependencies:
   markdown: ^2.1.3
   html_unescape: ^1.0.1+3
   moor: ^3.0.2
+  random_string: ^2.0.1
 
   olm:
     git:
       url: https://gitlab.com/famedly/libraries/dart-olm.git
-      ref: 1.x.y
+      ref: 2ef8828859e0c4f6064038e45d89be3e46f8013c
 
   matrix_file_e2ee:
-    git:
-      url: https://gitlab.com/famedly/libraries/matrix_file_e2ee.git
-      ref: 1.x.y
+    path: /home/sorunome/repos/famedly/matrix_file_e2ee
+#    git:
+#      url: https://gitlab.com/famedly/libraries/matrix_file_e2ee.git
+#      ref: 1.x.y
 
 dev_dependencies:
   test: ^1.0.0
