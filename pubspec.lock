@@ -298,9 +298,11 @@ packages:
   matrix_file_e2ee:
     dependency: "direct main"
     description:
-      path: "/home/sorunome/repos/famedly/matrix_file_e2ee"
-      relative: false
-    source: path
+      path: "."
+      ref: "1.x.y"
+      resolved-ref: "32edeff765369a7a77a0822f4b19302ca24a017b"
+      url: "https://gitlab.com/famedly/libraries/matrix_file_e2ee.git"
+    source: git
     version: "1.0.3"
   meta:
     dependency: transitive
@@ -362,11 +364,11 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "2ef8828859e0c4f6064038e45d89be3e46f8013c"
-      resolved-ref: "2ef8828859e0c4f6064038e45d89be3e46f8013c"
+      ref: "1.x.y"
+      resolved-ref: "7b6a91343e2af47ce78a7ecf7532b94b563b2d04"
       url: "https://gitlab.com/famedly/libraries/dart-olm.git"
     source: git
-    version: "1.0.0"
+    version: "1.1.0"
   package_config:
     dependency: transitive
     description:
