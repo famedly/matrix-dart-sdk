@@ -1408,6 +1408,7 @@ class Client {
             _pendingToDeviceEvents.add(toDeviceEvent);
             break;
           }
+          room ??= Room(client: this, id: roomId);
           final String sessionId = toDeviceEvent.content['session_id'];
           if (toDeviceEvent.type == 'm.room_key' &&
               userDeviceKeys.containsKey(toDeviceEvent.sender) &&
