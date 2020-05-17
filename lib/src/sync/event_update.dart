@@ -53,7 +53,7 @@ class EventUpdate {
       var decrpytedEvent =
           room.decryptGroupMessage(Event.fromJson(content, room, sortOrder));
       return EventUpdate(
-        eventType: eventType,
+        eventType: decrpytedEvent.typeKey,
         roomID: roomID,
         type: type,
         content: decrpytedEvent.toJson(),

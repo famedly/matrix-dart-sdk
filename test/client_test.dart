@@ -667,6 +667,7 @@ void main() {
       expect(client2.deviceID, client1.deviceID);
       expect(client2.deviceName, client1.deviceName);
       if (client2.encryptionEnabled) {
+        await client2.rooms[1].restoreOutboundGroupSession();
         expect(client2.pickledOlmAccount, client1.pickledOlmAccount);
         expect(json.encode(client2.rooms[1].inboundGroupSessions[sessionKey]),
             json.encode(client1.rooms[1].inboundGroupSessions[sessionKey]));

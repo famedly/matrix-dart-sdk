@@ -417,6 +417,10 @@ class Event {
     return await timeline.getEventById(replyEventId);
   }
 
+  Future<void> loadSession() {
+    return room.loadInboundGroupSessionKeyForEvent(this);  
+  }
+
   /// Trys to decrypt this event. Returns a m.bad.encrypted event
   /// if it fails and does nothing if the event was not encrypted.
   Event get decrypted => room.decryptGroupMessage(this);
