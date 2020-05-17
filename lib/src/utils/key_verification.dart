@@ -245,7 +245,7 @@ class KeyVerification {
   }
 
   List<int> get sasNumbers {
-    return _bytesToInt(_makeSas(5), 13);
+    return _bytesToInt(_makeSas(5), 13).map((n) => n + 1000).toList();
   }
 
   List<KeyVerificationEmoji> get sasEmojis {
