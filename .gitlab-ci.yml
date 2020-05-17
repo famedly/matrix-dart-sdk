@@ -2,13 +2,12 @@ stages:
   - coverage
   - builddocs
   - deploy
-
-variables:
-  JEKYLL_ENV: production
-
+  
 coverage:
-  image: debian:testing
+  tags:
+    - linux
   stage: coverage
+  image: debian:testing
   coverage: '/^\s+lines.+: (\d+.\d*%)/'
   dependencies: []
   script:
@@ -27,8 +26,10 @@ coverage:
     - su -c ./test.sh test
 
 coverage_without_olm:
-  image: debian:testing
+  tags:
+    - linux
   stage: coverage
+  image: debian:testing
   coverage: '/^\s+lines.+: (\d+.\d*%)/'
   dependencies: []
   script:    
@@ -44,13 +45,17 @@ coverage_without_olm:
     - pub run test
 
 code_analyze:
-  image: cirrusci/flutter
+  tags:
+    - docker
   stage: coverage
+  image: cirrusci/flutter
   dependencies: []
   script:
     - flutter analyze
 
-builddocs:
+build-api-doc:
+  tags:
+    - docker
   stage: builddocs
   image: cirrusci/flutter
   script:
@@ -61,17 +66,36 @@ builddocs:
   only:
     - master
 
-pages:
-  stage: deploy
-  image: ruby:2.3
+build-doc:
+  tags:
+    - docker
+  stage: builddocs
+  image: registry.gitlab.com/larodar/mdbook-dtmo:latest
   script:
-    - mv doc/api/* ./
-    - bundle install
-    - bundle exec jekyll build -d public
+    - cd doc
+    - mdbook-dtmo build -d public
+    - mv public ../doc-public
+  artifacts:
+    paths:
+      - doc-public
+  only:
+    - master
+
+pages:
+  tags:
+    - linux
+  stage: deploy
+  image: alpine:latest
+  script:
+    - mv doc/api/ ./home/api
+    - mv doc-public ./home/doc
+    - mv home public
   dependencies:
-    - builddocs
+    - build-api-doc
+    - build-doc
   artifacts:
     paths:
       - public
   only:
     - master
+    
