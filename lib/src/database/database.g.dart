@@ -4831,6 +4831,20 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
+  Selectable<DbInboundGroupSession> dbGetInboundGroupSessionKey(
+      int client_id, String room_id, String session_id) {
+    return customSelect(
+        'SELECT * FROM inbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id',
+        variables: [
+          Variable.withInt(client_id),
+          Variable.withString(room_id),
+          Variable.withString(session_id)
+        ],
+        readsFrom: {
+          inboundGroupSessions
+        }).map(_rowToDbInboundGroupSession);
+  }
+
   Selectable<DbInboundGroupSession> dbGetInboundGroupSessionKeys(
       int client_id, String room_id) {
     return customSelect(

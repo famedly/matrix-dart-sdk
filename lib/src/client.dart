@@ -1280,7 +1280,6 @@ class Client {
         roomAccountData: {},
         client: this,
       );
-      newRoom.restoreGroupSessionKeys();
       rooms.insert(position, newRoom);
     }
     // If the membership is "leave" then remove the item and stop here
@@ -1414,6 +1413,7 @@ class Client {
                   .containsKey(toDeviceEvent.content['requesting_device_id'])) {
             deviceKeys = userDeviceKeys[toDeviceEvent.sender]
                 .deviceKeys[toDeviceEvent.content['requesting_device_id']];
+            await room.loadInboundGroupSessionKey(sessionId);
             if (room.inboundGroupSessions.containsKey(sessionId)) {
               final roomKeyRequest =
                   RoomKeyRequest.fromToDeviceEvent(toDeviceEvent, this);
@@ -1556,11 +1556,6 @@ class Client {
       await database?.transaction(() async {
         for (final f in dbActions) {
           await f();
-        }
-      });
-      rooms.forEach((Room room) {
-        if (room.encrypted) {
-          room.clearOutboundGroupSession();
         }
       });
     } catch (e) {

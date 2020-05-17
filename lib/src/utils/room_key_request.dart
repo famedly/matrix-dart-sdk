@@ -16,6 +16,7 @@ class RoomKeyRequest extends ToDeviceEvent {
 
   Future<void> forwardKey() async {
     var room = this.room;
+    await room.loadInboundGroupSessionKey(content['body']['session_id']);
     final session = room.inboundGroupSessions[content['body']['session_id']];
     var forwardedKeys = <dynamic>[client.identityKey];
     for (final key in session.forwardingCurve25519KeyChain) {

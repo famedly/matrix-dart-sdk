@@ -201,7 +201,7 @@ class Room {
   ///   "session_key": "AgAAAADxKHa9uFxcXzwYoNueL5Xqi69IkD4sni8LlfJL7qNBEY..."
   /// }
   Map<String, SessionKey> get inboundGroupSessions => _inboundGroupSessions;
-  Map<String, SessionKey> _inboundGroupSessions = {};
+  final _inboundGroupSessions = <String, SessionKey>{};
 
   /// Add a new session key to the [sessionKeys].
   void setInboundGroupSession(String sessionId, Map<String, dynamic> content,
@@ -228,12 +228,10 @@ class Room {
       indexes: {},
       key: client.userID,
     );
-    if (_fullyRestored) {
-      client.database?.storeInboundGroupSession(client.id, id, sessionId,
-        inboundGroupSession.pickle(client.userID), json.encode(content),
-        json.encode({}),
-      );
-    }
+    client.database?.storeInboundGroupSession(client.id, id, sessionId,
+      inboundGroupSession.pickle(client.userID), json.encode(content),
+      json.encode({}),
+    );
     _tryAgainDecryptLastMessage();
     onSessionKeyReceived.add(sessionId);
   }
@@ -1036,51 +1034,6 @@ class Room {
     return;
   }
 
-  Future<void> restoreGroupSessionKeys({
-    dynamic outboundGroupSession, // DbOutboundGroupSession, optionally as future
-    dynamic inboundGroupSessions, // DbSessionKey, as iterator and optionally as future
-  }) async {
-    // Restore the inbound and outbound session keys
-    if (client.encryptionEnabled && client.database != null) {
-      outboundGroupSession ??= client.database.getDbOutboundGroupSession(client.id, id);
-      inboundGroupSessions ??= client.database.getDbInboundGroupSessions(client.id, id);
-      if (outboundGroupSession is Future) {
-        outboundGroupSession = await outboundGroupSession;
-      }
-      if (inboundGroupSessions is Future) {
-        inboundGroupSessions = await inboundGroupSessions;
-      }
-      if (outboundGroupSession != false && outboundGroupSession != null) {
-        try {
-          _outboundGroupSession = olm.OutboundGroupSession();
-          _outboundGroupSession.unpickle(
-              client.userID, outboundGroupSession.pickle);
-        } catch (e) {
-          _outboundGroupSession = null;
-          print('[LibOlm] Unable to unpickle outboundGroupSession: ' +
-              e.toString());
-        }
-        _outboundGroupSessionDevices =
-            List<String>.from(json.decode(outboundGroupSession.deviceIds));
-      }
-      if (inboundGroupSessions?.isNotEmpty ?? false) {
-        _inboundGroupSessions ??= {};
-        for (final sessionKey in inboundGroupSessions) {
-          try {
-            _inboundGroupSessions[sessionKey.sessionId] = SessionKey.fromDb(sessionKey, client.userID);
-          } catch (e) {
-            print('[LibOlm] Could not unpickle inboundGroupSession: ' + e.toString());
-          }
-        }
-      }
-    }
-    _tryAgainDecryptLastMessage();
-    _fullyRestored = true;
-    return;
-  }
-
-  bool _fullyRestored = false;
-
   /// Returns a Room from a json String which comes normally from the store. If the
   /// state are also given, the method will await them.
   static Future<Room> getRoomFromTableRow(
@@ -1089,8 +1042,6 @@ class Room {
       {
         dynamic states, // DbRoomState, as iterator and optionally as future
         dynamic roomAccountData, // DbRoomAccountData, as iterator and optionally as future
-        dynamic outboundGroupSession, // DbOutboundGroupSession, optionally as future
-        dynamic inboundGroupSessions, // DbSessionKey, as iterator and optionally as future
       }) async {
     final newRoom = Room(
       id: row.roomId,
@@ -1137,12 +1088,6 @@ class Room {
     }
     newRoom.roomAccountData = newRoomAccountData;
 
-    // Restore the inbound and outbound session keys
-    await newRoom.restoreGroupSessionKeys(
-      outboundGroupSession: outboundGroupSession,
-      inboundGroupSessions: inboundGroupSessions,
-    );
-
     return newRoom;
   }
 
@@ -1163,6 +1108,7 @@ class Room {
         for (var i = 0; i < events.length; i++) {
           if (events[i].type == EventTypes.Encrypted &&
               events[i].content['body'] == DecryptError.UNKNOWN_SESSION) {
+            await events[i].loadSession();
             events[i] = events[i].decrypted;
             if (events[i].type != EventTypes.Encrypted) {
               await client.database.storeEventUpdate(client.id,
@@ -1741,6 +1687,30 @@ class Room {
     }
     return deviceKeys;
   }
+  
+  bool _restoredOutboundGroupSession = false;
+
+  Future<void> restoreOutboundGroupSession() async {
+    if (_restoredOutboundGroupSession || client.database == null) {
+      return;
+    }
+    final outboundSession = await client.database.getDbOutboundGroupSession(client.id, id);
+    if (outboundSession != null) {
+      try {
+        _outboundGroupSession = olm.OutboundGroupSession();
+        _outboundGroupSession.unpickle(
+            client.userID, outboundSession.pickle);
+        _outboundGroupSessionDevices =
+                List<String>.from(json.decode(outboundSession.deviceIds));
+      } catch (e) {
+        _outboundGroupSession = null;
+        _outboundGroupSessionDevices = null;
+        print('[LibOlm] Unable to unpickle outboundGroupSession: ' +
+            e.toString());
+      }
+    }
+    _restoredOutboundGroupSession = true;
+  }
 
   /// Encrypts the given json payload and creates a send-ready m.room.encrypted
   /// payload. This will create a new outgoingGroupSession if necessary.
@@ -1751,6 +1721,13 @@ class Room {
     if (encryptionAlgorithm != 'm.megolm.v1.aes-sha2') {
       throw ('Unknown encryption algorithm');
     }
+    if (!_restoredOutboundGroupSession && client.database != null) {
+      // try to restore an outbound group session from the database
+      await restoreOutboundGroupSession();
+    }
+    // and clear the outbound session, if it needs clearing
+    await clearOutboundGroupSession();
+    // create a new one if none exists...
     if (_outboundGroupSession == null) {
       await createOutboundGroupSession();
     }
@@ -1770,6 +1747,30 @@ class Room {
     };
     await _storeOutboundGroupSession();
     return encryptedPayload;
+  }
+
+  Future<void> loadInboundGroupSessionKey(String sessionId) async {
+    if (sessionId == null || inboundGroupSessions.containsKey(sessionId)) return; // nothing to do
+    final session = await client.database.getDbInboundGroupSession(client.id, id, sessionId);
+    if (session == null) return; // no session found
+    try {
+      _inboundGroupSessions[sessionId] = SessionKey.fromDb(session, client.userID);
+    } catch (e) {
+      print('[LibOlm] Could not unpickle inboundGroupSession: ' + e.toString());
+    }
+  }
+
+  Future<void> loadInboundGroupSessionKeyForEvent(Event event) async {
+    if (client.database == null) return; // nothing to do, no database
+    if (event.type != EventTypes.Encrypted) return;
+    if (!client.encryptionEnabled) {
+      throw (DecryptError.NOT_ENABLED);
+    }
+    if (event.content['algorithm'] != 'm.megolm.v1.aes-sha2') {
+      throw (DecryptError.UNKNOWN_ALGORITHM);
+    }
+    final String sessionId = event.content['session_id'];
+    return loadInboundGroupSessionKey(sessionId);
   }
 
   /// Decrypts the given [event] with one of the available ingoingGroupSessions.

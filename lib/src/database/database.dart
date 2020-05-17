@@ -92,24 +92,27 @@ class Database extends _$Database {
     return await dbGetInboundGroupSessionKeys(clientId, roomId).get();
   }
 
+  Future<DbInboundGroupSession> getDbInboundGroupSession(int clientId, String roomId, String sessionId) async {
+    final res = await dbGetInboundGroupSessionKey(clientId, roomId, sessionId).get();
+    if (res.isEmpty) {
+      return null;
+    }
+    return res.first;
+  }
+
   Future<List<sdk.Room>> getRoomList(sdk.Client client, {bool onlyLeft = false}) async {
     final res = await (select(rooms)..where((t) => onlyLeft
       ? t.membership.equals('leave')
       : t.membership.equals('leave').not())).get();
     final resStates = await getAllRoomStates(client.id).get();
     final resAccountData = await getAllRoomAccountData(client.id).get();
-    final resOutboundGroupSessions = await getAllOutboundGroupSessions(client.id).get();
-    final resInboundGroupSessions = await getAllInboundGroupSessions(client.id).get();
     final roomList = <sdk.Room>[];
     for (final r in res) {
-      final outboundGroupSession = resOutboundGroupSessions.where((rs) => rs.roomId == r.roomId);
       final room = await sdk.Room.getRoomFromTableRow(
         r,
         client,
         states: resStates.where((rs) => rs.roomId == r.roomId),
         roomAccountData: resAccountData.where((rs) => rs.roomId == r.roomId),
-        outboundGroupSession: outboundGroupSession.isEmpty ? false : outboundGroupSession.first,
-        inboundGroupSessions: resInboundGroupSessions.where((rs) => rs.roomId == r.roomId),
       );
       roomList.add(room);
     }
