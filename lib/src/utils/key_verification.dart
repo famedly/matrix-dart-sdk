@@ -595,8 +595,6 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     } else {
       throw 'Unknown key agreement protocol';
     }
-    // this is needed, else things don't match up? WTF?!
-    print(sasInfo);
     return sas.generate_bytes(sasInfo, bytes);
   }
 
