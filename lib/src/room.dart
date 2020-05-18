@@ -370,16 +370,15 @@ class Room {
   String notificationSettings;
 
   Event get lastEvent {
-    var lastTime = DateTime.fromMillisecondsSinceEpoch(0);
+    var lastSortOrder = -1e32; // this bound to be small enough
     var lastEvent = getState('m.room.message');
     if (lastEvent == null) {
       states.forEach((final String key, final entry) {
         if (!entry.containsKey('')) return;
         final Event state = entry[''];
-        if (state.time != null &&
-            state.time.millisecondsSinceEpoch >
-                lastTime.millisecondsSinceEpoch) {
-          lastTime = state.time;
+        if (state.sortOrder != null &&
+            state.sortOrder > lastSortOrder) {
+          lastSortOrder = state.sortOrder;
           lastEvent = state;
         }
       });
