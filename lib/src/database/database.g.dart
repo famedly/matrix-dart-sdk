@@ -1313,17 +1313,22 @@ class DbOutboundGroupSession extends DataClass
   final String roomId;
   final String pickle;
   final String deviceIds;
+  final DateTime creationTime;
+  final int sentMessages;
   DbOutboundGroupSession(
       {@required this.clientId,
       @required this.roomId,
       @required this.pickle,
-      @required this.deviceIds});
+      @required this.deviceIds,
+      @required this.creationTime,
+      @required this.sentMessages});
   factory DbOutboundGroupSession.fromData(
       Map<String, dynamic> data, GeneratedDatabase db,
       {String prefix}) {
     final effectivePrefix = prefix ?? '';
     final intType = db.typeSystem.forDartType<int>();
     final stringType = db.typeSystem.forDartType<String>();
+    final dateTimeType = db.typeSystem.forDartType<DateTime>();
     return DbOutboundGroupSession(
       clientId:
           intType.mapFromDatabaseResponse(data['${effectivePrefix}client_id']),
@@ -1333,6 +1338,10 @@ class DbOutboundGroupSession extends DataClass
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}pickle']),
       deviceIds: stringType
           .mapFromDatabaseResponse(data['${effectivePrefix}device_ids']),
+      creationTime: dateTimeType
+          .mapFromDatabaseResponse(data['${effectivePrefix}creation_time']),
+      sentMessages: intType
+          .mapFromDatabaseResponse(data['${effectivePrefix}sent_messages']),
     );
   }
   @override
@@ -1350,6 +1359,12 @@ class DbOutboundGroupSession extends DataClass
     if (!nullToAbsent || deviceIds != null) {
       map['device_ids'] = Variable<String>(deviceIds);
     }
+    if (!nullToAbsent || creationTime != null) {
+      map['creation_time'] = Variable<DateTime>(creationTime);
+    }
+    if (!nullToAbsent || sentMessages != null) {
+      map['sent_messages'] = Variable<int>(sentMessages);
+    }
     return map;
   }
 
@@ -1361,6 +1376,8 @@ class DbOutboundGroupSession extends DataClass
       roomId: serializer.fromJson<String>(json['room_id']),
       pickle: serializer.fromJson<String>(json['pickle']),
       deviceIds: serializer.fromJson<String>(json['device_ids']),
+      creationTime: serializer.fromJson<DateTime>(json['creation_time']),
+      sentMessages: serializer.fromJson<int>(json['sent_messages']),
     );
   }
   @override
@@ -1371,16 +1388,25 @@ class DbOutboundGroupSession extends DataClass
       'room_id': serializer.toJson<String>(roomId),
       'pickle': serializer.toJson<String>(pickle),
       'device_ids': serializer.toJson<String>(deviceIds),
+      'creation_time': serializer.toJson<DateTime>(creationTime),
+      'sent_messages': serializer.toJson<int>(sentMessages),
     };
   }
 
   DbOutboundGroupSession copyWith(
-          {int clientId, String roomId, String pickle, String deviceIds}) =>
+          {int clientId,
+          String roomId,
+          String pickle,
+          String deviceIds,
+          DateTime creationTime,
+          int sentMessages}) =>
       DbOutboundGroupSession(
         clientId: clientId ?? this.clientId,
         roomId: roomId ?? this.roomId,
         pickle: pickle ?? this.pickle,
         deviceIds: deviceIds ?? this.deviceIds,
+        creationTime: creationTime ?? this.creationTime,
+        sentMessages: sentMessages ?? this.sentMessages,
       );
   @override
   String toString() {
@@ -1388,14 +1414,22 @@ class DbOutboundGroupSession extends DataClass
           ..write('clientId: $clientId, ')
           ..write('roomId: $roomId, ')
           ..write('pickle: $pickle, ')
-          ..write('deviceIds: $deviceIds')
+          ..write('deviceIds: $deviceIds, ')
+          ..write('creationTime: $creationTime, ')
+          ..write('sentMessages: $sentMessages')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => $mrjf($mrjc(clientId.hashCode,
-      $mrjc(roomId.hashCode, $mrjc(pickle.hashCode, deviceIds.hashCode))));
+  int get hashCode => $mrjf($mrjc(
+      clientId.hashCode,
+      $mrjc(
+          roomId.hashCode,
+          $mrjc(
+              pickle.hashCode,
+              $mrjc(deviceIds.hashCode,
+                  $mrjc(creationTime.hashCode, sentMessages.hashCode))))));
   @override
   bool operator ==(dynamic other) =>
       identical(this, other) ||
@@ -1403,7 +1437,9 @@ class DbOutboundGroupSession extends DataClass
           other.clientId == this.clientId &&
           other.roomId == this.roomId &&
           other.pickle == this.pickle &&
-          other.deviceIds == this.deviceIds);
+          other.deviceIds == this.deviceIds &&
+          other.creationTime == this.creationTime &&
+          other.sentMessages == this.sentMessages);
 }
 
 class OutboundGroupSessionsCompanion
@@ -1412,32 +1448,43 @@ class OutboundGroupSessionsCompanion
   final Value<String> roomId;
   final Value<String> pickle;
   final Value<String> deviceIds;
+  final Value<DateTime> creationTime;
+  final Value<int> sentMessages;
   const OutboundGroupSessionsCompanion({
     this.clientId = const Value.absent(),
     this.roomId = const Value.absent(),
     this.pickle = const Value.absent(),
     this.deviceIds = const Value.absent(),
+    this.creationTime = const Value.absent(),
+    this.sentMessages = const Value.absent(),
   });
   OutboundGroupSessionsCompanion.insert({
     @required int clientId,
     @required String roomId,
     @required String pickle,
     @required String deviceIds,
+    @required DateTime creationTime,
+    this.sentMessages = const Value.absent(),
   })  : clientId = Value(clientId),
         roomId = Value(roomId),
         pickle = Value(pickle),
-        deviceIds = Value(deviceIds);
+        deviceIds = Value(deviceIds),
+        creationTime = Value(creationTime);
   static Insertable<DbOutboundGroupSession> custom({
     Expression<int> clientId,
     Expression<String> roomId,
     Expression<String> pickle,
     Expression<String> deviceIds,
+    Expression<DateTime> creationTime,
+    Expression<int> sentMessages,
   }) {
     return RawValuesInsertable({
       if (clientId != null) 'client_id': clientId,
       if (roomId != null) 'room_id': roomId,
       if (pickle != null) 'pickle': pickle,
       if (deviceIds != null) 'device_ids': deviceIds,
+      if (creationTime != null) 'creation_time': creationTime,
+      if (sentMessages != null) 'sent_messages': sentMessages,
     });
   }
 
@@ -1445,12 +1492,16 @@ class OutboundGroupSessionsCompanion
       {Value<int> clientId,
       Value<String> roomId,
       Value<String> pickle,
-      Value<String> deviceIds}) {
+      Value<String> deviceIds,
+      Value<DateTime> creationTime,
+      Value<int> sentMessages}) {
     return OutboundGroupSessionsCompanion(
       clientId: clientId ?? this.clientId,
       roomId: roomId ?? this.roomId,
       pickle: pickle ?? this.pickle,
       deviceIds: deviceIds ?? this.deviceIds,
+      creationTime: creationTime ?? this.creationTime,
+      sentMessages: sentMessages ?? this.sentMessages,
     );
   }
 
@@ -1468,6 +1519,12 @@ class OutboundGroupSessionsCompanion
     }
     if (deviceIds.present) {
       map['device_ids'] = Variable<String>(deviceIds.value);
+    }
+    if (creationTime.present) {
+      map['creation_time'] = Variable<DateTime>(creationTime.value);
+    }
+    if (sentMessages.present) {
+      map['sent_messages'] = Variable<int>(sentMessages.value);
     }
     return map;
   }
@@ -1510,8 +1567,30 @@ class OutboundGroupSessions extends Table
         $customConstraints: 'NOT NULL');
   }
 
+  final VerificationMeta _creationTimeMeta =
+      const VerificationMeta('creationTime');
+  GeneratedDateTimeColumn _creationTime;
+  GeneratedDateTimeColumn get creationTime =>
+      _creationTime ??= _constructCreationTime();
+  GeneratedDateTimeColumn _constructCreationTime() {
+    return GeneratedDateTimeColumn('creation_time', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  final VerificationMeta _sentMessagesMeta =
+      const VerificationMeta('sentMessages');
+  GeneratedIntColumn _sentMessages;
+  GeneratedIntColumn get sentMessages =>
+      _sentMessages ??= _constructSentMessages();
+  GeneratedIntColumn _constructSentMessages() {
+    return GeneratedIntColumn('sent_messages', $tableName, false,
+        $customConstraints: 'NOT NULL DEFAULT \'0\'',
+        defaultValue: const CustomExpression<int>('\'0\''));
+  }
+
   @override
-  List<GeneratedColumn> get $columns => [clientId, roomId, pickle, deviceIds];
+  List<GeneratedColumn> get $columns =>
+      [clientId, roomId, pickle, deviceIds, creationTime, sentMessages];
   @override
   OutboundGroupSessions get asDslTable => this;
   @override
@@ -1547,6 +1626,20 @@ class OutboundGroupSessions extends Table
           deviceIds.isAcceptableOrUnknown(data['device_ids'], _deviceIdsMeta));
     } else if (isInserting) {
       context.missing(_deviceIdsMeta);
+    }
+    if (data.containsKey('creation_time')) {
+      context.handle(
+          _creationTimeMeta,
+          creationTime.isAcceptableOrUnknown(
+              data['creation_time'], _creationTimeMeta));
+    } else if (isInserting) {
+      context.missing(_creationTimeMeta);
+    }
+    if (data.containsKey('sent_messages')) {
+      context.handle(
+          _sentMessagesMeta,
+          sentMessages.isAcceptableOrUnknown(
+              data['sent_messages'], _sentMessagesMeta));
     }
     return context;
   }
@@ -4778,6 +4871,8 @@ abstract class _$Database extends GeneratedDatabase {
       roomId: row.readString('room_id'),
       pickle: row.readString('pickle'),
       deviceIds: row.readString('device_ids'),
+      creationTime: row.readDateTime('creation_time'),
+      sentMessages: row.readInt('sent_messages'),
     );
   }
 
@@ -4798,14 +4893,21 @@ abstract class _$Database extends GeneratedDatabase {
   }
 
   Future<int> storeOutboundGroupSession(
-      int client_id, String room_id, String pickle, String device_ids) {
+      int client_id,
+      String room_id,
+      String pickle,
+      String device_ids,
+      DateTime creation_time,
+      int sent_messages) {
     return customInsert(
-      'INSERT OR REPLACE INTO outbound_group_sessions (client_id, room_id, pickle, device_ids) VALUES (:client_id, :room_id, :pickle, :device_ids)',
+      'INSERT OR REPLACE INTO outbound_group_sessions (client_id, room_id, pickle, device_ids, creation_time, sent_messages) VALUES (:client_id, :room_id, :pickle, :device_ids, :creation_time, :sent_messages)',
       variables: [
         Variable.withInt(client_id),
         Variable.withString(room_id),
         Variable.withString(pickle),
-        Variable.withString(device_ids)
+        Variable.withString(device_ids),
+        Variable.withDateTime(creation_time),
+        Variable.withInt(sent_messages)
       ],
       updates: {outboundGroupSessions},
     );

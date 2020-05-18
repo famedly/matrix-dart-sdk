@@ -1347,7 +1347,8 @@ class Client {
       // man-in-the-middle attacks!
       final room = getRoomById(roomID);
       if (room == null ||
-          (event['type'] == 'm.room.encryption' && room.encrypted)) {
+          (event['type'] == 'm.room.encryption' && room.encrypted &&
+          event['content']['algorithm'] != room.getState('m.room.encryption')?.content['algorithm'])) {
         return;
       }
 

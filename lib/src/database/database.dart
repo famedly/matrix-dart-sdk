@@ -13,7 +13,7 @@ class Database extends _$Database {
   Database(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   int get maxFileSize => 1 * 1024 * 1024;
 
@@ -36,6 +36,11 @@ class Database extends _$Database {
         await m.createIndex(accountDataIndex);
         await m.createIndex(roomAccountDataIndex);
         await m.createIndex(presencesIndex);
+        from++;
+      }
+      if (from == 2) {
+        await m.deleteTable('outbound_group_sessions');
+        await m.createTable(outboundGroupSessions);
       }
     },
   );

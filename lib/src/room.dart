@@ -90,6 +90,8 @@ class Room {
   olm.OutboundGroupSession _outboundGroupSession;
 
   List<String> _outboundGroupSessionDevices;
+  DateTime _outboundGroupSessionCreationTime;
+  int _outboundGroupSessionSentMessages;
 
   double _newestSortOrder;
   double _oldestSortOrder;
@@ -147,6 +149,8 @@ class Room {
       await client.sendToDevice(deviceKeys, 'm.room_key', rawSession);
       _outboundGroupSession = outboundGroupSession;
       _outboundGroupSessionDevices = outboundGroupSessionDevices;
+      _outboundGroupSessionCreationTime = DateTime.now();
+      _outboundGroupSessionSentMessages = 0;
       await _storeOutboundGroupSession();
     } catch (e) {
       print(
@@ -161,7 +165,8 @@ class Room {
     if (_outboundGroupSession == null) return;
     await client.database?.storeOutboundGroupSession(
       client.id, id, _outboundGroupSession.pickle(client.userID),
-      json.encode(_outboundGroupSessionDevices),
+      json.encode(_outboundGroupSessionDevices), _outboundGroupSessionCreationTime,
+      _outboundGroupSessionSentMessages
     );
     return;
   }
@@ -171,14 +176,30 @@ class Room {
   /// it wasn't necessary.
   Future<bool> clearOutboundGroupSession({bool wipe = false}) async {
     if (!wipe && _outboundGroupSessionDevices != null) {
+      // first check if the devices in the room changed
       var deviceKeys = await getUserDeviceKeys();
       var outboundGroupSessionDevices = <String>[];
       for (var keys in deviceKeys) {
         if (!keys.blocked) outboundGroupSessionDevices.add(keys.deviceId);
       }
       outboundGroupSessionDevices.sort();
-      if (outboundGroupSessionDevices.toString() ==
+      if (outboundGroupSessionDevices.toString() !=
           _outboundGroupSessionDevices.toString()) {
+        wipe = true;
+      }
+      // next check if it needs to be rotated
+      final encryptionContent = getState('m.room.encryption')?.content;
+      final maxMessages = encryptionContent != null && encryptionContent['rotation_period_msgs'] is int
+        ? encryptionContent['rotation_period_msgs']
+        : 100;
+      final maxAge = encryptionContent != null && encryptionContent['rotation_period_ms'] is int
+        ? encryptionContent['rotation_period_ms']
+        : 604800000; // default of one week
+      if (_outboundGroupSessionSentMessages >= maxMessages ||
+          _outboundGroupSessionCreationTime.add(Duration(milliseconds: maxAge)).isBefore(DateTime.now())) {
+        wipe = true;
+      }
+      if (!wipe) {
         return false;
       }
     }
@@ -1705,6 +1726,8 @@ class Room {
             client.userID, outboundSession.pickle);
         _outboundGroupSessionDevices =
                 List<String>.from(json.decode(outboundSession.deviceIds));
+        _outboundGroupSessionCreationTime = outboundSession.creationTime;
+        _outboundGroupSessionSentMessages = outboundSession.sentMessages;
       } catch (e) {
         _outboundGroupSession = null;
         _outboundGroupSessionDevices = null;
@@ -1748,6 +1771,7 @@ class Room {
       'session_id': _outboundGroupSession.session_id(),
       if (mRelatesTo != null) 'm.relates_to': mRelatesTo,
     };
+    _outboundGroupSessionSentMessages++;
     await _storeOutboundGroupSession();
     return encryptedPayload;
   }
