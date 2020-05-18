@@ -1811,6 +1811,10 @@ class Room {
       _storeOutboundGroupSession();
       decryptedPayload = json.decode(decryptResult.plaintext);
     } catch (exception) {
+      // alright, if this was actually by our own outbound group session, we might as well clear it
+      if ((_outboundGroupSession?.session_id() ?? '') == event.content['session_id']) {
+        clearOutboundGroupSession(wipe: true);
+      }
       if (exception.toString() == DecryptError.UNKNOWN_SESSION) {
         decryptedPayload = {
           'content': event.content,
