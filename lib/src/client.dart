@@ -975,6 +975,7 @@ class Client {
       prevBatch = syncResp['next_batch'];
       await _updateUserDeviceKeys();
       _cleanupKeyVerificationRequests();
+      unawaited(_cleanupPendingEventUpdates());
       if (hash == _syncRequest.hashCode) unawaited(_sync());
     } on MatrixException catch (exception) {
       onError.add(exception);
@@ -1328,21 +1329,54 @@ class Client {
       if (event['type'] == 'm.room.encrypted') {
         update = update.decrypt(room);
       }
-      if (type != 'ephemeral' && database != null) {
-        dbActions.add(() => database.storeEventUpdate(id, update));
+      if (update.eventType == 'm.room.encrypted' && database != null) {
+        // we didn't manage to decrypt this event...time to re-qeueue it!
+        _pendingEventUpdates.add(update);
       }
-      _updateRoomsByEventUpdate(update);
-      onEvent.add(update);
+      _handleEventUpdate(update, room, dbActions);
+    }
+  }
 
-      if (event['type'] == 'm.call.invite') {
-        onCallInvite.add(Event.fromJson(event, room, sortOrder));
-      } else if (event['type'] == 'm.call.hangup') {
-        onCallHangup.add(Event.fromJson(event, room, sortOrder));
-      } else if (event['type'] == 'm.call.answer') {
-        onCallAnswer.add(Event.fromJson(event, room, sortOrder));
-      } else if (event['type'] == 'm.call.candidates') {
-        onCallCandidates.add(Event.fromJson(event, room, sortOrder));
+  final List<EventUpdate> _pendingEventUpdates = [];
+
+  void _handleEventUpdate(EventUpdate update, Room room, List<Future<dynamic> Function()> dbActions) {
+    if (update.type != 'ephemeral' && database != null) {
+      dbActions.add(() => database.storeEventUpdate(id, update));
+    }
+    _updateRoomsByEventUpdate(update);
+    onEvent.add(update);
+
+    if (update.eventType == 'm.call.invite') {
+      onCallInvite.add(Event.fromJson(update.content, room, update.sortOrder));
+    } else if (update.eventType == 'm.call.hangup') {
+      onCallHangup.add(Event.fromJson(update.content, room, update.sortOrder));
+    } else if (update.eventType == 'm.call.answer') {
+      onCallAnswer.add(Event.fromJson(update.content, room, update.sortOrder));
+    } else if (update.eventType == 'm.call.candidates') {
+      onCallCandidates.add(Event.fromJson(update.content, room, update.sortOrder));
+    }
+  }
+
+  Future<void> _cleanupPendingEventUpdates() async {
+    final dbActions = <Future<dynamic> Function()>[];
+    while (_pendingEventUpdates.isNotEmpty) {
+      var update = _pendingEventUpdates.removeLast();
+      final room = getRoomById(update.roomID);
+      if (room != null) {
+        if (database != null && update.eventType == 'm.room.encrypted') {
+          // try loading the keys from the db and decrypt this thing!
+          await room.loadInboundGroupSessionKey(update.content['content']['session_id']);
+          update = update.decrypt(room);
+        }
+        _handleEventUpdate(update, room, dbActions);
       }
+    }
+    if (dbActions.isNotEmpty && database != null) {
+      await database.transaction(() async {
+        for (final f in dbActions) {
+          await f();
+        }
+      });
     }
   }
 
