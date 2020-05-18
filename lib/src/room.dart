@@ -1780,7 +1780,7 @@ class Room {
   /// Returns a m.bad.encrypted event if it fails and does nothing if the event
   /// was not encrypted.
   Event decryptGroupMessage(Event event) {
-    if (event.type != EventTypes.Encrypted) return event;
+    if (event.type != EventTypes.Encrypted || event.content['ciphertext'] == null) return event;
     Map<String, dynamic> decryptedPayload;
     try {
       if (!client.encryptionEnabled) {
@@ -1820,7 +1820,7 @@ class Room {
         decryptedPayload['content']['msgtype'] = 'm.bad.encrypted';
       } else {
         decryptedPayload = {
-          'content': {
+          'content': <String, dynamic>{
             'msgtype': 'm.bad.encrypted',
             'body': exception.toString(),
           },
