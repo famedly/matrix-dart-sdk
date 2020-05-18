@@ -381,8 +381,6 @@ abstract class _KeyVerificationMethod {
     client = request.client;
   }
 
-  static String type;
-
   Future<void> handlePayload(String type, Map<String, dynamic> payload);
   bool validateStart(Map<String, dynamic> payload) {
     return false;
@@ -399,7 +397,6 @@ const KNOWN_AUTHENTICATION_TYPES = ['emoji', 'decimal'];
 class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   _KeyVerificationMethodSas({KeyVerification request}) : super(request: request);
 
-  @override
   static String type = 'm.sas.v1';
 
   String keyAgreementProtocol;
