@@ -160,14 +160,16 @@ void main() {
       expect(
           matrix
               .rooms[1]
-              .inboundGroupSessions['ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU']
+              .inboundGroupSessions[
+                  'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU']
               .content['session_key'],
           'AgAAAAAQcQ6XrFJk6Prm8FikZDqfry/NbDz8Xw7T6e+/9Yf/q3YHIPEQlzv7IZMNcYb51ifkRzFejVvtphS7wwG2FaXIp4XS2obla14iKISR0X74ugB2vyb1AydIHE/zbBQ1ic5s3kgjMFlWpu/S3FQCnCrv+DPFGEt3ERGWxIl3Bl5X53IjPyVkz65oljz2TZESwz0GH/QFvyOOm8ci0q/gceaF3S7Dmafg3dwTKYwcA5xkcc+BLyrLRzB6Hn+oMAqSNSscnm4mTeT5zYibIhrzqyUTMWr32spFtI9dNR/RFSzfCw');
       if (olmEnabled) {
         expect(
             matrix
                     .rooms[1]
-                    .inboundGroupSessions['ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU']
+                    .inboundGroupSessions[
+                        'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU']
                     .inboundGroupSession !=
                 null,
             true);
@@ -464,11 +466,17 @@ void main() {
     });
 
     test('getProfileFromUserId', () async {
-      final profile = await matrix.getProfileFromUserId('@getme:example.com');
+      final profile = await matrix.getProfileFromUserId('@getme:example.com',
+          getFromRooms: false);
       expect(profile.avatarUrl.toString(), 'mxc://test');
       expect(profile.displayname, 'You got me');
       expect(profile.content['avatar_url'], profile.avatarUrl.toString());
       expect(profile.content['displayname'], profile.displayname);
+      final aliceProfile =
+          await matrix.getProfileFromUserId('@alice:example.com');
+      expect(aliceProfile.avatarUrl.toString(),
+          'mxc://example.org/SEsfnsuifSDFSSEF');
+      expect(aliceProfile.displayname, 'Alice Margatroid');
     });
 
     test('signJson', () {
