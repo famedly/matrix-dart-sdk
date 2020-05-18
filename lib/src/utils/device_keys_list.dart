@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../client.dart';
 import '../database/database.dart' show DbUserDeviceKey, DbUserDeviceKeysKey;
 import '../event.dart';
+import 'key_verification.dart';
 
 class DeviceKeysList {
   String userId;
@@ -136,5 +137,12 @@ class DeviceKeys {
     data['verified'] = verified;
     data['blocked'] = blocked;
     return data;
+  }
+
+  KeyVerification startVerification(Client client) {
+    final request = KeyVerification(client: client, userId: userId, deviceId: deviceId);
+    request.start();
+    client.addKeyVerificationRequest(request);
+    return request;
   }
 }

@@ -27,6 +27,7 @@ export 'package:famedlysdk/src/sync/room_update.dart';
 export 'package:famedlysdk/src/sync/event_update.dart';
 export 'package:famedlysdk/src/sync/user_update.dart';
 export 'package:famedlysdk/src/utils/device_keys_list.dart';
+export 'package:famedlysdk/src/utils/key_verification.dart';
 export 'package:famedlysdk/src/utils/matrix_exception.dart';
 export 'package:famedlysdk/src/utils/matrix_file.dart';
 export 'package:famedlysdk/src/utils/matrix_id_string_extension.dart';

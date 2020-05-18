@@ -738,8 +738,8 @@ class Room {
   /// Sends an event to this room with this json as a content. Returns the
   /// event ID generated from the server.
   Future<String> sendEvent(Map<String, dynamic> content,
-      {String txid, Event inReplyTo}) async {
-    final type = 'm.room.message';
+      {String type, String txid, Event inReplyTo}) async {
+    type = type ?? 'm.room.message';
     final sendType =
         (encrypted && client.encryptionEnabled) ? 'm.room.encrypted' : type;
 
@@ -794,7 +794,7 @@ class Room {
           type: HTTPType.PUT,
           action: '/client/r0/rooms/${id}/send/$sendType/$messageID',
           data: encrypted && client.encryptionEnabled
-              ? await encryptGroupMessagePayload(content)
+              ? await encryptGroupMessagePayload(content, type: type)
               : content);
       final String res = response['event_id'];
       eventUpdate.content['status'] = 1;
