@@ -971,7 +971,7 @@ class Client {
   Future<dynamic> _syncRequest;
 
   Future<void> _sync() async {
-    if (isLogged() == false) return;
+    if (isLogged() == false || _disposed) return;
 
     var action = '/client/r0/sync?filter=$syncFilters';
 
@@ -981,11 +981,13 @@ class Client {
     }
     try {
       _syncRequest = jsonRequest(type: HTTPType.GET, action: action);
+      if (_disposed) return;
       final hash = _syncRequest.hashCode;
       final syncResp = await _syncRequest;
       if (hash != _syncRequest.hashCode) return;
       _timeoutFactor = 1;
       final futures = handleSync(syncResp);
+      if (_disposed) return;
       await database?.transaction(() async {
         for (final f in futures) {
           await f();
@@ -2173,5 +2175,16 @@ class Client {
     } catch (_) {
       rethrow;
     }
+  }
+
+  bool _disposed = false;
+
+  /// Stops the synchronization and closes the database. After this
+  /// you can safely make this Client instance null.
+  Future<void> dispose() async {
+    _disposed = true;
+    await database?.close();
+    database = null;
+    return;
   }
 }
