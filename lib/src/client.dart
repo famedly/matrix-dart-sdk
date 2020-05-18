@@ -373,13 +373,39 @@ class Client {
     return getProfileFromUserId(userID);
   }
 
-  /// Get the combined profile information for this user. This API may be used to
-  /// fetch the user's own profile information or other users; either locally
-  /// or on remote homeservers.
-  Future<Profile> getProfileFromUserId(String userId) async {
-    final dynamic resp = await jsonRequest(
+  final Map<String, Profile> _profileCache = {};
+
+  /// Get the combined profile information for this user.
+  /// If [getFromRooms] is true then the profile will first be searched from the
+  /// room memberships. This is unstable if the given user makes use of different displaynames
+  /// and avatars per room, which is common for some bots and bridges.
+  /// If [cache] is true then
+  /// the profile get cached for this session. Please note that then the profile may
+  /// become outdated if the user changes the displayname or avatar in this session.
+  Future<Profile> getProfileFromUserId(String userId,
+      {bool cache = true, bool getFromRooms = true}) async {
+    if (getFromRooms) {
+      final room = rooms.firstWhere(
+          (Room room) =>
+              room
+                  .getParticipants()
+                  .indexWhere((User user) => user.id == userId) !=
+              -1,
+          orElse: () => null);
+      if (room != null) {
+        final user =
+            room.getParticipants().firstWhere((User user) => user.id == userId);
+        return Profile(user.displayName, user.avatarUrl);
+      }
+    }
+    if (cache && _profileCache.containsKey(userId)) {
+      return _profileCache[userId];
+    }
+    final resp = await jsonRequest(
         type: HTTPType.GET, action: '/client/r0/profile/${userId}');
-    return Profile.fromJson(resp);
+    final profile = Profile.fromJson(resp);
+    _profileCache[userId] = profile;
+    return profile;
   }
 
   Future<List<Room>> get archive async {
@@ -635,7 +661,8 @@ class Client {
       StreamController.broadcast();
 
   /// Will be called when another device is requesting verification with this device.
-  final StreamController<KeyVerification> onKeyVerificationRequest = StreamController.broadcast();
+  final StreamController<KeyVerification> onKeyVerificationRequest =
+      StreamController.broadcast();
 
   final Map<String, KeyVerification> _keyVerificationRequests = {};
 
@@ -1065,7 +1092,9 @@ class Client {
   void _cleanupKeyVerificationRequests() {
     for (final entry in _keyVerificationRequests.entries) {
       (() async {
-        var dispose = entry.value.canceled || entry.value.state == KeyVerificationState.done || entry.value.state == KeyVerificationState.error;
+        var dispose = entry.value.canceled ||
+            entry.value.state == KeyVerificationState.done ||
+            entry.value.state == KeyVerificationState.error;
         if (!dispose) {
           dispose = !(await entry.value.verifyActivity());
         }
@@ -1119,13 +1148,18 @@ class Client {
       return;
     }
     // we have key verification going on!
-    final transactionId = KeyVerification.getTransactionId(toDeviceEvent.content);
+    final transactionId =
+        KeyVerification.getTransactionId(toDeviceEvent.content);
     if (transactionId != null) {
       if (_keyVerificationRequests.containsKey(transactionId)) {
-        _keyVerificationRequests[transactionId].handlePayload(toDeviceEvent.type, toDeviceEvent.content);
+        _keyVerificationRequests[transactionId]
+            .handlePayload(toDeviceEvent.type, toDeviceEvent.content);
       } else {
-        final newKeyRequest = KeyVerification(client: this, userId: toDeviceEvent.sender);
-        newKeyRequest.handlePayload(toDeviceEvent.type, toDeviceEvent.content).then((res) {
+        final newKeyRequest =
+            KeyVerification(client: this, userId: toDeviceEvent.sender);
+        newKeyRequest
+            .handlePayload(toDeviceEvent.type, toDeviceEvent.content)
+            .then((res) {
           if (newKeyRequest.state != KeyVerificationState.askAccept) {
             // okay, something went wrong (unknown transaction id?), just dispose it
             newKeyRequest.dispose();
