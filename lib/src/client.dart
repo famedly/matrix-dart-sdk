@@ -1357,6 +1357,11 @@ class Client {
       if (event['type'] == 'm.room.encrypted') {
         update = update.decrypt(room);
       }
+      if (update.eventType == 'm.room.encrypted' && database != null) {
+        // the event is still encrytped....let's try fetching the keys from the database!
+        await room.loadInboundGroupSessionKey(event['content']['session_id']);
+        update = update.decrypt(room);
+      }
       if (type != 'ephemeral' && database != null) {
         await database.storeEventUpdate(id, update);
       }
