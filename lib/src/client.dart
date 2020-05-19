@@ -2181,9 +2181,9 @@ class Client {
 
   /// Stops the synchronization and closes the database. After this
   /// you can safely make this Client instance null.
-  Future<void> dispose() async {
+  Future<void> dispose({bool closeDatabase = false}) async {
     _disposed = true;
-    await database?.close();
+    if (closeDatabase) await database?.close();
     database = null;
     return;
   }
