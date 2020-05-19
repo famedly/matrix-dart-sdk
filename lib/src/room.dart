@@ -24,6 +24,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:pedantic/pedantic.dart';
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/event.dart';
@@ -1776,10 +1777,49 @@ class Room {
     return encryptedPayload;
   }
 
-  Future<void> loadInboundGroupSessionKey(String sessionId) async {
+  final Set<String> _requestedSessionIds = <String>{};
+
+  Future<void> requestSessionKey(String sessionId, String senderKey) async {
+    final users = await requestParticipants();
+    await client.sendToDevice(
+      [],
+      'm.room_key_request',
+      {
+        'action': 'request_cancellation',
+        'request_id': base64.encode(utf8.encode(sessionId)),
+        'requesting_device_id': client.deviceID,
+      },
+      encrypted: false,
+      toUsers: users);
+    await client.sendToDevice(
+      [],
+      'm.room_key_request',
+      {
+        'action': 'request',
+        'body': {
+          'algorithm': 'm.megolm.v1.aes-sha2',
+          'room_id': id,
+          'sender_key': senderKey,
+          'session_id': sessionId,
+        },
+        'request_id': base64.encode(utf8.encode(sessionId)),
+        'requesting_device_id': client.deviceID,
+      },
+      encrypted: false,
+      toUsers: users);
+  }
+
+  Future<void> loadInboundGroupSessionKey(String sessionId, [String senderKey]) async {
     if (sessionId == null || inboundGroupSessions.containsKey(sessionId)) return; // nothing to do
     final session = await client.database.getDbInboundGroupSession(client.id, id, sessionId);
-    if (session == null) return; // no session found
+    if (session == null) {
+      // no session found, let's request it!
+      if (!_requestedSessionIds.contains(sessionId) && senderKey != null) {
+        unawaited(requestSessionKey(sessionId, senderKey));
+        _requestedSessionIds.add(sessionId);
+      }
+      return;
+    }
     try {
       _inboundGroupSessions[sessionId] = SessionKey.fromDb(session, client.userID);
     } catch (e) {
@@ -1797,7 +1837,7 @@ class Room {
       throw (DecryptError.UNKNOWN_ALGORITHM);
     }
     final String sessionId = event.content['session_id'];
-    return loadInboundGroupSessionKey(sessionId);
+    return loadInboundGroupSessionKey(sessionId, event.content['sender_key']);
   }
 
   /// Decrypts the given [event] with one of the available ingoingGroupSessions.
