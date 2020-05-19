@@ -9,6 +9,9 @@
 .history
 .svn/
 native/
+test/.test_coverage.dart
+coverage/
+coverage_badge.svg
 
 # IntelliJ related
 *.iml

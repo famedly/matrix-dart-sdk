@@ -26,7 +26,8 @@ import 'package:famedlysdk/src/event.dart';
 import 'package:famedlysdk/src/room.dart';
 import 'package:famedlysdk/src/user.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
-import 'package:famedlysdk/src/database/database.dart' show DbRoom, DbRoomState, DbRoomAccountData;
+import 'package:famedlysdk/src/database/database.dart'
+    show DbRoom, DbRoomState, DbRoomAccountData;
 import 'package:test/test.dart';
 
 import 'fake_matrix_api.dart';
@@ -397,15 +398,16 @@ void main() {
       expect(room.outboundGroupSession != null, true);
       expect(room.outboundGroupSession.session_id().isNotEmpty, true);
       expect(
-          room.inboundGroupSessions.containsKey(room.outboundGroupSession.session_id()),
+          room.inboundGroupSessions
+              .containsKey(room.outboundGroupSession.session_id()),
           true);
       expect(
           room.inboundGroupSessions[room.outboundGroupSession.session_id()]
               .content['session_key'],
           room.outboundGroupSession.session_key());
       expect(
-          room.inboundGroupSessions[room.outboundGroupSession.session_id()].indexes
-              .length,
+          room.inboundGroupSessions[room.outboundGroupSession.session_id()]
+              .indexes.length,
           0);
     });
 
@@ -441,6 +443,10 @@ void main() {
       var decryptedEvent = room.decryptGroupMessage(encryptedEvent);
       expect(decryptedEvent.typeKey, 'm.room.message');
       expect(decryptedEvent.content, payload);
+    });
+
+    test('logout', () async {
+      await matrix.logout();
     });
   });
 }
