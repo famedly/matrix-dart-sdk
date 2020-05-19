@@ -46,6 +46,8 @@ CREATE TABLE outbound_group_sessions (
   room_id TEXT NOT NULL,
   pickle TEXT NOT NULL,
   device_ids TEXT NOT NULL,
+  creation_time DATETIME NOT NULL,
+  sent_messages INTEGER NOT NULL DEFAULT '0',
   UNIQUE(client_id, room_id)
 ) AS DbOutboundGroupSession;
 CREATE INDEX outbound_group_sessions_index ON outbound_group_sessions(client_id);
@@ -156,7 +158,7 @@ getAllOlmSessions: SELECT * FROM olm_sessions WHERE client_id = :client_id;
 storeOlmSession: INSERT OR REPLACE INTO olm_sessions (client_id, identity_key, session_id, pickle) VALUES (:client_id, :identitiy_key, :session_id, :pickle);
 getAllOutboundGroupSessions: SELECT * FROM outbound_group_sessions WHERE client_id = :client_id;
 dbGetOutboundGroupSession: SELECT * FROM outbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id;
-storeOutboundGroupSession: INSERT OR REPLACE INTO outbound_group_sessions (client_id, room_id, pickle, device_ids) VALUES (:client_id, :room_id, :pickle, :device_ids);
+storeOutboundGroupSession: INSERT OR REPLACE INTO outbound_group_sessions (client_id, room_id, pickle, device_ids, creation_time, sent_messages) VALUES (:client_id, :room_id, :pickle, :device_ids, :creation_time, :sent_messages);
 removeOutboundGroupSession: DELETE FROM outbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id;
 dbGetInboundGroupSessionKey: SELECT * FROM inbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id;
 dbGetInboundGroupSessionKeys: SELECT * FROM inbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id;
