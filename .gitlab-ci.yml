@@ -8,7 +8,6 @@ coverage:
     - linux
   stage: coverage
   image: debian:testing
-  coverage: '/^\s+lines.+: (\d+.\d*%)/'
   dependencies: []
   script:
     - apt update
@@ -24,6 +23,10 @@ coverage:
     - chmod +x ./test.sh
     - su -c ./prepare.sh test
     - su -c ./test.sh test
+  artifacts:
+    paths:
+      - coverage/
+
 
 coverage_without_olm:
   tags:

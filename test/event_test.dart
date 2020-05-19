@@ -207,6 +207,8 @@ void main() {
       final resp2 = await event.sendAgain(txid: '1234');
       expect(resp1, null);
       expect(resp2, '42');
+
+      await matrix.dispose(closeDatabase: true);
     });
 
     test('requestKey', () async {
@@ -244,6 +246,8 @@ void main() {
       }, Room(id: '!1234:example.com', client: matrix));
 
       await event.requestKey();
+
+      await matrix.dispose(closeDatabase: true);
     });
   });
 }

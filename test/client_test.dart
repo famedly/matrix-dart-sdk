@@ -682,6 +682,9 @@ void main() {
         expect(client2.rooms[1].id, client1.rooms[1].id);
         expect(client2.rooms[1].outboundGroupSession.session_key(), sessionKey);
       }
+
+      await client1.logout();
+      await client2.logout();
     });
   });
 }
