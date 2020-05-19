@@ -207,7 +207,7 @@ void main() {
               .verified,
           false);
 
-      matrix.handleSync({
+      await matrix.handleSync({
         'device_lists': {
           'changed': [
             '@alice:example.com',
@@ -221,7 +221,7 @@ void main() {
       expect(matrix.userDeviceKeys.length, 2);
       expect(matrix.userDeviceKeys['@alice:example.com'].outdated, true);
 
-      matrix.handleSync({
+      await matrix.handleSync({
         'rooms': {
           'join': {
             '!726s6s6q:example.com': {
@@ -527,7 +527,7 @@ void main() {
     test('Track oneTimeKeys', () async {
       if (matrix.encryptionEnabled) {
         var last = matrix.lastTimeKeysUploaded ?? DateTime.now();
-        matrix.handleSync({
+        await matrix.handleSync({
           'device_one_time_keys_count': {'signed_curve25519': 49}
         });
         await Future.delayed(Duration(milliseconds: 50));
@@ -542,7 +542,7 @@ void main() {
         expect(matrix.rooms[1].outboundGroupSession == null, true);
         await matrix.rooms[1].createOutboundGroupSession();
         expect(matrix.rooms[1].outboundGroupSession != null, true);
-        matrix.handleSync({
+        await matrix.handleSync({
           'device_lists': {
             'changed': [
               '@alice:example.com',
@@ -562,7 +562,7 @@ void main() {
         expect(matrix.rooms[1].outboundGroupSession == null, true);
         await matrix.rooms[1].createOutboundGroupSession();
         expect(matrix.rooms[1].outboundGroupSession != null, true);
-        matrix.handleSync({
+        await matrix.handleSync({
           'rooms': {
             'join': {
               '!726s6s6q:example.com': {

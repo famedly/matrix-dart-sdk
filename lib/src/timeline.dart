@@ -116,19 +116,6 @@ class Timeline {
     try {
       if (eventUpdate.roomID != room.id) return;
 
-      // try to decrypt the event first, if needed
-      if (eventUpdate.eventType == 'm.room.encrypted' && room.client.database != null) {
-        try {
-          await room.loadInboundGroupSessionKey(eventUpdate.content['content']['session_id']);
-          eventUpdate = eventUpdate.decrypt(room);
-          if (eventUpdate.eventType != 'm.room.encrypted') {
-            await room.client.database.storeEventUpdate(room.client.id, eventUpdate);
-          }
-        } catch (err) {
-          print('[WARNING] (_handleEventUpdate) Failed to decrypt event: ${err.toString()}');
-        }
-      }
-
       if (eventUpdate.type == 'timeline' || eventUpdate.type == 'history') {
         // Redaction events are handled as modification for existing events.
         if (eventUpdate.eventType == 'm.room.redaction') {
