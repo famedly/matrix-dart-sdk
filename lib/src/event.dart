@@ -435,33 +435,7 @@ class Event {
         content['body'] != DecryptError.UNKNOWN_SESSION) {
       throw ('Session key not unknown');
     }
-    final users = await room.requestParticipants();
-    await room.client.sendToDevice(
-        [],
-        'm.room_key_request',
-        {
-          'action': 'request_cancellation',
-          'request_id': base64.encode(utf8.encode(content['session_id'])),
-          'requesting_device_id': room.client.deviceID,
-        },
-        encrypted: false,
-        toUsers: users);
-    await room.client.sendToDevice(
-        [],
-        'm.room_key_request',
-        {
-          'action': 'request',
-          'body': {
-            'algorithm': 'm.megolm.v1.aes-sha2',
-            'room_id': roomId,
-            'sender_key': content['sender_key'],
-            'session_id': content['session_id'],
-          },
-          'request_id': base64.encode(utf8.encode(content['session_id'])),
-          'requesting_device_id': room.client.deviceID,
-        },
-        encrypted: false,
-        toUsers: users);
+    await room.requestSessionKey(content['session_id'], content['sender_key']);
     return;
   }
 
