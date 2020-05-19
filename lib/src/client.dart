@@ -1216,13 +1216,13 @@ class Client {
         prev_batch: prev_batch,
         summary: summary,
       );
+      if (database != null) {
+        await database.storeRoomUpdate(this.id, update, getRoomById(id));
+      }
       _updateRoomsByRoomUpdate(update);
       final roomObj = getRoomById(id);
       if (limitedTimeline && roomObj != null) {
         roomObj.resetSortOrder();
-      }
-      if (database != null) {
-        await database.storeRoomUpdate(this.id, update, getRoomById(id));
       }
       onRoomUpdate.add(update);
 
