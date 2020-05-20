@@ -4978,6 +4978,21 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
+  Future<int> updateInboundGroupSessionIndexes(
+      String indexes, int client_id, String room_id, String session_id) {
+    return customUpdate(
+      'UPDATE inbound_group_sessions SET indexes = :indexes WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id',
+      variables: [
+        Variable.withString(indexes),
+        Variable.withInt(client_id),
+        Variable.withString(room_id),
+        Variable.withString(session_id)
+      ],
+      updates: {inboundGroupSessions},
+      updateKind: UpdateKind.update,
+    );
+  }
+
   Future<int> storeUserDeviceKeysInfo(
       int client_id, String user_id, bool outdated) {
     return customInsert(
