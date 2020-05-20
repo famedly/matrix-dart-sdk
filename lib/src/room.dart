@@ -1814,7 +1814,7 @@ class Room {
     final session = await client.database.getDbInboundGroupSession(client.id, id, sessionId);
     if (session == null) {
       // no session found, let's request it!
-      if (!_requestedSessionIds.contains(sessionId) && senderKey != null) {
+      if (client.enableE2eeRecovery && !_requestedSessionIds.contains(sessionId) && senderKey != null) {
         unawaited(requestSessionKey(sessionId, senderKey));
         _requestedSessionIds.add(sessionId);
       }
@@ -1876,7 +1876,7 @@ class Room {
       decryptedPayload = json.decode(decryptResult.plaintext);
     } catch (exception) {
       // alright, if this was actually by our own outbound group session, we might as well clear it
-      if ((_outboundGroupSession?.session_id() ?? '') == event.content['session_id']) {
+      if (client.enableE2eeRecovery && (_outboundGroupSession?.session_id() ?? '') == event.content['session_id']) {
         clearOutboundGroupSession(wipe: true);
       }
       if (exception.toString() == DecryptError.UNKNOWN_SESSION) {

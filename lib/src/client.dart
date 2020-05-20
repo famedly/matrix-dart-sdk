@@ -77,7 +77,14 @@ class Client {
 
   Database database;
 
-  Client(this.clientName, {this.debug = false, this.database}) {
+  bool enableE2eeRecovery;
+
+  /// Create a client
+  /// clientName = unique identifier of this client
+  /// debug: Print debug output?
+  /// database: The database instance to use
+  /// enableE2eeRecovery: Enable additional logic to try to recover from bad e2ee sessions
+  Client(this.clientName, {this.debug = false, this.database, this.enableE2eeRecovery = false}) {
     onLoginStateChanged.stream.listen((loginState) {
       print('LoginState: ${loginState.toString()}');
     });
