@@ -519,21 +519,64 @@ class Room {
   /// return all current emote packs for this room
   Map<String, Map<String, String>> get emotePacks {
     final packs = <String, Map<String, String>>{};
-    final addEmotePack = (String packName, Map<String, dynamic> content) {
-      packs[packName] = <String, String>{};
-      content.forEach((key, value) {
+    final normalizeEmotePackName = (String name) {
+      name = name.replaceAll(' ', '-');
+      name = name.replaceAll(RegExp(r'[^\w-]'), '');
+      return name.toLowerCase();
+    };
+    final addEmotePack = (String packName, Map<String, dynamic> content, [String packNameOverride]) {
+      if (!(content['short'] is Map)) {
+        return;
+      }
+      if (content['pack'] is Map && content['pack']['name'] is String) {
+        packName = content['pack']['name'];
+      }
+      if (packNameOverride != null && packNameOverride.isNotEmpty) {
+        packName = packNameOverride;
+      }
+      packName = normalizeEmotePackName(packName);
+      if (!packs.containsKey(packName)) {
+        packs[packName] = <String, String>{};
+      }
+      content['short'].forEach((key, value) {
         if (key is String && value is String && value.startsWith('mxc://')) {
           packs[packName][key] = value;
         }
       });
     };
-    final roomEmotes = getState('im.ponies.room_emotes');
-    final userEmotes = client.accountData['im.ponies.user_emotes'];
-    if (roomEmotes != null && roomEmotes.content['short'] is Map) {
-      addEmotePack('room', roomEmotes.content['short']);
+    // first add all the room emotes
+    final allRoomEmotes = states.states['im.ponies.room_emotes'];
+    if (allRoomEmotes != null) {
+      for (final entry in allRoomEmotes.entries) {
+        final stateKey = entry.key;
+        final event = entry.value;
+        addEmotePack(stateKey.isEmpty ? 'room' : stateKey, event.content);
+      }
     }
-    if (userEmotes != null && userEmotes.content['short'] is Map) {
-      addEmotePack('user', userEmotes.content['short']);
+    // next add all the user emotes
+    final userEmotes = client.accountData['im.ponies.user_emotes'];
+    if (userEmotes != null) {
+      addEmotePack('user', userEmotes.content);
+    }
+    // finally add all the external emote rooms
+    final emoteRooms = client.accountData['im.ponies.emote_rooms'];
+    if (emoteRooms != null && emoteRooms.content['rooms'] is Map) {
+      for (final roomEntry in emoteRooms.content['rooms'].entries) {
+        final roomId = roomEntry.key;
+        if (roomId == id) {
+          continue;
+        }
+        final room = client.getRoomById(roomId);
+        if (room != null && roomEntry.value is Map) {
+          for (final stateKeyEntry in roomEntry.value.entries) {
+            final stateKey = stateKeyEntry.key;
+            final event = room.getState('im.ponies.room_emotes', stateKey);
+            if (event != null && stateKeyEntry.value is Map) {
+              addEmotePack(room.canonicalAlias.isEmpty ? room.id : canonicalAlias, event.content, stateKeyEntry.value['name']);
+            }
+          }
+        }
+      }
     }
     return packs;
   }
