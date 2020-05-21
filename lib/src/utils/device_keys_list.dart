@@ -15,7 +15,12 @@ class DeviceKeysList {
     outdated = dbEntry.outdated;
     deviceKeys = {};
     for (final childEntry in childEntries) {
-      deviceKeys[childEntry.deviceId] = DeviceKeys.fromDb(childEntry);
+      final entry = DeviceKeys.fromDb(childEntry);
+      if (entry.isValid) {
+        deviceKeys[childEntry.deviceId] = entry;
+      } else {
+        outdated = true;
+      }
     }
   }
 
@@ -61,6 +66,8 @@ class DeviceKeys {
 
   String get curve25519Key => keys['curve25519:$deviceId'];
   String get ed25519Key => keys['ed25519:$deviceId'];
+
+  bool get isValid => userId != null && deviceId != null && curve25519Key != null && ed25519Key != null;
 
   Future<void> setVerified(bool newVerified, Client client) {
     verified = newVerified;

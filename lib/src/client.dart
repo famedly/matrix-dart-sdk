@@ -1655,27 +1655,29 @@ class Client {
             // Set the new device key for this device
 
             if (!oldKeys.containsKey(deviceId)) {
-              _userDeviceKeys[userId].deviceKeys[deviceId] =
-                  DeviceKeys.fromJson(rawDeviceKeyEntry.value);
-              if (deviceId == deviceID &&
-                  _userDeviceKeys[userId].deviceKeys[deviceId].ed25519Key ==
-                      fingerprintKey) {
-                // Always trust the own device
-                _userDeviceKeys[userId].deviceKeys[deviceId].verified = true;
+              final entry = DeviceKeys.fromJson(rawDeviceKeyEntry.value);
+              if (entry.isValid) {
+                _userDeviceKeys[userId].deviceKeys[deviceId] = entry;
+                if (deviceId == deviceID &&
+                  entry.ed25519Key ==
+                  fingerprintKey) {
+                    // Always trust the own device
+                    entry.verified = true;
+                }
+              }
+              if (database != null) {
+                dbActions.add(() => database.storeUserDeviceKey(
+                      id,
+                      userId,
+                      deviceId,
+                      json.encode(
+                          _userDeviceKeys[userId].deviceKeys[deviceId].toJson()),
+                      _userDeviceKeys[userId].deviceKeys[deviceId].verified,
+                      _userDeviceKeys[userId].deviceKeys[deviceId].blocked,
+                    ));
               }
             } else {
               _userDeviceKeys[userId].deviceKeys[deviceId] = oldKeys[deviceId];
-            }
-            if (database != null) {
-              dbActions.add(() => database.storeUserDeviceKey(
-                    id,
-                    userId,
-                    deviceId,
-                    json.encode(
-                        _userDeviceKeys[userId].deviceKeys[deviceId].toJson()),
-                    _userDeviceKeys[userId].deviceKeys[deviceId].verified,
-                    _userDeviceKeys[userId].deviceKeys[deviceId].blocked,
-                  ));
             }
           }
           if (database != null) {
