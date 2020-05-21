@@ -81,7 +81,7 @@ abstract class _SignedKey {
 
   String get ed25519Key => keys['ed25519:$identifier'];
 
-  bool get verified => directVerified || crossVerified;
+  bool get verified => (directVerified || crossVerified) && !blocked;
 
   void setDirectVerified(bool v) {
     _verified = v;
