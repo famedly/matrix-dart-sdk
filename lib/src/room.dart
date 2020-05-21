@@ -1872,7 +1872,11 @@ class Room {
       }
       inboundGroupSessions[sessionId].indexes[messageIndexKey] =
           decryptResult.message_index;
-      _storeOutboundGroupSession();
+      // now we persist the udpated indexes into the database.
+      // the entry should always exist. In the case it doesn't, the following
+      // line *could* throw an error. As that is a future, though, and we call
+      // it un-awaited here, nothing happens, which is exactly the result we want
+      client.database?.updateInboundGroupSessionIndexes(json.encode(inboundGroupSessions[sessionId].indexes), client.id, id, sessionId);
       decryptedPayload = json.decode(decryptResult.plaintext);
     } catch (exception) {
       // alright, if this was actually by our own outbound group session, we might as well clear it
