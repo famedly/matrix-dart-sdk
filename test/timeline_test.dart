@@ -26,7 +26,9 @@ import 'package:test/test.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/room.dart';
 import 'package:famedlysdk/src/timeline.dart';
+import 'package:famedlysdk/src/user.dart';
 import 'package:famedlysdk/src/sync/event_update.dart';
+import 'package:famedlysdk/src/sync/room_update.dart';
 import 'fake_matrix_api.dart';
 
 void main() {
@@ -239,6 +241,19 @@ void main() {
       expect(timeline.events[7].eventId, '2143273582443PhrSn:example.org');
       expect(timeline.events[8].eventId, '1143273582443PhrSn:example.org');
       expect(room.prev_batch, 't47409-4357353_219380_26003_2265');
+    });
+
+    test('Clear cache on limited timeline', () async {
+      client.onRoomUpdate.add(RoomUpdate(
+        id: roomID,
+        membership: Membership.join,
+        notification_count: 0,
+        highlight_count: 0,
+        limitedTimeline: true,
+        prev_batch: 'blah',
+      ));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events.isEmpty, true);
     });
   });
 }
