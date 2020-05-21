@@ -699,6 +699,7 @@ class DbUserDeviceKeysKey extends DataClass
   final String userId;
   final String deviceId;
   final String content;
+  final String validSignatures;
   final bool verified;
   final bool blocked;
   DbUserDeviceKeysKey(
@@ -706,6 +707,7 @@ class DbUserDeviceKeysKey extends DataClass
       @required this.userId,
       @required this.deviceId,
       @required this.content,
+      this.validSignatures,
       this.verified,
       this.blocked});
   factory DbUserDeviceKeysKey.fromData(
@@ -724,6 +726,8 @@ class DbUserDeviceKeysKey extends DataClass
           .mapFromDatabaseResponse(data['${effectivePrefix}device_id']),
       content:
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}content']),
+      validSignatures: stringType
+          .mapFromDatabaseResponse(data['${effectivePrefix}valid_signatures']),
       verified:
           boolType.mapFromDatabaseResponse(data['${effectivePrefix}verified']),
       blocked:
@@ -745,6 +749,9 @@ class DbUserDeviceKeysKey extends DataClass
     if (!nullToAbsent || content != null) {
       map['content'] = Variable<String>(content);
     }
+    if (!nullToAbsent || validSignatures != null) {
+      map['valid_signatures'] = Variable<String>(validSignatures);
+    }
     if (!nullToAbsent || verified != null) {
       map['verified'] = Variable<bool>(verified);
     }
@@ -762,6 +769,7 @@ class DbUserDeviceKeysKey extends DataClass
       userId: serializer.fromJson<String>(json['user_id']),
       deviceId: serializer.fromJson<String>(json['device_id']),
       content: serializer.fromJson<String>(json['content']),
+      validSignatures: serializer.fromJson<String>(json['valid_signatures']),
       verified: serializer.fromJson<bool>(json['verified']),
       blocked: serializer.fromJson<bool>(json['blocked']),
     );
@@ -774,6 +782,7 @@ class DbUserDeviceKeysKey extends DataClass
       'user_id': serializer.toJson<String>(userId),
       'device_id': serializer.toJson<String>(deviceId),
       'content': serializer.toJson<String>(content),
+      'valid_signatures': serializer.toJson<String>(validSignatures),
       'verified': serializer.toJson<bool>(verified),
       'blocked': serializer.toJson<bool>(blocked),
     };
@@ -784,6 +793,7 @@ class DbUserDeviceKeysKey extends DataClass
           String userId,
           String deviceId,
           String content,
+          String validSignatures,
           bool verified,
           bool blocked}) =>
       DbUserDeviceKeysKey(
@@ -791,6 +801,7 @@ class DbUserDeviceKeysKey extends DataClass
         userId: userId ?? this.userId,
         deviceId: deviceId ?? this.deviceId,
         content: content ?? this.content,
+        validSignatures: validSignatures ?? this.validSignatures,
         verified: verified ?? this.verified,
         blocked: blocked ?? this.blocked,
       );
@@ -801,6 +812,7 @@ class DbUserDeviceKeysKey extends DataClass
           ..write('userId: $userId, ')
           ..write('deviceId: $deviceId, ')
           ..write('content: $content, ')
+          ..write('validSignatures: $validSignatures, ')
           ..write('verified: $verified, ')
           ..write('blocked: $blocked')
           ..write(')'))
@@ -814,8 +826,10 @@ class DbUserDeviceKeysKey extends DataClass
           userId.hashCode,
           $mrjc(
               deviceId.hashCode,
-              $mrjc(content.hashCode,
-                  $mrjc(verified.hashCode, blocked.hashCode))))));
+              $mrjc(
+                  content.hashCode,
+                  $mrjc(validSignatures.hashCode,
+                      $mrjc(verified.hashCode, blocked.hashCode)))))));
   @override
   bool operator ==(dynamic other) =>
       identical(this, other) ||
@@ -824,6 +838,7 @@ class DbUserDeviceKeysKey extends DataClass
           other.userId == this.userId &&
           other.deviceId == this.deviceId &&
           other.content == this.content &&
+          other.validSignatures == this.validSignatures &&
           other.verified == this.verified &&
           other.blocked == this.blocked);
 }
@@ -833,6 +848,7 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
   final Value<String> userId;
   final Value<String> deviceId;
   final Value<String> content;
+  final Value<String> validSignatures;
   final Value<bool> verified;
   final Value<bool> blocked;
   const UserDeviceKeysKeyCompanion({
@@ -840,6 +856,7 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
     this.userId = const Value.absent(),
     this.deviceId = const Value.absent(),
     this.content = const Value.absent(),
+    this.validSignatures = const Value.absent(),
     this.verified = const Value.absent(),
     this.blocked = const Value.absent(),
   });
@@ -848,6 +865,7 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
     @required String userId,
     @required String deviceId,
     @required String content,
+    this.validSignatures = const Value.absent(),
     this.verified = const Value.absent(),
     this.blocked = const Value.absent(),
   })  : clientId = Value(clientId),
@@ -859,6 +877,7 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
     Expression<String> userId,
     Expression<String> deviceId,
     Expression<String> content,
+    Expression<String> validSignatures,
     Expression<bool> verified,
     Expression<bool> blocked,
   }) {
@@ -867,6 +886,7 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
       if (userId != null) 'user_id': userId,
       if (deviceId != null) 'device_id': deviceId,
       if (content != null) 'content': content,
+      if (validSignatures != null) 'valid_signatures': validSignatures,
       if (verified != null) 'verified': verified,
       if (blocked != null) 'blocked': blocked,
     });
@@ -877,6 +897,7 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
       Value<String> userId,
       Value<String> deviceId,
       Value<String> content,
+      Value<String> validSignatures,
       Value<bool> verified,
       Value<bool> blocked}) {
     return UserDeviceKeysKeyCompanion(
@@ -884,6 +905,7 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
       userId: userId ?? this.userId,
       deviceId: deviceId ?? this.deviceId,
       content: content ?? this.content,
+      validSignatures: validSignatures ?? this.validSignatures,
       verified: verified ?? this.verified,
       blocked: blocked ?? this.blocked,
     );
@@ -903,6 +925,9 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
     }
     if (content.present) {
       map['content'] = Variable<String>(content.value);
+    }
+    if (validSignatures.present) {
+      map['valid_signatures'] = Variable<String>(validSignatures.value);
     }
     if (verified.present) {
       map['verified'] = Variable<bool>(verified.value);
@@ -951,6 +976,16 @@ class UserDeviceKeysKey extends Table
         $customConstraints: 'NOT NULL');
   }
 
+  final VerificationMeta _validSignaturesMeta =
+      const VerificationMeta('validSignatures');
+  GeneratedTextColumn _validSignatures;
+  GeneratedTextColumn get validSignatures =>
+      _validSignatures ??= _constructValidSignatures();
+  GeneratedTextColumn _constructValidSignatures() {
+    return GeneratedTextColumn('valid_signatures', $tableName, true,
+        $customConstraints: '');
+  }
+
   final VerificationMeta _verifiedMeta = const VerificationMeta('verified');
   GeneratedBoolColumn _verified;
   GeneratedBoolColumn get verified => _verified ??= _constructVerified();
@@ -971,7 +1006,7 @@ class UserDeviceKeysKey extends Table
 
   @override
   List<GeneratedColumn> get $columns =>
-      [clientId, userId, deviceId, content, verified, blocked];
+      [clientId, userId, deviceId, content, validSignatures, verified, blocked];
   @override
   UserDeviceKeysKey get asDslTable => this;
   @override
@@ -1008,6 +1043,12 @@ class UserDeviceKeysKey extends Table
     } else if (isInserting) {
       context.missing(_contentMeta);
     }
+    if (data.containsKey('valid_signatures')) {
+      context.handle(
+          _validSignaturesMeta,
+          validSignatures.isAcceptableOrUnknown(
+              data['valid_signatures'], _validSignaturesMeta));
+    }
     if (data.containsKey('verified')) {
       context.handle(_verifiedMeta,
           verified.isAcceptableOrUnknown(data['verified'], _verifiedMeta));
@@ -1035,6 +1076,401 @@ class UserDeviceKeysKey extends Table
   @override
   List<String> get customConstraints =>
       const ['UNIQUE(client_id, user_id, device_id)'];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
+class DbUserCrossSigningKey extends DataClass
+    implements Insertable<DbUserCrossSigningKey> {
+  final int clientId;
+  final String userId;
+  final String publicKey;
+  final String content;
+  final String validSignatures;
+  final bool verified;
+  final bool blocked;
+  DbUserCrossSigningKey(
+      {@required this.clientId,
+      @required this.userId,
+      @required this.publicKey,
+      @required this.content,
+      this.validSignatures,
+      this.verified,
+      this.blocked});
+  factory DbUserCrossSigningKey.fromData(
+      Map<String, dynamic> data, GeneratedDatabase db,
+      {String prefix}) {
+    final effectivePrefix = prefix ?? '';
+    final intType = db.typeSystem.forDartType<int>();
+    final stringType = db.typeSystem.forDartType<String>();
+    final boolType = db.typeSystem.forDartType<bool>();
+    return DbUserCrossSigningKey(
+      clientId:
+          intType.mapFromDatabaseResponse(data['${effectivePrefix}client_id']),
+      userId:
+          stringType.mapFromDatabaseResponse(data['${effectivePrefix}user_id']),
+      publicKey: stringType
+          .mapFromDatabaseResponse(data['${effectivePrefix}public_key']),
+      content:
+          stringType.mapFromDatabaseResponse(data['${effectivePrefix}content']),
+      validSignatures: stringType
+          .mapFromDatabaseResponse(data['${effectivePrefix}valid_signatures']),
+      verified:
+          boolType.mapFromDatabaseResponse(data['${effectivePrefix}verified']),
+      blocked:
+          boolType.mapFromDatabaseResponse(data['${effectivePrefix}blocked']),
+    );
+  }
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (!nullToAbsent || clientId != null) {
+      map['client_id'] = Variable<int>(clientId);
+    }
+    if (!nullToAbsent || userId != null) {
+      map['user_id'] = Variable<String>(userId);
+    }
+    if (!nullToAbsent || publicKey != null) {
+      map['public_key'] = Variable<String>(publicKey);
+    }
+    if (!nullToAbsent || content != null) {
+      map['content'] = Variable<String>(content);
+    }
+    if (!nullToAbsent || validSignatures != null) {
+      map['valid_signatures'] = Variable<String>(validSignatures);
+    }
+    if (!nullToAbsent || verified != null) {
+      map['verified'] = Variable<bool>(verified);
+    }
+    if (!nullToAbsent || blocked != null) {
+      map['blocked'] = Variable<bool>(blocked);
+    }
+    return map;
+  }
+
+  factory DbUserCrossSigningKey.fromJson(Map<String, dynamic> json,
+      {ValueSerializer serializer}) {
+    serializer ??= moorRuntimeOptions.defaultSerializer;
+    return DbUserCrossSigningKey(
+      clientId: serializer.fromJson<int>(json['client_id']),
+      userId: serializer.fromJson<String>(json['user_id']),
+      publicKey: serializer.fromJson<String>(json['public_key']),
+      content: serializer.fromJson<String>(json['content']),
+      validSignatures: serializer.fromJson<String>(json['valid_signatures']),
+      verified: serializer.fromJson<bool>(json['verified']),
+      blocked: serializer.fromJson<bool>(json['blocked']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer serializer}) {
+    serializer ??= moorRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'client_id': serializer.toJson<int>(clientId),
+      'user_id': serializer.toJson<String>(userId),
+      'public_key': serializer.toJson<String>(publicKey),
+      'content': serializer.toJson<String>(content),
+      'valid_signatures': serializer.toJson<String>(validSignatures),
+      'verified': serializer.toJson<bool>(verified),
+      'blocked': serializer.toJson<bool>(blocked),
+    };
+  }
+
+  DbUserCrossSigningKey copyWith(
+          {int clientId,
+          String userId,
+          String publicKey,
+          String content,
+          String validSignatures,
+          bool verified,
+          bool blocked}) =>
+      DbUserCrossSigningKey(
+        clientId: clientId ?? this.clientId,
+        userId: userId ?? this.userId,
+        publicKey: publicKey ?? this.publicKey,
+        content: content ?? this.content,
+        validSignatures: validSignatures ?? this.validSignatures,
+        verified: verified ?? this.verified,
+        blocked: blocked ?? this.blocked,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('DbUserCrossSigningKey(')
+          ..write('clientId: $clientId, ')
+          ..write('userId: $userId, ')
+          ..write('publicKey: $publicKey, ')
+          ..write('content: $content, ')
+          ..write('validSignatures: $validSignatures, ')
+          ..write('verified: $verified, ')
+          ..write('blocked: $blocked')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => $mrjf($mrjc(
+      clientId.hashCode,
+      $mrjc(
+          userId.hashCode,
+          $mrjc(
+              publicKey.hashCode,
+              $mrjc(
+                  content.hashCode,
+                  $mrjc(validSignatures.hashCode,
+                      $mrjc(verified.hashCode, blocked.hashCode)))))));
+  @override
+  bool operator ==(dynamic other) =>
+      identical(this, other) ||
+      (other is DbUserCrossSigningKey &&
+          other.clientId == this.clientId &&
+          other.userId == this.userId &&
+          other.publicKey == this.publicKey &&
+          other.content == this.content &&
+          other.validSignatures == this.validSignatures &&
+          other.verified == this.verified &&
+          other.blocked == this.blocked);
+}
+
+class UserCrossSigningKeysCompanion
+    extends UpdateCompanion<DbUserCrossSigningKey> {
+  final Value<int> clientId;
+  final Value<String> userId;
+  final Value<String> publicKey;
+  final Value<String> content;
+  final Value<String> validSignatures;
+  final Value<bool> verified;
+  final Value<bool> blocked;
+  const UserCrossSigningKeysCompanion({
+    this.clientId = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.publicKey = const Value.absent(),
+    this.content = const Value.absent(),
+    this.validSignatures = const Value.absent(),
+    this.verified = const Value.absent(),
+    this.blocked = const Value.absent(),
+  });
+  UserCrossSigningKeysCompanion.insert({
+    @required int clientId,
+    @required String userId,
+    @required String publicKey,
+    @required String content,
+    this.validSignatures = const Value.absent(),
+    this.verified = const Value.absent(),
+    this.blocked = const Value.absent(),
+  })  : clientId = Value(clientId),
+        userId = Value(userId),
+        publicKey = Value(publicKey),
+        content = Value(content);
+  static Insertable<DbUserCrossSigningKey> custom({
+    Expression<int> clientId,
+    Expression<String> userId,
+    Expression<String> publicKey,
+    Expression<String> content,
+    Expression<String> validSignatures,
+    Expression<bool> verified,
+    Expression<bool> blocked,
+  }) {
+    return RawValuesInsertable({
+      if (clientId != null) 'client_id': clientId,
+      if (userId != null) 'user_id': userId,
+      if (publicKey != null) 'public_key': publicKey,
+      if (content != null) 'content': content,
+      if (validSignatures != null) 'valid_signatures': validSignatures,
+      if (verified != null) 'verified': verified,
+      if (blocked != null) 'blocked': blocked,
+    });
+  }
+
+  UserCrossSigningKeysCompanion copyWith(
+      {Value<int> clientId,
+      Value<String> userId,
+      Value<String> publicKey,
+      Value<String> content,
+      Value<String> validSignatures,
+      Value<bool> verified,
+      Value<bool> blocked}) {
+    return UserCrossSigningKeysCompanion(
+      clientId: clientId ?? this.clientId,
+      userId: userId ?? this.userId,
+      publicKey: publicKey ?? this.publicKey,
+      content: content ?? this.content,
+      validSignatures: validSignatures ?? this.validSignatures,
+      verified: verified ?? this.verified,
+      blocked: blocked ?? this.blocked,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientId.present) {
+      map['client_id'] = Variable<int>(clientId.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (publicKey.present) {
+      map['public_key'] = Variable<String>(publicKey.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (validSignatures.present) {
+      map['valid_signatures'] = Variable<String>(validSignatures.value);
+    }
+    if (verified.present) {
+      map['verified'] = Variable<bool>(verified.value);
+    }
+    if (blocked.present) {
+      map['blocked'] = Variable<bool>(blocked.value);
+    }
+    return map;
+  }
+}
+
+class UserCrossSigningKeys extends Table
+    with TableInfo<UserCrossSigningKeys, DbUserCrossSigningKey> {
+  final GeneratedDatabase _db;
+  final String _alias;
+  UserCrossSigningKeys(this._db, [this._alias]);
+  final VerificationMeta _clientIdMeta = const VerificationMeta('clientId');
+  GeneratedIntColumn _clientId;
+  GeneratedIntColumn get clientId => _clientId ??= _constructClientId();
+  GeneratedIntColumn _constructClientId() {
+    return GeneratedIntColumn('client_id', $tableName, false,
+        $customConstraints: 'NOT NULL REFERENCES clients(client_id)');
+  }
+
+  final VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  GeneratedTextColumn _userId;
+  GeneratedTextColumn get userId => _userId ??= _constructUserId();
+  GeneratedTextColumn _constructUserId() {
+    return GeneratedTextColumn('user_id', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  final VerificationMeta _publicKeyMeta = const VerificationMeta('publicKey');
+  GeneratedTextColumn _publicKey;
+  GeneratedTextColumn get publicKey => _publicKey ??= _constructPublicKey();
+  GeneratedTextColumn _constructPublicKey() {
+    return GeneratedTextColumn('public_key', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  final VerificationMeta _contentMeta = const VerificationMeta('content');
+  GeneratedTextColumn _content;
+  GeneratedTextColumn get content => _content ??= _constructContent();
+  GeneratedTextColumn _constructContent() {
+    return GeneratedTextColumn('content', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  final VerificationMeta _validSignaturesMeta =
+      const VerificationMeta('validSignatures');
+  GeneratedTextColumn _validSignatures;
+  GeneratedTextColumn get validSignatures =>
+      _validSignatures ??= _constructValidSignatures();
+  GeneratedTextColumn _constructValidSignatures() {
+    return GeneratedTextColumn('valid_signatures', $tableName, true,
+        $customConstraints: '');
+  }
+
+  final VerificationMeta _verifiedMeta = const VerificationMeta('verified');
+  GeneratedBoolColumn _verified;
+  GeneratedBoolColumn get verified => _verified ??= _constructVerified();
+  GeneratedBoolColumn _constructVerified() {
+    return GeneratedBoolColumn('verified', $tableName, true,
+        $customConstraints: 'DEFAULT false',
+        defaultValue: const CustomExpression<bool>('false'));
+  }
+
+  final VerificationMeta _blockedMeta = const VerificationMeta('blocked');
+  GeneratedBoolColumn _blocked;
+  GeneratedBoolColumn get blocked => _blocked ??= _constructBlocked();
+  GeneratedBoolColumn _constructBlocked() {
+    return GeneratedBoolColumn('blocked', $tableName, true,
+        $customConstraints: 'DEFAULT false',
+        defaultValue: const CustomExpression<bool>('false'));
+  }
+
+  @override
+  List<GeneratedColumn> get $columns => [
+        clientId,
+        userId,
+        publicKey,
+        content,
+        validSignatures,
+        verified,
+        blocked
+      ];
+  @override
+  UserCrossSigningKeys get asDslTable => this;
+  @override
+  String get $tableName => _alias ?? 'user_cross_signing_keys';
+  @override
+  final String actualTableName = 'user_cross_signing_keys';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<DbUserCrossSigningKey> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_id')) {
+      context.handle(_clientIdMeta,
+          clientId.isAcceptableOrUnknown(data['client_id'], _clientIdMeta));
+    } else if (isInserting) {
+      context.missing(_clientIdMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(_userIdMeta,
+          userId.isAcceptableOrUnknown(data['user_id'], _userIdMeta));
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('public_key')) {
+      context.handle(_publicKeyMeta,
+          publicKey.isAcceptableOrUnknown(data['public_key'], _publicKeyMeta));
+    } else if (isInserting) {
+      context.missing(_publicKeyMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(_contentMeta,
+          content.isAcceptableOrUnknown(data['content'], _contentMeta));
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('valid_signatures')) {
+      context.handle(
+          _validSignaturesMeta,
+          validSignatures.isAcceptableOrUnknown(
+              data['valid_signatures'], _validSignaturesMeta));
+    }
+    if (data.containsKey('verified')) {
+      context.handle(_verifiedMeta,
+          verified.isAcceptableOrUnknown(data['verified'], _verifiedMeta));
+    }
+    if (data.containsKey('blocked')) {
+      context.handle(_blockedMeta,
+          blocked.isAcceptableOrUnknown(data['blocked'], _blockedMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => <GeneratedColumn>{};
+  @override
+  DbUserCrossSigningKey map(Map<String, dynamic> data, {String tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : null;
+    return DbUserCrossSigningKey.fromData(data, _db, prefix: effectivePrefix);
+  }
+
+  @override
+  UserCrossSigningKeys createAlias(String alias) {
+    return UserCrossSigningKeys(_db, alias);
+  }
+
+  @override
+  List<String> get customConstraints =>
+      const ['UNIQUE(client_id, user_id, public_key)'];
   @override
   bool get dontWriteConstraints => true;
 }
@@ -4680,6 +5116,13 @@ abstract class _$Database extends GeneratedDatabase {
   Index get userDeviceKeysKeyIndex => _userDeviceKeysKeyIndex ??= Index(
       'user_device_keys_key_index',
       'CREATE INDEX user_device_keys_key_index ON user_device_keys_key(client_id);');
+  UserCrossSigningKeys _userCrossSigningKeys;
+  UserCrossSigningKeys get userCrossSigningKeys =>
+      _userCrossSigningKeys ??= UserCrossSigningKeys(this);
+  Index _userCrossSigningKeysIndex;
+  Index get userCrossSigningKeysIndex => _userCrossSigningKeysIndex ??= Index(
+      'user_cross_signing_keys_index',
+      'CREATE INDEX user_cross_signing_keys_index ON user_cross_signing_keys(client_id);');
   OlmSessions _olmSessions;
   OlmSessions get olmSessions => _olmSessions ??= OlmSessions(this);
   Index _olmSessionsIndex;
@@ -4823,6 +5266,7 @@ abstract class _$Database extends GeneratedDatabase {
       userId: row.readString('user_id'),
       deviceId: row.readString('device_id'),
       content: row.readString('content'),
+      validSignatures: row.readString('valid_signatures'),
       verified: row.readBool('verified'),
       blocked: row.readBool('blocked'),
     );
@@ -4833,6 +5277,25 @@ abstract class _$Database extends GeneratedDatabase {
         'SELECT * FROM user_device_keys_key WHERE client_id = :client_id',
         variables: [Variable.withInt(client_id)],
         readsFrom: {userDeviceKeysKey}).map(_rowToDbUserDeviceKeysKey);
+  }
+
+  DbUserCrossSigningKey _rowToDbUserCrossSigningKey(QueryRow row) {
+    return DbUserCrossSigningKey(
+      clientId: row.readInt('client_id'),
+      userId: row.readString('user_id'),
+      publicKey: row.readString('public_key'),
+      content: row.readString('content'),
+      validSignatures: row.readString('valid_signatures'),
+      verified: row.readBool('verified'),
+      blocked: row.readBool('blocked'),
+    );
+  }
+
+  Selectable<DbUserCrossSigningKey> getAllUserCrossSigningKeys(int client_id) {
+    return customSelect(
+        'SELECT * FROM user_cross_signing_keys WHERE client_id = :client_id',
+        variables: [Variable.withInt(client_id)],
+        readsFrom: {userCrossSigningKeys}).map(_rowToDbUserCrossSigningKey);
   }
 
   DbOlmSessions _rowToDbOlmSessions(QueryRow row) {
@@ -5036,15 +5499,22 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  Future<int> storeUserDeviceKey(int client_id, String user_id,
-      String device_id, String content, bool verified, bool blocked) {
+  Future<int> storeUserDeviceKey(
+      int client_id,
+      String user_id,
+      String device_id,
+      String content,
+      String valid_signatures,
+      bool verified,
+      bool blocked) {
     return customInsert(
-      'INSERT OR REPLACE INTO user_device_keys_key (client_id, user_id, device_id, content, verified, blocked) VALUES (:client_id, :user_id, :device_id, :content, :verified, :blocked)',
+      'INSERT OR REPLACE INTO user_device_keys_key (client_id, user_id, device_id, content, valid_signatures, verified, blocked) VALUES (:client_id, :user_id, :device_id, :content, :valid_signatures, :verified, :blocked)',
       variables: [
         Variable.withInt(client_id),
         Variable.withString(user_id),
         Variable.withString(device_id),
         Variable.withString(content),
+        Variable.withString(valid_signatures),
         Variable.withBool(verified),
         Variable.withBool(blocked)
       ],
@@ -5062,6 +5532,73 @@ abstract class _$Database extends GeneratedDatabase {
         Variable.withString(device_id)
       ],
       updates: {userDeviceKeysKey},
+      updateKind: UpdateKind.delete,
+    );
+  }
+
+  Future<int> setVerifiedUserCrossSigningKey(
+      bool verified, int client_id, String user_id, String public_key) {
+    return customUpdate(
+      'UPDATE user_cross_signing_keys SET verified = :verified WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key',
+      variables: [
+        Variable.withBool(verified),
+        Variable.withInt(client_id),
+        Variable.withString(user_id),
+        Variable.withString(public_key)
+      ],
+      updates: {userCrossSigningKeys},
+      updateKind: UpdateKind.update,
+    );
+  }
+
+  Future<int> setBlockedUserCrossSigningKey(
+      bool blocked, int client_id, String user_id, String public_key) {
+    return customUpdate(
+      'UPDATE user_cross_signing_keys SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key',
+      variables: [
+        Variable.withBool(blocked),
+        Variable.withInt(client_id),
+        Variable.withString(user_id),
+        Variable.withString(public_key)
+      ],
+      updates: {userCrossSigningKeys},
+      updateKind: UpdateKind.update,
+    );
+  }
+
+  Future<int> storeUserCrossSigningKey(
+      int client_id,
+      String user_id,
+      String public_key,
+      String content,
+      String valid_signatures,
+      bool verified,
+      bool blocked) {
+    return customInsert(
+      'INSERT OR REPLACE INTO user_cross_signing_keys (client_id, user_id, public_key, content, valid_signatures, verified, blocked) VALUES (:client_id, :user_id, :public_key, :content, :valid_signatures, :verified, :blocked)',
+      variables: [
+        Variable.withInt(client_id),
+        Variable.withString(user_id),
+        Variable.withString(public_key),
+        Variable.withString(content),
+        Variable.withString(valid_signatures),
+        Variable.withBool(verified),
+        Variable.withBool(blocked)
+      ],
+      updates: {userCrossSigningKeys},
+    );
+  }
+
+  Future<int> removeUserCrossSigningKey(
+      int client_id, String user_id, String public_key) {
+    return customUpdate(
+      'DELETE FROM user_cross_signing_keys WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key',
+      variables: [
+        Variable.withInt(client_id),
+        Variable.withString(user_id),
+        Variable.withString(public_key)
+      ],
+      updates: {userCrossSigningKeys},
       updateKind: UpdateKind.delete,
     );
   }
@@ -5472,6 +6009,8 @@ abstract class _$Database extends GeneratedDatabase {
         userDeviceKeysIndex,
         userDeviceKeysKey,
         userDeviceKeysKeyIndex,
+        userCrossSigningKeys,
+        userCrossSigningKeysIndex,
         olmSessions,
         olmSessionsIndex,
         outboundGroupSessions,

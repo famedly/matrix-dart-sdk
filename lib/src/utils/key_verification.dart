@@ -271,7 +271,7 @@ class KeyVerification {
     return [];
   }
 
-  Future<void> verifyKeys(Map<String, String> keys, Future<bool> Function(String, DeviceKeys) verifier) async {
+  Future<void> verifyKeys(Map<String, String> keys, Future<bool> Function(String, dynamic) verifier) async {
     final verifiedDevices = <String>[];
 
     if (!client.userDeviceKeys.containsKey(userId)) {
@@ -288,14 +288,23 @@ class KeyVerification {
           return;
         }
         verifiedDevices.add(verifyDeviceId);
-      } else {
-        // TODO: we would check here if what we are verifying is actually a
-        // cross-signing key and not a "normal" device key
+      } else if (client.userDeviceKeys[userId].crossSigningKeys.containsKey(verifyDeviceId)) {
+        // this is a cross signing key!
+        if (!(await verifier(keyInfo, client.userDeviceKeys[userId].crossSigningKeys[verifyDeviceId]))) {
+          await cancel('m.key_mismatch');
+          return;
+        }
+        verifiedDevices.add(verifyDeviceId);
       }
     }
     // okay, we reached this far, so all the devices are verified!
     for (final verifyDeviceId in verifiedDevices) {
-      await client.userDeviceKeys[userId].deviceKeys[verifyDeviceId].setVerified(true, client);
+      if (client.userDeviceKeys[userId].deviceKeys.containsKey(verifyDeviceId)) {
+        await client.userDeviceKeys[userId].deviceKeys[verifyDeviceId].setVerified(true);
+      } else if (client.userDeviceKeys[userId].crossSigningKeys.containsKey(verifyDeviceId)) {
+        await client.userDeviceKeys[userId].crossSigningKeys[verifyDeviceId].setVerified(true);
+        // TODO: sign the other persons master key
+      }
     }
   }
 
@@ -645,8 +654,13 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
         mac[entry.key] = entry.value;
       }
     }
-    await request.verifyKeys(mac, (String mac, DeviceKeys device) async {
-      return mac == _calculateMac(device.ed25519Key, baseInfo + 'ed25519:' + device.deviceId);
+    await request.verifyKeys(mac, (String mac, dynamic device) async {
+      if (device is DeviceKeys) {
+        return mac == _calculateMac(device.ed25519Key, baseInfo + 'ed25519:' + device.deviceId);
+      } else if (device is CrossSigningKey) {
+        return mac == _calculateMac(device.ed25519Key, baseInfo + 'ed25519:' + device.publicKey);
+      }
+      return false;
     });
     await request.send('m.key.verification.done', {});
     if (request.state != KeyVerificationState.error) {

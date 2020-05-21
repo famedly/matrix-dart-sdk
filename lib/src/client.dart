@@ -796,7 +796,7 @@ class Client {
           pickledOlmAccount,
         );
       }
-      _userDeviceKeys = await database.getUserDeviceKeys(id);
+      _userDeviceKeys = await database.getUserDeviceKeys(this);
       _olmSessions = await database.getOlmSessions(id, _userID);
       _rooms = await database.getRoomList(this, onlyLeft: false);
       _sortRooms();
@@ -1644,6 +1644,7 @@ class Client {
             action: '/client/r0/keys/query',
             data: {'timeout': 10000, 'device_keys': outdatedLists});
 
+        // first we parse and persist the device keys
         for (final rawDeviceKeyListEntry in response['device_keys'].entries) {
           final String userId = rawDeviceKeyListEntry.key;
           final oldKeys =
@@ -1653,10 +1654,17 @@ class Client {
             final String deviceId = rawDeviceKeyEntry.key;
 
             // Set the new device key for this device
-
-            if (!oldKeys.containsKey(deviceId)) {
-              final entry = DeviceKeys.fromJson(rawDeviceKeyEntry.value);
-              if (entry.isValid) {
+            final entry = DeviceKeys.fromJson(rawDeviceKeyEntry.value, this);
+            if (entry.isValid) {
+              // is this a new key or the same one as an old one?
+              // better store an update - the signatures might have changed!
+              if (!oldKeys.containsKey(deviceId) || oldKeys[deviceId].ed25519Key == entry.ed25519Key) {
+                if (oldKeys.containsKey(deviceId)) {
+                  // be sure to save the verified status
+                  entry.verified = oldKeys[deviceId].verified;
+                  entry.blocked = oldKeys[deviceId].blocked;
+                  entry.validSignatures = oldKeys[deviceId].validSignatures;
+                }
                 _userDeviceKeys[userId].deviceKeys[deviceId] = entry;
                 if (deviceId == deviceID &&
                   entry.ed25519Key ==
@@ -1664,22 +1672,26 @@ class Client {
                     // Always trust the own device
                     entry.verified = true;
                 }
+              } else {
+                // This shouldn't ever happen. The same device ID has gotten
+                // a new public key. So we ignore the update. TODO: ask krille
+                // if we should instead use the new key with unknown verified / blocked status
+                _userDeviceKeys[userId].deviceKeys[deviceId] = oldKeys[deviceId];
               }
               if (database != null) {
                 dbActions.add(() => database.storeUserDeviceKey(
                       id,
                       userId,
                       deviceId,
-                      json.encode(
-                          _userDeviceKeys[userId].deviceKeys[deviceId].toJson()),
-                      _userDeviceKeys[userId].deviceKeys[deviceId].verified,
-                      _userDeviceKeys[userId].deviceKeys[deviceId].blocked,
+                      json.encode(entry.toJson()),
+                      json.encode(entry.validSignatures),
+                      entry.verified,
+                      entry.blocked,
                     ));
               }
-            } else {
-              _userDeviceKeys[userId].deviceKeys[deviceId] = oldKeys[deviceId];
             }
           }
+          // delete old/unused entries
           if (database != null) {
             for (final oldDeviceKeyEntry in oldKeys.entries) {
               final deviceId = oldDeviceKeyEntry.key;
@@ -1694,6 +1706,68 @@ class Client {
           if (database != null) {
             dbActions
                 .add(() => database.storeUserDeviceKeysInfo(id, userId, false));
+          }
+        }
+        // next we parse and persist the cross signing keys
+        for (final keyType in ['master_keys', 'self_signing_keys', 'user_signing_keys']) {
+          if (!(response[keyType] is Map)) {
+            continue;
+          }
+          for (final rawDeviceKeyListEntry in response[keyType].entries) {
+            final String userId = rawDeviceKeyListEntry.key;
+            final oldKeys = Map<String, CrossSigningKey>.from(_userDeviceKeys[userId].crossSigningKeys);
+            _userDeviceKeys[userId].crossSigningKeys = {};
+            // add the types we arne't handling atm back
+            for (final oldEntry in oldKeys.entries) {
+              if (!oldEntry.value.usage.contains(keyType.substring(0, keyType.length - '_keys'.length))) {
+                _userDeviceKeys[userId].crossSigningKeys[oldEntry.key] = oldEntry.value;
+              }
+            }
+            final entry = CrossSigningKey.fromJson(rawDeviceKeyListEntry.value, this);
+            if (entry.isValid) {
+              final publicKey = entry.publicKey;
+              if (!oldKeys.containsKey(publicKey) || oldKeys[publicKey].ed25519Key == entry.ed25519Key) {
+                if (oldKeys.containsKey(publicKey)) {
+                  // be sure to save the verification status
+                  entry.verified = oldKeys[publicKey].verified;
+                  entry.blocked = oldKeys[publicKey].blocked;
+                  entry.validSignatures = oldKeys[publicKey].validSignatures;
+                }
+                _userDeviceKeys[userId].crossSigningKeys[publicKey] = entry;
+              } else {
+                // This shouldn't ever happen. The same device ID has gotten
+                // a new public key. So we ignore the update. TODO: ask krille
+                // if we should instead use the new key with unknown verified / blocked status
+                _userDeviceKeys[userId].crossSigningKeys[publicKey] = oldKeys[publicKey];
+              }
+              if (database != null) {
+                dbActions.add(() => database.storeUserCrossSigningKey(
+                  id, 
+                  userId,
+                  publicKey,
+                  json.encode(entry.toJson()),
+                  json.encode(entry.validSignatures),
+                  entry.verified,
+                  entry.blocked,
+                ));
+              }
+            }
+            // delete old/unused entries
+            if (database != null) {
+              for (final oldCrossSigningKeyEntry in oldKeys.entries) {
+                final publicKey = oldCrossSigningKeyEntry.key;
+                if (!_userDeviceKeys[userId].crossSigningKeys.containsKey(publicKey)) {
+                  // we need to remove an old key
+                  dbActions.add(
+                      () => database.removeUserCrossSigningKey(id, userId, publicKey));
+                }
+              }
+            }
+            _userDeviceKeys[userId].outdated = false;
+            if (database != null) {
+              dbActions
+                  .add(() => database.storeUserDeviceKeysInfo(id, userId, false));
+            }
           }
         }
       }

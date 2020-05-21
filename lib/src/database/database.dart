@@ -13,7 +13,7 @@ class Database extends _$Database {
   Database(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   int get maxFileSize => 1 * 1024 * 1024;
 
@@ -41,6 +41,15 @@ class Database extends _$Database {
       if (from == 2) {
         await m.deleteTable('outbound_group_sessions');
         await m.createTable(outboundGroupSessions);
+        from++;
+      }
+      if (from == 3) {
+        await m.createTable(userCrossSigningKeys);
+        await m.createIndex(userCrossSigningKeysIndex);
+        await m.addColumn(userDeviceKeysKey, userDeviceKeysKey.validSignatures);
+        // mark all keys as outdated so that the cross signing keys will be fetched
+        await m.issueCustomQuery('UPDATE user_device_keys SET outdated = true');
+        from++;
       }
     },
   );
@@ -51,15 +60,19 @@ class Database extends _$Database {
     return res.first;
   }
 
-  Future<Map<String, sdk.DeviceKeysList>> getUserDeviceKeys(int clientId) async {
-    final deviceKeys = await getAllUserDeviceKeys(clientId).get();
+  Future<Map<String, sdk.DeviceKeysList>> getUserDeviceKeys(sdk.Client client) async {
+    final deviceKeys = await getAllUserDeviceKeys(client.id).get();
     if (deviceKeys.isEmpty) {
       return {};
     }
-    final deviceKeysKeys = await getAllUserDeviceKeysKeys(clientId).get();
+    final deviceKeysKeys = await getAllUserDeviceKeysKeys(client.id).get();
+    final crossSigningKeys = await getAllUserCrossSigningKeys(client.id).get();
     final res = <String, sdk.DeviceKeysList>{};
     for (final entry in deviceKeys) {
-      res[entry.userId] = sdk.DeviceKeysList.fromDb(entry, deviceKeysKeys.where((k) => k.userId == entry.userId).toList());
+      res[entry.userId] = sdk.DeviceKeysList.fromDb(entry,
+        deviceKeysKeys.where((k) => k.userId == entry.userId).toList(),
+        crossSigningKeys.where((k) => k.userId == entry.userId).toList(),
+        client);
     }
     return res;
   }
