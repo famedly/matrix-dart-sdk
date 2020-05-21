@@ -113,9 +113,7 @@ abstract class _SignedKey {
   }
 
   bool hasValidSignatureChain({Set<String> visited}) {
-    if (visited == null) {
-      visited = Set<String>();
-    }
+    visited ??= <String>{};
     final setKey = '${userId};${identifier}';
     if (visited.contains(setKey)) {
       return false; // prevent recursion

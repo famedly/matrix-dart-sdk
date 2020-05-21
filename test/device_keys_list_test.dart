@@ -56,21 +56,21 @@ void main() {
       };
 
       var userDeviceKeys = <String, DeviceKeysList>{
-        '@alice:example.com': DeviceKeysList.fromJson(rawListJson),
+        '@alice:example.com': DeviceKeysList.fromJson(rawListJson, null),
       };
       var userDeviceKeyRaw = <String, dynamic>{
         '@alice:example.com': rawListJson,
       };
 
-      expect(json.encode(DeviceKeys.fromJson(rawJson).toJson()),
+      expect(json.encode(DeviceKeys.fromJson(rawJson, null).toJson()),
           json.encode(rawJson));
-      expect(json.encode(DeviceKeysList.fromJson(rawListJson).toJson()),
+      expect(json.encode(DeviceKeysList.fromJson(rawListJson, null).toJson()),
           json.encode(rawListJson));
 
       var mapFromRaw = <String, DeviceKeysList>{};
       for (final rawListEntry in userDeviceKeyRaw.entries) {
         mapFromRaw[rawListEntry.key] =
-            DeviceKeysList.fromJson(rawListEntry.value);
+            DeviceKeysList.fromJson(rawListEntry.value, null);
       }
       expect(mapFromRaw.toString(), userDeviceKeys.toString());
     });
