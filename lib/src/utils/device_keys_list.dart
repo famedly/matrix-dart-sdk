@@ -169,7 +169,7 @@ abstract class _SignedKey {
           continue;
         }
 
-        if (key.verified) {
+        if (key.directVerified) {
           return true; // we verified this key and it is valid...all checks out!
         }
         // or else we just recurse into that key and chack if it works out
