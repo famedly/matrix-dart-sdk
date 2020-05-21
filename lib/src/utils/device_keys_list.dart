@@ -76,10 +76,18 @@ abstract class _SignedKey {
   Map<String, String> keys;
   Map<String, dynamic> signatures;
   Map<String, dynamic> validSignatures;
-  bool verified;
+  bool _verified;
   bool blocked;
 
   String get ed25519Key => keys['ed25519:$identifier'];
+
+  bool get verified => directVerified || crossVerified;
+
+  void setDirectVerified(bool v) {
+    _verified = v;
+  }
+
+  bool get directVerified => _verified;
 
   bool get crossVerified {
     try {
@@ -182,7 +190,7 @@ class CrossSigningKey extends _SignedKey {
   bool get isValid => userId != null && publicKey != null && keys != null && ed25519Key != null;
 
   Future<void> setVerified(bool newVerified) {
-    verified = newVerified;
+    _verified = newVerified;
     return client.database?.setVerifiedUserCrossSigningKey(newVerified, client.id, userId, publicKey);
   }
 
@@ -207,7 +215,7 @@ class CrossSigningKey extends _SignedKey {
         validSignatures = validSignaturesContent.cast<String, dynamic>();
       }
     }
-    verified = dbEntry.verified;
+    _verified = dbEntry.verified;
     blocked = dbEntry.blocked;
   }
 
@@ -221,7 +229,7 @@ class CrossSigningKey extends _SignedKey {
         ? Map<String, dynamic>.from(json['signatures'])
         : null;
     validSignatures = null;
-    verified = json['verified'] ?? false;
+    _verified = json['verified'] ?? false;
     blocked = json['blocked'] ?? false;
     if (keys != null) {
       identifier = keys.values.first;
@@ -238,7 +246,7 @@ class CrossSigningKey extends _SignedKey {
     if (signatures != null) {
       data['signatures'] = signatures;
     }
-    data['verified'] = verified;
+    data['verified'] = _verified;
     data['blocked'] = blocked;
     return data;
   }
@@ -254,7 +262,7 @@ class DeviceKeys extends _SignedKey {
   bool get isValid => userId != null && deviceId != null && keys != null && curve25519Key != null && ed25519Key != null;
 
   Future<void> setVerified(bool newVerified) {
-    verified = newVerified;
+    _verified = newVerified;
     return client.database?.setVerifiedUserDeviceKey(newVerified, client.id, userId, deviceId);
   }
 
@@ -290,7 +298,7 @@ class DeviceKeys extends _SignedKey {
         validSignatures = validSignaturesContent.cast<String, dynamic>();
       }
     }
-    verified = dbEntry.verified;
+    _verified = dbEntry.verified;
     blocked = dbEntry.blocked;
   }
 
@@ -307,7 +315,7 @@ class DeviceKeys extends _SignedKey {
     unsigned = json['unsigned'] != null
         ? Map<String, dynamic>.from(json['unsigned'])
         : null;
-    verified = json['verified'] ?? false;
+    _verified = json['verified'] ?? false;
     blocked = json['blocked'] ?? false;
   }
 
@@ -325,7 +333,7 @@ class DeviceKeys extends _SignedKey {
     if (unsigned != null) {
       data['unsigned'] = unsigned;
     }
-    data['verified'] = verified;
+    data['verified'] = _verified;
     data['blocked'] = blocked;
     return data;
   }

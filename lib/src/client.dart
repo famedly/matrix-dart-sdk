@@ -1661,7 +1661,7 @@ class Client {
               if (!oldKeys.containsKey(deviceId) || oldKeys[deviceId].ed25519Key == entry.ed25519Key) {
                 if (oldKeys.containsKey(deviceId)) {
                   // be sure to save the verified status
-                  entry.verified = oldKeys[deviceId].verified;
+                  entry.setDirectVerified(oldKeys[deviceId].directVerified);
                   entry.blocked = oldKeys[deviceId].blocked;
                   entry.validSignatures = oldKeys[deviceId].validSignatures;
                 }
@@ -1670,7 +1670,7 @@ class Client {
                   entry.ed25519Key ==
                   fingerprintKey) {
                     // Always trust the own device
-                    entry.verified = true;
+                    entry.setDirectVerified(true);
                 }
               } else {
                 // This shouldn't ever happen. The same device ID has gotten
@@ -1729,7 +1729,7 @@ class Client {
               if (!oldKeys.containsKey(publicKey) || oldKeys[publicKey].ed25519Key == entry.ed25519Key) {
                 if (oldKeys.containsKey(publicKey)) {
                   // be sure to save the verification status
-                  entry.verified = oldKeys[publicKey].verified;
+                  entry.setDirectVerified(oldKeys[publicKey].directVerified);
                   entry.blocked = oldKeys[publicKey].blocked;
                   entry.validSignatures = oldKeys[publicKey].validSignatures;
                 }
