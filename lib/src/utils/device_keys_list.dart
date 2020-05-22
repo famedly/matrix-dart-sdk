@@ -101,8 +101,10 @@ abstract class _SignedKey {
 
   String _getSigningContent() {
     final data = Map<String, dynamic>.from(content);
+    // some old data might have the custom verified and blocked keys
     data.remove('verified');
     data.remove('blocked');
+    // remove the keys not needed for signing
     data.remove('unsigned');
     data.remove('signatures');
     return String.fromCharCodes(canonicalJson.encode(data));
@@ -114,6 +116,9 @@ abstract class _SignedKey {
     try {
       olmutil.ed25519_verify(pubKey, _getSigningContent(), signature);
       valid = true;
+    } catch (_) {
+      // bad signature
+      valid = false;
     } finally {
       olmutil.free();
     }
@@ -157,12 +162,18 @@ abstract class _SignedKey {
             haveValidSignature = true;
             gotSignatureFromCache = true;
           } else if (validSignatures[otherUserId][fullKeyId] == false) {
+            haveValidSignature = false;
             gotSignatureFromCache = true;
           }
         }
         if (!gotSignatureFromCache) {
           // validate the signature manually
           haveValidSignature = _verifySignature(key.ed25519Key, signature);
+          validSignatures ??= <String, dynamic>{};
+          if (!validSignatures.containsKey(otherUserId)) {
+            validSignatures[otherUserId] = <String, dynamic>{};
+          }
+          validSignatures[otherUserId][fullKeyId] = haveValidSignature;
         }
         if (!haveValidSignature) {
           // no valid signature, this key is useless
@@ -181,6 +192,17 @@ abstract class _SignedKey {
     }
     return false;
   }
+
+  Map<String, dynamic> toJson() {
+    final data = Map<String, dynamic>.from(content);
+    // some old data may have the verified and blocked keys which are unneeded now
+    data.remove('verified');
+    data.remove('blocked');
+    return data;
+  }
+
+  @override
+  String toString() => json.encode(toJson());
 }
 
 class CrossSigningKey extends _SignedKey {
@@ -208,13 +230,6 @@ class CrossSigningKey extends _SignedKey {
     usage = json['usage'].cast<String>();
     keys = json['keys'] != null ? Map<String, String>.from(json['keys']) : null;
     signatures = json['signatures'] != null ? Map<String, dynamic>.from(json['signatures']) : null;
-    validSignatures = null;
-    if (dbEntry.validSignatures != null) {
-      final validSignaturesContent = Event.getMapFromPayload(dbEntry.validSignatures);
-      if (validSignaturesContent is Map) {
-        validSignatures = validSignaturesContent.cast<String, dynamic>();
-      }
-    }
     _verified = dbEntry.verified;
     blocked = dbEntry.blocked;
   }
@@ -228,27 +243,11 @@ class CrossSigningKey extends _SignedKey {
     signatures = json['signatures'] != null
         ? Map<String, dynamic>.from(json['signatures'])
         : null;
-    validSignatures = null;
     _verified = json['verified'] ?? false;
     blocked = json['blocked'] ?? false;
     if (keys != null) {
       identifier = keys.values.first;
     }
-  }
-
-  Map<String, dynamic> toJson() {
-    final data = Map<String, dynamic>.from(content);
-    data['user_id'] = userId;
-    data['usage'] = usage;
-    if (keys != null) {
-      data['keys'] = keys;
-    }
-    if (signatures != null) {
-      data['signatures'] = signatures;
-    }
-    data['verified'] = _verified;
-    data['blocked'] = blocked;
-    return data;
   }
 }
 
@@ -291,13 +290,6 @@ class DeviceKeys extends _SignedKey {
     unsigned = json['unsigned'] != null
         ? Map<String, dynamic>.from(json['unsigned'])
         : null;
-    validSignatures = null;
-    if (dbEntry.validSignatures != null) {
-      final validSignaturesContent = Event.getMapFromPayload(dbEntry.validSignatures);
-      if (validSignaturesContent is Map) {
-        validSignatures = validSignaturesContent.cast<String, dynamic>();
-      }
-    }
     _verified = dbEntry.verified;
     blocked = dbEntry.blocked;
   }
@@ -317,25 +309,6 @@ class DeviceKeys extends _SignedKey {
         : null;
     _verified = json['verified'] ?? false;
     blocked = json['blocked'] ?? false;
-  }
-
-  Map<String, dynamic> toJson() {
-    final data = Map<String, dynamic>.from(content);
-    data['user_id'] = userId;
-    data['device_id'] = deviceId;
-    data['algorithms'] = algorithms;
-    if (keys != null) {
-      data['keys'] = keys;
-    }
-    if (signatures != null) {
-      data['signatures'] = signatures;
-    }
-    if (unsigned != null) {
-      data['unsigned'] = unsigned;
-    }
-    data['verified'] = _verified;
-    data['blocked'] = blocked;
-    return data;
   }
 
   KeyVerification startVerification() {

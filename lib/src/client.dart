@@ -1684,7 +1684,6 @@ class Client {
                       userId,
                       deviceId,
                       json.encode(entry.toJson()),
-                      json.encode(entry.validSignatures),
                       entry.verified,
                       entry.blocked,
                     ));
@@ -1746,7 +1745,6 @@ class Client {
                   userId,
                   publicKey,
                   json.encode(entry.toJson()),
-                  json.encode(entry.validSignatures),
                   entry.verified,
                   entry.blocked,
                 ));

@@ -26,7 +26,6 @@ CREATE TABLE user_device_keys_key (
   user_id TEXT NOT NULL,
   device_id TEXT NOT NULL,
   content TEXT NOT NULL,
-  valid_signatures TEXT,
   verified BOOLEAN DEFAULT false,
   blocked BOOLEAN DEFAULT false,
   UNIQUE(client_id, user_id, device_id)
@@ -38,7 +37,6 @@ CREATE TABLE user_cross_signing_keys (
   user_id TEXT NOT NULL,
   public_key TEXT NOT NULL,
   content TEXT NOT NULL,
-  valid_signatures TEXT,
   verified BOOLEAN DEFAULT false,
   blocked BOOLEAN DEFAULT false,
   UNIQUE(client_id, user_id, public_key)
@@ -182,11 +180,11 @@ updateInboundGroupSessionIndexes: UPDATE inbound_group_sessions SET indexes = :i
 storeUserDeviceKeysInfo: INSERT OR REPLACE INTO user_device_keys (client_id, user_id, outdated) VALUES (:client_id, :user_id, :outdated);
 setVerifiedUserDeviceKey: UPDATE user_device_keys_key SET verified = :verified WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
 setBlockedUserDeviceKey: UPDATE user_device_keys_key SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
-storeUserDeviceKey: INSERT OR REPLACE INTO user_device_keys_key (client_id, user_id, device_id, content, valid_signatures, verified, blocked) VALUES (:client_id, :user_id, :device_id, :content, :valid_signatures, :verified, :blocked);
+storeUserDeviceKey: INSERT OR REPLACE INTO user_device_keys_key (client_id, user_id, device_id, content, verified, blocked) VALUES (:client_id, :user_id, :device_id, :content, :verified, :blocked);
 removeUserDeviceKey: DELETE FROM user_device_keys_key WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
 setVerifiedUserCrossSigningKey: UPDATE user_cross_signing_keys SET verified = :verified WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key;
 setBlockedUserCrossSigningKey: UPDATE user_cross_signing_keys SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key;
-storeUserCrossSigningKey: INSERT OR REPLACE INTO user_cross_signing_keys (client_id, user_id, public_key, content, valid_signatures, verified, blocked) VALUES (:client_id, :user_id, :public_key, :content, :valid_signatures, :verified, :blocked);
+storeUserCrossSigningKey: INSERT OR REPLACE INTO user_cross_signing_keys (client_id, user_id, public_key, content, verified, blocked) VALUES (:client_id, :user_id, :public_key, :content, :verified, :blocked);
 removeUserCrossSigningKey: DELETE FROM user_cross_signing_keys WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key;
 insertClient: INSERT INTO clients (name, homeserver_url, token, user_id, device_id, device_name, prev_batch, olm_account) VALUES (:name, :homeserver_url, :token, :user_id, :device_id, :device_name, :prev_batch, :olm_account);
 ensureRoomExists: INSERT OR IGNORE INTO rooms (client_id, room_id, membership) VALUES (:client_id, :room_id, :membership);
