@@ -425,6 +425,25 @@ class Event {
   /// if it fails and does nothing if the event was not encrypted.
   Event get decrypted => room.decryptGroupMessage(this);
 
+  /// Trys to decrypt this event and persists it in the database afterwards
+  Future<Event> decryptAndStore([String updateType = 'timeline']) async {
+    final newEvent = decrypted;
+    if (newEvent.type == EventTypes.Encrypted || room.client.database == null) {
+      return newEvent; // decryption failed or we don't have a database
+    }
+    await room.client.database.storeEventUpdate(
+      room.client.id,
+      EventUpdate(
+        eventType: newEvent.typeKey,
+        content: newEvent.toJson(),
+        roomID: newEvent.roomId,
+        type: updateType,
+        sortOrder: newEvent.sortOrder,
+      ),
+    );
+    return newEvent;
+  }
+
   /// If this event is encrypted and the decryption was not successful because
   /// the session is unknown, this requests the session key from other devices
   /// in the room. If the event is not encrypted or the decryption failed because
