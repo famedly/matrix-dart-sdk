@@ -24,3 +24,17 @@ class ToDeviceEvent {
     return data;
   }
 }
+
+class ToDeviceEventDecryptionError extends ToDeviceEvent {
+  Exception exception;
+  StackTrace stackTrace;
+  ToDeviceEventDecryptionError({
+    ToDeviceEvent toDeviceEvent,
+    this.exception,
+    this.stackTrace,
+  }) : super(
+          sender: toDeviceEvent.sender,
+          content: toDeviceEvent.content,
+          type: toDeviceEvent.type,
+        );
+}

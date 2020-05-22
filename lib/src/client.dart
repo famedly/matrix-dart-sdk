@@ -639,6 +639,10 @@ class Client {
   final StreamController<MatrixException> onError =
       StreamController.broadcast();
 
+  /// Synchronization erros are coming here.
+  final StreamController<ToDeviceEventDecryptionError> onOlmError =
+      StreamController.broadcast();
+
   /// This is called once, when the first sync has received.
   final StreamController<bool> onFirstSync = StreamController.broadcast();
 
@@ -1134,11 +1138,18 @@ class Client {
       if (toDeviceEvent.type == 'm.room.encrypted') {
         try {
           toDeviceEvent = decryptToDeviceEvent(toDeviceEvent);
-        } catch (e) {
+        } catch (e, s) {
           print(
-              '[LibOlm] Could not decrypt to device event from ${toDeviceEvent.sender}: ' +
-                  e.toString());
-          print(toDeviceEvent.sender);
+              '[LibOlm] Could not decrypt to device event from ${toDeviceEvent.sender} with content: ${toDeviceEvent.content}');
+          print(e);
+          print(s);
+          onOlmError.add(
+            ToDeviceEventDecryptionError(
+              exception: e,
+              stackTrace: s,
+              toDeviceEvent: toDeviceEvent,
+            ),
+          );
           toDeviceEvent = ToDeviceEvent.fromJson(events[i]);
         }
       }
