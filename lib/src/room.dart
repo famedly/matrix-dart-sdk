@@ -271,9 +271,9 @@ class Room {
     onSessionKeyReceived.add(sessionId);
   }
 
-  void _tryAgainDecryptLastMessage() {
+  Future<void> _tryAgainDecryptLastMessage() async {
     if (getState('m.room.encrypted') != null) {
-      final decrypted = getState('m.room.encrypted').decrypted;
+      final decrypted = await getState('m.room.encrypted').decryptAndStore();
       if (decrypted.type != EventTypes.Encrypted) {
         setState(decrypted);
       }
@@ -1207,19 +1207,7 @@ class Room {
           if (events[i].type == EventTypes.Encrypted &&
               events[i].content['body'] == DecryptError.UNKNOWN_SESSION) {
             await events[i].loadSession();
-            events[i] = events[i].decrypted;
-            if (events[i].type != EventTypes.Encrypted) {
-              await client.database.storeEventUpdate(
-                client.id,
-                EventUpdate(
-                  eventType: events[i].typeKey,
-                  content: events[i].toJson(),
-                  roomID: events[i].roomId,
-                  type: 'timeline',
-                  sortOrder: events[i].sortOrder,
-                ),
-              );
-            }
+            events[i] = await events[i].decryptAndStore();
           }
         }
       });
