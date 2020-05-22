@@ -47,7 +47,8 @@ class Database extends _$Database {
             await m.createTable(userCrossSigningKeys);
             await m.createIndex(userCrossSigningKeysIndex);
             // mark all keys as outdated so that the cross signing keys will be fetched
-            await m.issueCustomQuery('UPDATE user_device_keys SET outdated = true');
+            await m.issueCustomQuery(
+                'UPDATE user_device_keys SET outdated = true');
             from++;
           }
         },
@@ -59,7 +60,8 @@ class Database extends _$Database {
     return res.first;
   }
 
-  Future<Map<String, sdk.DeviceKeysList>> getUserDeviceKeys(sdk.Client client) async {
+  Future<Map<String, sdk.DeviceKeysList>> getUserDeviceKeys(
+      sdk.Client client) async {
     final deviceKeys = await getAllUserDeviceKeys(client.id).get();
     if (deviceKeys.isEmpty) {
       return {};
@@ -68,10 +70,11 @@ class Database extends _$Database {
     final crossSigningKeys = await getAllUserCrossSigningKeys(client.id).get();
     final res = <String, sdk.DeviceKeysList>{};
     for (final entry in deviceKeys) {
-      res[entry.userId] = sdk.DeviceKeysList.fromDb(entry,
-        deviceKeysKeys.where((k) => k.userId == entry.userId).toList(),
-        crossSigningKeys.where((k) => k.userId == entry.userId).toList(),
-        client);
+      res[entry.userId] = sdk.DeviceKeysList.fromDb(
+          entry,
+          deviceKeysKeys.where((k) => k.userId == entry.userId).toList(),
+          crossSigningKeys.where((k) => k.userId == entry.userId).toList(),
+          client);
     }
     return res;
   }

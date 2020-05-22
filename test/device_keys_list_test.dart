@@ -65,8 +65,7 @@ void main() {
       final key = DeviceKeys.fromJson(rawJson, null);
       rawJson.remove('verified');
       rawJson.remove('blocked');
-      expect(json.encode(key.toJson()),
-          json.encode(rawJson));
+      expect(json.encode(key.toJson()), json.encode(rawJson));
       expect(key.verified, false);
       expect(key.blocked, true);
       expect(json.encode(DeviceKeysList.fromJson(rawListJson, null).toJson()),

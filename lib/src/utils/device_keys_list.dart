@@ -3,7 +3,8 @@ import 'package:canonical_json/canonical_json.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../client.dart';
-import '../database/database.dart' show DbUserDeviceKey, DbUserDeviceKeysKey, DbUserCrossSigningKey;
+import '../database/database.dart'
+    show DbUserDeviceKey, DbUserDeviceKeysKey, DbUserCrossSigningKey;
 import '../event.dart';
 import 'key_verification.dart';
 
@@ -14,7 +15,11 @@ class DeviceKeysList {
   Map<String, DeviceKeys> deviceKeys = {};
   Map<String, CrossSigningKey> crossSigningKeys = {};
 
-  DeviceKeysList.fromDb(DbUserDeviceKey dbEntry, List<DbUserDeviceKeysKey> childEntries, List<DbUserCrossSigningKey> crossSigningEntries, Client cl) {
+  DeviceKeysList.fromDb(
+      DbUserDeviceKey dbEntry,
+      List<DbUserDeviceKeysKey> childEntries,
+      List<DbUserCrossSigningKey> crossSigningEntries,
+      Client cl) {
     client = cl;
     userId = dbEntry.userId;
     outdated = dbEntry.outdated;
@@ -93,7 +98,9 @@ abstract class _SignedKey {
     try {
       return hasValidSignatureChain();
     } catch (err, stacktrace) {
-      print('[Cross Signing] Error during trying to determine signature chain: ' + err.toString());
+      print(
+          '[Cross Signing] Error during trying to determine signature chain: ' +
+              err.toString());
       print(stacktrace);
       return false;
     }
@@ -134,7 +141,8 @@ abstract class _SignedKey {
     visited.add(setKey);
     for (final signatureEntries in signatures.entries) {
       final otherUserId = signatureEntries.key;
-      if (!(signatureEntries.value is Map) || !client.userDeviceKeys.containsKey(otherUserId)) {
+      if (!(signatureEntries.value is Map) ||
+          !client.userDeviceKeys.containsKey(otherUserId)) {
         continue;
       }
       for (final signatureEntry in signatureEntries.value.entries) {
@@ -147,7 +155,8 @@ abstract class _SignedKey {
         _SignedKey key;
         if (client.userDeviceKeys[otherUserId].deviceKeys.containsKey(keyId)) {
           key = client.userDeviceKeys[otherUserId].deviceKeys[keyId];
-        } else if (client.userDeviceKeys[otherUserId].crossSigningKeys.containsKey(keyId)) {
+        } else if (client.userDeviceKeys[otherUserId].crossSigningKeys
+            .containsKey(keyId)) {
           key = client.userDeviceKeys[otherUserId].crossSigningKeys[keyId];
         } else {
           continue;
@@ -157,7 +166,9 @@ abstract class _SignedKey {
         }
         var haveValidSignature = false;
         var gotSignatureFromCache = false;
-        if (validSignatures != null && validSignatures.containsKey(otherUserId) && validSignatures[otherUserId].containsKey(fullKeyId)) {
+        if (validSignatures != null &&
+            validSignatures.containsKey(otherUserId) &&
+            validSignatures[otherUserId].containsKey(fullKeyId)) {
           if (validSignatures[otherUserId][fullKeyId] == true) {
             haveValidSignature = true;
             gotSignatureFromCache = true;
@@ -209,16 +220,19 @@ class CrossSigningKey extends _SignedKey {
   String get publicKey => identifier;
   List<String> usage;
 
-  bool get isValid => userId != null && publicKey != null && keys != null && ed25519Key != null;
+  bool get isValid =>
+      userId != null && publicKey != null && keys != null && ed25519Key != null;
 
   Future<void> setVerified(bool newVerified) {
     _verified = newVerified;
-    return client.database?.setVerifiedUserCrossSigningKey(newVerified, client.id, userId, publicKey);
+    return client.database?.setVerifiedUserCrossSigningKey(
+        newVerified, client.id, userId, publicKey);
   }
 
   Future<void> setBlocked(bool newBlocked) {
     blocked = newBlocked;
-    return client.database?.setBlockedUserCrossSigningKey(newBlocked, client.id, userId, publicKey);
+    return client.database?.setBlockedUserCrossSigningKey(
+        newBlocked, client.id, userId, publicKey);
   }
 
   CrossSigningKey.fromDb(DbUserCrossSigningKey dbEntry, Client cl) {
@@ -229,7 +243,9 @@ class CrossSigningKey extends _SignedKey {
     identifier = dbEntry.publicKey;
     usage = json['usage'].cast<String>();
     keys = json['keys'] != null ? Map<String, String>.from(json['keys']) : null;
-    signatures = json['signatures'] != null ? Map<String, dynamic>.from(json['signatures']) : null;
+    signatures = json['signatures'] != null
+        ? Map<String, dynamic>.from(json['signatures'])
+        : null;
     _verified = dbEntry.verified;
     blocked = dbEntry.blocked;
   }
