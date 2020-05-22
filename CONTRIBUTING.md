@@ -41,7 +41,10 @@ That means for example: "[users] add fetch users endpoint".
 - Directories need to be lowercase.
 
 ## Code style:
-- We recommend using Android Studio for coding. We are using the Android Studio auto styling with ctrl+alt+shift+L.
+Please use code formatting. You can use VSCode or Android Studio. On other editors you need to run:
+```
+flutter format lib/**/*/*.dart
+```
 
 ## Code quality:
 - Don't repeat yourself! Use local variables, functions, classes.

@@ -42,7 +42,14 @@ import '../room.dart';
           |                                 |
 */
 
-enum KeyVerificationState { askAccept, waitingAccept, askSas, waitingSas, done, error }
+enum KeyVerificationState {
+  askAccept,
+  waitingAccept,
+  askSas,
+  waitingSas,
+  done,
+  error
+}
 
 List<String> _intersect(List<String> a, List<dynamic> b) {
   final res = <String>[];
@@ -76,7 +83,8 @@ List<int> _bytesToInt(Uint8List bytes, int totalBits) {
 
 final VERIFICATION_METHODS = [_KeyVerificationMethodSas.type];
 
-_KeyVerificationMethod _makeVerificationMethod(String type, KeyVerification request) {
+_KeyVerificationMethod _makeVerificationMethod(
+    String type, KeyVerification request) {
   if (type == _KeyVerificationMethodSas.type) {
     return _KeyVerificationMethodSas(request: request);
   }
@@ -89,7 +97,7 @@ class KeyVerification {
   final Room room;
   final String userId;
   void Function() onUpdate;
-  String  get deviceId => _deviceId;
+  String get deviceId => _deviceId;
   String _deviceId;
   bool startedVerification = false;
   _KeyVerificationMethod method;
@@ -104,7 +112,8 @@ class KeyVerification {
   String canceledCode;
   String canceledReason;
 
-  KeyVerification({this.client, this.room, this.userId, String deviceId, this.onUpdate}) {
+  KeyVerification(
+      {this.client, this.room, this.userId, String deviceId, this.onUpdate}) {
     lastActivity = DateTime.now();
     _deviceId ??= deviceId;
   }
@@ -115,9 +124,10 @@ class KeyVerification {
   }
 
   static String getTransactionId(Map<String, dynamic> payload) {
-    return payload['transaction_id'] ?? (
-      payload['m.relates_to'] is Map ? payload['m.relates_to']['event_id'] : null
-    );
+    return payload['transaction_id'] ??
+        (payload['m.relates_to'] is Map
+            ? payload['m.relates_to']['event_id']
+            : null);
   }
 
   Future<void> start() async {
@@ -132,7 +142,8 @@ class KeyVerification {
     setState(KeyVerificationState.waitingAccept);
   }
 
-  Future<void> handlePayload(String type, Map<String, dynamic> payload, [String eventId]) async {
+  Future<void> handlePayload(String type, Map<String, dynamic> payload,
+      [String eventId]) async {
     print('[Key Verification] Received type ${type}: ' + payload.toString());
     try {
       switch (type) {
@@ -141,13 +152,16 @@ class KeyVerification {
           transactionId ??= eventId ?? payload['transaction_id'];
           // verify the timestamp
           final now = DateTime.now();
-          final verifyTime = DateTime.fromMillisecondsSinceEpoch(payload['timestamp']);
-          if (now.subtract(Duration(minutes: 10)).isAfter(verifyTime) || now.add(Duration(minutes: 5)).isBefore(verifyTime)) {
+          final verifyTime =
+              DateTime.fromMillisecondsSinceEpoch(payload['timestamp']);
+          if (now.subtract(Duration(minutes: 10)).isAfter(verifyTime) ||
+              now.add(Duration(minutes: 5)).isBefore(verifyTime)) {
             await cancel('m.timeout');
             return;
           }
           // verify it has a method we can use
-          possibleMethods = _intersect(VERIFICATION_METHODS, payload['methods']);
+          possibleMethods =
+              _intersect(VERIFICATION_METHODS, payload['methods']);
           if (possibleMethods.isEmpty) {
             // reject it outright
             await cancel('m.unknown_method');
@@ -156,7 +170,8 @@ class KeyVerification {
           setState(KeyVerificationState.askAccept);
           break;
         case 'm.key.verification.ready':
-          possibleMethods = _intersect(VERIFICATION_METHODS, payload['methods']);
+          possibleMethods =
+              _intersect(VERIFICATION_METHODS, payload['methods']);
           if (possibleMethods.isEmpty) {
             // reject it outright
             await cancel('m.unknown_method');
@@ -214,7 +229,8 @@ class KeyVerification {
 
   /// called when the user accepts an incoming verification
   Future<void> acceptVerification() async {
-    if (!(await verifyLastStep(['m.key.verification.request', 'm.key.verification.start']))) {
+    if (!(await verifyLastStep(
+        ['m.key.verification.request', 'm.key.verification.start']))) {
       return;
     }
     setState(KeyVerificationState.waitingAccept);
@@ -231,7 +247,8 @@ class KeyVerification {
 
   /// called when the user rejects an incoming verification
   Future<void> rejectVerification() async {
-    if (!(await verifyLastStep(['m.key.verification.request', 'm.key.verification.start']))) {
+    if (!(await verifyLastStep(
+        ['m.key.verification.request', 'm.key.verification.start']))) {
       return;
     }
     await cancel('m.user');
@@ -251,7 +268,9 @@ class KeyVerification {
 
   List<int> get sasNumbers {
     if (method is _KeyVerificationMethodSas) {
-      return _bytesToInt((method as _KeyVerificationMethodSas).makeSas(5), 13).map((n) => n + 1000).toList();
+      return _bytesToInt((method as _KeyVerificationMethodSas).makeSas(5), 13)
+          .map((n) => n + 1000)
+          .toList();
     }
     return [];
   }
@@ -265,13 +284,15 @@ class KeyVerification {
 
   List<KeyVerificationEmoji> get sasEmojis {
     if (method is _KeyVerificationMethodSas) {
-      final numbers = _bytesToInt((method as _KeyVerificationMethodSas).makeSas(6), 6);
+      final numbers =
+          _bytesToInt((method as _KeyVerificationMethodSas).makeSas(6), 6);
       return numbers.map((n) => KeyVerificationEmoji(n)).toList().sublist(0, 7);
     }
     return [];
   }
 
-  Future<void> verifyKeys(Map<String, String> keys, Future<bool> Function(String, DeviceKeys) verifier) async {
+  Future<void> verifyKeys(Map<String, String> keys,
+      Future<bool> Function(String, DeviceKeys) verifier) async {
     final verifiedDevices = <String>[];
 
     if (!client.userDeviceKeys.containsKey(userId)) {
@@ -282,8 +303,10 @@ class KeyVerification {
       final keyId = entry.key;
       final verifyDeviceId = keyId.substring('ed25519:'.length);
       final keyInfo = entry.value;
-      if (client.userDeviceKeys[userId].deviceKeys.containsKey(verifyDeviceId)) {
-        if (!(await verifier(keyInfo, client.userDeviceKeys[userId].deviceKeys[verifyDeviceId]))) {
+      if (client.userDeviceKeys[userId].deviceKeys
+          .containsKey(verifyDeviceId)) {
+        if (!(await verifier(keyInfo,
+            client.userDeviceKeys[userId].deviceKeys[verifyDeviceId]))) {
           await cancel('m.key_mismatch');
           return;
         }
@@ -295,12 +318,14 @@ class KeyVerification {
     }
     // okay, we reached this far, so all the devices are verified!
     for (final verifyDeviceId in verifiedDevices) {
-      await client.userDeviceKeys[userId].deviceKeys[verifyDeviceId].setVerified(true, client);
+      await client.userDeviceKeys[userId].deviceKeys[verifyDeviceId]
+          .setVerified(true, client);
     }
   }
 
   Future<bool> verifyActivity() async {
-    if (lastActivity != null && lastActivity.add(Duration(minutes: 10)).isAfter(DateTime.now())) {
+    if (lastActivity != null &&
+        lastActivity.add(Duration(minutes: 10)).isAfter(DateTime.now())) {
       lastActivity = DateTime.now();
       return true;
     }
@@ -351,7 +376,8 @@ class KeyVerification {
       if (['m.key.verification.request'].contains(type)) {
         payload['msgtype'] = type;
         payload['to'] = userId;
-        payload['body'] = 'Attempting verification request. (${type}) Apparently your client doesn\'t support this';
+        payload['body'] =
+            'Attempting verification request. (${type}) Apparently your client doesn\'t support this';
         type = 'm.room.message';
       }
       final newTransactionId = await room.sendEvent(payload, type: type);
@@ -360,7 +386,8 @@ class KeyVerification {
         client.addKeyVerificationRequest(this);
       }
     } else {
-      await client.sendToDevice([client.userDeviceKeys[userId].deviceKeys[deviceId]], type, payload);
+      await client.sendToDevice(
+          [client.userDeviceKeys[userId].deviceKeys[deviceId]], type, payload);
     }
   }
 
@@ -385,6 +412,7 @@ abstract class _KeyVerificationMethod {
   bool validateStart(Map<String, dynamic> payload) {
     return false;
   }
+
   Future<void> sendStart();
   void dispose() {}
 }
@@ -395,7 +423,8 @@ const KNOWN_MESSAGE_AUTHENTIFICATION_CODES = ['hkdf-hmac-sha256'];
 const KNOWN_AUTHENTICATION_TYPES = ['emoji', 'decimal'];
 
 class _KeyVerificationMethodSas extends _KeyVerificationMethod {
-  _KeyVerificationMethodSas({KeyVerification request}) : super(request: request);
+  _KeyVerificationMethodSas({KeyVerification request})
+      : super(request: request);
 
   static String type = 'm.sas.v1';
 
@@ -419,7 +448,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     try {
       switch (type) {
         case 'm.key.verification.start':
-          if (!(await request.verifyLastStep(['m.key.verification.request', 'm.key.verification.start']))) {
+          if (!(await request.verifyLastStep(
+              ['m.key.verification.request', 'm.key.verification.start']))) {
             return; // abort
           }
           if (!validateStart(payload)) {
@@ -439,7 +469,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
           await _sendKey();
           break;
         case 'm.key.verification.key':
-          if (!(await request.verifyLastStep(['m.key.verification.accept', 'm.key.verification.start']))) {
+          if (!(await request.verifyLastStep(
+              ['m.key.verification.accept', 'm.key.verification.start']))) {
             return;
           }
           _handleKey(payload);
@@ -506,7 +537,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     if (payload['method'] != type) {
       return false;
     }
-    final possibleKeyAgreementProtocols = _intersect(KNOWN_KEY_AGREEMENT_PROTOCOLS, payload['key_agreement_protocols']);
+    final possibleKeyAgreementProtocols = _intersect(
+        KNOWN_KEY_AGREEMENT_PROTOCOLS, payload['key_agreement_protocols']);
     if (possibleKeyAgreementProtocols.isEmpty) {
       return false;
     }
@@ -516,12 +548,15 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
       return false;
     }
     hash = possibleHashes.first;
-    final possibleMessageAuthenticationCodes = _intersect(KNOWN_MESSAGE_AUTHENTIFICATION_CODES, payload['message_authentication_codes']);
+    final possibleMessageAuthenticationCodes = _intersect(
+        KNOWN_MESSAGE_AUTHENTIFICATION_CODES,
+        payload['message_authentication_codes']);
     if (possibleMessageAuthenticationCodes.isEmpty) {
       return false;
     }
     messageAuthenticationCode = possibleMessageAuthenticationCodes.first;
-    final possibleAuthenticationTypes = _intersect(KNOWN_AUTHENTICATION_TYPES, payload['short_authentication_string']);
+    final possibleAuthenticationTypes = _intersect(
+        KNOWN_AUTHENTICATION_TYPES, payload['short_authentication_string']);
     if (possibleAuthenticationTypes.isEmpty) {
       return false;
     }
@@ -544,7 +579,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   }
 
   bool _handleAccept(Map<String, dynamic> payload) {
-    if (!KNOWN_KEY_AGREEMENT_PROTOCOLS.contains(payload['key_agreement_protocol'])) {
+    if (!KNOWN_KEY_AGREEMENT_PROTOCOLS
+        .contains(payload['key_agreement_protocol'])) {
       return false;
     }
     keyAgreementProtocol = payload['key_agreement_protocol'];
@@ -552,11 +588,13 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
       return false;
     }
     hash = payload['hash'];
-    if (!KNOWN_MESSAGE_AUTHENTIFICATION_CODES.contains(payload['message_authentication_code'])) {
+    if (!KNOWN_MESSAGE_AUTHENTIFICATION_CODES
+        .contains(payload['message_authentication_code'])) {
       return false;
     }
     messageAuthenticationCode = payload['message_authentication_code'];
-    final possibleAuthenticationTypes = _intersect(KNOWN_AUTHENTICATION_TYPES, payload['short_authentication_string']);
+    final possibleAuthenticationTypes = _intersect(
+        KNOWN_AUTHENTICATION_TYPES, payload['short_authentication_string']);
     if (possibleAuthenticationTypes.isEmpty) {
       return false;
     }
@@ -585,13 +623,23 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   Uint8List makeSas(int bytes) {
     var sasInfo = '';
     if (keyAgreementProtocol == 'curve25519-hkdf-sha256') {
-      final ourInfo = '${client.userID}|${client.deviceID}|${sas.get_pubkey()}|';
-      final theirInfo = '${request.userId}|${request.deviceId}|${theirPublicKey}|';
-      sasInfo = 'MATRIX_KEY_VERIFICATION_SAS|' + (request.startedVerification ? ourInfo + theirInfo : theirInfo + ourInfo) + request.transactionId;
+      final ourInfo =
+          '${client.userID}|${client.deviceID}|${sas.get_pubkey()}|';
+      final theirInfo =
+          '${request.userId}|${request.deviceId}|${theirPublicKey}|';
+      sasInfo = 'MATRIX_KEY_VERIFICATION_SAS|' +
+          (request.startedVerification
+              ? ourInfo + theirInfo
+              : theirInfo + ourInfo) +
+          request.transactionId;
     } else if (keyAgreementProtocol == 'curve25519') {
       final ourInfo = client.userID + client.deviceID;
       final theirInfo = request.userId + request.deviceId;
-      sasInfo = 'MATRIX_KEY_VERIFICATION_SAS' + (request.startedVerification ? ourInfo + theirInfo : theirInfo + ourInfo) + request.transactionId;
+      sasInfo = 'MATRIX_KEY_VERIFICATION_SAS' +
+          (request.startedVerification
+              ? ourInfo + theirInfo
+              : theirInfo + ourInfo) +
+          request.transactionId;
     } else {
       throw 'Unknown key agreement protocol';
     }
@@ -600,9 +648,11 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
 
   Future<void> _sendMac() async {
     final baseInfo = 'MATRIX_KEY_VERIFICATION_MAC' +
-      client.userID + client.deviceID +
-      request.userId + request.deviceId +
-      request.transactionId;
+        client.userID +
+        client.deviceID +
+        request.userId +
+        request.deviceId +
+        request.transactionId;
     final mac = <String, String>{};
     final keyList = <String>[];
 
@@ -610,7 +660,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     // for now it is just our device key, once we have cross-signing
     // we would also add the cross signing key here
     final deviceKeyId = 'ed25519:${client.deviceID}';
-    mac[deviceKeyId] = _calculateMac(client.fingerprintKey, baseInfo + deviceKeyId);
+    mac[deviceKeyId] =
+        _calculateMac(client.fingerprintKey, baseInfo + deviceKeyId);
     keyList.add(deviceKeyId);
 
     keyList.sort();
@@ -624,13 +675,16 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   Future<void> _processMac() async {
     final payload = macPayload;
     final baseInfo = 'MATRIX_KEY_VERIFICATION_MAC' +
-      request.userId + request.deviceId +
-      client.userID + client.deviceID +
-      request.transactionId;
+        request.userId +
+        request.deviceId +
+        client.userID +
+        client.deviceID +
+        request.transactionId;
 
     final keyList = payload['mac'].keys.toList();
     keyList.sort();
-    if (payload['keys'] != _calculateMac(keyList.join(','), baseInfo + 'KEY_IDS')) {
+    if (payload['keys'] !=
+        _calculateMac(keyList.join(','), baseInfo + 'KEY_IDS')) {
       await request.cancel('m.key_mismatch');
       return;
     }
@@ -646,7 +700,9 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
       }
     }
     await request.verifyKeys(mac, (String mac, DeviceKeys device) async {
-      return mac == _calculateMac(device.ed25519Key, baseInfo + 'ed25519:' + device.deviceId);
+      return mac ==
+          _calculateMac(
+              device.ed25519Key, baseInfo + 'ed25519:' + device.deviceId);
     });
     await request.send('m.key.verification.done', {});
     if (request.state != KeyVerificationState.error) {

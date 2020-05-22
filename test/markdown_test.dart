@@ -15,12 +15,15 @@ void main() {
       },
     };
     test('simple markdown', () {
-      expect(markdown('hey *there* how are **you** doing?'), 'hey <em>there</em> how are <strong>you</strong> doing?');
+      expect(markdown('hey *there* how are **you** doing?'),
+          'hey <em>there</em> how are <strong>you</strong> doing?');
       expect(markdown('wha ~~strike~~ works!'), 'wha <del>strike</del> works!');
     });
     test('spoilers', () {
-      expect(markdown('Snape killed ||Dumbledoor||'), 'Snape killed <span data-mx-spoiler="">Dumbledoor</span>');
-      expect(markdown('Snape killed ||Story|Dumbledoor||'), 'Snape killed <span data-mx-spoiler="Story">Dumbledoor</span>');
+      expect(markdown('Snape killed ||Dumbledoor||'),
+          'Snape killed <span data-mx-spoiler="">Dumbledoor</span>');
+      expect(markdown('Snape killed ||Story|Dumbledoor||'),
+          'Snape killed <span data-mx-spoiler="Story">Dumbledoor</span>');
     });
     test('multiple paragraphs', () {
       expect(markdown('Heya!\n\nBeep'), '<p>Heya!</p>\n<p>Beep</p>');
@@ -32,16 +35,22 @@ void main() {
       expect(markdown('foxies\ncute'), 'foxies<br />\ncute');
     });
     test('emotes', () {
-      expect(markdown(':fox:', emotePacks), '<img src="mxc:&#47;&#47;roomfox" alt=":fox:" title=":fox:" height="32" vertical-align="middle" />');
-      expect(markdown(':user~fox:', emotePacks), '<img src="mxc:&#47;&#47;userfox" alt=":fox:" title=":fox:" height="32" vertical-align="middle" />');
-      expect(markdown(':raccoon:', emotePacks), '<img src="mxc:&#47;&#47;raccoon" alt=":raccoon:" title=":raccoon:" height="32" vertical-align="middle" />');
+      expect(markdown(':fox:', emotePacks),
+          '<img src="mxc:&#47;&#47;roomfox" alt=":fox:" title=":fox:" height="32" vertical-align="middle" />');
+      expect(markdown(':user~fox:', emotePacks),
+          '<img src="mxc:&#47;&#47;userfox" alt=":fox:" title=":fox:" height="32" vertical-align="middle" />');
+      expect(markdown(':raccoon:', emotePacks),
+          '<img src="mxc:&#47;&#47;raccoon" alt=":raccoon:" title=":raccoon:" height="32" vertical-align="middle" />');
       expect(markdown(':invalid:', emotePacks), ':invalid:');
       expect(markdown(':room~invalid:', emotePacks), ':room~invalid:');
     });
     test('pills', () {
-      expect(markdown('Hey @sorunome:sorunome.de!'), 'Hey <a href="https://matrix.to/#/@sorunome:sorunome.de">@sorunome:sorunome.de</a>!');
-      expect(markdown('#fox:sorunome.de: you all are awesome'), '<a href="https://matrix.to/#/#fox:sorunome.de">#fox:sorunome.de</a>: you all are awesome');
-      expect(markdown('!blah:example.org'), '<a href="https://matrix.to/#/!blah:example.org">!blah:example.org</a>');
+      expect(markdown('Hey @sorunome:sorunome.de!'),
+          'Hey <a href="https://matrix.to/#/@sorunome:sorunome.de">@sorunome:sorunome.de</a>!');
+      expect(markdown('#fox:sorunome.de: you all are awesome'),
+          '<a href="https://matrix.to/#/#fox:sorunome.de">#fox:sorunome.de</a>: you all are awesome');
+      expect(markdown('!blah:example.org'),
+          '<a href="https://matrix.to/#/!blah:example.org">!blah:example.org</a>');
     });
   });
 }

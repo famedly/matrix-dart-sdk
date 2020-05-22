@@ -84,7 +84,8 @@ class Client {
   /// debug: Print debug output?
   /// database: The database instance to use
   /// enableE2eeRecovery: Enable additional logic to try to recover from bad e2ee sessions
-  Client(this.clientName, {this.debug = false, this.database, this.enableE2eeRecovery = false}) {
+  Client(this.clientName,
+      {this.debug = false, this.database, this.enableE2eeRecovery = false}) {
     onLoginStateChanged.stream.listen((loginState) {
       print('LoginState: ${loginState.toString()}');
     });
@@ -1045,8 +1046,7 @@ class Client {
     }
     if (sync['account_data'] is Map<String, dynamic> &&
         sync['account_data']['events'] is List<dynamic>) {
-      await _handleGlobalEvents(
-          sync['account_data']['events'], 'account_data');
+      await _handleGlobalEvents(sync['account_data']['events'], 'account_data');
     }
     if (sync['device_lists'] is Map<String, dynamic>) {
       await _handleDeviceListsEvents(sync['device_lists']);
@@ -1077,7 +1077,8 @@ class Client {
     }
   }
 
-  Future<void> _handleDeviceListsEvents(Map<String, dynamic> deviceLists) async {
+  Future<void> _handleDeviceListsEvents(
+      Map<String, dynamic> deviceLists) async {
     if (deviceLists['changed'] is List) {
       for (final userId in deviceLists['changed']) {
         if (_userDeviceKeys.containsKey(userId)) {
@@ -1179,7 +1180,8 @@ class Client {
     }
   }
 
-  Future<void> _handleRooms(Map<String, dynamic> rooms, Membership membership) async {
+  Future<void> _handleRooms(
+      Map<String, dynamic> rooms, Membership membership) async {
     for (final entry in rooms.entries) {
       final id = entry.key;
       final room = entry.value;
@@ -1252,8 +1254,7 @@ class Client {
       if (room['timeline'] is Map<String, dynamic> &&
           room['timeline']['events'] is List<dynamic> &&
           room['timeline']['events'].isNotEmpty) {
-        await _handleRoomEvents(
-            id, room['timeline']['events'], 'timeline');
+        await _handleRoomEvents(id, room['timeline']['events'], 'timeline');
         handledEvents = true;
       }
 
@@ -1318,7 +1319,8 @@ class Client {
     }
   }
 
-  Future<void> _handleRoomEvents(String chat_id, List<dynamic> events, String type) async {
+  Future<void> _handleRoomEvents(
+      String chat_id, List<dynamic> events, String type) async {
     for (num i = 0; i < events.length; i++) {
       await _handleEvent(events[i], chat_id, type);
     }
@@ -1341,14 +1343,17 @@ class Client {
     }
   }
 
-  Future<void> _handleEvent(Map<String, dynamic> event, String roomID, String type) async {
+  Future<void> _handleEvent(
+      Map<String, dynamic> event, String roomID, String type) async {
     if (event['type'] is String && event['content'] is Map<String, dynamic>) {
       // The client must ignore any new m.room.encryption event to prevent
       // man-in-the-middle attacks!
       final room = getRoomById(roomID);
       if (room == null ||
-          (event['type'] == 'm.room.encryption' && room.encrypted &&
-          event['content']['algorithm'] != room.getState('m.room.encryption')?.content['algorithm'])) {
+          (event['type'] == 'm.room.encryption' &&
+              room.encrypted &&
+              event['content']['algorithm'] !=
+                  room.getState('m.room.encryption')?.content['algorithm'])) {
         return;
       }
 
@@ -1367,7 +1372,8 @@ class Client {
       }
       if (update.eventType == 'm.room.encrypted' && database != null) {
         // the event is still encrytped....let's try fetching the keys from the database!
-        await room.loadInboundGroupSessionKey(event['content']['session_id'], event['content']['sender_key']);
+        await room.loadInboundGroupSessionKey(
+            event['content']['session_id'], event['content']['sender_key']);
         update = update.decrypt(room);
       }
       if (type != 'ephemeral' && database != null) {
@@ -1659,10 +1665,9 @@ class Client {
               if (entry.isValid) {
                 _userDeviceKeys[userId].deviceKeys[deviceId] = entry;
                 if (deviceId == deviceID &&
-                  entry.ed25519Key ==
-                  fingerprintKey) {
-                    // Always trust the own device
-                    entry.verified = true;
+                    entry.ed25519Key == fingerprintKey) {
+                  // Always trust the own device
+                  entry.verified = true;
                 }
               }
               if (database != null) {
@@ -1670,8 +1675,9 @@ class Client {
                       id,
                       userId,
                       deviceId,
-                      json.encode(
-                          _userDeviceKeys[userId].deviceKeys[deviceId].toJson()),
+                      json.encode(_userDeviceKeys[userId]
+                          .deviceKeys[deviceId]
+                          .toJson()),
                       _userDeviceKeys[userId].deviceKeys[deviceId].verified,
                       _userDeviceKeys[userId].deviceKeys[deviceId].blocked,
                     ));

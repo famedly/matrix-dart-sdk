@@ -13,11 +13,12 @@ class LinebreakSyntax extends InlineSyntax {
 
 class SpoilerSyntax extends TagSyntax {
   Map<String, String> reasonMap = <String, String>{};
-  SpoilerSyntax() : super(
-    r'\|\|(?:([^\|]+)\|(?!\|))?',
-    requiresDelimiterRun: true,
-    end: r'\|\|',
-  );
+  SpoilerSyntax()
+      : super(
+          r'\|\|(?:([^\|]+)\|(?!\|))?',
+          requiresDelimiterRun: true,
+          end: r'\|\|',
+        );
 
   @override
   bool onMatch(InlineParser parser, Match match) {
@@ -31,7 +32,8 @@ class SpoilerSyntax extends TagSyntax {
   @override
   bool onMatchEnd(InlineParser parser, Match match, TagState state) {
     final element = Element('span', state.children);
-    element.attributes['data-mx-spoiler'] = htmlEscape.convert(reasonMap[match.input] ?? '');
+    element.attributes['data-mx-spoiler'] =
+        htmlEscape.convert(reasonMap[match.input] ?? '');
     parser.addNode(element);
     return true;
   }
@@ -88,14 +90,33 @@ class PillSyntax extends InlineSyntax {
 
 String markdown(String text, [Map<String, Map<String, String>> emotePacks]) {
   emotePacks ??= <String, Map<String, String>>{};
-  var ret = markdownToHtml(text,
+  var ret = markdownToHtml(
+    text,
     extensionSet: ExtensionSet.commonMark,
-    inlineSyntaxes: [StrikethroughSyntax(), LinebreakSyntax(), SpoilerSyntax(), EmoteSyntax(emotePacks), PillSyntax()],
+    inlineSyntaxes: [
+      StrikethroughSyntax(),
+      LinebreakSyntax(),
+      SpoilerSyntax(),
+      EmoteSyntax(emotePacks),
+      PillSyntax()
+    ],
   );
-    
+
   var stripPTags = '<p>'.allMatches(ret).length <= 1;
   if (stripPTags) {
-    final otherBlockTags = ['table', 'pre', 'ol', 'ul', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote'];
+    final otherBlockTags = [
+      'table',
+      'pre',
+      'ol',
+      'ul',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'blockquote'
+    ];
     for (final tag in otherBlockTags) {
       // we check for the close tag as the opening one might have attributes
       if (ret.contains('</${tag}>')) {

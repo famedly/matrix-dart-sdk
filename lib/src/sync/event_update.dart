@@ -43,7 +43,8 @@ class EventUpdate {
   // the order where to stort this event
   final double sortOrder;
 
-  EventUpdate({this.eventType, this.roomID, this.type, this.content, this.sortOrder});
+  EventUpdate(
+      {this.eventType, this.roomID, this.type, this.content, this.sortOrder});
 
   EventUpdate decrypt(Room room) {
     if (eventType != 'm.room.encrypted') {
