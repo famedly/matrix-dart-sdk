@@ -19,31 +19,31 @@ class Database extends _$Database {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (Migrator m) {
-      return m.createAll();
-    },
-    onUpgrade: (Migrator m, int from, int to) async {
-      // this appears to be only called once, so multiple consecutive upgrades have to be handled appropriately in here
-      if (from == 1) {
-        await m.createIndex(userDeviceKeysIndex);
-        await m.createIndex(userDeviceKeysKeyIndex);
-        await m.createIndex(olmSessionsIndex);
-        await m.createIndex(outboundGroupSessionsIndex);
-        await m.createIndex(inboundGroupSessionsIndex);
-        await m.createIndex(roomsIndex);
-        await m.createIndex(eventsIndex);
-        await m.createIndex(roomStatesIndex);
-        await m.createIndex(accountDataIndex);
-        await m.createIndex(roomAccountDataIndex);
-        await m.createIndex(presencesIndex);
-        from++;
-      }
-      if (from == 2) {
-        await m.deleteTable('outbound_group_sessions');
-        await m.createTable(outboundGroupSessions);
-      }
-    },
-  );
+        onCreate: (Migrator m) {
+          return m.createAll();
+        },
+        onUpgrade: (Migrator m, int from, int to) async {
+          // this appears to be only called once, so multiple consecutive upgrades have to be handled appropriately in here
+          if (from == 1) {
+            await m.createIndex(userDeviceKeysIndex);
+            await m.createIndex(userDeviceKeysKeyIndex);
+            await m.createIndex(olmSessionsIndex);
+            await m.createIndex(outboundGroupSessionsIndex);
+            await m.createIndex(inboundGroupSessionsIndex);
+            await m.createIndex(roomsIndex);
+            await m.createIndex(eventsIndex);
+            await m.createIndex(roomStatesIndex);
+            await m.createIndex(accountDataIndex);
+            await m.createIndex(roomAccountDataIndex);
+            await m.createIndex(presencesIndex);
+            from++;
+          }
+          if (from == 2) {
+            await m.deleteTable('outbound_group_sessions');
+            await m.createTable(outboundGroupSessions);
+          }
+        },
+      );
 
   Future<DbClient> getClient(String name) async {
     final res = await dbGetClient(name).get();
@@ -51,7 +51,8 @@ class Database extends _$Database {
     return res.first;
   }
 
-  Future<Map<String, sdk.DeviceKeysList>> getUserDeviceKeys(int clientId) async {
+  Future<Map<String, sdk.DeviceKeysList>> getUserDeviceKeys(
+      int clientId) async {
     final deviceKeys = await getAllUserDeviceKeys(clientId).get();
     if (deviceKeys.isEmpty) {
       return {};
@@ -59,12 +60,14 @@ class Database extends _$Database {
     final deviceKeysKeys = await getAllUserDeviceKeysKeys(clientId).get();
     final res = <String, sdk.DeviceKeysList>{};
     for (final entry in deviceKeys) {
-      res[entry.userId] = sdk.DeviceKeysList.fromDb(entry, deviceKeysKeys.where((k) => k.userId == entry.userId).toList());
+      res[entry.userId] = sdk.DeviceKeysList.fromDb(entry,
+          deviceKeysKeys.where((k) => k.userId == entry.userId).toList());
     }
     return res;
   }
 
-  Future<Map<String, List<olm.Session>>> getOlmSessions(int clientId, String userId) async {
+  Future<Map<String, List<olm.Session>>> getOlmSessions(
+      int clientId, String userId) async {
     final raw = await getAllOlmSessions(clientId).get();
     if (raw.isEmpty) {
       return {};
@@ -85,7 +88,8 @@ class Database extends _$Database {
     return res;
   }
 
-  Future<DbOutboundGroupSession> getDbOutboundGroupSession(int clientId, String roomId) async {
+  Future<DbOutboundGroupSession> getDbOutboundGroupSession(
+      int clientId, String roomId) async {
     final res = await dbGetOutboundGroupSession(clientId, roomId).get();
     if (res.isEmpty) {
       return null;
@@ -93,22 +97,28 @@ class Database extends _$Database {
     return res.first;
   }
 
-  Future<List<DbInboundGroupSession>> getDbInboundGroupSessions(int clientId, String roomId) async {
+  Future<List<DbInboundGroupSession>> getDbInboundGroupSessions(
+      int clientId, String roomId) async {
     return await dbGetInboundGroupSessionKeys(clientId, roomId).get();
   }
 
-  Future<DbInboundGroupSession> getDbInboundGroupSession(int clientId, String roomId, String sessionId) async {
-    final res = await dbGetInboundGroupSessionKey(clientId, roomId, sessionId).get();
+  Future<DbInboundGroupSession> getDbInboundGroupSession(
+      int clientId, String roomId, String sessionId) async {
+    final res =
+        await dbGetInboundGroupSessionKey(clientId, roomId, sessionId).get();
     if (res.isEmpty) {
       return null;
     }
     return res.first;
   }
 
-  Future<List<sdk.Room>> getRoomList(sdk.Client client, {bool onlyLeft = false}) async {
-    final res = await (select(rooms)..where((t) => onlyLeft
-      ? t.membership.equals('leave')
-      : t.membership.equals('leave').not())).get();
+  Future<List<sdk.Room>> getRoomList(sdk.Client client,
+      {bool onlyLeft = false}) async {
+    final res = await (select(rooms)
+          ..where((t) => onlyLeft
+              ? t.membership.equals('leave')
+              : t.membership.equals('leave').not()))
+        .get();
     final resStates = await getAllRoomStates(client.id).get();
     final resAccountData = await getAllRoomAccountData(client.id).get();
     final roomList = <sdk.Room>[];
@@ -145,11 +155,13 @@ class Database extends _$Database {
   /// Stores a RoomUpdate object in the database. Must be called inside of
   /// [transaction].
   final Set<String> _ensuredRooms = {};
-  Future<void> storeRoomUpdate(int clientId, sdk.RoomUpdate roomUpdate, [sdk.Room oldRoom]) async {
+  Future<void> storeRoomUpdate(int clientId, sdk.RoomUpdate roomUpdate,
+      [sdk.Room oldRoom]) async {
     final setKey = '${clientId};${roomUpdate.id}';
     if (roomUpdate.membership != sdk.Membership.leave) {
       if (!_ensuredRooms.contains(setKey)) {
-        await ensureRoomExists(clientId, roomUpdate.id, roomUpdate.membership.toString().split('.').last);
+        await ensureRoomExists(clientId, roomUpdate.id,
+            roomUpdate.membership.toString().split('.').last);
         _ensuredRooms.add(setKey);
       }
     } else {
@@ -161,24 +173,37 @@ class Database extends _$Database {
     var doUpdate = oldRoom == null;
     if (!doUpdate) {
       doUpdate = roomUpdate.highlight_count != oldRoom.highlightCount ||
-        roomUpdate.notification_count != oldRoom.notificationCount ||
-        roomUpdate.membership.toString().split('.').last != oldRoom.membership.toString().split('.').last ||
-        (roomUpdate.summary?.mJoinedMemberCount != null &&
-          roomUpdate.summary.mJoinedMemberCount != oldRoom.mInvitedMemberCount) ||
-        (roomUpdate.summary?.mInvitedMemberCount != null &&
-          roomUpdate.summary.mJoinedMemberCount != oldRoom.mJoinedMemberCount) ||
-        (roomUpdate.summary?.mHeroes != null &&
-          roomUpdate.summary.mHeroes.join(',') != oldRoom.mHeroes.join(','));
+          roomUpdate.notification_count != oldRoom.notificationCount ||
+          roomUpdate.membership.toString().split('.').last !=
+              oldRoom.membership.toString().split('.').last ||
+          (roomUpdate.summary?.mJoinedMemberCount != null &&
+              roomUpdate.summary.mJoinedMemberCount !=
+                  oldRoom.mInvitedMemberCount) ||
+          (roomUpdate.summary?.mInvitedMemberCount != null &&
+              roomUpdate.summary.mJoinedMemberCount !=
+                  oldRoom.mJoinedMemberCount) ||
+          (roomUpdate.summary?.mHeroes != null &&
+              roomUpdate.summary.mHeroes.join(',') !=
+                  oldRoom.mHeroes.join(','));
     }
 
     if (doUpdate) {
-      await (update(rooms)..where((r) => r.roomId.equals(roomUpdate.id) & r.clientId.equals(clientId))).write(RoomsCompanion(
+      await (update(rooms)
+            ..where((r) =>
+                r.roomId.equals(roomUpdate.id) & r.clientId.equals(clientId)))
+          .write(RoomsCompanion(
         highlightCount: Value(roomUpdate.highlight_count),
         notificationCount: Value(roomUpdate.notification_count),
         membership: Value(roomUpdate.membership.toString().split('.').last),
-        joinedMemberCount: roomUpdate.summary?.mJoinedMemberCount != null ? Value(roomUpdate.summary.mJoinedMemberCount) : Value.absent(),
-        invitedMemberCount: roomUpdate.summary?.mInvitedMemberCount != null ? Value(roomUpdate.summary.mInvitedMemberCount) : Value.absent(),
-        heroes: roomUpdate.summary?.mHeroes != null ? Value(roomUpdate.summary.mHeroes.join(',')) : Value.absent(),
+        joinedMemberCount: roomUpdate.summary?.mJoinedMemberCount != null
+            ? Value(roomUpdate.summary.mJoinedMemberCount)
+            : Value.absent(),
+        invitedMemberCount: roomUpdate.summary?.mInvitedMemberCount != null
+            ? Value(roomUpdate.summary.mInvitedMemberCount)
+            : Value.absent(),
+        heroes: roomUpdate.summary?.mHeroes != null
+            ? Value(roomUpdate.summary.mHeroes.join(','))
+            : Value.absent(),
       ));
     }
 
@@ -193,17 +218,24 @@ class Database extends _$Database {
 
   /// Stores an UserUpdate object in the database. Must be called inside of
   /// [transaction].
-  Future<void> storeUserEventUpdate(int clientId, sdk.UserUpdate userUpdate) async {
+  Future<void> storeUserEventUpdate(
+      int clientId, sdk.UserUpdate userUpdate) async {
     if (userUpdate.type == 'account_data') {
-      await storeAccountData(clientId, userUpdate.eventType, json.encode(userUpdate.content['content']));
+      await storeAccountData(clientId, userUpdate.eventType,
+          json.encode(userUpdate.content['content']));
     } else if (userUpdate.type == 'presence') {
-      await storePresence(clientId, userUpdate.eventType, userUpdate.content['sender'], json.encode(userUpdate.content['content']));
+      await storePresence(
+          clientId,
+          userUpdate.eventType,
+          userUpdate.content['sender'],
+          json.encode(userUpdate.content['content']));
     }
   }
 
   /// Stores an EventUpdate object in the database. Must be called inside of
   /// [transaction].
-  Future<void> storeEventUpdate(int clientId, sdk.EventUpdate eventUpdate) async {
+  Future<void> storeEventUpdate(
+      int clientId, sdk.EventUpdate eventUpdate) async {
     if (eventUpdate.type == 'ephemeral') return;
     final eventContent = eventUpdate.content;
     final type = eventUpdate.type;
@@ -227,11 +259,13 @@ class Database extends _$Database {
           eventContent['unsigned'] is Map<String, dynamic> &&
           eventContent['unsigned']['transaction_id'] is String) {
         // status changed and we have an old transaction id --> update event id and stuffs
-        await updateEventStatus(status, eventContent['event_id'], clientId, eventContent['unsigned']['transaction_id'], chatId);
+        await updateEventStatus(status, eventContent['event_id'], clientId,
+            eventContent['unsigned']['transaction_id'], chatId);
       } else {
         DbEvent oldEvent;
         if (type == 'history') {
-          final allOldEvents = await getEvent(clientId, eventContent['event_id'], chatId).get();
+          final allOldEvents =
+              await getEvent(clientId, eventContent['event_id'], chatId).get();
           if (allOldEvents.isNotEmpty) {
             oldEvent = allOldEvents.first;
           }
@@ -241,7 +275,10 @@ class Database extends _$Database {
           eventContent['event_id'],
           chatId,
           oldEvent?.sortOrder ?? eventUpdate.sortOrder,
-          eventContent['origin_server_ts'] != null ? DateTime.fromMillisecondsSinceEpoch(eventContent['origin_server_ts']) : DateTime.now(),
+          eventContent['origin_server_ts'] != null
+              ? DateTime.fromMillisecondsSinceEpoch(
+                  eventContent['origin_server_ts'])
+              : DateTime.now(),
           eventContent['sender'],
           eventContent['type'],
           json.encode(eventContent['unsigned'] ?? ''),
@@ -256,7 +293,8 @@ class Database extends _$Database {
       if (status != -1 &&
           eventUpdate.content.containsKey('unsigned') &&
           eventUpdate.content['unsigned']['transaction_id'] is String) {
-        await removeEvent(clientId, eventUpdate.content['unsigned']['transaction_id'], chatId);
+        await removeEvent(clientId,
+            eventUpdate.content['unsigned']['transaction_id'], chatId);
       }
     }
 
@@ -269,7 +307,10 @@ class Database extends _$Database {
         eventContent['event_id'] ?? now.millisecondsSinceEpoch.toString(),
         chatId,
         eventUpdate.sortOrder ?? 0.0,
-        eventContent['origin_server_ts'] != null ? DateTime.fromMillisecondsSinceEpoch(eventContent['origin_server_ts']) : now,
+        eventContent['origin_server_ts'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(
+                eventContent['origin_server_ts'])
+            : now,
         eventContent['sender'],
         eventContent['type'],
         json.encode(eventContent['unsigned'] ?? ''),
@@ -287,7 +328,8 @@ class Database extends _$Database {
     }
   }
 
-  Future<sdk.Event> getEventById(int clientId, String eventId, sdk.Room room) async {
+  Future<sdk.Event> getEventById(
+      int clientId, String eventId, sdk.Room room) async {
     final event = await getEvent(clientId, eventId, room.id).get();
     if (event.isEmpty) {
       return null;
@@ -296,7 +338,9 @@ class Database extends _$Database {
   }
 
   Future<bool> redactMessage(int clientId, sdk.EventUpdate eventUpdate) async {
-    final events = await getEvent(clientId, eventUpdate.content['redacts'], eventUpdate.roomID).get();
+    final events = await getEvent(
+            clientId, eventUpdate.content['redacts'], eventUpdate.roomID)
+        .get();
     var success = false;
     for (final dbEvent in events) {
       final event = sdk.Event.fromDb(dbEvent, null);
@@ -325,29 +369,44 @@ class Database extends _$Database {
   Future<void> forgetRoom(int clientId, String roomId) async {
     final setKey = '${clientId};${roomId}';
     _ensuredRooms.remove(setKey);
-    await (delete(rooms)..where((r) => r.roomId.equals(roomId) & r.clientId.equals(clientId))).go();
-    await (delete(events)..where((r) => r.roomId.equals(roomId) & r.clientId.equals(clientId))).go();
-    await (delete(roomStates)..where((r) => r.roomId.equals(roomId) & r.clientId.equals(clientId))).go();
-    await (delete(roomAccountData)..where((r) => r.roomId.equals(roomId) & r.clientId.equals(clientId))).go();
+    await (delete(rooms)
+          ..where((r) => r.roomId.equals(roomId) & r.clientId.equals(clientId)))
+        .go();
+    await (delete(events)
+          ..where((r) => r.roomId.equals(roomId) & r.clientId.equals(clientId)))
+        .go();
+    await (delete(roomStates)
+          ..where((r) => r.roomId.equals(roomId) & r.clientId.equals(clientId)))
+        .go();
+    await (delete(roomAccountData)
+          ..where((r) => r.roomId.equals(roomId) & r.clientId.equals(clientId)))
+        .go();
   }
 
   Future<void> clearCache(int clientId) async {
     await (delete(presences)..where((r) => r.clientId.equals(clientId))).go();
-    await (delete(roomAccountData)..where((r) => r.clientId.equals(clientId))).go();
+    await (delete(roomAccountData)..where((r) => r.clientId.equals(clientId)))
+        .go();
     await (delete(accountData)..where((r) => r.clientId.equals(clientId))).go();
     await (delete(roomStates)..where((r) => r.clientId.equals(clientId))).go();
     await (delete(events)..where((r) => r.clientId.equals(clientId))).go();
     await (delete(rooms)..where((r) => r.clientId.equals(clientId))).go();
-    await (delete(outboundGroupSessions)..where((r) => r.clientId.equals(clientId))).go();
+    await (delete(outboundGroupSessions)
+          ..where((r) => r.clientId.equals(clientId)))
+        .go();
     await storePrevBatch(null, clientId);
   }
 
   Future<void> clear(int clientId) async {
     await clearCache(clientId);
-    await (delete(inboundGroupSessions)..where((r) => r.clientId.equals(clientId))).go();
+    await (delete(inboundGroupSessions)
+          ..where((r) => r.clientId.equals(clientId)))
+        .go();
     await (delete(olmSessions)..where((r) => r.clientId.equals(clientId))).go();
-    await (delete(userDeviceKeysKey)..where((r) => r.clientId.equals(clientId))).go();
-    await (delete(userDeviceKeys)..where((r) => r.clientId.equals(clientId))).go();
+    await (delete(userDeviceKeysKey)..where((r) => r.clientId.equals(clientId)))
+        .go();
+    await (delete(userDeviceKeys)..where((r) => r.clientId.equals(clientId)))
+        .go();
     await (delete(clients)..where((r) => r.clientId.equals(clientId))).go();
   }
 

@@ -54,6 +54,7 @@ code_analyze:
   image: cirrusci/flutter
   dependencies: []
   script:
+    - flutter format lib/ test/ test_driver/ --set-exit-if-changed
     - flutter analyze
 
 build-api-doc:

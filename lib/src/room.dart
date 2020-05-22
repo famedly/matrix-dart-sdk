@@ -112,7 +112,8 @@ class Room {
   }
 
   Future<void> updateSortOrder() async {
-    await client.database?.updateRoomSortOrder(_oldestSortOrder, _newestSortOrder, client.id, id);
+    await client.database?.updateRoomSortOrder(
+        _oldestSortOrder, _newestSortOrder, client.id, id);
   }
 
   /// Clears the existing outboundGroupSession, tries to create a new one and
@@ -165,10 +166,12 @@ class Room {
   Future<void> _storeOutboundGroupSession() async {
     if (_outboundGroupSession == null) return;
     await client.database?.storeOutboundGroupSession(
-      client.id, id, _outboundGroupSession.pickle(client.userID),
-      json.encode(_outboundGroupSessionDevices), _outboundGroupSessionCreationTime,
-      _outboundGroupSessionSentMessages
-    );
+        client.id,
+        id,
+        _outboundGroupSession.pickle(client.userID),
+        json.encode(_outboundGroupSessionDevices),
+        _outboundGroupSessionCreationTime,
+        _outboundGroupSessionSentMessages);
     return;
   }
 
@@ -190,21 +193,27 @@ class Room {
       }
       // next check if it needs to be rotated
       final encryptionContent = getState('m.room.encryption')?.content;
-      final maxMessages = encryptionContent != null && encryptionContent['rotation_period_msgs'] is int
-        ? encryptionContent['rotation_period_msgs']
-        : 100;
-      final maxAge = encryptionContent != null && encryptionContent['rotation_period_ms'] is int
-        ? encryptionContent['rotation_period_ms']
-        : 604800000; // default of one week
+      final maxMessages = encryptionContent != null &&
+              encryptionContent['rotation_period_msgs'] is int
+          ? encryptionContent['rotation_period_msgs']
+          : 100;
+      final maxAge = encryptionContent != null &&
+              encryptionContent['rotation_period_ms'] is int
+          ? encryptionContent['rotation_period_ms']
+          : 604800000; // default of one week
       if (_outboundGroupSessionSentMessages >= maxMessages ||
-          _outboundGroupSessionCreationTime.add(Duration(milliseconds: maxAge)).isBefore(DateTime.now())) {
+          _outboundGroupSessionCreationTime
+              .add(Duration(milliseconds: maxAge))
+              .isBefore(DateTime.now())) {
         wipe = true;
       }
       if (!wipe) {
         return false;
       }
     }
-    if (!wipe && _outboundGroupSessionDevices == null && _outboundGroupSession == null) {
+    if (!wipe &&
+        _outboundGroupSessionDevices == null &&
+        _outboundGroupSession == null) {
       return true; // let's just short-circuit out of here, no need to do DB stuff
     }
     _outboundGroupSessionDevices = null;
@@ -250,8 +259,12 @@ class Room {
       indexes: {},
       key: client.userID,
     );
-    client.database?.storeInboundGroupSession(client.id, id, sessionId,
-      inboundGroupSession.pickle(client.userID), json.encode(content),
+    client.database?.storeInboundGroupSession(
+      client.id,
+      id,
+      sessionId,
+      inboundGroupSession.pickle(client.userID),
+      json.encode(content),
       json.encode({}),
     );
     _tryAgainDecryptLastMessage();
@@ -398,8 +411,7 @@ class Room {
       states.forEach((final String key, final entry) {
         if (!entry.containsKey('')) return;
         final Event state = entry[''];
-        if (state.sortOrder != null &&
-            state.sortOrder > lastSortOrder) {
+        if (state.sortOrder != null && state.sortOrder > lastSortOrder) {
           lastSortOrder = state.sortOrder;
           lastEvent = state;
         }
@@ -436,7 +448,8 @@ class Room {
     this.roomAccountData = const {},
     double newestSortOrder = 0.0,
     double oldestSortOrder = 0.0,
-  }) : _newestSortOrder = newestSortOrder, _oldestSortOrder = oldestSortOrder;
+  })  : _newestSortOrder = newestSortOrder,
+        _oldestSortOrder = oldestSortOrder;
 
   /// The default count of how much events should be requested when requesting the
   /// history of this room.
@@ -524,7 +537,8 @@ class Room {
       name = name.replaceAll(RegExp(r'[^\w-]'), '');
       return name.toLowerCase();
     };
-    final addEmotePack = (String packName, Map<String, dynamic> content, [String packNameOverride]) {
+    final addEmotePack = (String packName, Map<String, dynamic> content,
+        [String packNameOverride]) {
       if (!(content['short'] is Map)) {
         return;
       }
@@ -572,7 +586,10 @@ class Room {
             final stateKey = stateKeyEntry.key;
             final event = room.getState('im.ponies.room_emotes', stateKey);
             if (event != null && stateKeyEntry.value is Map) {
-              addEmotePack(room.canonicalAlias.isEmpty ? room.id : canonicalAlias, event.content, stateKeyEntry.value['name']);
+              addEmotePack(
+                  room.canonicalAlias.isEmpty ? room.id : canonicalAlias,
+                  event.content,
+                  stateKeyEntry.value['name']);
             }
           }
         }
@@ -583,7 +600,11 @@ class Room {
 
   /// Sends a normal text message to this room. Returns the event ID generated
   /// by the server for this message.
-  Future<String> sendTextEvent(String message, {String txid, Event inReplyTo, bool parseMarkdown = true, Map<String, Map<String, String>> emotePacks}) {
+  Future<String> sendTextEvent(String message,
+      {String txid,
+      Event inReplyTo,
+      bool parseMarkdown = true,
+      Map<String, Map<String, String>> emotePacks}) {
     final event = <String, dynamic>{
       'msgtype': 'm.text',
       'body': message,
@@ -836,7 +857,11 @@ class Room {
 
     final sortOrder = newSortOrder;
     // Display a *sending* event and store it.
-    var eventUpdate = EventUpdate(type: 'timeline', roomID: id, eventType: type, sortOrder: sortOrder,
+    var eventUpdate = EventUpdate(
+      type: 'timeline',
+      roomID: id,
+      eventType: type,
+      sortOrder: sortOrder,
       content: {
         'type': type,
         'event_id': messageID,
@@ -994,7 +1019,8 @@ class Room {
 
     final dbActions = <Future<dynamic> Function()>[];
     if (client.database != null) {
-      dbActions.add(() => client.database.setRoomPrevBatch(prev_batch, client.id, id));
+      dbActions.add(
+          () => client.database.setRoomPrevBatch(prev_batch, client.id, id));
     }
 
     if (!(resp['chunk'] is List<dynamic> &&
@@ -1012,7 +1038,8 @@ class Room {
         ).decrypt(this);
         client.onEvent.add(eventUpdate);
         if (client.database != null) {
-          dbActions.add(() => client.database.storeEventUpdate(client.id, eventUpdate));
+          dbActions.add(
+              () => client.database.storeEventUpdate(client.id, eventUpdate));
         }
       }
     }
@@ -1028,11 +1055,13 @@ class Room {
       ).decrypt(this);
       client.onEvent.add(eventUpdate);
       if (client.database != null) {
-        dbActions.add(() => client.database.storeEventUpdate(client.id, eventUpdate));
+        dbActions.add(
+            () => client.database.storeEventUpdate(client.id, eventUpdate));
       }
     }
     if (client.database != null) {
-      dbActions.add(() => client.database.setRoomPrevBatch(resp['end'], client.id, id));
+      dbActions.add(
+          () => client.database.setRoomPrevBatch(resp['end'], client.id, id));
     }
     await client.database?.transaction(() async {
       for (final f in dbActions) {
@@ -1105,12 +1134,12 @@ class Room {
   /// Returns a Room from a json String which comes normally from the store. If the
   /// state are also given, the method will await them.
   static Future<Room> getRoomFromTableRow(
-      DbRoom row, // either Map<String, dynamic> or DbRoom
-      Client matrix,
-      {
-        dynamic states, // DbRoomState, as iterator and optionally as future
-        dynamic roomAccountData, // DbRoomAccountData, as iterator and optionally as future
-      }) async {
+    DbRoom row, // either Map<String, dynamic> or DbRoom
+    Client matrix, {
+    dynamic states, // DbRoomState, as iterator and optionally as future
+    dynamic
+        roomAccountData, // DbRoomAccountData, as iterator and optionally as future
+  }) async {
     final newRoom = Room(
       id: row.roomId,
       membership: Membership.values
@@ -1136,7 +1165,8 @@ class Room {
         rawStates = states;
       }
       for (final rawState in rawStates) {
-        final newState = Event.fromDb(rawState, newRoom);;
+        final newState = Event.fromDb(rawState, newRoom);
+        ;
         newRoom.setState(newState);
       }
     }
@@ -1179,7 +1209,8 @@ class Room {
             await events[i].loadSession();
             events[i] = events[i].decrypted;
             if (events[i].type != EventTypes.Encrypted) {
-              await client.database.storeEventUpdate(client.id,
+              await client.database.storeEventUpdate(
+                client.id,
                 EventUpdate(
                   eventType: events[i].typeKey,
                   content: events[i].toJson(),
@@ -1301,7 +1332,8 @@ class Room {
         'content': resp,
         'state_key': mxID,
       };
-      await client.database.storeEventUpdate(client.id,
+      await client.database.storeEventUpdate(
+        client.id,
         EventUpdate(
             content: content,
             roomID: id,
@@ -1748,28 +1780,29 @@ class Room {
     var users = await requestParticipants();
     for (final user in users) {
       if (client.userDeviceKeys.containsKey(user.id)) {
-        for (var deviceKeyEntry in client.userDeviceKeys[user.id].deviceKeys.values) {
+        for (var deviceKeyEntry
+            in client.userDeviceKeys[user.id].deviceKeys.values) {
           deviceKeys.add(deviceKeyEntry);
         }
       }
     }
     return deviceKeys;
   }
-  
+
   bool _restoredOutboundGroupSession = false;
 
   Future<void> restoreOutboundGroupSession() async {
     if (_restoredOutboundGroupSession || client.database == null) {
       return;
     }
-    final outboundSession = await client.database.getDbOutboundGroupSession(client.id, id);
+    final outboundSession =
+        await client.database.getDbOutboundGroupSession(client.id, id);
     if (outboundSession != null) {
       try {
         _outboundGroupSession = olm.OutboundGroupSession();
-        _outboundGroupSession.unpickle(
-            client.userID, outboundSession.pickle);
+        _outboundGroupSession.unpickle(client.userID, outboundSession.pickle);
         _outboundGroupSessionDevices =
-                List<String>.from(json.decode(outboundSession.deviceIds));
+            List<String>.from(json.decode(outboundSession.deviceIds));
         _outboundGroupSessionCreationTime = outboundSession.creationTime;
         _outboundGroupSessionSentMessages = outboundSession.sentMessages;
       } catch (e) {
@@ -1825,46 +1858,53 @@ class Room {
   Future<void> requestSessionKey(String sessionId, String senderKey) async {
     final users = await requestParticipants();
     await client.sendToDevice(
-      [],
-      'm.room_key_request',
-      {
-        'action': 'request_cancellation',
-        'request_id': base64.encode(utf8.encode(sessionId)),
-        'requesting_device_id': client.deviceID,
-      },
-      encrypted: false,
-      toUsers: users);
-    await client.sendToDevice(
-      [],
-      'm.room_key_request',
-      {
-        'action': 'request',
-        'body': {
-          'algorithm': 'm.megolm.v1.aes-sha2',
-          'room_id': id,
-          'sender_key': senderKey,
-          'session_id': sessionId,
+        [],
+        'm.room_key_request',
+        {
+          'action': 'request_cancellation',
+          'request_id': base64.encode(utf8.encode(sessionId)),
+          'requesting_device_id': client.deviceID,
         },
-        'request_id': base64.encode(utf8.encode(sessionId)),
-        'requesting_device_id': client.deviceID,
-      },
-      encrypted: false,
-      toUsers: users);
+        encrypted: false,
+        toUsers: users);
+    await client.sendToDevice(
+        [],
+        'm.room_key_request',
+        {
+          'action': 'request',
+          'body': {
+            'algorithm': 'm.megolm.v1.aes-sha2',
+            'room_id': id,
+            'sender_key': senderKey,
+            'session_id': sessionId,
+          },
+          'request_id': base64.encode(utf8.encode(sessionId)),
+          'requesting_device_id': client.deviceID,
+        },
+        encrypted: false,
+        toUsers: users);
   }
 
-  Future<void> loadInboundGroupSessionKey(String sessionId, [String senderKey]) async {
-    if (sessionId == null || inboundGroupSessions.containsKey(sessionId)) return; // nothing to do
-    final session = await client.database.getDbInboundGroupSession(client.id, id, sessionId);
+  Future<void> loadInboundGroupSessionKey(String sessionId,
+      [String senderKey]) async {
+    if (sessionId == null || inboundGroupSessions.containsKey(sessionId)) {
+      return;
+    } // nothing to do
+    final session = await client.database
+        .getDbInboundGroupSession(client.id, id, sessionId);
     if (session == null) {
       // no session found, let's request it!
-      if (client.enableE2eeRecovery && !_requestedSessionIds.contains(sessionId) && senderKey != null) {
+      if (client.enableE2eeRecovery &&
+          !_requestedSessionIds.contains(sessionId) &&
+          senderKey != null) {
         unawaited(requestSessionKey(sessionId, senderKey));
         _requestedSessionIds.add(sessionId);
       }
       return;
     }
     try {
-      _inboundGroupSessions[sessionId] = SessionKey.fromDb(session, client.userID);
+      _inboundGroupSessions[sessionId] =
+          SessionKey.fromDb(session, client.userID);
     } catch (e) {
       print('[LibOlm] Could not unpickle inboundGroupSession: ' + e.toString());
     }
@@ -1887,7 +1927,8 @@ class Room {
   /// Returns a m.bad.encrypted event if it fails and does nothing if the event
   /// was not encrypted.
   Event decryptGroupMessage(Event event) {
-    if (event.type != EventTypes.Encrypted || event.content['ciphertext'] == null) return event;
+    if (event.type != EventTypes.Encrypted ||
+        event.content['ciphertext'] == null) return event;
     Map<String, dynamic> decryptedPayload;
     try {
       if (!client.encryptionEnabled) {
@@ -1905,7 +1946,9 @@ class Room {
           .decrypt(event.content['ciphertext']);
       final messageIndexKey =
           event.eventId + event.time.millisecondsSinceEpoch.toString();
-      if (inboundGroupSessions[sessionId].indexes.containsKey(messageIndexKey) &&
+      if (inboundGroupSessions[sessionId]
+              .indexes
+              .containsKey(messageIndexKey) &&
           inboundGroupSessions[sessionId].indexes[messageIndexKey] !=
               decryptResult.message_index) {
         if ((_outboundGroupSession?.session_id() ?? '') == sessionId) {
@@ -1919,11 +1962,17 @@ class Room {
       // the entry should always exist. In the case it doesn't, the following
       // line *could* throw an error. As that is a future, though, and we call
       // it un-awaited here, nothing happens, which is exactly the result we want
-      client.database?.updateInboundGroupSessionIndexes(json.encode(inboundGroupSessions[sessionId].indexes), client.id, id, sessionId);
+      client.database?.updateInboundGroupSessionIndexes(
+          json.encode(inboundGroupSessions[sessionId].indexes),
+          client.id,
+          id,
+          sessionId);
       decryptedPayload = json.decode(decryptResult.plaintext);
     } catch (exception) {
       // alright, if this was actually by our own outbound group session, we might as well clear it
-      if (client.enableE2eeRecovery && (_outboundGroupSession?.session_id() ?? '') == event.content['session_id']) {
+      if (client.enableE2eeRecovery &&
+          (_outboundGroupSession?.session_id() ?? '') ==
+              event.content['session_id']) {
         clearOutboundGroupSession(wipe: true);
       }
       if (exception.toString() == DecryptError.UNKNOWN_SESSION) {

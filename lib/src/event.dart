@@ -418,7 +418,7 @@ class Event {
   }
 
   Future<void> loadSession() {
-    return room.loadInboundGroupSessionKeyForEvent(this);  
+    return room.loadInboundGroupSessionKeyForEvent(this);
   }
 
   /// Trys to decrypt this event. Returns a m.bad.encrypted event
