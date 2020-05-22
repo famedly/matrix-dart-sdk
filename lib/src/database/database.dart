@@ -300,7 +300,13 @@ class Database extends _$Database {
 
     if (type == 'history') return;
 
-    if (type != 'account_data') {
+    if (type != 'account_data' &&
+        ((stateKey?.isNotEmpty ?? false) ||
+            [
+              'm.room.message',
+              'm.room.encrypted',
+              'm.sticker',
+            ].contains(eventUpdate.eventType))) {
       final now = DateTime.now();
       await storeRoomState(
         clientId,

@@ -288,6 +288,14 @@ class Room {
   /// Adds the [state] to this room and overwrites a state with the same
   /// typeKey/stateKey key pair if there is one.
   void setState(Event state) {
+    if ((state.stateKey?.isEmpty ?? true) &&
+        [
+          EventTypes.Message,
+          EventTypes.Sticker,
+          EventTypes.Encrypted,
+        ].contains(state.type)) {
+      return;
+    }
     // Decrypt if necessary
     if (state.type == EventTypes.Encrypted) {
       try {
