@@ -62,8 +62,13 @@ void main() {
         '@alice:example.com': rawListJson,
       };
 
-      expect(json.encode(DeviceKeys.fromJson(rawJson, null).toJson()),
+      final key = DeviceKeys.fromJson(rawJson, null);
+      rawJson.remove('verified');
+      rawJson.remove('blocked');
+      expect(json.encode(key.toJson()),
           json.encode(rawJson));
+      expect(key.verified, false);
+      expect(key.blocked, true);
       expect(json.encode(DeviceKeysList.fromJson(rawListJson, null).toJson()),
           json.encode(rawListJson));
 
