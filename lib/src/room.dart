@@ -289,7 +289,7 @@ class Room {
   /// typeKey/stateKey key pair if there is one.
   void setState(Event state) {
     if ((state.stateKey?.isEmpty ?? true) &&
-        [
+        ![
           EventTypes.Message,
           EventTypes.Sticker,
           EventTypes.Encrypted,
