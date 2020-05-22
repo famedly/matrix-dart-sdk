@@ -26,6 +26,7 @@ import 'dart:async';
 import 'event.dart';
 import 'room.dart';
 import 'sync/event_update.dart';
+import 'sync/room_update.dart';
 
 typedef onTimelineUpdateCallback = void Function();
 typedef onTimelineInsertCallback = void Function(int insertID);
@@ -41,6 +42,7 @@ class Timeline {
   final onTimelineInsertCallback onInsert;
 
   StreamSubscription<EventUpdate> sub;
+  StreamSubscription<RoomUpdate> roomSub;
   StreamSubscription<String> sessionIdReceivedSub;
   bool _requestingHistoryLock = false;
 
@@ -77,6 +79,13 @@ class Timeline {
 
   Timeline({this.room, this.events, this.onUpdate, this.onInsert}) {
     sub ??= room.client.onEvent.stream.listen(_handleEventUpdate);
+    // if the timeline is limited we want to clear our events cache
+    // as r.limitedTimeline can be "null" sometimes, we need to check for == true
+    // as after receiving a limited timeline room update new events are expected
+    // to be received via the onEvent stream, it is unneeded to call sortAndUpdate
+    roomSub ??= room.client.onRoomUpdate.stream
+        .where((r) => r.id == room.id && r.limitedTimeline == true)
+        .listen((r) => events.clear());
     sessionIdReceivedSub ??=
         room.onSessionKeyReceived.stream.listen(_sessionKeyReceived);
   }
@@ -84,6 +93,7 @@ class Timeline {
   /// Don't forget to call this before you dismiss this object!
   void cancelSubscriptions() {
     sub?.cancel();
+    roomSub?.cancel();
     sessionIdReceivedSub?.cancel();
   }
 
@@ -121,8 +131,8 @@ class Timeline {
         if (eventUpdate.eventType == 'm.room.redaction') {
           final eventId = _findEvent(event_id: eventUpdate.content['redacts']);
           if (eventId != null) {
-            events[eventId]
-                .setRedactionEvent(Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder));
+            events[eventId].setRedactionEvent(Event.fromJson(
+                eventUpdate.content, room, eventUpdate.sortOrder));
           }
         } else if (eventUpdate.content['status'] == -2) {
           var i = _findEvent(event_id: eventUpdate.content['event_id']);
@@ -138,18 +148,23 @@ class Timeline {
                   : null);
 
           if (i < events.length) {
-            events[i] = Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder);
+            events[i] = Event.fromJson(
+                eventUpdate.content, room, eventUpdate.sortOrder);
           }
         } else {
           Event newEvent;
-          var senderUser = room.getState('m.room.member', eventUpdate.content['sender'])?.asUser ?? await room.client.database
-              ?.getUser(room.client.id, eventUpdate.content['sender'], room);
+          var senderUser = room
+                  .getState('m.room.member', eventUpdate.content['sender'])
+                  ?.asUser ??
+              await room.client.database?.getUser(
+                  room.client.id, eventUpdate.content['sender'], room);
           if (senderUser != null) {
             eventUpdate.content['displayname'] = senderUser.displayName;
             eventUpdate.content['avatar_url'] = senderUser.avatarUrl.toString();
           }
 
-          newEvent = Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder);
+          newEvent =
+              Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder);
 
           if (eventUpdate.type == 'history' &&
               events.indexWhere(

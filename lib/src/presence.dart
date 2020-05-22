@@ -42,7 +42,15 @@ class Presence {
   final String statusMsg;
   final DateTime time;
 
-  Presence({this.sender, this.displayname, this.avatarUrl, this.currentlyActive, this.lastActiveAgo, this.presence, this.statusMsg, this.time});
+  Presence(
+      {this.sender,
+      this.displayname,
+      this.avatarUrl,
+      this.currentlyActive,
+      this.lastActiveAgo,
+      this.presence,
+      this.statusMsg,
+      this.time});
 
   Presence.fromJson(Map<String, dynamic> json)
       : sender = json['sender'],
@@ -66,15 +74,16 @@ class Presence {
     return Presence(
       sender: dbEntry.sender,
       displayname: content['displayname'],
-      avatarUrl: content['avatar_url'] != null ? Uri.parse(content['avatar_url']) : null,
+      avatarUrl: content['avatar_url'] != null
+          ? Uri.parse(content['avatar_url'])
+          : null,
       currentlyActive: content['currently_active'],
       lastActiveAgo: content['last_active_ago'],
       time: DateTime.fromMillisecondsSinceEpoch(
           DateTime.now().millisecondsSinceEpoch -
               (content['last_active_ago'] ?? 0)),
       presence: PresenceType.values.firstWhere(
-          (e) =>
-              e.toString() == "PresenceType.${content['presence']}",
+          (e) => e.toString() == "PresenceType.${content['presence']}",
           orElse: () => null),
       statusMsg: content['status_msg'],
     );

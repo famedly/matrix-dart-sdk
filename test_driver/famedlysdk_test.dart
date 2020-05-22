@@ -128,7 +128,8 @@ void test() async {
   await Future.delayed(Duration(seconds: 5));
   assert(room.outboundGroupSession != null);
   var currentSessionIdA = room.outboundGroupSession.session_id();
-  assert(room.inboundGroupSessions.containsKey(room.outboundGroupSession.session_id()));
+  assert(room.inboundGroupSessions
+      .containsKey(room.outboundGroupSession.session_id()));
   assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
   assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
   assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
@@ -236,7 +237,8 @@ void test() async {
   assert(restoredRoom.outboundGroupSession.session_id() ==
       room.outboundGroupSession.session_id());
   assert(restoredRoom.inboundGroupSessions.length == 4);
-  assert(restoredRoom.inboundGroupSessions.length == room.inboundGroupSessions.length);
+  assert(restoredRoom.inboundGroupSessions.length ==
+      room.inboundGroupSessions.length);
   for (var i = 0; i < restoredRoom.inboundGroupSessions.length; i++) {
     assert(restoredRoom.inboundGroupSessions.keys.toList()[i] ==
         room.inboundGroupSessions.keys.toList()[i]);

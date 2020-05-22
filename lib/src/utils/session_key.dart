@@ -20,9 +20,8 @@ class SessionKey {
   SessionKey.fromDb(DbInboundGroupSession dbEntry, String key) : key = key {
     final parsedContent = Event.getMapFromPayload(dbEntry.content);
     final parsedIndexes = Event.getMapFromPayload(dbEntry.indexes);
-    content = parsedContent != null
-        ? Map<String, dynamic>.from(parsedContent)
-        : null;
+    content =
+        parsedContent != null ? Map<String, dynamic>.from(parsedContent) : null;
     indexes = parsedIndexes != null
         ? Map<String, int>.from(parsedIndexes)
         : <String, int>{};
