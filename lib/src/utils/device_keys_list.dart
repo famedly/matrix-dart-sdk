@@ -281,7 +281,7 @@ class DeviceKeys extends _SignedKey {
       curve25519Key != null &&
       ed25519Key != null;
 
-  Future<void> setVerified(bool newVerified, Client client) {
+  Future<void> setVerified(bool newVerified) {
     _verified = newVerified;
     return client.database
         ?.setVerifiedUserDeviceKey(newVerified, client.id, userId, deviceId);
@@ -336,7 +336,7 @@ class DeviceKeys extends _SignedKey {
     blocked = json['blocked'] ?? false;
   }
 
-  KeyVerification startVerification(Client client) {
+  KeyVerification startVerification() {
     final request =
         KeyVerification(client: client, userId: userId, deviceId: deviceId);
     request.start();
