@@ -47,6 +47,7 @@ import 'package:pedantic/pedantic.dart';
 
 import 'event.dart';
 import 'room.dart';
+import 'ssss.dart';
 import 'sync/event_update.dart';
 import 'sync/room_update.dart';
 import 'sync/user_update.dart';
@@ -79,6 +80,8 @@ class Client {
 
   bool enableE2eeRecovery;
 
+  SSSS ssss;
+
   /// Create a client
   /// clientName = unique identifier of this client
   /// debug: Print debug output?
@@ -86,6 +89,7 @@ class Client {
   /// enableE2eeRecovery: Enable additional logic to try to recover from bad e2ee sessions
   Client(this.clientName,
       {this.debug = false, this.database, this.enableE2eeRecovery = false}) {
+    ssss = SSSS(this);
     onLoginStateChanged.stream.listen((loginState) {
       print('LoginState: ${loginState.toString()}');
     });
@@ -1146,6 +1150,9 @@ class Client {
       if (toDeviceEvent.type.startsWith('m.key.verification.')) {
         _handleToDeviceKeyVerificationRequest(toDeviceEvent);
       }
+      if (toDeviceEvent.type.startsWith('m.secret.')) {
+        ssss.handleToDeviceEvent(toDeviceEvent);
+      }
       onToDeviceEvent.add(toDeviceEvent);
     }
   }
@@ -2013,12 +2020,16 @@ class Client {
     Map<String, dynamic> message, {
     bool encrypted = true,
     List<User> toUsers,
+    bool onlyVerified = false,
   }) async {
     if (encrypted && !encryptionEnabled) return;
-    // Don't send this message to blocked devices.
+    // Don't send this message to blocked devices, and if specified onlyVerified
+    // then only send it to verified devices
     if (deviceKeys.isNotEmpty) {
       deviceKeys.removeWhere((DeviceKeys deviceKeys) =>
-          deviceKeys.blocked || deviceKeys.deviceId == deviceID);
+          deviceKeys.blocked ||
+          deviceKeys.deviceId == deviceID ||
+          (onlyVerified && !deviceKeys.verified));
       if (deviceKeys.isEmpty) return;
     }
 

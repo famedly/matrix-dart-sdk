@@ -46,6 +46,7 @@ class Database extends _$Database {
           if (from == 3) {
             await m.createTable(userCrossSigningKeys);
             await m.createIndex(userCrossSigningKeysIndex);
+            await m.createTable(ssssCache);
             // mark all keys as outdated so that the cross signing keys will be fetched
             await m.issueCustomQuery(
                 'UPDATE user_device_keys SET outdated = true');
@@ -119,6 +120,14 @@ class Database extends _$Database {
       int clientId, String roomId, String sessionId) async {
     final res =
         await dbGetInboundGroupSessionKey(clientId, roomId, sessionId).get();
+    if (res.isEmpty) {
+      return null;
+    }
+    return res.first;
+  }
+
+  Future<DbSSSSCache> getSSSSCache(int clientId, String type) async {
+    final res = await dbGetSSSSCache(clientId, type).get();
     if (res.isEmpty) {
       return null;
     }
@@ -416,10 +425,14 @@ class Database extends _$Database {
           ..where((r) => r.clientId.equals(clientId)))
         .go();
     await (delete(olmSessions)..where((r) => r.clientId.equals(clientId))).go();
+    await (delete(userCrossSigningKeys)
+          ..where((r) => r.clientId.equals(clientId)))
+        .go();
     await (delete(userDeviceKeysKey)..where((r) => r.clientId.equals(clientId)))
         .go();
     await (delete(userDeviceKeys)..where((r) => r.clientId.equals(clientId)))
         .go();
+    await (delete(ssssCache)..where((r) => r.clientId.equals(clientId))).go();
     await (delete(clients)..where((r) => r.clientId.equals(clientId))).go();
   }
 

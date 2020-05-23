@@ -74,6 +74,14 @@ CREATE TABLE inbound_group_sessions (
 ) AS DbInboundGroupSession;
 CREATE INDEX inbound_group_sessions_index ON inbound_group_sessions(client_id);
 
+CREATE TABLE ssss_cache (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  type TEXT NOT NULL,
+  key_id TEXT NOT NULL,
+  content TEXT NOT NULL,
+  UNIQUE(client_id, type)
+) AS DbSSSSCache;
+
 CREATE TABLE rooms (
   client_id INTEGER NOT NULL REFERENCES clients(client_id),
   room_id TEXT NOT NULL,
@@ -186,6 +194,8 @@ setVerifiedUserCrossSigningKey: UPDATE user_cross_signing_keys SET verified = :v
 setBlockedUserCrossSigningKey: UPDATE user_cross_signing_keys SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key;
 storeUserCrossSigningKey: INSERT OR REPLACE INTO user_cross_signing_keys (client_id, user_id, public_key, content, verified, blocked) VALUES (:client_id, :user_id, :public_key, :content, :verified, :blocked);
 removeUserCrossSigningKey: DELETE FROM user_cross_signing_keys WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key;
+storeSSSSCache: INSERT OR REPLACE INTO ssss_cache (client_id, type, key_id, content) VALUES (:client_id, :type, :key_id, :content);
+dbGetSSSSCache: SELECT * FROM ssss_cache WHERE client_id = :client_id AND type = :type;
 insertClient: INSERT INTO clients (name, homeserver_url, token, user_id, device_id, device_name, prev_batch, olm_account) VALUES (:name, :homeserver_url, :token, :user_id, :device_id, :device_name, :prev_batch, :olm_account);
 ensureRoomExists: INSERT OR IGNORE INTO rooms (client_id, room_id, membership) VALUES (:client_id, :room_id, :membership);
 setRoomPrevBatch: UPDATE rooms SET prev_batch = :prev_batch WHERE client_id = :client_id AND room_id = :room_id;

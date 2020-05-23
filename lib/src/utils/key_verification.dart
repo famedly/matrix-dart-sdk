@@ -132,7 +132,8 @@ class KeyVerification {
 
   Future<void> start() async {
     if (room == null) {
-      transactionId = randomString(512);
+      transactionId =
+          randomString(512) + DateTime.now().millisecondsSinceEpoch.toString();
     }
     await send('m.key.verification.request', {
       'methods': VERIFICATION_METHODS,
@@ -323,16 +324,31 @@ class KeyVerification {
       }
     }
     // okay, we reached this far, so all the devices are verified!
+    var verifiedMasterKey = false;
+    final verifiedUserDevices = <DeviceKeys>[];
     for (final verifyDeviceId in verifiedDevices) {
       if (client.userDeviceKeys[userId].deviceKeys
           .containsKey(verifyDeviceId)) {
-        await client.userDeviceKeys[userId].deviceKeys[verifyDeviceId]
-            .setVerified(true);
+        final key = client.userDeviceKeys[userId].deviceKeys[verifyDeviceId];
+        await key.setVerified(true);
+        verifiedUserDevices.add(key);
       } else if (client.userDeviceKeys[userId].crossSigningKeys
           .containsKey(verifyDeviceId)) {
-        await client.userDeviceKeys[userId].crossSigningKeys[verifyDeviceId]
-            .setVerified(true);
-        // TODO: sign the other persons master key
+        final key =
+            client.userDeviceKeys[userId].crossSigningKeys[verifyDeviceId];
+        await key.setVerified(true);
+        if (key.usage.contains('master')) {
+          verifiedMasterKey = true;
+        }
+      }
+    }
+    if (verifiedMasterKey) {
+      if (userId == client.userID) {
+        // it was our own master key, let's request the cross signing keys
+        // we do it in the background, thus no await needed here
+        client.ssss.maybeRequestAll(verifiedUserDevices);
+      } else {
+        // it was someone elses master key, let's sign it
       }
     }
   }

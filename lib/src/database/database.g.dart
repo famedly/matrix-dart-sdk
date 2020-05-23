@@ -4801,6 +4801,263 @@ class Presences extends Table with TableInfo<Presences, DbPresence> {
   bool get dontWriteConstraints => true;
 }
 
+class DbSSSSCache extends DataClass implements Insertable<DbSSSSCache> {
+  final int clientId;
+  final String type;
+  final String keyId;
+  final String content;
+  DbSSSSCache(
+      {@required this.clientId,
+      @required this.type,
+      @required this.keyId,
+      @required this.content});
+  factory DbSSSSCache.fromData(Map<String, dynamic> data, GeneratedDatabase db,
+      {String prefix}) {
+    final effectivePrefix = prefix ?? '';
+    final intType = db.typeSystem.forDartType<int>();
+    final stringType = db.typeSystem.forDartType<String>();
+    return DbSSSSCache(
+      clientId:
+          intType.mapFromDatabaseResponse(data['${effectivePrefix}client_id']),
+      type: stringType.mapFromDatabaseResponse(data['${effectivePrefix}type']),
+      keyId:
+          stringType.mapFromDatabaseResponse(data['${effectivePrefix}key_id']),
+      content:
+          stringType.mapFromDatabaseResponse(data['${effectivePrefix}content']),
+    );
+  }
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (!nullToAbsent || clientId != null) {
+      map['client_id'] = Variable<int>(clientId);
+    }
+    if (!nullToAbsent || type != null) {
+      map['type'] = Variable<String>(type);
+    }
+    if (!nullToAbsent || keyId != null) {
+      map['key_id'] = Variable<String>(keyId);
+    }
+    if (!nullToAbsent || content != null) {
+      map['content'] = Variable<String>(content);
+    }
+    return map;
+  }
+
+  factory DbSSSSCache.fromJson(Map<String, dynamic> json,
+      {ValueSerializer serializer}) {
+    serializer ??= moorRuntimeOptions.defaultSerializer;
+    return DbSSSSCache(
+      clientId: serializer.fromJson<int>(json['client_id']),
+      type: serializer.fromJson<String>(json['type']),
+      keyId: serializer.fromJson<String>(json['key_id']),
+      content: serializer.fromJson<String>(json['content']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer serializer}) {
+    serializer ??= moorRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'client_id': serializer.toJson<int>(clientId),
+      'type': serializer.toJson<String>(type),
+      'key_id': serializer.toJson<String>(keyId),
+      'content': serializer.toJson<String>(content),
+    };
+  }
+
+  DbSSSSCache copyWith(
+          {int clientId, String type, String keyId, String content}) =>
+      DbSSSSCache(
+        clientId: clientId ?? this.clientId,
+        type: type ?? this.type,
+        keyId: keyId ?? this.keyId,
+        content: content ?? this.content,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('DbSSSSCache(')
+          ..write('clientId: $clientId, ')
+          ..write('type: $type, ')
+          ..write('keyId: $keyId, ')
+          ..write('content: $content')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => $mrjf($mrjc(clientId.hashCode,
+      $mrjc(type.hashCode, $mrjc(keyId.hashCode, content.hashCode))));
+  @override
+  bool operator ==(dynamic other) =>
+      identical(this, other) ||
+      (other is DbSSSSCache &&
+          other.clientId == this.clientId &&
+          other.type == this.type &&
+          other.keyId == this.keyId &&
+          other.content == this.content);
+}
+
+class SsssCacheCompanion extends UpdateCompanion<DbSSSSCache> {
+  final Value<int> clientId;
+  final Value<String> type;
+  final Value<String> keyId;
+  final Value<String> content;
+  const SsssCacheCompanion({
+    this.clientId = const Value.absent(),
+    this.type = const Value.absent(),
+    this.keyId = const Value.absent(),
+    this.content = const Value.absent(),
+  });
+  SsssCacheCompanion.insert({
+    @required int clientId,
+    @required String type,
+    @required String keyId,
+    @required String content,
+  })  : clientId = Value(clientId),
+        type = Value(type),
+        keyId = Value(keyId),
+        content = Value(content);
+  static Insertable<DbSSSSCache> custom({
+    Expression<int> clientId,
+    Expression<String> type,
+    Expression<String> keyId,
+    Expression<String> content,
+  }) {
+    return RawValuesInsertable({
+      if (clientId != null) 'client_id': clientId,
+      if (type != null) 'type': type,
+      if (keyId != null) 'key_id': keyId,
+      if (content != null) 'content': content,
+    });
+  }
+
+  SsssCacheCompanion copyWith(
+      {Value<int> clientId,
+      Value<String> type,
+      Value<String> keyId,
+      Value<String> content}) {
+    return SsssCacheCompanion(
+      clientId: clientId ?? this.clientId,
+      type: type ?? this.type,
+      keyId: keyId ?? this.keyId,
+      content: content ?? this.content,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientId.present) {
+      map['client_id'] = Variable<int>(clientId.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (keyId.present) {
+      map['key_id'] = Variable<String>(keyId.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    return map;
+  }
+}
+
+class SsssCache extends Table with TableInfo<SsssCache, DbSSSSCache> {
+  final GeneratedDatabase _db;
+  final String _alias;
+  SsssCache(this._db, [this._alias]);
+  final VerificationMeta _clientIdMeta = const VerificationMeta('clientId');
+  GeneratedIntColumn _clientId;
+  GeneratedIntColumn get clientId => _clientId ??= _constructClientId();
+  GeneratedIntColumn _constructClientId() {
+    return GeneratedIntColumn('client_id', $tableName, false,
+        $customConstraints: 'NOT NULL REFERENCES clients(client_id)');
+  }
+
+  final VerificationMeta _typeMeta = const VerificationMeta('type');
+  GeneratedTextColumn _type;
+  GeneratedTextColumn get type => _type ??= _constructType();
+  GeneratedTextColumn _constructType() {
+    return GeneratedTextColumn('type', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  final VerificationMeta _keyIdMeta = const VerificationMeta('keyId');
+  GeneratedTextColumn _keyId;
+  GeneratedTextColumn get keyId => _keyId ??= _constructKeyId();
+  GeneratedTextColumn _constructKeyId() {
+    return GeneratedTextColumn('key_id', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  final VerificationMeta _contentMeta = const VerificationMeta('content');
+  GeneratedTextColumn _content;
+  GeneratedTextColumn get content => _content ??= _constructContent();
+  GeneratedTextColumn _constructContent() {
+    return GeneratedTextColumn('content', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  @override
+  List<GeneratedColumn> get $columns => [clientId, type, keyId, content];
+  @override
+  SsssCache get asDslTable => this;
+  @override
+  String get $tableName => _alias ?? 'ssss_cache';
+  @override
+  final String actualTableName = 'ssss_cache';
+  @override
+  VerificationContext validateIntegrity(Insertable<DbSSSSCache> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_id')) {
+      context.handle(_clientIdMeta,
+          clientId.isAcceptableOrUnknown(data['client_id'], _clientIdMeta));
+    } else if (isInserting) {
+      context.missing(_clientIdMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+          _typeMeta, type.isAcceptableOrUnknown(data['type'], _typeMeta));
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('key_id')) {
+      context.handle(
+          _keyIdMeta, keyId.isAcceptableOrUnknown(data['key_id'], _keyIdMeta));
+    } else if (isInserting) {
+      context.missing(_keyIdMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(_contentMeta,
+          content.isAcceptableOrUnknown(data['content'], _contentMeta));
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => <GeneratedColumn>{};
+  @override
+  DbSSSSCache map(Map<String, dynamic> data, {String tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : null;
+    return DbSSSSCache.fromData(data, _db, prefix: effectivePrefix);
+  }
+
+  @override
+  SsssCache createAlias(String alias) {
+    return SsssCache(_db, alias);
+  }
+
+  @override
+  List<String> get customConstraints => const ['UNIQUE(client_id, type)'];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
 class DbFile extends DataClass implements Insertable<DbFile> {
   final String mxcUri;
   final Uint8List bytes;
@@ -5087,6 +5344,8 @@ abstract class _$Database extends GeneratedDatabase {
   Index _presencesIndex;
   Index get presencesIndex => _presencesIndex ??= Index('presences_index',
       'CREATE INDEX presences_index ON presences(client_id);');
+  SsssCache _ssssCache;
+  SsssCache get ssssCache => _ssssCache ??= SsssCache(this);
   Files _files;
   Files get files => _files ??= Files(this);
   DbClient _rowToDbClient(QueryRow row) {
@@ -5496,6 +5755,36 @@ abstract class _$Database extends GeneratedDatabase {
       updates: {userCrossSigningKeys},
       updateKind: UpdateKind.delete,
     );
+  }
+
+  Future<int> storeSSSSCache(
+      int client_id, String type, String key_id, String content) {
+    return customInsert(
+      'INSERT OR REPLACE INTO ssss_cache (client_id, type, key_id, content) VALUES (:client_id, :type, :key_id, :content)',
+      variables: [
+        Variable.withInt(client_id),
+        Variable.withString(type),
+        Variable.withString(key_id),
+        Variable.withString(content)
+      ],
+      updates: {ssssCache},
+    );
+  }
+
+  DbSSSSCache _rowToDbSSSSCache(QueryRow row) {
+    return DbSSSSCache(
+      clientId: row.readInt('client_id'),
+      type: row.readString('type'),
+      keyId: row.readString('key_id'),
+      content: row.readString('content'),
+    );
+  }
+
+  Selectable<DbSSSSCache> dbGetSSSSCache(int client_id, String type) {
+    return customSelect(
+        'SELECT * FROM ssss_cache WHERE client_id = :client_id AND type = :type',
+        variables: [Variable.withInt(client_id), Variable.withString(type)],
+        readsFrom: {ssssCache}).map(_rowToDbSSSSCache);
   }
 
   Future<int> insertClient(
@@ -5924,6 +6213,7 @@ abstract class _$Database extends GeneratedDatabase {
         roomAccountDataIndex,
         presences,
         presencesIndex,
+        ssssCache,
         files
       ];
 }
