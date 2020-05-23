@@ -69,7 +69,8 @@ class SSSS {
       }
     }
     var ciphertext = AES(Key(keys.aesKey), mode: AESMode.ctr, padding: null)
-        .encrypt(plain, iv: IV(iv)).bytes;
+        .encrypt(plain, iv: IV(iv))
+        .bytes;
     if (bytesMissing != AES_BLOCKSIZE) {
       // chop off those extra bytes again
       ciphertext = ciphertext.sublist(0, plain.length - bytesMissing);
@@ -104,12 +105,12 @@ class SSSS {
         cipher[i] = oldCipher[i];
       }
     }
-    final decipher = AES(Key(keys.aesKey), mode: AESMode.ctr, padding: null).decrypt(
-        Encrypted(cipher),
-        iv: IV(base64.decode(data.iv)));
+    final decipher = AES(Key(keys.aesKey), mode: AESMode.ctr, padding: null)
+        .decrypt(Encrypted(cipher), iv: IV(base64.decode(data.iv)));
     if (bytesMissing != AES_BLOCKSIZE) {
       // chop off those extra bytes again
-      return String.fromCharCodes(decipher.sublist(0, decipher.length - bytesMissing));
+      return String.fromCharCodes(
+          decipher.sublist(0, decipher.length - bytesMissing));
     }
     return String.fromCharCodes(decipher);
   }
@@ -145,8 +146,8 @@ class SSSS {
       throw 'Unknown algorithm';
     }
     final generator = PBKDF2(hashAlgorithm: sha512);
-    return Uint8List.fromList(generator.generateKey(
-        password, info.salt, info.iterations, info.bits != null ? info.bits / 8 : 32));
+    return Uint8List.fromList(generator.generateKey(password, info.salt,
+        info.iterations, info.bits != null ? info.bits / 8 : 32));
   }
 
   String get defaultKeyId {
