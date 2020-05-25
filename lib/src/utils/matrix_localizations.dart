@@ -1,6 +1,7 @@
 import '../room.dart';
 
 abstract class MatrixLocalizations {
+  const MatrixLocalizations();
   String get emptyChat;
 
   String get invitedUsersOnly;
@@ -121,9 +122,8 @@ extension HistoryVisibilityDisplayString on HistoryVisibility {
         return i18n.visibleForAllParticipants;
       case HistoryVisibility.world_readable:
         return i18n.visibleForEveryone;
-      default:
-        return toString().replaceAll('HistoryVisibility.', '');
     }
+    return null;
   }
 }
 
@@ -134,9 +134,8 @@ extension GuestAccessDisplayString on GuestAccess {
         return i18n.guestsCanJoin;
       case GuestAccess.forbidden:
         return i18n.guestsAreForbidden;
-      default:
-        return toString().replaceAll('GuestAccess.', '');
     }
+    return null;
   }
 }
 

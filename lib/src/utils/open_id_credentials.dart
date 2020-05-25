@@ -4,12 +4,6 @@ class OpenIdCredentials {
   String matrixServerName;
   num expiresIn;
 
-  OpenIdCredentials(
-      {this.accessToken,
-      this.tokenType,
-      this.matrixServerName,
-      this.expiresIn});
-
   OpenIdCredentials.fromJson(Map<String, dynamic> json) {
     accessToken = json['access_token'];
     tokenType = json['token_type'];
