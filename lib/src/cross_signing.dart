@@ -67,7 +67,7 @@ class CrossSigning {
             [signedWith.userId] = <String, dynamic>{};
       }
       signatures[key.userId][key.identifier]['signatures'][signedWith.userId]
-          [signedWith.identifier] = signature;
+          ['ed25519:${signedWith.identifier}'] = signature;
       signedKey = true;
     };
     for (final key in keys) {
