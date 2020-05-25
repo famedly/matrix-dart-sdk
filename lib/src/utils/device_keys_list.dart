@@ -15,6 +15,28 @@ class DeviceKeysList {
   Map<String, DeviceKeys> deviceKeys = {};
   Map<String, CrossSigningKey> crossSigningKeys = {};
 
+  SignedKey getKey(String id) {
+    if (deviceKeys.containsKey(id)) {
+      return deviceKeys[id];
+    }
+    if (crossSigningKeys.containsKey(id)) {
+      return crossSigningKeys[id];
+    }
+    return null;
+  }
+
+  CrossSigningKey getCrossSigningKey(String type) {
+    final keys = crossSigningKeys.values.where((k) => k.usage.contains(type));
+    if (keys.isEmpty) {
+      return null;
+    }
+    return keys.first;
+  }
+
+  CrossSigningKey get masterKey => getCrossSigningKey('master');
+  CrossSigningKey get selfSigningKey => getCrossSigningKey('self_signing');
+  CrossSigningKey get userSigningKey => getCrossSigningKey('user_signing');
+
   DeviceKeysList.fromDb(
       DbUserDeviceKey dbEntry,
       List<DbUserDeviceKeysKey> childEntries,
@@ -73,7 +95,7 @@ class DeviceKeysList {
   DeviceKeysList(this.userId);
 }
 
-abstract class _SignedKey {
+abstract class SignedKey {
   Client client;
   String userId;
   String identifier;
@@ -106,7 +128,7 @@ abstract class _SignedKey {
     }
   }
 
-  String _getSigningContent() {
+  String get signingContent {
     final data = Map<String, dynamic>.from(content);
     // some old data might have the custom verified and blocked keys
     data.remove('verified');
@@ -121,7 +143,7 @@ abstract class _SignedKey {
     final olmutil = olm.Utility();
     var valid = false;
     try {
-      olmutil.ed25519_verify(pubKey, _getSigningContent(), signature);
+      olmutil.ed25519_verify(pubKey, signingContent, signature);
       valid = true;
     } catch (_) {
       // bad signature
@@ -152,7 +174,7 @@ abstract class _SignedKey {
           continue;
         }
         final keyId = fullKeyId.substring('ed25519:'.length);
-        _SignedKey key;
+        SignedKey key;
         if (client.userDeviceKeys[otherUserId].deviceKeys.containsKey(keyId)) {
           key = client.userDeviceKeys[otherUserId].deviceKeys[keyId];
         } else if (client.userDeviceKeys[otherUserId].crossSigningKeys
@@ -204,6 +226,10 @@ abstract class _SignedKey {
     return false;
   }
 
+  Future<void> setVerified(bool newVerified);
+
+  Future<void> setBlocked(bool newBlocked);
+
   Map<String, dynamic> toJson() {
     final data = Map<String, dynamic>.from(content);
     // some old data may have the verified and blocked keys which are unneeded now
@@ -216,19 +242,21 @@ abstract class _SignedKey {
   String toString() => json.encode(toJson());
 }
 
-class CrossSigningKey extends _SignedKey {
+class CrossSigningKey extends SignedKey {
   String get publicKey => identifier;
   List<String> usage;
 
   bool get isValid =>
       userId != null && publicKey != null && keys != null && ed25519Key != null;
 
+  @override
   Future<void> setVerified(bool newVerified) {
     _verified = newVerified;
     return client.database?.setVerifiedUserCrossSigningKey(
         newVerified, client.id, userId, publicKey);
   }
 
+  @override
   Future<void> setBlocked(bool newBlocked) {
     blocked = newBlocked;
     return client.database?.setBlockedUserCrossSigningKey(
@@ -267,7 +295,7 @@ class CrossSigningKey extends _SignedKey {
   }
 }
 
-class DeviceKeys extends _SignedKey {
+class DeviceKeys extends SignedKey {
   String get deviceId => identifier;
   List<String> algorithms;
   Map<String, dynamic> unsigned;
@@ -281,12 +309,14 @@ class DeviceKeys extends _SignedKey {
       curve25519Key != null &&
       ed25519Key != null;
 
+  @override
   Future<void> setVerified(bool newVerified) {
     _verified = newVerified;
     return client.database
         ?.setVerifiedUserDeviceKey(newVerified, client.id, userId, deviceId);
   }
 
+  @override
   Future<void> setBlocked(bool newBlocked) {
     blocked = newBlocked;
     for (var room in client.rooms) {

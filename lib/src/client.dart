@@ -48,6 +48,7 @@ import 'package:pedantic/pedantic.dart';
 import 'event.dart';
 import 'room.dart';
 import 'ssss.dart';
+import 'cross_signing.dart';
 import 'sync/event_update.dart';
 import 'sync/room_update.dart';
 import 'sync/user_update.dart';
@@ -81,6 +82,7 @@ class Client {
   bool enableE2eeRecovery;
 
   SSSS ssss;
+  CrossSigning crossSigning;
 
   /// Create a client
   /// clientName = unique identifier of this client
@@ -90,6 +92,7 @@ class Client {
   Client(this.clientName,
       {this.debug = false, this.database, this.enableE2eeRecovery = false}) {
     ssss = SSSS(this);
+    crossSigning = CrossSigning(this);
     onLoginStateChanged.stream.listen((loginState) {
       print('LoginState: ${loginState.toString()}');
     });
@@ -1843,6 +1846,11 @@ class Client {
       payload['unsigned'] = unsigned;
     }
     return payload;
+  }
+
+  /// Just gets the signature of a string
+  String signString(String s) {
+    return _olmAccount.sign(s);
   }
 
   /// Checks the signature of a signed json object.

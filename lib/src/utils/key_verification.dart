@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:random_string/random_string.dart';
 import 'package:canonical_json/canonical_json.dart';
+import 'package:pedantic/pedantic.dart';
 import 'package:olm/olm.dart' as olm;
 import 'device_keys_list.dart';
 import '../client.dart';
@@ -44,6 +45,7 @@ import '../room.dart';
 
 enum KeyVerificationState {
   askAccept,
+  askSSSS,
   waitingAccept,
   askSas,
   waitingSas,
@@ -103,6 +105,8 @@ class KeyVerification {
   _KeyVerificationMethod method;
   List<String> possibleMethods;
   Map<String, dynamic> startPaylaod;
+  String _nextAction;
+  List<SignedKey> _verifiedDevices;
 
   DateTime lastActivity;
   String lastStep;
@@ -130,7 +134,7 @@ class KeyVerification {
             : null);
   }
 
-  Future<void> start() async {
+  Future<void> sendStart() async {
     if (room == null) {
       transactionId =
           randomString(512) + DateTime.now().millisecondsSinceEpoch.toString();
@@ -141,6 +145,17 @@ class KeyVerification {
     });
     startedVerification = true;
     setState(KeyVerificationState.waitingAccept);
+    lastActivity = DateTime.now();
+  }
+
+  Future<void> start() async {
+    if (client.crossSigning.enabled &&
+        !(await client.crossSigning.isCached())) {
+      setState(KeyVerificationState.askSSSS);
+      _nextAction = 'request';
+    } else {
+      await sendStart();
+    }
   }
 
   Future<void> handlePayload(String type, Map<String, dynamic> payload,
@@ -228,6 +243,29 @@ class KeyVerification {
     }
   }
 
+  Future<void> openSSSS(
+      {String password, String recoveryKey, bool skip = false}) async {
+    final next = () {
+      if (_nextAction == 'request') {
+        sendStart();
+      } else if (_nextAction == 'done') {
+        if (_verifiedDevices != null) {
+          // and now let's sign them all in the background
+          client.crossSigning.sign(_verifiedDevices);
+        }
+        setState(KeyVerificationState.done);
+      }
+    };
+    if (skip) {
+      next();
+      return;
+    }
+    final handle = client.ssss.open('m.cross_signing.user_signing');
+    await handle.unlock(password: password, recoveryKey: recoveryKey);
+    await handle.maybeCacheAll();
+    next();
+  }
+
   /// called when the user accepts an incoming verification
   Future<void> acceptVerification() async {
     if (!(await verifyLastStep(
@@ -293,8 +331,8 @@ class KeyVerification {
   }
 
   Future<void> verifyKeys(Map<String, String> keys,
-      Future<bool> Function(String, dynamic) verifier) async {
-    final verifiedDevices = <String>[];
+      Future<bool> Function(String, SignedKey) verifier) async {
+    _verifiedDevices = <SignedKey>[];
 
     if (!client.userDeviceKeys.containsKey(userId)) {
       await cancel('m.key_mismatch');
@@ -304,52 +342,47 @@ class KeyVerification {
       final keyId = entry.key;
       final verifyDeviceId = keyId.substring('ed25519:'.length);
       final keyInfo = entry.value;
-      if (client.userDeviceKeys[userId].deviceKeys
-          .containsKey(verifyDeviceId)) {
-        if (!(await verifier(keyInfo,
-            client.userDeviceKeys[userId].deviceKeys[verifyDeviceId]))) {
+      final key = client.userDeviceKeys[userId].getKey(verifyDeviceId);
+      if (key != null) {
+        if (!(await verifier(keyInfo, key))) {
           await cancel('m.key_mismatch');
           return;
         }
-        verifiedDevices.add(verifyDeviceId);
-      } else if (client.userDeviceKeys[userId].crossSigningKeys
-          .containsKey(verifyDeviceId)) {
-        // this is a cross signing key!
-        if (!(await verifier(keyInfo,
-            client.userDeviceKeys[userId].crossSigningKeys[verifyDeviceId]))) {
-          await cancel('m.key_mismatch');
-          return;
-        }
-        verifiedDevices.add(verifyDeviceId);
+        _verifiedDevices.add(key);
       }
     }
     // okay, we reached this far, so all the devices are verified!
     var verifiedMasterKey = false;
-    final verifiedUserDevices = <DeviceKeys>[];
-    for (final verifyDeviceId in verifiedDevices) {
-      if (client.userDeviceKeys[userId].deviceKeys
-          .containsKey(verifyDeviceId)) {
-        final key = client.userDeviceKeys[userId].deviceKeys[verifyDeviceId];
-        await key.setVerified(true);
-        verifiedUserDevices.add(key);
-      } else if (client.userDeviceKeys[userId].crossSigningKeys
-          .containsKey(verifyDeviceId)) {
-        final key =
-            client.userDeviceKeys[userId].crossSigningKeys[verifyDeviceId];
-        await key.setVerified(true);
-        if (key.usage.contains('master')) {
-          verifiedMasterKey = true;
-        }
+    for (final key in _verifiedDevices) {
+      await key.setVerified(true);
+      if (key is CrossSigningKey && key.usage.contains('master')) {
+        verifiedMasterKey = true;
       }
     }
-    if (verifiedMasterKey) {
-      if (userId == client.userID) {
-        // it was our own master key, let's request the cross signing keys
-        // we do it in the background, thus no await needed here
-        client.ssss.maybeRequestAll(verifiedUserDevices);
+    if (verifiedMasterKey && userId == client.userID) {
+      // it was our own master key, let's request the cross signing keys
+      // we do it in the background, thus no await needed here
+      unawaited(client.ssss.maybeRequestAll(
+          _verifiedDevices.whereType<DeviceKeys>().toList()));
+    }
+    await send('m.key.verification.done', {});
+
+    var askingSSSS = false;
+    if (client.crossSigning.enabled &&
+        client.crossSigning.signable(_verifiedDevices)) {
+      // these keys can be signed! Let's do so
+      if (await client.crossSigning.isCached()) {
+        // and now let's sign them all in the background
+        unawaited(client.crossSigning.sign(_verifiedDevices));
       } else {
-        // it was someone elses master key, let's sign it
+        askingSSSS = true;
       }
+    }
+    if (askingSSSS) {
+      setState(KeyVerificationState.askSSSS);
+      _nextAction = 'done';
+    } else {
+      setState(KeyVerificationState.done);
     }
   }
 
@@ -729,22 +762,10 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
         mac[entry.key] = entry.value;
       }
     }
-    await request.verifyKeys(mac, (String mac, dynamic device) async {
-      if (device is DeviceKeys) {
-        return mac ==
-            _calculateMac(
-                device.ed25519Key, baseInfo + 'ed25519:' + device.deviceId);
-      } else if (device is CrossSigningKey) {
-        return mac ==
-            _calculateMac(
-                device.ed25519Key, baseInfo + 'ed25519:' + device.publicKey);
-      }
-      return false;
+    await request.verifyKeys(mac, (String mac, SignedKey key) async {
+      return mac ==
+          _calculateMac(key.ed25519Key, baseInfo + 'ed25519:' + key.identifier);
     });
-    await request.send('m.key.verification.done', {});
-    if (request.state != KeyVerificationState.error) {
-      request.setState(KeyVerificationState.done);
-    }
   }
 
   String _makeCommitment(String pubKey, String canonicalJson) {

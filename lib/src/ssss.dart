@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:encrypt/encrypt.dart';
 import 'package:crypto/crypto.dart';
-import "package:base58check/base58.dart";
+import 'package:base58check/base58.dart';
 import 'package:password_hash/password_hash.dart';
 import 'package:random_string/random_string.dart';
 
@@ -21,7 +21,7 @@ const ZERO_STR =
     '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00';
 const BASE58_ALPHABET =
     '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-const base58 = const Base58Codec(BASE58_ALPHABET);
+const base58 = Base58Codec(BASE58_ALPHABET);
 const OLM_RECOVERY_KEY_PREFIX = [0x8B, 0x01];
 const OLM_PRIVATE_KEY_LENGTH = 32; // TODO: fetch from dart-olm
 const AES_BLOCKSIZE = 16;
@@ -38,7 +38,6 @@ class SSSS {
     b[0] = 1;
     final aesKey = Hmac(sha256, prk.bytes).convert(utf8.encode(name) + b);
     b[0] = 2;
-    final a = aesKey.bytes + utf8.encode(name) + b;
     final hmacKey =
         Hmac(sha256, prk.bytes).convert(aesKey.bytes + utf8.encode(name) + b);
     return _DerivedKeys(aesKey: aesKey.bytes, hmacKey: hmacKey.bytes);
@@ -239,6 +238,15 @@ class SSSS {
     }
   }
 
+  Future<void> maybeCacheAll(String keyId, Uint8List key) async {
+    for (final type in CACHE_TYPES) {
+      final secret = await getCached(type);
+      if (secret == null) {
+        await getStored(type, keyId, key);
+      }
+    }
+  }
+
   Future<void> maybeRequestAll(List<DeviceKeys> devices) async {
     for (final type in CACHE_TYPES) {
       final secret = await getCached(type);
@@ -347,8 +355,7 @@ class SSSS {
       return null;
     }
     if (data.content['encrypted'] is Map) {
-      final keys = Set<String>();
-      String maybeKey;
+      final Set keys = <String>{};
       for (final key in data.content['encrypted'].keys) {
         keys.add(key);
       }
@@ -369,9 +376,7 @@ class SSSS {
   }
 
   OpenSSSS open([String identifier]) {
-    if (identifier == null) {
-      identifier = defaultKeyId;
-    }
+    identifier ??= defaultKeyId;
     if (identifier == null) {
       throw 'Dont know what to open';
     }
@@ -453,5 +458,9 @@ class OpenSSSS {
 
   Future<String> getStored(String type) async {
     return await ssss.getStored(type, keyId, privateKey);
+  }
+
+  Future<void> maybeCacheAll() async {
+    await ssss.maybeCacheAll(keyId, privateKey);
   }
 }
