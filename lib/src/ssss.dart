@@ -24,7 +24,6 @@ const BASE58_ALPHABET =
 const base58 = Base58Codec(BASE58_ALPHABET);
 const OLM_RECOVERY_KEY_PREFIX = [0x8B, 0x01];
 const OLM_PRIVATE_KEY_LENGTH = 32; // TODO: fetch from dart-olm
-const AES_BLOCKSIZE = 16;
 
 class SSSS {
   final Client client;
@@ -56,24 +55,10 @@ class SSSS {
 
     final keys = deriveKeys(key, name);
 
-    // workaround for https://github.com/leocavalcante/encrypt/issues/136
-    var plain = Uint8List.fromList(utf8.encode(data));
-    final bytesMissing = AES_BLOCKSIZE - (plain.lengthInBytes % AES_BLOCKSIZE);
-    if (bytesMissing != AES_BLOCKSIZE) {
-      // we want to be able to modify it
-      final oldPlain = plain;
-      plain = Uint8List(plain.lengthInBytes + bytesMissing);
-      for (var i = 0; i < oldPlain.lengthInBytes; i++) {
-        plain[i] = oldPlain[i];
-      }
-    }
-    var ciphertext = AES(Key(keys.aesKey), mode: AESMode.ctr, padding: null)
+    final plain = Uint8List.fromList(utf8.encode(data));
+    final ciphertext = AES(Key(keys.aesKey), mode: AESMode.ctr, padding: null)
         .encrypt(plain, iv: IV(iv))
         .bytes;
-    if (bytesMissing != AES_BLOCKSIZE) {
-      // chop off those extra bytes again
-      ciphertext = ciphertext.sublist(0, plain.length - bytesMissing);
-    }
 
     final hmac = Hmac(sha256, keys.hmacKey).convert(ciphertext);
 
@@ -94,23 +79,9 @@ class SSSS {
       throw 'Bad MAC';
     }
     // workaround for https://github.com/leocavalcante/encrypt/issues/136
-    var cipher = base64.decode(data.ciphertext);
-    final bytesMissing = AES_BLOCKSIZE - (cipher.lengthInBytes % AES_BLOCKSIZE);
-    if (bytesMissing != AES_BLOCKSIZE) {
-      // we want to be able to modify it
-      final oldCipher = cipher;
-      cipher = Uint8List(cipher.lengthInBytes + bytesMissing);
-      for (var i = 0; i < oldCipher.lengthInBytes; i++) {
-        cipher[i] = oldCipher[i];
-      }
-    }
+    final cipher = base64.decode(data.ciphertext);
     final decipher = AES(Key(keys.aesKey), mode: AESMode.ctr, padding: null)
         .decrypt(Encrypted(cipher), iv: IV(base64.decode(data.iv)));
-    if (bytesMissing != AES_BLOCKSIZE) {
-      // chop off those extra bytes again
-      return String.fromCharCodes(
-          decipher.sublist(0, decipher.length - bytesMissing));
-    }
     return String.fromCharCodes(decipher);
   }
 

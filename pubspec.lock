@@ -210,7 +210,7 @@ packages:
       name: encrypt
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "4.0.1"
+    version: "4.0.2"
   ffi:
     dependency: transitive
     description:
