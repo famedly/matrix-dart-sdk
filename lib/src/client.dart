@@ -1574,7 +1574,7 @@ class Client {
                   deviceKeys.verified &&
                   !deviceKeys.blocked) {
                 await roomKeyRequest.forwardKey();
-              } else {
+              } else if (roomKeyRequest.requestingDevice != null) {
                 onRoomKeyRequest.add(roomKeyRequest);
               }
             }
