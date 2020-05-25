@@ -8,16 +8,6 @@ class Pusher {
   String lang;
   PusherData data;
 
-  Pusher(
-      {this.pushkey,
-      this.kind,
-      this.appId,
-      this.appDisplayName,
-      this.deviceDisplayName,
-      this.profileTag,
-      this.lang,
-      this.data});
-
   Pusher.fromJson(Map<String, dynamic> json) {
     pushkey = json['pushkey'];
     kind = json['kind'];
@@ -49,8 +39,6 @@ class PusherData {
   String url;
   String format;
 
-  PusherData({this.url, this.format});
-
   PusherData.fromJson(Map<String, dynamic> json) {
     url = json['url'];
     format = json['format'];
@@ -58,8 +46,8 @@ class PusherData {
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
-    data['url'] = url;
-    data['format'] = format;
+    if (url != null) data['url'] = url;
+    if (format != null) data['format'] = format;
     return data;
   }
 }

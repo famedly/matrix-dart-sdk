@@ -1,0 +1,213 @@
+/*
+ * Copyright (c) 2019 Zender & Kurtz GbR.
+ *
+ * Authors:
+ *   Christian Pauly <krille@famedly.com>
+ *   Marcel Radzio <mtrnord@famedly.com>
+ *
+ * This file is part of famedlysdk.
+ *
+ * famedlysdk is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * famedlysdk is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
+ */
+import 'package:famedlysdk/famedlysdk.dart';
+
+class MatrixDefaultLocalizations extends MatrixLocalizations {
+  const MatrixDefaultLocalizations();
+  @override
+  String acceptedTheInvitation(String targetName) =>
+      '$targetName accepted the invitation';
+
+  @override
+  String activatedEndToEndEncryption(String senderName) =>
+      '$senderName activated end to end encryption';
+
+  @override
+  String get anyoneCanJoin => 'Anyone can join';
+
+  @override
+  String bannedUser(String senderName, String targetName) =>
+      '$senderName banned $targetName';
+
+  @override
+  String changedTheChatAvatar(String senderName) =>
+      '$senderName changed the chat avatar';
+
+  @override
+  String changedTheChatDescriptionTo(String senderName, String content) =>
+      '$senderName changed the chat description to $content';
+
+  @override
+  String changedTheChatNameTo(String senderName, String content) =>
+      '$senderName changed the chat name to $content';
+
+  @override
+  String changedTheChatPermissions(String senderName) =>
+      '$senderName changed the chat permissions';
+
+  @override
+  String changedTheDisplaynameTo(String targetName, String newDisplayname) =>
+      '$targetName changed the displayname to $newDisplayname';
+
+  @override
+  String changedTheGuestAccessRules(String senderName) =>
+      '$senderName changed the guest access rules';
+
+  @override
+  String changedTheGuestAccessRulesTo(
+          String senderName, String localizedString) =>
+      '$senderName changed the guest access rules to $localizedString';
+
+  @override
+  String changedTheHistoryVisibility(String senderName) =>
+      '$senderName changed the history visibility';
+
+  @override
+  String changedTheHistoryVisibilityTo(
+          String senderName, String localizedString) =>
+      '$senderName changed the history visibility to $localizedString';
+
+  @override
+  String changedTheJoinRules(String senderName) =>
+      '$senderName changed the join rules';
+
+  @override
+  String changedTheJoinRulesTo(String senderName, String localizedString) =>
+      '$senderName changed the join rules to $localizedString';
+
+  @override
+  String changedTheProfileAvatar(String targetName) =>
+      '$targetName changed the profile avatar';
+
+  @override
+  String changedTheRoomAliases(String senderName) =>
+      '$senderName changed the room aliases';
+
+  @override
+  String changedTheRoomInvitationLink(String senderName) =>
+      '$senderName changed the room invitation link';
+
+  @override
+  String get channelCorruptedDecryptError =>
+      'The secure channel has been corrupted';
+
+  @override
+  String couldNotDecryptMessage(String errorText) =>
+      'Could not decrypt message: $errorText';
+
+  @override
+  String createdTheChat(String senderName) => '$senderName created the chat';
+
+  @override
+  String get emptyChat => 'Empty chat';
+
+  @override
+  String get encryptionNotEnabled => 'Encryption not enabled';
+
+  @override
+  String get fromJoining => 'From joining';
+
+  @override
+  String get fromTheInvitation => 'From the invitation';
+
+  @override
+  String groupWith(String displayname) => 'Group with $displayname';
+
+  @override
+  String get guestsAreForbidden => 'Guests are forbidden';
+
+  @override
+  String get guestsCanJoin => 'Guests can join';
+
+  @override
+  String hasWithdrawnTheInvitationFor(String senderName, String targetName) =>
+      '$senderName has withdrawn the invitation for $targetName';
+
+  @override
+  String invitedUser(String senderName, String targetName) =>
+      '$senderName has invited $targetName';
+
+  @override
+  String get invitedUsersOnly => 'Invited users only';
+
+  @override
+  String joinedTheChat(String targetName) => '$targetName joined the chat';
+
+  @override
+  String kicked(String senderName, String targetName) =>
+      '$senderName kicked $targetName';
+
+  @override
+  String kickedAndBanned(String senderName, String targetName) =>
+      '$senderName banned $targetName';
+
+  @override
+  String get needPantalaimonWarning => 'Need pantalaimon';
+
+  @override
+  String get noPermission => 'No permission';
+
+  @override
+  String redactedAnEvent(String senderName) => '$senderName redacted an event';
+
+  @override
+  String rejectedTheInvitation(String targetName) =>
+      '$targetName rejected the invitation';
+
+  @override
+  String removedBy(String calcDisplayname) => 'Removed by $calcDisplayname';
+
+  @override
+  String get roomHasBeenUpgraded => 'Room has been upgraded';
+
+  @override
+  String sentAFile(String senderName) => '$senderName sent a file';
+
+  @override
+  String sentAPicture(String senderName) => '$senderName sent a picture';
+
+  @override
+  String sentASticker(String senderName) => '$senderName sent a sticker';
+
+  @override
+  String sentAVideo(String senderName) => '$senderName sent a video';
+
+  @override
+  String sentAnAudio(String senderName) => '$senderName sent an audio';
+
+  @override
+  String sharedTheLocation(String senderName) =>
+      '$senderName shared the location';
+
+  @override
+  String unbannedUser(String senderName, String targetName) =>
+      '$senderName unbanned $targetName';
+
+  @override
+  String get unknownEncryptionAlgorithm => 'Unknown encryption algorithm';
+
+  @override
+  String unknownEvent(String typeKey) => 'Unknown event $typeKey';
+
+  @override
+  String userLeftTheChat(String targetName) => '$targetName left the chat';
+
+  @override
+  String get visibleForAllParticipants => 'Visible for all participants';
+
+  @override
+  String get visibleForEveryone => 'Visible for everyone';
+
+  @override
+  String get you => 'You';
+}

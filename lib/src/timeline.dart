@@ -97,18 +97,25 @@ class Timeline {
     sessionIdReceivedSub?.cancel();
   }
 
-  void _sessionKeyReceived(String sessionId) {
+  void _sessionKeyReceived(String sessionId) async {
     var decryptAtLeastOneEvent = false;
-    for (var i = 0; i < events.length; i++) {
-      if (events[i].type == EventTypes.Encrypted &&
-          events[i].messageType == MessageTypes.BadEncrypted &&
-          events[i].content['body'] == DecryptError.UNKNOWN_SESSION &&
-          events[i].content['session_id'] == sessionId) {
-        events[i] = events[i].decrypted;
-        if (events[i].type != EventTypes.Encrypted) {
-          decryptAtLeastOneEvent = true;
+    final decryptFn = () async {
+      for (var i = 0; i < events.length; i++) {
+        if (events[i].type == EventTypes.Encrypted &&
+            events[i].messageType == MessageTypes.BadEncrypted &&
+            events[i].content['body'] == DecryptError.UNKNOWN_SESSION &&
+            events[i].content['session_id'] == sessionId) {
+          events[i] = await events[i].decryptAndStore();
+          if (events[i].type != EventTypes.Encrypted) {
+            decryptAtLeastOneEvent = true;
+          }
         }
       }
+    };
+    if (room.client.database != null) {
+      await room.client.database.transaction(decryptFn);
+    } else {
+      await decryptFn();
     }
     if (decryptAtLeastOneEvent) onUpdate();
   }

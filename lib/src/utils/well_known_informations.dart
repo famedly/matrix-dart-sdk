@@ -3,8 +3,6 @@ class WellKnownInformations {
   MHomeserver mIdentityServer;
   Map<String, dynamic> content;
 
-  WellKnownInformations({this.mHomeserver, this.mIdentityServer});
-
   WellKnownInformations.fromJson(Map<String, dynamic> json) {
     content = json;
     mHomeserver = json['m.homeserver'] != null
@@ -18,8 +16,6 @@ class WellKnownInformations {
 
 class MHomeserver {
   String baseUrl;
-
-  MHomeserver({this.baseUrl});
 
   MHomeserver.fromJson(Map<String, dynamic> json) {
     baseUrl = json['base_url'];
