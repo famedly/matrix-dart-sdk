@@ -7,14 +7,6 @@ class PublicRoomsResponse {
   final int totalRoomCountEstimate;
   Client client;
 
-  PublicRoomsResponse({
-    this.publicRooms,
-    this.nextBatch,
-    this.prevBatch,
-    this.totalRoomCountEstimate,
-    this.client,
-  });
-
   PublicRoomsResponse.fromJson(Map<String, dynamic> json, Client client)
       : nextBatch = json['next_batch'],
         prevBatch = json['prev_batch'],
@@ -41,18 +33,6 @@ class PublicRoomEntry {
   Client client;
 
   Future<void> join() => client.joinRoomById(roomId);
-
-  PublicRoomEntry({
-    this.aliases,
-    this.avatarUrl,
-    this.guestCanJoin,
-    this.name,
-    this.numJoinedMembers,
-    this.roomId,
-    this.topic,
-    this.worldReadable,
-    this.client,
-  });
 
   PublicRoomEntry.fromJson(Map<String, dynamic> json, Client client)
       : aliases =

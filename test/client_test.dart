@@ -411,6 +411,12 @@ void main() {
       expect(openId.tokenType, 'Bearer');
       expect(openId.matrixServerName, 'example.com');
       expect(openId.expiresIn, 3600);
+      expect(openId.toJson(), {
+        'access_token': 'SomeT0kenHere',
+        'token_type': 'Bearer',
+        'matrix_server_name': 'example.com',
+        'expires_in': 3600
+      });
     });
 
     test('createRoom', () async {

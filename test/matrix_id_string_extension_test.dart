@@ -45,6 +45,8 @@ void main() {
       expect('\$test:example.com'.sigil, '\$');
       expect(mxId.localpart, 'test');
       expect(mxId.domain, 'example.com');
+      expect(mxId.equals('@Test:example.com'), true);
+      expect(mxId.equals('@test:example.org'), false);
     });
   });
 }
