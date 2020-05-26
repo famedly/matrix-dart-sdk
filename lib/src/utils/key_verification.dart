@@ -362,8 +362,8 @@ class KeyVerification {
     if (verifiedMasterKey && userId == client.userID) {
       // it was our own master key, let's request the cross signing keys
       // we do it in the background, thus no await needed here
-      unawaited(client.ssss.maybeRequestAll(
-          _verifiedDevices.whereType<DeviceKeys>().toList()));
+      unawaited(client.ssss
+          .maybeRequestAll(_verifiedDevices.whereType<DeviceKeys>().toList()));
     }
     await send('m.key.verification.done', {});
 
@@ -726,6 +726,17 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     mac[deviceKeyId] =
         _calculateMac(client.fingerprintKey, baseInfo + deviceKeyId);
     keyList.add(deviceKeyId);
+
+    final masterKey = client.userDeviceKeys.containsKey(client.userID)
+        ? client.userDeviceKeys[client.userID].masterKey
+        : null;
+    if (masterKey != null && masterKey.verified) {
+      // we have our own master key verified, let's send it!
+      final masterKeyId = 'ed25519:${masterKey.publicKey}';
+      mac[masterKeyId] =
+          _calculateMac(masterKey.publicKey, baseInfo + masterKeyId);
+      keyList.add(masterKeyId);
+    }
 
     keyList.sort();
     final keys = _calculateMac(keyList.join(','), baseInfo + 'KEY_IDS');

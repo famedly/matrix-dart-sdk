@@ -55,7 +55,9 @@ class CrossSigning {
         signatures[key.userId] = <String, dynamic>{};
       }
       if (!signatures[key.userId].containsKey(key.identifier)) {
-        signatures[key.userId][key.identifier] = key.toJson();
+        signatures[key.userId][key.identifier] =
+            Map<String, dynamic>.from(key.toJson());
+        signatures[key.userId][key.identifier].remove('signatures');
       }
       if (!signatures[key.userId][key.identifier].containsKey('signatures')) {
         signatures[key.userId][key.identifier]
@@ -79,18 +81,19 @@ class CrossSigning {
             final signature = client.signString(key.signingContent);
             addSignature(
                 key,
-                client.userDeviceKeys[client.userID].deviceKeys[client.deviceID],
+                client
+                    .userDeviceKeys[client.userID].deviceKeys[client.deviceID],
                 signature);
           }
           // we don't care about signing other cross-signing keys
         } else if (key.identifier != client.deviceID) {
           // okay, we'll sign a device key with our self signing key
-          selfSigningKey ??=
-              base64.decode(await client.ssss.getCached(SELF_SIGNING_KEY) ?? '');
+          selfSigningKey ??= base64
+              .decode(await client.ssss.getCached(SELF_SIGNING_KEY) ?? '');
           if (selfSigningKey != null) {
             final signature = _sign(key.signingContent, selfSigningKey);
-            addSignature(key, client.userDeviceKeys[client.userID].selfSigningKey,
-                signature);
+            addSignature(key,
+                client.userDeviceKeys[client.userID].selfSigningKey, signature);
           }
         }
       } else if (key is CrossSigningKey && key.usage.contains('master')) {
@@ -99,8 +102,8 @@ class CrossSigning {
             base64.decode(await client.ssss.getCached(USER_SIGNING_KEY) ?? '');
         if (userSigningKey != null) {
           final signature = _sign(key.signingContent, userSigningKey);
-          addSignature(
-              key, client.userDeviceKeys[client.userID].userSigningKey, signature);
+          addSignature(key, client.userDeviceKeys[client.userID].userSigningKey,
+              signature);
         }
       }
     }
