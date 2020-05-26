@@ -19,5 +19,7 @@ class Profile {
 
   @override
   bool operator ==(dynamic other) =>
-      avatarUrl == other.avatarUrl && displayname == other.displayname;
+      (other is Profile) &&
+      avatarUrl == other.avatarUrl &&
+      displayname == other.displayname;
 }
