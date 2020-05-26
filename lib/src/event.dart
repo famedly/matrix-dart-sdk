@@ -428,10 +428,10 @@ class Event {
   /// Trys to decrypt this event and persists it in the database afterwards
   Future<Event> decryptAndStore([String updateType = 'timeline']) async {
     final newEvent = decrypted;
-    if (newEvent.type == EventTypes.Encrypted || room.client.database == null) {
-      return newEvent; // decryption failed or we don't have a database
+    if (newEvent.type == EventTypes.Encrypted) {
+      return newEvent; // decryption failed
     }
-    await room.client.database.storeEventUpdate(
+    await room.client.database?.storeEventUpdate(
       room.client.id,
       EventUpdate(
         eventType: newEvent.typeKey,
@@ -441,6 +441,9 @@ class Event {
         sortOrder: newEvent.sortOrder,
       ),
     );
+    if (updateType != 'history') {
+      room.setState(newEvent);
+    }
     return newEvent;
   }
 
