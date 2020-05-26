@@ -148,6 +148,27 @@ class Client {
   /// Whether this client is able to encrypt and decrypt files.
   bool get fileEncryptionEnabled => true;
 
+  /// Wheather this session is unknown to others
+  bool get isUnknownSession {
+    if (!userDeviceKeys.containsKey(userID)) {
+      return true;
+    }
+    final masterKey = userDeviceKeys[userID].masterKey;
+    if (masterKey == null) {
+      return true;
+    }
+    if (!masterKey.directVerified) {
+      return true;
+    }
+    if (!userDeviceKeys[userID].deviceKeys.containsKey(deviceID)) {
+      return true;
+    }
+    if (!userDeviceKeys[userID].deviceKeys[deviceID].crossVerified) {
+      return true;
+    }
+    return false;
+  }
+
   /// Warning! This endpoint is for testing only!
   set rooms(List<Room> newList) {
     print('Warning! This endpoint is for testing only!');
@@ -1028,8 +1049,9 @@ class Client {
     } on MatrixException catch (exception) {
       onError.add(exception);
       await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
-    } catch (exception) {
+    } catch (exception, stack) {
       print('Error during processing events: ' + exception.toString());
+      print(stack);
       await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
     }
   }
@@ -1108,8 +1130,9 @@ class Client {
   }
 
   void _cleanupKeyVerificationRequests() {
+    final actions = <Future<void> Function()>[];
     for (final entry in _keyVerificationRequests.entries) {
-      (() async {
+      actions.add(() async {
         var dispose = entry.value.canceled ||
             entry.value.state == KeyVerificationState.done ||
             entry.value.state == KeyVerificationState.error;
@@ -1119,6 +1142,13 @@ class Client {
         if (dispose) {
           entry.value.dispose();
           _keyVerificationRequests.remove(entry.key);
+        }
+      });
+    }
+    if (actions.isNotEmpty) {
+      (() async {
+        for (final a in actions) {
+          await a();
         }
       })();
     }

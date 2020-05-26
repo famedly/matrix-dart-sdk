@@ -120,6 +120,7 @@ class KeyVerification {
       {this.client, this.room, this.userId, String deviceId, this.onUpdate}) {
     lastActivity = DateTime.now();
     _deviceId ??= deviceId;
+    print('Setting device id constructor: ' + _deviceId.toString());
   }
 
   void dispose() {
@@ -135,10 +136,6 @@ class KeyVerification {
   }
 
   Future<void> sendStart() async {
-    if (room == null) {
-      transactionId =
-          randomString(512) + DateTime.now().millisecondsSinceEpoch.toString();
-    }
     await send('m.key.verification.request', {
       'methods': VERIFICATION_METHODS,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
@@ -149,8 +146,12 @@ class KeyVerification {
   }
 
   Future<void> start() async {
+    if (room == null) {
+      transactionId =
+          randomString(512) + DateTime.now().millisecondsSinceEpoch.toString();
+    }
     if (client.crossSigning.enabled &&
-        !(await client.crossSigning.isCached())) {
+        !(await client.crossSigning.isCached()) && !client.isUnknownSession) {
       setState(KeyVerificationState.askSSSS);
       _nextAction = 'request';
     } else {
@@ -165,6 +166,7 @@ class KeyVerification {
       switch (type) {
         case 'm.key.verification.request':
           _deviceId ??= payload['from_device'];
+          print('Setting device id request: ' + _deviceId.toString());
           transactionId ??= eventId ?? payload['transaction_id'];
           // verify the timestamp
           final now = DateTime.now();
@@ -200,6 +202,7 @@ class KeyVerification {
           break;
         case 'm.key.verification.start':
           _deviceId ??= payload['from_device'];
+          print('Setting device id start: ' + _deviceId.toString());
           transactionId ??= eventId ?? payload['transaction_id'];
           if (!(await verifyLastStep(['m.key.verification.request', null]))) {
             return; // abort
@@ -353,6 +356,7 @@ class KeyVerification {
     }
     // okay, we reached this far, so all the devices are verified!
     var verifiedMasterKey = false;
+    final wasUnknownSession = client.isUnknownSession;
     for (final key in _verifiedDevices) {
       await key.setVerified(true);
       if (key is CrossSigningKey && key.usage.contains('master')) {
@@ -374,7 +378,7 @@ class KeyVerification {
       if (await client.crossSigning.isCached()) {
         // and now let's sign them all in the background
         unawaited(client.crossSigning.sign(_verifiedDevices));
-      } else {
+      } else if (!wasUnknownSession) {
         askingSSSS = true;
       }
     }
