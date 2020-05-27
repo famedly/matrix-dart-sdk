@@ -213,7 +213,11 @@ class SSSS {
     for (final type in CACHE_TYPES) {
       final secret = await getCached(type);
       if (secret == null) {
-        await getStored(type, keyId, key);
+        try {
+          await getStored(type, keyId, key);
+        } catch (_) {
+          // the entry wasn't stored, just ignore it
+        }
       }
     }
   }

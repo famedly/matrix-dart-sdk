@@ -168,7 +168,7 @@ abstract class SignedKey {
     return valid;
   }
 
-  bool hasValidSignatureChain({bool verfiedOnly = true, Set<String> visited}) {
+  bool hasValidSignatureChain({bool verifiedOnly = true, Set<String> visited}) {
     visited ??= <String>{};
     final setKey = '${userId};${identifier}';
     if (visited.contains(setKey)) {
@@ -228,15 +228,15 @@ abstract class SignedKey {
         }
 
         if ((verifiedOnly && key.directVerified) ||
-            (key is SignedKey &&
-                key.usage.includes('master') &&
+            (key is CrossSigningKey &&
+                key.usage.contains('master') &&
                 key.directVerified &&
                 key.userId == client.userID)) {
           return true; // we verified this key and it is valid...all checks out!
         }
         // or else we just recurse into that key and chack if it works out
         final haveChain = key.hasValidSignatureChain(
-            verfiedOnly: verfiedOnly, visited: visited);
+            verifiedOnly: verifiedOnly, visited: visited);
         if (haveChain) {
           return true;
         }

@@ -27,6 +27,31 @@ class CrossSigning {
         (await client.ssss.getCached(USER_SIGNING_KEY)) != null;
   }
 
+  Future<void> selfSign({String password, String recoveryKey}) async {
+    final handle = client.ssss.open(MASTER_KEY);
+    await handle.unlock(password: password, recoveryKey: recoveryKey);
+    await handle.maybeCacheAll();
+    final masterPrivateKey = base64.decode(await handle.getStored(MASTER_KEY));
+    final keyObj = olm.PkSigning();
+    String masterPubkey;
+    try {
+      masterPubkey = keyObj.init_with_seed(masterPrivateKey);
+    } finally {
+      keyObj.free();
+    }
+    if (masterPubkey == null || !client.userDeviceKeys.containsKey(client.userID) || !client.userDeviceKeys[client.userID].deviceKeys.containsKey(client.deviceID)) {
+      throw 'Master or user keys not found';
+    }
+    final masterKey = client.userDeviceKeys[client.userID].masterKey;
+    if (masterKey == null || masterKey.ed25519Key != masterPubkey) {
+      throw 'Master pubkey key doesn\'t match';
+    }
+    // master key is valid, set it to verified
+    masterKey.setVerified(true, false);
+    // and now sign bout our own key and our master key
+    await sign([masterKey, client.userDeviceKeys[client.userID].deviceKeys[client.deviceID]]);
+  }
+
   bool signable(List<SignedKey> keys) {
     for (final key in keys) {
       if (key is CrossSigningKey && key.usage.contains('master')) {
@@ -86,7 +111,7 @@ class CrossSigning {
                 signature);
           }
           // we don't care about signing other cross-signing keys
-        } else if (key.identifier != client.deviceID) {
+        } else {
           // okay, we'll sign a device key with our self signing key
           selfSigningKey ??= base64
               .decode(await client.ssss.getCached(SELF_SIGNING_KEY) ?? '');
@@ -119,8 +144,8 @@ class CrossSigning {
 
   String _sign(String canonicalJson, Uint8List key) {
     final keyObj = olm.PkSigning();
-    keyObj.init_with_seed(key);
     try {
+      keyObj.init_with_seed(key);
       return keyObj.sign(canonicalJson);
     } finally {
       keyObj.free();
