@@ -1466,6 +1466,7 @@ class Client {
       _updateRoomsByEventUpdate(update);
       if (event['type'].startsWith('m.key.verification.') ||
           (event['type'] == 'm.room.message' &&
+              (event['content']['msgtype'] is String) &&
               event['content']['msgtype'].startsWith('m.key.verification.'))) {
         _handleRoomKeyVerificationRequest(update);
       }
