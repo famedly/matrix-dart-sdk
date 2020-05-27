@@ -8,6 +8,8 @@ import '../database/database.dart'
 import '../event.dart';
 import 'key_verification.dart';
 
+enum UserVerifiedStatus { verified, unknown, unknownDevice }
+
 class DeviceKeysList {
   Client client;
   String userId;
@@ -25,17 +27,26 @@ class DeviceKeysList {
     return null;
   }
 
-  CrossSigningKey getCrossSigningKey(String type) {
-    final keys = crossSigningKeys.values.where((k) => k.usage.contains(type));
-    if (keys.isEmpty) {
-      return null;
-    }
-    return keys.first;
-  }
+  CrossSigningKey getCrossSigningKey(String type) => crossSigningKeys.values.firstWhere((k) => k.usage.contains(type));
 
   CrossSigningKey get masterKey => getCrossSigningKey('master');
   CrossSigningKey get selfSigningKey => getCrossSigningKey('self_signing');
   CrossSigningKey get userSigningKey => getCrossSigningKey('user_signing');
+
+  UserVerifiedStatus get verified {
+    if (masterKey == null) {
+      return UserVerifiedStatus.unknown;
+    }
+    if (masterKey.verified) {
+      for (final key in deviceKeys.values) {
+        if (!key.verified) {
+          return UserVerifiedStatus.unknownDevice;
+        }
+      }
+      return UserVerifiedStatus.verified;
+    }
+    return UserVerifiedStatus.unknown;
+  }
 
   DeviceKeysList.fromDb(
       DbUserDeviceKey dbEntry,
@@ -226,7 +237,13 @@ abstract class SignedKey {
     return false;
   }
 
-  Future<void> setVerified(bool newVerified);
+  Future<void> setVerified(bool newVerified, [bool sign = true]) {
+    _verified = newVerified;
+    if (sign && client.crossSigning.signable([this])) {
+      // sign the key!
+      client.crossSigning.sign([this]);
+    }
+  }
 
   Future<void> setBlocked(bool newBlocked);
 
@@ -250,8 +267,8 @@ class CrossSigningKey extends SignedKey {
       userId != null && publicKey != null && keys != null && ed25519Key != null;
 
   @override
-  Future<void> setVerified(bool newVerified) {
-    _verified = newVerified;
+  Future<void> setVerified(bool newVerified, [bool sign = true]) {
+    super.setVerified(newVerified, sign);
     return client.database?.setVerifiedUserCrossSigningKey(
         newVerified, client.id, userId, publicKey);
   }
@@ -310,8 +327,8 @@ class DeviceKeys extends SignedKey {
       ed25519Key != null;
 
   @override
-  Future<void> setVerified(bool newVerified) {
-    _verified = newVerified;
+  Future<void> setVerified(bool newVerified, [bool sign = true]) {
+    super.setVerified(newVerified, sign);
     return client.database
         ?.setVerifiedUserDeviceKey(newVerified, client.id, userId, deviceId);
   }

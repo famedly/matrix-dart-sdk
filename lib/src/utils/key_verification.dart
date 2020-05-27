@@ -358,7 +358,7 @@ class KeyVerification {
     var verifiedMasterKey = false;
     final wasUnknownSession = client.isUnknownSession;
     for (final key in _verifiedDevices) {
-      await key.setVerified(true);
+      await key.setVerified(true, false); // we don't want to sign the keys juuuust yet
       if (key is CrossSigningKey && key.usage.contains('master')) {
         verifiedMasterKey = true;
       }
