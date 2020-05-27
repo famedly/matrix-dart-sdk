@@ -149,25 +149,10 @@ class Client {
   bool get fileEncryptionEnabled => true;
 
   /// Wheather this session is unknown to others
-  bool get isUnknownSession {
-    if (!userDeviceKeys.containsKey(userID)) {
-      return true;
-    }
-    final masterKey = userDeviceKeys[userID].masterKey;
-    if (masterKey == null) {
-      return true;
-    }
-    if (!masterKey.directVerified) {
-      return true;
-    }
-    if (!userDeviceKeys[userID].deviceKeys.containsKey(deviceID)) {
-      return true;
-    }
-    if (!userDeviceKeys[userID].deviceKeys[deviceID].crossVerified) {
-      return true;
-    }
-    return false;
-  }
+  bool get isUnknownSession =>
+      !userDeviceKeys.containsKey(userID) ||
+      !userDeviceKeys[userID].deviceKeys.containsKey(deviceID) ||
+      !userDeviceKeys[userID].deviceKeys[deviceID].signed;
 
   /// Warning! This endpoint is for testing only!
   set rooms(List<Room> newList) {
