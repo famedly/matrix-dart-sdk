@@ -39,7 +39,10 @@ class CrossSigning {
     } finally {
       keyObj.free();
     }
-    if (masterPubkey == null || !client.userDeviceKeys.containsKey(client.userID) || !client.userDeviceKeys[client.userID].deviceKeys.containsKey(client.deviceID)) {
+    if (masterPubkey == null ||
+        !client.userDeviceKeys.containsKey(client.userID) ||
+        !client.userDeviceKeys[client.userID].deviceKeys
+            .containsKey(client.deviceID)) {
       throw 'Master or user keys not found';
     }
     final masterKey = client.userDeviceKeys[client.userID].masterKey;
@@ -49,7 +52,10 @@ class CrossSigning {
     // master key is valid, set it to verified
     masterKey.setVerified(true, false);
     // and now sign bout our own key and our master key
-    await sign([masterKey, client.userDeviceKeys[client.userID].deviceKeys[client.deviceID]]);
+    await sign([
+      masterKey,
+      client.userDeviceKeys[client.userID].deviceKeys[client.deviceID]
+    ]);
   }
 
   bool signable(List<SignedKey> keys) {
@@ -82,6 +88,7 @@ class CrossSigning {
       if (!signatures[key.userId].containsKey(key.identifier)) {
         signatures[key.userId][key.identifier] =
             Map<String, dynamic>.from(key.toJson());
+        // we don't need to send all old signatures, so let's just remove them
         signatures[key.userId][key.identifier].remove('signatures');
       }
       if (!signatures[key.userId][key.identifier].containsKey('signatures')) {

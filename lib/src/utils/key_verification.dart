@@ -83,11 +83,11 @@ List<int> _bytesToInt(Uint8List bytes, int totalBits) {
   return ret;
 }
 
-final VERIFICATION_METHODS = [_KeyVerificationMethodSas.type];
+final VERIFICATION_METHODS = ['m.sas.v1'];
 
 _KeyVerificationMethod _makeVerificationMethod(
     String type, KeyVerification request) {
-  if (type == _KeyVerificationMethodSas.type) {
+  if (type == 'm.sas.v1') {
     return _KeyVerificationMethodSas(request: request);
   }
   throw 'Unkown method type';
@@ -138,7 +138,7 @@ class KeyVerification {
   Future<void> sendStart() async {
     await send('m.key.verification.request', {
       'methods': VERIFICATION_METHODS,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      if (room == null) 'timestamp': DateTime.now().millisecondsSinceEpoch,
     });
     startedVerification = true;
     setState(KeyVerificationState.waitingAccept);
@@ -189,6 +189,7 @@ class KeyVerification {
           setState(KeyVerificationState.askAccept);
           break;
         case 'm.key.verification.ready':
+          _deviceId ??= payload['from_device'];
           possibleMethods =
               _intersect(VERIFICATION_METHODS, payload['methods']);
           if (possibleMethods.isEmpty) {
@@ -205,6 +206,32 @@ class KeyVerification {
           _deviceId ??= payload['from_device'];
           print('Setting device id start: ' + _deviceId.toString());
           transactionId ??= eventId ?? payload['transaction_id'];
+          if (method != null) {
+            print('DUPLICATE START');
+            // the other side sent us a start, even though we already sent one
+            if (payload['method'] == method.type) {
+              // same method. Determine priority
+              final ourEntry = '${client.userID}|${client.deviceID}';
+              final entries = [ourEntry, '${userId}|${deviceId}'];
+              entries.sort();
+              if (entries.first == ourEntry) {
+                // our start won, nothing to do
+                print('we won, nothing to do');
+                return;
+              } else {
+                print('They won, handing off');
+                // the other start won, let's hand off
+                startedVerification = false; // it is now as if they started
+                lastStep =
+                    'm.key.verification.request'; // we fake the last step
+                method.dispose(); // in case anything got created already
+              }
+            } else {
+              // methods don't match up, let's cancel this
+              await cancel('m.unexpected_message');
+              return;
+            }
+          }
           if (!(await verifyLastStep(['m.key.verification.request', null]))) {
             return; // abort
           }
@@ -221,6 +248,7 @@ class KeyVerification {
             startPaylaod = payload;
             setState(KeyVerificationState.askAccept);
           } else {
+            print('handling start in method.....');
             await method.handlePayload(type, payload);
           }
           break;
@@ -245,6 +273,13 @@ class KeyVerification {
         await cancel('m.invalid_message');
       }
     }
+  }
+
+  void otherDeviceAccepted() {
+    canceled = true;
+    canceledCode = 'm.accepted';
+    canceledReason = 'm.accepted';
+    setState(KeyVerificationState.error);
   }
 
   Future<void> openSSSS(
@@ -482,6 +517,9 @@ abstract class _KeyVerificationMethod {
     return false;
   }
 
+  String _type;
+  String get type => _type;
+
   Future<void> sendStart();
   void dispose() {}
 }
@@ -495,7 +533,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   _KeyVerificationMethodSas({KeyVerification request})
       : super(request: request);
 
-  static String type = 'm.sas.v1';
+  @override
+  String _type = 'm.sas.v1';
 
   String keyAgreementProtocol;
   String hash;

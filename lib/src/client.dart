@@ -1216,6 +1216,54 @@ class Client {
     }
   }
 
+  void _handleRoomKeyVerificationRequest(EventUpdate update) {
+    final event = update.content;
+    final type = event['type'].startsWith('m.key.verification.')
+        ? event['type']
+        : event['content']['msgtype'];
+    if (!type.startsWith('m.key.verification.')) {
+      return;
+    }
+    if (type == 'm.key.verification.request') {
+      event['content']['timestamp'] = event['origin_server_ts'];
+    }
+    final transactionId =
+        KeyVerification.getTransactionId(event['content']) ?? event['event_id'];
+    if (_keyVerificationRequests.containsKey(transactionId)) {
+      final req = _keyVerificationRequests[transactionId];
+      if (event['sender'] != userID) {
+        req.handlePayload(type, event['content'], event['event_id']);
+      } else if (req.userId == userID && req.deviceId == null) {
+        req
+            .handlePayload(type, event['content'], event['event_id'])
+            .then((ret) {
+          if (req.deviceId != deviceID) {
+            req.otherDeviceAccepted();
+            req.dispose();
+            _keyVerificationRequests.remove(transactionId);
+          }
+        });
+      }
+    } else if (event['sender'] != userID) {
+      final room =
+          getRoomById(update.roomID) ?? Room(id: update.roomID, client: this);
+      final newKeyRequest =
+          KeyVerification(client: this, userId: event['sender'], room: room);
+      newKeyRequest
+          .handlePayload(type, event['content'], event['event_id'])
+          .then((res) {
+        if (newKeyRequest.state != KeyVerificationState.askAccept) {
+          // something went wrong, let's just dispose the request
+          newKeyRequest.dispose();
+        } else {
+          // new request! Let's notify it and stuff
+          _keyVerificationRequests[transactionId] = newKeyRequest;
+          onKeyVerificationRequest.add(newKeyRequest);
+        }
+      });
+    }
+  }
+
   Future<void> _handleRooms(
       Map<String, dynamic> rooms, Membership membership) async {
     for (final entry in rooms.entries) {
@@ -1416,6 +1464,11 @@ class Client {
         await database.storeEventUpdate(id, update);
       }
       _updateRoomsByEventUpdate(update);
+      if (event['type'].startsWith('m.key.verification.') ||
+          (event['type'] == 'm.room.message' &&
+              event['content']['msgtype'].startsWith('m.key.verification.'))) {
+        _handleRoomKeyVerificationRequest(update);
+      }
       onEvent.add(update);
 
       if (event['type'] == 'm.call.invite') {

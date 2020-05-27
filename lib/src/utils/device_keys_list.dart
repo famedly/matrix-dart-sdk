@@ -3,6 +3,8 @@ import 'package:canonical_json/canonical_json.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../client.dart';
+import '../user.dart';
+import '../room.dart';
 import '../database/database.dart'
     show DbUserDeviceKey, DbUserDeviceKeysKey, DbUserCrossSigningKey;
 import '../event.dart';
@@ -47,6 +49,20 @@ class DeviceKeysList {
       return UserVerifiedStatus.verified;
     }
     return UserVerifiedStatus.unknown;
+  }
+
+  Future<KeyVerification> startVerification() async {
+    final roomId =
+        await User(userId, room: Room(client: client)).startDirectChat();
+    if (roomId == null) {
+      throw 'Unable to start new room';
+    }
+    final room = client.getRoomById(roomId) ?? Room(id: roomId, client: client);
+    final request = KeyVerification(client: client, room: room, userId: userId);
+    await request.start();
+    // no need to add to the request client object. As we are doing a room
+    // verification request that'll happen automatically once we know the transaction id
+    return request;
   }
 
   DeviceKeysList.fromDb(
