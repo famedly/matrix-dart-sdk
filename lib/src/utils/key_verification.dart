@@ -534,7 +534,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
       : super(request: request);
 
   @override
-  String _type = 'm.sas.v1';
+  final _type = 'm.sas.v1';
 
   String keyAgreementProtocol;
   String hash;

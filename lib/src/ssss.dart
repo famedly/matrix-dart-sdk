@@ -435,7 +435,7 @@ class OpenSSSS {
     return await ssss.getStored(type, keyId, privateKey);
   }
 
-  Future<String> store(String type, String secret) async {
+  Future<void> store(String type, String secret) async {
     await ssss.store(type, secret, keyId, privateKey);
   }
 

@@ -50,7 +50,7 @@ class CrossSigning {
       throw 'Master pubkey key doesn\'t match';
     }
     // master key is valid, set it to verified
-    masterKey.setVerified(true, false);
+    await masterKey.setVerified(true, false);
     // and now sign bout our own key and our master key
     await sign([
       masterKey,

@@ -261,7 +261,7 @@ abstract class SignedKey {
     return false;
   }
 
-  Future<void> setVerified(bool newVerified, [bool sign = true]) {
+  void setVerified(bool newVerified, [bool sign = true]) {
     _verified = newVerified;
     if (sign && client.crossSigning.signable([this])) {
       // sign the key!
@@ -269,7 +269,7 @@ abstract class SignedKey {
     }
   }
 
-  Future<void> setBlocked(bool newBlocked);
+  void setBlocked(bool newBlocked);
 
   Map<String, dynamic> toJson() {
     final data = Map<String, dynamic>.from(content);
@@ -291,16 +291,16 @@ class CrossSigningKey extends SignedKey {
       userId != null && publicKey != null && keys != null && ed25519Key != null;
 
   @override
-  Future<void> setVerified(bool newVerified, [bool sign = true]) {
+  void setVerified(bool newVerified, [bool sign = true]) {
     super.setVerified(newVerified, sign);
-    return client.database?.setVerifiedUserCrossSigningKey(
+    client.database?.setVerifiedUserCrossSigningKey(
         newVerified, client.id, userId, publicKey);
   }
 
   @override
-  Future<void> setBlocked(bool newBlocked) {
+  void setBlocked(bool newBlocked) {
     blocked = newBlocked;
-    return client.database?.setBlockedUserCrossSigningKey(
+    client.database?.setBlockedUserCrossSigningKey(
         newBlocked, client.id, userId, publicKey);
   }
 
@@ -351,14 +351,14 @@ class DeviceKeys extends SignedKey {
       ed25519Key != null;
 
   @override
-  Future<void> setVerified(bool newVerified, [bool sign = true]) {
+  void setVerified(bool newVerified, [bool sign = true]) {
     super.setVerified(newVerified, sign);
-    return client.database
+    client.database
         ?.setVerifiedUserDeviceKey(newVerified, client.id, userId, deviceId);
   }
 
   @override
-  Future<void> setBlocked(bool newBlocked) {
+  void setBlocked(bool newBlocked) {
     blocked = newBlocked;
     for (var room in client.rooms) {
       if (!room.encrypted) continue;
@@ -366,7 +366,7 @@ class DeviceKeys extends SignedKey {
         room.clearOutboundGroupSession();
       }
     }
-    return client.database
+    client.database
         ?.setBlockedUserDeviceKey(newBlocked, client.id, userId, deviceId);
   }
 

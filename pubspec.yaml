@@ -24,7 +24,7 @@ dependencies:
   olm:
     git:
       url: https://gitlab.com/famedly/libraries/dart-olm.git
-      ref: a6cde466e707b54e39df8d035a0a79714621bc0b
+      ref: 0c612a525511652a7760126b058de8c924fe8900
 
   matrix_file_e2ee:
     path: /home/sorunome/repos/famedly/matrix_file_e2ee
