@@ -151,7 +151,8 @@ class KeyVerification {
           randomString(512) + DateTime.now().millisecondsSinceEpoch.toString();
     }
     if (client.crossSigning.enabled &&
-        !(await client.crossSigning.isCached()) && !client.isUnknownSession) {
+        !(await client.crossSigning.isCached()) &&
+        !client.isUnknownSession) {
       setState(KeyVerificationState.askSSSS);
       _nextAction = 'request';
     } else {
@@ -358,7 +359,8 @@ class KeyVerification {
     var verifiedMasterKey = false;
     final wasUnknownSession = client.isUnknownSession;
     for (final key in _verifiedDevices) {
-      await key.setVerified(true, false); // we don't want to sign the keys juuuust yet
+      await key.setVerified(
+          true, false); // we don't want to sign the keys juuuust yet
       if (key is CrossSigningKey && key.usage.contains('master')) {
         verifiedMasterKey = true;
       }
