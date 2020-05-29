@@ -2,8 +2,9 @@ class ToDeviceEvent {
   String sender;
   String type;
   Map<String, dynamic> content;
+  Map<String, dynamic> encryptedContent;
 
-  ToDeviceEvent({this.sender, this.type, this.content});
+  ToDeviceEvent({this.sender, this.type, this.content, this.encryptedContent});
 
   ToDeviceEvent.fromJson(Map<String, dynamic> json) {
     sender = json['sender'];

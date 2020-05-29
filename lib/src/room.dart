@@ -835,9 +835,8 @@ class Room {
 
     // Create new transaction id
     String messageID;
-    final now = DateTime.now().millisecondsSinceEpoch;
     if (txid == null) {
-      messageID = 'msg$now';
+      messageID = client.generateUniqueTransactionId();
     } else {
       messageID = txid;
     }
@@ -872,7 +871,7 @@ class Room {
         'event_id': messageID,
         'sender': client.userID,
         'status': 0,
-        'origin_server_ts': now,
+        'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
         'content': content
       },
     );
@@ -1849,33 +1848,7 @@ class Room {
   final Set<String> _requestedSessionIds = <String>{};
 
   Future<void> requestSessionKey(String sessionId, String senderKey) async {
-    final users = await requestParticipants();
-    await client.sendToDevice(
-        [],
-        'm.room_key_request',
-        {
-          'action': 'request_cancellation',
-          'request_id': base64.encode(utf8.encode(sessionId)),
-          'requesting_device_id': client.deviceID,
-        },
-        encrypted: false,
-        toUsers: users);
-    await client.sendToDevice(
-        [],
-        'm.room_key_request',
-        {
-          'action': 'request',
-          'body': {
-            'algorithm': 'm.megolm.v1.aes-sha2',
-            'room_id': id,
-            'sender_key': senderKey,
-            'session_id': sessionId,
-          },
-          'request_id': base64.encode(utf8.encode(sessionId)),
-          'requesting_device_id': client.deviceID,
-        },
-        encrypted: false,
-        toUsers: users);
+    await client.keyManager.request(this, sessionId, senderKey);
   }
 
   Future<void> loadInboundGroupSessionKey(String sessionId,

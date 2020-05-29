@@ -29,6 +29,8 @@ import 'package:http/http.dart';
 import 'package:http/testing.dart';
 
 class FakeMatrixApi extends MockClient {
+  static final calledEndpoints = <String, List<dynamic>>{};
+
   FakeMatrixApi()
       : super((request) async {
           // Collect data from Request
@@ -53,6 +55,10 @@ class FakeMatrixApi extends MockClient {
           }
 
           // Call API
+          if (!calledEndpoints.containsKey(action)) {
+            calledEndpoints[action] = <dynamic>[];
+          }
+          calledEndpoints[action].add(data);
           if (api.containsKey(method) && api[method].containsKey(action)) {
             res = api[method][action](data);
             if (res.containsKey('errcode')) {
@@ -859,6 +865,19 @@ class FakeMatrixApi extends MockClient {
                     }
                   },
                   'unsigned': {'device_display_name': "Alice's mobile phone"}
+                },
+                'OTHERDEVICE': {
+                  'user_id': '@alice:example.com',
+                  'device_id': 'OTHERDEVICE',
+                  'algorithms': [
+                    'm.olm.v1.curve25519-aes-sha2',
+                    'm.megolm.v1.aes-sha2'
+                  ],
+                  'keys': {
+                    'curve25519:OTHERDEVICE': 'blah',
+                    'ed25519:OTHERDEVICE': 'blah'
+                  },
+                  'signatures': {},
                 }
               }
             }
