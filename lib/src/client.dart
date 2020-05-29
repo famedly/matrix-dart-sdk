@@ -35,7 +35,6 @@ import 'package:famedlysdk/src/utils/device_keys_list.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:famedlysdk/src/utils/open_id_credentials.dart';
 import 'package:famedlysdk/src/utils/public_rooms_response.dart';
-import 'package:famedlysdk/src/utils/room_key_request.dart';
 import 'package:famedlysdk/src/utils/session_key.dart';
 import 'package:famedlysdk/src/utils/to_device_event.dart';
 import 'package:famedlysdk/src/utils/turn_server_credentials.dart';
@@ -57,6 +56,7 @@ import 'database/database.dart' show Database;
 import 'utils/pusher.dart';
 import 'utils/well_known_informations.dart';
 import 'utils/key_verification.dart';
+import 'key_manager.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -76,6 +76,7 @@ class Client {
   int get id => _id;
 
   Database database;
+  KeyManager keyManager;
 
   bool enableE2eeRecovery;
 
@@ -86,6 +87,7 @@ class Client {
   /// enableE2eeRecovery: Enable additional logic to try to recover from bad e2ee sessions
   Client(this.clientName,
       {this.debug = false, this.database, this.enableE2eeRecovery = false}) {
+    keyManager = KeyManager(this);
     onLoginStateChanged.stream.listen((loginState) {
       print('LoginState: ${loginState.toString()}');
     });
@@ -154,6 +156,12 @@ class Client {
   Map<String, Presence> presences = {};
 
   int _timeoutFactor = 1;
+
+  int _transactionCounter = 0;
+  String generateUniqueTransactionId() {
+    _transactionCounter++;
+    return '${clientName}-${_transactionCounter}-${DateTime.now().millisecondsSinceEpoch}';
+  }
 
   Room getRoomByAlias(String alias) {
     for (var i = 0; i < rooms.length; i++) {
@@ -816,6 +824,11 @@ class Client {
     return _sync();
   }
 
+  /// Used for testing only
+  void setUserId(String s) {
+    _userID = s;
+  }
+
   StreamSubscription _userEventSub;
 
   /// Resets all settings and stops the synchronisation.
@@ -1156,6 +1169,10 @@ class Client {
       _updateRoomsByToDeviceEvent(toDeviceEvent);
       if (toDeviceEvent.type.startsWith('m.key.verification.')) {
         _handleToDeviceKeyVerificationRequest(toDeviceEvent);
+      }
+      if (['m.room_key_request', 'm.forwarded_room_key']
+          .contains(toDeviceEvent.type)) {
+        keyManager.handleToDeviceEvent(toDeviceEvent);
       }
       onToDeviceEvent.add(toDeviceEvent);
     }
@@ -1517,7 +1534,6 @@ class Client {
     try {
       switch (toDeviceEvent.type) {
         case 'm.room_key':
-        case 'm.forwarded_room_key':
           final roomId = toDeviceEvent.content['room_id'];
           var room = getRoomById(roomId);
           if (room == null && addToPendingIfNotFound) {
@@ -1526,8 +1542,7 @@ class Client {
           }
           room ??= Room(client: this, id: roomId);
           final String sessionId = toDeviceEvent.content['session_id'];
-          if (toDeviceEvent.type == 'm.room_key' &&
-              userDeviceKeys.containsKey(toDeviceEvent.sender) &&
+          if (userDeviceKeys.containsKey(toDeviceEvent.sender) &&
               userDeviceKeys[toDeviceEvent.sender]
                   .deviceKeys
                   .containsKey(toDeviceEvent.content['requesting_device_id'])) {
@@ -1539,46 +1554,8 @@ class Client {
           room.setInboundGroupSession(
             sessionId,
             toDeviceEvent.content,
-            forwarded: toDeviceEvent.type == 'm.forwarded_room_key',
+            forwarded: false,
           );
-          if (toDeviceEvent.type == 'm.forwarded_room_key') {
-            await sendToDevice(
-              [],
-              'm.room_key_request',
-              {
-                'action': 'request_cancellation',
-                'request_id': base64
-                    .encode(utf8.encode(toDeviceEvent.content['room_id'])),
-                'requesting_device_id': room.client.deviceID,
-              },
-              encrypted: false,
-            );
-          }
-          break;
-        case 'm.room_key_request':
-          if (!toDeviceEvent.content.containsKey('body')) break;
-          var room = getRoomById(toDeviceEvent.content['body']['room_id']);
-          DeviceKeys deviceKeys;
-          final String sessionId = toDeviceEvent.content['body']['session_id'];
-          if (userDeviceKeys.containsKey(toDeviceEvent.sender) &&
-              userDeviceKeys[toDeviceEvent.sender]
-                  .deviceKeys
-                  .containsKey(toDeviceEvent.content['requesting_device_id'])) {
-            deviceKeys = userDeviceKeys[toDeviceEvent.sender]
-                .deviceKeys[toDeviceEvent.content['requesting_device_id']];
-            await room.loadInboundGroupSessionKey(sessionId);
-            if (room.inboundGroupSessions.containsKey(sessionId)) {
-              final roomKeyRequest =
-                  RoomKeyRequest.fromToDeviceEvent(toDeviceEvent, this);
-              if (deviceKeys.userId == userID &&
-                  deviceKeys.verified &&
-                  !deviceKeys.blocked) {
-                await roomKeyRequest.forwardKey();
-              } else if (roomKeyRequest.requestingDevice != null) {
-                onRoomKeyRequest.add(roomKeyRequest);
-              }
-            }
-          }
           break;
       }
     } catch (e) {
@@ -1904,6 +1881,7 @@ class Client {
     }
     return ToDeviceEvent(
       content: plainContent['content'],
+      encryptedContent: toDeviceEvent.content,
       type: plainContent['type'],
       sender: toDeviceEvent.sender,
     );
@@ -2012,7 +1990,7 @@ class Client {
       }
     }
     if (encrypted) type = 'm.room.encrypted';
-    final messageID = 'msg${DateTime.now().millisecondsSinceEpoch}';
+    final messageID = generateUniqueTransactionId();
     await jsonRequest(
       type: HTTPType.PUT,
       action: '/client/r0/sendToDevice/$type/$messageID',
