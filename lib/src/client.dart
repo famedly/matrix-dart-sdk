@@ -64,6 +64,11 @@ enum HTTPType { GET, POST, PUT, DELETE }
 
 enum LoginState { logged, loggedOut }
 
+class GenericException implements Exception {
+  final dynamic content;
+  GenericException(this.content);
+}
+
 /// Represents a Matrix client to communicate with a
 /// [Matrix](https://matrix.org) homeserver and is the entry point for this
 /// SDK.
@@ -1158,7 +1163,7 @@ class Client {
           print(s);
           onOlmError.add(
             ToDeviceEventDecryptionError(
-              exception: e,
+              exception: (e is Exception) ? e : GenericException(e),
               stackTrace: s,
               toDeviceEvent: toDeviceEvent,
             ),
