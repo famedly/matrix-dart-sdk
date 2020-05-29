@@ -1,7 +1,14 @@
+import 'dart:core';
+import 'dart:convert';
+
+import 'package:olm/olm.dart' as olm;
+
 import 'client.dart';
 import 'room.dart';
 import 'utils/to_device_event.dart';
 import 'utils/device_keys_list.dart';
+
+const MEGOLM_KEY = 'm.megolm_backup.v1';
 
 class KeyManager {
   final Client client;
@@ -10,8 +17,109 @@ class KeyManager {
 
   KeyManager(this.client);
 
+  bool get enabled => client.accountData[MEGOLM_KEY] != null;
+
+  Future<Map<String, dynamic>> getRoomKeysInfo() async {
+    return await client.jsonRequest(
+      type: HTTPType.GET,
+      action: '/client/r0/room_keys/version',
+    );
+  }
+
+  Future<bool> isCached() async {
+    if (!enabled) {
+      return false;
+    }
+    return (await client.ssss.getCached(MEGOLM_KEY)) != null;
+  }
+
+  Future<void> loadFromResponse(Map<String, dynamic> payload) async {
+    if (!(await isCached())) {
+      return;
+    }
+    if (!(payload['rooms'] is Map)) {
+      return;
+    }
+    final privateKey = base64.decode(await client.ssss.getCached(MEGOLM_KEY));
+    final decryption = olm.PkDecryption();
+    String backupPubKey;
+    try {
+      backupPubKey = decryption.init_with_private_key(privateKey);
+    } catch (_) {
+      decryption.free();
+      rethrow;
+    }
+    if (backupPubKey == null) {
+      decryption.free();
+      return;
+    }
+    // TODO: check if pubkey is valid
+    for (final roomEntries in payload['rooms'].entries) {
+      final roomId = roomEntries.key;
+      if (!(roomEntries.value is Map) || !(roomEntries.value['sessions'] is Map)) {
+        continue;
+      }
+      for (final sessionEntries in roomEntries.value['sessions'].entries) {
+        final sessionId = sessionEntries.key;
+        final rawEncryptedSession = sessionEntries.value;
+        if (!(rawEncryptedSession is Map)) {
+          continue;
+        }
+        final firstMessageIndex = rawEncryptedSession['first_message_index'] is int ? rawEncryptedSession['first_message_index'] : null;
+        final forwardedCount = rawEncryptedSession['forwarded_count'] is int ? rawEncryptedSession['forwarded_count'] : null;
+        final isVerified = rawEncryptedSession['is_verified'] is bool ? rawEncryptedSession['is_verified'] : null;
+        final sessionData = rawEncryptedSession['session_data'];
+        if (firstMessageIndex == null || forwardedCount == null || isVerified == null || !(sessionData is Map)) {
+          continue;
+        }
+        final senderKey = sessionData['sender_key'];
+        Map<String, dynamic> decrypted;
+        try {
+          decrypted = json.decode(decryption.decrypt(sessionData['ephemeral'], sessionData['mac'], sessionData['ciphertext']));
+        } catch (err) {
+          print('[LibOlm] Error decrypting room key: ' + err.toString());
+        }
+        if (decrypted != null) {
+          decrypted['session_id'] = sessionId;
+          decrypted['room_id'] = roomId;
+          final room = client.getRoomById(roomId) ?? Room(id: roomId, client: client);
+          room.setInboundGroupSession(sessionId, decrypted, forwarded: true);
+        }
+      }
+    }
+  }
+
+  Future<void> loadSingleKey(String roomId, String sessionId) async {
+    final info = await getRoomKeysInfo();
+    final ret = await client.jsonRequest(
+      type: HTTPType.GET,
+      action: '/client/r0/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=${info['version']}',
+    );
+    await loadFromResponse({
+      'rooms': {
+        roomId: {
+          'sessions': {
+            sessionId: ret,
+          },
+        },
+      },
+    });
+  }
+
   /// Request a certain key from another device
   Future<void> request(Room room, String sessionId, String senderKey) async {
+    // let's first check our online key backup store thingy...
+    var hadPreviously = room.inboundGroupSessions.containsKey(sessionId);
+    try {
+      await loadSingleKey(room.id, sessionId);
+    } catch (err, stacktrace) {
+      print('++++++++++++++++++');
+      print(err.toString());
+      print(stacktrace);
+    }
+    if (!hadPreviously && room.inboundGroupSessions.containsKey(sessionId)) {
+      return; // we managed to load the session from online backup, no need to care about it now
+    }
     // while we just send the to-device event to '*', we still need to save the
     // devices themself to know where to send the cancel to after receiving a reply
     final devices = await room.getUserDeviceKeys();

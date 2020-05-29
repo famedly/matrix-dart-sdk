@@ -251,6 +251,7 @@ class Room {
         inboundGroupSession = null;
         print('[LibOlm] Could not create new InboundGroupSession: ' +
             e.toString());
+        return;
       }
     }
     _inboundGroupSessions[sessionId] = SessionKey(
