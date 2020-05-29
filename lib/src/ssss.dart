@@ -5,7 +5,6 @@ import 'package:encrypt/encrypt.dart';
 import 'package:crypto/crypto.dart';
 import 'package:base58check/base58.dart';
 import 'package:password_hash/password_hash.dart';
-import 'package:random_string/random_string.dart';
 
 import 'client.dart';
 import 'account_data.dart';
@@ -243,8 +242,7 @@ class SSSS {
       print('[SSSS] Warn: No devices');
       return;
     }
-    final requestId =
-        randomString(512) + DateTime.now().millisecondsSinceEpoch.toString();
+    final requestId = client.generateUniqueTransactionId();
     final request = _ShareRequest(
       requestId: requestId,
       type: type,
@@ -298,12 +296,22 @@ class SSSS {
       // receiving a secret we asked for
       print('[SSSS] Received shared secret...');
       if (event.sender != client.userID ||
-          !pendingShareRequests.containsKey(event.content['request_id'])) {
+          !pendingShareRequests.containsKey(event.content['request_id']) ||
+          event.encryptedContent == null) {
         print('[SSSS] Not by us or unknown request');
         return; // we have no idea what we just received
       }
       final request = pendingShareRequests[event.content['request_id']];
-      // alright, as we received a known request id we know that it must have originated from a trusted source
+      // alright, as we received a known request id, let's check if the sender is valid
+      final device = request.devices.firstWhere(
+          (d) =>
+              d.userId == event.sender &&
+              d.curve25519Key == event.encryptedContent['sender_key'],
+          orElse: () => null);
+      if (device == null) {
+        print('[SSSS] Someone else replied?');
+        return; // someone replied whom we didn't send the share request to
+      }
       pendingShareRequests.remove(request.requestId);
       if (!(event.content['secret'] is String)) {
         print('[SSSS] Secret wasn\'t a string');

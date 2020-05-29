@@ -261,15 +261,16 @@ abstract class SignedKey {
     return false;
   }
 
-  void setVerified(bool newVerified, [bool sign = true]) {
+  Future<void> setVerified(bool newVerified, [bool sign = true]) {
     _verified = newVerified;
     if (sign && client.crossSigning.signable([this])) {
       // sign the key!
       client.crossSigning.sign([this]);
     }
+    return Future.value();
   }
 
-  void setBlocked(bool newBlocked);
+  Future<void> setBlocked(bool newBlocked);
 
   Map<String, dynamic> toJson() {
     final data = Map<String, dynamic>.from(content);
@@ -291,16 +292,16 @@ class CrossSigningKey extends SignedKey {
       userId != null && publicKey != null && keys != null && ed25519Key != null;
 
   @override
-  void setVerified(bool newVerified, [bool sign = true]) {
+  Future<void> setVerified(bool newVerified, [bool sign = true]) {
     super.setVerified(newVerified, sign);
-    client.database?.setVerifiedUserCrossSigningKey(
+    return client.database?.setVerifiedUserCrossSigningKey(
         newVerified, client.id, userId, publicKey);
   }
 
   @override
-  void setBlocked(bool newBlocked) {
+  Future<void> setBlocked(bool newBlocked) {
     blocked = newBlocked;
-    client.database?.setBlockedUserCrossSigningKey(
+    return client.database?.setBlockedUserCrossSigningKey(
         newBlocked, client.id, userId, publicKey);
   }
 
@@ -351,14 +352,14 @@ class DeviceKeys extends SignedKey {
       ed25519Key != null;
 
   @override
-  void setVerified(bool newVerified, [bool sign = true]) {
+  Future<void> setVerified(bool newVerified, [bool sign = true]) {
     super.setVerified(newVerified, sign);
-    client.database
+    return client.database
         ?.setVerifiedUserDeviceKey(newVerified, client.id, userId, deviceId);
   }
 
   @override
-  void setBlocked(bool newBlocked) {
+  Future<void> setBlocked(bool newBlocked) {
     blocked = newBlocked;
     for (var room in client.rooms) {
       if (!room.encrypted) continue;
@@ -366,7 +367,7 @@ class DeviceKeys extends SignedKey {
         room.clearOutboundGroupSession();
       }
     }
-    client.database
+    return client.database
         ?.setBlockedUserDeviceKey(newBlocked, client.id, userId, deviceId);
   }
 

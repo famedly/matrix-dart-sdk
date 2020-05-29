@@ -136,7 +136,7 @@ void main() {
     matrix.setUserId('@alice:example.com'); // we need to pretend to be alice
     FakeMatrixApi.calledEndpoints.clear();
     await matrix.userDeviceKeys['@alice:example.com'].deviceKeys['OTHERDEVICE']
-        .setVerified(true, matrix);
+        .setVerified(true);
     // test a successful share
     var event = ToDeviceEvent(
         sender: '@alice:example.com',

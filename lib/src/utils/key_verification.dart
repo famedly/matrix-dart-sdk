@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-import 'package:random_string/random_string.dart';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:pedantic/pedantic.dart';
 import 'package:olm/olm.dart' as olm;
@@ -147,8 +146,7 @@ class KeyVerification {
 
   Future<void> start() async {
     if (room == null) {
-      transactionId =
-          randomString(512) + DateTime.now().millisecondsSinceEpoch.toString();
+      transactionId = client.generateUniqueTransactionId();
     }
     if (client.crossSigning.enabled &&
         !(await client.crossSigning.isCached()) &&
