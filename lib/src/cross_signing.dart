@@ -16,7 +16,8 @@ class CrossSigning {
     client.ssss.setValidator(SELF_SIGNING_KEY, (String secret) async {
       final keyObj = olm.PkSigning();
       try {
-        return keyObj.init_with_seed(base64.decode(secret)) == client.userDeviceKeys[client.userID].selfSigningKey.ed25519Key;
+        return keyObj.init_with_seed(base64.decode(secret)) ==
+            client.userDeviceKeys[client.userID].selfSigningKey.ed25519Key;
       } catch (_) {
         return false;
       } finally {
@@ -26,7 +27,8 @@ class CrossSigning {
     client.ssss.setValidator(USER_SIGNING_KEY, (String secret) async {
       final keyObj = olm.PkSigning();
       try {
-        return keyObj.init_with_seed(base64.decode(secret)) == client.userDeviceKeys[client.userID].userSigningKey.ed25519Key;
+        return keyObj.init_with_seed(base64.decode(secret)) ==
+            client.userDeviceKeys[client.userID].userSigningKey.ed25519Key;
       } catch (_) {
         return false;
       } finally {

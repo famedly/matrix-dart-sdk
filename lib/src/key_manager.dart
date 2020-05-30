@@ -20,7 +20,8 @@ class KeyManager {
       final keyObj = olm.PkDecryption();
       try {
         final info = await getRoomKeysInfo();
-        return keyObj.init_with_private_key(base64.decode(secret)) == info['auth_data']['public_key'];
+        return keyObj.init_with_private_key(base64.decode(secret)) ==
+            info['auth_data']['public_key'];
       } catch (_) {
         return false;
       } finally {
@@ -59,13 +60,16 @@ class KeyManager {
     try {
       backupPubKey = decryption.init_with_private_key(privateKey);
 
-      if (backupPubKey == null || !info.containsKey('auth_data') || !(info['auth_data'] is Map) || info['auth_data']['public_key'] != backupPubKey) {
-        
+      if (backupPubKey == null ||
+          !info.containsKey('auth_data') ||
+          !(info['auth_data'] is Map) ||
+          info['auth_data']['public_key'] != backupPubKey) {
         return;
       }
       for (final roomEntries in payload['rooms'].entries) {
         final roomId = roomEntries.key;
-        if (!(roomEntries.value is Map) || !(roomEntries.value['sessions'] is Map)) {
+        if (!(roomEntries.value is Map) ||
+            !(roomEntries.value['sessions'] is Map)) {
           continue;
         }
         for (final sessionEntries in roomEntries.value['sessions'].entries) {
@@ -74,24 +78,35 @@ class KeyManager {
           if (!(rawEncryptedSession is Map)) {
             continue;
           }
-          final firstMessageIndex = rawEncryptedSession['first_message_index'] is int ? rawEncryptedSession['first_message_index'] : null;
-          final forwardedCount = rawEncryptedSession['forwarded_count'] is int ? rawEncryptedSession['forwarded_count'] : null;
-          final isVerified = rawEncryptedSession['is_verified'] is bool ? rawEncryptedSession['is_verified'] : null;
+          final firstMessageIndex =
+              rawEncryptedSession['first_message_index'] is int
+                  ? rawEncryptedSession['first_message_index']
+                  : null;
+          final forwardedCount = rawEncryptedSession['forwarded_count'] is int
+              ? rawEncryptedSession['forwarded_count']
+              : null;
+          final isVerified = rawEncryptedSession['is_verified'] is bool
+              ? rawEncryptedSession['is_verified']
+              : null;
           final sessionData = rawEncryptedSession['session_data'];
-          if (firstMessageIndex == null || forwardedCount == null || isVerified == null || !(sessionData is Map)) {
+          if (firstMessageIndex == null ||
+              forwardedCount == null ||
+              isVerified == null ||
+              !(sessionData is Map)) {
             continue;
           }
-          final senderKey = sessionData['sender_key'];
           Map<String, dynamic> decrypted;
           try {
-            decrypted = json.decode(decryption.decrypt(sessionData['ephemeral'], sessionData['mac'], sessionData['ciphertext']));
+            decrypted = json.decode(decryption.decrypt(sessionData['ephemeral'],
+                sessionData['mac'], sessionData['ciphertext']));
           } catch (err) {
             print('[LibOlm] Error decrypting room key: ' + err.toString());
           }
           if (decrypted != null) {
             decrypted['session_id'] = sessionId;
             decrypted['room_id'] = roomId;
-            final room = client.getRoomById(roomId) ?? Room(id: roomId, client: client);
+            final room =
+                client.getRoomById(roomId) ?? Room(id: roomId, client: client);
             room.setInboundGroupSession(sessionId, decrypted, forwarded: true);
           }
         }
@@ -105,7 +120,8 @@ class KeyManager {
     final info = await getRoomKeysInfo();
     final ret = await client.jsonRequest(
       type: HTTPType.GET,
-      action: '/client/r0/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=${info['version']}',
+      action:
+          '/client/r0/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=${info['version']}',
     );
     await loadFromResponse({
       'rooms': {

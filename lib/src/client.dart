@@ -90,16 +90,25 @@ class Client {
   SSSS ssss;
   CrossSigning crossSigning;
 
+  Set<KeyVerificationMethod> verificationMethods;
+
   /// Create a client
   /// clientName = unique identifier of this client
   /// debug: Print debug output?
   /// database: The database instance to use
   /// enableE2eeRecovery: Enable additional logic to try to recover from bad e2ee sessions
+  /// verificationMethods: A set of all the verification methods this client can handle. Includes:
+  ///    KeyVerificationMethod.numbers: Compare numbers. Most basic, should be supported
+  ///    KeyVerificationMethod.emoji: Compare emojis
   Client(this.clientName,
-      {this.debug = false, this.database, this.enableE2eeRecovery = false}) {
+      {this.debug = false,
+      this.database,
+      this.enableE2eeRecovery = false,
+      this.verificationMethods}) {
     ssss = SSSS(this);
     keyManager = KeyManager(this);
     crossSigning = CrossSigning(this);
+    verificationMethods ??= {};
     onLoginStateChanged.stream.listen((loginState) {
       print('LoginState: ${loginState.toString()}');
     });
@@ -1209,7 +1218,8 @@ class Client {
   }
 
   void _handleToDeviceKeyVerificationRequest(ToDeviceEvent toDeviceEvent) {
-    if (!toDeviceEvent.type.startsWith('m.key.verification.')) {
+    if (!toDeviceEvent.type.startsWith('m.key.verification.') ||
+        verificationMethods.isEmpty) {
       return;
     }
     // we have key verification going on!
@@ -1243,7 +1253,8 @@ class Client {
     final type = event['type'].startsWith('m.key.verification.')
         ? event['type']
         : event['content']['msgtype'];
-    if (!type.startsWith('m.key.verification.')) {
+    if (!type.startsWith('m.key.verification.') ||
+        verificationMethods.isEmpty) {
       return;
     }
     if (type == 'm.key.verification.request') {

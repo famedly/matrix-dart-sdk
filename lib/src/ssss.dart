@@ -72,9 +72,7 @@ class SSSS {
     final keys = deriveKeys(key, name);
     final cipher = base64.decode(data.ciphertext);
     final hmac = base64
-        .encode(Hmac(sha256, keys.hmacKey)
-            .convert(cipher)
-            .bytes)
+        .encode(Hmac(sha256, keys.hmacKey).convert(cipher).bytes)
         .replaceAll(RegExp(r'=+$'), '');
     if (hmac != data.mac.replaceAll(RegExp(r'=+$'), '')) {
       throw 'Bad MAC';
@@ -322,7 +320,8 @@ class SSSS {
         return; // the secret wasn't a string....wut?
       }
       // let's validate if the secret is, well, valid
-      if (_validators.containsKey(request.type) && !(await _validators[request.type](secret))) {
+      if (_validators.containsKey(request.type) &&
+          !(await _validators[request.type](secret))) {
         print('[SSSS] The received secret was invalid');
         return; // didn't pass the validator
       }
@@ -335,8 +334,8 @@ class SSSS {
       if (client.database != null) {
         final keyId = keyIdFromType(request.type);
         if (keyId != null) {
-          await client.database.storeSSSSCache(
-              client.id, request.type, keyId, secret);
+          await client.database
+              .storeSSSSCache(client.id, request.type, keyId, secret);
         }
       }
     }

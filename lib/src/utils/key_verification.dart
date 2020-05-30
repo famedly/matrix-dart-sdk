@@ -52,6 +52,8 @@ enum KeyVerificationState {
   error
 }
 
+enum KeyVerificationMethod { emoji, numbers }
+
 List<String> _intersect(List<String> a, List<dynamic> b) {
   final res = <String>[];
   for (final v in a) {
@@ -81,8 +83,6 @@ List<int> _bytesToInt(Uint8List bytes, int totalBits) {
   }
   return ret;
 }
-
-final VERIFICATION_METHODS = ['m.sas.v1'];
 
 _KeyVerificationMethod _makeVerificationMethod(
     String type, KeyVerification request) {
@@ -134,9 +134,18 @@ class KeyVerification {
             : null);
   }
 
+  List<String> get knownVerificationMethods {
+    final methods = <String>[];
+    if (client.verificationMethods.contains(KeyVerificationMethod.numbers) ||
+        client.verificationMethods.contains(KeyVerificationMethod.emoji)) {
+      methods.add('m.sas.v1');
+    }
+    return methods;
+  }
+
   Future<void> sendStart() async {
     await send('m.key.verification.request', {
-      'methods': VERIFICATION_METHODS,
+      'methods': knownVerificationMethods,
       if (room == null) 'timestamp': DateTime.now().millisecondsSinceEpoch,
     });
     startedVerification = true;
@@ -178,7 +187,7 @@ class KeyVerification {
           }
           // verify it has a method we can use
           possibleMethods =
-              _intersect(VERIFICATION_METHODS, payload['methods']);
+              _intersect(knownVerificationMethods, payload['methods']);
           if (possibleMethods.isEmpty) {
             // reject it outright
             await cancel('m.unknown_method');
@@ -189,7 +198,7 @@ class KeyVerification {
         case 'm.key.verification.ready':
           _deviceId ??= payload['from_device'];
           possibleMethods =
-              _intersect(VERIFICATION_METHODS, payload['methods']);
+              _intersect(knownVerificationMethods, payload['methods']);
           if (possibleMethods.isEmpty) {
             // reject it outright
             await cancel('m.unknown_method');
@@ -233,7 +242,7 @@ class KeyVerification {
           if (!(await verifyLastStep(['m.key.verification.request', null]))) {
             return; // abort
           }
-          if (!VERIFICATION_METHODS.contains(payload['method'])) {
+          if (!knownVerificationMethods.contains(payload['method'])) {
             await cancel('m.unknown_method');
             return;
           }
@@ -525,7 +534,6 @@ abstract class _KeyVerificationMethod {
 const KNOWN_KEY_AGREEMENT_PROTOCOLS = ['curve25519-hkdf-sha256', 'curve25519'];
 const KNOWN_HASHES = ['sha256'];
 const KNOWN_MESSAGE_AUTHENTIFICATION_CODES = ['hkdf-hmac-sha256'];
-const KNOWN_AUTHENTICATION_TYPES = ['emoji', 'decimal'];
 
 class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   _KeyVerificationMethodSas({KeyVerification request})
@@ -547,6 +555,19 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   @override
   void dispose() {
     sas?.free();
+  }
+
+  List<String> get knownAuthentificationTypes {
+    final types = <String>[];
+    if (request.client.verificationMethods
+        .contains(KeyVerificationMethod.emoji)) {
+      types.add('emoji');
+    }
+    if (request.client.verificationMethods
+        .contains(KeyVerificationMethod.numbers)) {
+      types.add('decimal');
+    }
+    return types;
   }
 
   @override
@@ -630,7 +651,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
       'key_agreement_protocols': KNOWN_KEY_AGREEMENT_PROTOCOLS,
       'hashes': KNOWN_HASHES,
       'message_authentication_codes': KNOWN_MESSAGE_AUTHENTIFICATION_CODES,
-      'short_authentication_string': KNOWN_AUTHENTICATION_TYPES,
+      'short_authentication_string': knownAuthentificationTypes,
     };
     request.makePayload(payload);
     // We just store the canonical json in here for later verification
@@ -662,7 +683,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     }
     messageAuthenticationCode = possibleMessageAuthenticationCodes.first;
     final possibleAuthenticationTypes = _intersect(
-        KNOWN_AUTHENTICATION_TYPES, payload['short_authentication_string']);
+        knownAuthentificationTypes, payload['short_authentication_string']);
     if (possibleAuthenticationTypes.isEmpty) {
       return false;
     }
@@ -700,7 +721,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     }
     messageAuthenticationCode = payload['message_authentication_code'];
     final possibleAuthenticationTypes = _intersect(
-        KNOWN_AUTHENTICATION_TYPES, payload['short_authentication_string']);
+        knownAuthentificationTypes, payload['short_authentication_string']);
     if (possibleAuthenticationTypes.isEmpty) {
       return false;
     }

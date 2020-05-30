@@ -410,11 +410,9 @@ packages:
   olm:
     dependency: "direct main"
     description:
-      path: "."
-      ref: "0c612a525511652a7760126b058de8c924fe8900"
-      resolved-ref: "0c612a525511652a7760126b058de8c924fe8900"
-      url: "https://gitlab.com/famedly/libraries/dart-olm.git"
-    source: git
+      path: "/home/sorunome/repos/famedly/dart-olm"
+      relative: false
+    source: path
     version: "1.1.1"
   package_config:
     dependency: transitive

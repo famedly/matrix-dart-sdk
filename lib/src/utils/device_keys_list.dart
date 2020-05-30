@@ -29,8 +29,8 @@ class DeviceKeysList {
     return null;
   }
 
-  CrossSigningKey getCrossSigningKey(String type) =>
-      crossSigningKeys.values.firstWhere((k) => k.usage.contains(type), orElse: () => null);
+  CrossSigningKey getCrossSigningKey(String type) => crossSigningKeys.values
+      .firstWhere((k) => k.usage.contains(type), orElse: () => null);
 
   CrossSigningKey get masterKey => getCrossSigningKey('master');
   CrossSigningKey get selfSigningKey => getCrossSigningKey('self_signing');
