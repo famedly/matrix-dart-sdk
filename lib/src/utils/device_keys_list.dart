@@ -30,7 +30,7 @@ class DeviceKeysList {
   }
 
   CrossSigningKey getCrossSigningKey(String type) =>
-      crossSigningKeys.values.firstWhere((k) => k.usage.contains(type));
+      crossSigningKeys.values.firstWhere((k) => k.usage.contains(type), orElse: () => null);
 
   CrossSigningKey get masterKey => getCrossSigningKey('master');
   CrossSigningKey get selfSigningKey => getCrossSigningKey('self_signing');
@@ -144,17 +144,7 @@ abstract class SignedKey {
 
   bool get directVerified => _verified;
 
-  bool get crossVerified {
-    try {
-      return hasValidSignatureChain();
-    } catch (err, stacktrace) {
-      print(
-          '[Cross Signing] Error during trying to determine signature chain: ' +
-              err.toString());
-      print(stacktrace);
-      return false;
-    }
-  }
+  bool get crossVerified => hasValidSignatureChain();
 
   bool get signed => hasValidSignatureChain(verifiedOnly: false);
 
