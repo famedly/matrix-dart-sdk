@@ -12,7 +12,28 @@ const MASTER_KEY = 'm.cross_signing.master';
 
 class CrossSigning {
   final Client client;
-  CrossSigning(this.client);
+  CrossSigning(this.client) {
+    client.ssss.setValidator(SELF_SIGNING_KEY, (String secret) async {
+      final keyObj = olm.PkSigning();
+      try {
+        return keyObj.init_with_seed(base64.decode(secret)) == client.userDeviceKeys[client.userID].selfSigningKey.ed25519Key;
+      } catch (_) {
+        return false;
+      } finally {
+        keyObj.free();
+      }
+    });
+    client.ssss.setValidator(USER_SIGNING_KEY, (String secret) async {
+      final keyObj = olm.PkSigning();
+      try {
+        return keyObj.init_with_seed(base64.decode(secret)) == client.userDeviceKeys[client.userID].userSigningKey.ed25519Key;
+      } catch (_) {
+        return false;
+      } finally {
+        keyObj.free();
+      }
+    });
+  }
 
   bool get enabled =>
       client.accountData[SELF_SIGNING_KEY] != null &&

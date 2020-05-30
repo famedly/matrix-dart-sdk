@@ -97,8 +97,8 @@ class Client {
   /// enableE2eeRecovery: Enable additional logic to try to recover from bad e2ee sessions
   Client(this.clientName,
       {this.debug = false, this.database, this.enableE2eeRecovery = false}) {
-    keyManager = KeyManager(this);
     ssss = SSSS(this);
+    keyManager = KeyManager(this);
     crossSigning = CrossSigning(this);
     onLoginStateChanged.stream.listen((loginState) {
       print('LoginState: ${loginState.toString()}');

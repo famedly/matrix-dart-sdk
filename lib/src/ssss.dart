@@ -27,6 +27,7 @@ const OLM_PRIVATE_KEY_LENGTH = 32; // TODO: fetch from dart-olm
 class SSSS {
   final Client client;
   final pendingShareRequests = <String, _ShareRequest>{};
+  final _validators = <String, Future<bool> Function(String)>{};
   SSSS(this.client);
 
   static _DerivedKeys deriveKeys(Uint8List key, String name) {
@@ -117,6 +118,10 @@ class SSSS {
     final generator = PBKDF2(hashAlgorithm: sha512);
     return Uint8List.fromList(generator.generateKey(password, info.salt,
         info.iterations, info.bits != null ? info.bits / 8 : 32));
+  }
+
+  void setValidator(String type, Future<bool> Function(String) validator) {
+    _validators[type] = validator;
   }
 
   String get defaultKeyId {
@@ -312,11 +317,17 @@ class SSSS {
         print('[SSSS] Someone else replied?');
         return; // someone replied whom we didn't send the share request to
       }
-      pendingShareRequests.remove(request.requestId);
+      final secret = event.content['secret'];
       if (!(event.content['secret'] is String)) {
         print('[SSSS] Secret wasn\'t a string');
         return; // the secret wasn't a string....wut?
       }
+      // let's validate if the secret is, well, valid
+      if (_validators.containsKey(request.type) && !(await _validators[request.type](secret))) {
+        print('[SSSS] The received secret was invalid');
+        return; // didn't pass the validator
+      }
+      pendingShareRequests.remove(request.requestId);
       if (request.start.add(Duration(minutes: 15)).isBefore(DateTime.now())) {
         print('[SSSS] Request is too far in the past');
         return; // our request is more than 15min in the past...better not trust it anymore
@@ -326,7 +337,7 @@ class SSSS {
         final keyId = keyIdFromType(request.type);
         if (keyId != null) {
           await client.database.storeSSSSCache(
-              client.id, request.type, keyId, event.content['secret']);
+              client.id, request.type, keyId, secret);
         }
       }
     }
