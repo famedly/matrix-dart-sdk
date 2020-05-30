@@ -70,16 +70,15 @@ class SSSS {
 
   static String decryptAes(_Encrypted data, Uint8List key, String name) {
     final keys = deriveKeys(key, name);
+    final cipher = base64.decode(data.ciphertext);
     final hmac = base64
         .encode(Hmac(sha256, keys.hmacKey)
-            .convert(base64.decode(data.ciphertext))
+            .convert(cipher)
             .bytes)
         .replaceAll(RegExp(r'=+$'), '');
     if (hmac != data.mac.replaceAll(RegExp(r'=+$'), '')) {
       throw 'Bad MAC';
     }
-    // workaround for https://github.com/leocavalcante/encrypt/issues/136
-    final cipher = base64.decode(data.ciphertext);
     final decipher = AES(Key(keys.aesKey), mode: AESMode.ctr, padding: null)
         .decrypt(Encrypted(cipher), iv: IV(base64.decode(data.iv)));
     return String.fromCharCodes(decipher);

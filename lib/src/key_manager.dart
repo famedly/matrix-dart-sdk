@@ -63,7 +63,6 @@ class KeyManager {
         
         return;
       }
-      // TODO: check if pubkey is valid
       for (final roomEntries in payload['rooms'].entries) {
         final roomId = roomEntries.key;
         if (!(roomEntries.value is Map) || !(roomEntries.value['sessions'] is Map)) {
