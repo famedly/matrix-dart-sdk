@@ -1024,58 +1024,61 @@ class Room {
     if (onHistoryReceived != null) onHistoryReceived();
     prev_batch = resp['end'];
 
-    final dbActions = <Future<dynamic> Function()>[];
-    if (client.database != null) {
-      dbActions.add(
-          () => client.database.setRoomPrevBatch(prev_batch, client.id, id));
-    }
+    final loadFn = () async {
+      if (!(resp['chunk'] is List<dynamic> &&
+          resp['chunk'].length > 0 &&
+          resp['end'] is String)) return;
 
-    if (!(resp['chunk'] is List<dynamic> &&
-        resp['chunk'].length > 0 &&
-        resp['end'] is String)) return;
-
-    if (resp['state'] is List<dynamic>) {
-      for (final state in resp['state']) {
-        var eventUpdate = EventUpdate(
-          type: 'state',
-          roomID: id,
-          eventType: state['type'],
-          content: state,
-          sortOrder: oldSortOrder,
-        ).decrypt(this);
-        client.onEvent.add(eventUpdate);
-        if (client.database != null) {
-          dbActions.add(
-              () => client.database.storeEventUpdate(client.id, eventUpdate));
+      if (resp['state'] is List<dynamic>) {
+        for (final state in resp['state']) {
+          var eventUpdate = EventUpdate(
+            type: 'state',
+            roomID: id,
+            eventType: state['type'],
+            content: state,
+            sortOrder: oldSortOrder,
+          ).decrypt(this);
+          if (eventUpdate.eventType == 'm.room.encrypted' &&
+              client.database != null) {
+            await loadInboundGroupSessionKey(
+                state['content']['session_id'], state['content']['sender_key']);
+            eventUpdate = eventUpdate.decrypt(this);
+          }
+          client.onEvent.add(eventUpdate);
+          await client.database?.storeEventUpdate(client.id, eventUpdate);
         }
       }
-    }
 
-    List<dynamic> history = resp['chunk'];
-    for (final hist in history) {
-      var eventUpdate = EventUpdate(
-        type: 'history',
-        roomID: id,
-        eventType: hist['type'],
-        content: hist,
-        sortOrder: oldSortOrder,
-      ).decrypt(this);
-      client.onEvent.add(eventUpdate);
-      if (client.database != null) {
-        dbActions.add(
-            () => client.database.storeEventUpdate(client.id, eventUpdate));
+      List<dynamic> history = resp['chunk'];
+      for (final hist in history) {
+        var eventUpdate = EventUpdate(
+          type: 'history',
+          roomID: id,
+          eventType: hist['type'],
+          content: hist,
+          sortOrder: oldSortOrder,
+        ).decrypt(this);
+        if (eventUpdate.eventType == 'm.room.encrypted' &&
+            client.database != null) {
+          await loadInboundGroupSessionKey(
+              hist['content']['session_id'], hist['content']['sender_key']);
+          eventUpdate = eventUpdate.decrypt(this);
+        }
+        client.onEvent.add(eventUpdate);
+        await client.database?.storeEventUpdate(client.id, eventUpdate);
       }
-    }
+    };
+
     if (client.database != null) {
-      dbActions.add(
-          () => client.database.setRoomPrevBatch(resp['end'], client.id, id));
+      await client.database?.transaction(() async {
+        await client.database.setRoomPrevBatch(prev_batch, client.id, id);
+        await loadFn();
+        await client.database.setRoomPrevBatch(resp['end'], client.id, id);
+        await updateSortOrder();
+      });
+    } else {
+      await loadFn();
     }
-    await client.database?.transaction(() async {
-      for (final f in dbActions) {
-        await f();
-      }
-      await updateSortOrder();
-    });
     client.onRoomUpdate.add(
       RoomUpdate(
         id: id,
