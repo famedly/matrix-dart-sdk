@@ -648,6 +648,9 @@ class Client {
       StreamController.broadcast();
 
   /// Synchronization erros are coming here.
+  final StreamController<SyncError> onSyncError = StreamController.broadcast();
+
+  /// Synchronization erros are coming here.
   final StreamController<ToDeviceEventDecryptionError> onOlmError =
       StreamController.broadcast();
 
@@ -1034,8 +1037,11 @@ class Client {
     } on MatrixException catch (exception) {
       onError.add(exception);
       await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
-    } catch (exception) {
-      print('Error during processing events: ' + exception.toString());
+    } catch (e, s) {
+      print('Error during processing events: ' + e.toString());
+      print(s);
+      onSyncError.add(SyncError(
+          exception: e is Exception ? e : Exception(e), stackTrace: s));
       await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
     }
   }
@@ -1158,7 +1164,7 @@ class Client {
           print(s);
           onOlmError.add(
             ToDeviceEventDecryptionError(
-              exception: e,
+              exception: e is Exception ? e : Exception(e),
               stackTrace: s,
               toDeviceEvent: toDeviceEvent,
             ),
@@ -2190,4 +2196,10 @@ class Client {
     database = null;
     return;
   }
+}
+
+class SyncError {
+  Exception exception;
+  StackTrace stackTrace;
+  SyncError({this.exception, this.stackTrace});
 }
