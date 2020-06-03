@@ -1,24 +1,19 @@
 /*
- * Copyright (c) 2019 Zender & Kurtz GbR.
+ *   Famedly Matrix SDK
+ *   Copyright (C) 2019, 2020 Famedly GmbH
  *
- * Authors:
- *   Christian Pauly <krille@famedly.com>
- *   Marcel Radzio <mtrnord@famedly.com>
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
  *
- * This file is part of famedlysdk.
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
  *
- * famedlysdk is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * famedlysdk is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 import 'package:famedlysdk/src/client.dart';
@@ -27,8 +22,8 @@ import 'dart:core';
 extension MxcUriExtension on Uri {
   /// Returns a download Link to this content.
   String getDownloadLink(Client matrix) => isScheme('mxc')
-      ? matrix.homeserver != null
-          ? '${matrix.homeserver}/_matrix/media/r0/download/$host$path'
+      ? matrix.api.homeserver != null
+          ? '${matrix.api.homeserver.toString()}/_matrix/media/r0/download/$host$path'
           : ''
       : toString();
 
@@ -41,8 +36,8 @@ extension MxcUriExtension on Uri {
     final methodStr = method.toString().split('.').last;
     width = width.round();
     height = height.round();
-    return matrix.homeserver != null
-        ? '${matrix.homeserver}/_matrix/media/r0/thumbnail/$host$path?width=$width&height=$height&method=$methodStr'
+    return matrix.api.homeserver != null
+        ? '${matrix.api.homeserver.toString()}/_matrix/media/r0/thumbnail/$host$path?width=$width&height=$height&method=$methodStr'
         : '';
   }
 }

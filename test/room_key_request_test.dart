@@ -1,24 +1,19 @@
 /*
- * Copyright (c) 2019 Zender & Kurtz GbR.
+ *   Ansible inventory script used at Famedly GmbH for managing many hosts
+ *   Copyright (C) 2019, 2020 Famedly GmbH
  *
- * Authors:
- *   Christian Pauly <krille@famedly.com>
- *   Marcel Radzio <mtrnord@famedly.com>
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
  *
- * This file is part of famedlysdk.
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
  *
- * famedlysdk is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * famedlysdk is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 import 'dart:convert';
@@ -62,9 +57,16 @@ void main() {
     expect(toDeviceEvent.content, rawJson['content']);
     expect(toDeviceEvent.sender, rawJson['sender']);
     expect(toDeviceEvent.type, rawJson['type']);
+    expect(
+      ToDeviceEventDecryptionError(
+              exception: Exception('test'),
+              stackTrace: null,
+              toDeviceEvent: toDeviceEvent)
+          .sender,
+      rawJson['sender'],
+    );
 
-    var matrix = Client('testclient', debug: true);
-    matrix.httpClient = FakeMatrixApi();
+    var matrix = Client('testclient', debug: true, httpClient: FakeMatrixApi());
     matrix.database = getDatabase();
     await matrix.checkServer('https://fakeServer.notExisting');
     await matrix.login('test', '1234');
@@ -91,8 +93,7 @@ void main() {
     await matrix.dispose(closeDatabase: true);
   });
   test('Create Request', () async {
-    var matrix = Client('testclient', debug: true);
-    matrix.httpClient = FakeMatrixApi();
+    var matrix = Client('testclient', debug: true, httpClient: FakeMatrixApi());
     matrix.database = getDatabase();
     await matrix.checkServer('https://fakeServer.notExisting');
     await matrix.login('test', '1234');
@@ -124,8 +125,7 @@ void main() {
   });
   final validSessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
   test('Reply To Request', () async {
-    var matrix = Client('testclient', debug: true);
-    matrix.httpClient = FakeMatrixApi();
+    var matrix = Client('testclient', debug: true, httpClient: FakeMatrixApi());
     matrix.database = getDatabase();
     await matrix.checkServer('https://fakeServer.notExisting');
     await matrix.login('test', '1234');
@@ -136,7 +136,11 @@ void main() {
     matrix.setUserId('@alice:example.com'); // we need to pretend to be alice
     FakeMatrixApi.calledEndpoints.clear();
     await matrix.userDeviceKeys['@alice:example.com'].deviceKeys['OTHERDEVICE']
+        .setBlocked(false, matrix);
+    await matrix.userDeviceKeys['@alice:example.com'].deviceKeys['OTHERDEVICE']
         .setVerified(true, matrix);
+    await matrix.userDeviceKeys['@alice:example.com'].deviceKeys['OTHERDEVICE']
+        .startVerification(matrix);
     // test a successful share
     var event = ToDeviceEvent(
         sender: '@alice:example.com',
@@ -268,8 +272,7 @@ void main() {
     await matrix.dispose(closeDatabase: true);
   });
   test('Receive shared keys', () async {
-    var matrix = Client('testclient', debug: true);
-    matrix.httpClient = FakeMatrixApi();
+    var matrix = Client('testclient', debug: true, httpClient: FakeMatrixApi());
     matrix.database = getDatabase();
     await matrix.checkServer('https://fakeServer.notExisting');
     await matrix.login('test', '1234');

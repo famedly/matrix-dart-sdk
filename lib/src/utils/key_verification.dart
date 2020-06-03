@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:random_string/random_string.dart';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:olm/olm.dart' as olm;
+import '../../matrix_api.dart';
 import 'device_keys_list.dart';
 import '../client.dart';
 import '../room.dart';
@@ -378,7 +379,7 @@ class KeyVerification {
         payload['to'] = userId;
         payload['body'] =
             'Attempting verification request. (${type}) Apparently your client doesn\'t support this';
-        type = 'm.room.message';
+        type = EventTypes.Message;
       }
       final newTransactionId = await room.sendEvent(payload, type: type);
       if (transactionId == null) {
