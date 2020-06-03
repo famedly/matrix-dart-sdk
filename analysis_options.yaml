@@ -5,5 +5,7 @@ linter:
     - camel_case_types
 
 analyzer:
+  errors:
+    todo: ignore
 #   exclude:
 #     - path/to/excluded/files/**

@@ -1,31 +1,25 @@
 /*
- * Copyright (c) 2019 Zender & Kurtz GbR.
+ *   Famedly Matrix SDK
+ *   Copyright (C) 2019, 2020 Famedly GmbH
  *
- * Authors:
- *   Christian Pauly <krille@famedly.com>
- *   Marcel Radzio <mtrnord@famedly.com>
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
  *
- * This file is part of famedlysdk.
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
  *
- * famedlysdk is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * famedlysdk is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 import 'package:famedlysdk/famedlysdk.dart';
+import 'package:famedlysdk/matrix_api.dart';
 import 'package:famedlysdk/src/room.dart';
 import 'package:famedlysdk/src/event.dart';
-
-enum Membership { join, invite, leave, ban }
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
 class User extends Event {
@@ -43,10 +37,10 @@ class User extends Event {
     return User.fromState(
       stateKey: id,
       content: content,
-      typeKey: 'm.room.member',
+      typeKey: EventTypes.RoomMember,
       roomId: room?.id,
       room: room,
-      time: DateTime.now(),
+      originServerTs: DateTime.now(),
     );
   }
 
@@ -58,18 +52,18 @@ class User extends Event {
       String eventId,
       String roomId,
       String senderId,
-      DateTime time,
+      DateTime originServerTs,
       dynamic unsigned,
       Room room})
       : super(
             stateKey: stateKey,
             prevContent: prevContent,
             content: content,
-            typeKey: typeKey,
+            type: typeKey,
             eventId: eventId,
             roomId: roomId,
             senderId: senderId,
-            time: time,
+            originServerTs: originServerTs,
             unsigned: unsigned,
             room: room);
 
@@ -142,16 +136,11 @@ class User extends Event {
     if (roomID != null) return roomID;
 
     // Start a new direct chat
-    final dynamic resp = await room.client.jsonRequest(
-        type: HTTPType.POST,
-        action: '/client/r0/createRoom',
-        data: {
-          'invite': [id],
-          'is_direct': true,
-          'preset': 'trusted_private_chat'
-        });
-
-    final String newRoomID = resp['room_id'];
+    final newRoomID = await room.client.api.createRoom(
+      invite: [id],
+      isDirect: true,
+      preset: CreateRoomPreset.trusted_private_chat,
+    );
 
     if (newRoomID == null) return newRoomID;
 

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:famedlysdk/matrix_api.dart';
+
 import '../client.dart';
 import '../database/database.dart' show DbUserDeviceKey, DbUserDeviceKeysKey;
 import '../event.dart';
@@ -55,13 +57,7 @@ class DeviceKeysList {
   DeviceKeysList(this.userId);
 }
 
-class DeviceKeys {
-  String userId;
-  String deviceId;
-  List<String> algorithms;
-  Map<String, String> keys;
-  Map<String, dynamic> signatures;
-  Map<String, dynamic> unsigned;
+class DeviceKeys extends MatrixDeviceKeys {
   bool verified;
   bool blocked;
 
@@ -93,63 +89,68 @@ class DeviceKeys {
   }
 
   DeviceKeys({
-    this.userId,
-    this.deviceId,
-    this.algorithms,
-    this.keys,
-    this.signatures,
-    this.unsigned,
+    String userId,
+    String deviceId,
+    List<String> algorithms,
+    Map<String, String> keys,
+    Map<String, Map<String, String>> signatures,
+    Map<String, dynamic> unsigned,
     this.verified,
     this.blocked,
-  });
+  }) : super(userId, deviceId, algorithms, keys, signatures,
+            unsigned: unsigned);
 
-  DeviceKeys.fromDb(DbUserDeviceKeysKey dbEntry) {
+  factory DeviceKeys.fromMatrixDeviceKeys(MatrixDeviceKeys matrixDeviceKeys) =>
+      DeviceKeys(
+        userId: matrixDeviceKeys.userId,
+        deviceId: matrixDeviceKeys.deviceId,
+        algorithms: matrixDeviceKeys.algorithms,
+        keys: matrixDeviceKeys.keys,
+        signatures: matrixDeviceKeys.signatures,
+        unsigned: matrixDeviceKeys.unsigned,
+        verified: false,
+        blocked: false,
+      );
+
+  static DeviceKeys fromDb(DbUserDeviceKeysKey dbEntry) {
+    var deviceKeys = DeviceKeys();
     final content = Event.getMapFromPayload(dbEntry.content);
-    userId = dbEntry.userId;
-    deviceId = dbEntry.deviceId;
-    algorithms = content['algorithms'].cast<String>();
-    keys = content['keys'] != null
+    deviceKeys.userId = dbEntry.userId;
+    deviceKeys.deviceId = dbEntry.deviceId;
+    deviceKeys.algorithms = content['algorithms'].cast<String>();
+    deviceKeys.keys = content['keys'] != null
         ? Map<String, String>.from(content['keys'])
         : null;
-    signatures = content['signatures'] != null
-        ? Map<String, dynamic>.from(content['signatures'])
+    deviceKeys.signatures = content['signatures'] != null
+        ? Map<String, Map<String, String>>.from((content['signatures'] as Map)
+            .map((k, v) => MapEntry(k, Map<String, String>.from(v))))
         : null;
-    unsigned = content['unsigned'] != null
+    deviceKeys.unsigned = content['unsigned'] != null
         ? Map<String, dynamic>.from(content['unsigned'])
         : null;
-    verified = dbEntry.verified;
-    blocked = dbEntry.blocked;
+    deviceKeys.verified = dbEntry.verified;
+    deviceKeys.blocked = dbEntry.blocked;
+    return deviceKeys;
   }
 
-  DeviceKeys.fromJson(Map<String, dynamic> json) {
-    userId = json['user_id'];
-    deviceId = json['device_id'];
-    algorithms = json['algorithms'].cast<String>();
-    keys = json['keys'] != null ? Map<String, String>.from(json['keys']) : null;
-    signatures = json['signatures'] != null
-        ? Map<String, dynamic>.from(json['signatures'])
-        : null;
-    unsigned = json['unsigned'] != null
-        ? Map<String, dynamic>.from(json['unsigned'])
-        : null;
-    verified = json['verified'] ?? false;
-    blocked = json['blocked'] ?? false;
+  static DeviceKeys fromJson(Map<String, dynamic> json) {
+    var matrixDeviceKeys = MatrixDeviceKeys.fromJson(json);
+    var deviceKeys = DeviceKeys(
+      userId: matrixDeviceKeys.userId,
+      deviceId: matrixDeviceKeys.deviceId,
+      algorithms: matrixDeviceKeys.algorithms,
+      keys: matrixDeviceKeys.keys,
+      signatures: matrixDeviceKeys.signatures,
+      unsigned: matrixDeviceKeys.unsigned,
+    );
+    deviceKeys.verified = json['verified'] ?? false;
+    deviceKeys.blocked = json['blocked'] ?? false;
+    return deviceKeys;
   }
 
+  @override
   Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    data['user_id'] = userId;
-    data['device_id'] = deviceId;
-    data['algorithms'] = algorithms;
-    if (keys != null) {
-      data['keys'] = keys;
-    }
-    if (signatures != null) {
-      data['signatures'] = signatures;
-    }
-    if (unsigned != null) {
-      data['unsigned'] = unsigned;
-    }
+    final data = super.toJson();
     data['verified'] = verified;
     data['blocked'] = blocked;
     return data;

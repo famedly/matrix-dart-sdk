@@ -1,28 +1,27 @@
-class ToDeviceEvent {
-  String sender;
-  String type;
-  Map<String, dynamic> content;
+import 'package:famedlysdk/matrix_api.dart';
+
+class ToDeviceEvent extends BasicEventWithSender {
   Map<String, dynamic> encryptedContent;
 
-  ToDeviceEvent({this.sender, this.type, this.content, this.encryptedContent});
+  String get sender => senderId;
+  set sender(String sender) => senderId = sender;
 
-  ToDeviceEvent.fromJson(Map<String, dynamic> json) {
-    sender = json['sender'];
-    type = json['type'];
-    content = json['content'] != null
-        ? Map<String, dynamic>.from(json['content'])
-        : null;
+  ToDeviceEvent({
+    String sender,
+    String type,
+    Map<String, dynamic> content,
+    this.encryptedContent,
+  }) {
+    senderId = sender;
+    this.type = type;
+    this.content = content;
   }
 
-  Map<String, dynamic> toJson() {
-    var map = <String, dynamic>{};
-    final data = map;
-    data['sender'] = sender;
-    data['type'] = type;
-    if (content != null) {
-      data['content'] = content;
-    }
-    return data;
+  ToDeviceEvent.fromJson(Map<String, dynamic> json) {
+    final event = BasicEventWithSender.fromJson(json);
+    senderId = event.senderId;
+    type = event.type;
+    content = event.content;
   }
 }
 
@@ -34,7 +33,7 @@ class ToDeviceEventDecryptionError extends ToDeviceEvent {
     this.exception,
     this.stackTrace,
   }) : super(
-          sender: toDeviceEvent.sender,
+          sender: toDeviceEvent.senderId,
           content: toDeviceEvent.content,
           type: toDeviceEvent.type,
         );

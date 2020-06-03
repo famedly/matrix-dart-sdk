@@ -1,24 +1,19 @@
 /*
- * Copyright (c) 2019 Zender & Kurtz GbR.
+ *   Ansible inventory script used at Famedly GmbH for managing many hosts
+ *   Copyright (C) 2019, 2020 Famedly GmbH
  *
- * Authors:
- *   Christian Pauly <krille@famedly.com>
- *   Marcel Radzio <mtrnord@famedly.com>
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
  *
- * This file is part of famedlysdk.
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
  *
- * famedlysdk is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * famedlysdk is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 import 'dart:async';
@@ -26,14 +21,10 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/account_data.dart';
+import 'package:famedlysdk/matrix_api.dart';
 import 'package:famedlysdk/src/client.dart';
-import 'package:famedlysdk/src/presence.dart';
-import 'package:famedlysdk/src/user.dart';
-import 'package:famedlysdk/src/sync/event_update.dart';
-import 'package:famedlysdk/src/sync/room_update.dart';
-import 'package:famedlysdk/src/sync/user_update.dart';
-import 'package:famedlysdk/src/utils/matrix_exception.dart';
+import 'package:famedlysdk/src/utils/event_update.dart';
+import 'package:famedlysdk/src/utils/room_update.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
@@ -46,7 +37,6 @@ void main() {
 
   Future<List<RoomUpdate>> roomUpdateListFuture;
   Future<List<EventUpdate>> eventUpdateListFuture;
-  Future<List<UserUpdate>> userUpdateListFuture;
   Future<List<ToDeviceEvent>> toDeviceUpdateListFuture;
 
   const pickledOlmAccount =
@@ -58,12 +48,10 @@ void main() {
   group('FluffyMatrix', () {
     /// Check if all Elements get created
 
-    matrix = Client('testclient', debug: true);
-    matrix.httpClient = FakeMatrixApi();
+    matrix = Client('testclient', debug: true, httpClient: FakeMatrixApi());
 
     roomUpdateListFuture = matrix.onRoomUpdate.stream.toList();
     eventUpdateListFuture = matrix.onEvent.stream.toList();
-    userUpdateListFuture = matrix.onUserEvent.stream.toList();
     toDeviceUpdateListFuture = matrix.onToDeviceEvent.stream.toList();
     var olmEnabled = true;
     try {
@@ -81,11 +69,11 @@ void main() {
       matrix.onPresence.stream.listen((Presence data) {
         presenceCounter++;
       });
-      matrix.onAccountData.stream.listen((AccountData data) {
+      matrix.onAccountData.stream.listen((BasicEvent data) {
         accountDataCounter++;
       });
 
-      expect(matrix.homeserver, null);
+      expect(matrix.api.homeserver, null);
 
       try {
         await matrix.checkServer('https://fakeserver.wrongaddress');
@@ -93,61 +81,51 @@ void main() {
         expect(exception != null, true);
       }
       await matrix.checkServer('https://fakeserver.notexisting');
-      expect(matrix.homeserver, 'https://fakeserver.notexisting');
+      expect(
+          matrix.api.homeserver.toString(), 'https://fakeserver.notexisting');
 
-      final resp = await matrix
-          .jsonRequest(type: HTTPType.POST, action: '/client/r0/login', data: {
-        'type': 'm.login.password',
-        'user': 'test',
-        'password': '1234',
-        'initial_device_display_name': 'Fluffy Matrix Client'
-      });
+      final resp = await matrix.api.login(
+        type: 'm.login.password',
+        user: 'test',
+        password: '1234',
+        initialDeviceDisplayName: 'Fluffy Matrix Client',
+      );
 
-      final available = await matrix.usernameAvailable('testuser');
+      final available = await matrix.api.usernameAvailable('testuser');
       expect(available, true);
-
-      Map registerResponse = await matrix.register(username: 'testuser');
-      expect(registerResponse['user_id'], '@testuser:example.com');
-      registerResponse =
-          await matrix.register(username: 'testuser', kind: 'user');
-      expect(registerResponse['user_id'], '@testuser:example.com');
-      registerResponse =
-          await matrix.register(username: 'testuser', kind: 'guest');
-      expect(registerResponse['user_id'], '@testuser:example.com');
 
       var loginStateFuture = matrix.onLoginStateChanged.stream.first;
       var firstSyncFuture = matrix.onFirstSync.stream.first;
       var syncFuture = matrix.onSync.stream.first;
 
       matrix.connect(
-        newToken: resp['access_token'],
-        newUserID: resp['user_id'],
-        newHomeserver: matrix.homeserver,
+        newToken: resp.accessToken,
+        newUserID: resp.userId,
+        newHomeserver: matrix.api.homeserver,
         newDeviceName: 'Text Matrix Client',
-        newDeviceID: resp['device_id'],
+        newDeviceID: resp.deviceId,
         newOlmAccount: pickledOlmAccount,
       );
 
       await Future.delayed(Duration(milliseconds: 50));
 
-      expect(matrix.accessToken == resp['access_token'], true);
+      expect(matrix.api.accessToken == resp.accessToken, true);
       expect(matrix.deviceName == 'Text Matrix Client', true);
-      expect(matrix.deviceID == resp['device_id'], true);
-      expect(matrix.userID == resp['user_id'], true);
+      expect(matrix.deviceID == resp.deviceId, true);
+      expect(matrix.userID == resp.userId, true);
 
       var loginState = await loginStateFuture;
       var firstSync = await firstSyncFuture;
-      dynamic sync = await syncFuture;
+      var sync = await syncFuture;
 
       expect(loginState, LoginState.logged);
       expect(firstSync, true);
       expect(matrix.encryptionEnabled, olmEnabled);
       if (olmEnabled) {
-        expect(matrix.pickledOlmAccount, pickledOlmAccount);
         expect(matrix.identityKey, identityKey);
         expect(matrix.fingerprintKey, fingerprintKey);
       }
-      expect(sync['next_batch'] == matrix.prevBatch, true);
+      expect(sync.nextBatch == matrix.prevBatch, true);
 
       expect(matrix.accountData.length, 3);
       expect(matrix.getDirectChatFromUserId('@bob:example.com'),
@@ -192,14 +170,14 @@ void main() {
       expect(matrix.rooms[1].canonicalAlias,
           "#famedlyContactDiscovery:${matrix.userID.split(":")[1]}");
       final contacts = await matrix.loadFamedlyContacts();
-      expect(contacts.length, 1);
+      expect(contacts.length, 2);
       expect(contacts[0].senderId, '@alice:example.com');
-      expect(
-          matrix.presences['@alice:example.com'].presence, PresenceType.online);
+      expect(matrix.presences['@alice:example.com'].presence.presence,
+          PresenceType.online);
       expect(presenceCounter, 1);
       expect(accountDataCounter, 3);
       await Future.delayed(Duration(milliseconds: 50));
-      expect(matrix.userDeviceKeys.length, 2);
+      expect(matrix.userDeviceKeys.length, 3);
       expect(matrix.userDeviceKeys['@alice:example.com'].outdated, false);
       expect(matrix.userDeviceKeys['@alice:example.com'].deviceKeys.length, 2);
       expect(
@@ -207,7 +185,7 @@ void main() {
               .verified,
           false);
 
-      await matrix.handleSync({
+      await matrix.handleSync(SyncUpdate.fromJson({
         'device_lists': {
           'changed': [
             '@alice:example.com',
@@ -216,12 +194,12 @@ void main() {
             '@bob:example.com',
           ],
         }
-      });
+      }));
       await Future.delayed(Duration(milliseconds: 50));
       expect(matrix.userDeviceKeys.length, 2);
       expect(matrix.userDeviceKeys['@alice:example.com'].outdated, true);
 
-      await matrix.handleSync({
+      await matrix.handleSync(SyncUpdate.fromJson({
         'rooms': {
           'join': {
             '!726s6s6q:example.com': {
@@ -240,7 +218,7 @@ void main() {
             }
           }
         }
-      });
+      }));
       await Future.delayed(Duration(milliseconds: 50));
 
       expect(
@@ -253,27 +231,15 @@ void main() {
       expect(altContacts[0].senderId, '@alice:example.com');
     });
 
-    test('Try to get ErrorResponse', () async {
-      MatrixException expectedException;
-      try {
-        await matrix.jsonRequest(
-            type: HTTPType.PUT, action: '/non/existing/path');
-      } on MatrixException catch (exception) {
-        expectedException = exception;
-      }
-      expect(expectedException.error, MatrixError.M_UNRECOGNIZED);
-    });
-
     test('Logout', () async {
-      await matrix.jsonRequest(
-          type: HTTPType.POST, action: '/client/r0/logout');
+      await matrix.api.logout();
 
       var loginStateFuture = matrix.onLoginStateChanged.stream.first;
 
       matrix.clear();
 
-      expect(matrix.accessToken == null, true);
-      expect(matrix.homeserver == null, true);
+      expect(matrix.api.accessToken == null, true);
+      expect(matrix.api.homeserver == null, true);
       expect(matrix.userID == null, true);
       expect(matrix.deviceID == null, true);
       expect(matrix.deviceName == null, true);
@@ -288,7 +254,7 @@ void main() {
 
       var roomUpdateList = await roomUpdateListFuture;
 
-      expect(roomUpdateList.length, 3);
+      expect(roomUpdateList.length, 4);
 
       expect(roomUpdateList[0].id == '!726s6s6q:example.com', true);
       expect(roomUpdateList[0].membership == Membership.join, true);
@@ -361,23 +327,6 @@ void main() {
       expect(eventUpdateList[11].type, 'invite_state');
     });
 
-    test('User Update Test', () async {
-      await matrix.onUserEvent.close();
-
-      var eventUpdateList = await userUpdateListFuture;
-
-      expect(eventUpdateList.length, 4);
-
-      expect(eventUpdateList[0].eventType, 'm.presence');
-      expect(eventUpdateList[0].type, 'presence');
-
-      expect(eventUpdateList[1].eventType, 'm.push_rules');
-      expect(eventUpdateList[1].type, 'account_data');
-
-      expect(eventUpdateList[2].eventType, 'org.example.custom.config');
-      expect(eventUpdateList[2].type, 'account_data');
-    });
-
     test('To Device Update Test', () async {
       await matrix.onToDeviceEvent.close();
 
@@ -390,12 +339,10 @@ void main() {
     });
 
     test('Login', () async {
-      matrix = Client('testclient', debug: true);
-      matrix.httpClient = FakeMatrixApi();
+      matrix = Client('testclient', debug: true, httpClient: FakeMatrixApi());
 
       roomUpdateListFuture = matrix.onRoomUpdate.stream.toList();
       eventUpdateListFuture = matrix.onEvent.stream.toList();
-      userUpdateListFuture = matrix.onUserEvent.stream.toList();
       final checkResp =
           await matrix.checkServer('https://fakeServer.notExisting');
 
@@ -405,55 +352,14 @@ void main() {
       expect(loginResp, true);
     });
 
-    test('createRoom', () async {
-      final openId = await matrix.requestOpenIdCredentials();
-      expect(openId.accessToken, 'SomeT0kenHere');
-      expect(openId.tokenType, 'Bearer');
-      expect(openId.matrixServerName, 'example.com');
-      expect(openId.expiresIn, 3600);
-      expect(openId.toJson(), {
-        'access_token': 'SomeT0kenHere',
-        'token_type': 'Bearer',
-        'matrix_server_name': 'example.com',
-        'expires_in': 3600
-      });
-    });
-
-    test('createRoom', () async {
-      final users = [
-        User('@alice:fakeServer.notExisting'),
-        User('@bob:fakeServer.notExisting')
-      ];
-      final newID = await matrix.createRoom(invite: users);
-      expect(newID, '!1234:fakeServer.notExisting');
-    });
-
     test('setAvatar', () async {
       final testFile =
           MatrixFile(bytes: Uint8List(0), path: 'fake/path/file.jpeg');
       await matrix.setAvatar(testFile);
     });
 
-    test('setPushers', () async {
-      await matrix.setPushers('abcdefg', 'http', 'com.famedly.famedlysdk',
-          'famedlySDK', 'GitLabCi', 'en', 'https://examplepushserver.com',
-          format: 'event_id_only');
-    });
-
-    test('joinRoomById', () async {
-      final roomID = '1234';
-      final Map<String, dynamic> resp = await matrix.joinRoomById(roomID);
-      expect(resp['room_id'], roomID);
-    });
-
-    test('requestUserDevices', () async {
-      final userDevices = await matrix.requestUserDevices();
-      expect(userDevices.length, 1);
-      expect(userDevices.first.deviceId, 'QBUAZIFURK');
-      expect(userDevices.first.displayName, 'android');
-      expect(userDevices.first.lastSeenIp, '1.2.3.4');
-      expect(
-          userDevices.first.lastSeenTs.millisecondsSinceEpoch, 1474491775024);
+    test('setMuteAllPushNotifications', () async {
+      await matrix.setMuteAllPushNotifications(false);
     });
 
     test('get archive', () async {
@@ -476,8 +382,6 @@ void main() {
           getFromRooms: false);
       expect(profile.avatarUrl.toString(), 'mxc://test');
       expect(profile.displayname, 'You got me');
-      expect(profile.content['avatar_url'], profile.avatarUrl.toString());
-      expect(profile.content['displayname'], profile.displayname);
       final aliceProfile =
           await matrix.getProfileFromUserId('@alice:example.com');
       expect(aliceProfile.avatarUrl.toString(),
@@ -533,9 +437,9 @@ void main() {
     test('Track oneTimeKeys', () async {
       if (matrix.encryptionEnabled) {
         var last = matrix.lastTimeKeysUploaded ?? DateTime.now();
-        await matrix.handleSync({
+        await matrix.handleSync(SyncUpdate.fromJson({
           'device_one_time_keys_count': {'signed_curve25519': 49}
-        });
+        }));
         await Future.delayed(Duration(milliseconds: 50));
         expect(
             matrix.lastTimeKeysUploaded.millisecondsSinceEpoch >
@@ -548,7 +452,7 @@ void main() {
         expect(matrix.rooms[1].outboundGroupSession == null, true);
         await matrix.rooms[1].createOutboundGroupSession();
         expect(matrix.rooms[1].outboundGroupSession != null, true);
-        await matrix.handleSync({
+        await matrix.handleSync(SyncUpdate.fromJson({
           'device_lists': {
             'changed': [
               '@alice:example.com',
@@ -557,7 +461,7 @@ void main() {
               '@bob:example.com',
             ],
           }
-        });
+        }));
         await Future.delayed(Duration(milliseconds: 50));
         expect(matrix.rooms[1].outboundGroupSession != null, true);
       }
@@ -568,7 +472,7 @@ void main() {
         expect(matrix.rooms[1].outboundGroupSession == null, true);
         await matrix.rooms[1].createOutboundGroupSession();
         expect(matrix.rooms[1].outboundGroupSession != null, true);
-        await matrix.handleSync({
+        await matrix.handleSync(SyncUpdate.fromJson({
           'rooms': {
             'join': {
               '!726s6s6q:example.com': {
@@ -588,7 +492,7 @@ void main() {
               }
             }
           }
-        });
+        }));
         await Future.delayed(Duration(milliseconds: 50));
         expect(matrix.rooms[1].outboundGroupSession != null, true);
       }
@@ -627,29 +531,15 @@ void main() {
             'body': 'Hello world',
           });
     });
-    test('Logout when token is unknown', () async {
-      var loginStateFuture = matrix.onLoginStateChanged.stream.first;
-
-      try {
-        await matrix.jsonRequest(
-            type: HTTPType.DELETE, action: '/unknown/token');
-      } on MatrixException catch (exception) {
-        expect(exception.error, MatrixError.M_UNKNOWN_TOKEN);
-      }
-
-      var state = await loginStateFuture;
-      expect(state, LoginState.loggedOut);
-      expect(matrix.isLogged(), false);
-    });
     test('Test the fake store api', () async {
-      var client1 = Client('testclient', debug: true);
-      client1.httpClient = FakeMatrixApi();
+      var client1 =
+          Client('testclient', debug: true, httpClient: FakeMatrixApi());
       client1.database = getDatabase();
 
       client1.connect(
         newToken: 'abc123',
         newUserID: '@test:fakeServer.notExisting',
-        newHomeserver: 'https://fakeServer.notExisting',
+        newHomeserver: Uri.parse('https://fakeServer.notExisting'),
         newDeviceName: 'Text Matrix Client',
         newDeviceID: 'GHTYAJCE',
         newOlmAccount: pickledOlmAccount,
@@ -667,17 +557,17 @@ void main() {
       expect(client1.isLogged(), true);
       expect(client1.rooms.length, 2);
 
-      var client2 = Client('testclient', debug: true);
-      client2.httpClient = FakeMatrixApi();
+      var client2 =
+          Client('testclient', debug: true, httpClient: FakeMatrixApi());
       client2.database = client1.database;
 
       client2.connect();
       await Future.delayed(Duration(milliseconds: 100));
 
       expect(client2.isLogged(), true);
-      expect(client2.accessToken, client1.accessToken);
+      expect(client2.api.accessToken, client1.api.accessToken);
       expect(client2.userID, client1.userID);
-      expect(client2.homeserver, client1.homeserver);
+      expect(client2.api.homeserver, client1.api.homeserver);
       expect(client2.deviceID, client1.deviceID);
       expect(client2.deviceName, client1.deviceName);
       if (client2.encryptionEnabled) {
@@ -691,6 +581,13 @@ void main() {
 
       await client1.logout();
       await client2.logout();
+    });
+    test('changePassword', () async {
+      await matrix.changePassword('1234', oldPassword: '123456');
+    });
+
+    test('dispose', () async {
+      await matrix.dispose(closeDatabase: true);
     });
   });
 }

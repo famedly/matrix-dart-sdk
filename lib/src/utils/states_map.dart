@@ -1,5 +1,7 @@
 import 'package:famedlysdk/famedlysdk.dart';
 
+import '../../matrix_api.dart';
+
 /// Matrix room states are addressed by a tuple of the [type] and an
 /// optional [stateKey].
 class StatesMap {
@@ -11,8 +13,10 @@ class StatesMap {
     //print("[Warning] This method will be depracated in the future!");
     if (key == null) return null;
     if (key.startsWith('@') && key.contains(':')) {
-      if (!states.containsKey('m.room.member')) states['m.room.member'] = {};
-      return states['m.room.member'][key];
+      if (!states.containsKey(EventTypes.RoomMember)) {
+        states[EventTypes.RoomMember] = {};
+      }
+      return states[EventTypes.RoomMember][key];
     }
     if (!states.containsKey(key)) states[key] = {};
     if (states[key][''] is Event) {
@@ -27,8 +31,10 @@ class StatesMap {
   void operator []=(String key, Event val) {
     //print("[Warning] This method will be depracated in the future!");
     if (key.startsWith('@') && key.contains(':')) {
-      if (!states.containsKey('m.room.member')) states['m.room.member'] = {};
-      states['m.room.member'][key] = val;
+      if (!states.containsKey(EventTypes.RoomMember)) {
+        states[EventTypes.RoomMember] = {};
+      }
+      states[EventTypes.RoomMember][key] = val;
     }
     if (!states.containsKey(key)) states[key] = {};
     states[key][val.stateKey ?? ''] = val;

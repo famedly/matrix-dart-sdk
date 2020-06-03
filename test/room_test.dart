@@ -1,26 +1,22 @@
 /*
- * Copyright (c) 2019 Zender & Kurtz GbR.
+ *   Ansible inventory script used at Famedly GmbH for managing many hosts
+ *   Copyright (C) 2019, 2020 Famedly GmbH
  *
- * Authors:
- *   Christian Pauly <krille@famedly.com>
- *   Marcel Radzio <mtrnord@famedly.com>
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
  *
- * This file is part of famedlysdk.
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
  *
- * famedlysdk is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * famedlysdk is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/matrix_api.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/event.dart';
 import 'package:famedlysdk/src/room.dart';
@@ -41,8 +37,7 @@ void main() {
   /// All Tests related to the Event
   group('Room', () {
     test('Login', () async {
-      matrix = Client('testclient', debug: true);
-      matrix.httpClient = FakeMatrixApi();
+      matrix = Client('testclient', debug: true, httpClient: FakeMatrixApi());
 
       final checkResp =
           await matrix.checkServer('https://fakeServer.notExisting');
@@ -123,7 +118,7 @@ void main() {
 
       room.states['m.room.canonical_alias'] = Event(
           senderId: '@test:example.com',
-          typeKey: 'm.room.canonical_alias',
+          type: 'm.room.canonical_alias',
           roomId: room.id,
           room: room,
           eventId: '123',
@@ -134,7 +129,7 @@ void main() {
 
       room.states['m.room.name'] = Event(
           senderId: '@test:example.com',
-          typeKey: 'm.room.name',
+          type: 'm.room.name',
           roomId: room.id,
           room: room,
           eventId: '123',
@@ -145,7 +140,7 @@ void main() {
       expect(room.topic, '');
       room.states['m.room.topic'] = Event(
           senderId: '@test:example.com',
-          typeKey: 'm.room.topic',
+          type: 'm.room.topic',
           roomId: room.id,
           room: room,
           eventId: '123',
@@ -156,7 +151,7 @@ void main() {
       expect(room.avatar, null);
       room.states['m.room.avatar'] = Event(
           senderId: '@test:example.com',
-          typeKey: 'm.room.avatar',
+          type: 'm.room.avatar',
           roomId: room.id,
           room: room,
           eventId: '123',
@@ -165,20 +160,24 @@ void main() {
       expect(room.avatar.toString(), 'mxc://testurl');
       room.states['m.room.message'] = Event(
           senderId: '@test:example.com',
-          typeKey: 'm.room.message',
+          type: 'm.room.message',
           roomId: room.id,
           room: room,
           eventId: '12345',
-          time: DateTime.now(),
+          originServerTs: DateTime.now(),
           content: {'msgtype': 'm.text', 'body': 'test'},
           stateKey: '');
       expect(room.lastEvent.eventId, '12345');
       expect(room.lastMessage, 'test');
-      expect(room.timeCreated, room.lastEvent.time);
+      expect(room.timeCreated, room.lastEvent.originServerTs);
     });
 
     test('sendReadReceipt', () async {
       await room.sendReadReceipt('§1234:fakeServer.notExisting');
+    });
+
+    test('enableEncryption', () async {
+      await room.enableEncryption();
     });
 
     test('requestParticipants', () async {
@@ -222,7 +221,7 @@ void main() {
     test('PowerLevels', () async {
       room.states['m.room.power_levels'] = Event(
           senderId: '@test:example.com',
-          typeKey: 'm.room.power_levels',
+          type: 'm.room.power_levels',
           roomId: room.id,
           room: room,
           eventId: '123',
@@ -258,7 +257,7 @@ void main() {
 
       room.states['m.room.power_levels'] = Event(
           senderId: '@test:example.com',
-          typeKey: 'm.room.power_levels',
+          type: 'm.room.power_levels',
           roomId: room.id,
           room: room,
           eventId: '123abc',
@@ -298,16 +297,16 @@ void main() {
     test('getParticipants', () async {
       room.setState(Event(
           senderId: '@alice:test.abc',
-          typeKey: 'm.room.member',
+          type: 'm.room.member',
           roomId: room.id,
           room: room,
           eventId: '12345',
-          time: DateTime.now(),
+          originServerTs: DateTime.now(),
           content: {'displayname': 'alice'},
           stateKey: '@alice:test.abc'));
       final userList = room.getParticipants();
-      expect(userList.length, 5);
-      expect(userList[3].displayName, 'Alice Margatroid');
+      expect(userList.length, 4);
+      expect(userList[3].displayName, 'alice');
     });
 
     test('addToDirectChat', () async {
@@ -325,7 +324,7 @@ void main() {
         user = await room.getUserByMXID('@getme:example.com');
       } catch (_) {}
       expect(user.stateKey, '@getme:example.com');
-      expect(user.calcDisplayname(), 'You got me');
+      expect(user.calcDisplayname(), 'Getme');
     });
 
     test('setAvatar', () async {
@@ -375,11 +374,11 @@ void main() {
       room.setState(
         Event(
             senderId: '@alice:test.abc',
-            typeKey: 'm.room.encryption',
+            type: 'm.room.encryption',
             roomId: room.id,
             room: room,
             eventId: '12345',
-            time: DateTime.now(),
+            originServerTs: DateTime.now(),
             content: {
               'algorithm': 'm.megolm.v1.aes-sha2',
               'rotation_period_ms': 604800000,
@@ -433,16 +432,81 @@ void main() {
 
       var encryptedEvent = Event(
         content: encryptedPayload,
-        typeKey: 'm.room.encrypted',
+        type: 'm.room.encrypted',
         senderId: room.client.userID,
         eventId: '1234',
         roomId: room.id,
         room: room,
-        time: DateTime.now(),
+        originServerTs: DateTime.now(),
       );
       var decryptedEvent = room.decryptGroupMessage(encryptedEvent);
-      expect(decryptedEvent.typeKey, 'm.room.message');
+      expect(decryptedEvent.type, 'm.room.message');
       expect(decryptedEvent.content, payload);
+    });
+
+    test('setPushRuleState', () async {
+      await room.setPushRuleState(PushRuleState.notify);
+      await room.setPushRuleState(PushRuleState.dont_notify);
+      await room.setPushRuleState(PushRuleState.mentions_only);
+      await room.setPushRuleState(PushRuleState.notify);
+    });
+
+    test('Test call methods', () async {
+      await room.inviteToCall('1234', 1234, 'sdp', txid: '1234');
+      await room.answerCall('1234', 'sdp', txid: '1234');
+      await room.hangupCall('1234', txid: '1234');
+      await room.sendCallCandidates('1234', [], txid: '1234');
+    });
+
+    test('joinRules', () async {
+      expect(room.canChangeJoinRules, false);
+      expect(room.joinRules, JoinRules.public);
+      room.setState(Event.fromJson({
+        'content': {'join_rule': 'invite'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '',
+        'type': 'm.room.join_rules',
+        'unsigned': {'age': 1234}
+      }, room));
+      expect(room.joinRules, JoinRules.invite);
+      await room.setJoinRules(JoinRules.invite);
+    });
+
+    test('guestAccess', () async {
+      expect(room.canChangeGuestAccess, false);
+      expect(room.guestAccess, GuestAccess.forbidden);
+      room.setState(Event.fromJson({
+        'content': {'guest_access': 'can_join'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '',
+        'type': 'm.room.guest_access',
+        'unsigned': {'age': 1234}
+      }, room));
+      expect(room.guestAccess, GuestAccess.can_join);
+      await room.setGuestAccess(GuestAccess.can_join);
+    });
+
+    test('historyVisibility', () async {
+      expect(room.canChangeHistoryVisibility, false);
+      expect(room.historyVisibility, null);
+      room.setState(Event.fromJson({
+        'content': {'history_visibility': 'shared'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '',
+        'type': 'm.room.history_visibility',
+        'unsigned': {'age': 1234}
+      }, room));
+      expect(room.historyVisibility, HistoryVisibility.shared);
+      await room.setHistoryVisibility(HistoryVisibility.joined);
     });
 
     test('logout', () async {
