@@ -1569,7 +1569,19 @@ class FakeMatrixApi extends MockClient {
                     }
                   }
                 }
-              }
+              },
+              '@test:fakeServer.notExisting': {
+                'GHTYAJCE': {
+                  'signed_curve25519:AAAAAQ': {
+                    'key': 'qc72ve94cA28iuE0fXa98QO3uls39DHWdQlYyvvhGh0',
+                    'signatures': {
+                      '@test:fakeServer.notExisting': {
+                        'ed25519:GHTYAJCE': 'dFwffr5kTKefO7sjnWLMhTzw7oV31nkPIDRxFy5OQT2OP5++Ao0KRbaBZ6qfuT7lW1owKK0Xk3s7QTBvc/eNDA',
+                      },
+                    },
+                  },
+                },
+              },
             }
           },
       '/client/r0/rooms/!localpart%3Aexample.com/invite': (var req) => {},
@@ -1586,7 +1598,7 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/keys/upload': (var req) => {
             'one_time_key_counts': {
               'curve25519': 10,
-              'signed_curve25519': 100,
+              'signed_curve25519': 66,
             }
           },
       '/client/r0/keys/query': (var req) => {
@@ -1627,8 +1639,40 @@ class FakeMatrixApi extends MockClient {
                   },
                   'signatures': {},
                 },
-              }
-            }
+              },
+              '@test:fakeServer.notExisting': {
+                'GHTYAJCE': {
+                  'user_id': '@test:fakeServer.notExisting',
+                  'device_id': 'GHTYAJCE',
+                  'algorithms': [
+                    'm.olm.v1.curve25519-aes-sha2',
+                    'm.megolm.v1.aes-sha2'
+                  ],
+                  'keys': {
+                    'curve25519:GHTYAJCE':
+                        '7rvl3jORJkBiK4XX1e5TnGnqz068XfYJ0W++Ml63rgk',
+                    'ed25519:GHTYAJCE':
+                        'gjL//fyaFHADt9KBADGag8g7F8Up78B/K1zXeiEPLJo'
+                  },
+                  'signatures': {},
+                },
+              },
+              '@othertest:fakeServer.notExisting': {
+                'FOXDEVICE': {
+                  'user_id': '@othertest:fakeServer.notExisting',
+                  'device_id': 'FOXDEVICE',
+                  'algorithms': [
+                    'm.olm.v1.curve25519-aes-sha2',
+                    'm.megolm.v1.aes-sha2'
+                  ],
+                  'keys': {
+                    'curve25519:FOXDEVICE': 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg',
+                    'ed25519:FOXDEVICE': 'R5/p04tticvdlNIxiiBIP0j9OQWv8ep6eEU6/lWKDxw',
+                  },
+                  'signatures': {},
+                },
+              },
+            },
           },
       '/client/r0/register': (var req) => {
             'user_id': '@testuser:example.com',

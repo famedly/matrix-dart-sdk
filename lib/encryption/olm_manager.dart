@@ -123,13 +123,15 @@ class OlmManager {
   }
 
   /// Generates new one time keys, signs everything and upload it to the server.
-  Future<bool> uploadKeys({bool uploadDeviceKeys = false}) async {
+  Future<bool> uploadKeys({bool uploadDeviceKeys = false, int oldKeyCount = 0}) async {
     if (!enabled) {
       return true;
     }
 
     // generate one-time keys
-    final oneTimeKeysCount = _olmAccount.max_number_of_one_time_keys();
+    // we generate 2/3rds of max, so that other keys people may still have can
+    // still be used
+    final oneTimeKeysCount = (_olmAccount.max_number_of_one_time_keys() * 2 / 3).floor() - oldKeyCount;
     _olmAccount.generate_one_time_keys(oneTimeKeysCount);
     final Map<String, dynamic> oneTimeKeys =
         json.decode(_olmAccount.one_time_keys());
@@ -194,7 +196,7 @@ class OlmManager {
     if (countJson.containsKey('signed_curve25519') &&
         countJson['signed_curve25519'] <
             (_olmAccount.max_number_of_one_time_keys() / 2)) {
-      uploadKeys();
+      uploadKeys(oldKeyCount: countJson['signed_curve25519']);
     }
   }
 
@@ -260,11 +262,16 @@ class OlmManager {
 
     if (plaintext == null) {
       var newSession = olm.Session();
-      newSession.create_inbound_from(_olmAccount, senderKey, body);
-      _olmAccount.remove_one_time_keys(newSession);
-      client.database?.updateClientKeys(pickledOlmAccount, client.id);
-      plaintext = newSession.decrypt(type, body);
-      storeOlmSession(senderKey, newSession);
+      try {
+        newSession.create_inbound_from(_olmAccount, senderKey, body);
+        _olmAccount.remove_one_time_keys(newSession);
+        client.database?.updateClientKeys(pickledOlmAccount, client.id);
+        plaintext = newSession.decrypt(type, body);
+        storeOlmSession(senderKey, newSession);
+      } catch (_) {
+        newSession?.free();
+        rethrow;
+      }
     }
     final Map<String, dynamic> plainContent = json.decode(plaintext);
     if (plainContent.containsKey('sender') &&
@@ -292,22 +299,31 @@ class OlmManager {
     if (event.type != EventTypes.Encrypted) {
       return event;
     }
+    final senderKey = event.content['sender_key'];
+    final loadFromDb = () async {
+      if (client.database == null) {
+        return false;
+      }
+      final sessions = await client.database.getSingleOlmSessions(
+          client.id, senderKey, client.userID);
+      if (sessions.isEmpty) {
+        return false; // okay, can't do anything
+      }
+      _olmSessions[senderKey] = sessions;
+      return true;
+    };
+    if (!_olmSessions.containsKey(senderKey)) {
+      await loadFromDb();
+    }
     event = _decryptToDeviceEvent(event);
-    if (event.type != EventTypes.Encrypted || client.database == null) {
+    if (event.type != EventTypes.Encrypted || !(await loadFromDb())) {
       return event;
     }
-    // load the olm session from the database and re-try to decrypt it
-    final sessions = await client.database.getSingleOlmSessions(
-        client.id, event.content['sender_key'], client.userID);
-    if (sessions.isEmpty) {
-      return event; // okay, can't do anything
-    }
-    _olmSessions[event.content['sender_key']] = sessions;
+    // retry to decrypt!
     return _decryptToDeviceEvent(event);
   }
 
-  Future<void> startOutgoingOlmSessions(List<DeviceKeys> deviceKeys,
-      {bool checkSignature = true}) async {
+  Future<void> startOutgoingOlmSessions(List<DeviceKeys> deviceKeys) async {
     var requestingKeysFrom = <String, Map<String, String>>{};
     for (var device in deviceKeys) {
       if (requestingKeysFrom[device.userId] == null) {
@@ -328,9 +344,7 @@ class OlmManager {
         final identityKey =
             client.userDeviceKeys[userId].deviceKeys[deviceId].curve25519Key;
         for (Map<String, dynamic> deviceKey in deviceKeysEntry.value.values) {
-          if (checkSignature &&
-              checkJsonSignature(fingerprintKey, deviceKey, userId, deviceId) ==
-                  false) {
+          if (!checkJsonSignature(fingerprintKey, deviceKey, userId, deviceId)) {
             continue;
           }
           try {

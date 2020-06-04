@@ -1134,6 +1134,9 @@ class Client {
 
         for (final rawDeviceKeyListEntry in response.deviceKeys.entries) {
           final userId = rawDeviceKeyListEntry.key;
+          if (!userDeviceKeys.containsKey(userId)) {
+            _userDeviceKeys[userId] = DeviceKeysList(userId);
+          }
           final oldKeys =
               Map<String, DeviceKeys>.from(_userDeviceKeys[userId].deviceKeys);
           _userDeviceKeys[userId].deviceKeys = {};
