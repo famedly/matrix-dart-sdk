@@ -47,7 +47,6 @@ void main() {
     var client = Client('testclient', debug: true, httpClient: FakeMatrixApi());
     var otherClient =
         Client('othertestclient', debug: true, httpClient: FakeMatrixApi());
-    final roomId = '!726s6s6q:example.com';
     DeviceKeys device;
     Map<String, dynamic> payload;
 
