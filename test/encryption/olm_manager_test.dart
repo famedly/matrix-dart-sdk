@@ -51,38 +51,54 @@ void main() {
         'fox': 'floof',
       };
       final signedPayload = client.encryption.olmManager.signJson(payload);
-      expect(client.encryption.olmManager.checkJsonSignature(client.fingerprintKey, signedPayload, client.userID, client.deviceID), true);
-      expect(client.encryption.olmManager.checkJsonSignature(client.fingerprintKey, payload, client.userID, client.deviceID), false);
+      expect(
+          client.encryption.olmManager.checkJsonSignature(client.fingerprintKey,
+              signedPayload, client.userID, client.deviceID),
+          true);
+      expect(
+          client.encryption.olmManager.checkJsonSignature(
+              client.fingerprintKey, payload, client.userID, client.deviceID),
+          false);
     });
 
     test('uploadKeys', () async {
       FakeMatrixApi.calledEndpoints.clear();
-      final res = await client.encryption.olmManager.uploadKeys(uploadDeviceKeys: true);
+      final res =
+          await client.encryption.olmManager.uploadKeys(uploadDeviceKeys: true);
       expect(res, true);
-      var sent = json.decode(FakeMatrixApi.calledEndpoints['/client/r0/keys/upload'].first);
+      var sent = json.decode(
+          FakeMatrixApi.calledEndpoints['/client/r0/keys/upload'].first);
       expect(sent['device_keys'] != null, true);
       expect(sent['one_time_keys'] != null, true);
       expect(sent['one_time_keys'].keys.length, 66);
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption.olmManager.uploadKeys();
-      sent = json.decode(FakeMatrixApi.calledEndpoints['/client/r0/keys/upload'].first);
+      sent = json.decode(
+          FakeMatrixApi.calledEndpoints['/client/r0/keys/upload'].first);
       expect(sent['device_keys'] != null, false);
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption.olmManager.uploadKeys(oldKeyCount: 20);
-      sent = json.decode(FakeMatrixApi.calledEndpoints['/client/r0/keys/upload'].first);
+      sent = json.decode(
+          FakeMatrixApi.calledEndpoints['/client/r0/keys/upload'].first);
       expect(sent['one_time_keys'].keys.length, 46);
     });
 
     test('handleDeviceOneTimeKeysCount', () async {
       FakeMatrixApi.calledEndpoints.clear();
-      client.encryption.olmManager.handleDeviceOneTimeKeysCount({'signed_curve25519': 20});
+      client.encryption.olmManager
+          .handleDeviceOneTimeKeysCount({'signed_curve25519': 20});
       await Future.delayed(Duration(milliseconds: 50));
-      expect(FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'), true);
+      expect(
+          FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'),
+          true);
 
       FakeMatrixApi.calledEndpoints.clear();
-      client.encryption.olmManager.handleDeviceOneTimeKeysCount({'signed_curve25519': 70});
+      client.encryption.olmManager
+          .handleDeviceOneTimeKeysCount({'signed_curve25519': 70});
       await Future.delayed(Duration(milliseconds: 50));
-      expect(FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'), false);
+      expect(
+          FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'),
+          false);
     });
   });
 }

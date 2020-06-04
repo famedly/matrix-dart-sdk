@@ -71,7 +71,8 @@ void main() {
         originServerTs: now,
         eventId: '\$event',
       );
-      final decryptedEvent = await client.encryption.decryptRoomEvent(roomId, encryptedEvent);
+      final decryptedEvent =
+          await client.encryption.decryptRoomEvent(roomId, encryptedEvent);
       expect(decryptedEvent.type, 'm.room.message');
       expect(decryptedEvent.content['msgtype'], 'm.text');
       expect(decryptedEvent.content['text'], 'Hello foxies!');
@@ -87,7 +88,8 @@ void main() {
         originServerTs: now,
         eventId: '\$event',
       );
-      final decryptedEvent = await client.encryption.decryptRoomEvent(roomId, encryptedEvent);
+      final decryptedEvent =
+          await client.encryption.decryptRoomEvent(roomId, encryptedEvent);
       expect(decryptedEvent.type, 'm.room.message');
       expect(decryptedEvent.content['msgtype'], 'm.text');
       expect(decryptedEvent.content['text'], 'Hello foxies!');

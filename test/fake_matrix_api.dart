@@ -1576,7 +1576,8 @@ class FakeMatrixApi extends MockClient {
                     'key': 'qc72ve94cA28iuE0fXa98QO3uls39DHWdQlYyvvhGh0',
                     'signatures': {
                       '@test:fakeServer.notExisting': {
-                        'ed25519:GHTYAJCE': 'dFwffr5kTKefO7sjnWLMhTzw7oV31nkPIDRxFy5OQT2OP5++Ao0KRbaBZ6qfuT7lW1owKK0Xk3s7QTBvc/eNDA',
+                        'ed25519:GHTYAJCE':
+                            'dFwffr5kTKefO7sjnWLMhTzw7oV31nkPIDRxFy5OQT2OP5++Ao0KRbaBZ6qfuT7lW1owKK0Xk3s7QTBvc/eNDA',
                       },
                     },
                   },
@@ -1598,7 +1599,8 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/keys/upload': (var req) => {
             'one_time_key_counts': {
               'curve25519': 10,
-              'signed_curve25519': json.decode(req)['one_time_keys']?.keys?.length ?? 0,
+              'signed_curve25519':
+                  json.decode(req)['one_time_keys']?.keys?.length ?? 0,
             }
           },
       '/client/r0/keys/query': (var req) => {
@@ -1666,8 +1668,10 @@ class FakeMatrixApi extends MockClient {
                     'm.megolm.v1.aes-sha2'
                   ],
                   'keys': {
-                    'curve25519:FOXDEVICE': 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg',
-                    'ed25519:FOXDEVICE': 'R5/p04tticvdlNIxiiBIP0j9OQWv8ep6eEU6/lWKDxw',
+                    'curve25519:FOXDEVICE':
+                        'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg',
+                    'ed25519:FOXDEVICE':
+                        'R5/p04tticvdlNIxiiBIP0j9OQWv8ep6eEU6/lWKDxw',
                   },
                   'signatures': {},
                 },

@@ -123,7 +123,8 @@ class OlmManager {
   }
 
   /// Generates new one time keys, signs everything and upload it to the server.
-  Future<bool> uploadKeys({bool uploadDeviceKeys = false, int oldKeyCount = 0}) async {
+  Future<bool> uploadKeys(
+      {bool uploadDeviceKeys = false, int oldKeyCount = 0}) async {
     if (!enabled) {
       return true;
     }
@@ -131,7 +132,9 @@ class OlmManager {
     // generate one-time keys
     // we generate 2/3rds of max, so that other keys people may still have can
     // still be used
-    final oneTimeKeysCount = (_olmAccount.max_number_of_one_time_keys() * 2 / 3).floor() - oldKeyCount;
+    final oneTimeKeysCount =
+        (_olmAccount.max_number_of_one_time_keys() * 2 / 3).floor() -
+            oldKeyCount;
     _olmAccount.generate_one_time_keys(oneTimeKeysCount);
     final Map<String, dynamic> oneTimeKeys =
         json.decode(_olmAccount.one_time_keys());
@@ -301,8 +304,8 @@ class OlmManager {
       if (client.database == null) {
         return false;
       }
-      final sessions = await client.database.getSingleOlmSessions(
-          client.id, senderKey, client.userID);
+      final sessions = await client.database
+          .getSingleOlmSessions(client.id, senderKey, client.userID);
       if (sessions.isEmpty) {
         return false; // okay, can't do anything
       }
@@ -341,7 +344,8 @@ class OlmManager {
         final identityKey =
             client.userDeviceKeys[userId].deviceKeys[deviceId].curve25519Key;
         for (Map<String, dynamic> deviceKey in deviceKeysEntry.value.values) {
-          if (!checkJsonSignature(fingerprintKey, deviceKey, userId, deviceId)) {
+          if (!checkJsonSignature(
+              fingerprintKey, deviceKey, userId, deviceId)) {
             continue;
           }
           try {

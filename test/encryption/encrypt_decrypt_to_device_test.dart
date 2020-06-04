@@ -28,7 +28,8 @@ void main() {
   const pickledOlmAccount =
       'N2v1MkIFGcl0mQpo2OCwSopxPQJ0wnl7oe7PKiT4141AijfdTIhRu+ceXzXKy3Kr00nLqXtRv7kid6hU4a+V0rfJWLL0Y51+3Rp/ORDVnQy+SSeo6Fn4FHcXrxifJEJ0djla5u98fBcJ8BSkhIDmtXRPi5/oJAvpiYn+8zMjFHobOeZUAxYR0VfQ9JzSYBsSovoQ7uFkNks1M4EDUvHtu/BjDjz0C3ioDgrrFdoSrn+GSeF5FGKsNu8OLkQ9Lq5+BrUutK5QSJI19uoZj2sj/OixvIpnun8XxYpXo7cfh9MEtKI8ob7lLM2OpZ8BogU70ORgkwthsPSOtxQGPhx8+y5Sg7B6KGlU';
 
-  const otherPickledOlmAccount = 'VWhVApbkcilKAEGppsPDf9nNVjaK8/IxT3asSR0sYg0S5KgbfE8vXEPwoiKBX2cEvwX3OessOBOkk+ZE7TTbjlrh/KEd31p8Wo+47qj0AP+Ky+pabnhi+/rTBvZy+gfzTqUfCxZrkzfXI9Op4JnP6gYmy7dVX2lMYIIs9WCO1jcmIXiXum5jnfXu1WLfc7PZtO2hH+k9CDKosOFaXRBmsu8k/BGXPSoWqUpvu6WpEG9t5STk4FeAzA';
+  const otherPickledOlmAccount =
+      'VWhVApbkcilKAEGppsPDf9nNVjaK8/IxT3asSR0sYg0S5KgbfE8vXEPwoiKBX2cEvwX3OessOBOkk+ZE7TTbjlrh/KEd31p8Wo+47qj0AP+Ky+pabnhi+/rTBvZy+gfzTqUfCxZrkzfXI9Op4JnP6gYmy7dVX2lMYIIs9WCO1jcmIXiXum5jnfXu1WLfc7PZtO2hH+k9CDKosOFaXRBmsu8k/BGXPSoWqUpvu6WpEG9t5STk4FeAzA';
 
   group('Encrypt/Decrypt to-device messages', () {
     var olmEnabled = true;
@@ -44,7 +45,8 @@ void main() {
     if (!olmEnabled) return;
 
     var client = Client('testclient', debug: true, httpClient: FakeMatrixApi());
-    var otherClient = Client('othertestclient', debug: true, httpClient: FakeMatrixApi());
+    var otherClient =
+        Client('othertestclient', debug: true, httpClient: FakeMatrixApi());
     final roomId = '!726s6s6q:example.com';
     DeviceKeys device;
     Map<String, dynamic> payload;
@@ -92,12 +94,14 @@ void main() {
     });
 
     test('encryptToDeviceMessage', () async {
-      payload = await otherClient.encryption.encryptToDeviceMessage([device], 'm.to_device', {'hello': 'foxies'});
+      payload = await otherClient.encryption
+          .encryptToDeviceMessage([device], 'm.to_device', {'hello': 'foxies'});
     });
 
     test('encryptToDeviceMessagePayload', () async {
       // just a hard test if nothing errors
-      await otherClient.encryption.encryptToDeviceMessagePayload(device, 'm.to_device', {'hello': 'foxies'});
+      await otherClient.encryption.encryptToDeviceMessagePayload(
+          device, 'm.to_device', {'hello': 'foxies'});
     });
 
     test('decryptToDeviceEvent', () async {
@@ -106,20 +110,23 @@ void main() {
         type: EventTypes.Encrypted,
         content: payload[client.userID][client.deviceID],
       );
-      final decryptedEvent = await client.encryption.decryptToDeviceEvent(encryptedEvent);
+      final decryptedEvent =
+          await client.encryption.decryptToDeviceEvent(encryptedEvent);
       expect(decryptedEvent.type, 'm.to_device');
       expect(decryptedEvent.content['hello'], 'foxies');
     });
 
     test('decryptToDeviceEvent nocache', () async {
       client.encryption.olmManager.olmSessions.clear();
-      payload = await otherClient.encryption.encryptToDeviceMessage([device], 'm.to_device', {'hello': 'superfoxies'});
+      payload = await otherClient.encryption.encryptToDeviceMessage(
+          [device], 'm.to_device', {'hello': 'superfoxies'});
       final encryptedEvent = ToDeviceEvent(
         sender: '@othertest:fakeServer.notExisting',
         type: EventTypes.Encrypted,
         content: payload[client.userID][client.deviceID],
       );
-      final decryptedEvent = await client.encryption.decryptToDeviceEvent(encryptedEvent);
+      final decryptedEvent =
+          await client.encryption.decryptToDeviceEvent(encryptedEvent);
       expect(decryptedEvent.type, 'm.to_device');
       expect(decryptedEvent.content['hello'], 'superfoxies');
     });
