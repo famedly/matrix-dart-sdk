@@ -56,7 +56,7 @@ class OlmManager {
           throw ('Upload key failed');
         }
       } catch (_) {
-        _olmAccount.free();
+        _olmAccount?.free();
         _olmAccount = null;
       }
     } else {
@@ -65,7 +65,7 @@ class OlmManager {
         _olmAccount = olm.Account();
         _olmAccount.unpickle(client.userID, olmAccount);
       } catch (_) {
-        _olmAccount.free();
+        _olmAccount?.free();
         _olmAccount = null;
       }
     }
