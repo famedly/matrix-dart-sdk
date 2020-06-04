@@ -179,12 +179,9 @@ class OlmManager {
           : null,
       oneTimeKeys: signedOneTimeKeys,
     );
-    if (response['signed_curve25519'] != oneTimeKeysCount) {
-      return false;
-    }
     _olmAccount.mark_keys_as_published();
     await client.database?.updateClientKeys(pickledOlmAccount, client.id);
-    return true;
+    return response['signed_curve25519'] == oneTimeKeysCount;
   }
 
   void handleDeviceOneTimeKeysCount(Map<String, int> countJson) {

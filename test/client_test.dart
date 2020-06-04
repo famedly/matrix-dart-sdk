@@ -159,7 +159,7 @@ void main() {
       expect(presenceCounter, 1);
       expect(accountDataCounter, 3);
       await Future.delayed(Duration(milliseconds: 50));
-      expect(matrix.userDeviceKeys.length, 3);
+      expect(matrix.userDeviceKeys.length, 4);
       expect(matrix.userDeviceKeys['@alice:example.com'].outdated, false);
       expect(matrix.userDeviceKeys['@alice:example.com'].deviceKeys.length, 2);
       expect(
@@ -178,7 +178,7 @@ void main() {
         }
       }));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(matrix.userDeviceKeys.length, 2);
+      expect(matrix.userDeviceKeys.length, 3);
       expect(matrix.userDeviceKeys['@alice:example.com'].outdated, true);
 
       await matrix.handleSync(SyncUpdate.fromJson({

@@ -1598,7 +1598,7 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/keys/upload': (var req) => {
             'one_time_key_counts': {
               'curve25519': 10,
-              'signed_curve25519': 66,
+              'signed_curve25519': json.decode(req)['one_time_keys']?.keys?.length ?? 0,
             }
           },
       '/client/r0/keys/query': (var req) => {
