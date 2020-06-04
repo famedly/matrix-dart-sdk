@@ -88,7 +88,8 @@ void test() async {
   await room.enableEncryption();
   await Future.delayed(Duration(seconds: 5));
   assert(room.encrypted == true);
-  assert(room.outboundGroupSession == null);
+  assert(room.client.encryption.keyManager.getOutboundGroupSession(room.id) ==
+      null);
 
   print('++++ ($testUserA) Check known olm devices ++++');
   assert(testClientA.userDeviceKeys.containsKey(testUserB));
@@ -123,16 +124,30 @@ void test() async {
   print("++++ ($testUserA) Send encrypted message: '$testMessage' ++++");
   await room.sendTextEvent(testMessage);
   await Future.delayed(Duration(seconds: 5));
-  assert(room.outboundGroupSession != null);
-  var currentSessionIdA = room.outboundGroupSession.session_id();
-  assert(room.inboundGroupSessions
-      .containsKey(room.outboundGroupSession.session_id()));
-  assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
-  assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
-  assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
-      testClientB.olmSessions[testClientA.identityKey].first.session_id());
-  assert(inviteRoom.inboundGroupSessions
-      .containsKey(room.outboundGroupSession.session_id()));
+  assert(room.client.encryption.keyManager.getOutboundGroupSession(room.id) !=
+      null);
+  var currentSessionIdA = room.client.encryption.keyManager
+      .getOutboundGroupSession(room.id)
+      .outboundGroupSession
+      .session_id();
+  assert(room.client.encryption.keyManager
+          .getInboundGroupSession(room.id, currentSessionIdA, '') !=
+      null);
+  assert(testClientA
+          .encryption.olmManager.olmSessions[testClientB.identityKey].length ==
+      1);
+  assert(testClientB
+          .encryption.olmManager.olmSessions[testClientA.identityKey].length ==
+      1);
+  assert(testClientA
+          .encryption.olmManager.olmSessions[testClientB.identityKey].first
+          .session_id() ==
+      testClientB
+          .encryption.olmManager.olmSessions[testClientA.identityKey].first
+          .session_id());
+  assert(inviteRoom.client.encryption.keyManager
+          .getInboundGroupSession(inviteRoom.id, currentSessionIdA, '') !=
+      null);
   assert(room.lastMessage == testMessage);
   assert(inviteRoom.lastMessage == testMessage);
   print(
@@ -141,14 +156,27 @@ void test() async {
   print("++++ ($testUserA) Send again encrypted message: '$testMessage2' ++++");
   await room.sendTextEvent(testMessage2);
   await Future.delayed(Duration(seconds: 5));
-  assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
-  assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
-  assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
-      testClientB.olmSessions[testClientA.identityKey].first.session_id());
+  assert(testClientA
+          .encryption.olmManager.olmSessions[testClientB.identityKey].length ==
+      1);
+  assert(testClientB
+          .encryption.olmManager.olmSessions[testClientA.identityKey].length ==
+      1);
+  assert(testClientA
+          .encryption.olmManager.olmSessions[testClientB.identityKey].first
+          .session_id() ==
+      testClientB
+          .encryption.olmManager.olmSessions[testClientA.identityKey].first
+          .session_id());
 
-  assert(room.outboundGroupSession.session_id() == currentSessionIdA);
-  assert(inviteRoom.inboundGroupSessions
-      .containsKey(room.outboundGroupSession.session_id()));
+  assert(room.client.encryption.keyManager
+          .getOutboundGroupSession(room.id)
+          .outboundGroupSession
+          .session_id() ==
+      currentSessionIdA);
+  assert(room.client.encryption.keyManager
+          .getInboundGroupSession(room.id, currentSessionIdA, '') !=
+      null);
   assert(room.lastMessage == testMessage2);
   assert(inviteRoom.lastMessage == testMessage2);
   print(
@@ -157,14 +185,31 @@ void test() async {
   print("++++ ($testUserB) Send again encrypted message: '$testMessage3' ++++");
   await inviteRoom.sendTextEvent(testMessage3);
   await Future.delayed(Duration(seconds: 5));
-  assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
-  assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
-  assert(room.outboundGroupSession.session_id() == currentSessionIdA);
-  assert(inviteRoom.outboundGroupSession != null);
-  assert(inviteRoom.inboundGroupSessions
-      .containsKey(inviteRoom.outboundGroupSession.session_id()));
-  assert(room.inboundGroupSessions
-      .containsKey(inviteRoom.outboundGroupSession.session_id()));
+  assert(testClientA
+          .encryption.olmManager.olmSessions[testClientB.identityKey].length ==
+      1);
+  assert(testClientB
+          .encryption.olmManager.olmSessions[testClientA.identityKey].length ==
+      1);
+  assert(room.client.encryption.keyManager
+          .getOutboundGroupSession(room.id)
+          .outboundGroupSession
+          .session_id() ==
+      currentSessionIdA);
+  var inviteRoomOutboundGroupSession = inviteRoom.client.encryption.keyManager
+      .getOutboundGroupSession(inviteRoom.id);
+
+  assert(inviteRoomOutboundGroupSession != null);
+  assert(inviteRoom.client.encryption.keyManager.getInboundGroupSession(
+          inviteRoom.id,
+          inviteRoomOutboundGroupSession.outboundGroupSession.session_id(),
+          '') !=
+      null);
+  assert(room.client.encryption.keyManager.getInboundGroupSession(
+          room.id,
+          inviteRoomOutboundGroupSession.outboundGroupSession.session_id(),
+          '') !=
+      null);
   assert(inviteRoom.lastMessage == testMessage3);
   assert(room.lastMessage == testMessage3);
   print(
@@ -180,18 +225,42 @@ void test() async {
   print("++++ ($testUserA) Send again encrypted message: '$testMessage4' ++++");
   await room.sendTextEvent(testMessage4);
   await Future.delayed(Duration(seconds: 5));
-  assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
-  assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
-  assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
-      testClientB.olmSessions[testClientA.identityKey].first.session_id());
-  assert(testClientA.olmSessions[testClientC.identityKey].length == 1);
-  assert(testClientC.olmSessions[testClientA.identityKey].length == 1);
-  assert(testClientA.olmSessions[testClientC.identityKey].first.session_id() ==
-      testClientC.olmSessions[testClientA.identityKey].first.session_id());
-  assert(room.outboundGroupSession.session_id() != currentSessionIdA);
-  currentSessionIdA = room.outboundGroupSession.session_id();
-  assert(inviteRoom.inboundGroupSessions
-      .containsKey(room.outboundGroupSession.session_id()));
+  assert(testClientA
+          .encryption.olmManager.olmSessions[testClientB.identityKey].length ==
+      1);
+  assert(testClientB
+          .encryption.olmManager.olmSessions[testClientA.identityKey].length ==
+      1);
+  assert(testClientA
+          .encryption.olmManager.olmSessions[testClientB.identityKey].first
+          .session_id() ==
+      testClientB
+          .encryption.olmManager.olmSessions[testClientA.identityKey].first
+          .session_id());
+  assert(testClientA
+          .encryption.olmManager.olmSessions[testClientC.identityKey].length ==
+      1);
+  assert(testClientC
+          .encryption.olmManager.olmSessions[testClientA.identityKey].length ==
+      1);
+  assert(testClientA
+          .encryption.olmManager.olmSessions[testClientC.identityKey].first
+          .session_id() ==
+      testClientC
+          .encryption.olmManager.olmSessions[testClientA.identityKey].first
+          .session_id());
+  assert(room.client.encryption.keyManager
+          .getOutboundGroupSession(room.id)
+          .outboundGroupSession
+          .session_id() !=
+      currentSessionIdA);
+  currentSessionIdA = room.client.encryption.keyManager
+      .getOutboundGroupSession(room.id)
+      .outboundGroupSession
+      .session_id();
+  assert(inviteRoom.client.encryption.keyManager
+          .getInboundGroupSession(inviteRoom.id, currentSessionIdA, '') !=
+      null);
   assert(room.lastMessage == testMessage4);
   assert(inviteRoom.lastMessage == testMessage4);
   print(
@@ -206,14 +275,30 @@ void test() async {
   print("++++ ($testUserA) Send again encrypted message: '$testMessage6' ++++");
   await room.sendTextEvent(testMessage6);
   await Future.delayed(Duration(seconds: 5));
-  assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
-  assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
-  assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
-      testClientB.olmSessions[testClientA.identityKey].first.session_id());
-  assert(room.outboundGroupSession.session_id() != currentSessionIdA);
-  currentSessionIdA = room.outboundGroupSession.session_id();
-  assert(inviteRoom.inboundGroupSessions
-      .containsKey(room.outboundGroupSession.session_id()));
+  assert(testClientA
+          .encryption.olmManager.olmSessions[testClientB.identityKey].length ==
+      1);
+  assert(testClientB
+          .encryption.olmManager.olmSessions[testClientA.identityKey].length ==
+      1);
+  assert(testClientA
+          .encryption.olmManager.olmSessions[testClientB.identityKey].first
+          .session_id() ==
+      testClientB
+          .encryption.olmManager.olmSessions[testClientA.identityKey].first
+          .session_id());
+  assert(room.client.encryption.keyManager
+          .getOutboundGroupSession(room.id)
+          .outboundGroupSession
+          .session_id() !=
+      currentSessionIdA);
+  currentSessionIdA = room.client.encryption.keyManager
+      .getOutboundGroupSession(room.id)
+      .outboundGroupSession
+      .session_id();
+  assert(inviteRoom.client.encryption.keyManager
+          .getInboundGroupSession(inviteRoom.id, currentSessionIdA, '') !=
+      null);
   assert(room.lastMessage == testMessage6);
   assert(inviteRoom.lastMessage == testMessage6);
   print(
@@ -241,18 +326,18 @@ void test() async {
     assert(restoredRoom.inboundGroupSessions.keys.toList()[i] ==
         room.inboundGroupSessions.keys.toList()[i]);
   }
-  assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
-  assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
-  assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
-      testClientB.olmSessions[testClientA.identityKey].first.session_id());
+  assert(testClientA.encryption.olmManager.olmSessions[testClientB.identityKey].length == 1);
+  assert(testClientB.encryption.olmManager.olmSessions[testClientA.identityKey].length == 1);
+  assert(testClientA.encryption.olmManager.olmSessions[testClientB.identityKey].first.session_id() ==
+      testClientB.encryption.olmManager.olmSessions[testClientA.identityKey].first.session_id());
 
   print("++++ ($testUserA) Send again encrypted message: '$testMessage5' ++++");
   await restoredRoom.sendTextEvent(testMessage5);
   await Future.delayed(Duration(seconds: 5));
-  assert(testClientA.olmSessions[testClientB.identityKey].length == 1);
-  assert(testClientB.olmSessions[testClientA.identityKey].length == 1);
-  assert(testClientA.olmSessions[testClientB.identityKey].first.session_id() ==
-      testClientB.olmSessions[testClientA.identityKey].first.session_id());
+  assert(testClientA.encryption.olmManager.olmSessions[testClientB.identityKey].length == 1);
+  assert(testClientB.encryption.olmManager.olmSessions[testClientA.identityKey].length == 1);
+  assert(testClientA.encryption.olmManager.olmSessions[testClientB.identityKey].first.session_id() ==
+      testClientB.encryption.olmManager.olmSessions[testClientA.identityKey].first.session_id());
   assert(restoredRoom.lastMessage == testMessage5);
   assert(inviteRoom.lastMessage == testMessage5);
   assert(testClientB.getRoomById(roomId).lastMessage == testMessage5);

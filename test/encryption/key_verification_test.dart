@@ -17,10 +17,12 @@
  */
 
 import 'package:famedlysdk/famedlysdk.dart';
+import 'package:famedlysdk/encryption.dart';
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 
-import 'fake_matrix_api.dart';
+import '../fake_matrix_api.dart';
+import '../fake_database.dart';
 
 void main() {
   /// All Tests related to the ChatTime
@@ -36,18 +38,24 @@ void main() {
     print('[LibOlm] Enabled: $olmEnabled');
 
     var client = Client('testclient', debug: true, httpClient: FakeMatrixApi());
-    client.api.homeserver = Uri.parse('https://fakeserver.notexisting');
     var room = Room(id: '!localpart:server.abc', client: client);
     var updateCounter = 0;
-    final keyVerification = KeyVerification(
-      client: client,
-      room: room,
-      userId: '@alice:example.com',
-      deviceId: 'ABCD',
-      onUpdate: () => updateCounter++,
-    );
+    KeyVerification keyVerification;
 
     if (!olmEnabled) return;
+
+    test('setupClient', () async {
+      client.database = getDatabase();
+      await client.checkServer('https://fakeServer.notExisting');
+      await client.login('test', '1234');
+      keyVerification = KeyVerification(
+        encryption: client.encryption,
+        room: room,
+        userId: '@alice:example.com',
+        deviceId: 'ABCD',
+        onUpdate: () => updateCounter++,
+      );
+    });
 
     test('acceptSas', () async {
       await keyVerification.acceptSas();
@@ -91,7 +99,7 @@ void main() {
     test('verifyActivity', () async {
       final verified = await keyVerification.verifyActivity();
       expect(verified, true);
+      keyVerification?.dispose();
     });
-    keyVerification.dispose();
   });
 }

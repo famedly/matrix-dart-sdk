@@ -91,6 +91,22 @@ class Database extends _$Database {
     return res;
   }
 
+  Future<List<olm.Session>> getSingleOlmSessions(
+      int clientId, String identityKey, String userId) async {
+    final rows = await dbGetOlmSessions(clientId, identityKey).get();
+    final res = <olm.Session>[];
+    for (final row in rows) {
+      try {
+        var session = olm.Session();
+        session.unpickle(userId, row.pickle);
+        res.add(session);
+      } catch (e) {
+        print('[LibOlm] Could not unpickle olm session: ' + e.toString());
+      }
+    }
+    return res;
+  }
+
   Future<DbOutboundGroupSession> getDbOutboundGroupSession(
       int clientId, String roomId) async {
     final res = await dbGetOutboundGroupSession(clientId, roomId).get();

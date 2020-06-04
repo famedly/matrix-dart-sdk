@@ -1,11 +1,11 @@
 import 'dart:convert';
 
 import 'package:famedlysdk/matrix_api.dart';
+import 'package:famedlysdk/encryption.dart';
 
 import '../client.dart';
 import '../database/database.dart' show DbUserDeviceKey, DbUserDeviceKeysKey;
 import '../event.dart';
-import 'key_verification.dart';
 
 class DeviceKeysList {
   String userId;
@@ -78,12 +78,6 @@ class DeviceKeys extends MatrixDeviceKeys {
 
   Future<void> setBlocked(bool newBlocked, Client client) {
     blocked = newBlocked;
-    for (var room in client.rooms) {
-      if (!room.encrypted) continue;
-      if (room.getParticipants().indexWhere((u) => u.id == userId) != -1) {
-        room.clearOutboundGroupSession();
-      }
-    }
     return client.database
         ?.setBlockedUserDeviceKey(newBlocked, client.id, userId, deviceId);
   }
@@ -157,10 +151,10 @@ class DeviceKeys extends MatrixDeviceKeys {
   }
 
   KeyVerification startVerification(Client client) {
-    final request =
-        KeyVerification(client: client, userId: userId, deviceId: deviceId);
+    final request = KeyVerification(
+        encryption: client.encryption, userId: userId, deviceId: deviceId);
     request.start();
-    client.addKeyVerificationRequest(request);
+    client.encryption.keyVerificationManager.addRequest(request);
     return request;
   }
 }

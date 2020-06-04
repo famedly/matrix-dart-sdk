@@ -20,6 +20,7 @@ import 'dart:convert';
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api.dart';
+import 'package:famedlysdk/encryption.dart';
 import 'package:famedlysdk/src/event.dart';
 import 'package:test/test.dart';
 

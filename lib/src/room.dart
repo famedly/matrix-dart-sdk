@@ -17,21 +17,18 @@
  */
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:famedlysdk/matrix_api.dart';
-import 'package:pedantic/pedantic.dart';
+import 'package:famedlysdk/encryption.dart';
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/event.dart';
 import 'package:famedlysdk/src/utils/event_update.dart';
 import 'package:famedlysdk/src/utils/room_update.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
-import 'package:famedlysdk/src/utils/session_key.dart';
 import 'package:image/image.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 import 'package:mime_type/mime_type.dart';
-import 'package:olm/olm.dart' as olm;
 import 'package:html_unescape/html_unescape.dart';
 
 import './user.dart';
@@ -81,13 +78,6 @@ class Room {
   /// Key-Value store for private account data only visible for this user.
   Map<String, BasicRoomEvent> roomAccountData = {};
 
-  olm.OutboundGroupSession get outboundGroupSession => _outboundGroupSession;
-  olm.OutboundGroupSession _outboundGroupSession;
-
-  List<String> _outboundGroupSessionDevices;
-  DateTime _outboundGroupSessionCreationTime;
-  int _outboundGroupSessionSentMessages;
-
   double _newestSortOrder;
   double _oldestSortOrder;
 
@@ -110,168 +100,6 @@ class Room {
         _oldestSortOrder, _newestSortOrder, client.id, id);
   }
 
-  /// Clears the existing outboundGroupSession, tries to create a new one and
-  /// stores it as an ingoingGroupSession in the [sessionKeys]. Then sends the
-  /// new session encrypted with olm to all non-blocked devices using
-  /// to-device-messaging.
-  Future<void> createOutboundGroupSession() async {
-    await clearOutboundGroupSession(wipe: true);
-    var deviceKeys = await getUserDeviceKeys();
-    olm.OutboundGroupSession outboundGroupSession;
-    var outboundGroupSessionDevices = <String>[];
-    for (var keys in deviceKeys) {
-      if (!keys.blocked) outboundGroupSessionDevices.add(keys.deviceId);
-    }
-    outboundGroupSessionDevices.sort();
-    try {
-      outboundGroupSession = olm.OutboundGroupSession();
-      outboundGroupSession.create();
-    } catch (e) {
-      outboundGroupSession = null;
-      print('[LibOlm] Unable to create new outboundGroupSession: ' +
-          e.toString());
-    }
-
-    if (outboundGroupSession == null) return;
-    // Add as an inboundSession to the [sessionKeys].
-    var rawSession = <String, dynamic>{
-      'algorithm': 'm.megolm.v1.aes-sha2',
-      'room_id': id,
-      'session_id': outboundGroupSession.session_id(),
-      'session_key': outboundGroupSession.session_key(),
-    };
-    setInboundGroupSession(rawSession['session_id'], rawSession);
-    try {
-      await client.sendToDevice(deviceKeys, 'm.room_key', rawSession);
-      _outboundGroupSession = outboundGroupSession;
-      _outboundGroupSessionDevices = outboundGroupSessionDevices;
-      _outboundGroupSessionCreationTime = DateTime.now();
-      _outboundGroupSessionSentMessages = 0;
-      await _storeOutboundGroupSession();
-    } catch (e, s) {
-      print(
-          '[LibOlm] Unable to send the session key to the participating devices: ' +
-              e.toString());
-      print(s);
-      await clearOutboundGroupSession();
-    }
-    return;
-  }
-
-  Future<void> _storeOutboundGroupSession() async {
-    if (_outboundGroupSession == null) return;
-    await client.database?.storeOutboundGroupSession(
-        client.id,
-        id,
-        _outboundGroupSession.pickle(client.userID),
-        json.encode(_outboundGroupSessionDevices),
-        _outboundGroupSessionCreationTime,
-        _outboundGroupSessionSentMessages);
-    return;
-  }
-
-  /// Clears the existing outboundGroupSession but first checks if the participating
-  /// devices have been changed. Returns false if the session has not been cleared because
-  /// it wasn't necessary.
-  Future<bool> clearOutboundGroupSession({bool wipe = false}) async {
-    if (!wipe && _outboundGroupSessionDevices != null) {
-      // first check if the devices in the room changed
-      var deviceKeys = await getUserDeviceKeys();
-      var outboundGroupSessionDevices = <String>[];
-      for (var keys in deviceKeys) {
-        if (!keys.blocked) outboundGroupSessionDevices.add(keys.deviceId);
-      }
-      outboundGroupSessionDevices.sort();
-      if (outboundGroupSessionDevices.toString() !=
-          _outboundGroupSessionDevices.toString()) {
-        wipe = true;
-      }
-      // next check if it needs to be rotated
-      final encryptionContent = getState(EventTypes.Encryption)?.content;
-      final maxMessages = encryptionContent != null &&
-              encryptionContent['rotation_period_msgs'] is int
-          ? encryptionContent['rotation_period_msgs']
-          : 100;
-      final maxAge = encryptionContent != null &&
-              encryptionContent['rotation_period_ms'] is int
-          ? encryptionContent['rotation_period_ms']
-          : 604800000; // default of one week
-      if (_outboundGroupSessionSentMessages >= maxMessages ||
-          _outboundGroupSessionCreationTime
-              .add(Duration(milliseconds: maxAge))
-              .isBefore(DateTime.now())) {
-        wipe = true;
-      }
-      if (!wipe) {
-        return false;
-      }
-    }
-    if (!wipe &&
-        _outboundGroupSessionDevices == null &&
-        _outboundGroupSession == null) {
-      return true; // let's just short-circuit out of here, no need to do DB stuff
-    }
-    _outboundGroupSessionDevices = null;
-    await client.database?.removeOutboundGroupSession(client.id, id);
-    _outboundGroupSession?.free();
-    _outboundGroupSession = null;
-    return true;
-  }
-
-  /// Key-Value store of session ids to the session keys. Only m.megolm.v1.aes-sha2
-  /// session keys are supported. They are stored as a Map with the following keys:
-  /// {
-  ///   "algorithm": "m.megolm.v1.aes-sha2",
-  ///   "room_id": "!Cuyf34gef24t:localhost",
-  ///   "session_id": "X3lUlvLELLYxeTx4yOVu6UDpasGEVO0Jbu+QFnm0cKQ",
-  ///   "session_key": "AgAAAADxKHa9uFxcXzwYoNueL5Xqi69IkD4sni8LlfJL7qNBEY..."
-  /// }
-  Map<String, SessionKey> get inboundGroupSessions => _inboundGroupSessions;
-  final _inboundGroupSessions = <String, SessionKey>{};
-
-  /// Add a new session key to the [sessionKeys].
-  void setInboundGroupSession(String sessionId, Map<String, dynamic> content,
-      {bool forwarded = false}) {
-    if (inboundGroupSessions.containsKey(sessionId)) return;
-    olm.InboundGroupSession inboundGroupSession;
-    if (content['algorithm'] == 'm.megolm.v1.aes-sha2') {
-      try {
-        inboundGroupSession = olm.InboundGroupSession();
-        if (forwarded) {
-          inboundGroupSession.import_session(content['session_key']);
-        } else {
-          inboundGroupSession.create(content['session_key']);
-        }
-      } catch (e) {
-        inboundGroupSession = null;
-        print('[LibOlm] Could not create new InboundGroupSession: ' +
-            e.toString());
-      }
-    }
-    _inboundGroupSessions[sessionId] = SessionKey(
-      content: content,
-      inboundGroupSession: inboundGroupSession,
-      indexes: {},
-      key: client.userID,
-    );
-    client.database?.storeInboundGroupSession(
-      client.id,
-      id,
-      sessionId,
-      inboundGroupSession.pickle(client.userID),
-      json.encode(content),
-      json.encode({}),
-    );
-    _tryAgainDecryptLastMessage();
-    onSessionKeyReceived.add(sessionId);
-  }
-
-  Future<void> _tryAgainDecryptLastMessage() async {
-    if (getState(EventTypes.Encrypted) != null) {
-      await getState(EventTypes.Encrypted).decryptAndStore();
-    }
-  }
-
   /// Returns the [Event] for the given [typeKey] and optional [stateKey].
   /// If no [stateKey] is provided, it defaults to an empty string.
   Event getState(String typeKey, [String stateKey = '']) =>
@@ -281,21 +109,11 @@ class Room {
   /// typeKey/stateKey key pair if there is one.
   void setState(Event state) {
     // Decrypt if necessary
-    if (state.type == EventTypes.Encrypted) {
+    if (state.type == EventTypes.Encrypted && client.encryptionEnabled) {
       try {
-        state = decryptGroupMessage(state);
+        state = client.encryption.decryptRoomEventSync(id, state);
       } catch (e) {
         print('[LibOlm] Could not decrypt room state: ' + e.toString());
-      }
-    }
-    // Check if this is a member change and we need to clear the outboundGroupSession.
-    if (encrypted &&
-        outboundGroupSession != null &&
-        state.type == EventTypes.RoomMember) {
-      var newUser = state.asUser;
-      var oldUser = getState(EventTypes.RoomMember, newUser.id)?.asUser;
-      if (oldUser == null || oldUser.membership != newUser.membership) {
-        clearOutboundGroupSession();
       }
     }
     if ((getState(state.type)?.originServerTs?.millisecondsSinceEpoch ?? 0) >
@@ -882,7 +700,8 @@ class Room {
     // Send the text and on success, store and display a *sent* event.
     try {
       final sendMessageContent = encrypted && client.encryptionEnabled
-          ? await encryptGroupMessagePayload(content, type: type)
+          ? await client.encryption
+              .encryptGroupMessagePayload(id, content, type: type)
           : content;
       final res = await client.api.sendMessage(
         id,
@@ -998,55 +817,42 @@ class Room {
     if (onHistoryReceived != null) onHistoryReceived();
     prev_batch = resp.end;
 
-    final dbActions = <Future<dynamic> Function()>[];
-    if (client.database != null) {
-      dbActions.add(
-          () => client.database.setRoomPrevBatch(prev_batch, client.id, id));
-    }
+    final loadFn = () async {
+      if (!((resp.chunk?.isNotEmpty ?? false) && resp.end != null)) return;
 
-    if (!((resp.chunk?.isNotEmpty ?? false) && resp.end != null)) return;
-
-    if (resp.state != null) {
-      for (final state in resp.state) {
-        var eventUpdate = EventUpdate(
-          type: 'state',
-          roomID: id,
-          eventType: state.type,
-          content: state.toJson(),
-          sortOrder: oldSortOrder,
-        ).decrypt(this);
-        client.onEvent.add(eventUpdate);
-        if (client.database != null) {
-          dbActions.add(
-              () => client.database.storeEventUpdate(client.id, eventUpdate));
+      if (resp.state != null) {
+        for (final state in resp.state) {
+          await EventUpdate(
+            type: 'state',
+            roomID: id,
+            eventType: state.type,
+            content: state.toJson(),
+            sortOrder: oldSortOrder,
+          ).decrypt(this, store: true);
         }
       }
-    }
 
-    for (final hist in resp.chunk) {
-      var eventUpdate = EventUpdate(
-        type: 'history',
-        roomID: id,
-        eventType: hist.type,
-        content: hist.toJson(),
-        sortOrder: oldSortOrder,
-      ).decrypt(this);
-      client.onEvent.add(eventUpdate);
-      if (client.database != null) {
-        dbActions.add(
-            () => client.database.storeEventUpdate(client.id, eventUpdate));
+      for (final hist in resp.chunk) {
+        final eventUpdate = await EventUpdate(
+          type: 'history',
+          roomID: id,
+          eventType: hist.type,
+          content: hist.toJson(),
+          sortOrder: oldSortOrder,
+        ).decrypt(this, store: true);
+        client.onEvent.add(eventUpdate);
       }
-    }
+    };
+
     if (client.database != null) {
-      dbActions
-          .add(() => client.database.setRoomPrevBatch(resp.end, client.id, id));
+      await client.database.transaction(() async {
+        await client.database.setRoomPrevBatch(resp.end, client.id, id);
+        await loadFn();
+        await updateSortOrder();
+      });
+    } else {
+      await loadFn();
     }
-    await client.database?.transaction(() async {
-      for (final f in dbActions) {
-        await f();
-      }
-      await updateSortOrder();
-    });
     client.onRoomUpdate.add(
       RoomUpdate(
         id: id,
@@ -1146,7 +952,6 @@ class Room {
       }
       for (final rawState in rawStates) {
         final newState = Event.fromDb(rawState, newRoom);
-        ;
         newRoom.setState(newState);
       }
     }
@@ -1186,13 +991,13 @@ class Room {
     }
 
     // Try again to decrypt encrypted events and update the database.
-    if (encrypted && client.database != null) {
+    if (encrypted && client.database != null && client.encryptionEnabled) {
       await client.database.transaction(() async {
         for (var i = 0; i < events.length; i++) {
           if (events[i].type == EventTypes.Encrypted &&
               events[i].content['body'] == DecryptError.UNKNOWN_SESSION) {
-            await events[i].loadSession();
-            events[i] = await events[i].decryptAndStore();
+            events[i] = await client.encryption
+                .decryptRoomEvent(id, events[i], store: true);
           }
         }
       });
@@ -1745,209 +1550,10 @@ class Room {
     return deviceKeys;
   }
 
-  bool _restoredOutboundGroupSession = false;
-
-  Future<void> restoreOutboundGroupSession() async {
-    if (_restoredOutboundGroupSession || client.database == null) {
-      return;
-    }
-    final outboundSession =
-        await client.database.getDbOutboundGroupSession(client.id, id);
-    if (outboundSession != null) {
-      try {
-        _outboundGroupSession = olm.OutboundGroupSession();
-        _outboundGroupSession.unpickle(client.userID, outboundSession.pickle);
-        _outboundGroupSessionDevices =
-            List<String>.from(json.decode(outboundSession.deviceIds));
-        _outboundGroupSessionCreationTime = outboundSession.creationTime;
-        _outboundGroupSessionSentMessages = outboundSession.sentMessages;
-      } catch (e) {
-        _outboundGroupSession = null;
-        _outboundGroupSessionDevices = null;
-        print('[LibOlm] Unable to unpickle outboundGroupSession: ' +
-            e.toString());
-      }
-    }
-    _restoredOutboundGroupSession = true;
-  }
-
-  /// Encrypts the given json payload and creates a send-ready m.room.encrypted
-  /// payload. This will create a new outgoingGroupSession if necessary.
-  Future<Map<String, dynamic>> encryptGroupMessagePayload(
-      Map<String, dynamic> payload,
-      {String type = EventTypes.Message}) async {
-    if (!encrypted || !client.encryptionEnabled) return payload;
-    if (encryptionAlgorithm != 'm.megolm.v1.aes-sha2') {
-      throw ('Unknown encryption algorithm');
-    }
-    if (!_restoredOutboundGroupSession && client.database != null) {
-      // try to restore an outbound group session from the database
-      await restoreOutboundGroupSession();
-    }
-    // and clear the outbound session, if it needs clearing
-    await clearOutboundGroupSession();
-    // create a new one if none exists...
-    if (_outboundGroupSession == null) {
-      await createOutboundGroupSession();
-    }
-    final Map<String, dynamic> mRelatesTo = payload.remove('m.relates_to');
-    final payloadContent = {
-      'content': payload,
-      'type': type,
-      'room_id': id,
-    };
-    var encryptedPayload = <String, dynamic>{
-      'algorithm': 'm.megolm.v1.aes-sha2',
-      'ciphertext': _outboundGroupSession.encrypt(json.encode(payloadContent)),
-      'device_id': client.deviceID,
-      'sender_key': client.identityKey,
-      'session_id': _outboundGroupSession.session_id(),
-      if (mRelatesTo != null) 'm.relates_to': mRelatesTo,
-    };
-    _outboundGroupSessionSentMessages++;
-    await _storeOutboundGroupSession();
-    return encryptedPayload;
-  }
-
-  final Set<String> _requestedSessionIds = <String>{};
-
   Future<void> requestSessionKey(String sessionId, String senderKey) async {
-    await client.keyManager.request(this, sessionId, senderKey);
-  }
-
-  Future<void> loadInboundGroupSessionKey(String sessionId,
-      [String senderKey]) async {
-    if (sessionId == null || inboundGroupSessions.containsKey(sessionId)) {
-      return;
-    } // nothing to do
-    final session = await client.database
-        .getDbInboundGroupSession(client.id, id, sessionId);
-    if (session == null) {
-      // no session found, let's request it!
-      if (client.enableE2eeRecovery &&
-          !_requestedSessionIds.contains(sessionId) &&
-          senderKey != null) {
-        unawaited(requestSessionKey(sessionId, senderKey));
-        _requestedSessionIds.add(sessionId);
-      }
-      return;
-    }
-    try {
-      _inboundGroupSessions[sessionId] =
-          SessionKey.fromDb(session, client.userID);
-    } catch (e) {
-      print('[LibOlm] Could not unpickle inboundGroupSession: ' + e.toString());
-    }
-  }
-
-  Future<void> loadInboundGroupSessionKeyForEvent(Event event) async {
-    if (client.database == null) return; // nothing to do, no database
-    if (event.type != EventTypes.Encrypted) return;
     if (!client.encryptionEnabled) {
-      throw (DecryptError.NOT_ENABLED);
+      return;
     }
-    if (event.content['algorithm'] != 'm.megolm.v1.aes-sha2') {
-      throw (DecryptError.UNKNOWN_ALGORITHM);
-    }
-    final String sessionId = event.content['session_id'];
-    return loadInboundGroupSessionKey(sessionId, event.content['sender_key']);
+    await client.encryption.keyManager.request(this, sessionId, senderKey);
   }
-
-  /// Decrypts the given [event] with one of the available ingoingGroupSessions.
-  /// Returns a m.bad.encrypted event if it fails and does nothing if the event
-  /// was not encrypted.
-  Event decryptGroupMessage(Event event) {
-    if (event.type != EventTypes.Encrypted ||
-        event.content['ciphertext'] == null) return event;
-    Map<String, dynamic> decryptedPayload;
-    try {
-      if (!client.encryptionEnabled) {
-        throw (DecryptError.NOT_ENABLED);
-      }
-      if (event.content['algorithm'] != 'm.megolm.v1.aes-sha2') {
-        throw (DecryptError.UNKNOWN_ALGORITHM);
-      }
-      final String sessionId = event.content['session_id'];
-      if (!inboundGroupSessions.containsKey(sessionId)) {
-        throw (DecryptError.UNKNOWN_SESSION);
-      }
-      final decryptResult = inboundGroupSessions[sessionId]
-          .inboundGroupSession
-          .decrypt(event.content['ciphertext']);
-      final messageIndexKey = event.eventId +
-          event.originServerTs.millisecondsSinceEpoch.toString();
-      if (inboundGroupSessions[sessionId]
-              .indexes
-              .containsKey(messageIndexKey) &&
-          inboundGroupSessions[sessionId].indexes[messageIndexKey] !=
-              decryptResult.message_index) {
-        if ((_outboundGroupSession?.session_id() ?? '') == sessionId) {
-          clearOutboundGroupSession();
-        }
-        throw (DecryptError.CHANNEL_CORRUPTED);
-      }
-      inboundGroupSessions[sessionId].indexes[messageIndexKey] =
-          decryptResult.message_index;
-      // now we persist the udpated indexes into the database.
-      // the entry should always exist. In the case it doesn't, the following
-      // line *could* throw an error. As that is a future, though, and we call
-      // it un-awaited here, nothing happens, which is exactly the result we want
-      client.database?.updateInboundGroupSessionIndexes(
-          json.encode(inboundGroupSessions[sessionId].indexes),
-          client.id,
-          id,
-          sessionId);
-      decryptedPayload = json.decode(decryptResult.plaintext);
-    } catch (exception) {
-      // alright, if this was actually by our own outbound group session, we might as well clear it
-      if (client.enableE2eeRecovery &&
-          (_outboundGroupSession?.session_id() ?? '') ==
-              event.content['session_id']) {
-        clearOutboundGroupSession(wipe: true);
-      }
-      if (exception.toString() == DecryptError.UNKNOWN_SESSION) {
-        decryptedPayload = {
-          'content': event.content,
-          'type': EventTypes.Encrypted,
-        };
-        decryptedPayload['content']['body'] = exception.toString();
-        decryptedPayload['content']['msgtype'] = 'm.bad.encrypted';
-      } else {
-        decryptedPayload = {
-          'content': <String, dynamic>{
-            'msgtype': 'm.bad.encrypted',
-            'body': exception.toString(),
-          },
-          'type': EventTypes.Encrypted,
-        };
-      }
-    }
-    if (event.content['m.relates_to'] != null) {
-      decryptedPayload['content']['m.relates_to'] =
-          event.content['m.relates_to'];
-    }
-    return Event(
-      content: decryptedPayload['content'],
-      type: decryptedPayload['type'],
-      senderId: event.senderId,
-      eventId: event.eventId,
-      roomId: event.roomId,
-      room: event.room,
-      originServerTs: event.originServerTs,
-      unsigned: event.unsigned,
-      stateKey: event.stateKey,
-      prevContent: event.prevContent,
-      status: event.status,
-      sortOrder: event.sortOrder,
-    );
-  }
-}
-
-abstract class DecryptError {
-  static const String NOT_ENABLED = 'Encryption is not enabled in your client.';
-  static const String UNKNOWN_ALGORITHM = 'Unknown encryption algorithm.';
-  static const String UNKNOWN_SESSION =
-      'The sender has not sent us the session key.';
-  static const String CHANNEL_CORRUPTED =
-      'The secure channel with the sender was corrupted.';
 }

@@ -1,11 +1,29 @@
+/*
+ *   Famedly Matrix SDK
+ *   Copyright (C) 2020 Famedly GmbH
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 import 'dart:typed_data';
 import 'package:random_string/random_string.dart';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:olm/olm.dart' as olm;
-import '../../matrix_api.dart';
-import 'device_keys_list.dart';
-import '../client.dart';
-import '../room.dart';
+import 'package:famedlysdk/famedlysdk.dart';
+import 'package:famedlysdk/matrix_api.dart';
+
+import '../encryption.dart';
 
 /*
     +-------------+                    +-----------+
@@ -53,6 +71,9 @@ enum KeyVerificationState {
 }
 
 List<String> _intersect(List<String> a, List<dynamic> b) {
+  if (b == null || a == null) {
+    return [];
+  }
   final res = <String>[];
   for (final v in a) {
     if (b.contains(v)) {
@@ -94,7 +115,8 @@ _KeyVerificationMethod _makeVerificationMethod(
 
 class KeyVerification {
   String transactionId;
-  final Client client;
+  final Encryption encryption;
+  Client get client => encryption.client;
   final Room room;
   final String userId;
   void Function() onUpdate;
@@ -114,7 +136,11 @@ class KeyVerification {
   String canceledReason;
 
   KeyVerification(
-      {this.client, this.room, this.userId, String deviceId, this.onUpdate}) {
+      {this.encryption,
+      this.room,
+      this.userId,
+      String deviceId,
+      this.onUpdate}) {
     lastActivity = DateTime.now();
     _deviceId ??= deviceId;
   }
@@ -384,7 +410,7 @@ class KeyVerification {
       final newTransactionId = await room.sendEvent(payload, type: type);
       if (transactionId == null) {
         transactionId = newTransactionId;
-        client.addKeyVerificationRequest(this);
+        encryption.keyVerificationManager.addRequest(this);
       }
     } else {
       await client.sendToDevice(
@@ -404,10 +430,9 @@ class KeyVerification {
 
 abstract class _KeyVerificationMethod {
   KeyVerification request;
-  Client client;
-  _KeyVerificationMethod({this.request}) {
-    client = request.client;
-  }
+  Encryption get encryption => request.encryption;
+  Client get client => request.client;
+  _KeyVerificationMethod({this.request});
 
   Future<void> handlePayload(String type, Map<String, dynamic> payload);
   bool validateStart(Map<String, dynamic> payload) {
@@ -662,7 +687,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     // we would also add the cross signing key here
     final deviceKeyId = 'ed25519:${client.deviceID}';
     mac[deviceKeyId] =
-        _calculateMac(client.fingerprintKey, baseInfo + deviceKeyId);
+        _calculateMac(encryption.fingerprintKey, baseInfo + deviceKeyId);
     keyList.add(deviceKeyId);
 
     keyList.sort();

@@ -315,7 +315,7 @@ void main() {
 
     test('getTimeline', () async {
       final timeline = await room.getTimeline();
-      expect(timeline.events, []);
+      expect(timeline.events.length, 1);
     });
 
     test('getUserByMXID', () async {
@@ -388,60 +388,6 @@ void main() {
       );
       expect(room.encrypted, true);
       expect(room.encryptionAlgorithm, 'm.megolm.v1.aes-sha2');
-      expect(room.outboundGroupSession, null);
-    });
-
-    test('createOutboundGroupSession', () async {
-      if (!room.client.encryptionEnabled) return;
-      await room.createOutboundGroupSession();
-      expect(room.outboundGroupSession != null, true);
-      expect(room.outboundGroupSession.session_id().isNotEmpty, true);
-      expect(
-          room.inboundGroupSessions
-              .containsKey(room.outboundGroupSession.session_id()),
-          true);
-      expect(
-          room.inboundGroupSessions[room.outboundGroupSession.session_id()]
-              .content['session_key'],
-          room.outboundGroupSession.session_key());
-      expect(
-          room.inboundGroupSessions[room.outboundGroupSession.session_id()]
-              .indexes.length,
-          0);
-    });
-
-    test('clearOutboundGroupSession', () async {
-      if (!room.client.encryptionEnabled) return;
-      await room.clearOutboundGroupSession(wipe: true);
-      expect(room.outboundGroupSession == null, true);
-    });
-
-    test('encryptGroupMessagePayload and decryptGroupMessage', () async {
-      if (!room.client.encryptionEnabled) return;
-      final payload = {
-        'msgtype': 'm.text',
-        'body': 'Hello world',
-      };
-      final encryptedPayload = await room.encryptGroupMessagePayload(payload);
-      expect(encryptedPayload['algorithm'], 'm.megolm.v1.aes-sha2');
-      expect(encryptedPayload['ciphertext'].isNotEmpty, true);
-      expect(encryptedPayload['device_id'], room.client.deviceID);
-      expect(encryptedPayload['sender_key'], room.client.identityKey);
-      expect(encryptedPayload['session_id'],
-          room.outboundGroupSession.session_id());
-
-      var encryptedEvent = Event(
-        content: encryptedPayload,
-        type: 'm.room.encrypted',
-        senderId: room.client.userID,
-        eventId: '1234',
-        roomId: room.id,
-        room: room,
-        originServerTs: DateTime.now(),
-      );
-      var decryptedEvent = room.decryptGroupMessage(encryptedEvent);
-      expect(decryptedEvent.type, 'm.room.message');
-      expect(decryptedEvent.content, payload);
     });
 
     test('setPushRuleState', () async {
