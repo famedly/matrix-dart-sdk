@@ -24,6 +24,7 @@ class MatrixEvent extends StrippedStateEvent {
   DateTime originServerTs;
   Map<String, dynamic> unsigned;
   Map<String, dynamic> prevContent;
+  String redacts;
 
   MatrixEvent();
 
@@ -43,6 +44,7 @@ class MatrixEvent extends StrippedStateEvent {
     prevContent = json['prev_content'] != null
         ? Map<String, dynamic>.from(json['prev_content'])
         : null;
+    redacts = json['redacts'];
   }
 
   @override
@@ -61,6 +63,9 @@ class MatrixEvent extends StrippedStateEvent {
     }
     if (data['state_key'] == null) {
       data.remove('state_key');
+    }
+    if (redacts != null) {
+      data['redacts'] = redacts;
     }
     return data;
   }
