@@ -43,7 +43,6 @@ void main() {
     var updateCounter = 0;
     KeyVerification keyVerification;
 
-
     test('setupClient', () async {
       client = await getClient();
       room = Room(id: '!localpart:server.abc', client: client);

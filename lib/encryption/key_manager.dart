@@ -437,7 +437,8 @@ class KeyManager {
             .deviceKeys[event.content['requesting_device_id']]
             .ed25519Key;
       }
-      setInboundGroupSession(roomId, sessionId, event.encryptedContent['sender_key'], event.content,
+      setInboundGroupSession(roomId, sessionId,
+          event.encryptedContent['sender_key'], event.content,
           forwarded: false);
     }
   }

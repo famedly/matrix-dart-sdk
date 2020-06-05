@@ -101,8 +101,12 @@ void main() {
 
     test('startOutgoingOlmSessions', () async {
       // start an olm session.....with ourself!
-      await client.encryption.olmManager.startOutgoingOlmSessions([client.userDeviceKeys[client.userID].deviceKeys[client.deviceID]]);
-      expect(client.encryption.olmManager.olmSessions.containsKey(client.identityKey), true);
+      await client.encryption.olmManager.startOutgoingOlmSessions(
+          [client.userDeviceKeys[client.userID].deviceKeys[client.deviceID]]);
+      expect(
+          client.encryption.olmManager.olmSessions
+              .containsKey(client.identityKey),
+          true);
     });
   });
 }
