@@ -215,5 +215,9 @@ void main() {
               null,
           true);
     });
+
+    test('dispose client', () async {
+      await client.dispose(closeDatabase: true);
+    });
   });
 }

@@ -99,5 +99,9 @@ void main() {
       expect(verified, true);
       keyVerification?.dispose();
     });
+
+    test('dispose client', () async {
+      await client.dispose(closeDatabase: true);
+    });
   });
 }

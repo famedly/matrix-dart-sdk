@@ -111,5 +111,10 @@ void main() {
       expect(decryptedEvent.type, 'm.to_device');
       expect(decryptedEvent.content['hello'], 'superfoxies');
     });
+
+    test('dispose client', () async {
+      await client.dispose(closeDatabase: true);
+      await otherClient.dispose(closeDatabase: true);
+    });
   });
 }

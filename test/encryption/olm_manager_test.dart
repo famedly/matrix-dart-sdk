@@ -108,5 +108,9 @@ void main() {
               .containsKey(client.identityKey),
           true);
     });
+
+    test('dispose client', () async {
+      await client.dispose(closeDatabase: true);
+    });
   });
 }

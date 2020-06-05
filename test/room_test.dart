@@ -330,13 +330,13 @@ void main() {
       final dynamic resp = await room.sendEvent(
           {'msgtype': 'm.text', 'body': 'hello world'},
           txid: 'testtxid');
-      expect(resp, '\$event0');
+      expect(resp.startsWith('\$event'), true);
     });
 
     test('sendEvent', () async {
       final dynamic resp =
           await room.sendTextEvent('Hello world', txid: 'testtxid');
-      expect(resp, '\$event1');
+      expect(resp.startsWith('\$event'), true);
     });
 
     // Not working because there is no real file to test it...

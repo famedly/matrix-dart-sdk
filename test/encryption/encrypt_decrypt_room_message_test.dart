@@ -91,5 +91,9 @@ void main() {
       expect(decryptedEvent.content['msgtype'], 'm.text');
       expect(decryptedEvent.content['text'], 'Hello foxies!');
     });
+
+    test('dispose client', () async {
+      await client.dispose(closeDatabase: true);
+    });
   });
 }
