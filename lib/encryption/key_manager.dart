@@ -147,6 +147,11 @@ class KeyManager {
     return sess;
   }
 
+  /// clear all cached inbound group sessions. useful for testing
+  void clearOutboundGroupSessions() {
+    _outboundGroupSessions.clear();
+  }
+
   /// Clears the existing outboundGroupSession but first checks if the participating
   /// devices have been changed. Returns false if the session has not been cleared because
   /// it wasn't necessary.
