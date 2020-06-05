@@ -51,7 +51,7 @@ class KeyVerificationManager {
   }
 
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
-    if (!event.type.startsWith('m.key.verification')) {
+    if (!event.type.startsWith('m.key.verification') || client.verificationMethods.isEmpty) {
       return;
     }
     // we have key verification going on!
@@ -69,6 +69,52 @@ class KeyVerificationManager {
         // okay, something went wrong (unknown transaction id?), just dispose it
         newKeyRequest.dispose();
       } else {
+        _requests[transactionId] = newKeyRequest;
+        client.onKeyVerificationRequest.add(newKeyRequest);
+      }
+    }
+  }
+
+  Future<void> handleEventUpdate(EventUpdate update) async {
+    final event = update.content;
+    final type = event['type'].startsWith('m.key.verification.')
+        ? event['type']
+        : event['content']['msgtype'];
+    if (type == null || !type.startsWith('m.key.verification.') || client.verificationMethods.isEmpty) {
+      return;
+    }
+    if (type == 'm.key.verification.request') {
+      event['content']['timestamp'] = event['origin_server_ts'];
+    }
+
+    final transactionId =
+        KeyVerification.getTransactionId(event['content']) ?? event['event_id'];
+
+    if (_requests.containsKey(transactionId)) {
+      final req = _requests[transactionId];
+      if (event['sender'] != client.userID) {
+        req.handlePayload(type, event['content'], event['event_id']);
+      } else if (req.userId == client.userID && req.deviceId == null) {
+        // okay, maybe another of our devices answered
+        await req.handlePayload(type, event['content'], event['event_id']);
+        if (req.deviceId != client.deviceID) {
+          req.otherDeviceAccepted();
+          req.dispose();
+          _requests.remove(transactionId);
+        }
+      }
+    } else if (event['sender'] != client.userID) {
+      final room =
+          client.getRoomById(update.roomID) ?? Room(id: update.roomID, client: client);
+      final newKeyRequest =
+          KeyVerification(encryption: encryption, userId: event['sender'], room: room);
+      await newKeyRequest
+          .handlePayload(type, event['content'], event['event_id']);
+      if (newKeyRequest.state != KeyVerificationState.askAccept) {
+        // something went wrong, let's just dispose the request
+        newKeyRequest.dispose();
+      } else {
+        // new request! Let's notify it and stuff
         _requests[transactionId] = newKeyRequest;
         client.onKeyVerificationRequest.add(newKeyRequest);
       }

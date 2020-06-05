@@ -184,8 +184,8 @@ class KeyVerification {
     if (room == null) {
       transactionId = client.generateUniqueTransactionId();
     }
-    if (client.crossSigning.enabled &&
-        !(await client.crossSigning.isCached()) &&
+    if (encryption.crossSigning.enabled &&
+        !(await encryption.crossSigning.isCached()) &&
         !client.isUnknownSession) {
       setState(KeyVerificationState.askSSSS);
       _nextAction = 'request';
@@ -241,7 +241,6 @@ class KeyVerification {
           print('Setting device id start: ' + _deviceId.toString());
           transactionId ??= eventId ?? payload['transaction_id'];
           if (method != null) {
-            print('DUPLICATE START');
             // the other side sent us a start, even though we already sent one
             if (payload['method'] == method.type) {
               // same method. Determine priority
@@ -250,10 +249,8 @@ class KeyVerification {
               entries.sort();
               if (entries.first == ourEntry) {
                 // our start won, nothing to do
-                print('we won, nothing to do');
                 return;
               } else {
-                print('They won, handing off');
                 // the other start won, let's hand off
                 startedVerification = false; // it is now as if they started
                 lastStep =
@@ -324,7 +321,7 @@ class KeyVerification {
       } else if (_nextAction == 'done') {
         if (_verifiedDevices != null) {
           // and now let's sign them all in the background
-          client.crossSigning.sign(_verifiedDevices);
+          encryption.crossSigning.sign(_verifiedDevices);
         }
         setState(KeyVerificationState.done);
       }
@@ -333,7 +330,7 @@ class KeyVerification {
       next();
       return;
     }
-    final handle = client.ssss.open('m.cross_signing.user_signing');
+    final handle = encryption.ssss.open('m.cross_signing.user_signing');
     await handle.unlock(password: password, recoveryKey: recoveryKey);
     await handle.maybeCacheAll();
     next();
@@ -437,18 +434,18 @@ class KeyVerification {
     if (verifiedMasterKey && userId == client.userID) {
       // it was our own master key, let's request the cross signing keys
       // we do it in the background, thus no await needed here
-      unawaited(client.ssss
+      unawaited(encryption.ssss
           .maybeRequestAll(_verifiedDevices.whereType<DeviceKeys>().toList()));
     }
     await send('m.key.verification.done', {});
 
     var askingSSSS = false;
-    if (client.crossSigning.enabled &&
-        client.crossSigning.signable(_verifiedDevices)) {
+    if (encryption.crossSigning.enabled &&
+        encryption.crossSigning.signable(_verifiedDevices)) {
       // these keys can be signed! Let's do so
-      if (await client.crossSigning.isCached()) {
+      if (await encryption.crossSigning.isCached()) {
         // and now let's sign them all in the background
-        unawaited(client.crossSigning.sign(_verifiedDevices));
+        unawaited(encryption.crossSigning.sign(_verifiedDevices));
       } else if (!wasUnknownSession) {
         askingSSSS = true;
       }

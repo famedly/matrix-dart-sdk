@@ -85,10 +85,10 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await matrix
           .userDeviceKeys['@alice:example.com'].deviceKeys['OTHERDEVICE']
-          .setBlocked(false, matrix);
+          .setBlocked(false);
       await matrix
           .userDeviceKeys['@alice:example.com'].deviceKeys['OTHERDEVICE']
-          .setVerified(true, matrix);
+          .setVerified(true);
       // test a successful share
       var event = ToDeviceEvent(
           sender: '@alice:example.com',

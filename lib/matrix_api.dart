@@ -31,6 +31,7 @@ export 'package:famedlysdk/matrix_api/model/filter.dart';
 export 'package:famedlysdk/matrix_api/model/keys_query_response.dart';
 export 'package:famedlysdk/matrix_api/model/login_response.dart';
 export 'package:famedlysdk/matrix_api/model/login_types.dart';
+export 'package:famedlysdk/matrix_api/model/matrix_cross_signing_key.dart';
 export 'package:famedlysdk/matrix_api/model/matrix_device_keys.dart';
 export 'package:famedlysdk/matrix_api/model/matrix_exception.dart';
 export 'package:famedlysdk/matrix_api/model/message_types.dart';

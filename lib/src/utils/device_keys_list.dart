@@ -60,7 +60,7 @@ class DeviceKeysList {
       throw 'Unable to start new room';
     }
     final room = client.getRoomById(roomId) ?? Room(id: roomId, client: client);
-    final request = KeyVerification(client: client, room: room, userId: userId);
+    final request = KeyVerification(encryption: client.encryption, room: room, userId: userId);
     await request.start();
     // no need to add to the request client object. As we are doing a room
     // verification request that'll happen automatically once we know the transaction id
@@ -94,34 +94,6 @@ class DeviceKeysList {
     }
   }
 
-  DeviceKeysList.fromJson(Map<String, dynamic> json, Client cl) {
-    client = cl;
-    userId = json['user_id'];
-    outdated = json['outdated'];
-    deviceKeys = {};
-    for (final rawDeviceKeyEntry in json['device_keys'].entries) {
-      deviceKeys[rawDeviceKeyEntry.key] =
-          DeviceKeys.fromJson(rawDeviceKeyEntry.value, client);
-    }
-  }
-
-  Map<String, dynamic> toJson() {
-    var map = <String, dynamic>{};
-    final data = map;
-    data['user_id'] = userId;
-    data['outdated'] = outdated ?? true;
-
-    var rawDeviceKeys = <String, dynamic>{};
-    for (final deviceKeyEntry in deviceKeys.entries) {
-      rawDeviceKeys[deviceKeyEntry.key] = deviceKeyEntry.value.toJson();
-    }
-    data['device_keys'] = rawDeviceKeys;
-    return data;
-  }
-
-  @override
-  String toString() => json.encode(toJson());
-
   DeviceKeysList(this.userId);
 }
 
@@ -137,7 +109,6 @@ abstract class SignedKey {
   bool blocked;
 
   String get ed25519Key => keys['ed25519:$identifier'];
-
   bool get verified => (directVerified || crossVerified) && !blocked;
 
   void setDirectVerified(bool v) {
@@ -145,9 +116,7 @@ abstract class SignedKey {
   }
 
   bool get directVerified => _verified;
-
   bool get crossVerified => hasValidSignatureChain();
-
   bool get signed => hasValidSignatureChain(verifiedOnly: false);
 
   String get signingContent {
@@ -255,9 +224,9 @@ abstract class SignedKey {
 
   Future<void> setVerified(bool newVerified, [bool sign = true]) {
     _verified = newVerified;
-    if (sign && client.crossSigning.signable([this])) {
+    if (sign && client.encryptionEnabled && client.encryption.crossSigning.signable([this])) {
       // sign the key!
-      client.crossSigning.sign([this]);
+      client.encryption.crossSigning.sign([this]);
     }
     return Future.value();
   }
@@ -295,6 +264,20 @@ class CrossSigningKey extends SignedKey {
     blocked = newBlocked;
     return client.database?.setBlockedUserCrossSigningKey(
         newBlocked, client.id, userId, publicKey);
+  }
+
+  CrossSigningKey.fromMatrixCrossSigningKey(MatrixCrossSigningKey k, Client cl) {
+    client = cl;
+    content = Map<String, dynamic>.from(k.toJson());
+    userId = k.userId;
+    identifier = k.publicKey;
+    usage = content['usage'].cast<String>();
+    keys = content['keys'] != null ? Map<String, String>.from(content['keys']) : null;
+    signatures = content['signatures'] != null
+        ? Map<String, dynamic>.from(content['signatures'])
+        : null;
+    _verified = false;
+    blocked = false;
   }
 
   CrossSigningKey.fromDb(DbUserCrossSigningKey dbEntry, Client cl) {
@@ -346,15 +329,34 @@ class DeviceKeys extends SignedKey {
   @override
   Future<void> setVerified(bool newVerified, [bool sign = true]) {
     super.setVerified(newVerified, sign);
-    return client.database
+    return client?.database
         ?.setVerifiedUserDeviceKey(newVerified, client.id, userId, deviceId);
   }
 
   @override
   Future<void> setBlocked(bool newBlocked) {
     blocked = newBlocked;
-    return client.database
+    return client?.database
         ?.setBlockedUserDeviceKey(newBlocked, client.id, userId, deviceId);
+  }
+
+  DeviceKeys.fromMatrixDeviceKeys(MatrixDeviceKeys k, Client cl) {
+    client = cl;
+    content = Map<String, dynamic>.from(k.toJson());
+    userId = k.userId;
+    identifier = k.deviceId;
+    algorithms = content['algorithms'].cast<String>();
+    keys = content['keys'] != null
+        ? Map<String, String>.from(content['keys'])
+        : null;
+    signatures = content['signatures'] != null
+        ? Map<String, dynamic>.from(content['signatures'])
+        : null;
+    unsigned = content['unsigned'] != null
+        ? Map<String, dynamic>.from(content['unsigned'])
+        : null;
+    _verified = false;
+    blocked = false;
   }
 
   DeviceKeys.fromDb(DbUserDeviceKeysKey dbEntry, Client cl) {
@@ -365,45 +367,10 @@ class DeviceKeys extends SignedKey {
     identifier = dbEntry.deviceId;
     algorithms = content['algorithms'].cast<String>();
     keys = content['keys'] != null
-  }) : super(userId, deviceId, algorithms, keys, signatures,
-              unsigned: unsigned);
-
-  DeviceKeys({
-    String userId,
-    String deviceId,
-    List<String> algorithms,
-    Map<String, String> keys,
-    Map<String, Map<String, String>> signatures,
-    Map<String, dynamic> unsigned,
-    this.verified,
-    this.blocked,
-  }) : super(userId, deviceId, algorithms, keys, signatures,
-            unsigned: unsigned);
-
-  factory DeviceKeys.fromMatrixDeviceKeys(MatrixDeviceKeys matrixDeviceKeys) =>
-      DeviceKeys(
-        userId: matrixDeviceKeys.userId,
-        deviceId: matrixDeviceKeys.deviceId,
-        algorithms: matrixDeviceKeys.algorithms,
-        keys: matrixDeviceKeys.keys,
-        signatures: matrixDeviceKeys.signatures,
-        unsigned: matrixDeviceKeys.unsigned,
-        verified: false,
-        blocked: false,
-      );
-
-  static DeviceKeys fromDb(DbUserDeviceKeysKey dbEntry) {
-    var deviceKeys = DeviceKeys();
-    final content = Event.getMapFromPayload(dbEntry.content);
-    deviceKeys.userId = dbEntry.userId;
-    deviceKeys.deviceId = dbEntry.deviceId;
-    deviceKeys.algorithms = content['algorithms'].cast<String>();
-    deviceKeys.keys = content['keys'] != null
         ? Map<String, String>.from(content['keys'])
         : null;
-    deviceKeys.signatures = content['signatures'] != null
-        ? Map<String, Map<String, String>>.from((content['signatures'] as Map)
-            .map((k, v) => MapEntry(k, Map<String, String>.from(v))))
+    signatures = content['signatures'] != null
+        ? Map<String, dynamic>.from(content['signatures'])
         : null;
     unsigned = json['unsigned'] != null
         ? Map<String, dynamic>.from(json['unsigned'])
@@ -431,7 +398,7 @@ class DeviceKeys extends SignedKey {
 
   KeyVerification startVerification() {
     final request =
-        KeyVerification(client: client, userId: userId, deviceId: deviceId);
+        KeyVerification(encryption: client.encryption, userId: userId, deviceId: deviceId);
 
     request.start();
     client.encryption.keyVerificationManager.addRequest(request);

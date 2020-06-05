@@ -41,8 +41,6 @@ void main() {
           }
         },
         'unsigned': {'device_display_name': "Alice's mobile phone"},
-        'verified': false,
-        'blocked': true,
       };
       var rawListJson = <String, dynamic>{
         'user_id': '@alice:example.com',
@@ -50,28 +48,12 @@ void main() {
         'device_keys': {'JLAFKJWSCS': rawJson},
       };
 
-      var userDeviceKeys = <String, DeviceKeysList>{
-        '@alice:example.com': DeviceKeysList.fromJson(rawListJson, null),
-      };
-      var userDeviceKeyRaw = <String, dynamic>{
-        '@alice:example.com': rawListJson,
-      };
-
       final key = DeviceKeys.fromJson(rawJson, null);
-      rawJson.remove('verified');
-      rawJson.remove('blocked');
+      key.setVerified(false, false);
+      key.setBlocked(true);
       expect(json.encode(key.toJson()), json.encode(rawJson));
-      expect(key.verified, false);
+      expect(key.directVerified, false);
       expect(key.blocked, true);
-      expect(json.encode(DeviceKeysList.fromJson(rawListJson, null).toJson()),
-          json.encode(rawListJson));
-
-      var mapFromRaw = <String, DeviceKeysList>{};
-      for (final rawListEntry in userDeviceKeyRaw.entries) {
-        mapFromRaw[rawListEntry.key] =
-            DeviceKeysList.fromJson(rawListEntry.value, null);
-      }
-      expect(mapFromRaw.toString(), userDeviceKeys.toString());
     });
   });
 }

@@ -1,3 +1,21 @@
+/*
+ *   Famedly Matrix SDK
+ *   Copyright (C) 2020 Famedly GmbH
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 import 'dart:typed_data';
 import 'dart:convert';
 
@@ -5,11 +23,10 @@ import 'package:encrypt/encrypt.dart';
 import 'package:crypto/crypto.dart';
 import 'package:base58check/base58.dart';
 import 'package:password_hash/password_hash.dart';
+import 'package:famedlysdk/famedlysdk.dart';
+import 'package:famedlysdk/matrix_api.dart';
 
-import 'client.dart';
-import 'account_data.dart';
-import 'utils/device_keys_list.dart';
-import 'utils/to_device_event.dart';
+import 'encryption.dart';
 
 const CACHE_TYPES = <String>[
   'm.cross_signing.self_signing',
@@ -25,10 +42,11 @@ const OLM_RECOVERY_KEY_PREFIX = [0x8B, 0x01];
 const OLM_PRIVATE_KEY_LENGTH = 32; // TODO: fetch from dart-olm
 
 class SSSS {
-  final Client client;
+  final Encryption encryption;
+  Client get client => encryption.client;
   final pendingShareRequests = <String, _ShareRequest>{};
   final _validators = <String, Future<bool> Function(String)>{};
-  SSSS(this.client);
+  SSSS(this.encryption);
 
   static _DerivedKeys deriveKeys(Uint8List key, String name) {
     final zerosalt = Uint8List(8);
@@ -129,11 +147,11 @@ class SSSS {
     return keyData.content['key'];
   }
 
-  AccountData getKey(String keyId) {
+  BasicEvent getKey(String keyId) {
     return client.accountData['m.secret_storage.key.${keyId}'];
   }
 
-  bool checkKey(Uint8List key, AccountData keyData) {
+  bool checkKey(Uint8List key, BasicEvent keyData) {
     final info = keyData.content;
     if (info['algorithm'] == 'm.secret_storage.v1.aes-hmac-sha2') {
       if ((info['mac'] is String) && (info['iv'] is String)) {
@@ -200,7 +218,7 @@ class SSSS {
     };
     // store the thing in your account data
     await client.jsonRequest(
-      type: HTTPType.PUT,
+      type: RequestType.PUT,
       action: '/client/r0/user/${client.userID}/account_data/${type}',
       data: content,
     );
@@ -421,7 +439,7 @@ class _PasswordInfo {
 class OpenSSSS {
   final SSSS ssss;
   final String keyId;
-  final AccountData keyData;
+  final BasicEvent keyData;
   OpenSSSS({this.ssss, this.keyId, this.keyData});
   Uint8List privateKey;
 

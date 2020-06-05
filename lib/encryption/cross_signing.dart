@@ -1,19 +1,38 @@
+/*
+ *   Famedly Matrix SDK
+ *   Copyright (C) 2020 Famedly GmbH
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 import 'dart:typed_data';
 import 'dart:convert';
 
 import 'package:olm/olm.dart' as olm;
+import 'package:famedlysdk/famedlysdk.dart';
 
-import 'client.dart';
-import 'utils/device_keys_list.dart';
+import 'encryption.dart';
 
 const SELF_SIGNING_KEY = 'm.cross_signing.self_signing';
 const USER_SIGNING_KEY = 'm.cross_signing.user_signing';
 const MASTER_KEY = 'm.cross_signing.master';
 
 class CrossSigning {
-  final Client client;
-  CrossSigning(this.client) {
-    client.ssss.setValidator(SELF_SIGNING_KEY, (String secret) async {
+  final Encryption encryption;
+  Client get client => encryption.client;
+  CrossSigning(this.encryption) {
+    encryption.ssss.setValidator(SELF_SIGNING_KEY, (String secret) async {
       final keyObj = olm.PkSigning();
       try {
         return keyObj.init_with_seed(base64.decode(secret)) ==
@@ -24,7 +43,7 @@ class CrossSigning {
         keyObj.free();
       }
     });
-    client.ssss.setValidator(USER_SIGNING_KEY, (String secret) async {
+    encryption.ssss.setValidator(USER_SIGNING_KEY, (String secret) async {
       final keyObj = olm.PkSigning();
       try {
         return keyObj.init_with_seed(base64.decode(secret)) ==
@@ -46,12 +65,12 @@ class CrossSigning {
     if (!enabled) {
       return false;
     }
-    return (await client.ssss.getCached(SELF_SIGNING_KEY)) != null &&
-        (await client.ssss.getCached(USER_SIGNING_KEY)) != null;
+    return (await encryption.ssss.getCached(SELF_SIGNING_KEY)) != null &&
+        (await encryption.ssss.getCached(USER_SIGNING_KEY)) != null;
   }
 
   Future<void> selfSign({String password, String recoveryKey}) async {
-    final handle = client.ssss.open(MASTER_KEY);
+    final handle = encryption.ssss.open(MASTER_KEY);
     await handle.unlock(password: password, recoveryKey: recoveryKey);
     await handle.maybeCacheAll();
     final masterPrivateKey = base64.decode(await handle.getStored(MASTER_KEY));
@@ -133,7 +152,7 @@ class CrossSigning {
         if (key is CrossSigningKey) {
           if (key.usage.contains('master')) {
             // okay, we'll sign our own master key
-            final signature = client.signString(key.signingContent);
+            final signature = encryption.olmManager.signString(key.signingContent);
             addSignature(
                 key,
                 client
@@ -144,8 +163,8 @@ class CrossSigning {
         } else {
           // okay, we'll sign a device key with our self signing key
           selfSigningKey ??= base64
-              .decode(await client.ssss.getCached(SELF_SIGNING_KEY) ?? '');
-          if (selfSigningKey != null) {
+              .decode(await encryption.ssss.getCached(SELF_SIGNING_KEY) ?? '');
+          if (selfSigningKey.isNotEmpty) {
             final signature = _sign(key.signingContent, selfSigningKey);
             addSignature(key,
                 client.userDeviceKeys[client.userID].selfSigningKey, signature);
@@ -154,8 +173,8 @@ class CrossSigning {
       } else if (key is CrossSigningKey && key.usage.contains('master')) {
         // we are signing someone elses master key
         userSigningKey ??=
-            base64.decode(await client.ssss.getCached(USER_SIGNING_KEY) ?? '');
-        if (userSigningKey != null) {
+            base64.decode(await encryption.ssss.getCached(USER_SIGNING_KEY) ?? '');
+        if (userSigningKey.isNotEmpty) {
           final signature = _sign(key.signingContent, userSigningKey);
           addSignature(key, client.userDeviceKeys[client.userID].userSigningKey,
               signature);
@@ -165,7 +184,7 @@ class CrossSigning {
     if (signedKey) {
       // post our new keys!
       await client.jsonRequest(
-        type: HTTPType.POST,
+        type: RequestType.POST,
         action: '/client/r0/keys/signatures/upload',
         data: signatures,
       );

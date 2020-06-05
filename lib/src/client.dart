@@ -41,11 +41,6 @@ typedef RoomSorter = int Function(Room a, Room b);
 
 enum LoginState { logged, loggedOut }
 
-class GenericException implements Exception {
-  final dynamic content;
-  GenericException(this.content);
-}
-
 /// Represents a Matrix client to communicate with a
 /// [Matrix](https://matrix.org) homeserver and is the entry point for this
 /// SDK.
@@ -61,6 +56,8 @@ class Client {
 
   Encryption encryption;
 
+  Set<KeyVerificationMethod> verificationMethods;
+
   /// Create a client
   /// clientName = unique identifier of this client
   /// debug: Print debug output?
@@ -73,7 +70,9 @@ class Client {
       {this.debug = false,
       this.database,
       this.enableE2eeRecovery = false,
+      this.verificationMethods,
       http.Client httpClient}) {
+    verificationMethods ??= <KeyVerificationMethod>{};
     api = MatrixApi(debug: debug, httpClient: httpClient);
     onLoginStateChanged.stream.listen((loginState) {
       if (debug) {
@@ -642,7 +641,7 @@ class Client {
           encryption?.pickledOlmAccount,
         );
       }
-      _userDeviceKeys = await database.getUserDeviceKeys(id);
+      _userDeviceKeys = await database.getUserDeviceKeys(this);
       _rooms = await database.getRoomList(this, onlyLeft: false);
       _sortRooms();
       accountData = await database.getAccountData(id);
@@ -813,9 +812,6 @@ class Client {
       if (encryptionEnabled) {
         await encryption.handleToDeviceEvent(toDeviceEvent);
       }
-      if (toDeviceEvent.type.startsWith('m.secret.')) {
-        ssss.handleToDeviceEvent(toDeviceEvent);
-      }
       onToDeviceEvent.add(toDeviceEvent);
     }
   }
@@ -969,11 +965,8 @@ class Client {
         await database.storeEventUpdate(id, update);
       }
       _updateRoomsByEventUpdate(update);
-      if (event['type'].startsWith('m.key.verification.') ||
-          (event['type'] == 'm.room.message' &&
-              (event['content']['msgtype'] is String) &&
-              event['content']['msgtype'].startsWith('m.key.verification.'))) {
-        _handleRoomKeyVerificationRequest(update);
+      if (encryptionEnabled) {
+        await encryption.handleEventUpdate(update);
       }
       onEvent.add(update);
 
@@ -1167,14 +1160,21 @@ class Client {
             final deviceId = rawDeviceKeyEntry.key;
 
             // Set the new device key for this device
-
-            if (!oldKeys.containsKey(deviceId)) {
-              final entry =
-                  DeviceKeys.fromMatrixDeviceKeys(rawDeviceKeyEntry.value);
-              if (entry.isValid) {
+            final entry = DeviceKeys.fromMatrixDeviceKeys(rawDeviceKeyEntry.value, this);
+            if (entry.isValid) {
+              // is this a new key or the same one as an old one?
+              // better store an update - the signatures might have changed!
+              if (!oldKeys.containsKey(deviceId) ||
+                  oldKeys[deviceId].ed25519Key == entry.ed25519Key) {
+                if (oldKeys.containsKey(deviceId)) {
+                  // be sure to save the verified status
+                  entry.setDirectVerified(oldKeys[deviceId].directVerified);
+                  entry.blocked = oldKeys[deviceId].blocked;
+                  entry.validSignatures = oldKeys[deviceId].validSignatures;
+                }
                 _userDeviceKeys[userId].deviceKeys[deviceId] = entry;
                 if (deviceId == deviceID &&
-                    entry.ed25519Key == encryption?.fingerprintKey) {
+                    entry.ed25519Key == fingerprintKey) {
                   // Always trust the own device
                   entry.setDirectVerified(true);
                 }
@@ -1185,16 +1185,16 @@ class Client {
                 _userDeviceKeys[userId].deviceKeys[deviceId] =
                     oldKeys[deviceId];
               }
-              if (database != null) {
-                dbActions.add(() => database.storeUserDeviceKey(
-                      id,
-                      userId,
-                      deviceId,
-                      json.encode(entry.toJson()),
-                      entry.directVerified,
-                      entry.blocked,
-                    ));
-              }
+            }
+            if (database != null) {
+              dbActions.add(() => database.storeUserDeviceKey(
+                    id,
+                    userId,
+                    deviceId,
+                    json.encode(entry.toJson()),
+                    entry.directVerified,
+                    entry.blocked,
+                  ));
             }
           }
           // delete old/unused entries
@@ -1215,29 +1215,33 @@ class Client {
           }
         }
         // next we parse and persist the cross signing keys
-        for (final keyType in [
-          'master_keys',
-          'self_signing_keys',
-          'user_signing_keys'
-        ]) {
-          if (!(response[keyType] is Map)) {
+        final crossSigningTypes = {
+          'master': response.masterKeys,
+          'self_signing': response.selfSigningKeys,
+          'user_signing': response.userSigningKeys,
+        };
+        for (final crossSigningKeysEntry in crossSigningTypes.entries) {
+          final keyType = crossSigningKeysEntry.key;
+          final keys = crossSigningKeysEntry.value;
+          if (keys == null) {
             continue;
           }
-          for (final rawDeviceKeyListEntry in response[keyType].entries) {
-            final String userId = rawDeviceKeyListEntry.key;
-            final oldKeys = Map<String, CrossSigningKey>.from(
-                _userDeviceKeys[userId].crossSigningKeys);
+          for (final crossSigningKeyListEntry in keys.entries) {
+            final userId = crossSigningKeyListEntry.key;
+            if (!userDeviceKeys.containsKey(userId)) {
+              _userDeviceKeys[userId] = DeviceKeysList(userId);
+            }
+            final oldKeys = Map<String, CrossSigningKey>.from(_userDeviceKeys[userId].crossSigningKeys);
             _userDeviceKeys[userId].crossSigningKeys = {};
-            // add the types we arne't handling atm back
+            // add the types we aren't handling atm back
             for (final oldEntry in oldKeys.entries) {
-              if (!oldEntry.value.usage.contains(
-                  keyType.substring(0, keyType.length - '_keys'.length))) {
+              if (!oldEntry.value.usage.contains(keyType)) {
                 _userDeviceKeys[userId].crossSigningKeys[oldEntry.key] =
                     oldEntry.value;
               }
             }
             final entry =
-                CrossSigningKey.fromJson(rawDeviceKeyListEntry.value, this);
+                CrossSigningKey.fromMatrixCrossSigningKey(crossSigningKeyListEntry.value, this);
             if (entry.isValid) {
               final publicKey = entry.publicKey;
               if (!oldKeys.containsKey(publicKey) ||
@@ -1265,19 +1269,6 @@ class Client {
                       entry.directVerified,
                       entry.blocked,
                     ));
-              }
-            }
-            // delete old/unused entries
-            if (database != null) {
-              for (final oldCrossSigningKeyEntry in oldKeys.entries) {
-                final publicKey = oldCrossSigningKeyEntry.key;
-                if (!_userDeviceKeys[userId]
-                    .crossSigningKeys
-                    .containsKey(publicKey)) {
-                  // we need to remove an old key
-                  dbActions.add(() => database.removeUserCrossSigningKey(
-                      id, userId, publicKey));
-                }
               }
             }
             _userDeviceKeys[userId].outdated = false;

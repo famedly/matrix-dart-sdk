@@ -17,10 +17,14 @@
  */
 
 import 'matrix_device_keys.dart';
+import 'matrix_cross_signing_key.dart';
 
 class KeysQueryResponse {
   Map<String, dynamic> failures;
   Map<String, Map<String, MatrixDeviceKeys>> deviceKeys;
+  Map<String, MatrixCrossSigningKey> masterKeys;
+  Map<String, MatrixCrossSigningKey> selfSigningKeys;
+  Map<String, MatrixCrossSigningKey> userSigningKeys;
 
   KeysQueryResponse.fromJson(Map<String, dynamic> json) {
     failures = Map<String, dynamic>.from(json['failures']);
@@ -37,6 +41,32 @@ class KeysQueryResponse {
             ),
           )
         : null;
+    masterKeys = json['master_keys'] != null ? 
+        (json['master_keys'] as Map).map(
+          (k, v) => MapEntry(
+            k,
+            MatrixCrossSigningKey.fromJson(v),
+          ),
+        )
+      : null;
+
+    selfSigningKeys = json['self_signing_keys'] != null ? 
+        (json['self_signing_keys'] as Map).map(
+          (k, v) => MapEntry(
+            k,
+            MatrixCrossSigningKey.fromJson(v),
+          ),
+        )
+      : null;
+
+    userSigningKeys = json['user_signing_keys'] != null ? 
+        (json['user_signing_keys'] as Map).map(
+          (k, v) => MapEntry(
+            k,
+            MatrixCrossSigningKey.fromJson(v),
+          ),
+        )
+      : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -54,6 +84,30 @@ class KeysQueryResponse {
               v.toJson(),
             ),
           ),
+        ),
+      );
+    }
+    if (masterKeys != null) {
+      data['master_keys'] = masterKeys.map(
+        (k, v) => MapEntry(
+          k,
+          v.toJson(),
+        ),
+      );
+    }
+    if (selfSigningKeys != null) {
+      data['self_signing_keys'] = selfSigningKeys.map(
+        (k, v) => MapEntry(
+          k,
+          v.toJson(),
+        ),
+      );
+    }
+    if (userSigningKeys != null) {
+      data['user_signing_keys'] = userSigningKeys.map(
+        (k, v) => MapEntry(
+          k,
+          v.toJson(),
         ),
       );
     }

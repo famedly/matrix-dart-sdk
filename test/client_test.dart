@@ -388,7 +388,7 @@ void main() {
               'dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA'
         }
       }
-    });
+    }, matrix);
     test('sendToDevice', () async {
       await matrix.sendToDevice(
           [deviceKeys],
