@@ -5482,6 +5482,19 @@ abstract class _$Database extends GeneratedDatabase {
         readsFrom: {olmSessions}).map(_rowToDbOlmSessions);
   }
 
+  Selectable<DbOlmSessions> dbGetOlmSessions(
+      int client_id, String identity_key) {
+    return customSelect(
+        'SELECT * FROM olm_sessions WHERE client_id = :client_id AND identity_key = :identity_key',
+        variables: [
+          Variable.withInt(client_id),
+          Variable.withString(identity_key)
+        ],
+        readsFrom: {
+          olmSessions
+        }).map(_rowToDbOlmSessions);
+  }
+
   Future<int> storeOlmSession(
       int client_id, String identitiy_key, String session_id, String pickle) {
     return customInsert(

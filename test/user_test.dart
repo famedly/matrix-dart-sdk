@@ -1,33 +1,48 @@
 /*
- * Copyright (c) 2019 Zender & Kurtz GbR.
+ *   Ansible inventory script used at Famedly GmbH for managing many hosts
+ *   Copyright (C) 2019, 2020 Famedly GmbH
  *
- * Authors:
- *   Christian Pauly <krille@famedly.com>
- *   Marcel Radzio <mtrnord@famedly.com>
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
  *
- * This file is part of famedlysdk.
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
  *
- * famedlysdk is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * famedlysdk is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/famedlysdk.dart';
+import 'package:famedlysdk/matrix_api.dart';
 import 'package:famedlysdk/src/event.dart';
 import 'package:famedlysdk/src/user.dart';
 import 'package:test/test.dart';
 
+import 'fake_matrix_api.dart';
+
 void main() {
   /// All Tests related to the Event
   group('User', () {
+    var client = Client('testclient', debug: true, httpClient: FakeMatrixApi());
+    final user1 = User(
+      '@alice:example.com',
+      membership: 'join',
+      displayName: 'Alice M',
+      avatarUrl: 'mxc://bla',
+      room: Room(id: '!localpart:server.abc', client: client),
+    );
+    test('create', () async {
+      expect(user1.powerLevel, 0);
+      expect(user1.stateKey, '@alice:example.com');
+      expect(user1.id, '@alice:example.com');
+      expect(user1.membership, Membership.join);
+      expect(user1.avatarUrl.toString(), 'mxc://bla');
+      expect(user1.displayName, 'Alice M');
+    });
     test('Create from json', () async {
       final id = '@alice:server.abc';
       final membership = Membership.join;
@@ -65,6 +80,56 @@ void main() {
       expect(user1.calcDisplayname(), 'Alice');
       expect(user2.calcDisplayname(), 'SuperAlice');
       expect(user3.calcDisplayname(), 'Alice Mep');
+      expect(user3.calcDisplayname(formatLocalpart: false), 'alice_mep');
     });
+    test('kick', () async {
+      await client.checkServer('https://fakeserver.notexisting');
+      await user1.kick();
+    });
+    test('ban', () async {
+      await client.checkServer('https://fakeserver.notexisting');
+      await user1.ban();
+    });
+    test('unban', () async {
+      await client.checkServer('https://fakeserver.notexisting');
+      await user1.unban();
+    });
+    test('setPower', () async {
+      await client.checkServer('https://fakeserver.notexisting');
+      await user1.setPower(50);
+    });
+    test('startDirectChat', () async {
+      await client.checkServer('https://fakeserver.notexisting');
+      await client.login('test', '1234');
+      await user1.startDirectChat();
+    });
+    test('getPresence', () async {
+      await client.checkServer('https://fakeserver.notexisting');
+      await client.handleSync(SyncUpdate.fromJson({
+        'presence': {
+          'events': [
+            {
+              'sender': '@alice:example.com',
+              'type': 'm.presence',
+              'content': {'presence': 'online'}
+            }
+          ]
+        }
+      }));
+      expect(user1.presence.presence.presence, PresenceType.online);
+    });
+    test('canBan', () async {
+      await client.checkServer('https://fakeserver.notexisting');
+      expect(user1.canBan, false);
+    });
+    test('canKick', () async {
+      await client.checkServer('https://fakeserver.notexisting');
+      expect(user1.canKick, false);
+    });
+    test('canChangePowerLevel', () async {
+      await client.checkServer('https://fakeserver.notexisting');
+      expect(user1.canChangePowerLevel, false);
+    });
+    client.dispose();
   });
 }

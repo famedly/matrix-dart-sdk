@@ -1,74 +1,45 @@
 /*
- * Copyright (c) 2019 Zender & Kurtz GbR.
+ *   Famedly Matrix SDK
+ *   Copyright (C) 2019, 2020 Famedly GmbH
  *
- * Authors:
- *   Christian Pauly <krille@famedly.com>
- *   Marcel Radzio <mtrnord@famedly.com>
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
  *
- * This file is part of famedlysdk.
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
  *
- * famedlysdk is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * famedlysdk is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:famedlysdk/famedlysdk.dart';
+import 'package:famedlysdk/encryption.dart';
 import 'package:famedlysdk/src/utils/receipt.dart';
 import 'package:http/http.dart' as http;
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
+import '../matrix_api.dart';
 import './room.dart';
 import 'utils/matrix_localizations.dart';
 import './database/database.dart' show DbRoomState, DbEvent;
 
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
-class Event {
-  /// The Matrix ID for this event in the format '$localpart:server.abc'. Please not
-  /// that account data, presence and other events may not have an eventId.
-  final String eventId;
-
-  /// The json payload of the content. The content highly depends on the type.
-  Map<String, dynamic> content;
-
-  /// The type String of this event. For example 'm.room.message'.
-  final String typeKey;
-
-  /// The ID of the room this event belongs to.
-  final String roomId;
-
-  /// The user who has sent this event if it is not a global account data event.
-  final String senderId;
-
+class Event extends MatrixEvent {
   User get sender => room.getUserByMXIDSync(senderId ?? '@unknown');
 
-  /// The time this event has received at the server. May be null for events like
-  /// account data.
-  final DateTime time;
+  @Deprecated('Use [originServerTs] instead')
+  DateTime get time => originServerTs;
 
-  /// Optional additional content for this event.
-  Map<String, dynamic> unsigned;
+  @Deprecated('Use [type] instead')
+  String get typeKey => type;
 
   /// The room this event belongs to. May be null.
   final Room room;
-
-  /// Optional. The previous content for this state.
-  /// This will be present only for state events appearing in the timeline.
-  /// If this is not a state event, or there is no previous content, this key will be null.
-  Map<String, dynamic> prevContent;
-
-  /// Optional. This key will only be present for state events. A unique key which defines
-  /// the overwriting semantics for this piece of room state.
-  final String stateKey;
 
   /// The status of this event.
   /// -1=ERROR
@@ -101,17 +72,27 @@ class Event {
 
   Event(
       {this.status = defaultStatus,
-      this.content,
-      this.typeKey,
-      this.eventId,
-      this.roomId,
-      this.senderId,
-      this.time,
-      this.unsigned,
-      this.prevContent,
-      this.stateKey,
+      Map<String, dynamic> content,
+      String type,
+      String eventId,
+      String roomId,
+      String senderId,
+      DateTime originServerTs,
+      Map<String, dynamic> unsigned,
+      Map<String, dynamic> prevContent,
+      String stateKey,
       this.room,
-      this.sortOrder = 0.0});
+      this.sortOrder = 0.0}) {
+    this.content = content;
+    this.type = type;
+    this.eventId = eventId;
+    this.roomId = roomId ?? room?.id;
+    this.senderId = senderId;
+    this.unsigned = unsigned;
+    this.prevContent = prevContent;
+    this.stateKey = stateKey;
+    this.originServerTs = originServerTs;
+  }
 
   static Map<String, dynamic> getMapFromPayload(dynamic payload) {
     if (payload is String) {
@@ -125,6 +106,27 @@ class Event {
     return {};
   }
 
+  factory Event.fromMatrixEvent(
+    MatrixEvent matrixEvent,
+    Room room, {
+    double sortOrder,
+    int status,
+  }) =>
+      Event(
+        status: status,
+        content: matrixEvent.content,
+        type: matrixEvent.type,
+        eventId: matrixEvent.eventId,
+        roomId: room.id,
+        senderId: matrixEvent.senderId,
+        originServerTs: matrixEvent.originServerTs,
+        unsigned: matrixEvent.unsigned,
+        prevContent: matrixEvent.prevContent,
+        stateKey: matrixEvent.stateKey,
+        room: room,
+        sortOrder: sortOrder,
+      );
+
   /// Get a State event from a table row or from the event stream.
   factory Event.fromJson(Map<String, dynamic> jsonPayload, Room room,
       [double sortOrder]) {
@@ -136,11 +138,11 @@ class Event {
       stateKey: jsonPayload['state_key'],
       prevContent: prevContent,
       content: content,
-      typeKey: jsonPayload['type'],
+      type: jsonPayload['type'],
       eventId: jsonPayload['event_id'],
       roomId: jsonPayload['room_id'],
       senderId: jsonPayload['sender'],
-      time: jsonPayload.containsKey('origin_server_ts')
+      originServerTs: jsonPayload.containsKey('origin_server_ts')
           ? DateTime.fromMillisecondsSinceEpoch(jsonPayload['origin_server_ts'])
           : DateTime.now(),
       unsigned: unsigned,
@@ -162,17 +164,18 @@ class Event {
       stateKey: dbEntry.stateKey,
       prevContent: prevContent,
       content: content,
-      typeKey: dbEntry.type,
+      type: dbEntry.type,
       eventId: dbEntry.eventId,
       roomId: dbEntry.roomId,
       senderId: dbEntry.sender,
-      time: dbEntry.originServerTs ?? DateTime.now(),
+      originServerTs: dbEntry.originServerTs ?? DateTime.now(),
       unsigned: unsigned,
       room: room,
       sortOrder: dbEntry.sortOrder ?? 0.0,
     );
   }
 
+  @override
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     if (stateKey != null) data['state_key'] = stateKey;
@@ -180,116 +183,33 @@ class Event {
       data['prev_content'] = prevContent;
     }
     data['content'] = content;
-    data['type'] = typeKey;
+    data['type'] = type;
     data['event_id'] = eventId;
     data['room_id'] = roomId;
     data['sender'] = senderId;
-    data['origin_server_ts'] = time.millisecondsSinceEpoch;
+    data['origin_server_ts'] = originServerTs.millisecondsSinceEpoch;
     if (unsigned != null && unsigned.isNotEmpty) {
       data['unsigned'] = unsigned;
     }
     return data;
   }
 
-  /// The unique key of this event. For events with a [stateKey], it will be the
-  /// stateKey. Otherwise it will be the [type] as a string.
-  @deprecated
-  String get key => stateKey == null || stateKey.isEmpty ? typeKey : stateKey;
-
   User get asUser => User.fromState(
       stateKey: stateKey,
       prevContent: prevContent,
       content: content,
-      typeKey: typeKey,
+      typeKey: type,
       eventId: eventId,
       roomId: roomId,
       senderId: senderId,
-      time: time,
+      originServerTs: originServerTs,
       unsigned: unsigned,
       room: room);
 
-  /// Get the real type.
-  EventTypes get type {
-    switch (typeKey) {
-      case 'm.room.avatar':
-        return EventTypes.RoomAvatar;
-      case 'm.room.name':
-        return EventTypes.RoomName;
-      case 'm.room.topic':
-        return EventTypes.RoomTopic;
-      case 'm.room.aliases':
-        return EventTypes.RoomAliases;
-      case 'm.room.canonical_alias':
-        return EventTypes.RoomCanonicalAlias;
-      case 'm.room.create':
-        return EventTypes.RoomCreate;
-      case 'm.room.redaction':
-        return EventTypes.Redaction;
-      case 'm.room.join_rules':
-        return EventTypes.RoomJoinRules;
-      case 'm.room.member':
-        return EventTypes.RoomMember;
-      case 'm.room.power_levels':
-        return EventTypes.RoomPowerLevels;
-      case 'm.room.guest_access':
-        return EventTypes.GuestAccess;
-      case 'm.room.history_visibility':
-        return EventTypes.HistoryVisibility;
-      case 'm.sticker':
-        return EventTypes.Sticker;
-      case 'm.room.message':
-        return EventTypes.Message;
-      case 'm.room.encrypted':
-        return EventTypes.Encrypted;
-      case 'm.room.encryption':
-        return EventTypes.Encryption;
-      case 'm.room.tombsone':
-        return EventTypes.RoomTombstone;
-      case 'm.call.invite':
-        return EventTypes.CallInvite;
-      case 'm.call.answer':
-        return EventTypes.CallAnswer;
-      case 'm.call.candidates':
-        return EventTypes.CallCandidates;
-      case 'm.call.hangup':
-        return EventTypes.CallHangup;
-    }
-    return EventTypes.Unknown;
-  }
-
-  ///
-  MessageTypes get messageType {
-    switch (content['msgtype'] ?? 'm.text') {
-      case 'm.text':
-        if (content.containsKey('m.relates_to')) {
-          return MessageTypes.Reply;
-        }
-        return MessageTypes.Text;
-      case 'm.notice':
-        return MessageTypes.Notice;
-      case 'm.emote':
-        return MessageTypes.Emote;
-      case 'm.image':
-        return MessageTypes.Image;
-      case 'm.video':
-        return MessageTypes.Video;
-      case 'm.audio':
-        return MessageTypes.Audio;
-      case 'm.file':
-        return MessageTypes.File;
-      case 'm.sticker':
-        return MessageTypes.Sticker;
-      case 'm.location':
-        return MessageTypes.Location;
-      case 'm.bad.encrypted':
-        return MessageTypes.BadEncrypted;
-      default:
-        if (type == EventTypes.Message) {
-          return MessageTypes.Text;
-        }
-        return MessageTypes.None;
-    }
-  }
+  String get messageType => (content.containsKey('m.relates_to') &&
+          content['m.relates_to']['m.in_reply_to'] != null)
+      ? MessageTypes.Reply
+      : content['msgtype'] ?? MessageTypes.Text;
 
   void setRedactionEvent(Event redactedBecause) {
     unsigned = {
@@ -341,9 +261,6 @@ class Event {
   /// Returns the formatted boy of this event if it has a formatted body.
   String get formattedText => content['formatted_body'] ?? '';
 
-  @Deprecated('Use [body] instead.')
-  String getBody() => body;
-
   /// Use this to get the body.
   String get body {
     if (redacted) return 'Redacted';
@@ -374,7 +291,7 @@ class Event {
       room.client.onEvent.add(EventUpdate(
           roomID: room.id,
           type: 'timeline',
-          eventType: typeKey,
+          eventType: type,
           content: {
             'event_id': eventId,
             'status': -2,
@@ -417,36 +334,6 @@ class Event {
     return await timeline.getEventById(replyEventId);
   }
 
-  Future<void> loadSession() {
-    return room.loadInboundGroupSessionKeyForEvent(this);
-  }
-
-  /// Trys to decrypt this event. Returns a m.bad.encrypted event
-  /// if it fails and does nothing if the event was not encrypted.
-  Event get decrypted => room.decryptGroupMessage(this);
-
-  /// Trys to decrypt this event and persists it in the database afterwards
-  Future<Event> decryptAndStore([String updateType = 'timeline']) async {
-    final newEvent = decrypted;
-    if (newEvent.type == EventTypes.Encrypted) {
-      return newEvent; // decryption failed
-    }
-    await room.client.database?.storeEventUpdate(
-      room.client.id,
-      EventUpdate(
-        eventType: newEvent.typeKey,
-        content: newEvent.toJson(),
-        roomID: newEvent.roomId,
-        type: updateType,
-        sortOrder: newEvent.sortOrder,
-      ),
-    );
-    if (updateType != 'history') {
-      room.setState(newEvent);
-    }
-    return newEvent;
-  }
-
   /// If this event is encrypted and the decryption was not successful because
   /// the session is unknown, this requests the session key from other devices
   /// in the room. If the event is not encrypted or the decryption failed because
@@ -473,7 +360,7 @@ class Event {
   Future<MatrixFile> downloadAndDecryptAttachment(
       {bool getThumbnail = false}) async {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
-      throw ("This event has the type '$typeKey' and so it can't contain an attachment.");
+      throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
     if (!getThumbnail &&
         !content.containsKey('url') &&
@@ -741,7 +628,7 @@ class Event {
         }
         break;
       default:
-        localizedBody = i18n.unknownEvent(typeKey);
+        localizedBody = i18n.unknownEvent(type);
     }
 
     // Hide reply fallback
@@ -762,51 +649,11 @@ class Event {
     return localizedBody;
   }
 
-  static const Set<MessageTypes> textOnlyMessageTypes = {
+  static const Set<String> textOnlyMessageTypes = {
     MessageTypes.Text,
     MessageTypes.Reply,
     MessageTypes.Notice,
     MessageTypes.Emote,
     MessageTypes.None,
   };
-}
-
-enum MessageTypes {
-  Text,
-  Emote,
-  Notice,
-  Image,
-  Video,
-  Audio,
-  File,
-  Location,
-  Reply,
-  Sticker,
-  BadEncrypted,
-  None,
-}
-
-enum EventTypes {
-  Message,
-  Sticker,
-  Redaction,
-  RoomAliases,
-  RoomCanonicalAlias,
-  RoomCreate,
-  RoomJoinRules,
-  RoomMember,
-  RoomPowerLevels,
-  RoomName,
-  RoomTopic,
-  RoomAvatar,
-  RoomTombstone,
-  GuestAccess,
-  HistoryVisibility,
-  Encryption,
-  Encrypted,
-  CallInvite,
-  CallAnswer,
-  CallCandidates,
-  CallHangup,
-  Unknown,
 }

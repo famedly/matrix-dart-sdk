@@ -2,7 +2,10 @@ import 'package:moor/moor.dart';
 import 'dart:convert';
 
 import 'package:famedlysdk/famedlysdk.dart' as sdk;
+import 'package:famedlysdk/matrix_api.dart' as api;
 import 'package:olm/olm.dart' as olm;
+
+import '../../matrix_api.dart';
 
 part 'database.g.dart';
 
@@ -102,6 +105,22 @@ class Database extends _$Database {
     return res;
   }
 
+  Future<List<olm.Session>> getSingleOlmSessions(
+      int clientId, String identityKey, String userId) async {
+    final rows = await dbGetOlmSessions(clientId, identityKey).get();
+    final res = <olm.Session>[];
+    for (final row in rows) {
+      try {
+        var session = olm.Session();
+        session.unpickle(userId, row.pickle);
+        res.add(session);
+      } catch (e) {
+        print('[LibOlm] Could not unpickle olm session: ' + e.toString());
+      }
+    }
+    return res;
+  }
+
   Future<DbOutboundGroupSession> getDbOutboundGroupSession(
       int clientId, String roomId) async {
     final res = await dbGetOutboundGroupSession(clientId, roomId).get();
@@ -156,20 +175,31 @@ class Database extends _$Database {
     return roomList;
   }
 
-  Future<Map<String, sdk.AccountData>> getAccountData(int clientId) async {
-    final newAccountData = <String, sdk.AccountData>{};
+  Future<Map<String, api.BasicEvent>> getAccountData(int clientId) async {
+    final newAccountData = <String, api.BasicEvent>{};
     final rawAccountData = await getAllAccountData(clientId).get();
     for (final d in rawAccountData) {
-      newAccountData[d.type] = sdk.AccountData.fromDb(d);
+      final content = sdk.Event.getMapFromPayload(d.content);
+      newAccountData[d.type] = api.BasicEvent(
+        content: content,
+        type: d.type,
+      );
     }
     return newAccountData;
   }
 
-  Future<Map<String, sdk.Presence>> getPresences(int clientId) async {
-    final newPresences = <String, sdk.Presence>{};
+  Future<Map<String, api.Presence>> getPresences(int clientId) async {
+    final newPresences = <String, api.Presence>{};
     final rawPresences = await getAllPresences(clientId).get();
     for (final d in rawPresences) {
-      newPresences[d.sender] = sdk.Presence.fromDb(d);
+      // TODO: Why is this not working?
+      try {
+        final content = sdk.Event.getMapFromPayload(d.content);
+        var presence = api.Presence.fromJson(content);
+        presence.senderId = d.sender;
+        presence.type = d.type;
+        newPresences[d.sender] = api.Presence.fromJson(content);
+      } catch (_) {}
     }
     return newPresences;
   }
@@ -180,7 +210,7 @@ class Database extends _$Database {
   Future<void> storeRoomUpdate(int clientId, sdk.RoomUpdate roomUpdate,
       [sdk.Room oldRoom]) async {
     final setKey = '${clientId};${roomUpdate.id}';
-    if (roomUpdate.membership != sdk.Membership.leave) {
+    if (roomUpdate.membership != api.Membership.leave) {
       if (!_ensuredRooms.contains(setKey)) {
         await ensureRoomExists(clientId, roomUpdate.id,
             roomUpdate.membership.toString().split('.').last);
@@ -241,16 +271,17 @@ class Database extends _$Database {
   /// Stores an UserUpdate object in the database. Must be called inside of
   /// [transaction].
   Future<void> storeUserEventUpdate(
-      int clientId, sdk.UserUpdate userUpdate) async {
-    if (userUpdate.type == 'account_data') {
-      await storeAccountData(clientId, userUpdate.eventType,
-          json.encode(userUpdate.content['content']));
-    } else if (userUpdate.type == 'presence') {
-      await storePresence(
-          clientId,
-          userUpdate.eventType,
-          userUpdate.content['sender'],
-          json.encode(userUpdate.content['content']));
+    int clientId,
+    String type,
+    String eventType,
+    Map<String, dynamic> content,
+  ) async {
+    if (type == 'account_data') {
+      await storeAccountData(
+          clientId, eventType, json.encode(content['content']));
+    } else if (type == 'presence') {
+      await storePresence(clientId, eventType, content['sender'],
+          json.encode(content['content']));
     }
   }
 
@@ -269,7 +300,7 @@ class Database extends _$Database {
       stateKey = eventContent['state_key'];
     }
 
-    if (eventUpdate.eventType == 'm.room.redaction') {
+    if (eventUpdate.eventType == EventTypes.Redaction) {
       await redactMessage(clientId, eventUpdate);
     }
 

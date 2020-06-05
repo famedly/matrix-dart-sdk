@@ -2,13 +2,15 @@ import 'dart:convert';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:olm/olm.dart' as olm;
 
+import 'package:famedlysdk/matrix_api.dart';
+import 'package:famedlysdk/encryption.dart';
+
 import '../client.dart';
 import '../user.dart';
 import '../room.dart';
 import '../database/database.dart'
     show DbUserDeviceKey, DbUserDeviceKeysKey, DbUserCrossSigningKey;
 import '../event.dart';
-import 'key_verification.dart';
 
 enum UserVerifiedStatus { verified, unknown, unknownDevice }
 
@@ -351,12 +353,6 @@ class DeviceKeys extends SignedKey {
   @override
   Future<void> setBlocked(bool newBlocked) {
     blocked = newBlocked;
-    for (var room in client.rooms) {
-      if (!room.encrypted) continue;
-      if (room.getParticipants().indexWhere((u) => u.id == userId) != -1) {
-        room.clearOutboundGroupSession();
-      }
-    }
     return client.database
         ?.setBlockedUserDeviceKey(newBlocked, client.id, userId, deviceId);
   }
@@ -369,10 +365,45 @@ class DeviceKeys extends SignedKey {
     identifier = dbEntry.deviceId;
     algorithms = content['algorithms'].cast<String>();
     keys = content['keys'] != null
+  }) : super(userId, deviceId, algorithms, keys, signatures,
+              unsigned: unsigned);
+
+  DeviceKeys({
+    String userId,
+    String deviceId,
+    List<String> algorithms,
+    Map<String, String> keys,
+    Map<String, Map<String, String>> signatures,
+    Map<String, dynamic> unsigned,
+    this.verified,
+    this.blocked,
+  }) : super(userId, deviceId, algorithms, keys, signatures,
+            unsigned: unsigned);
+
+  factory DeviceKeys.fromMatrixDeviceKeys(MatrixDeviceKeys matrixDeviceKeys) =>
+      DeviceKeys(
+        userId: matrixDeviceKeys.userId,
+        deviceId: matrixDeviceKeys.deviceId,
+        algorithms: matrixDeviceKeys.algorithms,
+        keys: matrixDeviceKeys.keys,
+        signatures: matrixDeviceKeys.signatures,
+        unsigned: matrixDeviceKeys.unsigned,
+        verified: false,
+        blocked: false,
+      );
+
+  static DeviceKeys fromDb(DbUserDeviceKeysKey dbEntry) {
+    var deviceKeys = DeviceKeys();
+    final content = Event.getMapFromPayload(dbEntry.content);
+    deviceKeys.userId = dbEntry.userId;
+    deviceKeys.deviceId = dbEntry.deviceId;
+    deviceKeys.algorithms = content['algorithms'].cast<String>();
+    deviceKeys.keys = content['keys'] != null
         ? Map<String, String>.from(content['keys'])
         : null;
-    signatures = content['signatures'] != null
-        ? Map<String, dynamic>.from(content['signatures'])
+    deviceKeys.signatures = content['signatures'] != null
+        ? Map<String, Map<String, String>>.from((content['signatures'] as Map)
+            .map((k, v) => MapEntry(k, Map<String, String>.from(v))))
         : null;
     unsigned = json['unsigned'] != null
         ? Map<String, dynamic>.from(json['unsigned'])
@@ -401,8 +432,9 @@ class DeviceKeys extends SignedKey {
   KeyVerification startVerification() {
     final request =
         KeyVerification(client: client, userId: userId, deviceId: deviceId);
+
     request.start();
-    client.addKeyVerificationRequest(request);
+    client.encryption.keyVerificationManager.addRequest(request);
     return request;
   }
 }

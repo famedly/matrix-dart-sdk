@@ -1,33 +1,31 @@
 /*
- * Copyright (c) 2019 Zender & Kurtz GbR.
+ *   Ansible inventory script used at Famedly GmbH for managing many hosts
+ *   Copyright (C) 2019, 2020 Famedly GmbH
  *
- * Authors:
- *   Christian Pauly <krille@famedly.com>
- *   Marcel Radzio <mtrnord@famedly.com>
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
  *
- * This file is part of famedlysdk.
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
  *
- * famedlysdk is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * famedlysdk is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 import 'dart:convert';
 
 import 'package:famedlysdk/famedlysdk.dart';
+import 'package:famedlysdk/matrix_api.dart';
+import 'package:famedlysdk/encryption.dart';
 import 'package:famedlysdk/src/event.dart';
 import 'package:test/test.dart';
 
 import 'fake_matrix_api.dart';
+import 'fake_matrix_localizations.dart';
 
 void main() {
   /// All Tests related to the Event
@@ -52,9 +50,11 @@ void main() {
       'status': 2,
       'content': contentJson,
     };
+    var client = Client('testclient', debug: true, httpClient: FakeMatrixApi());
+    var event = Event.fromJson(
+        jsonObj, Room(id: '!localpart:server.abc', client: client));
 
     test('Create from json', () async {
-      var event = Event.fromJson(jsonObj, null);
       jsonObj.remove('status');
       jsonObj['content'] = json.decode(contentJson);
       expect(event.toJson(), jsonObj);
@@ -124,6 +124,7 @@ void main() {
       jsonObj['type'] = 'm.room.message';
       jsonObj['content'] = json.decode(jsonObj['content']);
 
+      jsonObj['content'].remove('m.relates_to');
       jsonObj['content']['msgtype'] = 'm.notice';
       event = Event.fromJson(jsonObj, null);
       expect(event.messageType, MessageTypes.Notice);
@@ -163,25 +164,38 @@ void main() {
     });
 
     test('redact', () async {
-      final room = Room(id: '1234', client: Client('testclient', debug: true));
-      final redactionEventJson = {
-        'content': {'reason': 'Spamming'},
-        'event_id': '143273582443PhrSn:example.org',
-        'origin_server_ts': 1432735824653,
-        'redacts': id,
-        'room_id': '1234',
-        'sender': '@example:example.org',
-        'type': 'm.room.redaction',
-        'unsigned': {'age': 1234}
-      };
-      var redactedBecause = Event.fromJson(redactionEventJson, room);
-      var event = Event.fromJson(jsonObj, room);
-      event.setRedactionEvent(redactedBecause);
-      expect(event.redacted, true);
-      expect(event.redactedBecause.toJson(), redactedBecause.toJson());
-      expect(event.content.isEmpty, true);
-      redactionEventJson.remove('redacts');
-      expect(event.unsigned['redacted_because'], redactionEventJson);
+      final redactJsonObj = Map<String, dynamic>.from(jsonObj);
+      final testTypes = [
+        EventTypes.RoomMember,
+        EventTypes.RoomCreate,
+        EventTypes.RoomJoinRules,
+        EventTypes.RoomPowerLevels,
+        EventTypes.RoomAliases,
+        EventTypes.HistoryVisibility,
+      ];
+      for (final testType in testTypes) {
+        redactJsonObj['type'] = testType;
+        final room =
+            Room(id: '1234', client: Client('testclient', debug: true));
+        final redactionEventJson = {
+          'content': {'reason': 'Spamming'},
+          'event_id': '143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'redacts': id,
+          'room_id': '1234',
+          'sender': '@example:example.org',
+          'type': 'm.room.redaction',
+          'unsigned': {'age': 1234}
+        };
+        var redactedBecause = Event.fromJson(redactionEventJson, room);
+        var event = Event.fromJson(redactJsonObj, room);
+        event.setRedactionEvent(redactedBecause);
+        expect(event.redacted, true);
+        expect(event.redactedBecause.toJson(), redactedBecause.toJson());
+        expect(event.content.isEmpty, true);
+        redactionEventJson.remove('redacts');
+        expect(event.unsigned['redacted_because'], redactionEventJson);
+      }
     });
 
     test('remove', () async {
@@ -195,8 +209,8 @@ void main() {
     });
 
     test('sendAgain', () async {
-      var matrix = Client('testclient', debug: true);
-      matrix.httpClient = FakeMatrixApi();
+      var matrix =
+          Client('testclient', debug: true, httpClient: FakeMatrixApi());
       await matrix.checkServer('https://fakeServer.notExisting');
       await matrix.login('test', '1234');
 
@@ -206,14 +220,14 @@ void main() {
       event.status = -1;
       final resp2 = await event.sendAgain(txid: '1234');
       expect(resp1, null);
-      expect(resp2, '42');
+      expect(resp2.startsWith('\$event'), true);
 
       await matrix.dispose(closeDatabase: true);
     });
 
     test('requestKey', () async {
-      var matrix = Client('testclient', debug: true);
-      matrix.httpClient = FakeMatrixApi();
+      var matrix =
+          Client('testclient', debug: true, httpClient: FakeMatrixApi());
       await matrix.checkServer('https://fakeServer.notExisting');
       await matrix.login('test', '1234');
 
@@ -227,7 +241,7 @@ void main() {
       }
       expect(exception, 'Session key not unknown');
 
-      event = Event.fromJson({
+      var event2 = Event.fromJson({
         'event_id': id,
         'sender': senderID,
         'origin_server_ts': timestamp,
@@ -245,9 +259,535 @@ void main() {
         }),
       }, Room(id: '!1234:example.com', client: matrix));
 
-      await event.requestKey();
+      await event2.requestKey();
 
       await matrix.dispose(closeDatabase: true);
+    });
+    test('requestKey', () async {
+      jsonObj['state_key'] = '@alice:example.com';
+      var event = Event.fromJson(
+          jsonObj, Room(id: '!localpart:server.abc', client: client));
+      expect(event.stateKeyUser.id, '@alice:example.com');
+    });
+    test('canRedact', () async {
+      expect(event.canRedact, true);
+    });
+    test('getLocalizedBody', () async {
+      final matrix =
+          Client('testclient', debug: true, httpClient: FakeMatrixApi());
+      final room = Room(id: '!1234:example.com', client: matrix);
+      var event = Event.fromJson({
+        'content': {
+          'avatar_url': 'mxc://example.org/SEsfnsuifSDFSSEF',
+          'displayname': 'Alice Margatroid',
+          'membership': 'join'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '@alice:example.org',
+        'type': 'm.room.member',
+        'unsigned': {
+          'age': 1234,
+          'redacted_because': {
+            'content': {'reason': 'Spamming'},
+            'event_id': '\$143273582443PhrSn:example.org',
+            'origin_server_ts': 1432735824653,
+            'redacts': '\$143273582443PhrSn:example.org',
+            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+            'sender': '@example:example.org',
+            'type': 'm.room.redaction',
+            'unsigned': {'age': 1234}
+          }
+        }
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {
+          'body': 'Landing',
+          'info': {
+            'h': 200,
+            'mimetype': 'image/png',
+            'size': 73602,
+            'thumbnail_info': {
+              'h': 200,
+              'mimetype': 'image/png',
+              'size': 73602,
+              'w': 140
+            },
+            'thumbnail_url': 'mxc://matrix.org/sHhqkFCvSkFwtmvtETOtKnLP',
+            'w': 140
+          },
+          'url': 'mxc://matrix.org/sHhqkFCvSkFwtmvtETOtKnLP'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.sticker',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {'reason': 'Spamming'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'redacts': '\$143273582443PhrSn:example.org',
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.redaction',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {
+          'aliases': ['#somewhere:example.org', '#another:example.org']
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': 'example.org',
+        'type': 'm.room.aliases',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {
+          'aliases': ['#somewhere:example.org', '#another:example.org']
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': 'example.org',
+        'type': 'm.room.aliases',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {'alias': '#somewhere:localhost'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '',
+        'type': 'm.room.canonical_alias',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {
+          'creator': '@example:example.org',
+          'm.federate': true,
+          'predecessor': {
+            'event_id': '\$something:example.org',
+            'room_id': '!oldroom:example.org'
+          },
+          'room_version': '1'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '',
+        'type': 'm.room.create',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {
+          'body': 'This room has been replaced',
+          'replacement_room': '!newroom:example.org'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '',
+        'type': 'm.room.tombstone',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {'join_rule': 'public'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '',
+        'type': 'm.room.join_rules',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {
+          'avatar_url': 'mxc://example.org/SEsfnsuifSDFSSEF',
+          'displayname': 'Alice Margatroid',
+          'membership': 'join'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '@alice:example.org',
+        'type': 'm.room.member',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {'membership': 'invite'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '@alice:example.org',
+        'type': 'm.room.member'
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {'membership': 'leave'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '@alice:example.org',
+        'type': 'm.room.member',
+        'unsigned': {
+          'prev_content': {'membership': 'join'},
+        }
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {'membership': 'ban'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '@alice:example.org',
+        'type': 'm.room.member',
+        'unsigned': {
+          'prev_content': {'membership': 'join'},
+        }
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {'membership': 'join'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '@alice:example.org',
+        'type': 'm.room.member',
+        'unsigned': {
+          'prev_content': {'membership': 'invite'},
+        }
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {'membership': 'invite'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '@alice:example.org',
+        'type': 'm.room.member',
+        'unsigned': {
+          'prev_content': {'membership': 'join'},
+        }
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {'membership': 'leave'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '@alice:example.org',
+        'type': 'm.room.member',
+        'unsigned': {
+          'prev_content': {'membership': 'invite'},
+        }
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {'membership': 'leave'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@alice:example.org',
+        'state_key': '@alice:example.org',
+        'type': 'm.room.member',
+        'unsigned': {
+          'prev_content': {'membership': 'invite'},
+        }
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {
+          'ban': 50,
+          'events': {'m.room.name': 100, 'm.room.power_levels': 100},
+          'events_default': 0,
+          'invite': 50,
+          'kick': 50,
+          'notifications': {'room': 20},
+          'redact': 50,
+          'state_default': 50,
+          'users': {'@example:localhost': 100},
+          'users_default': 0
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '',
+        'type': 'm.room.power_levels',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {'name': 'The room name'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '',
+        'type': 'm.room.name',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {'topic': 'A room topic'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '',
+        'type': 'm.room.topic',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {
+          'info': {'h': 398, 'mimetype': 'image/jpeg', 'size': 31037, 'w': 394},
+          'url': 'mxc://example.org/JWEIFJgwEIhweiWJE'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '',
+        'type': 'm.room.avatar',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {'history_visibility': 'shared'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '',
+        'type': 'm.room.history_visibility',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {
+          'algorithm': 'm.megolm.v1.aes-sha2',
+          'rotation_period_ms': 604800000,
+          'rotation_period_msgs': 100
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '',
+        'type': 'm.room.encryption',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()),
+          'Example activatedEndToEndEncryption. needPantalaimonWarning');
+
+      event = Event.fromJson({
+        'content': {
+          'body': 'This is an example text message',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '<b>This is an example text message</b>',
+          'msgtype': 'm.text'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.message',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()),
+          'This is an example text message');
+
+      event = Event.fromJson({
+        'content': {
+          'body': 'thinks this is an example emote',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': 'thinks <b>this</b> is an example emote',
+          'msgtype': 'm.emote'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.message',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()),
+          '* thinks this is an example emote');
+
+      event = Event.fromJson({
+        'content': {
+          'body': 'This is an example notice',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': 'This is an <strong>example</strong> notice',
+          'msgtype': 'm.notice'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.message',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()),
+          'This is an example notice');
+
+      event = Event.fromJson({
+        'content': {
+          'body': 'filename.jpg',
+          'info': {'h': 398, 'mimetype': 'image/jpeg', 'size': 31037, 'w': 394},
+          'msgtype': 'm.image',
+          'url': 'mxc://example.org/JWEIFJgwEIhweiWJE'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.message',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {
+          'body': 'something-important.doc',
+          'filename': 'something-important.doc',
+          'info': {'mimetype': 'application/msword', 'size': 46144},
+          'msgtype': 'm.file',
+          'url': 'mxc://example.org/FHyPlCeYUSFFxlgbQYZmoEoe'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.message',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {
+          'body': 'Bee Gees - Stayin Alive',
+          'info': {
+            'duration': 2140786,
+            'mimetype': 'audio/mpeg',
+            'size': 1563685
+          },
+          'msgtype': 'm.audio',
+          'url': 'mxc://example.org/ffed755USFFxlgbQYZGtryd'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.message',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {
+          'body': 'Big Ben, London, UK',
+          'geo_uri': 'geo:51.5008,0.1247',
+          'info': {
+            'thumbnail_info': {
+              'h': 300,
+              'mimetype': 'image/jpeg',
+              'size': 46144,
+              'w': 300
+            },
+            'thumbnail_url': 'mxc://example.org/FHyPlCeYUSFFxlgbQYZmoEoe'
+          },
+          'msgtype': 'm.location'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.message',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+
+      event = Event.fromJson({
+        'content': {
+          'body': 'Gangnam Style',
+          'info': {
+            'duration': 2140786,
+            'h': 320,
+            'mimetype': 'video/mp4',
+            'size': 1563685,
+            'thumbnail_info': {
+              'h': 300,
+              'mimetype': 'image/jpeg',
+              'size': 46144,
+              'w': 300
+            },
+            'thumbnail_url': 'mxc://example.org/FHyPlCeYUSFFxlgbQYZmoEoe',
+            'w': 480
+          },
+          'msgtype': 'm.video',
+          'url': 'mxc://example.org/a526eYUSFFxlgbQYZmo442'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.message',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
     });
   });
 }

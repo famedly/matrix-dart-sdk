@@ -1,34 +1,28 @@
 /*
- * Copyright (c) 2019 Zender & Kurtz GbR.
+ *   Ansible inventory script used at Famedly GmbH for managing many hosts
+ *   Copyright (C) 2019, 2020 Famedly GmbH
  *
- * Authors:
- *   Christian Pauly <krille@famedly.com>
- *   Marcel Radzio <mtrnord@famedly.com>
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
  *
- * This file is part of famedlysdk.
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
  *
- * famedlysdk is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * famedlysdk is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/room_account_data.dart';
+import 'package:famedlysdk/matrix_api.dart';
 import 'package:test/test.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/room.dart';
 import 'package:famedlysdk/src/timeline.dart';
-import 'package:famedlysdk/src/user.dart';
-import 'package:famedlysdk/src/sync/event_update.dart';
-import 'package:famedlysdk/src/sync/room_update.dart';
+import 'package:famedlysdk/src/utils/event_update.dart';
+import 'package:famedlysdk/src/utils/room_update.dart';
 import 'fake_matrix_api.dart';
 
 void main() {
@@ -39,8 +33,7 @@ void main() {
     var updateCount = 0;
     var insertList = <int>[];
 
-    var client = Client('testclient', debug: true);
-    client.httpClient = FakeMatrixApi();
+    var client = Client('testclient', debug: true, httpClient: FakeMatrixApi());
 
     var room = Room(
         id: roomID, client: client, prev_batch: '1234', roomAccountData: {});
@@ -94,15 +87,16 @@ void main() {
       expect(timeline.events.length, 2);
       expect(timeline.events[0].eventId, '1');
       expect(timeline.events[0].sender.id, '@alice:example.com');
-      expect(timeline.events[0].time.millisecondsSinceEpoch, testTimeStamp);
+      expect(timeline.events[0].originServerTs.millisecondsSinceEpoch,
+          testTimeStamp);
       expect(timeline.events[0].body, 'Testcase');
       expect(
-          timeline.events[0].time.millisecondsSinceEpoch >
-              timeline.events[1].time.millisecondsSinceEpoch,
+          timeline.events[0].originServerTs.millisecondsSinceEpoch >
+              timeline.events[1].originServerTs.millisecondsSinceEpoch,
           true);
       expect(timeline.events[0].receipts, []);
 
-      room.roomAccountData['m.receipt'] = RoomAccountData.fromJson({
+      room.roomAccountData['m.receipt'] = BasicRoomEvent.fromJson({
         'type': 'm.receipt',
         'content': {
           '@alice:example.com': {
@@ -111,7 +105,7 @@ void main() {
           }
         },
         'room_id': roomID,
-      }, room);
+      });
 
       await Future.delayed(Duration(milliseconds: 50));
 
@@ -149,7 +143,8 @@ void main() {
       expect(updateCount, 5);
       expect(insertList, [0, 0, 0]);
       expect(insertList.length, timeline.events.length);
-      expect(timeline.events[0].eventId, '42');
+      final eventId = timeline.events[0].eventId;
+      expect(eventId.startsWith('\$event'), true);
       expect(timeline.events[0].status, 1);
 
       client.onEvent.add(EventUpdate(
@@ -161,7 +156,7 @@ void main() {
             'content': {'msgtype': 'm.text', 'body': 'test'},
             'sender': '@alice:example.com',
             'status': 2,
-            'event_id': '42',
+            'event_id': eventId,
             'unsigned': {'transaction_id': '1234'},
             'origin_server_ts': DateTime.now().millisecondsSinceEpoch
           },
@@ -172,7 +167,7 @@ void main() {
       expect(updateCount, 6);
       expect(insertList, [0, 0, 0]);
       expect(insertList.length, timeline.events.length);
-      expect(timeline.events[0].eventId, '42');
+      expect(timeline.events[0].eventId, eventId);
       expect(timeline.events[0].status, 2);
     });
 
@@ -241,6 +236,7 @@ void main() {
       expect(timeline.events[7].eventId, '2143273582443PhrSn:example.org');
       expect(timeline.events[8].eventId, '1143273582443PhrSn:example.org');
       expect(room.prev_batch, 't47409-4357353_219380_26003_2265');
+      await timeline.events[8].redact(reason: 'test', txid: '1234');
     });
 
     test('Clear cache on limited timeline', () async {

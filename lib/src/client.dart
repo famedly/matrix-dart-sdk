@@ -1,68 +1,43 @@
 /*
- * Copyright (c) 2019 Zender & Kurtz GbR.
+ *   Famedly Matrix SDK
+ *   Copyright (C) 2019, 2020 Famedly GmbH
  *
- * Authors:
- *   Christian Pauly <krille@famedly.com>
- *   Marcel Radzio <mtrnord@famedly.com>
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
  *
- * This file is part of famedlysdk.
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
  *
- * famedlysdk is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * famedlysdk is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 
-import 'package:canonical_json/canonical_json.dart';
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/account_data.dart';
-import 'package:famedlysdk/src/presence.dart';
+import 'package:famedlysdk/matrix_api.dart';
+import 'package:famedlysdk/encryption.dart';
 import 'package:famedlysdk/src/room.dart';
-import 'package:famedlysdk/src/sync/user_update.dart';
 import 'package:famedlysdk/src/utils/device_keys_list.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
-import 'package:famedlysdk/src/utils/open_id_credentials.dart';
-import 'package:famedlysdk/src/utils/public_rooms_response.dart';
-import 'package:famedlysdk/src/utils/session_key.dart';
 import 'package:famedlysdk/src/utils/to_device_event.dart';
-import 'package:famedlysdk/src/utils/turn_server_credentials.dart';
-import 'package:famedlysdk/src/utils/user_device.dart';
 import 'package:http/http.dart' as http;
-import 'package:mime_type/mime_type.dart';
-import 'package:olm/olm.dart' as olm;
 import 'package:pedantic/pedantic.dart';
 
 import 'event.dart';
 import 'room.dart';
-import 'ssss.dart';
-import 'cross_signing.dart';
-import 'sync/event_update.dart';
-import 'sync/room_update.dart';
-import 'sync/user_update.dart';
+import 'utils/event_update.dart';
+import 'utils/room_update.dart';
 import 'user.dart';
-import 'utils/matrix_exception.dart';
-import 'utils/profile.dart';
 import 'database/database.dart' show Database;
-import 'utils/pusher.dart';
-import 'utils/well_known_informations.dart';
-import 'utils/key_verification.dart';
-import 'key_manager.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
-
-enum HTTPType { GET, POST, PUT, DELETE }
 
 enum LoginState { logged, loggedOut }
 
@@ -75,22 +50,16 @@ class GenericException implements Exception {
 /// [Matrix](https://matrix.org) homeserver and is the entry point for this
 /// SDK.
 class Client {
-  /// Handles the connection for this client.
-  @deprecated
-  Client get connection => this;
-
   int _id;
   int get id => _id;
 
   Database database;
-  KeyManager keyManager;
 
   bool enableE2eeRecovery;
 
-  SSSS ssss;
-  CrossSigning crossSigning;
+  MatrixApi api;
 
-  Set<KeyVerificationMethod> verificationMethods;
+  Encryption encryption;
 
   /// Create a client
   /// clientName = unique identifier of this client
@@ -104,13 +73,12 @@ class Client {
       {this.debug = false,
       this.database,
       this.enableE2eeRecovery = false,
-      this.verificationMethods}) {
-    ssss = SSSS(this);
-    keyManager = KeyManager(this);
-    crossSigning = CrossSigning(this);
-    verificationMethods ??= {};
+      http.Client httpClient}) {
+    api = MatrixApi(debug: debug, httpClient: httpClient);
     onLoginStateChanged.stream.listen((loginState) {
-      print('LoginState: ${loginState.toString()}');
+      if (debug) {
+        print('[LoginState]: ${loginState.toString()}');
+      }
     });
   }
 
@@ -120,18 +88,9 @@ class Client {
   /// The required name for this client.
   final String clientName;
 
-  /// The homeserver this client is communicating with.
-  String get homeserver => _homeserver;
-  String _homeserver;
-
   /// The Matrix ID of the current logged user.
   String get userID => _userID;
   String _userID;
-
-  /// This is the access token for the matrix client. When it is undefined, then
-  /// the user needs to sign in first.
-  String get accessToken => _accessToken;
-  String _accessToken;
 
   /// This points to the position in the synchronization history.
   String prevBatch;
@@ -145,24 +104,20 @@ class Client {
   String _deviceName;
 
   /// Returns the current login state.
-  bool isLogged() => accessToken != null;
+  bool isLogged() => api.accessToken != null;
 
   /// A list of all rooms the user is participating or invited.
   List<Room> get rooms => _rooms;
   List<Room> _rooms = [];
 
-  olm.Account _olmAccount;
-
-  /// Returns the base64 encoded keys to store them in a store.
-  /// This String should **never** leave the device!
-  String get pickledOlmAccount =>
-      encryptionEnabled ? _olmAccount.pickle(userID) : null;
-
   /// Whether this client supports end-to-end encryption using olm.
-  bool get encryptionEnabled => _olmAccount != null;
+  bool get encryptionEnabled => encryption != null && encryption.enabled;
 
   /// Whether this client is able to encrypt and decrypt files.
-  bool get fileEncryptionEnabled => true;
+  bool get fileEncryptionEnabled => encryptionEnabled && true;
+
+  String get identityKey => encryption?.identityKey ?? '';
+  String get fingerprintKey => encryption?.fingerprintKey ?? '';
 
   /// Wheather this session is unknown to others
   bool get isUnknownSession =>
@@ -177,14 +132,28 @@ class Client {
   }
 
   /// Key/Value store of account data.
-  Map<String, AccountData> accountData = {};
+  Map<String, BasicEvent> accountData = {};
 
   /// Presences of users by a given matrix ID
   Map<String, Presence> presences = {};
 
-  int _timeoutFactor = 1;
-
   int _transactionCounter = 0;
+
+  @Deprecated('Use [api.request()] instead')
+  Future<Map<String, dynamic>> jsonRequest(
+          {RequestType type,
+          String action,
+          dynamic data = '',
+          int timeout,
+          String contentType = 'application/json'}) =>
+      api.request(
+        type,
+        action,
+        data: data,
+        timeout: timeout,
+        contentType: contentType,
+      );
+
   String generateUniqueTransactionId() {
     _transactionCounter++;
     return '${clientName}-${_transactionCounter}-${DateTime.now().millisecondsSinceEpoch}';
@@ -204,19 +173,6 @@ class Client {
     return null;
   }
 
-  void handleUserUpdate(UserUpdate userUpdate) {
-    if (userUpdate.type == 'account_data') {
-      var newAccountData = AccountData.fromJson(userUpdate.content);
-      accountData[newAccountData.typeKey] = newAccountData;
-      if (onAccountData != null) onAccountData.add(newAccountData);
-    }
-    if (userUpdate.type == 'presence') {
-      var newPresence = Presence.fromJson(userUpdate.content);
-      presences[newPresence.sender] = newPresence;
-      if (onPresence != null) onPresence.add(newPresence);
-    }
-  }
-
   Map<String, dynamic> get directChats =>
       accountData['m.direct'] != null ? accountData['m.direct'].content : {};
 
@@ -231,10 +187,7 @@ class Client {
       }
       (accountData['m.direct'].content[userId] as List<dynamic>)
           .remove(accountData['m.direct'].content[userId][0]);
-      jsonRequest(
-          type: HTTPType.PUT,
-          action: '/client/r0/user/${userID}/account_data/m.direct',
-          data: directChats);
+      api.setAccountData(userId, 'm.direct', directChats);
       return getDirectChatFromUserId(userId);
     }
     for (var i = 0; i < rooms.length; i++) {
@@ -261,56 +214,37 @@ class Client {
   /// login types. Returns false if the server is not compatible with the
   /// client.
   /// Throws FormatException, TimeoutException and MatrixException on error.
-  Future<bool> checkServer(serverUrl) async {
+  Future<bool> checkServer(dynamic serverUrl) async {
     try {
-      _homeserver = serverUrl;
-      final versionResp =
-          await jsonRequest(type: HTTPType.GET, action: '/client/versions');
+      api.homeserver = (serverUrl is Uri) ? serverUrl : Uri.parse(serverUrl);
+      final versions = await api.requestSupportedVersions();
 
-      final versions = List<String>.from(versionResp['versions']);
-
-      for (var i = 0; i < versions.length; i++) {
-        if (versions[i] == 'r0.5.0' || versions[i] == 'r0.6.0') {
+      for (var i = 0; i < versions.versions.length; i++) {
+        if (versions.versions[i] == 'r0.5.0' ||
+            versions.versions[i] == 'r0.6.0') {
           break;
-        } else if (i == versions.length - 1) {
+        } else if (i == versions.versions.length - 1) {
           return false;
         }
       }
 
-      final loginResp =
-          await jsonRequest(type: HTTPType.GET, action: '/client/r0/login');
-
-      final List<dynamic> flows = loginResp['flows'];
-
-      for (var i = 0; i < flows.length; i++) {
-        if (flows[i].containsKey('type') &&
-            flows[i]['type'] == 'm.login.password') {
-          break;
-        } else if (i == flows.length - 1) {
-          return false;
-        }
+      final loginTypes = await api.requestLoginTypes();
+      if (loginTypes.flows.indexWhere((f) => f.type == 'm.login.password') ==
+          -1) {
+        return false;
       }
+
       return true;
     } catch (_) {
-      _homeserver = null;
+      api.homeserver = null;
       rethrow;
     }
   }
 
   /// Checks to see if a username is available, and valid, for the server.
-  /// You have to call [checkServer] first to set a homeserver.
-  Future<bool> usernameAvailable(String username) async {
-    final response = await jsonRequest(
-      type: HTTPType.GET,
-      action: '/client/r0/register/available?username=$username',
-    );
-    return response['available'];
-  }
-
-  /// Checks to see if a username is available, and valid, for the server.
   /// Returns the fully-qualified Matrix user ID (MXID) that has been registered.
   /// You have to call [checkServer] first to set a homeserver.
-  Future<Map<String, dynamic>> register({
+  Future<void> register({
     String kind,
     String username,
     String password,
@@ -319,31 +253,28 @@ class Client {
     String initialDeviceDisplayName,
     bool inhibitLogin,
   }) async {
-    final action = '/client/r0/register' + (kind != null ? '?kind=$kind' : '');
-    var data = <String, dynamic>{};
-    if (username != null) data['username'] = username;
-    if (password != null) data['password'] = password;
-    if (auth != null) data['auth'] = auth;
-    if (deviceId != null) data['device_id'] = deviceId;
-    if (initialDeviceDisplayName != null) {
-      data['initial_device_display_name'] = initialDeviceDisplayName;
-    }
-    if (inhibitLogin != null) data['inhibit_login'] = inhibitLogin;
-    final response =
-        await jsonRequest(type: HTTPType.POST, action: action, data: data);
+    final response = await api.register(
+      username: username,
+      password: password,
+      auth: auth,
+      deviceId: deviceId,
+      initialDeviceDisplayName: initialDeviceDisplayName,
+      inhibitLogin: inhibitLogin,
+    );
 
     // Connect if there is an access token in the response.
-    if (response.containsKey('access_token') &&
-        response.containsKey('device_id') &&
-        response.containsKey('user_id')) {
-      await connect(
-          newToken: response['access_token'],
-          newUserID: response['user_id'],
-          newHomeserver: homeserver,
-          newDeviceName: initialDeviceDisplayName ?? '',
-          newDeviceID: response['device_id']);
+    if (response.accessToken == null ||
+        response.deviceId == null ||
+        response.userId == null) {
+      throw 'Registered but token, device ID or user ID is null.';
     }
-    return response;
+    await connect(
+        newToken: response.accessToken,
+        newUserID: response.userId,
+        newHomeserver: api.homeserver,
+        newDeviceName: initialDeviceDisplayName ?? '',
+        newDeviceID: response.deviceId);
+    return;
   }
 
   /// Handles the login and allows the client to call all APIs which require
@@ -370,30 +301,38 @@ class Client {
       data['initial_device_display_name'] = initialDeviceDisplayName;
     }
 
-    final loginResp = await jsonRequest(
-        type: HTTPType.POST, action: '/client/r0/login', data: data);
+    final loginResp = await api.login(
+      type: 'm.login.password',
+      userIdentifierType: 'm.id.user',
+      user: username,
+      password: password,
+      deviceId: deviceId,
+      initialDeviceDisplayName: initialDeviceDisplayName,
+    );
 
-    if (loginResp.containsKey('user_id') &&
-        loginResp.containsKey('access_token') &&
-        loginResp.containsKey('device_id')) {
-      await connect(
-        newToken: loginResp['access_token'],
-        newUserID: loginResp['user_id'],
-        newHomeserver: homeserver,
-        newDeviceName: initialDeviceDisplayName ?? '',
-        newDeviceID: loginResp['device_id'],
-      );
-      return true;
+    // Connect if there is an access token in the response.
+    if (loginResp.accessToken == null ||
+        loginResp.deviceId == null ||
+        loginResp.userId == null) {
+      throw 'Registered but token, device ID or user ID is null.';
     }
-    return false;
+    await connect(
+      newToken: loginResp.accessToken,
+      newUserID: loginResp.userId,
+      newHomeserver: api.homeserver,
+      newDeviceName: initialDeviceDisplayName ?? '',
+      newDeviceID: loginResp.deviceId,
+    );
+    return true;
   }
 
   /// Sends a logout command to the homeserver and clears all local data,
   /// including all persistent data from the store.
   Future<void> logout() async {
     try {
-      await jsonRequest(type: HTTPType.POST, action: '/client/r0/logout');
+      await api.logout();
     } catch (exception) {
+      print(exception);
       rethrow;
     } finally {
       await clear();
@@ -444,59 +383,43 @@ class Client {
     if (cache && _profileCache.containsKey(userId)) {
       return _profileCache[userId];
     }
-    final resp = await jsonRequest(
-        type: HTTPType.GET, action: '/client/r0/profile/${userId}');
-    final profile = Profile.fromJson(resp);
+    final profile = await api.requestProfile(userId);
     _profileCache[userId] = profile;
     return profile;
   }
 
   Future<List<Room>> get archive async {
     var archiveList = <Room>[];
-    var syncFilters = '{"room":{"include_leave":true,"timeline":{"limit":10}}}';
-    var action = '/client/r0/sync?filter=$syncFilters&timeout=0';
-    final sync = await jsonRequest(type: HTTPType.GET, action: action);
-    if (sync['rooms']['leave'] is Map<String, dynamic>) {
-      for (var entry in sync['rooms']['leave'].entries) {
-        final String id = entry.key;
-        final dynamic room = entry.value;
+    final sync = await api.sync(
+      filter: '{"room":{"include_leave":true,"timeline":{"limit":10}}}',
+      timeout: 0,
+    );
+    if (sync.rooms.leave is Map<String, dynamic>) {
+      for (var entry in sync.rooms.leave.entries) {
+        final id = entry.key;
+        final room = entry.value;
         var leftRoom = Room(
             id: id,
             membership: Membership.leave,
             client: this,
-            roomAccountData: {},
+            roomAccountData:
+                room.accountData?.asMap()?.map((k, v) => MapEntry(v.type, v)) ??
+                    <String, BasicRoomEvent>{},
             mHeroes: []);
-        if (room['account_data'] is Map<String, dynamic> &&
-            room['account_data']['events'] is List<dynamic>) {
-          for (dynamic event in room['account_data']['events']) {
-            leftRoom.roomAccountData[event['type']] =
-                RoomAccountData.fromJson(event, leftRoom);
+        if (room.timeline?.events != null) {
+          for (var event in room.timeline.events) {
+            leftRoom.setState(Event.fromMatrixEvent(event, leftRoom));
           }
         }
-        if (room['timeline'] is Map<String, dynamic> &&
-            room['timeline']['events'] is List<dynamic>) {
-          for (dynamic event in room['timeline']['events']) {
-            leftRoom.setState(Event.fromJson(event, leftRoom));
-          }
-        }
-        if (room['state'] is Map<String, dynamic> &&
-            room['state']['events'] is List<dynamic>) {
-          for (dynamic event in room['state']['events']) {
-            leftRoom.setState(Event.fromJson(event, leftRoom));
+        if (room.state != null) {
+          for (var event in room.state) {
+            leftRoom.setState(Event.fromMatrixEvent(event, leftRoom));
           }
         }
         archiveList.add(leftRoom);
       }
     }
     return archiveList;
-  }
-
-  /// This API starts a user participating in a particular room, if that user is allowed to participate in that room.
-  /// After this call, the client is allowed to see all current state events in the room, and all subsequent events
-  /// associated with the room until the user leaves the room.
-  Future<dynamic> joinRoomById(String roomIdOrAlias) async {
-    return await jsonRequest(
-        type: HTTPType.POST, action: '/client/r0/join/$roomIdOrAlias');
   }
 
   /// Loads the contact list for this user excluding the user itself.
@@ -522,118 +445,21 @@ class Client {
     return contacts;
   }
 
-  @Deprecated('Please use [createRoom] instead!')
-  Future<String> createGroup(List<User> users) => createRoom(invite: users);
-
-  /// Creates a new group chat and invites the given Users and returns the new
-  /// created room ID. If [params] are provided, invite will be ignored. For the
-  /// moment please look at https://matrix.org/docs/spec/client_server/r0.5.0#post-matrix-client-r0-createroom
-  /// to configure [params].
-  Future<String> createRoom(
-      {List<User> invite, Map<String, dynamic> params}) async {
-    var inviteIDs = <String>[];
-    if (params == null && invite != null) {
-      for (var i = 0; i < invite.length; i++) {
-        inviteIDs.add(invite[i].id);
-      }
-    }
-
-    try {
-      final dynamic resp = await jsonRequest(
-          type: HTTPType.POST,
-          action: '/client/r0/createRoom',
-          data: params ??
-              {
-                'invite': inviteIDs,
-              });
-      return resp['room_id'];
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   /// Changes the user's displayname.
-  Future<void> setDisplayname(String displayname) async {
-    await jsonRequest(
-        type: HTTPType.PUT,
-        action: '/client/r0/profile/$userID/displayname',
-        data: {'displayname': displayname});
-    return;
-  }
+  Future<void> setDisplayname(String displayname) =>
+      api.setDisplayname(userID, displayname);
 
   /// Uploads a new user avatar for this user.
   Future<void> setAvatar(MatrixFile file) async {
-    final uploadResp = await upload(file);
-    await jsonRequest(
-        type: HTTPType.PUT,
-        action: '/client/r0/profile/$userID/avatar_url',
-        data: {'avatar_url': uploadResp});
+    final uploadResp = await api.upload(file.bytes, file.path);
+    await api.setAvatarUrl(userID, Uri.parse(uploadResp));
     return;
-  }
-
-  /// Get credentials for the client to use when initiating calls.
-  Future<TurnServerCredentials> getTurnServerCredentials() async {
-    final response = await jsonRequest(
-      type: HTTPType.GET,
-      action: '/client/r0/voip/turnServer',
-    );
-    return TurnServerCredentials.fromJson(response);
-  }
-
-  /// Fetches the pushrules for the logged in user.
-  /// These are needed for notifications on Android
-  @Deprecated('Use [pushRules] instead.')
-  Future<PushRules> getPushrules() async {
-    final dynamic resp = await jsonRequest(
-      type: HTTPType.GET,
-      action: '/client/r0/pushrules/',
-    );
-
-    return PushRules.fromJson(resp);
   }
 
   /// Returns the push rules for the logged in user.
-  PushRules get pushRules => accountData.containsKey('m.push_rules')
-      ? PushRules.fromJson(accountData['m.push_rules'].content)
+  PushRuleSet get pushRules => accountData.containsKey('m.push_rules')
+      ? PushRuleSet.fromJson(accountData['m.push_rules'].content)
       : null;
-
-  /// Gets all currently active pushers for the authenticated user.
-  Future<List<Pusher>> getPushers() async {
-    final response =
-        await jsonRequest(type: HTTPType.GET, action: '/client/r0/pushers');
-    var list = <Pusher>[];
-    for (final pusherJson in response['pushers']) {
-      list.add(Pusher.fromJson(pusherJson));
-    }
-    return list;
-  }
-
-  /// This endpoint allows the creation, modification and deletion of pushers for this user ID.
-  Future<void> setPushers(String pushKey, String kind, String appId,
-      String appDisplayName, String deviceDisplayName, String lang, String url,
-      {bool append, String profileTag, String format}) async {
-    var data = <String, dynamic>{
-      'lang': lang,
-      'kind': kind,
-      'app_display_name': appDisplayName,
-      'device_display_name': deviceDisplayName,
-      'profile_tag': profileTag,
-      'app_id': appId,
-      'pushkey': pushKey,
-      'data': {'url': url}
-    };
-
-    if (format != null) data['data']['format'] = format;
-    if (profileTag != null) data['profile_tag'] = profileTag;
-    if (append != null) data['append'] = append;
-
-    await jsonRequest(
-      type: HTTPType.POST,
-      action: '/client/r0/pushers/set',
-      data: data,
-    );
-    return;
-  }
 
   static String syncFilters = '{"room":{"state":{"lazy_load_members":true}}}';
   static String messagesFilters = '{"lazy_load_members":true}';
@@ -645,8 +471,6 @@ class Client {
   ];
   static const int defaultThumbnailSize = 256;
 
-  http.Client httpClient = http.Client();
-
   /// The newEvent signal is the most important signal in this concept. Every time
   /// the app receives a new synchronization, this event is called for every signal
   /// to update the GUI. For example, for a new message, it is called:
@@ -657,9 +481,6 @@ class Client {
   /// are handled by this signal:
   final StreamController<RoomUpdate> onRoomUpdate =
       StreamController.broadcast();
-
-  /// Outside of rooms there are account updates like account_data or presences.
-  final StreamController<UserUpdate> onUserEvent = StreamController.broadcast();
 
   /// The onToDeviceEvent is called when there comes a new to device event. It is
   /// already decrypted if necessary.
@@ -675,6 +496,9 @@ class Client {
       StreamController.broadcast();
 
   /// Synchronization erros are coming here.
+  final StreamController<SyncError> onSyncError = StreamController.broadcast();
+
+  /// Synchronization erros are coming here.
   final StreamController<ToDeviceEventDecryptionError> onOlmError =
       StreamController.broadcast();
 
@@ -682,13 +506,13 @@ class Client {
   final StreamController<bool> onFirstSync = StreamController.broadcast();
 
   /// When a new sync response is coming in, this gives the complete payload.
-  final StreamController<dynamic> onSync = StreamController.broadcast();
+  final StreamController<SyncUpdate> onSync = StreamController.broadcast();
 
   /// Callback will be called on presences.
   final StreamController<Presence> onPresence = StreamController.broadcast();
 
   /// Callback will be called on account data updates.
-  final StreamController<AccountData> onAccountData =
+  final StreamController<BasicEvent> onAccountData =
       StreamController.broadcast();
 
   /// Will be called on call invites.
@@ -711,8 +535,6 @@ class Client {
   final StreamController<KeyVerification> onKeyVerificationRequest =
       StreamController.broadcast();
 
-  final Map<String, KeyVerification> _keyVerificationRequests = {};
-
   /// Matrix synchronisation is done with https long polling. This needs a
   /// timeout which is usually 30 seconds.
   int syncTimeoutSec = 30;
@@ -734,7 +556,7 @@ class Client {
   ///
   /// ```
   /// final resp = await matrix
-  ///          .jsonRequest(type: HTTPType.POST, action: "/client/r0/login", data: {
+  ///          .jsonRequest(type: RequestType.POST, action: "/client/r0/login", data: {
   ///        "type": "m.login.password",
   ///        "user": "test",
   ///        "password": "1234",
@@ -755,7 +577,7 @@ class Client {
   /// Sends [LoginState.logged] to [onLoginStateChanged].
   void connect({
     String newToken,
-    String newHomeserver,
+    Uri newHomeserver,
     String newUserID,
     String newDeviceName,
     String newDeviceID,
@@ -767,8 +589,8 @@ class Client {
       final account = await database.getClient(clientName);
       if (account != null) {
         _id = account.clientId;
-        _homeserver = account.homeserverUrl;
-        _accessToken = account.token;
+        api.homeserver = Uri.parse(account.homeserverUrl);
+        api.accessToken = account.token;
         _userID = account.userId;
         _deviceID = account.deviceId;
         _deviceName = account.deviceName;
@@ -776,75 +598,56 @@ class Client {
         olmAccount = account.olmAccount;
       }
     }
-    _accessToken = newToken ?? _accessToken;
-    _homeserver = newHomeserver ?? _homeserver;
+    api.accessToken = newToken ?? api.accessToken;
+    api.homeserver = newHomeserver ?? api.homeserver;
     _userID = newUserID ?? _userID;
     _deviceID = newDeviceID ?? _deviceID;
     _deviceName = newDeviceName ?? _deviceName;
     prevBatch = newPrevBatch ?? prevBatch;
     olmAccount = newOlmAccount ?? olmAccount;
 
-    if (_accessToken == null || _homeserver == null || _userID == null) {
+    if (api.accessToken == null || api.homeserver == null || _userID == null) {
       // we aren't logged in
+      encryption?.dispose();
+      encryption = null;
       onLoginStateChanged.add(LoginState.loggedOut);
       return;
     }
 
-    // Try to create a new olm account or restore a previous one.
-    if (olmAccount == null) {
-      try {
-        await olm.init();
-        _olmAccount = olm.Account();
-        _olmAccount.create();
-        if (await _uploadKeys(uploadDeviceKeys: true) == false) {
-          throw ('Upload key failed');
-        }
-      } catch (_) {
-        _olmAccount = null;
-      }
-    } else {
-      try {
-        await olm.init();
-        _olmAccount = olm.Account();
-        _olmAccount.unpickle(userID, olmAccount);
-      } catch (_) {
-        _olmAccount = null;
-      }
-    }
+    encryption = Encryption(
+        debug: debug, client: this, enableE2eeRecovery: enableE2eeRecovery);
+    await encryption.init(olmAccount);
 
     if (database != null) {
       if (id != null) {
         await database.updateClient(
-          _homeserver,
-          _accessToken,
+          api.homeserver.toString(),
+          api.accessToken,
           _userID,
           _deviceID,
           _deviceName,
           prevBatch,
-          pickledOlmAccount,
+          encryption?.pickledOlmAccount,
           id,
         );
       } else {
         _id = await database.insertClient(
           clientName,
-          _homeserver,
-          _accessToken,
+          api.homeserver.toString(),
+          api.accessToken,
           _userID,
           _deviceID,
           _deviceName,
           prevBatch,
-          pickledOlmAccount,
+          encryption?.pickledOlmAccount,
         );
       }
-      _userDeviceKeys = await database.getUserDeviceKeys(this);
-      _olmSessions = await database.getOlmSessions(id, _userID);
+      _userDeviceKeys = await database.getUserDeviceKeys(id);
       _rooms = await database.getRoomList(this, onlyLeft: false);
       _sortRooms();
       accountData = await database.getAccountData(id);
       presences = await database.getPresences(id);
     }
-
-    _userEventSub ??= onUserEvent.stream.listen(handleUserUpdate);
 
     onLoginStateChanged.add(LoginState.logged);
 
@@ -856,193 +659,36 @@ class Client {
     _userID = s;
   }
 
-  StreamSubscription _userEventSub;
-
   /// Resets all settings and stops the synchronisation.
   void clear() {
-    olmSessions.values.forEach((List<olm.Session> sessions) {
-      sessions.forEach((olm.Session session) => session?.free());
-    });
-    rooms.forEach((Room room) {
-      room.clearOutboundGroupSession(wipe: true);
-      room.inboundGroupSessions.values.forEach((SessionKey sessionKey) {
-        sessionKey.inboundGroupSession?.free();
-      });
-    });
-    _olmAccount?.free();
     database?.clear(id);
-    _id = _accessToken =
-        _homeserver = _userID = _deviceID = _deviceName = prevBatch = null;
+    _id = api.accessToken =
+        api.homeserver = _userID = _deviceID = _deviceName = prevBatch = null;
     _rooms = [];
+    encryption?.dispose();
+    encryption = null;
     onLoginStateChanged.add(LoginState.loggedOut);
   }
 
-  /// Used for all Matrix json requests using the [c2s API](https://matrix.org/docs/spec/client_server/r0.4.0.html).
-  ///
-  /// Throws: TimeoutException, FormatException, MatrixException
-  ///
-  /// You must first call [this.connect()] or set [this.homeserver] before you can use
-  /// this! For example to send a message to a Matrix room with the id
-  /// '!fjd823j:example.com' you call:
-  ///
-  /// ```
-  /// final resp = await jsonRequest(
-  ///   type: HTTPType.PUT,
-  ///   action: "/r0/rooms/!fjd823j:example.com/send/m.room.message/$txnId",
-  ///   data: {
-  ///     "msgtype": "m.text",
-  ///     "body": "hello"
-  ///   }
-  ///  );
-  /// ```
-  ///
-  Future<Map<String, dynamic>> jsonRequest(
-      {HTTPType type,
-      String action,
-      dynamic data = '',
-      int timeout,
-      String contentType = 'application/json'}) async {
-    if (isLogged() == false && homeserver == null) {
-      throw ('No homeserver specified.');
-    }
-    timeout ??= (_timeoutFactor * syncTimeoutSec) + 5;
-    dynamic json;
-    if (data is Map) data.removeWhere((k, v) => v == null);
-    (!(data is String)) ? json = jsonEncode(data) : json = data;
-    if (data is List<int> || action.startsWith('/media/r0/upload')) json = data;
-
-    final url = '${homeserver}/_matrix${action}';
-
-    var headers = <String, String>{};
-    if (type == HTTPType.PUT || type == HTTPType.POST) {
-      headers['Content-Type'] = contentType;
-    }
-    if (isLogged()) {
-      headers['Authorization'] = 'Bearer ${accessToken}';
-    }
-
-    if (debug) {
-      print(
-          "[REQUEST ${type.toString().split('.').last}] Action: $action, Data: ${jsonEncode(data)}");
-    }
-
-    http.Response resp;
-    var jsonResp = <String, dynamic>{};
-    try {
-      switch (type.toString().split('.').last) {
-        case 'GET':
-          resp = await httpClient.get(url, headers: headers).timeout(
-                Duration(seconds: timeout),
-                onTimeout: () => null,
-              );
-          break;
-        case 'POST':
-          resp =
-              await httpClient.post(url, body: json, headers: headers).timeout(
-                    Duration(seconds: timeout),
-                    onTimeout: () => null,
-                  );
-          break;
-        case 'PUT':
-          resp =
-              await httpClient.put(url, body: json, headers: headers).timeout(
-                    Duration(seconds: timeout),
-                    onTimeout: () => null,
-                  );
-          break;
-        case 'DELETE':
-          resp = await httpClient.delete(url, headers: headers).timeout(
-                Duration(seconds: timeout),
-                onTimeout: () => null,
-              );
-          break;
-      }
-      if (resp == null) {
-        throw TimeoutException;
-      }
-      jsonResp = jsonDecode(String.fromCharCodes(resp.body.runes))
-          as Map<String, dynamic>; // May throw FormatException
-
-      if (resp.statusCode >= 400 && resp.statusCode < 500) {
-        // The server has responsed with an matrix related error.
-        var exception = MatrixException(resp);
-        if (exception.error == MatrixError.M_UNKNOWN_TOKEN) {
-          // The token is no longer valid. Need to sign off....
-          // TODO: add a way to export keys prior logout?
-          onError.add(exception);
-          clear();
-        }
-
-        throw exception;
-      }
-
-      if (debug) print('[RESPONSE] ${jsonResp.toString()}');
-    } on ArgumentError catch (exception) {
-      print(exception);
-      // Ignore this error
-    } on TimeoutException catch (_) {
-      _timeoutFactor *= 2;
-      rethrow;
-    } catch (_) {
-      print(_);
-      rethrow;
-    }
-
-    return jsonResp;
-  }
-
-  /// Uploads a file with the name [fileName] as base64 encoded to the server
-  /// and returns the mxc url as a string.
-  Future<String> upload(MatrixFile file, {String contentType}) async {
-    // For testing
-    if (homeserver.toLowerCase() == 'https://fakeserver.notexisting') {
-      return 'mxc://example.com/AQwafuaFswefuhsfAFAgsw';
-    }
-    var headers = <String, String>{};
-    headers['Authorization'] = 'Bearer $accessToken';
-    headers['Content-Type'] = contentType ?? mime(file.path);
-    var fileName = Uri.encodeFull(file.path.split('/').last.toLowerCase());
-    final url = '$homeserver/_matrix/media/r0/upload?filename=$fileName';
-    final streamedRequest = http.StreamedRequest('POST', Uri.parse(url))
-      ..headers.addAll(headers);
-    streamedRequest.contentLength = await file.bytes.length;
-    streamedRequest.sink.add(file.bytes);
-    streamedRequest.sink.close();
-    print('[UPLOADING] $fileName');
-    var streamedResponse = await streamedRequest.send();
-    Map<String, dynamic> jsonResponse = json.decode(
-      String.fromCharCodes(await streamedResponse.stream.first),
-    );
-    if (!(jsonResponse['content_uri'] is String &&
-        jsonResponse['content_uri'].isNotEmpty)) {
-      throw ("Missing json key: 'content_uri' ${jsonResponse.toString()}");
-    }
-    return jsonResponse['content_uri'];
-  }
-
-  Future<dynamic> _syncRequest;
+  Future<SyncUpdate> _syncRequest;
 
   Future<void> _sync() async {
     if (isLogged() == false || _disposed) return;
-
-    var action = '/client/r0/sync?filter=$syncFilters';
-
-    if (prevBatch != null) {
-      action += '&timeout=30000';
-      action += '&since=${prevBatch}';
-    }
     try {
-      _syncRequest = jsonRequest(type: HTTPType.GET, action: action);
+      _syncRequest = api.sync(
+        filter: syncFilters,
+        since: prevBatch,
+        timeout: prevBatch != null ? 30000 : null,
+      );
       if (_disposed) return;
       final hash = _syncRequest.hashCode;
       final syncResp = await _syncRequest;
       if (hash != _syncRequest.hashCode) return;
-      _timeoutFactor = 1;
       if (database != null) {
         await database.transaction(() async {
           await handleSync(syncResp);
-          if (prevBatch != syncResp['next_batch']) {
-            await database.storePrevBatch(syncResp['next_batch'], id);
+          if (prevBatch != syncResp.nextBatch) {
+            await database.storePrevBatch(syncResp.nextBatch, id);
           }
         });
       } else {
@@ -1051,81 +697,83 @@ class Client {
       if (_disposed) return;
       if (prevBatch == null) {
         onFirstSync.add(true);
-        prevBatch = syncResp['next_batch'];
+        prevBatch = syncResp.nextBatch;
         _sortRooms();
       }
-      prevBatch = syncResp['next_batch'];
+      prevBatch = syncResp.nextBatch;
       await _updateUserDeviceKeys();
-      _cleanupKeyVerificationRequests();
+      if (encryptionEnabled) {
+        encryption.onSync();
+      }
       if (hash == _syncRequest.hashCode) unawaited(_sync());
     } on MatrixException catch (exception) {
       onError.add(exception);
       await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
-    } catch (exception, stack) {
-      print('Error during processing events: ' + exception.toString());
-      print(stack);
+    } catch (e, s) {
+      print('Error during processing events: ' + e.toString());
+      print(s);
+      onSyncError.add(SyncError(
+          exception: e is Exception ? e : Exception(e), stackTrace: s));
       await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
     }
   }
 
   /// Use this method only for testing utilities!
-  Future<void> handleSync(dynamic sync) async {
-    if (sync['to_device'] is Map<String, dynamic> &&
-        sync['to_device']['events'] is List<dynamic>) {
-      _handleToDeviceEvents(sync['to_device']['events']);
+  Future<void> handleSync(SyncUpdate sync) async {
+    if (sync.toDevice != null) {
+      await _handleToDeviceEvents(sync.toDevice);
     }
-    if (sync['rooms'] is Map<String, dynamic>) {
-      if (sync['rooms']['join'] is Map<String, dynamic>) {
-        await _handleRooms(sync['rooms']['join'], Membership.join);
+    if (sync.rooms != null) {
+      if (sync.rooms.join != null) {
+        await _handleRooms(sync.rooms.join, Membership.join);
       }
-      if (sync['rooms']['invite'] is Map<String, dynamic>) {
-        await _handleRooms(sync['rooms']['invite'], Membership.invite);
+      if (sync.rooms.invite != null) {
+        await _handleRooms(sync.rooms.invite, Membership.invite);
       }
-      if (sync['rooms']['leave'] is Map<String, dynamic>) {
-        await _handleRooms(sync['rooms']['leave'], Membership.leave);
+      if (sync.rooms.leave != null) {
+        await _handleRooms(sync.rooms.leave, Membership.leave);
       }
     }
-    if (sync['presence'] is Map<String, dynamic> &&
-        sync['presence']['events'] is List<dynamic>) {
-      await _handleGlobalEvents(sync['presence']['events'], 'presence');
+    if (sync.presence != null) {
+      for (final newPresence in sync.presence) {
+        if (database != null) {
+          await database.storeUserEventUpdate(
+            id,
+            'presence',
+            newPresence.type,
+            newPresence.toJson(),
+          );
+        }
+        presences[newPresence.senderId] = newPresence;
+        onPresence.add(newPresence);
+      }
     }
-    if (sync['account_data'] is Map<String, dynamic> &&
-        sync['account_data']['events'] is List<dynamic>) {
-      await _handleGlobalEvents(sync['account_data']['events'], 'account_data');
+    if (sync.accountData != null) {
+      for (final newAccountData in sync.accountData) {
+        if (database != null) {
+          await database.storeUserEventUpdate(
+            id,
+            'account_data',
+            newAccountData.type,
+            newAccountData.toJson(),
+          );
+        }
+        accountData[newAccountData.type] = newAccountData;
+        if (onAccountData != null) onAccountData.add(newAccountData);
+      }
     }
-    if (sync['device_lists'] is Map<String, dynamic>) {
-      await _handleDeviceListsEvents(sync['device_lists']);
+    if (sync.deviceLists != null) {
+      await _handleDeviceListsEvents(sync.deviceLists);
     }
-    if (sync['device_one_time_keys_count'] is Map<String, dynamic>) {
-      _handleDeviceOneTimeKeysCount(sync['device_one_time_keys_count']);
-    }
-    while (_pendingToDeviceEvents.isNotEmpty) {
-      _updateRoomsByToDeviceEvent(
-        _pendingToDeviceEvents.removeLast(),
-        addToPendingIfNotFound: false,
-      );
+    if (sync.deviceOneTimeKeysCount != null && encryptionEnabled) {
+      encryption.handleDeviceOneTimeKeysCount(sync.deviceOneTimeKeysCount);
     }
     onSync.add(sync);
   }
 
-  void _handleDeviceOneTimeKeysCount(
-      Map<String, dynamic> deviceOneTimeKeysCount) {
-    if (!encryptionEnabled) return;
-    // Check if there are at least half of max_number_of_one_time_keys left on the server
-    // and generate and upload more if not.
-    if (deviceOneTimeKeysCount['signed_curve25519'] is int) {
-      final int oneTimeKeysCount = deviceOneTimeKeysCount['signed_curve25519'];
-      if (oneTimeKeysCount < (_olmAccount.max_number_of_one_time_keys() / 2)) {
-        // Generate and upload more one time keys:
-        _uploadKeys();
-      }
-    }
-  }
-
-  Future<void> _handleDeviceListsEvents(
-      Map<String, dynamic> deviceLists) async {
-    if (deviceLists['changed'] is List) {
-      for (final userId in deviceLists['changed']) {
+  Future<void> _handleDeviceListsEvents(DeviceListsUpdate deviceLists) async {
+    if (deviceLists.changed is List) {
+      for (final userId in deviceLists.changed) {
         if (_userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys[userId].outdated = true;
           if (database != null) {
@@ -1133,7 +781,7 @@ class Client {
           }
         }
       }
-      for (final userId in deviceLists['left']) {
+      for (final userId in deviceLists.left) {
         if (_userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys.remove(userId);
         }
@@ -1141,52 +789,12 @@ class Client {
     }
   }
 
-  void _cleanupKeyVerificationRequests() {
-    final actions = <Future<void> Function()>[];
-    for (final entry in _keyVerificationRequests.entries) {
-      actions.add(() async {
-        var dispose = entry.value.canceled ||
-            entry.value.state == KeyVerificationState.done ||
-            entry.value.state == KeyVerificationState.error;
-        if (!dispose) {
-          dispose = !(await entry.value.verifyActivity());
-        }
-        if (dispose) {
-          entry.value.dispose();
-          _keyVerificationRequests.remove(entry.key);
-        }
-      });
-    }
-    if (actions.isNotEmpty) {
-      (() async {
-        for (final a in actions) {
-          await a();
-        }
-      })();
-    }
-  }
-
-  void addKeyVerificationRequest(KeyVerification request) {
-    if (request.transactionId == null) {
-      return;
-    }
-    _keyVerificationRequests[request.transactionId] = request;
-  }
-
-  void _handleToDeviceEvents(List<dynamic> events) {
+  Future<void> _handleToDeviceEvents(List<BasicEventWithSender> events) async {
     for (var i = 0; i < events.length; i++) {
-      var isValid = events[i] is Map &&
-          events[i]['type'] is String &&
-          events[i]['sender'] is String &&
-          events[i]['content'] is Map;
-      if (!isValid) {
-        print('[Sync] Invalid To Device Event! ${events[i]}');
-        continue;
-      }
-      var toDeviceEvent = ToDeviceEvent.fromJson(events[i]);
-      if (toDeviceEvent.type == 'm.room.encrypted') {
+      var toDeviceEvent = ToDeviceEvent.fromJson(events[i].toJson());
+      if (toDeviceEvent.type == EventTypes.Encrypted && encryptionEnabled) {
         try {
-          toDeviceEvent = decryptToDeviceEvent(toDeviceEvent);
+          toDeviceEvent = await encryption.decryptToDeviceEvent(toDeviceEvent);
         } catch (e, s) {
           print(
               '[LibOlm] Could not decrypt to device event from ${toDeviceEvent.sender} with content: ${toDeviceEvent.content}');
@@ -1194,21 +802,16 @@ class Client {
           print(s);
           onOlmError.add(
             ToDeviceEventDecryptionError(
-              exception: (e is Exception) ? e : GenericException(e),
+              exception: e is Exception ? e : Exception(e),
               stackTrace: s,
               toDeviceEvent: toDeviceEvent,
             ),
           );
-          toDeviceEvent = ToDeviceEvent.fromJson(events[i]);
+          toDeviceEvent = ToDeviceEvent.fromJson(events[i].toJson());
         }
       }
-      _updateRoomsByToDeviceEvent(toDeviceEvent);
-      if (toDeviceEvent.type.startsWith('m.key.verification.')) {
-        _handleToDeviceKeyVerificationRequest(toDeviceEvent);
-      }
-      if (['m.room_key_request', 'm.forwarded_room_key']
-          .contains(toDeviceEvent.type)) {
-        keyManager.handleToDeviceEvent(toDeviceEvent);
+      if (encryptionEnabled) {
+        await encryption.handleToDeviceEvent(toDeviceEvent);
       }
       if (toDeviceEvent.type.startsWith('m.secret.')) {
         ssss.handleToDeviceEvent(toDeviceEvent);
@@ -1217,137 +820,19 @@ class Client {
     }
   }
 
-  void _handleToDeviceKeyVerificationRequest(ToDeviceEvent toDeviceEvent) {
-    if (!toDeviceEvent.type.startsWith('m.key.verification.') ||
-        verificationMethods.isEmpty) {
-      return;
-    }
-    // we have key verification going on!
-    final transactionId =
-        KeyVerification.getTransactionId(toDeviceEvent.content);
-    if (transactionId != null) {
-      if (_keyVerificationRequests.containsKey(transactionId)) {
-        _keyVerificationRequests[transactionId]
-            .handlePayload(toDeviceEvent.type, toDeviceEvent.content);
-      } else {
-        final newKeyRequest =
-            KeyVerification(client: this, userId: toDeviceEvent.sender);
-        newKeyRequest
-            .handlePayload(toDeviceEvent.type, toDeviceEvent.content)
-            .then((res) {
-          if (newKeyRequest.state != KeyVerificationState.askAccept) {
-            // okay, something went wrong (unknown transaction id?), just dispose it
-            newKeyRequest.dispose();
-          } else {
-            // we have a new request! Let's broadcast it!
-            _keyVerificationRequests[transactionId] = newKeyRequest;
-            onKeyVerificationRequest.add(newKeyRequest);
-          }
-        });
-      }
-    }
-  }
-
-  void _handleRoomKeyVerificationRequest(EventUpdate update) {
-    final event = update.content;
-    final type = event['type'].startsWith('m.key.verification.')
-        ? event['type']
-        : event['content']['msgtype'];
-    if (!type.startsWith('m.key.verification.') ||
-        verificationMethods.isEmpty) {
-      return;
-    }
-    if (type == 'm.key.verification.request') {
-      event['content']['timestamp'] = event['origin_server_ts'];
-    }
-    final transactionId =
-        KeyVerification.getTransactionId(event['content']) ?? event['event_id'];
-    if (_keyVerificationRequests.containsKey(transactionId)) {
-      final req = _keyVerificationRequests[transactionId];
-      if (event['sender'] != userID) {
-        req.handlePayload(type, event['content'], event['event_id']);
-      } else if (req.userId == userID && req.deviceId == null) {
-        req
-            .handlePayload(type, event['content'], event['event_id'])
-            .then((ret) {
-          if (req.deviceId != deviceID) {
-            req.otherDeviceAccepted();
-            req.dispose();
-            _keyVerificationRequests.remove(transactionId);
-          }
-        });
-      }
-    } else if (event['sender'] != userID) {
-      final room =
-          getRoomById(update.roomID) ?? Room(id: update.roomID, client: this);
-      final newKeyRequest =
-          KeyVerification(client: this, userId: event['sender'], room: room);
-      newKeyRequest
-          .handlePayload(type, event['content'], event['event_id'])
-          .then((res) {
-        if (newKeyRequest.state != KeyVerificationState.askAccept) {
-          // something went wrong, let's just dispose the request
-          newKeyRequest.dispose();
-        } else {
-          // new request! Let's notify it and stuff
-          _keyVerificationRequests[transactionId] = newKeyRequest;
-          onKeyVerificationRequest.add(newKeyRequest);
-        }
-      });
-    }
-  }
-
   Future<void> _handleRooms(
-      Map<String, dynamic> rooms, Membership membership) async {
+      Map<String, SyncRoomUpdate> rooms, Membership membership) async {
     for (final entry in rooms.entries) {
       final id = entry.key;
       final room = entry.value;
-      // calculate the notification counts, the limitedTimeline and prevbatch
-      num highlight_count = 0;
-      num notification_count = 0;
-      var prev_batch = '';
-      var limitedTimeline = false;
 
-      if (room['unread_notifications'] is Map<String, dynamic>) {
-        if (room['unread_notifications']['highlight_count'] is num) {
-          highlight_count = room['unread_notifications']['highlight_count'];
-        }
-        if (room['unread_notifications']['notification_count'] is num) {
-          notification_count =
-              room['unread_notifications']['notification_count'];
-        }
-      }
-
-      if (room['timeline'] is Map<String, dynamic>) {
-        if (room['timeline']['limited'] is bool) {
-          limitedTimeline = room['timeline']['limited'];
-        }
-        if (room['timeline']['prev_batch'] is String) {
-          prev_batch = room['timeline']['prev_batch'];
-        }
-      }
-
-      RoomSummary summary;
-
-      if (room['summary'] is Map<String, dynamic>) {
-        summary = RoomSummary.fromJson(room['summary']);
-      }
-
-      var update = RoomUpdate(
-        id: id,
-        membership: membership,
-        notification_count: notification_count,
-        highlight_count: highlight_count,
-        limitedTimeline: limitedTimeline,
-        prev_batch: prev_batch,
-        summary: summary,
-      );
+      var update = RoomUpdate.fromSyncRoomUpdate(room, id);
       if (database != null) {
         await database.storeRoomUpdate(this.id, update, getRoomById(id));
       }
       _updateRoomsByRoomUpdate(update);
       final roomObj = getRoomById(id);
-      if (limitedTimeline && roomObj != null) {
+      if (update.limitedTimeline && roomObj != null) {
         roomObj.resetSortOrder();
       }
       onRoomUpdate.add(update);
@@ -1355,37 +840,47 @@ class Client {
       var handledEvents = false;
 
       /// Handle now all room events and save them in the database
-      if (room['state'] is Map<String, dynamic> &&
-          room['state']['events'] is List<dynamic> &&
-          room['state']['events'].isNotEmpty) {
-        await _handleRoomEvents(id, room['state']['events'], 'state');
-        handledEvents = true;
+      if (room is JoinedRoomUpdate) {
+        if (room.state?.isNotEmpty ?? false) {
+          await _handleRoomEvents(
+              id, room.state.map((i) => i.toJson()).toList(), 'state');
+          handledEvents = true;
+        }
+        if (room.timeline?.events?.isNotEmpty ?? false) {
+          await _handleRoomEvents(id,
+              room.timeline.events.map((i) => i.toJson()).toList(), 'timeline');
+          handledEvents = true;
+        }
+        if (room.ephemeral?.isNotEmpty ?? false) {
+          await _handleEphemerals(
+              id, room.ephemeral.map((i) => i.toJson()).toList());
+        }
+        if (room.accountData?.isNotEmpty ?? false) {
+          await _handleRoomEvents(id,
+              room.accountData.map((i) => i.toJson()).toList(), 'account_data');
+        }
       }
-
-      if (room['invite_state'] is Map<String, dynamic> &&
-          room['invite_state']['events'] is List<dynamic>) {
-        await _handleRoomEvents(
-            id, room['invite_state']['events'], 'invite_state');
+      if (room is LeftRoomUpdate) {
+        if (room.timeline?.events?.isNotEmpty ?? false) {
+          await _handleRoomEvents(id,
+              room.timeline.events.map((i) => i.toJson()).toList(), 'timeline');
+          handledEvents = true;
+        }
+        if (room.accountData?.isNotEmpty ?? false) {
+          await _handleRoomEvents(id,
+              room.accountData.map((i) => i.toJson()).toList(), 'account_data');
+        }
+        if (room.state?.isNotEmpty ?? false) {
+          await _handleRoomEvents(
+              id, room.state.map((i) => i.toJson()).toList(), 'state');
+          handledEvents = true;
+        }
       }
-
-      if (room['timeline'] is Map<String, dynamic> &&
-          room['timeline']['events'] is List<dynamic> &&
-          room['timeline']['events'].isNotEmpty) {
-        await _handleRoomEvents(id, room['timeline']['events'], 'timeline');
-        handledEvents = true;
+      if (room is InvitedRoomUpdate &&
+          (room.inviteState?.isNotEmpty ?? false)) {
+        await _handleRoomEvents(id,
+            room.inviteState.map((i) => i.toJson()).toList(), 'invite_state');
       }
-
-      if (room['ephemeral'] is Map<String, dynamic> &&
-          room['ephemeral']['events'] is List<dynamic>) {
-        await _handleEphemerals(id, room['ephemeral']['events']);
-      }
-
-      if (room['account_data'] is Map<String, dynamic> &&
-          room['account_data']['events'] is List<dynamic>) {
-        await _handleRoomEvents(
-            id, room['account_data']['events'], 'account_data');
-      }
-
       if (handledEvents && database != null && roomObj != null) {
         await roomObj.updateSortOrder();
       }
@@ -1443,23 +938,6 @@ class Client {
     }
   }
 
-  Future<void> _handleGlobalEvents(List<dynamic> events, String type) async {
-    for (var i = 0; i < events.length; i++) {
-      if (events[i]['type'] is String &&
-          events[i]['content'] is Map<String, dynamic>) {
-        var update = UserUpdate(
-          eventType: events[i]['type'],
-          type: type,
-          content: events[i],
-        );
-        if (database != null) {
-          await database.storeUserEventUpdate(id, update);
-        }
-        onUserEvent.add(update);
-      }
-    }
-  }
-
   Future<void> _handleEvent(
       Map<String, dynamic> event, String roomID, String type) async {
     if (event['type'] is String && event['content'] is Map<String, dynamic>) {
@@ -1467,10 +945,10 @@ class Client {
       // man-in-the-middle attacks!
       final room = getRoomById(roomID);
       if (room == null ||
-          (event['type'] == 'm.room.encryption' &&
+          (event['type'] == EventTypes.Encryption &&
               room.encrypted &&
               event['content']['algorithm'] !=
-                  room.getState('m.room.encryption')?.content['algorithm'])) {
+                  room.getState(EventTypes.Encryption)?.content['algorithm'])) {
         return;
       }
 
@@ -1484,14 +962,8 @@ class Client {
         content: event,
         sortOrder: sortOrder,
       );
-      if (event['type'] == 'm.room.encrypted') {
-        update = update.decrypt(room);
-      }
-      if (update.eventType == 'm.room.encrypted' && database != null) {
-        // the event is still encrytped....let's try fetching the keys from the database!
-        await room.loadInboundGroupSessionKey(
-            event['content']['session_id'], event['content']['sender_key']);
-        update = update.decrypt(room);
+      if (event['type'] == EventTypes.Encrypted && encryptionEnabled) {
+        update = await update.decrypt(room);
       }
       if (type != 'ephemeral' && database != null) {
         await database.storeEventUpdate(id, update);
@@ -1604,58 +1076,21 @@ class Client {
               ),
             );
       } else {
-        var prevState =
-            rooms[j].getState(stateEvent.typeKey, stateEvent.stateKey);
+        var prevState = rooms[j].getState(stateEvent.type, stateEvent.stateKey);
         if (prevState != null &&
-            prevState.time.millisecondsSinceEpoch >
-                stateEvent.time.millisecondsSinceEpoch) return;
+            prevState.originServerTs.millisecondsSinceEpoch >
+                stateEvent.originServerTs.millisecondsSinceEpoch) return;
         rooms[j].setState(stateEvent);
       }
     } else if (eventUpdate.type == 'account_data') {
       rooms[j].roomAccountData[eventUpdate.eventType] =
-          RoomAccountData.fromJson(eventUpdate.content, rooms[j]);
+          BasicRoomEvent.fromJson(eventUpdate.content);
     } else if (eventUpdate.type == 'ephemeral') {
       rooms[j].ephemerals[eventUpdate.eventType] =
-          RoomAccountData.fromJson(eventUpdate.content, rooms[j]);
+          BasicRoomEvent.fromJson(eventUpdate.content);
     }
     if (rooms[j].onUpdate != null) rooms[j].onUpdate.add(rooms[j].id);
     if (eventUpdate.type == 'timeline') _sortRooms();
-  }
-
-  final List<ToDeviceEvent> _pendingToDeviceEvents = [];
-
-  void _updateRoomsByToDeviceEvent(ToDeviceEvent toDeviceEvent,
-      {addToPendingIfNotFound = true}) async {
-    try {
-      switch (toDeviceEvent.type) {
-        case 'm.room_key':
-          final roomId = toDeviceEvent.content['room_id'];
-          var room = getRoomById(roomId);
-          if (room == null && addToPendingIfNotFound) {
-            _pendingToDeviceEvents.add(toDeviceEvent);
-            break;
-          }
-          room ??= Room(client: this, id: roomId);
-          final String sessionId = toDeviceEvent.content['session_id'];
-          if (userDeviceKeys.containsKey(toDeviceEvent.sender) &&
-              userDeviceKeys[toDeviceEvent.sender]
-                  .deviceKeys
-                  .containsKey(toDeviceEvent.content['requesting_device_id'])) {
-            toDeviceEvent.content['sender_claimed_ed25519_key'] =
-                userDeviceKeys[toDeviceEvent.sender]
-                    .deviceKeys[toDeviceEvent.content['requesting_device_id']]
-                    .ed25519Key;
-          }
-          room.setInboundGroupSession(
-            sessionId,
-            toDeviceEvent.content,
-            forwarded: false,
-          );
-          break;
-      }
-    } catch (e) {
-      print('[Matrix] Error while processing to-device-event: ' + e.toString());
-    }
   }
 
   bool _sortLock = false;
@@ -1671,17 +1106,6 @@ class Client {
     _sortLock = true;
     rooms?.sort(sortRoomsBy);
     _sortLock = false;
-  }
-
-  /// Gets an OpenID token object that the requester may supply to another service to verify their identity in Matrix.
-  /// The generated token is only valid for exchanging for user information from the federation API for OpenID.
-  Future<OpenIdCredentials> requestOpenIdCredentials() async {
-    final response = await jsonRequest(
-      type: HTTPType.POST,
-      action: '/client/r0/user/$userID/openid/request_token',
-      data: {},
-    );
-    return OpenIdCredentials.fromJson(response);
   }
 
   /// A map of known device keys per user.
@@ -1728,36 +1152,29 @@ class Client {
 
       if (outdatedLists.isNotEmpty) {
         // Request the missing device key lists from the server.
-        final response = await jsonRequest(
-            type: HTTPType.POST,
-            action: '/client/r0/keys/query',
-            data: {'timeout': 10000, 'device_keys': outdatedLists});
+        final response =
+            await api.requestDeviceKeys(outdatedLists, timeout: 10000);
 
-        // first we parse and persist the device keys
-        for (final rawDeviceKeyListEntry in response['device_keys'].entries) {
-          final String userId = rawDeviceKeyListEntry.key;
+        for (final rawDeviceKeyListEntry in response.deviceKeys.entries) {
+          final userId = rawDeviceKeyListEntry.key;
+          if (!userDeviceKeys.containsKey(userId)) {
+            _userDeviceKeys[userId] = DeviceKeysList(userId);
+          }
           final oldKeys =
               Map<String, DeviceKeys>.from(_userDeviceKeys[userId].deviceKeys);
           _userDeviceKeys[userId].deviceKeys = {};
           for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
-            final String deviceId = rawDeviceKeyEntry.key;
+            final deviceId = rawDeviceKeyEntry.key;
 
             // Set the new device key for this device
-            final entry = DeviceKeys.fromJson(rawDeviceKeyEntry.value, this);
-            if (entry.isValid) {
-              // is this a new key or the same one as an old one?
-              // better store an update - the signatures might have changed!
-              if (!oldKeys.containsKey(deviceId) ||
-                  oldKeys[deviceId].ed25519Key == entry.ed25519Key) {
-                if (oldKeys.containsKey(deviceId)) {
-                  // be sure to save the verified status
-                  entry.setDirectVerified(oldKeys[deviceId].directVerified);
-                  entry.blocked = oldKeys[deviceId].blocked;
-                  entry.validSignatures = oldKeys[deviceId].validSignatures;
-                }
+
+            if (!oldKeys.containsKey(deviceId)) {
+              final entry =
+                  DeviceKeys.fromMatrixDeviceKeys(rawDeviceKeyEntry.value);
+              if (entry.isValid) {
                 _userDeviceKeys[userId].deviceKeys[deviceId] = entry;
                 if (deviceId == deviceID &&
-                    entry.ed25519Key == fingerprintKey) {
+                    entry.ed25519Key == encryption?.fingerprintKey) {
                   // Always trust the own device
                   entry.setDirectVerified(true);
                 }
@@ -1881,219 +1298,6 @@ class Client {
     }
   }
 
-  String get fingerprintKey => encryptionEnabled
-      ? json.decode(_olmAccount.identity_keys())['ed25519']
-      : null;
-  String get identityKey => encryptionEnabled
-      ? json.decode(_olmAccount.identity_keys())['curve25519']
-      : null;
-
-  /// Adds a signature to this json from this olm account.
-  Map<String, dynamic> signJson(Map<String, dynamic> payload) {
-    if (!encryptionEnabled) throw ('Encryption is disabled');
-    final Map<String, dynamic> unsigned = payload['unsigned'];
-    final Map<String, dynamic> signatures = payload['signatures'];
-    payload.remove('unsigned');
-    payload.remove('signatures');
-    final canonical = canonicalJson.encode(payload);
-    final signature = _olmAccount.sign(String.fromCharCodes(canonical));
-    if (signatures != null) {
-      payload['signatures'] = signatures;
-    } else {
-      payload['signatures'] = <String, dynamic>{};
-    }
-    payload['signatures'][userID] = <String, dynamic>{};
-    payload['signatures'][userID]['ed25519:$deviceID'] = signature;
-    if (unsigned != null) {
-      payload['unsigned'] = unsigned;
-    }
-    return payload;
-  }
-
-  /// Just gets the signature of a string
-  String signString(String s) {
-    return _olmAccount.sign(s);
-  }
-
-  /// Checks the signature of a signed json object.
-  bool checkJsonSignature(String key, Map<String, dynamic> signedJson,
-      String userId, String deviceId) {
-    if (!encryptionEnabled) throw ('Encryption is disabled');
-    final Map<String, dynamic> signatures = signedJson['signatures'];
-    if (signatures == null || !signatures.containsKey(userId)) return false;
-    signedJson.remove('unsigned');
-    signedJson.remove('signatures');
-    if (!signatures[userId].containsKey('ed25519:$deviceId')) return false;
-    final String signature = signatures[userId]['ed25519:$deviceId'];
-    final canonical = canonicalJson.encode(signedJson);
-    final message = String.fromCharCodes(canonical);
-    var isValid = true;
-    try {
-      olm.Utility()
-        ..ed25519_verify(key, message, signature)
-        ..free();
-    } catch (e) {
-      isValid = false;
-      print('[LibOlm] Signature check failed: ' + e.toString());
-    }
-    return isValid;
-  }
-
-  DateTime lastTimeKeysUploaded;
-
-  /// Generates new one time keys, signs everything and upload it to the server.
-  Future<bool> _uploadKeys({bool uploadDeviceKeys = false}) async {
-    if (!encryptionEnabled) return true;
-
-    final oneTimeKeysCount = _olmAccount.max_number_of_one_time_keys();
-    _olmAccount.generate_one_time_keys(oneTimeKeysCount);
-    final Map<String, dynamic> oneTimeKeys =
-        json.decode(_olmAccount.one_time_keys());
-
-    var signedOneTimeKeys = <String, dynamic>{};
-
-    for (String key in oneTimeKeys['curve25519'].keys) {
-      signedOneTimeKeys['signed_curve25519:$key'] = <String, dynamic>{};
-      signedOneTimeKeys['signed_curve25519:$key']['key'] =
-          oneTimeKeys['curve25519'][key];
-      signedOneTimeKeys['signed_curve25519:$key'] =
-          signJson(signedOneTimeKeys['signed_curve25519:$key']);
-    }
-
-    var keysContent = <String, dynamic>{
-      if (uploadDeviceKeys)
-        'device_keys': {
-          'user_id': userID,
-          'device_id': deviceID,
-          'algorithms': [
-            'm.olm.v1.curve25519-aes-sha2',
-            'm.megolm.v1.aes-sha2'
-          ],
-          'keys': <String, dynamic>{},
-        },
-      'one_time_keys': signedOneTimeKeys,
-    };
-    if (uploadDeviceKeys) {
-      final Map<String, dynamic> keys =
-          json.decode(_olmAccount.identity_keys());
-      for (var algorithm in keys.keys) {
-        keysContent['device_keys']['keys']['$algorithm:$deviceID'] =
-            keys[algorithm];
-      }
-      keysContent['device_keys'] =
-          signJson(keysContent['device_keys'] as Map<String, dynamic>);
-    }
-
-    _olmAccount.mark_keys_as_published();
-    final response = await jsonRequest(
-      type: HTTPType.POST,
-      action: '/client/r0/keys/upload',
-      data: keysContent,
-    );
-    if (response['one_time_key_counts']['signed_curve25519'] !=
-        oneTimeKeysCount) {
-      return false;
-    }
-    await database?.updateClientKeys(pickledOlmAccount, id);
-    lastTimeKeysUploaded = DateTime.now();
-    return true;
-  }
-
-  /// Try to decrypt a ToDeviceEvent encrypted with olm.
-  ToDeviceEvent decryptToDeviceEvent(ToDeviceEvent toDeviceEvent) {
-    if (toDeviceEvent.type != 'm.room.encrypted') {
-      print(
-          '[LibOlm] Warning! Tried to decrypt a not-encrypted to-device-event');
-      return toDeviceEvent;
-    }
-    if (toDeviceEvent.content['algorithm'] != 'm.olm.v1.curve25519-aes-sha2') {
-      throw ('Unknown algorithm: ${toDeviceEvent.content}');
-    }
-    if (!toDeviceEvent.content['ciphertext'].containsKey(identityKey)) {
-      throw ("The message isn't sent for this device");
-    }
-    String plaintext;
-    final String senderKey = toDeviceEvent.content['sender_key'];
-    final String body =
-        toDeviceEvent.content['ciphertext'][identityKey]['body'];
-    final int type = toDeviceEvent.content['ciphertext'][identityKey]['type'];
-    if (type != 0 && type != 1) {
-      throw ('Unknown message type');
-    }
-    var existingSessions = olmSessions[senderKey];
-    if (existingSessions != null) {
-      for (var session in existingSessions) {
-        if (type == 0 && session.matches_inbound(body) == true) {
-          plaintext = session.decrypt(type, body);
-          storeOlmSession(senderKey, session);
-          break;
-        } else if (type == 1) {
-          try {
-            plaintext = session.decrypt(type, body);
-            storeOlmSession(senderKey, session);
-            break;
-          } catch (_) {
-            plaintext = null;
-          }
-        }
-      }
-    }
-    if (plaintext == null && type != 0) {
-      throw ('No existing sessions found');
-    }
-
-    if (plaintext == null) {
-      var newSession = olm.Session();
-      newSession.create_inbound_from(_olmAccount, senderKey, body);
-      _olmAccount.remove_one_time_keys(newSession);
-      database?.updateClientKeys(pickledOlmAccount, id);
-      plaintext = newSession.decrypt(type, body);
-      storeOlmSession(senderKey, newSession);
-    }
-    final Map<String, dynamic> plainContent = json.decode(plaintext);
-    if (plainContent.containsKey('sender') &&
-        plainContent['sender'] != toDeviceEvent.sender) {
-      throw ("Message was decrypted but sender doesn't match");
-    }
-    if (plainContent.containsKey('recipient') &&
-        plainContent['recipient'] != userID) {
-      throw ("Message was decrypted but recipient doesn't match");
-    }
-    if (plainContent['recipient_keys'] is Map &&
-        plainContent['recipient_keys']['ed25519'] is String &&
-        plainContent['recipient_keys']['ed25519'] != fingerprintKey) {
-      throw ("Message was decrypted but own fingerprint Key doesn't match");
-    }
-    return ToDeviceEvent(
-      content: plainContent['content'],
-      encryptedContent: toDeviceEvent.content,
-      type: plainContent['type'],
-      sender: toDeviceEvent.sender,
-    );
-  }
-
-  /// A map from Curve25519 identity keys to existing olm sessions.
-  Map<String, List<olm.Session>> get olmSessions => _olmSessions;
-  Map<String, List<olm.Session>> _olmSessions = {};
-
-  void storeOlmSession(String curve25519IdentityKey, olm.Session session) {
-    if (!_olmSessions.containsKey(curve25519IdentityKey)) {
-      _olmSessions[curve25519IdentityKey] = [];
-    }
-    final ix = _olmSessions[curve25519IdentityKey]
-        .indexWhere((s) => s.session_id() == session.session_id());
-    if (ix == -1) {
-      // add a new session
-      _olmSessions[curve25519IdentityKey].add(session);
-    } else {
-      // update an existing session
-      _olmSessions[curve25519IdentityKey][ix] = session;
-    }
-    final pickle = session.pickle(userID);
-    database?.storeOlmSession(
-        id, curve25519IdentityKey, session.session_id(), pickle);
-  }
-
   /// Sends an encrypted [message] of this [type] to these [deviceKeys]. To send
   /// the request to all devices of the current user, pass an empty list to [deviceKeys].
   Future<void> sendToDevice(
@@ -2118,180 +1322,33 @@ class Client {
     var sendToDeviceMessage = message;
 
     // Send with send-to-device messaging
-    var data = <String, dynamic>{
-      'messages': <String, dynamic>{},
-    };
+    var data = <String, Map<String, Map<String, dynamic>>>{};
     if (deviceKeys.isEmpty) {
       if (toUsers == null) {
-        data['messages'][userID] = <String, dynamic>{};
-        data['messages'][userID]['*'] = sendToDeviceMessage;
+        data[userID] = {};
+        data[userID]['*'] = sendToDeviceMessage;
       } else {
         for (var user in toUsers) {
-          data['messages'][user.id] = <String, dynamic>{};
-          data['messages'][user.id]['*'] = sendToDeviceMessage;
+          data[user.id] = {};
+          data[user.id]['*'] = sendToDeviceMessage;
         }
       }
     } else {
       if (encrypted) {
-        // Create new sessions with devices if there is no existing session yet.
-        var deviceKeysWithoutSession = List<DeviceKeys>.from(deviceKeys);
-        deviceKeysWithoutSession.removeWhere((DeviceKeys deviceKeys) =>
-            olmSessions.containsKey(deviceKeys.curve25519Key));
-        if (deviceKeysWithoutSession.isNotEmpty) {
-          await startOutgoingOlmSessions(deviceKeysWithoutSession);
+        data =
+            await encryption.encryptToDeviceMessage(deviceKeys, type, message);
+      } else {
+        for (final device in deviceKeys) {
+          if (!data.containsKey(device.userId)) {
+            data[device.userId] = {};
+          }
+          data[device.userId][device.deviceId] = sendToDeviceMessage;
         }
-      }
-      for (var i = 0; i < deviceKeys.length; i++) {
-        var device = deviceKeys[i];
-        if (!data['messages'].containsKey(device.userId)) {
-          data['messages'][device.userId] = <String, dynamic>{};
-        }
-
-        if (encrypted) {
-          var existingSessions = olmSessions[device.curve25519Key];
-          if (existingSessions == null || existingSessions.isEmpty) continue;
-          existingSessions
-              .sort((a, b) => a.session_id().compareTo(b.session_id()));
-
-          final payload = {
-            'type': type,
-            'content': message,
-            'sender': userID,
-            'keys': {'ed25519': fingerprintKey},
-            'recipient': device.userId,
-            'recipient_keys': {'ed25519': device.ed25519Key},
-          };
-          final encryptResult =
-              existingSessions.first.encrypt(json.encode(payload));
-          storeOlmSession(device.curve25519Key, existingSessions.first);
-          sendToDeviceMessage = {
-            'algorithm': 'm.olm.v1.curve25519-aes-sha2',
-            'sender_key': identityKey,
-            'ciphertext': <String, dynamic>{},
-          };
-          sendToDeviceMessage['ciphertext'][device.curve25519Key] = {
-            'type': encryptResult.type,
-            'body': encryptResult.body,
-          };
-        }
-
-        data['messages'][device.userId][device.deviceId] = sendToDeviceMessage;
       }
     }
-    if (encrypted) type = 'm.room.encrypted';
+    if (encrypted) type = EventTypes.Encrypted;
     final messageID = generateUniqueTransactionId();
-    await jsonRequest(
-      type: HTTPType.PUT,
-      action: '/client/r0/sendToDevice/$type/$messageID',
-      data: data,
-    );
-  }
-
-  Future<void> startOutgoingOlmSessions(List<DeviceKeys> deviceKeys,
-      {bool checkSignature = true}) async {
-    var requestingKeysFrom = <String, Map<String, String>>{};
-    for (var device in deviceKeys) {
-      if (requestingKeysFrom[device.userId] == null) {
-        requestingKeysFrom[device.userId] = {};
-      }
-      requestingKeysFrom[device.userId][device.deviceId] = 'signed_curve25519';
-    }
-
-    final response = await jsonRequest(
-      type: HTTPType.POST,
-      action: '/client/r0/keys/claim',
-      data: {'timeout': 10000, 'one_time_keys': requestingKeysFrom},
-    );
-
-    for (var userKeysEntry in response['one_time_keys'].entries) {
-      final String userId = userKeysEntry.key;
-      for (var deviceKeysEntry in userKeysEntry.value.entries) {
-        final String deviceId = deviceKeysEntry.key;
-        final fingerprintKey =
-            userDeviceKeys[userId].deviceKeys[deviceId].ed25519Key;
-        final identityKey =
-            userDeviceKeys[userId].deviceKeys[deviceId].curve25519Key;
-        for (Map<String, dynamic> deviceKey in deviceKeysEntry.value.values) {
-          if (checkSignature &&
-              checkJsonSignature(fingerprintKey, deviceKey, userId, deviceId) ==
-                  false) {
-            continue;
-          }
-          try {
-            var session = olm.Session();
-            session.create_outbound(_olmAccount, identityKey, deviceKey['key']);
-            await storeOlmSession(identityKey, session);
-          } catch (e) {
-            print('[LibOlm] Could not create new outbound olm session: ' +
-                e.toString());
-          }
-        }
-      }
-    }
-  }
-
-  /// Gets information about all devices for the current user.
-  Future<List<UserDevice>> requestUserDevices() async {
-    final response =
-        await jsonRequest(type: HTTPType.GET, action: '/client/r0/devices');
-    var userDevices = <UserDevice>[];
-    for (final rawDevice in response['devices']) {
-      userDevices.add(
-        UserDevice.fromJson(rawDevice, this),
-      );
-    }
-    return userDevices;
-  }
-
-  /// Gets information about all devices for the current user.
-  Future<UserDevice> requestUserDevice(String deviceId) async {
-    final response = await jsonRequest(
-        type: HTTPType.GET, action: '/client/r0/devices/$deviceId');
-    return UserDevice.fromJson(response, this);
-  }
-
-  /// Deletes the given devices, and invalidates any access token associated with them.
-  Future<void> deleteDevices(List<String> deviceIds,
-      {Map<String, dynamic> auth}) async {
-    await jsonRequest(
-      type: HTTPType.POST,
-      action: '/client/r0/delete_devices',
-      data: {
-        'devices': deviceIds,
-        if (auth != null) 'auth': auth,
-      },
-    );
-    return;
-  }
-
-  /// Lists the public rooms on the server, with optional filter.
-  Future<PublicRoomsResponse> requestPublicRooms({
-    int limit,
-    String since,
-    String genericSearchTerm,
-    String server,
-    bool includeAllNetworks,
-    String thirdPartyInstanceId,
-  }) async {
-    var action = '/client/r0/publicRooms';
-    if (server != null) {
-      action += '?server=$server';
-    }
-    final response = await jsonRequest(
-      type: HTTPType.POST,
-      action: action,
-      data: {
-        if (limit != null) 'limit': 10,
-        if (since != null) 'since': since,
-        if (genericSearchTerm != null)
-          'filter': {'generic_search_term': genericSearchTerm},
-        if (includeAllNetworks != null)
-          'include_all_networks': includeAllNetworks,
-        if (thirdPartyInstanceId != null)
-          'third_party_instance_id': thirdPartyInstanceId,
-      },
-    );
-    return PublicRoomsResponse.fromJson(response, this);
+    await api.sendToDevice(type, messageID, data);
   }
 
   /// Whether all push notifications are muted using the [.m.rule.master]
@@ -2316,10 +1373,11 @@ class Client {
   }
 
   Future<void> setMuteAllPushNotifications(bool muted) async {
-    await jsonRequest(
-      type: HTTPType.PUT,
-      action: '/client/r0/pushrules/global/override/.m.rule.master/enabled',
-      data: {'enabled': muted},
+    await api.enablePushRule(
+      'global',
+      PushRuleKind.override,
+      '.m.rule.master',
+      muted,
     );
     return;
   }
@@ -2328,20 +1386,14 @@ class Client {
   Future<void> changePassword(String newPassword,
       {String oldPassword, Map<String, dynamic> auth}) async {
     try {
-      await jsonRequest(
-        type: HTTPType.POST,
-        action: '/client/r0/account/password',
-        data: {
-          'new_password': newPassword,
-          if (oldPassword != null)
-            'auth': {
-              'type': 'm.login.password',
-              'user': userID,
-              'password': oldPassword,
-            },
-          if (auth != null) 'auth': auth,
-        },
-      );
+      if (oldPassword != null) {
+        auth = {
+          'type': 'm.login.password',
+          'user': userID,
+          'password': oldPassword,
+        };
+      }
+      await api.changePassword(newPassword, auth: auth);
     } on MatrixException catch (matrixException) {
       if (!matrixException.requireAdditionalAuthentication) {
         rethrow;
@@ -2379,4 +1431,10 @@ class Client {
     database = null;
     return;
   }
+}
+
+class SyncError {
+  Exception exception;
+  StackTrace stackTrace;
+  SyncError({this.exception, this.stackTrace});
 }

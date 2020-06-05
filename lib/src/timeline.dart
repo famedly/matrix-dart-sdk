@@ -1,32 +1,30 @@
 /*
- * Copyright (c) 2019 Zender & Kurtz GbR.
+ *   Famedly Matrix SDK
+ *   Copyright (C) 2019, 2020 Famedly GmbH
  *
- * Authors:
- *   Christian Pauly <krille@famedly.com>
- *   Marcel Radzio <mtrnord@famedly.com>
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
  *
- * This file is part of famedlysdk.
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
  *
- * famedlysdk is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * famedlysdk is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with famedlysdk.  If not, see <http://www.gnu.org/licenses/>.
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 import 'dart:async';
 
+import 'package:famedlysdk/matrix_api.dart';
+import 'package:famedlysdk/encryption.dart';
+
 import 'event.dart';
 import 'room.dart';
-import 'sync/event_update.dart';
-import 'sync/room_update.dart';
+import 'utils/event_update.dart';
+import 'utils/room_update.dart';
 
 typedef onTimelineUpdateCallback = void Function();
 typedef onTimelineInsertCallback = void Function(int insertID);
@@ -100,12 +98,16 @@ class Timeline {
   void _sessionKeyReceived(String sessionId) async {
     var decryptAtLeastOneEvent = false;
     final decryptFn = () async {
+      if (!room.client.encryptionEnabled) {
+        return;
+      }
       for (var i = 0; i < events.length; i++) {
         if (events[i].type == EventTypes.Encrypted &&
             events[i].messageType == MessageTypes.BadEncrypted &&
             events[i].content['body'] == DecryptError.UNKNOWN_SESSION &&
             events[i].content['session_id'] == sessionId) {
-          events[i] = await events[i].decryptAndStore();
+          events[i] = await room.client.encryption
+              .decryptRoomEvent(room.id, events[i], store: true);
           if (events[i].type != EventTypes.Encrypted) {
             decryptAtLeastOneEvent = true;
           }
@@ -135,7 +137,7 @@ class Timeline {
 
       if (eventUpdate.type == 'timeline' || eventUpdate.type == 'history') {
         // Redaction events are handled as modification for existing events.
-        if (eventUpdate.eventType == 'm.room.redaction') {
+        if (eventUpdate.eventType == EventTypes.Redaction) {
           final eventId = _findEvent(event_id: eventUpdate.content['redacts']);
           if (eventId != null) {
             events[eventId].setRedactionEvent(Event.fromJson(
@@ -161,7 +163,8 @@ class Timeline {
         } else {
           Event newEvent;
           var senderUser = room
-                  .getState('m.room.member', eventUpdate.content['sender'])
+                  .getState(
+                      EventTypes.RoomMember, eventUpdate.content['sender'])
                   ?.asUser ??
               await room.client.database?.getUser(
                   room.client.id, eventUpdate.content['sender'], room);
