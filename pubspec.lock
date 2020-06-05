@@ -596,12 +596,10 @@ packages:
   test_coverage:
     dependency: "direct dev"
     description:
-      path: "."
-      ref: "6831abb314cc05e32b5d9140324e84069484b2eb"
-      resolved-ref: "6831abb314cc05e32b5d9140324e84069484b2eb"
-      url: "https://github.com/pulyaevskiy/test-coverage.git"
-    source: git
-    version: "0.4.2"
+      name: test_coverage
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.4.1"
   timing:
     dependency: transitive
     description:
