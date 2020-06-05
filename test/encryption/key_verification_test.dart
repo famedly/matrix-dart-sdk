@@ -21,8 +21,7 @@ import 'package:famedlysdk/encryption.dart';
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 
-import '../fake_matrix_api.dart';
-import '../fake_database.dart';
+import '../fake_client.dart';
 
 void main() {
   /// All Tests related to the ChatTime
@@ -37,17 +36,17 @@ void main() {
     }
     print('[LibOlm] Enabled: $olmEnabled');
 
-    var client = Client('testclient', debug: true, httpClient: FakeMatrixApi());
-    var room = Room(id: '!localpart:server.abc', client: client);
+    if (!olmEnabled) return;
+
+    Client client;
+    Room room;
     var updateCounter = 0;
     KeyVerification keyVerification;
 
-    if (!olmEnabled) return;
 
     test('setupClient', () async {
-      client.database = getDatabase();
-      await client.checkServer('https://fakeServer.notExisting');
-      await client.login('test', '1234');
+      client = await getClient();
+      room = Room(id: '!localpart:server.abc', client: client);
       keyVerification = KeyVerification(
         encryption: client.encryption,
         room: room,

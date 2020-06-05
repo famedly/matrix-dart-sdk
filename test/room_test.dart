@@ -26,7 +26,7 @@ import 'package:famedlysdk/src/database/database.dart'
     show DbRoom, DbRoomState, DbRoomAccountData;
 import 'package:test/test.dart';
 
-import 'fake_matrix_api.dart';
+import 'fake_client.dart';
 
 import 'dart:typed_data';
 
@@ -37,15 +37,7 @@ void main() {
   /// All Tests related to the Event
   group('Room', () {
     test('Login', () async {
-      matrix = Client('testclient', debug: true, httpClient: FakeMatrixApi());
-
-      final checkResp =
-          await matrix.checkServer('https://fakeServer.notExisting');
-
-      final loginResp = await matrix.login('test', '1234');
-
-      expect(checkResp, true);
-      expect(loginResp, true);
+      matrix = await getClient();
     });
 
     test('Create from json', () async {
@@ -315,7 +307,7 @@ void main() {
 
     test('getTimeline', () async {
       final timeline = await room.getTimeline();
-      expect(timeline.events.length, 1);
+      expect(timeline.events.length, 0);
     });
 
     test('getUserByMXID', () async {
@@ -338,13 +330,13 @@ void main() {
       final dynamic resp = await room.sendEvent(
           {'msgtype': 'm.text', 'body': 'hello world'},
           txid: 'testtxid');
-      expect(resp, '42');
+      expect(resp, '\$event0');
     });
 
     test('sendEvent', () async {
       final dynamic resp =
           await room.sendTextEvent('Hello world', txid: 'testtxid');
-      expect(resp, '42');
+      expect(resp, '\$event1');
     });
 
     // Not working because there is no real file to test it...

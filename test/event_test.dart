@@ -220,7 +220,7 @@ void main() {
       event.status = -1;
       final resp2 = await event.sendAgain(txid: '1234');
       expect(resp1, null);
-      expect(resp2, '42');
+      expect(resp2, '\$event0');
 
       await matrix.dispose(closeDatabase: true);
     });

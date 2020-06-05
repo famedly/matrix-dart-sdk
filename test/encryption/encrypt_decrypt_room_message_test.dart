@@ -20,8 +20,7 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 
-import '../fake_matrix_api.dart';
-import '../fake_database.dart';
+import '../fake_client.dart';
 
 void main() {
   group('Encrypt/Decrypt room message', () {
@@ -37,16 +36,14 @@ void main() {
 
     if (!olmEnabled) return;
 
-    var client = Client('testclient', debug: true, httpClient: FakeMatrixApi());
+    Client client;
     final roomId = '!726s6s6q:example.com';
     Room room;
     Map<String, dynamic> payload;
     final now = DateTime.now();
 
     test('setupClient', () async {
-      client.database = getDatabase();
-      await client.checkServer('https://fakeServer.notExisting');
-      await client.login('test', '1234');
+      client = await getClient();
       room = client.getRoomById(roomId);
     });
 

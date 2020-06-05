@@ -25,6 +25,7 @@ import 'package:http/testing.dart';
 
 class FakeMatrixApi extends MockClient {
   static final calledEndpoints = <String, List<dynamic>>{};
+  static int eventCounter = 0;
 
   FakeMatrixApi()
       : super((request) async {
@@ -1754,13 +1755,13 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/directory/room/%23testalias%3Aexample.com': (var reqI) => {},
       '/client/r0/rooms/%21localpart%3Aserver.abc/send/m.room.message/testtxid':
           (var reqI) => {
-                'event_id': '42',
+                'event_id': '\$event${FakeMatrixApi.eventCounter++}',
               },
       '/client/r0/rooms/!localpart%3Aexample.com/typing/%40alice%3Aexample.com':
           (var req) => {},
       '/client/r0/rooms/%211234%3Aexample.com/send/m.room.message/1234':
           (var reqI) => {
-                'event_id': '42',
+                'event_id': '\$event${FakeMatrixApi.eventCounter++}',
               },
       '/client/r0/user/%40alice%3Aexample.com/rooms/%21localpart%3Aexample.com/tags/testtag':
           (var req) => {},

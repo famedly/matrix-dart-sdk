@@ -20,14 +20,11 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 
+import '../fake_client.dart';
 import '../fake_matrix_api.dart';
-import '../fake_database.dart';
 
 void main() {
-  // key @test:fakeServer.notExisting
-  const pickledOlmAccount =
-      'N2v1MkIFGcl0mQpo2OCwSopxPQJ0wnl7oe7PKiT4141AijfdTIhRu+ceXzXKy3Kr00nLqXtRv7kid6hU4a+V0rfJWLL0Y51+3Rp/ORDVnQy+SSeo6Fn4FHcXrxifJEJ0djla5u98fBcJ8BSkhIDmtXRPi5/oJAvpiYn+8zMjFHobOeZUAxYR0VfQ9JzSYBsSovoQ7uFkNks1M4EDUvHtu/BjDjz0C3ioDgrrFdoSrn+GSeF5FGKsNu8OLkQ9Lq5+BrUutK5QSJI19uoZj2sj/OixvIpnun8XxYpXo7cfh9MEtKI8ob7lLM2OpZ8BogU70ORgkwthsPSOtxQGPhx8+y5Sg7B6KGlU';
-
+  // key @othertest:fakeServer.notExisting
   const otherPickledOlmAccount =
       'VWhVApbkcilKAEGppsPDf9nNVjaK8/IxT3asSR0sYg0S5KgbfE8vXEPwoiKBX2cEvwX3OessOBOkk+ZE7TTbjlrh/KEd31p8Wo+47qj0AP+Ky+pabnhi+/rTBvZy+gfzTqUfCxZrkzfXI9Op4JnP6gYmy7dVX2lMYIIs9WCO1jcmIXiXum5jnfXu1WLfc7PZtO2hH+k9CDKosOFaXRBmsu8k/BGXPSoWqUpvu6WpEG9t5STk4FeAzA';
 
@@ -44,31 +41,16 @@ void main() {
 
     if (!olmEnabled) return;
 
-    var client = Client('testclient', debug: true, httpClient: FakeMatrixApi());
+    Client client;
     var otherClient =
         Client('othertestclient', debug: true, httpClient: FakeMatrixApi());
     DeviceKeys device;
     Map<String, dynamic> payload;
 
     test('setupClient', () async {
-      client.database = getDatabase();
+      client = await getClient();
       otherClient.database = client.database;
-      await client.checkServer('https://fakeServer.notExisting');
       await otherClient.checkServer('https://fakeServer.notExisting');
-      final resp = await client.api.login(
-        type: 'm.login.password',
-        user: 'test',
-        password: '1234',
-        initialDeviceDisplayName: 'Fluffy Matrix Client',
-      );
-      client.connect(
-        newToken: resp.accessToken,
-        newUserID: resp.userId,
-        newHomeserver: client.api.homeserver,
-        newDeviceName: 'Text Matrix Client',
-        newDeviceID: resp.deviceId,
-        newOlmAccount: pickledOlmAccount,
-      );
       otherClient.connect(
         newToken: 'abc',
         newUserID: '@othertest:fakeServer.notExisting',
@@ -78,14 +60,14 @@ void main() {
         newOlmAccount: otherPickledOlmAccount,
       );
 
-      await Future.delayed(Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 10));
       device = DeviceKeys(
-        userId: resp.userId,
-        deviceId: resp.deviceId,
+        userId: client.userID,
+        deviceId: client.deviceID,
         algorithms: ['m.olm.v1.curve25519-aes-sha2', 'm.megolm.v1.aes-sha2'],
         keys: {
-          'curve25519:${resp.deviceId}': client.identityKey,
-          'ed25519:${resp.deviceId}': client.fingerprintKey,
+          'curve25519:${client.deviceID}': client.identityKey,
+          'ed25519:${client.deviceID}': client.fingerprintKey,
         },
         verified: true,
         blocked: false,

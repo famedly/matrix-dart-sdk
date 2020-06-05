@@ -19,9 +19,10 @@
 import 'dart:convert';
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:test/test.dart';
+import 'package:olm/olm.dart' as olm;
 
+import '../fake_client.dart';
 import '../fake_matrix_api.dart';
-import '../fake_database.dart';
 
 Map<String, dynamic> jsonDecode(dynamic payload) {
   if (payload is String) {
@@ -38,18 +39,22 @@ Map<String, dynamic> jsonDecode(dynamic payload) {
 void main() {
   /// All Tests related to device keys
   group('Key Request', () {
+    var olmEnabled = true;
+    try {
+      olm.init();
+      olm.Account();
+    } catch (_) {
+      olmEnabled = false;
+      print('[LibOlm] Failed to load LibOlm: ' + _.toString());
+    }
+    print('[LibOlm] Enabled: $olmEnabled');
+
+    if (!olmEnabled) return;
+
     final validSessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
     final validSenderKey = '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI';
     test('Create Request', () async {
-      var matrix =
-          Client('testclient', debug: true, httpClient: FakeMatrixApi());
-      matrix.database = getDatabase();
-      await matrix.checkServer('https://fakeServer.notExisting');
-      await matrix.login('test', '1234');
-      if (!matrix.encryptionEnabled) {
-        await matrix.dispose(closeDatabase: true);
-        return;
-      }
+      var matrix = await getClient();
       final requestRoom = matrix.getRoomById('!726s6s6q:example.com');
       await matrix.encryption.keyManager
           .request(requestRoom, 'sessionId', validSenderKey);
@@ -75,15 +80,7 @@ void main() {
       await matrix.dispose(closeDatabase: true);
     });
     test('Reply To Request', () async {
-      var matrix =
-          Client('testclient', debug: true, httpClient: FakeMatrixApi());
-      matrix.database = getDatabase();
-      await matrix.checkServer('https://fakeServer.notExisting');
-      await matrix.login('test', '1234');
-      if (!matrix.encryptionEnabled) {
-        await matrix.dispose(closeDatabase: true);
-        return;
-      }
+      var matrix = await getClient();
       matrix.setUserId('@alice:example.com'); // we need to pretend to be alice
       FakeMatrixApi.calledEndpoints.clear();
       await matrix
@@ -224,15 +221,7 @@ void main() {
       await matrix.dispose(closeDatabase: true);
     });
     test('Receive shared keys', () async {
-      var matrix =
-          Client('testclient', debug: true, httpClient: FakeMatrixApi());
-      matrix.database = getDatabase();
-      await matrix.checkServer('https://fakeServer.notExisting');
-      await matrix.login('test', '1234');
-      if (!matrix.encryptionEnabled) {
-        await matrix.dispose(closeDatabase: true);
-        return;
-      }
+      var matrix = await getClient();
       final requestRoom = matrix.getRoomById('!726s6s6q:example.com');
       await matrix.encryption.keyManager
           .request(requestRoom, validSessionId, validSenderKey);

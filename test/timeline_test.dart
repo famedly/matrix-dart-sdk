@@ -143,7 +143,7 @@ void main() {
       expect(updateCount, 5);
       expect(insertList, [0, 0, 0]);
       expect(insertList.length, timeline.events.length);
-      expect(timeline.events[0].eventId, '42');
+      expect(timeline.events[0].eventId, '\$event0');
       expect(timeline.events[0].status, 1);
 
       client.onEvent.add(EventUpdate(
@@ -155,7 +155,7 @@ void main() {
             'content': {'msgtype': 'm.text', 'body': 'test'},
             'sender': '@alice:example.com',
             'status': 2,
-            'event_id': '42',
+            'event_id': '\$event0',
             'unsigned': {'transaction_id': '1234'},
             'origin_server_ts': DateTime.now().millisecondsSinceEpoch
           },
@@ -166,7 +166,7 @@ void main() {
       expect(updateCount, 6);
       expect(insertList, [0, 0, 0]);
       expect(insertList.length, timeline.events.length);
-      expect(timeline.events[0].eventId, '42');
+      expect(timeline.events[0].eventId, '\$event0');
       expect(timeline.events[0].status, 2);
     });
 

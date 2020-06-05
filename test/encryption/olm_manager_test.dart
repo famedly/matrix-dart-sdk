@@ -21,8 +21,8 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 
+import '../fake_client.dart';
 import '../fake_matrix_api.dart';
-import '../fake_database.dart';
 
 void main() {
   group('Olm Manager', () {
@@ -38,12 +38,10 @@ void main() {
 
     if (!olmEnabled) return;
 
-    var client = Client('testclient', debug: true, httpClient: FakeMatrixApi());
+    Client client;
 
     test('setupClient', () async {
-      client.database = getDatabase();
-      await client.checkServer('https://fakeServer.notExisting');
-      await client.login('test', '1234');
+      client = await getClient();
     });
 
     test('signatures', () async {
