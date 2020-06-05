@@ -1510,8 +1510,6 @@ class FakeMatrixApi extends MockClient {
               }
             }
           },
-      '/client/r0/presence/${Uri.encodeComponent('@alice:example.com')}/status':
-          (var req) => {},
       '/client/r0/account/deactivate': (var req) =>
           {'id_server_unbind_result': 'success'},
       '/client/r0/user_directory/search': (var req) => {
@@ -1743,6 +1741,8 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/rooms/!localpart%3Aserver.abc/invite': (var reqI) => {},
     },
     'PUT': {
+      '/client/r0/presence/${Uri.encodeComponent('@alice:example.com')}/status':
+          (var req) => {},
       '/client/r0/pushrules/global/content/nocake/enabled': (var req) => {},
       '/client/r0/pushrules/global/content/nocake/actions': (var req) => {},
       '/client/r0/rooms/%21localpart%3Aserver.abc/state/m.room.history_visibility':

@@ -1295,7 +1295,7 @@ class MatrixApi {
     String statusMsg,
   }) async {
     await request(
-      RequestType.POST,
+      RequestType.PUT,
       '/client/r0/presence/${Uri.encodeComponent(userId)}/status',
       data: {
         'presence': presenceType.toString().split('.').last,
