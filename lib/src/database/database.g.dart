@@ -4805,11 +4805,13 @@ class DbSSSSCache extends DataClass implements Insertable<DbSSSSCache> {
   final int clientId;
   final String type;
   final String keyId;
+  final String ciphertext;
   final String content;
   DbSSSSCache(
       {@required this.clientId,
       @required this.type,
       @required this.keyId,
+      @required this.ciphertext,
       @required this.content});
   factory DbSSSSCache.fromData(Map<String, dynamic> data, GeneratedDatabase db,
       {String prefix}) {
@@ -4822,6 +4824,8 @@ class DbSSSSCache extends DataClass implements Insertable<DbSSSSCache> {
       type: stringType.mapFromDatabaseResponse(data['${effectivePrefix}type']),
       keyId:
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}key_id']),
+      ciphertext: stringType
+          .mapFromDatabaseResponse(data['${effectivePrefix}ciphertext']),
       content:
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}content']),
     );
@@ -4838,6 +4842,9 @@ class DbSSSSCache extends DataClass implements Insertable<DbSSSSCache> {
     if (!nullToAbsent || keyId != null) {
       map['key_id'] = Variable<String>(keyId);
     }
+    if (!nullToAbsent || ciphertext != null) {
+      map['ciphertext'] = Variable<String>(ciphertext);
+    }
     if (!nullToAbsent || content != null) {
       map['content'] = Variable<String>(content);
     }
@@ -4851,6 +4858,7 @@ class DbSSSSCache extends DataClass implements Insertable<DbSSSSCache> {
       clientId: serializer.fromJson<int>(json['client_id']),
       type: serializer.fromJson<String>(json['type']),
       keyId: serializer.fromJson<String>(json['key_id']),
+      ciphertext: serializer.fromJson<String>(json['ciphertext']),
       content: serializer.fromJson<String>(json['content']),
     );
   }
@@ -4861,16 +4869,22 @@ class DbSSSSCache extends DataClass implements Insertable<DbSSSSCache> {
       'client_id': serializer.toJson<int>(clientId),
       'type': serializer.toJson<String>(type),
       'key_id': serializer.toJson<String>(keyId),
+      'ciphertext': serializer.toJson<String>(ciphertext),
       'content': serializer.toJson<String>(content),
     };
   }
 
   DbSSSSCache copyWith(
-          {int clientId, String type, String keyId, String content}) =>
+          {int clientId,
+          String type,
+          String keyId,
+          String ciphertext,
+          String content}) =>
       DbSSSSCache(
         clientId: clientId ?? this.clientId,
         type: type ?? this.type,
         keyId: keyId ?? this.keyId,
+        ciphertext: ciphertext ?? this.ciphertext,
         content: content ?? this.content,
       );
   @override
@@ -4879,14 +4893,19 @@ class DbSSSSCache extends DataClass implements Insertable<DbSSSSCache> {
           ..write('clientId: $clientId, ')
           ..write('type: $type, ')
           ..write('keyId: $keyId, ')
+          ..write('ciphertext: $ciphertext, ')
           ..write('content: $content')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => $mrjf($mrjc(clientId.hashCode,
-      $mrjc(type.hashCode, $mrjc(keyId.hashCode, content.hashCode))));
+  int get hashCode => $mrjf($mrjc(
+      clientId.hashCode,
+      $mrjc(
+          type.hashCode,
+          $mrjc(
+              keyId.hashCode, $mrjc(ciphertext.hashCode, content.hashCode)))));
   @override
   bool operator ==(dynamic other) =>
       identical(this, other) ||
@@ -4894,6 +4913,7 @@ class DbSSSSCache extends DataClass implements Insertable<DbSSSSCache> {
           other.clientId == this.clientId &&
           other.type == this.type &&
           other.keyId == this.keyId &&
+          other.ciphertext == this.ciphertext &&
           other.content == this.content);
 }
 
@@ -4901,32 +4921,38 @@ class SsssCacheCompanion extends UpdateCompanion<DbSSSSCache> {
   final Value<int> clientId;
   final Value<String> type;
   final Value<String> keyId;
+  final Value<String> ciphertext;
   final Value<String> content;
   const SsssCacheCompanion({
     this.clientId = const Value.absent(),
     this.type = const Value.absent(),
     this.keyId = const Value.absent(),
+    this.ciphertext = const Value.absent(),
     this.content = const Value.absent(),
   });
   SsssCacheCompanion.insert({
     @required int clientId,
     @required String type,
     @required String keyId,
+    @required String ciphertext,
     @required String content,
   })  : clientId = Value(clientId),
         type = Value(type),
         keyId = Value(keyId),
+        ciphertext = Value(ciphertext),
         content = Value(content);
   static Insertable<DbSSSSCache> custom({
     Expression<int> clientId,
     Expression<String> type,
     Expression<String> keyId,
+    Expression<String> ciphertext,
     Expression<String> content,
   }) {
     return RawValuesInsertable({
       if (clientId != null) 'client_id': clientId,
       if (type != null) 'type': type,
       if (keyId != null) 'key_id': keyId,
+      if (ciphertext != null) 'ciphertext': ciphertext,
       if (content != null) 'content': content,
     });
   }
@@ -4935,11 +4961,13 @@ class SsssCacheCompanion extends UpdateCompanion<DbSSSSCache> {
       {Value<int> clientId,
       Value<String> type,
       Value<String> keyId,
+      Value<String> ciphertext,
       Value<String> content}) {
     return SsssCacheCompanion(
       clientId: clientId ?? this.clientId,
       type: type ?? this.type,
       keyId: keyId ?? this.keyId,
+      ciphertext: ciphertext ?? this.ciphertext,
       content: content ?? this.content,
     );
   }
@@ -4955,6 +4983,9 @@ class SsssCacheCompanion extends UpdateCompanion<DbSSSSCache> {
     }
     if (keyId.present) {
       map['key_id'] = Variable<String>(keyId.value);
+    }
+    if (ciphertext.present) {
+      map['ciphertext'] = Variable<String>(ciphertext.value);
     }
     if (content.present) {
       map['content'] = Variable<String>(content.value);
@@ -4991,6 +5022,14 @@ class SsssCache extends Table with TableInfo<SsssCache, DbSSSSCache> {
         $customConstraints: 'NOT NULL');
   }
 
+  final VerificationMeta _ciphertextMeta = const VerificationMeta('ciphertext');
+  GeneratedTextColumn _ciphertext;
+  GeneratedTextColumn get ciphertext => _ciphertext ??= _constructCiphertext();
+  GeneratedTextColumn _constructCiphertext() {
+    return GeneratedTextColumn('ciphertext', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
   final VerificationMeta _contentMeta = const VerificationMeta('content');
   GeneratedTextColumn _content;
   GeneratedTextColumn get content => _content ??= _constructContent();
@@ -5000,7 +5039,8 @@ class SsssCache extends Table with TableInfo<SsssCache, DbSSSSCache> {
   }
 
   @override
-  List<GeneratedColumn> get $columns => [clientId, type, keyId, content];
+  List<GeneratedColumn> get $columns =>
+      [clientId, type, keyId, ciphertext, content];
   @override
   SsssCache get asDslTable => this;
   @override
@@ -5029,6 +5069,14 @@ class SsssCache extends Table with TableInfo<SsssCache, DbSSSSCache> {
           _keyIdMeta, keyId.isAcceptableOrUnknown(data['key_id'], _keyIdMeta));
     } else if (isInserting) {
       context.missing(_keyIdMeta);
+    }
+    if (data.containsKey('ciphertext')) {
+      context.handle(
+          _ciphertextMeta,
+          ciphertext.isAcceptableOrUnknown(
+              data['ciphertext'], _ciphertextMeta));
+    } else if (isInserting) {
+      context.missing(_ciphertextMeta);
     }
     if (data.containsKey('content')) {
       context.handle(_contentMeta,
@@ -5770,14 +5818,15 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  Future<int> storeSSSSCache(
-      int client_id, String type, String key_id, String content) {
+  Future<int> storeSSSSCache(int client_id, String type, String key_id,
+      String ciphertext, String content) {
     return customInsert(
-      'INSERT OR REPLACE INTO ssss_cache (client_id, type, key_id, content) VALUES (:client_id, :type, :key_id, :content)',
+      'INSERT OR REPLACE INTO ssss_cache (client_id, type, key_id, ciphertext, content) VALUES (:client_id, :type, :key_id, :ciphertext, :content)',
       variables: [
         Variable.withInt(client_id),
         Variable.withString(type),
         Variable.withString(key_id),
+        Variable.withString(ciphertext),
         Variable.withString(content)
       ],
       updates: {ssssCache},
@@ -5789,6 +5838,7 @@ abstract class _$Database extends GeneratedDatabase {
       clientId: row.readInt('client_id'),
       type: row.readString('type'),
       keyId: row.readString('key_id'),
+      ciphertext: row.readString('ciphertext'),
       content: row.readString('content'),
     );
   }
