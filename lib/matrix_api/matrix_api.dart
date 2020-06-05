@@ -1326,7 +1326,7 @@ class MatrixApi {
     headers['Content-Type'] = contentType ?? mime(fileName);
     fileName = Uri.encodeQueryComponent(fileName);
     final url =
-        '$homeserver.toString()/_matrix/media/r0/upload?filename=$fileName';
+        '${homeserver.toString()}/_matrix/media/r0/upload?filename=$fileName';
     final streamedRequest = http.StreamedRequest('POST', Uri.parse(url))
       ..headers.addAll(headers);
     streamedRequest.contentLength = await file.length;
