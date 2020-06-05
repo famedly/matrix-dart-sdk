@@ -419,9 +419,9 @@ class KeyManager {
           },
           encrypted: false);
     } else if (event.type == 'm.room_key') {
-      //if (event.encryptedContent == null) {
-      //  return; // the event wasn't encrypted, this is a security risk;
-      //}
+      if (event.encryptedContent == null) {
+        return; // the event wasn't encrypted, this is a security risk;
+      }
       final String roomId = event.content['room_id'];
       final String sessionId = event.content['session_id'];
       if (client.userDeviceKeys.containsKey(event.sender) &&
@@ -432,8 +432,7 @@ class KeyManager {
             .deviceKeys[event.content['requesting_device_id']]
             .ed25519Key;
       }
-      // event.encryptedContent['sender_key']
-      setInboundGroupSession(roomId, sessionId, '', event.content,
+      setInboundGroupSession(roomId, sessionId, event.encryptedContent['sender_key'], event.content,
           forwarded: false);
     }
   }

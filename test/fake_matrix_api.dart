@@ -528,16 +528,30 @@ class FakeMatrixApi extends MockClient {
             'rooms': ['!726s6s6q:example.com']
           }
         },
-        {
-          'sender': '@alice:example.com',
+//        {
+//          'sender': '@othertest:fakeServer.notExisting',
+//          'content': {
+//            'algorithm': 'm.megolm.v1.aes-sha2',
+//            'room_id': '!726s6s6q:example.com',
+//            'session_id': 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU',
+//            'session_key':
+//                'AgAAAAAQcQ6XrFJk6Prm8FikZDqfry/NbDz8Xw7T6e+/9Yf/q3YHIPEQlzv7IZMNcYb51ifkRzFejVvtphS7wwG2FaXIp4XS2obla14iKISR0X74ugB2vyb1AydIHE/zbBQ1ic5s3kgjMFlWpu/S3FQCnCrv+DPFGEt3ERGWxIl3Bl5X53IjPyVkz65oljz2TZESwz0GH/QFvyOOm8ci0q/gceaF3S7Dmafg3dwTKYwcA5xkcc+BLyrLRzB6Hn+oMAqSNSscnm4mTeT5zYibIhrzqyUTMWr32spFtI9dNR/RFSzfCw'
+//          },
+//          'type': 'm.room_key'
+//        },
+        { // this is the commented out m.room_key event - only encrypted
+          'sender': '@othertest:fakeServer.notExisting',
           'content': {
-            'algorithm': 'm.megolm.v1.aes-sha2',
-            'room_id': '!726s6s6q:example.com',
-            'session_id': 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU',
-            'session_key':
-                'AgAAAAAQcQ6XrFJk6Prm8FikZDqfry/NbDz8Xw7T6e+/9Yf/q3YHIPEQlzv7IZMNcYb51ifkRzFejVvtphS7wwG2FaXIp4XS2obla14iKISR0X74ugB2vyb1AydIHE/zbBQ1ic5s3kgjMFlWpu/S3FQCnCrv+DPFGEt3ERGWxIl3Bl5X53IjPyVkz65oljz2TZESwz0GH/QFvyOOm8ci0q/gceaF3S7Dmafg3dwTKYwcA5xkcc+BLyrLRzB6Hn+oMAqSNSscnm4mTeT5zYibIhrzqyUTMWr32spFtI9dNR/RFSzfCw'
+            'algorithm': 'm.olm.v1.curve25519-aes-sha2',
+            'sender_key': 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg',
+            'ciphertext': {
+              '7rvl3jORJkBiK4XX1e5TnGnqz068XfYJ0W++Ml63rgk': {
+                'type': 0,
+                'body': 'Awogyh7K4iLUQjcOxIfi7q7LhBBqv9w0mQ6JI9+U9tv7iF4SIHC6xb5YFWf9voRnmDBbd+0vxD/xDlVNRDlPIKliLGkYGiAkEbtlo+fng4ELtO4gSLKVbcFn7tZwZCEUE8H2miBsCCKABgMKIFrKDJwB7gM3lXPt9yVoh6gQksafKt7VFCNRN5KLKqsDEAAi0AX5EfTV7jJ1ZWAbxftjoSN6kCVIxzGclbyg1HjchmNCX7nxNCHWl+q5ZgqHYZVu2n2mCVmIaKD0kvoEZeY3tV1Itb6zf67BLaU0qgW/QzHCHg5a44tNLjucvL2mumHjIG8k0BY2uh+52HeiMCvSOvtDwHg7nzCASGdqPVCj9Kzw6z7F6nL4e3mYim8zvJd7f+mD9z3ARrypUOLGkTGYbB2PQOovf0Do8WzcaRzfaUCnuu/YVZWKK7DPgG8uhw/TjR6XtraAKZysF+4DJYMG9SQWx558r6s7Z5EUOF5CU2M35w1t1Xxllb3vrS83dtf9LPCrBhLsEBeYEUBE2+bTBfl0BDKqLiB0Cc0N0ixOcHIt6e40wAvW622/gMgHlpNSx8xG12u0s6h6EMWdCXXLWd9fy2q6glFUHvA67A35q7O+M8DVml7Y9xG55Y3DHkMDc9cwgwFkBDCAYQe6pQF1nlKytcVCGREpBs/gq69gHAStMQ8WEg38Lf8u8eBr2DFexrN4U+QAk+S//P3fJgf0bQx/Eosx4fvWSz9En41iC+ADCsWQpMbwHn4JWvtAbn3oW0XmL/OgThTkJMLiCymduYAa1Hnt7a3tP0KTL2/x11F02ggQHL28cCjq5W4zUGjWjl5wo2PsKB6t8aAvMg2ujGD2rCjb4yrv5VIzAKMOZLyj7K0vSK9gwDLQ/4vq+QnKUBG5zrcOze0hX+kz2909/tmAdeCH61Ypw7gbPUJAKnmKYUiB/UgwkJvzMJSsk/SEs5SXosHDI+HsJHJp4Mp4iKD0xRMst+8f9aTjaWwh8ZvELE1ZOhhCbF3RXhxi3x2Nu8ORIz+vhEQ1NOlMc7UIo98Fk/96T36vL/fviowT4C/0AlaapZDJBmKwhmwqisMjY2n1vY29oM2p5BzY1iwP7q9BYdRFst6xwo57TNSuRwQw7IhFsf0k+ABuPEZy5xB5nPHyIRTf/pr3Hw',
+              },
+            },
           },
-          'type': 'm.room_key'
+          'type': 'm.room.encrypted',
         },
       ]
     },
