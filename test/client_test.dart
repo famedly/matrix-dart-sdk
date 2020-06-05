@@ -317,7 +317,7 @@ void main() {
       expect(eventUpdateList.length, 2);
 
       expect(eventUpdateList[0].type, 'm.new_device');
-      if (matrix.encryptionEnabled) {
+      if (olmEnabled) {
         expect(eventUpdateList[1].type, 'm.room_key');
       } else {
         expect(eventUpdateList[1].type, 'm.room.encrypted');
