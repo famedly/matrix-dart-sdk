@@ -100,7 +100,7 @@ class CrossSigning {
     ]);
   }
 
-  bool signable(List<SignedKey> keys) {
+  bool signable(List<SignableKey> keys) {
     for (final key in keys) {
       if (key is CrossSigningKey && key.usage.contains('master')) {
         return true;
@@ -114,13 +114,13 @@ class CrossSigning {
     return false;
   }
 
-  Future<void> sign(List<SignedKey> keys) async {
+  Future<void> sign(List<SignableKey> keys) async {
     Uint8List selfSigningKey;
     Uint8List userSigningKey;
     final signatures = <String, dynamic>{};
     var signedKey = false;
     final addSignature =
-        (SignedKey key, SignedKey signedWith, String signature) {
+        (SignableKey key, SignableKey signedWith, String signature) {
       if (key == null || signedWith == null || signature == null) {
         return;
       }

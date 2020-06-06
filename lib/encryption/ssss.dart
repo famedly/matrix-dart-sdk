@@ -221,11 +221,7 @@ class SSSS {
       'mac': encrypted.mac,
     };
     // store the thing in your account data
-    await client.jsonRequest(
-      type: RequestType.PUT,
-      action: '/client/r0/user/${client.userID}/account_data/${type}',
-      data: content,
-    );
+    await client.api.setAccountData(client.userID, type, content);
     if (CACHE_TYPES.contains(type) && client.database != null) {
       // cache the thing
       await client.database

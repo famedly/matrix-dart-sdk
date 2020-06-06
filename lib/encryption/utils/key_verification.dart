@@ -128,7 +128,7 @@ class KeyVerification {
   List<String> possibleMethods;
   Map<String, dynamic> startPaylaod;
   String _nextAction;
-  List<SignedKey> _verifiedDevices;
+  List<SignableKey> _verifiedDevices;
 
   DateTime lastActivity;
   String lastStep;
@@ -404,8 +404,8 @@ class KeyVerification {
   }
 
   Future<void> verifyKeys(Map<String, String> keys,
-      Future<bool> Function(String, SignedKey) verifier) async {
-    _verifiedDevices = <SignedKey>[];
+      Future<bool> Function(String, SignableKey) verifier) async {
+    _verifiedDevices = <SignableKey>[];
 
     if (!client.userDeviceKeys.containsKey(userId)) {
       await cancel('m.key_mismatch');
@@ -863,7 +863,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
         mac[entry.key] = entry.value;
       }
     }
-    await request.verifyKeys(mac, (String mac, SignedKey key) async {
+    await request.verifyKeys(mac, (String mac, SignableKey key) async {
       return mac ==
           _calculateMac(key.ed25519Key, baseInfo + 'ed25519:' + key.identifier);
     });

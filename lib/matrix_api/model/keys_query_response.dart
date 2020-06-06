@@ -16,8 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'matrix_device_keys.dart';
-import 'matrix_cross_signing_key.dart';
+import 'matrix_keys.dart';
 
 class KeysQueryResponse {
   Map<String, dynamic> failures;

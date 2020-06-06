@@ -36,8 +36,8 @@ import 'package:mime_type/mime_type.dart';
 import 'package:moor/moor.dart';
 
 import 'model/device.dart';
-import 'model/matrix_device_keys.dart';
 import 'model/matrix_event.dart';
+import 'model/matrix_keys.dart';
 import 'model/event_context.dart';
 import 'model/events_sync_update.dart';
 import 'model/login_response.dart';
