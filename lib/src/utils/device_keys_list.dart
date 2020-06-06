@@ -125,6 +125,7 @@ abstract class SignableKey extends MatrixSignableKey {
   MatrixSignableKey cloneForSigning() {
     final newKey =
         MatrixSignableKey.fromJson(Map<String, dynamic>.from(toJson()));
+    newKey.identifier = identifier;
     newKey.signatures ??= <String, Map<String, String>>{};
     newKey.signatures.clear();
     return newKey;
