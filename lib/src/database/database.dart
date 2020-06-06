@@ -455,6 +455,7 @@ class Database extends _$Database {
     await (delete(inboundGroupSessions)
           ..where((r) => r.clientId.equals(clientId)))
         .go();
+    await (delete(ssssCache)..where((r) => r.clientId.equals(clientId))).go();
     await (delete(olmSessions)..where((r) => r.clientId.equals(clientId))).go();
     await (delete(userCrossSigningKeys)
           ..where((r) => r.clientId.equals(clientId)))
