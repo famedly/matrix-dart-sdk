@@ -83,6 +83,10 @@ class Encryption {
       // do this in the background
       unawaited(keyVerificationManager.handleToDeviceEvent(event));
     }
+    if (event.type.startsWith('m.secret.')) {
+      // some ssss thing. We can do this in the background
+      unawaited(ssss.handleToDeviceEvent(event));
+    }
   }
 
   Future<void> handleEventUpdate(EventUpdate update) async {

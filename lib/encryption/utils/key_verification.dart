@@ -146,7 +146,6 @@ class KeyVerification {
       this.onUpdate}) {
     lastActivity = DateTime.now();
     _deviceId ??= deviceId;
-    print('Setting device id constructor: ' + _deviceId.toString());
   }
 
   void dispose() {
@@ -198,10 +197,10 @@ class KeyVerification {
       [String eventId]) async {
     print('[Key Verification] Received type ${type}: ' + payload.toString());
     try {
+      var thisLastStep = lastStep;
       switch (type) {
         case 'm.key.verification.request':
           _deviceId ??= payload['from_device'];
-          print('Setting device id request: ' + _deviceId.toString());
           transactionId ??= eventId ?? payload['transaction_id'];
           // verify the timestamp
           final now = DateTime.now();
@@ -231,6 +230,9 @@ class KeyVerification {
             await cancel('m.unknown_method');
             return;
           }
+          // as both parties can send a start, the last step being "ready" is race-condition prone
+          // as such, we better set it *before* we send our start
+          lastStep = type;
           // TODO: Pick method?
           method = _makeVerificationMethod(possibleMethods.first, this);
           await method.sendStart();
@@ -238,7 +240,6 @@ class KeyVerification {
           break;
         case 'm.key.verification.start':
           _deviceId ??= payload['from_device'];
-          print('Setting device id start: ' + _deviceId.toString());
           transactionId ??= eventId ?? payload['transaction_id'];
           if (method != null) {
             // the other side sent us a start, even though we already sent one
@@ -253,7 +254,7 @@ class KeyVerification {
               } else {
                 // the other start won, let's hand off
                 startedVerification = false; // it is now as if they started
-                lastStep =
+                thisLastStep = lastStep =
                     'm.key.verification.request'; // we fake the last step
                 method.dispose(); // in case anything got created already
               }
@@ -296,7 +297,9 @@ class KeyVerification {
           await method.handlePayload(type, payload);
           break;
       }
-      lastStep = type;
+      if (lastStep == thisLastStep) {
+        lastStep = type;
+      }
     } catch (err, stacktrace) {
       print('[Key Verification] An error occured: ' + err.toString());
       print(stacktrace);

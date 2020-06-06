@@ -29,6 +29,7 @@ class KeyVerificationManager {
   final Map<String, KeyVerification> _requests = {};
 
   Future<void> cleanup() async {
+    Set<String> entriesToDispose = <String>{};
     for (final entry in _requests.entries) {
       var dispose = entry.value.canceled ||
           entry.value.state == KeyVerificationState.done ||
@@ -38,8 +39,11 @@ class KeyVerificationManager {
       }
       if (dispose) {
         entry.value.dispose();
-        _requests.remove(entry.key);
+        entriesToDispose.add(entry.key);
       }
+    }
+    for (final k in entriesToDispose) {
+      _requests.remove(k);
     }
   }
 
