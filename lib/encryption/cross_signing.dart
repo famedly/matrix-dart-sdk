@@ -123,14 +123,8 @@ class CrossSigning {
       if (key == null || signedWith == null || signature == null) {
         return;
       }
-      final signedKey = signedKeys.firstWhere(
-              (k) => k.userId == key.userId && k.identifier == key.identifier,
-              orElse: () => null) ??
-          key.cloneForSigning();
-      signedKey.signatures ??= <String, Map<String, String>>{};
-      if (!signedKey.signatures.containsKey(signedWith.userId)) {
-        signedKey.signatures[signedWith.userId] = <String, String>{};
-      }
+      final signedKey = key.cloneForSigning();
+      signedKey.signatures[signedWith.userId] = <String, String>{};
       signedKey.signatures[signedWith.userId]
           ['ed25519:${signedWith.identifier}'] = signature;
       signedKeys.add(signedKey);
