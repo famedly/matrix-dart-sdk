@@ -1160,7 +1160,8 @@ class Client {
             final deviceId = rawDeviceKeyEntry.key;
 
             // Set the new device key for this device
-            final entry = DeviceKeys.fromMatrixDeviceKeys(rawDeviceKeyEntry.value, this);
+            final entry =
+                DeviceKeys.fromMatrixDeviceKeys(rawDeviceKeyEntry.value, this);
             if (entry.isValid) {
               // is this a new key or the same one as an old one?
               // better store an update - the signatures might have changed!
@@ -1231,7 +1232,8 @@ class Client {
             if (!userDeviceKeys.containsKey(userId)) {
               _userDeviceKeys[userId] = DeviceKeysList(userId);
             }
-            final oldKeys = Map<String, CrossSigningKey>.from(_userDeviceKeys[userId].crossSigningKeys);
+            final oldKeys = Map<String, CrossSigningKey>.from(
+                _userDeviceKeys[userId].crossSigningKeys);
             _userDeviceKeys[userId].crossSigningKeys = {};
             // add the types we aren't handling atm back
             for (final oldEntry in oldKeys.entries) {
@@ -1240,8 +1242,8 @@ class Client {
                     oldEntry.value;
               }
             }
-            final entry =
-                CrossSigningKey.fromMatrixCrossSigningKey(crossSigningKeyListEntry.value, this);
+            final entry = CrossSigningKey.fromMatrixCrossSigningKey(
+                crossSigningKeyListEntry.value, this);
             if (entry.isValid) {
               final publicKey = entry.publicKey;
               if (!oldKeys.containsKey(publicKey) ||

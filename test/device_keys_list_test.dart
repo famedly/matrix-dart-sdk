@@ -42,15 +42,10 @@ void main() {
         },
         'unsigned': {'device_display_name': "Alice's mobile phone"},
       };
-      var rawListJson = <String, dynamic>{
-        'user_id': '@alice:example.com',
-        'outdated': true,
-        'device_keys': {'JLAFKJWSCS': rawJson},
-      };
 
       final key = DeviceKeys.fromJson(rawJson, null);
-      key.setVerified(false, false);
-      key.setBlocked(true);
+      await key.setVerified(false, false);
+      await key.setBlocked(true);
       expect(json.encode(key.toJson()), json.encode(rawJson));
       expect(key.directVerified, false);
       expect(key.blocked, true);

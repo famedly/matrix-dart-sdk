@@ -177,7 +177,10 @@ class SSSS {
     }
     // check if it is still valid
     final keys = keyIdsFromType(type);
-    if (keys.contains(ret.keyId) && client.accountData[type].content['encrypted'][ret.keyId]['ciphertext'] == ret.ciphertext) {
+    if (keys.contains(ret.keyId) &&
+        client.accountData[type].content['encrypted'][ret.keyId]
+                ['ciphertext'] ==
+            ret.ciphertext) {
       return ret.content;
     }
     return null;
@@ -200,7 +203,8 @@ class SSSS {
     final decrypted = decryptAes(encryptInfo, key, type);
     if (CACHE_TYPES.contains(type) && client.database != null) {
       // cache the thing
-      await client.database.storeSSSSCache(client.id, type, keyId, enc['ciphertext'], decrypted);
+      await client.database
+          .storeSSSSCache(client.id, type, keyId, enc['ciphertext'], decrypted);
     }
     return decrypted;
   }
@@ -224,7 +228,8 @@ class SSSS {
     );
     if (CACHE_TYPES.contains(type) && client.database != null) {
       // cache the thing
-      await client.database.storeSSSSCache(client.id, type, keyId, encrypted.ciphertext, secret);
+      await client.database
+          .storeSSSSCache(client.id, type, keyId, encrypted.ciphertext, secret);
     }
   }
 
@@ -352,9 +357,10 @@ class SSSS {
       if (client.database != null) {
         final keyId = keyIdFromType(request.type);
         if (keyId != null) {
-          final ciphertext = client.accountData[request.type].content['encrypted'][keyId]['ciphertext'];
-          await client.database
-              .storeSSSSCache(client.id, request.type, keyId, ciphertext, secret);
+          final ciphertext = client.accountData[request.type]
+              .content['encrypted'][keyId]['ciphertext'];
+          await client.database.storeSSSSCache(
+              client.id, request.type, keyId, ciphertext, secret);
         }
       }
     }

@@ -93,7 +93,11 @@ class Encryption {
     if (update.type == 'ephemeral') {
       return;
     }
-    if (update.eventType.startsWith('m.key.verification.') || (update.eventType == 'm.room.message' && (update.content['content']['msgtype'] is String) && update.content['content']['msgtype'].startsWith('m.key.verification.'))) {
+    if (update.eventType.startsWith('m.key.verification.') ||
+        (update.eventType == 'm.room.message' &&
+            (update.content['content']['msgtype'] is String) &&
+            update.content['content']['msgtype']
+                .startsWith('m.key.verification.'))) {
       // "just" key verification, no need to do this in sync
       unawaited(keyVerificationManager.handleEventUpdate(update));
     }

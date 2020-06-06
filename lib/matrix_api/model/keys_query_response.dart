@@ -41,32 +41,32 @@ class KeysQueryResponse {
             ),
           )
         : null;
-    masterKeys = json['master_keys'] != null ? 
-        (json['master_keys'] as Map).map(
-          (k, v) => MapEntry(
-            k,
-            MatrixCrossSigningKey.fromJson(v),
-          ),
-        )
-      : null;
+    masterKeys = json['master_keys'] != null
+        ? (json['master_keys'] as Map).map(
+            (k, v) => MapEntry(
+              k,
+              MatrixCrossSigningKey.fromJson(v),
+            ),
+          )
+        : null;
 
-    selfSigningKeys = json['self_signing_keys'] != null ? 
-        (json['self_signing_keys'] as Map).map(
-          (k, v) => MapEntry(
-            k,
-            MatrixCrossSigningKey.fromJson(v),
-          ),
-        )
-      : null;
+    selfSigningKeys = json['self_signing_keys'] != null
+        ? (json['self_signing_keys'] as Map).map(
+            (k, v) => MapEntry(
+              k,
+              MatrixCrossSigningKey.fromJson(v),
+            ),
+          )
+        : null;
 
-    userSigningKeys = json['user_signing_keys'] != null ? 
-        (json['user_signing_keys'] as Map).map(
-          (k, v) => MapEntry(
-            k,
-            MatrixCrossSigningKey.fromJson(v),
-          ),
-        )
-      : null;
+    userSigningKeys = json['user_signing_keys'] != null
+        ? (json['user_signing_keys'] as Map).map(
+            (k, v) => MapEntry(
+              k,
+              MatrixCrossSigningKey.fromJson(v),
+            ),
+          )
+        : null;
   }
 
   Map<String, dynamic> toJson() {

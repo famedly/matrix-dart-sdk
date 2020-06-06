@@ -60,7 +60,8 @@ class DeviceKeysList {
       throw 'Unable to start new room';
     }
     final room = client.getRoomById(roomId) ?? Room(id: roomId, client: client);
-    final request = KeyVerification(encryption: client.encryption, room: room, userId: userId);
+    final request = KeyVerification(
+        encryption: client.encryption, room: room, userId: userId);
     await request.start();
     // no need to add to the request client object. As we are doing a room
     // verification request that'll happen automatically once we know the transaction id
@@ -224,7 +225,9 @@ abstract class SignedKey {
 
   Future<void> setVerified(bool newVerified, [bool sign = true]) {
     _verified = newVerified;
-    if (sign && client.encryptionEnabled && client.encryption.crossSigning.signable([this])) {
+    if (sign &&
+        client.encryptionEnabled &&
+        client.encryption.crossSigning.signable([this])) {
       // sign the key!
       client.encryption.crossSigning.sign([this]);
     }
@@ -266,13 +269,16 @@ class CrossSigningKey extends SignedKey {
         newBlocked, client.id, userId, publicKey);
   }
 
-  CrossSigningKey.fromMatrixCrossSigningKey(MatrixCrossSigningKey k, Client cl) {
+  CrossSigningKey.fromMatrixCrossSigningKey(
+      MatrixCrossSigningKey k, Client cl) {
     client = cl;
     content = Map<String, dynamic>.from(k.toJson());
     userId = k.userId;
     identifier = k.publicKey;
     usage = content['usage'].cast<String>();
-    keys = content['keys'] != null ? Map<String, String>.from(content['keys']) : null;
+    keys = content['keys'] != null
+        ? Map<String, String>.from(content['keys'])
+        : null;
     signatures = content['signatures'] != null
         ? Map<String, dynamic>.from(content['signatures'])
         : null;
@@ -397,8 +403,8 @@ class DeviceKeys extends SignedKey {
   }
 
   KeyVerification startVerification() {
-    final request =
-        KeyVerification(encryption: client.encryption, userId: userId, deviceId: deviceId);
+    final request = KeyVerification(
+        encryption: client.encryption, userId: userId, deviceId: deviceId);
 
     request.start();
     client.encryption.keyVerificationManager.addRequest(request);

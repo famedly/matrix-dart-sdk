@@ -152,7 +152,8 @@ class CrossSigning {
         if (key is CrossSigningKey) {
           if (key.usage.contains('master')) {
             // okay, we'll sign our own master key
-            final signature = encryption.olmManager.signString(key.signingContent);
+            final signature =
+                encryption.olmManager.signString(key.signingContent);
             addSignature(
                 key,
                 client
@@ -172,8 +173,8 @@ class CrossSigning {
         }
       } else if (key is CrossSigningKey && key.usage.contains('master')) {
         // we are signing someone elses master key
-        userSigningKey ??=
-            base64.decode(await encryption.ssss.getCached(USER_SIGNING_KEY) ?? '');
+        userSigningKey ??= base64
+            .decode(await encryption.ssss.getCached(USER_SIGNING_KEY) ?? '');
         if (userSigningKey.isNotEmpty) {
           final signature = _sign(key.signingContent, userSigningKey);
           addSignature(key, client.userDeviceKeys[client.userID].userSigningKey,

@@ -321,7 +321,8 @@ class KeyManager {
     if (!(payload['rooms'] is Map)) {
       return;
     }
-    final privateKey = base64.decode(await encryption.ssss.getCached(MEGOLM_KEY));
+    final privateKey =
+        base64.decode(await encryption.ssss.getCached(MEGOLM_KEY));
     final decryption = olm.PkDecryption();
     final info = await getRoomKeysInfo();
     String backupPubKey;
@@ -373,7 +374,9 @@ class KeyManager {
           if (decrypted != null) {
             decrypted['session_id'] = sessionId;
             decrypted['room_id'] = roomId;
-            setInboundGroupSession(roomId, sessionId, decrypted['sender_key'], decrypted, forwarded: true);
+            setInboundGroupSession(
+                roomId, sessionId, decrypted['sender_key'], decrypted,
+                forwarded: true);
           }
         }
       }
@@ -403,7 +406,8 @@ class KeyManager {
   /// Request a certain key from another device
   Future<void> request(Room room, String sessionId, String senderKey) async {
     // let's first check our online key backup store thingy...
-    var hadPreviously = getInboundGroupSession(room.id, sessionId, senderKey) != null;
+    var hadPreviously =
+        getInboundGroupSession(room.id, sessionId, senderKey) != null;
     try {
       await loadSingleKey(room.id, sessionId);
     } catch (err, stacktrace) {
@@ -411,7 +415,8 @@ class KeyManager {
       print(err.toString());
       print(stacktrace);
     }
-    if (!hadPreviously && getInboundGroupSession(room.id, sessionId, senderKey) != null) {
+    if (!hadPreviously &&
+        getInboundGroupSession(room.id, sessionId, senderKey) != null) {
       return; // we managed to load the session from online backup, no need to care about it now
     }
     // while we just send the to-device event to '*', we still need to save the
