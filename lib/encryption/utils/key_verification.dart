@@ -314,7 +314,7 @@ class KeyVerification {
   }
 
   Future<void> openSSSS(
-      {String password, String recoveryKey, bool skip = false}) async {
+      {String passphrase, String recoveryKey, bool skip = false}) async {
     final next = () {
       if (_nextAction == 'request') {
         sendStart();
@@ -331,7 +331,7 @@ class KeyVerification {
       return;
     }
     final handle = encryption.ssss.open('m.cross_signing.user_signing');
-    await handle.unlock(password: password, recoveryKey: recoveryKey);
+    await handle.unlock(passphrase: passphrase, recoveryKey: recoveryKey);
     await handle.maybeCacheAll();
     next();
   }

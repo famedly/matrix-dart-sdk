@@ -126,12 +126,12 @@ class SSSS {
         OLM_RECOVERY_KEY_PREFIX.length + OLM_PRIVATE_KEY_LENGTH));
   }
 
-  static Uint8List keyFromPassword(String password, _PasswordInfo info) {
+  static Uint8List keyFromPassphrase(String passphrase, _PassphraseInfo info) {
     if (info.algorithm != 'm.pbkdf2') {
       throw 'Unknown algorithm';
     }
     final generator = PBKDF2(hashAlgorithm: sha512);
-    return Uint8List.fromList(generator.generateKey(password, info.salt,
+    return Uint8List.fromList(generator.generateKey(passphrase, info.salt,
         info.iterations, info.bits != null ? info.bits / 8 : 32));
   }
 
@@ -428,13 +428,13 @@ class _DerivedKeys {
   _DerivedKeys({this.aesKey, this.hmacKey});
 }
 
-class _PasswordInfo {
+class _PassphraseInfo {
   final String algorithm;
   final String salt;
   final int iterations;
   final int bits;
 
-  _PasswordInfo({this.algorithm, this.salt, this.iterations, this.bits});
+  _PassphraseInfo({this.algorithm, this.salt, this.iterations, this.bits});
 }
 
 class OpenSSSS {
@@ -446,11 +446,11 @@ class OpenSSSS {
 
   bool get isUnlocked => privateKey != null;
 
-  void unlock({String password, String recoveryKey}) {
-    if (password != null) {
-      privateKey = SSSS.keyFromPassword(
-          password,
-          _PasswordInfo(
+  void unlock({String passphrase, String recoveryKey}) {
+    if (passphrase != null) {
+      privateKey = SSSS.keyFromPassphrase(
+          passphrase,
+          _PassphraseInfo(
               algorithm: keyData.content['passphrase']['algorithm'],
               salt: keyData.content['passphrase']['salt'],
               iterations: keyData.content['passphrase']['iterations'],

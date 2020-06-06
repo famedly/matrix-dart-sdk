@@ -69,9 +69,9 @@ class CrossSigning {
         (await encryption.ssss.getCached(USER_SIGNING_KEY)) != null;
   }
 
-  Future<void> selfSign({String password, String recoveryKey}) async {
+  Future<void> selfSign({String passphrase, String recoveryKey}) async {
     final handle = encryption.ssss.open(MASTER_KEY);
-    await handle.unlock(password: password, recoveryKey: recoveryKey);
+    await handle.unlock(passphrase: passphrase, recoveryKey: recoveryKey);
     await handle.maybeCacheAll();
     final masterPrivateKey = base64.decode(await handle.getStored(MASTER_KEY));
     final keyObj = olm.PkSigning();
