@@ -100,7 +100,6 @@ class DeviceKeysList {
 
 abstract class SignableKey extends MatrixSignableKey {
   Client client;
-  String identifier;
   Map<String, dynamic> validSignatures;
   bool _verified;
   bool blocked;
@@ -121,6 +120,13 @@ abstract class SignableKey extends MatrixSignableKey {
         super.fromJson(json) {
     _verified = false;
     blocked = false;
+  }
+
+  MatrixSignableKey cloneForSigning() {
+    final newKey =
+        MatrixSignableKey.fromJson(Map<String, dynamic>.from(toJson()));
+    newKey.signatures.clear();
+    return newKey;
   }
 
   String get signingContent {

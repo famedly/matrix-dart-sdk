@@ -117,34 +117,23 @@ class CrossSigning {
   Future<void> sign(List<SignableKey> keys) async {
     Uint8List selfSigningKey;
     Uint8List userSigningKey;
-    final signatures = <String, dynamic>{};
-    var signedKey = false;
+    final signedKeys = <MatrixSignableKey>[];
     final addSignature =
         (SignableKey key, SignableKey signedWith, String signature) {
       if (key == null || signedWith == null || signature == null) {
         return;
       }
-      if (!signatures.containsKey(key.userId)) {
-        signatures[key.userId] = <String, dynamic>{};
+      final signedKey = signedKeys.firstWhere(
+              (k) => k.userId == key.userId && k.identifier == key.identifier,
+              orElse: () => null) ??
+          key.cloneForSigning();
+      signedKey.signatures ??= <String, Map<String, String>>{};
+      if (!signedKey.signatures.containsKey(signedWith.userId)) {
+        signedKey.signatures[signedWith.userId] = <String, String>{};
       }
-      if (!signatures[key.userId].containsKey(key.identifier)) {
-        signatures[key.userId][key.identifier] =
-            Map<String, dynamic>.from(key.toJson());
-        // we don't need to send all old signatures, so let's just remove them
-        signatures[key.userId][key.identifier].remove('signatures');
-      }
-      if (!signatures[key.userId][key.identifier].containsKey('signatures')) {
-        signatures[key.userId][key.identifier]
-            ['signatures'] = <String, dynamic>{};
-      }
-      if (!signatures[key.userId][key.identifier]['signatures']
-          .containsKey(signedWith.userId)) {
-        signatures[key.userId][key.identifier]['signatures']
-            [signedWith.userId] = <String, dynamic>{};
-      }
-      signatures[key.userId][key.identifier]['signatures'][signedWith.userId]
+      signedKey.signatures[signedWith.userId]
           ['ed25519:${signedWith.identifier}'] = signature;
-      signedKey = true;
+      signedKeys.add(signedKey);
     };
     for (final key in keys) {
       if (key.userId == client.userID) {
@@ -182,13 +171,9 @@ class CrossSigning {
         }
       }
     }
-    if (signedKey) {
+    if (signedKeys.isNotEmpty) {
       // post our new keys!
-      await client.jsonRequest(
-        type: RequestType.POST,
-        action: '/client/r0/keys/signatures/upload',
-        data: signatures,
-      );
+      await client.api.uploadKeySignatures(signedKeys);
     }
   }
 

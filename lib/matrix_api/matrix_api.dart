@@ -54,6 +54,7 @@ import 'model/tag.dart';
 import 'model/third_party_identifier.dart';
 import 'model/third_party_user.dart';
 import 'model/turn_server_credentials.dart';
+import 'model/upload_key_signatures_response.dart';
 import 'model/well_known_informations.dart';
 import 'model/who_is_info.dart';
 
@@ -1501,6 +1502,55 @@ class MatrixApi {
       '/client/r0/keys/changes?from=${Uri.encodeQueryComponent(from)}&to=${Uri.encodeQueryComponent(to)}',
     );
     return DeviceListsUpdate.fromJson(response);
+  }
+
+  /// Uploads your own cross-signing keys.
+  /// https://12682-24998719-gh.circle-artifacts.com/0/scripts/gen/client_server/unstable.html#post-matrix-client-r0-keys-device-signing-upload
+  Future<void> uploadDeviceSigningKeys({
+    MatrixCrossSigningKey masterKey,
+    MatrixCrossSigningKey selfSigningKey,
+    MatrixCrossSigningKey userSigningKey,
+  }) async {
+    await request(
+      RequestType.POST,
+      '/client/r0/keys/device_signing/upload',
+      data: {
+        'master_key': masterKey.toJson(),
+        'self_signing_key': selfSigningKey.toJson(),
+        'user_signing_key': userSigningKey.toJson(),
+      },
+    );
+  }
+
+  /// Uploads new signatures of keys
+  /// https://12682-24998719-gh.circle-artifacts.com/0/scripts/gen/client_server/unstable.html#post-matrix-client-r0-keys-signatures-upload
+  Future<UploadKeySignaturesResponse> uploadKeySignatures(
+      List<MatrixSignableKey> keys) async {
+    final payload = <String, dynamic>{};
+    for (final key in keys) {
+      if (key.identifier == null ||
+          key.signatures == null ||
+          key.signatures.isEmpty) {
+        continue;
+      }
+      if (!payload.containsKey(key.userId)) {
+        payload[key.userId] = <String, dynamic>{};
+      }
+      if (payload[key.userId].containsKey(key.identifier)) {
+        // we need to merge signature objects
+        payload[key.userId][key.identifier]['signatures']
+            .addAll(key.signatures);
+      } else {
+        // we can just add signatures
+        payload[key.userId][key.identifier] = key.toJson();
+      }
+    }
+    final response = await request(
+      RequestType.POST,
+      '/client/r0/keys/signatures/upload',
+      data: payload,
+    );
+    return UploadKeySignaturesResponse.fromJson(response);
   }
 
   /// Gets all currently active pushers for the authenticated user.

@@ -18,11 +18,13 @@
 
 class MatrixSignableKey {
   String userId;
+  String identifier;
   Map<String, String> keys;
   Map<String, Map<String, String>> signatures;
   Map<String, dynamic> unsigned;
 
-  MatrixSignableKey(this.userId, this.keys, this.signatures, {this.unsigned});
+  MatrixSignableKey(this.userId, this.identifier, this.keys, this.signatures,
+      {this.unsigned});
 
   // This object is used for signing so we need the raw json too
   Map<String, dynamic> _json;
@@ -31,9 +33,10 @@ class MatrixSignableKey {
     _json = json;
     userId = json['user_id'];
     keys = Map<String, String>.from(json['keys']);
-    signatures = json['signatures'] is Map ? Map<String, Map<String, String>>.from(
-        (json['signatures'] as Map)
-            .map((k, v) => MapEntry(k, Map<String, String>.from(v)))) : null;
+    signatures = json['signatures'] is Map
+        ? Map<String, Map<String, String>>.from((json['signatures'] as Map)
+            .map((k, v) => MapEntry(k, Map<String, String>.from(v))))
+        : null;
     unsigned = json['unsigned'] is Map
         ? Map<String, dynamic>.from(json['unsigned'])
         : null;
@@ -56,7 +59,7 @@ class MatrixSignableKey {
 
 class MatrixCrossSigningKey extends MatrixSignableKey {
   List<String> usage;
-  String get publicKey => keys?.values?.first;
+  String get publicKey => identifier;
 
   MatrixCrossSigningKey(
     String userId,
@@ -64,12 +67,13 @@ class MatrixCrossSigningKey extends MatrixSignableKey {
     Map<String, String> keys,
     Map<String, Map<String, String>> signatures, {
     Map<String, dynamic> unsigned,
-  }) : super(userId, keys, signatures, unsigned: unsigned);
+  }) : super(userId, keys?.values?.first, keys, signatures, unsigned: unsigned);
 
   @override
   MatrixCrossSigningKey.fromJson(Map<String, dynamic> json)
       : super.fromJson(json) {
     usage = List<String>.from(json['usage']);
+    identifier = keys?.values?.first;
   }
 
   @override
@@ -81,23 +85,23 @@ class MatrixCrossSigningKey extends MatrixSignableKey {
 }
 
 class MatrixDeviceKeys extends MatrixSignableKey {
-  String deviceId;
+  String get deviceId => identifier;
   List<String> algorithms;
   String get deviceDisplayName =>
       unsigned != null ? unsigned['device_display_name'] : null;
 
   MatrixDeviceKeys(
     String userId,
-    this.deviceId,
+    String deviceId,
     this.algorithms,
     Map<String, String> keys,
     Map<String, Map<String, String>> signatures, {
     Map<String, dynamic> unsigned,
-  }) : super(userId, keys, signatures, unsigned: unsigned);
+  }) : super(userId, deviceId, keys, signatures, unsigned: unsigned);
 
   @override
   MatrixDeviceKeys.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
-    deviceId = json['device_id'];
+    identifier = json['device_id'];
     algorithms = json['algorithms'].cast<String>();
   }
 

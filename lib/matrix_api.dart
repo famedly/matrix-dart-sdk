@@ -58,6 +58,7 @@ export 'package:famedlysdk/matrix_api/model/third_party_location.dart';
 export 'package:famedlysdk/matrix_api/model/third_party_user.dart';
 export 'package:famedlysdk/matrix_api/model/timeline_history_response.dart';
 export 'package:famedlysdk/matrix_api/model/turn_server_credentials.dart';
+export 'package:famedlysdk/matrix_api/model/upload_key_signatures_response.dart';
 export 'package:famedlysdk/matrix_api/model/user_search_result.dart';
 export 'package:famedlysdk/matrix_api/model/well_known_informations.dart';
 export 'package:famedlysdk/matrix_api/model/who_is_info.dart';
