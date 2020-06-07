@@ -457,22 +457,27 @@ class KeyManager {
       }
       if (event.content['action'] == 'request') {
         // we are *receiving* a request
+        print('[KeyManager] Received key sharing request...');
         if (!event.content.containsKey('body')) {
+          print('[KeyManager] No body, doing nothing');
           return; // no body
         }
         if (!client.userDeviceKeys.containsKey(event.sender) ||
             !client.userDeviceKeys[event.sender].deviceKeys
                 .containsKey(event.content['requesting_device_id'])) {
+          print('[KeyManager] Device not found, doing nothing');
           return; // device not found
         }
         final device = client.userDeviceKeys[event.sender]
             .deviceKeys[event.content['requesting_device_id']];
         if (device.userId == client.userID &&
             device.deviceId == client.deviceID) {
+          print('[KeyManager] Request is by ourself, ignoring');
           return; // ignore requests by ourself
         }
         final room = client.getRoomById(event.content['body']['room_id']);
         if (room == null) {
+          print('[KeyManager] Unknown room, ignoring');
           return; // unknown room
         }
         final sessionId = event.content['body']['session_id'];
@@ -480,6 +485,7 @@ class KeyManager {
         // okay, let's see if we have this session at all
         if ((await loadInboundGroupSession(room.id, sessionId, senderKey)) ==
             null) {
+          print('[KeyManager] Unknown session, ignoring');
           return; // we don't have this session anyways
         }
         final request = KeyManagerKeyShareRequest(
@@ -490,6 +496,7 @@ class KeyManager {
           senderKey: senderKey,
         );
         if (incomingShareRequests.containsKey(request.requestId)) {
+          print('[KeyManager] Already processed this request, ignoring');
           return; // we don't want to process one and the same request multiple times
         }
         incomingShareRequests[request.requestId] = request;
@@ -498,9 +505,11 @@ class KeyManager {
         if (device.userId == client.userID &&
             device.verified &&
             !device.blocked) {
+          print('[KeyManager] All checks out, forwarding key...');
           // alright, we can forward the key
           await roomKeyRequest.forwardKey();
         } else {
+          print('[KeyManager] Asking client, if the key should be forwarded');
           client.onRoomKeyRequest
               .add(roomKeyRequest); // let the client handle this
         }
@@ -637,6 +646,20 @@ class RoomKeyRequest extends ToDeviceEvent {
     var message = session.content;
     message['forwarding_curve25519_key_chain'] = forwardedKeys;
 
+    message['sender_key'] = request.senderKey;
+    message['sender_claimed_ed25519_key'] = forwardedKeys.isEmpty ? keyManager.encryption.fingerprintKey : null;
+    if (message['sender_claimed_ed25519_key'] == null) {
+      for (final value in keyManager.client.userDeviceKeys.values) {
+        for (final key in value.deviceKeys.values) {
+          if (key.curve25519Key == forwardedKeys.first) {
+            message['sender_claimed_ed25519_key'] = key.ed25519Key;
+          }
+        }
+        if (message['sender_claimed_ed25519_key'] != null) {
+          break;
+        }
+      }
+    }
     message['session_key'] = session.inboundGroupSession
         .export_session(session.inboundGroupSession.first_known_index());
     // send the actual reply of the key back to the requester
