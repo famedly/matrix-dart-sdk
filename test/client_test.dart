@@ -17,7 +17,6 @@
  */
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:famedlysdk/famedlysdk.dart';
@@ -39,8 +38,9 @@ void main() {
   Future<List<EventUpdate>> eventUpdateListFuture;
   Future<List<ToDeviceEvent>> toDeviceUpdateListFuture;
 
+  // key @test:fakeServer.notExisting
   const pickledOlmAccount =
-      'N2v1MkIFGcl0mQpo2OCwSopxPQJ0wnl7oe7PKiT4141AijfdTIhRu+ceXzXKy3Kr00nLqXtRv7kid6hU4a+V0rfJWLL0Y51+3Rp/ORDVnQy+SSeo6Fn4FHcXrxifJEJ0djla5u98fBcJ8BSkhIDmtXRPi5/oJAvpiYn+8zMjFHobOeZUAxYR0VfQ9JzSYBsSovoQ7uFkNks1M4EDUvHtuweStA+EKZvvHZO0SnwRp0Hw7sv8UMYvXw';
+      'N2v1MkIFGcl0mQpo2OCwSopxPQJ0wnl7oe7PKiT4141AijfdTIhRu+ceXzXKy3Kr00nLqXtRv7kid6hU4a+V0rfJWLL0Y51+3Rp/ORDVnQy+SSeo6Fn4FHcXrxifJEJ0djla5u98fBcJ8BSkhIDmtXRPi5/oJAvpiYn+8zMjFHobOeZUAxYR0VfQ9JzSYBsSovoQ7uFkNks1M4EDUvHtuyg3RxViwdNxs3718fyAqQ/VSwbXsY0Nl+qQbF+nlVGHenGqk5SuNl1P6e1PzZxcR0IfXA94Xij1Ob5gDv5YH4UCn9wRMG0abZsQP0YzpDM0FLaHSCyo9i5JD/vMlhH+nZWrgAzPPCTNGYewNV8/h3c+VyJh8ZTx/fVi6Yq46Fv+27Ga2ETRZ3Qn+Oyx6dLBjnBZ9iUvIhqpe2XqaGA1PopOz8iDnaZitw';
   const identityKey = '7rvl3jORJkBiK4XX1e5TnGnqz068XfYJ0W++Ml63rgk';
   const fingerprintKey = 'gjL//fyaFHADt9KBADGag8g7F8Up78B/K1zXeiEPLJo';
 
@@ -134,24 +134,6 @@ void main() {
       expect(matrix.directChats, matrix.accountData['m.direct'].content);
       expect(matrix.presences.length, 1);
       expect(matrix.rooms[1].ephemerals.length, 2);
-      expect(matrix.rooms[1].inboundGroupSessions.length, 1);
-      expect(
-          matrix
-              .rooms[1]
-              .inboundGroupSessions[
-                  'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU']
-              .content['session_key'],
-          'AgAAAAAQcQ6XrFJk6Prm8FikZDqfry/NbDz8Xw7T6e+/9Yf/q3YHIPEQlzv7IZMNcYb51ifkRzFejVvtphS7wwG2FaXIp4XS2obla14iKISR0X74ugB2vyb1AydIHE/zbBQ1ic5s3kgjMFlWpu/S3FQCnCrv+DPFGEt3ERGWxIl3Bl5X53IjPyVkz65oljz2TZESwz0GH/QFvyOOm8ci0q/gceaF3S7Dmafg3dwTKYwcA5xkcc+BLyrLRzB6Hn+oMAqSNSscnm4mTeT5zYibIhrzqyUTMWr32spFtI9dNR/RFSzfCw');
-      if (olmEnabled) {
-        expect(
-            matrix
-                    .rooms[1]
-                    .inboundGroupSessions[
-                        'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU']
-                    .inboundGroupSession !=
-                null,
-            true);
-      }
       expect(matrix.rooms[1].typingUsers.length, 1);
       expect(matrix.rooms[1].typingUsers[0].id, '@alice:example.com');
       expect(matrix.rooms[1].roomAccountData.length, 3);
@@ -177,7 +159,7 @@ void main() {
       expect(presenceCounter, 1);
       expect(accountDataCounter, 3);
       await Future.delayed(Duration(milliseconds: 50));
-      expect(matrix.userDeviceKeys.length, 3);
+      expect(matrix.userDeviceKeys.length, 4);
       expect(matrix.userDeviceKeys['@alice:example.com'].outdated, false);
       expect(matrix.userDeviceKeys['@alice:example.com'].deviceKeys.length, 2);
       expect(
@@ -196,7 +178,7 @@ void main() {
         }
       }));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(matrix.userDeviceKeys.length, 2);
+      expect(matrix.userDeviceKeys.length, 3);
       expect(matrix.userDeviceKeys['@alice:example.com'].outdated, true);
 
       await matrix.handleSync(SyncUpdate.fromJson({
@@ -335,7 +317,11 @@ void main() {
       expect(eventUpdateList.length, 2);
 
       expect(eventUpdateList[0].type, 'm.new_device');
-      expect(eventUpdateList[1].type, 'm.room_key');
+      if (olmEnabled) {
+        expect(eventUpdateList[1].type, 'm.room_key');
+      } else {
+        expect(eventUpdateList[1].type, 'm.room.encrypted');
+      }
     });
 
     test('Login', () async {
@@ -388,115 +374,6 @@ void main() {
           'mxc://example.org/SEsfnsuifSDFSSEF');
       expect(aliceProfile.displayname, 'Alice Margatroid');
     });
-
-    test('signJson', () {
-      if (matrix.encryptionEnabled) {
-        expect(matrix.fingerprintKey.isNotEmpty, true);
-        expect(matrix.identityKey.isNotEmpty, true);
-        var payload = <String, dynamic>{
-          'unsigned': {
-            'foo': 'bar',
-          },
-          'auth': {
-            'success': true,
-            'mxid': '@john.doe:example.com',
-            'profile': {
-              'display_name': 'John Doe',
-              'three_pids': [
-                {'medium': 'email', 'address': 'john.doe@example.org'},
-                {'medium': 'msisdn', 'address': '123456789'}
-              ]
-            }
-          }
-        };
-        var payloadWithoutUnsigned = Map<String, dynamic>.from(payload);
-        payloadWithoutUnsigned.remove('unsigned');
-
-        expect(
-            matrix.checkJsonSignature(
-                matrix.fingerprintKey, payload, matrix.userID, matrix.deviceID),
-            false);
-        expect(
-            matrix.checkJsonSignature(matrix.fingerprintKey,
-                payloadWithoutUnsigned, matrix.userID, matrix.deviceID),
-            false);
-        payload = matrix.signJson(payload);
-        payloadWithoutUnsigned = matrix.signJson(payloadWithoutUnsigned);
-        expect(payload['signatures'], payloadWithoutUnsigned['signatures']);
-        print(payload['signatures']);
-        expect(
-            matrix.checkJsonSignature(
-                matrix.fingerprintKey, payload, matrix.userID, matrix.deviceID),
-            true);
-        expect(
-            matrix.checkJsonSignature(matrix.fingerprintKey,
-                payloadWithoutUnsigned, matrix.userID, matrix.deviceID),
-            true);
-      }
-    });
-    test('Track oneTimeKeys', () async {
-      if (matrix.encryptionEnabled) {
-        var last = matrix.lastTimeKeysUploaded ?? DateTime.now();
-        await matrix.handleSync(SyncUpdate.fromJson({
-          'device_one_time_keys_count': {'signed_curve25519': 49}
-        }));
-        await Future.delayed(Duration(milliseconds: 50));
-        expect(
-            matrix.lastTimeKeysUploaded.millisecondsSinceEpoch >
-                last.millisecondsSinceEpoch,
-            true);
-      }
-    });
-    test('Test invalidate outboundGroupSessions', () async {
-      if (matrix.encryptionEnabled) {
-        expect(matrix.rooms[1].outboundGroupSession == null, true);
-        await matrix.rooms[1].createOutboundGroupSession();
-        expect(matrix.rooms[1].outboundGroupSession != null, true);
-        await matrix.handleSync(SyncUpdate.fromJson({
-          'device_lists': {
-            'changed': [
-              '@alice:example.com',
-            ],
-            'left': [
-              '@bob:example.com',
-            ],
-          }
-        }));
-        await Future.delayed(Duration(milliseconds: 50));
-        expect(matrix.rooms[1].outboundGroupSession != null, true);
-      }
-    });
-    test('Test invalidate outboundGroupSessions', () async {
-      if (matrix.encryptionEnabled) {
-        await matrix.rooms[1].clearOutboundGroupSession(wipe: true);
-        expect(matrix.rooms[1].outboundGroupSession == null, true);
-        await matrix.rooms[1].createOutboundGroupSession();
-        expect(matrix.rooms[1].outboundGroupSession != null, true);
-        await matrix.handleSync(SyncUpdate.fromJson({
-          'rooms': {
-            'join': {
-              '!726s6s6q:example.com': {
-                'state': {
-                  'events': [
-                    {
-                      'content': {'membership': 'leave'},
-                      'event_id': '143273582443PhrSn:example.org',
-                      'origin_server_ts': 1432735824653,
-                      'room_id': '!726s6s6q:example.com',
-                      'sender': '@alice:example.com',
-                      'state_key': '@alice:example.com',
-                      'type': 'm.room.member'
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        }));
-        await Future.delayed(Duration(milliseconds: 50));
-        expect(matrix.rooms[1].outboundGroupSession != null, true);
-      }
-    });
     var deviceKeys = DeviceKeys.fromJson({
       'user_id': '@alice:example.com',
       'device_id': 'JLAFKJWSCS',
@@ -510,16 +387,6 @@ void main() {
           'ed25519:JLAFKJWSCS':
               'dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA'
         }
-      }
-    });
-    test('startOutgoingOlmSessions', () async {
-      expect(matrix.olmSessions.length, 0);
-      if (olmEnabled) {
-        await matrix
-            .startOutgoingOlmSessions([deviceKeys], checkSignature: false);
-        expect(matrix.olmSessions.length, 1);
-        expect(matrix.olmSessions.entries.first.key,
-            '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI');
       }
     });
     test('sendToDevice', () async {
@@ -547,13 +414,6 @@ void main() {
 
       await Future.delayed(Duration(milliseconds: 50));
 
-      String sessionKey;
-      if (client1.encryptionEnabled) {
-        await client1.rooms[1].createOutboundGroupSession();
-
-        sessionKey = client1.rooms[1].outboundGroupSession.session_key();
-      }
-
       expect(client1.isLogged(), true);
       expect(client1.rooms.length, 2);
 
@@ -571,12 +431,9 @@ void main() {
       expect(client2.deviceID, client1.deviceID);
       expect(client2.deviceName, client1.deviceName);
       if (client2.encryptionEnabled) {
-        await client2.rooms[1].restoreOutboundGroupSession();
-        expect(client2.pickledOlmAccount, client1.pickledOlmAccount);
-        expect(json.encode(client2.rooms[1].inboundGroupSessions[sessionKey]),
-            json.encode(client1.rooms[1].inboundGroupSessions[sessionKey]));
+        expect(client2.encryption.pickledOlmAccount,
+            client1.encryption.pickledOlmAccount);
         expect(client2.rooms[1].id, client1.rooms[1].id);
-        expect(client2.rooms[1].outboundGroupSession.session_key(), sessionKey);
       }
 
       await client1.logout();

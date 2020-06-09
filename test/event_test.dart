@@ -20,6 +20,7 @@ import 'dart:convert';
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api.dart';
+import 'package:famedlysdk/encryption.dart';
 import 'package:famedlysdk/src/event.dart';
 import 'package:test/test.dart';
 
@@ -219,7 +220,7 @@ void main() {
       event.status = -1;
       final resp2 = await event.sendAgain(txid: '1234');
       expect(resp1, null);
-      expect(resp2, '42');
+      expect(resp2.startsWith('\$event'), true);
 
       await matrix.dispose(closeDatabase: true);
     });

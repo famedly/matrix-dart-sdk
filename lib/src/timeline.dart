@@ -19,6 +19,7 @@
 import 'dart:async';
 
 import 'package:famedlysdk/matrix_api.dart';
+import 'package:famedlysdk/encryption.dart';
 
 import 'event.dart';
 import 'room.dart';
@@ -97,12 +98,16 @@ class Timeline {
   void _sessionKeyReceived(String sessionId) async {
     var decryptAtLeastOneEvent = false;
     final decryptFn = () async {
+      if (!room.client.encryptionEnabled) {
+        return;
+      }
       for (var i = 0; i < events.length; i++) {
         if (events[i].type == EventTypes.Encrypted &&
             events[i].messageType == MessageTypes.BadEncrypted &&
             events[i].content['body'] == DecryptError.UNKNOWN_SESSION &&
             events[i].content['session_id'] == sessionId) {
-          events[i] = await events[i].decryptAndStore();
+          events[i] = await room.client.encryption
+              .decryptRoomEvent(room.id, events[i], store: true);
           if (events[i].type != EventTypes.Encrypted) {
             decryptAtLeastOneEvent = true;
           }

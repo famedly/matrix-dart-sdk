@@ -19,6 +19,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:famedlysdk/famedlysdk.dart';
+import 'package:famedlysdk/encryption.dart';
 import 'package:famedlysdk/src/utils/receipt.dart';
 import 'package:http/http.dart' as http;
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
@@ -331,36 +332,6 @@ class Event extends MatrixEvent {
     final String replyEventId =
         content['m.relates_to']['m.in_reply_to']['event_id'];
     return await timeline.getEventById(replyEventId);
-  }
-
-  Future<void> loadSession() {
-    return room.loadInboundGroupSessionKeyForEvent(this);
-  }
-
-  /// Trys to decrypt this event. Returns a m.bad.encrypted event
-  /// if it fails and does nothing if the event was not encrypted.
-  Event get decrypted => room.decryptGroupMessage(this);
-
-  /// Trys to decrypt this event and persists it in the database afterwards
-  Future<Event> decryptAndStore([String updateType = 'timeline']) async {
-    final newEvent = decrypted;
-    if (newEvent.type == EventTypes.Encrypted) {
-      return newEvent; // decryption failed
-    }
-    await room.client.database?.storeEventUpdate(
-      room.client.id,
-      EventUpdate(
-        eventType: newEvent.type,
-        content: newEvent.toJson(),
-        roomID: newEvent.roomId,
-        type: updateType,
-        sortOrder: newEvent.sortOrder,
-      ),
-    );
-    if (updateType != 'history') {
-      room.setState(newEvent);
-    }
-    return newEvent;
   }
 
   /// If this event is encrypted and the decryption was not successful because

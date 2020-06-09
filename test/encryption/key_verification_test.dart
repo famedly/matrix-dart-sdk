@@ -1,6 +1,6 @@
 /*
  *   Ansible inventory script used at Famedly GmbH for managing many hosts
- *   Copyright (C) 2019, 2020 Famedly GmbH
+ *   Copyright (C) 2020 Famedly GmbH
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU Affero General Public License as
@@ -17,10 +17,11 @@
  */
 
 import 'package:famedlysdk/famedlysdk.dart';
+import 'package:famedlysdk/encryption.dart';
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 
-import 'fake_matrix_api.dart';
+import '../fake_client.dart';
 
 void main() {
   /// All Tests related to the ChatTime
@@ -35,19 +36,24 @@ void main() {
     }
     print('[LibOlm] Enabled: $olmEnabled');
 
-    var client = Client('testclient', debug: true, httpClient: FakeMatrixApi());
-    client.api.homeserver = Uri.parse('https://fakeserver.notexisting');
-    var room = Room(id: '!localpart:server.abc', client: client);
-    var updateCounter = 0;
-    final keyVerification = KeyVerification(
-      client: client,
-      room: room,
-      userId: '@alice:example.com',
-      deviceId: 'ABCD',
-      onUpdate: () => updateCounter++,
-    );
-
     if (!olmEnabled) return;
+
+    Client client;
+    Room room;
+    var updateCounter = 0;
+    KeyVerification keyVerification;
+
+    test('setupClient', () async {
+      client = await getClient();
+      room = Room(id: '!localpart:server.abc', client: client);
+      keyVerification = KeyVerification(
+        encryption: client.encryption,
+        room: room,
+        userId: '@alice:example.com',
+        deviceId: 'ABCD',
+        onUpdate: () => updateCounter++,
+      );
+    });
 
     test('acceptSas', () async {
       await keyVerification.acceptSas();
@@ -91,7 +97,11 @@ void main() {
     test('verifyActivity', () async {
       final verified = await keyVerification.verifyActivity();
       expect(verified, true);
+      keyVerification?.dispose();
     });
-    keyVerification.dispose();
+
+    test('dispose client', () async {
+      await client.dispose(closeDatabase: true);
+    });
   });
 }

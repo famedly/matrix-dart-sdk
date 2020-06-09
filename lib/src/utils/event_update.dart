@@ -42,13 +42,14 @@ class EventUpdate {
   EventUpdate(
       {this.eventType, this.roomID, this.type, this.content, this.sortOrder});
 
-  EventUpdate decrypt(Room room) {
-    if (eventType != EventTypes.Encrypted) {
+  Future<EventUpdate> decrypt(Room room, {bool store = false}) async {
+    if (eventType != EventTypes.Encrypted || !room.client.encryptionEnabled) {
       return this;
     }
     try {
-      var decrpytedEvent =
-          room.decryptGroupMessage(Event.fromJson(content, room, sortOrder));
+      var decrpytedEvent = await room.client.encryption.decryptRoomEvent(
+          room.id, Event.fromJson(content, room, sortOrder),
+          store: store, updateType: type);
       return EventUpdate(
         eventType: decrpytedEvent.type,
         roomID: roomID,
