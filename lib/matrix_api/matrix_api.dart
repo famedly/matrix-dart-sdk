@@ -1972,6 +1972,7 @@ class MatrixApi {
     final response = await request(
       RequestType.POST,
       '/client/r0/user/${Uri.encodeComponent(userId)}/openid/request_token',
+      data: {},
     );
     return OpenIdCredentials.fromJson(response);
   }
