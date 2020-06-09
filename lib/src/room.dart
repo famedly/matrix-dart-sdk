@@ -185,7 +185,8 @@ class Room {
   }
 
   /// The address in the format: #roomname:homeserver.org.
-  String get canonicalAlias => states[EventTypes.RoomCanonicalAlias] != null
+  String get canonicalAlias => states[EventTypes.RoomCanonicalAlias] != null &&
+          states[EventTypes.RoomCanonicalAlias].content['alias'] is String
       ? states[EventTypes.RoomCanonicalAlias].content['alias']
       : '';
 

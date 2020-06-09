@@ -1327,7 +1327,7 @@ class MatrixApi {
     headers['Content-Type'] = contentType ?? mime(fileName);
     fileName = Uri.encodeQueryComponent(fileName);
     final url =
-        '$homeserver.toString()/_matrix/media/r0/upload?filename=$fileName';
+        '${homeserver.toString()}/_matrix/media/r0/upload?filename=$fileName';
     final streamedRequest = http.StreamedRequest('POST', Uri.parse(url))
       ..headers.addAll(headers);
     streamedRequest.contentLength = await file.length;
@@ -2022,6 +2022,7 @@ class MatrixApi {
     final response = await request(
       RequestType.POST,
       '/client/r0/user/${Uri.encodeComponent(userId)}/openid/request_token',
+      data: {},
     );
     return OpenIdCredentials.fromJson(response);
   }
