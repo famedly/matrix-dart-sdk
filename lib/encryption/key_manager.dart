@@ -49,9 +49,6 @@ class KeyManager {
       {bool forwarded = false}) {
     final oldSession =
         getInboundGroupSession(roomId, sessionId, senderKey, otherRooms: false);
-    if (oldSession != null) {
-      return;
-    }
     if (content['algorithm'] != 'm.megolm.v1.aes-sha2') {
       return;
     }
@@ -69,15 +66,31 @@ class KeyManager {
           '[LibOlm] Could not create new InboundGroupSession: ' + e.toString());
       return;
     }
-    if (!_inboundGroupSessions.containsKey(roomId)) {
-      _inboundGroupSessions[roomId] = <String, SessionKey>{};
-    }
-    _inboundGroupSessions[roomId][sessionId] = SessionKey(
+    final newSession = SessionKey(
       content: content,
       inboundGroupSession: inboundGroupSession,
       indexes: {},
       key: client.userID,
     );
+    final oldFirstIndex =
+        oldSession?.inboundGroupSession?.first_known_index() ?? 0;
+    final newFirstIndex = newSession.inboundGroupSession.first_known_index();
+    if (oldSession == null ||
+        newFirstIndex < oldFirstIndex ||
+        (oldFirstIndex == newFirstIndex &&
+            newSession.forwardingCurve25519KeyChain.length <
+                oldSession.forwardingCurve25519KeyChain.length)) {
+      // use new session
+      oldSession?.dispose();
+    } else {
+      // we are gonna keep our old session
+      newSession.dispose();
+      return;
+    }
+    if (!_inboundGroupSessions.containsKey(roomId)) {
+      _inboundGroupSessions[roomId] = <String, SessionKey>{};
+    }
+    _inboundGroupSessions[roomId][sessionId] = newSession;
     client.database?.storeInboundGroupSession(
       client.id,
       roomId,
