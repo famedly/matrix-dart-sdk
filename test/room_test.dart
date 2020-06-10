@@ -447,6 +447,45 @@ void main() {
       await room.setHistoryVisibility(HistoryVisibility.joined);
     });
 
+    test('setState', () async {
+      // not set non-state-events
+      room.setState(Event.fromJson({
+        'content': {'history_visibility': 'shared'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.custom',
+        'unsigned': {'age': 1234}
+      }, room));
+      expect(room.getState('m.custom') != null, false);
+
+      // set state events
+      room.setState(Event.fromJson({
+        'content': {'history_visibility': 'shared'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'state_key': '',
+        'type': 'm.custom',
+        'unsigned': {'age': 1234}
+      }, room));
+      expect(room.getState('m.custom') != null, true);
+
+      // sets messages as state events
+      room.setState(Event.fromJson({
+        'content': {'history_visibility': 'shared'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.message',
+        'unsigned': {'age': 1234}
+      }, room));
+      expect(room.getState('m.room.message') != null, true);
+    });
+
     test('logout', () async {
       await matrix.logout();
     });

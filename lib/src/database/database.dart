@@ -295,7 +295,7 @@ class Database extends _$Database {
     final chatId = eventUpdate.roomID;
 
     // Get the state_key for state events
-    var stateKey = '';
+    String stateKey;
     if (eventContent['state_key'] is String) {
       stateKey = eventContent['state_key'];
     }
@@ -353,7 +353,10 @@ class Database extends _$Database {
 
     if (type == 'history') return;
 
-    if (type != 'account_data') {
+    if (type != 'account_data' &&
+        ((stateKey is String) ||
+            [EventTypes.Message, EventTypes.Sticker, EventTypes.Encrypted]
+                .contains(eventUpdate.eventType))) {
       final now = DateTime.now();
       await storeRoomState(
         clientId,
@@ -369,7 +372,7 @@ class Database extends _$Database {
         json.encode(eventContent['unsigned'] ?? ''),
         json.encode(eventContent['content']),
         json.encode(eventContent['prev_content'] ?? ''),
-        stateKey,
+        stateKey ?? '',
       );
     } else if (type == 'account_data') {
       await storeRoomAccountData(
