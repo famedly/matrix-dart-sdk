@@ -20,7 +20,7 @@ class OpenIdCredentials {
   String accessToken;
   String tokenType;
   String matrixServerName;
-  int expiresIn;
+  double expiresIn;
 
   OpenIdCredentials.fromJson(Map<String, dynamic> json) {
     accessToken = json['access_token'];
