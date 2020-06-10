@@ -237,9 +237,9 @@ void main() {
       try {
         await event.requestKey();
       } catch (e) {
-        exception = e;
+        exception = e.toString();
       }
-      expect(exception, 'Session key not unknown');
+      expect(exception, 'Session key not requestable');
 
       var event2 = Event.fromJson({
         'event_id': id,
@@ -251,6 +251,7 @@ void main() {
         'content': json.encode({
           'msgtype': 'm.bad.encrypted',
           'body': DecryptError.UNKNOWN_SESSION,
+          'can_request_session': true,
           'algorithm': 'm.megolm.v1.aes-sha2',
           'ciphertext': 'AwgAEnACgAkLmt6qF84IK++J7UDH2Za1YVchHyprqTqsg...',
           'device_id': 'RJYKSTBOIE',

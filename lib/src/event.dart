@@ -341,8 +341,8 @@ class Event extends MatrixEvent {
   Future<void> requestKey() async {
     if (type != EventTypes.Encrypted ||
         messageType != MessageTypes.BadEncrypted ||
-        content['body'] != DecryptError.UNKNOWN_SESSION) {
-      throw ('Session key not unknown');
+        content['can_request_session'] != true) {
+      throw ('Session key not requestable');
     }
     await room.requestSessionKey(content['session_id'], content['sender_key']);
     return;
