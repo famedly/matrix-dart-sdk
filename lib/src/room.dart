@@ -115,7 +115,15 @@ class Room {
         print('[LibOlm] Could not decrypt room state: ' + e.toString());
       }
     }
-    if ((getState(state.type)?.originServerTs?.millisecondsSinceEpoch ?? 0) >
+    if (!(state.stateKey is String) &&
+        ![EventTypes.Message, EventTypes.Sticker, EventTypes.Encrypted]
+            .contains(state.type)) {
+      return;
+    }
+    if ((getState(state.type, state.stateKey ?? '')
+                ?.originServerTs
+                ?.millisecondsSinceEpoch ??
+            0) >
         (state.originServerTs?.millisecondsSinceEpoch ?? 1)) {
       return;
     }
