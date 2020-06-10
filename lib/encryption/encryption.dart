@@ -100,8 +100,11 @@ class Encryption {
         canRequestSession = true;
         throw (DecryptError.UNKNOWN_SESSION);
       }
+      // decrypt errors here may mean we have a bad session key - others might have a better one
+      canRequestSession = true;
       final decryptResult = inboundGroupSession.inboundGroupSession
           .decrypt(event.content['ciphertext']);
+      canRequestSession = false;
       final messageIndexKey = event.eventId +
           event.originServerTs.millisecondsSinceEpoch.toString();
       var haveIndex = inboundGroupSession.indexes.containsKey(messageIndexKey);
@@ -124,8 +127,6 @@ class Encryption {
             roomId,
             sessionId);
       }
-      // decrypt errors here may mean we have a bad session key - others might have a better one
-      canRequestSession = true;
       decryptedPayload = json.decode(decryptResult.plaintext);
     } catch (exception) {
       // alright, if this was actually by our own outbound group session, we might as well clear it
