@@ -1577,6 +1577,7 @@ class MatrixApi {
     await request(
       RequestType.POST,
       '/client/r0/pushers/set',
+      data: data,
     );
     return;
   }

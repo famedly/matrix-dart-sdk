@@ -19,7 +19,6 @@
 import 'dart:async';
 
 import 'package:famedlysdk/matrix_api.dart';
-import 'package:famedlysdk/encryption.dart';
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/event.dart';
@@ -998,7 +997,7 @@ class Room {
       await client.database.transaction(() async {
         for (var i = 0; i < events.length; i++) {
           if (events[i].type == EventTypes.Encrypted &&
-              events[i].content['body'] == DecryptError.UNKNOWN_SESSION) {
+              events[i].content['can_request_session'] == true) {
             events[i] = await client.encryption
                 .decryptRoomEvent(id, events[i], store: true);
           }

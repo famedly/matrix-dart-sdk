@@ -111,6 +111,7 @@ class Encryption {
     if (event.type != EventTypes.Encrypted ||
         event.content['ciphertext'] == null) return event;
     Map<String, dynamic> decryptedPayload;
+    var canRequestSession = false;
     try {
       if (event.content['algorithm'] != 'm.megolm.v1.aes-sha2') {
         throw (DecryptError.UNKNOWN_ALGORITHM);
@@ -120,6 +121,7 @@ class Encryption {
       final inboundGroupSession =
           keyManager.getInboundGroupSession(roomId, sessionId, senderKey);
       if (inboundGroupSession == null) {
+        canRequestSession = true;
         throw (DecryptError.UNKNOWN_SESSION);
       }
       final decryptResult = inboundGroupSession.inboundGroupSession
@@ -146,6 +148,8 @@ class Encryption {
             roomId,
             sessionId);
       }
+      // decrypt errors here may mean we have a bad session key - others might have a better one
+      canRequestSession = true;
       decryptedPayload = json.decode(decryptResult.plaintext);
     } catch (exception) {
       // alright, if this was actually by our own outbound group session, we might as well clear it
@@ -158,13 +162,14 @@ class Encryption {
               event.content['session_id']) {
         keyManager.clearOutboundGroupSession(roomId, wipe: true);
       }
-      if (exception.toString() == DecryptError.UNKNOWN_SESSION) {
+      if (canRequestSession) {
         decryptedPayload = {
           'content': event.content,
           'type': EventTypes.Encrypted,
         };
         decryptedPayload['content']['body'] = exception.toString();
         decryptedPayload['content']['msgtype'] = 'm.bad.encrypted';
+        decryptedPayload['content']['can_request_session'] = true;
       } else {
         decryptedPayload = {
           'content': <String, dynamic>{

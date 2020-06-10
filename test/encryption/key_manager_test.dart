@@ -216,6 +216,148 @@ void main() {
           true);
     });
 
+    test('setInboundGroupSession', () async {
+      final session = olm.OutboundGroupSession();
+      session.create();
+      final inbound = olm.InboundGroupSession();
+      inbound.create(session.session_key());
+      final senderKey = client.identityKey;
+      final roomId = '!someroom:example.org';
+      final sessionId = inbound.session_id();
+      // set a payload...
+      var sessionPayload = <String, dynamic>{
+        'algorithm': 'm.megolm.v1.aes-sha2',
+        'room_id': roomId,
+        'forwarding_curve25519_key_chain': [client.identityKey],
+        'session_id': sessionId,
+        'session_key': inbound.export_session(1),
+        'sender_key': senderKey,
+        'sender_claimed_ed25519_key': client.fingerprintKey,
+      };
+      client.encryption.keyManager.setInboundGroupSession(
+          roomId, sessionId, senderKey, sessionPayload,
+          forwarded: true);
+      expect(
+          client.encryption.keyManager
+              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .inboundGroupSession
+              .first_known_index(),
+          1);
+      expect(
+          client.encryption.keyManager
+              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .forwardingCurve25519KeyChain
+              .length,
+          1);
+
+      // not set one with a higher first known index
+      sessionPayload = <String, dynamic>{
+        'algorithm': 'm.megolm.v1.aes-sha2',
+        'room_id': roomId,
+        'forwarding_curve25519_key_chain': [client.identityKey],
+        'session_id': sessionId,
+        'session_key': inbound.export_session(2),
+        'sender_key': senderKey,
+        'sender_claimed_ed25519_key': client.fingerprintKey,
+      };
+      client.encryption.keyManager.setInboundGroupSession(
+          roomId, sessionId, senderKey, sessionPayload,
+          forwarded: true);
+      expect(
+          client.encryption.keyManager
+              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .inboundGroupSession
+              .first_known_index(),
+          1);
+      expect(
+          client.encryption.keyManager
+              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .forwardingCurve25519KeyChain
+              .length,
+          1);
+
+      // set one with a lower first known index
+      sessionPayload = <String, dynamic>{
+        'algorithm': 'm.megolm.v1.aes-sha2',
+        'room_id': roomId,
+        'forwarding_curve25519_key_chain': [client.identityKey],
+        'session_id': sessionId,
+        'session_key': inbound.export_session(0),
+        'sender_key': senderKey,
+        'sender_claimed_ed25519_key': client.fingerprintKey,
+      };
+      client.encryption.keyManager.setInboundGroupSession(
+          roomId, sessionId, senderKey, sessionPayload,
+          forwarded: true);
+      expect(
+          client.encryption.keyManager
+              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .inboundGroupSession
+              .first_known_index(),
+          0);
+      expect(
+          client.encryption.keyManager
+              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .forwardingCurve25519KeyChain
+              .length,
+          1);
+
+      // not set one with a longer forwarding chain
+      sessionPayload = <String, dynamic>{
+        'algorithm': 'm.megolm.v1.aes-sha2',
+        'room_id': roomId,
+        'forwarding_curve25519_key_chain': [client.identityKey, 'beep'],
+        'session_id': sessionId,
+        'session_key': inbound.export_session(0),
+        'sender_key': senderKey,
+        'sender_claimed_ed25519_key': client.fingerprintKey,
+      };
+      client.encryption.keyManager.setInboundGroupSession(
+          roomId, sessionId, senderKey, sessionPayload,
+          forwarded: true);
+      expect(
+          client.encryption.keyManager
+              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .inboundGroupSession
+              .first_known_index(),
+          0);
+      expect(
+          client.encryption.keyManager
+              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .forwardingCurve25519KeyChain
+              .length,
+          1);
+
+      // set one with a shorter forwarding chain
+      sessionPayload = <String, dynamic>{
+        'algorithm': 'm.megolm.v1.aes-sha2',
+        'room_id': roomId,
+        'forwarding_curve25519_key_chain': [],
+        'session_id': sessionId,
+        'session_key': inbound.export_session(0),
+        'sender_key': senderKey,
+        'sender_claimed_ed25519_key': client.fingerprintKey,
+      };
+      client.encryption.keyManager.setInboundGroupSession(
+          roomId, sessionId, senderKey, sessionPayload,
+          forwarded: true);
+      expect(
+          client.encryption.keyManager
+              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .inboundGroupSession
+              .first_known_index(),
+          0);
+      expect(
+          client.encryption.keyManager
+              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .forwardingCurve25519KeyChain
+              .length,
+          0);
+
+      inbound.free();
+      session.free();
+    });
+
     test('dispose client', () async {
       await client.dispose(closeDatabase: true);
     });
