@@ -1707,7 +1707,7 @@ class FakeMatrixApi extends MockClient {
             'access_token': 'SomeT0kenHere',
             'token_type': 'Bearer',
             'matrix_server_name': 'example.com',
-            'expires_in': 3600
+            'expires_in': 3600.0
           },
       '/client/r0/user/@test:fakeServer.notExisting/openid/request_token':
           (var req) => {
