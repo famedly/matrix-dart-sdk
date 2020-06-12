@@ -415,12 +415,13 @@ class KeyVerification {
       // no need to request cache, we already have it
       return;
     }
-    unawaited(encryption.ssss.maybeRequestAll(
-        _verifiedDevices.whereType<DeviceKeys>().toList()));
+    unawaited(encryption.ssss
+        .maybeRequestAll(_verifiedDevices.whereType<DeviceKeys>().toList()));
     if (requestInterval.length <= i) {
       return;
     }
-    Timer(Duration(seconds: requestInterval[i]), () => maybeRequestSSSSSecrets(i + 1));
+    Timer(Duration(seconds: requestInterval[i]),
+        () => maybeRequestSSSSSecrets(i + 1));
   }
 
   Future<void> verifyKeys(Map<String, String> keys,
