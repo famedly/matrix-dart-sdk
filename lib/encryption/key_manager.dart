@@ -47,8 +47,12 @@ class KeyManager {
         if (!(info.authData is RoomKeysAuthDataV1Curve25519AesSha2)) {
           return false;
         }
-        return keyObj.init_with_private_key(base64.decode(secret)) ==
-            (info.authData as RoomKeysAuthDataV1Curve25519AesSha2).publicKey;
+        if (keyObj.init_with_private_key(base64.decode(secret)) ==
+            (info.authData as RoomKeysAuthDataV1Curve25519AesSha2).publicKey) {
+          _requestedSessionIds.clear();
+          return true;
+        }
+        return false;
       } catch (_) {
         return false;
       } finally {
@@ -399,7 +403,6 @@ class KeyManager {
     var hadPreviously =
         getInboundGroupSession(room.id, sessionId, senderKey) != null;
     try {
-      print('FETCHING FROM KEY STORE...');
       await loadSingleKey(room.id, sessionId);
     } catch (err, stacktrace) {
       print('++++++++++++++++++');
@@ -408,7 +411,6 @@ class KeyManager {
     }
     if (!hadPreviously &&
         getInboundGroupSession(room.id, sessionId, senderKey) != null) {
-      print('GOT FROM KEY STORE, SUCCESS!!!!!');
       return; // we managed to load the session from online backup, no need to care about it now
     }
     // while we just send the to-device event to '*', we still need to save the

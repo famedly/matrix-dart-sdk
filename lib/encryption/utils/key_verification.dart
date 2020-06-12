@@ -16,6 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:pedantic/pedantic.dart';
@@ -403,6 +404,27 @@ class KeyVerification {
     return [];
   }
 
+  Future<void> maybeRequestSSSSSecrets([int i = 0]) async {
+    final requestInterval = <int>[10, 60];
+    print('Attempting to request ssss secrets...');
+    if ((!encryption.crossSigning.enabled ||
+            (encryption.crossSigning.enabled &&
+                (await encryption.crossSigning.isCached()))) &&
+        (!encryption.keyManager.enabled ||
+            (encryption.keyManager.enabled &&
+                (await encryption.keyManager.isCached())))) {
+      // no need to request cache, we already have it
+      print('Not needed, we already have them');
+      return;
+    }
+    unawaited(encryption.ssss.maybeRequestAll(
+        _verifiedDevices.whereType<DeviceKeys>().toList()));
+    if (requestInterval.length >= i) {
+      return;
+    }
+    Timer(Duration(seconds: requestInterval[i]), () => maybeRequestSSSSSecrets(i + 1));
+  }
+
   Future<void> verifyKeys(Map<String, String> keys,
       Future<bool> Function(String, SignableKey) verifier) async {
     _verifiedDevices = <SignableKey>[];
@@ -437,8 +459,7 @@ class KeyVerification {
     if (verifiedMasterKey && userId == client.userID) {
       // it was our own master key, let's request the cross signing keys
       // we do it in the background, thus no await needed here
-      unawaited(encryption.ssss
-          .maybeRequestAll(_verifiedDevices.whereType<DeviceKeys>().toList()));
+      unawaited(maybeRequestSSSSSecrets());
     }
     await send('m.key.verification.done', {});
 
