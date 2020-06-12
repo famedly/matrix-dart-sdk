@@ -55,7 +55,8 @@ class RoomKeysAuthDataV1Curve25519AesSha2 extends RoomKeysAuthData {
   String publicKey;
   Map<String, Map<String, String>> signatures;
 
-  RoomKeysAuthDataV1Curve25519AesSha2.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
+  RoomKeysAuthDataV1Curve25519AesSha2.fromJson(Map<String, dynamic> json)
+      : super.fromJson(json) {
     publicKey = json['public_key'];
     signatures = json['signatures'] is Map
         ? Map<String, Map<String, String>>.from((json['signatures'] as Map)
@@ -82,16 +83,19 @@ class RoomKeysVersionResponse {
   String version;
 
   RoomKeysVersionResponse.fromJson(Map<String, dynamic> json) {
-    algorithm = RoomKeysAlgorithmTypeExtension.fromAlgorithmString(json['algorithm']);
+    algorithm =
+        RoomKeysAlgorithmTypeExtension.fromAlgorithmString(json['algorithm']);
     switch (algorithm) {
       case RoomKeysAlgorithmType.v1Curve25519AesSha2:
-        authData = RoomKeysAuthDataV1Curve25519AesSha2.fromJson(json['auth_data']);
+        authData =
+            RoomKeysAuthDataV1Curve25519AesSha2.fromJson(json['auth_data']);
         break;
       default:
         authData = null;
     }
     count = json['count'];
-    etag = json['etag'].toString(); // synapse replies an int but docs say string?
+    etag =
+        json['etag'].toString(); // synapse replies an int but docs say string?
     version = json['version'];
   }
 

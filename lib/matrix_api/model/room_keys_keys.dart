@@ -43,7 +43,8 @@ class RoomKeysRoom {
   Map<String, RoomKeysSingleKey> sessions;
 
   RoomKeysRoom.fromJson(Map<String, dynamic> json) {
-    sessions = (json['sessions'] as Map).map((k, v) => MapEntry(k, RoomKeysSingleKey.fromJson(v)));
+    sessions = (json['sessions'] as Map)
+        .map((k, v) => MapEntry(k, RoomKeysSingleKey.fromJson(v)));
   }
 
   Map<String, dynamic> toJson() {
@@ -57,7 +58,8 @@ class RoomKeys {
   Map<String, RoomKeysRoom> rooms;
 
   RoomKeys.fromJson(Map<String, dynamic> json) {
-    rooms = (json['rooms'] as Map).map((k, v) => MapEntry(k, RoomKeysRoom.fromJson(v)));
+    rooms = (json['rooms'] as Map)
+        .map((k, v) => MapEntry(k, RoomKeysRoom.fromJson(v)));
   }
 
   Map<String, dynamic> toJson() {

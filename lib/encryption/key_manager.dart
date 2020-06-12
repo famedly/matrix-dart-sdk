@@ -337,7 +337,8 @@ class KeyManager {
 
       if (backupPubKey == null ||
           !(info.authData is RoomKeysAuthDataV1Curve25519AesSha2) ||
-          (info.authData as RoomKeysAuthDataV1Curve25519AesSha2).publicKey != backupPubKey) {
+          (info.authData as RoomKeysAuthDataV1Curve25519AesSha2).publicKey !=
+              backupPubKey) {
         return;
       }
       for (final roomEntry in keys.rooms.entries) {
@@ -378,7 +379,8 @@ class KeyManager {
 
   Future<void> loadSingleKey(String roomId, String sessionId) async {
     final info = await client.api.getRoomKeysBackup();
-    final ret = await client.api.getRoomKeysSingleKey(roomId, sessionId, info.version);
+    final ret =
+        await client.api.getRoomKeysSingleKey(roomId, sessionId, info.version);
     final keys = RoomKeys.fromJson({
       'rooms': {
         roomId: {

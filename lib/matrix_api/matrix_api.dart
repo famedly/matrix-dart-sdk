@@ -2041,7 +2041,8 @@ class MatrixApi {
 
   /// Create room keys backup
   /// https://matrix.org/docs/spec/client_server/unstable#post-matrix-client-r0-room-keys-version
-  Future<String> createRoomKeysBackup(RoomKeysAlgorithmType algorithm, RoomKeysAuthData authData) async {
+  Future<String> createRoomKeysBackup(
+      RoomKeysAlgorithmType algorithm, RoomKeysAuthData authData) async {
     final ret = await request(
       RequestType.POST,
       '/client/unstable/room_keys/version',
@@ -2069,7 +2070,8 @@ class MatrixApi {
 
   /// Updates a room key backup
   /// https://matrix.org/docs/spec/client_server/unstable#put-matrix-client-r0-room-keys-version-version
-  Future<void> updateRoomKeysBackup(String version, RoomKeysAlgorithmType algorithm, RoomKeysAuthData authData) async {
+  Future<void> updateRoomKeysBackup(String version,
+      RoomKeysAlgorithmType algorithm, RoomKeysAuthData authData) async {
     await request(
       RequestType.PUT,
       '/client/unstable/room_keys/version/${Uri.encodeComponent(version)}',
@@ -2092,7 +2094,8 @@ class MatrixApi {
 
   /// Stores a single room key
   /// https://matrix.org/docs/spec/client_server/unstable#put-matrix-client-r0-room-keys-keys-roomid-sessionid
-  Future<RoomKeysUpdateResponse> storeRoomKeysSingleKey(String roomId, String sessionId, String version, RoomKeysSingleKey session) async {
+  Future<RoomKeysUpdateResponse> storeRoomKeysSingleKey(String roomId,
+      String sessionId, String version, RoomKeysSingleKey session) async {
     final ret = await request(
       RequestType.PUT,
       '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=${Uri.encodeComponent(version)}',
@@ -2103,7 +2106,8 @@ class MatrixApi {
 
   /// Gets a single room key
   /// https://matrix.org/docs/spec/client_server/unstable#get-matrix-client-r0-room-keys-keys-roomid-sessionid
-  Future<RoomKeysSingleKey> getRoomKeysSingleKey(String roomId, String sessionId, String version) async {
+  Future<RoomKeysSingleKey> getRoomKeysSingleKey(
+      String roomId, String sessionId, String version) async {
     final ret = await request(
       RequestType.GET,
       '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=${Uri.encodeComponent(version)}',
@@ -2113,7 +2117,8 @@ class MatrixApi {
 
   /// Deletes a single room key
   /// https://matrix.org/docs/spec/client_server/unstable#delete-matrix-client-r0-room-keys-keys-roomid-sessionid
-  Future<RoomKeysUpdateResponse> deleteRoomKeysSingleKey(String roomId, String sessionId, String version) async {
+  Future<RoomKeysUpdateResponse> deleteRoomKeysSingleKey(
+      String roomId, String sessionId, String version) async {
     final ret = await request(
       RequestType.DELETE,
       '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=${Uri.encodeComponent(version)}',
@@ -2123,7 +2128,8 @@ class MatrixApi {
 
   /// Stores room keys for a room
   /// https://matrix.org/docs/spec/client_server/unstable#put-matrix-client-r0-room-keys-keys-roomid
-  Future<RoomKeysUpdateResponse> storeRoomKeysRoom(String roomId, String version, RoomKeysRoom keys) async {
+  Future<RoomKeysUpdateResponse> storeRoomKeysRoom(
+      String roomId, String version, RoomKeysRoom keys) async {
     final ret = await request(
       RequestType.PUT,
       '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}?version=${Uri.encodeComponent(version)}',
@@ -2144,7 +2150,8 @@ class MatrixApi {
 
   /// Deletes room ekys for a room
   /// https://matrix.org/docs/spec/client_server/unstable#delete-matrix-client-r0-room-keys-keys-roomid
-  Future<RoomKeysUpdateResponse> deleteRoomKeysRoom(String roomId, String version) async {
+  Future<RoomKeysUpdateResponse> deleteRoomKeysRoom(
+      String roomId, String version) async {
     final ret = await request(
       RequestType.DELETE,
       '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}?version=${Uri.encodeComponent(version)}',
@@ -2154,7 +2161,8 @@ class MatrixApi {
 
   /// Store multiple room keys
   /// https://matrix.org/docs/spec/client_server/unstable#put-matrix-client-r0-room-keys-keys
-  Future<RoomKeysUpdateResponse> storeRoomKeys(String version, RoomKeys keys) async {
+  Future<RoomKeysUpdateResponse> storeRoomKeys(
+      String version, RoomKeys keys) async {
     final ret = await request(
       RequestType.PUT,
       '/client/unstable/room_keys/keys?version=${Uri.encodeComponent(version)}',
