@@ -406,7 +406,6 @@ class KeyVerification {
 
   Future<void> maybeRequestSSSSSecrets([int i = 0]) async {
     final requestInterval = <int>[10, 60];
-    print('Attempting to request ssss secrets...');
     if ((!encryption.crossSigning.enabled ||
             (encryption.crossSigning.enabled &&
                 (await encryption.crossSigning.isCached()))) &&
@@ -414,12 +413,11 @@ class KeyVerification {
             (encryption.keyManager.enabled &&
                 (await encryption.keyManager.isCached())))) {
       // no need to request cache, we already have it
-      print('Not needed, we already have them');
       return;
     }
     unawaited(encryption.ssss.maybeRequestAll(
         _verifiedDevices.whereType<DeviceKeys>().toList()));
-    if (requestInterval.length >= i) {
+    if (requestInterval.length <= i) {
       return;
     }
     Timer(Duration(seconds: requestInterval[i]), () => maybeRequestSSSSSecrets(i + 1));
