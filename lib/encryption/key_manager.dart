@@ -660,7 +660,8 @@ class RoomKeyRequest extends ToDeviceEvent {
     message['forwarding_curve25519_key_chain'] = forwardedKeys;
 
     message['sender_key'] = request.senderKey;
-    message['sender_claimed_ed25519_key'] = forwardedKeys.isEmpty ? keyManager.encryption.fingerprintKey : null;
+    message['sender_claimed_ed25519_key'] =
+        forwardedKeys.isEmpty ? keyManager.encryption.fingerprintKey : null;
     if (message['sender_claimed_ed25519_key'] == null) {
       for (final value in keyManager.client.userDeviceKeys.values) {
         for (final key in value.deviceKeys.values) {
