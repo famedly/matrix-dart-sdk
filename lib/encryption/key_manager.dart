@@ -43,9 +43,12 @@ class KeyManager {
     encryption.ssss.setValidator(MEGOLM_KEY, (String secret) async {
       final keyObj = olm.PkDecryption();
       try {
-        final info = await getRoomKeysInfo();
+        final info = await client.api.getRoomKeysBackup();
+        if (!(info.authData is RoomKeysAuthDataV1Curve25519AesSha2)) {
+          return false;
+        }
         return keyObj.init_with_private_key(base64.decode(secret)) ==
-            info['auth_data']['public_key'];
+            (info.authData as RoomKeysAuthDataV1Curve25519AesSha2).publicKey;
       } catch (_) {
         return false;
       } finally {
@@ -313,13 +316,6 @@ class KeyManager {
     _outboundGroupSessions[roomId] = sess;
   }
 
-  Future<Map<String, dynamic>> getRoomKeysInfo() async {
-    return await client.jsonRequest(
-      type: RequestType.GET,
-      action: '/client/r0/room_keys/version',
-    );
-  }
-
   Future<bool> isCached() async {
     if (!enabled) {
       return false;
@@ -327,50 +323,32 @@ class KeyManager {
     return (await encryption.ssss.getCached(MEGOLM_KEY)) != null;
   }
 
-  Future<void> loadFromResponse(Map<String, dynamic> payload) async {
+  Future<void> loadFromResponse(RoomKeys keys) async {
     if (!(await isCached())) {
-      return;
-    }
-    if (!(payload['rooms'] is Map)) {
       return;
     }
     final privateKey =
         base64.decode(await encryption.ssss.getCached(MEGOLM_KEY));
     final decryption = olm.PkDecryption();
-    final info = await getRoomKeysInfo();
+    final info = await client.api.getRoomKeysBackup();
     String backupPubKey;
     try {
       backupPubKey = decryption.init_with_private_key(privateKey);
 
       if (backupPubKey == null ||
-          !info.containsKey('auth_data') ||
-          !(info['auth_data'] is Map) ||
-          info['auth_data']['public_key'] != backupPubKey) {
+          !(info.authData is RoomKeysAuthDataV1Curve25519AesSha2) ||
+          (info.authData as RoomKeysAuthDataV1Curve25519AesSha2).publicKey != backupPubKey) {
         return;
       }
-      for (final roomEntries in payload['rooms'].entries) {
-        final roomId = roomEntries.key;
-        if (!(roomEntries.value is Map) ||
-            !(roomEntries.value['sessions'] is Map)) {
-          continue;
-        }
-        for (final sessionEntries in roomEntries.value['sessions'].entries) {
-          final sessionId = sessionEntries.key;
-          final rawEncryptedSession = sessionEntries.value;
-          if (!(rawEncryptedSession is Map)) {
-            continue;
-          }
-          final firstMessageIndex =
-              rawEncryptedSession['first_message_index'] is int
-                  ? rawEncryptedSession['first_message_index']
-                  : null;
-          final forwardedCount = rawEncryptedSession['forwarded_count'] is int
-              ? rawEncryptedSession['forwarded_count']
-              : null;
-          final isVerified = rawEncryptedSession['is_verified'] is bool
-              ? rawEncryptedSession['is_verified']
-              : null;
-          final sessionData = rawEncryptedSession['session_data'];
+      for (final roomEntry in keys.rooms.entries) {
+        final roomId = roomEntry.key;
+        for (final sessionEntry in roomEntry.value.sessions.entries) {
+          final sessionId = sessionEntry.key;
+          final session = sessionEntry.value;
+          final firstMessageIndex = session.firstMessageIndex;
+          final forwardedCount = session.forwardedCount;
+          final isVerified = session.isVerified;
+          final sessionData = session.sessionData;
           if (firstMessageIndex == null ||
               forwardedCount == null ||
               isVerified == null ||
@@ -399,21 +377,18 @@ class KeyManager {
   }
 
   Future<void> loadSingleKey(String roomId, String sessionId) async {
-    final info = await getRoomKeysInfo();
-    final ret = await client.jsonRequest(
-      type: RequestType.GET,
-      action:
-          '/client/r0/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=${info['version']}',
-    );
-    await loadFromResponse({
+    final info = await client.api.getRoomKeysBackup();
+    final ret = await client.api.getRoomKeysSingleKey(roomId, sessionId, info.version);
+    final keys = RoomKeys.fromJson({
       'rooms': {
         roomId: {
           'sessions': {
-            sessionId: ret,
+            sessionId: ret.toJson(),
           },
         },
       },
     });
+    await loadFromResponse(keys);
   }
 
   /// Request a certain key from another device
@@ -422,6 +397,7 @@ class KeyManager {
     var hadPreviously =
         getInboundGroupSession(room.id, sessionId, senderKey) != null;
     try {
+      print('FETCHING FROM KEY STORE...');
       await loadSingleKey(room.id, sessionId);
     } catch (err, stacktrace) {
       print('++++++++++++++++++');
@@ -430,6 +406,7 @@ class KeyManager {
     }
     if (!hadPreviously &&
         getInboundGroupSession(room.id, sessionId, senderKey) != null) {
+      print('GOT FROM KEY STORE, SUCCESS!!!!!');
       return; // we managed to load the session from online backup, no need to care about it now
     }
     // while we just send the to-device event to '*', we still need to save the

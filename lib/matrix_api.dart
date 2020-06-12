@@ -46,6 +46,8 @@ export 'package:famedlysdk/matrix_api/model/push_rule_set.dart';
 export 'package:famedlysdk/matrix_api/model/pusher.dart';
 export 'package:famedlysdk/matrix_api/model/request_token_response.dart';
 export 'package:famedlysdk/matrix_api/model/room_alias_informations.dart';
+export 'package:famedlysdk/matrix_api/model/room_keys_info.dart';
+export 'package:famedlysdk/matrix_api/model/room_keys_keys.dart';
 export 'package:famedlysdk/matrix_api/model/room_summary.dart';
 export 'package:famedlysdk/matrix_api/model/server_capabilities.dart';
 export 'package:famedlysdk/matrix_api/model/stripped_state_event.dart';

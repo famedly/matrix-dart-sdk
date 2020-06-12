@@ -49,6 +49,8 @@ import 'model/public_rooms_response.dart';
 import 'model/push_rule_set.dart';
 import 'model/pusher.dart';
 import 'model/room_alias_informations.dart';
+import 'model/room_keys_info.dart';
+import 'model/room_keys_keys.dart';
 import 'model/supported_protocol.dart';
 import 'model/tag.dart';
 import 'model/third_party_identifier.dart';
@@ -2035,5 +2037,149 @@ class MatrixApi {
       data: {'new_version': version},
     );
     return;
+  }
+
+  /// Create room keys backup
+  /// https://matrix.org/docs/spec/client_server/unstable#post-matrix-client-r0-room-keys-version
+  Future<String> createRoomKeysBackup(RoomKeysAlgorithmType algorithm, RoomKeysAuthData authData) async {
+    final ret = await request(
+      RequestType.POST,
+      '/client/unstable/room_keys/version',
+      data: {
+        'algorithm': algorithm.algorithmString,
+        'auth_data': authData.toJson(),
+      },
+    );
+    return ret['version'];
+  }
+
+  /// Gets a room key backup
+  /// https://matrix.org/docs/spec/client_server/unstable#get-matrix-client-r0-room-keys-version
+  Future<RoomKeysVersionResponse> getRoomKeysBackup([String version]) async {
+    var url = '/client/unstable/room_keys/version';
+    if (version != null) {
+      url += '/${Uri.encodeComponent(version)}';
+    }
+    final ret = await request(
+      RequestType.GET,
+      url,
+    );
+    return RoomKeysVersionResponse.fromJson(ret);
+  }
+
+  /// Updates a room key backup
+  /// https://matrix.org/docs/spec/client_server/unstable#put-matrix-client-r0-room-keys-version-version
+  Future<void> updateRoomKeysBackup(String version, RoomKeysAlgorithmType algorithm, RoomKeysAuthData authData) async {
+    await request(
+      RequestType.PUT,
+      '/client/unstable/room_keys/version/${Uri.encodeComponent(version)}',
+      data: {
+        'algorithm': algorithm.algorithmString,
+        'auth_data': authData.toJson,
+        'version': version,
+      },
+    );
+  }
+
+  /// Deletes a room key backup
+  /// https://matrix.org/docs/spec/client_server/unstable#delete-matrix-client-r0-room-keys-version-version
+  Future<void> deleteRoomKeysBackup(String version) async {
+    await request(
+      RequestType.DELETE,
+      '/client/unstable/room_keys/version/${Uri.encodeComponent(version)}',
+    );
+  }
+
+  /// Stores a single room key
+  /// https://matrix.org/docs/spec/client_server/unstable#put-matrix-client-r0-room-keys-keys-roomid-sessionid
+  Future<RoomKeysUpdateResponse> storeRoomKeysSingleKey(String roomId, String sessionId, String version, RoomKeysSingleKey session) async {
+    final ret = await request(
+      RequestType.PUT,
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=${Uri.encodeComponent(version)}',
+      data: session.toJson(),
+    );
+    return RoomKeysUpdateResponse.fromJson(ret);
+  }
+
+  /// Gets a single room key
+  /// https://matrix.org/docs/spec/client_server/unstable#get-matrix-client-r0-room-keys-keys-roomid-sessionid
+  Future<RoomKeysSingleKey> getRoomKeysSingleKey(String roomId, String sessionId, String version) async {
+    final ret = await request(
+      RequestType.GET,
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=${Uri.encodeComponent(version)}',
+    );
+    return RoomKeysSingleKey.fromJson(ret);
+  }
+
+  /// Deletes a single room key
+  /// https://matrix.org/docs/spec/client_server/unstable#delete-matrix-client-r0-room-keys-keys-roomid-sessionid
+  Future<RoomKeysUpdateResponse> deleteRoomKeysSingleKey(String roomId, String sessionId, String version) async {
+    final ret = await request(
+      RequestType.DELETE,
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=${Uri.encodeComponent(version)}',
+    );
+    return RoomKeysUpdateResponse.fromJson(ret);
+  }
+
+  /// Stores room keys for a room
+  /// https://matrix.org/docs/spec/client_server/unstable#put-matrix-client-r0-room-keys-keys-roomid
+  Future<RoomKeysUpdateResponse> storeRoomKeysRoom(String roomId, String version, RoomKeysRoom keys) async {
+    final ret = await request(
+      RequestType.PUT,
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}?version=${Uri.encodeComponent(version)}',
+      data: keys.toJson(),
+    );
+    return RoomKeysUpdateResponse.fromJson(ret);
+  }
+
+  /// Gets room keys for a room
+  /// https://matrix.org/docs/spec/client_server/unstable#get-matrix-client-r0-room-keys-keys-roomid
+  Future<RoomKeysRoom> getRoomKeysRoom(String roomId, String version) async {
+    final ret = await request(
+      RequestType.GET,
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}?version=${Uri.encodeComponent(version)}',
+    );
+    return RoomKeysRoom.fromJson(ret);
+  }
+
+  /// Deletes room ekys for a room
+  /// https://matrix.org/docs/spec/client_server/unstable#delete-matrix-client-r0-room-keys-keys-roomid
+  Future<RoomKeysUpdateResponse> deleteRoomKeysRoom(String roomId, String version) async {
+    final ret = await request(
+      RequestType.DELETE,
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}?version=${Uri.encodeComponent(version)}',
+    );
+    return RoomKeysUpdateResponse.fromJson(ret);
+  }
+
+  /// Store multiple room keys
+  /// https://matrix.org/docs/spec/client_server/unstable#put-matrix-client-r0-room-keys-keys
+  Future<RoomKeysUpdateResponse> storeRoomKeys(String version, RoomKeys keys) async {
+    final ret = await request(
+      RequestType.PUT,
+      '/client/unstable/room_keys/keys?version=${Uri.encodeComponent(version)}',
+      data: keys.toJson(),
+    );
+    return RoomKeysUpdateResponse.fromJson(ret);
+  }
+
+  /// get all room keys
+  /// https://matrix.org/docs/spec/client_server/unstable#get-matrix-client-r0-room-keys-keys
+  Future<RoomKeys> getRoomKeys(String version) async {
+    final ret = await request(
+      RequestType.GET,
+      '/client/unstable/room_keys/keys?version=${Uri.encodeComponent(version)}',
+    );
+    return RoomKeys.fromJson(ret);
+  }
+
+  /// delete all room keys
+  /// https://matrix.org/docs/spec/client_server/unstable#delete-matrix-client-r0-room-keys-keys
+  Future<RoomKeysUpdateResponse> deleteRoomKeys(String version) async {
+    final ret = await request(
+      RequestType.DELETE,
+      '/client/unstable/room_keys/keys?version=${Uri.encodeComponent(version)}',
+    );
+    return RoomKeysUpdateResponse.fromJson(ret);
   }
 }

@@ -22,16 +22,14 @@ dependencies:
   password_hash: ^2.0.0
 
   olm:
-    path: /home/sorunome/repos/famedly/dart-olm
-#    git:
-#      url: https://gitlab.com/famedly/libraries/dart-olm.git
-#      ref: 0c612a525511652a7760126b058de8c924fe8900
+    git:
+      url: https://gitlab.com/famedly/libraries/dart-olm.git
+      ref: 1.x.y
 
   matrix_file_e2ee:
-    path: /home/sorunome/repos/famedly/matrix_file_e2ee
-#    git:
-#      url: https://gitlab.com/famedly/libraries/matrix_file_e2ee.git
-#      ref: 1.x.y
+    git:
+      url: https://gitlab.com/famedly/libraries/matrix_file_e2ee.git
+      ref: 1.x.y
 
 dev_dependencies:
   test: ^1.0.0
