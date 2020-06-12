@@ -513,10 +513,24 @@ class RoomKeyRequest extends ToDeviceEvent {
     for (final key in session.forwardingCurve25519KeyChain) {
       forwardedKeys.add(key);
     }
-    await requestingDevice.setVerified(true, keyManager.client);
     var message = session.content;
     message['forwarding_curve25519_key_chain'] = forwardedKeys;
 
+    message['sender_key'] = request.senderKey;
+    message['sender_claimed_ed25519_key'] =
+        forwardedKeys.isEmpty ? keyManager.encryption.fingerprintKey : null;
+    if (message['sender_claimed_ed25519_key'] == null) {
+      for (final value in keyManager.client.userDeviceKeys.values) {
+        for (final key in value.deviceKeys.values) {
+          if (key.curve25519Key == forwardedKeys.first) {
+            message['sender_claimed_ed25519_key'] = key.ed25519Key;
+          }
+        }
+        if (message['sender_claimed_ed25519_key'] != null) {
+          break;
+        }
+      }
+    }
     message['session_key'] = session.inboundGroupSession
         .export_session(session.inboundGroupSession.first_known_index());
     // send the actual reply of the key back to the requester
