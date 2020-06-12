@@ -158,6 +158,9 @@ abstract class SignableKey extends MatrixSignableKey {
   }
 
   bool hasValidSignatureChain({bool verifiedOnly = true, Set<String> visited}) {
+    if (!client.encryptionEnabled) {
+      return false;
+    }
     visited ??= <String>{};
     final setKey = '${userId};${identifier}';
     if (visited.contains(setKey)) {
