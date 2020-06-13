@@ -539,7 +539,8 @@ class FakeMatrixApi extends MockClient {
             'encrypted': {
               '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
                 'iv': 'eIb2IITxtmcq+1TrT8D5eQ==',
-                'ciphertext': 'lWRTPo5qxf4LAVwVPzGHOyMcP181n7bb9/B0lvkLDC2Oy4DvAL0eLx2x3bY=',
+                'ciphertext':
+                    'lWRTPo5qxf4LAVwVPzGHOyMcP181n7bb9/B0lvkLDC2Oy4DvAL0eLx2x3bY=',
                 'mac': 'Ynx89tIxPkx0o6ljMgxszww17JOgB4tg4etmNnMC9XI='
               }
             }
@@ -551,7 +552,8 @@ class FakeMatrixApi extends MockClient {
             'encrypted': {
               '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
                 'iv': 'YqU2XIjYulYZl+bkZtGgVw==',
-                'ciphertext': 'kM2TSoy/jR/4d357ZoRPbpPypxQl6XRLo3FsEXz+f7vIOp82GeRp28RYb3k=',
+                'ciphertext':
+                    'kM2TSoy/jR/4d357ZoRPbpPypxQl6XRLo3FsEXz+f7vIOp82GeRp28RYb3k=',
                 'mac': 'F+DZa5tAFmWsYSryw5EuEpzTmmABRab4GETkM85bGGo='
               }
             }
@@ -563,7 +565,8 @@ class FakeMatrixApi extends MockClient {
             'encrypted': {
               '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
                 'iv': 'D7AM3LXFu7ZlyGOkR+OeqQ==',
-                'ciphertext': 'bYA2+OMgsO6QB1E31aY+ESAWrT0fUBTXqajy4qmL7bVDSZY4Uj64EXNbHuA=',
+                'ciphertext':
+                    'bYA2+OMgsO6QB1E31aY+ESAWrT0fUBTXqajy4qmL7bVDSZY4Uj64EXNbHuA=',
                 'mac': 'j2UtyPo/UBSoiaQCWfzCiRZXp3IRt0ZZujuXgUMjnw4='
               }
             }
@@ -575,7 +578,8 @@ class FakeMatrixApi extends MockClient {
             'encrypted': {
               '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
                 'iv': 'cL/0MJZaiEd3fNU+I9oJrw==',
-                'ciphertext': 'WL73Pzdk5wZdaaSpaeRH0uZYKcxkuV8IS6Qa2FEfA1+vMeRLuHcWlXbMX0w=',
+                'ciphertext':
+                    'WL73Pzdk5wZdaaSpaeRH0uZYKcxkuV8IS6Qa2FEfA1+vMeRLuHcWlXbMX0w=',
                 'mac': '+xozp909S6oDX8KRV8D8ZFVRyh7eEYQpPP76f+DOsnw='
               }
             }
@@ -1527,12 +1531,14 @@ class FakeMatrixApi extends MockClient {
                 'event_fields': ['type', 'content', 'sender']
               },
       '/client/unstable/room_keys/version': (var req) => {
-        'algorithm': 'm.megolm_backup.v1.curve25519-aes-sha2',
-        'auth_data': {'public_key': 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM'},
-        'count': 0,
-        'etag': '0',
-        'version': '5',
-      },
+            'algorithm': 'm.megolm_backup.v1.curve25519-aes-sha2',
+            'auth_data': {
+              'public_key': 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM'
+            },
+            'count': 0,
+            'etag': '0',
+            'version': '5',
+          },
     },
     'POST': {
       '/client/r0/delete_devices': (var req) => {},
@@ -1782,7 +1788,8 @@ class FakeMatrixApi extends MockClient {
                 'user_id': '@test:fakeServer.notExisting',
                 'usage': ['master'],
                 'keys': {
-                  'ed25519:82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8': '82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8',
+                  'ed25519:82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8':
+                      '82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8',
                 },
                 'signatures': {},
               },
@@ -1792,7 +1799,8 @@ class FakeMatrixApi extends MockClient {
                 'user_id': '@test:fakeServer.notExisting',
                 'usage': ['self_signing'],
                 'keys': {
-                  'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY': 'F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY',
+                  'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY':
+                      'F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY',
                 },
                 'signatures': {},
               },
@@ -1802,7 +1810,8 @@ class FakeMatrixApi extends MockClient {
                 'user_id': '@test:fakeServer.notExisting',
                 'usage': ['user_signing'],
                 'keys': {
-                  'ed25519:0PiwulzJ/RU86LlzSSZ8St80HUMN3dqjKa/orIJoA0g': '0PiwulzJ/RU86LlzSSZ8St80HUMN3dqjKa/orIJoA0g',
+                  'ed25519:0PiwulzJ/RU86LlzSSZ8St80HUMN3dqjKa/orIJoA0g':
+                      '0PiwulzJ/RU86LlzSSZ8St80HUMN3dqjKa/orIJoA0g',
                 },
                 'signatures': {},
               },

@@ -5850,6 +5850,15 @@ abstract class _$Database extends GeneratedDatabase {
         readsFrom: {ssssCache}).map(_rowToDbSSSSCache);
   }
 
+  Future<int> clearSSSSCache(int client_id) {
+    return customUpdate(
+      'DELETE FROM ssss_cache WHERE client_id = :client_id',
+      variables: [Variable.withInt(client_id)],
+      updates: {ssssCache},
+      updateKind: UpdateKind.delete,
+    );
+  }
+
   Future<int> insertClient(
       String name,
       String homeserver_url,
