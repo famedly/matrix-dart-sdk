@@ -398,20 +398,23 @@ class KeyManager {
   }
 
   /// Request a certain key from another device
-  Future<void> request(Room room, String sessionId, String senderKey) async {
-    // let's first check our online key backup store thingy...
-    var hadPreviously =
-        getInboundGroupSession(room.id, sessionId, senderKey) != null;
-    try {
-      await loadSingleKey(room.id, sessionId);
-    } catch (err, stacktrace) {
-      print(
-          '[KeyManager] Failed to access online key backup: ' + err.toString());
-      print(stacktrace);
-    }
-    if (!hadPreviously &&
-        getInboundGroupSession(room.id, sessionId, senderKey) != null) {
-      return; // we managed to load the session from online backup, no need to care about it now
+  Future<void> request(Room room, String sessionId, String senderKey,
+      {bool tryOnlineBackup = true}) async {
+    if (tryOnlineBackup) {
+      // let's first check our online key backup store thingy...
+      var hadPreviously =
+          getInboundGroupSession(room.id, sessionId, senderKey) != null;
+      try {
+        await loadSingleKey(room.id, sessionId);
+      } catch (err, stacktrace) {
+        print('[KeyManager] Failed to access online key backup: ' +
+            err.toString());
+        print(stacktrace);
+      }
+      if (!hadPreviously &&
+          getInboundGroupSession(room.id, sessionId, senderKey) != null) {
+        return; // we managed to load the session from online backup, no need to care about it now
+      }
     }
     // while we just send the to-device event to '*', we still need to save the
     // devices themself to know where to send the cancel to after receiving a reply
