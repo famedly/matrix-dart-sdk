@@ -2077,7 +2077,7 @@ class MatrixApi {
       '/client/unstable/room_keys/version/${Uri.encodeComponent(version)}',
       data: {
         'algorithm': algorithm.algorithmString,
-        'auth_data': authData.toJson,
+        'auth_data': authData.toJson(),
         'version': version,
       },
     );

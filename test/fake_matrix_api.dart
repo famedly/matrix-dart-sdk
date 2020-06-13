@@ -1552,6 +1552,43 @@ class FakeMatrixApi extends MockClient {
                   'mac': 'QzKV/fgAs4U',
                 },
               },
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5':
+          (var req) => {
+                'sessions': {
+                  'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU': {
+                    'first_message_index': 0,
+                    'forwarded_count': 0,
+                    'is_verified': true,
+                    'session_data': {
+                      'ephemeral':
+                          'fwRxYh+seqLykz5mQCLypJ4/59URdcFJ2s69OU1dGRc',
+                      'ciphertext':
+                          '19jkQYlbgdP+VL9DH3qY/Dvpk6onJZgf+6frZFl1TinPCm9OMK9AZZLuM1haS9XLAUK1YsREgjBqfl6T+Tq8JlJ5ONZGg2Wttt24sGYc0iTMZJ8rXcNDeKMZhM96ETyjufJSeYoXLqifiVLDw9rrVBmNStF7PskYp040em+0OZ4pF85Cwsdf7l9V7MMynzh9BoXqVUCBiwT03PNYH9AEmNUxXX+6ZwCpe/saONv8MgGt5uGXMZIK29phA3D8jD6uV/WOHsB8NjHNq9FrfSEAsl+dAcS4uiYie4BKSSeQN+zGAQqu1MMW4OAdxGOuf8WpIINx7n+7cKQfxlmc/Cgg5+MmIm2H0oDwQ+Xu7aSxp1OCUzbxQRdjz6+tnbYmZBuH0Ov2RbEvC5tDb261LRqKXpub0llg5fqKHl01D0ahv4OAQgRs5oU+4mq+H2QGTwIFGFqP9tCRo0I+aICawpxYOfoLJpFW6KvEPnM2Lr3sl6Nq2fmkz6RL5F7nUtzxN8OKazLQpv8DOYzXbi7+ayEsqS0/EINetq7RfCqgjrEUgfNWYuFXWqvUT8lnxLdNu+8cyrJqh1UquFjXWTw1kWcJ0pkokVeBtK9YysCnF1UYh/Iv3rl2ZoYSSLNtuvMSYlYHggZ8xV8bz9S3X2/NwBycBiWIy5Ou/OuSX7trIKgkkmda0xjBWEM1a2acVuqu2OFbMn2zFxm2a3YwKP//OlIgMg',
+                      'mac': 'QzKV/fgAs4U',
+                    },
+                  },
+                },
+              },
+      '/client/unstable/room_keys/keys?version=5': (var req) => {
+            'rooms': {
+              '!726s6s6q:example.com': {
+                'sessions': {
+                  'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU': {
+                    'first_message_index': 0,
+                    'forwarded_count': 0,
+                    'is_verified': true,
+                    'session_data': {
+                      'ephemeral':
+                          'fwRxYh+seqLykz5mQCLypJ4/59URdcFJ2s69OU1dGRc',
+                      'ciphertext':
+                          '19jkQYlbgdP+VL9DH3qY/Dvpk6onJZgf+6frZFl1TinPCm9OMK9AZZLuM1haS9XLAUK1YsREgjBqfl6T+Tq8JlJ5ONZGg2Wttt24sGYc0iTMZJ8rXcNDeKMZhM96ETyjufJSeYoXLqifiVLDw9rrVBmNStF7PskYp040em+0OZ4pF85Cwsdf7l9V7MMynzh9BoXqVUCBiwT03PNYH9AEmNUxXX+6ZwCpe/saONv8MgGt5uGXMZIK29phA3D8jD6uV/WOHsB8NjHNq9FrfSEAsl+dAcS4uiYie4BKSSeQN+zGAQqu1MMW4OAdxGOuf8WpIINx7n+7cKQfxlmc/Cgg5+MmIm2H0oDwQ+Xu7aSxp1OCUzbxQRdjz6+tnbYmZBuH0Ov2RbEvC5tDb261LRqKXpub0llg5fqKHl01D0ahv4OAQgRs5oU+4mq+H2QGTwIFGFqP9tCRo0I+aICawpxYOfoLJpFW6KvEPnM2Lr3sl6Nq2fmkz6RL5F7nUtzxN8OKazLQpv8DOYzXbi7+ayEsqS0/EINetq7RfCqgjrEUgfNWYuFXWqvUT8lnxLdNu+8cyrJqh1UquFjXWTw1kWcJ0pkokVeBtK9YysCnF1UYh/Iv3rl2ZoYSSLNtuvMSYlYHggZ8xV8bz9S3X2/NwBycBiWIy5Ou/OuSX7trIKgkkmda0xjBWEM1a2acVuqu2OFbMn2zFxm2a3YwKP//OlIgMg',
+                      'mac': 'QzKV/fgAs4U',
+                    },
+                  },
+                },
+              },
+            },
+          },
     },
     'POST': {
       '/client/r0/delete_devices': (var req) => {},
@@ -1900,7 +1937,9 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/rooms/!localpart%3Aserver.abc/ban': (var reqI) => {},
       '/client/r0/rooms/!localpart%3Aserver.abc/unban': (var reqI) => {},
       '/client/r0/rooms/!localpart%3Aserver.abc/invite': (var reqI) => {},
+      '/client/r0/keys/device_signing/upload': (var reqI) => {},
       '/client/r0/keys/signatures/upload': (var reqI) => {'failures': {}},
+      '/client/unstable/room_keys/version': (var reqI) => {'version': '5'},
     },
     'PUT': {
       '/client/r0/presence/${Uri.encodeComponent('@alice:example.com')}/status':
@@ -1979,6 +2018,21 @@ class FakeMatrixApi extends MockClient {
           (var reqI) => {},
       '/client/r0/directory/list/room/!localpart%3Aexample.com': (var req) =>
           {},
+      '/client/unstable/room_keys/version/5': (var req) => {},
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5':
+          (var req) => {
+                'etag': 'asdf',
+                'count': 1,
+              },
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5':
+          (var req) => {
+                'etag': 'asdf',
+                'count': 1,
+              },
+      '/client/unstable/room_keys/keys?version=5': (var req) => {
+            'etag': 'asdf',
+            'count': 1,
+          },
     },
     'DELETE': {
       '/unknown/token': (var req) => {'errcode': 'M_UNKNOWN_TOKEN'},
@@ -1989,6 +2043,21 @@ class FakeMatrixApi extends MockClient {
           (var req) => {},
       '/client/r0/user/%40alice%3Aexample.com/rooms/%21localpart%3Aexample.com/tags/testtag':
           (var req) => {},
+      '/client/unstable/room_keys/version/5': (var req) => {},
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5':
+          (var req) => {
+                'etag': 'asdf',
+                'count': 1,
+              },
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5':
+          (var req) => {
+                'etag': 'asdf',
+                'count': 1,
+              },
+      '/client/unstable/room_keys/keys?version=5': (var req) => {
+            'etag': 'asdf',
+            'count': 1,
+          },
     },
   };
 }
