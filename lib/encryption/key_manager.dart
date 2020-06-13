@@ -405,7 +405,8 @@ class KeyManager {
     try {
       await loadSingleKey(room.id, sessionId);
     } catch (err, stacktrace) {
-      print('[KeyManager] Failed to access online key backup: ' + err.toString());
+      print(
+          '[KeyManager] Failed to access online key backup: ' + err.toString());
       print(stacktrace);
     }
     if (!hadPreviously &&

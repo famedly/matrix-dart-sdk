@@ -93,7 +93,7 @@ class CrossSigning {
     }
     // master key is valid, set it to verified
     await masterKey.setVerified(true, false);
-    // and now sign bout our own key and our master key
+    // and now sign both our own key and our master key
     await sign([
       masterKey,
       client.userDeviceKeys[client.userID].deviceKeys[client.deviceID]
