@@ -84,6 +84,7 @@ void main() {
         room: room,
         originServerTs: now,
         eventId: '\$event',
+        senderId: '@alice:example.com',
       );
       final decryptedEvent =
           await client.encryption.decryptRoomEvent(roomId, encryptedEvent);
