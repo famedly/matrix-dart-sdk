@@ -1135,7 +1135,7 @@ class Client {
       var outdatedLists = <String, dynamic>{};
       for (var userId in trackedUserIds) {
         if (!userDeviceKeys.containsKey(userId)) {
-          _userDeviceKeys[userId] = DeviceKeysList(userId);
+          _userDeviceKeys[userId] = DeviceKeysList(userId, this);
         }
         var deviceKeysList = userDeviceKeys[userId];
         if (deviceKeysList.outdated) {
@@ -1151,7 +1151,7 @@ class Client {
         for (final rawDeviceKeyListEntry in response.deviceKeys.entries) {
           final userId = rawDeviceKeyListEntry.key;
           if (!userDeviceKeys.containsKey(userId)) {
-            _userDeviceKeys[userId] = DeviceKeysList(userId);
+            _userDeviceKeys[userId] = DeviceKeysList(userId, this);
           }
           final oldKeys =
               Map<String, DeviceKeys>.from(_userDeviceKeys[userId].deviceKeys);
@@ -1230,7 +1230,7 @@ class Client {
           for (final crossSigningKeyListEntry in keys.entries) {
             final userId = crossSigningKeyListEntry.key;
             if (!userDeviceKeys.containsKey(userId)) {
-              _userDeviceKeys[userId] = DeviceKeysList(userId);
+              _userDeviceKeys[userId] = DeviceKeysList(userId, this);
             }
             final oldKeys = Map<String, CrossSigningKey>.from(
                 _userDeviceKeys[userId].crossSigningKeys);

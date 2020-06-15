@@ -54,6 +54,8 @@ class DeviceKeysList {
   }
 
   Future<KeyVerification> startVerification() async {
+    print('++++++++++++');
+    print(client.toString());
     final roomId =
         await User(userId, room: Room(client: client)).startDirectChat();
     if (roomId == null) {
@@ -95,7 +97,7 @@ class DeviceKeysList {
     }
   }
 
-  DeviceKeysList(this.userId);
+  DeviceKeysList(this.userId, this.client);
 }
 
 abstract class SignableKey extends MatrixSignableKey {
@@ -239,7 +241,8 @@ abstract class SignableKey extends MatrixSignableKey {
 
   Future<void> setVerified(bool newVerified, [bool sign = true]) {
     _verified = newVerified;
-    if (sign &&
+    if (newVerified &&
+        sign &&
         client.encryptionEnabled &&
         client.encryption.crossSigning.signable([this])) {
       // sign the key!

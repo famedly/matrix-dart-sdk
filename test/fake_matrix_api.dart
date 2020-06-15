@@ -1799,7 +1799,12 @@ class FakeMatrixApi extends MockClient {
                     'ed25519:GHTYAJCE':
                         'gjL//fyaFHADt9KBADGag8g7F8Up78B/K1zXeiEPLJo'
                   },
-                  'signatures': {},
+                  'signatures': {
+                    '@test:fakeServer.notExisting': {
+                      'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY':
+                          'Q4/55vZjEJD7M2EC40bgZqd9Zuy/4C75UPVopJdXeioQVaKtFf6EF0nUUuql0yD+r3hinsZcock0wO6Q2xcoAQ',
+                    },
+                  },
                 },
                 'OTHERDEVICE': {
                   'user_id': '@test:fakeServer.notExisting',
@@ -1812,7 +1817,12 @@ class FakeMatrixApi extends MockClient {
                     'curve25519:OTHERDEVICE': 'blah',
                     'ed25519:OTHERDEVICE': 'blah'
                   },
-                  'signatures': {},
+                  'signatures': {
+                    '@test:fakeServer.notExisting': {
+                      'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY':
+                          'o7ucKPWrF2VKx7wYqP1f+aw4QohLMz7kX+SIw6aWCYsLC3XyIlg8rX/7QQ9B8figCVnRK7IjtjWvQodBCfWCAA',
+                    },
+                  },
                 },
               },
               '@othertest:fakeServer.notExisting': {
@@ -1860,7 +1870,12 @@ class FakeMatrixApi extends MockClient {
                   'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY':
                       'F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY',
                 },
-                'signatures': {},
+                'signatures': {
+                  '@test:fakeServer.notExisting': {
+                    'ed25519:82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8':
+                        'afkrbGvPn5Zb5zc7Lk9cz2skI3QrzI/L0st1GS+/GATxNjMzc6vKmGu7r9cMb1GJxy4RdeUpfH3L7Fs/fNL1Dw',
+                  },
+                },
               },
               '@othertest:fakeServer.notExisting': {
                 'user_id': '@othertest:fakeServer.notExisting',
@@ -1879,7 +1894,12 @@ class FakeMatrixApi extends MockClient {
                   'ed25519:0PiwulzJ/RU86LlzSSZ8St80HUMN3dqjKa/orIJoA0g':
                       '0PiwulzJ/RU86LlzSSZ8St80HUMN3dqjKa/orIJoA0g',
                 },
-                'signatures': {},
+                'signatures': {
+                  '@test:fakeServer.notExisting': {
+                    'ed25519:82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8':
+                        'pvgbZxEbllaElhpiRnb7/uOIUhrglvHCFnpoxr3/5ZrWa0EK/uaefhex9eEV4uBLrHjHg2ymwdNaM7ap9+sBBg',
+                  },
+                },
               },
               '@othertest:fakeServer.notExisting': {
                 'user_id': '@othertest:fakeServer.notExisting',
