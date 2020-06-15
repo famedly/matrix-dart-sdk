@@ -90,6 +90,7 @@ void main() {
       expect(decryptedEvent.type, 'm.room.message');
       expect(decryptedEvent.content['msgtype'], 'm.text');
       expect(decryptedEvent.content['text'], 'Hello foxies!');
+      await client.encryption.decryptRoomEvent(roomId, encryptedEvent, store: true);
     });
 
     test('dispose client', () async {
