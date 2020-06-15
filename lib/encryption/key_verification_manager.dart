@@ -99,16 +99,16 @@ class KeyVerificationManager {
 
     if (_requests.containsKey(transactionId)) {
       final req = _requests[transactionId];
+      final otherDeviceId = event['content']['from_device'];
       if (event['sender'] != client.userID) {
         await req.handlePayload(type, event['content'], event['event_id']);
-      } else if (req.userId == client.userID && req.deviceId == null) {
-        // okay, maybe another of our devices answered
-        await req.handlePayload(type, event['content'], event['event_id']);
-        if (req.deviceId != client.deviceID) {
-          req.otherDeviceAccepted();
-          req.dispose();
-          _requests.remove(transactionId);
-        }
+      } else if (event['sender'] == client.userID &&
+          otherDeviceId != null &&
+          otherDeviceId != client.deviceID) {
+        // okay, another of our devices answered
+        req.otherDeviceAccepted();
+        req.dispose();
+        _requests.remove(transactionId);
       }
     } else if (event['sender'] != client.userID) {
       final room = client.getRoomById(update.roomID) ??

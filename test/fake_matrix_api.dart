@@ -78,6 +78,11 @@ class FakeMatrixApi extends MockClient {
               action.contains('/state/m.room.member/')) {
             res = {'displayname': ''};
             return Response(json.encode(res), 200);
+          } else if (method == 'PUT' &&
+              action.contains(
+                  '/client/r0/rooms/%211234%3AfakeServer.notExisting/send/')) {
+            res = {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
+            return Response(json.encode(res), 200);
           } else {
             res = {
               'errcode': 'M_UNRECOGNIZED',
@@ -2007,6 +2012,10 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/best+animal':
           (var req) => {},
       '/client/r0/user/%40alice%3Aexample.com/rooms/1234/account_data/test.account.data':
+          (var req) => {},
+      '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/m.direct':
+          (var req) => {},
+      '/client/r0/user/%40othertest%3AfakeServer.notExisting/account_data/m.direct':
           (var req) => {},
       '/client/r0/profile/%40alice%3Aexample.com/displayname': (var reqI) => {},
       '/client/r0/profile/%40alice%3Aexample.com/avatar_url': (var reqI) => {},
