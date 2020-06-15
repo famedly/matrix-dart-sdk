@@ -54,8 +54,6 @@ class DeviceKeysList {
   }
 
   Future<KeyVerification> startVerification() async {
-    print('++++++++++++');
-    print(client.toString());
     final roomId =
         await User(userId, room: Room(client: client)).startDirectChat();
     if (roomId == null) {
