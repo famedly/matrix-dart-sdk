@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:famedlysdk/famedlysdk.dart' as sdk;
 import 'package:famedlysdk/matrix_api.dart' as api;
 import 'package:olm/olm.dart' as olm;
+import 'package:pedantic/pedantic.dart';
 
 import '../../matrix_api.dart';
 
@@ -19,6 +20,20 @@ class Database extends _$Database {
   int get schemaVersion => 3;
 
   int get maxFileSize => 1 * 1024 * 1024;
+
+  @override
+  Future<void> beforeOpen(
+      QueryExecutor executor, OpeningDetails details) async {
+    await super.beforeOpen(executor, details);
+    if (executor.dialect == SqlDialect.sqlite) {
+      unawaited(customSelect('PRAGMA journal_mode=WAL').get().then((ret) {
+        if (ret.isNotEmpty) {
+          print('[Moor] Switched database to mode ' +
+              ret.first.data['journal_mode'].toString());
+        }
+      }));
+    }
+  }
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
