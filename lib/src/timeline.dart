@@ -156,8 +156,10 @@ class Timeline {
                   : null);
 
           if (i < events.length) {
+            final tempSortOrder = events[i].sortOrder;
             events[i] = Event.fromJson(
                 eventUpdate.content, room, eventUpdate.sortOrder);
+            events[i].sortOrder = tempSortOrder;
           }
         } else {
           Event newEvent;
