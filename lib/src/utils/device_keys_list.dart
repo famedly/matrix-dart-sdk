@@ -237,7 +237,7 @@ abstract class SignableKey extends MatrixSignableKey {
     return false;
   }
 
-  Future<void> setVerified(bool newVerified, [bool sign = true]) {
+  void setVerified(bool newVerified, [bool sign = true]) {
     _verified = newVerified;
     if (newVerified &&
         sign &&
@@ -246,7 +246,6 @@ abstract class SignableKey extends MatrixSignableKey {
       // sign the key!
       client.encryption.crossSigning.sign([this]);
     }
-    return Future.value();
   }
 
   Future<void> setBlocked(bool newBlocked);
