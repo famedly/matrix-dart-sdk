@@ -316,6 +316,8 @@ class DeviceKeys extends SignableKey {
   List<String> algorithms;
 
   String get curve25519Key => keys['curve25519:$deviceId'];
+  String get deviceDisplayName =>
+      unsigned != null ? unsigned['device_display_name'] : null;
 
   bool get isValid =>
       userId != null &&
