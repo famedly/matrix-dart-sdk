@@ -168,13 +168,12 @@ class Client {
     if (accountData['m.direct'] != null &&
         accountData['m.direct'].content[userId] is List<dynamic> &&
         accountData['m.direct'].content[userId].length > 0) {
-      if (getRoomById(accountData['m.direct'].content[userId][0]) != null) {
-        return accountData['m.direct'].content[userId][0];
+      for (final roomId in accountData['m.direct'].content[userId]) {
+        final room = getRoomById(roomId);
+        if (room != null && room.membership == Membership.join) {
+          return roomId;
+        }
       }
-      (accountData['m.direct'].content[userId] as List<dynamic>)
-          .remove(accountData['m.direct'].content[userId][0]);
-      api.setAccountData(userId, 'm.direct', directChats);
-      return getDirectChatFromUserId(userId);
     }
     for (var i = 0; i < rooms.length; i++) {
       if (rooms[i].membership == Membership.invite &&
