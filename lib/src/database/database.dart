@@ -21,18 +21,6 @@ class Database extends _$Database {
   int get maxFileSize => 1 * 1024 * 1024;
 
   @override
-  Future<T> transaction<T>(Future<T> Function() action) async {
-    try {
-      await super.transaction(() async {
-        await customSelect('SELECT 1').get();
-      });
-    } catch (_) {
-      return action();
-    }
-    return super.transaction(action);
-  }
-
-  @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (Migrator m) {
           return m.createAll();
