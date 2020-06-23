@@ -42,7 +42,7 @@ class OlmSession {
     try {
       session.unpickle(key, dbEntry.pickle);
       identityKey = dbEntry.identityKey;
-      sessionId = dbEntry.identityKey;
+      sessionId = dbEntry.sessionId;
       lastReceived =
           dbEntry.lastReceived ?? DateTime.fromMillisecondsSinceEpoch(0);
       assert(sessionId == session.session_id());

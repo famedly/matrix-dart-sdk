@@ -275,7 +275,7 @@ class OlmManager {
         plaintext = newSession.decrypt(type, body);
         storeOlmSession(OlmSession(
           key: client.userID,
-          identityKey: identityKey,
+          identityKey: senderKey,
           sessionId: newSession.session_id(),
           session: newSession,
           lastReceived: DateTime.now(),
@@ -383,7 +383,7 @@ class OlmManager {
               identityKey: identityKey,
               sessionId: session.session_id(),
               session: session,
-              lastReceived: null,
+              lastReceived: DateTime.fromMillisecondsSinceEpoch(0),
             ));
           } catch (e) {
             session.free();
