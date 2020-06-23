@@ -48,6 +48,7 @@ CREATE TABLE olm_sessions (
   identity_key TEXT NOT NULL,
   session_id TEXT NOT NULL,
   pickle TEXT NOT NULL,
+  last_received DATETIME,
   UNIQUE(client_id, identity_key, session_id)
 ) AS DbOlmSessions;
 CREATE INDEX olm_sessions_index ON olm_sessions(client_id);
@@ -177,7 +178,7 @@ getAllUserDeviceKeysKeys: SELECT * FROM user_device_keys_key WHERE client_id = :
 getAllUserCrossSigningKeys: SELECT * FROM user_cross_signing_keys WHERE client_id = :client_id;
 getAllOlmSessions: SELECT * FROM olm_sessions WHERE client_id = :client_id;
 dbGetOlmSessions: SELECT * FROM olm_sessions WHERE client_id = :client_id AND identity_key = :identity_key;
-storeOlmSession: INSERT OR REPLACE INTO olm_sessions (client_id, identity_key, session_id, pickle) VALUES (:client_id, :identitiy_key, :session_id, :pickle);
+storeOlmSession: INSERT OR REPLACE INTO olm_sessions (client_id, identity_key, session_id, pickle, last_received) VALUES (:client_id, :identitiy_key, :session_id, :pickle, :last_received);
 getAllOutboundGroupSessions: SELECT * FROM outbound_group_sessions WHERE client_id = :client_id;
 dbGetOutboundGroupSession: SELECT * FROM outbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id;
 storeOutboundGroupSession: INSERT OR REPLACE INTO outbound_group_sessions (client_id, room_id, pickle, device_ids, creation_time, sent_messages) VALUES (:client_id, :room_id, :pickle, :device_ids, :creation_time, :sent_messages);
