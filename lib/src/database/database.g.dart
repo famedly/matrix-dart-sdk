@@ -5406,6 +5406,29 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
+  DbRoom _rowToDbRoom(QueryRow row) {
+    return DbRoom(
+      clientId: row.readInt('client_id'),
+      roomId: row.readString('room_id'),
+      membership: row.readString('membership'),
+      highlightCount: row.readInt('highlight_count'),
+      notificationCount: row.readInt('notification_count'),
+      prevBatch: row.readString('prev_batch'),
+      joinedMemberCount: row.readInt('joined_member_count'),
+      invitedMemberCount: row.readInt('invited_member_count'),
+      newestSortOrder: row.readDouble('newest_sort_order'),
+      oldestSortOrder: row.readDouble('oldest_sort_order'),
+      heroes: row.readString('heroes'),
+    );
+  }
+
+  Selectable<DbRoom> getRoom(int client_id, String room_id) {
+    return customSelect(
+        'SELECT * FROM rooms WHERE client_id = :client_id AND room_id = :room_id',
+        variables: [Variable.withInt(client_id), Variable.withString(room_id)],
+        readsFrom: {rooms}).map(_rowToDbRoom);
+  }
+
   Selectable<DbEvent> getEvent(int client_id, String event_id, String room_id) {
     return customSelect(
         'SELECT * FROM events WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id',
