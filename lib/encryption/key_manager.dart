@@ -44,11 +44,11 @@ class KeyManager {
       final keyObj = olm.PkDecryption();
       try {
         final info = await client.api.getRoomKeysBackup();
-        if (!(info.authData is RoomKeysAuthDataV1Curve25519AesSha2)) {
+        if (info.algorithm != RoomKeysAlgorithmType.v1Curve25519AesSha2) {
           return false;
         }
         if (keyObj.init_with_private_key(base64.decode(secret)) ==
-            (info.authData as RoomKeysAuthDataV1Curve25519AesSha2).publicKey) {
+            info.authData['public_key']) {
           _requestedSessionIds.clear();
           return true;
         }
@@ -340,9 +340,8 @@ class KeyManager {
       backupPubKey = decryption.init_with_private_key(privateKey);
 
       if (backupPubKey == null ||
-          !(info.authData is RoomKeysAuthDataV1Curve25519AesSha2) ||
-          (info.authData as RoomKeysAuthDataV1Curve25519AesSha2).publicKey !=
-              backupPubKey) {
+          info.algorithm != RoomKeysAlgorithmType.v1Curve25519AesSha2 ||
+          info.authData['public_key'] != backupPubKey) {
         return;
       }
       for (final roomEntry in keys.rooms.entries) {

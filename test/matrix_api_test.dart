@@ -1596,10 +1596,10 @@ void main() {
       matrixApi.accessToken = '1234';
 
       final algorithm = RoomKeysAlgorithmType.v1Curve25519AesSha2;
-      final authData = RoomKeysAuthDataV1Curve25519AesSha2.fromJson({
+      final authData = <String, dynamic>{
         'public_key': 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM',
         'signatures': {},
-      });
+      };
       final ret = await matrixApi.createRoomKeysBackup(algorithm, authData);
       expect(
           FakeMatrixApi.api['POST']
@@ -1619,10 +1619,10 @@ void main() {
       matrixApi.accessToken = '1234';
 
       final algorithm = RoomKeysAlgorithmType.v1Curve25519AesSha2;
-      final authData = RoomKeysAuthDataV1Curve25519AesSha2.fromJson({
+      final authData = <String, dynamic>{
         'public_key': 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM',
         'signatures': {},
-      });
+      };
       await matrixApi.updateRoomKeysBackup('5', algorithm, authData);
     });
     test('deleteRoomKeysBackup', () async {

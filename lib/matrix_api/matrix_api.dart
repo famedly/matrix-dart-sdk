@@ -2042,13 +2042,13 @@ class MatrixApi {
   /// Create room keys backup
   /// https://matrix.org/docs/spec/client_server/unstable#post-matrix-client-r0-room-keys-version
   Future<String> createRoomKeysBackup(
-      RoomKeysAlgorithmType algorithm, RoomKeysAuthData authData) async {
+      RoomKeysAlgorithmType algorithm, Map<String, dynamic> authData) async {
     final ret = await request(
       RequestType.POST,
       '/client/unstable/room_keys/version',
       data: {
         'algorithm': algorithm.algorithmString,
-        'auth_data': authData.toJson(),
+        'auth_data': authData,
       },
     );
     return ret['version'];
@@ -2071,13 +2071,13 @@ class MatrixApi {
   /// Updates a room key backup
   /// https://matrix.org/docs/spec/client_server/unstable#put-matrix-client-r0-room-keys-version-version
   Future<void> updateRoomKeysBackup(String version,
-      RoomKeysAlgorithmType algorithm, RoomKeysAuthData authData) async {
+      RoomKeysAlgorithmType algorithm, Map<String, dynamic> authData) async {
     await request(
       RequestType.PUT,
       '/client/unstable/room_keys/version/${Uri.encodeComponent(version)}',
       data: {
         'algorithm': algorithm.algorithmString,
-        'auth_data': authData.toJson(),
+        'auth_data': authData,
         'version': version,
       },
     );

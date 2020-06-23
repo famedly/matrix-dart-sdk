@@ -38,46 +38,9 @@ extension RoomKeysAlgorithmTypeExtension on RoomKeysAlgorithmType {
   }
 }
 
-abstract class RoomKeysAuthData {
-  // This object is used for signing so we need the raw json too
-  Map<String, dynamic> _json;
-
-  RoomKeysAuthData.fromJson(Map<String, dynamic> json) {
-    _json = json;
-  }
-
-  Map<String, dynamic> toJson() {
-    return _json;
-  }
-}
-
-class RoomKeysAuthDataV1Curve25519AesSha2 extends RoomKeysAuthData {
-  String publicKey;
-  Map<String, Map<String, String>> signatures;
-
-  RoomKeysAuthDataV1Curve25519AesSha2.fromJson(Map<String, dynamic> json)
-      : super.fromJson(json) {
-    publicKey = json['public_key'];
-    signatures = json['signatures'] is Map
-        ? Map<String, Map<String, String>>.from((json['signatures'] as Map)
-            .map((k, v) => MapEntry(k, Map<String, String>.from(v))))
-        : null;
-  }
-
-  @override
-  Map<String, dynamic> toJson() {
-    final data = super.toJson();
-    data['public_key'] = publicKey;
-    if (signatures != null) {
-      data['signatures'] = signatures;
-    }
-    return data;
-  }
-}
-
 class RoomKeysVersionResponse {
   RoomKeysAlgorithmType algorithm;
-  RoomKeysAuthData authData;
+  Map<String, dynamic> authData;
   int count;
   String etag;
   String version;
@@ -85,14 +48,7 @@ class RoomKeysVersionResponse {
   RoomKeysVersionResponse.fromJson(Map<String, dynamic> json) {
     algorithm =
         RoomKeysAlgorithmTypeExtension.fromAlgorithmString(json['algorithm']);
-    switch (algorithm) {
-      case RoomKeysAlgorithmType.v1Curve25519AesSha2:
-        authData =
-            RoomKeysAuthDataV1Curve25519AesSha2.fromJson(json['auth_data']);
-        break;
-      default:
-        authData = null;
-    }
+    authData = json['auth_data'];
     count = json['count'];
     etag =
         json['etag'].toString(); // synapse replies an int but docs say string?
@@ -102,7 +58,7 @@ class RoomKeysVersionResponse {
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     data['algorithm'] = algorithm?.algorithmString;
-    data['auth_data'] = authData?.toJson();
+    data['auth_data'] = authData;
     data['count'] = count;
     data['etag'] = etag;
     data['version'] = version;
