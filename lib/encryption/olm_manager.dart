@@ -18,6 +18,7 @@
 
 import 'dart:convert';
 
+import 'package:pedantic/pedantic.dart';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api.dart';
@@ -323,6 +324,19 @@ class OlmManager {
     return res;
   }
 
+  Future<void> restoreOlmSession(String userId, String senderKey) async {
+    if (!client.userDeviceKeys.containsKey(userId)) {
+      return;
+    }
+    final device = client.userDeviceKeys[userId].deviceKeys.values
+        .firstWhere((d) => d.curve25519Key == senderKey, orElse: () => null);
+    if (device == null) {
+      return;
+    }
+    await startOutgoingOlmSessions([device]);
+    await client.sendToDevice([device], 'm.dummy', {});
+  }
+
   Future<ToDeviceEvent> decryptToDeviceEvent(ToDeviceEvent event) async {
     if (event.type != EventTypes.Encrypted) {
       return event;
@@ -342,12 +356,20 @@ class OlmManager {
     if (!_olmSessions.containsKey(senderKey)) {
       await loadFromDb();
     }
-    event = _decryptToDeviceEvent(event);
-    if (event.type != EventTypes.Encrypted || !(await loadFromDb())) {
-      return event;
+    try {
+      event = _decryptToDeviceEvent(event);
+      if (event.type != EventTypes.Encrypted || !(await loadFromDb())) {
+        return event;
+      }
+      // retry to decrypt!
+      return _decryptToDeviceEvent(event);
+    } catch (_) {
+      // okay, the thing errored while decrypting. It is safe to assume that the olm session is corrupt and we should generate a new one
+      if (client.enableE2eeRecovery) {
+        unawaited(restoreOlmSession(event.senderId, senderKey));
+      }
+      rethrow;
     }
-    // retry to decrypt!
-    return _decryptToDeviceEvent(event);
   }
 
   Future<void> startOutgoingOlmSessions(List<DeviceKeys> deviceKeys) async {
@@ -383,7 +405,8 @@ class OlmManager {
               identityKey: identityKey,
               sessionId: session.session_id(),
               session: session,
-              lastReceived: DateTime.fromMillisecondsSinceEpoch(0),
+              lastReceived:
+                  DateTime.now(), // we want to use a newly created session
             ));
           } catch (e) {
             session.free();
