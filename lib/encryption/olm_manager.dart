@@ -400,6 +400,18 @@ class OlmManager {
       String type,
       Map<String, dynamic> payload) async {
     var data = <String, Map<String, Map<String, dynamic>>>{};
+    // first check if any of our sessions we want to encrypt for are in the database
+    if (client.database != null) {
+      for (final device in deviceKeys) {
+        if (!olmSessions.containsKey(device.curve25519Key)) {
+          final sessions = await client.database.getSingleOlmSessions(
+              client.id, device.curve25519Key, client.userID);
+          if (sessions.isNotEmpty) {
+            _olmSessions[device.curve25519Key] = sessions;
+          }
+        }
+      }
+    }
     final deviceKeysWithoutSession = List<DeviceKeys>.from(deviceKeys);
     deviceKeysWithoutSession.removeWhere((DeviceKeys deviceKeys) =>
         olmSessions.containsKey(deviceKeys.curve25519Key));
