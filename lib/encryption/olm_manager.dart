@@ -462,8 +462,8 @@ class OlmManager {
     if (client.database != null) {
       for (final device in deviceKeys) {
         if (!olmSessions.containsKey(device.curve25519Key)) {
-          final sessions = await client.database.getSingleOlmSessions(
-              client.id, device.curve25519Key, client.userID);
+          final sessions =
+              await getOlmSessionsFromDatabase(device.curve25519Key);
           if (sessions.isNotEmpty) {
             _olmSessions[device.curve25519Key] = sessions;
           }
