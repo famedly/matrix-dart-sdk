@@ -194,6 +194,18 @@ class FakeMatrixApi extends MockClient {
                 'origin_server_ts': 1417731086795,
                 'event_id': '666972737430353:example.com'
               },
+              {
+                'content': {
+                  'pinned': ['1234:bla']
+                },
+                'type': 'm.room.pinned_events',
+                'event_id': '21432735824443PhrSn:example.org',
+                'room_id': '!1234:example.com',
+                'sender': '@example:example.org',
+                'origin_server_ts': 1432735824653,
+                'unsigned': {'age': 1234},
+                'state_key': ''
+              },
             ]
           },
           'timeline': {
@@ -1802,6 +1814,10 @@ class FakeMatrixApi extends MockClient {
                 'event_id': '42',
               },
       '/client/r0/rooms/%21localpart%3Aserver.abc/state/m.room.topic':
+          (var reqI) => {
+                'event_id': '42',
+              },
+      '/client/r0/rooms/%21localpart%3Aserver.abc/state/m.room.pinned_events':
           (var reqI) => {
                 'event_id': '42',
               },

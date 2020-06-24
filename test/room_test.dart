@@ -150,6 +150,19 @@ void main() {
           content: {'url': 'mxc://testurl'},
           stateKey: '');
       expect(room.avatar.toString(), 'mxc://testurl');
+
+      expect(room.pinnedEventIds, <String>[]);
+      room.states['m.room.pinned_events'] = Event(
+          senderId: '@test:example.com',
+          type: 'm.room.pinned_events',
+          roomId: room.id,
+          room: room,
+          eventId: '123',
+          content: {
+            'pinned': ['1234']
+          },
+          stateKey: '');
+      expect(room.pinnedEventIds.first, '1234');
       room.states['m.room.message'] = Event(
           senderId: '@test:example.com',
           type: 'm.room.message',

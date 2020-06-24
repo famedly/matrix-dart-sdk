@@ -152,6 +152,14 @@ class Room {
       ? states[EventTypes.RoomName].content['name']
       : '';
 
+  /// The pinned events for this room. If there are no this returns an empty
+  /// list.
+  List<String> get pinnedEventIds => states[EventTypes.RoomPinnedEvents] != null
+      ? (states[EventTypes.RoomPinnedEvents].content['pinned'] is List<String>
+          ? states[EventTypes.RoomPinnedEvents].content['pinned']
+          : <String>[])
+      : <String>[];
+
   /// Returns a localized displayname for this server. If the room is a groupchat
   /// without a name, then it will return the localized version of 'Group with Alice' instead
   /// of just 'Alice' to make it different to a direct chat.
@@ -351,6 +359,14 @@ class Room {
         id,
         EventTypes.RoomTopic,
         {'topic': newName},
+      );
+
+  /// Call the Matrix API to change the pinned events of this room.
+  Future<String> setPinnedEvents(List<String> pinnedEventIds) =>
+      client.api.sendState(
+        id,
+        EventTypes.RoomPinnedEvents,
+        {'pinned': pinnedEventIds},
       );
 
   /// return all current emote packs for this room
