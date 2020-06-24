@@ -307,7 +307,10 @@ class Event extends MatrixEvent {
   Future<String> sendAgain({String txid}) async {
     if (status != -1) return null;
     await remove();
-    final eventID = await room.sendTextEvent(text, txid: txid);
+    final eventID = await room.sendEvent(
+      content,
+      txid: txid ?? unsigned['transaction_id'],
+    );
     return eventID;
   }
 

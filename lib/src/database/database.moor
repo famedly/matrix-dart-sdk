@@ -218,6 +218,7 @@ dbGetUser: SELECT * FROM room_states WHERE client_id = :client_id AND type = 'm.
 dbGetEventList: SELECT * FROM events WHERE client_id = :client_id AND room_id = :room_id GROUP BY event_id ORDER BY sort_order DESC;
 getStates: SELECT * FROM room_states WHERE client_id = :client_id AND room_id = :room_id;
 resetNotificationCount: UPDATE rooms SET notification_count = 0, highlight_count = 0 WHERE client_id = :client_id AND room_id = :room_id;
+getRoom: SELECT * FROM rooms WHERE client_id = :client_id AND room_id = :room_id;
 getEvent: SELECT * FROM events WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id;
 removeEvent: DELETE FROM events WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id;
 removeRoom: DELETE FROM rooms WHERE client_id = :client_id AND room_id = :room_id;
