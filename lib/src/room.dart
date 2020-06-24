@@ -361,6 +361,40 @@ class Room {
         {'topic': newName},
       );
 
+  /// Add a tag to the room.
+  Future<void> addTag(String tag, {double order}) => client.api.addRoomTag(
+        client.userID,
+        id,
+        tag,
+        order: order,
+      );
+
+  /// Removes a tag from the room.
+  Future<void> removeTag(String tag) => client.api.removeRoomTag(
+        client.userID,
+        id,
+        tag,
+      );
+
+  /// Returns all tags for this room.
+  Map<String, Tag> get tags {
+    if (roomAccountData['m.tag'] == null ||
+        !(roomAccountData['m.tag'].content['tags'] is Map)) {
+      return {};
+    }
+    final tags = (roomAccountData['m.tag'].content['tags'] as Map)
+        .map((k, v) => MapEntry<String, Tag>(k, Tag.fromJson(v)));
+    tags.removeWhere((k, v) => !TagType.isValid(k));
+    return tags;
+  }
+
+  /// Returns true if this room has a m.favourite tag.
+  bool get isFavourite => tags[TagType.Favourite] != null;
+
+  /// Sets the m.favourite tag for this room.
+  Future<void> setFavourite(bool favourite) =>
+      favourite ? addTag(TagType.Favourite) : removeTag(TagType.Favourite);
+
   /// Call the Matrix API to change the pinned events of this room.
   Future<String> setPinnedEvents(List<String> pinnedEventIds) =>
       client.api.sendState(

@@ -1791,6 +1791,8 @@ class FakeMatrixApi extends MockClient {
           (var reqI) => {
                 'event_id': '\$event${FakeMatrixApi.eventCounter++}',
               },
+      '/client/r0/user/%40test%3AfakeServer.notExisting/rooms/%21localpart%3Aserver.abc/tags/m.favourite':
+          (var req) => {},
       '/client/r0/user/%40alice%3Aexample.com/rooms/%21localpart%3Aexample.com/tags/testtag':
           (var req) => {},
       '/client/r0/user/%40alice%3Aexample.com/account_data/test.account.data':
@@ -1838,6 +1840,8 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/directory/room/%23testalias%3Aexample.com': (var reqI) => {},
       '/client/r0/pushrules/global/content/nocake': (var req) => {},
       '/client/r0/pushrules/global/override/!localpart%3Aserver.abc':
+          (var req) => {},
+      '/client/r0/user/%40test%3AfakeServer.notExisting/rooms/%21localpart%3Aserver.abc/tags/m.favourite':
           (var req) => {},
       '/client/r0/user/%40alice%3Aexample.com/rooms/%21localpart%3Aexample.com/tags/testtag':
           (var req) => {},

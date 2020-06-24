@@ -409,6 +409,25 @@ void main() {
       await room.sendCallCandidates('1234', [], txid: '1234');
     });
 
+    test('Test tag methods', () async {
+      await room.addTag(TagType.Favourite, order: 0.1);
+      await room.removeTag(TagType.Favourite);
+      expect(room.isFavourite, false);
+      room.roomAccountData['m.tag'] = BasicRoomEvent.fromJson({
+        'content': {
+          'tags': {
+            'm.favourite': {'order': 0.1},
+            'm.wrong': {'order': 0.2},
+          }
+        },
+        'type': 'm.tag'
+      });
+      expect(room.tags.length, 1);
+      expect(room.tags[TagType.Favourite].order, 0.1);
+      expect(room.isFavourite, true);
+      await room.setFavourite(false);
+    });
+
     test('joinRules', () async {
       expect(room.canChangeJoinRules, false);
       expect(room.joinRules, JoinRules.public);

@@ -20,7 +20,7 @@ class Tag {
   double order;
 
   Tag.fromJson(Map<String, dynamic> json) {
-    order = json['order'];
+    order = json['order']?.toDouble();
   }
 
   Map<String, dynamic> toJson() {
@@ -30,4 +30,13 @@ class Tag {
     }
     return data;
   }
+}
+
+abstract class TagType {
+  static const String Favourite = 'm.favourite';
+  static const String LowPriority = 'm.lowpriority';
+  static const String ServerNotice = 'm.server_notice';
+  static bool isValid(String tag) => tag.startsWith('m.')
+      ? [Favourite, LowPriority, ServerNotice].contains(tag)
+      : true;
 }
