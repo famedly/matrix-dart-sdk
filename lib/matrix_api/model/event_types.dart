@@ -27,6 +27,7 @@ abstract class EventTypes {
   static const String RoomMember = 'm.room.member';
   static const String RoomPowerLevels = 'm.room.power_levels';
   static const String RoomName = 'm.room.name';
+  static const String RoomPinnedEvents = 'm.room.pinned_events';
   static const String RoomTopic = 'm.room.topic';
   static const String RoomAvatar = 'm.room.avatar';
   static const String RoomTombstone = 'm.room.tombsone';
