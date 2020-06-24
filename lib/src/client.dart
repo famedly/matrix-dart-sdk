@@ -1074,8 +1074,10 @@ class Client {
   /// The compare function how the rooms should be sorted internally. By default
   /// rooms are sorted by timestamp of the last m.room.message event or the last
   /// event if there is no known message.
-  RoomSorter sortRoomsBy = (a, b) => b.timeCreated.millisecondsSinceEpoch
-      .compareTo(a.timeCreated.millisecondsSinceEpoch);
+  RoomSorter sortRoomsBy = (a, b) => (a.isFavourite != b.isFavourite)
+      ? (a.isFavourite ? -1 : 1)
+      : b.timeCreated.millisecondsSinceEpoch
+          .compareTo(a.timeCreated.millisecondsSinceEpoch);
 
   void _sortRooms() {
     if (prevBatch == null || _sortLock || rooms.length < 2) return;
