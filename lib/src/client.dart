@@ -722,11 +722,11 @@ class Client {
     if (sync.presence != null) {
       for (final newPresence in sync.presence) {
         if (database != null) {
-          await database.storeUserEventUpdate(
+          await database.storePresence(
             id,
-            'presence',
             newPresence.type,
-            newPresence.toJson(),
+            newPresence.senderId,
+            jsonEncode(newPresence.toJson()),
           );
         }
         presences[newPresence.senderId] = newPresence;
@@ -736,15 +736,17 @@ class Client {
     if (sync.accountData != null) {
       for (final newAccountData in sync.accountData) {
         if (database != null) {
-          await database.storeUserEventUpdate(
+          await database.storeAccountData(
             id,
-            'account_data',
             newAccountData.type,
-            newAccountData.toJson(),
+            jsonEncode(newAccountData.toJson()),
           );
         }
         accountData[newAccountData.type] = newAccountData;
         if (onAccountData != null) onAccountData.add(newAccountData);
+        if (newAccountData.type == 'm.direct') {
+          _sortRooms();
+        }
       }
     }
     if (sync.deviceLists != null) {
