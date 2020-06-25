@@ -255,23 +255,6 @@ class Database extends _$Database {
     }
   }
 
-  /// Stores an UserUpdate object in the database. Must be called inside of
-  /// [transaction].
-  Future<void> storeUserEventUpdate(
-    int clientId,
-    String type,
-    String eventType,
-    Map<String, dynamic> content,
-  ) async {
-    if (type == 'account_data') {
-      await storeAccountData(
-          clientId, eventType, json.encode(content['content']));
-    } else if (type == 'presence') {
-      await storePresence(clientId, eventType, content['sender'],
-          json.encode(content['content']));
-    }
-  }
-
   /// Stores an EventUpdate object in the database. Must be called inside of
   /// [transaction].
   Future<void> storeEventUpdate(
