@@ -744,7 +744,7 @@ class Client {
         }
         accountData[newAccountData.type] = newAccountData;
         if (onAccountData != null) onAccountData.add(newAccountData);
-        if (newAccountData.type == 'm.direct') {
+        if (newAccountData.type == 'm.tag') {
           _sortRooms();
         }
       }
