@@ -935,9 +935,8 @@ class Room {
       directChats[userID] = [id];
     }
 
-    await client.api.setRoomAccountData(
+    await client.api.setAccountData(
       client.userID,
-      id,
       'm.direct',
       directChats,
     );
