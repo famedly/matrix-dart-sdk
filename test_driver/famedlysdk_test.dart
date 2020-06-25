@@ -139,12 +139,10 @@ void test() async {
   assert(testClientB
           .encryption.olmManager.olmSessions[testClientA.identityKey].length ==
       1);
-  assert(testClientA
-          .encryption.olmManager.olmSessions[testClientB.identityKey].first
-          .session_id() ==
-      testClientB
-          .encryption.olmManager.olmSessions[testClientA.identityKey].first
-          .session_id());
+  assert(testClientA.encryption.olmManager.olmSessions[testClientB.identityKey]
+          .first.sessionId ==
+      testClientB.encryption.olmManager.olmSessions[testClientA.identityKey]
+          .first.sessionId);
   assert(inviteRoom.client.encryption.keyManager
           .getInboundGroupSession(inviteRoom.id, currentSessionIdA, '') !=
       null);
@@ -162,12 +160,10 @@ void test() async {
   assert(testClientB
           .encryption.olmManager.olmSessions[testClientA.identityKey].length ==
       1);
-  assert(testClientA
-          .encryption.olmManager.olmSessions[testClientB.identityKey].first
-          .session_id() ==
-      testClientB
-          .encryption.olmManager.olmSessions[testClientA.identityKey].first
-          .session_id());
+  assert(testClientA.encryption.olmManager.olmSessions[testClientB.identityKey]
+          .first.sessionId ==
+      testClientB.encryption.olmManager.olmSessions[testClientA.identityKey]
+          .first.sessionId);
 
   assert(room.client.encryption.keyManager
           .getOutboundGroupSession(room.id)
@@ -231,24 +227,20 @@ void test() async {
   assert(testClientB
           .encryption.olmManager.olmSessions[testClientA.identityKey].length ==
       1);
-  assert(testClientA
-          .encryption.olmManager.olmSessions[testClientB.identityKey].first
-          .session_id() ==
-      testClientB
-          .encryption.olmManager.olmSessions[testClientA.identityKey].first
-          .session_id());
+  assert(testClientA.encryption.olmManager.olmSessions[testClientB.identityKey]
+          .first.sessionId ==
+      testClientB.encryption.olmManager.olmSessions[testClientA.identityKey]
+          .first.sessionId);
   assert(testClientA
           .encryption.olmManager.olmSessions[testClientC.identityKey].length ==
       1);
   assert(testClientC
           .encryption.olmManager.olmSessions[testClientA.identityKey].length ==
       1);
-  assert(testClientA
-          .encryption.olmManager.olmSessions[testClientC.identityKey].first
-          .session_id() ==
-      testClientC
-          .encryption.olmManager.olmSessions[testClientA.identityKey].first
-          .session_id());
+  assert(testClientA.encryption.olmManager.olmSessions[testClientC.identityKey]
+          .first.sessionId ==
+      testClientC.encryption.olmManager.olmSessions[testClientA.identityKey]
+          .first.sessionId);
   assert(room.client.encryption.keyManager
           .getOutboundGroupSession(room.id)
           .outboundGroupSession
@@ -281,12 +273,10 @@ void test() async {
   assert(testClientB
           .encryption.olmManager.olmSessions[testClientA.identityKey].length ==
       1);
-  assert(testClientA
-          .encryption.olmManager.olmSessions[testClientB.identityKey].first
-          .session_id() ==
-      testClientB
-          .encryption.olmManager.olmSessions[testClientA.identityKey].first
-          .session_id());
+  assert(testClientA.encryption.olmManager.olmSessions[testClientB.identityKey]
+          .first.sessionId ==
+      testClientB.encryption.olmManager.olmSessions[testClientA.identityKey]
+          .first.sessionId);
   assert(room.client.encryption.keyManager
           .getOutboundGroupSession(room.id)
           .outboundGroupSession

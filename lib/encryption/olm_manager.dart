@@ -18,11 +18,13 @@
 
 import 'dart:convert';
 
+import 'package:pedantic/pedantic.dart';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api.dart';
 import 'package:olm/olm.dart' as olm;
 import './encryption.dart';
+import './utils/olm_session.dart';
 
 class OlmManager {
   final Encryption encryption;
@@ -43,8 +45,8 @@ class OlmManager {
   OlmManager(this.encryption);
 
   /// A map from Curve25519 identity keys to existing olm sessions.
-  Map<String, List<olm.Session>> get olmSessions => _olmSessions;
-  final Map<String, List<olm.Session>> _olmSessions = {};
+  Map<String, List<OlmSession>> get olmSessions => _olmSessions;
+  final Map<String, List<OlmSession>> _olmSessions = {};
 
   Future<void> init(String olmAccount) async {
     if (olmAccount == null) {
@@ -204,25 +206,24 @@ class OlmManager {
     }
   }
 
-  void storeOlmSession(String curve25519IdentityKey, olm.Session session) {
+  void storeOlmSession(OlmSession session) {
     if (client.database == null) {
       return;
     }
-    if (!_olmSessions.containsKey(curve25519IdentityKey)) {
-      _olmSessions[curve25519IdentityKey] = [];
+    if (!_olmSessions.containsKey(session.identityKey)) {
+      _olmSessions[session.identityKey] = [];
     }
-    final ix = _olmSessions[curve25519IdentityKey]
-        .indexWhere((s) => s.session_id() == session.session_id());
+    final ix = _olmSessions[session.identityKey]
+        .indexWhere((s) => s.sessionId == session.sessionId);
     if (ix == -1) {
       // add a new session
-      _olmSessions[curve25519IdentityKey].add(session);
+      _olmSessions[session.identityKey].add(session);
     } else {
       // update an existing session
-      _olmSessions[curve25519IdentityKey][ix] = session;
+      _olmSessions[session.identityKey][ix] = session;
     }
-    final pickle = session.pickle(client.userID);
-    client.database.storeOlmSession(
-        client.id, curve25519IdentityKey, session.session_id(), pickle);
+    client.database.storeOlmSession(client.id, session.identityKey,
+        session.sessionId, session.pickledSession, session.lastReceived);
   }
 
   ToDeviceEvent _decryptToDeviceEvent(ToDeviceEvent event) {
@@ -245,14 +246,16 @@ class OlmManager {
     var existingSessions = olmSessions[senderKey];
     if (existingSessions != null) {
       for (var session in existingSessions) {
-        if (type == 0 && session.matches_inbound(body) == true) {
-          plaintext = session.decrypt(type, body);
-          storeOlmSession(senderKey, session);
+        if (type == 0 && session.session.matches_inbound(body) == true) {
+          plaintext = session.session.decrypt(type, body);
+          session.lastReceived = DateTime.now();
+          storeOlmSession(session);
           break;
         } else if (type == 1) {
           try {
-            plaintext = session.decrypt(type, body);
-            storeOlmSession(senderKey, session);
+            plaintext = session.session.decrypt(type, body);
+            session.lastReceived = DateTime.now();
+            storeOlmSession(session);
             break;
           } catch (_) {
             plaintext = null;
@@ -271,7 +274,13 @@ class OlmManager {
         _olmAccount.remove_one_time_keys(newSession);
         client.database?.updateClientKeys(pickledOlmAccount, client.id);
         plaintext = newSession.decrypt(type, body);
-        storeOlmSession(senderKey, newSession);
+        storeOlmSession(OlmSession(
+          key: client.userID,
+          identityKey: senderKey,
+          sessionId: newSession.session_id(),
+          session: newSession,
+          lastReceived: DateTime.now(),
+        ));
       } catch (_) {
         newSession?.free();
         rethrow;
@@ -299,6 +308,35 @@ class OlmManager {
     );
   }
 
+  Future<List<OlmSession>> getOlmSessionsFromDatabase(String senderKey) async {
+    if (client.database == null) {
+      return [];
+    }
+    final rows =
+        await client.database.dbGetOlmSessions(client.id, senderKey).get();
+    final res = <OlmSession>[];
+    for (final row in rows) {
+      final sess = OlmSession.fromDb(row, client.userID);
+      if (sess.isValid) {
+        res.add(sess);
+      }
+    }
+    return res;
+  }
+
+  Future<void> restoreOlmSession(String userId, String senderKey) async {
+    if (!client.userDeviceKeys.containsKey(userId)) {
+      return;
+    }
+    final device = client.userDeviceKeys[userId].deviceKeys.values
+        .firstWhere((d) => d.curve25519Key == senderKey, orElse: () => null);
+    if (device == null) {
+      return;
+    }
+    await startOutgoingOlmSessions([device]);
+    await client.sendToDevice([device], 'm.dummy', {});
+  }
+
   Future<ToDeviceEvent> decryptToDeviceEvent(ToDeviceEvent event) async {
     if (event.type != EventTypes.Encrypted) {
       return event;
@@ -308,8 +346,7 @@ class OlmManager {
       if (client.database == null) {
         return false;
       }
-      final sessions = await client.database
-          .getSingleOlmSessions(client.id, senderKey, client.userID);
+      final sessions = await getOlmSessionsFromDatabase(senderKey);
       if (sessions.isEmpty) {
         return false; // okay, can't do anything
       }
@@ -319,12 +356,20 @@ class OlmManager {
     if (!_olmSessions.containsKey(senderKey)) {
       await loadFromDb();
     }
-    event = _decryptToDeviceEvent(event);
-    if (event.type != EventTypes.Encrypted || !(await loadFromDb())) {
-      return event;
+    try {
+      event = _decryptToDeviceEvent(event);
+      if (event.type != EventTypes.Encrypted || !(await loadFromDb())) {
+        return event;
+      }
+      // retry to decrypt!
+      return _decryptToDeviceEvent(event);
+    } catch (_) {
+      // okay, the thing errored while decrypting. It is safe to assume that the olm session is corrupt and we should generate a new one
+      if (client.enableE2eeRecovery) {
+        unawaited(restoreOlmSession(event.senderId, senderKey));
+      }
+      rethrow;
     }
-    // retry to decrypt!
-    return _decryptToDeviceEvent(event);
   }
 
   Future<void> startOutgoingOlmSessions(List<DeviceKeys> deviceKeys) async {
@@ -352,11 +397,19 @@ class OlmManager {
               fingerprintKey, deviceKey, userId, deviceId)) {
             continue;
           }
+          var session = olm.Session();
           try {
-            var session = olm.Session();
             session.create_outbound(_olmAccount, identityKey, deviceKey['key']);
-            await storeOlmSession(identityKey, session);
+            await storeOlmSession(OlmSession(
+              key: client.userID,
+              identityKey: identityKey,
+              sessionId: session.session_id(),
+              session: session,
+              lastReceived:
+                  DateTime.now(), // we want to use a newly created session
+            ));
           } catch (e) {
+            session.free();
             print('[LibOlm] Could not create new outbound olm session: ' +
                 e.toString());
           }
@@ -369,14 +422,15 @@ class OlmManager {
       DeviceKeys device, String type, Map<String, dynamic> payload) async {
     var sess = olmSessions[device.curve25519Key];
     if (sess == null || sess.isEmpty) {
-      final sessions = await client.database
-          .getSingleOlmSessions(client.id, device.curve25519Key, client.userID);
+      final sessions = await getOlmSessionsFromDatabase(device.curve25519Key);
       if (sessions.isEmpty) {
         throw ('No olm session found');
       }
       sess = _olmSessions[device.curve25519Key] = sessions;
     }
-    sess.sort((a, b) => a.session_id().compareTo(b.session_id()));
+    sess.sort((a, b) => a.lastReceived == b.lastReceived
+        ? a.sessionId.compareTo(b.sessionId)
+        : b.lastReceived.compareTo(a.lastReceived));
     final fullPayload = {
       'type': type,
       'content': payload,
@@ -385,8 +439,8 @@ class OlmManager {
       'recipient': device.userId,
       'recipient_keys': {'ed25519': device.ed25519Key},
     };
-    final encryptResult = sess.first.encrypt(json.encode(fullPayload));
-    storeOlmSession(device.curve25519Key, sess.first);
+    final encryptResult = sess.first.session.encrypt(json.encode(fullPayload));
+    storeOlmSession(sess.first);
     final encryptedBody = <String, dynamic>{
       'algorithm': 'm.olm.v1.curve25519-aes-sha2',
       'sender_key': identityKey,
@@ -408,8 +462,8 @@ class OlmManager {
     if (client.database != null) {
       for (final device in deviceKeys) {
         if (!olmSessions.containsKey(device.curve25519Key)) {
-          final sessions = await client.database.getSingleOlmSessions(
-              client.id, device.curve25519Key, client.userID);
+          final sessions =
+              await getOlmSessionsFromDatabase(device.curve25519Key);
           if (sessions.isNotEmpty) {
             _olmSessions[device.curve25519Key] = sessions;
           }
@@ -440,7 +494,7 @@ class OlmManager {
   void dispose() {
     for (final sessions in olmSessions.values) {
       for (final sess in sessions) {
-        sess.free();
+        sess.dispose();
       }
     }
     _olmAccount?.free();

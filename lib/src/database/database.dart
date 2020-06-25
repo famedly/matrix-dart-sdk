@@ -16,7 +16,7 @@ class Database extends _$Database {
   Database(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   int get maxFileSize => 1 * 1024 * 1024;
 
@@ -53,6 +53,10 @@ class Database extends _$Database {
             // mark all keys as outdated so that the cross signing keys will be fetched
             await m.issueCustomQuery(
                 'UPDATE user_device_keys SET outdated = true');
+            from++;
+          }
+          if (from == 4) {
+            await m.addColumn(olmSessions, olmSessions.lastReceived);
             from++;
           }
         },
@@ -107,22 +111,6 @@ class Database extends _$Database {
         var session = olm.Session();
         session.unpickle(userId, row.pickle);
         res[row.identityKey].add(session);
-      } catch (e) {
-        print('[LibOlm] Could not unpickle olm session: ' + e.toString());
-      }
-    }
-    return res;
-  }
-
-  Future<List<olm.Session>> getSingleOlmSessions(
-      int clientId, String identityKey, String userId) async {
-    final rows = await dbGetOlmSessions(clientId, identityKey).get();
-    final res = <olm.Session>[];
-    for (final row in rows) {
-      try {
-        var session = olm.Session();
-        session.unpickle(userId, row.pickle);
-        res.add(session);
       } catch (e) {
         print('[LibOlm] Could not unpickle olm session: ' + e.toString());
       }

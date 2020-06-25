@@ -1391,17 +1391,20 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
   final String identityKey;
   final String sessionId;
   final String pickle;
+  final DateTime lastReceived;
   DbOlmSessions(
       {@required this.clientId,
       @required this.identityKey,
       @required this.sessionId,
-      @required this.pickle});
+      @required this.pickle,
+      this.lastReceived});
   factory DbOlmSessions.fromData(
       Map<String, dynamic> data, GeneratedDatabase db,
       {String prefix}) {
     final effectivePrefix = prefix ?? '';
     final intType = db.typeSystem.forDartType<int>();
     final stringType = db.typeSystem.forDartType<String>();
+    final dateTimeType = db.typeSystem.forDartType<DateTime>();
     return DbOlmSessions(
       clientId:
           intType.mapFromDatabaseResponse(data['${effectivePrefix}client_id']),
@@ -1411,6 +1414,8 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
           .mapFromDatabaseResponse(data['${effectivePrefix}session_id']),
       pickle:
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}pickle']),
+      lastReceived: dateTimeType
+          .mapFromDatabaseResponse(data['${effectivePrefix}last_received']),
     );
   }
   @override
@@ -1428,6 +1433,9 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
     if (!nullToAbsent || pickle != null) {
       map['pickle'] = Variable<String>(pickle);
     }
+    if (!nullToAbsent || lastReceived != null) {
+      map['last_received'] = Variable<DateTime>(lastReceived);
+    }
     return map;
   }
 
@@ -1439,6 +1447,7 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
       identityKey: serializer.fromJson<String>(json['identity_key']),
       sessionId: serializer.fromJson<String>(json['session_id']),
       pickle: serializer.fromJson<String>(json['pickle']),
+      lastReceived: serializer.fromJson<DateTime>(json['last_received']),
     );
   }
   @override
@@ -1449,6 +1458,7 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
       'identity_key': serializer.toJson<String>(identityKey),
       'session_id': serializer.toJson<String>(sessionId),
       'pickle': serializer.toJson<String>(pickle),
+      'last_received': serializer.toJson<DateTime>(lastReceived),
     };
   }
 
@@ -1456,12 +1466,14 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
           {int clientId,
           String identityKey,
           String sessionId,
-          String pickle}) =>
+          String pickle,
+          DateTime lastReceived}) =>
       DbOlmSessions(
         clientId: clientId ?? this.clientId,
         identityKey: identityKey ?? this.identityKey,
         sessionId: sessionId ?? this.sessionId,
         pickle: pickle ?? this.pickle,
+        lastReceived: lastReceived ?? this.lastReceived,
       );
   @override
   String toString() {
@@ -1469,14 +1481,19 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
           ..write('clientId: $clientId, ')
           ..write('identityKey: $identityKey, ')
           ..write('sessionId: $sessionId, ')
-          ..write('pickle: $pickle')
+          ..write('pickle: $pickle, ')
+          ..write('lastReceived: $lastReceived')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => $mrjf($mrjc(clientId.hashCode,
-      $mrjc(identityKey.hashCode, $mrjc(sessionId.hashCode, pickle.hashCode))));
+  int get hashCode => $mrjf($mrjc(
+      clientId.hashCode,
+      $mrjc(
+          identityKey.hashCode,
+          $mrjc(sessionId.hashCode,
+              $mrjc(pickle.hashCode, lastReceived.hashCode)))));
   @override
   bool operator ==(dynamic other) =>
       identical(this, other) ||
@@ -1484,7 +1501,8 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
           other.clientId == this.clientId &&
           other.identityKey == this.identityKey &&
           other.sessionId == this.sessionId &&
-          other.pickle == this.pickle);
+          other.pickle == this.pickle &&
+          other.lastReceived == this.lastReceived);
 }
 
 class OlmSessionsCompanion extends UpdateCompanion<DbOlmSessions> {
@@ -1492,17 +1510,20 @@ class OlmSessionsCompanion extends UpdateCompanion<DbOlmSessions> {
   final Value<String> identityKey;
   final Value<String> sessionId;
   final Value<String> pickle;
+  final Value<DateTime> lastReceived;
   const OlmSessionsCompanion({
     this.clientId = const Value.absent(),
     this.identityKey = const Value.absent(),
     this.sessionId = const Value.absent(),
     this.pickle = const Value.absent(),
+    this.lastReceived = const Value.absent(),
   });
   OlmSessionsCompanion.insert({
     @required int clientId,
     @required String identityKey,
     @required String sessionId,
     @required String pickle,
+    this.lastReceived = const Value.absent(),
   })  : clientId = Value(clientId),
         identityKey = Value(identityKey),
         sessionId = Value(sessionId),
@@ -1512,12 +1533,14 @@ class OlmSessionsCompanion extends UpdateCompanion<DbOlmSessions> {
     Expression<String> identityKey,
     Expression<String> sessionId,
     Expression<String> pickle,
+    Expression<DateTime> lastReceived,
   }) {
     return RawValuesInsertable({
       if (clientId != null) 'client_id': clientId,
       if (identityKey != null) 'identity_key': identityKey,
       if (sessionId != null) 'session_id': sessionId,
       if (pickle != null) 'pickle': pickle,
+      if (lastReceived != null) 'last_received': lastReceived,
     });
   }
 
@@ -1525,12 +1548,14 @@ class OlmSessionsCompanion extends UpdateCompanion<DbOlmSessions> {
       {Value<int> clientId,
       Value<String> identityKey,
       Value<String> sessionId,
-      Value<String> pickle}) {
+      Value<String> pickle,
+      Value<DateTime> lastReceived}) {
     return OlmSessionsCompanion(
       clientId: clientId ?? this.clientId,
       identityKey: identityKey ?? this.identityKey,
       sessionId: sessionId ?? this.sessionId,
       pickle: pickle ?? this.pickle,
+      lastReceived: lastReceived ?? this.lastReceived,
     );
   }
 
@@ -1548,6 +1573,9 @@ class OlmSessionsCompanion extends UpdateCompanion<DbOlmSessions> {
     }
     if (pickle.present) {
       map['pickle'] = Variable<String>(pickle.value);
+    }
+    if (lastReceived.present) {
+      map['last_received'] = Variable<DateTime>(lastReceived.value);
     }
     return map;
   }
@@ -1591,9 +1619,19 @@ class OlmSessions extends Table with TableInfo<OlmSessions, DbOlmSessions> {
         $customConstraints: 'NOT NULL');
   }
 
+  final VerificationMeta _lastReceivedMeta =
+      const VerificationMeta('lastReceived');
+  GeneratedDateTimeColumn _lastReceived;
+  GeneratedDateTimeColumn get lastReceived =>
+      _lastReceived ??= _constructLastReceived();
+  GeneratedDateTimeColumn _constructLastReceived() {
+    return GeneratedDateTimeColumn('last_received', $tableName, true,
+        $customConstraints: '');
+  }
+
   @override
   List<GeneratedColumn> get $columns =>
-      [clientId, identityKey, sessionId, pickle];
+      [clientId, identityKey, sessionId, pickle, lastReceived];
   @override
   OlmSessions get asDslTable => this;
   @override
@@ -1630,6 +1668,12 @@ class OlmSessions extends Table with TableInfo<OlmSessions, DbOlmSessions> {
           pickle.isAcceptableOrUnknown(data['pickle'], _pickleMeta));
     } else if (isInserting) {
       context.missing(_pickleMeta);
+    }
+    if (data.containsKey('last_received')) {
+      context.handle(
+          _lastReceivedMeta,
+          lastReceived.isAcceptableOrUnknown(
+              data['last_received'], _lastReceivedMeta));
     }
     return context;
   }
@@ -5520,6 +5564,7 @@ abstract class _$Database extends GeneratedDatabase {
       identityKey: row.readString('identity_key'),
       sessionId: row.readString('session_id'),
       pickle: row.readString('pickle'),
+      lastReceived: row.readDateTime('last_received'),
     );
   }
 
@@ -5543,15 +5588,16 @@ abstract class _$Database extends GeneratedDatabase {
         }).map(_rowToDbOlmSessions);
   }
 
-  Future<int> storeOlmSession(
-      int client_id, String identitiy_key, String session_id, String pickle) {
+  Future<int> storeOlmSession(int client_id, String identitiy_key,
+      String session_id, String pickle, DateTime last_received) {
     return customInsert(
-      'INSERT OR REPLACE INTO olm_sessions (client_id, identity_key, session_id, pickle) VALUES (:client_id, :identitiy_key, :session_id, :pickle)',
+      'INSERT OR REPLACE INTO olm_sessions (client_id, identity_key, session_id, pickle, last_received) VALUES (:client_id, :identitiy_key, :session_id, :pickle, :last_received)',
       variables: [
         Variable.withInt(client_id),
         Variable.withString(identitiy_key),
         Variable.withString(session_id),
-        Variable.withString(pickle)
+        Variable.withString(pickle),
+        Variable.withDateTime(last_received)
       ],
       updates: {olmSessions},
     );

@@ -99,8 +99,26 @@ void main() {
           false);
     });
 
+    test('restoreOlmSession', () async {
+      client.encryption.olmManager.olmSessions.clear();
+      await client.encryption.olmManager
+          .restoreOlmSession(client.userID, client.identityKey);
+      expect(client.encryption.olmManager.olmSessions.length, 1);
+
+      client.encryption.olmManager.olmSessions.clear();
+      await client.encryption.olmManager
+          .restoreOlmSession(client.userID, 'invalid');
+      expect(client.encryption.olmManager.olmSessions.length, 0);
+
+      client.encryption.olmManager.olmSessions.clear();
+      await client.encryption.olmManager
+          .restoreOlmSession('invalid', client.identityKey);
+      expect(client.encryption.olmManager.olmSessions.length, 0);
+    });
+
     test('startOutgoingOlmSessions', () async {
       // start an olm session.....with ourself!
+      client.encryption.olmManager.olmSessions.clear();
       await client.encryption.olmManager.startOutgoingOlmSessions(
           [client.userDeviceKeys[client.userID].deviceKeys[client.deviceID]]);
       expect(
