@@ -757,9 +757,6 @@ class Client {
         }
         accountData[newAccountData.type] = newAccountData;
         if (onAccountData != null) onAccountData.add(newAccountData);
-        if (newAccountData.type == 'm.tag') {
-          _sortRooms();
-        }
       }
     }
     if (sync.deviceLists != null) {
@@ -1084,7 +1081,7 @@ class Client {
           BasicRoomEvent.fromJson(eventUpdate.content);
     }
     if (rooms[j].onUpdate != null) rooms[j].onUpdate.add(rooms[j].id);
-    if (eventUpdate.type == 'timeline') _sortRooms();
+    if (['timeline', 'account_data'].contains(eventUpdate.type)) _sortRooms();
   }
 
   bool _sortLock = false;
