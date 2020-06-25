@@ -56,16 +56,23 @@ class Client {
 
   Encryption encryption;
 
+  Set<KeyVerificationMethod> verificationMethods;
+
   /// Create a client
   /// clientName = unique identifier of this client
   /// debug: Print debug output?
   /// database: The database instance to use
   /// enableE2eeRecovery: Enable additional logic to try to recover from bad e2ee sessions
+  /// verificationMethods: A set of all the verification methods this client can handle. Includes:
+  ///    KeyVerificationMethod.numbers: Compare numbers. Most basic, should be supported
+  ///    KeyVerificationMethod.emoji: Compare emojis
   Client(this.clientName,
       {this.debug = false,
       this.database,
       this.enableE2eeRecovery = false,
+      this.verificationMethods,
       http.Client httpClient}) {
+    verificationMethods ??= <KeyVerificationMethod>{};
     api = MatrixApi(debug: debug, httpClient: httpClient);
     onLoginStateChanged.stream.listen((loginState) {
       if (debug) {
@@ -110,6 +117,12 @@ class Client {
 
   String get identityKey => encryption?.identityKey ?? '';
   String get fingerprintKey => encryption?.fingerprintKey ?? '';
+
+  /// Wheather this session is unknown to others
+  bool get isUnknownSession =>
+      !userDeviceKeys.containsKey(userID) ||
+      !userDeviceKeys[userID].deviceKeys.containsKey(deviceID) ||
+      !userDeviceKeys[userID].deviceKeys[deviceID].signed;
 
   /// Warning! This endpoint is for testing only!
   set rooms(List<Room> newList) {
@@ -627,7 +640,7 @@ class Client {
           encryption?.pickledOlmAccount,
         );
       }
-      _userDeviceKeys = await database.getUserDeviceKeys(id);
+      _userDeviceKeys = await database.getUserDeviceKeys(this);
       _rooms = await database.getRoomList(this, onlyLeft: false);
       _sortRooms();
       accountData = await database.getAccountData(id);
@@ -953,6 +966,9 @@ class Client {
         await database.storeEventUpdate(id, update);
       }
       _updateRoomsByEventUpdate(update);
+      if (encryptionEnabled) {
+        await encryption.handleEventUpdate(update);
+      }
       onEvent.add(update);
 
       if (event['type'] == 'm.call.invite') {
@@ -1124,7 +1140,7 @@ class Client {
       var outdatedLists = <String, dynamic>{};
       for (var userId in trackedUserIds) {
         if (!userDeviceKeys.containsKey(userId)) {
-          _userDeviceKeys[userId] = DeviceKeysList(userId);
+          _userDeviceKeys[userId] = DeviceKeysList(userId, this);
         }
         var deviceKeysList = userDeviceKeys[userId];
         if (deviceKeysList.outdated) {
@@ -1140,7 +1156,7 @@ class Client {
         for (final rawDeviceKeyListEntry in response.deviceKeys.entries) {
           final userId = rawDeviceKeyListEntry.key;
           if (!userDeviceKeys.containsKey(userId)) {
-            _userDeviceKeys[userId] = DeviceKeysList(userId);
+            _userDeviceKeys[userId] = DeviceKeysList(userId, this);
           }
           final oldKeys =
               Map<String, DeviceKeys>.from(_userDeviceKeys[userId].deviceKeys);
@@ -1149,34 +1165,45 @@ class Client {
             final deviceId = rawDeviceKeyEntry.key;
 
             // Set the new device key for this device
-
-            if (!oldKeys.containsKey(deviceId)) {
-              final entry =
-                  DeviceKeys.fromMatrixDeviceKeys(rawDeviceKeyEntry.value);
-              if (entry.isValid) {
+            final entry =
+                DeviceKeys.fromMatrixDeviceKeys(rawDeviceKeyEntry.value, this);
+            if (entry.isValid) {
+              // is this a new key or the same one as an old one?
+              // better store an update - the signatures might have changed!
+              if (!oldKeys.containsKey(deviceId) ||
+                  oldKeys[deviceId].ed25519Key == entry.ed25519Key) {
+                if (oldKeys.containsKey(deviceId)) {
+                  // be sure to save the verified status
+                  entry.setDirectVerified(oldKeys[deviceId].directVerified);
+                  entry.blocked = oldKeys[deviceId].blocked;
+                  entry.validSignatures = oldKeys[deviceId].validSignatures;
+                }
                 _userDeviceKeys[userId].deviceKeys[deviceId] = entry;
                 if (deviceId == deviceID &&
-                    entry.ed25519Key == encryption?.fingerprintKey) {
+                    entry.ed25519Key == fingerprintKey) {
                   // Always trust the own device
-                  entry.verified = true;
+                  entry.setDirectVerified(true);
                 }
+              } else {
+                // This shouldn't ever happen. The same device ID has gotten
+                // a new public key. So we ignore the update. TODO: ask krille
+                // if we should instead use the new key with unknown verified / blocked status
+                _userDeviceKeys[userId].deviceKeys[deviceId] =
+                    oldKeys[deviceId];
               }
-              if (database != null) {
-                dbActions.add(() => database.storeUserDeviceKey(
-                      id,
-                      userId,
-                      deviceId,
-                      json.encode(_userDeviceKeys[userId]
-                          .deviceKeys[deviceId]
-                          .toJson()),
-                      _userDeviceKeys[userId].deviceKeys[deviceId].verified,
-                      _userDeviceKeys[userId].deviceKeys[deviceId].blocked,
-                    ));
-              }
-            } else {
-              _userDeviceKeys[userId].deviceKeys[deviceId] = oldKeys[deviceId];
+            }
+            if (database != null) {
+              dbActions.add(() => database.storeUserDeviceKey(
+                    id,
+                    userId,
+                    deviceId,
+                    json.encode(entry.toJson()),
+                    entry.directVerified,
+                    entry.blocked,
+                  ));
             }
           }
+          // delete old/unused entries
           if (database != null) {
             for (final oldDeviceKeyEntry in oldKeys.entries) {
               final deviceId = oldDeviceKeyEntry.key;
@@ -1191,6 +1218,71 @@ class Client {
           if (database != null) {
             dbActions
                 .add(() => database.storeUserDeviceKeysInfo(id, userId, false));
+          }
+        }
+        // next we parse and persist the cross signing keys
+        final crossSigningTypes = {
+          'master': response.masterKeys,
+          'self_signing': response.selfSigningKeys,
+          'user_signing': response.userSigningKeys,
+        };
+        for (final crossSigningKeysEntry in crossSigningTypes.entries) {
+          final keyType = crossSigningKeysEntry.key;
+          final keys = crossSigningKeysEntry.value;
+          if (keys == null) {
+            continue;
+          }
+          for (final crossSigningKeyListEntry in keys.entries) {
+            final userId = crossSigningKeyListEntry.key;
+            if (!userDeviceKeys.containsKey(userId)) {
+              _userDeviceKeys[userId] = DeviceKeysList(userId, this);
+            }
+            final oldKeys = Map<String, CrossSigningKey>.from(
+                _userDeviceKeys[userId].crossSigningKeys);
+            _userDeviceKeys[userId].crossSigningKeys = {};
+            // add the types we aren't handling atm back
+            for (final oldEntry in oldKeys.entries) {
+              if (!oldEntry.value.usage.contains(keyType)) {
+                _userDeviceKeys[userId].crossSigningKeys[oldEntry.key] =
+                    oldEntry.value;
+              }
+            }
+            final entry = CrossSigningKey.fromMatrixCrossSigningKey(
+                crossSigningKeyListEntry.value, this);
+            if (entry.isValid) {
+              final publicKey = entry.publicKey;
+              if (!oldKeys.containsKey(publicKey) ||
+                  oldKeys[publicKey].ed25519Key == entry.ed25519Key) {
+                if (oldKeys.containsKey(publicKey)) {
+                  // be sure to save the verification status
+                  entry.setDirectVerified(oldKeys[publicKey].directVerified);
+                  entry.blocked = oldKeys[publicKey].blocked;
+                  entry.validSignatures = oldKeys[publicKey].validSignatures;
+                }
+                _userDeviceKeys[userId].crossSigningKeys[publicKey] = entry;
+              } else {
+                // This shouldn't ever happen. The same device ID has gotten
+                // a new public key. So we ignore the update. TODO: ask krille
+                // if we should instead use the new key with unknown verified / blocked status
+                _userDeviceKeys[userId].crossSigningKeys[publicKey] =
+                    oldKeys[publicKey];
+              }
+              if (database != null) {
+                dbActions.add(() => database.storeUserCrossSigningKey(
+                      id,
+                      userId,
+                      publicKey,
+                      json.encode(entry.toJson()),
+                      entry.directVerified,
+                      entry.blocked,
+                    ));
+              }
+            }
+            _userDeviceKeys[userId].outdated = false;
+            if (database != null) {
+              dbActions.add(
+                  () => database.storeUserDeviceKeysInfo(id, userId, false));
+            }
           }
         }
       }
@@ -1212,12 +1304,16 @@ class Client {
     Map<String, dynamic> message, {
     bool encrypted = true,
     List<User> toUsers,
+    bool onlyVerified = false,
   }) async {
     if (encrypted && !encryptionEnabled) return;
-    // Don't send this message to blocked devices.
+    // Don't send this message to blocked devices, and if specified onlyVerified
+    // then only send it to verified devices
     if (deviceKeys.isNotEmpty) {
       deviceKeys.removeWhere((DeviceKeys deviceKeys) =>
-          deviceKeys.blocked || deviceKeys.deviceId == deviceID);
+          deviceKeys.blocked ||
+          deviceKeys.deviceId == deviceID ||
+          (onlyVerified && !deviceKeys.verified));
       if (deviceKeys.isEmpty) return;
     }
 

@@ -84,12 +84,15 @@ void main() {
         room: room,
         originServerTs: now,
         eventId: '\$event',
+        senderId: '@alice:example.com',
       );
       final decryptedEvent =
           await client.encryption.decryptRoomEvent(roomId, encryptedEvent);
       expect(decryptedEvent.type, 'm.room.message');
       expect(decryptedEvent.content['msgtype'], 'm.text');
       expect(decryptedEvent.content['text'], 'Hello foxies!');
+      await client.encryption
+          .decryptRoomEvent(roomId, encryptedEvent, store: true);
     });
 
     test('dispose client', () async {

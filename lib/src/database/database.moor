@@ -32,6 +32,17 @@ CREATE TABLE user_device_keys_key (
 ) as DbUserDeviceKeysKey;
 CREATE INDEX user_device_keys_key_index ON user_device_keys_key(client_id);
 
+CREATE TABLE user_cross_signing_keys (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  user_id TEXT NOT NULL,
+  public_key TEXT NOT NULL,
+  content TEXT NOT NULL,
+  verified BOOLEAN DEFAULT false,
+  blocked BOOLEAN DEFAULT false,
+  UNIQUE(client_id, user_id, public_key)
+) as DbUserCrossSigningKey;
+CREATE INDEX user_cross_signing_keys_index ON user_cross_signing_keys(client_id);
+
 CREATE TABLE olm_sessions (
   client_id INTEGER NOT NULL REFERENCES clients(client_id),
   identity_key TEXT NOT NULL,
@@ -62,6 +73,15 @@ CREATE TABLE inbound_group_sessions (
   UNIQUE(client_id, room_id, session_id)
 ) AS DbInboundGroupSession;
 CREATE INDEX inbound_group_sessions_index ON inbound_group_sessions(client_id);
+
+CREATE TABLE ssss_cache (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  type TEXT NOT NULL,
+  key_id TEXT NOT NULL,
+  ciphertext TEXT NOT NULL,
+  content TEXT NOT NULL,
+  UNIQUE(client_id, type)
+) AS DbSSSSCache;
 
 CREATE TABLE rooms (
   client_id INTEGER NOT NULL REFERENCES clients(client_id),
@@ -154,6 +174,7 @@ updateClientKeys: UPDATE clients SET olm_account = :olm_account WHERE client_id 
 storePrevBatch: UPDATE clients SET prev_batch = :prev_batch WHERE client_id = :client_id;
 getAllUserDeviceKeys: SELECT * FROM user_device_keys WHERE client_id = :client_id;
 getAllUserDeviceKeysKeys: SELECT * FROM user_device_keys_key WHERE client_id = :client_id;
+getAllUserCrossSigningKeys: SELECT * FROM user_cross_signing_keys WHERE client_id = :client_id;
 getAllOlmSessions: SELECT * FROM olm_sessions WHERE client_id = :client_id;
 dbGetOlmSessions: SELECT * FROM olm_sessions WHERE client_id = :client_id AND identity_key = :identity_key;
 storeOlmSession: INSERT OR REPLACE INTO olm_sessions (client_id, identity_key, session_id, pickle) VALUES (:client_id, :identitiy_key, :session_id, :pickle);
@@ -171,6 +192,13 @@ setVerifiedUserDeviceKey: UPDATE user_device_keys_key SET verified = :verified W
 setBlockedUserDeviceKey: UPDATE user_device_keys_key SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
 storeUserDeviceKey: INSERT OR REPLACE INTO user_device_keys_key (client_id, user_id, device_id, content, verified, blocked) VALUES (:client_id, :user_id, :device_id, :content, :verified, :blocked);
 removeUserDeviceKey: DELETE FROM user_device_keys_key WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
+setVerifiedUserCrossSigningKey: UPDATE user_cross_signing_keys SET verified = :verified WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key;
+setBlockedUserCrossSigningKey: UPDATE user_cross_signing_keys SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key;
+storeUserCrossSigningKey: INSERT OR REPLACE INTO user_cross_signing_keys (client_id, user_id, public_key, content, verified, blocked) VALUES (:client_id, :user_id, :public_key, :content, :verified, :blocked);
+removeUserCrossSigningKey: DELETE FROM user_cross_signing_keys WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key;
+storeSSSSCache: INSERT OR REPLACE INTO ssss_cache (client_id, type, key_id, ciphertext, content) VALUES (:client_id, :type, :key_id, :ciphertext, :content);
+dbGetSSSSCache: SELECT * FROM ssss_cache WHERE client_id = :client_id AND type = :type;
+clearSSSSCache: DELETE FROM ssss_cache WHERE client_id = :client_id;
 insertClient: INSERT INTO clients (name, homeserver_url, token, user_id, device_id, device_name, prev_batch, olm_account) VALUES (:name, :homeserver_url, :token, :user_id, :device_id, :device_name, :prev_batch, :olm_account);
 ensureRoomExists: INSERT OR IGNORE INTO rooms (client_id, room_id, membership) VALUES (:client_id, :room_id, :membership);
 setRoomPrevBatch: UPDATE rooms SET prev_batch = :prev_batch WHERE client_id = :client_id AND room_id = :room_id;

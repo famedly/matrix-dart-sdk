@@ -20,4 +20,5 @@ library encryption;
 
 export './encryption/encryption.dart';
 export './encryption/key_manager.dart';
+export './encryption/ssss.dart';
 export './encryption/utils/key_verification.dart';

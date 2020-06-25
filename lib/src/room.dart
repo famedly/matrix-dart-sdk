@@ -465,7 +465,9 @@ class Room {
             final event = room.getState('im.ponies.room_emotes', stateKey);
             if (event != null && stateKeyEntry.value is Map) {
               addEmotePack(
-                  room.canonicalAlias.isEmpty ? room.id : canonicalAlias,
+                  (room.canonicalAlias?.isEmpty ?? true)
+                      ? room.id
+                      : canonicalAlias,
                   event.content,
                   stateKeyEntry.value['name']);
             }

@@ -24,6 +24,8 @@ import 'package:pedantic/pedantic.dart';
 import 'key_manager.dart';
 import 'olm_manager.dart';
 import 'key_verification_manager.dart';
+import 'cross_signing.dart';
+import 'ssss.dart';
 
 class Encryption {
   final Client client;
@@ -42,15 +44,19 @@ class Encryption {
   KeyManager keyManager;
   OlmManager olmManager;
   KeyVerificationManager keyVerificationManager;
+  CrossSigning crossSigning;
+  SSSS ssss;
 
   Encryption({
     this.client,
     this.debug,
     this.enableE2eeRecovery,
   }) {
+    ssss = SSSS(this);
     keyManager = KeyManager(this);
     olmManager = OlmManager(this);
     keyVerificationManager = KeyVerificationManager(this);
+    crossSigning = CrossSigning(this);
   }
 
   Future<void> init(String olmAccount) async {
@@ -76,6 +82,24 @@ class Encryption {
       // some key verification event. No need to handle it now, we can easily
       // do this in the background
       unawaited(keyVerificationManager.handleToDeviceEvent(event));
+    }
+    if (event.type.startsWith('m.secret.')) {
+      // some ssss thing. We can do this in the background
+      unawaited(ssss.handleToDeviceEvent(event));
+    }
+  }
+
+  Future<void> handleEventUpdate(EventUpdate update) async {
+    if (update.type == 'ephemeral') {
+      return;
+    }
+    if (update.eventType.startsWith('m.key.verification.') ||
+        (update.eventType == 'm.room.message' &&
+            (update.content['content']['msgtype'] is String) &&
+            update.content['content']['msgtype']
+                .startsWith('m.key.verification.'))) {
+      // "just" key verification, no need to do this in sync
+      unawaited(keyVerificationManager.handleEventUpdate(update));
     }
   }
 

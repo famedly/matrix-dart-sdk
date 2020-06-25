@@ -1039,6 +1039,353 @@ class UserDeviceKeysKey extends Table
   bool get dontWriteConstraints => true;
 }
 
+class DbUserCrossSigningKey extends DataClass
+    implements Insertable<DbUserCrossSigningKey> {
+  final int clientId;
+  final String userId;
+  final String publicKey;
+  final String content;
+  final bool verified;
+  final bool blocked;
+  DbUserCrossSigningKey(
+      {@required this.clientId,
+      @required this.userId,
+      @required this.publicKey,
+      @required this.content,
+      this.verified,
+      this.blocked});
+  factory DbUserCrossSigningKey.fromData(
+      Map<String, dynamic> data, GeneratedDatabase db,
+      {String prefix}) {
+    final effectivePrefix = prefix ?? '';
+    final intType = db.typeSystem.forDartType<int>();
+    final stringType = db.typeSystem.forDartType<String>();
+    final boolType = db.typeSystem.forDartType<bool>();
+    return DbUserCrossSigningKey(
+      clientId:
+          intType.mapFromDatabaseResponse(data['${effectivePrefix}client_id']),
+      userId:
+          stringType.mapFromDatabaseResponse(data['${effectivePrefix}user_id']),
+      publicKey: stringType
+          .mapFromDatabaseResponse(data['${effectivePrefix}public_key']),
+      content:
+          stringType.mapFromDatabaseResponse(data['${effectivePrefix}content']),
+      verified:
+          boolType.mapFromDatabaseResponse(data['${effectivePrefix}verified']),
+      blocked:
+          boolType.mapFromDatabaseResponse(data['${effectivePrefix}blocked']),
+    );
+  }
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (!nullToAbsent || clientId != null) {
+      map['client_id'] = Variable<int>(clientId);
+    }
+    if (!nullToAbsent || userId != null) {
+      map['user_id'] = Variable<String>(userId);
+    }
+    if (!nullToAbsent || publicKey != null) {
+      map['public_key'] = Variable<String>(publicKey);
+    }
+    if (!nullToAbsent || content != null) {
+      map['content'] = Variable<String>(content);
+    }
+    if (!nullToAbsent || verified != null) {
+      map['verified'] = Variable<bool>(verified);
+    }
+    if (!nullToAbsent || blocked != null) {
+      map['blocked'] = Variable<bool>(blocked);
+    }
+    return map;
+  }
+
+  factory DbUserCrossSigningKey.fromJson(Map<String, dynamic> json,
+      {ValueSerializer serializer}) {
+    serializer ??= moorRuntimeOptions.defaultSerializer;
+    return DbUserCrossSigningKey(
+      clientId: serializer.fromJson<int>(json['client_id']),
+      userId: serializer.fromJson<String>(json['user_id']),
+      publicKey: serializer.fromJson<String>(json['public_key']),
+      content: serializer.fromJson<String>(json['content']),
+      verified: serializer.fromJson<bool>(json['verified']),
+      blocked: serializer.fromJson<bool>(json['blocked']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer serializer}) {
+    serializer ??= moorRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'client_id': serializer.toJson<int>(clientId),
+      'user_id': serializer.toJson<String>(userId),
+      'public_key': serializer.toJson<String>(publicKey),
+      'content': serializer.toJson<String>(content),
+      'verified': serializer.toJson<bool>(verified),
+      'blocked': serializer.toJson<bool>(blocked),
+    };
+  }
+
+  DbUserCrossSigningKey copyWith(
+          {int clientId,
+          String userId,
+          String publicKey,
+          String content,
+          bool verified,
+          bool blocked}) =>
+      DbUserCrossSigningKey(
+        clientId: clientId ?? this.clientId,
+        userId: userId ?? this.userId,
+        publicKey: publicKey ?? this.publicKey,
+        content: content ?? this.content,
+        verified: verified ?? this.verified,
+        blocked: blocked ?? this.blocked,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('DbUserCrossSigningKey(')
+          ..write('clientId: $clientId, ')
+          ..write('userId: $userId, ')
+          ..write('publicKey: $publicKey, ')
+          ..write('content: $content, ')
+          ..write('verified: $verified, ')
+          ..write('blocked: $blocked')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => $mrjf($mrjc(
+      clientId.hashCode,
+      $mrjc(
+          userId.hashCode,
+          $mrjc(
+              publicKey.hashCode,
+              $mrjc(content.hashCode,
+                  $mrjc(verified.hashCode, blocked.hashCode))))));
+  @override
+  bool operator ==(dynamic other) =>
+      identical(this, other) ||
+      (other is DbUserCrossSigningKey &&
+          other.clientId == this.clientId &&
+          other.userId == this.userId &&
+          other.publicKey == this.publicKey &&
+          other.content == this.content &&
+          other.verified == this.verified &&
+          other.blocked == this.blocked);
+}
+
+class UserCrossSigningKeysCompanion
+    extends UpdateCompanion<DbUserCrossSigningKey> {
+  final Value<int> clientId;
+  final Value<String> userId;
+  final Value<String> publicKey;
+  final Value<String> content;
+  final Value<bool> verified;
+  final Value<bool> blocked;
+  const UserCrossSigningKeysCompanion({
+    this.clientId = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.publicKey = const Value.absent(),
+    this.content = const Value.absent(),
+    this.verified = const Value.absent(),
+    this.blocked = const Value.absent(),
+  });
+  UserCrossSigningKeysCompanion.insert({
+    @required int clientId,
+    @required String userId,
+    @required String publicKey,
+    @required String content,
+    this.verified = const Value.absent(),
+    this.blocked = const Value.absent(),
+  })  : clientId = Value(clientId),
+        userId = Value(userId),
+        publicKey = Value(publicKey),
+        content = Value(content);
+  static Insertable<DbUserCrossSigningKey> custom({
+    Expression<int> clientId,
+    Expression<String> userId,
+    Expression<String> publicKey,
+    Expression<String> content,
+    Expression<bool> verified,
+    Expression<bool> blocked,
+  }) {
+    return RawValuesInsertable({
+      if (clientId != null) 'client_id': clientId,
+      if (userId != null) 'user_id': userId,
+      if (publicKey != null) 'public_key': publicKey,
+      if (content != null) 'content': content,
+      if (verified != null) 'verified': verified,
+      if (blocked != null) 'blocked': blocked,
+    });
+  }
+
+  UserCrossSigningKeysCompanion copyWith(
+      {Value<int> clientId,
+      Value<String> userId,
+      Value<String> publicKey,
+      Value<String> content,
+      Value<bool> verified,
+      Value<bool> blocked}) {
+    return UserCrossSigningKeysCompanion(
+      clientId: clientId ?? this.clientId,
+      userId: userId ?? this.userId,
+      publicKey: publicKey ?? this.publicKey,
+      content: content ?? this.content,
+      verified: verified ?? this.verified,
+      blocked: blocked ?? this.blocked,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientId.present) {
+      map['client_id'] = Variable<int>(clientId.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (publicKey.present) {
+      map['public_key'] = Variable<String>(publicKey.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (verified.present) {
+      map['verified'] = Variable<bool>(verified.value);
+    }
+    if (blocked.present) {
+      map['blocked'] = Variable<bool>(blocked.value);
+    }
+    return map;
+  }
+}
+
+class UserCrossSigningKeys extends Table
+    with TableInfo<UserCrossSigningKeys, DbUserCrossSigningKey> {
+  final GeneratedDatabase _db;
+  final String _alias;
+  UserCrossSigningKeys(this._db, [this._alias]);
+  final VerificationMeta _clientIdMeta = const VerificationMeta('clientId');
+  GeneratedIntColumn _clientId;
+  GeneratedIntColumn get clientId => _clientId ??= _constructClientId();
+  GeneratedIntColumn _constructClientId() {
+    return GeneratedIntColumn('client_id', $tableName, false,
+        $customConstraints: 'NOT NULL REFERENCES clients(client_id)');
+  }
+
+  final VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  GeneratedTextColumn _userId;
+  GeneratedTextColumn get userId => _userId ??= _constructUserId();
+  GeneratedTextColumn _constructUserId() {
+    return GeneratedTextColumn('user_id', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  final VerificationMeta _publicKeyMeta = const VerificationMeta('publicKey');
+  GeneratedTextColumn _publicKey;
+  GeneratedTextColumn get publicKey => _publicKey ??= _constructPublicKey();
+  GeneratedTextColumn _constructPublicKey() {
+    return GeneratedTextColumn('public_key', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  final VerificationMeta _contentMeta = const VerificationMeta('content');
+  GeneratedTextColumn _content;
+  GeneratedTextColumn get content => _content ??= _constructContent();
+  GeneratedTextColumn _constructContent() {
+    return GeneratedTextColumn('content', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  final VerificationMeta _verifiedMeta = const VerificationMeta('verified');
+  GeneratedBoolColumn _verified;
+  GeneratedBoolColumn get verified => _verified ??= _constructVerified();
+  GeneratedBoolColumn _constructVerified() {
+    return GeneratedBoolColumn('verified', $tableName, true,
+        $customConstraints: 'DEFAULT false',
+        defaultValue: const CustomExpression<bool>('false'));
+  }
+
+  final VerificationMeta _blockedMeta = const VerificationMeta('blocked');
+  GeneratedBoolColumn _blocked;
+  GeneratedBoolColumn get blocked => _blocked ??= _constructBlocked();
+  GeneratedBoolColumn _constructBlocked() {
+    return GeneratedBoolColumn('blocked', $tableName, true,
+        $customConstraints: 'DEFAULT false',
+        defaultValue: const CustomExpression<bool>('false'));
+  }
+
+  @override
+  List<GeneratedColumn> get $columns =>
+      [clientId, userId, publicKey, content, verified, blocked];
+  @override
+  UserCrossSigningKeys get asDslTable => this;
+  @override
+  String get $tableName => _alias ?? 'user_cross_signing_keys';
+  @override
+  final String actualTableName = 'user_cross_signing_keys';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<DbUserCrossSigningKey> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_id')) {
+      context.handle(_clientIdMeta,
+          clientId.isAcceptableOrUnknown(data['client_id'], _clientIdMeta));
+    } else if (isInserting) {
+      context.missing(_clientIdMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(_userIdMeta,
+          userId.isAcceptableOrUnknown(data['user_id'], _userIdMeta));
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('public_key')) {
+      context.handle(_publicKeyMeta,
+          publicKey.isAcceptableOrUnknown(data['public_key'], _publicKeyMeta));
+    } else if (isInserting) {
+      context.missing(_publicKeyMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(_contentMeta,
+          content.isAcceptableOrUnknown(data['content'], _contentMeta));
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('verified')) {
+      context.handle(_verifiedMeta,
+          verified.isAcceptableOrUnknown(data['verified'], _verifiedMeta));
+    }
+    if (data.containsKey('blocked')) {
+      context.handle(_blockedMeta,
+          blocked.isAcceptableOrUnknown(data['blocked'], _blockedMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => <GeneratedColumn>{};
+  @override
+  DbUserCrossSigningKey map(Map<String, dynamic> data, {String tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : null;
+    return DbUserCrossSigningKey.fromData(data, _db, prefix: effectivePrefix);
+  }
+
+  @override
+  UserCrossSigningKeys createAlias(String alias) {
+    return UserCrossSigningKeys(_db, alias);
+  }
+
+  @override
+  List<String> get customConstraints =>
+      const ['UNIQUE(client_id, user_id, public_key)'];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
 class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
   final int clientId;
   final String identityKey;
@@ -4454,6 +4801,311 @@ class Presences extends Table with TableInfo<Presences, DbPresence> {
   bool get dontWriteConstraints => true;
 }
 
+class DbSSSSCache extends DataClass implements Insertable<DbSSSSCache> {
+  final int clientId;
+  final String type;
+  final String keyId;
+  final String ciphertext;
+  final String content;
+  DbSSSSCache(
+      {@required this.clientId,
+      @required this.type,
+      @required this.keyId,
+      @required this.ciphertext,
+      @required this.content});
+  factory DbSSSSCache.fromData(Map<String, dynamic> data, GeneratedDatabase db,
+      {String prefix}) {
+    final effectivePrefix = prefix ?? '';
+    final intType = db.typeSystem.forDartType<int>();
+    final stringType = db.typeSystem.forDartType<String>();
+    return DbSSSSCache(
+      clientId:
+          intType.mapFromDatabaseResponse(data['${effectivePrefix}client_id']),
+      type: stringType.mapFromDatabaseResponse(data['${effectivePrefix}type']),
+      keyId:
+          stringType.mapFromDatabaseResponse(data['${effectivePrefix}key_id']),
+      ciphertext: stringType
+          .mapFromDatabaseResponse(data['${effectivePrefix}ciphertext']),
+      content:
+          stringType.mapFromDatabaseResponse(data['${effectivePrefix}content']),
+    );
+  }
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (!nullToAbsent || clientId != null) {
+      map['client_id'] = Variable<int>(clientId);
+    }
+    if (!nullToAbsent || type != null) {
+      map['type'] = Variable<String>(type);
+    }
+    if (!nullToAbsent || keyId != null) {
+      map['key_id'] = Variable<String>(keyId);
+    }
+    if (!nullToAbsent || ciphertext != null) {
+      map['ciphertext'] = Variable<String>(ciphertext);
+    }
+    if (!nullToAbsent || content != null) {
+      map['content'] = Variable<String>(content);
+    }
+    return map;
+  }
+
+  factory DbSSSSCache.fromJson(Map<String, dynamic> json,
+      {ValueSerializer serializer}) {
+    serializer ??= moorRuntimeOptions.defaultSerializer;
+    return DbSSSSCache(
+      clientId: serializer.fromJson<int>(json['client_id']),
+      type: serializer.fromJson<String>(json['type']),
+      keyId: serializer.fromJson<String>(json['key_id']),
+      ciphertext: serializer.fromJson<String>(json['ciphertext']),
+      content: serializer.fromJson<String>(json['content']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer serializer}) {
+    serializer ??= moorRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'client_id': serializer.toJson<int>(clientId),
+      'type': serializer.toJson<String>(type),
+      'key_id': serializer.toJson<String>(keyId),
+      'ciphertext': serializer.toJson<String>(ciphertext),
+      'content': serializer.toJson<String>(content),
+    };
+  }
+
+  DbSSSSCache copyWith(
+          {int clientId,
+          String type,
+          String keyId,
+          String ciphertext,
+          String content}) =>
+      DbSSSSCache(
+        clientId: clientId ?? this.clientId,
+        type: type ?? this.type,
+        keyId: keyId ?? this.keyId,
+        ciphertext: ciphertext ?? this.ciphertext,
+        content: content ?? this.content,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('DbSSSSCache(')
+          ..write('clientId: $clientId, ')
+          ..write('type: $type, ')
+          ..write('keyId: $keyId, ')
+          ..write('ciphertext: $ciphertext, ')
+          ..write('content: $content')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => $mrjf($mrjc(
+      clientId.hashCode,
+      $mrjc(
+          type.hashCode,
+          $mrjc(
+              keyId.hashCode, $mrjc(ciphertext.hashCode, content.hashCode)))));
+  @override
+  bool operator ==(dynamic other) =>
+      identical(this, other) ||
+      (other is DbSSSSCache &&
+          other.clientId == this.clientId &&
+          other.type == this.type &&
+          other.keyId == this.keyId &&
+          other.ciphertext == this.ciphertext &&
+          other.content == this.content);
+}
+
+class SsssCacheCompanion extends UpdateCompanion<DbSSSSCache> {
+  final Value<int> clientId;
+  final Value<String> type;
+  final Value<String> keyId;
+  final Value<String> ciphertext;
+  final Value<String> content;
+  const SsssCacheCompanion({
+    this.clientId = const Value.absent(),
+    this.type = const Value.absent(),
+    this.keyId = const Value.absent(),
+    this.ciphertext = const Value.absent(),
+    this.content = const Value.absent(),
+  });
+  SsssCacheCompanion.insert({
+    @required int clientId,
+    @required String type,
+    @required String keyId,
+    @required String ciphertext,
+    @required String content,
+  })  : clientId = Value(clientId),
+        type = Value(type),
+        keyId = Value(keyId),
+        ciphertext = Value(ciphertext),
+        content = Value(content);
+  static Insertable<DbSSSSCache> custom({
+    Expression<int> clientId,
+    Expression<String> type,
+    Expression<String> keyId,
+    Expression<String> ciphertext,
+    Expression<String> content,
+  }) {
+    return RawValuesInsertable({
+      if (clientId != null) 'client_id': clientId,
+      if (type != null) 'type': type,
+      if (keyId != null) 'key_id': keyId,
+      if (ciphertext != null) 'ciphertext': ciphertext,
+      if (content != null) 'content': content,
+    });
+  }
+
+  SsssCacheCompanion copyWith(
+      {Value<int> clientId,
+      Value<String> type,
+      Value<String> keyId,
+      Value<String> ciphertext,
+      Value<String> content}) {
+    return SsssCacheCompanion(
+      clientId: clientId ?? this.clientId,
+      type: type ?? this.type,
+      keyId: keyId ?? this.keyId,
+      ciphertext: ciphertext ?? this.ciphertext,
+      content: content ?? this.content,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientId.present) {
+      map['client_id'] = Variable<int>(clientId.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (keyId.present) {
+      map['key_id'] = Variable<String>(keyId.value);
+    }
+    if (ciphertext.present) {
+      map['ciphertext'] = Variable<String>(ciphertext.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    return map;
+  }
+}
+
+class SsssCache extends Table with TableInfo<SsssCache, DbSSSSCache> {
+  final GeneratedDatabase _db;
+  final String _alias;
+  SsssCache(this._db, [this._alias]);
+  final VerificationMeta _clientIdMeta = const VerificationMeta('clientId');
+  GeneratedIntColumn _clientId;
+  GeneratedIntColumn get clientId => _clientId ??= _constructClientId();
+  GeneratedIntColumn _constructClientId() {
+    return GeneratedIntColumn('client_id', $tableName, false,
+        $customConstraints: 'NOT NULL REFERENCES clients(client_id)');
+  }
+
+  final VerificationMeta _typeMeta = const VerificationMeta('type');
+  GeneratedTextColumn _type;
+  GeneratedTextColumn get type => _type ??= _constructType();
+  GeneratedTextColumn _constructType() {
+    return GeneratedTextColumn('type', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  final VerificationMeta _keyIdMeta = const VerificationMeta('keyId');
+  GeneratedTextColumn _keyId;
+  GeneratedTextColumn get keyId => _keyId ??= _constructKeyId();
+  GeneratedTextColumn _constructKeyId() {
+    return GeneratedTextColumn('key_id', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  final VerificationMeta _ciphertextMeta = const VerificationMeta('ciphertext');
+  GeneratedTextColumn _ciphertext;
+  GeneratedTextColumn get ciphertext => _ciphertext ??= _constructCiphertext();
+  GeneratedTextColumn _constructCiphertext() {
+    return GeneratedTextColumn('ciphertext', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  final VerificationMeta _contentMeta = const VerificationMeta('content');
+  GeneratedTextColumn _content;
+  GeneratedTextColumn get content => _content ??= _constructContent();
+  GeneratedTextColumn _constructContent() {
+    return GeneratedTextColumn('content', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  @override
+  List<GeneratedColumn> get $columns =>
+      [clientId, type, keyId, ciphertext, content];
+  @override
+  SsssCache get asDslTable => this;
+  @override
+  String get $tableName => _alias ?? 'ssss_cache';
+  @override
+  final String actualTableName = 'ssss_cache';
+  @override
+  VerificationContext validateIntegrity(Insertable<DbSSSSCache> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_id')) {
+      context.handle(_clientIdMeta,
+          clientId.isAcceptableOrUnknown(data['client_id'], _clientIdMeta));
+    } else if (isInserting) {
+      context.missing(_clientIdMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+          _typeMeta, type.isAcceptableOrUnknown(data['type'], _typeMeta));
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('key_id')) {
+      context.handle(
+          _keyIdMeta, keyId.isAcceptableOrUnknown(data['key_id'], _keyIdMeta));
+    } else if (isInserting) {
+      context.missing(_keyIdMeta);
+    }
+    if (data.containsKey('ciphertext')) {
+      context.handle(
+          _ciphertextMeta,
+          ciphertext.isAcceptableOrUnknown(
+              data['ciphertext'], _ciphertextMeta));
+    } else if (isInserting) {
+      context.missing(_ciphertextMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(_contentMeta,
+          content.isAcceptableOrUnknown(data['content'], _contentMeta));
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => <GeneratedColumn>{};
+  @override
+  DbSSSSCache map(Map<String, dynamic> data, {String tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : null;
+    return DbSSSSCache.fromData(data, _db, prefix: effectivePrefix);
+  }
+
+  @override
+  SsssCache createAlias(String alias) {
+    return SsssCache(_db, alias);
+  }
+
+  @override
+  List<String> get customConstraints => const ['UNIQUE(client_id, type)'];
+  @override
+  bool get dontWriteConstraints => true;
+}
+
 class DbFile extends DataClass implements Insertable<DbFile> {
   final String mxcUri;
   final Uint8List bytes;
@@ -4680,6 +5332,13 @@ abstract class _$Database extends GeneratedDatabase {
   Index get userDeviceKeysKeyIndex => _userDeviceKeysKeyIndex ??= Index(
       'user_device_keys_key_index',
       'CREATE INDEX user_device_keys_key_index ON user_device_keys_key(client_id);');
+  UserCrossSigningKeys _userCrossSigningKeys;
+  UserCrossSigningKeys get userCrossSigningKeys =>
+      _userCrossSigningKeys ??= UserCrossSigningKeys(this);
+  Index _userCrossSigningKeysIndex;
+  Index get userCrossSigningKeysIndex => _userCrossSigningKeysIndex ??= Index(
+      'user_cross_signing_keys_index',
+      'CREATE INDEX user_cross_signing_keys_index ON user_cross_signing_keys(client_id);');
   OlmSessions _olmSessions;
   OlmSessions get olmSessions => _olmSessions ??= OlmSessions(this);
   Index _olmSessionsIndex;
@@ -4733,6 +5392,8 @@ abstract class _$Database extends GeneratedDatabase {
   Index _presencesIndex;
   Index get presencesIndex => _presencesIndex ??= Index('presences_index',
       'CREATE INDEX presences_index ON presences(client_id);');
+  SsssCache _ssssCache;
+  SsssCache get ssssCache => _ssssCache ??= SsssCache(this);
   Files _files;
   Files get files => _files ??= Files(this);
   DbClient _rowToDbClient(QueryRow row) {
@@ -4833,6 +5494,24 @@ abstract class _$Database extends GeneratedDatabase {
         'SELECT * FROM user_device_keys_key WHERE client_id = :client_id',
         variables: [Variable.withInt(client_id)],
         readsFrom: {userDeviceKeysKey}).map(_rowToDbUserDeviceKeysKey);
+  }
+
+  DbUserCrossSigningKey _rowToDbUserCrossSigningKey(QueryRow row) {
+    return DbUserCrossSigningKey(
+      clientId: row.readInt('client_id'),
+      userId: row.readString('user_id'),
+      publicKey: row.readString('public_key'),
+      content: row.readString('content'),
+      verified: row.readBool('verified'),
+      blocked: row.readBool('blocked'),
+    );
+  }
+
+  Selectable<DbUserCrossSigningKey> getAllUserCrossSigningKeys(int client_id) {
+    return customSelect(
+        'SELECT * FROM user_cross_signing_keys WHERE client_id = :client_id',
+        variables: [Variable.withInt(client_id)],
+        readsFrom: {userCrossSigningKeys}).map(_rowToDbUserCrossSigningKey);
   }
 
   DbOlmSessions _rowToDbOlmSessions(QueryRow row) {
@@ -5075,6 +5754,107 @@ abstract class _$Database extends GeneratedDatabase {
         Variable.withString(device_id)
       ],
       updates: {userDeviceKeysKey},
+      updateKind: UpdateKind.delete,
+    );
+  }
+
+  Future<int> setVerifiedUserCrossSigningKey(
+      bool verified, int client_id, String user_id, String public_key) {
+    return customUpdate(
+      'UPDATE user_cross_signing_keys SET verified = :verified WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key',
+      variables: [
+        Variable.withBool(verified),
+        Variable.withInt(client_id),
+        Variable.withString(user_id),
+        Variable.withString(public_key)
+      ],
+      updates: {userCrossSigningKeys},
+      updateKind: UpdateKind.update,
+    );
+  }
+
+  Future<int> setBlockedUserCrossSigningKey(
+      bool blocked, int client_id, String user_id, String public_key) {
+    return customUpdate(
+      'UPDATE user_cross_signing_keys SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key',
+      variables: [
+        Variable.withBool(blocked),
+        Variable.withInt(client_id),
+        Variable.withString(user_id),
+        Variable.withString(public_key)
+      ],
+      updates: {userCrossSigningKeys},
+      updateKind: UpdateKind.update,
+    );
+  }
+
+  Future<int> storeUserCrossSigningKey(int client_id, String user_id,
+      String public_key, String content, bool verified, bool blocked) {
+    return customInsert(
+      'INSERT OR REPLACE INTO user_cross_signing_keys (client_id, user_id, public_key, content, verified, blocked) VALUES (:client_id, :user_id, :public_key, :content, :verified, :blocked)',
+      variables: [
+        Variable.withInt(client_id),
+        Variable.withString(user_id),
+        Variable.withString(public_key),
+        Variable.withString(content),
+        Variable.withBool(verified),
+        Variable.withBool(blocked)
+      ],
+      updates: {userCrossSigningKeys},
+    );
+  }
+
+  Future<int> removeUserCrossSigningKey(
+      int client_id, String user_id, String public_key) {
+    return customUpdate(
+      'DELETE FROM user_cross_signing_keys WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key',
+      variables: [
+        Variable.withInt(client_id),
+        Variable.withString(user_id),
+        Variable.withString(public_key)
+      ],
+      updates: {userCrossSigningKeys},
+      updateKind: UpdateKind.delete,
+    );
+  }
+
+  Future<int> storeSSSSCache(int client_id, String type, String key_id,
+      String ciphertext, String content) {
+    return customInsert(
+      'INSERT OR REPLACE INTO ssss_cache (client_id, type, key_id, ciphertext, content) VALUES (:client_id, :type, :key_id, :ciphertext, :content)',
+      variables: [
+        Variable.withInt(client_id),
+        Variable.withString(type),
+        Variable.withString(key_id),
+        Variable.withString(ciphertext),
+        Variable.withString(content)
+      ],
+      updates: {ssssCache},
+    );
+  }
+
+  DbSSSSCache _rowToDbSSSSCache(QueryRow row) {
+    return DbSSSSCache(
+      clientId: row.readInt('client_id'),
+      type: row.readString('type'),
+      keyId: row.readString('key_id'),
+      ciphertext: row.readString('ciphertext'),
+      content: row.readString('content'),
+    );
+  }
+
+  Selectable<DbSSSSCache> dbGetSSSSCache(int client_id, String type) {
+    return customSelect(
+        'SELECT * FROM ssss_cache WHERE client_id = :client_id AND type = :type',
+        variables: [Variable.withInt(client_id), Variable.withString(type)],
+        readsFrom: {ssssCache}).map(_rowToDbSSSSCache);
+  }
+
+  Future<int> clearSSSSCache(int client_id) {
+    return customUpdate(
+      'DELETE FROM ssss_cache WHERE client_id = :client_id',
+      variables: [Variable.withInt(client_id)],
+      updates: {ssssCache},
       updateKind: UpdateKind.delete,
     );
   }
@@ -5508,6 +6288,8 @@ abstract class _$Database extends GeneratedDatabase {
         userDeviceKeysIndex,
         userDeviceKeysKey,
         userDeviceKeysKeyIndex,
+        userCrossSigningKeys,
+        userCrossSigningKeysIndex,
         olmSessions,
         olmSessionsIndex,
         outboundGroupSessions,
@@ -5526,6 +6308,7 @@ abstract class _$Database extends GeneratedDatabase {
         roomAccountDataIndex,
         presences,
         presencesIndex,
+        ssssCache,
         files
       ];
 }

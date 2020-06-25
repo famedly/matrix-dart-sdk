@@ -78,6 +78,11 @@ class FakeMatrixApi extends MockClient {
               action.contains('/state/m.room.member/')) {
             res = {'displayname': ''};
             return Response(json.encode(res), 200);
+          } else if (method == 'PUT' &&
+              action.contains(
+                  '/client/r0/rooms/%211234%3AfakeServer.notExisting/send/')) {
+            res = {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
+            return Response(json.encode(res), 200);
           } else {
             res = {
               'errcode': 'M_UNRECOGNIZED',
@@ -528,6 +533,75 @@ class FakeMatrixApi extends MockClient {
           },
           'type': 'm.direct'
         },
+        {
+          'type': 'm.secret_storage.default_key',
+          'content': {'key': '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3'}
+        },
+        {
+          'type': 'm.secret_storage.key.0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3',
+          'content': {
+            'algorithm': 'm.secret_storage.v1.aes-hmac-sha2',
+            'passphrase': {
+              'algorithm': 'm.pbkdf2',
+              'iterations': 500000,
+              'salt': 'F4jJ80mr0Fc8mRwU9JgA3lQDyjPuZXQL'
+            },
+            'iv': 'HjbTgIoQH2pI7jQo19NUzA==',
+            'mac': 'QbJjQzDnAggU0cM4RBnDxw2XyarRGjdahcKukP9xVlk='
+          }
+        },
+        {
+          'type': 'm.cross_signing.master',
+          'content': {
+            'encrypted': {
+              '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
+                'iv': 'eIb2IITxtmcq+1TrT8D5eQ==',
+                'ciphertext':
+                    'lWRTPo5qxf4LAVwVPzGHOyMcP181n7bb9/B0lvkLDC2Oy4DvAL0eLx2x3bY=',
+                'mac': 'Ynx89tIxPkx0o6ljMgxszww17JOgB4tg4etmNnMC9XI='
+              }
+            }
+          }
+        },
+        {
+          'type': 'm.cross_signing.self_signing',
+          'content': {
+            'encrypted': {
+              '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
+                'iv': 'YqU2XIjYulYZl+bkZtGgVw==',
+                'ciphertext':
+                    'kM2TSoy/jR/4d357ZoRPbpPypxQl6XRLo3FsEXz+f7vIOp82GeRp28RYb3k=',
+                'mac': 'F+DZa5tAFmWsYSryw5EuEpzTmmABRab4GETkM85bGGo='
+              }
+            }
+          }
+        },
+        {
+          'type': 'm.cross_signing.user_signing',
+          'content': {
+            'encrypted': {
+              '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
+                'iv': 'D7AM3LXFu7ZlyGOkR+OeqQ==',
+                'ciphertext':
+                    'bYA2+OMgsO6QB1E31aY+ESAWrT0fUBTXqajy4qmL7bVDSZY4Uj64EXNbHuA=',
+                'mac': 'j2UtyPo/UBSoiaQCWfzCiRZXp3IRt0ZZujuXgUMjnw4='
+              }
+            }
+          }
+        },
+        {
+          'type': 'm.megolm_backup.v1',
+          'content': {
+            'encrypted': {
+              '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
+                'iv': 'cL/0MJZaiEd3fNU+I9oJrw==',
+                'ciphertext':
+                    'WL73Pzdk5wZdaaSpaeRH0uZYKcxkuV8IS6Qa2FEfA1+vMeRLuHcWlXbMX0w=',
+                'mac': '+xozp909S6oDX8KRV8D8ZFVRyh7eEYQpPP76f+DOsnw='
+              }
+            }
+          }
+        }
       ]
     },
     'to_device': {
@@ -1473,6 +1547,65 @@ class FakeMatrixApi extends MockClient {
                 'event_format': 'client',
                 'event_fields': ['type', 'content', 'sender']
               },
+      '/client/unstable/room_keys/version': (var req) => {
+            'algorithm': 'm.megolm_backup.v1.curve25519-aes-sha2',
+            'auth_data': {
+              'public_key': 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM',
+              'signatures': {},
+            },
+            'count': 0,
+            'etag': '0',
+            'version': '5',
+          },
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5':
+          (var req) => {
+                'first_message_index': 0,
+                'forwarded_count': 0,
+                'is_verified': true,
+                'session_data': {
+                  'ephemeral': 'fwRxYh+seqLykz5mQCLypJ4/59URdcFJ2s69OU1dGRc',
+                  'ciphertext':
+                      '19jkQYlbgdP+VL9DH3qY/Dvpk6onJZgf+6frZFl1TinPCm9OMK9AZZLuM1haS9XLAUK1YsREgjBqfl6T+Tq8JlJ5ONZGg2Wttt24sGYc0iTMZJ8rXcNDeKMZhM96ETyjufJSeYoXLqifiVLDw9rrVBmNStF7PskYp040em+0OZ4pF85Cwsdf7l9V7MMynzh9BoXqVUCBiwT03PNYH9AEmNUxXX+6ZwCpe/saONv8MgGt5uGXMZIK29phA3D8jD6uV/WOHsB8NjHNq9FrfSEAsl+dAcS4uiYie4BKSSeQN+zGAQqu1MMW4OAdxGOuf8WpIINx7n+7cKQfxlmc/Cgg5+MmIm2H0oDwQ+Xu7aSxp1OCUzbxQRdjz6+tnbYmZBuH0Ov2RbEvC5tDb261LRqKXpub0llg5fqKHl01D0ahv4OAQgRs5oU+4mq+H2QGTwIFGFqP9tCRo0I+aICawpxYOfoLJpFW6KvEPnM2Lr3sl6Nq2fmkz6RL5F7nUtzxN8OKazLQpv8DOYzXbi7+ayEsqS0/EINetq7RfCqgjrEUgfNWYuFXWqvUT8lnxLdNu+8cyrJqh1UquFjXWTw1kWcJ0pkokVeBtK9YysCnF1UYh/Iv3rl2ZoYSSLNtuvMSYlYHggZ8xV8bz9S3X2/NwBycBiWIy5Ou/OuSX7trIKgkkmda0xjBWEM1a2acVuqu2OFbMn2zFxm2a3YwKP//OlIgMg',
+                  'mac': 'QzKV/fgAs4U',
+                },
+              },
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5':
+          (var req) => {
+                'sessions': {
+                  'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU': {
+                    'first_message_index': 0,
+                    'forwarded_count': 0,
+                    'is_verified': true,
+                    'session_data': {
+                      'ephemeral':
+                          'fwRxYh+seqLykz5mQCLypJ4/59URdcFJ2s69OU1dGRc',
+                      'ciphertext':
+                          '19jkQYlbgdP+VL9DH3qY/Dvpk6onJZgf+6frZFl1TinPCm9OMK9AZZLuM1haS9XLAUK1YsREgjBqfl6T+Tq8JlJ5ONZGg2Wttt24sGYc0iTMZJ8rXcNDeKMZhM96ETyjufJSeYoXLqifiVLDw9rrVBmNStF7PskYp040em+0OZ4pF85Cwsdf7l9V7MMynzh9BoXqVUCBiwT03PNYH9AEmNUxXX+6ZwCpe/saONv8MgGt5uGXMZIK29phA3D8jD6uV/WOHsB8NjHNq9FrfSEAsl+dAcS4uiYie4BKSSeQN+zGAQqu1MMW4OAdxGOuf8WpIINx7n+7cKQfxlmc/Cgg5+MmIm2H0oDwQ+Xu7aSxp1OCUzbxQRdjz6+tnbYmZBuH0Ov2RbEvC5tDb261LRqKXpub0llg5fqKHl01D0ahv4OAQgRs5oU+4mq+H2QGTwIFGFqP9tCRo0I+aICawpxYOfoLJpFW6KvEPnM2Lr3sl6Nq2fmkz6RL5F7nUtzxN8OKazLQpv8DOYzXbi7+ayEsqS0/EINetq7RfCqgjrEUgfNWYuFXWqvUT8lnxLdNu+8cyrJqh1UquFjXWTw1kWcJ0pkokVeBtK9YysCnF1UYh/Iv3rl2ZoYSSLNtuvMSYlYHggZ8xV8bz9S3X2/NwBycBiWIy5Ou/OuSX7trIKgkkmda0xjBWEM1a2acVuqu2OFbMn2zFxm2a3YwKP//OlIgMg',
+                      'mac': 'QzKV/fgAs4U',
+                    },
+                  },
+                },
+              },
+      '/client/unstable/room_keys/keys?version=5': (var req) => {
+            'rooms': {
+              '!726s6s6q:example.com': {
+                'sessions': {
+                  'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU': {
+                    'first_message_index': 0,
+                    'forwarded_count': 0,
+                    'is_verified': true,
+                    'session_data': {
+                      'ephemeral':
+                          'fwRxYh+seqLykz5mQCLypJ4/59URdcFJ2s69OU1dGRc',
+                      'ciphertext':
+                          '19jkQYlbgdP+VL9DH3qY/Dvpk6onJZgf+6frZFl1TinPCm9OMK9AZZLuM1haS9XLAUK1YsREgjBqfl6T+Tq8JlJ5ONZGg2Wttt24sGYc0iTMZJ8rXcNDeKMZhM96ETyjufJSeYoXLqifiVLDw9rrVBmNStF7PskYp040em+0OZ4pF85Cwsdf7l9V7MMynzh9BoXqVUCBiwT03PNYH9AEmNUxXX+6ZwCpe/saONv8MgGt5uGXMZIK29phA3D8jD6uV/WOHsB8NjHNq9FrfSEAsl+dAcS4uiYie4BKSSeQN+zGAQqu1MMW4OAdxGOuf8WpIINx7n+7cKQfxlmc/Cgg5+MmIm2H0oDwQ+Xu7aSxp1OCUzbxQRdjz6+tnbYmZBuH0Ov2RbEvC5tDb261LRqKXpub0llg5fqKHl01D0ahv4OAQgRs5oU+4mq+H2QGTwIFGFqP9tCRo0I+aICawpxYOfoLJpFW6KvEPnM2Lr3sl6Nq2fmkz6RL5F7nUtzxN8OKazLQpv8DOYzXbi7+ayEsqS0/EINetq7RfCqgjrEUgfNWYuFXWqvUT8lnxLdNu+8cyrJqh1UquFjXWTw1kWcJ0pkokVeBtK9YysCnF1UYh/Iv3rl2ZoYSSLNtuvMSYlYHggZ8xV8bz9S3X2/NwBycBiWIy5Ou/OuSX7trIKgkkmda0xjBWEM1a2acVuqu2OFbMn2zFxm2a3YwKP//OlIgMg',
+                      'mac': 'QzKV/fgAs4U',
+                    },
+                  },
+                },
+              },
+            },
+          },
     },
     'POST': {
       '/client/r0/delete_devices': (var req) => {},
@@ -1683,7 +1816,30 @@ class FakeMatrixApi extends MockClient {
                     'ed25519:GHTYAJCE':
                         'gjL//fyaFHADt9KBADGag8g7F8Up78B/K1zXeiEPLJo'
                   },
-                  'signatures': {},
+                  'signatures': {
+                    '@test:fakeServer.notExisting': {
+                      'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY':
+                          'Q4/55vZjEJD7M2EC40bgZqd9Zuy/4C75UPVopJdXeioQVaKtFf6EF0nUUuql0yD+r3hinsZcock0wO6Q2xcoAQ',
+                    },
+                  },
+                },
+                'OTHERDEVICE': {
+                  'user_id': '@test:fakeServer.notExisting',
+                  'device_id': 'OTHERDEVICE',
+                  'algorithms': [
+                    'm.olm.v1.curve25519-aes-sha2',
+                    'm.megolm.v1.aes-sha2'
+                  ],
+                  'keys': {
+                    'curve25519:OTHERDEVICE': 'blah',
+                    'ed25519:OTHERDEVICE': 'blah'
+                  },
+                  'signatures': {
+                    '@test:fakeServer.notExisting': {
+                      'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY':
+                          'o7ucKPWrF2VKx7wYqP1f+aw4QohLMz7kX+SIw6aWCYsLC3XyIlg8rX/7QQ9B8figCVnRK7IjtjWvQodBCfWCAA',
+                    },
+                  },
                 },
               },
               '@othertest:fakeServer.notExisting': {
@@ -1702,6 +1858,73 @@ class FakeMatrixApi extends MockClient {
                   },
                   'signatures': {},
                 },
+              },
+            },
+            'master_keys': {
+              '@test:fakeServer.notExisting': {
+                'user_id': '@test:fakeServer.notExisting',
+                'usage': ['master'],
+                'keys': {
+                  'ed25519:82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8':
+                      '82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8',
+                },
+                'signatures': {},
+              },
+              '@othertest:fakeServer.notExisting': {
+                'user_id': '@othertest:fakeServer.notExisting',
+                'usage': ['master'],
+                'keys': {
+                  'ed25519:master': 'master',
+                },
+                'signatures': {},
+              },
+            },
+            'self_signing_keys': {
+              '@test:fakeServer.notExisting': {
+                'user_id': '@test:fakeServer.notExisting',
+                'usage': ['self_signing'],
+                'keys': {
+                  'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY':
+                      'F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY',
+                },
+                'signatures': {
+                  '@test:fakeServer.notExisting': {
+                    'ed25519:82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8':
+                        'afkrbGvPn5Zb5zc7Lk9cz2skI3QrzI/L0st1GS+/GATxNjMzc6vKmGu7r9cMb1GJxy4RdeUpfH3L7Fs/fNL1Dw',
+                  },
+                },
+              },
+              '@othertest:fakeServer.notExisting': {
+                'user_id': '@othertest:fakeServer.notExisting',
+                'usage': ['self_signing'],
+                'keys': {
+                  'ed25519:self_signing': 'self_signing',
+                },
+                'signatures': {},
+              },
+            },
+            'user_signing_keys': {
+              '@test:fakeServer.notExisting': {
+                'user_id': '@test:fakeServer.notExisting',
+                'usage': ['user_signing'],
+                'keys': {
+                  'ed25519:0PiwulzJ/RU86LlzSSZ8St80HUMN3dqjKa/orIJoA0g':
+                      '0PiwulzJ/RU86LlzSSZ8St80HUMN3dqjKa/orIJoA0g',
+                },
+                'signatures': {
+                  '@test:fakeServer.notExisting': {
+                    'ed25519:82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8':
+                        'pvgbZxEbllaElhpiRnb7/uOIUhrglvHCFnpoxr3/5ZrWa0EK/uaefhex9eEV4uBLrHjHg2ymwdNaM7ap9+sBBg',
+                  },
+                },
+              },
+              '@othertest:fakeServer.notExisting': {
+                'user_id': '@othertest:fakeServer.notExisting',
+                'usage': ['user_signing'],
+                'keys': {
+                  'ed25519:user_signing': 'user_signing',
+                },
+                'signatures': {},
               },
             },
           },
@@ -1751,6 +1974,9 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/rooms/!localpart%3Aserver.abc/ban': (var reqI) => {},
       '/client/r0/rooms/!localpart%3Aserver.abc/unban': (var reqI) => {},
       '/client/r0/rooms/!localpart%3Aserver.abc/invite': (var reqI) => {},
+      '/client/r0/keys/device_signing/upload': (var reqI) => {},
+      '/client/r0/keys/signatures/upload': (var reqI) => {'failures': {}},
+      '/client/unstable/room_keys/version': (var reqI) => {'version': '5'},
     },
     'PUT': {
       '/client/r0/presence/${Uri.encodeComponent('@alice:example.com')}/status':
@@ -1797,7 +2023,13 @@ class FakeMatrixApi extends MockClient {
           (var req) => {},
       '/client/r0/user/%40alice%3Aexample.com/account_data/test.account.data':
           (var req) => {},
+      '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/best+animal':
+          (var req) => {},
       '/client/r0/user/%40alice%3Aexample.com/rooms/1234/account_data/test.account.data':
+          (var req) => {},
+      '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/m.direct':
+          (var req) => {},
+      '/client/r0/user/%40othertest%3AfakeServer.notExisting/account_data/m.direct':
           (var req) => {},
       '/client/r0/profile/%40alice%3Aexample.com/displayname': (var reqI) => {},
       '/client/r0/profile/%40alice%3Aexample.com/avatar_url': (var reqI) => {},
@@ -1831,6 +2063,21 @@ class FakeMatrixApi extends MockClient {
           (var reqI) => {},
       '/client/r0/directory/list/room/!localpart%3Aexample.com': (var req) =>
           {},
+      '/client/unstable/room_keys/version/5': (var req) => {},
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5':
+          (var req) => {
+                'etag': 'asdf',
+                'count': 1,
+              },
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5':
+          (var req) => {
+                'etag': 'asdf',
+                'count': 1,
+              },
+      '/client/unstable/room_keys/keys?version=5': (var req) => {
+            'etag': 'asdf',
+            'count': 1,
+          },
     },
     'DELETE': {
       '/unknown/token': (var req) => {'errcode': 'M_UNKNOWN_TOKEN'},
@@ -1843,6 +2090,21 @@ class FakeMatrixApi extends MockClient {
           (var req) => {},
       '/client/r0/user/%40alice%3Aexample.com/rooms/%21localpart%3Aexample.com/tags/testtag':
           (var req) => {},
+      '/client/unstable/room_keys/version/5': (var req) => {},
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5':
+          (var req) => {
+                'etag': 'asdf',
+                'count': 1,
+              },
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5':
+          (var req) => {
+                'etag': 'asdf',
+                'count': 1,
+              },
+      '/client/unstable/room_keys/keys?version=5': (var req) => {
+            'etag': 'asdf',
+            'count': 1,
+          },
     },
   };
 }

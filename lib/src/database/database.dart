@@ -16,7 +16,7 @@ class Database extends _$Database {
   Database(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   int get maxFileSize => 1 * 1024 * 1024;
 
@@ -44,6 +44,16 @@ class Database extends _$Database {
           if (from == 2) {
             await m.deleteTable('outbound_group_sessions');
             await m.createTable(outboundGroupSessions);
+            from++;
+          }
+          if (from == 3) {
+            await m.createTable(userCrossSigningKeys);
+            await m.createIndex(userCrossSigningKeysIndex);
+            await m.createTable(ssssCache);
+            // mark all keys as outdated so that the cross signing keys will be fetched
+            await m.issueCustomQuery(
+                'UPDATE user_device_keys SET outdated = true');
+            from++;
           }
         },
         beforeOpen: (_) async {
@@ -64,16 +74,20 @@ class Database extends _$Database {
   }
 
   Future<Map<String, sdk.DeviceKeysList>> getUserDeviceKeys(
-      int clientId) async {
-    final deviceKeys = await getAllUserDeviceKeys(clientId).get();
+      sdk.Client client) async {
+    final deviceKeys = await getAllUserDeviceKeys(client.id).get();
     if (deviceKeys.isEmpty) {
       return {};
     }
-    final deviceKeysKeys = await getAllUserDeviceKeysKeys(clientId).get();
+    final deviceKeysKeys = await getAllUserDeviceKeysKeys(client.id).get();
+    final crossSigningKeys = await getAllUserCrossSigningKeys(client.id).get();
     final res = <String, sdk.DeviceKeysList>{};
     for (final entry in deviceKeys) {
-      res[entry.userId] = sdk.DeviceKeysList.fromDb(entry,
-          deviceKeysKeys.where((k) => k.userId == entry.userId).toList());
+      res[entry.userId] = sdk.DeviceKeysList.fromDb(
+          entry,
+          deviceKeysKeys.where((k) => k.userId == entry.userId).toList(),
+          crossSigningKeys.where((k) => k.userId == entry.userId).toList(),
+          client);
     }
     return res;
   }
@@ -134,6 +148,14 @@ class Database extends _$Database {
       int clientId, String roomId, String sessionId) async {
     final res =
         await dbGetInboundGroupSessionKey(clientId, roomId, sessionId).get();
+    if (res.isEmpty) {
+      return null;
+    }
+    return res.first;
+  }
+
+  Future<DbSSSSCache> getSSSSCache(int clientId, String type) async {
+    final res = await dbGetSSSSCache(clientId, type).get();
     if (res.isEmpty) {
       return null;
     }
@@ -428,11 +450,16 @@ class Database extends _$Database {
     await (delete(inboundGroupSessions)
           ..where((r) => r.clientId.equals(clientId)))
         .go();
+    await (delete(ssssCache)..where((r) => r.clientId.equals(clientId))).go();
     await (delete(olmSessions)..where((r) => r.clientId.equals(clientId))).go();
+    await (delete(userCrossSigningKeys)
+          ..where((r) => r.clientId.equals(clientId)))
+        .go();
     await (delete(userDeviceKeysKey)..where((r) => r.clientId.equals(clientId)))
         .go();
     await (delete(userDeviceKeys)..where((r) => r.clientId.equals(clientId)))
         .go();
+    await (delete(ssssCache)..where((r) => r.clientId.equals(clientId))).go();
     await (delete(clients)..where((r) => r.clientId.equals(clientId))).go();
   }
 

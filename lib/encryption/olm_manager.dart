@@ -96,6 +96,10 @@ class OlmManager {
     return payload;
   }
 
+  String signString(String s) {
+    return _olmAccount.sign(s);
+  }
+
   /// Checks the signature of a signed json object.
   bool checkJsonSignature(String key, Map<String, dynamic> signedJson,
       String userId, String deviceId) {

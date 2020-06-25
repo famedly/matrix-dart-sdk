@@ -56,8 +56,9 @@ void main() {
     test('Create Request', () async {
       var matrix = await getClient();
       final requestRoom = matrix.getRoomById('!726s6s6q:example.com');
-      await matrix.encryption.keyManager
-          .request(requestRoom, 'sessionId', validSenderKey);
+      await matrix.encryption.keyManager.request(
+          requestRoom, 'sessionId', validSenderKey,
+          tryOnlineBackup: false);
       var foundEvent = false;
       for (var entry in FakeMatrixApi.calledEndpoints.entries) {
         final payload = jsonDecode(entry.value.first);
@@ -85,10 +86,10 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await matrix
           .userDeviceKeys['@alice:example.com'].deviceKeys['OTHERDEVICE']
-          .setBlocked(false, matrix);
+          .setBlocked(false);
       await matrix
           .userDeviceKeys['@alice:example.com'].deviceKeys['OTHERDEVICE']
-          .setVerified(true, matrix);
+          .setVerified(true);
       // test a successful share
       var event = ToDeviceEvent(
           sender: '@alice:example.com',
@@ -223,8 +224,9 @@ void main() {
     test('Receive shared keys', () async {
       var matrix = await getClient();
       final requestRoom = matrix.getRoomById('!726s6s6q:example.com');
-      await matrix.encryption.keyManager
-          .request(requestRoom, validSessionId, validSenderKey);
+      await matrix.encryption.keyManager.request(
+          requestRoom, validSessionId, validSenderKey,
+          tryOnlineBackup: false);
 
       final session = await matrix.encryption.keyManager
           .loadInboundGroupSession(
@@ -279,8 +281,9 @@ void main() {
           false);
 
       // unknown device
-      await matrix.encryption.keyManager
-          .request(requestRoom, validSessionId, validSenderKey);
+      await matrix.encryption.keyManager.request(
+          requestRoom, validSessionId, validSenderKey,
+          tryOnlineBackup: false);
       matrix.encryption.keyManager.clearInboundGroupSessions();
       event = ToDeviceEvent(
           sender: '@alice:example.com',
@@ -304,8 +307,9 @@ void main() {
           false);
 
       // no encrypted content
-      await matrix.encryption.keyManager
-          .request(requestRoom, validSessionId, validSenderKey);
+      await matrix.encryption.keyManager.request(
+          requestRoom, validSessionId, validSenderKey,
+          tryOnlineBackup: false);
       matrix.encryption.keyManager.clearInboundGroupSessions();
       event = ToDeviceEvent(
           sender: '@alice:example.com',

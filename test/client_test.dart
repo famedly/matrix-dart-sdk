@@ -127,7 +127,7 @@ void main() {
       }
       expect(sync.nextBatch == matrix.prevBatch, true);
 
-      expect(matrix.accountData.length, 3);
+      expect(matrix.accountData.length, 9);
       expect(matrix.getDirectChatFromUserId('@bob:example.com'),
           '!726s6s6q:example.com');
       expect(matrix.rooms[1].directChatMatrixID, '@bob:example.com');
@@ -157,7 +157,7 @@ void main() {
       expect(matrix.presences['@alice:example.com'].presence.presence,
           PresenceType.online);
       expect(presenceCounter, 1);
-      expect(accountDataCounter, 3);
+      expect(accountDataCounter, 9);
       await Future.delayed(Duration(milliseconds: 50));
       expect(matrix.userDeviceKeys.length, 4);
       expect(matrix.userDeviceKeys['@alice:example.com'].outdated, false);
@@ -392,7 +392,7 @@ void main() {
               'dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA'
         }
       }
-    });
+    }, matrix);
     test('sendToDevice', () async {
       await matrix.sendToDevice(
           [deviceKeys],

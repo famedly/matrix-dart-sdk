@@ -18,7 +18,7 @@
 
 import 'dart:typed_data';
 import 'package:famedlysdk/matrix_api.dart';
-import 'package:famedlysdk/matrix_api/model/matrix_device_keys.dart';
+import 'package:famedlysdk/matrix_api/model/matrix_keys.dart';
 import 'package:famedlysdk/matrix_api/model/filter.dart';
 import 'package:famedlysdk/matrix_api/model/matrix_exception.dart';
 import 'package:famedlysdk/matrix_api/model/presence_content.dart';
@@ -1116,6 +1116,83 @@ void main() {
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
+    test('uploadDeviceSigningKeys', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final masterKey = MatrixCrossSigningKey.fromJson({
+        'user_id': '@test:fakeServer.notExisting',
+        'usage': ['master'],
+        'keys': {
+          'ed25519:82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8':
+              '82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8',
+        },
+        'signatures': {},
+      });
+      final selfSigningKey = MatrixCrossSigningKey.fromJson({
+        'user_id': '@test:fakeServer.notExisting',
+        'usage': ['self_signing'],
+        'keys': {
+          'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY':
+              'F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY',
+        },
+        'signatures': {},
+      });
+      final userSigningKey = MatrixCrossSigningKey.fromJson({
+        'user_id': '@test:fakeServer.notExisting',
+        'usage': ['user_signing'],
+        'keys': {
+          'ed25519:0PiwulzJ/RU86LlzSSZ8St80HUMN3dqjKa/orIJoA0g':
+              '0PiwulzJ/RU86LlzSSZ8St80HUMN3dqjKa/orIJoA0g',
+        },
+        'signatures': {},
+      });
+      await matrixApi.uploadDeviceSigningKeys(
+          masterKey: masterKey,
+          selfSigningKey: selfSigningKey,
+          userSigningKey: userSigningKey);
+    });
+    test('uploadKeySignatures', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final key1 = MatrixDeviceKeys.fromJson({
+        'user_id': '@alice:example.com',
+        'device_id': 'JLAFKJWSCS',
+        'algorithms': ['m.olm.v1.curve25519-aes-sha2', 'm.megolm.v1.aes-sha2'],
+        'keys': {
+          'curve25519:JLAFKJWSCS':
+              '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',
+          'ed25519:JLAFKJWSCS': 'lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI'
+        },
+        'signatures': {
+          '@alice:example.com': {
+            'ed25519:JLAFKJWSCS':
+                'dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA'
+          }
+        },
+        'unsigned': {'device_display_name': 'Alices mobile phone'},
+      });
+      final key2 = MatrixDeviceKeys.fromJson({
+        'user_id': '@alice:example.com',
+        'device_id': 'JLAFKJWSCS',
+        'algorithms': ['m.olm.v1.curve25519-aes-sha2', 'm.megolm.v1.aes-sha2'],
+        'keys': {
+          'curve25519:JLAFKJWSCS':
+              '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',
+          'ed25519:JLAFKJWSCS': 'lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI'
+        },
+        'signatures': {
+          '@alice:example.com': {'ed25519:OTHERDEVICE': 'OTHERSIG'}
+        },
+        'unsigned': {'device_display_name': 'Alices mobile phone'},
+      });
+      final ret = await matrixApi.uploadKeySignatures([key1, key2]);
+      expect(
+        FakeMatrixApi.api['POST']['/client/r0/keys/signatures/upload']({}),
+        ret.toJson(),
+      );
+    });
     test('requestPushers', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
@@ -1513,6 +1590,195 @@ void main() {
       await matrixApi.upgradeRoom('1234', '2');
 
       matrixApi.homeserver = matrixApi.accessToken = null;
+    });
+    test('createRoomKeysBackup', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final algorithm = RoomKeysAlgorithmType.v1Curve25519AesSha2;
+      final authData = <String, dynamic>{
+        'public_key': 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM',
+        'signatures': {},
+      };
+      final ret = await matrixApi.createRoomKeysBackup(algorithm, authData);
+      expect(
+          FakeMatrixApi.api['POST']
+              ['/client/unstable/room_keys/version']({})['version'],
+          ret);
+    });
+    test('getRoomKeysBackup', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final ret = await matrixApi.getRoomKeysBackup();
+      expect(FakeMatrixApi.api['GET']['/client/unstable/room_keys/version']({}),
+          ret.toJson());
+    });
+    test('updateRoomKeysBackup', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final algorithm = RoomKeysAlgorithmType.v1Curve25519AesSha2;
+      final authData = <String, dynamic>{
+        'public_key': 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM',
+        'signatures': {},
+      };
+      await matrixApi.updateRoomKeysBackup('5', algorithm, authData);
+    });
+    test('deleteRoomKeysBackup', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      await matrixApi.deleteRoomKeysBackup('5');
+    });
+    test('storeRoomKeysSingleKey', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final roomId = '!726s6s6q:example.com';
+      final sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
+      final session = RoomKeysSingleKey.fromJson({
+        'first_message_index': 0,
+        'forwarded_count': 0,
+        'is_verified': true,
+        'session_data': {
+          'ephemeral': 'fwRxYh+seqLykz5mQCLypJ4/59URdcFJ2s69OU1dGRc',
+          'ciphertext':
+              '19jkQYlbgdP+VL9DH3qY/Dvpk6onJZgf+6frZFl1TinPCm9OMK9AZZLuM1haS9XLAUK1YsREgjBqfl6T+Tq8JlJ5ONZGg2Wttt24sGYc0iTMZJ8rXcNDeKMZhM96ETyjufJSeYoXLqifiVLDw9rrVBmNStF7PskYp040em+0OZ4pF85Cwsdf7l9V7MMynzh9BoXqVUCBiwT03PNYH9AEmNUxXX+6ZwCpe/saONv8MgGt5uGXMZIK29phA3D8jD6uV/WOHsB8NjHNq9FrfSEAsl+dAcS4uiYie4BKSSeQN+zGAQqu1MMW4OAdxGOuf8WpIINx7n+7cKQfxlmc/Cgg5+MmIm2H0oDwQ+Xu7aSxp1OCUzbxQRdjz6+tnbYmZBuH0Ov2RbEvC5tDb261LRqKXpub0llg5fqKHl01D0ahv4OAQgRs5oU+4mq+H2QGTwIFGFqP9tCRo0I+aICawpxYOfoLJpFW6KvEPnM2Lr3sl6Nq2fmkz6RL5F7nUtzxN8OKazLQpv8DOYzXbi7+ayEsqS0/EINetq7RfCqgjrEUgfNWYuFXWqvUT8lnxLdNu+8cyrJqh1UquFjXWTw1kWcJ0pkokVeBtK9YysCnF1UYh/Iv3rl2ZoYSSLNtuvMSYlYHggZ8xV8bz9S3X2/NwBycBiWIy5Ou/OuSX7trIKgkkmda0xjBWEM1a2acVuqu2OFbMn2zFxm2a3YwKP//OlIgMg',
+          'mac': 'QzKV/fgAs4U',
+        },
+      });
+      final ret = await matrixApi.storeRoomKeysSingleKey(
+          roomId, sessionId, '5', session);
+      expect(
+          FakeMatrixApi.api['PUT'][
+              '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5']({}),
+          ret.toJson());
+    });
+    test('getRoomKeysSingleKey', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final roomId = '!726s6s6q:example.com';
+      final sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
+      final ret = await matrixApi.getRoomKeysSingleKey(roomId, sessionId, '5');
+      expect(
+          FakeMatrixApi.api['GET'][
+              '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5']({}),
+          ret.toJson());
+    });
+    test('deleteRoomKeysSingleKey', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final roomId = '!726s6s6q:example.com';
+      final sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
+      final ret =
+          await matrixApi.deleteRoomKeysSingleKey(roomId, sessionId, '5');
+      expect(
+          FakeMatrixApi.api['DELETE'][
+              '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5']({}),
+          ret.toJson());
+    });
+    test('storeRoomKeysRoom', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final roomId = '!726s6s6q:example.com';
+      final sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
+      final session = RoomKeysRoom.fromJson({
+        'sessions': {
+          sessionId: {
+            'first_message_index': 0,
+            'forwarded_count': 0,
+            'is_verified': true,
+            'session_data': {
+              'ephemeral': 'fwRxYh+seqLykz5mQCLypJ4/59URdcFJ2s69OU1dGRc',
+              'ciphertext':
+                  '19jkQYlbgdP+VL9DH3qY/Dvpk6onJZgf+6frZFl1TinPCm9OMK9AZZLuM1haS9XLAUK1YsREgjBqfl6T+Tq8JlJ5ONZGg2Wttt24sGYc0iTMZJ8rXcNDeKMZhM96ETyjufJSeYoXLqifiVLDw9rrVBmNStF7PskYp040em+0OZ4pF85Cwsdf7l9V7MMynzh9BoXqVUCBiwT03PNYH9AEmNUxXX+6ZwCpe/saONv8MgGt5uGXMZIK29phA3D8jD6uV/WOHsB8NjHNq9FrfSEAsl+dAcS4uiYie4BKSSeQN+zGAQqu1MMW4OAdxGOuf8WpIINx7n+7cKQfxlmc/Cgg5+MmIm2H0oDwQ+Xu7aSxp1OCUzbxQRdjz6+tnbYmZBuH0Ov2RbEvC5tDb261LRqKXpub0llg5fqKHl01D0ahv4OAQgRs5oU+4mq+H2QGTwIFGFqP9tCRo0I+aICawpxYOfoLJpFW6KvEPnM2Lr3sl6Nq2fmkz6RL5F7nUtzxN8OKazLQpv8DOYzXbi7+ayEsqS0/EINetq7RfCqgjrEUgfNWYuFXWqvUT8lnxLdNu+8cyrJqh1UquFjXWTw1kWcJ0pkokVeBtK9YysCnF1UYh/Iv3rl2ZoYSSLNtuvMSYlYHggZ8xV8bz9S3X2/NwBycBiWIy5Ou/OuSX7trIKgkkmda0xjBWEM1a2acVuqu2OFbMn2zFxm2a3YwKP//OlIgMg',
+              'mac': 'QzKV/fgAs4U',
+            },
+          },
+        },
+      });
+      final ret = await matrixApi.storeRoomKeysRoom(roomId, '5', session);
+      expect(
+          FakeMatrixApi.api['PUT'][
+              '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5']({}),
+          ret.toJson());
+    });
+    test('getRoomKeysRoom', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final roomId = '!726s6s6q:example.com';
+      final ret = await matrixApi.getRoomKeysRoom(roomId, '5');
+      expect(
+          FakeMatrixApi.api['GET'][
+              '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5']({}),
+          ret.toJson());
+    });
+    test('deleteRoomKeysRoom', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final roomId = '!726s6s6q:example.com';
+      final ret = await matrixApi.deleteRoomKeysRoom(roomId, '5');
+      expect(
+          FakeMatrixApi.api['DELETE'][
+              '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5']({}),
+          ret.toJson());
+    });
+    test('storeRoomKeys', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final roomId = '!726s6s6q:example.com';
+      final sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
+      final session = RoomKeys.fromJson({
+        'rooms': {
+          roomId: {
+            'sessions': {
+              sessionId: {
+                'first_message_index': 0,
+                'forwarded_count': 0,
+                'is_verified': true,
+                'session_data': {
+                  'ephemeral': 'fwRxYh+seqLykz5mQCLypJ4/59URdcFJ2s69OU1dGRc',
+                  'ciphertext':
+                      '19jkQYlbgdP+VL9DH3qY/Dvpk6onJZgf+6frZFl1TinPCm9OMK9AZZLuM1haS9XLAUK1YsREgjBqfl6T+Tq8JlJ5ONZGg2Wttt24sGYc0iTMZJ8rXcNDeKMZhM96ETyjufJSeYoXLqifiVLDw9rrVBmNStF7PskYp040em+0OZ4pF85Cwsdf7l9V7MMynzh9BoXqVUCBiwT03PNYH9AEmNUxXX+6ZwCpe/saONv8MgGt5uGXMZIK29phA3D8jD6uV/WOHsB8NjHNq9FrfSEAsl+dAcS4uiYie4BKSSeQN+zGAQqu1MMW4OAdxGOuf8WpIINx7n+7cKQfxlmc/Cgg5+MmIm2H0oDwQ+Xu7aSxp1OCUzbxQRdjz6+tnbYmZBuH0Ov2RbEvC5tDb261LRqKXpub0llg5fqKHl01D0ahv4OAQgRs5oU+4mq+H2QGTwIFGFqP9tCRo0I+aICawpxYOfoLJpFW6KvEPnM2Lr3sl6Nq2fmkz6RL5F7nUtzxN8OKazLQpv8DOYzXbi7+ayEsqS0/EINetq7RfCqgjrEUgfNWYuFXWqvUT8lnxLdNu+8cyrJqh1UquFjXWTw1kWcJ0pkokVeBtK9YysCnF1UYh/Iv3rl2ZoYSSLNtuvMSYlYHggZ8xV8bz9S3X2/NwBycBiWIy5Ou/OuSX7trIKgkkmda0xjBWEM1a2acVuqu2OFbMn2zFxm2a3YwKP//OlIgMg',
+                  'mac': 'QzKV/fgAs4U',
+                },
+              },
+            },
+          },
+        },
+      });
+      final ret = await matrixApi.storeRoomKeys('5', session);
+      expect(
+          FakeMatrixApi.api['PUT']
+              ['/client/unstable/room_keys/keys?version=5']({}),
+          ret.toJson());
+    });
+    test('getRoomKeys', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final ret = await matrixApi.getRoomKeys('5');
+      expect(
+          FakeMatrixApi.api['GET']
+              ['/client/unstable/room_keys/keys?version=5']({}),
+          ret.toJson());
+    });
+    test('deleteRoomKeys', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final ret = await matrixApi.deleteRoomKeys('5');
+      expect(
+          FakeMatrixApi.api['DELETE']
+              ['/client/unstable/room_keys/keys?version=5']({}),
+          ret.toJson());
     });
   });
 }

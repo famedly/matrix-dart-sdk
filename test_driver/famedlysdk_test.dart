@@ -107,7 +107,7 @@ void test() async {
   assert(!testClientB
       .userDeviceKeys[testUserA].deviceKeys[testClientA.deviceID].blocked);
   await testClientA.userDeviceKeys[testUserB].deviceKeys[testClientB.deviceID]
-      .setVerified(true, testClientA);
+      .setVerified(true);
 
   print('++++ Check if own olm device is verified by default ++++');
   assert(testClientA.userDeviceKeys.containsKey(testUserA));

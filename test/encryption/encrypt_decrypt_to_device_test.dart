@@ -61,17 +61,15 @@ void main() {
       );
 
       await Future.delayed(Duration(milliseconds: 10));
-      device = DeviceKeys(
-        userId: client.userID,
-        deviceId: client.deviceID,
-        algorithms: ['m.olm.v1.curve25519-aes-sha2', 'm.megolm.v1.aes-sha2'],
-        keys: {
+      device = DeviceKeys.fromJson({
+        'user_id': client.userID,
+        'device_id': client.deviceID,
+        'algorithms': ['m.olm.v1.curve25519-aes-sha2', 'm.megolm.v1.aes-sha2'],
+        'keys': {
           'curve25519:${client.deviceID}': client.identityKey,
           'ed25519:${client.deviceID}': client.fingerprintKey,
         },
-        verified: true,
-        blocked: false,
-      );
+      }, client);
     });
 
     test('encryptToDeviceMessage', () async {
