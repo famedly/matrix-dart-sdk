@@ -20,7 +20,7 @@ class Tag {
   double order;
 
   Tag.fromJson(Map<String, dynamic> json) {
-    order = json['order']?.toDouble();
+    order = double.tryParse(json['order'].toString());
   }
 
   Map<String, dynamic> toJson() {
