@@ -1507,7 +1507,7 @@ class MatrixApi {
   }
 
   /// Uploads your own cross-signing keys.
-  /// https://12682-24998719-gh.circle-artifacts.com/0/scripts/gen/client_server/unstable.html#post-matrix-client-r0-keys-device-signing-upload
+  /// https://github.com/matrix-org/matrix-doc/pull/2536
   Future<void> uploadDeviceSigningKeys({
     MatrixCrossSigningKey masterKey,
     MatrixCrossSigningKey selfSigningKey,
@@ -1525,7 +1525,7 @@ class MatrixApi {
   }
 
   /// Uploads new signatures of keys
-  /// https://12682-24998719-gh.circle-artifacts.com/0/scripts/gen/client_server/unstable.html#post-matrix-client-r0-keys-signatures-upload
+  /// https://github.com/matrix-org/matrix-doc/pull/2536
   Future<UploadKeySignaturesResponse> uploadKeySignatures(
       List<MatrixSignableKey> keys) async {
     final payload = <String, dynamic>{};
