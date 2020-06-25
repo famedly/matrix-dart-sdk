@@ -2059,8 +2059,6 @@ class FakeMatrixApi extends MockClient {
           (var reqI) => {
                 'event_id': '42',
               },
-      '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/m.direct':
-          (var reqI) => {},
       '/client/r0/directory/list/room/!localpart%3Aexample.com': (var req) =>
           {},
       '/client/unstable/room_keys/version/5': (var req) => {},
