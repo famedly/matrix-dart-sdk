@@ -81,7 +81,11 @@ class Room {
   double _oldestSortOrder;
 
   double get newSortOrder {
-    _newestSortOrder++;
+    var now = DateTime.now().millisecondsSinceEpoch.toDouble();
+    if (_newestSortOrder >= now) {
+      now = _newestSortOrder + 1;
+    }
+    _newestSortOrder = now;
     return _newestSortOrder;
   }
 
