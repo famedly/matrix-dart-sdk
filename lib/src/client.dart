@@ -752,7 +752,7 @@ class Client {
           await database.storeAccountData(
             id,
             newAccountData.type,
-            jsonEncode(newAccountData.toJson()),
+            jsonEncode(newAccountData.content),
           );
         }
         accountData[newAccountData.type] = newAccountData;

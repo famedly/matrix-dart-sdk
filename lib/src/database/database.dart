@@ -176,7 +176,14 @@ class Database extends _$Database {
     final newAccountData = <String, api.BasicEvent>{};
     final rawAccountData = await getAllAccountData(clientId).get();
     for (final d in rawAccountData) {
-      final content = sdk.Event.getMapFromPayload(d.content);
+      var content = sdk.Event.getMapFromPayload(d.content);
+      // there was a bug where it stored the entire event, not just the content
+      // in the databse. This is the temporary fix for those affected by the bug
+      if (content['content'] is Map && content['type'] is String) {
+        content = content['content'];
+        // and save
+        await storeAccountData(clientId, d.type, jsonEncode(content));
+      }
       newAccountData[d.type] = api.BasicEvent(
         content: content,
         type: d.type,
