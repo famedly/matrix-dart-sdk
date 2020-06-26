@@ -32,7 +32,7 @@ import 'package:famedlysdk/matrix_api/model/third_party_location.dart';
 import 'package:famedlysdk/matrix_api/model/timeline_history_response.dart';
 import 'package:famedlysdk/matrix_api/model/user_search_result.dart';
 import 'package:http/http.dart' as http;
-import 'package:mime_type/mime_type.dart';
+import 'package:mime/mime.dart';
 import 'package:moor/moor.dart';
 
 import 'model/device.dart';
@@ -1326,7 +1326,8 @@ class MatrixApi {
     fileName = fileName.split('/').last;
     var headers = <String, String>{};
     headers['Authorization'] = 'Bearer $accessToken';
-    headers['Content-Type'] = contentType ?? mime(fileName);
+    headers['Content-Type'] =
+        contentType ?? lookupMimeType(fileName, headerBytes: file);
     fileName = Uri.encodeQueryComponent(fileName);
     final url =
         '${homeserver.toString()}/_matrix/media/r0/upload?filename=$fileName';

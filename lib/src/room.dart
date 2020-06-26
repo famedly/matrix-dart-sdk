@@ -27,7 +27,7 @@ import 'package:famedlysdk/src/utils/room_update.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:image/image.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
-import 'package:mime_type/mime_type.dart';
+import 'package:mime/mime.dart';
 import 'package:html_unescape/html_unescape.dart';
 
 import './user.dart';
@@ -524,7 +524,7 @@ class Room {
     String thumbnailUploadResp;
 
     var fileName = file.path.split('/').last;
-    final mimeType = mime(file.path) ?? '';
+    final mimeType = lookupMimeType(file.path, headerBytes: file.bytes) ?? '';
     if (msgType == null) {
       final metaType = (mimeType).split('/')[0];
       switch (metaType) {
@@ -647,7 +647,7 @@ class Room {
         inReplyTo: inReplyTo,
         info: {
           'size': file.size,
-          'mimetype': mime(file.path.split('/').last),
+          'mimetype': lookupMimeType(file.path, headerBytes: file.bytes),
           'w': width,
           'h': height,
         });
@@ -663,10 +663,9 @@ class Room {
       int thumbnailWidth,
       int thumbnailHeight,
       Event inReplyTo}) async {
-    var fileName = file.path.split('/').last;
     var info = <String, dynamic>{
       'size': file.size,
-      'mimetype': mime(fileName),
+      'mimetype': lookupMimeType(file.path, headerBytes: file.bytes),
     };
     if (videoWidth != null) {
       info['w'] = videoWidth;
@@ -678,7 +677,6 @@ class Room {
       info['duration'] = duration;
     }
     if (thumbnail != null && !(encrypted && client.encryptionEnabled)) {
-      var thumbnailName = file.path.split('/').last;
       final thumbnailUploadResp = await client.api.upload(
         thumbnail.bytes,
         thumbnail.path,
@@ -686,7 +684,8 @@ class Room {
       info['thumbnail_url'] = thumbnailUploadResp;
       info['thumbnail_info'] = {
         'size': thumbnail.size,
-        'mimetype': mime(thumbnailName),
+        'mimetype':
+            lookupMimeType(thumbnail.path, headerBytes: thumbnail.bytes),
       };
       if (thumbnailWidth != null) {
         info['thumbnail_info']['w'] = thumbnailWidth;
