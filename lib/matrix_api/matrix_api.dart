@@ -214,8 +214,11 @@ class MatrixApi {
   /// Gets discovery information about the domain. The file may include additional keys.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#get-well-known-matrix-client
   Future<WellKnownInformations> requestWellKnownInformations() async {
-    final response = await httpClient
-        .get('${homeserver.toString()}/.well-known/matrix/client');
+    var baseUrl = homeserver.toString();
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+    }
+    final response = await httpClient.get('$baseUrl/.well-known/matrix/client');
     final rawJson = json.decode(response.body);
     return WellKnownInformations.fromJson(rawJson);
   }
