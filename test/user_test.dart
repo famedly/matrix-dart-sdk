@@ -81,6 +81,8 @@ void main() {
       expect(user2.calcDisplayname(), 'SuperAlice');
       expect(user3.calcDisplayname(), 'Alice Mep');
       expect(user3.calcDisplayname(formatLocalpart: false), 'alice_mep');
+      expect(
+          user3.calcDisplayname(mxidLocalPartFallback: false), 'Unknown user');
     });
     test('kick', () async {
       await client.checkServer('https://fakeserver.notexisting');

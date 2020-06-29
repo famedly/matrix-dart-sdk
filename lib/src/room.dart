@@ -1134,8 +1134,13 @@ class Room {
   final Set<String> _requestingMatrixIds = {};
 
   /// Requests a missing [User] for this room. Important for clients using
-  /// lazy loading.
-  Future<User> requestUser(String mxID, {bool ignoreErrors = false}) async {
+  /// lazy loading. If the user can't be found this method tries to fetch
+  /// the displayname and avatar from the profile if [requestProfile] is true.
+  Future<User> requestUser(
+    String mxID, {
+    bool ignoreErrors = false,
+    bool requestProfile = true,
+  }) async {
     if (getState(EventTypes.RoomMember, mxID) != null) {
       return getState(EventTypes.RoomMember, mxID).asUser;
     }
@@ -1148,8 +1153,22 @@ class Room {
         mxID,
       );
     } catch (exception) {
-      _requestingMatrixIds.remove(mxID);
-      if (!ignoreErrors) rethrow;
+      if (!ignoreErrors) {
+        _requestingMatrixIds.remove(mxID);
+        rethrow;
+      }
+    }
+    if (resp == null && requestProfile) {
+      try {
+        final profile = await client.api.requestProfile(mxID);
+        resp = {
+          'displayname': profile.displayname,
+          'avatar_url': profile.avatarUrl,
+        };
+      } catch (exception) {
+        _requestingMatrixIds.remove(mxID);
+        if (!ignoreErrors) rethrow;
+      }
     }
     if (resp == null) {
       return null;

@@ -97,11 +97,14 @@ class User extends Event {
   /// has no displayname. If [formatLocalpart] is true, then the localpart will
   /// be formatted in the way, that all "_" characters are becomming white spaces and
   /// the first character of each word becomes uppercase.
-  String calcDisplayname({bool formatLocalpart = true}) {
+  /// If [mxidLocalPartFallback] is true, then the local part of the mxid will be shown
+  /// if there is no other displayname available. If not then this will return "Unknown user".
+  String calcDisplayname(
+      {bool formatLocalpart = true, bool mxidLocalPartFallback = true}) {
     if (displayName?.isNotEmpty ?? false) {
       return displayName;
     }
-    if (stateKey != null) {
+    if (stateKey != null && mxidLocalPartFallback) {
       if (!formatLocalpart) {
         return stateKey.localpart;
       }
@@ -113,7 +116,7 @@ class User extends Event {
       }
       return words.join(' ');
     }
-    return 'Unknown User';
+    return 'Unknown user';
   }
 
   /// Call the Matrix API to kick this user from this room.
