@@ -448,7 +448,7 @@ class KeyManager {
   /// Handle an incoming to_device event that is related to key sharing
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
     if (event.type == 'm.room_key_request') {
-      if (!event.content.containsKey('request_id')) {
+      if (!(event.content['request_id'] is String)) {
         return; // invalid event
       }
       if (event.content['action'] == 'request') {

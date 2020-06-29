@@ -1349,7 +1349,7 @@ class MatrixApi {
               .codeUnits
           : await streamedResponse.stream.first),
     );
-    if (!jsonResponse.containsKey('content_uri')) {
+    if (!(jsonResponse['content_uri'] is String)) {
       throw MatrixException.fromJson(jsonResponse);
     }
     return jsonResponse['content_uri'];

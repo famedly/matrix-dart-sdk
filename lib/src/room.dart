@@ -819,7 +819,7 @@ class Room {
   /// Sets this room as a direct chat for this user if not already.
   Future<void> addToDirectChat(String userID) async {
     var directChats = client.directChats;
-    if (directChats.containsKey(userID)) {
+    if (directChats[userID] is List) {
       if (!directChats[userID].contains(id)) {
         directChats[userID].add(id);
       } else {
@@ -840,7 +840,7 @@ class Room {
   /// Removes this room from all direct chat tags.
   Future<void> removeFromDirectChat() async {
     var directChats = client.directChats;
-    if (directChats.containsKey(directChatMatrixID) &&
+    if (directChats[directChatMatrixID] is List &&
         directChats[directChatMatrixID].contains(id)) {
       directChats[directChatMatrixID].remove(id);
     } else {
