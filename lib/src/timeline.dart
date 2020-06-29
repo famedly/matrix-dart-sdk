@@ -147,11 +147,11 @@ class Timeline {
           if (i < events.length) events.removeAt(i);
         }
         // Is this event already in the timeline?
-        else if (eventUpdate.content.containsKey('unsigned') &&
+        else if (eventUpdate.content['unsigned'] is Map &&
             eventUpdate.content['unsigned']['transaction_id'] is String) {
           var i = _findEvent(
               event_id: eventUpdate.content['event_id'],
-              unsigned_txid: eventUpdate.content.containsKey('unsigned')
+              unsigned_txid: eventUpdate.content['unsigned'] is Map
                   ? eventUpdate.content['unsigned']['transaction_id']
                   : null);
 

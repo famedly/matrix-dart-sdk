@@ -60,7 +60,7 @@ class Event extends MatrixEvent {
 
   /// Optional. The event that redacted this event, if any. Otherwise null.
   Event get redactedBecause =>
-      unsigned != null && unsigned.containsKey('redacted_because')
+      unsigned != null && unsigned['redacted_because'] is Map
           ? Event.fromJson(unsigned['redacted_because'], room)
           : null;
 
@@ -206,7 +206,7 @@ class Event extends MatrixEvent {
       unsigned: unsigned,
       room: room);
 
-  String get messageType => (content.containsKey('m.relates_to') &&
+  String get messageType => (content['m.relates_to'] is Map &&
           content['m.relates_to']['m.in_reply_to'] != null)
       ? MessageTypes.Reply
       : content['msgtype'] ?? MessageTypes.Text;
@@ -353,8 +353,8 @@ class Event extends MatrixEvent {
 
   bool get hasThumbnail =>
       content['info'] is Map<String, dynamic> &&
-      (content['info'].containsKey('thumbnail_url') ||
-          content['info'].containsKey('thumbnail_file'));
+      (content['info']['thumbnail_url'] is String ||
+          content['info']['thumbnail_file'] is Map);
 
   /// Downloads (and decryptes if necessary) the attachment of this
   /// event and returns it as a [MatrixFile]. If this event doesn't
@@ -366,16 +366,16 @@ class Event extends MatrixEvent {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
     if (!getThumbnail &&
-        !content.containsKey('url') &&
-        !content.containsKey('file')) {
+        !(content['url'] is String) &&
+        !(content['file'] is Map)) {
       throw ("This event hasn't any attachment.");
     }
     if (getThumbnail && !hasThumbnail) {
       throw ("This event hasn't any thumbnail.");
     }
     final isEncrypted = getThumbnail
-        ? !content['info'].containsKey('thumbnail_url')
-        : !content.containsKey('url');
+        ? !(content['info']['thumbnail_url'] is String)
+        : !(content['url'] is String);
 
     if (isEncrypted && !room.client.encryptionEnabled) {
       throw ('Encryption is not enabled in your Client.');

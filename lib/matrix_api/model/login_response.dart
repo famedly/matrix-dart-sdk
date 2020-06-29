@@ -28,7 +28,7 @@ class LoginResponse {
     userId = json['user_id'];
     accessToken = json['access_token'];
     deviceId = json['device_id'];
-    if (json.containsKey('well_known')) {
+    if (json['well_known'] is Map) {
       wellKnownInformations =
           WellKnownInformations.fromJson(json['well_known']);
     }
