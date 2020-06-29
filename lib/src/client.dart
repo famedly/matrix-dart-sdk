@@ -708,6 +708,9 @@ class Client {
       onError.add(exception);
       await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
     } catch (e, s) {
+      if (isLogged() == false || _disposed) {
+        return;
+      }
       print('Error during processing events: ' + e.toString());
       print(s);
       onSyncError.add(SyncError(
