@@ -449,7 +449,7 @@ class Client {
 
   /// Uploads a new user avatar for this user.
   Future<void> setAvatar(MatrixFile file) async {
-    final uploadResp = await api.upload(file.bytes, file.path);
+    final uploadResp = await api.upload(file.bytes, file.name);
     await api.setAvatarUrl(userID, Uri.parse(uploadResp));
     return;
   }

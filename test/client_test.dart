@@ -343,8 +343,7 @@ void main() {
     });
 
     test('setAvatar', () async {
-      final testFile =
-          MatrixFile(bytes: Uint8List(0), path: 'fake/path/file.jpeg');
+      final testFile = MatrixFile(bytes: Uint8List(0), name: 'file.jpeg');
       await matrix.setAvatar(testFile);
     });
 

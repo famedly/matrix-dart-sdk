@@ -25,9 +25,7 @@ import 'package:famedlysdk/src/event.dart';
 import 'package:famedlysdk/src/utils/event_update.dart';
 import 'package:famedlysdk/src/utils/room_update.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
-import 'package:image/image.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
-import 'package:mime/mime.dart';
 import 'package:html_unescape/html_unescape.dart';
 
 import './user.dart';
@@ -504,79 +502,53 @@ class Room {
     return sendEvent(event, txid: txid, inReplyTo: inReplyTo);
   }
 
-  /// Sends a [file] to this room after uploading it. The [msgType] is optional
-  /// and will be detected by the mimetype of the file. Returns the mxc uri of
+  /// Sends a [file] to this room after uploading it. Returns the mxc uri of
   /// the uploaded file. If [waitUntilSent] is true, the future will wait until
   /// the message event has received the server. Otherwise the future will only
   /// wait until the file has been uploaded.
   Future<String> sendFileEvent(
     MatrixFile file, {
-    String msgType,
     String txid,
     Event inReplyTo,
-    Map<String, dynamic> info,
     bool waitUntilSent = false,
-    MatrixFile thumbnail,
+    MatrixImageFile thumbnail,
   }) async {
-    Image fileImage;
-    Image thumbnailImage;
-    EncryptedFile encryptedThumbnail;
-    String thumbnailUploadResp;
-
-    var fileName = file.path.split('/').last;
-    final mimeType = lookupMimeType(file.path, headerBytes: file.bytes) ?? '';
-    if (msgType == null) {
-      final metaType = (mimeType).split('/')[0];
-      switch (metaType) {
-        case 'image':
-        case 'audio':
-        case 'video':
-          msgType = 'm.$metaType';
-          break;
-        default:
-          msgType = 'm.file';
-          break;
-      }
-    }
-
-    if (msgType == 'm.image') {
-      fileImage = decodeImage(file.bytes.toList());
-      if (thumbnail != null) {
-        thumbnailImage = decodeImage(thumbnail.bytes.toList());
-      }
-    }
-
-    final sendEncrypted = encrypted && client.fileEncryptionEnabled;
+    MatrixFile uploadFile = file; // ignore: omit_local_variable_types
+    MatrixFile uploadThumbnail = thumbnail; // ignore: omit_local_variable_types
     EncryptedFile encryptedFile;
-    if (sendEncrypted) {
+    EncryptedFile encryptedThumbnail;
+    if (encrypted && client.fileEncryptionEnabled) {
       encryptedFile = await file.encrypt();
+      uploadFile = encryptedFile.toMatrixFile();
+
       if (thumbnail != null) {
         encryptedThumbnail = await thumbnail.encrypt();
+        uploadThumbnail = encryptedThumbnail.toMatrixFile();
       }
     }
     final uploadResp = await client.api.upload(
-      file.bytes,
-      file.path,
-      contentType: sendEncrypted ? 'application/octet-stream' : null,
+      uploadFile.bytes,
+      uploadFile.name,
+      contentType: uploadFile.mimeType,
     );
-    if (thumbnail != null) {
-      thumbnailUploadResp = await client.api.upload(
-        thumbnail.bytes,
-        thumbnail.path,
-        contentType: sendEncrypted ? 'application/octet-stream' : null,
-      );
-    }
+    final thumbnailUploadResp = uploadThumbnail != null
+        ? await client.api.upload(
+            uploadThumbnail.bytes,
+            uploadThumbnail.name,
+            contentType: uploadThumbnail.mimeType,
+          )
+        : null;
 
     // Send event
     var content = <String, dynamic>{
-      'msgtype': msgType,
-      'body': fileName,
-      'filename': fileName,
-      if (!sendEncrypted) 'url': uploadResp,
-      if (sendEncrypted)
+      'msgtype': file.msgType,
+      'body': file.name,
+      'filename': file.name,
+      if (encryptedFile == null) 'url': uploadResp,
+      if (encryptedFile != null)
         'file': {
           'url': uploadResp,
-          'mimetype': mimeType,
+          'mimetype': file.mimeType,
           'v': 'v2',
           'key': {
             'alg': 'A256CTR',
@@ -588,37 +560,27 @@ class Room {
           'iv': encryptedFile.iv,
           'hashes': {'sha256': encryptedFile.sha256}
         },
-      'info': info ??
-          {
-            'mimetype': mimeType,
-            'size': file.size,
-            if (fileImage != null) 'h': fileImage.height,
-            if (fileImage != null) 'w': fileImage.width,
-            if (thumbnailUploadResp != null && !sendEncrypted)
-              'thumbnail_url': thumbnailUploadResp,
-            if (thumbnailUploadResp != null && sendEncrypted)
-              'thumbnail_file': {
-                'url': thumbnailUploadResp,
-                'mimetype': mimeType,
-                'v': 'v2',
-                'key': {
-                  'alg': 'A256CTR',
-                  'ext': true,
-                  'k': encryptedThumbnail.k,
-                  'key_ops': ['encrypt', 'decrypt'],
-                  'kty': 'oct'
-                },
-                'iv': encryptedThumbnail.iv,
-                'hashes': {'sha256': encryptedThumbnail.sha256}
-              },
-            if (thumbnailImage != null)
-              'thumbnail_info': {
-                'h': thumbnailImage.height,
-                'mimetype': mimeType,
-                'size': thumbnail.size,
-                'w': thumbnailImage.width,
-              }
-          }
+      'info': {
+        ...file.info,
+        if (thumbnail != null && encryptedThumbnail == null)
+          'thumbnail_url': thumbnailUploadResp,
+        if (thumbnail != null && encryptedThumbnail != null)
+          'thumbnail_file': {
+            'url': thumbnailUploadResp,
+            'mimetype': thumbnail.mimeType,
+            'v': 'v2',
+            'key': {
+              'alg': 'A256CTR',
+              'ext': true,
+              'k': encryptedThumbnail.k,
+              'key_ops': ['encrypt', 'decrypt'],
+              'kty': 'oct'
+            },
+            'iv': encryptedThumbnail.iv,
+            'hashes': {'sha256': encryptedThumbnail.sha256}
+          },
+        if (thumbnail != null) 'thumbnail_info': thumbnail.info,
+      }
     };
     final sendResponse = sendEvent(
       content,
@@ -629,79 +591,6 @@ class Room {
       await sendResponse;
     }
     return uploadResp;
-  }
-
-  /// Sends an audio file to this room and returns the mxc uri.
-  Future<String> sendAudioEvent(MatrixFile file,
-      {String txid, Event inReplyTo}) async {
-    return await sendFileEvent(file,
-        msgType: 'm.audio', txid: txid, inReplyTo: inReplyTo);
-  }
-
-  /// Sends an image to this room and returns the mxc uri.
-  Future<String> sendImageEvent(MatrixFile file,
-      {String txid, int width, int height, Event inReplyTo}) async {
-    return await sendFileEvent(file,
-        msgType: 'm.image',
-        txid: txid,
-        inReplyTo: inReplyTo,
-        info: {
-          'size': file.size,
-          'mimetype': lookupMimeType(file.path, headerBytes: file.bytes),
-          'w': width,
-          'h': height,
-        });
-  }
-
-  /// Sends an video to this room and returns the mxc uri.
-  Future<String> sendVideoEvent(MatrixFile file,
-      {String txid,
-      int videoWidth,
-      int videoHeight,
-      int duration,
-      MatrixFile thumbnail,
-      int thumbnailWidth,
-      int thumbnailHeight,
-      Event inReplyTo}) async {
-    var info = <String, dynamic>{
-      'size': file.size,
-      'mimetype': lookupMimeType(file.path, headerBytes: file.bytes),
-    };
-    if (videoWidth != null) {
-      info['w'] = videoWidth;
-    }
-    if (thumbnailHeight != null) {
-      info['h'] = thumbnailHeight;
-    }
-    if (duration != null) {
-      info['duration'] = duration;
-    }
-    if (thumbnail != null && !(encrypted && client.encryptionEnabled)) {
-      final thumbnailUploadResp = await client.api.upload(
-        thumbnail.bytes,
-        thumbnail.path,
-      );
-      info['thumbnail_url'] = thumbnailUploadResp;
-      info['thumbnail_info'] = {
-        'size': thumbnail.size,
-        'mimetype':
-            lookupMimeType(thumbnail.path, headerBytes: thumbnail.bytes),
-      };
-      if (thumbnailWidth != null) {
-        info['thumbnail_info']['w'] = thumbnailWidth;
-      }
-      if (thumbnailHeight != null) {
-        info['thumbnail_info']['h'] = thumbnailHeight;
-      }
-    }
-
-    return await sendFileEvent(
-      file,
-      msgType: 'm.video',
-      txid: txid,
-      inReplyTo: inReplyTo,
-      info: info,
-    );
   }
 
   /// Sends an event to this room with this json as a content. Returns the
@@ -1236,7 +1125,7 @@ class Room {
   /// Uploads a new user avatar for this room. Returns the event ID of the new
   /// m.room.avatar event.
   Future<String> setAvatar(MatrixFile file) async {
-    final uploadResp = await client.api.upload(file.bytes, file.path);
+    final uploadResp = await client.api.upload(file.bytes, file.name);
     return await client.api.sendState(
       id,
       EventTypes.RoomAvatar,
