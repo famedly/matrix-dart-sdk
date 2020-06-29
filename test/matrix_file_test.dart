@@ -28,7 +28,7 @@ void main() {
     test('Decrypt', () async {
       final text = 'hello world';
       final file = MatrixFile(
-        path: '/path/to/file.txt',
+        name: 'file.txt',
         bytes: Uint8List.fromList(text.codeUnits),
       );
       var olmEnabled = true;

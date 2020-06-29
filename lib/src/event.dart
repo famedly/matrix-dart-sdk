@@ -424,7 +424,7 @@ class Event extends MatrixEvent {
       encryptedFile.sha256 = fileMap['hashes']['sha256'];
       uint8list = await decryptFile(encryptedFile);
     }
-    return MatrixFile(bytes: uint8list, path: '/$body');
+    return MatrixFile(bytes: uint8list, name: body);
   }
 
   /// Returns a localized String representation of this event. For a
