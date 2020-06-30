@@ -5999,35 +5999,6 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  DbPresence _rowToDbPresence(QueryRow row) {
-    return DbPresence(
-      clientId: row.readInt('client_id'),
-      type: row.readString('type'),
-      sender: row.readString('sender'),
-      content: row.readString('content'),
-    );
-  }
-
-  Selectable<DbPresence> getAllPresences(int client_id) {
-    return customSelect('SELECT * FROM presences WHERE client_id = :client_id',
-        variables: [Variable.withInt(client_id)],
-        readsFrom: {presences}).map(_rowToDbPresence);
-  }
-
-  Future<int> storePresence(
-      int client_id, String type, String sender, String content) {
-    return customInsert(
-      'INSERT OR REPLACE INTO presences (client_id, type, sender, content) VALUES (:client_id, :type, :sender, :content)',
-      variables: [
-        Variable.withInt(client_id),
-        Variable.withString(type),
-        Variable.withString(sender),
-        Variable.withString(content)
-      ],
-      updates: {presences},
-    );
-  }
-
   Future<int> updateEvent(String unsigned, String content, String prev_content,
       int client_id, String event_id, String room_id) {
     return customUpdate(
@@ -6079,7 +6050,7 @@ abstract class _$Database extends GeneratedDatabase {
 
   Selectable<DbRoomState> getImportantRoomStates(int client_id) {
     return customSelect(
-        'SELECT * FROM room_states WHERE client_id = :client_id AND type IN (\'m.room.name\', \'m.room.avatar\', \'m.room.message\', \'m.room.encrypted\', \'m.room.encryption\')',
+        'SELECT * FROM room_states WHERE client_id = :client_id AND type <> \'m.room.member\'',
         variables: [Variable.withInt(client_id)],
         readsFrom: {roomStates}).map(_rowToDbRoomState);
   }
@@ -6091,10 +6062,10 @@ abstract class _$Database extends GeneratedDatabase {
         readsFrom: {roomStates}).map(_rowToDbRoomState);
   }
 
-  Selectable<DbRoomState> getAllRoomStatesForRoom(
+  Selectable<DbRoomState> getUnimportantRoomStatesForRoom(
       int client_id, String room_id) {
     return customSelect(
-        'SELECT * FROM room_states WHERE client_id = :client_id AND room_id = :room_id',
+        'SELECT * FROM room_states WHERE client_id = :client_id AND room_id = :room_id AND type = \'m.room.member\'',
         variables: [Variable.withInt(client_id), Variable.withString(room_id)],
         readsFrom: {roomStates}).map(_rowToDbRoomState);
   }

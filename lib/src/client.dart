@@ -651,7 +651,7 @@ class Client {
       }
       _sortRooms();
       accountData = await database.getAccountData(id);
-      presences = await database.getPresences(id);
+      presences.clear();
     }
 
     onLoginStateChanged.add(LoginState.logged);
@@ -744,14 +744,6 @@ class Client {
     }
     if (sync.presence != null) {
       for (final newPresence in sync.presence) {
-        if (database != null) {
-          await database.storePresence(
-            id,
-            newPresence.type,
-            newPresence.senderId,
-            jsonEncode(newPresence.toJson()),
-          );
-        }
         presences[newPresence.senderId] = newPresence;
         onPresence.add(newPresence);
       }

@@ -106,8 +106,9 @@ class Room {
     if (!partial || client.database == null) {
       return;
     }
-    final allStates =
-        await client.database.getAllRoomStatesForRoom(client.id, id).get();
+    final allStates = await client.database
+        .getUnimportantRoomStatesForRoom(client.id, id)
+        .get();
     for (final state in allStates) {
       final newState = Event.fromDb(state, this);
       setState(newState);

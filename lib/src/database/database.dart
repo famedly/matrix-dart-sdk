@@ -192,22 +192,6 @@ class Database extends _$Database {
     return newAccountData;
   }
 
-  Future<Map<String, api.Presence>> getPresences(int clientId) async {
-    final newPresences = <String, api.Presence>{};
-    final rawPresences = await getAllPresences(clientId).get();
-    for (final d in rawPresences) {
-      // TODO: Why is this not working?
-      try {
-        final content = sdk.Event.getMapFromPayload(d.content);
-        var presence = api.Presence.fromJson(content);
-        presence.senderId = d.sender;
-        presence.type = d.type;
-        newPresences[d.sender] = api.Presence.fromJson(content);
-      } catch (_) {}
-    }
-    return newPresences;
-  }
-
   /// Stores a RoomUpdate object in the database. Must be called inside of
   /// [transaction].
   final Set<String> _ensuredRooms = {};
