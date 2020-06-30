@@ -1432,12 +1432,10 @@ class Client {
 
   void _addUpdate() {
     // we only want max. one update per 50ms
-    if (_updateTimer == null) {
-      _updateTimer = Timer(Duration(milliseconds: 50), () {
-        onUpdate.add(true);
-        _updateTimer = null;
-      });
-    }
+    _updateTimer ??= Timer(Duration(milliseconds: 50), () {
+      onUpdate.add(true);
+      _updateTimer = null;
+    });
   }
 
   bool _disposed = false;
