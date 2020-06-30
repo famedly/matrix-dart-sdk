@@ -669,18 +669,25 @@ class Client {
   }
 
   Future<SyncUpdate> _syncRequest;
+  Exception _lastSyncError;
 
   Future<void> _sync() async {
     if (isLogged() == false || _disposed) return;
     try {
-      _syncRequest = api.sync(
+      _syncRequest = api
+          .sync(
         filter: syncFilters,
         since: prevBatch,
         timeout: prevBatch != null ? 30000 : null,
-      );
+      )
+          .catchError((e) {
+        _lastSyncError = e;
+        return null;
+      });
       if (_disposed) return;
       final hash = _syncRequest.hashCode;
       final syncResp = await _syncRequest;
+      if (syncResp == null) throw _lastSyncError;
       if (hash != _syncRequest.hashCode) return;
       if (database != null) {
         await database.transaction(() async {
