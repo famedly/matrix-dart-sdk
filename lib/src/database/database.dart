@@ -157,7 +157,7 @@ class Database extends _$Database {
               ? t.membership.equals('leave')
               : t.membership.equals('leave').not()))
         .get();
-    final resStates = await getAllRoomStates(client.id).get();
+    final resStates = await getImportantRoomStates(client.id).get();
     final resAccountData = await getAllRoomAccountData(client.id).get();
     final roomList = <sdk.Room>[];
     for (final r in res) {

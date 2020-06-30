@@ -6077,10 +6077,25 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
+  Selectable<DbRoomState> getImportantRoomStates(int client_id) {
+    return customSelect(
+        'SELECT * FROM room_states WHERE client_id = :client_id AND type IN (\'m.room.name\', \'m.room.avatar\', \'m.room.message\', \'m.room.encrypted\', \'m.room.encryption\')',
+        variables: [Variable.withInt(client_id)],
+        readsFrom: {roomStates}).map(_rowToDbRoomState);
+  }
+
   Selectable<DbRoomState> getAllRoomStates(int client_id) {
     return customSelect(
         'SELECT * FROM room_states WHERE client_id = :client_id',
         variables: [Variable.withInt(client_id)],
+        readsFrom: {roomStates}).map(_rowToDbRoomState);
+  }
+
+  Selectable<DbRoomState> getAllRoomStatesForRoom(
+      int client_id, String room_id) {
+    return customSelect(
+        'SELECT * FROM room_states WHERE client_id = :client_id AND room_id = :room_id',
+        variables: [Variable.withInt(client_id), Variable.withString(room_id)],
         readsFrom: {roomStates}).map(_rowToDbRoomState);
   }
 

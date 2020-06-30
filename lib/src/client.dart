@@ -533,6 +533,10 @@ class Client {
   final StreamController<KeyVerification> onKeyVerificationRequest =
       StreamController.broadcast();
 
+  /// When a new update entered, be it a sync or an avatar post-loaded
+  /// payload will always be true
+  final StreamController<bool> onUpdate = StreamController.broadcast();
+
   /// Matrix synchronisation is done with https long polling. This needs a
   /// timeout which is usually 30 seconds.
   int syncTimeoutSec = 30;
@@ -642,6 +646,9 @@ class Client {
       }
       _userDeviceKeys = await database.getUserDeviceKeys(this);
       _rooms = await database.getRoomList(this, onlyLeft: false);
+      for (final r in rooms) {
+        r.onUpdate.stream.listen((v) => _addUpdate());
+      }
       _sortRooms();
       accountData = await database.getAccountData(id);
       presences = await database.getPresences(id);
@@ -769,6 +776,7 @@ class Client {
       encryption.handleDeviceOneTimeKeysCount(sync.deviceOneTimeKeysCount);
     }
     onSync.add(sync);
+    _addUpdate();
   }
 
   Future<void> _handleDeviceListsEvents(DeviceListsUpdate deviceLists) async {
@@ -1009,6 +1017,7 @@ class Client {
         roomAccountData: {},
         client: this,
       );
+      newRoom.onUpdate.stream.listen((v) => _addUpdate());
       rooms.insert(position, newRoom);
     }
     // If the membership is "leave" then remove the item and stop here
@@ -1416,6 +1425,18 @@ class Client {
       );
     } catch (_) {
       rethrow;
+    }
+  }
+
+  Timer _updateTimer;
+
+  void _addUpdate() {
+    // we only want max. one update per 50ms
+    if (_updateTimer == null) {
+      _updateTimer = Timer(Duration(milliseconds: 50), () {
+        onUpdate.add(true);
+        _updateTimer = null;
+      });
     }
   }
 
