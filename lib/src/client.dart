@@ -58,6 +58,8 @@ class Client {
 
   Set<KeyVerificationMethod> verificationMethods;
 
+  Set<String> importantStateEvents;
+
   /// Create a client
   /// clientName = unique identifier of this client
   /// debug: Print debug output?
@@ -66,13 +68,37 @@ class Client {
   /// verificationMethods: A set of all the verification methods this client can handle. Includes:
   ///    KeyVerificationMethod.numbers: Compare numbers. Most basic, should be supported
   ///    KeyVerificationMethod.emoji: Compare emojis
+  /// importantStateEvents: A set of all the important state events to load when the client connects.
+  ///    To speed up performance only a set of state events is loaded on startup, those that are
+  ///    needed to display a room list. All the remaining state events are automatically post-loaded
+  ///    when opening the timeline of a room or manually by calling `room.postLoad()`.
+  ///    This set will always include the following state events:
+  ///     - m.room.name
+  ///     - m.room.avatar
+  ///     - m.room.message
+  ///     - m.room.encrypted
+  ///     - m.room.encryption
+  ///     - m.room.canonical_alias
+  ///     - m.room.tombstone
+  ///     - *some* m.room.member events, where needed
   Client(this.clientName,
       {this.debug = false,
       this.database,
       this.enableE2eeRecovery = false,
       this.verificationMethods,
-      http.Client httpClient}) {
+      http.Client httpClient,
+      this.importantStateEvents}) {
     verificationMethods ??= <KeyVerificationMethod>{};
+    importantStateEvents ??= <String>{};
+    importantStateEvents.addAll([
+      'm.room.name',
+      'm.room.avatar',
+      'm.room.message',
+      'm.room.encrypted',
+      'm.room.encryption',
+      'm.room.canonical_alias',
+      'm.room.tombstone',
+    ]);
     api = MatrixApi(debug: debug, httpClient: httpClient);
     onLoginStateChanged.stream.listen((loginState) {
       if (debug) {
@@ -533,10 +559,6 @@ class Client {
   final StreamController<KeyVerification> onKeyVerificationRequest =
       StreamController.broadcast();
 
-  /// When a new update entered, be it a sync or an avatar post-loaded
-  /// payload will always be true
-  final StreamController<bool> onUpdate = StreamController.broadcast();
-
   /// Matrix synchronisation is done with https long polling. This needs a
   /// timeout which is usually 30 seconds.
   int syncTimeoutSec = 30;
@@ -646,9 +668,6 @@ class Client {
       }
       _userDeviceKeys = await database.getUserDeviceKeys(this);
       _rooms = await database.getRoomList(this, onlyLeft: false);
-      for (final r in rooms) {
-        r.onUpdate.stream.listen((v) => _addUpdate());
-      }
       _sortRooms();
       accountData = await database.getAccountData(id);
       presences.clear();
@@ -768,7 +787,6 @@ class Client {
       encryption.handleDeviceOneTimeKeysCount(sync.deviceOneTimeKeysCount);
     }
     onSync.add(sync);
-    _addUpdate();
   }
 
   Future<void> _handleDeviceListsEvents(DeviceListsUpdate deviceLists) async {
@@ -1009,7 +1027,6 @@ class Client {
         roomAccountData: {},
         client: this,
       );
-      newRoom.onUpdate.stream.listen((v) => _addUpdate());
       rooms.insert(position, newRoom);
     }
     // If the membership is "leave" then remove the item and stop here
@@ -1418,16 +1435,6 @@ class Client {
     } catch (_) {
       rethrow;
     }
-  }
-
-  Timer _updateTimer;
-
-  void _addUpdate() {
-    // we only want max. one update per 50ms
-    _updateTimer ??= Timer(Duration(milliseconds: 50), () {
-      onUpdate.add(true);
-      _updateTimer = null;
-    });
   }
 
   bool _disposed = false;

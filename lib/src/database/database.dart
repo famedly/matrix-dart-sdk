@@ -157,9 +157,12 @@ class Database extends _$Database {
               ? t.membership.equals('leave')
               : t.membership.equals('leave').not()))
         .get();
-    final resStates = await getImportantRoomStates(client.id).get();
+    final resStates = await getImportantRoomStates(
+            client.id, client.importantStateEvents.toList())
+        .get();
     final resAccountData = await getAllRoomAccountData(client.id).get();
     final roomList = <sdk.Room>[];
+    final allMembersToPostload = <String, Set<String>>{};
     for (final r in res) {
       final room = await sdk.Room.getRoomFromTableRow(
         r,
@@ -168,6 +171,81 @@ class Database extends _$Database {
         roomAccountData: resAccountData.where((rs) => rs.roomId == r.roomId),
       );
       roomList.add(room);
+      // let's see if we need any m.room.member events
+      final membersToPostload = <String>{};
+      // the lastEvent message preview might have an author we need to fetch, if it is a group chat
+      if (room.getState(EventTypes.Message) != null && !room.isDirectChat) {
+        membersToPostload.add(room.getState(EventTypes.Message).senderId);
+      }
+      // if the room has no name and no canonical alias, its name is calculated
+      // based on the heroes of the room
+      if (room.getState(EventTypes.RoomName) == null &&
+          room.getState(EventTypes.RoomCanonicalAlias) == null &&
+          room.mHeroes != null) {
+        // we don't have a name and no canonical alias, so we'll need to
+        // post-load the heroes
+        membersToPostload.addAll(room.mHeroes.where((h) => h.isNotEmpty));
+      }
+      // okay, only load from the database if we actually have stuff to load
+      if (membersToPostload.isNotEmpty) {
+        // save it for loading later
+        allMembersToPostload[room.id] = membersToPostload;
+      }
+    }
+    // now we postload all members, if thre are any
+    if (allMembersToPostload.isNotEmpty) {
+      // we will generate a query to fetch as many events as possible at once, as that
+      // significantly improves performance. However, to prevent too large queries from being constructed,
+      // we limit to only fetching 500 rooms at once.
+      // This value might be fine-tune-able to be larger (and thus increase performance more for very large accounts),
+      // however this very conservative value should be on the safe side.
+      final MAX_ROOMS_PER_QUERY = 500;
+      // as we iterate over our entries in separate chunks one-by-one we use an iterator
+      // which persists accross the chunks, and thus we just re-sume iteration at the place
+      // we prreviously left off.
+      final entriesIterator = allMembersToPostload.entries.iterator;
+      // now we iterate over all our 500-room-chunks...
+      for (var i = 0;
+          i < allMembersToPostload.keys.length;
+          i += MAX_ROOMS_PER_QUERY) {
+        // query the current chunk and build the query
+        final membersRes = await (select(roomStates)
+              ..where((s) {
+                // all chunks have to have the reight client id and must be of type `m.room.member`
+                final basequery = s.clientId.equals(client.id) &
+                    s.type.equals('m.room.member');
+                // this is where the magic happens. Here we build a query with the form
+                // OR room_id = '!roomId1' AND state_key IN ('@member') OR room_id = '!roomId2' AND state_key IN ('@member')
+                // subqueries holds our query fragment
+                Expression<bool> subqueries;
+                // here we iterate over our chunk....we musn't forget to progress our iterator!
+                // we must check for if our chunk is done *before* progressing the
+                // iterator, else we might progress it twice around chunk edges, missing on rooms
+                for (var j = 0;
+                    j < MAX_ROOMS_PER_QUERY && entriesIterator.moveNext();
+                    j++) {
+                  final entry = entriesIterator.current;
+                  // builds room_id = '!roomId1' AND state_key IN ('@member')
+                  final q =
+                      s.roomId.equals(entry.key) & s.stateKey.isIn(entry.value);
+                  // adds it either as the start of subqueries or as a new OR condition to it
+                  if (subqueries == null) {
+                    subqueries = q;
+                  } else {
+                    subqueries = subqueries | q;
+                  }
+                }
+                // combinde the basequery with the subquery together, giving our final query
+                return basequery & subqueries;
+              }))
+            .get();
+        // now that we got all the entries from the database, set them as room states
+        for (final dbMember in membersRes) {
+          final room = roomList.firstWhere((r) => r.id == dbMember.roomId);
+          final event = sdk.Event.fromDb(dbMember, room);
+          room.setState(event);
+        }
+      }
     }
     return roomList;
   }

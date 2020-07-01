@@ -101,13 +101,17 @@ class Room {
         _oldestSortOrder, _newestSortOrder, client.id, id);
   }
 
+  /// Flag if the room is partial, meaning not all state events have been loaded yet
   bool partial = true;
+
+  /// Load all the missing state events for the room from the database. If the room has already been loaded, this does nothing.
   Future<void> postLoad() async {
     if (!partial || client.database == null) {
       return;
     }
     final allStates = await client.database
-        .getUnimportantRoomStatesForRoom(client.id, id)
+        .getUnimportantRoomStatesForRoom(
+            client.id, id, client.importantStateEvents.toList())
         .get();
     for (final state in allStates) {
       final newState = Event.fromDb(state, this);
