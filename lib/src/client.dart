@@ -446,29 +446,6 @@ class Client {
     return archiveList;
   }
 
-  /// Loads the contact list for this user excluding the user itself.
-  /// Currently the contacts are found by discovering the contacts of
-  /// the famedlyContactDiscovery room, which is
-  /// defined by the autojoin room feature in Synapse.
-  Future<List<User>> loadFamedlyContacts() async {
-    var contacts = <User>[];
-    var contactDiscoveryRoom =
-        getRoomByAlias('#famedlyContactDiscovery:${userID.domain}');
-    if (contactDiscoveryRoom != null) {
-      contacts = await contactDiscoveryRoom.requestParticipants();
-    } else {
-      var userMap = <String, bool>{};
-      for (var i = 0; i < rooms.length; i++) {
-        var roomUsers = rooms[i].getParticipants();
-        for (var j = 0; j < roomUsers.length; j++) {
-          if (userMap[roomUsers[j].id] != true) contacts.add(roomUsers[j]);
-          userMap[roomUsers[j].id] = true;
-        }
-      }
-    }
-    return contacts;
-  }
-
   /// Changes the user's displayname.
   Future<void> setDisplayname(String displayname) =>
       api.setDisplayname(userID, displayname);
