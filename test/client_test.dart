@@ -151,9 +151,6 @@ void main() {
       expect(matrix.rooms.length, 2);
       expect(matrix.rooms[1].canonicalAlias,
           "#famedlyContactDiscovery:${matrix.userID.split(":")[1]}");
-      final contacts = await matrix.loadFamedlyContacts();
-      expect(contacts.length, 2);
-      expect(contacts[0].senderId, '@alice:example.com');
       expect(matrix.presences['@alice:example.com'].presence.presence,
           PresenceType.online);
       expect(presenceCounter, 1);
@@ -207,10 +204,6 @@ void main() {
           matrix.getRoomByAlias(
               "#famedlyContactDiscovery:${matrix.userID.split(":")[1]}"),
           null);
-      final altContacts = await matrix.loadFamedlyContacts();
-      altContacts.forEach((u) => print(u.id));
-      expect(altContacts.length, 2);
-      expect(altContacts[0].senderId, '@alice:example.com');
     });
 
     test('Logout', () async {
