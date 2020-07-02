@@ -199,7 +199,7 @@ class Database extends _$Database {
       // we limit to only fetching 500 rooms at once.
       // This value might be fine-tune-able to be larger (and thus increase performance more for very large accounts),
       // however this very conservative value should be on the safe side.
-      final MAX_ROOMS_PER_QUERY = 500;
+      const MAX_ROOMS_PER_QUERY = 500;
       // as we iterate over our entries in separate chunks one-by-one we use an iterator
       // which persists accross the chunks, and thus we just re-sume iteration at the place
       // we prreviously left off.

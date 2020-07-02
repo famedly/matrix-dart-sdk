@@ -91,13 +91,13 @@ class Client {
     verificationMethods ??= <KeyVerificationMethod>{};
     importantStateEvents ??= <String>{};
     importantStateEvents.addAll([
-      'm.room.name',
-      'm.room.avatar',
-      'm.room.message',
-      'm.room.encrypted',
-      'm.room.encryption',
-      'm.room.canonical_alias',
-      'm.room.tombstone',
+      EventTypes.RoomName,
+      EventTypes.RoomAvatar,
+      EventTypes.Message,
+      EventTypes.Encrypted,
+      EventTypes.Encryption,
+      EventTypes.RoomCanonicalAlias,
+      EventTypes.RoomTombstone,
     ]);
     api = MatrixApi(debug: debug, httpClient: httpClient);
     onLoginStateChanged.stream.listen((loginState) {
@@ -979,6 +979,16 @@ class Client {
       );
       if (event['type'] == EventTypes.Encrypted && encryptionEnabled) {
         update = await update.decrypt(room);
+      }
+      if (event['type'] == EventTypes.Message &&
+          !room.isDirectChat &&
+          database != null &&
+          room.getState(EventTypes.RoomMember, event['sender']) == null) {
+        // In order to correctly render room list previews we need to fetch the member from the database
+        final user = await database.getUser(id, event['sender'], room);
+        if (user != null) {
+          room.setState(user);
+        }
       }
       if (type != 'ephemeral' && database != null) {
         await database.storeEventUpdate(id, update);
