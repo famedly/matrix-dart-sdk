@@ -5999,35 +5999,6 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  DbPresence _rowToDbPresence(QueryRow row) {
-    return DbPresence(
-      clientId: row.readInt('client_id'),
-      type: row.readString('type'),
-      sender: row.readString('sender'),
-      content: row.readString('content'),
-    );
-  }
-
-  Selectable<DbPresence> getAllPresences(int client_id) {
-    return customSelect('SELECT * FROM presences WHERE client_id = :client_id',
-        variables: [Variable.withInt(client_id)],
-        readsFrom: {presences}).map(_rowToDbPresence);
-  }
-
-  Future<int> storePresence(
-      int client_id, String type, String sender, String content) {
-    return customInsert(
-      'INSERT OR REPLACE INTO presences (client_id, type, sender, content) VALUES (:client_id, :type, :sender, :content)',
-      variables: [
-        Variable.withInt(client_id),
-        Variable.withString(type),
-        Variable.withString(sender),
-        Variable.withString(content)
-      ],
-      updates: {presences},
-    );
-  }
-
   Future<int> updateEvent(String unsigned, String content, String prev_content,
       int client_id, String event_id, String room_id) {
     return customUpdate(
@@ -6077,11 +6048,44 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
+  Selectable<DbRoomState> getImportantRoomStates(
+      int client_id, List<String> events) {
+    var $arrayStartIndex = 2;
+    final expandedevents = $expandVar($arrayStartIndex, events.length);
+    $arrayStartIndex += events.length;
+    return customSelect(
+        'SELECT * FROM room_states WHERE client_id = :client_id AND type IN ($expandedevents)',
+        variables: [
+          Variable.withInt(client_id),
+          for (var $ in events) Variable.withString($)
+        ],
+        readsFrom: {
+          roomStates
+        }).map(_rowToDbRoomState);
+  }
+
   Selectable<DbRoomState> getAllRoomStates(int client_id) {
     return customSelect(
         'SELECT * FROM room_states WHERE client_id = :client_id',
         variables: [Variable.withInt(client_id)],
         readsFrom: {roomStates}).map(_rowToDbRoomState);
+  }
+
+  Selectable<DbRoomState> getUnimportantRoomStatesForRoom(
+      int client_id, String room_id, List<String> events) {
+    var $arrayStartIndex = 3;
+    final expandedevents = $expandVar($arrayStartIndex, events.length);
+    $arrayStartIndex += events.length;
+    return customSelect(
+        'SELECT * FROM room_states WHERE client_id = :client_id AND room_id = :room_id AND type NOT IN ($expandedevents)',
+        variables: [
+          Variable.withInt(client_id),
+          Variable.withString(room_id),
+          for (var $ in events) Variable.withString($)
+        ],
+        readsFrom: {
+          roomStates
+        }).map(_rowToDbRoomState);
   }
 
   Future<int> storeEvent(
@@ -6185,6 +6189,23 @@ abstract class _$Database extends GeneratedDatabase {
         variables: [
           Variable.withInt(client_id),
           Variable.withString(state_key),
+          Variable.withString(room_id)
+        ],
+        readsFrom: {
+          roomStates
+        }).map(_rowToDbRoomState);
+  }
+
+  Selectable<DbRoomState> dbGetUsers(
+      int client_id, List<String> mxids, String room_id) {
+    var $arrayStartIndex = 2;
+    final expandedmxids = $expandVar($arrayStartIndex, mxids.length);
+    $arrayStartIndex += mxids.length;
+    return customSelect(
+        'SELECT * FROM room_states WHERE client_id = :client_id AND type = \'m.room.member\' AND state_key IN ($expandedmxids) AND room_id = :room_id',
+        variables: [
+          Variable.withInt(client_id),
+          for (var $ in mxids) Variable.withString($),
           Variable.withString(room_id)
         ],
         readsFrom: {

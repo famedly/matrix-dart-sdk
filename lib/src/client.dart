@@ -58,6 +58,8 @@ class Client {
 
   Set<KeyVerificationMethod> verificationMethods;
 
+  Set<String> importantStateEvents;
+
   /// Create a client
   /// clientName = unique identifier of this client
   /// debug: Print debug output?
@@ -66,13 +68,37 @@ class Client {
   /// verificationMethods: A set of all the verification methods this client can handle. Includes:
   ///    KeyVerificationMethod.numbers: Compare numbers. Most basic, should be supported
   ///    KeyVerificationMethod.emoji: Compare emojis
+  /// importantStateEvents: A set of all the important state events to load when the client connects.
+  ///    To speed up performance only a set of state events is loaded on startup, those that are
+  ///    needed to display a room list. All the remaining state events are automatically post-loaded
+  ///    when opening the timeline of a room or manually by calling `room.postLoad()`.
+  ///    This set will always include the following state events:
+  ///     - m.room.name
+  ///     - m.room.avatar
+  ///     - m.room.message
+  ///     - m.room.encrypted
+  ///     - m.room.encryption
+  ///     - m.room.canonical_alias
+  ///     - m.room.tombstone
+  ///     - *some* m.room.member events, where needed
   Client(this.clientName,
       {this.debug = false,
       this.database,
       this.enableE2eeRecovery = false,
       this.verificationMethods,
-      http.Client httpClient}) {
+      http.Client httpClient,
+      this.importantStateEvents}) {
     verificationMethods ??= <KeyVerificationMethod>{};
+    importantStateEvents ??= <String>{};
+    importantStateEvents.addAll([
+      EventTypes.RoomName,
+      EventTypes.RoomAvatar,
+      EventTypes.Message,
+      EventTypes.Encrypted,
+      EventTypes.Encryption,
+      EventTypes.RoomCanonicalAlias,
+      EventTypes.RoomTombstone,
+    ]);
     api = MatrixApi(debug: debug, httpClient: httpClient);
     onLoginStateChanged.stream.listen((loginState) {
       if (debug) {
@@ -644,7 +670,7 @@ class Client {
       _rooms = await database.getRoomList(this, onlyLeft: false);
       _sortRooms();
       accountData = await database.getAccountData(id);
-      presences = await database.getPresences(id);
+      presences.clear();
     }
 
     onLoginStateChanged.add(LoginState.logged);
@@ -744,14 +770,6 @@ class Client {
     }
     if (sync.presence != null) {
       for (final newPresence in sync.presence) {
-        if (database != null) {
-          await database.storePresence(
-            id,
-            newPresence.type,
-            newPresence.senderId,
-            jsonEncode(newPresence.toJson()),
-          );
-        }
         presences[newPresence.senderId] = newPresence;
         onPresence.add(newPresence);
       }
@@ -968,6 +986,16 @@ class Client {
       );
       if (event['type'] == EventTypes.Encrypted && encryptionEnabled) {
         update = await update.decrypt(room);
+      }
+      if (event['type'] == EventTypes.Message &&
+          !room.isDirectChat &&
+          database != null &&
+          room.getState(EventTypes.RoomMember, event['sender']) == null) {
+        // In order to correctly render room list previews we need to fetch the member from the database
+        final user = await database.getUser(id, event['sender'], room);
+        if (user != null) {
+          room.setState(user);
+        }
       }
       if (type != 'ephemeral' && database != null) {
         await database.storeEventUpdate(id, update);

@@ -101,6 +101,25 @@ class Room {
         _oldestSortOrder, _newestSortOrder, client.id, id);
   }
 
+  /// Flag if the room is partial, meaning not all state events have been loaded yet
+  bool partial = true;
+
+  /// Load all the missing state events for the room from the database. If the room has already been loaded, this does nothing.
+  Future<void> postLoad() async {
+    if (!partial || client.database == null) {
+      return;
+    }
+    final allStates = await client.database
+        .getUnimportantRoomStatesForRoom(
+            client.id, id, client.importantStateEvents.toList())
+        .get();
+    for (final state in allStates) {
+      final newState = Event.fromDb(state, this);
+      setState(newState);
+    }
+    partial = false;
+  }
+
   /// Returns the [Event] for the given [typeKey] and optional [stateKey].
   /// If no [stateKey] is provided, it defaults to an empty string.
   Event getState(String typeKey, [String stateKey = '']) =>
@@ -934,6 +953,7 @@ class Room {
   Future<Timeline> getTimeline(
       {onTimelineUpdateCallback onUpdate,
       onTimelineInsertCallback onInsert}) async {
+    await postLoad();
     var events;
     if (client.database != null) {
       events = await client.database.getEventList(client.id, this);
@@ -1032,6 +1052,15 @@ class Room {
   }) async {
     if (getState(EventTypes.RoomMember, mxID) != null) {
       return getState(EventTypes.RoomMember, mxID).asUser;
+    }
+    if (client.database != null) {
+      // it may be in the database
+      final user = await client.database.getUser(client.id, mxID, this);
+      if (user != null) {
+        setState(user);
+        if (onUpdate != null) onUpdate.add(id);
+        return user;
+      }
     }
     if (mxID == null || !_requestingMatrixIds.add(mxID)) return null;
     Map<String, dynamic> resp;
