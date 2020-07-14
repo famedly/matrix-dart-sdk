@@ -528,6 +528,15 @@ class Database extends _$Database {
     return sdk.Event.fromDb(res.first, room).asUser;
   }
 
+  Future<List<sdk.User>> getUsers(int clientId, sdk.Room room) async {
+    final res = await dbGetUsers(clientId, room.id).get();
+    final ret = <sdk.User>[];
+    for (final r in res) {
+      ret.add(sdk.Event.fromDb(r, room).asUser);
+    }
+    return ret;
+  }
+
   Future<List<sdk.Event>> getEventList(int clientId, sdk.Room room) async {
     final res = await dbGetEventList(clientId, room.id).get();
     final eventList = <sdk.Event>[];

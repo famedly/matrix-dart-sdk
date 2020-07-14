@@ -1004,10 +1004,20 @@ class Room {
   /// Request the full list of participants from the server. The local list
   /// from the store is not complete if the client uses lazy loading.
   Future<List<User>> requestParticipants() async {
+    if (!participantListComplete && partial && client.database != null) {
+      // we aren't fully loaded, maybe the users are in the database
+      final users = await client.database.getUsers(client.id, this);
+      for (final user in users) {
+        setState(user);
+      }
+    }
     if (participantListComplete) return getParticipants();
     final matrixEvents = await client.api.requestMembers(id);
     final users =
         matrixEvents.map((e) => Event.fromMatrixEvent(e, this).asUser).toList();
+    for (final user in users) {
+      setState(user); // at *least* cache this in-memory
+    }
     users.removeWhere(
         (u) => [Membership.leave, Membership.ban].contains(u.membership));
     return users;

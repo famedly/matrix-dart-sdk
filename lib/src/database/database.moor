@@ -216,6 +216,7 @@ storeRoomState: INSERT OR REPLACE INTO room_states (client_id, event_id, room_id
 getAllRoomAccountData: SELECT * FROM room_account_data WHERE client_id = :client_id;
 storeRoomAccountData: INSERT OR REPLACE INTO room_account_data (client_id, type, room_id, content) VALUES (:client_id, :type, :room_id, :content);
 dbGetUser: SELECT * FROM room_states WHERE client_id = :client_id AND type = 'm.room.member' AND state_key = :state_key AND room_id = :room_id;
+dbGetUsers: SELECT * FROM room_states WHERE client_id = :client_id AND type = 'm.room.member' AND room_id = :room_id;
 dbGetEventList: SELECT * FROM events WHERE client_id = :client_id AND room_id = :room_id GROUP BY event_id ORDER BY sort_order DESC;
 getStates: SELECT * FROM room_states WHERE client_id = :client_id AND room_id = :room_id;
 resetNotificationCount: UPDATE rooms SET notification_count = 0, highlight_count = 0 WHERE client_id = :client_id AND room_id = :room_id;

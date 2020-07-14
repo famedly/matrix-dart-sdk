@@ -6196,21 +6196,11 @@ abstract class _$Database extends GeneratedDatabase {
         }).map(_rowToDbRoomState);
   }
 
-  Selectable<DbRoomState> dbGetUsers(
-      int client_id, List<String> mxids, String room_id) {
-    var $arrayStartIndex = 2;
-    final expandedmxids = $expandVar($arrayStartIndex, mxids.length);
-    $arrayStartIndex += mxids.length;
+  Selectable<DbRoomState> dbGetUsers(int client_id, String room_id) {
     return customSelect(
-        'SELECT * FROM room_states WHERE client_id = :client_id AND type = \'m.room.member\' AND state_key IN ($expandedmxids) AND room_id = :room_id',
-        variables: [
-          Variable.withInt(client_id),
-          for (var $ in mxids) Variable.withString($),
-          Variable.withString(room_id)
-        ],
-        readsFrom: {
-          roomStates
-        }).map(_rowToDbRoomState);
+        'SELECT * FROM room_states WHERE client_id = :client_id AND type = \'m.room.member\' AND room_id = :room_id',
+        variables: [Variable.withInt(client_id), Variable.withString(room_id)],
+        readsFrom: {roomStates}).map(_rowToDbRoomState);
   }
 
   DbEvent _rowToDbEvent(QueryRow row) {
