@@ -74,7 +74,9 @@ class PusherData {
   });
 
   PusherData.fromJson(Map<String, dynamic> json) {
-    url = Uri.parse(json['url']);
+    if (json.containsKey('url')) {
+      url = Uri.parse(json['url']);
+    }
     format = json['format'];
   }
 
