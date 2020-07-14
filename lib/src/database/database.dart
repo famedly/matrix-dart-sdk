@@ -48,7 +48,6 @@ class Database extends _$Database {
           }
           if (from == 3) {
             await m.createTable(userCrossSigningKeys);
-            await m.createIndex(userCrossSigningKeysIndex);
             await m.createTable(ssssCache);
             // mark all keys as outdated so that the cross signing keys will be fetched
             await m.issueCustomQuery(
