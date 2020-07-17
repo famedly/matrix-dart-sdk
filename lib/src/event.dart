@@ -89,7 +89,13 @@ class Event extends MatrixEvent {
     this.roomId = roomId ?? room?.id;
     this.senderId = senderId;
     this.unsigned = unsigned;
-    this.prevContent = prevContent;
+    // synapse unfortunatley isn't following the spec and tosses the prev_content
+    // into the unsigned block
+    this.prevContent = prevContent != null && prevContent.isNotEmpty
+        ? prevContent
+        : (unsigned != null && unsigned['prev_content'] is Map
+            ? unsigned['prev_content']
+            : null);
     this.stateKey = stateKey;
     this.originServerTs = originServerTs;
   }
