@@ -5361,6 +5361,7 @@ class Files extends Table with TableInfo<Files, DbFile> {
 
 abstract class _$Database extends GeneratedDatabase {
   _$Database(QueryExecutor e) : super(SqlTypeSystem.defaultInstance, e);
+  _$Database.connect(DatabaseConnection c) : super.connect(c);
   Clients _clients;
   Clients get clients => _clients ??= Clients(this);
   UserDeviceKeys _userDeviceKeys;
@@ -6189,23 +6190,6 @@ abstract class _$Database extends GeneratedDatabase {
         variables: [
           Variable.withInt(client_id),
           Variable.withString(state_key),
-          Variable.withString(room_id)
-        ],
-        readsFrom: {
-          roomStates
-        }).map(_rowToDbRoomState);
-  }
-
-  Selectable<DbRoomState> dbGetUsers(
-      int client_id, List<String> mxids, String room_id) {
-    var $arrayStartIndex = 2;
-    final expandedmxids = $expandVar($arrayStartIndex, mxids.length);
-    $arrayStartIndex += mxids.length;
-    return customSelect(
-        'SELECT * FROM room_states WHERE client_id = :client_id AND type = \'m.room.member\' AND state_key IN ($expandedmxids) AND room_id = :room_id',
-        variables: [
-          Variable.withInt(client_id),
-          for (var $ in mxids) Variable.withString($),
           Variable.withString(room_id)
         ],
         readsFrom: {

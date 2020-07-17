@@ -15,6 +15,8 @@ part 'database.g.dart';
 class Database extends _$Database {
   Database(QueryExecutor e) : super(e);
 
+  Database.connect(DatabaseConnection connection) : super.connect(connection);
+
   @override
   int get schemaVersion => 5;
 
