@@ -68,30 +68,28 @@ class FakeMatrixApi extends MockClient {
           if (api.containsKey(method) && api[method].containsKey(action)) {
             res = api[method][action](data);
             if (res is Map && res.containsKey('errcode')) {
-              return Response(json.encode(res), 405);
+              return Response.bytes(utf8.encode(json.encode(res)), 405);
             }
           } else if (method == 'PUT' &&
               action.contains('/client/r0/sendToDevice/')) {
-            return Response(json.encode({}), 200);
+            return Response.bytes(utf8.encode(json.encode({})), 200);
           } else if (method == 'GET' &&
               action.contains('/client/r0/rooms/') &&
               action.contains('/state/m.room.member/')) {
             res = {'displayname': ''};
-            return Response(json.encode(res), 200);
           } else if (method == 'PUT' &&
               action.contains(
                   '/client/r0/rooms/%211234%3AfakeServer.notExisting/send/')) {
             res = {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
-            return Response(json.encode(res), 200);
           } else {
             res = {
               'errcode': 'M_UNRECOGNIZED',
               'error': 'Unrecognized request'
             };
-            return Response(json.encode(res), 405);
+            return Response.bytes(utf8.encode(json.encode(res)), 405);
           }
 
-          return Response(json.encode(res), 200);
+          return Response.bytes(utf8.encode(json.encode(res)), 200);
         });
 
   static Map<String, dynamic> messagesResponse = {
