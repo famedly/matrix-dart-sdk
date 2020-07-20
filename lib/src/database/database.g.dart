@@ -5361,6 +5361,7 @@ class Files extends Table with TableInfo<Files, DbFile> {
 
 abstract class _$Database extends GeneratedDatabase {
   _$Database(QueryExecutor e) : super(SqlTypeSystem.defaultInstance, e);
+  _$Database.connect(DatabaseConnection c) : super.connect(c);
   Clients _clients;
   Clients get clients => _clients ??= Clients(this);
   UserDeviceKeys _userDeviceKeys;

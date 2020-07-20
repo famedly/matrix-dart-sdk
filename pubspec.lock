@@ -22,13 +22,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.2.2"
-  archive:
-    dependency: transitive
-    description:
-      name: archive
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "2.0.13"
   args:
     dependency: transitive
     description:
@@ -326,12 +319,10 @@ packages:
   matrix_file_e2ee:
     dependency: "direct main"
     description:
-      path: "."
-      ref: "1.x.y"
-      resolved-ref: "32edeff765369a7a77a0822f4b19302ca24a017b"
-      url: "https://gitlab.com/famedly/libraries/matrix_file_e2ee.git"
-    source: git
-    version: "1.0.3"
+      name: matrix_file_e2ee
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.0.4"
   meta:
     dependency: transitive
     description:
@@ -340,7 +331,7 @@ packages:
     source: hosted
     version: "1.1.8"
   mime:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: mime
       url: "https://pub.dartlang.org"
@@ -398,12 +389,10 @@ packages:
   olm:
     dependency: "direct main"
     description:
-      path: "."
-      ref: "1.x.y"
-      resolved-ref: "8e4fcccff7a2d4d0bd5142964db092bf45061905"
-      url: "https://gitlab.com/famedly/libraries/dart-olm.git"
-    source: git
-    version: "1.2.0"
+      name: olm
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.2.1"
   package_config:
     dependency: transitive
     description:
@@ -432,13 +421,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.9.0"
-  petitparser:
-    dependency: transitive
-    description:
-      name: petitparser
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "3.0.2"
   pointycastle:
     dependency: transitive
     description:
@@ -670,13 +652,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.5.4"
-  xml:
-    dependency: transitive
-    description:
-      name: xml
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "3.7.0"
   yaml:
     dependency: transitive
     description:

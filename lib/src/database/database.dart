@@ -15,6 +15,8 @@ part 'database.g.dart';
 class Database extends _$Database {
   Database(QueryExecutor e) : super(e);
 
+  Database.connect(DatabaseConnection connection) : super.connect(connection);
+
   @override
   int get schemaVersion => 5;
 
@@ -48,7 +50,6 @@ class Database extends _$Database {
           }
           if (from == 3) {
             await m.createTable(userCrossSigningKeys);
-            await m.createIndex(userCrossSigningKeysIndex);
             await m.createTable(ssssCache);
             // mark all keys as outdated so that the cross signing keys will be fetched
             await m.issueCustomQuery(
