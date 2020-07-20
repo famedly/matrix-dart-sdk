@@ -231,8 +231,13 @@ class Client {
   ) async {
     final response = await http
         .get('https://${MatrixIdOrDomain.domain}/.well-known/matrix/client');
-    var resp_body = utf8.decode(response.bodyBytes);
-    final rawJson = json.decode(resp_body);
+    var respBody = response.body;
+    try {
+      respBody = utf8.decode(response.bodyBytes);
+    } catch (_) {
+      // No-OP
+    }
+    final rawJson = json.decode(respBody);
     return WellKnownInformations.fromJson(rawJson);
   }
 

@@ -193,8 +193,13 @@ class MatrixApi {
               );
           break;
       }
-      var resp_body = utf8.decode(resp.bodyBytes);
-      var jsonString = String.fromCharCodes(resp_body.runes);
+      var respBody = resp.body;
+      try {
+        respBody = utf8.decode(resp.bodyBytes);
+      } catch (_) {
+        // No-OP
+      }
+      var jsonString = String.fromCharCodes(respBody.runes);
       if (jsonString.startsWith('[') && jsonString.endsWith(']')) {
         jsonString = '\{"chunk":$jsonString\}';
       }
