@@ -194,8 +194,14 @@ class KeyVerification {
     }
   }
 
+  bool _handlePayloadLock = false;
+
   Future<void> handlePayload(String type, Map<String, dynamic> payload,
       [String eventId]) async {
+    while (_handlePayloadLock) {
+      await Future.delayed(Duration(milliseconds: 50));
+    }
+    _handlePayloadLock = true;
     print('[Key Verification] Received type ${type}: ' + payload.toString());
     try {
       var thisLastStep = lastStep;
@@ -307,6 +313,8 @@ class KeyVerification {
       if (deviceId != null) {
         await cancel('m.invalid_message');
       }
+    } finally {
+      _handlePayloadLock = false;
     }
   }
 
@@ -529,8 +537,8 @@ class KeyVerification {
   Future<void> send(String type, Map<String, dynamic> payload) async {
     makePayload(payload);
     print('[Key Verification] Sending type ${type}: ' + payload.toString());
-    print('[Key Verification] Sending to ${userId} device ${deviceId}');
     if (room != null) {
+      print('[Key Verification] Sending to ${userId} in room ${room.id}');
       if (['m.key.verification.request'].contains(type)) {
         payload['msgtype'] = type;
         payload['to'] = userId;
@@ -544,6 +552,7 @@ class KeyVerification {
         encryption.keyVerificationManager.addRequest(this);
       }
     } else {
+      print('[Key Verification] Sending to ${userId} device ${deviceId}');
       await client.sendToDevice(
           [client.userDeviceKeys[userId].deviceKeys[deviceId]], type, payload);
     }
