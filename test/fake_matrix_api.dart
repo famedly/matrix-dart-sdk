@@ -47,6 +47,7 @@ class FakeMatrixApi extends MockClient {
           final dynamic data =
               method == 'GET' ? request.url.queryParameters : request.body;
           dynamic res = {};
+          var statusCode = 200;
 
           //print('\$method request to $action with Data: $data');
 
@@ -68,11 +69,11 @@ class FakeMatrixApi extends MockClient {
           if (api.containsKey(method) && api[method].containsKey(action)) {
             res = api[method][action](data);
             if (res is Map && res.containsKey('errcode')) {
-              return Response.bytes(utf8.encode(json.encode(res)), 405);
+              statusCode = 405;
             }
           } else if (method == 'PUT' &&
               action.contains('/client/r0/sendToDevice/')) {
-            return Response.bytes(utf8.encode(json.encode({})), 200);
+            res = {};
           } else if (method == 'GET' &&
               action.contains('/client/r0/rooms/') &&
               action.contains('/state/m.room.member/')) {
@@ -86,10 +87,10 @@ class FakeMatrixApi extends MockClient {
               'errcode': 'M_UNRECOGNIZED',
               'error': 'Unrecognized request'
             };
-            return Response.bytes(utf8.encode(json.encode(res)), 405);
+            statusCode = 405;
           }
 
-          return Response.bytes(utf8.encode(json.encode(res)), 200);
+          return Response.bytes(utf8.encode(json.encode(res)), statusCode);
         });
 
   static Map<String, dynamic> messagesResponse = {
