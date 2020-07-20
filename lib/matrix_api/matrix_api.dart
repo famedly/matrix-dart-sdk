@@ -18,13 +18,14 @@
 
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:famedlysdk/matrix_api/model/filter.dart';
 import 'package:famedlysdk/matrix_api/model/keys_query_response.dart';
 import 'package:famedlysdk/matrix_api/model/login_types.dart';
 import 'package:famedlysdk/matrix_api/model/notifications_query_response.dart';
 import 'package:famedlysdk/matrix_api/model/open_graph_data.dart';
-import 'package:famedlysdk/matrix_api/model/request_token_response.dart';
 import 'package:famedlysdk/matrix_api/model/profile.dart';
+import 'package:famedlysdk/matrix_api/model/request_token_response.dart';
 import 'package:famedlysdk/matrix_api/model/server_capabilities.dart';
 import 'package:famedlysdk/matrix_api/model/supported_versions.dart';
 import 'package:famedlysdk/matrix_api/model/sync_update.dart';
@@ -36,12 +37,12 @@ import 'package:mime/mime.dart';
 import 'package:moor/moor.dart';
 
 import 'model/device.dart';
-import 'model/matrix_event.dart';
-import 'model/matrix_keys.dart';
 import 'model/event_context.dart';
 import 'model/events_sync_update.dart';
 import 'model/login_response.dart';
+import 'model/matrix_event.dart';
 import 'model/matrix_exception.dart';
+import 'model/matrix_keys.dart';
 import 'model/one_time_keys_claim_response.dart';
 import 'model/open_id_credentials.dart';
 import 'model/presence_content.dart';
@@ -192,7 +193,8 @@ class MatrixApi {
               );
           break;
       }
-      var jsonString = String.fromCharCodes(resp.body.runes);
+      var resp_body = utf8.decode(resp.bodyBytes);
+      var jsonString = String.fromCharCodes(resp_body.runes);
       if (jsonString.startsWith('[') && jsonString.endsWith(']')) {
         jsonString = '\{"chunk":$jsonString\}';
       }
