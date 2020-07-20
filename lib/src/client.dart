@@ -20,9 +20,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 
+import 'package:famedlysdk/encryption.dart';
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api.dart';
-import 'package:famedlysdk/encryption.dart';
 import 'package:famedlysdk/src/room.dart';
 import 'package:famedlysdk/src/utils/device_keys_list.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
@@ -30,12 +30,12 @@ import 'package:famedlysdk/src/utils/to_device_event.dart';
 import 'package:http/http.dart' as http;
 import 'package:pedantic/pedantic.dart';
 
+import 'database/database.dart' show Database;
 import 'event.dart';
 import 'room.dart';
+import 'user.dart';
 import 'utils/event_update.dart';
 import 'utils/room_update.dart';
-import 'user.dart';
-import 'database/database.dart' show Database;
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -231,7 +231,13 @@ class Client {
   ) async {
     final response = await http
         .get('https://${MatrixIdOrDomain.domain}/.well-known/matrix/client');
-    final rawJson = json.decode(response.body);
+    var respBody = response.body;
+    try {
+      respBody = utf8.decode(response.bodyBytes);
+    } catch (_) {
+      // No-OP
+    }
+    final rawJson = json.decode(respBody);
     return WellKnownInformations.fromJson(rawJson);
   }
 
