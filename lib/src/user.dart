@@ -71,7 +71,10 @@ class User extends Event {
   String get id => stateKey;
 
   /// The displayname of the user if the user has set one.
-  String get displayName => content != null ? content['displayname'] : null;
+  String get displayName =>
+      content != null && content.containsKey('displayname')
+          ? content['displayname']
+          : (prevContent != null ? prevContent['displayname'] : null);
 
   /// Returns the power level of this user.
   int get powerLevel => room?.getPowerLevelByUserId(id);
@@ -89,9 +92,13 @@ class User extends Event {
       }, orElse: () => Membership.join);
 
   /// The avatar if the user has one.
-  Uri get avatarUrl => content != null && content['avatar_url'] is String
-      ? Uri.parse(content['avatar_url'])
-      : null;
+  Uri get avatarUrl => content != null && content.containsKey('avatar_url')
+      ? (content['avatar_url'] is String
+          ? Uri.parse(content['avatar_url'])
+          : null)
+      : (prevContent != null && prevContent['avatar_url'] is String
+          ? Uri.parse(prevContent['avatar_url'])
+          : null);
 
   /// Returns the displayname or the local part of the Matrix ID if the user
   /// has no displayname. If [formatLocalpart] is true, then the localpart will
