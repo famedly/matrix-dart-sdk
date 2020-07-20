@@ -87,7 +87,8 @@ class Client {
       this.enableE2eeRecovery = false,
       this.verificationMethods,
       http.Client httpClient,
-      this.importantStateEvents}) {
+      this.importantStateEvents,
+      this.pinUnreadRooms = false}) {
     verificationMethods ??= <KeyVerificationMethod>{};
     importantStateEvents ??= <String>{};
     importantStateEvents.addAll([
@@ -1101,13 +1102,16 @@ class Client {
 
   bool _sortLock = false;
 
+  /// If [true] then unread rooms are pinned at the top of the room list.
+  bool pinUnreadRooms;
+
   /// The compare function how the rooms should be sorted internally. By default
   /// rooms are sorted by timestamp of the last m.room.message event or the last
   /// event if there is no known message.
-  RoomSorter sortRoomsBy = (a, b) => (a.membership != b.membership)
-      ? (a.membership == Membership.invite ? -1 : 1)
-      : (a.isFavourite != b.isFavourite)
-          ? (a.isFavourite ? -1 : 1)
+  RoomSorter get sortRoomsBy => (a, b) => (a.isFavourite != b.isFavourite)
+      ? (a.isFavourite ? -1 : 1)
+      : (pinUnreadRooms && a.notificationCount != b.notificationCount)
+          ? b.notificationCount.compareTo(a.notificationCount)
           : b.timeCreated.millisecondsSinceEpoch
               .compareTo(a.timeCreated.millisecondsSinceEpoch);
 
