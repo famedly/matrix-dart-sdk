@@ -300,6 +300,9 @@ void main() {
     });
 
     test('getParticipants', () async {
+      var userList = room.getParticipants();
+      expect(userList.length, 4);
+      // add new user
       room.setState(Event(
           senderId: '@alice:test.abc',
           type: 'm.room.member',
@@ -309,9 +312,9 @@ void main() {
           originServerTs: DateTime.now(),
           content: {'displayname': 'alice'},
           stateKey: '@alice:test.abc'));
-      final userList = room.getParticipants();
-      expect(userList.length, 4);
-      expect(userList[3].displayName, 'alice');
+      userList = room.getParticipants();
+      expect(userList.length, 5);
+      expect(userList[4].displayName, 'alice');
     });
 
     test('addToDirectChat', () async {

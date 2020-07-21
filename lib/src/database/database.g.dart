@@ -6197,6 +6197,13 @@ abstract class _$Database extends GeneratedDatabase {
         }).map(_rowToDbRoomState);
   }
 
+  Selectable<DbRoomState> dbGetUsers(int client_id, String room_id) {
+    return customSelect(
+        'SELECT * FROM room_states WHERE client_id = :client_id AND type = \'m.room.member\' AND room_id = :room_id',
+        variables: [Variable.withInt(client_id), Variable.withString(room_id)],
+        readsFrom: {roomStates}).map(_rowToDbRoomState);
+  }
+
   DbEvent _rowToDbEvent(QueryRow row) {
     return DbEvent(
       clientId: row.readInt('client_id'),
