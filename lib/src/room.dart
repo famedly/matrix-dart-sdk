@@ -791,28 +791,17 @@ class Room {
     final loadFn = () async {
       if (!((resp.chunk?.isNotEmpty ?? false) && resp.end != null)) return;
 
-      if (resp.state != null) {
-        for (final state in resp.state) {
-          await EventUpdate(
-            type: 'state',
-            roomID: id,
-            eventType: state.type,
-            content: state.toJson(),
-            sortOrder: oldSortOrder,
-          ).decrypt(this, store: true);
-        }
-      }
-
-      for (final hist in resp.chunk) {
-        final eventUpdate = await EventUpdate(
-          type: 'history',
-          roomID: id,
-          eventType: hist.type,
-          content: hist.toJson(),
-          sortOrder: oldSortOrder,
-        ).decrypt(this, store: true);
-        client.onEvent.add(eventUpdate);
-      }
+      await client.handleSync(
+          SyncUpdate()
+            ..rooms = (RoomsUpdate()
+              ..join = {
+                '$id': (JoinedRoomUpdate()
+                  ..state = resp.state
+                  ..timeline = (TimelineUpdate()
+                    ..events = resp.chunk
+                    ..prevBatch = resp.end)),
+              }),
+          sortAtTheEnd: true);
     };
 
     if (client.database != null) {
@@ -824,15 +813,6 @@ class Room {
     } else {
       await loadFn();
     }
-    client.onRoomUpdate.add(
-      RoomUpdate(
-        id: id,
-        membership: membership,
-        prev_batch: resp.end,
-        notification_count: notificationCount,
-        highlight_count: highlightCount,
-      ),
-    );
   }
 
   /// Sets this room as a direct chat for this user if not already.

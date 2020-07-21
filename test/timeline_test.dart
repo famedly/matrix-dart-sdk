@@ -49,19 +49,6 @@ void main() {
 
     test('Create', () async {
       await client.checkServer('https://fakeServer.notExisting');
-      client.onEvent.add(EventUpdate(
-          type: 'timeline',
-          roomID: roomID,
-          eventType: 'm.room.message',
-          content: {
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-            'sender': '@alice:example.com',
-            'status': 2,
-            'event_id': '1',
-            'origin_server_ts': testTimeStamp
-          },
-          sortOrder: room.newSortOrder));
 
       client.onEvent.add(EventUpdate(
           type: 'timeline',
@@ -75,7 +62,20 @@ void main() {
             'event_id': '2',
             'origin_server_ts': testTimeStamp - 1000
           },
-          sortOrder: room.oldSortOrder));
+          sortOrder: room.newSortOrder));
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': 2,
+            'event_id': '1',
+            'origin_server_ts': testTimeStamp
+          },
+          sortOrder: room.newSortOrder));
 
       expect(timeline.sub != null, true);
 
