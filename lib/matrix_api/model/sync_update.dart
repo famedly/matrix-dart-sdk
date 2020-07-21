@@ -33,6 +33,8 @@ class SyncUpdate {
   DeviceListsUpdate deviceLists;
   Map<String, int> deviceOneTimeKeysCount;
 
+  SyncUpdate();
+
   SyncUpdate.fromJson(Map<String, dynamic> json) {
     nextBatch = json['next_batch'];
     rooms = json['rooms'] != null ? RoomsUpdate.fromJson(json['rooms']) : null;
@@ -97,6 +99,8 @@ class RoomsUpdate {
   Map<String, InvitedRoomUpdate> invite;
   Map<String, LeftRoomUpdate> leave;
 
+  RoomsUpdate();
+
   RoomsUpdate.fromJson(Map<String, dynamic> json) {
     join = json['join'] != null
         ? (json['join'] as Map)
@@ -135,6 +139,8 @@ class JoinedRoomUpdate extends SyncRoomUpdate {
   List<BasicRoomEvent> ephemeral;
   List<BasicRoomEvent> accountData;
   UnreadNotificationCounts unreadNotifications;
+
+  JoinedRoomUpdate();
 
   JoinedRoomUpdate.fromJson(Map<String, dynamic> json) {
     summary =
@@ -260,6 +266,9 @@ class TimelineUpdate {
   List<MatrixEvent> events;
   bool limited;
   String prevBatch;
+
+  TimelineUpdate();
+
   TimelineUpdate.fromJson(Map<String, dynamic> json) {
     events = json['events'] != null
         ? (json['events'] as List).map((i) => MatrixEvent.fromJson(i)).toList()
@@ -267,6 +276,7 @@ class TimelineUpdate {
     limited = json['limited'];
     prevBatch = json['prev_batch'];
   }
+
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     if (events != null) {

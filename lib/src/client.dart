@@ -737,19 +737,22 @@ class Client {
   }
 
   /// Use this method only for testing utilities!
-  Future<void> handleSync(SyncUpdate sync) async {
+  Future<void> handleSync(SyncUpdate sync, {bool sortAtTheEnd = false}) async {
     if (sync.toDevice != null) {
       await _handleToDeviceEvents(sync.toDevice);
     }
     if (sync.rooms != null) {
       if (sync.rooms.join != null) {
-        await _handleRooms(sync.rooms.join, Membership.join);
+        await _handleRooms(sync.rooms.join, Membership.join,
+            sortAtTheEnd: sortAtTheEnd);
       }
       if (sync.rooms.invite != null) {
-        await _handleRooms(sync.rooms.invite, Membership.invite);
+        await _handleRooms(sync.rooms.invite, Membership.invite,
+            sortAtTheEnd: sortAtTheEnd);
       }
       if (sync.rooms.leave != null) {
-        await _handleRooms(sync.rooms.leave, Membership.leave);
+        await _handleRooms(sync.rooms.leave, Membership.leave,
+            sortAtTheEnd: sortAtTheEnd);
       }
     }
     if (sync.presence != null) {
@@ -827,7 +830,8 @@ class Client {
   }
 
   Future<void> _handleRooms(
-      Map<String, SyncRoomUpdate> rooms, Membership membership) async {
+      Map<String, SyncRoomUpdate> rooms, Membership membership,
+      {bool sortAtTheEnd = false}) async {
     for (final entry in rooms.entries) {
       final id = entry.key;
       final room = entry.value;
@@ -853,8 +857,11 @@ class Client {
           handledEvents = true;
         }
         if (room.timeline?.events?.isNotEmpty ?? false) {
-          await _handleRoomEvents(id,
-              room.timeline.events.map((i) => i.toJson()).toList(), 'timeline');
+          await _handleRoomEvents(
+              id,
+              room.timeline.events.map((i) => i.toJson()).toList(),
+              sortAtTheEnd ? 'history' : 'timeline',
+              sortAtTheEnd: sortAtTheEnd);
           handledEvents = true;
         }
         if (room.ephemeral?.isNotEmpty ?? false) {
@@ -938,14 +945,16 @@ class Client {
   }
 
   Future<void> _handleRoomEvents(
-      String chat_id, List<dynamic> events, String type) async {
+      String chat_id, List<dynamic> events, String type,
+      {bool sortAtTheEnd = false}) async {
     for (num i = 0; i < events.length; i++) {
-      await _handleEvent(events[i], chat_id, type);
+      await _handleEvent(events[i], chat_id, type, sortAtTheEnd: sortAtTheEnd);
     }
   }
 
   Future<void> _handleEvent(
-      Map<String, dynamic> event, String roomID, String type) async {
+      Map<String, dynamic> event, String roomID, String type,
+      {bool sortAtTheEnd = false}) async {
     if (event['type'] is String && event['content'] is Map<String, dynamic>) {
       // The client must ignore any new m.room.encryption event to prevent
       // man-in-the-middle attacks!
@@ -960,7 +969,9 @@ class Client {
 
       // ephemeral events aren't persisted and don't need a sort order - they are
       // expected to be processed as soon as they come in
-      final sortOrder = type != 'ephemeral' ? room.newSortOrder : 0.0;
+      final sortOrder = type != 'ephemeral'
+          ? (sortAtTheEnd ? room.oldSortOrder : room.newSortOrder)
+          : 0.0;
       var update = EventUpdate(
         eventType: event['type'],
         roomID: roomID,
