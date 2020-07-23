@@ -6033,6 +6033,21 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
+  Future<int> updateEventStatusOnly(
+      int status, int client_id, String event_id, String room_id) {
+    return customUpdate(
+      'UPDATE events SET status = :status WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id',
+      variables: [
+        Variable.withInt(status),
+        Variable.withInt(client_id),
+        Variable.withString(event_id),
+        Variable.withString(room_id)
+      ],
+      updates: {events},
+      updateKind: UpdateKind.update,
+    );
+  }
+
   DbRoomState _rowToDbRoomState(QueryRow row) {
     return DbRoomState(
       clientId: row.readInt('client_id'),

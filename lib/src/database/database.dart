@@ -361,9 +361,32 @@ class Database extends _$Database {
       if ((status == 1 || status == -1) &&
           eventContent['unsigned'] is Map<String, dynamic> &&
           eventContent['unsigned']['transaction_id'] is String) {
-        // status changed and we have an old transaction id --> update event id and stuffs
-        await updateEventStatus(status, eventContent['event_id'], clientId,
-            eventContent['unsigned']['transaction_id'], chatId);
+        final allOldEvents =
+            await getEvent(clientId, eventContent['event_id'], chatId).get();
+        if (allOldEvents.isNotEmpty) {
+          // we were likely unable to change transaction_id -> event_id.....because the event ID already exists!
+          // So, we try to fetch the old event
+          // the transaction id event will automatically be deleted further down
+          final oldEvent = allOldEvents.first;
+          // do we update the status? We should allow 0 -> -1 updates and status increases
+          if (status > oldEvent.status ||
+              (oldEvent.status == 0 && status == -1)) {
+            // update the status
+            await updateEventStatusOnly(
+                status, clientId, eventContent['event_id'], chatId);
+          }
+        } else {
+          // status changed and we have an old transaction id --> update event id and stuffs
+          try {
+            await updateEventStatus(status, eventContent['event_id'], clientId,
+                eventContent['unsigned']['transaction_id'], chatId);
+          } catch (err) {
+            // we could not update the transaction id to the event id....so it already exists
+            // as we just tried to fetch the event previously this is a race condition if the event comes down sync in the mean time
+            // that means that the status we already have in the database is likely more accurate
+            // than our status. So, we just ignore this error
+          }
+        }
       } else {
         DbEvent oldEvent;
         if (type == 'history') {

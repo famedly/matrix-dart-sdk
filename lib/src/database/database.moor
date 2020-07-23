@@ -208,6 +208,7 @@ getAllAccountData: SELECT * FROM account_data WHERE client_id = :client_id;
 storeAccountData: INSERT OR REPLACE INTO account_data (client_id, type, content) VALUES (:client_id, :type, :content);
 updateEvent: UPDATE events SET unsigned = :unsigned, content = :content, prev_content = :prev_content WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id;
 updateEventStatus: UPDATE events SET status = :status, event_id = :new_event_id WHERE client_id = :client_id AND event_id = :old_event_id AND room_id = :room_id;
+updateEventStatusOnly: UPDATE events SET status = :status WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id;
 getImportantRoomStates: SELECT * FROM room_states WHERE client_id = :client_id AND type IN :events;
 getAllRoomStates: SELECT * FROM room_states WHERE client_id = :client_id;
 getUnimportantRoomStatesForRoom: SELECT * FROM room_states WHERE client_id = :client_id AND room_id = :room_id AND type NOT IN :events;

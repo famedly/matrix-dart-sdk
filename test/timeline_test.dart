@@ -214,14 +214,29 @@ void main() {
     });
 
     test('Resend message', () async {
-      await timeline.events[0].sendAgain(txid: '1234');
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': -1,
+            'event_id': 'new-test-event',
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'newresend'},
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      await timeline.events[0].sendAgain();
 
       await Future.delayed(Duration(milliseconds: 50));
 
       expect(updateCount, 17);
 
       expect(insertList, [0, 0, 0, 0, 0, 0, 0, 0]);
-      expect(timeline.events.length, 6);
+      expect(timeline.events.length, 7);
       expect(timeline.events[0].status, 1);
     });
 
@@ -231,12 +246,12 @@ void main() {
       await Future.delayed(Duration(milliseconds: 50));
 
       expect(updateCount, 20);
-      expect(timeline.events.length, 9);
-      expect(timeline.events[6].eventId, '3143273582443PhrSn:example.org');
-      expect(timeline.events[7].eventId, '2143273582443PhrSn:example.org');
-      expect(timeline.events[8].eventId, '1143273582443PhrSn:example.org');
+      expect(timeline.events.length, 10);
+      expect(timeline.events[7].eventId, '3143273582443PhrSn:example.org');
+      expect(timeline.events[8].eventId, '2143273582443PhrSn:example.org');
+      expect(timeline.events[9].eventId, '1143273582443PhrSn:example.org');
       expect(room.prev_batch, 't47409-4357353_219380_26003_2265');
-      await timeline.events[8].redact(reason: 'test', txid: '1234');
+      await timeline.events[9].redact(reason: 'test', txid: '1234');
     });
 
     test('Clear cache on limited timeline', () async {
@@ -250,6 +265,254 @@ void main() {
       ));
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events.isEmpty, true);
+    });
+
+    test('sending event to failed update', () async {
+      timeline.events.clear();
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': 0,
+            'event_id': 'will-fail',
+            'origin_server_ts': testTimeStamp
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, 0);
+      expect(timeline.events.length, 1);
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': -1,
+            'event_id': 'will-fail',
+            'origin_server_ts': testTimeStamp
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, -1);
+      expect(timeline.events.length, 1);
+    });
+    test('sending an event and the http request finishes first, 0 -> 1 -> 2',
+        () async {
+      timeline.events.clear();
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': 0,
+            'event_id': 'transaction',
+            'origin_server_ts': testTimeStamp
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, 0);
+      expect(timeline.events.length, 1);
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': 1,
+            'event_id': '\$event',
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'transaction'}
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, 1);
+      expect(timeline.events.length, 1);
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': 2,
+            'event_id': '\$event',
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'transaction'}
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, 2);
+      expect(timeline.events.length, 1);
+    });
+    test('sending an event where the sync reply arrives first, 0 -> 2 -> 1',
+        () async {
+      timeline.events.clear();
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': 0,
+            'event_id': 'transaction',
+            'origin_server_ts': testTimeStamp
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, 0);
+      expect(timeline.events.length, 1);
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': 2,
+            'event_id': '\$event',
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'transaction'}
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, 2);
+      expect(timeline.events.length, 1);
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': 1,
+            'event_id': '\$event',
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'transaction'}
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, 2);
+      expect(timeline.events.length, 1);
+    });
+    test('sending an event 0 -> -1 -> 2', () async {
+      timeline.events.clear();
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': 0,
+            'event_id': 'transaction',
+            'origin_server_ts': testTimeStamp
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, 0);
+      expect(timeline.events.length, 1);
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': -1,
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'transaction'},
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, -1);
+      expect(timeline.events.length, 1);
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': 2,
+            'event_id': '\$event',
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'transaction'},
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, 2);
+      expect(timeline.events.length, 1);
+    });
+    test('sending an event 0 -> 2 -> -1', () async {
+      timeline.events.clear();
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': 0,
+            'event_id': 'transaction',
+            'origin_server_ts': testTimeStamp
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, 0);
+      expect(timeline.events.length, 1);
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': 2,
+            'event_id': '\$event',
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'transaction'},
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, 2);
+      expect(timeline.events.length, 1);
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': -1,
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'transaction'},
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, 2);
+      expect(timeline.events.length, 1);
     });
   });
 }

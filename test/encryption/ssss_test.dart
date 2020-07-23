@@ -89,7 +89,7 @@ void main() {
       // account_data for this test
       final content = FakeMatrixApi
           .calledEndpoints[
-              '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/best+animal']
+              '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/best%20animal']
           .first;
       client.accountData['best animal'] = BasicEvent.fromJson({
         'type': 'best animal',

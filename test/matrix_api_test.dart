@@ -1377,7 +1377,7 @@ void main() {
           '@alice:example.com', '!localpart:example.com');
       expect(
         FakeMatrixApi.api['GET'][
-            '/client/r0/user/%40alice%3Aexample.com/rooms/%21localpart%3Aexample.com/tags']({}),
+            '/client/r0/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags']({}),
         {'tags': response.map((k, v) => MapEntry(k, v.toJson()))},
       );
 
