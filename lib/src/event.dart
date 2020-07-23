@@ -312,7 +312,8 @@ class Event extends MatrixEvent {
   /// Try to send this event again. Only works with events of status -1.
   Future<String> sendAgain({String txid}) async {
     if (status != -1) return null;
-    await remove();
+    // we do not remove the event here. It will automatically be updated
+    // in the `sendEvent` method to transition -1 -> 0 -> 1 -> 2
     final eventID = await room.sendEvent(
       content,
       txid: txid ?? unsigned['transaction_id'],

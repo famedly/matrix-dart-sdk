@@ -122,10 +122,31 @@ class Timeline {
   }
 
   int _findEvent({String event_id, String unsigned_txid}) {
+    // we want to find any existing event where either the passed event_id or the passed unsigned_txid
+    // matches either the event_id or transaction_id of the existing event.
+    // For that we create two sets, searchNeedle, what we search, and searchHaystack, where we check if there is a match.
+    // Now, after having these two sets, if the intersect between them is non-empty, we know that we have at least one match in one pair,
+    // thus meaning we found our element.
+    final searchNeedle = <String>{};
+    if (event_id != null) {
+      searchNeedle.add(event_id);
+    }
+    if (unsigned_txid != null) {
+      searchNeedle.add(unsigned_txid);
+    }
     int i;
     for (i = 0; i < events.length; i++) {
-      if (events[i].eventId == event_id ||
-          (unsigned_txid != null && events[i].eventId == unsigned_txid)) break;
+      final searchHaystack = <String>{};
+      if (events[i].eventId != null) {
+        searchHaystack.add(events[i].eventId);
+      }
+      if (events[i].unsigned != null &&
+          events[i].unsigned['transaction_id'] != null) {
+        searchHaystack.add(events[i].unsigned['transaction_id']);
+      }
+      if (searchNeedle.intersection(searchHaystack).isNotEmpty) {
+        break;
+      }
     }
     return i;
   }
@@ -135,6 +156,7 @@ class Timeline {
       if (eventUpdate.roomID != room.id) return;
 
       if (eventUpdate.type == 'timeline' || eventUpdate.type == 'history') {
+        var status = eventUpdate.content['status'] ?? 2;
         // Redaction events are handled as modification for existing events.
         if (eventUpdate.eventType == EventTypes.Redaction) {
           final eventId = _findEvent(event_id: eventUpdate.content['redacts']);
@@ -142,13 +164,10 @@ class Timeline {
             events[eventId].setRedactionEvent(Event.fromJson(
                 eventUpdate.content, room, eventUpdate.sortOrder));
           }
-        } else if (eventUpdate.content['status'] == -2) {
+        } else if (status == -2) {
           var i = _findEvent(event_id: eventUpdate.content['event_id']);
           if (i < events.length) events.removeAt(i);
-        }
-        // Is this event already in the timeline?
-        else if (eventUpdate.content['unsigned'] is Map &&
-            eventUpdate.content['unsigned']['transaction_id'] is String) {
+        } else {
           var i = _findEvent(
               event_id: eventUpdate.content['event_id'],
               unsigned_txid: eventUpdate.content['unsigned'] is Map
@@ -156,34 +175,29 @@ class Timeline {
                   : null);
 
           if (i < events.length) {
+            // we want to preserve the old sort order
             final tempSortOrder = events[i].sortOrder;
+            // if the old status is larger than the new one, we also want to preserve the old status
+            final oldStatus = events[i].status;
             events[i] = Event.fromJson(
                 eventUpdate.content, room, eventUpdate.sortOrder);
             events[i].sortOrder = tempSortOrder;
+            // do we preserve the status? we should allow 0 -> -1 updates and status increases
+            if (status < oldStatus && !(status == -1 && oldStatus == 0)) {
+              events[i].status = oldStatus;
+            }
+          } else {
+            var newEvent = Event.fromJson(
+                eventUpdate.content, room, eventUpdate.sortOrder);
+
+            if (eventUpdate.type == 'history' &&
+                events.indexWhere(
+                        (e) => e.eventId == eventUpdate.content['event_id']) !=
+                    -1) return;
+
+            events.insert(0, newEvent);
+            if (onInsert != null) onInsert(0);
           }
-        } else {
-          Event newEvent;
-          var senderUser = room
-                  .getState(
-                      EventTypes.RoomMember, eventUpdate.content['sender'])
-                  ?.asUser ??
-              await room.client.database?.getUser(
-                  room.client.id, eventUpdate.content['sender'], room);
-          if (senderUser != null) {
-            eventUpdate.content['displayname'] = senderUser.displayName;
-            eventUpdate.content['avatar_url'] = senderUser.avatarUrl.toString();
-          }
-
-          newEvent =
-              Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder);
-
-          if (eventUpdate.type == 'history' &&
-              events.indexWhere(
-                      (e) => e.eventId == eventUpdate.content['event_id']) !=
-                  -1) return;
-
-          events.insert(0, newEvent);
-          if (onInsert != null) onInsert(0);
         }
       }
       sortAndUpdate();

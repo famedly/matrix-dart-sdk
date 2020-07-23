@@ -80,7 +80,7 @@ class FakeMatrixApi extends MockClient {
             res = {'displayname': ''};
           } else if (method == 'PUT' &&
               action.contains(
-                  '/client/r0/rooms/%211234%3AfakeServer.notExisting/send/')) {
+                  '/client/r0/rooms/!1234%3AfakeServer.notExisting/send/')) {
             res = {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
           } else {
             res = {
@@ -748,7 +748,7 @@ class FakeMatrixApi extends MockClient {
               'app_url': 'https://custom.app.example.org'
             }
           },
-      '/client/r0/user/%40alice%3Aexample.com/rooms/%21localpart%3Aexample.com/tags':
+      '/client/r0/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags':
           (var req) => {
                 'tags': {
                   'm.favourite': {'order': 0.1},
@@ -1982,21 +1982,21 @@ class FakeMatrixApi extends MockClient {
           (var req) => {},
       '/client/r0/pushrules/global/content/nocake/enabled': (var req) => {},
       '/client/r0/pushrules/global/content/nocake/actions': (var req) => {},
-      '/client/r0/rooms/%21localpart%3Aserver.abc/state/m.room.history_visibility':
+      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.history_visibility':
           (var req) => {},
-      '/client/r0/rooms/%21localpart%3Aserver.abc/state/m.room.join_rules':
+      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.join_rules':
           (var req) => {},
-      '/client/r0/rooms/%21localpart%3Aserver.abc/state/m.room.guest_access':
+      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.guest_access':
           (var req) => {},
-      '/client/r0/rooms/%21localpart%3Aserver.abc/send/m.room.call.invite/1234':
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.room.call.invite/1234':
           (var req) => {},
-      '/client/r0/rooms/%21localpart%3Aserver.abc/send/m.room.call.answer/1234':
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.room.call.answer/1234':
           (var req) => {},
-      '/client/r0/rooms/%21localpart%3Aserver.abc/send/m.room.call.candidates/1234':
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.room.call.candidates/1234':
           (var req) => {},
-      '/client/r0/rooms/%21localpart%3Aserver.abc/send/m.room.call.hangup/1234':
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.room.call.hangup/1234':
           (var req) => {},
-      '/client/r0/rooms/%211234%3Aexample.com/redact/1143273582443PhrSn%3Aexample.org/1234':
+      '/client/r0/rooms/!1234%3Aexample.com/redact/1143273582443PhrSn%3Aexample.org/1234':
           (var req) => {'event_id': '1234'},
       '/client/r0/pushrules/global/room/!localpart%3Aserver.abc': (var req) =>
           {},
@@ -2006,23 +2006,27 @@ class FakeMatrixApi extends MockClient {
           (var req) => {},
       '/client/r0/devices/QBUAZIFURK': (var req) => {},
       '/client/r0/directory/room/%23testalias%3Aexample.com': (var reqI) => {},
-      '/client/r0/rooms/%21localpart%3Aserver.abc/send/m.room.message/testtxid':
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.room.message/testtxid':
           (var reqI) => {
                 'event_id': '\$event${FakeMatrixApi.eventCounter++}',
               },
       '/client/r0/rooms/!localpart%3Aexample.com/typing/%40alice%3Aexample.com':
           (var req) => {},
-      '/client/r0/rooms/%211234%3Aexample.com/send/m.room.message/1234':
+      '/client/r0/rooms/!1234%3Aexample.com/send/m.room.message/1234':
           (var reqI) => {
                 'event_id': '\$event${FakeMatrixApi.eventCounter++}',
               },
-      '/client/r0/user/%40test%3AfakeServer.notExisting/rooms/%21localpart%3Aserver.abc/tags/m.favourite':
+      '/client/r0/rooms/!1234%3Aexample.com/send/m.room.message/newresend':
+          (var reqI) => {
+                'event_id': '\$event${FakeMatrixApi.eventCounter++}',
+              },
+      '/client/r0/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/tags/m.favourite':
           (var req) => {},
-      '/client/r0/user/%40alice%3Aexample.com/rooms/%21localpart%3Aexample.com/tags/testtag':
+      '/client/r0/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags/testtag':
           (var req) => {},
       '/client/r0/user/%40alice%3Aexample.com/account_data/test.account.data':
           (var req) => {},
-      '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/best+animal':
+      '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/best%20animal':
           (var req) => {},
       '/client/r0/user/%40alice%3Aexample.com/rooms/1234/account_data/test.account.data':
           (var req) => {},
@@ -2034,27 +2038,27 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/profile/%40alice%3Aexample.com/avatar_url': (var reqI) => {},
       '/client/r0/profile/%40test%3AfakeServer.notExisting/avatar_url':
           (var reqI) => {},
-      '/client/r0/rooms/%21localpart%3Aserver.abc/state/m.room.encryption':
+      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.encryption':
           (var reqI) => {'event_id': 'YUwRidLecu:example.com'},
-      '/client/r0/rooms/%21localpart%3Aserver.abc/state/m.room.avatar':
+      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.avatar':
           (var reqI) => {'event_id': 'YUwRidLecu:example.com'},
-      '/client/r0/rooms/%21localpart%3Aserver.abc/send/m.room.message/1234':
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.room.message/1234':
           (var reqI) => {'event_id': 'YUwRidLecu:example.com'},
-      '/client/r0/rooms/%21localpart%3Aserver.abc/redact/1234/1234':
-          (var reqI) => {'event_id': 'YUwRidLecu:example.com'},
-      '/client/r0/rooms/%21localpart%3Aserver.abc/state/m.room.name':
+      '/client/r0/rooms/!localpart%3Aserver.abc/redact/1234/1234': (var reqI) =>
+          {'event_id': 'YUwRidLecu:example.com'},
+      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.name':
           (var reqI) => {
                 'event_id': '42',
               },
-      '/client/r0/rooms/%21localpart%3Aserver.abc/state/m.room.topic':
+      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.topic':
           (var reqI) => {
                 'event_id': '42',
               },
-      '/client/r0/rooms/%21localpart%3Aserver.abc/state/m.room.pinned_events':
+      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.pinned_events':
           (var reqI) => {
                 'event_id': '42',
               },
-      '/client/r0/rooms/%21localpart%3Aserver.abc/state/m.room.power_levels':
+      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.power_levels':
           (var reqI) => {
                 'event_id': '42',
               },
@@ -2083,9 +2087,9 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/pushrules/global/content/nocake': (var req) => {},
       '/client/r0/pushrules/global/override/!localpart%3Aserver.abc':
           (var req) => {},
-      '/client/r0/user/%40test%3AfakeServer.notExisting/rooms/%21localpart%3Aserver.abc/tags/m.favourite':
+      '/client/r0/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/tags/m.favourite':
           (var req) => {},
-      '/client/r0/user/%40alice%3Aexample.com/rooms/%21localpart%3Aexample.com/tags/testtag':
+      '/client/r0/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags/testtag':
           (var req) => {},
       '/client/unstable/room_keys/version/5': (var req) => {},
       '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5':

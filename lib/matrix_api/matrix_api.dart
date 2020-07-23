@@ -787,7 +787,7 @@ class MatrixApi {
     String stateKey = '',
   ]) async {
     final response = await request(RequestType.PUT,
-        '/client/r0/rooms/${Uri.encodeQueryComponent(roomId)}/state/${Uri.encodeQueryComponent(eventType)}/${Uri.encodeQueryComponent(stateKey)}',
+        '/client/r0/rooms/${Uri.encodeComponent(roomId)}/state/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(stateKey)}',
         data: content);
     return response['event_id'];
   }
@@ -803,7 +803,7 @@ class MatrixApi {
     Map<String, dynamic> content,
   ) async {
     final response = await request(RequestType.PUT,
-        '/client/r0/rooms/${Uri.encodeQueryComponent(roomId)}/send/${Uri.encodeQueryComponent(eventType)}/${Uri.encodeQueryComponent(txnId)}',
+        '/client/r0/rooms/${Uri.encodeComponent(roomId)}/send/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(txnId)}',
         data: content);
     return response['event_id'];
   }
@@ -818,7 +818,7 @@ class MatrixApi {
     String reason,
   }) async {
     final response = await request(RequestType.PUT,
-        '/client/r0/rooms/${Uri.encodeQueryComponent(roomId)}/redact/${Uri.encodeQueryComponent(eventId)}/${Uri.encodeQueryComponent(txnId)}',
+        '/client/r0/rooms/${Uri.encodeComponent(roomId)}/redact/${Uri.encodeComponent(eventId)}/${Uri.encodeComponent(txnId)}',
         data: {
           if (reason != null) 'reason': reason,
         });
@@ -1734,7 +1734,7 @@ class MatrixApi {
   Future<Map<String, Tag>> requestRoomTags(String userId, String roomId) async {
     final response = await request(
       RequestType.GET,
-      '/client/r0/user/${Uri.encodeQueryComponent(userId)}/rooms/${Uri.encodeQueryComponent(roomId)}/tags',
+      '/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags',
     );
     return (response['tags'] as Map).map(
       (k, v) => MapEntry(k, Tag.fromJson(v)),
@@ -1750,7 +1750,7 @@ class MatrixApi {
     double order,
   }) async {
     await request(RequestType.PUT,
-        '/client/r0/user/${Uri.encodeQueryComponent(userId)}/rooms/${Uri.encodeQueryComponent(roomId)}/tags/${Uri.encodeQueryComponent(tag)}',
+        '/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags/${Uri.encodeComponent(tag)}',
         data: {
           if (order != null) 'order': order,
         });
@@ -1762,7 +1762,7 @@ class MatrixApi {
   Future<void> removeRoomTag(String userId, String roomId, String tag) async {
     await request(
       RequestType.DELETE,
-      '/client/r0/user/${Uri.encodeQueryComponent(userId)}/rooms/${Uri.encodeQueryComponent(roomId)}/tags/${Uri.encodeQueryComponent(tag)}',
+      '/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags/${Uri.encodeComponent(tag)}',
     );
     return;
   }
@@ -1777,7 +1777,7 @@ class MatrixApi {
   ) async {
     await request(
       RequestType.PUT,
-      '/client/r0/user/${Uri.encodeQueryComponent(userId)}/account_data/${Uri.encodeQueryComponent(type)}',
+      '/client/r0/user/${Uri.encodeComponent(userId)}/account_data/${Uri.encodeComponent(type)}',
       data: content,
     );
     return;
@@ -1791,7 +1791,7 @@ class MatrixApi {
   ) async {
     return await request(
       RequestType.GET,
-      '/client/r0/user/${Uri.encodeQueryComponent(userId)}/account_data/${Uri.encodeQueryComponent(type)}',
+      '/client/r0/user/${Uri.encodeComponent(userId)}/account_data/${Uri.encodeComponent(type)}',
     );
   }
 
@@ -1806,7 +1806,7 @@ class MatrixApi {
   ) async {
     await request(
       RequestType.PUT,
-      '/client/r0/user/${Uri.encodeQueryComponent(userId)}/rooms/${Uri.encodeQueryComponent(roomId)}/account_data/${Uri.encodeQueryComponent(type)}',
+      '/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/account_data/${Uri.encodeComponent(type)}',
       data: content,
     );
     return;
@@ -1821,7 +1821,7 @@ class MatrixApi {
   ) async {
     return await request(
       RequestType.GET,
-      '/client/r0/user/${Uri.encodeQueryComponent(userId)}/rooms/${Uri.encodeQueryComponent(roomId)}/account_data/${Uri.encodeQueryComponent(type)}',
+      '/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/account_data/${Uri.encodeComponent(type)}',
     );
   }
 
@@ -1830,7 +1830,7 @@ class MatrixApi {
   Future<WhoIsInfo> requestWhoIsInfo(String userId) async {
     final response = await request(
       RequestType.GET,
-      '/client/r0/admin/whois/${Uri.encodeQueryComponent(userId)}',
+      '/client/r0/admin/whois/${Uri.encodeComponent(userId)}',
     );
     return WhoIsInfo.fromJson(response);
   }
@@ -1845,7 +1845,7 @@ class MatrixApi {
     String filter,
   }) async {
     final response = await request(RequestType.GET,
-        '/client/r0/rooms/${Uri.encodeQueryComponent(roomId)}/context/${Uri.encodeQueryComponent(eventId)}',
+        '/client/r0/rooms/${Uri.encodeComponent(roomId)}/context/${Uri.encodeComponent(eventId)}',
         query: {
           if (filter != null) 'filter': filter,
           if (limit != null) 'limit': limit.toString(),
@@ -1862,7 +1862,7 @@ class MatrixApi {
     int score,
   ) async {
     await request(RequestType.POST,
-        '/client/r0/rooms/${Uri.encodeQueryComponent(roomId)}/report/${Uri.encodeQueryComponent(eventId)}',
+        '/client/r0/rooms/${Uri.encodeComponent(roomId)}/report/${Uri.encodeComponent(eventId)}',
         data: {
           'reason': reason,
           'score': score,
