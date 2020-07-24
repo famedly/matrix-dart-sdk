@@ -41,10 +41,9 @@ class MatrixEvent extends StrippedStateEvent {
     unsigned = json['unsigned'] != null
         ? Map<String, dynamic>.from(json['unsigned'])
         : null;
-    prevContent =
-        json.containsKey('prev_content') && json['prev_content'] != null
-            ? Map<String, dynamic>.from(json['prev_content'])
-            : null;
+    prevContent = json['prev_content'] != null
+        ? Map<String, dynamic>.from(json['prev_content'])
+        : null;
     redacts = json['redacts'];
   }
 
