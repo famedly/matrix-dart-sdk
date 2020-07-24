@@ -481,9 +481,10 @@ class Event extends MatrixEvent {
         final targetName = stateKeyUser.calcDisplayname();
         // Has the membership changed?
         final newMembership = content['membership'] ?? '';
-        final oldMembership = unsigned != null && unsigned['prev_content'] is Map<String, dynamic>
-            ? unsigned['prev_content']['membership'] ?? ''
-            : '';
+        final oldMembership =
+            unsigned != null && unsigned['prev_content'] is Map<String, dynamic>
+                ? unsigned['prev_content']['membership'] ?? ''
+                : '';
         if (newMembership != oldMembership) {
           if (oldMembership == 'invite' && newMembership == 'join') {
             text = i18n.acceptedTheInvitation(targetName);
@@ -518,12 +519,14 @@ class Event extends MatrixEvent {
           }
         } else if (newMembership == 'join') {
           final newAvatar = content['avatar_url'] ?? '';
-          final oldAvatar = unsigned != null && unsigned['prev_content'] is Map<String, dynamic>
+          final oldAvatar = unsigned != null &&
+                  unsigned['prev_content'] is Map<String, dynamic>
               ? unsigned['prev_content']['avatar_url'] ?? ''
               : '';
 
           final newDisplayname = content['displayname'] ?? '';
-          final oldDisplayname = unsigned != null && unsigned['prev_content'] is Map<String, dynamic>
+          final oldDisplayname = unsigned != null &&
+                  unsigned['prev_content'] is Map<String, dynamic>
               ? unsigned['prev_content']['displayname'] ?? ''
               : '';
 
