@@ -28,6 +28,7 @@ export 'package:famedlysdk/src/utils/uri_extension.dart';
 export 'package:famedlysdk/src/utils/matrix_localizations.dart';
 export 'package:famedlysdk/src/utils/receipt.dart';
 export 'package:famedlysdk/src/utils/states_map.dart';
+export 'package:famedlysdk/src/utils/sync_update_extension.dart';
 export 'package:famedlysdk/src/utils/to_device_event.dart';
 export 'package:famedlysdk/src/client.dart';
 export 'package:famedlysdk/src/event.dart';
