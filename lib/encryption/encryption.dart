@@ -72,11 +72,15 @@ class Encryption {
   }
 
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
-    if (['m.room_key', 'm.room_key_request', 'm.forwarded_room_key']
-        .contains(event.type)) {
-      // a new room key or thelike. We need to handle this asap, before other
+    if (event.type == 'm.room_key') {
+      // a new room key. We need to handle this asap, before other
       // events in /sync are handled
       await keyManager.handleToDeviceEvent(event);
+    }
+    if (['m.room_key_request', 'm.forwarded_room_key'].contains(event.type)) {
+      // "just" room key request things. We don't need these asap, so we handle
+      // them in the background
+      unawaited(keyManager.handleToDeviceEvent(event));
     }
     if (event.type.startsWith('m.key.verification.')) {
       // some key verification event. No need to handle it now, we can easily
