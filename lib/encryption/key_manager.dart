@@ -123,6 +123,8 @@ class KeyManager {
       json.encode(content),
       json.encode({}),
     );
+    // Note to self: When adding key-backup that needs to be unawaited(), else
+    // we might accidentally end up with http requests inside of the sync loop
     // TODO: somehow try to decrypt last message again
     final room = client.getRoomById(roomId);
     if (room != null) {
