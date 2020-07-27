@@ -27,7 +27,9 @@ import 'package:famedlysdk/src/database/database.dart'
 import 'package:test/test.dart';
 
 import 'fake_client.dart';
+import 'fake_matrix_api.dart';
 
+import 'dart:convert';
 import 'dart:typed_data';
 
 void main() {
@@ -349,9 +351,87 @@ void main() {
     });
 
     test('sendEvent', () async {
+      FakeMatrixApi.calledEndpoints.clear();
       final dynamic resp =
           await room.sendTextEvent('Hello world', txid: 'testtxid');
       expect(resp.startsWith('\$event'), true);
+      final entry = FakeMatrixApi.calledEndpoints.entries
+          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      final content = json.decode(entry.value.first);
+      expect(content, {
+        'body': 'Hello world',
+        'msgtype': 'm.text',
+      });
+    });
+
+    test('send edit', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      final dynamic resp = await room.sendTextEvent('Hello world',
+          txid: 'testtxid', editEventId: '\$otherEvent');
+      expect(resp.startsWith('\$event'), true);
+      final entry = FakeMatrixApi.calledEndpoints.entries
+          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      final content = json.decode(entry.value.first);
+      expect(content, {
+        'body': '* Hello world',
+        'msgtype': 'm.text',
+        'm.new_content': {
+          'body': 'Hello world',
+          'msgtype': 'm.text',
+        },
+        'm.relates_to': {
+          'event_id': '\$otherEvent',
+          'rel_type': 'm.replace',
+        },
+      });
+    });
+
+    test('send reply', () async {
+      var event = Event.fromJson({
+        'event_id': '\$replyEvent',
+        'content': {
+          'body': 'Blah',
+          'msgtype': 'm.text',
+        },
+        'type': 'm.room.message',
+        'sender': '@alice:example.org',
+      }, room);
+      FakeMatrixApi.calledEndpoints.clear();
+      final dynamic resp = await room.sendTextEvent('Hello world',
+          txid: 'testtxid', inReplyTo: event);
+      expect(resp.startsWith('\$event'), true);
+      final entry = FakeMatrixApi.calledEndpoints.entries
+          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      final content = json.decode(entry.value.first);
+      expect(content, {
+        'body': '> <@alice:example.org> Blah\n\nHello world',
+        'msgtype': 'm.text',
+        'format': 'org.matrix.custom.html',
+        'formatted_body':
+            '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Blah</blockquote></mx-reply>Hello world',
+        'm.relates_to': {
+          'm.in_reply_to': {
+            'event_id': '\$replyEvent',
+          },
+        },
+      });
+    });
+
+    test('send reaction', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      final dynamic resp =
+          await room.sendReaction('\$otherEvent', '🦊', txid: 'testtxid');
+      expect(resp.startsWith('\$event'), true);
+      final entry = FakeMatrixApi.calledEndpoints.entries
+          .firstWhere((p) => p.key.contains('/send/m.reaction/'));
+      final content = json.decode(entry.value.first);
+      expect(content, {
+        'm.relates_to': {
+          'event_id': '\$otherEvent',
+          'rel_type': 'm.annotation',
+          'key': '🦊',
+        },
+      });
     });
 
     // Not working because there is no real file to test it...

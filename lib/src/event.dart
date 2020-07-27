@@ -28,6 +28,12 @@ import './room.dart';
 import 'utils/matrix_localizations.dart';
 import './database/database.dart' show DbRoomState, DbEvent;
 
+abstract class RelationshipTypes {
+  static const String Reply = 'm.in_reply_to';
+  static const String Edit = 'm.replace';
+  static const String Reaction = 'm.annotation';
+}
+
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
 class Event extends MatrixEvent {
   User get sender => room.getUserByMXIDSync(senderId ?? '@unknown');
@@ -212,10 +218,7 @@ class Event extends MatrixEvent {
       unsigned: unsigned,
       room: room);
 
-  String get messageType => (content['m.relates_to'] is Map &&
-          content['m.relates_to']['m.in_reply_to'] != null)
-      ? MessageTypes.Reply
-      : content['msgtype'] ?? MessageTypes.Text;
+  String get messageType => content['msgtype'] ?? MessageTypes.Text;
 
   void setRedactionEvent(Event redactedBecause) {
     unsigned = {
@@ -328,20 +331,10 @@ class Event extends MatrixEvent {
   Future<dynamic> redact({String reason, String txid}) =>
       room.redactEvent(eventId, reason: reason, txid: txid);
 
-  /// Whether this event is in reply to another event.
-  bool get isReply =>
-      content['m.relates_to'] is Map<String, dynamic> &&
-      content['m.relates_to']['m.in_reply_to'] is Map<String, dynamic> &&
-      content['m.relates_to']['m.in_reply_to']['event_id'] is String &&
-      (content['m.relates_to']['m.in_reply_to']['event_id'] as String)
-          .isNotEmpty;
-
   /// Searches for the reply event in the given timeline.
   Future<Event> getReplyEvent(Timeline timeline) async {
-    if (!isReply) return null;
-    final String replyEventId =
-        content['m.relates_to']['m.in_reply_to']['event_id'];
-    return await timeline.getEventById(replyEventId);
+    if (relationshipType != RelationshipTypes.Reply) return null;
+    return await timeline.getEventById(relationshipEventId);
   }
 
   /// If this event is encrypted and the decryption was not successful because
@@ -634,7 +627,6 @@ class Event extends MatrixEvent {
           case MessageTypes.Text:
           case MessageTypes.Notice:
           case MessageTypes.None:
-          case MessageTypes.Reply:
             localizedBody = body;
             break;
         }
@@ -663,9 +655,61 @@ class Event extends MatrixEvent {
 
   static const Set<String> textOnlyMessageTypes = {
     MessageTypes.Text,
-    MessageTypes.Reply,
     MessageTypes.Notice,
     MessageTypes.Emote,
     MessageTypes.None,
   };
+
+  /// returns if this event matches the passed event or transaction id
+  bool matchesEventOrTransactionId(String search) {
+    if (search == null) {
+      return false;
+    }
+    if (eventId == search) {
+      return true;
+    }
+    return unsigned != null && unsigned['transaction_id'] == search;
+  }
+
+  /// Get the relationship type of an event. `null` if there is none
+  String get relationshipType {
+    if (content == null || !(content['m.relates_to'] is Map)) {
+      return null;
+    }
+    if (content['m.relates_to'].containsKey('rel_type')) {
+      return content['m.relates_to']['rel_type'];
+    }
+    if (content['m.relates_to'].containsKey('m.in_reply_to')) {
+      return RelationshipTypes.Reply;
+    }
+    return null;
+  }
+
+  /// Get the event ID that this relationship will reference. `null` if there is none
+  String get relationshipEventId {
+    if (content == null || !(content['m.relates_to'] is Map)) {
+      return null;
+    }
+    if (content['m.relates_to'].containsKey('event_id')) {
+      return content['m.relates_to']['event_id'];
+    }
+    if (content['m.relates_to']['m.in_reply_to'] is Map &&
+        content['m.relates_to']['m.in_reply_to'].containsKey('event_id')) {
+      return content['m.relates_to']['m.in_reply_to']['event_id'];
+    }
+    return null;
+  }
+
+  /// Get wether this event has aggregated events from a certain [type]
+  /// To be able to do that you need to pass a [timeline]
+  bool hasAggregatedEvents(Timeline timeline, String type) =>
+      timeline.aggregatedEvents.containsKey(eventId) &&
+      timeline.aggregatedEvents[eventId].containsKey(type);
+
+  /// Get all the aggregated event objects for a given [type]. To be able to do this
+  /// you have to pass a [timeline]
+  Set<Event> aggregatedEvents(Timeline timeline, String type) =>
+      hasAggregatedEvents(timeline, type)
+          ? timeline.aggregatedEvents[eventId][type]
+          : <Event>{};
 }

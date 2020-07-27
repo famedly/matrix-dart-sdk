@@ -25,7 +25,6 @@ abstract class MessageTypes {
   static const String Audio = 'm.audio';
   static const String File = 'm.file';
   static const String Location = 'm.location';
-  static const String Reply = 'm.relates_to';
   static const String Sticker = 'm.sticker';
   static const String BadEncrypted = 'm.bad.encrypted';
   static const String None = 'm.none';

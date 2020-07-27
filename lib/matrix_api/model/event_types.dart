@@ -19,6 +19,7 @@
 abstract class EventTypes {
   static const String Message = 'm.room.message';
   static const String Sticker = 'm.sticker';
+  static const String Reaction = 'm.reaction';
   static const String Redaction = 'm.room.redaction';
   static const String RoomAliases = 'm.room.aliases';
   static const String RoomCanonicalAlias = 'm.room.canonical_alias';
