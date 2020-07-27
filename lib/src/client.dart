@@ -247,7 +247,19 @@ class Client {
   /// Throws FormatException, TimeoutException and MatrixException on error.
   Future<bool> checkServer(dynamic serverUrl) async {
     try {
-      api.homeserver = (serverUrl is Uri) ? serverUrl : Uri.parse(serverUrl);
+      if (serverUrl is Uri) {
+        api.homeserver = serverUrl;
+      } else {
+        // URLs allow to have whitespace surrounding them, see https://www.w3.org/TR/2011/WD-html5-20110525/urls.html
+        // As we want to strip a trailing slash, though, we have to trim the url ourself
+        // and thus can't let Uri.parse() deal with it.
+        serverUrl = serverUrl.trim();
+        // strip a trailing slash
+        if (serverUrl.endsWith('/')) {
+          serverUrl = serverUrl.substring(0, serverUrl.length - 1);
+        }
+        api.homeserver = Uri.parse(serverUrl);
+      }
       final versions = await api.requestSupportedVersions();
 
       for (var i = 0; i < versions.versions.length; i++) {
