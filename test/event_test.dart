@@ -67,7 +67,7 @@ void main() {
       expect(event.formattedText, formatted_body);
       expect(event.body, body);
       expect(event.type, EventTypes.Message);
-      expect(event.isReply, true);
+      expect(event.relationshipType, RelationshipTypes.Reply);
       jsonObj['state_key'] = '';
       var state = Event.fromJson(jsonObj, null);
       expect(state.eventId, id);
@@ -160,7 +160,43 @@ void main() {
         'event_id': '1234',
       };
       event = Event.fromJson(jsonObj, null);
-      expect(event.messageType, MessageTypes.Reply);
+      expect(event.messageType, MessageTypes.Text);
+      expect(event.relationshipType, RelationshipTypes.Reply);
+      expect(event.relationshipEventId, '1234');
+    });
+
+    test('relationship types', () async {
+      Event event;
+
+      jsonObj['content'] = <String, dynamic>{
+        'msgtype': 'm.text',
+        'text': 'beep',
+      };
+      event = Event.fromJson(jsonObj, null);
+      expect(event.relationshipType, null);
+      expect(event.relationshipEventId, null);
+
+      jsonObj['content']['m.relates_to'] = <String, dynamic>{
+        'rel_type': 'm.replace',
+        'event_id': 'abc',
+      };
+      event = Event.fromJson(jsonObj, null);
+      expect(event.relationshipType, RelationshipTypes.Edit);
+      expect(event.relationshipEventId, 'abc');
+
+      jsonObj['content']['m.relates_to']['rel_type'] = 'm.annotation';
+      event = Event.fromJson(jsonObj, null);
+      expect(event.relationshipType, RelationshipTypes.Reaction);
+      expect(event.relationshipEventId, 'abc');
+
+      jsonObj['content']['m.relates_to'] = {
+        'm.in_reply_to': {
+          'event_id': 'def',
+        },
+      };
+      event = Event.fromJson(jsonObj, null);
+      expect(event.relationshipType, RelationshipTypes.Reply);
+      expect(event.relationshipEventId, 'def');
     });
 
     test('redact', () async {
@@ -789,6 +825,57 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+    });
+
+    test('aggregations', () {
+      var event = Event.fromJson({
+        'content': {
+          'body': 'blah',
+          'msgtype': 'm.text',
+        },
+        'event_id': '\$source',
+      }, null);
+      var edit1 = Event.fromJson({
+        'content': {
+          'body': 'blah',
+          'msgtype': 'm.text',
+          'm.relates_to': {
+            'event_id': '\$source',
+            'rel_type': RelationshipTypes.Edit,
+          },
+        },
+        'event_id': '\$edit1',
+      }, null);
+      var edit2 = Event.fromJson({
+        'content': {
+          'body': 'blah',
+          'msgtype': 'm.text',
+          'm.relates_to': {
+            'event_id': '\$source',
+            'rel_type': RelationshipTypes.Edit,
+          },
+        },
+        'event_id': '\$edit2',
+      }, null);
+      var room = Room(client: client);
+      var timeline = Timeline(events: <Event>[event, edit1, edit2], room: room);
+      expect(event.hasAggregatedEvents(timeline, RelationshipTypes.Edit), true);
+      expect(event.aggregatedEvents(timeline, RelationshipTypes.Edit),
+          {edit1, edit2});
+      expect(event.aggregatedEvents(timeline, RelationshipTypes.Reaction),
+          <Event>{});
+      expect(event.hasAggregatedEvents(timeline, RelationshipTypes.Reaction),
+          false);
+
+      timeline.removeAggregatedEvent(edit2);
+      expect(event.aggregatedEvents(timeline, RelationshipTypes.Edit), {edit1});
+      timeline.addAggregatedEvent(edit2);
+      expect(event.aggregatedEvents(timeline, RelationshipTypes.Edit),
+          {edit1, edit2});
+
+      timeline.removeAggregatedEvent(event);
+      expect(
+          event.aggregatedEvents(timeline, RelationshipTypes.Edit), <Event>{});
     });
   });
 }

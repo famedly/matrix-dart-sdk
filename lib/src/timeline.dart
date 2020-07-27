@@ -35,6 +35,9 @@ class Timeline {
   final Room room;
   List<Event> events = [];
 
+  /// Map of event ID to map of type to set of aggregated events
+  Map<String, Map<String, Set<Event>>> aggregatedEvents = {};
+
   final onTimelineUpdateCallback onUpdate;
   final onTimelineInsertCallback onInsert;
 
@@ -66,7 +69,10 @@ class Timeline {
       await room.requestHistory(
         historyCount: historyCount,
         onHistoryReceived: () {
-          if (room.prev_batch.isEmpty || room.prev_batch == null) events = [];
+          if (room.prev_batch.isEmpty || room.prev_batch == null) {
+            events.clear();
+            aggregatedEvents.clear();
+          }
         },
       );
       await Future.delayed(const Duration(seconds: 2));
@@ -82,9 +88,17 @@ class Timeline {
     // to be received via the onEvent stream, it is unneeded to call sortAndUpdate
     roomSub ??= room.client.onRoomUpdate.stream
         .where((r) => r.id == room.id && r.limitedTimeline == true)
-        .listen((r) => events.clear());
+        .listen((r) {
+      events.clear();
+      aggregatedEvents.clear();
+    });
     sessionIdReceivedSub ??=
         room.onSessionKeyReceived.stream.listen(_sessionKeyReceived);
+
+    // we want to populate our aggregated events
+    for (final e in events) {
+      addAggregatedEvent(e);
+    }
   }
 
   /// Don't forget to call this before you dismiss this object!
@@ -151,6 +165,47 @@ class Timeline {
     return i;
   }
 
+  void _removeEventFromSet(Set<Event> eventSet, Event event) {
+    eventSet.removeWhere((e) =>
+        e.matchesEventOrTransactionId(event.eventId) ||
+        (event.unsigned != null &&
+            e.matchesEventOrTransactionId(event.unsigned['transaction_id'])));
+  }
+
+  void addAggregatedEvent(Event event) {
+    // we want to add an event to the aggregation tree
+    if (event.relationshipType == null || event.relationshipEventId == null) {
+      return; // nothing to do
+    }
+    if (!aggregatedEvents.containsKey(event.relationshipEventId)) {
+      aggregatedEvents[event.relationshipEventId] = <String, Set<Event>>{};
+    }
+    if (!aggregatedEvents[event.relationshipEventId]
+        .containsKey(event.relationshipType)) {
+      aggregatedEvents[event.relationshipEventId]
+          [event.relationshipType] = <Event>{};
+    }
+    // remove a potential old event
+    _removeEventFromSet(
+        aggregatedEvents[event.relationshipEventId][event.relationshipType],
+        event);
+    // add the new one
+    aggregatedEvents[event.relationshipEventId][event.relationshipType]
+        .add(event);
+  }
+
+  void removeAggregatedEvent(Event event) {
+    aggregatedEvents.remove(event.eventId);
+    if (event.unsigned != null) {
+      aggregatedEvents.remove(event.unsigned['transaction_id']);
+    }
+    for (final types in aggregatedEvents.values) {
+      for (final events in types.values) {
+        _removeEventFromSet(events, event);
+      }
+    }
+  }
+
   void _handleEventUpdate(EventUpdate eventUpdate) async {
     try {
       if (eventUpdate.roomID != room.id) return;
@@ -161,12 +216,16 @@ class Timeline {
         if (eventUpdate.eventType == EventTypes.Redaction) {
           final eventId = _findEvent(event_id: eventUpdate.content['redacts']);
           if (eventId != null) {
+            removeAggregatedEvent(events[eventId]);
             events[eventId].setRedactionEvent(Event.fromJson(
                 eventUpdate.content, room, eventUpdate.sortOrder));
           }
         } else if (status == -2) {
           var i = _findEvent(event_id: eventUpdate.content['event_id']);
-          if (i < events.length) events.removeAt(i);
+          if (i < events.length) {
+            removeAggregatedEvent(events[i]);
+            events.removeAt(i);
+          }
         } else {
           var i = _findEvent(
               event_id: eventUpdate.content['event_id'],
@@ -186,6 +245,7 @@ class Timeline {
             if (status < oldStatus && !(status == -1 && oldStatus == 0)) {
               events[i].status = oldStatus;
             }
+            addAggregatedEvent(events[i]);
           } else {
             var newEvent = Event.fromJson(
                 eventUpdate.content, room, eventUpdate.sortOrder);
@@ -196,6 +256,7 @@ class Timeline {
                     -1) return;
 
             events.insert(0, newEvent);
+            addAggregatedEvent(newEvent);
             if (onInsert != null) onInsert(0);
           }
         }

@@ -2010,6 +2010,10 @@ class FakeMatrixApi extends MockClient {
           (var reqI) => {
                 'event_id': '\$event${FakeMatrixApi.eventCounter++}',
               },
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.reaction/testtxid':
+          (var reqI) => {
+                'event_id': '\$event${FakeMatrixApi.eventCounter++}',
+              },
       '/client/r0/rooms/!localpart%3Aexample.com/typing/%40alice%3Aexample.com':
           (var req) => {},
       '/client/r0/rooms/!1234%3Aexample.com/send/m.room.message/1234':
