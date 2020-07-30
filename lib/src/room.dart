@@ -39,6 +39,8 @@ enum PushRuleState { notify, mentions_only, dont_notify }
 enum JoinRules { public, knock, invite, private }
 enum GuestAccess { can_join, forbidden }
 enum HistoryVisibility { invited, joined, shared, world_readable }
+const String MessageSendingStatusKey =
+    'com.famedly.famedlysdk.message_sending_status';
 
 /// Represents a Matrix room.
 class Room {
@@ -678,27 +680,20 @@ class Room {
       }
     }
 
-    final sortOrder = newSortOrder;
-    // Display a *sending* event and store it.
-    var eventUpdate = EventUpdate(
-      type: 'timeline',
-      roomID: id,
-      eventType: type,
-      sortOrder: sortOrder,
-      content: {
-        'type': type,
-        'event_id': messageID,
-        'sender': client.userID,
-        'status': 0,
-        'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-        'content': content
-      },
-    );
-    client.onEvent.add(eventUpdate);
-    await client.database?.transaction(() async {
-      await client.database.storeEventUpdate(client.id, eventUpdate);
-      await updateSortOrder();
-    });
+    final syncUpdate = SyncUpdate()
+      ..rooms = (RoomsUpdate()
+        ..join = (<String, JoinedRoomUpdate>{}..[id] = (JoinedRoomUpdate()
+          ..timeline = (TimelineUpdate()
+            ..events = [
+              MatrixEvent()
+                ..content = content
+                ..type = type
+                ..eventId = messageID
+                ..senderId = client.userID
+                ..originServerTs = DateTime.now()
+                ..unsigned = {MessageSendingStatusKey: 0},
+            ]))));
+    await client.handleSync(syncUpdate);
 
     // Send the text and on success, store and display a *sent* event.
     try {
@@ -712,23 +707,18 @@ class Room {
         messageID,
         sendMessageContent,
       );
-      eventUpdate.content['status'] = 1;
-      eventUpdate.content['unsigned'] = {'transaction_id': messageID};
-      eventUpdate.content['event_id'] = res;
-      client.onEvent.add(eventUpdate);
-      await client.database?.transaction(() async {
-        await client.database.storeEventUpdate(client.id, eventUpdate);
-      });
+      syncUpdate.rooms.join.values.first.timeline.events.first
+          .unsigned[MessageSendingStatusKey] = 1;
+      syncUpdate.rooms.join.values.first.timeline.events.first
+          .unsigned['transaction_id'] = messageID;
+      syncUpdate.rooms.join.values.first.timeline.events.first.eventId = res;
+      await client.handleSync(syncUpdate);
       return res;
     } catch (exception) {
       print('[Client] Error while sending: ' + exception.toString());
-      // On error, set status to -1
-      eventUpdate.content['status'] = -1;
-      eventUpdate.content['unsigned'] = {'transaction_id': messageID};
-      client.onEvent.add(eventUpdate);
-      await client.database?.transaction(() async {
-        await client.database.storeEventUpdate(client.id, eventUpdate);
-      });
+      syncUpdate.rooms.join.values.first.timeline.events.first
+          .unsigned[MessageSendingStatusKey] = -1;
+      await client.handleSync(syncUpdate);
     }
     return null;
   }

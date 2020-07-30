@@ -146,7 +146,9 @@ class Event extends MatrixEvent {
     final unsigned = Event.getMapFromPayload(jsonPayload['unsigned']);
     final prevContent = Event.getMapFromPayload(jsonPayload['prev_content']);
     return Event(
-      status: jsonPayload['status'] ?? defaultStatus,
+      status: jsonPayload['status'] ??
+          unsigned[MessageSendingStatusKey] ??
+          defaultStatus,
       stateKey: jsonPayload['state_key'],
       prevContent: prevContent,
       content: content,
