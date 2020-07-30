@@ -67,6 +67,10 @@ class KeyVerificationManager {
     if (_requests.containsKey(transactionId)) {
       await _requests[transactionId].handlePayload(event.type, event.content);
     } else {
+      if (!['m.key.verification.request', 'm.key.verification.start']
+          .contains(event.type)) {
+        return; // we can only start on these
+      }
       final newKeyRequest =
           KeyVerification(encryption: encryption, userId: event.sender);
       await newKeyRequest.handlePayload(event.type, event.content);
@@ -111,6 +115,10 @@ class KeyVerificationManager {
         _requests.remove(transactionId);
       }
     } else if (event['sender'] != client.userID) {
+      if (!['m.key.verification.request', 'm.key.verification.start']
+          .contains(type)) {
+        return; // we can only start on these
+      }
       final room = client.getRoomById(update.roomID) ??
           Room(id: update.roomID, client: client);
       final newKeyRequest = KeyVerification(
