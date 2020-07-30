@@ -1331,11 +1331,14 @@ class Client {
           }
         }
       }
-      await database?.transaction(() async {
-        for (final f in dbActions) {
-          await f();
-        }
-      });
+
+      if (dbActions.isNotEmpty) {
+        await database?.transaction(() async {
+          for (final f in dbActions) {
+            await f();
+          }
+        });
+      }
     } catch (e) {
       print('[LibOlm] Unable to update user device keys: ' + e.toString());
     }

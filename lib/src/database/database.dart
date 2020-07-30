@@ -22,6 +22,13 @@ class Database extends _$Database {
 
   int get maxFileSize => 1 * 1024 * 1024;
 
+  // moor transactions are sometimes rather weird and freeze. Until there is a
+  // proper fix in moor we override that there aren't actually using transactions
+  @override
+  Future<T> transaction<T>(Future<T> Function() action) async {
+    return action();
+  }
+
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (Migrator m) {
