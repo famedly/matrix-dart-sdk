@@ -186,8 +186,12 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
+
+      expect(updateCount, 7);
       await room.sendTextEvent('test', txid: 'errortxid');
       await Future.delayed(Duration(milliseconds: 50));
+
+      expect(updateCount, 9);
       await room.sendTextEvent('test', txid: 'errortxid2');
       await Future.delayed(Duration(milliseconds: 50));
       await room.sendTextEvent('test', txid: 'errortxid3');
