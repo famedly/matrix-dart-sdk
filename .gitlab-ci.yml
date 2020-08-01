@@ -68,7 +68,7 @@ build-api-doc:
     paths:
       - doc/api/
   only:
-    - master
+    - main
 
 build-doc:
   tags:
@@ -83,7 +83,7 @@ build-doc:
     paths:
       - doc-public
   only:
-    - master
+    - main
 
 pages:
   tags:
@@ -101,4 +101,4 @@ pages:
     paths:
       - public
   only:
-    - master
+    - main
