@@ -1,6 +1,7 @@
 /// Workaround until [File] in dart:io and dart:html is unified
 
 import 'dart:typed_data';
+import 'package:famedlysdk/matrix_api/model/message_types.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 import 'package:mime/mime.dart';
 
@@ -22,7 +23,18 @@ class MatrixFile {
 
   int get size => bytes.length;
 
-  String get msgType => 'm.file';
+  String get msgType {
+    if (mimeType.toLowerCase().startsWith('image/')) {
+      return MessageTypes.Image;
+    }
+    if (mimeType.toLowerCase().startsWith('video/')) {
+      return MessageTypes.Video;
+    }
+    if (mimeType.toLowerCase().startsWith('audio/')) {
+      return MessageTypes.Audio;
+    }
+    return MessageTypes.File;
+  }
 
   Map<String, dynamic> get info => ({
         'mimetype': mimeType,
