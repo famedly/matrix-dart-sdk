@@ -1159,11 +1159,16 @@ class Client {
     var userIds = <String>{};
     for (var i = 0; i < rooms.length; i++) {
       if (rooms[i].encrypted) {
-        var userList = await rooms[i].requestParticipants();
-        for (var user in userList) {
-          if ([Membership.join, Membership.invite].contains(user.membership)) {
-            userIds.add(user.id);
+        try {
+          var userList = await rooms[i].requestParticipants();
+          for (var user in userList) {
+            if ([Membership.join, Membership.invite]
+                .contains(user.membership)) {
+              userIds.add(user.id);
+            }
           }
+        } catch (err) {
+          print('[E2EE] Failed to fetch participants: ' + err.toString());
         }
       }
     }
