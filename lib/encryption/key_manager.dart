@@ -417,34 +417,39 @@ class KeyManager {
         return; // we managed to load the session from online backup, no need to care about it now
       }
     }
-    // while we just send the to-device event to '*', we still need to save the
-    // devices themself to know where to send the cancel to after receiving a reply
-    final devices = await room.getUserDeviceKeys();
-    final requestId = client.generateUniqueTransactionId();
-    final request = KeyManagerKeyShareRequest(
-      requestId: requestId,
-      devices: devices,
-      room: room,
-      sessionId: sessionId,
-      senderKey: senderKey,
-    );
-    await client.sendToDevice(
-        [],
-        'm.room_key_request',
-        {
-          'action': 'request',
-          'body': {
-            'algorithm': 'm.megolm.v1.aes-sha2',
-            'room_id': room.id,
-            'sender_key': senderKey,
-            'session_id': sessionId,
+    try {
+      // while we just send the to-device event to '*', we still need to save the
+      // devices themself to know where to send the cancel to after receiving a reply
+      final devices = await room.getUserDeviceKeys();
+      final requestId = client.generateUniqueTransactionId();
+      final request = KeyManagerKeyShareRequest(
+        requestId: requestId,
+        devices: devices,
+        room: room,
+        sessionId: sessionId,
+        senderKey: senderKey,
+      );
+      await client.sendToDevice(
+          [],
+          'm.room_key_request',
+          {
+            'action': 'request',
+            'body': {
+              'algorithm': 'm.megolm.v1.aes-sha2',
+              'room_id': room.id,
+              'sender_key': senderKey,
+              'session_id': sessionId,
+            },
+            'request_id': requestId,
+            'requesting_device_id': client.deviceID,
           },
-          'request_id': requestId,
-          'requesting_device_id': client.deviceID,
-        },
-        encrypted: false,
-        toUsers: await room.requestParticipants());
-    outgoingShareRequests[request.requestId] = request;
+          encrypted: false,
+          toUsers: await room.requestParticipants());
+      outgoingShareRequests[request.requestId] = request;
+    } catch (err) {
+      print('[Key Manager] Sending key verification request failed: ' +
+          err.toString());
+    }
   }
 
   /// Handle an incoming to_device event that is related to key sharing
