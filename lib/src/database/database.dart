@@ -6,6 +6,7 @@ import 'package:famedlysdk/matrix_api.dart' as api;
 import 'package:olm/olm.dart' as olm;
 
 import '../../matrix_api.dart';
+import '../room.dart';
 
 part 'database.g.dart';
 
@@ -357,6 +358,10 @@ class Database extends _$Database {
     if (type == 'timeline' || type == 'history') {
       // calculate the status
       var status = 2;
+      if (eventContent['unsigned'] is Map<String, dynamic> &&
+          eventContent['unsigned'][MessageSendingStatusKey] is num) {
+        status = eventContent['unsigned'][MessageSendingStatusKey];
+      }
       if (eventContent['status'] is num) status = eventContent['status'];
       if ((status == 1 || status == -1) &&
           eventContent['unsigned'] is Map<String, dynamic> &&
