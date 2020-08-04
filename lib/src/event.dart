@@ -99,9 +99,9 @@ class Event extends MatrixEvent {
     // into the unsigned block
     this.prevContent = prevContent != null && prevContent.isNotEmpty
         ? prevContent
-        : (unsigned != null && unsigned['prev_content'] is Map
+        : (unsigned != null && unsigned['prev_content'] is Map)
             ? unsigned['prev_content']
-            : null);
+            : null;
     this.stateKey = stateKey;
     this.originServerTs = originServerTs;
   }
@@ -477,9 +477,7 @@ class Event extends MatrixEvent {
         // Has the membership changed?
         final newMembership = content['membership'] ?? '';
         final oldMembership =
-            unsigned != null && unsigned['prev_content'] is Map<String, dynamic>
-                ? unsigned['prev_content']['membership'] ?? ''
-                : '';
+            prevContent != null ? prevContent['membership'] ?? '' : '';
         if (newMembership != oldMembership) {
           if (oldMembership == 'invite' && newMembership == 'join') {
             text = i18n.acceptedTheInvitation(targetName);
@@ -514,16 +512,12 @@ class Event extends MatrixEvent {
           }
         } else if (newMembership == 'join') {
           final newAvatar = content['avatar_url'] ?? '';
-          final oldAvatar = unsigned != null &&
-                  unsigned['prev_content'] is Map<String, dynamic>
-              ? unsigned['prev_content']['avatar_url'] ?? ''
-              : '';
+          final oldAvatar =
+              prevContent != null ? prevContent['avatar_url'] ?? '' : '';
 
           final newDisplayname = content['displayname'] ?? '';
-          final oldDisplayname = unsigned != null &&
-                  unsigned['prev_content'] is Map<String, dynamic>
-              ? unsigned['prev_content']['displayname'] ?? ''
-              : '';
+          final oldDisplayname =
+              prevContent != null ? prevContent['displayname'] ?? '' : '';
 
           // Has the user avatar changed?
           if (newAvatar != oldAvatar) {
