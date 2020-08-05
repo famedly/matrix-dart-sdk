@@ -691,7 +691,10 @@ class Room {
                 ..eventId = messageID
                 ..senderId = client.userID
                 ..originServerTs = DateTime.now()
-                ..unsigned = {MessageSendingStatusKey: 0},
+                ..unsigned = {
+                  MessageSendingStatusKey: 0,
+                  'transaction_id': messageID,
+                },
             ]))));
     await client.handleSync(syncUpdate);
 
@@ -709,8 +712,6 @@ class Room {
       );
       syncUpdate.rooms.join.values.first.timeline.events.first
           .unsigned[MessageSendingStatusKey] = 1;
-      syncUpdate.rooms.join.values.first.timeline.events.first
-          .unsigned['transaction_id'] = messageID;
       syncUpdate.rooms.join.values.first.timeline.events.first.eventId = res;
       await client.handleSync(syncUpdate);
       return res;

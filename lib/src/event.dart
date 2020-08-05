@@ -319,11 +319,11 @@ class Event extends MatrixEvent {
     if (status != -1) return null;
     // we do not remove the event here. It will automatically be updated
     // in the `sendEvent` method to transition -1 -> 0 -> 1 -> 2
-    final eventID = await room.sendEvent(
+    final newEventId = await room.sendEvent(
       content,
-      txid: txid ?? unsigned['transaction_id'],
+      txid: txid ?? unsigned['transaction_id'] ?? eventId,
     );
-    return eventID;
+    return newEventId;
   }
 
   /// Whether the client is allowed to redact this event.
