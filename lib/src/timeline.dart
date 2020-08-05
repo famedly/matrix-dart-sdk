@@ -215,7 +215,7 @@ class Timeline {
         // Redaction events are handled as modification for existing events.
         if (eventUpdate.eventType == EventTypes.Redaction) {
           final eventId = _findEvent(event_id: eventUpdate.content['redacts']);
-          if (eventId != null) {
+          if (eventId < events.length) {
             removeAggregatedEvent(events[eventId]);
             events[eventId].setRedactionEvent(Event.fromJson(
                 eventUpdate.content, room, eventUpdate.sortOrder));
@@ -262,9 +262,10 @@ class Timeline {
         }
       }
       sortAndUpdate();
-    } catch (e) {
+    } catch (e, s) {
       if (room.client.debug) {
         print('[WARNING] (_handleEventUpdate) ${e.toString()}');
+        print(s);
       }
     }
   }

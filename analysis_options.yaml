@@ -7,5 +7,5 @@ linter:
 analyzer:
   errors:
     todo: ignore
-#   exclude:
-#     - path/to/excluded/files/**
+  exclude:
+    - example/main.dart
