@@ -18,14 +18,14 @@ const String testMessage6 = 'Hello mars';
 
 void test() async {
   print('++++ Login $testUserA ++++');
-  var testClientA = Client('TestClientA', debug: false);
+  var testClientA = Client('TestClientA');
   testClientA.database = getDatabase();
   await testClientA.checkServer(homeserver);
   await testClientA.login(testUserA, testPasswordA);
   assert(testClientA.encryptionEnabled);
 
   print('++++ Login $testUserB ++++');
-  var testClientB = Client('TestClientB', debug: false);
+  var testClientB = Client('TestClientB');
   testClientB.database = getDatabase();
   await testClientB.checkServer(homeserver);
   await testClientB.login(testUserB, testPasswordA);
@@ -212,8 +212,7 @@ void test() async {
       "++++ ($testUserA) Received decrypted message: '${room.lastMessage}' ++++");
 
   print('++++ Login $testUserB in another client ++++');
-  var testClientC =
-      Client('TestClientC', debug: false, database: getDatabase());
+  var testClientC = Client('TestClientC', database: getDatabase());
   await testClientC.checkServer(homeserver);
   await testClientC.login(testUserB, testPasswordA);
   await Future.delayed(Duration(seconds: 3));

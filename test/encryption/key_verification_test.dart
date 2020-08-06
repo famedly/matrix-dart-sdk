@@ -82,8 +82,7 @@ void main() {
 
     test('setupClient', () async {
       client1 = await getClient();
-      client2 =
-          Client('othertestclient', debug: true, httpClient: FakeMatrixApi());
+      client2 = Client('othertestclient', httpClient: FakeMatrixApi());
       client2.database = client1.database;
       await client2.checkServer('https://fakeServer.notExisting');
       client2.connect(

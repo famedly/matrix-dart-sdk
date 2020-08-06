@@ -42,8 +42,7 @@ void main() {
     if (!olmEnabled) return;
 
     Client client;
-    var otherClient =
-        Client('othertestclient', debug: true, httpClient: FakeMatrixApi());
+    var otherClient = Client('othertestclient', httpClient: FakeMatrixApi());
     DeviceKeys device;
     Map<String, dynamic> payload;
 

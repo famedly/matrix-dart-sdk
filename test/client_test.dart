@@ -48,7 +48,7 @@ void main() {
   group('FluffyMatrix', () {
     /// Check if all Elements get created
 
-    matrix = Client('testclient', debug: true, httpClient: FakeMatrixApi());
+    matrix = Client('testclient', httpClient: FakeMatrixApi());
 
     roomUpdateListFuture = matrix.onRoomUpdate.stream.toList();
     eventUpdateListFuture = matrix.onEvent.stream.toList();
@@ -322,7 +322,7 @@ void main() {
     });
 
     test('Login', () async {
-      matrix = Client('testclient', debug: true, httpClient: FakeMatrixApi());
+      matrix = Client('testclient', httpClient: FakeMatrixApi());
 
       roomUpdateListFuture = matrix.onRoomUpdate.stream.toList();
       eventUpdateListFuture = matrix.onEvent.stream.toList();
@@ -395,8 +395,7 @@ void main() {
           });
     });
     test('Test the fake store api', () async {
-      var client1 =
-          Client('testclient', debug: true, httpClient: FakeMatrixApi());
+      var client1 = Client('testclient', httpClient: FakeMatrixApi());
       client1.database = getDatabase();
 
       client1.connect(
@@ -413,8 +412,7 @@ void main() {
       expect(client1.isLogged(), true);
       expect(client1.rooms.length, 2);
 
-      var client2 =
-          Client('testclient', debug: true, httpClient: FakeMatrixApi());
+      var client2 = Client('testclient', httpClient: FakeMatrixApi());
       client2.database = client1.database;
 
       client2.connect();

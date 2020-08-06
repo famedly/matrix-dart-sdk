@@ -88,9 +88,6 @@ class MatrixApi {
   /// timeout which is usually 30 seconds.
   int syncTimeoutSec;
 
-  /// Whether debug prints should be displayed.
-  final bool debug;
-
   http.Client httpClient = http.Client();
 
   bool get _testMode =>
@@ -101,7 +98,6 @@ class MatrixApi {
   MatrixApi({
     this.homeserver,
     this.accessToken,
-    this.debug = false,
     http.Client httpClient,
     this.syncTimeoutSec = 30,
   }) {
@@ -161,11 +157,6 @@ class MatrixApi {
       headers['Authorization'] = 'Bearer ${accessToken}';
     }
 
-    if (debug) {
-      print(
-          '[REQUEST ${describeEnum(type)}] $action, Data: ${jsonEncode(data)}');
-    }
-
     http.Response resp;
     var jsonResp = <String, dynamic>{};
     try {
@@ -212,8 +203,6 @@ class MatrixApi {
 
         throw exception;
       }
-
-      if (debug) print('[RESPONSE] ${jsonResp.toString()}');
       _timeoutFactor = 1;
     } on TimeoutException catch (_) {
       _timeoutFactor *= 2;
@@ -1300,7 +1289,6 @@ class MatrixApi {
     streamedRequest.contentLength = await file.length;
     streamedRequest.sink.add(file);
     streamedRequest.sink.close();
-    if (debug) print('[UPLOADING] $fileName');
     var streamedResponse = _testMode ? null : await streamedRequest.send();
     Map<String, dynamic> jsonResponse = json.decode(
       String.fromCharCodes(_testMode

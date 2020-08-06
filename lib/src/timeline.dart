@@ -263,10 +263,8 @@ class Timeline {
       }
       sortAndUpdate();
     } catch (e, s) {
-      if (room.client.debug) {
-        print('[WARNING] (_handleEventUpdate) ${e.toString()}');
-        print(s);
-      }
+      print('[WARNING] (_handleEventUpdate) ${e.toString()}');
+      print(s);
     }
   }
 

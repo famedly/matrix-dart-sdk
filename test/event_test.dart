@@ -50,7 +50,7 @@ void main() {
       'status': 2,
       'content': contentJson,
     };
-    var client = Client('testclient', debug: true, httpClient: FakeMatrixApi());
+    var client = Client('testclient', httpClient: FakeMatrixApi());
     var event = Event.fromJson(
         jsonObj, Room(id: '!localpart:server.abc', client: client));
 
@@ -211,8 +211,7 @@ void main() {
       ];
       for (final testType in testTypes) {
         redactJsonObj['type'] = testType;
-        final room =
-            Room(id: '1234', client: Client('testclient', debug: true));
+        final room = Room(id: '1234', client: Client('testclient'));
         final redactionEventJson = {
           'content': {'reason': 'Spamming'},
           'event_id': '143273582443PhrSn:example.org',
@@ -236,7 +235,7 @@ void main() {
 
     test('remove', () async {
       var event = Event.fromJson(
-          jsonObj, Room(id: '1234', client: Client('testclient', debug: true)));
+          jsonObj, Room(id: '1234', client: Client('testclient')));
       final removed1 = await event.remove();
       event.status = 0;
       final removed2 = await event.remove();
@@ -245,8 +244,7 @@ void main() {
     });
 
     test('sendAgain', () async {
-      var matrix =
-          Client('testclient', debug: true, httpClient: FakeMatrixApi());
+      var matrix = Client('testclient', httpClient: FakeMatrixApi());
       await matrix.checkServer('https://fakeServer.notExisting');
       await matrix.login('test', '1234');
 
@@ -262,8 +260,7 @@ void main() {
     });
 
     test('requestKey', () async {
-      var matrix =
-          Client('testclient', debug: true, httpClient: FakeMatrixApi());
+      var matrix = Client('testclient', httpClient: FakeMatrixApi());
       await matrix.checkServer('https://fakeServer.notExisting');
       await matrix.login('test', '1234');
 
@@ -310,8 +307,7 @@ void main() {
       expect(event.canRedact, true);
     });
     test('getLocalizedBody', () async {
-      final matrix =
-          Client('testclient', debug: true, httpClient: FakeMatrixApi());
+      final matrix = Client('testclient', httpClient: FakeMatrixApi());
       final room = Room(id: '!1234:example.com', client: matrix);
       var event = Event.fromJson({
         'content': {

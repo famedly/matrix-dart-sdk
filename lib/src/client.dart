@@ -81,14 +81,16 @@ class Client {
   ///     - m.room.canonical_alias
   ///     - m.room.tombstone
   ///     - *some* m.room.member events, where needed
-  Client(this.clientName,
-      {this.debug = false,
-      this.database,
-      this.enableE2eeRecovery = false,
-      this.verificationMethods,
-      http.Client httpClient,
-      this.importantStateEvents,
-      this.pinUnreadRooms = false}) {
+  Client(
+    this.clientName, {
+    this.database,
+    this.enableE2eeRecovery = false,
+    this.verificationMethods,
+    http.Client httpClient,
+    this.importantStateEvents,
+    this.pinUnreadRooms = false,
+    @deprecated bool debug,
+  }) {
     verificationMethods ??= <KeyVerificationMethod>{};
     importantStateEvents ??= <String>{};
     importantStateEvents.addAll([
@@ -100,16 +102,8 @@ class Client {
       EventTypes.RoomCanonicalAlias,
       EventTypes.RoomTombstone,
     ]);
-    api = MatrixApi(debug: debug, httpClient: httpClient);
-    onLoginStateChanged.stream.listen((loginState) {
-      if (debug) {
-        print('[LoginState]: ${loginState.toString()}');
-      }
-    });
+    api = MatrixApi(httpClient: httpClient);
   }
-
-  /// Whether debug prints should be displayed.
-  final bool debug;
 
   /// The required name for this client.
   final String clientName;
@@ -634,8 +628,8 @@ class Client {
       return;
     }
 
-    encryption = Encryption(
-        debug: debug, client: this, enableE2eeRecovery: enableE2eeRecovery);
+    encryption =
+        Encryption(client: this, enableE2eeRecovery: enableE2eeRecovery);
     await encryption.init(olmAccount);
 
     if (database != null) {

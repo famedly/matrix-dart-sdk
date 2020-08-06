@@ -27,7 +27,7 @@ import 'fake_matrix_api.dart';
 void main() {
   /// All Tests related to the Event
   group('User', () {
-    var client = Client('testclient', debug: true, httpClient: FakeMatrixApi());
+    var client = Client('testclient', httpClient: FakeMatrixApi());
     final user1 = User(
       '@alice:example.com',
       membership: 'join',

@@ -33,7 +33,6 @@ void main() {
   group('Matrix API', () {
     final matrixApi = MatrixApi(
       httpClient: FakeMatrixApi(),
-      debug: true,
     );
     test('MatrixException test', () async {
       final exception = MatrixException.fromJson({
