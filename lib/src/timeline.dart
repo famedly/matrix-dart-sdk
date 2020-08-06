@@ -19,6 +19,7 @@
 import 'dart:async';
 
 import 'package:famedlysdk/matrix_api.dart';
+import 'package:famedlysdk/src/utils/logs.dart';
 
 import 'event.dart';
 import 'room.dart';
@@ -263,8 +264,7 @@ class Timeline {
       }
       sortAndUpdate();
     } catch (e, s) {
-      print('[WARNING] (_handleEventUpdate) ${e.toString()}');
-      print(s);
+      Logs.warning('Handle event update failed: ${e.toString()}', s);
     }
   }
 

@@ -18,6 +18,7 @@
 
 import 'dart:convert';
 
+import 'package:famedlysdk/src/utils/logs.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:famedlysdk/famedlysdk.dart';
 
@@ -48,9 +49,11 @@ class SessionKey {
     inboundGroupSession = olm.InboundGroupSession();
     try {
       inboundGroupSession.unpickle(key, dbEntry.pickle);
-    } catch (e) {
+    } catch (e, s) {
       dispose();
-      print('[LibOlm] Unable to unpickle inboundGroupSession: ' + e.toString());
+      Logs.error(
+          '[LibOlm] Unable to unpickle inboundGroupSession: ' + e.toString(),
+          s);
     }
   }
 

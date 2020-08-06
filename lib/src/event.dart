@@ -20,6 +20,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/encryption.dart';
+import 'package:famedlysdk/src/utils/logs.dart';
 import 'package:famedlysdk/src/utils/receipt.dart';
 import 'package:http/http.dart' as http;
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
@@ -96,12 +97,18 @@ class Event extends MatrixEvent {
     this.senderId = senderId;
     this.unsigned = unsigned;
     // synapse unfortunatley isn't following the spec and tosses the prev_content
-    // into the unsigned block
-    this.prevContent = prevContent != null && prevContent.isNotEmpty
-        ? prevContent
-        : (unsigned != null && unsigned['prev_content'] is Map)
-            ? unsigned['prev_content']
-            : null;
+    // into the unsigned block.
+    // Currently we are facing a very strange bug in web which is impossible to debug.
+    // It may be because of this line so we put this in try-catch until we can fix it.
+    try {
+      this.prevContent = (prevContent != null && prevContent.isNotEmpty)
+          ? prevContent
+          : (unsigned != null && unsigned['prev_content'] is Map)
+              ? unsigned['prev_content']
+              : null;
+    } catch (e, s) {
+      Logs.error('Event constructor crashed: ${e.toString()}', s);
+    }
     this.stateKey = stateKey;
     this.originServerTs = originServerTs;
   }

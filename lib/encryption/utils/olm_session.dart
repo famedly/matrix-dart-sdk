@@ -16,6 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/src/utils/logs.dart';
 import 'package:olm/olm.dart' as olm;
 import '../../src/database/database.dart' show DbOlmSessions;
 
@@ -46,8 +47,8 @@ class OlmSession {
       lastReceived =
           dbEntry.lastReceived ?? DateTime.fromMillisecondsSinceEpoch(0);
       assert(sessionId == session.session_id());
-    } catch (e) {
-      print('[LibOlm] Could not unpickle olm session: ' + e.toString());
+    } catch (e, s) {
+      Logs.error('[LibOlm] Could not unpickle olm session: ' + e.toString(), s);
       dispose();
     }
   }

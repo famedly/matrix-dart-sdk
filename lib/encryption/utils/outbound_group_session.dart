@@ -18,6 +18,7 @@
 
 import 'dart:convert';
 
+import 'package:famedlysdk/src/utils/logs.dart';
 import 'package:olm/olm.dart' as olm;
 import '../../src/database/database.dart' show DbOutboundGroupSession;
 
@@ -44,10 +45,11 @@ class OutboundGroupSession {
       devices = List<String>.from(json.decode(dbEntry.deviceIds));
       creationTime = dbEntry.creationTime;
       sentMessages = dbEntry.sentMessages;
-    } catch (e) {
+    } catch (e, s) {
       dispose();
-      print(
-          '[LibOlm] Unable to unpickle outboundGroupSession: ' + e.toString());
+      Logs.error(
+          '[LibOlm] Unable to unpickle outboundGroupSession: ' + e.toString(),
+          s);
     }
   }
 

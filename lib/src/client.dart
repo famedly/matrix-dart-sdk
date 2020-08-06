@@ -25,6 +25,7 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api.dart';
 import 'package:famedlysdk/src/room.dart';
 import 'package:famedlysdk/src/utils/device_keys_list.dart';
+import 'package:famedlysdk/src/utils/logs.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:famedlysdk/src/utils/to_device_event.dart';
 import 'package:http/http.dart' as http;
@@ -147,7 +148,7 @@ class Client {
 
   /// Warning! This endpoint is for testing only!
   set rooms(List<Room> newList) {
-    print('Warning! This endpoint is for testing only!');
+    Logs.warning('Warning! This endpoint is for testing only!');
     _rooms = newList;
   }
 
@@ -368,8 +369,8 @@ class Client {
   Future<void> logout() async {
     try {
       await api.logout();
-    } catch (exception) {
-      print(exception);
+    } catch (e, s) {
+      Logs.error(e, s);
       rethrow;
     } finally {
       await clear();
@@ -664,6 +665,9 @@ class Client {
     }
 
     onLoginStateChanged.add(LoginState.logged);
+    Logs.success(
+      'Successfully connected as ${userID.localpart} with ${api.homeserver.toString()}',
+    );
 
     return _sync();
   }
@@ -734,8 +738,7 @@ class Client {
       if (isLogged() == false || _disposed) {
         return;
       }
-      print('Error during processing events: ' + e.toString());
-      print(s);
+      Logs.error('Error during processing events: ' + e.toString(), s);
       onSyncError.add(SyncError(
           exception: e is Exception ? e : Exception(e), stackTrace: s));
       await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
@@ -814,10 +817,10 @@ class Client {
         try {
           toDeviceEvent = await encryption.decryptToDeviceEvent(toDeviceEvent);
         } catch (e, s) {
-          print(
-              '[LibOlm] Could not decrypt to device event from ${toDeviceEvent.sender} with content: ${toDeviceEvent.content}');
-          print(e);
-          print(s);
+          Logs.error(
+              '[LibOlm] Could not decrypt to device event from ${toDeviceEvent.sender} with content: ${toDeviceEvent.content}\n${e.toString()}',
+              s);
+
           onOlmError.add(
             ToDeviceEventDecryptionError(
               exception: e is Exception ? e : Exception(e),
@@ -1161,8 +1164,8 @@ class Client {
               userIds.add(user.id);
             }
           }
-        } catch (err) {
-          print('[E2EE] Failed to fetch participants: ' + err.toString());
+        } catch (e, s) {
+          Logs.error('[E2EE] Failed to fetch participants: ' + e.toString(), s);
         }
       }
     }
@@ -1338,8 +1341,9 @@ class Client {
           }
         });
       }
-    } catch (e) {
-      print('[LibOlm] Unable to update user device keys: ' + e.toString());
+    } catch (e, s) {
+      Logs.error(
+          '[LibOlm] Unable to update user device keys: ' + e.toString(), s);
     }
   }
 

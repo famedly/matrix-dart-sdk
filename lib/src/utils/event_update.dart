@@ -18,6 +18,7 @@
 
 import '../../famedlysdk.dart';
 import '../../matrix_api.dart';
+import 'logs.dart';
 
 /// Represents a new event (e.g. a message in a room) or an update for an
 /// already known event.
@@ -57,8 +58,8 @@ class EventUpdate {
         content: decrpytedEvent.toJson(),
         sortOrder: sortOrder,
       );
-    } catch (e) {
-      print('[LibOlm] Could not decrypt megolm event: ' + e.toString());
+    } catch (e, s) {
+      Logs.error('[LibOlm] Could not decrypt megolm event: ' + e.toString(), s);
       return this;
     }
   }

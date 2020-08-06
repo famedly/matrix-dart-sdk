@@ -23,6 +23,7 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/utils/event_update.dart';
+import 'package:famedlysdk/src/utils/logs.dart';
 import 'package:famedlysdk/src/utils/room_update.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:olm/olm.dart' as olm;
@@ -59,9 +60,9 @@ void main() {
       olm.Account();
     } catch (_) {
       olmEnabled = false;
-      print('[LibOlm] Failed to load LibOlm: ' + _.toString());
+      Logs.warning('[LibOlm] Failed to load LibOlm: ' + _.toString());
     }
-    print('[LibOlm] Enabled: $olmEnabled');
+    Logs.success('[LibOlm] Enabled: $olmEnabled');
 
     test('Login', () async {
       var presenceCounter = 0;

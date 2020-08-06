@@ -21,6 +21,7 @@ dependencies:
   password_hash: ^2.0.0
   olm: ^1.2.1
   matrix_file_e2ee: ^1.0.4
+  ansicolor: ^1.0.2
 
 dev_dependencies:
   test: ^1.0.0

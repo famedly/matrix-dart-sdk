@@ -23,6 +23,7 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/event.dart';
 import 'package:famedlysdk/src/utils/event_update.dart';
+import 'package:famedlysdk/src/utils/logs.dart';
 import 'package:famedlysdk/src/utils/room_update.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
@@ -136,8 +137,8 @@ class Room {
     if (state.type == EventTypes.Encrypted && client.encryptionEnabled) {
       try {
         state = client.encryption.decryptRoomEventSync(id, state);
-      } catch (e) {
-        print('[LibOlm] Could not decrypt room state: ' + e.toString());
+      } catch (e, s) {
+        Logs.error('[LibOlm] Could not decrypt room state: ' + e.toString(), s);
       }
     }
     if (!(state.stateKey is String) &&
@@ -715,8 +716,9 @@ class Room {
       syncUpdate.rooms.join.values.first.timeline.events.first.eventId = res;
       await client.handleSync(syncUpdate);
       return res;
-    } catch (exception) {
-      print('[Client] Error while sending: ' + exception.toString());
+    } catch (e, s) {
+      Logs.warning(
+          '[Client] Problem while sending message: ' + e.toString(), s);
       syncUpdate.rooms.join.values.first.timeline.events.first
           .unsigned[MessageSendingStatusKey] = -1;
       await client.handleSync(syncUpdate);

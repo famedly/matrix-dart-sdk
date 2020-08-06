@@ -1,3 +1,4 @@
+import 'package:famedlysdk/src/utils/logs.dart';
 import 'package:moor/moor.dart';
 import 'dart:convert';
 
@@ -66,7 +67,7 @@ class Database extends _$Database {
           if (executor.dialect == SqlDialect.sqlite) {
             final ret = await customSelect('PRAGMA journal_mode=WAL').get();
             if (ret.isNotEmpty) {
-              print('[Moor] Switched database to mode ' +
+              Logs.info('[Moor] Switched database to mode ' +
                   ret.first.data['journal_mode'].toString());
             }
           }
@@ -113,8 +114,9 @@ class Database extends _$Database {
         var session = olm.Session();
         session.unpickle(userId, row.pickle);
         res[row.identityKey].add(session);
-      } catch (e) {
-        print('[LibOlm] Could not unpickle olm session: ' + e.toString());
+      } catch (e, s) {
+        Logs.error(
+            '[LibOlm] Could not unpickle olm session: ' + e.toString(), s);
       }
     }
     return res;

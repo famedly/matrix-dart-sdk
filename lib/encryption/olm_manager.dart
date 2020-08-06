@@ -18,6 +18,7 @@
 
 import 'dart:convert';
 
+import 'package:famedlysdk/src/utils/logs.dart';
 import 'package:pedantic/pedantic.dart';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:famedlysdk/famedlysdk.dart';
@@ -119,9 +120,9 @@ class OlmManager {
     try {
       olmutil.ed25519_verify(key, message, signature);
       isValid = true;
-    } catch (e) {
+    } catch (e, s) {
       isValid = false;
-      print('[LibOlm] Signature check failed: ' + e.toString());
+      Logs.error('[LibOlm] Signature check failed: ' + e.toString(), s);
     } finally {
       olmutil.free();
     }
@@ -408,10 +409,12 @@ class OlmManager {
               lastReceived:
                   DateTime.now(), // we want to use a newly created session
             ));
-          } catch (e) {
+          } catch (e, s) {
             session.free();
-            print('[LibOlm] Could not create new outbound olm session: ' +
-                e.toString());
+            Logs.error(
+                '[LibOlm] Could not create new outbound olm session: ' +
+                    e.toString(),
+                s);
           }
         }
       }
@@ -483,8 +486,9 @@ class OlmManager {
       try {
         data[device.userId][device.deviceId] =
             await encryptToDeviceMessagePayload(device, type, payload);
-      } catch (e) {
-        print('[LibOlm] Error encrypting to-device event: ' + e.toString());
+      } catch (e, s) {
+        Logs.error(
+            '[LibOlm] Error encrypting to-device event: ' + e.toString(), s);
         continue;
       }
     }

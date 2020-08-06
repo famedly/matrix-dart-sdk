@@ -1,5 +1,6 @@
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api.dart';
+import 'package:famedlysdk/src/utils/logs.dart';
 import '../test/fake_database.dart';
 
 void main() => test();
@@ -17,21 +18,21 @@ const String testMessage5 = 'Hello earth';
 const String testMessage6 = 'Hello mars';
 
 void test() async {
-  print('++++ Login $testUserA ++++');
+  Logs.success('++++ Login $testUserA ++++');
   var testClientA = Client('TestClientA');
   testClientA.database = getDatabase();
   await testClientA.checkServer(homeserver);
   await testClientA.login(testUserA, testPasswordA);
   assert(testClientA.encryptionEnabled);
 
-  print('++++ Login $testUserB ++++');
+  Logs.success('++++ Login $testUserB ++++');
   var testClientB = Client('TestClientB');
   testClientB.database = getDatabase();
   await testClientB.checkServer(homeserver);
   await testClientB.login(testUserB, testPasswordA);
   assert(testClientB.encryptionEnabled);
 
-  print('++++ ($testUserA) Leave all rooms ++++');
+  Logs.success('++++ ($testUserA) Leave all rooms ++++');
   while (testClientA.rooms.isNotEmpty) {
     var room = testClientA.rooms.first;
     if (room.canonicalAlias?.isNotEmpty ?? false) {
@@ -43,7 +44,7 @@ void test() async {
     } catch (_) {}
   }
 
-  print('++++ ($testUserB) Leave all rooms ++++');
+  Logs.success('++++ ($testUserB) Leave all rooms ++++');
   for (var i = 0; i < 3; i++) {
     if (testClientB.rooms.isNotEmpty) {
       var room = testClientB.rooms.first;
@@ -54,7 +55,7 @@ void test() async {
     }
   }
 
-  print('++++ Check if own olm device is verified by default ++++');
+  Logs.success('++++ Check if own olm device is verified by default ++++');
   assert(testClientA.userDeviceKeys.containsKey(testUserA));
   assert(testClientA.userDeviceKeys[testUserA].deviceKeys
       .containsKey(testClientA.deviceID));
@@ -70,20 +71,20 @@ void test() async {
   assert(!testClientB
       .userDeviceKeys[testUserB].deviceKeys[testClientB.deviceID].blocked);
 
-  print('++++ ($testUserA) Create room and invite $testUserB ++++');
+  Logs.success('++++ ($testUserA) Create room and invite $testUserB ++++');
   await testClientA.api.createRoom(invite: [testUserB]);
   await Future.delayed(Duration(seconds: 1));
   var room = testClientA.rooms.first;
   assert(room != null);
   final roomId = room.id;
 
-  print('++++ ($testUserB) Join room ++++');
+  Logs.success('++++ ($testUserB) Join room ++++');
   var inviteRoom = testClientB.getRoomById(roomId);
   await inviteRoom.join();
   await Future.delayed(Duration(seconds: 1));
   assert(inviteRoom.membership == Membership.join);
 
-  print('++++ ($testUserA) Enable encryption ++++');
+  Logs.success('++++ ($testUserA) Enable encryption ++++');
   assert(room.encrypted == false);
   await room.enableEncryption();
   await Future.delayed(Duration(seconds: 5));
@@ -91,7 +92,7 @@ void test() async {
   assert(room.client.encryption.keyManager.getOutboundGroupSession(room.id) ==
       null);
 
-  print('++++ ($testUserA) Check known olm devices ++++');
+  Logs.success('++++ ($testUserA) Check known olm devices ++++');
   assert(testClientA.userDeviceKeys.containsKey(testUserB));
   assert(testClientA.userDeviceKeys[testUserB].deviceKeys
       .containsKey(testClientB.deviceID));
@@ -109,7 +110,7 @@ void test() async {
   await testClientA.userDeviceKeys[testUserB].deviceKeys[testClientB.deviceID]
       .setVerified(true);
 
-  print('++++ Check if own olm device is verified by default ++++');
+  Logs.success('++++ Check if own olm device is verified by default ++++');
   assert(testClientA.userDeviceKeys.containsKey(testUserA));
   assert(testClientA.userDeviceKeys[testUserA].deviceKeys
       .containsKey(testClientA.deviceID));
@@ -121,7 +122,7 @@ void test() async {
   assert(testClientB
       .userDeviceKeys[testUserB].deviceKeys[testClientB.deviceID].verified);
 
-  print("++++ ($testUserA) Send encrypted message: '$testMessage' ++++");
+  Logs.success("++++ ($testUserA) Send encrypted message: '$testMessage' ++++");
   await room.sendTextEvent(testMessage);
   await Future.delayed(Duration(seconds: 5));
   assert(room.client.encryption.keyManager.getOutboundGroupSession(room.id) !=
@@ -148,10 +149,11 @@ void test() async {
       null);
   assert(room.lastMessage == testMessage);
   assert(inviteRoom.lastMessage == testMessage);
-  print(
+  Logs.success(
       "++++ ($testUserB) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
 
-  print("++++ ($testUserA) Send again encrypted message: '$testMessage2' ++++");
+  Logs.success(
+      "++++ ($testUserA) Send again encrypted message: '$testMessage2' ++++");
   await room.sendTextEvent(testMessage2);
   await Future.delayed(Duration(seconds: 5));
   assert(testClientA
@@ -175,10 +177,11 @@ void test() async {
       null);
   assert(room.lastMessage == testMessage2);
   assert(inviteRoom.lastMessage == testMessage2);
-  print(
+  Logs.success(
       "++++ ($testUserB) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
 
-  print("++++ ($testUserB) Send again encrypted message: '$testMessage3' ++++");
+  Logs.success(
+      "++++ ($testUserB) Send again encrypted message: '$testMessage3' ++++");
   await inviteRoom.sendTextEvent(testMessage3);
   await Future.delayed(Duration(seconds: 5));
   assert(testClientA
@@ -208,16 +211,17 @@ void test() async {
       null);
   assert(inviteRoom.lastMessage == testMessage3);
   assert(room.lastMessage == testMessage3);
-  print(
+  Logs.success(
       "++++ ($testUserA) Received decrypted message: '${room.lastMessage}' ++++");
 
-  print('++++ Login $testUserB in another client ++++');
+  Logs.success('++++ Login $testUserB in another client ++++');
   var testClientC = Client('TestClientC', database: getDatabase());
   await testClientC.checkServer(homeserver);
   await testClientC.login(testUserB, testPasswordA);
   await Future.delayed(Duration(seconds: 3));
 
-  print("++++ ($testUserA) Send again encrypted message: '$testMessage4' ++++");
+  Logs.success(
+      "++++ ($testUserA) Send again encrypted message: '$testMessage4' ++++");
   await room.sendTextEvent(testMessage4);
   await Future.delayed(Duration(seconds: 5));
   assert(testClientA
@@ -254,16 +258,17 @@ void test() async {
       null);
   assert(room.lastMessage == testMessage4);
   assert(inviteRoom.lastMessage == testMessage4);
-  print(
+  Logs.success(
       "++++ ($testUserB) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
 
-  print('++++ Logout $testUserB another client ++++');
+  Logs.success('++++ Logout $testUserB another client ++++');
   await testClientC.dispose();
   await testClientC.logout();
   testClientC = null;
   await Future.delayed(Duration(seconds: 5));
 
-  print("++++ ($testUserA) Send again encrypted message: '$testMessage6' ++++");
+  Logs.success(
+      "++++ ($testUserA) Send again encrypted message: '$testMessage6' ++++");
   await room.sendTextEvent(testMessage6);
   await Future.delayed(Duration(seconds: 5));
   assert(testClientA
@@ -290,10 +295,10 @@ void test() async {
       null);
   assert(room.lastMessage == testMessage6);
   assert(inviteRoom.lastMessage == testMessage6);
-  print(
+  Logs.success(
       "++++ ($testUserB) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
 
-/*  print('++++ ($testUserA) Restore user ++++');
+/*  Logs.success('++++ ($testUserA) Restore user ++++');
   await testClientA.dispose();
   testClientA = null;
   testClientA = Client(
@@ -320,7 +325,7 @@ void test() async {
   assert(testClientA.encryption.olmManager.olmSessions[testClientB.identityKey].first.session_id() ==
       testClientB.encryption.olmManager.olmSessions[testClientA.identityKey].first.session_id());
 
-  print("++++ ($testUserA) Send again encrypted message: '$testMessage5' ++++");
+  Logs.success("++++ ($testUserA) Send again encrypted message: '$testMessage5' ++++");
   await restoredRoom.sendTextEvent(testMessage5);
   await Future.delayed(Duration(seconds: 5));
   assert(testClientA.encryption.olmManager.olmSessions[testClientB.identityKey].length == 1);
@@ -330,10 +335,10 @@ void test() async {
   assert(restoredRoom.lastMessage == testMessage5);
   assert(inviteRoom.lastMessage == testMessage5);
   assert(testClientB.getRoomById(roomId).lastMessage == testMessage5);
-  print(
+  Logs.success(
       "++++ ($testUserB) Received decrypted message: '${inviteRoom.lastMessage}' ++++");*/
 
-  print('++++ Logout $testUserA and $testUserB ++++');
+  Logs.success('++++ Logout $testUserA and $testUserB ++++');
   await room.leave();
   await room.forget();
   await inviteRoom.leave();
