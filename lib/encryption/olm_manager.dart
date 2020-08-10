@@ -232,7 +232,7 @@ class OlmManager {
       return event;
     }
     if (event.content['algorithm'] != 'm.olm.v1.curve25519-aes-sha2') {
-      throw ('Unknown algorithm: ${event.content}');
+      throw ('Unknown algorithm: ${event.content['algorithm']}');
     }
     if (!event.content['ciphertext'].containsKey(identityKey)) {
       throw ("The message isn't sent for this device");
