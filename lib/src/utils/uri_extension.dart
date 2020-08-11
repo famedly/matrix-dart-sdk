@@ -22,8 +22,8 @@ import 'dart:core';
 extension MxcUriExtension on Uri {
   /// Returns a download Link to this content.
   String getDownloadLink(Client matrix) => isScheme('mxc')
-      ? matrix.api.homeserver != null
-          ? '${matrix.api.homeserver.toString()}/_matrix/media/r0/download/$host$path'
+      ? matrix.homeserver != null
+          ? '${matrix.homeserver.toString()}/_matrix/media/r0/download/$host$path'
           : ''
       : toString();
 
@@ -36,8 +36,8 @@ extension MxcUriExtension on Uri {
     final methodStr = method.toString().split('.').last;
     width = width.round();
     height = height.round();
-    return matrix.api.homeserver != null
-        ? '${matrix.api.homeserver.toString()}/_matrix/media/r0/thumbnail/$host$path?width=$width&height=$height&method=$methodStr'
+    return matrix.homeserver != null
+        ? '${matrix.homeserver.toString()}/_matrix/media/r0/thumbnail/$host$path?width=$width&height=$height&method=$methodStr'
         : '';
   }
 }

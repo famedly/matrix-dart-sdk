@@ -222,7 +222,7 @@ class SSSS {
       'mac': encrypted.mac,
     };
     // store the thing in your account data
-    await client.api.setAccountData(client.userID, type, content);
+    await client.setAccountData(client.userID, type, content);
     if (CACHE_TYPES.contains(type) && client.database != null) {
       // cache the thing
       await client.database
@@ -271,7 +271,7 @@ class SSSS {
       devices: devices,
     );
     pendingShareRequests[requestId] = request;
-    await client.sendToDevice(devices, 'm.secret.request', {
+    await client.sendToDeviceEncrypted(devices, 'm.secret.request', {
       'action': 'request',
       'requesting_device_id': client.deviceID,
       'request_id': requestId,
@@ -308,7 +308,7 @@ class SSSS {
       }
       // okay, all checks out...time to share this secret!
       Logs.info('[SSSS] Replying with secret for ${type}');
-      await client.sendToDevice(
+      await client.sendToDeviceEncrypted(
           [device],
           'm.secret.send',
           {

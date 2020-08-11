@@ -89,7 +89,7 @@ void main() {
       client2.connect(
         newToken: 'abc',
         newUserID: '@othertest:fakeServer.notExisting',
-        newHomeserver: client2.api.homeserver,
+        newHomeserver: client2.homeserver,
         newDeviceName: 'Text Matrix Client',
         newDeviceID: 'FOXDEVICE',
         newOlmAccount: otherPickledOlmAccount,

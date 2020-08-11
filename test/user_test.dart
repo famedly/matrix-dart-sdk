@@ -102,7 +102,7 @@ void main() {
     });
     test('startDirectChat', () async {
       await client.checkServer('https://fakeserver.notexisting');
-      await client.login('test', '1234');
+      await client.login(user: 'test', password: '1234');
       await user1.startDirectChat();
     });
     test('getPresence', () async {

@@ -22,7 +22,6 @@ import 'dart:core';
 
 import 'package:famedlysdk/encryption.dart';
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/matrix_api.dart';
 import 'package:famedlysdk/src/room.dart';
 import 'package:famedlysdk/src/utils/device_keys_list.dart';
 import 'package:famedlysdk/src/utils/logs.dart';
@@ -45,7 +44,7 @@ enum LoginState { logged, loggedOut }
 /// Represents a Matrix client to communicate with a
 /// [Matrix](https://matrix.org) homeserver and is the entry point for this
 /// SDK.
-class Client {
+class Client extends MatrixApi {
   int _id;
   int get id => _id;
 
@@ -53,7 +52,8 @@ class Client {
 
   bool enableE2eeRecovery;
 
-  MatrixApi api;
+  @deprecated
+  MatrixApi get api => this;
 
   Encryption encryption;
 
@@ -103,7 +103,7 @@ class Client {
       EventTypes.RoomCanonicalAlias,
       EventTypes.RoomTombstone,
     ]);
-    api = MatrixApi(httpClient: httpClient);
+    this.httpClient = httpClient;
   }
 
   /// The required name for this client.
@@ -125,7 +125,7 @@ class Client {
   String _deviceName;
 
   /// Returns the current login state.
-  bool isLogged() => api.accessToken != null;
+  bool isLogged() => accessToken != null;
 
   /// A list of all rooms the user is participating or invited.
   List<Room> get rooms => _rooms;
@@ -159,21 +159,6 @@ class Client {
   Map<String, Presence> presences = {};
 
   int _transactionCounter = 0;
-
-  @Deprecated('Use [api.request()] instead')
-  Future<Map<String, dynamic>> jsonRequest(
-          {RequestType type,
-          String action,
-          dynamic data = '',
-          int timeout,
-          String contentType = 'application/json'}) =>
-      api.request(
-        type,
-        action,
-        data: data,
-        timeout: timeout,
-        contentType: contentType,
-      );
 
   String generateUniqueTransactionId() {
     _transactionCounter++;
@@ -243,7 +228,7 @@ class Client {
   Future<bool> checkServer(dynamic serverUrl) async {
     try {
       if (serverUrl is Uri) {
-        api.homeserver = serverUrl;
+        homeserver = serverUrl;
       } else {
         // URLs allow to have whitespace surrounding them, see https://www.w3.org/TR/2011/WD-html5-20110525/urls.html
         // As we want to strip a trailing slash, though, we have to trim the url ourself
@@ -253,9 +238,9 @@ class Client {
         if (serverUrl.endsWith('/')) {
           serverUrl = serverUrl.substring(0, serverUrl.length - 1);
         }
-        api.homeserver = Uri.parse(serverUrl);
+        homeserver = Uri.parse(serverUrl);
       }
-      final versions = await api.requestSupportedVersions();
+      final versions = await requestSupportedVersions();
 
       for (var i = 0; i < versions.versions.length; i++) {
         if (versions.versions[i] == 'r0.5.0' ||
@@ -266,7 +251,7 @@ class Client {
         }
       }
 
-      final loginTypes = await api.requestLoginTypes();
+      final loginTypes = await requestLoginTypes();
       if (loginTypes.flows.indexWhere((f) => f.type == 'm.login.password') ==
           -1) {
         return false;
@@ -274,7 +259,7 @@ class Client {
 
       return true;
     } catch (_) {
-      api.homeserver = null;
+      homeserver = null;
       rethrow;
     }
   }
@@ -282,16 +267,17 @@ class Client {
   /// Checks to see if a username is available, and valid, for the server.
   /// Returns the fully-qualified Matrix user ID (MXID) that has been registered.
   /// You have to call [checkServer] first to set a homeserver.
-  Future<void> register({
-    String kind,
+  @override
+  Future<LoginResponse> register({
     String username,
     String password,
-    Map<String, dynamic> auth,
     String deviceId,
     String initialDeviceDisplayName,
     bool inhibitLogin,
+    Map<String, dynamic> auth,
+    String kind,
   }) async {
-    final response = await api.register(
+    final response = await super.register(
       username: username,
       password: password,
       auth: auth,
@@ -309,66 +295,62 @@ class Client {
     await connect(
         newToken: response.accessToken,
         newUserID: response.userId,
-        newHomeserver: api.homeserver,
+        newHomeserver: homeserver,
         newDeviceName: initialDeviceDisplayName ?? '',
         newDeviceID: response.deviceId);
-    return;
+    return response;
   }
 
   /// Handles the login and allows the client to call all APIs which require
   /// authentication. Returns false if the login was not successful. Throws
   /// MatrixException if login was not successful.
   /// You have to call [checkServer] first to set a homeserver.
-  Future<bool> login(
-    String username,
-    String password, {
-    String initialDeviceDisplayName,
+  @override
+  Future<LoginResponse> login({
+    String type = 'm.login.password',
+    String userIdentifierType = 'm.id.user',
+    String user,
+    String medium,
+    String address,
+    String password,
+    String token,
     String deviceId,
+    String initialDeviceDisplayName,
   }) async {
-    var data = <String, dynamic>{
-      'type': 'm.login.password',
-      'user': username,
-      'identifier': {
-        'type': 'm.id.user',
-        'user': username,
-      },
-      'password': password,
-    };
-    if (deviceId != null) data['device_id'] = deviceId;
-    if (initialDeviceDisplayName != null) {
-      data['initial_device_display_name'] = initialDeviceDisplayName;
-    }
-
-    final loginResp = await api.login(
-      type: 'm.login.password',
-      userIdentifierType: 'm.id.user',
-      user: username,
+    final loginResp = await super.login(
+      type: type,
+      userIdentifierType: userIdentifierType,
+      user: user,
       password: password,
       deviceId: deviceId,
       initialDeviceDisplayName: initialDeviceDisplayName,
+      medium: medium,
+      address: address,
+      token: token,
     );
 
     // Connect if there is an access token in the response.
     if (loginResp.accessToken == null ||
         loginResp.deviceId == null ||
         loginResp.userId == null) {
-      throw 'Registered but token, device ID or user ID is null.';
+      throw Exception('Registered but token, device ID or user ID is null.');
     }
     await connect(
       newToken: loginResp.accessToken,
       newUserID: loginResp.userId,
-      newHomeserver: api.homeserver,
+      newHomeserver: homeserver,
       newDeviceName: initialDeviceDisplayName ?? '',
       newDeviceID: loginResp.deviceId,
     );
-    return true;
+    return loginResp;
   }
 
   /// Sends a logout command to the homeserver and clears all local data,
   /// including all persistent data from the store.
+  @override
   Future<void> logout() async {
     try {
-      await api.logout();
+      await super.logout();
     } catch (e, s) {
       Logs.error(e, s);
       rethrow;
@@ -421,19 +403,19 @@ class Client {
     if (cache && _profileCache.containsKey(userId)) {
       return _profileCache[userId];
     }
-    final profile = await api.requestProfile(userId);
+    final profile = await requestProfile(userId);
     _profileCache[userId] = profile;
     return profile;
   }
 
   Future<List<Room>> get archive async {
     var archiveList = <Room>[];
-    final sync = await api.sync(
+    final syncResp = await sync(
       filter: '{"room":{"include_leave":true,"timeline":{"limit":10}}}',
       timeout: 0,
     );
-    if (sync.rooms.leave is Map<String, dynamic>) {
-      for (var entry in sync.rooms.leave.entries) {
+    if (syncResp.rooms.leave is Map<String, dynamic>) {
+      for (var entry in syncResp.rooms.leave.entries) {
         final id = entry.key;
         final room = entry.value;
         var leftRoom = Room(
@@ -460,14 +442,10 @@ class Client {
     return archiveList;
   }
 
-  /// Changes the user's displayname.
-  Future<void> setDisplayname(String displayname) =>
-      api.setDisplayname(userID, displayname);
-
   /// Uploads a new user avatar for this user.
   Future<void> setAvatar(MatrixFile file) async {
-    final uploadResp = await api.upload(file.bytes, file.name);
-    await api.setAvatarUrl(userID, Uri.parse(uploadResp));
+    final uploadResp = await upload(file.bytes, file.name);
+    await setAvatarUrl(userID, Uri.parse(uploadResp));
     return;
   }
 
@@ -550,10 +528,6 @@ class Client {
   final StreamController<KeyVerification> onKeyVerificationRequest =
       StreamController.broadcast();
 
-  /// Matrix synchronisation is done with https long polling. This needs a
-  /// timeout which is usually 30 seconds.
-  int syncTimeoutSec = 30;
-
   /// How long should the app wait until it retrys the synchronisation after
   /// an error?
   int syncErrorTimeoutSec = 3;
@@ -575,7 +549,7 @@ class Client {
   ///        "type": "m.login.password",
   ///        "user": "test",
   ///        "password": "1234",
-  ///        "initial_device_display_name": "Fluffy Matrix Client"
+  ///        "initial_device_display_name": "Matrix Client"
   ///      });
   /// ```
   ///
@@ -604,8 +578,8 @@ class Client {
       final account = await database.getClient(clientName);
       if (account != null) {
         _id = account.clientId;
-        api.homeserver = Uri.parse(account.homeserverUrl);
-        api.accessToken = account.token;
+        homeserver = Uri.parse(account.homeserverUrl);
+        accessToken = account.token;
         _userID = account.userId;
         _deviceID = account.deviceId;
         _deviceName = account.deviceName;
@@ -613,15 +587,15 @@ class Client {
         olmAccount = account.olmAccount;
       }
     }
-    api.accessToken = newToken ?? api.accessToken;
-    api.homeserver = newHomeserver ?? api.homeserver;
+    accessToken = newToken ?? accessToken;
+    homeserver = newHomeserver ?? homeserver;
     _userID = newUserID ?? _userID;
     _deviceID = newDeviceID ?? _deviceID;
     _deviceName = newDeviceName ?? _deviceName;
     prevBatch = newPrevBatch ?? prevBatch;
     olmAccount = newOlmAccount ?? olmAccount;
 
-    if (api.accessToken == null || api.homeserver == null || _userID == null) {
+    if (accessToken == null || homeserver == null || _userID == null) {
       // we aren't logged in
       encryption?.dispose();
       encryption = null;
@@ -636,8 +610,8 @@ class Client {
     if (database != null) {
       if (id != null) {
         await database.updateClient(
-          api.homeserver.toString(),
-          api.accessToken,
+          homeserver.toString(),
+          accessToken,
           _userID,
           _deviceID,
           _deviceName,
@@ -648,8 +622,8 @@ class Client {
       } else {
         _id = await database.insertClient(
           clientName,
-          api.homeserver.toString(),
-          api.accessToken,
+          homeserver.toString(),
+          accessToken,
           _userID,
           _deviceID,
           _deviceName,
@@ -666,7 +640,7 @@ class Client {
 
     onLoginStateChanged.add(LoginState.logged);
     Logs.success(
-      'Successfully connected as ${userID.localpart} with ${api.homeserver.toString()}',
+      'Successfully connected as ${userID.localpart} with ${homeserver.toString()}',
     );
 
     return _sync();
@@ -680,8 +654,8 @@ class Client {
   /// Resets all settings and stops the synchronisation.
   void clear() {
     database?.clear(id);
-    _id = api.accessToken =
-        api.homeserver = _userID = _deviceID = _deviceName = prevBatch = null;
+    _id = accessToken =
+        homeserver = _userID = _deviceID = _deviceName = prevBatch = null;
     _rooms = [];
     encryption?.dispose();
     encryption = null;
@@ -694,13 +668,11 @@ class Client {
   Future<void> _sync() async {
     if (isLogged() == false || _disposed) return;
     try {
-      _syncRequest = api
-          .sync(
+      _syncRequest = sync(
         filter: syncFilters,
         since: prevBatch,
         timeout: prevBatch != null ? 30000 : null,
-      )
-          .catchError((e) {
+      ).catchError((e) {
         _lastSyncError = e;
         return null;
       });
@@ -1197,8 +1169,7 @@ class Client {
 
       if (outdatedLists.isNotEmpty) {
         // Request the missing device key lists from the server.
-        final response =
-            await api.requestDeviceKeys(outdatedLists, timeout: 10000);
+        final response = await requestDeviceKeys(outdatedLists, timeout: 10000);
 
         for (final rawDeviceKeyListEntry in response.deviceKeys.entries) {
           final userId = rawDeviceKeyListEntry.key;
@@ -1347,17 +1318,35 @@ class Client {
     }
   }
 
+  /// Send an (unencrypted) to device [message] of a specific [eventType] to all
+  /// devices of a set of [users].
+  Future<void> sendToDevicesOfUserIds(
+    Set<String> users,
+    String eventType,
+    Map<String, dynamic> message, {
+    String messageId,
+  }) async {
+    // Send with send-to-device messaging
+    var data = <String, Map<String, Map<String, dynamic>>>{};
+    for (var user in users) {
+      data[user] = {};
+      data[user]['*'] = message;
+    }
+    await sendToDevice(
+        eventType, messageId ?? generateUniqueTransactionId(), data);
+    return;
+  }
+
   /// Sends an encrypted [message] of this [type] to these [deviceKeys]. To send
   /// the request to all devices of the current user, pass an empty list to [deviceKeys].
-  Future<void> sendToDevice(
+  Future<void> sendToDeviceEncrypted(
     List<DeviceKeys> deviceKeys,
-    String type,
+    String eventType,
     Map<String, dynamic> message, {
-    bool encrypted = true,
-    List<User> toUsers,
+    String messageId,
     bool onlyVerified = false,
   }) async {
-    if (encrypted && !encryptionEnabled) return;
+    if (!encryptionEnabled) return;
     // Don't send this message to blocked devices, and if specified onlyVerified
     // then only send it to verified devices
     if (deviceKeys.isNotEmpty) {
@@ -1368,36 +1357,13 @@ class Client {
       if (deviceKeys.isEmpty) return;
     }
 
-    var sendToDeviceMessage = message;
-
     // Send with send-to-device messaging
     var data = <String, Map<String, Map<String, dynamic>>>{};
-    if (deviceKeys.isEmpty) {
-      if (toUsers == null) {
-        data[userID] = {};
-        data[userID]['*'] = sendToDeviceMessage;
-      } else {
-        for (var user in toUsers) {
-          data[user.id] = {};
-          data[user.id]['*'] = sendToDeviceMessage;
-        }
-      }
-    } else {
-      if (encrypted) {
-        data =
-            await encryption.encryptToDeviceMessage(deviceKeys, type, message);
-      } else {
-        for (final device in deviceKeys) {
-          if (!data.containsKey(device.userId)) {
-            data[device.userId] = {};
-          }
-          data[device.userId][device.deviceId] = sendToDeviceMessage;
-        }
-      }
-    }
-    if (encrypted) type = EventTypes.Encrypted;
-    final messageID = generateUniqueTransactionId();
-    await api.sendToDevice(type, messageID, data);
+    data =
+        await encryption.encryptToDeviceMessage(deviceKeys, eventType, message);
+    eventType = EventTypes.Encrypted;
+    await sendToDevice(
+        eventType, messageId ?? generateUniqueTransactionId(), data);
   }
 
   /// Whether all push notifications are muted using the [.m.rule.master]
@@ -1422,7 +1388,7 @@ class Client {
   }
 
   Future<void> setMuteAllPushNotifications(bool muted) async {
-    await api.enablePushRule(
+    await enablePushRule(
       'global',
       PushRuleKind.override,
       '.m.rule.master',
@@ -1432,6 +1398,7 @@ class Client {
   }
 
   /// Changes the password. You should either set oldPasswort or another authentication flow.
+  @override
   Future<void> changePassword(String newPassword,
       {String oldPassword, Map<String, dynamic> auth}) async {
     try {
@@ -1442,7 +1409,7 @@ class Client {
           'password': oldPassword,
         };
       }
-      await api.changePassword(newPassword, auth: auth);
+      await super.changePassword(newPassword, auth: auth);
     } on MatrixException catch (matrixException) {
       if (!matrixException.requireAdditionalAuthentication) {
         rethrow;

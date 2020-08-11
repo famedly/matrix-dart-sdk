@@ -44,7 +44,7 @@ class KeyManager {
     encryption.ssss.setValidator(MEGOLM_KEY, (String secret) async {
       final keyObj = olm.PkDecryption();
       try {
-        final info = await client.api.getRoomKeysBackup();
+        final info = await client.getRoomKeysBackup();
         if (info.algorithm != RoomKeysAlgorithmType.v1Curve25519AesSha2) {
           return false;
         }
@@ -288,7 +288,7 @@ class KeyManager {
       key: client.userID,
     );
     try {
-      await client.sendToDevice(deviceKeys, 'm.room_key', rawSession);
+      await client.sendToDeviceEncrypted(deviceKeys, 'm.room_key', rawSession);
       await storeOutboundGroupSession(roomId, sess);
       _outboundGroupSessions[roomId] = sess;
     } catch (e, s) {
@@ -339,7 +339,7 @@ class KeyManager {
     final privateKey =
         base64.decode(await encryption.ssss.getCached(MEGOLM_KEY));
     final decryption = olm.PkDecryption();
-    final info = await client.api.getRoomKeysBackup();
+    final info = await client.getRoomKeysBackup();
     String backupPubKey;
     try {
       backupPubKey = decryption.init_with_private_key(privateKey);
@@ -387,9 +387,9 @@ class KeyManager {
   }
 
   Future<void> loadSingleKey(String roomId, String sessionId) async {
-    final info = await client.api.getRoomKeysBackup();
+    final info = await client.getRoomKeysBackup();
     final ret =
-        await client.api.getRoomKeysSingleKey(roomId, sessionId, info.version);
+        await client.getRoomKeysSingleKey(roomId, sessionId, info.version);
     final keys = RoomKeys.fromJson({
       'rooms': {
         roomId: {
@@ -434,22 +434,22 @@ class KeyManager {
         sessionId: sessionId,
         senderKey: senderKey,
       );
-      await client.sendToDevice(
-          [],
-          'm.room_key_request',
-          {
-            'action': 'request',
-            'body': {
-              'algorithm': 'm.megolm.v1.aes-sha2',
-              'room_id': room.id,
-              'sender_key': senderKey,
-              'session_id': sessionId,
-            },
-            'request_id': requestId,
-            'requesting_device_id': client.deviceID,
+      final userList = await room.requestParticipants();
+      await client.sendToDevicesOfUserIds(
+        userList.map<String>((u) => u.id).toSet(),
+        'm.room_key_request',
+        {
+          'action': 'request',
+          'body': {
+            'algorithm': 'm.megolm.v1.aes-sha2',
+            'room_id': room.id,
+            'sender_key': senderKey,
+            'session_id': sessionId,
           },
-          encrypted: false,
-          toUsers: await room.requestParticipants());
+          'request_id': requestId,
+          'requesting_device_id': client.deviceID,
+        },
+      );
       outgoingShareRequests[request.requestId] = request;
     } catch (e, s) {
       Logs.error(
@@ -568,15 +568,24 @@ class KeyManager {
       if (request.devices.isEmpty) {
         return; // no need to send any cancellation
       }
+      // Send with send-to-device messaging
+      final sendToDeviceMessage = {
+        'action': 'request_cancellation',
+        'request_id': request.requestId,
+        'requesting_device_id': client.deviceID,
+      };
+      var data = <String, Map<String, Map<String, dynamic>>>{};
+      for (final device in request.devices) {
+        if (!data.containsKey(device.userId)) {
+          data[device.userId] = {};
+        }
+        data[device.userId][device.deviceId] = sendToDeviceMessage;
+      }
       await client.sendToDevice(
-          request.devices,
-          'm.room_key_request',
-          {
-            'action': 'request_cancellation',
-            'request_id': request.requestId,
-            'requesting_device_id': client.deviceID,
-          },
-          encrypted: false);
+        'm.room_key_request',
+        client.generateUniqueTransactionId(),
+        data,
+      );
     } else if (event.type == 'm.room_key') {
       if (event.encryptedContent == null) {
         return; // the event wasn't encrypted, this is a security risk;
@@ -675,7 +684,7 @@ class RoomKeyRequest extends ToDeviceEvent {
     message['session_key'] = session.inboundGroupSession
         .export_session(session.inboundGroupSession.first_known_index());
     // send the actual reply of the key back to the requester
-    await keyManager.client.sendToDevice(
+    await keyManager.client.sendToDeviceEncrypted(
       [requestingDevice],
       'm.forwarded_room_key',
       message,

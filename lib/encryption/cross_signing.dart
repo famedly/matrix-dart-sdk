@@ -167,7 +167,7 @@ class CrossSigning {
     }
     if (signedKeys.isNotEmpty) {
       // post our new keys!
-      await client.api.uploadKeySignatures(signedKeys);
+      await client.uploadKeySignatures(signedKeys);
     }
   }
 

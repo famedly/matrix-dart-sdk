@@ -22,14 +22,14 @@ void test() async {
   var testClientA = Client('TestClientA');
   testClientA.database = getDatabase();
   await testClientA.checkServer(homeserver);
-  await testClientA.login(testUserA, testPasswordA);
+  await testClientA.login(user: testUserA, password: testPasswordA);
   assert(testClientA.encryptionEnabled);
 
   Logs.success('++++ Login $testUserB ++++');
   var testClientB = Client('TestClientB');
   testClientB.database = getDatabase();
   await testClientB.checkServer(homeserver);
-  await testClientB.login(testUserB, testPasswordA);
+  await testClientB.login(user: testUserB, password: testPasswordA);
   assert(testClientB.encryptionEnabled);
 
   Logs.success('++++ ($testUserA) Leave all rooms ++++');
@@ -72,7 +72,7 @@ void test() async {
       .userDeviceKeys[testUserB].deviceKeys[testClientB.deviceID].blocked);
 
   Logs.success('++++ ($testUserA) Create room and invite $testUserB ++++');
-  await testClientA.api.createRoom(invite: [testUserB]);
+  await testClientA.createRoom(invite: [testUserB]);
   await Future.delayed(Duration(seconds: 1));
   var room = testClientA.rooms.first;
   assert(room != null);
@@ -217,7 +217,7 @@ void test() async {
   Logs.success('++++ Login $testUserB in another client ++++');
   var testClientC = Client('TestClientC', database: getDatabase());
   await testClientC.checkServer(homeserver);
-  await testClientC.login(testUserB, testPasswordA);
+  await testClientC.login(user: testUserB, password: testPasswordA);
   await Future.delayed(Duration(seconds: 3));
 
   Logs.success(
@@ -346,8 +346,8 @@ void test() async {
   await Future.delayed(Duration(seconds: 1));
   await testClientA.dispose();
   await testClientB.dispose();
-  await testClientA.api.logoutAll();
-  await testClientB.api.logoutAll();
+  await testClientA.logoutAll();
+  await testClientB.logoutAll();
   testClientA = null;
   testClientB = null;
   return;

@@ -33,13 +33,13 @@ void main() {
       expect(content.isScheme('mxc'), true);
 
       expect(content.getDownloadLink(client),
-          '${client.api.homeserver.toString()}/_matrix/media/r0/download/exampleserver.abc/abcdefghijklmn');
+          '${client.homeserver.toString()}/_matrix/media/r0/download/exampleserver.abc/abcdefghijklmn');
       expect(content.getThumbnail(client, width: 50, height: 50),
-          '${client.api.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop');
+          '${client.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop');
       expect(
           content.getThumbnail(client,
               width: 50, height: 50, method: ThumbnailMethod.scale),
-          '${client.api.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale');
+          '${client.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale');
     });
   });
 }

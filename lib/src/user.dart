@@ -146,7 +146,7 @@ class User extends Event {
     if (roomID != null) return roomID;
 
     // Start a new direct chat
-    final newRoomID = await room.client.api.createRoom(
+    final newRoomID = await room.client.createRoom(
       invite: [id],
       isDirect: true,
       preset: CreateRoomPreset.trusted_private_chat,

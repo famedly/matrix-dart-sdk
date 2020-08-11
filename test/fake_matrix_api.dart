@@ -82,6 +82,10 @@ class FakeMatrixApi extends MockClient {
               action.contains(
                   '/client/r0/rooms/!1234%3AfakeServer.notExisting/send/')) {
             res = {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
+          } else if (action.contains('/client/r0/sync')) {
+            res = {
+              'next_batch': DateTime.now().millisecondsSinceEpoch.toString
+            };
           } else {
             res = {
               'errcode': 'M_UNRECOGNIZED',

@@ -46,7 +46,7 @@ void main() {
   const fingerprintKey = 'gjL//fyaFHADt9KBADGag8g7F8Up78B/K1zXeiEPLJo';
 
   /// All Tests related to the Login
-  group('FluffyMatrix', () {
+  group('Client', () {
     /// Check if all Elements get created
 
     matrix = Client('testclient', httpClient: FakeMatrixApi());
@@ -74,7 +74,7 @@ void main() {
         accountDataCounter++;
       });
 
-      expect(matrix.api.homeserver, null);
+      expect(matrix.homeserver, null);
 
       try {
         await matrix.checkServer('https://fakeserver.wrongaddress');
@@ -82,17 +82,9 @@ void main() {
         expect(exception != null, true);
       }
       await matrix.checkServer('https://fakeserver.notexisting');
-      expect(
-          matrix.api.homeserver.toString(), 'https://fakeserver.notexisting');
+      expect(matrix.homeserver.toString(), 'https://fakeserver.notexisting');
 
-      final resp = await matrix.api.login(
-        type: 'm.login.password',
-        user: 'test',
-        password: '1234',
-        initialDeviceDisplayName: 'Fluffy Matrix Client',
-      );
-
-      final available = await matrix.api.usernameAvailable('testuser');
+      final available = await matrix.usernameAvailable('testuser');
       expect(available, true);
 
       var loginStateFuture = matrix.onLoginStateChanged.stream.first;
@@ -100,20 +92,15 @@ void main() {
       var syncFuture = matrix.onSync.stream.first;
 
       matrix.connect(
-        newToken: resp.accessToken,
-        newUserID: resp.userId,
-        newHomeserver: matrix.api.homeserver,
+        newToken: 'abcd',
+        newUserID: '@test:fakeServer.notExisting',
+        newHomeserver: matrix.homeserver,
         newDeviceName: 'Text Matrix Client',
-        newDeviceID: resp.deviceId,
+        newDeviceID: 'GHTYAJCE',
         newOlmAccount: pickledOlmAccount,
       );
 
       await Future.delayed(Duration(milliseconds: 50));
-
-      expect(matrix.api.accessToken == resp.accessToken, true);
-      expect(matrix.deviceName == 'Text Matrix Client', true);
-      expect(matrix.deviceID == resp.deviceId, true);
-      expect(matrix.userID == resp.userId, true);
 
       var loginState = await loginStateFuture;
       var firstSync = await firstSyncFuture;
@@ -208,14 +195,11 @@ void main() {
     });
 
     test('Logout', () async {
-      await matrix.api.logout();
-
       var loginStateFuture = matrix.onLoginStateChanged.stream.first;
+      await matrix.logout();
 
-      matrix.clear();
-
-      expect(matrix.api.accessToken == null, true);
-      expect(matrix.api.homeserver == null, true);
+      expect(matrix.accessToken == null, true);
+      expect(matrix.homeserver == null, true);
       expect(matrix.userID == null, true);
       expect(matrix.deviceID == null, true);
       expect(matrix.deviceName == null, true);
@@ -330,10 +314,10 @@ void main() {
       final checkResp =
           await matrix.checkServer('https://fakeServer.notExisting');
 
-      final loginResp = await matrix.login('test', '1234');
+      final loginResp = await matrix.login(user: 'test', password: '1234');
 
       expect(checkResp, true);
-      expect(loginResp, true);
+      expect(loginResp != null, true);
     });
 
     test('setAvatar', () async {
@@ -386,8 +370,8 @@ void main() {
         }
       }
     }, matrix);
-    test('sendToDevice', () async {
-      await matrix.sendToDevice(
+    test('sendToDeviceEncrypted', () async {
+      await matrix.sendToDeviceEncrypted(
           [deviceKeys],
           'm.message',
           {
@@ -420,9 +404,9 @@ void main() {
       await Future.delayed(Duration(milliseconds: 100));
 
       expect(client2.isLogged(), true);
-      expect(client2.api.accessToken, client1.api.accessToken);
+      expect(client2.accessToken, client1.accessToken);
       expect(client2.userID, client1.userID);
-      expect(client2.api.homeserver, client1.api.homeserver);
+      expect(client2.homeserver, client1.homeserver);
       expect(client2.deviceID, client1.deviceID);
       expect(client2.deviceName, client1.deviceName);
       if (client2.encryptionEnabled) {

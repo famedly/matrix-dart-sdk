@@ -54,7 +54,7 @@ void main() {
       otherClient.connect(
         newToken: 'abc',
         newUserID: '@othertest:fakeServer.notExisting',
-        newHomeserver: otherClient.api.homeserver,
+        newHomeserver: otherClient.homeserver,
         newDeviceName: 'Text Matrix Client',
         newDeviceID: 'FOXDEVICE',
         newOlmAccount: otherPickledOlmAccount,

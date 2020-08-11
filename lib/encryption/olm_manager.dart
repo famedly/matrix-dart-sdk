@@ -183,7 +183,7 @@ class OlmManager {
           signJson(keysContent['device_keys'] as Map<String, dynamic>);
     }
 
-    final response = await client.api.uploadDeviceKeys(
+    final response = await client.uploadDeviceKeys(
       deviceKeys: uploadDeviceKeys
           ? MatrixDeviceKeys.fromJson(keysContent['device_keys'])
           : null,
@@ -335,7 +335,7 @@ class OlmManager {
       return;
     }
     await startOutgoingOlmSessions([device]);
-    await client.sendToDevice([device], 'm.dummy', {});
+    await client.sendToDeviceEncrypted([device], 'm.dummy', {});
   }
 
   Future<ToDeviceEvent> decryptToDeviceEvent(ToDeviceEvent event) async {
@@ -383,7 +383,7 @@ class OlmManager {
     }
 
     final response =
-        await client.api.requestOneTimeKeys(requestingKeysFrom, timeout: 10000);
+        await client.requestOneTimeKeys(requestingKeysFrom, timeout: 10000);
 
     for (var userKeysEntry in response.oneTimeKeys.entries) {
       final userId = userKeysEntry.key;

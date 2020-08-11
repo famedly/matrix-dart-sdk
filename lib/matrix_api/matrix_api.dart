@@ -1329,8 +1329,11 @@ class MatrixApi {
 
   /// This endpoint is used to send send-to-device events to a set of client devices.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-sendtodevice-eventtype-txnid
-  Future<void> sendToDevice(String eventType, String txnId,
-      Map<String, Map<String, Map<String, dynamic>>> messages) async {
+  Future<void> sendToDevice(
+    String eventType,
+    String txnId,
+    Map<String, Map<String, Map<String, dynamic>>> messages,
+  ) async {
     await request(
       RequestType.PUT,
       '/client/r0/sendToDevice/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(txnId)}',

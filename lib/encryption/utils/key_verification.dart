@@ -571,7 +571,7 @@ class KeyVerification {
     } else {
       Logs.info(
           '[Key Verification] Sending to ${userId} device ${deviceId}...');
-      await client.sendToDevice(
+      await client.sendToDeviceEncrypted(
           [client.userDeviceKeys[userId].deviceKeys[deviceId]], type, payload);
     }
   }

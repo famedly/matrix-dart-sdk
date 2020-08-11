@@ -32,18 +32,12 @@ Future<Client> getClient() async {
   final client = Client('testclient', httpClient: FakeMatrixApi());
   client.database = getDatabase();
   await client.checkServer('https://fakeServer.notExisting');
-  final resp = await client.api.login(
-    type: 'm.login.password',
-    user: 'test',
-    password: '1234',
-    initialDeviceDisplayName: 'Fluffy Matrix Client',
-  );
   client.connect(
-    newToken: resp.accessToken,
-    newUserID: resp.userId,
-    newHomeserver: client.api.homeserver,
+    newToken: 'abcd',
+    newUserID: '@test:fakeServer.notExisting',
+    newHomeserver: client.homeserver,
     newDeviceName: 'Text Matrix Client',
-    newDeviceID: resp.deviceId,
+    newDeviceID: 'GHTYAJCE',
     newOlmAccount: pickledOlmAccount,
   );
   await Future.delayed(Duration(milliseconds: 10));

@@ -374,21 +374,21 @@ class Room {
 
   /// Call the Matrix API to change the name of this room. Returns the event ID of the
   /// new m.room.name event.
-  Future<String> setName(String newName) => client.api.sendState(
+  Future<String> setName(String newName) => client.sendState(
         id,
         EventTypes.RoomName,
         {'name': newName},
       );
 
   /// Call the Matrix API to change the topic of this room.
-  Future<String> setDescription(String newName) => client.api.sendState(
+  Future<String> setDescription(String newName) => client.sendState(
         id,
         EventTypes.RoomTopic,
         {'topic': newName},
       );
 
   /// Add a tag to the room.
-  Future<void> addTag(String tag, {double order}) => client.api.addRoomTag(
+  Future<void> addTag(String tag, {double order}) => client.addRoomTag(
         client.userID,
         id,
         tag,
@@ -396,7 +396,7 @@ class Room {
       );
 
   /// Removes a tag from the room.
-  Future<void> removeTag(String tag) => client.api.removeRoomTag(
+  Future<void> removeTag(String tag) => client.removeRoomTag(
         client.userID,
         id,
         tag,
@@ -423,7 +423,7 @@ class Room {
 
   /// Call the Matrix API to change the pinned events of this room.
   Future<String> setPinnedEvents(List<String> pinnedEventIds) =>
-      client.api.sendState(
+      client.sendState(
         id,
         EventTypes.RoomPinnedEvents,
         {'pinned': pinnedEventIds},
@@ -565,13 +565,13 @@ class Room {
         uploadThumbnail = encryptedThumbnail.toMatrixFile();
       }
     }
-    final uploadResp = await client.api.upload(
+    final uploadResp = await client.upload(
       uploadFile.bytes,
       uploadFile.name,
       contentType: uploadFile.mimeType,
     );
     final thumbnailUploadResp = uploadThumbnail != null
-        ? await client.api.upload(
+        ? await client.upload(
             uploadThumbnail.bytes,
             uploadThumbnail.name,
             contentType: uploadThumbnail.mimeType,
@@ -705,7 +705,7 @@ class Room {
           ? await client.encryption
               .encryptGroupMessagePayload(id, content, type: type)
           : content;
-      final res = await client.api.sendMessage(
+      final res = await client.sendMessage(
         id,
         sendType,
         messageID,
@@ -731,7 +731,7 @@ class Room {
   /// automatically be set.
   Future<void> join() async {
     try {
-      await client.api.joinRoom(id);
+      await client.joinRoom(id);
       final invitation = getState(EventTypes.RoomMember, client.userID);
       if (invitation != null &&
           invitation.content['is_direct'] is bool &&
@@ -757,25 +757,25 @@ class Room {
   /// chat, this will be removed too.
   Future<void> leave() async {
     if (directChatMatrixID != '') await removeFromDirectChat();
-    await client.api.leaveRoom(id);
+    await client.leaveRoom(id);
     return;
   }
 
   /// Call the Matrix API to forget this room if you already left it.
   Future<void> forget() async {
     await client.database?.forgetRoom(client.id, id);
-    await client.api.forgetRoom(id);
+    await client.forgetRoom(id);
     return;
   }
 
   /// Call the Matrix API to kick a user from this room.
-  Future<void> kick(String userID) => client.api.kickFromRoom(id, userID);
+  Future<void> kick(String userID) => client.kickFromRoom(id, userID);
 
   /// Call the Matrix API to ban a user from this room.
-  Future<void> ban(String userID) => client.api.banFromRoom(id, userID);
+  Future<void> ban(String userID) => client.banFromRoom(id, userID);
 
   /// Call the Matrix API to unban a banned user from this room.
-  Future<void> unban(String userID) => client.api.unbanInRoom(id, userID);
+  Future<void> unban(String userID) => client.unbanInRoom(id, userID);
 
   /// Set the power level of the user with the [userID] to the value [power].
   /// Returns the event ID of the new state event. If there is no known
@@ -787,7 +787,7 @@ class Room {
     if (powerMap['users'] == null) powerMap['users'] = {};
     powerMap['users'][userID] = power;
 
-    return await client.api.sendState(
+    return await client.sendState(
       id,
       EventTypes.RoomPowerLevels,
       powerMap,
@@ -795,14 +795,14 @@ class Room {
   }
 
   /// Call the Matrix API to invite a user to this room.
-  Future<void> invite(String userID) => client.api.inviteToRoom(id, userID);
+  Future<void> invite(String userID) => client.inviteToRoom(id, userID);
 
   /// Request more previous events from the server. [historyCount] defines how much events should
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
   /// the historical events will be published in the onEvent stream.
   Future<void> requestHistory(
       {int historyCount = DefaultHistoryCount, onHistoryReceived}) async {
-    final resp = await client.api.requestMessages(
+    final resp = await client.requestMessages(
       id,
       prev_batch,
       Direction.b,
@@ -853,7 +853,7 @@ class Room {
       directChats[userID] = [id];
     }
 
-    await client.api.setAccountData(
+    await client.setAccountData(
       client.userID,
       'm.direct',
       directChats,
@@ -871,7 +871,7 @@ class Room {
       return;
     } // Nothing to do here
 
-    await client.api.setRoomAccountData(
+    await client.setRoomAccountData(
       client.userID,
       id,
       'm.direct',
@@ -884,7 +884,7 @@ class Room {
   Future<void> sendReadReceipt(String eventID) async {
     notificationCount = 0;
     await client.database?.resetNotificationCount(client.id, id);
-    await client.api.sendReadMarker(
+    await client.sendReadMarker(
       id,
       eventID,
       readReceiptLocationEventId: eventID,
@@ -1017,7 +1017,7 @@ class Room {
       }
     }
     if (participantListComplete) return getParticipants();
-    final matrixEvents = await client.api.requestMembers(id);
+    final matrixEvents = await client.requestMembers(id);
     final users =
         matrixEvents.map((e) => Event.fromMatrixEvent(e, this).asUser).toList();
     for (final user in users) {
@@ -1080,7 +1080,7 @@ class Room {
     if (mxID == null || !_requestingMatrixIds.add(mxID)) return null;
     Map<String, dynamic> resp;
     try {
-      resp = await client.api.requestStateContent(
+      resp = await client.requestStateContent(
         id,
         EventTypes.RoomMember,
         mxID,
@@ -1093,7 +1093,7 @@ class Room {
     }
     if (resp == null && requestProfile) {
       try {
-        final profile = await client.api.requestProfile(mxID);
+        final profile = await client.requestProfile(mxID);
         resp = {
           'displayname': profile.displayname,
           'avatar_url': profile.avatarUrl,
@@ -1135,7 +1135,7 @@ class Room {
 
   /// Searches for the event on the server. Returns null if not found.
   Future<Event> getEventById(String eventID) async {
-    final matrixEvent = await client.api.requestEvent(id, eventID);
+    final matrixEvent = await client.requestEvent(id, eventID);
     return Event.fromMatrixEvent(matrixEvent, this);
   }
 
@@ -1169,8 +1169,8 @@ class Room {
   /// Uploads a new user avatar for this room. Returns the event ID of the new
   /// m.room.avatar event.
   Future<String> setAvatar(MatrixFile file) async {
-    final uploadResp = await client.api.upload(file.bytes, file.name);
-    return await client.api.sendState(
+    final uploadResp = await client.upload(file.bytes, file.name);
+    return await client.sendState(
       id,
       EventTypes.RoomAvatar,
       {'url': uploadResp},
@@ -1267,23 +1267,23 @@ class Room {
       // All push notifications should be sent to the user
       case PushRuleState.notify:
         if (pushRuleState == PushRuleState.dont_notify) {
-          await client.api.deletePushRule('global', PushRuleKind.override, id);
+          await client.deletePushRule('global', PushRuleKind.override, id);
         } else if (pushRuleState == PushRuleState.mentions_only) {
-          await client.api.deletePushRule('global', PushRuleKind.room, id);
+          await client.deletePushRule('global', PushRuleKind.room, id);
         }
         break;
       // Only when someone mentions the user, a push notification should be sent
       case PushRuleState.mentions_only:
         if (pushRuleState == PushRuleState.dont_notify) {
-          await client.api.deletePushRule('global', PushRuleKind.override, id);
-          await client.api.setPushRule(
+          await client.deletePushRule('global', PushRuleKind.override, id);
+          await client.setPushRule(
             'global',
             PushRuleKind.room,
             id,
             [PushRuleAction.dont_notify],
           );
         } else if (pushRuleState == PushRuleState.notify) {
-          await client.api.setPushRule(
+          await client.setPushRule(
             'global',
             PushRuleKind.room,
             id,
@@ -1294,9 +1294,9 @@ class Room {
       // No push notification should be ever sent for this room.
       case PushRuleState.dont_notify:
         if (pushRuleState == PushRuleState.mentions_only) {
-          await client.api.deletePushRule('global', PushRuleKind.room, id);
+          await client.deletePushRule('global', PushRuleKind.room, id);
         }
-        await client.api.setPushRule(
+        await client.setPushRule(
           'global',
           PushRuleKind.override,
           id,
@@ -1322,7 +1322,7 @@ class Room {
     }
     var data = <String, dynamic>{};
     if (reason != null) data['reason'] = reason;
-    return await client.api.redact(
+    return await client.redact(
       id,
       eventId,
       messageID,
@@ -1335,7 +1335,7 @@ class Room {
       'typing': isTyping,
     };
     if (timeout != null) data['timeout'] = timeout;
-    return client.api.sendTypingNotification(client.userID, id, isTyping);
+    return client.sendTypingNotification(client.userID, id, isTyping);
   }
 
   /// This is sent by the caller when they wish to establish a call.
@@ -1349,7 +1349,7 @@ class Room {
       {String type = 'offer', int version = 0, String txid}) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
 
-    return await client.api.sendMessage(
+    return await client.sendMessage(
       id,
       EventTypes.CallInvite,
       txid,
@@ -1387,7 +1387,7 @@ class Room {
     String txid,
   }) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
-    return await client.api.sendMessage(
+    return await client.sendMessage(
       id,
       EventTypes.CallCandidates,
       txid,
@@ -1407,7 +1407,7 @@ class Room {
   Future<String> answerCall(String callId, String sdp,
       {String type = 'answer', int version = 0, String txid}) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
-    return await client.api.sendMessage(
+    return await client.sendMessage(
       id,
       EventTypes.CallAnswer,
       txid,
@@ -1425,7 +1425,7 @@ class Room {
   Future<String> hangupCall(String callId,
       {int version = 0, String txid}) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
-    return await client.api.sendMessage(
+    return await client.sendMessage(
       id,
       EventTypes.CallHangup,
       txid,
@@ -1461,7 +1461,7 @@ class Room {
 
   /// Changes the join rules. You should check first if the user is able to change it.
   Future<void> setJoinRules(JoinRules joinRules) async {
-    await client.api.sendState(
+    await client.sendState(
       id,
       EventTypes.RoomJoinRules,
       {
@@ -1486,7 +1486,7 @@ class Room {
 
   /// Changes the guest access. You should check first if the user is able to change it.
   Future<void> setGuestAccess(GuestAccess guestAccess) async {
-    await client.api.sendState(
+    await client.sendState(
       id,
       EventTypes.GuestAccess,
       {
@@ -1512,7 +1512,7 @@ class Room {
 
   /// Changes the history visibility. You should check first if the user is able to change it.
   Future<void> setHistoryVisibility(HistoryVisibility historyVisibility) async {
-    await client.api.sendState(
+    await client.sendState(
       id,
       EventTypes.HistoryVisibility,
       {
@@ -1539,7 +1539,7 @@ class Room {
   Future<void> enableEncryption({int algorithmIndex = 0}) async {
     if (encrypted) throw ('Encryption is already enabled!');
     final algorithm = Client.supportedGroupEncryptionAlgorithms[algorithmIndex];
-    await client.api.sendState(
+    await client.sendState(
       id,
       EventTypes.Encryption,
       {
