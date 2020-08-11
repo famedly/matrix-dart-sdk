@@ -20,7 +20,7 @@ class Database extends _$Database {
   Database.connect(DatabaseConnection connection) : super.connect(connection);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   int get maxFileSize => 1 * 1024 * 1024;
 
@@ -60,6 +60,15 @@ class Database extends _$Database {
           }
           if (from == 4) {
             await m.addColumn(olmSessions, olmSessions.lastReceived);
+            from++;
+          }
+          if (from == 5) {
+            await m.addColumn(
+                inboundGroupSessions, inboundGroupSessions.uploaded);
+            await m.addColumn(
+                inboundGroupSessions, inboundGroupSessions.senderKey);
+            await m.addColumn(
+                inboundGroupSessions, inboundGroupSessions.senderClaimedKeys);
             from++;
           }
         },

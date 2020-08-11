@@ -29,23 +29,39 @@ class SessionKey {
   Map<String, int> indexes;
   olm.InboundGroupSession inboundGroupSession;
   final String key;
-  List<dynamic> get forwardingCurve25519KeyChain =>
-      content['forwarding_curve25519_key_chain'] ?? [];
-  String get senderClaimedEd25519Key =>
-      content['sender_claimed_ed25519_key'] ?? '';
-  String get senderKey => content['sender_key'] ?? '';
+  List<String> get forwardingCurve25519KeyChain =>
+      (content['forwarding_curve25519_key_chain'] != null
+          ? List<String>.from(content['forwarding_curve25519_key_chain'])
+          : null) ??
+      <String>[];
+  Map<String, String> senderClaimedKeys;
+  String senderKey;
   bool get isValid => inboundGroupSession != null;
 
-  SessionKey({this.content, this.inboundGroupSession, this.key, this.indexes});
+  SessionKey(
+      {this.content,
+      this.inboundGroupSession,
+      this.key,
+      this.indexes,
+      String senderKey,
+      Map<String, String> senderClaimedKeys}) {
+    _setSenderKey(senderKey);
+    _setSenderClaimedKeys(senderClaimedKeys);
+  }
 
   SessionKey.fromDb(DbInboundGroupSession dbEntry, String key) : key = key {
     final parsedContent = Event.getMapFromPayload(dbEntry.content);
     final parsedIndexes = Event.getMapFromPayload(dbEntry.indexes);
+    final parsedSenderClaimedKeys =
+        Event.getMapFromPayload(dbEntry.senderClaimedKeys);
     content =
         parsedContent != null ? Map<String, dynamic>.from(parsedContent) : null;
     indexes = parsedIndexes != null
         ? Map<String, int>.from(parsedIndexes)
         : <String, int>{};
+    _setSenderKey(dbEntry.senderKey);
+    _setSenderClaimedKeys(Map<String, String>.from(parsedSenderClaimedKeys));
+
     inboundGroupSession = olm.InboundGroupSession();
     try {
       inboundGroupSession.unpickle(key, dbEntry.pickle);
@@ -55,6 +71,22 @@ class SessionKey {
           '[LibOlm] Unable to unpickle inboundGroupSession: ' + e.toString(),
           s);
     }
+  }
+
+  void _setSenderKey(String key) {
+    senderKey = key ?? content['sender_key'] ?? '';
+  }
+
+  void _setSenderClaimedKeys(Map<String, String> keys) {
+    senderClaimedKeys = (keys != null && keys.isNotEmpty)
+        ? keys
+        : (content['sender_claimed_keys'] is Map
+            ? Map<String, String>.from(content['sender_claimed_keys'])
+            : (content['sender_claimed_ed25519_key'] is String
+                ? <String, String>{
+                    'ed25519': content['sender_claimed_ed25519_key']
+                  }
+                : <String, String>{}));
   }
 
   Map<String, dynamic> toJson() {

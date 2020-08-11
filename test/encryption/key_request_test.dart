@@ -53,7 +53,7 @@ void main() {
     if (!olmEnabled) return;
 
     final validSessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
-    final validSenderKey = '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI';
+    final validSenderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
     test('Create Request', () async {
       var matrix = await getClient();
       final requestRoom = matrix.getRoomById('!726s6s6q:example.com');

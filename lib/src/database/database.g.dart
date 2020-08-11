@@ -2062,19 +2062,26 @@ class DbInboundGroupSession extends DataClass
   final String pickle;
   final String content;
   final String indexes;
+  final bool uploaded;
+  final String senderKey;
+  final String senderClaimedKeys;
   DbInboundGroupSession(
       {@required this.clientId,
       @required this.roomId,
       @required this.sessionId,
       @required this.pickle,
       this.content,
-      this.indexes});
+      this.indexes,
+      this.uploaded,
+      this.senderKey,
+      this.senderClaimedKeys});
   factory DbInboundGroupSession.fromData(
       Map<String, dynamic> data, GeneratedDatabase db,
       {String prefix}) {
     final effectivePrefix = prefix ?? '';
     final intType = db.typeSystem.forDartType<int>();
     final stringType = db.typeSystem.forDartType<String>();
+    final boolType = db.typeSystem.forDartType<bool>();
     return DbInboundGroupSession(
       clientId:
           intType.mapFromDatabaseResponse(data['${effectivePrefix}client_id']),
@@ -2088,6 +2095,12 @@ class DbInboundGroupSession extends DataClass
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}content']),
       indexes:
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}indexes']),
+      uploaded:
+          boolType.mapFromDatabaseResponse(data['${effectivePrefix}uploaded']),
+      senderKey: stringType
+          .mapFromDatabaseResponse(data['${effectivePrefix}sender_key']),
+      senderClaimedKeys: stringType.mapFromDatabaseResponse(
+          data['${effectivePrefix}sender_claimed_keys']),
     );
   }
   @override
@@ -2111,6 +2124,15 @@ class DbInboundGroupSession extends DataClass
     if (!nullToAbsent || indexes != null) {
       map['indexes'] = Variable<String>(indexes);
     }
+    if (!nullToAbsent || uploaded != null) {
+      map['uploaded'] = Variable<bool>(uploaded);
+    }
+    if (!nullToAbsent || senderKey != null) {
+      map['sender_key'] = Variable<String>(senderKey);
+    }
+    if (!nullToAbsent || senderClaimedKeys != null) {
+      map['sender_claimed_keys'] = Variable<String>(senderClaimedKeys);
+    }
     return map;
   }
 
@@ -2124,6 +2146,10 @@ class DbInboundGroupSession extends DataClass
       pickle: serializer.fromJson<String>(json['pickle']),
       content: serializer.fromJson<String>(json['content']),
       indexes: serializer.fromJson<String>(json['indexes']),
+      uploaded: serializer.fromJson<bool>(json['uploaded']),
+      senderKey: serializer.fromJson<String>(json['sender_key']),
+      senderClaimedKeys:
+          serializer.fromJson<String>(json['sender_claimed_keys']),
     );
   }
   @override
@@ -2136,6 +2162,9 @@ class DbInboundGroupSession extends DataClass
       'pickle': serializer.toJson<String>(pickle),
       'content': serializer.toJson<String>(content),
       'indexes': serializer.toJson<String>(indexes),
+      'uploaded': serializer.toJson<bool>(uploaded),
+      'sender_key': serializer.toJson<String>(senderKey),
+      'sender_claimed_keys': serializer.toJson<String>(senderClaimedKeys),
     };
   }
 
@@ -2145,7 +2174,10 @@ class DbInboundGroupSession extends DataClass
           String sessionId,
           String pickle,
           String content,
-          String indexes}) =>
+          String indexes,
+          bool uploaded,
+          String senderKey,
+          String senderClaimedKeys}) =>
       DbInboundGroupSession(
         clientId: clientId ?? this.clientId,
         roomId: roomId ?? this.roomId,
@@ -2153,6 +2185,9 @@ class DbInboundGroupSession extends DataClass
         pickle: pickle ?? this.pickle,
         content: content ?? this.content,
         indexes: indexes ?? this.indexes,
+        uploaded: uploaded ?? this.uploaded,
+        senderKey: senderKey ?? this.senderKey,
+        senderClaimedKeys: senderClaimedKeys ?? this.senderClaimedKeys,
       );
   @override
   String toString() {
@@ -2162,7 +2197,10 @@ class DbInboundGroupSession extends DataClass
           ..write('sessionId: $sessionId, ')
           ..write('pickle: $pickle, ')
           ..write('content: $content, ')
-          ..write('indexes: $indexes')
+          ..write('indexes: $indexes, ')
+          ..write('uploaded: $uploaded, ')
+          ..write('senderKey: $senderKey, ')
+          ..write('senderClaimedKeys: $senderClaimedKeys')
           ..write(')'))
         .toString();
   }
@@ -2174,8 +2212,16 @@ class DbInboundGroupSession extends DataClass
           roomId.hashCode,
           $mrjc(
               sessionId.hashCode,
-              $mrjc(pickle.hashCode,
-                  $mrjc(content.hashCode, indexes.hashCode))))));
+              $mrjc(
+                  pickle.hashCode,
+                  $mrjc(
+                      content.hashCode,
+                      $mrjc(
+                          indexes.hashCode,
+                          $mrjc(
+                              uploaded.hashCode,
+                              $mrjc(senderKey.hashCode,
+                                  senderClaimedKeys.hashCode)))))))));
   @override
   bool operator ==(dynamic other) =>
       identical(this, other) ||
@@ -2185,7 +2231,10 @@ class DbInboundGroupSession extends DataClass
           other.sessionId == this.sessionId &&
           other.pickle == this.pickle &&
           other.content == this.content &&
-          other.indexes == this.indexes);
+          other.indexes == this.indexes &&
+          other.uploaded == this.uploaded &&
+          other.senderKey == this.senderKey &&
+          other.senderClaimedKeys == this.senderClaimedKeys);
 }
 
 class InboundGroupSessionsCompanion
@@ -2196,6 +2245,9 @@ class InboundGroupSessionsCompanion
   final Value<String> pickle;
   final Value<String> content;
   final Value<String> indexes;
+  final Value<bool> uploaded;
+  final Value<String> senderKey;
+  final Value<String> senderClaimedKeys;
   const InboundGroupSessionsCompanion({
     this.clientId = const Value.absent(),
     this.roomId = const Value.absent(),
@@ -2203,6 +2255,9 @@ class InboundGroupSessionsCompanion
     this.pickle = const Value.absent(),
     this.content = const Value.absent(),
     this.indexes = const Value.absent(),
+    this.uploaded = const Value.absent(),
+    this.senderKey = const Value.absent(),
+    this.senderClaimedKeys = const Value.absent(),
   });
   InboundGroupSessionsCompanion.insert({
     @required int clientId,
@@ -2211,6 +2266,9 @@ class InboundGroupSessionsCompanion
     @required String pickle,
     this.content = const Value.absent(),
     this.indexes = const Value.absent(),
+    this.uploaded = const Value.absent(),
+    this.senderKey = const Value.absent(),
+    this.senderClaimedKeys = const Value.absent(),
   })  : clientId = Value(clientId),
         roomId = Value(roomId),
         sessionId = Value(sessionId),
@@ -2222,6 +2280,9 @@ class InboundGroupSessionsCompanion
     Expression<String> pickle,
     Expression<String> content,
     Expression<String> indexes,
+    Expression<bool> uploaded,
+    Expression<String> senderKey,
+    Expression<String> senderClaimedKeys,
   }) {
     return RawValuesInsertable({
       if (clientId != null) 'client_id': clientId,
@@ -2230,6 +2291,9 @@ class InboundGroupSessionsCompanion
       if (pickle != null) 'pickle': pickle,
       if (content != null) 'content': content,
       if (indexes != null) 'indexes': indexes,
+      if (uploaded != null) 'uploaded': uploaded,
+      if (senderKey != null) 'sender_key': senderKey,
+      if (senderClaimedKeys != null) 'sender_claimed_keys': senderClaimedKeys,
     });
   }
 
@@ -2239,7 +2303,10 @@ class InboundGroupSessionsCompanion
       Value<String> sessionId,
       Value<String> pickle,
       Value<String> content,
-      Value<String> indexes}) {
+      Value<String> indexes,
+      Value<bool> uploaded,
+      Value<String> senderKey,
+      Value<String> senderClaimedKeys}) {
     return InboundGroupSessionsCompanion(
       clientId: clientId ?? this.clientId,
       roomId: roomId ?? this.roomId,
@@ -2247,6 +2314,9 @@ class InboundGroupSessionsCompanion
       pickle: pickle ?? this.pickle,
       content: content ?? this.content,
       indexes: indexes ?? this.indexes,
+      uploaded: uploaded ?? this.uploaded,
+      senderKey: senderKey ?? this.senderKey,
+      senderClaimedKeys: senderClaimedKeys ?? this.senderClaimedKeys,
     );
   }
 
@@ -2270,6 +2340,15 @@ class InboundGroupSessionsCompanion
     }
     if (indexes.present) {
       map['indexes'] = Variable<String>(indexes.value);
+    }
+    if (uploaded.present) {
+      map['uploaded'] = Variable<bool>(uploaded.value);
+    }
+    if (senderKey.present) {
+      map['sender_key'] = Variable<String>(senderKey.value);
+    }
+    if (senderClaimedKeys.present) {
+      map['sender_claimed_keys'] = Variable<String>(senderClaimedKeys.value);
     }
     return map;
   }
@@ -2328,9 +2407,45 @@ class InboundGroupSessions extends Table
         $customConstraints: '');
   }
 
+  final VerificationMeta _uploadedMeta = const VerificationMeta('uploaded');
+  GeneratedBoolColumn _uploaded;
+  GeneratedBoolColumn get uploaded => _uploaded ??= _constructUploaded();
+  GeneratedBoolColumn _constructUploaded() {
+    return GeneratedBoolColumn('uploaded', $tableName, true,
+        $customConstraints: 'DEFAULT false',
+        defaultValue: const CustomExpression<bool>('false'));
+  }
+
+  final VerificationMeta _senderKeyMeta = const VerificationMeta('senderKey');
+  GeneratedTextColumn _senderKey;
+  GeneratedTextColumn get senderKey => _senderKey ??= _constructSenderKey();
+  GeneratedTextColumn _constructSenderKey() {
+    return GeneratedTextColumn('sender_key', $tableName, true,
+        $customConstraints: '');
+  }
+
+  final VerificationMeta _senderClaimedKeysMeta =
+      const VerificationMeta('senderClaimedKeys');
+  GeneratedTextColumn _senderClaimedKeys;
+  GeneratedTextColumn get senderClaimedKeys =>
+      _senderClaimedKeys ??= _constructSenderClaimedKeys();
+  GeneratedTextColumn _constructSenderClaimedKeys() {
+    return GeneratedTextColumn('sender_claimed_keys', $tableName, true,
+        $customConstraints: '');
+  }
+
   @override
-  List<GeneratedColumn> get $columns =>
-      [clientId, roomId, sessionId, pickle, content, indexes];
+  List<GeneratedColumn> get $columns => [
+        clientId,
+        roomId,
+        sessionId,
+        pickle,
+        content,
+        indexes,
+        uploaded,
+        senderKey,
+        senderClaimedKeys
+      ];
   @override
   InboundGroupSessions get asDslTable => this;
   @override
@@ -2374,6 +2489,20 @@ class InboundGroupSessions extends Table
     if (data.containsKey('indexes')) {
       context.handle(_indexesMeta,
           indexes.isAcceptableOrUnknown(data['indexes'], _indexesMeta));
+    }
+    if (data.containsKey('uploaded')) {
+      context.handle(_uploadedMeta,
+          uploaded.isAcceptableOrUnknown(data['uploaded'], _uploadedMeta));
+    }
+    if (data.containsKey('sender_key')) {
+      context.handle(_senderKeyMeta,
+          senderKey.isAcceptableOrUnknown(data['sender_key'], _senderKeyMeta));
+    }
+    if (data.containsKey('sender_claimed_keys')) {
+      context.handle(
+          _senderClaimedKeysMeta,
+          senderClaimedKeys.isAcceptableOrUnknown(
+              data['sender_claimed_keys'], _senderClaimedKeysMeta));
     }
     return context;
   }
@@ -5669,6 +5798,9 @@ abstract class _$Database extends GeneratedDatabase {
       pickle: row.readString('pickle'),
       content: row.readString('content'),
       indexes: row.readString('indexes'),
+      uploaded: row.readBool('uploaded'),
+      senderKey: row.readString('sender_key'),
+      senderClaimedKeys: row.readString('sender_claimed_keys'),
     );
   }
 
@@ -5701,17 +5833,26 @@ abstract class _$Database extends GeneratedDatabase {
         readsFrom: {inboundGroupSessions}).map(_rowToDbInboundGroupSession);
   }
 
-  Future<int> storeInboundGroupSession(int client_id, String room_id,
-      String session_id, String pickle, String content, String indexes) {
+  Future<int> storeInboundGroupSession(
+      int client_id,
+      String room_id,
+      String session_id,
+      String pickle,
+      String content,
+      String indexes,
+      String sender_key,
+      String sender_claimed_keys) {
     return customInsert(
-      'INSERT OR REPLACE INTO inbound_group_sessions (client_id, room_id, session_id, pickle, content, indexes) VALUES (:client_id, :room_id, :session_id, :pickle, :content, :indexes)',
+      'INSERT OR REPLACE INTO inbound_group_sessions (client_id, room_id, session_id, pickle, content, indexes, sender_key, sender_claimed_keys) VALUES (:client_id, :room_id, :session_id, :pickle, :content, :indexes, :sender_key, :sender_claimed_keys)',
       variables: [
         Variable.withInt(client_id),
         Variable.withString(room_id),
         Variable.withString(session_id),
         Variable.withString(pickle),
         Variable.withString(content),
-        Variable.withString(indexes)
+        Variable.withString(indexes),
+        Variable.withString(sender_key),
+        Variable.withString(sender_claimed_keys)
       ],
       updates: {inboundGroupSessions},
     );
