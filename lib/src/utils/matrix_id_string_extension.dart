@@ -9,8 +9,14 @@ extension MatrixIdExtension on String {
     if (!VALID_SIGILS.contains(substring(0, 1))) {
       return false;
     }
+    // event IDs do not have to have a domain
+    if (substring(0, 1) == '\$') {
+      return true;
+    }
+    // all other matrix IDs have to have a domain
     final parts = substring(1).split(':');
-    if (parts.length != 2 || parts[0].isEmpty || parts[1].isEmpty) {
+    // the localpart can be an empty string, e.g. for aliases
+    if (parts.length != 2 || parts[1].isEmpty) {
       return false;
     }
     return true;

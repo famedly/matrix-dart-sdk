@@ -29,9 +29,10 @@ void main() {
       expect('!test:example.com'.isValidMatrixId, true);
       expect('+test:example.com'.isValidMatrixId, true);
       expect('\$test:example.com'.isValidMatrixId, true);
+      expect('\$testevent'.isValidMatrixId, true);
       expect('test:example.com'.isValidMatrixId, false);
       expect('@testexample.com'.isValidMatrixId, false);
-      expect('@:example.com'.isValidMatrixId, false);
+      expect('@:example.com'.isValidMatrixId, true);
       expect('@test:'.isValidMatrixId, false);
       expect(mxId.sigil, '@');
       expect('#test:example.com'.sigil, '#');
