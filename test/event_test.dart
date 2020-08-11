@@ -873,5 +873,92 @@ void main() {
       expect(
           event.aggregatedEvents(timeline, RelationshipTypes.Edit), <Event>{});
     });
+    test('getDisplayEvent', () {
+      var event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'body': 'blah',
+          'msgtype': 'm.text',
+        },
+        'event_id': '\$source',
+        'sender': '@alice:example.org',
+      }, null);
+      event.sortOrder = 0;
+      var edit1 = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'body': '* edit 1',
+          'msgtype': 'm.text',
+          'm.new_content': {
+            'body': 'edit 1',
+            'msgtype': 'm.text',
+          },
+          'm.relates_to': {
+            'event_id': '\$source',
+            'rel_type': RelationshipTypes.Edit,
+          },
+        },
+        'event_id': '\$edit1',
+        'sender': '@alice:example.org',
+      }, null);
+      edit1.sortOrder = 1;
+      var edit2 = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'body': '* edit 2',
+          'msgtype': 'm.text',
+          'm.new_content': {
+            'body': 'edit 2',
+            'msgtype': 'm.text',
+          },
+          'm.relates_to': {
+            'event_id': '\$source',
+            'rel_type': RelationshipTypes.Edit,
+          },
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      edit2.sortOrder = 2;
+      var edit3 = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'body': '* edit 3',
+          'msgtype': 'm.text',
+          'm.new_content': {
+            'body': 'edit 3',
+            'msgtype': 'm.text',
+          },
+          'm.relates_to': {
+            'event_id': '\$source',
+            'rel_type': RelationshipTypes.Edit,
+          },
+        },
+        'event_id': '\$edit3',
+        'sender': '@bob:example.org',
+      }, null);
+      edit3.sortOrder = 3;
+      var room = Room(client: client);
+      // no edits
+      var displayEvent =
+          event.getDisplayEvent(Timeline(events: <Event>[event], room: room));
+      expect(displayEvent.body, 'blah');
+      // one edit
+      displayEvent = event
+          .getDisplayEvent(Timeline(events: <Event>[event, edit1], room: room));
+      expect(displayEvent.body, 'edit 1');
+      // two edits
+      displayEvent = event.getDisplayEvent(
+          Timeline(events: <Event>[event, edit1, edit2], room: room));
+      expect(displayEvent.body, 'edit 2');
+      // foreign edit
+      displayEvent = event
+          .getDisplayEvent(Timeline(events: <Event>[event, edit3], room: room));
+      expect(displayEvent.body, 'blah');
+      // mixed foreign and non-foreign
+      displayEvent = event.getDisplayEvent(
+          Timeline(events: <Event>[event, edit1, edit2, edit3], room: room));
+      expect(displayEvent.body, 'edit 2');
+    });
   });
 }

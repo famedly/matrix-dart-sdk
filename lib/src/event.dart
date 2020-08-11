@@ -715,4 +715,28 @@ class Event extends MatrixEvent {
       hasAggregatedEvents(timeline, type)
           ? timeline.aggregatedEvents[eventId][type]
           : <Event>{};
+
+  /// Fetches the event to be rendered, taking into account all the edits and the like.
+  /// It needs a [timeline] for that.
+  Event getDisplayEvent(Timeline timeline) {
+    if (hasAggregatedEvents(timeline, RelationshipTypes.Edit)) {
+      // alright, we have an edit
+      final allEditEvents = aggregatedEvents(timeline, RelationshipTypes.Edit)
+          // we only allow edits made by the original author themself
+          .where((e) => e.senderId == senderId && e.type == EventTypes.Message)
+          .toList();
+      // we need to check again if it isn't empty, as we potentially removed all
+      // aggregated edits
+      if (allEditEvents.isNotEmpty) {
+        allEditEvents.sort((a, b) => a.sortOrder - b.sortOrder > 0 ? 1 : -1);
+        var rawEvent = allEditEvents.last.toJson();
+        // update the content of the new event to render
+        if (rawEvent['content']['m.new_content'] is Map) {
+          rawEvent['content'] = rawEvent['content']['m.new_content'];
+        }
+        return Event.fromJson(rawEvent, room);
+      }
+    }
+    return this;
+  }
 }
