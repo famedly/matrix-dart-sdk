@@ -16,9 +16,10 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/utils/logs.dart';
 import 'package:olm/olm.dart' as olm;
+
 import '../../src/database/database.dart' show DbOlmSessions;
+import '../../src/utils/logs.dart';
 
 class OlmSession {
   String identityKey;

@@ -18,13 +18,14 @@
 
 import 'dart:convert';
 
-import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/matrix_api.dart';
 import 'package:pedantic/pedantic.dart';
-import 'key_manager.dart';
-import 'olm_manager.dart';
-import 'key_verification_manager.dart';
+
+import '../famedlysdk.dart';
+import '../matrix_api.dart';
 import 'cross_signing.dart';
+import 'key_manager.dart';
+import 'key_verification_manager.dart';
+import 'olm_manager.dart';
 import 'ssss.dart';
 
 class Encryption {

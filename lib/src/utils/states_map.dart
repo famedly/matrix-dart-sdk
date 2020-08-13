@@ -1,5 +1,4 @@
-import 'package:famedlysdk/famedlysdk.dart';
-
+import '../../famedlysdk.dart';
 import '../../matrix_api.dart';
 
 /// Matrix room states are addressed by a tuple of the [type] and an

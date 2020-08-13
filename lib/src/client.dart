@@ -20,22 +20,21 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 
-import 'package:famedlysdk/encryption.dart';
-import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/room.dart';
-import 'package:famedlysdk/src/utils/device_keys_list.dart';
-import 'package:famedlysdk/src/utils/logs.dart';
-import 'package:famedlysdk/src/utils/matrix_file.dart';
-import 'package:famedlysdk/src/utils/to_device_event.dart';
 import 'package:http/http.dart' as http;
 import 'package:pedantic/pedantic.dart';
 
+import '../encryption.dart';
+import '../famedlysdk.dart';
 import 'database/database.dart' show Database;
 import 'event.dart';
 import 'room.dart';
 import 'user.dart';
+import 'utils/device_keys_list.dart';
 import 'utils/event_update.dart';
+import 'utils/logs.dart';
+import 'utils/matrix_file.dart';
 import 'utils/room_update.dart';
+import 'utils/to_device_event.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 

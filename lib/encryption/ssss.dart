@@ -16,17 +16,17 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'dart:typed_data';
 import 'dart:convert';
+import 'dart:typed_data';
 
-import 'package:encrypt/encrypt.dart';
-import 'package:crypto/crypto.dart';
 import 'package:base58check/base58.dart';
-import 'package:famedlysdk/src/utils/logs.dart';
+import 'package:crypto/crypto.dart';
+import 'package:encrypt/encrypt.dart';
 import 'package:password_hash/password_hash.dart';
-import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/matrix_api.dart';
 
+import '../famedlysdk.dart';
+import '../matrix_api.dart';
+import '../src/utils/logs.dart';
 import 'encryption.dart';
 
 const CACHE_TYPES = <String>[

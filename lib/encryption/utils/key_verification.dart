@@ -18,13 +18,14 @@
 
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:canonical_json/canonical_json.dart';
-import 'package:famedlysdk/src/utils/logs.dart';
-import 'package:pedantic/pedantic.dart';
-import 'package:olm/olm.dart' as olm;
-import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/matrix_api.dart';
 
+import 'package:canonical_json/canonical_json.dart';
+import 'package:olm/olm.dart' as olm;
+import 'package:pedantic/pedantic.dart';
+
+import '../../famedlysdk.dart';
+import '../../matrix_api.dart';
+import '../../src/utils/logs.dart';
 import '../encryption.dart';
 
 /*

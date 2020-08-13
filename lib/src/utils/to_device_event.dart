@@ -1,4 +1,4 @@
-import 'package:famedlysdk/matrix_api.dart';
+import '../../matrix_api.dart';
 
 class ToDeviceEvent extends BasicEventWithSender {
   Map<String, dynamic> encryptedContent;

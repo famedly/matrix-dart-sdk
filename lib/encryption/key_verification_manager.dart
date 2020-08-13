@@ -16,9 +16,9 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/famedlysdk.dart';
-import './encryption.dart';
-import './utils/key_verification.dart';
+import '../famedlysdk.dart';
+import 'encryption.dart';
+import 'utils/key_verification.dart';
 
 class KeyVerificationManager {
   final Encryption encryption;

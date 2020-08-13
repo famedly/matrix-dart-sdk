@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/matrix_api/model/stripped_state_event.dart';
+import 'stripped_state_event.dart';
 
 class MatrixEvent extends StrippedStateEvent {
   String eventId;

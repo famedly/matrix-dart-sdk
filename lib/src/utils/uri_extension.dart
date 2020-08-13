@@ -16,8 +16,9 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/client.dart';
 import 'dart:core';
+
+import '../client.dart';
 
 extension MxcUriExtension on Uri {
   /// Returns a download Link to this content.

@@ -1,16 +1,16 @@
 import 'dart:convert';
+
 import 'package:canonical_json/canonical_json.dart';
 import 'package:olm/olm.dart' as olm;
 
-import 'package:famedlysdk/matrix_api.dart';
-import 'package:famedlysdk/encryption.dart';
-
+import '../../encryption.dart';
+import '../../matrix_api.dart';
 import '../client.dart';
-import '../user.dart';
-import '../room.dart';
 import '../database/database.dart'
     show DbUserDeviceKey, DbUserDeviceKeysKey, DbUserCrossSigningKey;
 import '../event.dart';
+import '../room.dart';
+import '../user.dart';
 
 enum UserVerifiedStatus { verified, unknown, unknownDevice }
 

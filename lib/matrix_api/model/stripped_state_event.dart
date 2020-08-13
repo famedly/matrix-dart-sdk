@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/matrix_api/model/basic_event_with_sender.dart';
+import 'basic_event_with_sender.dart';
 
 class StrippedStateEvent extends BasicEventWithSender {
   String stateKey;

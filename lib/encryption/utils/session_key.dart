@@ -18,11 +18,11 @@
 
 import 'dart:convert';
 
-import 'package:famedlysdk/src/utils/logs.dart';
 import 'package:olm/olm.dart' as olm;
-import 'package:famedlysdk/famedlysdk.dart';
 
+import '../../famedlysdk.dart';
 import '../../src/database/database.dart' show DbInboundGroupSession;
+import '../../src/utils/logs.dart';
 
 class SessionKey {
   Map<String, dynamic> content;

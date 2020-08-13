@@ -18,15 +18,15 @@
 
 import 'dart:convert';
 
-import 'package:famedlysdk/src/utils/logs.dart';
-import 'package:pedantic/pedantic.dart';
-import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/matrix_api.dart';
 import 'package:olm/olm.dart' as olm;
+import 'package:pedantic/pedantic.dart';
 
 import './encryption.dart';
-import './utils/session_key.dart';
 import './utils/outbound_group_session.dart';
+import './utils/session_key.dart';
+import '../famedlysdk.dart';
+import '../matrix_api.dart';
+import '../src/utils/logs.dart';
 
 const MEGOLM_KEY = 'm.megolm_backup.v1';
 

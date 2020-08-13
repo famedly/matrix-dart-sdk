@@ -18,16 +18,18 @@
 
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/encryption.dart';
-import 'package:famedlysdk/src/utils/logs.dart';
-import 'package:famedlysdk/src/utils/receipt.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
+
+import '../encryption.dart';
+import '../famedlysdk.dart';
 import '../matrix_api.dart';
-import './room.dart';
+import 'database/database.dart' show DbRoomState, DbEvent;
+import 'room.dart';
+import 'utils/logs.dart';
 import 'utils/matrix_localizations.dart';
-import './database/database.dart' show DbRoomState, DbEvent;
+import 'utils/receipt.dart';
 
 abstract class RelationshipTypes {
   static const String Reply = 'm.in_reply_to';

@@ -18,9 +18,10 @@
 
 import 'dart:convert';
 
-import 'package:famedlysdk/src/utils/logs.dart';
 import 'package:olm/olm.dart' as olm;
+
 import '../../src/database/database.dart' show DbOutboundGroupSession;
+import '../../src/utils/logs.dart';
 
 class OutboundGroupSession {
   List<String> devices;

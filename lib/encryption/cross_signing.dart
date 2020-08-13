@@ -16,12 +16,12 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'dart:typed_data';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:olm/olm.dart' as olm;
-import 'package:famedlysdk/famedlysdk.dart';
 
+import '../famedlysdk.dart';
 import 'encryption.dart';
 
 const SELF_SIGNING_KEY = 'm.cross_signing.self_signing';

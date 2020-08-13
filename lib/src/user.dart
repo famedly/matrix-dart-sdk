@@ -16,10 +16,10 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/matrix_api.dart';
-import 'package:famedlysdk/src/room.dart';
-import 'package:famedlysdk/src/event.dart';
+import '../famedlysdk.dart';
+import '../matrix_api.dart';
+import 'event.dart';
+import 'room.dart';
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
 class User extends Event {

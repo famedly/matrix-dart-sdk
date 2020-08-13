@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/matrix_api.dart';
+import '../../matrix_api.dart';
 
 /// Represents a new room or an update for an
 /// already known room.

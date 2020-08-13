@@ -18,23 +18,23 @@
 
 import 'dart:async';
 
-import 'package:famedlysdk/matrix_api.dart';
-import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/client.dart';
-import 'package:famedlysdk/src/event.dart';
-import 'package:famedlysdk/src/utils/event_update.dart';
-import 'package:famedlysdk/src/utils/logs.dart';
-import 'package:famedlysdk/src/utils/room_update.dart';
-import 'package:famedlysdk/src/utils/matrix_file.dart';
-import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 import 'package:html_unescape/html_unescape.dart';
+import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 
-import './user.dart';
+import '../famedlysdk.dart';
+import '../matrix_api.dart';
+import 'client.dart';
+import 'database/database.dart' show DbRoom;
+import 'event.dart';
 import 'timeline.dart';
+import 'user.dart';
+import 'utils/event_update.dart';
+import 'utils/logs.dart';
+import 'utils/markdown.dart';
+import 'utils/matrix_file.dart';
 import 'utils/matrix_localizations.dart';
+import 'utils/room_update.dart';
 import 'utils/states_map.dart';
-import './utils/markdown.dart';
-import './database/database.dart' show DbRoom;
 
 enum PushRuleState { notify, mentions_only, dont_notify }
 enum JoinRules { public, knock, invite, private }
