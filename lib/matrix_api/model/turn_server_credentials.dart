@@ -20,7 +20,7 @@ class TurnServerCredentials {
   String username;
   String password;
   List<String> uris;
-  int ttl;
+  num ttl;
 
   TurnServerCredentials.fromJson(Map<String, dynamic> json) {
     username = json['username'];
