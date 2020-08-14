@@ -102,7 +102,7 @@ class Client extends MatrixApi {
       EventTypes.RoomCanonicalAlias,
       EventTypes.RoomTombstone,
     ]);
-    this.httpClient = httpClient;
+    this.httpClient = httpClient ?? http.Client();
   }
 
   /// The required name for this client.
