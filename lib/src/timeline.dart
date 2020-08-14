@@ -211,7 +211,11 @@ class Timeline {
       if (eventUpdate.roomID != room.id) return;
 
       if (eventUpdate.type == 'timeline' || eventUpdate.type == 'history') {
-        var status = eventUpdate.content['status'] ?? 2;
+        var status = eventUpdate.content['status'] ??
+            (eventUpdate.content['unsigned'] is Map<String, dynamic>
+                ? eventUpdate.content['unsigned'][MessageSendingStatusKey]
+                : null) ??
+            2;
         // Redaction events are handled as modification for existing events.
         if (eventUpdate.eventType == EventTypes.Redaction) {
           final eventId = _findEvent(event_id: eventUpdate.content['redacts']);

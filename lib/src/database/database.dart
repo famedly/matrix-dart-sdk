@@ -424,6 +424,7 @@ class Database extends _$Database {
 
       // is there a transaction id? Then delete the event with this id.
       if (status != -1 &&
+          status != 0 &&
           eventUpdate.content['unsigned'] is Map &&
           eventUpdate.content['unsigned']['transaction_id'] is String) {
         await removeEvent(clientId,

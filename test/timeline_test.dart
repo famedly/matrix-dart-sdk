@@ -371,9 +371,12 @@ void main() {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
-            'status': 0,
             'event_id': 'transaction',
-            'origin_server_ts': testTimeStamp
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {
+              MessageSendingStatusKey: 0,
+              'transaction_id': 'transaction',
+            },
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
@@ -387,10 +390,12 @@ void main() {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
-            'status': 2,
             'event_id': '\$event',
             'origin_server_ts': testTimeStamp,
-            'unsigned': {'transaction_id': 'transaction'}
+            'unsigned': {
+              'transaction_id': 'transaction',
+              MessageSendingStatusKey: 2,
+            },
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
@@ -404,10 +409,12 @@ void main() {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
-            'status': 1,
             'event_id': '\$event',
             'origin_server_ts': testTimeStamp,
-            'unsigned': {'transaction_id': 'transaction'}
+            'unsigned': {
+              'transaction_id': 'transaction',
+              MessageSendingStatusKey: 1,
+            },
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
