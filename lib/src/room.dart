@@ -633,10 +633,34 @@ class Room {
     return uploadResp;
   }
 
+  Future<String> _sendContent(
+    String type,
+    Map<String, dynamic> content, {
+    String txid,
+  }) async {
+    txid ??= client.generateUniqueTransactionId();
+    final mustEncrypt = encrypted && client.encryptionEnabled;
+    final sendMessageContent = mustEncrypt
+        ? await client.encryption
+            .encryptGroupMessagePayload(id, content, type: type)
+        : content;
+    return await client.sendMessage(
+      id,
+      mustEncrypt ? EventTypes.Encrypted : type,
+      txid,
+      sendMessageContent,
+    );
+  }
+
   /// Sends an event to this room with this json as a content. Returns the
   /// event ID generated from the server.
-  Future<String> sendEvent(Map<String, dynamic> content,
-      {String type, String txid, Event inReplyTo, String editEventId}) async {
+  Future<String> sendEvent(
+    Map<String, dynamic> content, {
+    String type,
+    String txid,
+    Event inReplyTo,
+    String editEventId,
+  }) async {
     type = type ?? EventTypes.Message;
     final sendType =
         (encrypted && client.encryptionEnabled) ? EventTypes.Encrypted : type;
@@ -701,15 +725,10 @@ class Room {
 
     // Send the text and on success, store and display a *sent* event.
     try {
-      final sendMessageContent = encrypted && client.encryptionEnabled
-          ? await client.encryption
-              .encryptGroupMessagePayload(id, content, type: type)
-          : content;
-      final res = await client.sendMessage(
-        id,
+      final res = await _sendContent(
         sendType,
-        messageID,
-        sendMessageContent,
+        content,
+        txid: messageID,
       );
       syncUpdate.rooms.join.values.first.timeline.events.first
           .unsigned[MessageSendingStatusKey] = 1;
@@ -1355,16 +1374,10 @@ class Room {
       'offer': {'sdp': sdp, 'type': type},
       'version': version,
     };
-
-    final sendMessageContent = encrypted && client.encryptionEnabled
-        ? await client.encryption.encryptGroupMessagePayload(id, content,
-            type: EventTypes.CallInvite)
-        : content;
-    return await client.sendMessage(
-      id,
+    return await _sendContent(
       EventTypes.CallInvite,
-      txid,
-      sendMessageContent,
+      content,
+      txid: txid,
     );
   }
 
@@ -1398,16 +1411,10 @@ class Room {
       'candidates': candidates,
       'version': version,
     };
-
-    final sendMessageContent = encrypted && client.encryptionEnabled
-        ? await client.encryption.encryptGroupMessagePayload(id, content,
-            type: EventTypes.CallCandidates)
-        : content;
-    return await client.sendMessage(
-      id,
+    return await _sendContent(
       EventTypes.CallCandidates,
-      txid,
-      sendMessageContent,
+      content,
+      txid: txid,
     );
   }
 
@@ -1424,16 +1431,10 @@ class Room {
       'answer': {'sdp': sdp, 'type': type},
       'version': version,
     };
-
-    final sendMessageContent = encrypted && client.encryptionEnabled
-        ? await client.encryption.encryptGroupMessagePayload(id, content,
-            type: EventTypes.CallAnswer)
-        : content;
-    return await client.sendMessage(
-      id,
+    return await _sendContent(
       EventTypes.CallAnswer,
-      txid,
-      sendMessageContent,
+      content,
+      txid: txid,
     );
   }
 
@@ -1448,16 +1449,10 @@ class Room {
       'call_id': callId,
       'version': version,
     };
-
-    final sendMessageContent = encrypted && client.encryptionEnabled
-        ? await client.encryption.encryptGroupMessagePayload(id, content,
-            type: EventTypes.CallHangup)
-        : content;
-    return await client.sendMessage(
-      id,
+    return await _sendContent(
       EventTypes.CallHangup,
-      txid,
-      sendMessageContent,
+      content,
+      txid: txid,
     );
   }
 

@@ -183,10 +183,6 @@ void main() {
       await room.sendReadReceipt('§1234:fakeServer.notExisting');
     });
 
-    test('enableEncryption', () async {
-      await room.enableEncryption();
-    });
-
     test('requestParticipants', () async {
       final participants = await room.requestParticipants();
       expect(participants.length, 1);
@@ -455,6 +451,17 @@ void main() {
       expect(room.pushRuleState, PushRuleState.dont_notify);
     });
 
+    test('Test call methods', () async {
+      await room.inviteToCall('1234', 1234, 'sdp', txid: '1234');
+      await room.answerCall('1234', 'sdp', txid: '1234');
+      await room.hangupCall('1234', txid: '1234');
+      await room.sendCallCandidates('1234', [], txid: '1234');
+    });
+
+    test('enableEncryption', () async {
+      await room.enableEncryption();
+    });
+
     test('Enable encryption', () async {
       room.setState(
         Event(
@@ -480,13 +487,6 @@ void main() {
       await room.setPushRuleState(PushRuleState.dont_notify);
       await room.setPushRuleState(PushRuleState.mentions_only);
       await room.setPushRuleState(PushRuleState.notify);
-    });
-
-    test('Test call methods', () async {
-      await room.inviteToCall('1234', 1234, 'sdp', txid: '1234');
-      await room.answerCall('1234', 'sdp', txid: '1234');
-      await room.hangupCall('1234', txid: '1234');
-      await room.sendCallCandidates('1234', [], txid: '1234');
     });
 
     test('Test tag methods', () async {
