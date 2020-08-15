@@ -1349,16 +1349,22 @@ class Room {
       {String type = 'offer', int version = 0, String txid}) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
 
+    final content = {
+      'call_id': callId,
+      'lifetime': lifetime,
+      'offer': {'sdp': sdp, 'type': type},
+      'version': version,
+    };
+
+    final sendMessageContent = encrypted && client.encryptionEnabled
+        ? await client.encryption.encryptGroupMessagePayload(id, content,
+            type: EventTypes.CallInvite)
+        : content;
     return await client.sendMessage(
       id,
       EventTypes.CallInvite,
       txid,
-      {
-        'call_id': callId,
-        'lifetime': lifetime,
-        'offer': {'sdp': sdp, 'type': type},
-        'version': version,
-      },
+      sendMessageContent,
     );
   }
 
@@ -1387,15 +1393,21 @@ class Room {
     String txid,
   }) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
+    final content = {
+      'call_id': callId,
+      'candidates': candidates,
+      'version': version,
+    };
+
+    final sendMessageContent = encrypted && client.encryptionEnabled
+        ? await client.encryption.encryptGroupMessagePayload(id, content,
+            type: EventTypes.CallCandidates)
+        : content;
     return await client.sendMessage(
       id,
       EventTypes.CallCandidates,
       txid,
-      {
-        'call_id': callId,
-        'candidates': candidates,
-        'version': version,
-      },
+      sendMessageContent,
     );
   }
 
@@ -1407,15 +1419,21 @@ class Room {
   Future<String> answerCall(String callId, String sdp,
       {String type = 'answer', int version = 0, String txid}) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
+    final content = {
+      'call_id': callId,
+      'answer': {'sdp': sdp, 'type': type},
+      'version': version,
+    };
+
+    final sendMessageContent = encrypted && client.encryptionEnabled
+        ? await client.encryption.encryptGroupMessagePayload(id, content,
+            type: EventTypes.CallAnswer)
+        : content;
     return await client.sendMessage(
       id,
       EventTypes.CallAnswer,
       txid,
-      {
-        'call_id': callId,
-        'answer': {'sdp': sdp, 'type': type},
-        'version': version,
-      },
+      sendMessageContent,
     );
   }
 
@@ -1425,14 +1443,21 @@ class Room {
   Future<String> hangupCall(String callId,
       {int version = 0, String txid}) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
+
+    final content = {
+      'call_id': callId,
+      'version': version,
+    };
+
+    final sendMessageContent = encrypted && client.encryptionEnabled
+        ? await client.encryption.encryptGroupMessagePayload(id, content,
+            type: EventTypes.CallHangup)
+        : content;
     return await client.sendMessage(
       id,
       EventTypes.CallHangup,
       txid,
-      {
-        'call_id': callId,
-        'version': version,
-      },
+      sendMessageContent,
     );
   }
 
