@@ -584,6 +584,18 @@ class Event extends MatrixEvent {
           localizedBody += '. ' + i18n.needPantalaimonWarning;
         }
         break;
+      case EventTypes.CallAnswer:
+        localizedBody = i18n.answeredTheCall(senderName);
+        break;
+      case EventTypes.CallHangup:
+        localizedBody = i18n.endedTheCall(senderName);
+        break;
+      case EventTypes.CallInvite:
+        localizedBody = i18n.startedACall(senderName);
+        break;
+      case EventTypes.CallCandidates:
+        localizedBody = i18n.sentCallInformations(senderName);
+        break;
       case EventTypes.Encrypted:
       case EventTypes.Message:
         switch (messageType) {

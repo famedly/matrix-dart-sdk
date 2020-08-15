@@ -109,6 +109,14 @@ abstract class MatrixLocalizations {
   String couldNotDecryptMessage(String errorText);
 
   String unknownEvent(String typeKey);
+
+  String startedACall(String senderName);
+
+  String endedTheCall(String senderName);
+
+  String answeredTheCall(String senderName);
+
+  String sentCallInformations(String senderName);
 }
 
 extension HistoryVisibilityDisplayString on HistoryVisibility {

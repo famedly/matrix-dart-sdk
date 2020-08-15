@@ -306,4 +306,28 @@ class FakeMatrixLocalizations extends MatrixLocalizations {
   @override
   // TODO: implement you
   String get you => null;
+
+  @override
+  String answeredTheCall(String senderName) {
+    // TODO: implement answeredTheCall
+    return null;
+  }
+
+  @override
+  String endedTheCall(String senderName) {
+    // TODO: implement endedTheCall
+    return null;
+  }
+
+  @override
+  String sentCallInformations(String senderName) {
+    // TODO: implement sentCallInformations
+    return null;
+  }
+
+  @override
+  String startedACall(String senderName) {
+    // TODO: implement startedACall
+    return null;
+  }
 }
