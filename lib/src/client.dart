@@ -981,13 +981,13 @@ class Client extends MatrixApi {
       }
       onEvent.add(update);
 
-      if (event['type'] == 'm.call.invite') {
+      if (event['type'] == EventTypes.CallInvite) {
         onCallInvite.add(Event.fromJson(event, room, sortOrder));
-      } else if (event['type'] == 'm.call.hangup') {
+      } else if (event['type'] == EventTypes.CallHangup) {
         onCallHangup.add(Event.fromJson(event, room, sortOrder));
-      } else if (event['type'] == 'm.call.answer') {
+      } else if (event['type'] == EventTypes.CallAnswer) {
         onCallAnswer.add(Event.fromJson(event, room, sortOrder));
-      } else if (event['type'] == 'm.call.candidates') {
+      } else if (event['type'] == EventTypes.CallCandidates) {
         onCallCandidates.add(Event.fromJson(event, room, sortOrder));
       }
     }

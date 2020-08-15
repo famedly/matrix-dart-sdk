@@ -36,9 +36,9 @@ abstract class EventTypes {
   static const String HistoryVisibility = 'm.room.history_visibility';
   static const String Encryption = 'm.room.encryption';
   static const String Encrypted = 'm.room.encrypted';
-  static const String CallInvite = 'm.room.call.invite';
-  static const String CallAnswer = 'm.room.call.answer';
-  static const String CallCandidates = 'm.room.call.candidates';
-  static const String CallHangup = 'm.room.call.hangup';
+  static const String CallInvite = 'm.call.invite';
+  static const String CallAnswer = 'm.call.answer';
+  static const String CallCandidates = 'm.call.candidates';
+  static const String CallHangup = 'm.call.hangup';
   static const String Unknown = 'm.unknown';
 }

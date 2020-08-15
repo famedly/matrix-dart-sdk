@@ -1992,13 +1992,13 @@ class FakeMatrixApi extends MockClient {
           (var req) => {},
       '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.guest_access':
           (var req) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.room.call.invite/1234':
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.invite/1234':
           (var req) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.room.call.answer/1234':
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.answer/1234':
           (var req) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.room.call.candidates/1234':
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.candidates/1234':
           (var req) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.room.call.hangup/1234':
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.hangup/1234':
           (var req) => {},
       '/client/r0/rooms/!1234%3Aexample.com/redact/1143273582443PhrSn%3Aexample.org/1234':
           (var req) => {'event_id': '1234'},
