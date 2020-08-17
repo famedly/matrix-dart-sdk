@@ -662,8 +662,6 @@ class Room {
     String editEventId,
   }) async {
     type = type ?? EventTypes.Message;
-    final sendType =
-        (encrypted && client.encryptionEnabled) ? EventTypes.Encrypted : type;
 
     // Create new transaction id
     String messageID;
@@ -726,7 +724,7 @@ class Room {
     // Send the text and on success, store and display a *sent* event.
     try {
       final res = await _sendContent(
-        sendType,
+        type,
         content,
         txid: messageID,
       );
