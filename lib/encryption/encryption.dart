@@ -63,6 +63,8 @@ class Encryption {
 
   Future<void> init(String olmAccount) async {
     await olmManager.init(olmAccount);
+    _backgroundTasksRunning = true;
+    _backgroundTasks(); // start the background tasks
   }
 
   void handleDeviceOneTimeKeysCount(Map<String, int> countJson) {
@@ -307,10 +309,25 @@ class Encryption {
     return await olmManager.encryptToDeviceMessage(deviceKeys, type, payload);
   }
 
+  // this method is responsible for all background tasks, such as uploading online key backups
+  bool _backgroundTasksRunning = true;
+  void _backgroundTasks() {
+    if (!_backgroundTasksRunning) {
+      return;
+    }
+
+    keyManager.backgroundTasks();
+
+    if (_backgroundTasksRunning) {
+      Timer(Duration(seconds: 10), _backgroundTasks);
+    }
+  }
+
   void dispose() {
     keyManager.dispose();
     olmManager.dispose();
     keyVerificationManager.dispose();
+    _backgroundTasksRunning = false;
   }
 }
 

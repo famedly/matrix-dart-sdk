@@ -2062,7 +2062,7 @@ class MatrixApi {
     return RoomKeysRoom.fromJson(ret);
   }
 
-  /// Deletes room ekys for a room
+  /// Deletes room keys for a room
   /// https://matrix.org/docs/spec/client_server/unstable#delete-matrix-client-r0-room-keys-keys-roomid
   Future<RoomKeysUpdateResponse> deleteRoomKeysRoom(
       String roomId, String version) async {

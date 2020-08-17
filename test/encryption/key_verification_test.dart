@@ -207,7 +207,7 @@ void main() {
 
     test('ask SSSS start', () async {
       client1.userDeviceKeys[client1.userID].masterKey.setDirectVerified(true);
-      await client1.database.clearSSSSCache(client1.id);
+      await client1.encryption.ssss.clearCache();
       final req1 =
           await client1.userDeviceKeys[client2.userID].startVerification();
       expect(req1.state, KeyVerificationState.askSSSS);
@@ -288,7 +288,7 @@ void main() {
 
       // alright, they match
       client1.userDeviceKeys[client1.userID].masterKey.setDirectVerified(true);
-      await client1.database.clearSSSSCache(client1.id);
+      await client1.encryption.ssss.clearCache();
 
       // send mac
       FakeMatrixApi.calledEndpoints.clear();
@@ -312,7 +312,7 @@ void main() {
 
       client1.encryption.ssss = MockSSSS(client1.encryption);
       (client1.encryption.ssss as MockSSSS).requestedSecrets = false;
-      await client1.database.clearSSSSCache(client1.id);
+      await client1.encryption.ssss.clearCache();
       await req1.maybeRequestSSSSSecrets();
       await Future.delayed(Duration(milliseconds: 10));
       expect((client1.encryption.ssss as MockSSSS).requestedSecrets, true);

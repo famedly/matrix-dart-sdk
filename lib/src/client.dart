@@ -615,6 +615,7 @@ class Client extends MatrixApi {
       return;
     }
 
+    encryption?.dispose();
     encryption =
         Encryption(client: this, enableE2eeRecovery: enableE2eeRecovery);
     await encryption.init(olmAccount);
@@ -1165,6 +1166,18 @@ class Client extends MatrixApi {
   Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
   Map<String, DeviceKeysList> _userDeviceKeys = {};
 
+  /// Gets user device keys by its curve25519 key. Returns null if it isn't found
+  DeviceKeys getUserDeviceKeysByCurve25519Key(String senderKey) {
+    for (final user in userDeviceKeys.values) {
+      final device = user.deviceKeys.values
+          .firstWhere((e) => e.curve25519Key == senderKey, orElse: () => null);
+      if (device != null) {
+        return device;
+      }
+    }
+    return null;
+  }
+
   Future<Set<String>> _getUserIdsInEncryptedRooms() async {
     var userIds = <String>{};
     for (var i = 0; i < rooms.length; i++) {
@@ -1493,6 +1506,8 @@ class Client extends MatrixApi {
     }
     if (closeDatabase) await database?.close();
     database = null;
+    encryption?.dispose();
+    encryption = null;
     return;
   }
 }

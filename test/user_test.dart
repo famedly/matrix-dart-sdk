@@ -132,6 +132,8 @@ void main() {
       await client.checkServer('https://fakeserver.notexisting');
       expect(user1.canChangePowerLevel, false);
     });
-    client.dispose();
+    test('dispose client', () async {
+      await client.dispose();
+    });
   });
 }

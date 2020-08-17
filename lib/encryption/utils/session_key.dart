@@ -37,12 +37,16 @@ class SessionKey {
   Map<String, String> senderClaimedKeys;
   String senderKey;
   bool get isValid => inboundGroupSession != null;
+  String roomId;
+  String sessionId;
 
   SessionKey(
       {this.content,
       this.inboundGroupSession,
       this.key,
       this.indexes,
+      this.roomId,
+      this.sessionId,
       String senderKey,
       Map<String, String> senderClaimedKeys}) {
     _setSenderKey(senderKey);
@@ -59,6 +63,8 @@ class SessionKey {
     indexes = parsedIndexes != null
         ? Map<String, int>.from(parsedIndexes)
         : <String, int>{};
+    roomId = dbEntry.roomId;
+    sessionId = dbEntry.sessionId;
     _setSenderKey(dbEntry.senderKey);
     _setSenderClaimedKeys(Map<String, String>.from(parsedSenderClaimedKeys));
 

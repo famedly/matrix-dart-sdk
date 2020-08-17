@@ -22,6 +22,12 @@ class RoomKeysSingleKey {
   bool isVerified;
   Map<String, dynamic> sessionData;
 
+  RoomKeysSingleKey(
+      {this.firstMessageIndex,
+      this.forwardedCount,
+      this.isVerified,
+      this.sessionData});
+
   RoomKeysSingleKey.fromJson(Map<String, dynamic> json) {
     firstMessageIndex = json['first_message_index'];
     forwardedCount = json['forwarded_count'];
@@ -42,6 +48,10 @@ class RoomKeysSingleKey {
 class RoomKeysRoom {
   Map<String, RoomKeysSingleKey> sessions;
 
+  RoomKeysRoom({this.sessions}) {
+    sessions ??= <String, RoomKeysSingleKey>{};
+  }
+
   RoomKeysRoom.fromJson(Map<String, dynamic> json) {
     sessions = (json['sessions'] as Map)
         .map((k, v) => MapEntry(k, RoomKeysSingleKey.fromJson(v)));
@@ -56,6 +66,10 @@ class RoomKeysRoom {
 
 class RoomKeys {
   Map<String, RoomKeysRoom> rooms;
+
+  RoomKeys({this.rooms}) {
+    rooms ??= <String, RoomKeysRoom>{};
+  }
 
   RoomKeys.fromJson(Map<String, dynamic> json) {
     rooms = (json['rooms'] as Map)

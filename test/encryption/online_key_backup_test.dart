@@ -16,12 +16,16 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:convert';
+
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/utils/logs.dart';
+import 'package:famedlysdk/matrix_api.dart';
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../fake_client.dart';
+import '../fake_matrix_api.dart';
 
 void main() {
   group('Online Key Backup', () {
@@ -65,6 +69,49 @@ void main() {
                   .getInboundGroupSession(roomId, sessionId, senderKey) !=
               null,
           true);
+    });
+
+    test('upload key', () async {
+      final session = olm.OutboundGroupSession();
+      session.create();
+      final inbound = olm.InboundGroupSession();
+      inbound.create(session.session_key());
+      final senderKey = client.identityKey;
+      final roomId = '!someroom:example.org';
+      final sessionId = inbound.session_id();
+      // set a payload...
+      var sessionPayload = <String, dynamic>{
+        'algorithm': 'm.megolm.v1.aes-sha2',
+        'room_id': roomId,
+        'forwarding_curve25519_key_chain': [client.identityKey],
+        'session_id': sessionId,
+        'session_key': inbound.export_session(1),
+        'sender_key': senderKey,
+        'sender_claimed_ed25519_key': client.fingerprintKey,
+      };
+      FakeMatrixApi.calledEndpoints.clear();
+      client.encryption.keyManager.setInboundGroupSession(
+          roomId, sessionId, senderKey, sessionPayload,
+          forwarded: true);
+      var dbSessions =
+          await client.database.getInboundGroupSessionsToUpload().get();
+      expect(dbSessions.isNotEmpty, true);
+      await client.encryption.keyManager.backgroundTasks();
+      final payload = FakeMatrixApi
+          .calledEndpoints['/client/unstable/room_keys/keys?version=5'].first;
+      dbSessions =
+          await client.database.getInboundGroupSessionsToUpload().get();
+      expect(dbSessions.isEmpty, true);
+
+      final onlineKeys = RoomKeys.fromJson(json.decode(payload));
+      client.encryption.keyManager.clearInboundGroupSessions();
+      var ret = client.encryption.keyManager
+          .getInboundGroupSession(roomId, sessionId, senderKey);
+      expect(ret, null);
+      await client.encryption.keyManager.loadFromResponse(onlineKeys);
+      ret = client.encryption.keyManager
+          .getInboundGroupSession(roomId, sessionId, senderKey);
+      expect(ret != null, true);
     });
 
     test('dispose client', () async {

@@ -27,6 +27,7 @@ import 'package:password_hash/password_hash.dart';
 
 import '../famedlysdk.dart';
 import '../matrix_api.dart';
+import '../src/database/database.dart';
 import '../src/utils/logs.dart';
 import 'encryption.dart';
 
@@ -48,7 +49,14 @@ class SSSS {
   Client get client => encryption.client;
   final pendingShareRequests = <String, _ShareRequest>{};
   final _validators = <String, Future<bool> Function(String)>{};
+  final Map<String, DbSSSSCache> _cache = <String, DbSSSSCache>{};
   SSSS(this.encryption);
+
+  // for testing
+  Future<void> clearCache() async {
+    await client.database?.clearSSSSCache(client.id);
+    _cache.clear();
+  }
 
   static _DerivedKeys deriveKeys(Uint8List key, String name) {
     final zerosalt = Uint8List(8);
@@ -173,16 +181,22 @@ class SSSS {
     if (client.database == null) {
       return null;
     }
+    // check if it is still valid
+    final keys = keyIdsFromType(type);
+    final isValid = (dbEntry) =>
+        keys.contains(dbEntry.keyId) &&
+        client.accountData[type].content['encrypted'][dbEntry.keyId]
+                ['ciphertext'] ==
+            dbEntry.ciphertext;
+    if (_cache.containsKey(type) && isValid(_cache[type])) {
+      return _cache[type].content;
+    }
     final ret = await client.database.getSSSSCache(client.id, type);
     if (ret == null) {
       return null;
     }
-    // check if it is still valid
-    final keys = keyIdsFromType(type);
-    if (keys.contains(ret.keyId) &&
-        client.accountData[type].content['encrypted'][ret.keyId]
-                ['ciphertext'] ==
-            ret.ciphertext) {
+    if (isValid(ret)) {
+      _cache[type] = ret;
       return ret.content;
     }
     return null;

@@ -26,7 +26,9 @@ import './utils/outbound_group_session.dart';
 import './utils/session_key.dart';
 import '../famedlysdk.dart';
 import '../matrix_api.dart';
+import '../src/database/database.dart';
 import '../src/utils/logs.dart';
+import '../src/utils/run_in_background.dart';
 
 const MEGOLM_KEY = 'm.megolm_backup.v1';
 
@@ -71,18 +73,14 @@ class KeyManager {
 
   void setInboundGroupSession(String roomId, String sessionId, String senderKey,
       Map<String, dynamic> content,
-      {bool forwarded = false, Map<String, String> senderClaimedKeys}) {
+      {bool forwarded = false,
+      Map<String, String> senderClaimedKeys,
+      bool uploaded = false}) {
     senderClaimedKeys ??= <String, String>{};
     if (!senderClaimedKeys.containsKey('ed25519')) {
-      DeviceKeys device;
-      for (final user in client.userDeviceKeys.values) {
-        device = user.deviceKeys.values.firstWhere(
-            (e) => e.curve25519Key == senderKey,
-            orElse: () => null);
-        if (device != null) {
-          senderClaimedKeys['ed25519'] = device.ed25519Key;
-          break;
-        }
+      final device = client.getUserDeviceKeysByCurve25519Key(senderKey);
+      if (device != null) {
+        senderClaimedKeys['ed25519'] = device.ed25519Key;
       }
     }
     final oldSession =
@@ -109,6 +107,8 @@ class KeyManager {
       content: content,
       inboundGroupSession: inboundGroupSession,
       indexes: {},
+      roomId: roomId,
+      sessionId: sessionId,
       key: client.userID,
       senderKey: senderKey,
       senderClaimedKeys: senderClaimedKeys,
@@ -132,7 +132,8 @@ class KeyManager {
       _inboundGroupSessions[roomId] = <String, SessionKey>{};
     }
     _inboundGroupSessions[roomId][sessionId] = newSession;
-    client.database?.storeInboundGroupSession(
+    client.database
+        ?.storeInboundGroupSession(
       client.id,
       roomId,
       sessionId,
@@ -141,9 +142,13 @@ class KeyManager {
       json.encode({}),
       senderKey,
       json.encode(senderClaimedKeys),
-    );
-    // Note to self: When adding key-backup that needs to be unawaited(), else
-    // we might accidentally end up with http requests inside of the sync loop
+    )
+        ?.then((_) {
+      if (uploaded) {
+        client.database
+            .markInboundGroupSessionAsUploaded(client.id, roomId, sessionId);
+      }
+    });
     // TODO: somehow try to decrypt last message again
     final room = client.getRoomById(roomId);
     if (room != null) {
@@ -410,7 +415,8 @@ class KeyManager {
                 forwarded: true,
                 senderClaimedKeys: decrypted['sender_claimed_keys'] != null
                     ? Map<String, String>.from(decrypted['sender_claimed_keys'])
-                    : null);
+                    : null,
+                uploaded: true);
           }
         }
       }
@@ -489,6 +495,79 @@ class KeyManager {
           '[Key Manager] Sending key verification request failed: ' +
               e.toString(),
           s);
+    }
+  }
+
+  bool _isUploadingKeys = false;
+  Future<void> backgroundTasks() async {
+    if (_isUploadingKeys || client.database == null) {
+      return;
+    }
+    _isUploadingKeys = true;
+    try {
+      if (!(await isCached())) {
+        return; // we can't backup anyways
+      }
+      final dbSessions =
+          await client.database.getInboundGroupSessionsToUpload().get();
+      if (dbSessions.isEmpty) {
+        return; // nothing to do
+      }
+      final privateKey =
+          base64.decode(await encryption.ssss.getCached(MEGOLM_KEY));
+      // decryption is needed to calculate the public key and thus see if the claimed information is in fact valid
+      final decryption = olm.PkDecryption();
+      final info = await client.getRoomKeysBackup();
+      String backupPubKey;
+      try {
+        backupPubKey = decryption.init_with_private_key(privateKey);
+
+        if (backupPubKey == null ||
+            info.algorithm != RoomKeysAlgorithmType.v1Curve25519AesSha2 ||
+            info.authData['public_key'] != backupPubKey) {
+          return;
+        }
+        final args = _GenerateUploadKeysArgs(
+          pubkey: backupPubKey,
+          dbSessions: <_DbInboundGroupSessionBundle>[],
+          userId: client.userID,
+        );
+        // we need to calculate verified beforehand, as else we pass a closure to an isolate
+        // with 500 keys they do, however, noticably block the UI, which is why we give brief async suspentions in here
+        // so that the event loop can progress
+        var i = 0;
+        for (final dbSession in dbSessions) {
+          final device =
+              client.getUserDeviceKeysByCurve25519Key(dbSession.senderKey);
+          args.dbSessions.add(_DbInboundGroupSessionBundle(
+            dbSession: dbSession,
+            verified: device?.verified ?? false,
+          ));
+          i++;
+          if (i > 10) {
+            await Future.delayed(Duration(milliseconds: 1));
+            i = 0;
+          }
+        }
+        final roomKeys =
+            await runInBackground<RoomKeys, _GenerateUploadKeysArgs>(
+                _generateUploadKeys, args);
+        Logs.info('[Key Manager] Uploading ${dbSessions.length} room keys...');
+        // upload the payload...
+        await client.storeRoomKeys(info.version, roomKeys);
+        // and now finally mark all the keys as uploaded
+        // no need to optimze this, as we only run it so seldomly and almost never with many keys at once
+        for (final dbSession in dbSessions) {
+          await client.database.markInboundGroupSessionAsUploaded(
+              client.id, dbSession.roomId, dbSession.sessionId);
+        }
+      } finally {
+        decryption.free();
+      }
+    } catch (e, s) {
+      Logs.error('[Key Manager] Error uploading room keys: ' + e.toString(), s);
+    } finally {
+      _isUploadingKeys = false;
     }
   }
 
@@ -724,4 +803,68 @@ class RoomKeyRequest extends ToDeviceEvent {
     );
     keyManager.incomingShareRequests.remove(request.requestId);
   }
+}
+
+RoomKeys _generateUploadKeys(_GenerateUploadKeysArgs args) {
+  final enc = olm.PkEncryption();
+  try {
+    enc.set_recipient_key(args.pubkey);
+    // first we generate the payload to upload all the session keys in this chunk
+    final roomKeys = RoomKeys();
+    for (final dbSession in args.dbSessions) {
+      final sess = SessionKey.fromDb(dbSession.dbSession, args.userId);
+      if (!sess.isValid) {
+        continue;
+      }
+      // create the room if it doesn't exist
+      if (!roomKeys.rooms.containsKey(sess.roomId)) {
+        roomKeys.rooms[sess.roomId] = RoomKeysRoom();
+      }
+      // generate the encrypted content
+      final payload = <String, dynamic>{
+        'algorithm': 'm.megolm.v1.aes-sha2',
+        'forwarding_curve25519_key_chain': sess.forwardingCurve25519KeyChain,
+        'sender_key': sess.senderKey,
+        'sender_clencaimed_keys': sess.senderClaimedKeys,
+        'session_key': sess.inboundGroupSession
+            .export_session(sess.inboundGroupSession.first_known_index()),
+      };
+      // encrypt the content
+      final encrypted = enc.encrypt(json.encode(payload));
+      // fetch the device, if available...
+      //final device = args.client.getUserDeviceKeysByCurve25519Key(sess.senderKey);
+      // aaaand finally add the session key to our payload
+      roomKeys.rooms[sess.roomId].sessions[sess.sessionId] = RoomKeysSingleKey(
+        firstMessageIndex: sess.inboundGroupSession.first_known_index(),
+        forwardedCount: sess.forwardingCurve25519KeyChain.length,
+        isVerified: dbSession.verified, //device?.verified ?? false,
+        sessionData: {
+          'ephemeral': encrypted.ephemeral,
+          'ciphertext': encrypted.ciphertext,
+          'mac': encrypted.mac,
+        },
+      );
+    }
+    return roomKeys;
+  } catch (e, s) {
+    Logs.error('[Key Manager] Error generating payload ' + e.toString(), s);
+    rethrow;
+  } finally {
+    enc.free();
+  }
+}
+
+class _DbInboundGroupSessionBundle {
+  _DbInboundGroupSessionBundle({this.dbSession, this.verified});
+
+  DbInboundGroupSession dbSession;
+  bool verified;
+}
+
+class _GenerateUploadKeysArgs {
+  _GenerateUploadKeysArgs({this.pubkey, this.dbSessions, this.userId});
+
+  String pubkey;
+  List<_DbInboundGroupSessionBundle> dbSessions;
+  String userId;
 }

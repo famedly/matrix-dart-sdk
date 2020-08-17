@@ -248,7 +248,7 @@ void main() {
           client.encryption.ssss.open('m.cross_signing.self_signing');
       handle.unlock(recoveryKey: SSSS_KEY);
 
-      await client.database.clearSSSSCache(client.id);
+      await client.encryption.ssss.clearCache();
       client.encryption.ssss.pendingShareRequests.clear();
       await client.encryption.ssss.request('best animal', [key]);
       var event = ToDeviceEvent(
@@ -272,7 +272,7 @@ void main() {
         'm.megolm_backup.v1'
       ]) {
         final secret = await handle.getStored(type);
-        await client.database.clearSSSSCache(client.id);
+        await client.encryption.ssss.clearCache();
         client.encryption.ssss.pendingShareRequests.clear();
         await client.encryption.ssss.request(type, [key]);
         event = ToDeviceEvent(
@@ -294,7 +294,7 @@ void main() {
       // test different fail scenarios
 
       // not encrypted
-      await client.database.clearSSSSCache(client.id);
+      await client.encryption.ssss.clearCache();
       client.encryption.ssss.pendingShareRequests.clear();
       await client.encryption.ssss.request('best animal', [key]);
       event = ToDeviceEvent(
@@ -309,7 +309,7 @@ void main() {
       expect(await client.encryption.ssss.getCached('best animal'), null);
 
       // unknown request id
-      await client.database.clearSSSSCache(client.id);
+      await client.encryption.ssss.clearCache();
       client.encryption.ssss.pendingShareRequests.clear();
       await client.encryption.ssss.request('best animal', [key]);
       event = ToDeviceEvent(
@@ -327,7 +327,7 @@ void main() {
       expect(await client.encryption.ssss.getCached('best animal'), null);
 
       // not from a device we sent the request to
-      await client.database.clearSSSSCache(client.id);
+      await client.encryption.ssss.clearCache();
       client.encryption.ssss.pendingShareRequests.clear();
       await client.encryption.ssss.request('best animal', [key]);
       event = ToDeviceEvent(
@@ -345,7 +345,7 @@ void main() {
       expect(await client.encryption.ssss.getCached('best animal'), null);
 
       // secret not a string
-      await client.database.clearSSSSCache(client.id);
+      await client.encryption.ssss.clearCache();
       client.encryption.ssss.pendingShareRequests.clear();
       await client.encryption.ssss.request('best animal', [key]);
       event = ToDeviceEvent(
@@ -363,7 +363,7 @@ void main() {
       expect(await client.encryption.ssss.getCached('best animal'), null);
 
       // validator doesn't check out
-      await client.database.clearSSSSCache(client.id);
+      await client.encryption.ssss.clearCache();
       client.encryption.ssss.pendingShareRequests.clear();
       await client.encryption.ssss.request('m.megolm_backup.v1', [key]);
       event = ToDeviceEvent(
@@ -386,7 +386,7 @@ void main() {
       final key =
           client.userDeviceKeys[client.userID].deviceKeys['OTHERDEVICE'];
       key.setDirectVerified(true);
-      await client.database.clearSSSSCache(client.id);
+      await client.encryption.ssss.clearCache();
       client.encryption.ssss.pendingShareRequests.clear();
       await client.encryption.ssss.maybeRequestAll([key]);
       expect(client.encryption.ssss.pendingShareRequests.length, 3);
