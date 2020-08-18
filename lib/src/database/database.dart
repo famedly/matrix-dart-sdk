@@ -11,6 +11,39 @@ import '../utils/logs.dart';
 
 part 'database.g.dart';
 
+extension MigratorExtension on Migrator {
+  Future<void> createIndexIfNotExists(Index index) async {
+    try {
+      await createIndex(index);
+    } catch (err) {
+      if (!err.toString().toLowerCase().contains('already exists')) {
+        rethrow;
+      }
+    }
+  }
+
+  Future<void> createTableIfNotExists(TableInfo<Table, DataClass> table) async {
+    try {
+      await createTable(table);
+    } catch (err) {
+      if (!err.toString().toLowerCase().contains('already exists')) {
+        rethrow;
+      }
+    }
+  }
+
+  Future<void> addColumnIfNotExists(
+      TableInfo<Table, DataClass> table, GeneratedColumn column) async {
+    try {
+      await addColumn(table, column);
+    } catch (err) {
+      if (!err.toString().toLowerCase().contains('duplicate column name')) {
+        rethrow;
+      }
+    }
+  }
+}
+
 @UseMoor(
   include: {'database.moor'},
 )
@@ -32,17 +65,17 @@ class Database extends _$Database {
         onUpgrade: (Migrator m, int from, int to) async {
           // this appears to be only called once, so multiple consecutive upgrades have to be handled appropriately in here
           if (from == 1) {
-            await m.createIndex(userDeviceKeysIndex);
-            await m.createIndex(userDeviceKeysKeyIndex);
-            await m.createIndex(olmSessionsIndex);
-            await m.createIndex(outboundGroupSessionsIndex);
-            await m.createIndex(inboundGroupSessionsIndex);
-            await m.createIndex(roomsIndex);
-            await m.createIndex(eventsIndex);
-            await m.createIndex(roomStatesIndex);
-            await m.createIndex(accountDataIndex);
-            await m.createIndex(roomAccountDataIndex);
-            await m.createIndex(presencesIndex);
+            await m.createIndexIfNotExists(userDeviceKeysIndex);
+            await m.createIndexIfNotExists(userDeviceKeysKeyIndex);
+            await m.createIndexIfNotExists(olmSessionsIndex);
+            await m.createIndexIfNotExists(outboundGroupSessionsIndex);
+            await m.createIndexIfNotExists(inboundGroupSessionsIndex);
+            await m.createIndexIfNotExists(roomsIndex);
+            await m.createIndexIfNotExists(eventsIndex);
+            await m.createIndexIfNotExists(roomStatesIndex);
+            await m.createIndexIfNotExists(accountDataIndex);
+            await m.createIndexIfNotExists(roomAccountDataIndex);
+            await m.createIndexIfNotExists(presencesIndex);
             from++;
           }
           if (from == 2) {
@@ -51,23 +84,23 @@ class Database extends _$Database {
             from++;
           }
           if (from == 3) {
-            await m.createTable(userCrossSigningKeys);
-            await m.createTable(ssssCache);
+            await m.createTableIfNotExists(userCrossSigningKeys);
+            await m.createTableIfNotExists(ssssCache);
             // mark all keys as outdated so that the cross signing keys will be fetched
             await m.issueCustomQuery(
                 'UPDATE user_device_keys SET outdated = true');
             from++;
           }
           if (from == 4) {
-            await m.addColumn(olmSessions, olmSessions.lastReceived);
+            await m.addColumnIfNotExists(olmSessions, olmSessions.lastReceived);
             from++;
           }
           if (from == 5) {
-            await m.addColumn(
+            await m.addColumnIfNotExists(
                 inboundGroupSessions, inboundGroupSessions.uploaded);
-            await m.addColumn(
+            await m.addColumnIfNotExists(
                 inboundGroupSessions, inboundGroupSessions.senderKey);
-            await m.addColumn(
+            await m.addColumnIfNotExists(
                 inboundGroupSessions, inboundGroupSessions.senderClaimedKeys);
             from++;
           }
