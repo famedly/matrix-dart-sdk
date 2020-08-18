@@ -719,7 +719,7 @@ class Room {
                   'transaction_id': messageID,
                 },
             ]))));
-    await client.handleSync(syncUpdate);
+    await _handleFakeSync(syncUpdate);
 
     // Send the text and on success, store and display a *sent* event.
     try {
@@ -731,14 +731,15 @@ class Room {
       syncUpdate.rooms.join.values.first.timeline.events.first
           .unsigned[MessageSendingStatusKey] = 1;
       syncUpdate.rooms.join.values.first.timeline.events.first.eventId = res;
-      await client.handleSync(syncUpdate);
+      await _handleFakeSync(syncUpdate);
+
       return res;
     } catch (e, s) {
       Logs.warning(
           '[Client] Problem while sending message: ' + e.toString(), s);
       syncUpdate.rooms.join.values.first.timeline.events.first
           .unsigned[MessageSendingStatusKey] = -1;
-      await client.handleSync(syncUpdate);
+      await _handleFakeSync(syncUpdate);
     }
     return null;
   }
@@ -1587,5 +1588,16 @@ class Room {
       return;
     }
     await client.encryption.keyManager.request(this, sessionId, senderKey);
+  }
+
+  Future<void> _handleFakeSync(SyncUpdate syncUpdate,
+      {bool sortAtTheEnd = false}) async {
+    if (client.database != null) {
+      await client.database.transaction(() async {
+        await client.handleSync(syncUpdate, sortAtTheEnd: sortAtTheEnd);
+      });
+    } else {
+      await client.handleSync(syncUpdate, sortAtTheEnd: sortAtTheEnd);
+    }
   }
 }
