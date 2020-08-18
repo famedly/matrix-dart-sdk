@@ -983,15 +983,20 @@ class Client extends MatrixApi {
 
       final rawUnencryptedEvent = update.content;
 
-      if (rawUnencryptedEvent['type'] == EventTypes.CallInvite) {
-        onCallInvite.add(Event.fromJson(rawUnencryptedEvent, room, sortOrder));
-      } else if (rawUnencryptedEvent['type'] == EventTypes.CallHangup) {
-        onCallHangup.add(Event.fromJson(rawUnencryptedEvent, room, sortOrder));
-      } else if (rawUnencryptedEvent['type'] == EventTypes.CallAnswer) {
-        onCallAnswer.add(Event.fromJson(rawUnencryptedEvent, room, sortOrder));
-      } else if (rawUnencryptedEvent['type'] == EventTypes.CallCandidates) {
-        onCallCandidates
-            .add(Event.fromJson(rawUnencryptedEvent, room, sortOrder));
+      if (prevBatch != null && type == 'timeline') {
+        if (rawUnencryptedEvent['type'] == EventTypes.CallInvite) {
+          onCallInvite
+              .add(Event.fromJson(rawUnencryptedEvent, room, sortOrder));
+        } else if (rawUnencryptedEvent['type'] == EventTypes.CallHangup) {
+          onCallHangup
+              .add(Event.fromJson(rawUnencryptedEvent, room, sortOrder));
+        } else if (rawUnencryptedEvent['type'] == EventTypes.CallAnswer) {
+          onCallAnswer
+              .add(Event.fromJson(rawUnencryptedEvent, room, sortOrder));
+        } else if (rawUnencryptedEvent['type'] == EventTypes.CallCandidates) {
+          onCallCandidates
+              .add(Event.fromJson(rawUnencryptedEvent, room, sortOrder));
+        }
       }
     }
   }
