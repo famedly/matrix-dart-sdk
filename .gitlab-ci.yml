@@ -46,6 +46,30 @@ coverage_without_olm:
     - chmod +x ./test.sh
     - pub get
     - pub run test
+  
+e2ee_test:
+  tags:
+    - linux
+  stage: coverage
+  image: debian:testing
+  dependencies: []
+  script:
+    - apt update
+    - apt install -y curl gnupg2 git
+    - curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+    - curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list
+    - apt update
+    - apt install -y dart chromium lcov libolm3 sqlite3 libsqlite3-dev
+    - ln -s /usr/lib/dart/bin/pub /usr/bin/
+    - useradd -m test
+    - chown -R 'test:' '.'
+    - chmod +x ./prepare.sh
+    - chmod +x ./test_driver.sh
+    - printf "abstract class TestUser {\n  static const String homeserver = '$TEST_HOMESERVER';\n  static const String username = '$TEST_USER1';\n  static const String username2 = '$TEST_USER2';\n  static const String password = '$TEST_USER_PASSWORD';\n}" > ./test_driver/test_config.dart
+    - su -c ./prepare.sh test
+    - su -c ./test_driver.sh test
+  timeout: 16m
+  resource_group: e2ee_test
 
 code_analyze:
   tags:
@@ -57,7 +81,7 @@ code_analyze:
     - flutter format lib/ test/ test_driver/ --set-exit-if-changed
     - flutter analyze
 
-build-api-doc:
+build_api_doc:
   tags:
     - docker
   stage: builddocs
@@ -70,7 +94,7 @@ build-api-doc:
   only:
     - main
 
-build-doc:
+build_doc:
   tags:
     - docker
   stage: builddocs
@@ -95,8 +119,8 @@ pages:
     - mv doc-public ./home/doc
     - mv home public
   dependencies:
-    - build-api-doc
-    - build-doc
+    - build_api_doc
+    - build_doc
   artifacts:
     paths:
       - public

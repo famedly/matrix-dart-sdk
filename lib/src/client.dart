@@ -358,6 +358,20 @@ class Client extends MatrixApi {
     }
   }
 
+  /// Sends a logout command to the homeserver and clears all local data,
+  /// including all persistent data from the store.
+  @override
+  Future<void> logoutAll() async {
+    try {
+      await super.logoutAll();
+    } catch (e, s) {
+      Logs.error(e, s);
+      rethrow;
+    } finally {
+      await clear();
+    }
+  }
+
   /// Returns the user's own displayname and avatar url. In Matrix it is possible that
   /// one user can have different displaynames and avatar urls in different rooms. So
   /// this endpoint first checks if the profile is the same in all rooms. If not, the
@@ -1177,6 +1191,7 @@ class Client extends MatrixApi {
 
       if (outdatedLists.isNotEmpty) {
         // Request the missing device key lists from the server.
+        if (!isLogged()) return;
         final response = await requestDeviceKeys(outdatedLists, timeout: 10000);
 
         for (final rawDeviceKeyListEntry in response.deviceKeys.entries) {
