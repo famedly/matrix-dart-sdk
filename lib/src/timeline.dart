@@ -238,13 +238,10 @@ class Timeline {
                   : null);
 
           if (i < events.length) {
-            // we want to preserve the old sort order
-            final tempSortOrder = events[i].sortOrder;
             // if the old status is larger than the new one, we also want to preserve the old status
             final oldStatus = events[i].status;
             events[i] = Event.fromJson(
                 eventUpdate.content, room, eventUpdate.sortOrder);
-            events[i].sortOrder = tempSortOrder;
             // do we preserve the status? we should allow 0 -> -1 updates and status increases
             if (status < oldStatus && !(status == -1 && oldStatus == 0)) {
               events[i].status = oldStatus;
@@ -265,23 +262,19 @@ class Timeline {
           }
         }
       }
-      sortAndUpdate();
+      _sort();
+      if (onUpdate != null) onUpdate();
     } catch (e, s) {
       Logs.warning('Handle event update failed: ${e.toString()}', s);
     }
   }
 
-  bool sortLock = false;
+  bool _sortLock = false;
 
-  void sort() {
-    if (sortLock || events.length < 2) return;
-    sortLock = true;
+  void _sort() {
+    if (_sortLock || events.length < 2) return;
+    _sortLock = true;
     events?.sort((a, b) => b.sortOrder - a.sortOrder > 0 ? 1 : -1);
-    sortLock = false;
-  }
-
-  void sortAndUpdate() async {
-    sort();
-    if (onUpdate != null) onUpdate();
+    _sortLock = false;
   }
 }
