@@ -675,18 +675,19 @@ class Client extends MatrixApi {
         _lastSyncError = e;
         return null;
       });
-      if (_disposed) return;
       final hash = _syncRequest.hashCode;
       final syncResp = await _syncRequest;
+      if (_disposed) return;
       if (syncResp == null) throw _lastSyncError;
       if (hash != _syncRequest.hashCode) return;
       if (database != null) {
-        await database.transaction(() async {
+        _currentTransaction = database.transaction(() async {
           await handleSync(syncResp);
           if (prevBatch != syncResp.nextBatch) {
             await database.storePrevBatch(syncResp.nextBatch, id);
           }
         });
+        await _currentTransaction;
       } else {
         await handleSync(syncResp);
       }
@@ -1445,11 +1446,17 @@ class Client extends MatrixApi {
   }
 
   bool _disposed = false;
+  Future _currentTransaction = Future.sync(() => {});
 
   /// Stops the synchronization and closes the database. After this
   /// you can safely make this Client instance null.
   Future<void> dispose({bool closeDatabase = false}) async {
     _disposed = true;
+    try {
+      await _currentTransaction;
+    } catch (_) {
+      // No-OP
+    }
     if (closeDatabase) await database?.close();
     database = null;
     return;
