@@ -502,7 +502,7 @@ class Client extends MatrixApi {
       StreamController.broadcast();
 
   /// Synchronization erros are coming here.
-  final StreamController<SyncError> onSyncError = StreamController.broadcast();
+  final StreamController<SdkError> onSyncError = StreamController.broadcast();
 
   /// Synchronization erros are coming here.
   final StreamController<ToDeviceEventDecryptionError> onOlmError =
@@ -725,7 +725,7 @@ class Client extends MatrixApi {
         return;
       }
       Logs.error('Error during processing events: ' + e.toString(), s);
-      onSyncError.add(SyncError(
+      onSyncError.add(SdkError(
           exception: e is Exception ? e : Exception(e), stackTrace: s));
       await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
     }
@@ -1478,8 +1478,8 @@ class Client extends MatrixApi {
   }
 }
 
-class SyncError {
+class SdkError {
   Exception exception;
   StackTrace stackTrace;
-  SyncError({this.exception, this.stackTrace});
+  SdkError({this.exception, this.stackTrace});
 }

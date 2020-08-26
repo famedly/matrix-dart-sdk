@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:moor/moor.dart';
@@ -6,6 +7,7 @@ import 'package:olm/olm.dart' as olm;
 import '../../famedlysdk.dart' as sdk;
 import '../../matrix_api.dart' as api;
 import '../../matrix_api.dart';
+import '../client.dart';
 import '../room.dart';
 import '../utils/logs.dart';
 
@@ -57,61 +59,83 @@ class Database extends _$Database {
 
   int get maxFileSize => 1 * 1024 * 1024;
 
+  /// Update errors are coming here.
+  final StreamController<SdkError> onError = StreamController.broadcast();
+
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (Migrator m) {
-          return m.createAll();
+        onCreate: (Migrator m) async {
+          try {
+            await m.createAll();
+          } catch (e, s) {
+            Logs.error(e, s);
+            onError.add(SdkError(exception: e, stackTrace: s));
+            rethrow;
+          }
         },
         onUpgrade: (Migrator m, int from, int to) async {
-          // this appears to be only called once, so multiple consecutive upgrades have to be handled appropriately in here
-          if (from == 1) {
-            await m.createIndexIfNotExists(userDeviceKeysIndex);
-            await m.createIndexIfNotExists(userDeviceKeysKeyIndex);
-            await m.createIndexIfNotExists(olmSessionsIndex);
-            await m.createIndexIfNotExists(outboundGroupSessionsIndex);
-            await m.createIndexIfNotExists(inboundGroupSessionsIndex);
-            await m.createIndexIfNotExists(roomsIndex);
-            await m.createIndexIfNotExists(eventsIndex);
-            await m.createIndexIfNotExists(roomStatesIndex);
-            await m.createIndexIfNotExists(accountDataIndex);
-            await m.createIndexIfNotExists(roomAccountDataIndex);
-            await m.createIndexIfNotExists(presencesIndex);
-            from++;
-          }
-          if (from == 2) {
-            await m.deleteTable('outbound_group_sessions');
-            await m.createTable(outboundGroupSessions);
-            from++;
-          }
-          if (from == 3) {
-            await m.createTableIfNotExists(userCrossSigningKeys);
-            await m.createTableIfNotExists(ssssCache);
-            // mark all keys as outdated so that the cross signing keys will be fetched
-            await m.issueCustomQuery(
-                'UPDATE user_device_keys SET outdated = true');
-            from++;
-          }
-          if (from == 4) {
-            await m.addColumnIfNotExists(olmSessions, olmSessions.lastReceived);
-            from++;
-          }
-          if (from == 5) {
-            await m.addColumnIfNotExists(
-                inboundGroupSessions, inboundGroupSessions.uploaded);
-            await m.addColumnIfNotExists(
-                inboundGroupSessions, inboundGroupSessions.senderKey);
-            await m.addColumnIfNotExists(
-                inboundGroupSessions, inboundGroupSessions.senderClaimedKeys);
-            from++;
+          try {
+            // this appears to be only called once, so multiple consecutive upgrades have to be handled appropriately in here
+            if (from == 1) {
+              await m.createIndexIfNotExists(userDeviceKeysIndex);
+              await m.createIndexIfNotExists(userDeviceKeysKeyIndex);
+              await m.createIndexIfNotExists(olmSessionsIndex);
+              await m.createIndexIfNotExists(outboundGroupSessionsIndex);
+              await m.createIndexIfNotExists(inboundGroupSessionsIndex);
+              await m.createIndexIfNotExists(roomsIndex);
+              await m.createIndexIfNotExists(eventsIndex);
+              await m.createIndexIfNotExists(roomStatesIndex);
+              await m.createIndexIfNotExists(accountDataIndex);
+              await m.createIndexIfNotExists(roomAccountDataIndex);
+              await m.createIndexIfNotExists(presencesIndex);
+              from++;
+            }
+            if (from == 2) {
+              await m.deleteTable('outbound_group_sessions');
+              await m.createTable(outboundGroupSessions);
+              from++;
+            }
+            if (from == 3) {
+              await m.createTableIfNotExists(userCrossSigningKeys);
+              await m.createTableIfNotExists(ssssCache);
+              // mark all keys as outdated so that the cross signing keys will be fetched
+              await m.issueCustomQuery(
+                  'UPDATE user_device_keys SET outdated = true');
+              from++;
+            }
+            if (from == 4) {
+              await m.addColumnIfNotExists(
+                  olmSessions, olmSessions.lastReceived);
+              from++;
+            }
+            if (from == 5) {
+              await m.addColumnIfNotExists(
+                  inboundGroupSessions, inboundGroupSessions.uploaded);
+              await m.addColumnIfNotExists(
+                  inboundGroupSessions, inboundGroupSessions.senderKey);
+              await m.addColumnIfNotExists(
+                  inboundGroupSessions, inboundGroupSessions.senderClaimedKeys);
+              from++;
+            }
+          } catch (e, s) {
+            Logs.error(e, s);
+            onError.add(SdkError(exception: e, stackTrace: s));
+            rethrow;
           }
         },
         beforeOpen: (_) async {
-          if (executor.dialect == SqlDialect.sqlite) {
-            final ret = await customSelect('PRAGMA journal_mode=WAL').get();
-            if (ret.isNotEmpty) {
-              Logs.info('[Moor] Switched database to mode ' +
-                  ret.first.data['journal_mode'].toString());
+          try {
+            if (executor.dialect == SqlDialect.sqlite) {
+              final ret = await customSelect('PRAGMA journal_mode=WAL').get();
+              if (ret.isNotEmpty) {
+                Logs.info('[Moor] Switched database to mode ' +
+                    ret.first.data['journal_mode'].toString());
+              }
             }
+          } catch (e, s) {
+            Logs.error(e, s);
+            onError.add(SdkError(exception: e, stackTrace: s));
+            rethrow;
           }
         },
       );
