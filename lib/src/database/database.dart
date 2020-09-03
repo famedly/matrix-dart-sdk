@@ -99,7 +99,7 @@ class Database extends _$Database {
               await m.createTableIfNotExists(userCrossSigningKeys);
               await m.createTableIfNotExists(ssssCache);
               // mark all keys as outdated so that the cross signing keys will be fetched
-              await m.issueCustomQuery(
+              await customStatement(
                   'UPDATE user_device_keys SET outdated = true');
               from++;
             }
