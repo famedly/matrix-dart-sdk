@@ -1104,9 +1104,9 @@ class Client extends MatrixApi {
             );
       } else {
         var prevState = rooms[j].getState(stateEvent.type, stateEvent.stateKey);
-        if (prevState != null &&
-            prevState.originServerTs.millisecondsSinceEpoch >
-                stateEvent.originServerTs.millisecondsSinceEpoch) return;
+        if (prevState != null && prevState.sortOrder > stateEvent.sortOrder) {
+          return;
+        }
         rooms[j].setState(stateEvent);
       }
     } else if (eventUpdate.type == 'account_data') {
