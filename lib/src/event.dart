@@ -372,7 +372,8 @@ class Event extends MatrixEvent {
   /// contain an attachment, this throws an error. Set [getThumbnail] to
   /// true to download the thumbnail instead.
   Future<MatrixFile> downloadAndDecryptAttachment(
-      {bool getThumbnail = false}) async {
+      {bool getThumbnail = false,
+      Future<Uint8List> Function(String) downloadCallback}) async {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
@@ -413,8 +414,11 @@ class Event extends MatrixEvent {
 
     // Download the file
     if (uint8list == null) {
+      downloadCallback ??= (String url) async {
+        return (await http.get(url)).bodyBytes;
+      };
       uint8list =
-          (await http.get(mxContent.getDownloadLink(room.client))).bodyBytes;
+          await downloadCallback(mxContent.getDownloadLink(room.client));
       if (storeable) {
         await room.client.database
             .storeFile(mxContent.toString(), uint8list, DateTime.now());
