@@ -65,7 +65,7 @@ class EmoteSyntax extends InlineSyntax {
       return true;
     }
     final element = Element.empty('img');
-    element.attributes['data-mx-emote'] = '';
+    element.attributes['data-mx-emoticon'] = '';
     element.attributes['src'] = htmlEscape.convert(mxc);
     element.attributes['alt'] = htmlEscape.convert(emote);
     element.attributes['title'] = htmlEscape.convert(emote);
