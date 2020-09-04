@@ -21,7 +21,6 @@ import 'dart:convert';
 import 'dart:core';
 
 import 'package:http/http.dart' as http;
-import 'package:pedantic/pedantic.dart';
 
 import '../encryption.dart';
 import '../famedlysdk.dart';
@@ -656,6 +655,7 @@ class Client extends MatrixApi {
       'Successfully connected as ${userID.localpart} with ${homeserver.toString()}',
     );
 
+    // Always do a _sync after login, even if backgroundSync is set to off
     return _sync();
   }
 
@@ -675,25 +675,48 @@ class Client extends MatrixApi {
     onLoginStateChanged.add(LoginState.loggedOut);
   }
 
-  Future<SyncUpdate> _syncRequest;
-  Exception _lastSyncError;
+  bool _backgroundSync = true;
+  Future<void> _currentSync, _retryDelay = Future.value();
+  bool get syncPending => _currentSync != null;
 
-  Future<void> _sync() async {
-    if (isLogged() == false || _disposed) return;
+  /// Controls the background sync (automatically looping forever if turned on).
+  set backgroundSync(bool enabled) {
+    _backgroundSync = enabled;
+    if (_backgroundSync) {
+      _sync();
+    }
+  }
+
+  /// Immediately start a sync and wait for completion.
+  /// If there is an active sync already, wait for the active sync instead.
+  Future<void> oneShotSync() {
+    return _sync();
+  }
+
+  Future<void> _sync() {
+    if (_currentSync == null) {
+      _currentSync = _innerSync();
+      _currentSync.whenComplete(() {
+        _currentSync = null;
+        if (_backgroundSync && isLogged() && !_disposed) {
+          _sync();
+        }
+      });
+    }
+    return _currentSync;
+  }
+
+  Future<void> _innerSync() async {
+    await _retryDelay;
+    _retryDelay = Future.delayed(Duration(seconds: syncErrorTimeoutSec));
+    if (!isLogged() || _disposed) return null;
     try {
-      _syncRequest = sync(
+      final syncResp = await sync(
         filter: syncFilters,
         since: prevBatch,
         timeout: prevBatch != null ? 30000 : null,
-      ).catchError((e) {
-        _lastSyncError = e;
-        return null;
-      });
-      final hash = _syncRequest.hashCode;
-      final syncResp = await _syncRequest;
+      );
       if (_disposed) return;
-      if (syncResp == null) throw _lastSyncError;
-      if (hash != _syncRequest.hashCode) return;
       if (database != null) {
         _currentTransaction = database.transaction(() async {
           await handleSync(syncResp);
@@ -716,18 +739,14 @@ class Client extends MatrixApi {
       if (encryptionEnabled) {
         encryption.onSync();
       }
-      if (hash == _syncRequest.hashCode) unawaited(_sync());
-    } on MatrixException catch (exception) {
-      onError.add(exception);
-      await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
+      _retryDelay = Future.value();
+    } on MatrixException catch (e) {
+      onError.add(e);
     } catch (e, s) {
-      if (isLogged() == false || _disposed) {
-        return;
-      }
+      if (!isLogged() || _disposed) return;
       Logs.error('Error during processing events: ' + e.toString(), s);
       onSyncError.add(SdkError(
           exception: e is Exception ? e : Exception(e), stackTrace: s));
-      await Future.delayed(Duration(seconds: syncErrorTimeoutSec), _sync);
     }
   }
 
