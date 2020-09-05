@@ -167,6 +167,11 @@ void main() {
       event = Event.fromJson(jsonObj, null);
       expect(event.messageType, MessageTypes.Location);
 
+      jsonObj['type'] = 'm.sticker';
+      jsonObj['content']['msgtype'] = null;
+      event = Event.fromJson(jsonObj, null);
+      expect(event.messageType, MessageTypes.Sticker);
+
       jsonObj['type'] = 'm.room.message';
       jsonObj['content']['msgtype'] = 'm.text';
       jsonObj['content']['m.relates_to'] = {};

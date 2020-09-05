@@ -229,7 +229,9 @@ class Event extends MatrixEvent {
       unsigned: unsigned,
       room: room);
 
-  String get messageType => content['msgtype'] ?? MessageTypes.Text;
+  String get messageType => type == EventTypes.Sticker
+      ? MessageTypes.Sticker
+      : content['msgtype'] ?? MessageTypes.Text;
 
   void setRedactionEvent(Event redactedBecause) {
     unsigned = {
