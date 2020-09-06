@@ -17,6 +17,7 @@
  */
 
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:pedantic/pedantic.dart';
 
@@ -81,16 +82,17 @@ class Encryption {
     if (['m.room_key_request', 'm.forwarded_room_key'].contains(event.type)) {
       // "just" room key request things. We don't need these asap, so we handle
       // them in the background
-      unawaited(keyManager.handleToDeviceEvent(event));
+      unawaited(Zone.root.run(() => keyManager.handleToDeviceEvent(event)));
     }
     if (event.type.startsWith('m.key.verification.')) {
       // some key verification event. No need to handle it now, we can easily
       // do this in the background
-      unawaited(keyVerificationManager.handleToDeviceEvent(event));
+      unawaited(Zone.root
+          .run(() => keyVerificationManager.handleToDeviceEvent(event)));
     }
     if (event.type.startsWith('m.secret.')) {
       // some ssss thing. We can do this in the background
-      unawaited(ssss.handleToDeviceEvent(event));
+      unawaited(Zone.root.run(() => ssss.handleToDeviceEvent(event)));
     }
   }
 
@@ -104,7 +106,8 @@ class Encryption {
             update.content['content']['msgtype']
                 .startsWith('m.key.verification.'))) {
       // "just" key verification, no need to do this in sync
-      unawaited(keyVerificationManager.handleEventUpdate(update));
+      unawaited(Zone.root
+          .run(() => keyVerificationManager.handleEventUpdate(update)));
     }
   }
 
