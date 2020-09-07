@@ -27,7 +27,6 @@ import '../famedlysdk.dart';
 import '../matrix_api.dart';
 import 'database/database.dart' show DbRoomState, DbEvent;
 import 'room.dart';
-import 'utils/logs.dart';
 import 'utils/matrix_localizations.dart';
 import 'utils/receipt.dart';
 
@@ -110,8 +109,8 @@ class Event extends MatrixEvent {
                   unsigned['prev_content'] is Map)
               ? unsigned['prev_content']
               : null;
-    } catch (e, s) {
-      Logs.error('Event constructor crashed: ${e.toString()}', s);
+    } catch (_) {
+      // A strange bug in dart web makes this crash
     }
     this.stateKey = stateKey;
     this.originServerTs = originServerTs;
