@@ -105,8 +105,10 @@ class Event extends MatrixEvent {
     try {
       this.prevContent = (prevContent != null && prevContent.isNotEmpty)
           ? prevContent
-          : (this.unsigned != null && this.unsigned['prev_content'] is Map)
-              ? this.unsigned['prev_content']
+          : (unsigned != null &&
+                  unsigned.containsKey('prev_content') &&
+                  unsigned['prev_content'] is Map)
+              ? unsigned['prev_content']
               : null;
     } catch (e, s) {
       Logs.error('Event constructor crashed: ${e.toString()}', s);
