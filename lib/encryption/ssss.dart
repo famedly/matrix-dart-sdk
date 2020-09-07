@@ -16,6 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:core';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -133,7 +134,7 @@ class SSSS {
     }
     final generator = PBKDF2(hashAlgorithm: sha512);
     return Uint8List.fromList(generator.generateKey(passphrase, info.salt,
-        info.iterations, info.bits != null ? info.bits / 8 : 32));
+        info.iterations, info.bits != null ? (info.bits / 8).ceil() : 32));
   }
 
   void setValidator(String type, Future<bool> Function(String) validator) {
