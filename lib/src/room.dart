@@ -1117,7 +1117,7 @@ class Room {
         final profile = await client.requestProfile(mxID);
         resp = {
           'displayname': profile.displayname,
-          'avatar_url': profile.avatarUrl,
+          'avatar_url': profile.avatarUrl.toString(),
         };
       } catch (exception) {
         _requestingMatrixIds.remove(mxID);
