@@ -157,14 +157,20 @@ abstract class SignableKey extends MatrixSignableKey {
     return valid;
   }
 
-  bool hasValidSignatureChain({bool verifiedOnly = true, Set<String> visited}) {
+  bool hasValidSignatureChain(
+      {bool verifiedOnly = true,
+      Set<String> visited,
+      Set<String> onlyValidateUserIds}) {
     if (!client.encryptionEnabled) {
       return false;
     }
     visited ??= <String>{};
+    onlyValidateUserIds ??= <String>{};
     final setKey = '${userId};${identifier}';
-    if (visited.contains(setKey)) {
-      return false; // prevent recursion
+    if (visited.contains(setKey) ||
+        (onlyValidateUserIds.isNotEmpty &&
+            !onlyValidateUserIds.contains(userId))) {
+      return false; // prevent recursion & validate hasValidSignatureChain
     }
     visited.add(setKey);
     for (final signatureEntries in signatures.entries) {
@@ -189,6 +195,13 @@ abstract class SignableKey extends MatrixSignableKey {
         } else {
           continue;
         }
+
+        if (onlyValidateUserIds.isNotEmpty &&
+            !onlyValidateUserIds.contains(key.userId)) {
+          // we don't want to verify keys from this user
+          continue;
+        }
+
         if (key.blocked) {
           continue; // we can't be bothered about this keys signatures
         }
@@ -228,7 +241,9 @@ abstract class SignableKey extends MatrixSignableKey {
         }
         // or else we just recurse into that key and chack if it works out
         final haveChain = key.hasValidSignatureChain(
-            verifiedOnly: verifiedOnly, visited: visited);
+            verifiedOnly: verifiedOnly,
+            visited: visited,
+            onlyValidateUserIds: onlyValidateUserIds);
         if (haveChain) {
           return true;
         }

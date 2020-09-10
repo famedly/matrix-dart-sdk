@@ -316,6 +316,20 @@ class Encryption {
     return await olmManager.encryptToDeviceMessage(deviceKeys, type, payload);
   }
 
+  Future<void> autovalidateMasterOwnKey() async {
+    // check if we can set our own master key as verified, if it isn't yet
+    if (client.database != null &&
+        client.userDeviceKeys.containsKey(client.userID)) {
+      final masterKey = client.userDeviceKeys[client.userID].masterKey;
+      if (masterKey != null &&
+          !masterKey.directVerified &&
+          masterKey
+              .hasValidSignatureChain(onlyValidateUserIds: {client.userID})) {
+        await masterKey.setVerified(true);
+      }
+    }
+  }
+
   // this method is responsible for all background tasks, such as uploading online key backups
   bool _backgroundTasksRunning = true;
   void _backgroundTasks() {
@@ -324,6 +338,8 @@ class Encryption {
     }
 
     keyManager.backgroundTasks();
+
+    autovalidateMasterOwnKey();
 
     if (_backgroundTasksRunning) {
       Timer(Duration(seconds: 10), _backgroundTasks);
