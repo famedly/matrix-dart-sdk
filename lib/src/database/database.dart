@@ -143,6 +143,7 @@ class Database extends _$Database {
   Future<DbClient> getClient(String name) async {
     final res = await dbGetClient(name).get();
     if (res.isEmpty) return null;
+    await markPendingEventsAsError(res.first.clientId);
     return res.first;
   }
 

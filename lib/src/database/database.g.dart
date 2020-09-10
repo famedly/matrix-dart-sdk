@@ -6514,6 +6514,15 @@ abstract class _$Database extends GeneratedDatabase {
         readsFrom: {files}).map(_rowToDbFile);
   }
 
+  Future<int> markPendingEventsAsError(int client_id) {
+    return customUpdate(
+      'UPDATE events SET status = -1 WHERE client_id = :client_id AND status = 0',
+      variables: [Variable.withInt(client_id)],
+      updates: {events},
+      updateKind: UpdateKind.update,
+    );
+  }
+
   @override
   Iterable<TableInfo> get allTables => allSchemaEntities.whereType<TableInfo>();
   @override
