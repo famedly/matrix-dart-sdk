@@ -148,6 +148,13 @@ class Encryption {
         // TODO: maybe clear outbound session, if it is ours
         throw (DecryptError.CHANNEL_CORRUPTED);
       }
+      final existingIndex = inboundGroupSession.indexes.entries.firstWhere(
+          (e) => e.value == decryptResult.message_index,
+          orElse: () => null);
+      if (existingIndex != null && existingIndex.key != messageIndexKey) {
+        // TODO: maybe clear outbound session, if it is ours
+        throw (DecryptError.CHANNEL_CORRUPTED);
+      }
       inboundGroupSession.indexes[messageIndexKey] =
           decryptResult.message_index;
       if (!haveIndex) {
