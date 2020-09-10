@@ -68,7 +68,7 @@ class Encryption {
   }
 
   void handleDeviceOneTimeKeysCount(Map<String, int> countJson) {
-    olmManager.handleDeviceOneTimeKeysCount(countJson);
+    Zone.root.run(() => olmManager.handleDeviceOneTimeKeysCount(countJson));
   }
 
   void onSync() {

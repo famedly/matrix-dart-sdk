@@ -130,6 +130,8 @@ class OlmManager {
     return isValid;
   }
 
+  bool _uploadKeysLock = false;
+
   /// Generates new one time keys, signs everything and upload it to the server.
   Future<bool> uploadKeys(
       {bool uploadDeviceKeys = false, int oldKeyCount = 0}) async {
@@ -137,62 +139,71 @@ class OlmManager {
       return true;
     }
 
-    // generate one-time keys
-    // we generate 2/3rds of max, so that other keys people may still have can
-    // still be used
-    final oneTimeKeysCount =
-        (_olmAccount.max_number_of_one_time_keys() * 2 / 3).floor() -
-            oldKeyCount;
-    _olmAccount.generate_one_time_keys(oneTimeKeysCount);
-    final Map<String, dynamic> oneTimeKeys =
-        json.decode(_olmAccount.one_time_keys());
-
-    // now sign all the one-time keys
-    final signedOneTimeKeys = <String, dynamic>{};
-    for (final entry in oneTimeKeys['curve25519'].entries) {
-      final key = entry.key;
-      final value = entry.value;
-      signedOneTimeKeys['signed_curve25519:$key'] = <String, dynamic>{};
-      signedOneTimeKeys['signed_curve25519:$key'] = signJson({
-        'key': value,
-      });
+    if (_uploadKeysLock) {
+      return false;
     }
+    _uploadKeysLock = true;
 
-    // and now generate the payload to upload
-    final keysContent = <String, dynamic>{
-      if (uploadDeviceKeys)
-        'device_keys': {
-          'user_id': client.userID,
-          'device_id': client.deviceID,
-          'algorithms': [
-            'm.olm.v1.curve25519-aes-sha2',
-            'm.megolm.v1.aes-sha2'
-          ],
-          'keys': <String, dynamic>{},
-        },
-    };
-    if (uploadDeviceKeys) {
-      final Map<String, dynamic> keys =
-          json.decode(_olmAccount.identity_keys());
-      for (final entry in keys.entries) {
-        final algorithm = entry.key;
+    try {
+      // generate one-time keys
+      // we generate 2/3rds of max, so that other keys people may still have can
+      // still be used
+      final oneTimeKeysCount =
+          (_olmAccount.max_number_of_one_time_keys() * 2 / 3).floor() -
+              oldKeyCount;
+      _olmAccount.generate_one_time_keys(oneTimeKeysCount);
+      final Map<String, dynamic> oneTimeKeys =
+          json.decode(_olmAccount.one_time_keys());
+
+      // now sign all the one-time keys
+      final signedOneTimeKeys = <String, dynamic>{};
+      for (final entry in oneTimeKeys['curve25519'].entries) {
+        final key = entry.key;
         final value = entry.value;
-        keysContent['device_keys']['keys']['$algorithm:${client.deviceID}'] =
-            value;
+        signedOneTimeKeys['signed_curve25519:$key'] = <String, dynamic>{};
+        signedOneTimeKeys['signed_curve25519:$key'] = signJson({
+          'key': value,
+        });
       }
-      keysContent['device_keys'] =
-          signJson(keysContent['device_keys'] as Map<String, dynamic>);
-    }
 
-    final response = await client.uploadDeviceKeys(
-      deviceKeys: uploadDeviceKeys
-          ? MatrixDeviceKeys.fromJson(keysContent['device_keys'])
-          : null,
-      oneTimeKeys: signedOneTimeKeys,
-    );
-    _olmAccount.mark_keys_as_published();
-    await client.database?.updateClientKeys(pickledOlmAccount, client.id);
-    return response['signed_curve25519'] == oneTimeKeysCount;
+      // and now generate the payload to upload
+      final keysContent = <String, dynamic>{
+        if (uploadDeviceKeys)
+          'device_keys': {
+            'user_id': client.userID,
+            'device_id': client.deviceID,
+            'algorithms': [
+              'm.olm.v1.curve25519-aes-sha2',
+              'm.megolm.v1.aes-sha2'
+            ],
+            'keys': <String, dynamic>{},
+          },
+      };
+      if (uploadDeviceKeys) {
+        final Map<String, dynamic> keys =
+            json.decode(_olmAccount.identity_keys());
+        for (final entry in keys.entries) {
+          final algorithm = entry.key;
+          final value = entry.value;
+          keysContent['device_keys']['keys']['$algorithm:${client.deviceID}'] =
+              value;
+        }
+        keysContent['device_keys'] =
+            signJson(keysContent['device_keys'] as Map<String, dynamic>);
+      }
+
+      final response = await client.uploadDeviceKeys(
+        deviceKeys: uploadDeviceKeys
+            ? MatrixDeviceKeys.fromJson(keysContent['device_keys'])
+            : null,
+        oneTimeKeys: signedOneTimeKeys,
+      );
+      _olmAccount.mark_keys_as_published();
+      await client.database?.updateClientKeys(pickledOlmAccount, client.id);
+      return response['signed_curve25519'] == oneTimeKeysCount;
+    } finally {
+      _uploadKeysLock = false;
+    }
   }
 
   void handleDeviceOneTimeKeysCount(Map<String, int> countJson) {
