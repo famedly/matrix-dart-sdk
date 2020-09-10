@@ -399,7 +399,7 @@ class Database extends _$Database {
     // Is the timeline limited? Then all previous messages should be
     // removed from the database!
     if (roomUpdate.limitedTimeline) {
-      await removeRoomEvents(clientId, roomUpdate.id);
+      await removeSuccessfulRoomEvents(clientId, roomUpdate.id);
       await updateRoomSortOrder(0.0, 0.0, clientId, roomUpdate.id);
       await setRoomPrevBatch(roomUpdate.prev_batch, clientId, roomUpdate.id);
     }
@@ -432,9 +432,10 @@ class Database extends _$Database {
         status = eventContent['unsigned'][MessageSendingStatusKey];
       }
       if (eventContent['status'] is num) status = eventContent['status'];
-      if ((status == 1 || status == -1) &&
+      var storeNewEvent = !((status == 1 || status == -1) &&
           eventContent['unsigned'] is Map<String, dynamic> &&
-          eventContent['unsigned']['transaction_id'] is String) {
+          eventContent['unsigned']['transaction_id'] is String);
+      if (!storeNewEvent) {
         final allOldEvents =
             await getEvent(clientId, eventContent['event_id'], chatId).get();
         if (allOldEvents.isNotEmpty) {
@@ -452,8 +453,15 @@ class Database extends _$Database {
         } else {
           // status changed and we have an old transaction id --> update event id and stuffs
           try {
-            await updateEventStatus(status, eventContent['event_id'], clientId,
-                eventContent['unsigned']['transaction_id'], chatId);
+            final updated = await updateEventStatus(
+                status,
+                eventContent['event_id'],
+                clientId,
+                eventContent['unsigned']['transaction_id'],
+                chatId);
+            if (updated == 0) {
+              storeNewEvent = true;
+            }
           } catch (err) {
             // we could not update the transaction id to the event id....so it already exists
             // as we just tried to fetch the event previously this is a race condition if the event comes down sync in the mean time
@@ -461,7 +469,8 @@ class Database extends _$Database {
             // than our status. So, we just ignore this error
           }
         }
-      } else {
+      }
+      if (storeNewEvent) {
         DbEvent oldEvent;
         if (type == 'history') {
           final allOldEvents =

@@ -230,7 +230,7 @@ getRoom: SELECT * FROM rooms WHERE client_id = :client_id AND room_id = :room_id
 getEvent: SELECT * FROM events WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id;
 removeEvent: DELETE FROM events WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id;
 removeRoom: DELETE FROM rooms WHERE client_id = :client_id AND room_id = :room_id;
-removeRoomEvents: DELETE FROM events WHERE client_id = :client_id AND room_id = :room_id;
+removeSuccessfulRoomEvents: DELETE FROM events WHERE client_id = :client_id AND room_id = :room_id AND status <> -1 AND status <> 0;
 storeFile: INSERT OR REPLACE INTO files (mxc_uri, bytes, saved_at) VALUES (:mxc_uri, :bytes, :time);
 dbGetFile: SELECT * FROM files WHERE mxc_uri = :mxc_uri;
 markPendingEventsAsError: UPDATE events SET status = -1 WHERE client_id = :client_id AND status = 0;

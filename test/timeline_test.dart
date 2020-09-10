@@ -218,6 +218,7 @@ void main() {
     });
 
     test('Resend message', () async {
+      timeline.events.clear();
       client.onEvent.add(EventUpdate(
           type: 'timeline',
           roomID: roomID,
@@ -233,6 +234,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, -1);
       await timeline.events[0].sendAgain();
 
       await Future.delayed(Duration(milliseconds: 50));
@@ -240,22 +242,23 @@ void main() {
       expect(updateCount, 17);
 
       expect(insertList, [0, 0, 0, 0, 0, 0, 0, 0]);
-      expect(timeline.events.length, 7);
+      expect(timeline.events.length, 1);
       expect(timeline.events[0].status, 1);
     });
 
     test('Request history', () async {
+      timeline.events.clear();
       await room.requestHistory();
 
       await Future.delayed(Duration(milliseconds: 50));
 
       expect(updateCount, 20);
-      expect(timeline.events.length, 10);
-      expect(timeline.events[7].eventId, '3143273582443PhrSn:example.org');
-      expect(timeline.events[8].eventId, '2143273582443PhrSn:example.org');
-      expect(timeline.events[9].eventId, '1143273582443PhrSn:example.org');
+      expect(timeline.events.length, 3);
+      expect(timeline.events[0].eventId, '3143273582443PhrSn:example.org');
+      expect(timeline.events[1].eventId, '2143273582443PhrSn:example.org');
+      expect(timeline.events[2].eventId, '1143273582443PhrSn:example.org');
       expect(room.prev_batch, 't47409-4357353_219380_26003_2265');
-      await timeline.events[9].redact(reason: 'test', txid: '1234');
+      await timeline.events[2].redact(reason: 'test', txid: '1234');
     });
 
     test('Clear cache on limited timeline', () async {
@@ -269,6 +272,39 @@ void main() {
       ));
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events.isEmpty, true);
+    });
+
+    test('sort errors on top', () async {
+      timeline.events.clear();
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': -1,
+            'event_id': 'abc',
+            'origin_server_ts': testTimeStamp
+          },
+          sortOrder: room.newSortOrder));
+      client.onEvent.add(EventUpdate(
+          type: 'timeline',
+          roomID: roomID,
+          eventType: 'm.room.message',
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': 2,
+            'event_id': 'def',
+            'origin_server_ts': testTimeStamp + 5
+          },
+          sortOrder: room.newSortOrder));
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(timeline.events[0].status, -1);
+      expect(timeline.events[1].status, 2);
     });
 
     test('sending event to failed update', () async {

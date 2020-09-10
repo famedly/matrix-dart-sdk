@@ -6479,9 +6479,9 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  Future<int> removeRoomEvents(int client_id, String room_id) {
+  Future<int> removeSuccessfulRoomEvents(int client_id, String room_id) {
     return customUpdate(
-      'DELETE FROM events WHERE client_id = :client_id AND room_id = :room_id',
+      'DELETE FROM events WHERE client_id = :client_id AND room_id = :room_id AND status <> -1 AND status <> 0',
       variables: [Variable.withInt(client_id), Variable.withString(room_id)],
       updates: {events},
       updateKind: UpdateKind.delete,

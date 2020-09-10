@@ -99,6 +99,7 @@ class Timeline {
     for (final e in events) {
       addAggregatedEvent(e);
     }
+    _sort();
   }
 
   /// Don't forget to call this before you dismiss this object!
@@ -274,7 +275,15 @@ class Timeline {
   void _sort() {
     if (_sortLock || events.length < 2) return;
     _sortLock = true;
-    events?.sort((a, b) => b.sortOrder - a.sortOrder > 0 ? 1 : -1);
+    events?.sort((a, b) {
+      if (b.status == -1 && a.status != -1) {
+        return 1;
+      }
+      if (a.status == -1 && b.status != -1) {
+        return -1;
+      }
+      return b.sortOrder - a.sortOrder > 0 ? 1 : -1;
+    });
     _sortLock = false;
   }
 }
