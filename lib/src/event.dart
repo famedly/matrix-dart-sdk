@@ -406,7 +406,7 @@ class Event extends MatrixEvent {
     // Is this file storeable?
     final infoMap =
         getThumbnail ? content['info']['thumbnail_info'] : content['info'];
-    final storeable = room.client.database != null &&
+    var storeable = room.client.database != null &&
         infoMap is Map<String, dynamic> &&
         infoMap['size'] is int &&
         infoMap['size'] <= room.client.database.maxFileSize;
@@ -422,6 +422,8 @@ class Event extends MatrixEvent {
       };
       uint8list =
           await downloadCallback(mxContent.getDownloadLink(room.client));
+      storeable = storeable &&
+          uint8list.lengthInBytes < room.client.database.maxFileSize;
       if (storeable) {
         await room.client.database
             .storeFile(mxContent.toString(), uint8list, DateTime.now());
