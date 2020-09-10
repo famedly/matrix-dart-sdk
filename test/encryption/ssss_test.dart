@@ -30,6 +30,19 @@ import 'package:olm/olm.dart' as olm;
 import '../fake_client.dart';
 import '../fake_matrix_api.dart';
 
+class MockSSSS extends SSSS {
+  MockSSSS(Encryption encryption) : super(encryption);
+
+  bool requestedSecrets = false;
+  @override
+  Future<void> maybeRequestAll([List<DeviceKeys> devices]) async {
+    requestedSecrets = true;
+    final handle = open();
+    handle.unlock(recoveryKey: SSSS_KEY);
+    await handle.maybeCacheAll();
+  }
+}
+
 void main() {
   group('SSSS', () {
     var olmEnabled = true;
@@ -390,6 +403,18 @@ void main() {
       client.encryption.ssss.pendingShareRequests.clear();
       await client.encryption.ssss.maybeRequestAll([key]);
       expect(client.encryption.ssss.pendingShareRequests.length, 3);
+    });
+
+    test('periodicallyRequestMissingCache', () async {
+      client.userDeviceKeys[client.userID].masterKey.setDirectVerified(true);
+      client.encryption.ssss = MockSSSS(client.encryption);
+      (client.encryption.ssss as MockSSSS).requestedSecrets = false;
+      await client.encryption.ssss.periodicallyRequestMissingCache();
+      expect((client.encryption.ssss as MockSSSS).requestedSecrets, true);
+      // it should only retry once every 15 min
+      (client.encryption.ssss as MockSSSS).requestedSecrets = false;
+      await client.encryption.ssss.periodicallyRequestMissingCache();
+      expect((client.encryption.ssss as MockSSSS).requestedSecrets, false);
     });
 
     test('dispose client', () async {

@@ -96,6 +96,10 @@ class Encryption {
       // some ssss thing. We can do this in the background
       unawaited(Zone.root.run(() => ssss.handleToDeviceEvent(event)));
     }
+    if (event.sender == client.userID) {
+      // maybe we need to re-try SSSS secrets
+      unawaited(Zone.root.run(() => ssss.periodicallyRequestMissingCache()));
+    }
   }
 
   Future<void> handleEventUpdate(EventUpdate update) async {
@@ -110,6 +114,11 @@ class Encryption {
       // "just" key verification, no need to do this in sync
       unawaited(Zone.root
           .run(() => keyVerificationManager.handleEventUpdate(update)));
+    }
+    if (update.content['sender'] == client.userID &&
+        !update.content['unsigned'].containsKey('transaction_id')) {
+      // maybe we need to re-try SSSS secrets
+      unawaited(Zone.root.run(() => ssss.periodicallyRequestMissingCache()));
     }
   }
 

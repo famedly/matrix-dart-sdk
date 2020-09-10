@@ -258,18 +258,27 @@ class SSSS {
     }
   }
 
-  Future<void> maybeRequestAll(List<DeviceKeys> devices) async {
+  Future<void> maybeRequestAll([List<DeviceKeys> devices]) async {
     for (final type in CACHE_TYPES) {
-      final secret = await getCached(type);
-      if (secret == null) {
-        await request(type, devices);
+      if (keyIdsFromType(type) != null) {
+        final secret = await getCached(type);
+        if (secret == null) {
+          await request(type, devices);
+        }
       }
     }
   }
 
-  Future<void> request(String type, List<DeviceKeys> devices) async {
+  Future<void> request(String type, [List<DeviceKeys> devices]) async {
     // only send to own, verified devices
     Logs.info('[SSSS] Requesting type ${type}...');
+    if (devices == null || devices.isEmpty) {
+      if (!client.userDeviceKeys.containsKey(client.userID)) {
+        Logs.warning('[SSSS] User does not have any devices');
+        return;
+      }
+      devices = client.userDeviceKeys[client.userID].deviceKeys.values.toList();
+    }
     devices.removeWhere((DeviceKeys d) =>
         d.userId != client.userID ||
         !d.verified ||
@@ -292,6 +301,27 @@ class SSSS {
       'request_id': requestId,
       'name': type,
     });
+  }
+
+  DateTime _lastCacheRequest;
+  bool _isPeriodicallyRequestingMissingCache = false;
+  Future<void> periodicallyRequestMissingCache() async {
+    if (_isPeriodicallyRequestingMissingCache ||
+        (_lastCacheRequest != null &&
+            DateTime.now()
+                .subtract(Duration(minutes: 15))
+                .isBefore(_lastCacheRequest)) ||
+        client.isUnknownSession) {
+      // we are already requesting right now or we attempted to within the last 15 min
+      return;
+    }
+    _lastCacheRequest = DateTime.now();
+    _isPeriodicallyRequestingMissingCache = true;
+    try {
+      await maybeRequestAll();
+    } finally {
+      _isPeriodicallyRequestingMissingCache = false;
+    }
   }
 
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {

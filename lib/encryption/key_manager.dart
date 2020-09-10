@@ -451,10 +451,15 @@ class KeyManager {
       try {
         await loadSingleKey(room.id, sessionId);
       } catch (err, stacktrace) {
-        Logs.error(
-            '[KeyManager] Failed to access online key backup: ' +
-                err.toString(),
-            stacktrace);
+        if (err is MatrixException && err.errcode == 'M_NOT_FOUND') {
+          Logs.info(
+              '[KeyManager] Key not in online key backup, requesting it from other devices...');
+        } else {
+          Logs.error(
+              '[KeyManager] Failed to access online key backup: ' +
+                  err.toString(),
+              stacktrace);
+        }
       }
       if (!hadPreviously &&
           getInboundGroupSession(room.id, sessionId, senderKey) != null) {

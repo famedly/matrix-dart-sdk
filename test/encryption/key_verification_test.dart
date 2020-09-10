@@ -32,7 +32,7 @@ class MockSSSS extends SSSS {
 
   bool requestedSecrets = false;
   @override
-  Future<void> maybeRequestAll(List<DeviceKeys> devices) async {
+  Future<void> maybeRequestAll([List<DeviceKeys> devices]) async {
     requestedSecrets = true;
     final handle = open();
     handle.unlock(recoveryKey: SSSS_KEY);
