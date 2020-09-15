@@ -43,6 +43,8 @@ void main() {
       expect(mxId.domain, 'example.com');
       expect(mxId.equals('@Test:example.com'), true);
       expect(mxId.equals('@test:example.org'), false);
+      expect('@user:domain:8448'.localpart, 'user');
+      expect('@user:domain:8448'.domain, 'domain:8448');
     });
   });
 }
