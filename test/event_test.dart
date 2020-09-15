@@ -1159,5 +1159,103 @@ void main() {
 
       await room.client.dispose(closeDatabase: true);
     });
+    test('emote detection', () async {
+      var event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'msgtype': 'm.text',
+          'body': 'normal message',
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.onlyEmotes, false);
+      expect(event.numberEmotes, 0);
+      event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'msgtype': 'm.text',
+          'body': 'normal message with emoji 🦊',
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.onlyEmotes, false);
+      expect(event.numberEmotes, 1);
+      event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'msgtype': 'm.text',
+          'body': '🦊',
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.onlyEmotes, true);
+      expect(event.numberEmotes, 1);
+      event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'msgtype': 'm.text',
+          'body': '🦊🦊 🦊\n🦊🦊',
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.onlyEmotes, true);
+      expect(event.numberEmotes, 5);
+      event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'msgtype': 'm.text',
+          'body': 'rich message',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': 'rich message'
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.onlyEmotes, false);
+      expect(event.numberEmotes, 0);
+      event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'msgtype': 'm.text',
+          'body': '🦊',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '🦊'
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.onlyEmotes, true);
+      expect(event.numberEmotes, 1);
+      event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'msgtype': 'm.text',
+          'body': ':blah:',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '<img data-mx-emoticon src="mxc://blah/blubb">'
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.onlyEmotes, true);
+      expect(event.numberEmotes, 1);
+      event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'msgtype': 'm.text',
+          'body': '🦊 :blah:',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '🦊 <img data-mx-emoticon src="mxc://blah/blubb">'
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.onlyEmotes, true);
+      expect(event.numberEmotes, 2);
+    });
   });
 }

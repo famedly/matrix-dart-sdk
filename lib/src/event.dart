@@ -762,4 +762,49 @@ class Event extends MatrixEvent {
     }
     return this;
   }
+
+  /// returns if a message is a rich message
+  bool get isRichMessage =>
+      content['format'] == 'org.matrix.custom.html' &&
+      content['formatted_body'] is String;
+
+  // regexes to fetch the number of emotes, including emoji, and if the message consists of only those
+  // to match an emoji we can use the following regex:
+  // \x{00a9}|\x{00ae}|[\x{2000}-\x{3300}]|\x{d83c}[\x{d000}-\x{dfff}|\x{d83d}[\x{d000}-\x{dfff}]|\x{d83e}[\x{d000}-\x{dfff}]
+  // we need to replace \x{0000} with \u0000, the comment is left in the other format to be able to paste into regex101.com
+  // to see if there is a custom emote, we use the following regex: <img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>
+  // now we combind the two to have four regexes:
+  // 1. are there only emoji, or whitespace
+  // 2. are there only emoji, emotes, or whitespace
+  // 3. count number of emoji
+  // 4- count number of emoji or emotes
+  static final RegExp _onlyEmojiRegex = RegExp(
+      r'^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|\s)*$',
+      caseSensitive: false,
+      multiLine: true);
+  static final RegExp _onlyEmojiEmoteRegex = RegExp(
+      r'^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|<img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>|\s)*$',
+      caseSensitive: false,
+      multiLine: true);
+  static final RegExp _countEmojiRegex = RegExp(
+      r'(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])',
+      caseSensitive: false,
+      multiLine: true);
+  static final RegExp _countEmojiEmoteRegex = RegExp(
+      r'(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|<img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>)',
+      caseSensitive: false,
+      multiLine: true);
+
+  /// Returns if a given event only has emotes, emojis or whitespace as content.
+  /// This is useful to determine if stand-alone emotes should be displayed bigger.
+  bool get onlyEmotes => isRichMessage
+      ? _onlyEmojiEmoteRegex.hasMatch(content['formatted_body'])
+      : _onlyEmojiRegex.hasMatch(content['body'] ?? '');
+
+  /// Gets the number of emotes in a given message. This is useful to determine if
+  /// emotes should be displayed bigger. WARNING: This does **not** test if there are
+  /// only emotes. Use `event.onlyEmotes` for that!
+  int get numberEmotes => isRichMessage
+      ? _countEmojiEmoteRegex.allMatches(content['formatted_body']).length
+      : _countEmojiRegex.allMatches(content['body'] ?? '').length;
 }
