@@ -24,6 +24,7 @@ import 'package:famedlysdk/matrix_api.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:pedantic/pedantic.dart';
 
+import '../encryption/utils/json_signature_check_extension.dart';
 import '../src/utils/logs.dart';
 import 'encryption.dart';
 import 'utils/olm_session.dart';
@@ -75,7 +76,8 @@ class OlmManager {
     }
   }
 
-  /// Adds a signature to this json from this olm account.
+  /// Adds a signature to this json from this olm account and returns the signed
+  /// json.
   Map<String, dynamic> signJson(Map<String, dynamic> payload) {
     if (!enabled) throw ('Encryption is disabled');
     final Map<String, dynamic> unsigned = payload['unsigned'];
@@ -105,6 +107,7 @@ class OlmManager {
   }
 
   /// Checks the signature of a signed json object.
+  @deprecated
   bool checkJsonSignature(String key, Map<String, dynamic> signedJson,
       String userId, String deviceId) {
     if (!enabled) throw ('Encryption is disabled');
@@ -406,8 +409,7 @@ class OlmManager {
         final identityKey =
             client.userDeviceKeys[userId].deviceKeys[deviceId].curve25519Key;
         for (Map<String, dynamic> deviceKey in deviceKeysEntry.value.values) {
-          if (!checkJsonSignature(
-              fingerprintKey, deviceKey, userId, deviceId)) {
+          if (!deviceKey.checkJsonSignature(fingerprintKey, userId, deviceId)) {
             continue;
           }
           var session = olm.Session();
