@@ -59,15 +59,16 @@ class Client extends MatrixApi {
 
   Set<String> importantStateEvents;
 
+  Set<String> roomPreviewLastEvents;
+
   /// Create a client
-  /// clientName = unique identifier of this client
-  /// debug: Print debug output?
-  /// database: The database instance to use
-  /// enableE2eeRecovery: Enable additional logic to try to recover from bad e2ee sessions
-  /// verificationMethods: A set of all the verification methods this client can handle. Includes:
+  /// [clientName] = unique identifier of this client
+  /// [database]: The database instance to use
+  /// [enableE2eeRecovery]: Enable additional logic to try to recover from bad e2ee sessions
+  /// [verificationMethods]: A set of all the verification methods this client can handle. Includes:
   ///    KeyVerificationMethod.numbers: Compare numbers. Most basic, should be supported
   ///    KeyVerificationMethod.emoji: Compare emojis
-  /// importantStateEvents: A set of all the important state events to load when the client connects.
+  /// [importantStateEvents]: A set of all the important state events to load when the client connects.
   ///    To speed up performance only a set of state events is loaded on startup, those that are
   ///    needed to display a room list. All the remaining state events are automatically post-loaded
   ///    when opening the timeline of a room or manually by calling `room.postLoad()`.
@@ -80,6 +81,8 @@ class Client extends MatrixApi {
   ///     - m.room.canonical_alias
   ///     - m.room.tombstone
   ///     - *some* m.room.member events, where needed
+  /// [roomPreviewLastEvents]: The event types that should be used to calculate the last event
+  ///     in a room for the room list.
   Client(
     this.clientName, {
     this.database,
@@ -87,11 +90,12 @@ class Client extends MatrixApi {
     this.verificationMethods,
     http.Client httpClient,
     this.importantStateEvents,
+    this.roomPreviewLastEvents,
     this.pinUnreadRooms = false,
     @deprecated bool debug,
   }) {
     verificationMethods ??= <KeyVerificationMethod>{};
-    importantStateEvents ??= <String>{};
+    importantStateEvents ??= {};
     importantStateEvents.addAll([
       EventTypes.RoomName,
       EventTypes.RoomAvatar,
@@ -100,6 +104,12 @@ class Client extends MatrixApi {
       EventTypes.Encryption,
       EventTypes.RoomCanonicalAlias,
       EventTypes.RoomTombstone,
+    ]);
+    roomPreviewLastEvents ??= {};
+    roomPreviewLastEvents.addAll([
+      EventTypes.Message,
+      EventTypes.Encrypted,
+      EventTypes.Sticker,
     ]);
     this.httpClient = httpClient ?? http.Client();
   }
@@ -1099,44 +1109,49 @@ class Client extends MatrixApi {
 
   void _updateRoomsByEventUpdate(EventUpdate eventUpdate) {
     if (eventUpdate.type == 'history') return;
-    // Search the room in the rooms
-    num j = 0;
-    for (j = 0; j < rooms.length; j++) {
-      if (rooms[j].id == eventUpdate.roomID) break;
-    }
-    final found = (j < rooms.length && rooms[j].id == eventUpdate.roomID);
-    if (!found) return;
-    if (eventUpdate.type == 'timeline' ||
-        eventUpdate.type == 'state' ||
-        eventUpdate.type == 'invite_state') {
-      var stateEvent =
-          Event.fromJson(eventUpdate.content, rooms[j], eventUpdate.sortOrder);
-      if (stateEvent.type == EventTypes.Redaction) {
-        final String redacts = eventUpdate.content['redacts'];
-        rooms[j].states.states.forEach(
-              (String key, Map<String, Event> states) => states.forEach(
-                (String key, Event state) {
-                  if (state.eventId == redacts) {
-                    state.setRedactionEvent(stateEvent);
-                  }
-                },
-              ),
-            );
-      } else {
-        var prevState = rooms[j].getState(stateEvent.type, stateEvent.stateKey);
+
+    final room = getRoomById(eventUpdate.roomID);
+    if (room == null) return;
+
+    switch (eventUpdate.type) {
+      case 'timeline':
+      case 'state':
+      case 'invite_state':
+        var stateEvent =
+            Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder);
+        var prevState = room.getState(stateEvent.type, stateEvent.stateKey);
         if (prevState != null && prevState.sortOrder > stateEvent.sortOrder) {
+          Logs.warning('''
+A new ${eventUpdate.type} event of the type ${stateEvent.type} has arrived with a previews 
+sort order ${stateEvent.sortOrder} than the current ${stateEvent.type} event with a 
+sort order of ${prevState.sortOrder}. This should never happen...''');
           return;
         }
-        rooms[j].setState(stateEvent);
-      }
-    } else if (eventUpdate.type == 'account_data') {
-      rooms[j].roomAccountData[eventUpdate.eventType] =
-          BasicRoomEvent.fromJson(eventUpdate.content);
-    } else if (eventUpdate.type == 'ephemeral') {
-      rooms[j].ephemerals[eventUpdate.eventType] =
-          BasicRoomEvent.fromJson(eventUpdate.content);
+        if (stateEvent.type == EventTypes.Redaction) {
+          final String redacts = eventUpdate.content['redacts'];
+          room.states.states.forEach(
+            (String key, Map<String, Event> states) => states.forEach(
+              (String key, Event state) {
+                if (state.eventId == redacts) {
+                  state.setRedactionEvent(stateEvent);
+                }
+              },
+            ),
+          );
+        } else {
+          room.setState(stateEvent);
+        }
+        break;
+      case 'account_data':
+        room.roomAccountData[eventUpdate.eventType] =
+            BasicRoomEvent.fromJson(eventUpdate.content);
+        break;
+      case 'ephemeral':
+        room.ephemerals[eventUpdate.eventType] =
+            BasicRoomEvent.fromJson(eventUpdate.content);
+        break;
     }
-    if (rooms[j].onUpdate != null) rooms[j].onUpdate.add(rooms[j].id);
+    room.onUpdate.add(room.id);
     if (['timeline', 'account_data'].contains(eventUpdate.type)) _sortRooms();
   }
 

@@ -264,7 +264,13 @@ class Room {
     // perfect, it is only used for the room preview in the room list and sorting
     // said room list, so it should be good enough.
     var lastTime = DateTime.fromMillisecondsSinceEpoch(0);
-    var lastEvent = getState(EventTypes.Message);
+    final lastEvents = <Event>[
+      for (var type in client.roomPreviewLastEvents) getState(type)
+    ]..removeWhere((e) => e == null);
+
+    var lastEvent = lastEvents.isEmpty
+        ? null
+        : lastEvents.reduce((a, b) => a.sortOrder > b.sortOrder ? a : b);
     if (lastEvent == null) {
       states.forEach((final String key, final entry) {
         if (!entry.containsKey('')) return;

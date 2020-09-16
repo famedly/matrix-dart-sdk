@@ -10,4 +10,3 @@ analyzer:
     todo: ignore
   exclude:
     - example/main.dart
-    - lib/src/utils/logs.dart

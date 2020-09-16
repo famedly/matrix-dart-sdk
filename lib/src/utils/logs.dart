@@ -26,20 +26,24 @@ abstract class Logs {
 
   static const String _prefixText = '[Famedly Matrix SDK] ';
 
+  // ignore: avoid_print
   static void info(dynamic info) => print(
         _prefixText + _infoPen(info.toString()),
       );
 
+  // ignore: avoid_print
   static void success(dynamic obj, [dynamic stackTrace]) => print(
         _prefixText + _successPen(obj.toString()),
       );
 
+  // ignore: avoid_print
   static void warning(dynamic warning, [dynamic stackTrace]) => print(
         _prefixText +
             _warningPen(warning.toString()) +
             (stackTrace != null ? '\n${stackTrace.toString()}' : ''),
       );
 
+  // ignore: avoid_print
   static void error(dynamic obj, [dynamic stackTrace]) => print(
         _prefixText +
             _errorPen(obj.toString()) +
