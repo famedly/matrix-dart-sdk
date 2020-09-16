@@ -207,7 +207,7 @@ class KeyManager {
           !_requestedSessionIds.contains(requestIdent)) {
         // do e2ee recovery
         _requestedSessionIds.add(requestIdent);
-        unawaited(request(room, sessionId, senderKey));
+        unawaited(request(room, sessionId, senderKey, askOnlyOwnDevices: true));
       }
       return null;
     }
@@ -442,8 +442,13 @@ class KeyManager {
   }
 
   /// Request a certain key from another device
-  Future<void> request(Room room, String sessionId, String senderKey,
-      {bool tryOnlineBackup = true}) async {
+  Future<void> request(
+    Room room,
+    String sessionId,
+    String senderKey, {
+    bool tryOnlineBackup = true,
+    bool askOnlyOwnDevices = false,
+  }) async {
     if (tryOnlineBackup) {
       // let's first check our online key backup store thingy...
       var hadPreviously =
@@ -470,6 +475,9 @@ class KeyManager {
       // while we just send the to-device event to '*', we still need to save the
       // devices themself to know where to send the cancel to after receiving a reply
       final devices = await room.getUserDeviceKeys();
+      if (askOnlyOwnDevices) {
+        devices.removeWhere((d) => d.userId != client.userID);
+      }
       final requestId = client.generateUniqueTransactionId();
       final request = KeyManagerKeyShareRequest(
         requestId: requestId,
