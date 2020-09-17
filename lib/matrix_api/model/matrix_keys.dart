@@ -102,7 +102,7 @@ class MatrixDeviceKeys extends MatrixSignableKey {
   @override
   MatrixDeviceKeys.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     identifier = json['device_id'];
-    algorithms = json['algorithms'].cast<String>();
+    algorithms = List<String>.from(json['algorithms']);
   }
 
   @override

@@ -19,6 +19,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
+import 'dart:developer';
 
 import 'package:http/http.dart' as http;
 
@@ -1576,6 +1577,88 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
 
   bool _disposed = false;
   Future _currentTransaction = Future.sync(() => {});
+
+  /// Returns the current devices and identity keys for the given users.
+  /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-keys-query
+  @override
+  Future<KeysQueryResponse> requestDeviceKeys(
+    Map<String, dynamic> deviceKeys, {
+    int timeout,
+    String token,
+  }) async {
+    final keysQueryResponse = await super
+        .requestDeviceKeys(deviceKeys, timeout: timeout, token: token);
+    if (encryptionEnabled) {
+      for (var userEntry in keysQueryResponse.deviceKeys.entries) {
+        final userId = userEntry.key;
+        userEntry.value.removeWhere((deviceId, deviceKey) {
+          if (deviceKey.signatures.isEmpty) return false;
+          final fingerprintKeyJsonKey = 'ed25519:$deviceId';
+          if (!deviceKey.keys.containsKey(fingerprintKeyJsonKey) ||
+              !deviceKey.toJson().checkJsonSignature(
+                  deviceKey.keys[fingerprintKeyJsonKey], userId, deviceId)) {
+            Logs.warning(
+                'Received a signed device key from ${userEntry.key} with the device ID ${deviceId} which is invalid. We dismiss this key. JSON:');
+            //inspect(deviceKey.toJson());
+            return true;
+          }
+          return false;
+        });
+      }
+    }
+    return keysQueryResponse;
+  }
+
+  /// Claims one-time keys for use in pre-key messages.
+  /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-keys-claim
+  @override
+  Future<OneTimeKeysClaimResponse> requestOneTimeKeys(
+    Map<String, Map<String, String>> oneTimeKeys, {
+    int timeout,
+  }) async {
+    final response = await super.requestOneTimeKeys(
+      oneTimeKeys,
+      timeout: timeout,
+    );
+    return response;
+/*
+    if (encryptionEnabled) {
+      for (var userEntry in response.oneTimeKeys.entries) {
+        for (var deviceEntry in userEntry.value.entries) {
+          for (var entry in deviceEntry.value.entries) {
+            if (!(entry.value is Map)) continue;
+            if (!entry.key.contains(':')) continue;
+            final keyType = entry.key.split(':').first;
+            if (keyType != 'signed_curve25519') continue;
+            if (!userDeviceKeys.containsKey(userEntry.key) ||
+                !userDeviceKeys[userEntry.key]
+                    .deviceKeys
+                    .containsKey(deviceEntry.key)) {
+              Logs.warning(
+                  'Received a signed one-time-key from ${userEntry.key} with the device ID ${deviceEntry.key} which is unknown. We can not check the signature so we dismiss this key.');
+              continue;
+            }
+            final key = userDeviceKeys[userEntry.key]
+                .deviceKeys[deviceEntry.key]
+                .ed25519Key;
+            if ((entry.value as Map<String, dynamic>).checkJsonSignature(
+              key,
+              userEntry.key,
+              deviceEntry.key,
+            )) {
+              continue;
+            }
+
+            Logs.warning(
+                'Received a one-time-key from ${userEntry.key} with the device ID ${deviceEntry.key} with an invalid signature');
+            response.oneTimeKeys[userEntry.key][deviceEntry.key]
+                .remove(entry.key);
+          }
+        }
+      }
+    }
+    return response;*/
+  }
 
   /// Stops the synchronization and closes the database. After this
   /// you can safely make this Client instance null.

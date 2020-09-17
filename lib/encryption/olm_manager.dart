@@ -24,7 +24,6 @@ import 'package:famedlysdk/matrix_api.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:pedantic/pedantic.dart';
 
-import '../encryption/utils/json_signature_check_extension.dart';
 import '../src/utils/logs.dart';
 import 'encryption.dart';
 import 'utils/olm_session.dart';
@@ -408,14 +407,9 @@ class OlmManager {
       final userId = userKeysEntry.key;
       for (var deviceKeysEntry in userKeysEntry.value.entries) {
         final deviceId = deviceKeysEntry.key;
-        final fingerprintKey =
-            client.userDeviceKeys[userId].deviceKeys[deviceId].ed25519Key;
         final identityKey =
             client.userDeviceKeys[userId].deviceKeys[deviceId].curve25519Key;
         for (Map<String, dynamic> deviceKey in deviceKeysEntry.value.values) {
-          if (!deviceKey.checkJsonSignature(fingerprintKey, userId, deviceId)) {
-            continue;
-          }
           var session = olm.Session();
           try {
             session.create_outbound(_olmAccount, identityKey, deviceKey['key']);
