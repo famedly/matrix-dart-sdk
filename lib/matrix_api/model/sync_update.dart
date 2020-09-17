@@ -315,8 +315,8 @@ class DeviceListsUpdate {
   List<String> changed;
   List<String> left;
   DeviceListsUpdate.fromJson(Map<String, dynamic> json) {
-    changed = List<String>.from(json['changed']);
-    left = List<String>.from(json['left']);
+    changed = List<String>.from(json['changed'] ?? []);
+    left = List<String>.from(json['left'] ?? []);
   }
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
