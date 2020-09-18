@@ -430,6 +430,25 @@ void main() {
       });
     });
 
+    test('send location', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+
+      final body = 'Middle of the ocean';
+      final geoUri = 'geo:0.0,0.0';
+      final dynamic resp =
+          await room.sendLocation(body, geoUri, txid: 'testtxid');
+      expect(resp.startsWith('\$event'), true);
+
+      final entry = FakeMatrixApi.calledEndpoints.entries
+          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      final content = json.decode(entry.value.first);
+      expect(content, {
+        'msgtype': 'm.location',
+        'body': body,
+        'geo_uri': geoUri,
+      });
+    });
+
     // Not working because there is no real file to test it...
     /*test('sendImageEvent', () async {
       final File testFile = File.fromUri(Uri.parse("fake/path/file.jpeg"));
