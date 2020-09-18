@@ -1044,6 +1044,8 @@ class Room {
     return userList;
   }
 
+  bool _requestedParticipants = false;
+
   /// Request the full list of participants from the server. The local list
   /// from the store is not complete if the client uses lazy loading.
   Future<List<User>> requestParticipants() async {
@@ -1054,13 +1056,16 @@ class Room {
         setState(user);
       }
     }
-    if (participantListComplete) return getParticipants();
+    if (_requestedParticipants || participantListComplete) {
+      return getParticipants();
+    }
     final matrixEvents = await client.requestMembers(id);
     final users =
         matrixEvents.map((e) => Event.fromMatrixEvent(e, this).asUser).toList();
     for (final user in users) {
       setState(user); // at *least* cache this in-memory
     }
+    _requestedParticipants = true;
     users.removeWhere(
         (u) => [Membership.leave, Membership.ban].contains(u.membership));
     return users;
