@@ -26,7 +26,9 @@ class KeysQueryResponse {
   Map<String, MatrixCrossSigningKey> userSigningKeys;
 
   KeysQueryResponse.fromJson(Map<String, dynamic> json) {
-    failures = Map<String, dynamic>.from(json['failures']);
+    failures = json['failures'] != null
+        ? Map<String, dynamic>.from(json['failures'])
+        : null;
     deviceKeys = json['device_keys'] != null
         ? (json['device_keys'] as Map).map(
             (k, v) => MapEntry(

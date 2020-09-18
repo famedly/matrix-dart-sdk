@@ -1122,8 +1122,8 @@ class Client extends MatrixApi {
         var prevState = room.getState(stateEvent.type, stateEvent.stateKey);
         if (prevState != null && prevState.sortOrder > stateEvent.sortOrder) {
           Logs.warning('''
-A new ${eventUpdate.type} event of the type ${stateEvent.type} has arrived with a previews 
-sort order ${stateEvent.sortOrder} than the current ${stateEvent.type} event with a 
+A new ${eventUpdate.type} event of the type ${stateEvent.type} has arrived with a previews
+sort order ${stateEvent.sortOrder} than the current ${stateEvent.type} event with a
 sort order of ${prevState.sortOrder}. This should never happen...''');
           return;
         }
@@ -1213,6 +1213,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     return userIds;
   }
 
+  final Map<String, DateTime> _keyQueryFailures = {};
   Future<void> _updateUserDeviceKeys() async {
     try {
       if (!isLogged()) return;
@@ -1231,7 +1232,11 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
           _userDeviceKeys[userId] = DeviceKeysList(userId, this);
         }
         var deviceKeysList = userDeviceKeys[userId];
-        if (deviceKeysList.outdated) {
+        if (deviceKeysList.outdated &&
+            (!_keyQueryFailures.containsKey(userId.domain) ||
+                DateTime.now()
+                    .subtract(Duration(minutes: 5))
+                    .isAfter(_keyQueryFailures[userId.domain]))) {
           outdatedLists[userId] = [];
         }
       }
@@ -1371,6 +1376,13 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
               dbActions.add(
                   () => database.storeUserDeviceKeysInfo(id, userId, false));
             }
+          }
+        }
+
+        // now process all the failures
+        if (response.failures != null) {
+          for (final failureDomain in response.failures.keys) {
+            _keyQueryFailures[failureDomain] = DateTime.now();
           }
         }
       }
