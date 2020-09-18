@@ -46,7 +46,7 @@ class KeyManager {
     encryption.ssss.setValidator(MEGOLM_KEY, (String secret) async {
       final keyObj = olm.PkDecryption();
       try {
-        final info = await client.getRoomKeysBackup();
+        final info = await getRoomKeysBackupInfo(false);
         if (info.algorithm != RoomKeysAlgorithmType.v1Curve25519AesSha2) {
           return false;
         }
@@ -204,7 +204,8 @@ class KeyManager {
       final requestIdent = '$roomId|$sessionId|$senderKey';
       if (client.enableE2eeRecovery &&
           room != null &&
-          !_requestedSessionIds.contains(requestIdent)) {
+          !_requestedSessionIds.contains(requestIdent) &&
+          !client.isUnknownSession) {
         // do e2ee recovery
         _requestedSessionIds.add(requestIdent);
         unawaited(request(room, sessionId, senderKey, askOnlyOwnDevices: true));
@@ -367,6 +368,23 @@ class KeyManager {
     return (await encryption.ssss.getCached(MEGOLM_KEY)) != null;
   }
 
+  RoomKeysVersionResponse _roomKeysVersionCache;
+  DateTime _roomKeysVersionCacheDate;
+  Future<RoomKeysVersionResponse> getRoomKeysBackupInfo(
+      [bool useCache = true]) async {
+    if (_roomKeysVersionCache != null &&
+        _roomKeysVersionCacheDate != null &&
+        useCache &&
+        DateTime.now()
+            .subtract(Duration(minutes: 5))
+            .isBefore(_roomKeysVersionCacheDate)) {
+      return _roomKeysVersionCache;
+    }
+    _roomKeysVersionCache = await client.getRoomKeysBackup();
+    _roomKeysVersionCacheDate = DateTime.now();
+    return _roomKeysVersionCache;
+  }
+
   Future<void> loadFromResponse(RoomKeys keys) async {
     if (!(await isCached())) {
       return;
@@ -374,7 +392,7 @@ class KeyManager {
     final privateKey =
         base64.decode(await encryption.ssss.getCached(MEGOLM_KEY));
     final decryption = olm.PkDecryption();
-    final info = await client.getRoomKeysBackup();
+    final info = await getRoomKeysBackupInfo();
     String backupPubKey;
     try {
       backupPubKey = decryption.init_with_private_key(privateKey);
@@ -426,7 +444,7 @@ class KeyManager {
   }
 
   Future<void> loadSingleKey(String roomId, String sessionId) async {
-    final info = await client.getRoomKeysBackup();
+    final info = await getRoomKeysBackupInfo();
     final ret =
         await client.getRoomKeysSingleKey(roomId, sessionId, info.version);
     final keys = RoomKeys.fromJson({
@@ -449,7 +467,7 @@ class KeyManager {
     bool tryOnlineBackup = true,
     bool askOnlyOwnDevices = false,
   }) async {
-    if (tryOnlineBackup) {
+    if (tryOnlineBackup && await isCached()) {
       // let's first check our online key backup store thingy...
       var hadPreviously =
           getInboundGroupSession(room.id, sessionId, senderKey) != null;
@@ -530,7 +548,7 @@ class KeyManager {
           base64.decode(await encryption.ssss.getCached(MEGOLM_KEY));
       // decryption is needed to calculate the public key and thus see if the claimed information is in fact valid
       final decryption = olm.PkDecryption();
-      final info = await client.getRoomKeysBackup();
+      final info = await getRoomKeysBackupInfo(false);
       String backupPubKey;
       try {
         backupPubKey = decryption.init_with_private_key(privateKey);
