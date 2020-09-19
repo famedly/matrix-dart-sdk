@@ -1527,10 +1527,12 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
   }
 
   /// A list of mxids of users who are ignored.
-  List<String> get ignoredUsers =>
-      accountData.containsKey('m.ignored_user_list')
-          ? accountData['m.ignored_user_list'].content['ignored_users']
-          : [];
+  List<String> get ignoredUsers => (accountData
+              .containsKey('m.ignored_user_list') &&
+          accountData['m.ignored_user_list'].content['ignored_users'] is List)
+      ? List<String>.from(
+          accountData['m.ignored_user_list'].content['ignored_users'])
+      : [];
 
   /// Ignore another user. This will clear the local cached messages to
   /// hide all previous messages from this user.
