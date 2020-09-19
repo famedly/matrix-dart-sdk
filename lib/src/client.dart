@@ -1519,6 +1519,52 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     }
   }
 
+  /// Clear all local cached messages and perform a new clean sync.
+  Future<void> clearLocalCachedMessages() async {
+    prevBatch = null;
+    rooms.forEach((r) => r.prev_batch = null);
+    await database?.clearCache(id);
+  }
+
+  /// A list of mxids of users who are ignored.
+  List<String> get ignoredUsers =>
+      accountData.containsKey('m.ignored_user_list')
+          ? accountData['m.ignored_user_list'].content['ignored_users']
+          : [];
+
+  /// Ignore another user. This will clear the local cached messages to
+  /// hide all previous messages from this user.
+  Future<void> ignoreUser(String userId) async {
+    if (!userId.isValidMatrixId) {
+      throw Exception('$userId is not a valid mxid!');
+    }
+    await setAccountData(
+      userID,
+      'm.ignored_user_list',
+      {'ignored_users': ignoredUsers..add(userId)},
+    );
+    await clearLocalCachedMessages();
+    return;
+  }
+
+  /// Unignore a user. This will clear the local cached messages and request
+  /// them again from the server to avoid gaps in the timeline.
+  Future<void> unignoreUser(String userId) async {
+    if (!userId.isValidMatrixId) {
+      throw Exception('$userId is not a valid mxid!');
+    }
+    if (!ignoredUsers.contains(userId)) {
+      throw Exception('$userId is not in the ignore list!');
+    }
+    await setAccountData(
+      userID,
+      'm.ignored_user_list',
+      {'ignored_users': ignoredUsers..remove(userId)},
+    );
+    await clearLocalCachedMessages();
+    return;
+  }
+
   bool _disposed = false;
   Future _currentTransaction = Future.sync(() => {});
 

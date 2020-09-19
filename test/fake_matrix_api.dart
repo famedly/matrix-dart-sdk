@@ -1982,6 +1982,8 @@ class FakeMatrixApi extends MockClient {
       '/client/unstable/room_keys/version': (var reqI) => {'version': '5'},
     },
     'PUT': {
+      '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/m.ignored_user_list':
+          (var req) => {},
       '/client/r0/presence/${Uri.encodeComponent('@alice:example.com')}/status':
           (var req) => {},
       '/client/r0/pushrules/global/content/nocake/enabled': (var req) => {},

@@ -421,6 +421,18 @@ void main() {
     test('changePassword', () async {
       await matrix.changePassword('1234', oldPassword: '123456');
     });
+    test('ignoredUsers', () async {
+      expect(matrix.ignoredUsers, []);
+      matrix.accountData['m.ignored_user_list'] =
+          BasicEvent(type: 'm.ignored_user_list', content: {
+        'ignored_users': ['@charley:stupid.abc']
+      });
+      expect(matrix.ignoredUsers, ['@charley:stupid.abc']);
+    });
+    test('ignoredUsers', () async {
+      await matrix.ignoreUser('@charley2:stupid.abc');
+      await matrix.unignoreUser('@charley:stupid.abc');
+    });
 
     test('dispose', () async {
       await matrix.dispose(closeDatabase: true);
