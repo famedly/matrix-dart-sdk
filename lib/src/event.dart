@@ -781,19 +781,19 @@ class Event extends MatrixEvent {
   static final RegExp _onlyEmojiRegex = RegExp(
       r'^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|\s)*$',
       caseSensitive: false,
-      multiLine: true);
+      multiLine: false);
   static final RegExp _onlyEmojiEmoteRegex = RegExp(
       r'^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|<img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>|\s)*$',
       caseSensitive: false,
-      multiLine: true);
+      multiLine: false);
   static final RegExp _countEmojiRegex = RegExp(
       r'(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])',
       caseSensitive: false,
-      multiLine: true);
+      multiLine: false);
   static final RegExp _countEmojiEmoteRegex = RegExp(
       r'(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|<img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>)',
       caseSensitive: false,
-      multiLine: true);
+      multiLine: false);
 
   /// Returns if a given event only has emotes, emojis or whitespace as content.
   /// This is useful to determine if stand-alone emotes should be displayed bigger.

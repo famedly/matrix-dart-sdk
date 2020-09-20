@@ -1175,6 +1175,17 @@ void main() {
         'type': EventTypes.Message,
         'content': {
           'msgtype': 'm.text',
+          'body': 'normal message\n\nvery normal',
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.onlyEmotes, false);
+      expect(event.numberEmotes, 0);
+      event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'msgtype': 'm.text',
           'body': 'normal message with emoji 🦊',
         },
         'event_id': '\$edit2',
