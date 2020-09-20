@@ -1529,9 +1529,9 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
   /// A list of mxids of users who are ignored.
   List<String> get ignoredUsers => (accountData
               .containsKey('m.ignored_user_list') &&
-          accountData['m.ignored_user_list'].content['ignored_users'] is List)
+          accountData['m.ignored_user_list'].content['ignored_users'] is Map)
       ? List<String>.from(
-          accountData['m.ignored_user_list'].content['ignored_users'])
+          accountData['m.ignored_user_list'].content['ignored_users'].keys)
       : [];
 
   /// Ignore another user. This will clear the local cached messages to
@@ -1540,11 +1540,10 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     if (!userId.isValidMatrixId) {
       throw Exception('$userId is not a valid mxid!');
     }
-    await setAccountData(
-      userID,
-      'm.ignored_user_list',
-      {'ignored_users': ignoredUsers..add(userId)},
-    );
+    await setAccountData(userID, 'm.ignored_user_list', {
+      'ignored_users': Map.fromEntries(
+          (ignoredUsers..add(userId)).map((key) => MapEntry(key, {}))),
+    });
     await clearLocalCachedMessages();
     return;
   }
@@ -1558,11 +1557,10 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     if (!ignoredUsers.contains(userId)) {
       throw Exception('$userId is not in the ignore list!');
     }
-    await setAccountData(
-      userID,
-      'm.ignored_user_list',
-      {'ignored_users': ignoredUsers..remove(userId)},
-    );
+    await setAccountData(userID, 'm.ignored_user_list', {
+      'ignored_users': Map.fromEntries(
+          (ignoredUsers..remove(userId)).map((key) => MapEntry(key, {}))),
+    });
     await clearLocalCachedMessages();
     return;
   }

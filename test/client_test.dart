@@ -425,7 +425,9 @@ void main() {
       expect(matrix.ignoredUsers, []);
       matrix.accountData['m.ignored_user_list'] =
           BasicEvent(type: 'm.ignored_user_list', content: {
-        'ignored_users': ['@charley:stupid.abc']
+        'ignored_users': {
+          '@charley:stupid.abc': {},
+        },
       });
       expect(matrix.ignoredUsers, ['@charley:stupid.abc']);
     });
