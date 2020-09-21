@@ -722,7 +722,7 @@ class Room {
         content['formatted_body'] = '* ' + content['formatted_body'];
       }
     }
-
+    final sentDate = DateTime.now();
     final syncUpdate = SyncUpdate()
       ..rooms = (RoomsUpdate()
         ..join = (<String, JoinedRoomUpdate>{}..[id] = (JoinedRoomUpdate()
@@ -733,7 +733,7 @@ class Room {
                 ..type = type
                 ..eventId = messageID
                 ..senderId = client.userID
-                ..originServerTs = DateTime.now()
+                ..originServerTs = sentDate
                 ..unsigned = {
                   MessageSendingStatusKey: 0,
                   'transaction_id': messageID,
@@ -742,26 +742,38 @@ class Room {
     await _handleFakeSync(syncUpdate);
 
     // Send the text and on success, store and display a *sent* event.
-    try {
-      final res = await _sendContent(
-        type,
-        content,
-        txid: messageID,
-      );
-      syncUpdate.rooms.join.values.first.timeline.events.first
-          .unsigned[MessageSendingStatusKey] = 1;
-      syncUpdate.rooms.join.values.first.timeline.events.first.eventId = res;
-      await _handleFakeSync(syncUpdate);
-
-      return res;
-    } catch (e, s) {
-      Logs.warning(
-          '[Client] Problem while sending message: ' + e.toString(), s);
-      syncUpdate.rooms.join.values.first.timeline.events.first
-          .unsigned[MessageSendingStatusKey] = -1;
-      await _handleFakeSync(syncUpdate);
+    String res;
+    while (res == null) {
+      try {
+        res = await _sendContent(
+          type,
+          content,
+          txid: messageID,
+        );
+      } catch (e, s) {
+        if ((DateTime.now().millisecondsSinceEpoch -
+                sentDate.millisecondsSinceEpoch) <
+            (1000 * client.sendMessageTimeoutSeconds)) {
+          Logs.warning('[Client] Problem while sending message because of "' +
+              e.toString() +
+              '". Try again in 1 seconds...');
+          await Future.delayed(Duration(seconds: 1));
+        } else {
+          Logs.warning(
+              '[Client] Problem while sending message: ' + e.toString(), s);
+          syncUpdate.rooms.join.values.first.timeline.events.first
+              .unsigned[MessageSendingStatusKey] = -1;
+          await _handleFakeSync(syncUpdate);
+          return null;
+        }
+      }
     }
-    return null;
+    syncUpdate.rooms.join.values.first.timeline.events.first
+        .unsigned[MessageSendingStatusKey] = 1;
+    syncUpdate.rooms.join.values.first.timeline.events.first.eventId = res;
+    await _handleFakeSync(syncUpdate);
+
+    return res;
   }
 
   /// Call the Matrix API to join this room if the user is not already a member.

@@ -33,7 +33,8 @@ void main() {
     var updateCount = 0;
     var insertList = <int>[];
 
-    var client = Client('testclient', httpClient: FakeMatrixApi());
+    var client = Client('testclient',
+        httpClient: FakeMatrixApi(), sendMessageTimeoutSeconds: 5);
 
     var room = Room(
         id: roomID, client: client, prev_batch: '1234', roomAccountData: {});

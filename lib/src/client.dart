@@ -61,6 +61,8 @@ class Client extends MatrixApi {
 
   Set<String> roomPreviewLastEvents;
 
+  int sendMessageTimeoutSeconds;
+
   /// Create a client
   /// [clientName] = unique identifier of this client
   /// [database]: The database instance to use
@@ -92,6 +94,7 @@ class Client extends MatrixApi {
     this.importantStateEvents,
     this.roomPreviewLastEvents,
     this.pinUnreadRooms = false,
+    this.sendMessageTimeoutSeconds = 60,
     @deprecated bool debug,
   }) {
     verificationMethods ??= <KeyVerificationMethod>{};
