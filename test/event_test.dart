@@ -1267,6 +1267,18 @@ void main() {
       }, null);
       expect(event.onlyEmotes, true);
       expect(event.numberEmotes, 2);
+      // with variant selector
+      event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'msgtype': 'm.text',
+          'body': '❤️',
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.onlyEmotes, true);
+      expect(event.numberEmotes, 1);
     });
   });
 }
