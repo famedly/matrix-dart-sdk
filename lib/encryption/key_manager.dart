@@ -29,6 +29,7 @@ import '../matrix_api.dart';
 import '../src/database/database.dart';
 import '../src/utils/logs.dart';
 import '../src/utils/run_in_background.dart';
+import '../src/utils/run_in_root.dart';
 
 const MEGOLM_KEY = 'm.megolm_backup.v1';
 
@@ -208,7 +209,8 @@ class KeyManager {
           !client.isUnknownSession) {
         // do e2ee recovery
         _requestedSessionIds.add(requestIdent);
-        unawaited(request(room, sessionId, senderKey, askOnlyOwnDevices: true));
+        unawaited(runInRoot(() =>
+            request(room, sessionId, senderKey, askOnlyOwnDevices: true)));
       }
       return null;
     }

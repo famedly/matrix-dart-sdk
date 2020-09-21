@@ -23,23 +23,12 @@ import 'package:pedantic/pedantic.dart';
 
 import '../famedlysdk.dart';
 import '../matrix_api.dart';
-import '../src/utils/logs.dart';
+import '../src/utils/run_in_root.dart';
 import 'cross_signing.dart';
 import 'key_manager.dart';
 import 'key_verification_manager.dart';
 import 'olm_manager.dart';
 import 'ssss.dart';
-
-Future<T> _runInRoot<T>(FutureOr<T> Function() fn) async {
-  return await Zone.root.run(() async {
-    try {
-      return await fn();
-    } catch (e, s) {
-      Logs.error('Error thrown in root zone: ' + e.toString(), s);
-    }
-    return null;
-  });
-}
 
 class Encryption {
   final Client client;
@@ -80,7 +69,7 @@ class Encryption {
   }
 
   void handleDeviceOneTimeKeysCount(Map<String, int> countJson) {
-    _runInRoot(() => olmManager.handleDeviceOneTimeKeysCount(countJson));
+    runInRoot(() => olmManager.handleDeviceOneTimeKeysCount(countJson));
   }
 
   void onSync() {
@@ -96,21 +85,21 @@ class Encryption {
     if (['m.room_key_request', 'm.forwarded_room_key'].contains(event.type)) {
       // "just" room key request things. We don't need these asap, so we handle
       // them in the background
-      unawaited(_runInRoot(() => keyManager.handleToDeviceEvent(event)));
+      unawaited(runInRoot(() => keyManager.handleToDeviceEvent(event)));
     }
     if (event.type.startsWith('m.key.verification.')) {
       // some key verification event. No need to handle it now, we can easily
       // do this in the background
       unawaited(
-          _runInRoot(() => keyVerificationManager.handleToDeviceEvent(event)));
+          runInRoot(() => keyVerificationManager.handleToDeviceEvent(event)));
     }
     if (event.type.startsWith('m.secret.')) {
       // some ssss thing. We can do this in the background
-      unawaited(_runInRoot(() => ssss.handleToDeviceEvent(event)));
+      unawaited(runInRoot(() => ssss.handleToDeviceEvent(event)));
     }
     if (event.sender == client.userID) {
       // maybe we need to re-try SSSS secrets
-      unawaited(_runInRoot(() => ssss.periodicallyRequestMissingCache()));
+      unawaited(runInRoot(() => ssss.periodicallyRequestMissingCache()));
     }
   }
 
@@ -125,12 +114,12 @@ class Encryption {
                 .startsWith('m.key.verification.'))) {
       // "just" key verification, no need to do this in sync
       unawaited(
-          _runInRoot(() => keyVerificationManager.handleEventUpdate(update)));
+          runInRoot(() => keyVerificationManager.handleEventUpdate(update)));
     }
     if (update.content['sender'] == client.userID &&
         !update.content['unsigned'].containsKey('transaction_id')) {
       // maybe we need to re-try SSSS secrets
-      unawaited(_runInRoot(() => ssss.periodicallyRequestMissingCache()));
+      unawaited(runInRoot(() => ssss.periodicallyRequestMissingCache()));
     }
   }
 
