@@ -26,7 +26,7 @@ import '../../src/utils/logs.dart';
 
 class SessionKey {
   Map<String, dynamic> content;
-  Map<String, int> indexes;
+  Map<String, String> indexes;
   olm.InboundGroupSession inboundGroupSession;
   final String key;
   List<String> get forwardingCurve25519KeyChain =>
@@ -60,9 +60,14 @@ class SessionKey {
         Event.getMapFromPayload(dbEntry.senderClaimedKeys);
     content =
         parsedContent != null ? Map<String, dynamic>.from(parsedContent) : null;
-    indexes = parsedIndexes != null
-        ? Map<String, int>.from(parsedIndexes)
-        : <String, int>{};
+    // we need to try...catch as the map used to be <String, int> and that will throw an error.
+    try {
+      indexes = parsedIndexes != null
+          ? Map<String, String>.from(parsedIndexes)
+          : <String, String>{};
+    } catch (e) {
+      indexes = <String, String>{};
+    }
     roomId = dbEntry.roomId;
     sessionId = dbEntry.sessionId;
     _setSenderKey(dbEntry.senderKey);

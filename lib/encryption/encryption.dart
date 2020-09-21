@@ -160,24 +160,18 @@ class Encryption {
       final decryptResult = inboundGroupSession.inboundGroupSession
           .decrypt(event.content['ciphertext']);
       canRequestSession = false;
-      final messageIndexKey = event.eventId +
+      // we can't have the key be an int, else json-serializing will fail, thus we need it to be a string
+      final messageIndexKey = 'key-' + decryptResult.message_index.toString();
+      final messageIndexValue = event.eventId +
+          '|' +
           event.originServerTs.millisecondsSinceEpoch.toString();
       var haveIndex = inboundGroupSession.indexes.containsKey(messageIndexKey);
       if (haveIndex &&
-          inboundGroupSession.indexes[messageIndexKey] !=
-              decryptResult.message_index) {
+          inboundGroupSession.indexes[messageIndexKey] != messageIndexValue) {
         // TODO: maybe clear outbound session, if it is ours
         throw (DecryptError.CHANNEL_CORRUPTED);
       }
-      final existingIndex = inboundGroupSession.indexes.entries.firstWhere(
-          (e) => e.value == decryptResult.message_index,
-          orElse: () => null);
-      if (existingIndex != null && existingIndex.key != messageIndexKey) {
-        // TODO: maybe clear outbound session, if it is ours
-        throw (DecryptError.CHANNEL_CORRUPTED);
-      }
-      inboundGroupSession.indexes[messageIndexKey] =
-          decryptResult.message_index;
+      inboundGroupSession.indexes[messageIndexKey] = messageIndexValue;
       if (!haveIndex) {
         // now we persist the udpated indexes into the database.
         // the entry should always exist. In the case it doesn't, the following
