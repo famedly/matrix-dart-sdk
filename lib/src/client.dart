@@ -758,6 +758,11 @@ class Client extends MatrixApi {
       Logs.error('Error during processing events: ' + e.toString(), s);
       onSyncError.add(SdkError(
           exception: e is Exception ? e : Exception(e), stackTrace: s));
+      if (e is MatrixException &&
+          e.errcode == MatrixError.M_UNKNOWN_TOKEN.toString().split('.').last) {
+        Logs.warning('The user has been logged out!');
+        clear();
+      }
     }
   }
 
