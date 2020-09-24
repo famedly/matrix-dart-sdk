@@ -446,7 +446,7 @@ class Room {
     final allMxcs = <String>{}; // for easy dedupint
     final addEmotePack = (String packName, Map<String, dynamic> content,
         [String packNameOverride]) {
-      if (!(content['short'] is Map)) {
+      if (!(content['emoticons'] is Map) && !(content['short'] is Map)) {
         return;
       }
       if (content['pack'] is Map && content['pack']['name'] is String) {
@@ -459,13 +459,26 @@ class Room {
       if (!packs.containsKey(packName)) {
         packs[packName] = <String, String>{};
       }
-      content['short'].forEach((key, value) {
-        if (key is String && value is String && value.startsWith('mxc://')) {
-          if (allMxcs.add(value)) {
-            packs[packName][key] = value;
+      if (content['emoticons'] is Map) {
+        content['emoticons'].forEach((key, value) {
+          if (key is String &&
+              value is Map &&
+              value['url'] is String &&
+              value['url'].startsWith('mxc://')) {
+            if (allMxcs.add(value['url'])) {
+              packs[packName][key] = value['url'];
+            }
           }
-        }
-      });
+        });
+      } else {
+        content['short'].forEach((key, value) {
+          if (key is String && value is String && value.startsWith('mxc://')) {
+            if (allMxcs.add(value)) {
+              packs[packName][key] = value;
+            }
+          }
+        });
+      }
     };
     // first add all the user emotes
     final userEmotes = client.accountData['im.ponies.user_emotes'];
@@ -477,9 +490,6 @@ class Room {
     if (emoteRooms != null && emoteRooms.content['rooms'] is Map) {
       for (final roomEntry in emoteRooms.content['rooms'].entries) {
         final roomId = roomEntry.key;
-        if (roomId == id) {
-          continue;
-        }
         final room = client.getRoomById(roomId);
         if (room != null && roomEntry.value is Map) {
           for (final stateKeyEntry in roomEntry.value.entries) {
