@@ -1,16 +1,19 @@
-+++ This SDK is under development and highly experimental +++
+# Matrix Dart SDK
 
-# famedlysdk
+The Matrix Dart SDK can be used as a single component or in combination with other modules.
 
-Matrix SDK for the famedly talk app written in dart.
+## Overview
 
-## API
+![Client Architecture](/doc/images/Architecture.png "Client Architecture")
 
-The API is documented here: [famedly.gitlab.io/famedlysdk/famedlysdk/famedlysdk-library.html](https://famedly.gitlab.io/famedlysdk/famedlysdk/famedlysdk-library.html)
+## Documentation
 
-## How to use this
+* [API](https://famedly.gitlab.io/famedlysdk/api/index.html)
+* [Documentation](https://famedly.gitlab.io/famedlysdk/doc/index.html) !WIP!
 
-1. Import the sdk
+## Getting started
+
+### 1. Import the SDK
 
 ```yaml
   famedlysdk:
@@ -23,20 +26,13 @@ import 'package:flutter/material.dart';
 import 'package:famedlysdk/famedlysdk.dart';
 ```
 
-2. Create a new client:
+### 2. Create a new Client
 
 ```dart
-Client matrix = Client("HappyChat");
+Client matrix = Client("SecureChat");
 ```
 
-Take a look here for an example store:
-[https://gitlab.com/ChristianPauly/fluffychat-flutter/snippets](https://gitlab.com/ChristianPauly/fluffychat-flutter/snippets)
-
-```dart
-Client matrix = Client("HappyChat");
-```
-
-3. Connect to a Matrix Homeserver and listen to the streams:
+### 3. Connect to a Matrix Homeserver and listen to the streams
 
 ```dart
 matrix.onLoginStateChanged.stream.listen((bool loginState){ 
@@ -56,7 +52,7 @@ final bool serverValid = await matrix.checkServer("https://yourhomeserver.abc");
 final bool loginValid = await matrix.login("username", "password");
 ```
 
-4. Send a message to a Room:
+### 4. Send a message to a Room:
 
 ```dart
 final resp = await matrix.jsonRequest(
