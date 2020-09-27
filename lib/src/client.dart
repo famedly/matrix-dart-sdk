@@ -787,6 +787,7 @@ class Client extends MatrixApi {
         await _handleRooms(sync.rooms.leave, Membership.leave,
             sortAtTheEnd: sortAtTheEnd);
       }
+      _sortRooms();
     }
     if (sync.presence != null) {
       for (final newPresence in sync.presence) {
@@ -1112,7 +1113,6 @@ class Client extends MatrixApi {
       }
       if (rooms[j].onUpdate != null) rooms[j].onUpdate.add(rooms[j].id);
     }
-    _sortRooms();
   }
 
   void _updateRoomsByEventUpdate(EventUpdate eventUpdate) {
@@ -1160,7 +1160,6 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
         break;
     }
     room.onUpdate.add(room.id);
-    if (['timeline', 'account_data'].contains(eventUpdate.type)) _sortRooms();
   }
 
   bool _sortLock = false;
