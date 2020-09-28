@@ -24,6 +24,7 @@ import 'package:pedantic/pedantic.dart';
 import '../famedlysdk.dart';
 import '../matrix_api.dart';
 import '../src/utils/run_in_root.dart';
+import '../src/utils/logs.dart';
 import 'cross_signing.dart';
 import 'key_manager.dart';
 import 'key_verification_manager.dart';
@@ -158,6 +159,16 @@ class Encryption {
       if (haveIndex &&
           inboundGroupSession.indexes[messageIndexKey] != messageIndexValue) {
         // TODO: maybe clear outbound session, if it is ours
+        // TODO: Make it so that we can't re-request the session keys, this is just for debugging
+        Logs.error('[Decrypt] Could not decrypt due to a corrupted session.');
+        Logs.error('[Decrypt] Want session: $roomId $sessionId $senderKey');
+        Logs.error(
+            '[Decrypt] Have sessoin: ${inboundGroupSession.roomId} ${inboundGroupSession.sessionId} ${inboundGroupSession.senderKey}');
+        Logs.error(
+            '[Decrypt] Want indexes: $messageIndexKey $messageIndexValue');
+        Logs.error(
+            '[Decrypt] Have indexes: $messageIndexKey ${inboundGroupSession.indexes[messageIndexKey]}');
+        canRequestSession = true;
         throw (DecryptError.CHANNEL_CORRUPTED);
       }
       inboundGroupSession.indexes[messageIndexKey] = messageIndexValue;
