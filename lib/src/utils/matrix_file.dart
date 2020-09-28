@@ -19,7 +19,8 @@ class MatrixFile {
   }
 
   MatrixFile({this.bytes, this.name, this.mimeType}) {
-    mimeType ??= lookupMimeType(name, headerBytes: bytes);
+    mimeType ??=
+        lookupMimeType(name, headerBytes: bytes) ?? 'application/octet-stream';
     name = name.split('/').last.toLowerCase();
   }
 
