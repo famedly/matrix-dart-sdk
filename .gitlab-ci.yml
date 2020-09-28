@@ -4,8 +4,6 @@ stages:
   - deploy
   
 coverage:
-  tags:
-    - linux
   stage: coverage
   image: debian:testing
   dependencies: []
@@ -28,8 +26,6 @@ coverage:
       - coverage/
 
 coverage_without_olm:
-  tags:
-    - linux
   stage: coverage
   image: debian:testing
   dependencies: []
@@ -48,8 +44,6 @@ coverage_without_olm:
     - pub run test
   
 e2ee_test:
-  tags:
-    - linux
   stage: coverage
   image: debian:testing
   dependencies: []
@@ -72,8 +66,6 @@ e2ee_test:
   resource_group: e2ee_test
 
 code_analyze:
-  tags:
-    - docker
   stage: coverage
   image: cirrusci/flutter
   dependencies: []
@@ -82,8 +74,6 @@ code_analyze:
     - flutter analyze
 
 build_api_doc:
-  tags:
-    - docker
   stage: builddocs
   image: cirrusci/flutter
   script:
@@ -95,8 +85,6 @@ build_api_doc:
     - main
 
 build_doc:
-  tags:
-    - docker
   stage: builddocs
   image: registry.gitlab.com/larodar/mdbook-dtmo:latest
   script:
@@ -110,8 +98,6 @@ build_doc:
     - main
 
 pages:
-  tags:
-    - linux
   stage: deploy
   image: alpine:latest
   script:
