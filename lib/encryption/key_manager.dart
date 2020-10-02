@@ -286,7 +286,7 @@ class KeyManager {
         roomId,
         sess.outboundGroupSession.pickle(client.userID),
         json.encode(sess.devices),
-        sess.creationTime,
+        sess.creationTime.millisecondsSinceEpoch,
         sess.sentMessages);
   }
 

@@ -73,7 +73,7 @@ void main() {
           eventId: '143273582443PhrSn:example.org',
           roomId: id,
           sortOrder: 0.0,
-          originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
+          originServerTs: 1432735824653,
           sender: '@example:example.org',
           type: 'm.room.join_rules',
           unsigned: '{"age": 1234}',

@@ -1579,15 +1579,19 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
   /// you can safely make this Client instance null.
   Future<void> dispose({bool closeDatabase = false}) async {
     _disposed = true;
+    encryption?.dispose();
+    encryption = null;
     try {
       await _currentTransaction;
     } catch (_) {
       // No-OP
     }
-    if (closeDatabase) await database?.close();
+    try {
+      if (closeDatabase) await database?.close();
+    } catch (error, stacktrace) {
+      Logs.warning('Failed to close database: ' + error.toString(), stacktrace);
+    }
     database = null;
-    encryption?.dispose();
-    encryption = null;
     return;
   }
 }

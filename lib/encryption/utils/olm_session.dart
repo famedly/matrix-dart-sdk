@@ -46,7 +46,7 @@ class OlmSession {
       identityKey = dbEntry.identityKey;
       sessionId = dbEntry.sessionId;
       lastReceived =
-          dbEntry.lastReceived ?? DateTime.fromMillisecondsSinceEpoch(0);
+          DateTime.fromMillisecondsSinceEpoch(dbEntry.lastReceived ?? 0);
       assert(sessionId == session.session_id());
     } catch (e, s) {
       Logs.error('[LibOlm] Could not unpickle olm session: ' + e.toString(), s);

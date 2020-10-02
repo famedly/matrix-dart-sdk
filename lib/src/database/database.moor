@@ -48,7 +48,7 @@ CREATE TABLE olm_sessions (
   identity_key TEXT NOT NULL,
   session_id TEXT NOT NULL,
   pickle TEXT NOT NULL,
-  last_received DATETIME,
+  last_received BIGINT,
   UNIQUE(client_id, identity_key, session_id)
 ) AS DbOlmSessions;
 CREATE INDEX olm_sessions_index ON olm_sessions(client_id);
@@ -58,7 +58,7 @@ CREATE TABLE outbound_group_sessions (
   room_id TEXT NOT NULL,
   pickle TEXT NOT NULL,
   device_ids TEXT NOT NULL,
-  creation_time DATETIME NOT NULL,
+  creation_time BIGINT NOT NULL,
   sent_messages INTEGER NOT NULL DEFAULT '0',
   UNIQUE(client_id, room_id)
 ) AS DbOutboundGroupSession;
@@ -108,7 +108,7 @@ CREATE TABLE events (
   event_id TEXT NOT NULL,
   room_id TEXT NOT NULL,
   sort_order DOUBLE NOT NULL,
-  origin_server_ts DATETIME NOT NULL,
+  origin_server_ts BIGINT NOT NULL,
   sender TEXT NOT NULL,
   type TEXT NOT NULL,
   unsigned TEXT,
@@ -125,7 +125,7 @@ CREATE TABLE room_states (
   event_id TEXT NOT NULL,
   room_id TEXT NOT NULL,
   sort_order DOUBLE NOT NULL,
-  origin_server_ts DATETIME NOT NULL,
+  origin_server_ts BIGINT NOT NULL,
   sender TEXT NOT NULL,
   type TEXT NOT NULL,
   unsigned TEXT,
@@ -166,7 +166,7 @@ CREATE INDEX presences_index ON presences(client_id);
 CREATE TABLE files (
   mxc_uri TEXT NOT NULL PRIMARY KEY,
   bytes BLOB,
-  saved_at DATETIME,
+  saved_at BIGINT,
   UNIQUE(mxc_uri)
 ) AS DbFile;
 

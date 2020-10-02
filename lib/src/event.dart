@@ -192,7 +192,9 @@ class Event extends MatrixEvent {
       eventId: dbEntry.eventId,
       roomId: dbEntry.roomId,
       senderId: dbEntry.sender,
-      originServerTs: dbEntry.originServerTs ?? DateTime.now(),
+      originServerTs: dbEntry.originServerTs != null
+          ? DateTime.fromMillisecondsSinceEpoch(dbEntry.originServerTs)
+          : DateTime.now(),
       unsigned: unsigned,
       room: room,
       sortOrder: dbEntry.sortOrder ?? 0.0,
@@ -425,8 +427,8 @@ class Event extends MatrixEvent {
       storeable = storeable &&
           uint8list.lengthInBytes < room.client.database.maxFileSize;
       if (storeable) {
-        await room.client.database
-            .storeFile(mxContent.toString(), uint8list, DateTime.now());
+        await room.client.database.storeFile(mxContent.toString(), uint8list,
+            DateTime.now().millisecondsSinceEpoch);
       }
     }
 

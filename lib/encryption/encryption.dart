@@ -362,10 +362,10 @@ class Encryption {
   }
 
   void dispose() {
+    _backgroundTasksRunning = false;
     keyManager.dispose();
     olmManager.dispose();
     keyVerificationManager.dispose();
-    _backgroundTasksRunning = false;
   }
 }
 

@@ -238,8 +238,12 @@ class OlmManager {
       // update an existing session
       _olmSessions[session.identityKey][ix] = session;
     }
-    client.database.storeOlmSession(client.id, session.identityKey,
-        session.sessionId, session.pickledSession, session.lastReceived);
+    client.database.storeOlmSession(
+        client.id,
+        session.identityKey,
+        session.sessionId,
+        session.pickledSession,
+        session.lastReceived.millisecondsSinceEpoch);
   }
 
   ToDeviceEvent _decryptToDeviceEvent(ToDeviceEvent event) {

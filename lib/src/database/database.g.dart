@@ -85,6 +85,34 @@ class DbClient extends DataClass implements Insertable<DbClient> {
     return map;
   }
 
+  ClientsCompanion toCompanion(bool nullToAbsent) {
+    return ClientsCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
+      homeserverUrl: homeserverUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(homeserverUrl),
+      token:
+          token == null && nullToAbsent ? const Value.absent() : Value(token),
+      userId:
+          userId == null && nullToAbsent ? const Value.absent() : Value(userId),
+      deviceId: deviceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deviceId),
+      deviceName: deviceName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deviceName),
+      prevBatch: prevBatch == null && nullToAbsent
+          ? const Value.absent()
+          : Value(prevBatch),
+      olmAccount: olmAccount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(olmAccount),
+    );
+  }
+
   factory DbClient.fromJson(Map<String, dynamic> json,
       {ValueSerializer serializer}) {
     serializer ??= moorRuntimeOptions.defaultSerializer;
@@ -298,6 +326,22 @@ class ClientsCompanion extends UpdateCompanion<DbClient> {
       map['olm_account'] = Variable<String>(olmAccount.value);
     }
     return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ClientsCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('name: $name, ')
+          ..write('homeserverUrl: $homeserverUrl, ')
+          ..write('token: $token, ')
+          ..write('userId: $userId, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('deviceName: $deviceName, ')
+          ..write('prevBatch: $prevBatch, ')
+          ..write('olmAccount: $olmAccount')
+          ..write(')'))
+        .toString();
   }
 }
 
@@ -513,6 +557,19 @@ class DbUserDeviceKey extends DataClass implements Insertable<DbUserDeviceKey> {
     return map;
   }
 
+  UserDeviceKeysCompanion toCompanion(bool nullToAbsent) {
+    return UserDeviceKeysCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      userId:
+          userId == null && nullToAbsent ? const Value.absent() : Value(userId),
+      outdated: outdated == null && nullToAbsent
+          ? const Value.absent()
+          : Value(outdated),
+    );
+  }
+
   factory DbUserDeviceKey.fromJson(Map<String, dynamic> json,
       {ValueSerializer serializer}) {
     serializer ??= moorRuntimeOptions.defaultSerializer;
@@ -609,6 +666,16 @@ class UserDeviceKeysCompanion extends UpdateCompanion<DbUserDeviceKey> {
       map['outdated'] = Variable<bool>(outdated.value);
     }
     return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('UserDeviceKeysCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('userId: $userId, ')
+          ..write('outdated: $outdated')
+          ..write(')'))
+        .toString();
   }
 }
 
@@ -752,6 +819,28 @@ class DbUserDeviceKeysKey extends DataClass
       map['blocked'] = Variable<bool>(blocked);
     }
     return map;
+  }
+
+  UserDeviceKeysKeyCompanion toCompanion(bool nullToAbsent) {
+    return UserDeviceKeysKeyCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      userId:
+          userId == null && nullToAbsent ? const Value.absent() : Value(userId),
+      deviceId: deviceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deviceId),
+      content: content == null && nullToAbsent
+          ? const Value.absent()
+          : Value(content),
+      verified: verified == null && nullToAbsent
+          ? const Value.absent()
+          : Value(verified),
+      blocked: blocked == null && nullToAbsent
+          ? const Value.absent()
+          : Value(blocked),
+    );
   }
 
   factory DbUserDeviceKeysKey.fromJson(Map<String, dynamic> json,
@@ -911,6 +1000,19 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
       map['blocked'] = Variable<bool>(blocked.value);
     }
     return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('UserDeviceKeysKeyCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('userId: $userId, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('content: $content, ')
+          ..write('verified: $verified, ')
+          ..write('blocked: $blocked')
+          ..write(')'))
+        .toString();
   }
 }
 
@@ -1100,6 +1202,28 @@ class DbUserCrossSigningKey extends DataClass
     return map;
   }
 
+  UserCrossSigningKeysCompanion toCompanion(bool nullToAbsent) {
+    return UserCrossSigningKeysCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      userId:
+          userId == null && nullToAbsent ? const Value.absent() : Value(userId),
+      publicKey: publicKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(publicKey),
+      content: content == null && nullToAbsent
+          ? const Value.absent()
+          : Value(content),
+      verified: verified == null && nullToAbsent
+          ? const Value.absent()
+          : Value(verified),
+      blocked: blocked == null && nullToAbsent
+          ? const Value.absent()
+          : Value(blocked),
+    );
+  }
+
   factory DbUserCrossSigningKey.fromJson(Map<String, dynamic> json,
       {ValueSerializer serializer}) {
     serializer ??= moorRuntimeOptions.defaultSerializer;
@@ -1259,6 +1383,19 @@ class UserCrossSigningKeysCompanion
     }
     return map;
   }
+
+  @override
+  String toString() {
+    return (StringBuffer('UserCrossSigningKeysCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('userId: $userId, ')
+          ..write('publicKey: $publicKey, ')
+          ..write('content: $content, ')
+          ..write('verified: $verified, ')
+          ..write('blocked: $blocked')
+          ..write(')'))
+        .toString();
+  }
 }
 
 class UserCrossSigningKeys extends Table
@@ -1391,7 +1528,7 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
   final String identityKey;
   final String sessionId;
   final String pickle;
-  final DateTime lastReceived;
+  final int lastReceived;
   DbOlmSessions(
       {@required this.clientId,
       @required this.identityKey,
@@ -1404,7 +1541,6 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
     final effectivePrefix = prefix ?? '';
     final intType = db.typeSystem.forDartType<int>();
     final stringType = db.typeSystem.forDartType<String>();
-    final dateTimeType = db.typeSystem.forDartType<DateTime>();
     return DbOlmSessions(
       clientId:
           intType.mapFromDatabaseResponse(data['${effectivePrefix}client_id']),
@@ -1414,7 +1550,7 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
           .mapFromDatabaseResponse(data['${effectivePrefix}session_id']),
       pickle:
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}pickle']),
-      lastReceived: dateTimeType
+      lastReceived: intType
           .mapFromDatabaseResponse(data['${effectivePrefix}last_received']),
     );
   }
@@ -1434,9 +1570,28 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
       map['pickle'] = Variable<String>(pickle);
     }
     if (!nullToAbsent || lastReceived != null) {
-      map['last_received'] = Variable<DateTime>(lastReceived);
+      map['last_received'] = Variable<int>(lastReceived);
     }
     return map;
+  }
+
+  OlmSessionsCompanion toCompanion(bool nullToAbsent) {
+    return OlmSessionsCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      identityKey: identityKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(identityKey),
+      sessionId: sessionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sessionId),
+      pickle:
+          pickle == null && nullToAbsent ? const Value.absent() : Value(pickle),
+      lastReceived: lastReceived == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastReceived),
+    );
   }
 
   factory DbOlmSessions.fromJson(Map<String, dynamic> json,
@@ -1447,7 +1602,7 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
       identityKey: serializer.fromJson<String>(json['identity_key']),
       sessionId: serializer.fromJson<String>(json['session_id']),
       pickle: serializer.fromJson<String>(json['pickle']),
-      lastReceived: serializer.fromJson<DateTime>(json['last_received']),
+      lastReceived: serializer.fromJson<int>(json['last_received']),
     );
   }
   @override
@@ -1458,7 +1613,7 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
       'identity_key': serializer.toJson<String>(identityKey),
       'session_id': serializer.toJson<String>(sessionId),
       'pickle': serializer.toJson<String>(pickle),
-      'last_received': serializer.toJson<DateTime>(lastReceived),
+      'last_received': serializer.toJson<int>(lastReceived),
     };
   }
 
@@ -1467,7 +1622,7 @@ class DbOlmSessions extends DataClass implements Insertable<DbOlmSessions> {
           String identityKey,
           String sessionId,
           String pickle,
-          DateTime lastReceived}) =>
+          int lastReceived}) =>
       DbOlmSessions(
         clientId: clientId ?? this.clientId,
         identityKey: identityKey ?? this.identityKey,
@@ -1510,7 +1665,7 @@ class OlmSessionsCompanion extends UpdateCompanion<DbOlmSessions> {
   final Value<String> identityKey;
   final Value<String> sessionId;
   final Value<String> pickle;
-  final Value<DateTime> lastReceived;
+  final Value<int> lastReceived;
   const OlmSessionsCompanion({
     this.clientId = const Value.absent(),
     this.identityKey = const Value.absent(),
@@ -1533,7 +1688,7 @@ class OlmSessionsCompanion extends UpdateCompanion<DbOlmSessions> {
     Expression<String> identityKey,
     Expression<String> sessionId,
     Expression<String> pickle,
-    Expression<DateTime> lastReceived,
+    Expression<int> lastReceived,
   }) {
     return RawValuesInsertable({
       if (clientId != null) 'client_id': clientId,
@@ -1549,7 +1704,7 @@ class OlmSessionsCompanion extends UpdateCompanion<DbOlmSessions> {
       Value<String> identityKey,
       Value<String> sessionId,
       Value<String> pickle,
-      Value<DateTime> lastReceived}) {
+      Value<int> lastReceived}) {
     return OlmSessionsCompanion(
       clientId: clientId ?? this.clientId,
       identityKey: identityKey ?? this.identityKey,
@@ -1575,9 +1730,21 @@ class OlmSessionsCompanion extends UpdateCompanion<DbOlmSessions> {
       map['pickle'] = Variable<String>(pickle.value);
     }
     if (lastReceived.present) {
-      map['last_received'] = Variable<DateTime>(lastReceived.value);
+      map['last_received'] = Variable<int>(lastReceived.value);
     }
     return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OlmSessionsCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('identityKey: $identityKey, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('pickle: $pickle, ')
+          ..write('lastReceived: $lastReceived')
+          ..write(')'))
+        .toString();
   }
 }
 
@@ -1621,11 +1788,11 @@ class OlmSessions extends Table with TableInfo<OlmSessions, DbOlmSessions> {
 
   final VerificationMeta _lastReceivedMeta =
       const VerificationMeta('lastReceived');
-  GeneratedDateTimeColumn _lastReceived;
-  GeneratedDateTimeColumn get lastReceived =>
+  GeneratedIntColumn _lastReceived;
+  GeneratedIntColumn get lastReceived =>
       _lastReceived ??= _constructLastReceived();
-  GeneratedDateTimeColumn _constructLastReceived() {
-    return GeneratedDateTimeColumn('last_received', $tableName, true,
+  GeneratedIntColumn _constructLastReceived() {
+    return GeneratedIntColumn('last_received', $tableName, true,
         $customConstraints: '');
   }
 
@@ -1704,7 +1871,7 @@ class DbOutboundGroupSession extends DataClass
   final String roomId;
   final String pickle;
   final String deviceIds;
-  final DateTime creationTime;
+  final int creationTime;
   final int sentMessages;
   DbOutboundGroupSession(
       {@required this.clientId,
@@ -1719,7 +1886,6 @@ class DbOutboundGroupSession extends DataClass
     final effectivePrefix = prefix ?? '';
     final intType = db.typeSystem.forDartType<int>();
     final stringType = db.typeSystem.forDartType<String>();
-    final dateTimeType = db.typeSystem.forDartType<DateTime>();
     return DbOutboundGroupSession(
       clientId:
           intType.mapFromDatabaseResponse(data['${effectivePrefix}client_id']),
@@ -1729,7 +1895,7 @@ class DbOutboundGroupSession extends DataClass
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}pickle']),
       deviceIds: stringType
           .mapFromDatabaseResponse(data['${effectivePrefix}device_ids']),
-      creationTime: dateTimeType
+      creationTime: intType
           .mapFromDatabaseResponse(data['${effectivePrefix}creation_time']),
       sentMessages: intType
           .mapFromDatabaseResponse(data['${effectivePrefix}sent_messages']),
@@ -1751,12 +1917,33 @@ class DbOutboundGroupSession extends DataClass
       map['device_ids'] = Variable<String>(deviceIds);
     }
     if (!nullToAbsent || creationTime != null) {
-      map['creation_time'] = Variable<DateTime>(creationTime);
+      map['creation_time'] = Variable<int>(creationTime);
     }
     if (!nullToAbsent || sentMessages != null) {
       map['sent_messages'] = Variable<int>(sentMessages);
     }
     return map;
+  }
+
+  OutboundGroupSessionsCompanion toCompanion(bool nullToAbsent) {
+    return OutboundGroupSessionsCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      roomId:
+          roomId == null && nullToAbsent ? const Value.absent() : Value(roomId),
+      pickle:
+          pickle == null && nullToAbsent ? const Value.absent() : Value(pickle),
+      deviceIds: deviceIds == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deviceIds),
+      creationTime: creationTime == null && nullToAbsent
+          ? const Value.absent()
+          : Value(creationTime),
+      sentMessages: sentMessages == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sentMessages),
+    );
   }
 
   factory DbOutboundGroupSession.fromJson(Map<String, dynamic> json,
@@ -1767,7 +1954,7 @@ class DbOutboundGroupSession extends DataClass
       roomId: serializer.fromJson<String>(json['room_id']),
       pickle: serializer.fromJson<String>(json['pickle']),
       deviceIds: serializer.fromJson<String>(json['device_ids']),
-      creationTime: serializer.fromJson<DateTime>(json['creation_time']),
+      creationTime: serializer.fromJson<int>(json['creation_time']),
       sentMessages: serializer.fromJson<int>(json['sent_messages']),
     );
   }
@@ -1779,7 +1966,7 @@ class DbOutboundGroupSession extends DataClass
       'room_id': serializer.toJson<String>(roomId),
       'pickle': serializer.toJson<String>(pickle),
       'device_ids': serializer.toJson<String>(deviceIds),
-      'creation_time': serializer.toJson<DateTime>(creationTime),
+      'creation_time': serializer.toJson<int>(creationTime),
       'sent_messages': serializer.toJson<int>(sentMessages),
     };
   }
@@ -1789,7 +1976,7 @@ class DbOutboundGroupSession extends DataClass
           String roomId,
           String pickle,
           String deviceIds,
-          DateTime creationTime,
+          int creationTime,
           int sentMessages}) =>
       DbOutboundGroupSession(
         clientId: clientId ?? this.clientId,
@@ -1839,7 +2026,7 @@ class OutboundGroupSessionsCompanion
   final Value<String> roomId;
   final Value<String> pickle;
   final Value<String> deviceIds;
-  final Value<DateTime> creationTime;
+  final Value<int> creationTime;
   final Value<int> sentMessages;
   const OutboundGroupSessionsCompanion({
     this.clientId = const Value.absent(),
@@ -1854,7 +2041,7 @@ class OutboundGroupSessionsCompanion
     @required String roomId,
     @required String pickle,
     @required String deviceIds,
-    @required DateTime creationTime,
+    @required int creationTime,
     this.sentMessages = const Value.absent(),
   })  : clientId = Value(clientId),
         roomId = Value(roomId),
@@ -1866,7 +2053,7 @@ class OutboundGroupSessionsCompanion
     Expression<String> roomId,
     Expression<String> pickle,
     Expression<String> deviceIds,
-    Expression<DateTime> creationTime,
+    Expression<int> creationTime,
     Expression<int> sentMessages,
   }) {
     return RawValuesInsertable({
@@ -1884,7 +2071,7 @@ class OutboundGroupSessionsCompanion
       Value<String> roomId,
       Value<String> pickle,
       Value<String> deviceIds,
-      Value<DateTime> creationTime,
+      Value<int> creationTime,
       Value<int> sentMessages}) {
     return OutboundGroupSessionsCompanion(
       clientId: clientId ?? this.clientId,
@@ -1912,12 +2099,25 @@ class OutboundGroupSessionsCompanion
       map['device_ids'] = Variable<String>(deviceIds.value);
     }
     if (creationTime.present) {
-      map['creation_time'] = Variable<DateTime>(creationTime.value);
+      map['creation_time'] = Variable<int>(creationTime.value);
     }
     if (sentMessages.present) {
       map['sent_messages'] = Variable<int>(sentMessages.value);
     }
     return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OutboundGroupSessionsCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('roomId: $roomId, ')
+          ..write('pickle: $pickle, ')
+          ..write('deviceIds: $deviceIds, ')
+          ..write('creationTime: $creationTime, ')
+          ..write('sentMessages: $sentMessages')
+          ..write(')'))
+        .toString();
   }
 }
 
@@ -1960,11 +2160,11 @@ class OutboundGroupSessions extends Table
 
   final VerificationMeta _creationTimeMeta =
       const VerificationMeta('creationTime');
-  GeneratedDateTimeColumn _creationTime;
-  GeneratedDateTimeColumn get creationTime =>
+  GeneratedIntColumn _creationTime;
+  GeneratedIntColumn get creationTime =>
       _creationTime ??= _constructCreationTime();
-  GeneratedDateTimeColumn _constructCreationTime() {
-    return GeneratedDateTimeColumn('creation_time', $tableName, false,
+  GeneratedIntColumn _constructCreationTime() {
+    return GeneratedIntColumn('creation_time', $tableName, false,
         $customConstraints: 'NOT NULL');
   }
 
@@ -2134,6 +2334,36 @@ class DbInboundGroupSession extends DataClass
       map['sender_claimed_keys'] = Variable<String>(senderClaimedKeys);
     }
     return map;
+  }
+
+  InboundGroupSessionsCompanion toCompanion(bool nullToAbsent) {
+    return InboundGroupSessionsCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      roomId:
+          roomId == null && nullToAbsent ? const Value.absent() : Value(roomId),
+      sessionId: sessionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sessionId),
+      pickle:
+          pickle == null && nullToAbsent ? const Value.absent() : Value(pickle),
+      content: content == null && nullToAbsent
+          ? const Value.absent()
+          : Value(content),
+      indexes: indexes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(indexes),
+      uploaded: uploaded == null && nullToAbsent
+          ? const Value.absent()
+          : Value(uploaded),
+      senderKey: senderKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(senderKey),
+      senderClaimedKeys: senderClaimedKeys == null && nullToAbsent
+          ? const Value.absent()
+          : Value(senderClaimedKeys),
+    );
   }
 
   factory DbInboundGroupSession.fromJson(Map<String, dynamic> json,
@@ -2351,6 +2581,22 @@ class InboundGroupSessionsCompanion
       map['sender_claimed_keys'] = Variable<String>(senderClaimedKeys.value);
     }
     return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InboundGroupSessionsCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('roomId: $roomId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('pickle: $pickle, ')
+          ..write('content: $content, ')
+          ..write('indexes: $indexes, ')
+          ..write('uploaded: $uploaded, ')
+          ..write('senderKey: $senderKey, ')
+          ..write('senderClaimedKeys: $senderClaimedKeys')
+          ..write(')'))
+        .toString();
   }
 }
 
@@ -2621,6 +2867,42 @@ class DbRoom extends DataClass implements Insertable<DbRoom> {
     return map;
   }
 
+  RoomsCompanion toCompanion(bool nullToAbsent) {
+    return RoomsCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      roomId:
+          roomId == null && nullToAbsent ? const Value.absent() : Value(roomId),
+      membership: membership == null && nullToAbsent
+          ? const Value.absent()
+          : Value(membership),
+      highlightCount: highlightCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(highlightCount),
+      notificationCount: notificationCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notificationCount),
+      prevBatch: prevBatch == null && nullToAbsent
+          ? const Value.absent()
+          : Value(prevBatch),
+      joinedMemberCount: joinedMemberCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(joinedMemberCount),
+      invitedMemberCount: invitedMemberCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(invitedMemberCount),
+      newestSortOrder: newestSortOrder == null && nullToAbsent
+          ? const Value.absent()
+          : Value(newestSortOrder),
+      oldestSortOrder: oldestSortOrder == null && nullToAbsent
+          ? const Value.absent()
+          : Value(oldestSortOrder),
+      heroes:
+          heroes == null && nullToAbsent ? const Value.absent() : Value(heroes),
+    );
+  }
+
   factory DbRoom.fromJson(Map<String, dynamic> json,
       {ValueSerializer serializer}) {
     serializer ??= moorRuntimeOptions.defaultSerializer;
@@ -2872,6 +3154,24 @@ class RoomsCompanion extends UpdateCompanion<DbRoom> {
     }
     return map;
   }
+
+  @override
+  String toString() {
+    return (StringBuffer('RoomsCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('roomId: $roomId, ')
+          ..write('membership: $membership, ')
+          ..write('highlightCount: $highlightCount, ')
+          ..write('notificationCount: $notificationCount, ')
+          ..write('prevBatch: $prevBatch, ')
+          ..write('joinedMemberCount: $joinedMemberCount, ')
+          ..write('invitedMemberCount: $invitedMemberCount, ')
+          ..write('newestSortOrder: $newestSortOrder, ')
+          ..write('oldestSortOrder: $oldestSortOrder, ')
+          ..write('heroes: $heroes')
+          ..write(')'))
+        .toString();
+  }
 }
 
 class Rooms extends Table with TableInfo<Rooms, DbRoom> {
@@ -3102,7 +3402,7 @@ class DbEvent extends DataClass implements Insertable<DbEvent> {
   final String eventId;
   final String roomId;
   final double sortOrder;
-  final DateTime originServerTs;
+  final int originServerTs;
   final String sender;
   final String type;
   final String unsigned;
@@ -3129,7 +3429,6 @@ class DbEvent extends DataClass implements Insertable<DbEvent> {
     final intType = db.typeSystem.forDartType<int>();
     final stringType = db.typeSystem.forDartType<String>();
     final doubleType = db.typeSystem.forDartType<double>();
-    final dateTimeType = db.typeSystem.forDartType<DateTime>();
     return DbEvent(
       clientId:
           intType.mapFromDatabaseResponse(data['${effectivePrefix}client_id']),
@@ -3139,7 +3438,7 @@ class DbEvent extends DataClass implements Insertable<DbEvent> {
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}room_id']),
       sortOrder: doubleType
           .mapFromDatabaseResponse(data['${effectivePrefix}sort_order']),
-      originServerTs: dateTimeType
+      originServerTs: intType
           .mapFromDatabaseResponse(data['${effectivePrefix}origin_server_ts']),
       sender:
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}sender']),
@@ -3171,7 +3470,7 @@ class DbEvent extends DataClass implements Insertable<DbEvent> {
       map['sort_order'] = Variable<double>(sortOrder);
     }
     if (!nullToAbsent || originServerTs != null) {
-      map['origin_server_ts'] = Variable<DateTime>(originServerTs);
+      map['origin_server_ts'] = Variable<int>(originServerTs);
     }
     if (!nullToAbsent || sender != null) {
       map['sender'] = Variable<String>(sender);
@@ -3197,6 +3496,42 @@ class DbEvent extends DataClass implements Insertable<DbEvent> {
     return map;
   }
 
+  EventsCompanion toCompanion(bool nullToAbsent) {
+    return EventsCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      eventId: eventId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(eventId),
+      roomId:
+          roomId == null && nullToAbsent ? const Value.absent() : Value(roomId),
+      sortOrder: sortOrder == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sortOrder),
+      originServerTs: originServerTs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(originServerTs),
+      sender:
+          sender == null && nullToAbsent ? const Value.absent() : Value(sender),
+      type: type == null && nullToAbsent ? const Value.absent() : Value(type),
+      unsigned: unsigned == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unsigned),
+      content: content == null && nullToAbsent
+          ? const Value.absent()
+          : Value(content),
+      prevContent: prevContent == null && nullToAbsent
+          ? const Value.absent()
+          : Value(prevContent),
+      stateKey: stateKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(stateKey),
+      status:
+          status == null && nullToAbsent ? const Value.absent() : Value(status),
+    );
+  }
+
   factory DbEvent.fromJson(Map<String, dynamic> json,
       {ValueSerializer serializer}) {
     serializer ??= moorRuntimeOptions.defaultSerializer;
@@ -3205,7 +3540,7 @@ class DbEvent extends DataClass implements Insertable<DbEvent> {
       eventId: serializer.fromJson<String>(json['event_id']),
       roomId: serializer.fromJson<String>(json['room_id']),
       sortOrder: serializer.fromJson<double>(json['sort_order']),
-      originServerTs: serializer.fromJson<DateTime>(json['origin_server_ts']),
+      originServerTs: serializer.fromJson<int>(json['origin_server_ts']),
       sender: serializer.fromJson<String>(json['sender']),
       type: serializer.fromJson<String>(json['type']),
       unsigned: serializer.fromJson<String>(json['unsigned']),
@@ -3223,7 +3558,7 @@ class DbEvent extends DataClass implements Insertable<DbEvent> {
       'event_id': serializer.toJson<String>(eventId),
       'room_id': serializer.toJson<String>(roomId),
       'sort_order': serializer.toJson<double>(sortOrder),
-      'origin_server_ts': serializer.toJson<DateTime>(originServerTs),
+      'origin_server_ts': serializer.toJson<int>(originServerTs),
       'sender': serializer.toJson<String>(sender),
       'type': serializer.toJson<String>(type),
       'unsigned': serializer.toJson<String>(unsigned),
@@ -3239,7 +3574,7 @@ class DbEvent extends DataClass implements Insertable<DbEvent> {
           String eventId,
           String roomId,
           double sortOrder,
-          DateTime originServerTs,
+          int originServerTs,
           String sender,
           String type,
           String unsigned,
@@ -3326,7 +3661,7 @@ class EventsCompanion extends UpdateCompanion<DbEvent> {
   final Value<String> eventId;
   final Value<String> roomId;
   final Value<double> sortOrder;
-  final Value<DateTime> originServerTs;
+  final Value<int> originServerTs;
   final Value<String> sender;
   final Value<String> type;
   final Value<String> unsigned;
@@ -3353,7 +3688,7 @@ class EventsCompanion extends UpdateCompanion<DbEvent> {
     @required String eventId,
     @required String roomId,
     @required double sortOrder,
-    @required DateTime originServerTs,
+    @required int originServerTs,
     @required String sender,
     @required String type,
     this.unsigned = const Value.absent(),
@@ -3373,7 +3708,7 @@ class EventsCompanion extends UpdateCompanion<DbEvent> {
     Expression<String> eventId,
     Expression<String> roomId,
     Expression<double> sortOrder,
-    Expression<DateTime> originServerTs,
+    Expression<int> originServerTs,
     Expression<String> sender,
     Expression<String> type,
     Expression<String> unsigned,
@@ -3403,7 +3738,7 @@ class EventsCompanion extends UpdateCompanion<DbEvent> {
       Value<String> eventId,
       Value<String> roomId,
       Value<double> sortOrder,
-      Value<DateTime> originServerTs,
+      Value<int> originServerTs,
       Value<String> sender,
       Value<String> type,
       Value<String> unsigned,
@@ -3443,7 +3778,7 @@ class EventsCompanion extends UpdateCompanion<DbEvent> {
       map['sort_order'] = Variable<double>(sortOrder.value);
     }
     if (originServerTs.present) {
-      map['origin_server_ts'] = Variable<DateTime>(originServerTs.value);
+      map['origin_server_ts'] = Variable<int>(originServerTs.value);
     }
     if (sender.present) {
       map['sender'] = Variable<String>(sender.value);
@@ -3467,6 +3802,25 @@ class EventsCompanion extends UpdateCompanion<DbEvent> {
       map['status'] = Variable<int>(status.value);
     }
     return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EventsCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('eventId: $eventId, ')
+          ..write('roomId: $roomId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('originServerTs: $originServerTs, ')
+          ..write('sender: $sender, ')
+          ..write('type: $type, ')
+          ..write('unsigned: $unsigned, ')
+          ..write('content: $content, ')
+          ..write('prevContent: $prevContent, ')
+          ..write('stateKey: $stateKey, ')
+          ..write('status: $status')
+          ..write(')'))
+        .toString();
   }
 }
 
@@ -3508,11 +3862,11 @@ class Events extends Table with TableInfo<Events, DbEvent> {
 
   final VerificationMeta _originServerTsMeta =
       const VerificationMeta('originServerTs');
-  GeneratedDateTimeColumn _originServerTs;
-  GeneratedDateTimeColumn get originServerTs =>
+  GeneratedIntColumn _originServerTs;
+  GeneratedIntColumn get originServerTs =>
       _originServerTs ??= _constructOriginServerTs();
-  GeneratedDateTimeColumn _constructOriginServerTs() {
-    return GeneratedDateTimeColumn('origin_server_ts', $tableName, false,
+  GeneratedIntColumn _constructOriginServerTs() {
+    return GeneratedIntColumn('origin_server_ts', $tableName, false,
         $customConstraints: 'NOT NULL');
   }
 
@@ -3694,7 +4048,7 @@ class DbRoomState extends DataClass implements Insertable<DbRoomState> {
   final String eventId;
   final String roomId;
   final double sortOrder;
-  final DateTime originServerTs;
+  final int originServerTs;
   final String sender;
   final String type;
   final String unsigned;
@@ -3719,7 +4073,6 @@ class DbRoomState extends DataClass implements Insertable<DbRoomState> {
     final intType = db.typeSystem.forDartType<int>();
     final stringType = db.typeSystem.forDartType<String>();
     final doubleType = db.typeSystem.forDartType<double>();
-    final dateTimeType = db.typeSystem.forDartType<DateTime>();
     return DbRoomState(
       clientId:
           intType.mapFromDatabaseResponse(data['${effectivePrefix}client_id']),
@@ -3729,7 +4082,7 @@ class DbRoomState extends DataClass implements Insertable<DbRoomState> {
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}room_id']),
       sortOrder: doubleType
           .mapFromDatabaseResponse(data['${effectivePrefix}sort_order']),
-      originServerTs: dateTimeType
+      originServerTs: intType
           .mapFromDatabaseResponse(data['${effectivePrefix}origin_server_ts']),
       sender:
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}sender']),
@@ -3760,7 +4113,7 @@ class DbRoomState extends DataClass implements Insertable<DbRoomState> {
       map['sort_order'] = Variable<double>(sortOrder);
     }
     if (!nullToAbsent || originServerTs != null) {
-      map['origin_server_ts'] = Variable<DateTime>(originServerTs);
+      map['origin_server_ts'] = Variable<int>(originServerTs);
     }
     if (!nullToAbsent || sender != null) {
       map['sender'] = Variable<String>(sender);
@@ -3783,6 +4136,40 @@ class DbRoomState extends DataClass implements Insertable<DbRoomState> {
     return map;
   }
 
+  RoomStatesCompanion toCompanion(bool nullToAbsent) {
+    return RoomStatesCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      eventId: eventId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(eventId),
+      roomId:
+          roomId == null && nullToAbsent ? const Value.absent() : Value(roomId),
+      sortOrder: sortOrder == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sortOrder),
+      originServerTs: originServerTs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(originServerTs),
+      sender:
+          sender == null && nullToAbsent ? const Value.absent() : Value(sender),
+      type: type == null && nullToAbsent ? const Value.absent() : Value(type),
+      unsigned: unsigned == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unsigned),
+      content: content == null && nullToAbsent
+          ? const Value.absent()
+          : Value(content),
+      prevContent: prevContent == null && nullToAbsent
+          ? const Value.absent()
+          : Value(prevContent),
+      stateKey: stateKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(stateKey),
+    );
+  }
+
   factory DbRoomState.fromJson(Map<String, dynamic> json,
       {ValueSerializer serializer}) {
     serializer ??= moorRuntimeOptions.defaultSerializer;
@@ -3791,7 +4178,7 @@ class DbRoomState extends DataClass implements Insertable<DbRoomState> {
       eventId: serializer.fromJson<String>(json['event_id']),
       roomId: serializer.fromJson<String>(json['room_id']),
       sortOrder: serializer.fromJson<double>(json['sort_order']),
-      originServerTs: serializer.fromJson<DateTime>(json['origin_server_ts']),
+      originServerTs: serializer.fromJson<int>(json['origin_server_ts']),
       sender: serializer.fromJson<String>(json['sender']),
       type: serializer.fromJson<String>(json['type']),
       unsigned: serializer.fromJson<String>(json['unsigned']),
@@ -3808,7 +4195,7 @@ class DbRoomState extends DataClass implements Insertable<DbRoomState> {
       'event_id': serializer.toJson<String>(eventId),
       'room_id': serializer.toJson<String>(roomId),
       'sort_order': serializer.toJson<double>(sortOrder),
-      'origin_server_ts': serializer.toJson<DateTime>(originServerTs),
+      'origin_server_ts': serializer.toJson<int>(originServerTs),
       'sender': serializer.toJson<String>(sender),
       'type': serializer.toJson<String>(type),
       'unsigned': serializer.toJson<String>(unsigned),
@@ -3823,7 +4210,7 @@ class DbRoomState extends DataClass implements Insertable<DbRoomState> {
           String eventId,
           String roomId,
           double sortOrder,
-          DateTime originServerTs,
+          int originServerTs,
           String sender,
           String type,
           String unsigned,
@@ -3904,7 +4291,7 @@ class RoomStatesCompanion extends UpdateCompanion<DbRoomState> {
   final Value<String> eventId;
   final Value<String> roomId;
   final Value<double> sortOrder;
-  final Value<DateTime> originServerTs;
+  final Value<int> originServerTs;
   final Value<String> sender;
   final Value<String> type;
   final Value<String> unsigned;
@@ -3929,7 +4316,7 @@ class RoomStatesCompanion extends UpdateCompanion<DbRoomState> {
     @required String eventId,
     @required String roomId,
     @required double sortOrder,
-    @required DateTime originServerTs,
+    @required int originServerTs,
     @required String sender,
     @required String type,
     this.unsigned = const Value.absent(),
@@ -3949,7 +4336,7 @@ class RoomStatesCompanion extends UpdateCompanion<DbRoomState> {
     Expression<String> eventId,
     Expression<String> roomId,
     Expression<double> sortOrder,
-    Expression<DateTime> originServerTs,
+    Expression<int> originServerTs,
     Expression<String> sender,
     Expression<String> type,
     Expression<String> unsigned,
@@ -3977,7 +4364,7 @@ class RoomStatesCompanion extends UpdateCompanion<DbRoomState> {
       Value<String> eventId,
       Value<String> roomId,
       Value<double> sortOrder,
-      Value<DateTime> originServerTs,
+      Value<int> originServerTs,
       Value<String> sender,
       Value<String> type,
       Value<String> unsigned,
@@ -4015,7 +4402,7 @@ class RoomStatesCompanion extends UpdateCompanion<DbRoomState> {
       map['sort_order'] = Variable<double>(sortOrder.value);
     }
     if (originServerTs.present) {
-      map['origin_server_ts'] = Variable<DateTime>(originServerTs.value);
+      map['origin_server_ts'] = Variable<int>(originServerTs.value);
     }
     if (sender.present) {
       map['sender'] = Variable<String>(sender.value);
@@ -4036,6 +4423,24 @@ class RoomStatesCompanion extends UpdateCompanion<DbRoomState> {
       map['state_key'] = Variable<String>(stateKey.value);
     }
     return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RoomStatesCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('eventId: $eventId, ')
+          ..write('roomId: $roomId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('originServerTs: $originServerTs, ')
+          ..write('sender: $sender, ')
+          ..write('type: $type, ')
+          ..write('unsigned: $unsigned, ')
+          ..write('content: $content, ')
+          ..write('prevContent: $prevContent, ')
+          ..write('stateKey: $stateKey')
+          ..write(')'))
+        .toString();
   }
 }
 
@@ -4077,11 +4482,11 @@ class RoomStates extends Table with TableInfo<RoomStates, DbRoomState> {
 
   final VerificationMeta _originServerTsMeta =
       const VerificationMeta('originServerTs');
-  GeneratedDateTimeColumn _originServerTs;
-  GeneratedDateTimeColumn get originServerTs =>
+  GeneratedIntColumn _originServerTs;
+  GeneratedIntColumn get originServerTs =>
       _originServerTs ??= _constructOriginServerTs();
-  GeneratedDateTimeColumn _constructOriginServerTs() {
-    return GeneratedDateTimeColumn('origin_server_ts', $tableName, false,
+  GeneratedIntColumn _constructOriginServerTs() {
+    return GeneratedIntColumn('origin_server_ts', $tableName, false,
         $customConstraints: 'NOT NULL');
   }
 
@@ -4283,6 +4688,18 @@ class DbAccountData extends DataClass implements Insertable<DbAccountData> {
     return map;
   }
 
+  AccountDataCompanion toCompanion(bool nullToAbsent) {
+    return AccountDataCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      type: type == null && nullToAbsent ? const Value.absent() : Value(type),
+      content: content == null && nullToAbsent
+          ? const Value.absent()
+          : Value(content),
+    );
+  }
+
   factory DbAccountData.fromJson(Map<String, dynamic> json,
       {ValueSerializer serializer}) {
     serializer ??= moorRuntimeOptions.defaultSerializer;
@@ -4379,6 +4796,16 @@ class AccountDataCompanion extends UpdateCompanion<DbAccountData> {
       map['content'] = Variable<String>(content.value);
     }
     return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AccountDataCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('type: $type, ')
+          ..write('content: $content')
+          ..write(')'))
+        .toString();
   }
 }
 
@@ -4506,6 +4933,20 @@ class DbRoomAccountData extends DataClass
     return map;
   }
 
+  RoomAccountDataCompanion toCompanion(bool nullToAbsent) {
+    return RoomAccountDataCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      type: type == null && nullToAbsent ? const Value.absent() : Value(type),
+      roomId:
+          roomId == null && nullToAbsent ? const Value.absent() : Value(roomId),
+      content: content == null && nullToAbsent
+          ? const Value.absent()
+          : Value(content),
+    );
+  }
+
   factory DbRoomAccountData.fromJson(Map<String, dynamic> json,
       {ValueSerializer serializer}) {
     serializer ??= moorRuntimeOptions.defaultSerializer;
@@ -4621,6 +5062,17 @@ class RoomAccountDataCompanion extends UpdateCompanion<DbRoomAccountData> {
       map['content'] = Variable<String>(content.value);
     }
     return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RoomAccountDataCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('type: $type, ')
+          ..write('roomId: $roomId, ')
+          ..write('content: $content')
+          ..write(')'))
+        .toString();
   }
 }
 
@@ -4762,6 +5214,20 @@ class DbPresence extends DataClass implements Insertable<DbPresence> {
     return map;
   }
 
+  PresencesCompanion toCompanion(bool nullToAbsent) {
+    return PresencesCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      type: type == null && nullToAbsent ? const Value.absent() : Value(type),
+      sender:
+          sender == null && nullToAbsent ? const Value.absent() : Value(sender),
+      content: content == null && nullToAbsent
+          ? const Value.absent()
+          : Value(content),
+    );
+  }
+
   factory DbPresence.fromJson(Map<String, dynamic> json,
       {ValueSerializer serializer}) {
     serializer ??= moorRuntimeOptions.defaultSerializer;
@@ -4877,6 +5343,17 @@ class PresencesCompanion extends UpdateCompanion<DbPresence> {
       map['content'] = Variable<String>(content.value);
     }
     return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PresencesCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('type: $type, ')
+          ..write('sender: $sender, ')
+          ..write('content: $content')
+          ..write(')'))
+        .toString();
   }
 }
 
@@ -5024,6 +5501,23 @@ class DbSSSSCache extends DataClass implements Insertable<DbSSSSCache> {
     return map;
   }
 
+  SsssCacheCompanion toCompanion(bool nullToAbsent) {
+    return SsssCacheCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      type: type == null && nullToAbsent ? const Value.absent() : Value(type),
+      keyId:
+          keyId == null && nullToAbsent ? const Value.absent() : Value(keyId),
+      ciphertext: ciphertext == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ciphertext),
+      content: content == null && nullToAbsent
+          ? const Value.absent()
+          : Value(content),
+    );
+  }
+
   factory DbSSSSCache.fromJson(Map<String, dynamic> json,
       {ValueSerializer serializer}) {
     serializer ??= moorRuntimeOptions.defaultSerializer;
@@ -5165,6 +5659,18 @@ class SsssCacheCompanion extends UpdateCompanion<DbSSSSCache> {
     }
     return map;
   }
+
+  @override
+  String toString() {
+    return (StringBuffer('SsssCacheCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('type: $type, ')
+          ..write('keyId: $keyId, ')
+          ..write('ciphertext: $ciphertext, ')
+          ..write('content: $content')
+          ..write(')'))
+        .toString();
+  }
 }
 
 class SsssCache extends Table with TableInfo<SsssCache, DbSSSSCache> {
@@ -5282,21 +5788,21 @@ class SsssCache extends Table with TableInfo<SsssCache, DbSSSSCache> {
 class DbFile extends DataClass implements Insertable<DbFile> {
   final String mxcUri;
   final Uint8List bytes;
-  final DateTime savedAt;
+  final int savedAt;
   DbFile({@required this.mxcUri, this.bytes, this.savedAt});
   factory DbFile.fromData(Map<String, dynamic> data, GeneratedDatabase db,
       {String prefix}) {
     final effectivePrefix = prefix ?? '';
     final stringType = db.typeSystem.forDartType<String>();
     final uint8ListType = db.typeSystem.forDartType<Uint8List>();
-    final dateTimeType = db.typeSystem.forDartType<DateTime>();
+    final intType = db.typeSystem.forDartType<int>();
     return DbFile(
       mxcUri:
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}mxc_uri']),
       bytes: uint8ListType
           .mapFromDatabaseResponse(data['${effectivePrefix}bytes']),
-      savedAt: dateTimeType
-          .mapFromDatabaseResponse(data['${effectivePrefix}saved_at']),
+      savedAt:
+          intType.mapFromDatabaseResponse(data['${effectivePrefix}saved_at']),
     );
   }
   @override
@@ -5309,9 +5815,21 @@ class DbFile extends DataClass implements Insertable<DbFile> {
       map['bytes'] = Variable<Uint8List>(bytes);
     }
     if (!nullToAbsent || savedAt != null) {
-      map['saved_at'] = Variable<DateTime>(savedAt);
+      map['saved_at'] = Variable<int>(savedAt);
     }
     return map;
+  }
+
+  FilesCompanion toCompanion(bool nullToAbsent) {
+    return FilesCompanion(
+      mxcUri:
+          mxcUri == null && nullToAbsent ? const Value.absent() : Value(mxcUri),
+      bytes:
+          bytes == null && nullToAbsent ? const Value.absent() : Value(bytes),
+      savedAt: savedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(savedAt),
+    );
   }
 
   factory DbFile.fromJson(Map<String, dynamic> json,
@@ -5320,7 +5838,7 @@ class DbFile extends DataClass implements Insertable<DbFile> {
     return DbFile(
       mxcUri: serializer.fromJson<String>(json['mxc_uri']),
       bytes: serializer.fromJson<Uint8List>(json['bytes']),
-      savedAt: serializer.fromJson<DateTime>(json['saved_at']),
+      savedAt: serializer.fromJson<int>(json['saved_at']),
     );
   }
   @override
@@ -5329,11 +5847,11 @@ class DbFile extends DataClass implements Insertable<DbFile> {
     return <String, dynamic>{
       'mxc_uri': serializer.toJson<String>(mxcUri),
       'bytes': serializer.toJson<Uint8List>(bytes),
-      'saved_at': serializer.toJson<DateTime>(savedAt),
+      'saved_at': serializer.toJson<int>(savedAt),
     };
   }
 
-  DbFile copyWith({String mxcUri, Uint8List bytes, DateTime savedAt}) => DbFile(
+  DbFile copyWith({String mxcUri, Uint8List bytes, int savedAt}) => DbFile(
         mxcUri: mxcUri ?? this.mxcUri,
         bytes: bytes ?? this.bytes,
         savedAt: savedAt ?? this.savedAt,
@@ -5363,7 +5881,7 @@ class DbFile extends DataClass implements Insertable<DbFile> {
 class FilesCompanion extends UpdateCompanion<DbFile> {
   final Value<String> mxcUri;
   final Value<Uint8List> bytes;
-  final Value<DateTime> savedAt;
+  final Value<int> savedAt;
   const FilesCompanion({
     this.mxcUri = const Value.absent(),
     this.bytes = const Value.absent(),
@@ -5377,7 +5895,7 @@ class FilesCompanion extends UpdateCompanion<DbFile> {
   static Insertable<DbFile> custom({
     Expression<String> mxcUri,
     Expression<Uint8List> bytes,
-    Expression<DateTime> savedAt,
+    Expression<int> savedAt,
   }) {
     return RawValuesInsertable({
       if (mxcUri != null) 'mxc_uri': mxcUri,
@@ -5387,7 +5905,7 @@ class FilesCompanion extends UpdateCompanion<DbFile> {
   }
 
   FilesCompanion copyWith(
-      {Value<String> mxcUri, Value<Uint8List> bytes, Value<DateTime> savedAt}) {
+      {Value<String> mxcUri, Value<Uint8List> bytes, Value<int> savedAt}) {
     return FilesCompanion(
       mxcUri: mxcUri ?? this.mxcUri,
       bytes: bytes ?? this.bytes,
@@ -5405,9 +5923,19 @@ class FilesCompanion extends UpdateCompanion<DbFile> {
       map['bytes'] = Variable<Uint8List>(bytes.value);
     }
     if (savedAt.present) {
-      map['saved_at'] = Variable<DateTime>(savedAt.value);
+      map['saved_at'] = Variable<int>(savedAt.value);
     }
     return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FilesCompanion(')
+          ..write('mxcUri: $mxcUri, ')
+          ..write('bytes: $bytes, ')
+          ..write('savedAt: $savedAt')
+          ..write(')'))
+        .toString();
   }
 }
 
@@ -5432,10 +5960,10 @@ class Files extends Table with TableInfo<Files, DbFile> {
   }
 
   final VerificationMeta _savedAtMeta = const VerificationMeta('savedAt');
-  GeneratedDateTimeColumn _savedAt;
-  GeneratedDateTimeColumn get savedAt => _savedAt ??= _constructSavedAt();
-  GeneratedDateTimeColumn _constructSavedAt() {
-    return GeneratedDateTimeColumn('saved_at', $tableName, true,
+  GeneratedIntColumn _savedAt;
+  GeneratedIntColumn get savedAt => _savedAt ??= _constructSavedAt();
+  GeneratedIntColumn _constructSavedAt() {
+    return GeneratedIntColumn('saved_at', $tableName, true,
         $customConstraints: '');
   }
 
@@ -5570,24 +6098,10 @@ abstract class _$Database extends GeneratedDatabase {
   SsssCache get ssssCache => _ssssCache ??= SsssCache(this);
   Files _files;
   Files get files => _files ??= Files(this);
-  DbClient _rowToDbClient(QueryRow row) {
-    return DbClient(
-      clientId: row.readInt('client_id'),
-      name: row.readString('name'),
-      homeserverUrl: row.readString('homeserver_url'),
-      token: row.readString('token'),
-      userId: row.readString('user_id'),
-      deviceId: row.readString('device_id'),
-      deviceName: row.readString('device_name'),
-      prevBatch: row.readString('prev_batch'),
-      olmAccount: row.readString('olm_account'),
-    );
-  }
-
   Selectable<DbClient> dbGetClient(String name) {
     return customSelect('SELECT * FROM clients WHERE name = :name',
         variables: [Variable.withString(name)],
-        readsFrom: {clients}).map(_rowToDbClient);
+        readsFrom: {clients}).map(clients.mapFromRow);
   }
 
   Future<int> updateClient(
@@ -5637,72 +6151,32 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  DbUserDeviceKey _rowToDbUserDeviceKey(QueryRow row) {
-    return DbUserDeviceKey(
-      clientId: row.readInt('client_id'),
-      userId: row.readString('user_id'),
-      outdated: row.readBool('outdated'),
-    );
-  }
-
   Selectable<DbUserDeviceKey> getAllUserDeviceKeys(int client_id) {
     return customSelect(
         'SELECT * FROM user_device_keys WHERE client_id = :client_id',
         variables: [Variable.withInt(client_id)],
-        readsFrom: {userDeviceKeys}).map(_rowToDbUserDeviceKey);
-  }
-
-  DbUserDeviceKeysKey _rowToDbUserDeviceKeysKey(QueryRow row) {
-    return DbUserDeviceKeysKey(
-      clientId: row.readInt('client_id'),
-      userId: row.readString('user_id'),
-      deviceId: row.readString('device_id'),
-      content: row.readString('content'),
-      verified: row.readBool('verified'),
-      blocked: row.readBool('blocked'),
-    );
+        readsFrom: {userDeviceKeys}).map(userDeviceKeys.mapFromRow);
   }
 
   Selectable<DbUserDeviceKeysKey> getAllUserDeviceKeysKeys(int client_id) {
     return customSelect(
         'SELECT * FROM user_device_keys_key WHERE client_id = :client_id',
         variables: [Variable.withInt(client_id)],
-        readsFrom: {userDeviceKeysKey}).map(_rowToDbUserDeviceKeysKey);
-  }
-
-  DbUserCrossSigningKey _rowToDbUserCrossSigningKey(QueryRow row) {
-    return DbUserCrossSigningKey(
-      clientId: row.readInt('client_id'),
-      userId: row.readString('user_id'),
-      publicKey: row.readString('public_key'),
-      content: row.readString('content'),
-      verified: row.readBool('verified'),
-      blocked: row.readBool('blocked'),
-    );
+        readsFrom: {userDeviceKeysKey}).map(userDeviceKeysKey.mapFromRow);
   }
 
   Selectable<DbUserCrossSigningKey> getAllUserCrossSigningKeys(int client_id) {
     return customSelect(
         'SELECT * FROM user_cross_signing_keys WHERE client_id = :client_id',
         variables: [Variable.withInt(client_id)],
-        readsFrom: {userCrossSigningKeys}).map(_rowToDbUserCrossSigningKey);
-  }
-
-  DbOlmSessions _rowToDbOlmSessions(QueryRow row) {
-    return DbOlmSessions(
-      clientId: row.readInt('client_id'),
-      identityKey: row.readString('identity_key'),
-      sessionId: row.readString('session_id'),
-      pickle: row.readString('pickle'),
-      lastReceived: row.readDateTime('last_received'),
-    );
+        readsFrom: {userCrossSigningKeys}).map(userCrossSigningKeys.mapFromRow);
   }
 
   Selectable<DbOlmSessions> getAllOlmSessions(int client_id) {
     return customSelect(
         'SELECT * FROM olm_sessions WHERE client_id = :client_id',
         variables: [Variable.withInt(client_id)],
-        readsFrom: {olmSessions}).map(_rowToDbOlmSessions);
+        readsFrom: {olmSessions}).map(olmSessions.mapFromRow);
   }
 
   Selectable<DbOlmSessions> dbGetOlmSessions(
@@ -5715,11 +6189,11 @@ abstract class _$Database extends GeneratedDatabase {
         ],
         readsFrom: {
           olmSessions
-        }).map(_rowToDbOlmSessions);
+        }).map(olmSessions.mapFromRow);
   }
 
   Future<int> storeOlmSession(int client_id, String identitiy_key,
-      String session_id, String pickle, DateTime last_received) {
+      String session_id, String pickle, int last_received) {
     return customInsert(
       'INSERT OR REPLACE INTO olm_sessions (client_id, identity_key, session_id, pickle, last_received) VALUES (:client_id, :identitiy_key, :session_id, :pickle, :last_received)',
       variables: [
@@ -5727,20 +6201,9 @@ abstract class _$Database extends GeneratedDatabase {
         Variable.withString(identitiy_key),
         Variable.withString(session_id),
         Variable.withString(pickle),
-        Variable.withDateTime(last_received)
+        Variable.withInt(last_received)
       ],
       updates: {olmSessions},
-    );
-  }
-
-  DbOutboundGroupSession _rowToDbOutboundGroupSession(QueryRow row) {
-    return DbOutboundGroupSession(
-      clientId: row.readInt('client_id'),
-      roomId: row.readString('room_id'),
-      pickle: row.readString('pickle'),
-      deviceIds: row.readString('device_ids'),
-      creationTime: row.readDateTime('creation_time'),
-      sentMessages: row.readInt('sent_messages'),
     );
   }
 
@@ -5748,25 +6211,29 @@ abstract class _$Database extends GeneratedDatabase {
       int client_id) {
     return customSelect(
         'SELECT * FROM outbound_group_sessions WHERE client_id = :client_id',
-        variables: [Variable.withInt(client_id)],
-        readsFrom: {outboundGroupSessions}).map(_rowToDbOutboundGroupSession);
+        variables: [
+          Variable.withInt(client_id)
+        ],
+        readsFrom: {
+          outboundGroupSessions
+        }).map(outboundGroupSessions.mapFromRow);
   }
 
   Selectable<DbOutboundGroupSession> dbGetOutboundGroupSession(
       int client_id, String room_id) {
     return customSelect(
         'SELECT * FROM outbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id',
-        variables: [Variable.withInt(client_id), Variable.withString(room_id)],
-        readsFrom: {outboundGroupSessions}).map(_rowToDbOutboundGroupSession);
+        variables: [
+          Variable.withInt(client_id),
+          Variable.withString(room_id)
+        ],
+        readsFrom: {
+          outboundGroupSessions
+        }).map(outboundGroupSessions.mapFromRow);
   }
 
-  Future<int> storeOutboundGroupSession(
-      int client_id,
-      String room_id,
-      String pickle,
-      String device_ids,
-      DateTime creation_time,
-      int sent_messages) {
+  Future<int> storeOutboundGroupSession(int client_id, String room_id,
+      String pickle, String device_ids, int creation_time, int sent_messages) {
     return customInsert(
       'INSERT OR REPLACE INTO outbound_group_sessions (client_id, room_id, pickle, device_ids, creation_time, sent_messages) VALUES (:client_id, :room_id, :pickle, :device_ids, :creation_time, :sent_messages)',
       variables: [
@@ -5774,7 +6241,7 @@ abstract class _$Database extends GeneratedDatabase {
         Variable.withString(room_id),
         Variable.withString(pickle),
         Variable.withString(device_ids),
-        Variable.withDateTime(creation_time),
+        Variable.withInt(creation_time),
         Variable.withInt(sent_messages)
       ],
       updates: {outboundGroupSessions},
@@ -5790,20 +6257,6 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  DbInboundGroupSession _rowToDbInboundGroupSession(QueryRow row) {
-    return DbInboundGroupSession(
-      clientId: row.readInt('client_id'),
-      roomId: row.readString('room_id'),
-      sessionId: row.readString('session_id'),
-      pickle: row.readString('pickle'),
-      content: row.readString('content'),
-      indexes: row.readString('indexes'),
-      uploaded: row.readBool('uploaded'),
-      senderKey: row.readString('sender_key'),
-      senderClaimedKeys: row.readString('sender_claimed_keys'),
-    );
-  }
-
   Selectable<DbInboundGroupSession> dbGetInboundGroupSessionKey(
       int client_id, String room_id, String session_id) {
     return customSelect(
@@ -5815,7 +6268,7 @@ abstract class _$Database extends GeneratedDatabase {
         ],
         readsFrom: {
           inboundGroupSessions
-        }).map(_rowToDbInboundGroupSession);
+        }).map(inboundGroupSessions.mapFromRow);
   }
 
   Selectable<DbInboundGroupSession> dbGetInboundGroupSessionKeys(
@@ -5823,14 +6276,14 @@ abstract class _$Database extends GeneratedDatabase {
     return customSelect(
         'SELECT * FROM inbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id',
         variables: [Variable.withInt(client_id), Variable.withString(room_id)],
-        readsFrom: {inboundGroupSessions}).map(_rowToDbInboundGroupSession);
+        readsFrom: {inboundGroupSessions}).map(inboundGroupSessions.mapFromRow);
   }
 
   Selectable<DbInboundGroupSession> getAllInboundGroupSessions(int client_id) {
     return customSelect(
         'SELECT * FROM inbound_group_sessions WHERE client_id = :client_id',
         variables: [Variable.withInt(client_id)],
-        readsFrom: {inboundGroupSessions}).map(_rowToDbInboundGroupSession);
+        readsFrom: {inboundGroupSessions}).map(inboundGroupSessions.mapFromRow);
   }
 
   Future<int> storeInboundGroupSession(
@@ -5877,7 +6330,7 @@ abstract class _$Database extends GeneratedDatabase {
     return customSelect(
         'SELECT * FROM inbound_group_sessions WHERE uploaded = false LIMIT 500',
         variables: [],
-        readsFrom: {inboundGroupSessions}).map(_rowToDbInboundGroupSession);
+        readsFrom: {inboundGroupSessions}).map(inboundGroupSessions.mapFromRow);
   }
 
   Future<int> markInboundGroupSessionAsUploaded(
@@ -6042,21 +6495,11 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  DbSSSSCache _rowToDbSSSSCache(QueryRow row) {
-    return DbSSSSCache(
-      clientId: row.readInt('client_id'),
-      type: row.readString('type'),
-      keyId: row.readString('key_id'),
-      ciphertext: row.readString('ciphertext'),
-      content: row.readString('content'),
-    );
-  }
-
   Selectable<DbSSSSCache> dbGetSSSSCache(int client_id, String type) {
     return customSelect(
         'SELECT * FROM ssss_cache WHERE client_id = :client_id AND type = :type',
         variables: [Variable.withInt(client_id), Variable.withString(type)],
-        readsFrom: {ssssCache}).map(_rowToDbSSSSCache);
+        readsFrom: {ssssCache}).map(ssssCache.mapFromRow);
   }
 
   Future<int> clearSSSSCache(int client_id) {
@@ -6135,19 +6578,11 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  DbAccountData _rowToDbAccountData(QueryRow row) {
-    return DbAccountData(
-      clientId: row.readInt('client_id'),
-      type: row.readString('type'),
-      content: row.readString('content'),
-    );
-  }
-
   Selectable<DbAccountData> getAllAccountData(int client_id) {
     return customSelect(
         'SELECT * FROM account_data WHERE client_id = :client_id',
         variables: [Variable.withInt(client_id)],
-        readsFrom: {accountData}).map(_rowToDbAccountData);
+        readsFrom: {accountData}).map(accountData.mapFromRow);
   }
 
   Future<int> storeAccountData(int client_id, String type, String content) {
@@ -6210,22 +6645,6 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  DbRoomState _rowToDbRoomState(QueryRow row) {
-    return DbRoomState(
-      clientId: row.readInt('client_id'),
-      eventId: row.readString('event_id'),
-      roomId: row.readString('room_id'),
-      sortOrder: row.readDouble('sort_order'),
-      originServerTs: row.readDateTime('origin_server_ts'),
-      sender: row.readString('sender'),
-      type: row.readString('type'),
-      unsigned: row.readString('unsigned'),
-      content: row.readString('content'),
-      prevContent: row.readString('prev_content'),
-      stateKey: row.readString('state_key'),
-    );
-  }
-
   Selectable<DbRoomState> getImportantRoomStates(
       int client_id, List<String> events) {
     var $arrayStartIndex = 2;
@@ -6239,14 +6658,14 @@ abstract class _$Database extends GeneratedDatabase {
         ],
         readsFrom: {
           roomStates
-        }).map(_rowToDbRoomState);
+        }).map(roomStates.mapFromRow);
   }
 
   Selectable<DbRoomState> getAllRoomStates(int client_id) {
     return customSelect(
         'SELECT * FROM room_states WHERE client_id = :client_id',
         variables: [Variable.withInt(client_id)],
-        readsFrom: {roomStates}).map(_rowToDbRoomState);
+        readsFrom: {roomStates}).map(roomStates.mapFromRow);
   }
 
   Selectable<DbRoomState> getUnimportantRoomStatesForRoom(
@@ -6263,7 +6682,7 @@ abstract class _$Database extends GeneratedDatabase {
         ],
         readsFrom: {
           roomStates
-        }).map(_rowToDbRoomState);
+        }).map(roomStates.mapFromRow);
   }
 
   Future<int> storeEvent(
@@ -6271,7 +6690,7 @@ abstract class _$Database extends GeneratedDatabase {
       String event_id,
       String room_id,
       double sort_order,
-      DateTime origin_server_ts,
+      int origin_server_ts,
       String sender,
       String type,
       String unsigned,
@@ -6286,7 +6705,7 @@ abstract class _$Database extends GeneratedDatabase {
         Variable.withString(event_id),
         Variable.withString(room_id),
         Variable.withReal(sort_order),
-        Variable.withDateTime(origin_server_ts),
+        Variable.withInt(origin_server_ts),
         Variable.withString(sender),
         Variable.withString(type),
         Variable.withString(unsigned),
@@ -6304,7 +6723,7 @@ abstract class _$Database extends GeneratedDatabase {
       String event_id,
       String room_id,
       double sort_order,
-      DateTime origin_server_ts,
+      int origin_server_ts,
       String sender,
       String type,
       String unsigned,
@@ -6318,7 +6737,7 @@ abstract class _$Database extends GeneratedDatabase {
         Variable.withString(event_id),
         Variable.withString(room_id),
         Variable.withReal(sort_order),
-        Variable.withDateTime(origin_server_ts),
+        Variable.withInt(origin_server_ts),
         Variable.withString(sender),
         Variable.withString(type),
         Variable.withString(unsigned),
@@ -6330,20 +6749,11 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  DbRoomAccountData _rowToDbRoomAccountData(QueryRow row) {
-    return DbRoomAccountData(
-      clientId: row.readInt('client_id'),
-      type: row.readString('type'),
-      roomId: row.readString('room_id'),
-      content: row.readString('content'),
-    );
-  }
-
   Selectable<DbRoomAccountData> getAllRoomAccountData(int client_id) {
     return customSelect(
         'SELECT * FROM room_account_data WHERE client_id = :client_id',
         variables: [Variable.withInt(client_id)],
-        readsFrom: {roomAccountData}).map(_rowToDbRoomAccountData);
+        readsFrom: {roomAccountData}).map(roomAccountData.mapFromRow);
   }
 
   Future<int> storeRoomAccountData(
@@ -6371,45 +6781,28 @@ abstract class _$Database extends GeneratedDatabase {
         ],
         readsFrom: {
           roomStates
-        }).map(_rowToDbRoomState);
+        }).map(roomStates.mapFromRow);
   }
 
   Selectable<DbRoomState> dbGetUsers(int client_id, String room_id) {
     return customSelect(
         'SELECT * FROM room_states WHERE client_id = :client_id AND type = \'m.room.member\' AND room_id = :room_id',
         variables: [Variable.withInt(client_id), Variable.withString(room_id)],
-        readsFrom: {roomStates}).map(_rowToDbRoomState);
-  }
-
-  DbEvent _rowToDbEvent(QueryRow row) {
-    return DbEvent(
-      clientId: row.readInt('client_id'),
-      eventId: row.readString('event_id'),
-      roomId: row.readString('room_id'),
-      sortOrder: row.readDouble('sort_order'),
-      originServerTs: row.readDateTime('origin_server_ts'),
-      sender: row.readString('sender'),
-      type: row.readString('type'),
-      unsigned: row.readString('unsigned'),
-      content: row.readString('content'),
-      prevContent: row.readString('prev_content'),
-      stateKey: row.readString('state_key'),
-      status: row.readInt('status'),
-    );
+        readsFrom: {roomStates}).map(roomStates.mapFromRow);
   }
 
   Selectable<DbEvent> dbGetEventList(int client_id, String room_id) {
     return customSelect(
         'SELECT * FROM events WHERE client_id = :client_id AND room_id = :room_id GROUP BY event_id ORDER BY sort_order DESC',
         variables: [Variable.withInt(client_id), Variable.withString(room_id)],
-        readsFrom: {events}).map(_rowToDbEvent);
+        readsFrom: {events}).map(events.mapFromRow);
   }
 
   Selectable<DbRoomState> getStates(int client_id, String room_id) {
     return customSelect(
         'SELECT * FROM room_states WHERE client_id = :client_id AND room_id = :room_id',
         variables: [Variable.withInt(client_id), Variable.withString(room_id)],
-        readsFrom: {roomStates}).map(_rowToDbRoomState);
+        readsFrom: {roomStates}).map(roomStates.mapFromRow);
   }
 
   Future<int> resetNotificationCount(int client_id, String room_id) {
@@ -6421,27 +6814,11 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  DbRoom _rowToDbRoom(QueryRow row) {
-    return DbRoom(
-      clientId: row.readInt('client_id'),
-      roomId: row.readString('room_id'),
-      membership: row.readString('membership'),
-      highlightCount: row.readInt('highlight_count'),
-      notificationCount: row.readInt('notification_count'),
-      prevBatch: row.readString('prev_batch'),
-      joinedMemberCount: row.readInt('joined_member_count'),
-      invitedMemberCount: row.readInt('invited_member_count'),
-      newestSortOrder: row.readDouble('newest_sort_order'),
-      oldestSortOrder: row.readDouble('oldest_sort_order'),
-      heroes: row.readString('heroes'),
-    );
-  }
-
   Selectable<DbRoom> getRoom(int client_id, String room_id) {
     return customSelect(
         'SELECT * FROM rooms WHERE client_id = :client_id AND room_id = :room_id',
         variables: [Variable.withInt(client_id), Variable.withString(room_id)],
-        readsFrom: {rooms}).map(_rowToDbRoom);
+        readsFrom: {rooms}).map(rooms.mapFromRow);
   }
 
   Selectable<DbEvent> getEvent(int client_id, String event_id, String room_id) {
@@ -6454,7 +6831,7 @@ abstract class _$Database extends GeneratedDatabase {
         ],
         readsFrom: {
           events
-        }).map(_rowToDbEvent);
+        }).map(events.mapFromRow);
   }
 
   Future<int> removeEvent(int client_id, String event_id, String room_id) {
@@ -6488,30 +6865,22 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  Future<int> storeFile(String mxc_uri, Uint8List bytes, DateTime time) {
+  Future<int> storeFile(String mxc_uri, Uint8List bytes, int time) {
     return customInsert(
       'INSERT OR REPLACE INTO files (mxc_uri, bytes, saved_at) VALUES (:mxc_uri, :bytes, :time)',
       variables: [
         Variable.withString(mxc_uri),
         Variable.withBlob(bytes),
-        Variable.withDateTime(time)
+        Variable.withInt(time)
       ],
       updates: {files},
-    );
-  }
-
-  DbFile _rowToDbFile(QueryRow row) {
-    return DbFile(
-      mxcUri: row.readString('mxc_uri'),
-      bytes: row.readBlob('bytes'),
-      savedAt: row.readDateTime('saved_at'),
     );
   }
 
   Selectable<DbFile> dbGetFile(String mxc_uri) {
     return customSelect('SELECT * FROM files WHERE mxc_uri = :mxc_uri',
         variables: [Variable.withString(mxc_uri)],
-        readsFrom: {files}).map(_rowToDbFile);
+        readsFrom: {files}).map(files.mapFromRow);
   }
 
   Future<int> markPendingEventsAsError(int client_id) {

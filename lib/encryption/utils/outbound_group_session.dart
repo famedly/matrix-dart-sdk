@@ -44,7 +44,7 @@ class OutboundGroupSession {
     try {
       outboundGroupSession.unpickle(key, dbEntry.pickle);
       devices = List<String>.from(json.decode(dbEntry.deviceIds));
-      creationTime = dbEntry.creationTime;
+      creationTime = DateTime.fromMillisecondsSinceEpoch(dbEntry.creationTime);
       sentMessages = dbEntry.sentMessages;
     } catch (e, s) {
       dispose();

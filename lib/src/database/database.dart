@@ -55,7 +55,7 @@ class Database extends _$Database {
   Database.connect(DatabaseConnection connection) : super.connect(connection);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   int get maxFileSize => 1 * 1024 * 1024;
 
@@ -116,6 +116,27 @@ class Database extends _$Database {
               await m.addColumnIfNotExists(
                   inboundGroupSessions, inboundGroupSessions.senderClaimedKeys);
               from++;
+            }
+            if (from == 6) {
+              // DATETIME was internally an int, so we should be able to re-use the
+              // olm_sessions table.
+              await m.deleteTable('outbound_group_sessions');
+              await m.createTable(outboundGroupSessions);
+              await m.deleteTable('events');
+              await m.createTable(events);
+              await m.deleteTable('room_states');
+              await m.createTable(roomStates);
+              await m.deleteTable('files');
+              await m.createTable(files);
+              // and now clear cache
+              await delete(presences).go();
+              await delete(roomAccountData).go();
+              await delete(accountData).go();
+              await delete(roomStates).go();
+              await delete(events).go();
+              await delete(rooms).go();
+              await delete(outboundGroupSessions).go();
+              await customStatement('UPDATE clients SET prev_batch = null');
             }
           } catch (e, s) {
             Logs.error(e, s);
@@ -484,10 +505,8 @@ class Database extends _$Database {
           eventContent['event_id'],
           chatId,
           oldEvent?.sortOrder ?? eventUpdate.sortOrder,
-          eventContent['origin_server_ts'] != null
-              ? DateTime.fromMillisecondsSinceEpoch(
-                  eventContent['origin_server_ts'])
-              : DateTime.now(),
+          eventContent['origin_server_ts'] ??
+              DateTime.now().millisecondsSinceEpoch,
           eventContent['sender'],
           eventContent['type'],
           json.encode(eventContent['unsigned'] ?? ''),
@@ -520,10 +539,7 @@ class Database extends _$Database {
         eventContent['event_id'] ?? now.millisecondsSinceEpoch.toString(),
         chatId,
         eventUpdate.sortOrder ?? 0.0,
-        eventContent['origin_server_ts'] != null
-            ? DateTime.fromMillisecondsSinceEpoch(
-                eventContent['origin_server_ts'])
-            : now,
+        eventContent['origin_server_ts'] ?? now.millisecondsSinceEpoch,
         eventContent['sender'],
         eventContent['type'],
         json.encode(eventContent['unsigned'] ?? ''),
