@@ -1620,7 +1620,8 @@ class Room {
     var deviceKeys = <DeviceKeys>[];
     var users = await requestParticipants();
     for (final user in users) {
-      if (client.userDeviceKeys.containsKey(user.id)) {
+      if ([Membership.invite, Membership.join].contains(user.membership) &&
+          client.userDeviceKeys.containsKey(user.id)) {
         for (var deviceKeyEntry
             in client.userDeviceKeys[user.id].deviceKeys.values) {
           deviceKeys.add(deviceKeyEntry);

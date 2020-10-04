@@ -133,7 +133,7 @@ void main() {
       expect(user1.canChangePowerLevel, false);
     });
     test('dispose client', () async {
-      await client.dispose();
+      await client.dispose(closeDatabase: true);
     });
   });
 }
