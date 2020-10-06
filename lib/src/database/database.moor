@@ -234,3 +234,4 @@ removeSuccessfulRoomEvents: DELETE FROM events WHERE client_id = :client_id AND 
 storeFile: INSERT OR REPLACE INTO files (mxc_uri, bytes, saved_at) VALUES (:mxc_uri, :bytes, :time);
 dbGetFile: SELECT * FROM files WHERE mxc_uri = :mxc_uri;
 markPendingEventsAsError: UPDATE events SET status = -1 WHERE client_id = :client_id AND status = 0;
+deleteOldFiles: DELETE FROM files WHERE saved_at < :saved_at;

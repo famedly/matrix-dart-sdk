@@ -6892,6 +6892,15 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
+  Future<int> deleteOldFiles(int saved_at) {
+    return customUpdate(
+      'DELETE FROM files WHERE saved_at < :saved_at',
+      variables: [Variable.withInt(saved_at)],
+      updates: {files},
+      updateKind: UpdateKind.delete,
+    );
+  }
+
   @override
   Iterable<TableInfo> get allTables => allSchemaEntities.whereType<TableInfo>();
   @override

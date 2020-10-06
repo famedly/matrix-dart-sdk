@@ -749,6 +749,8 @@ class Client extends MatrixApi {
         _sortRooms();
       }
       prevBatch = syncResp.nextBatch;
+      await database?.deleteOldFiles(
+          DateTime.now().subtract(Duration(days: 30)).millisecondsSinceEpoch);
       await _updateUserDeviceKeys();
       if (encryptionEnabled) {
         encryption.onSync();
