@@ -234,7 +234,7 @@ class Event extends MatrixEvent {
 
   String get messageType => type == EventTypes.Sticker
       ? MessageTypes.Sticker
-      : content['msgtype'] ?? MessageTypes.Text;
+      : (content['msgtype'] is String ? content['msgtype'] : MessageTypes.Text);
 
   void setRedactionEvent(Event redactedBecause) {
     unsigned = {
@@ -281,10 +281,11 @@ class Event extends MatrixEvent {
   }
 
   /// Returns the body of this event if it has a body.
-  String get text => content['body'] ?? '';
+  String get text => content['body'] is String ? content['body'] : '';
 
   /// Returns the formatted boy of this event if it has a formatted body.
-  String get formattedText => content['formatted_body'] ?? '';
+  String get formattedText =>
+      content['formatted_body'] is String ? content['formatted_body'] : '';
 
   /// Use this to get the body.
   String get body {
@@ -800,13 +801,13 @@ class Event extends MatrixEvent {
   /// Returns if a given event only has emotes, emojis or whitespace as content.
   /// This is useful to determine if stand-alone emotes should be displayed bigger.
   bool get onlyEmotes => isRichMessage
-      ? _onlyEmojiEmoteRegex.hasMatch(content['formatted_body'])
-      : _onlyEmojiRegex.hasMatch(content['body'] ?? '');
+      ? _onlyEmojiEmoteRegex.hasMatch(formattedText)
+      : _onlyEmojiRegex.hasMatch(text);
 
   /// Gets the number of emotes in a given message. This is useful to determine if
   /// emotes should be displayed bigger. WARNING: This does **not** test if there are
   /// only emotes. Use `event.onlyEmotes` for that!
   int get numberEmotes => isRichMessage
-      ? _countEmojiEmoteRegex.allMatches(content['formatted_body']).length
-      : _countEmojiRegex.allMatches(content['body'] ?? '').length;
+      ? _countEmojiEmoteRegex.allMatches(formattedText).length
+      : _countEmojiRegex.allMatches(text).length;
 }

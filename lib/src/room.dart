@@ -174,7 +174,8 @@ class Room {
       StreamController.broadcast();
 
   /// The name of the room if set by a participant.
-  String get name => states[EventTypes.RoomName] != null
+  String get name => states[EventTypes.RoomName] != null &&
+          states[EventTypes.RoomName].content['name'] is String
       ? states[EventTypes.RoomName].content['name']
       : '';
 
@@ -205,14 +206,15 @@ class Room {
   }
 
   /// The topic of the room if set by a participant.
-  String get topic => states[EventTypes.RoomTopic] != null
+  String get topic => states[EventTypes.RoomTopic] != null &&
+          states[EventTypes.RoomTopic].content['topic'] is String
       ? states[EventTypes.RoomTopic].content['topic']
       : '';
 
   /// The avatar of the room if set by a participant.
   Uri get avatar {
     if (states[EventTypes.RoomAvatar] != null &&
-        states[EventTypes.RoomAvatar].content['url'] != null) {
+        states[EventTypes.RoomAvatar].content['url'] is String) {
       return Uri.parse(states[EventTypes.RoomAvatar].content['url']);
     }
     if (mHeroes != null && mHeroes.length == 1 && states[mHeroes[0]] != null) {
