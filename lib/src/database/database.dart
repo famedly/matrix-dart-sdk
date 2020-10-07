@@ -164,8 +164,8 @@ class Database extends _$Database {
   Future<DbClient> getClient(String name) async {
     final res = await dbGetClient(name).get();
     if (res.isEmpty) return null;
-    await markPendingEventsAsError(res.first.clientId);
-    return res.first;
+    await markPendingEventsAsError(res.single.clientId);
+    return res.single;
   }
 
   Future<Map<String, sdk.DeviceKeysList>> getUserDeviceKeys(
@@ -216,7 +216,7 @@ class Database extends _$Database {
     if (res.isEmpty) {
       return null;
     }
-    return res.first;
+    return res.single;
   }
 
   Future<List<DbInboundGroupSession>> getDbInboundGroupSessions(
@@ -231,7 +231,7 @@ class Database extends _$Database {
     if (res.isEmpty) {
       return null;
     }
-    return res.first;
+    return res.single;
   }
 
   Future<DbSSSSCache> getSSSSCache(int clientId, String type) async {
@@ -239,7 +239,7 @@ class Database extends _$Database {
     if (res.isEmpty) {
       return null;
     }
-    return res.first;
+    return res.single;
   }
 
   Future<List<sdk.Room>> getRoomList(sdk.Client client,
@@ -563,7 +563,7 @@ class Database extends _$Database {
     if (event.isEmpty) {
       return null;
     }
-    return sdk.Event.fromDb(event.first, room);
+    return sdk.Event.fromDb(event.single, room);
   }
 
   Future<bool> redactMessage(int clientId, sdk.EventUpdate eventUpdate) async {
@@ -649,7 +649,7 @@ class Database extends _$Database {
     if (res.isEmpty) {
       return null;
     }
-    return sdk.Event.fromDb(res.first, room).asUser;
+    return sdk.Event.fromDb(res.single, room).asUser;
   }
 
   Future<List<sdk.User>> getUsers(int clientId, sdk.Room room) async {
@@ -673,6 +673,6 @@ class Database extends _$Database {
   Future<Uint8List> getFile(String mxcUri) async {
     final res = await dbGetFile(mxcUri).get();
     if (res.isEmpty) return null;
-    return res.first.bytes;
+    return res.single.bytes;
   }
 }
