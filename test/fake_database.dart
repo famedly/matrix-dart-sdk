@@ -18,7 +18,7 @@
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:moor/moor.dart';
-import 'package:moor_ffi/moor_ffi.dart' as moor;
+import 'package:moor/ffi.dart' as moor;
 
 Database getDatabase() {
   moorRuntimeOptions.dontWarnAboutMultipleDatabases = true;

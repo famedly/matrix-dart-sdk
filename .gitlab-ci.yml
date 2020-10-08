@@ -11,16 +11,19 @@ coverage:
   dependencies: []
   script:
     - apt update
-    - apt install -y curl gnupg2 git
-    - curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
-    - curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list
+    - apt install -y curl gnupg2 git unzip
+    - git clone https://github.com/flutter/flutter.git -b stable
+    - export PATH="$PATH:`pwd`/flutter/bin"
+    - sed -i s/#//g pubspec.yaml
+    - flutter doctor
     - apt update
-    - apt install -y dart chromium lcov libolm3 sqlite3 libsqlite3-dev
+    - apt install -y chromium lcov libolm3 sqlite3 libsqlite3-dev
     - ln -s /usr/lib/dart/bin/pub /usr/bin/
     - useradd -m test
     - chown -R 'test:' '.'
     - chmod +x ./prepare.sh
     - chmod +x ./test.sh
+    - rm -r example
     - su -c ./prepare.sh test
     - su -c ./test.sh test
   artifacts:

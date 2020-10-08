@@ -20,4 +20,8 @@ cmake --build .
 cd ..
 fi
 
-pub get
+if which flutter >/dev/null; then
+    flutter pub get
+else
+    pub get
+fi
