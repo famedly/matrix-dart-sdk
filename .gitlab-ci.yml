@@ -134,6 +134,7 @@ include:
   - template: Security/License-Scanning.gitlab-ci.yml
 
 license_scanning:
+  stage: coverage
   image:
     name: "registry.gitlab.com/gitlab-org/security-products/analyzers/ort/ort:latest"
   script:
