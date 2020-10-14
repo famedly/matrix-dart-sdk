@@ -144,5 +144,6 @@ license_scanning:
     - /opt/ort/bin/ort scan -i $CI_PROJECT_DIR/analyzer-result.yml -o $CI_PROJECT_DIR/
     - /opt/ort/bin/ort report -f StaticHtml -i $CI_PROJECT_DIR/scan-result.yml -o doc/license
   artifacts:
+    when: always
     paths:
       - doc/license
