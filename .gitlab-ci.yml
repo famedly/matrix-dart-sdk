@@ -129,3 +129,13 @@ pages:
       - public
   only:
     - main
+
+include:
+  - template: Security/License-Scanning.gitlab-ci.yml
+
+license_scanning:
+  image:
+    name: "registry.gitlab.com/gitlab-org/security-products/analyzers/ort/ort:latest"
+  script:
+    - /opt/ort/bin/ort analyze -i $CI_PROJECT_DIR -o $CI_PROJECT_DIR/
+    - /opt/ort/bin/ort report -f GitLabLicenseModel -i $CI_PROJECT_DIR/analyzer-result.yml -o $CI_PROJECT_DIR/
