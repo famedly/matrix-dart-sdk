@@ -130,6 +130,9 @@ pages:
   only:
     - main
 
+# Adds license-scanning job. Because Gitlab does not support pub.dev
+# we added https://github.com/oss-review-toolkit/ort
+
 include:
   - template: Security/License-Scanning.gitlab-ci.yml
 
