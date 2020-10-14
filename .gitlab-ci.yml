@@ -95,7 +95,7 @@ build_api_doc:
     paths:
       - doc/api/
   only:
-#    - main
+    - main
 
 build_doc:
   tags:
@@ -110,7 +110,7 @@ build_doc:
     paths:
       - doc-public
   only:
-#    - main
+    - main
 
 pages:
   tags:
@@ -120,17 +120,15 @@ pages:
   script:
     - mv doc/api/ ./home/api
     - mv doc-public ./home/doc
-    - mv doc/license ./home/license
     - mv home public
   dependencies:
     - build_api_doc
     - build_doc
-    - license_scanning
   artifacts:
     paths:
       - public
   only:
-#    - main
+    - main
 
 include:
   - template: Security/License-Scanning.gitlab-ci.yml
@@ -143,3 +141,5 @@ license_scanning:
     - /opt/ort/bin/ort analyze -i $CI_PROJECT_DIR -o $CI_PROJECT_DIR/ --allow-dynamic-versions
     - /opt/ort/bin/ort scan -i $CI_PROJECT_DIR/analyzer-result.yml -o $CI_PROJECT_DIR/ || true
     - /opt/ort/bin/ort report -f GitLabLicenseModel -i $CI_PROJECT_DIR/scan-result.yml -o $CI_PROJECT_DIR/
+  only:
+    - main
