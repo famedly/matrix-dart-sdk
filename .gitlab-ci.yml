@@ -141,7 +141,8 @@ license_scanning:
     name: "registry.gitlab.com/gitlab-org/security-products/analyzers/ort/ort:latest"
   script:
     - /opt/ort/bin/ort analyze -i $CI_PROJECT_DIR -o $CI_PROJECT_DIR/ --allow-dynamic-versions
-    - /opt/ort/bin/ort report -f StaticHtml -i $CI_PROJECT_DIR/analyzer-result.yml -o doc/license
+    - /opt/ort/bin/ort scan -i $CI_PROJECT_DIR/analyzer-result.yml -o $CI_PROJECT_DIR/ --skip-excluded
+    - /opt/ort/bin/ort report -f GitLabLicenseModel,StaticHtml -i $CI_PROJECT_DIR/scan-result.yml -o $CI_PROJECT_DIR/
   artifacts:
     paths:
       - doc/license
