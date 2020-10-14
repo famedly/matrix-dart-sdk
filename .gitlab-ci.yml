@@ -144,5 +144,3 @@ license_scanning:
     - /opt/ort/bin/ort analyze -i $CI_PROJECT_DIR -o $CI_PROJECT_DIR/ --allow-dynamic-versions
     - /opt/ort/bin/ort scan -i $CI_PROJECT_DIR/analyzer-result.yml -o $CI_PROJECT_DIR/ || true
     - /opt/ort/bin/ort report -f GitLabLicenseModel -i $CI_PROJECT_DIR/scan-result.yml -o $CI_PROJECT_DIR/
-  only:
-    - main
