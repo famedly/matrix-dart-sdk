@@ -21,7 +21,13 @@ import 'dart:async';
 
 Future<T> runInBackground<T, U>(
     FutureOr<T> Function(U arg) function, U arg) async {
-  final isolate = await IsolateRunner.spawn();
+  IsolateRunner isolate;
+  try {
+    isolate = await IsolateRunner.spawn();
+  } on UnsupportedError {
+    // web does not support isolates (yet), so we fall back to calling the method directly
+    return await function(arg);
+  }
   try {
     return await isolate.run(function, arg);
   } finally {
