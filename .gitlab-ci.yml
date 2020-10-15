@@ -149,3 +149,4 @@ license_scanning:
     expire_in: 30 days
     paths:
       - license
+    when: always
