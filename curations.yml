@@ -175,7 +175,7 @@
 - id: "Pub:olm:olm"
   curations:
       comment: "Use correct Git"
-      source_artifact::
+      source_artifact:
         url: "https://gitlab.com/famedly/libraries/dart-olm/-/archive/master/dart-olm-master.zip"
 
 - id: "Pub:package_config:package_config"
