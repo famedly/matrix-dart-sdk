@@ -144,7 +144,7 @@ license_scanning:
     - /opt/ort/bin/ort analyze -i $CI_PROJECT_DIR -o $CI_PROJECT_DIR/ --allow-dynamic-versions --package-curations-file curations.yml -m Pub
     - /opt/ort/bin/ort download -i $CI_PROJECT_DIR/analyzer-result.yml -o $CI_PROJECT_DIR/ --allow-moving-revisions || true
     - /opt/ort/bin/ort scan -p $CI_PROJECT_DIR/ -o $CI_PROJECT_DIR/ || true
-    - /opt/ort/bin/ort report -i $CI_PROJECT_DIR/scan-result.yml -o $CI_PROJECT_DIR/ -f GitLabLicenseModel,StaticHtml
+#    - /opt/ort/bin/ort report -i $CI_PROJECT_DIR/scan-result.yml -o $CI_PROJECT_DIR/ -f GitLabLicenseModel,StaticHtml
   artifacts:
     expire_in: 30 days
     paths:
