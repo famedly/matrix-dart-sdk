@@ -116,7 +116,7 @@
   curations:
       comment: "Use correct revision"
       vcs:
-        revision: "02aaa8ada4c9ad6fd57eb7b9215ffd11cd58a180"
+        revision: "master"
 
 - id: "Pub:meta:meta"
   curations:
@@ -172,11 +172,9 @@
 
 - id: "Pub:olm:olm"
   curations:
-      comment: "Use correct Git"
-      source_artifact:
-        url: "https://gitlab.com/famedly/libraries/dart-olm/-/archive/4853b5301519a50866a81b58ac3730830a4fe547/dart-olm-4853b5301519a50866a81b58ac3730830a4fe547.zip"
-        hash: "4853b5301519a50866a81b58ac3730830a4fe547"
-        hash_algorithm: "SHA1"
+      comment: "Use correct revision"
+      vcs:
+        revision: "master"
 
 - id: "Pub:package_config:package_config"
   curations:
