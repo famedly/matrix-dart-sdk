@@ -510,10 +510,6 @@ class Client extends MatrixApi {
       StreamController.broadcast();
 
   /// Synchronization erros are coming here.
-  final StreamController<MatrixException> onError =
-      StreamController.broadcast();
-
-  /// Synchronization erros are coming here.
   final StreamController<SdkError> onSyncError = StreamController.broadcast();
 
   /// Synchronization erros are coming here.
@@ -756,18 +752,17 @@ class Client extends MatrixApi {
         encryption.onSync();
       }
       _retryDelay = Future.value();
-    } on MatrixException catch (e) {
-      onError.add(e);
+    } on MatrixException catch (e, s) {
+      onSyncError.add(SdkError(exception: e, stackTrace: s));
+      if (e.error == MatrixError.M_UNKNOWN_TOKEN) {
+        Logs.warning('The user has been logged out!');
+        clear();
+      }
     } catch (e, s) {
       if (!isLogged() || _disposed) return;
       Logs.error('Error during processing events: ' + e.toString(), s);
       onSyncError.add(SdkError(
           exception: e is Exception ? e : Exception(e), stackTrace: s));
-      if (e is MatrixException &&
-          e.errcode == MatrixError.M_UNKNOWN_TOKEN.toString().split('.').last) {
-        Logs.warning('The user has been logged out!');
-        clear();
-      }
     }
   }
 
