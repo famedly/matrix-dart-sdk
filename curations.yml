@@ -69,7 +69,7 @@
       vcs:
         type: "Git"
         url: "https://github.com/leocavalcante/encrypt.git"
-        revision: "master"
+        revision: "main"
 
 - id: "Pub:ffi:ffi"
   curations:
@@ -175,10 +175,8 @@
 - id: "Pub:olm:olm"
   curations:
       comment: "Use correct Git"
-      vcs:
-        type: "Git"
-        url: "https://gitlab.com/famedly/libraries/dart-olm.git"
-        revision: "master"
+      source_artifact::
+        url: "https://gitlab.com/famedly/libraries/dart-olm/-/archive/master/dart-olm-master.zip"
 
 - id: "Pub:package_config:package_config"
   curations:
