@@ -178,7 +178,7 @@
       source_artifact:
         url: "https://gitlab.com/famedly/libraries/dart-olm/-/archive/master/dart-olm-master.zip"
         hash: "4853b5301519a50866a81b58ac3730830a4fe547"
-        hash_algorithm: "SHA256"
+        hash_algorithm: "SHA1"
 
 - id: "Pub:package_config:package_config"
   curations:
