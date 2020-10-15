@@ -1,0 +1,241 @@
+---
+# Example for a complete curation object:
+#- id: "Maven:org.hamcrest:hamcrest-core:1.3"
+#  curations:
+#    comment: "An explanation why the curation is needed or the reasoning for a license conclusion."
+#    concluded_license: "Apache-2.0 OR MIT" # Valid SPDX license expression to override the license findings.
+#    declared_licenses:
+#    - "license a"
+#    - "license b"
+#    description: "Curated description"
+#    homepage_url: "http://example.com"
+#    binary_artifact:
+#      url: "http://example.com/binary.zip"
+#      hash: "ddce269a1e3d054cae349621c198dd52"
+#      hash_algorithm: "MD5"
+#    source_artifact:
+#      url: "http://example.com/sources.zip"
+#      hash: "ddce269a1e3d054cae349621c198dd52"
+#      hash_algorithm: "MD5"
+#    vcs:
+#      type: "git"
+#      url: "http://example.com/repo.git"
+#      revision: "1234abc"
+#      path: "subdirectory"
+
+#- id: "Pub:_fe_analyzer_shared:_fe_analyzer_shared:7.0.0"
+#  curations:
+#      comment: "Use correct Git"
+#      vcs:
+#        type: "Git"
+#        url: "https://github.com/dart-lang/sdk.git"
+#        revision: "master"
+
+- id: "Pub:ansicolor:ansicolor"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/google/ansicolor-dart.git"
+        revision: "master"
+
+- id: "Pub:asn1lib:asn1lib"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/wstrange/asn1lib.git"
+        revision: "master"
+
+- id: "Pub:build:build"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/dart-lang/build.git"
+        revision: "master"   
+
+- id: "Pub:coverage:coverage"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/dart-lang/coverage.git"
+        revision: "master"
+
+- id: "Pub:encrypt:encrypt"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/leocavalcante/encrypt.git"
+        revision: "master"
+
+- id: "Pub:ffi:ffi"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/dart-lang/ffi.git"
+        revision: "master"
+
+- id: "Pub:html_unescape:html_unescape"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/filiph/html_unescape.git"
+        revision: "master"
+
+- id: "Pub:http_multi_server:http_multi_server"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/dart-lang/http_multi_server.git"
+        revision: "master"
+
+- id: "Pub:isolate:isolate"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/dart-lang/isolate.git"
+        revision: "master"
+
+- id: "Pub:js:js"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/dart-lang/sdk.git"
+        revision: "master"
+        path: "pkg/js"
+
+- id: "Pub:matrix_file_e2ee:matrix_file_e2ee"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://gitlab.com/famedly/libraries/matrix_file_e2ee.git"
+        revision: "1.x.y"
+
+- id: "Pub:meta:meta"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/dart-lang/sdk.git"
+        revision: "master"
+        path: "pkg/meta"
+
+- id: "Pub:moor:moor"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/simolus3/moor.git"
+        revision: "master"
+
+- id: "Pub:moor_generator:moor_generator"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/simolus3/moor.git"
+        revision: "master"
+        path: "moor_generator"
+
+- id: "Pub:node_interop:node_interop"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/pulyaevskiy/node-interop.git"
+        revision: "master"
+        path: "node_interop"
+
+- id: "Pub:node_io:node_io"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/pulyaevskiy/node-interop.git"
+        revision: "master"
+        path: "node_io"
+
+- id: "Pub:node_preamble:node_preamble"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/mbullington/node_preamble.dart.git"
+        revision: "master"
+
+- id: "Pub:olm:olm"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://gitlab.com/famedly/libraries/dart-olm.git"
+        revision: "master"
+
+- id: "Pub:package_config:package_config"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/dart-lang/package_config.git"
+        revision: "master"
+
+- id: "Pub:password_hash:password_hash"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/stablekernel/dart-password-hash.git"
+        revision: "master"
+
+- id: "Pub:pedantic:pedantic"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/dart-lang/pedantic.git"
+        revision: "master"
+
+- id: "Pub:sqlparser:sqlparser"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/simolus3/moor.git"
+        revision: "master"
+        path: "sqlparser"
+
+- id: "Pub:test_coverage:test_coverage"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/pulyaevskiy/test-coverage.git"
+        revision: "master"
+
+- id: "Pub:typed_data:typed_data"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/dart-lang/typed_data.git"
+        revision: "master"
+
+- id: "Pub:vm_service:vm_service"
+  curations:
+      comment: "Use correct Git"
+      vcs:
+        type: "Git"
+        url: "https://github.com/dart-lang/sdk.git"
+        revision: "master"
+        path: "pkg/vm_service"
+
+
