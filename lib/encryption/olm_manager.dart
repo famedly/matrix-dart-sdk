@@ -28,6 +28,7 @@ import '../encryption/utils/json_signature_check_extension.dart';
 import '../src/utils/logs.dart';
 import 'encryption.dart';
 import 'utils/olm_session.dart';
+import '../src/utils/run_in_root.dart';
 
 class OlmManager {
   final Encryption encryption;
@@ -344,6 +345,8 @@ class OlmManager {
     return res;
   }
 
+  final Map<String, DateTime> _restoredOlmSessionsTime = {};
+
   Future<void> restoreOlmSession(String userId, String senderKey) async {
     if (!client.userDeviceKeys.containsKey(userId)) {
       return;
@@ -353,6 +356,15 @@ class OlmManager {
     if (device == null) {
       return;
     }
+    // per device only one olm session per hour should be restored
+    final mapKey = '$userId;$senderKey';
+    if (_restoredOlmSessionsTime.containsKey(mapKey) &&
+        DateTime.now()
+            .subtract(Duration(hours: 1))
+            .isBefore(_restoredOlmSessionsTime[mapKey])) {
+      return;
+    }
+    _restoredOlmSessionsTime[mapKey] = DateTime.now();
     await startOutgoingOlmSessions([device]);
     await client.sendToDeviceEncrypted([device], 'm.dummy', {});
   }
@@ -386,7 +398,8 @@ class OlmManager {
     } catch (_) {
       // okay, the thing errored while decrypting. It is safe to assume that the olm session is corrupt and we should generate a new one
       if (client.enableE2eeRecovery) {
-        unawaited(restoreOlmSession(event.senderId, senderKey));
+        unawaited(
+            runInRoot(() => restoreOlmSession(event.senderId, senderKey)));
       }
       rethrow;
     }

@@ -869,6 +869,8 @@ class Client extends MatrixApi {
 
       var update = RoomUpdate.fromSyncRoomUpdate(room, id);
       if (database != null) {
+        // TODO: This method seems to be rather slow for some updates
+        // Perhaps don't dynamically build that one query?
         await database.storeRoomUpdate(this.id, update, getRoomById(id));
       }
       _updateRoomsByRoomUpdate(update);
@@ -883,6 +885,7 @@ class Client extends MatrixApi {
       /// Handle now all room events and save them in the database
       if (room is JoinedRoomUpdate) {
         if (room.state?.isNotEmpty ?? false) {
+          // TODO: This method seems to be comperatively slow for some updates
           await _handleRoomEvents(
               id, room.state.map((i) => i.toJson()).toList(), 'state');
           handledEvents = true;
@@ -896,6 +899,7 @@ class Client extends MatrixApi {
           handledEvents = true;
         }
         if (room.ephemeral?.isNotEmpty ?? false) {
+          // TODO: This method seems to be comperatively slow for some updates
           await _handleEphemerals(
               id, room.ephemeral.map((i) => i.toJson()).toList());
         }
