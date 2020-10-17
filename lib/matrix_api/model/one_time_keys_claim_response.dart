@@ -21,7 +21,7 @@ class OneTimeKeysClaimResponse {
   Map<String, Map<String, dynamic>> oneTimeKeys;
 
   OneTimeKeysClaimResponse.fromJson(Map<String, dynamic> json) {
-    failures = Map<String, dynamic>.from(json['failures']);
+    failures = Map<String, dynamic>.from(json['failures'] ?? {});
     oneTimeKeys = Map<String, Map<String, dynamic>>.from(json['one_time_keys']);
   }
 
