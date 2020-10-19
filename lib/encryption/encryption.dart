@@ -118,7 +118,8 @@ class Encryption {
           runInRoot(() => keyVerificationManager.handleEventUpdate(update)));
     }
     if (update.content['sender'] == client.userID &&
-        !update.content['unsigned'].containsKey('transaction_id')) {
+        (!update.content.containsKey('unsigned') ||
+            !update.content['unsigned'].containsKey('transaction_id'))) {
       // maybe we need to re-try SSSS secrets
       unawaited(runInRoot(() => ssss.periodicallyRequestMissingCache()));
     }

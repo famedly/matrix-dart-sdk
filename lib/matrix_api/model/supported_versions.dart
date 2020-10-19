@@ -22,7 +22,7 @@ class SupportedVersions {
 
   SupportedVersions.fromJson(Map<String, dynamic> json) {
     versions = json['versions'].cast<String>();
-    unstableFeatures = Map<String, bool>.from(json['unstable_features']);
+    unstableFeatures = Map<String, bool>.from(json['unstable_features'] ?? {});
   }
 
   Map<String, dynamic> toJson() {
