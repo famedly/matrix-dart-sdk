@@ -24,8 +24,8 @@ import 'package:olm/olm.dart' as olm;
 import '../famedlysdk.dart';
 import 'encryption.dart';
 
-const SELF_SIGNING_KEY = 'm.cross_signing.self_signing';
-const USER_SIGNING_KEY = 'm.cross_signing.user_signing';
+const SELF_SIGNING_KEY = EventTypes.CrossSigningSelfSigning;
+const USER_SIGNING_KEY = EventTypes.CrossSigningUserSigning;
 const MASTER_KEY = 'm.cross_signing.master';
 
 class CrossSigning {

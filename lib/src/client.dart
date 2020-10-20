@@ -34,6 +34,7 @@ import '../matrix_api/utils/logs.dart';
 import 'utils/matrix_file.dart';
 import 'utils/room_update.dart';
 import 'utils/to_device_event.dart';
+import 'utils/uia_request.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -409,6 +410,24 @@ class Client extends MatrixApi {
     }
   }
 
+  Future<T> uiaRequestBackground<T>(
+      Future<T> Function(Map<String, dynamic> auth) request) {
+    final completer = Completer<T>();
+    UiaRequest uia;
+    uia = UiaRequest(
+      request: request,
+      onDone: () {
+        if (uia.done) {
+          completer.complete(uia.result);
+        } else if (uia.fail) {
+          completer.completeError(uia.error);
+        }
+      },
+    );
+    onUiaRequest.add(uia);
+    return completer.future;
+  }
+
   /// Returns the user's own displayname and avatar url. In Matrix it is possible that
   /// one user can have different displaynames and avatar urls in different rooms. So
   /// this endpoint first checks if the profile is the same in all rooms. If not, the
@@ -588,6 +607,11 @@ class Client extends MatrixApi {
 
   /// Will be called when another device is requesting verification with this device.
   final StreamController<KeyVerification> onKeyVerificationRequest =
+      StreamController.broadcast();
+
+  /// When the library calls an endpoint that needs UIA the `UiaRequest` is passed down this screen.
+  /// The client can open a UIA prompt based on this.
+  final StreamController<UiaRequest> onUiaRequest =
       StreamController.broadcast();
 
   /// How long should the app wait until it retrys the synchronisation after

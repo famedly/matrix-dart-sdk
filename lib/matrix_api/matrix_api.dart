@@ -1470,14 +1470,16 @@ class MatrixApi {
     MatrixCrossSigningKey masterKey,
     MatrixCrossSigningKey selfSigningKey,
     MatrixCrossSigningKey userSigningKey,
+    Map<String, dynamic> auth,
   }) async {
     await request(
       RequestType.POST,
-      '/client/r0/keys/device_signing/upload',
+      '/client/unstable/keys/device_signing/upload',
       data: {
-        'master_key': masterKey.toJson(),
-        'self_signing_key': selfSigningKey.toJson(),
-        'user_signing_key': userSigningKey.toJson(),
+        if (masterKey != null) 'master_key': masterKey.toJson(),
+        if (selfSigningKey != null) 'self_signing_key': selfSigningKey.toJson(),
+        if (userSigningKey != null) 'user_signing_key': userSigningKey.toJson(),
+        if (auth != null) 'auth': auth,
       },
     );
   }

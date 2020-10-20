@@ -193,6 +193,7 @@ storeInboundGroupSession: INSERT OR REPLACE INTO inbound_group_sessions (client_
 updateInboundGroupSessionIndexes: UPDATE inbound_group_sessions SET indexes = :indexes WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id;
 getInboundGroupSessionsToUpload: SELECT * FROM inbound_group_sessions WHERE uploaded = false LIMIT 500;
 markInboundGroupSessionAsUploaded: UPDATE inbound_group_sessions SET uploaded = true WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id;
+markInboundGroupSessionsAsNeedingUpload: UPDATE inbound_group_sessions SET uploaded = false WHERE client_id = :client_id;
 storeUserDeviceKeysInfo: INSERT OR REPLACE INTO user_device_keys (client_id, user_id, outdated) VALUES (:client_id, :user_id, :outdated);
 setVerifiedUserDeviceKey: UPDATE user_device_keys_key SET verified = :verified WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
 setBlockedUserDeviceKey: UPDATE user_device_keys_key SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;

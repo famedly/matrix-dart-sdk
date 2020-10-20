@@ -30,6 +30,7 @@ import 'key_manager.dart';
 import 'key_verification_manager.dart';
 import 'olm_manager.dart';
 import 'ssss.dart';
+import 'utils/bootstrap.dart';
 
 class Encryption {
   final Client client;
@@ -68,6 +69,11 @@ class Encryption {
     _backgroundTasksRunning = true;
     _backgroundTasks(); // start the background tasks
   }
+
+  Bootstrap bootstrap({void Function() onUpdate}) => Bootstrap(
+        encryption: this,
+        onUpdate: onUpdate,
+      );
 
   void handleDeviceOneTimeKeysCount(Map<String, int> countJson) {
     runInRoot(() => olmManager.handleDeviceOneTimeKeysCount(countJson));

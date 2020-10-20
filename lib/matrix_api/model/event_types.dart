@@ -41,4 +41,10 @@ abstract class EventTypes {
   static const String CallCandidates = 'm.call.candidates';
   static const String CallHangup = 'm.call.hangup';
   static const String Unknown = 'm.unknown';
+
+  static const String CrossSigningSelfSigning = 'm.cross_signing.self_signing';
+  static const String CrossSigningUserSigning = 'm.cross_signing.user_signing';
+  static const String MegolmBackup = 'm.megolm_backup.v1';
+  static const String SecretStorageDefaultKey = 'm.secret_storage.default_key';
+  static String secretStorageKey(String keyId) => 'm.secret_storage.key.$keyId';
 }

@@ -30,20 +30,28 @@ import '../famedlysdk.dart';
 import '../matrix_api.dart';
 import '../src/database/database.dart';
 import '../matrix_api/utils/logs.dart';
+import '../src/utils/run_in_background.dart';
 import 'encryption.dart';
 
-const CACHE_TYPES = <String>[
-  'm.cross_signing.self_signing',
-  'm.cross_signing.user_signing',
-  'm.megolm_backup.v1'
-];
+const CACHE_TYPES = <String>{
+  EventTypes.CrossSigningSelfSigning,
+  EventTypes.CrossSigningUserSigning,
+  EventTypes.MegolmBackup,
+};
+
 const ZERO_STR =
     '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00';
 const BASE58_ALPHABET =
     '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const base58 = Base58Codec(BASE58_ALPHABET);
 const OLM_RECOVERY_KEY_PREFIX = [0x8B, 0x01];
-const OLM_PRIVATE_KEY_LENGTH = 32; // TODO: fetch from dart-olm
+const SSSS_KEY_LENGTH = 32;
+const PBKDF2_DEFAULT_ITERATIONS = 500000;
+const PBKDF2_SALT_LENGTH = 64;
+
+Map<String, dynamic> _deepcopy(Map<String, dynamic> data) {
+  return json.decode(json.encode(data));
+}
 
 class SSSS {
   final Encryption encryption;
@@ -129,17 +137,16 @@ class SSSS {
       }
     }
 
-    if (result.length !=
-        OLM_RECOVERY_KEY_PREFIX.length + OLM_PRIVATE_KEY_LENGTH + 1) {
+    if (result.length != OLM_RECOVERY_KEY_PREFIX.length + SSSS_KEY_LENGTH + 1) {
       throw 'Incorrect length';
     }
 
     return Uint8List.fromList(result.sublist(OLM_RECOVERY_KEY_PREFIX.length,
-        OLM_RECOVERY_KEY_PREFIX.length + OLM_PRIVATE_KEY_LENGTH));
+        OLM_RECOVERY_KEY_PREFIX.length + SSSS_KEY_LENGTH));
   }
 
   static Uint8List keyFromPassphrase(String passphrase, _PassphraseInfo info) {
-    if (info.algorithm != 'm.pbkdf2') {
+    if (info.algorithm != AlgorithmTypes.pbkdf2) {
       throw 'Unknown algorithm';
     }
     final generator = PBKDF2(hashAlgorithm: sha512);
@@ -156,15 +163,84 @@ class SSSS {
   }
 
   String get defaultKeyId {
-    final keyData = client.accountData['m.secret_storage.default_key'];
+    final keyData = client.accountData[EventTypes.SecretStorageDefaultKey];
     if (keyData == null || !(keyData.content['key'] is String)) {
       return null;
     }
     return keyData.content['key'];
   }
 
+  Future<void> setDefaultKeyId(String keyId) async {
+    await client.setAccountData(
+        client.userID, EventTypes.SecretStorageDefaultKey, <String, dynamic>{
+      'key': keyId,
+    });
+  }
+
   BasicEvent getKey(String keyId) {
-    return client.accountData['m.secret_storage.key.${keyId}'];
+    return client.accountData[EventTypes.secretStorageKey(keyId)];
+  }
+
+  bool isKeyValid(String keyId) {
+    final keyData = getKey(keyId);
+    if (keyData == null) {
+      return false;
+    }
+    return keyData.content['algorithm'] ==
+        AlgorithmTypes.secretStorageV1AesHmcSha2;
+  }
+
+  Future<OpenSSSS> createKey([String passphrase]) async {
+    Uint8List privateKey;
+    final content = <String, dynamic>{};
+    if (passphrase != null) {
+      // we need to derive the key off of the passphrase
+      content['passphrase'] = <String, dynamic>{};
+      content['passphrase']['algorithm'] = AlgorithmTypes.pbkdf2;
+      content['passphrase']['salt'] = base64
+          .encode(SecureRandom(PBKDF2_SALT_LENGTH).bytes); // generate salt
+      content['passphrase']['iterations'] = PBKDF2_DEFAULT_ITERATIONS;
+      content['passphrase']['bits'] = SSSS_KEY_LENGTH * 8;
+      privateKey = await runInBackground(
+          _keyFromPassphrase,
+          _KeyFromPassphraseArgs(
+            passphrase: passphrase,
+            info: _PassphraseInfo(
+              algorithm: content['passphrase']['algorithm'],
+              salt: content['passphrase']['salt'],
+              iterations: content['passphrase']['iterations'],
+              bits: content['passphrase']['bits'],
+            ),
+          ));
+    } else {
+      // we need to just generate a new key from scratch
+      privateKey = Uint8List.fromList(SecureRandom(SSSS_KEY_LENGTH).bytes);
+    }
+    // now that we have the private key, let's create the iv and mac
+    final encrypted = encryptAes(ZERO_STR, privateKey, '');
+    content['iv'] = encrypted.iv;
+    content['mac'] = encrypted.mac;
+    content['algorithm'] = AlgorithmTypes.secretStorageV1AesHmcSha2;
+
+    const KEYID_BYTE_LENGTH = 24;
+
+    // make sure we generate a unique key id
+    var keyId = base64.encode(SecureRandom(KEYID_BYTE_LENGTH).bytes);
+    while (getKey(keyId) != null) {
+      keyId = base64.encode(SecureRandom(KEYID_BYTE_LENGTH).bytes);
+    }
+
+    final accountDataType = EventTypes.secretStorageKey(keyId);
+    // noooow we set the account data
+    final waitForAccountData = client.onSync.stream.firstWhere((syncUpdate) =>
+        syncUpdate.accountData
+            .any((accountData) => accountData.type == accountDataType));
+    await client.setAccountData(client.userID, accountDataType, content);
+    await waitForAccountData;
+
+    final key = open(keyId);
+    key.setPrivateKey(privateKey);
+    return key;
   }
 
   bool checkKey(Uint8List key, BasicEvent keyData) {
@@ -234,12 +310,19 @@ class SSSS {
     return decrypted;
   }
 
-  Future<void> store(
-      String type, String secret, String keyId, Uint8List key) async {
+  Future<void> store(String type, String secret, String keyId, Uint8List key,
+      {bool add = false}) async {
     final triggerCacheCallback =
         _cacheCallbacks.containsKey(type) && await getCached(type) == null;
     final encrypted = encryptAes(secret, key, type);
-    final content = <String, dynamic>{
+    Map<String, dynamic> content;
+    if (add && client.accountData[type] != null) {
+      content = _deepcopy(client.accountData[type].content);
+      if (!(content['encrypted'] is Map)) {
+        content['encrypted'] = <String, dynamic>{};
+      }
+    }
+    content ??= <String, dynamic>{
       'encrypted': <String, dynamic>{},
     };
     content['encrypted'][keyId] = <String, dynamic>{
@@ -256,6 +339,29 @@ class SSSS {
       if (triggerCacheCallback) {
         _cacheCallbacks[type](secret);
       }
+    }
+  }
+
+  Future<void> validateAndStripOtherKeys(
+      String type, String secret, String keyId, Uint8List key) async {
+    if (await getStored(type, keyId, key) != secret) {
+      throw 'Secrets do not match up!';
+    }
+    // now remove all other keys
+    final content = _deepcopy(client.accountData[type].content);
+    final otherKeys =
+        Set<String>.from(content['encrypted'].keys.where((k) => k != keyId));
+    content['encrypted'].removeWhere((k, v) => otherKeys.contains(k));
+    // yes, we are paranoid...
+    if (await getStored(type, keyId, key) != secret) {
+      throw 'Secrets do not match up!';
+    }
+    // store the thing in your account data
+    await client.setAccountData(client.userID, type, content);
+    if (CACHE_TYPES.contains(type) && client.database != null) {
+      // cache the thing
+      await client.database.storeSSSSCache(client.id, type, keyId,
+          content['encrypted'][keyId]['ciphertext'], secret);
     }
   }
 
@@ -512,15 +618,27 @@ class OpenSSSS {
 
   bool get isUnlocked => privateKey != null;
 
-  void unlock({String passphrase, String recoveryKey}) {
-    if (passphrase != null) {
-      privateKey = SSSS.keyFromPassphrase(
-          passphrase,
-          _PassphraseInfo(
+  Future<void> unlock(
+      {String passphrase, String recoveryKey, String keyOrPassphrase}) async {
+    if (keyOrPassphrase != null) {
+      try {
+        await unlock(recoveryKey: keyOrPassphrase);
+      } catch (_) {
+        await unlock(passphrase: keyOrPassphrase);
+      }
+      return;
+    } else if (passphrase != null) {
+      privateKey = await runInBackground(
+          _keyFromPassphrase,
+          _KeyFromPassphraseArgs(
+            passphrase: passphrase,
+            info: _PassphraseInfo(
               algorithm: keyData.content['passphrase']['algorithm'],
               salt: keyData.content['passphrase']['salt'],
               iterations: keyData.content['passphrase']['iterations'],
-              bits: keyData.content['passphrase']['bits']));
+              bits: keyData.content['passphrase']['bits'],
+            ),
+          ));
     } else if (recoveryKey != null) {
       privateKey = SSSS.decodeRecoveryKey(recoveryKey);
     } else {
@@ -533,15 +651,36 @@ class OpenSSSS {
     }
   }
 
+  void setPrivateKey(Uint8List key) {
+    if (!ssss.checkKey(key, keyData)) {
+      throw 'Invalid key';
+    }
+    privateKey = key;
+  }
+
   Future<String> getStored(String type) async {
     return await ssss.getStored(type, keyId, privateKey);
   }
 
-  Future<void> store(String type, String secret) async {
-    await ssss.store(type, secret, keyId, privateKey);
+  Future<void> store(String type, String secret, {bool add = false}) async {
+    await ssss.store(type, secret, keyId, privateKey, add: add);
+  }
+
+  Future<void> validateAndStripOtherKeys(String type, String secret) async {
+    await ssss.validateAndStripOtherKeys(type, secret, keyId, privateKey);
   }
 
   Future<void> maybeCacheAll() async {
     await ssss.maybeCacheAll(keyId, privateKey);
   }
+}
+
+class _KeyFromPassphraseArgs {
+  final String passphrase;
+  final _PassphraseInfo info;
+  _KeyFromPassphraseArgs({this.passphrase, this.info});
+}
+
+Uint8List _keyFromPassphrase(_KeyFromPassphraseArgs args) {
+  return SSSS.keyFromPassphrase(args.passphrase, args.info);
 }

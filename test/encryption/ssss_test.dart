@@ -38,7 +38,7 @@ class MockSSSS extends SSSS {
   Future<void> maybeRequestAll([List<DeviceKeys> devices]) async {
     requestedSecrets = true;
     final handle = open();
-    handle.unlock(recoveryKey: SSSS_KEY);
+    await handle.unlock(recoveryKey: SSSS_KEY);
     await handle.maybeCacheAll();
   }
 }
@@ -80,7 +80,7 @@ void main() {
       final handle = client.encryption.ssss.open();
       var failed = false;
       try {
-        handle.unlock(passphrase: 'invalid');
+        await handle.unlock(passphrase: 'invalid');
       } catch (_) {
         failed = true;
       }
@@ -88,14 +88,14 @@ void main() {
       expect(handle.isUnlocked, false);
       failed = false;
       try {
-        handle.unlock(recoveryKey: 'invalid');
+        await handle.unlock(recoveryKey: 'invalid');
       } catch (_) {
         failed = true;
       }
       expect(failed, true);
       expect(handle.isUnlocked, false);
-      handle.unlock(passphrase: SSSS_PASSPHRASE);
-      handle.unlock(recoveryKey: SSSS_KEY);
+      await handle.unlock(passphrase: SSSS_PASSPHRASE);
+      await handle.unlock(recoveryKey: SSSS_KEY);
       expect(handle.isUnlocked, true);
       FakeMatrixApi.calledEndpoints.clear();
       await handle.store('best animal', 'foxies');
@@ -114,32 +114,32 @@ void main() {
 
     test('cache', () async {
       final handle =
-          client.encryption.ssss.open('m.cross_signing.self_signing');
-      handle.unlock(recoveryKey: SSSS_KEY);
+          client.encryption.ssss.open(EventTypes.CrossSigningSelfSigning);
+      await handle.unlock(recoveryKey: SSSS_KEY);
       expect(
           (await client.encryption.ssss
-                  .getCached('m.cross_signing.self_signing')) !=
+                  .getCached(EventTypes.CrossSigningSelfSigning)) !=
               null,
           false);
       expect(
           (await client.encryption.ssss
-                  .getCached('m.cross_signing.user_signing')) !=
+                  .getCached(EventTypes.CrossSigningUserSigning)) !=
               null,
           false);
-      await handle.getStored('m.cross_signing.self_signing');
+      await handle.getStored(EventTypes.CrossSigningSelfSigning);
       expect(
           (await client.encryption.ssss
-                  .getCached('m.cross_signing.self_signing')) !=
+                  .getCached(EventTypes.CrossSigningSelfSigning)) !=
               null,
           true);
       await handle.maybeCacheAll();
       expect(
           (await client.encryption.ssss
-                  .getCached('m.cross_signing.user_signing')) !=
+                  .getCached(EventTypes.CrossSigningUserSigning)) !=
               null,
           true);
       expect(
-          (await client.encryption.ssss.getCached('m.megolm_backup.v1')) !=
+          (await client.encryption.ssss.getCached(EventTypes.MegolmBackup)) !=
               null,
           true);
     });
@@ -163,7 +163,7 @@ void main() {
         content: {
           'action': 'request',
           'requesting_device_id': 'OTHERDEVICE',
-          'name': 'm.cross_signing.self_signing',
+          'name': EventTypes.CrossSigningSelfSigning,
           'request_id': '1',
         },
       );
@@ -183,7 +183,7 @@ void main() {
         content: {
           'action': 'request',
           'requesting_device_id': 'OTHERDEVICE',
-          'name': 'm.cross_signing.self_signing',
+          'name': EventTypes.CrossSigningSelfSigning,
           'request_id': '1',
         },
       );
@@ -219,7 +219,7 @@ void main() {
         content: {
           'action': 'request_cancellation',
           'requesting_device_id': 'OTHERDEVICE',
-          'name': 'm.cross_signing.self_signing',
+          'name': EventTypes.CrossSigningSelfSigning,
           'request_id': '1',
         },
       );
@@ -240,7 +240,7 @@ void main() {
         content: {
           'action': 'request',
           'requesting_device_id': 'OTHERDEVICE',
-          'name': 'm.cross_signing.self_signing',
+          'name': EventTypes.CrossSigningSelfSigning,
           'request_id': '1',
         },
       );
@@ -258,8 +258,8 @@ void main() {
           client.userDeviceKeys[client.userID].deviceKeys['OTHERDEVICE'];
       key.setDirectVerified(true);
       final handle =
-          client.encryption.ssss.open('m.cross_signing.self_signing');
-      handle.unlock(recoveryKey: SSSS_KEY);
+          client.encryption.ssss.open(EventTypes.CrossSigningSelfSigning);
+      await handle.unlock(recoveryKey: SSSS_KEY);
 
       await client.encryption.ssss.clearCache();
       client.encryption.ssss.pendingShareRequests.clear();
@@ -280,9 +280,9 @@ void main() {
 
       // test the different validators
       for (final type in [
-        'm.cross_signing.self_signing',
-        'm.cross_signing.user_signing',
-        'm.megolm_backup.v1'
+        EventTypes.CrossSigningSelfSigning,
+        EventTypes.CrossSigningUserSigning,
+        EventTypes.MegolmBackup
       ]) {
         final secret = await handle.getStored(type);
         await client.encryption.ssss.clearCache();
@@ -378,7 +378,7 @@ void main() {
       // validator doesn't check out
       await client.encryption.ssss.clearCache();
       client.encryption.ssss.pendingShareRequests.clear();
-      await client.encryption.ssss.request('m.megolm_backup.v1', [key]);
+      await client.encryption.ssss.request(EventTypes.MegolmBackup, [key]);
       event = ToDeviceEvent(
         sender: client.userID,
         type: 'm.secret.send',
@@ -391,8 +391,8 @@ void main() {
         },
       );
       await client.encryption.ssss.handleToDeviceEvent(event);
-      expect(
-          await client.encryption.ssss.getCached('m.megolm_backup.v1'), null);
+      expect(await client.encryption.ssss.getCached(EventTypes.MegolmBackup),
+          null);
     });
 
     test('request all', () async {
@@ -415,6 +415,21 @@ void main() {
       (client.encryption.ssss as MockSSSS).requestedSecrets = false;
       await client.encryption.ssss.periodicallyRequestMissingCache();
       expect((client.encryption.ssss as MockSSSS).requestedSecrets, false);
+    });
+
+    test('createKey', () async {
+      // with passphrase
+      var newKey = await client.encryption.ssss.createKey('test');
+      expect(client.encryption.ssss.isKeyValid(newKey.keyId), true);
+      var testKey = await client.encryption.ssss.open(newKey.keyId);
+      await testKey.unlock(passphrase: 'test');
+      await testKey.setPrivateKey(newKey.privateKey);
+
+      // without passphrase
+      newKey = await client.encryption.ssss.createKey();
+      expect(client.encryption.ssss.isKeyValid(newKey.keyId), true);
+      testKey = await client.encryption.ssss.open(newKey.keyId);
+      await testKey.setPrivateKey(newKey.privateKey);
     });
 
     test('dispose client', () async {

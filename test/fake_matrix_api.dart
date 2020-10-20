@@ -16,6 +16,8 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/famedlysdk.dart' as sdk;
+
 import 'dart:convert';
 import 'dart:core';
 import 'dart:math';
@@ -27,6 +29,7 @@ import 'package:http/testing.dart';
 class FakeMatrixApi extends MockClient {
   static final calledEndpoints = <String, List<dynamic>>{};
   static int eventCounter = 0;
+  static sdk.Client client;
 
   FakeMatrixApi()
       : super((request) async {
@@ -87,6 +90,25 @@ class FakeMatrixApi extends MockClient {
             res = {
               'next_batch': DateTime.now().millisecondsSinceEpoch.toString
             };
+          } else if (method == 'PUT' &&
+              client != null &&
+              action.contains('/account_data/') &&
+              !action.contains('/room/')) {
+            final type = Uri.decodeComponent(action.split('/').last);
+            final syncUpdate = sdk.SyncUpdate()
+              ..accountData = [
+                sdk.BasicEvent()
+                  ..content = json.decode(data)
+                  ..type = type
+              ];
+            if (client.database != null) {
+              await client.database.transaction(() async {
+                await client.handleSync(syncUpdate);
+              });
+            } else {
+              await client.handleSync(syncUpdate);
+            }
+            res = {};
           } else {
             res = {
               'errcode': 'M_UNRECOGNIZED',
@@ -538,7 +560,7 @@ class FakeMatrixApi extends MockClient {
           'type': 'm.direct'
         },
         {
-          'type': 'm.secret_storage.default_key',
+          'type': EventTypes.SecretStorageDefaultKey,
           'content': {'key': '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3'}
         },
         {
@@ -546,7 +568,7 @@ class FakeMatrixApi extends MockClient {
           'content': {
             'algorithm': AlgorithmTypes.secretStorageV1AesHmcSha2,
             'passphrase': {
-              'algorithm': 'm.pbkdf2',
+              'algorithm': AlgorithmTypes.pbkdf2,
               'iterations': 500000,
               'salt': 'F4jJ80mr0Fc8mRwU9JgA3lQDyjPuZXQL'
             },
@@ -568,7 +590,7 @@ class FakeMatrixApi extends MockClient {
           }
         },
         {
-          'type': 'm.cross_signing.self_signing',
+          'type': EventTypes.CrossSigningSelfSigning,
           'content': {
             'encrypted': {
               '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
@@ -581,7 +603,7 @@ class FakeMatrixApi extends MockClient {
           }
         },
         {
-          'type': 'm.cross_signing.user_signing',
+          'type': EventTypes.CrossSigningUserSigning,
           'content': {
             'encrypted': {
               '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
@@ -594,7 +616,7 @@ class FakeMatrixApi extends MockClient {
           }
         },
         {
-          'type': 'm.megolm_backup.v1',
+          'type': EventTypes.MegolmBackup,
           'content': {
             'encrypted': {
               '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3': {
@@ -1978,7 +2000,28 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/rooms/!localpart%3Aserver.abc/ban': (var reqI) => {},
       '/client/r0/rooms/!localpart%3Aserver.abc/unban': (var reqI) => {},
       '/client/r0/rooms/!localpart%3Aserver.abc/invite': (var reqI) => {},
-      '/client/r0/keys/device_signing/upload': (var reqI) => {},
+      '/client/unstable/keys/device_signing/upload': (var reqI) {
+        if (client != null) {
+          final jsonBody = json.decode(reqI);
+          for (final keyType in {
+            'master_key',
+            'self_signing_key',
+            'user_signing_key'
+          }) {
+            if (jsonBody[keyType] != null) {
+              final key =
+                  sdk.CrossSigningKey.fromJson(jsonBody[keyType], client);
+              client.userDeviceKeys[client.userID].crossSigningKeys
+                  .removeWhere((k, v) => v.usage.contains(key.usage.first));
+              client.userDeviceKeys[client.userID]
+                  .crossSigningKeys[key.publicKey] = key;
+            }
+          }
+          // and generate a fake sync
+          client.handleSync(sdk.SyncUpdate());
+        }
+        return {};
+      },
       '/client/r0/keys/signatures/upload': (var reqI) => {'failures': {}},
       '/client/unstable/room_keys/version': (var reqI) => {'version': '5'},
     },

@@ -6347,6 +6347,15 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
+  Future<int> markInboundGroupSessionsAsNeedingUpload(int client_id) {
+    return customUpdate(
+      'UPDATE inbound_group_sessions SET uploaded = false WHERE client_id = :client_id',
+      variables: [Variable.withInt(client_id)],
+      updates: {inboundGroupSessions},
+      updateKind: UpdateKind.update,
+    );
+  }
+
   Future<int> storeUserDeviceKeysInfo(
       int client_id, String user_id, bool outdated) {
     return customInsert(

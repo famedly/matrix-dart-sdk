@@ -35,7 +35,7 @@ class MockSSSS extends SSSS {
   Future<void> maybeRequestAll([List<DeviceKeys> devices]) async {
     requestedSecrets = true;
     final handle = open();
-    handle.unlock(recoveryKey: SSSS_KEY);
+    await handle.unlock(recoveryKey: SSSS_KEY);
     await handle.maybeCacheAll();
   }
 }

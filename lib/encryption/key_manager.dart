@@ -30,7 +30,7 @@ import '../matrix_api/utils/logs.dart';
 import '../src/utils/run_in_background.dart';
 import '../src/utils/run_in_root.dart';
 
-const MEGOLM_KEY = 'm.megolm_backup.v1';
+const MEGOLM_KEY = EventTypes.MegolmBackup;
 
 class KeyManager {
   final Encryption encryption;

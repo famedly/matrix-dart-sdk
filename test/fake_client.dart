@@ -29,8 +29,12 @@ const pickledOlmAccount =
     'N2v1MkIFGcl0mQpo2OCwSopxPQJ0wnl7oe7PKiT4141AijfdTIhRu+ceXzXKy3Kr00nLqXtRv7kid6hU4a+V0rfJWLL0Y51+3Rp/ORDVnQy+SSeo6Fn4FHcXrxifJEJ0djla5u98fBcJ8BSkhIDmtXRPi5/oJAvpiYn+8zMjFHobOeZUAxYR0VfQ9JzSYBsSovoQ7uFkNks1M4EDUvHtuyg3RxViwdNxs3718fyAqQ/VSwbXsY0Nl+qQbF+nlVGHenGqk5SuNl1P6e1PzZxcR0IfXA94Xij1Ob5gDv5YH4UCn9wRMG0abZsQP0YzpDM0FLaHSCyo9i5JD/vMlhH+nZWrgAzPPCTNGYewNV8/h3c+VyJh8ZTx/fVi6Yq46Fv+27Ga2ETRZ3Qn+Oyx6dLBjnBZ9iUvIhqpe2XqaGA1PopOz8iDnaZitw';
 
 Future<Client> getClient() async {
-  final client = Client('testclient',
-      httpClient: FakeMatrixApi(), databaseBuilder: getDatabase);
+  final client = Client(
+    'testclient',
+    httpClient: FakeMatrixApi(),
+    databaseBuilder: getDatabase,
+  );
+  FakeMatrixApi.client = client;
   await client.checkHomeserver('https://fakeServer.notExisting');
   client.init(
     newToken: 'abcd',

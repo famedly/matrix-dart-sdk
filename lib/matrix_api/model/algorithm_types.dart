@@ -23,4 +23,5 @@ abstract class AlgorithmTypes {
       'm.secret_storage.v1.aes-hmac-sha2';
   static const String megolmBackupV1Curve25519AesSha2 =
       'm.megolm_backup.v1.curve25519-aes-sha2';
+  static const String pbkdf2 = 'm.pbkdf2';
 }
