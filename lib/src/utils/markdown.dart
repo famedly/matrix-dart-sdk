@@ -76,6 +76,51 @@ class EmoteSyntax extends InlineSyntax {
   }
 }
 
+class InlineLatexSyntax extends InlineSyntax {
+  InlineLatexSyntax() : super(r'(?<=\s|^)\$(?=\S)([^\n$]+)(?<=\S)\$(?=\s|$)');
+
+  @override
+  bool onMatch(InlineParser parser, Match match) {
+    final latex = htmlEscape.convert(match[1]);
+    final element = Element('span', [Element.text('code', latex)]);
+    element.attributes['data-mx-maths'] = latex;
+    parser.addNode(element);
+    return true;
+  }
+}
+
+class BlockLatexSyntax extends BlockSyntax {
+  @override
+  RegExp get pattern => RegExp(r'^[ ]{0,3}\${2}\s*$');
+
+  @override
+  List<String> parseChildLines(BlockParser parser) {
+    var childLines = <String>[];
+    parser.advance();
+    while (!parser.isDone) {
+      if (!pattern.hasMatch(parser.current)) {
+        childLines.add(parser.current);
+        parser.advance();
+      } else {
+        parser.advance();
+        break;
+      }
+    }
+    return childLines;
+  }
+
+  @override
+  Node parse(BlockParser parser) {
+    final childLines = parseChildLines(parser);
+    final latex = htmlEscape.convert(childLines.join('\n'));
+    final element = Element('div', [
+      Element('pre', [Element.text('code', latex)])
+    ]);
+    element.attributes['data-mx-maths'] = latex;
+    return element;
+  }
+}
+
 class PillSyntax extends InlineSyntax {
   PillSyntax() : super(r'([@#!][^\s:]*:[^\s]+\.\w+)');
 
@@ -94,18 +139,22 @@ String markdown(String text, [Map<String, Map<String, String>> emotePacks]) {
   var ret = markdownToHtml(
     text,
     extensionSet: ExtensionSet.commonMark,
+    blockSyntaxes: [
+      BlockLatexSyntax(),
+    ],
     inlineSyntaxes: [
       StrikethroughSyntax(),
       LinebreakSyntax(),
       SpoilerSyntax(),
       EmoteSyntax(emotePacks),
-      PillSyntax()
+      PillSyntax(),
+      InlineLatexSyntax(),
     ],
   );
 
   var stripPTags = '<p>'.allMatches(ret).length <= 1;
   if (stripPTags) {
-    final otherBlockTags = [
+    const otherBlockTags = {
       'table',
       'pre',
       'ol',
@@ -116,8 +165,9 @@ String markdown(String text, [Map<String, Map<String, String>> emotePacks]) {
       'h4',
       'h5',
       'h6',
-      'blockquote'
-    ];
+      'blockquote',
+      'div',
+    };
     for (final tag in otherBlockTags) {
       // we check for the close tag as the opening one might have attributes
       if (ret.contains('</${tag}>')) {

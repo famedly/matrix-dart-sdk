@@ -70,5 +70,11 @@ void main() {
       expect(markdown('!blah:example.org'),
           '<a href="https://matrix.to/#/!blah:example.org">!blah:example.org</a>');
     });
+    test('latex', () {
+      expect(markdown('meep \$\\frac{2}{3}\$'),
+          'meep <span data-mx-maths="\\frac{2}{3}"><code>\\frac{2}{3}</code></span>');
+      expect(markdown('hey\n\$\$\nbeep\nboop\n\$\$\nmeow'),
+          '<p>hey</p>\n<div data-mx-maths="beep\nboop">\n<pre><code>beep\nboop</code></pre>\n</div>\n<p>meow</p>');
+    });
   });
 }
