@@ -1190,7 +1190,7 @@ class Room {
         EventUpdate(
             content: content,
             roomID: id,
-            type: 'state',
+            type: EventUpdateType.state,
             eventType: EventTypes.RoomMember,
             sortOrder: 0.0),
       );

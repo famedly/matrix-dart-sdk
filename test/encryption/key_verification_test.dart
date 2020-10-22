@@ -54,7 +54,7 @@ EventUpdate getLastSentEvent(KeyVerification req) {
       'sender': req.client.userID,
     },
     eventType: type,
-    type: 'timeline',
+    type: EventUpdateType.timeline,
     roomID: req.room.id,
   );
 }
@@ -446,7 +446,7 @@ void main() {
           'sender': client2.userID,
         },
         eventType: 'm.key.verification.ready',
-        type: 'timeline',
+        type: EventUpdateType.timeline,
         roomID: req2.room.id,
       ));
       expect(req2.state, KeyVerificationState.error);

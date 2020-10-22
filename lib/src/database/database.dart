@@ -6,7 +6,6 @@ import 'package:olm/olm.dart' as olm;
 
 import '../../famedlysdk.dart' as sdk;
 import '../../matrix_api.dart' as api;
-import '../../matrix_api.dart';
 import '../client.dart';
 import '../room.dart';
 import '../utils/logs.dart';
@@ -266,13 +265,13 @@ class Database extends _$Database {
       // let's see if we need any m.room.member events
       final membersToPostload = <String>{};
       // the lastEvent message preview might have an author we need to fetch, if it is a group chat
-      if (room.getState(EventTypes.Message) != null && !room.isDirectChat) {
-        membersToPostload.add(room.getState(EventTypes.Message).senderId);
+      if (room.getState(api.EventTypes.Message) != null && !room.isDirectChat) {
+        membersToPostload.add(room.getState(api.EventTypes.Message).senderId);
       }
       // if the room has no name and no canonical alias, its name is calculated
       // based on the heroes of the room
-      if (room.getState(EventTypes.RoomName) == null &&
-          room.getState(EventTypes.RoomCanonicalAlias) == null &&
+      if (room.getState(api.EventTypes.RoomName) == null &&
+          room.getState(api.EventTypes.RoomCanonicalAlias) == null &&
           room.mHeroes != null) {
         // we don't have a name and no canonical alias, so we'll need to
         // post-load the heroes
@@ -430,7 +429,7 @@ class Database extends _$Database {
   /// [transaction].
   Future<void> storeEventUpdate(
       int clientId, sdk.EventUpdate eventUpdate) async {
-    if (eventUpdate.type == 'ephemeral') return;
+    if (eventUpdate.type == sdk.EventUpdateType.ephemeral) return;
     final eventContent = eventUpdate.content;
     final type = eventUpdate.type;
     final chatId = eventUpdate.roomID;
@@ -441,11 +440,12 @@ class Database extends _$Database {
       stateKey = eventContent['state_key'];
     }
 
-    if (eventUpdate.eventType == EventTypes.Redaction) {
+    if (eventUpdate.eventType == api.EventTypes.Redaction) {
       await redactMessage(clientId, eventUpdate);
     }
 
-    if (type == 'timeline' || type == 'history') {
+    if (type == sdk.EventUpdateType.timeline ||
+        type == sdk.EventUpdateType.history) {
       // calculate the status
       var status = 2;
       if (eventContent['unsigned'] is Map<String, dynamic> &&
@@ -493,7 +493,7 @@ class Database extends _$Database {
       }
       if (storeNewEvent) {
         DbEvent oldEvent;
-        if (type == 'history') {
+        if (type == sdk.EventUpdateType.history) {
           final allOldEvents =
               await getEvent(clientId, eventContent['event_id'], chatId).get();
           if (allOldEvents.isNotEmpty) {
@@ -527,12 +527,15 @@ class Database extends _$Database {
       }
     }
 
-    if (type == 'history') return;
+    if (type == sdk.EventUpdateType.history) return;
 
-    if (type != 'account_data' &&
+    if (type != sdk.EventUpdateType.accountData &&
         ((stateKey is String) ||
-            [EventTypes.Message, EventTypes.Sticker, EventTypes.Encrypted]
-                .contains(eventUpdate.eventType))) {
+            [
+              api.EventTypes.Message,
+              api.EventTypes.Sticker,
+              api.EventTypes.Encrypted
+            ].contains(eventUpdate.eventType))) {
       final now = DateTime.now();
       await storeRoomState(
         clientId,
@@ -547,7 +550,7 @@ class Database extends _$Database {
         json.encode(eventContent['prev_content'] ?? ''),
         stateKey ?? '',
       );
-    } else if (type == 'account_data') {
+    } else if (type == sdk.EventUpdateType.accountData) {
       await storeRoomAccountData(
         clientId,
         eventContent['type'],

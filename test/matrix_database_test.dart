@@ -40,7 +40,7 @@ void main() {
     test('storeEventUpdate', () async {
       // store a simple update
       var update = EventUpdate(
-        type: 'timeline',
+        type: EventUpdateType.timeline,
         roomID: room.id,
         eventType: 'm.room.message',
         content: {
@@ -58,7 +58,7 @@ void main() {
 
       // insert a transaction id
       update = EventUpdate(
-        type: 'timeline',
+        type: EventUpdateType.timeline,
         roomID: room.id,
         eventType: 'm.room.message',
         content: {
@@ -75,7 +75,7 @@ void main() {
       event = await database.getEventById(clientId, 'transaction-1', room);
       expect(event.eventId, 'transaction-1');
       update = EventUpdate(
-        type: 'timeline',
+        type: EventUpdateType.timeline,
         roomID: room.id,
         eventType: 'm.room.message',
         content: {
@@ -98,7 +98,7 @@ void main() {
 
       // insert a transaction id if the event id for it already exists
       update = EventUpdate(
-        type: 'timeline',
+        type: EventUpdateType.timeline,
         roomID: room.id,
         eventType: 'm.room.message',
         content: {
@@ -115,7 +115,7 @@ void main() {
       event = await database.getEventById(clientId, '\$event-3', room);
       expect(event.eventId, '\$event-3');
       update = EventUpdate(
-        type: 'timeline',
+        type: EventUpdateType.timeline,
         roomID: room.id,
         eventType: 'm.room.message',
         content: {
@@ -140,7 +140,7 @@ void main() {
 
       // insert transaction id and not update status
       update = EventUpdate(
-        type: 'timeline',
+        type: EventUpdateType.timeline,
         roomID: room.id,
         eventType: 'm.room.message',
         content: {
@@ -157,7 +157,7 @@ void main() {
       event = await database.getEventById(clientId, '\$event-4', room);
       expect(event.eventId, '\$event-4');
       update = EventUpdate(
-        type: 'timeline',
+        type: EventUpdateType.timeline,
         roomID: room.id,
         eventType: 'm.room.message',
         content: {

@@ -20,11 +20,20 @@ import '../../famedlysdk.dart';
 import '../../matrix_api.dart';
 import 'logs.dart';
 
+enum EventUpdateType {
+  timeline,
+  state,
+  history,
+  accountData,
+  ephemeral,
+  inviteState
+}
+
 /// Represents a new event (e.g. a message in a room) or an update for an
 /// already known event.
 class EventUpdate {
   /// Usually 'timeline', 'state' or whatever.
-  final String type;
+  final EventUpdateType type;
 
   /// Most events belong to a room. If not, this equals to eventType.
   final String roomID;

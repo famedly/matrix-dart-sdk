@@ -105,7 +105,7 @@ class Encryption {
   }
 
   Future<void> handleEventUpdate(EventUpdate update) async {
-    if (update.type == 'ephemeral') {
+    if (update.type == EventUpdateType.ephemeral) {
       return;
     }
     if (update.eventType.startsWith('m.key.verification.') ||
@@ -235,7 +235,8 @@ class Encryption {
   }
 
   Future<Event> decryptRoomEvent(String roomId, Event event,
-      {bool store = false, String updateType = 'timeline'}) async {
+      {bool store = false,
+      EventUpdateType updateType = EventUpdateType.timeline}) async {
     final doStore = () async {
       await client.database?.storeEventUpdate(
         client.id,
@@ -247,7 +248,7 @@ class Encryption {
           sortOrder: event.sortOrder,
         ),
       );
-      if (updateType != 'history') {
+      if (updateType != EventUpdateType.history) {
         event.room?.setState(event);
       }
     };

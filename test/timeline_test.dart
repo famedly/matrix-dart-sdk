@@ -52,7 +52,7 @@ void main() {
       await client.checkServer('https://fakeServer.notExisting');
 
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -65,7 +65,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -114,7 +114,7 @@ void main() {
       expect(timeline.events[0].receipts[0].user.id, '@alice:example.com');
 
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.redaction',
           content: {
@@ -149,7 +149,7 @@ void main() {
       expect(timeline.events[0].status, 1);
 
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -174,7 +174,7 @@ void main() {
 
     test('Send message with error', () async {
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -221,7 +221,7 @@ void main() {
     test('Resend message', () async {
       timeline.events.clear();
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -278,7 +278,7 @@ void main() {
     test('sort errors on top', () async {
       timeline.events.clear();
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -291,7 +291,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -311,7 +311,7 @@ void main() {
     test('sending event to failed update', () async {
       timeline.events.clear();
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -327,7 +327,7 @@ void main() {
       expect(timeline.events[0].status, 0);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -347,7 +347,7 @@ void main() {
         () async {
       timeline.events.clear();
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -363,7 +363,7 @@ void main() {
       expect(timeline.events[0].status, 0);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -380,7 +380,7 @@ void main() {
       expect(timeline.events[0].status, 1);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -401,7 +401,7 @@ void main() {
         () async {
       timeline.events.clear();
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -420,7 +420,7 @@ void main() {
       expect(timeline.events[0].status, 0);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -439,7 +439,7 @@ void main() {
       expect(timeline.events[0].status, 2);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -461,7 +461,7 @@ void main() {
     test('sending an event 0 -> -1 -> 2', () async {
       timeline.events.clear();
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -477,7 +477,7 @@ void main() {
       expect(timeline.events[0].status, 0);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -493,7 +493,7 @@ void main() {
       expect(timeline.events[0].status, -1);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -513,7 +513,7 @@ void main() {
     test('sending an event 0 -> 2 -> -1', () async {
       timeline.events.clear();
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -529,7 +529,7 @@ void main() {
       expect(timeline.events[0].status, 0);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
@@ -546,7 +546,7 @@ void main() {
       expect(timeline.events[0].status, 2);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
-          type: 'timeline',
+          type: EventUpdateType.timeline,
           roomID: roomID,
           eventType: 'm.room.message',
           content: {
