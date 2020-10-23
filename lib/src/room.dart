@@ -272,7 +272,15 @@ class Room {
 
     var lastEvent = lastEvents.isEmpty
         ? null
-        : lastEvents.reduce((a, b) => a.sortOrder > b.sortOrder ? a : b);
+        : lastEvents.reduce((a, b) {
+            if (a.sortOrder == b.sortOrder) {
+              // if two events have the same sort order we want to give encrypted events a lower priority
+              // This is so that if the same event exists in the state both encrypted *and* unencrypted,
+              // the unencrypted one is picked
+              return a.type == EventTypes.Encrypted ? b : a;
+            }
+            return a.sortOrder > b.sortOrder ? a : b;
+          });
     if (lastEvent == null) {
       states.forEach((final String key, final entry) {
         if (!entry.containsKey('')) return;

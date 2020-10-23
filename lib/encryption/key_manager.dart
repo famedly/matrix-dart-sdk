@@ -150,9 +150,14 @@ class KeyManager {
             .markInboundGroupSessionAsUploaded(client.id, roomId, sessionId);
       }
     });
-    // TODO: somehow try to decrypt last message again
     final room = client.getRoomById(roomId);
     if (room != null) {
+      // attempt to decrypt the last event
+      final event = room.getState(EventTypes.Encrypted);
+      if (event != null && event.content['session_id'] == sessionId) {
+        encryption.decryptRoomEvent(roomId, event, store: true);
+      }
+      // and finally broadcast the new session
       room.onSessionKeyReceived.add(sessionId);
     }
   }

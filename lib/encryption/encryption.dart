@@ -238,6 +238,9 @@ class Encryption {
       {bool store = false,
       EventUpdateType updateType = EventUpdateType.timeline}) async {
     final doStore = () async {
+      if (updateType != EventUpdateType.history) {
+        event.room?.setState(event);
+      }
       await client.database?.storeEventUpdate(
         client.id,
         EventUpdate(
@@ -248,9 +251,6 @@ class Encryption {
           sortOrder: event.sortOrder,
         ),
       );
-      if (updateType != EventUpdateType.history) {
-        event.room?.setState(event);
-      }
     };
     if (event.type != EventTypes.Encrypted) {
       return event;

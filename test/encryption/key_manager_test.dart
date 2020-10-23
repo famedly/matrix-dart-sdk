@@ -16,6 +16,8 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:convert';
+
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/utils/logs.dart';
 import 'package:test/test.dart';
@@ -249,6 +251,30 @@ void main() {
       final senderKey = client.identityKey;
       final roomId = '!someroom:example.org';
       final sessionId = inbound.session_id();
+      final room = Room(id: roomId, client: client);
+      client.rooms.add(room);
+      // we build up an encrypted message so that we can test if it successfully decrypted afterwards
+      room.states['m.room.encrypted'] = Event(
+        senderId: '@test:example.com',
+        type: 'm.room.encrypted',
+        roomId: room.id,
+        room: room,
+        eventId: '12345',
+        originServerTs: DateTime.now(),
+        content: {
+          'algorithm': 'm.megolm.v1.aes-sha2',
+          'ciphertext': session.encrypt(json.encode({
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'foxies'},
+          })),
+          'device_id': client.deviceID,
+          'sender_key': client.identityKey,
+          'session_id': sessionId,
+        },
+        stateKey: '',
+        sortOrder: 42.0,
+      );
+      expect(room.lastEvent.type, 'm.room.encrypted');
       // set a payload...
       var sessionPayload = <String, dynamic>{
         'algorithm': 'm.megolm.v1.aes-sha2',
@@ -378,6 +404,10 @@ void main() {
               .forwardingCurve25519KeyChain
               .length,
           0);
+
+      // test that it decrypted the last event
+      expect(room.lastEvent.type, 'm.room.message');
+      expect(room.lastEvent.content['body'], 'foxies');
 
       inbound.free();
       session.free();

@@ -179,6 +179,31 @@ void main() {
       expect(room.timeCreated, room.lastEvent.originServerTs);
     });
 
+    test('multiple last event with same sort order', () {
+      room.states['m.room.encrypted'] = Event(
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          roomId: room.id,
+          room: room,
+          eventId: '12345',
+          originServerTs: DateTime.now(),
+          content: {'msgtype': 'm.text', 'body': 'test'},
+          stateKey: '',
+          sortOrder: 42.0);
+      expect(room.lastEvent.type, 'm.room.encrypted');
+      room.states['m.room.messge'] = Event(
+          senderId: '@test:example.com',
+          type: 'm.room.messge',
+          roomId: room.id,
+          room: room,
+          eventId: '12345',
+          originServerTs: DateTime.now(),
+          content: {'msgtype': 'm.text', 'body': 'test'},
+          stateKey: '',
+          sortOrder: 42.0);
+      expect(room.lastEvent.type, 'm.room.encrypted');
+    });
+
     test('sendReadReceipt', () async {
       await room.sendReadReceipt('§1234:fakeServer.notExisting');
     });

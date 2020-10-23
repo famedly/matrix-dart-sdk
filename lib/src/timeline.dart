@@ -118,7 +118,6 @@ class Timeline {
       for (var i = 0; i < events.length; i++) {
         if (events[i].type == EventTypes.Encrypted &&
             events[i].messageType == MessageTypes.BadEncrypted &&
-            events[i].content['can_request_session'] == true &&
             events[i].content['session_id'] == sessionId) {
           events[i] = await room.client.encryption
               .decryptRoomEvent(room.id, events[i], store: true);
