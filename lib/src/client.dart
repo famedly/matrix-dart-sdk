@@ -232,43 +232,51 @@ class Client extends MatrixApi {
     return WellKnownInformations.fromJson(rawJson);
   }
 
-  /// Checks the supported versions of the Matrix protocol and the supported
-  /// login types. Returns false if the server is not compatible with the
-  /// client.
-  /// Throws FormatException, TimeoutException and MatrixException on error.
+  @Deprecated('Use [checkHomeserver] instead.')
   Future<bool> checkServer(dynamic serverUrl) async {
     try {
-      if (serverUrl is Uri) {
-        homeserver = serverUrl;
+      await checkHomeserver(serverUrl);
+    } catch (_) {
+      return false;
+    }
+    return true;
+  }
+
+  /// Checks the supported versions of the Matrix protocol and the supported
+  /// login types. Throws an exception if the server is not compatible with the
+  /// client and sets [homeserver] to [serverUrl] if it is. Supports the types [Uri]
+  /// and [String].
+  Future<void> checkHomeserver(dynamic homeserverUrl,
+      {Set<String> supportedLoginTypes = supportedLoginTypes}) async {
+    try {
+      if (homeserverUrl is Uri) {
+        homeserver = homeserverUrl;
       } else {
         // URLs allow to have whitespace surrounding them, see https://www.w3.org/TR/2011/WD-html5-20110525/urls.html
         // As we want to strip a trailing slash, though, we have to trim the url ourself
         // and thus can't let Uri.parse() deal with it.
-        serverUrl = serverUrl.trim();
+        homeserverUrl = homeserverUrl.trim();
         // strip a trailing slash
-        if (serverUrl.endsWith('/')) {
-          serverUrl = serverUrl.substring(0, serverUrl.length - 1);
+        if (homeserverUrl.endsWith('/')) {
+          homeserverUrl = homeserverUrl.substring(0, homeserverUrl.length - 1);
         }
-        homeserver = Uri.parse(serverUrl);
+        homeserver = Uri.parse(homeserverUrl);
       }
       final versions = await requestSupportedVersions();
 
-      for (var i = 0; i < versions.versions.length; i++) {
-        if (versions.versions[i] == 'r0.5.0' ||
-            versions.versions[i] == 'r0.6.0') {
-          break;
-        } else if (i == versions.versions.length - 1) {
-          return false;
-        }
+      if (!versions.versions
+          .any((version) => supportedVersions.contains(version))) {
+        throw Exception(
+            'Server supports the versions: ${versions.versions.toString()} but this application is only compatible with ${supportedVersions.toString()}.');
       }
 
       final loginTypes = await requestLoginTypes();
-      if (loginTypes.flows.indexWhere((f) => f.type == 'm.login.password') ==
-          -1) {
-        return false;
+      if (!loginTypes.flows.any((f) => supportedLoginTypes.contains(f.type))) {
+        throw Exception(
+            'Server supports the Login Types: ${loginTypes.flows.map((f) => f.toJson).toList().toString()} but this application is only compatible with ${supportedLoginTypes.toString()}.');
       }
 
-      return true;
+      return;
     } catch (_) {
       homeserver = null;
       rethrow;
@@ -277,7 +285,7 @@ class Client extends MatrixApi {
 
   /// Checks to see if a username is available, and valid, for the server.
   /// Returns the fully-qualified Matrix user ID (MXID) that has been registered.
-  /// You have to call [checkServer] first to set a homeserver.
+  /// You have to call [checkHomeserver] first to set a homeserver.
   @override
   Future<LoginResponse> register({
     String username,
@@ -315,7 +323,7 @@ class Client extends MatrixApi {
   /// Handles the login and allows the client to call all APIs which require
   /// authentication. Returns false if the login was not successful. Throws
   /// MatrixException if login was not successful.
-  /// You have to call [checkServer] first to set a homeserver.
+  /// You have to call [checkHomeserver] first to set a homeserver.
   @override
   Future<LoginResponse> login({
     String type = 'm.login.password',
@@ -479,8 +487,11 @@ class Client extends MatrixApi {
       ? PushRuleSet.fromJson(accountData['m.push_rules'].content)
       : null;
 
-  static String syncFilters = '{"room":{"state":{"lazy_load_members":true}}}';
-  static String messagesFilters = '{"lazy_load_members":true}';
+  static const Set<String> supportedVersions = {'r0.5.0', 'r0.6.0'};
+  static const Set<String> supportedLoginTypes = {'m.login.password'};
+  static const String syncFilters =
+      '{"room":{"state":{"lazy_load_members":true}}}';
+  static const String messagesFilters = '{"lazy_load_members":true}';
   static const List<String> supportedDirectEncryptionAlgorithms = [
     'm.olm.v1.curve25519-aes-sha2'
   ];

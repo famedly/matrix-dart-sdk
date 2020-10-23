@@ -85,7 +85,7 @@ void main() {
       client1 = await getClient();
       client2 = Client('othertestclient', httpClient: FakeMatrixApi());
       client2.database = client1.database;
-      await client2.checkServer('https://fakeServer.notExisting');
+      await client2.checkHomeserver('https://fakeServer.notExisting');
       client2.connect(
         newToken: 'abc',
         newUserID: '@othertest:fakeServer.notExisting',

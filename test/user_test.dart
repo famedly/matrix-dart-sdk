@@ -85,28 +85,28 @@ void main() {
           user3.calcDisplayname(mxidLocalPartFallback: false), 'Unknown user');
     });
     test('kick', () async {
-      await client.checkServer('https://fakeserver.notexisting');
+      await client.checkHomeserver('https://fakeserver.notexisting');
       await user1.kick();
     });
     test('ban', () async {
-      await client.checkServer('https://fakeserver.notexisting');
+      await client.checkHomeserver('https://fakeserver.notexisting');
       await user1.ban();
     });
     test('unban', () async {
-      await client.checkServer('https://fakeserver.notexisting');
+      await client.checkHomeserver('https://fakeserver.notexisting');
       await user1.unban();
     });
     test('setPower', () async {
-      await client.checkServer('https://fakeserver.notexisting');
+      await client.checkHomeserver('https://fakeserver.notexisting');
       await user1.setPower(50);
     });
     test('startDirectChat', () async {
-      await client.checkServer('https://fakeserver.notexisting');
+      await client.checkHomeserver('https://fakeserver.notexisting');
       await client.login(user: 'test', password: '1234');
       await user1.startDirectChat();
     });
     test('getPresence', () async {
-      await client.checkServer('https://fakeserver.notexisting');
+      await client.checkHomeserver('https://fakeserver.notexisting');
       await client.handleSync(SyncUpdate.fromJson({
         'presence': {
           'events': [
@@ -121,15 +121,15 @@ void main() {
       expect(user1.presence.presence.presence, PresenceType.online);
     });
     test('canBan', () async {
-      await client.checkServer('https://fakeserver.notexisting');
+      await client.checkHomeserver('https://fakeserver.notexisting');
       expect(user1.canBan, false);
     });
     test('canKick', () async {
-      await client.checkServer('https://fakeserver.notexisting');
+      await client.checkHomeserver('https://fakeserver.notexisting');
       expect(user1.canKick, false);
     });
     test('canChangePowerLevel', () async {
-      await client.checkServer('https://fakeserver.notexisting');
+      await client.checkHomeserver('https://fakeserver.notexisting');
       expect(user1.canChangePowerLevel, false);
     });
     test('dispose client', () async {

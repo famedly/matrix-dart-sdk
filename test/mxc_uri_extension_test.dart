@@ -27,7 +27,7 @@ void main() {
   group('MxContent', () {
     test('Formatting', () async {
       var client = Client('testclient', httpClient: FakeMatrixApi());
-      await client.checkServer('https://fakeserver.notexisting');
+      await client.checkHomeserver('https://fakeserver.notexisting');
       final mxc = 'mxc://exampleserver.abc/abcdefghijklmn';
       final content = Uri.parse(mxc);
       expect(content.isScheme('mxc'), true);

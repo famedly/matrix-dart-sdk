@@ -49,7 +49,7 @@ void main() {
         });
 
     test('Create', () async {
-      await client.checkServer('https://fakeServer.notExisting');
+      await client.checkHomeserver('https://fakeServer.notExisting');
 
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,

@@ -26,45 +26,38 @@ import 'package:famedlysdk/famedlysdk.dart';
 2. Create a new client:
 
 ```dart
-Client matrix = Client("HappyChat");
+Client client = Client("HappyChat");
 ```
 
 Take a look here for an example store:
 [https://gitlab.com/ChristianPauly/fluffychat-flutter/snippets](https://gitlab.com/ChristianPauly/fluffychat-flutter/snippets)
 
-```dart
-Client matrix = Client("HappyChat");
-```
-
 3. Connect to a Matrix Homeserver and listen to the streams:
 
 ```dart
-matrix.onLoginStateChanged.stream.listen((bool loginState){ 
+client.onLoginStateChanged.stream.listen((bool loginState){ 
   print("LoginState: ${loginState.toString()}");
 });
 
-matrix.onEvent.stream.listen((EventUpdate eventUpdate){ 
+client.onEvent.stream.listen((EventUpdate eventUpdate){ 
   print("New event update!");
 });
 
-matrix.onRoomUpdate.stream.listen((RoomUpdate eventUpdate){ 
+client.onRoomUpdate.stream.listen((RoomUpdate eventUpdate){ 
   print("New room update!");
 });
 
-final bool serverValid = await matrix.checkServer("https://yourhomeserver.abc");
-
-final bool loginValid = await matrix.login("username", "password");
+try {
+  await client.checkHomeserver("https://yourhomeserver.abc");
+  await client.login("username", "password");
+}
+catch(e) {
+  print('No luck...');
+}
 ```
 
 4. Send a message to a Room:
 
 ```dart
-final resp = await matrix.jsonRequest(
-    type: "PUT",
-    action: "/r0/rooms/!fjd823j:example.com/send/m.room.message/$txnId",
-    data: {
-        "msgtype": "m.text",
-        "body": "hello"
-    }
-);
+await client.getRoomById('your_room_id').sendTextEvent('Hello world');
 ```

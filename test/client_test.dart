@@ -77,11 +77,11 @@ void main() {
       expect(matrix.homeserver, null);
 
       try {
-        await matrix.checkServer('https://fakeserver.wrongaddress');
+        await matrix.checkHomeserver('https://fakeserver.wrongaddress');
       } on FormatException catch (exception) {
         expect(exception != null, true);
       }
-      await matrix.checkServer('https://fakeserver.notexisting');
+      await matrix.checkHomeserver('https://fakeserver.notexisting');
       expect(matrix.homeserver.toString(), 'https://fakeserver.notexisting');
 
       final available = await matrix.usernameAvailable('testuser');
@@ -311,12 +311,11 @@ void main() {
 
       roomUpdateListFuture = matrix.onRoomUpdate.stream.toList();
       eventUpdateListFuture = matrix.onEvent.stream.toList();
-      final checkResp =
-          await matrix.checkServer('https://fakeServer.notExisting');
+
+      await matrix.checkHomeserver('https://fakeServer.notExisting');
 
       final loginResp = await matrix.login(user: 'test', password: '1234');
 
-      expect(checkResp, true);
       expect(loginResp != null, true);
     });
 

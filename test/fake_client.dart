@@ -31,7 +31,7 @@ const pickledOlmAccount =
 Future<Client> getClient() async {
   final client = Client('testclient', httpClient: FakeMatrixApi());
   client.database = getDatabase();
-  await client.checkServer('https://fakeServer.notExisting');
+  await client.checkHomeserver('https://fakeServer.notExisting');
   client.connect(
     newToken: 'abcd',
     newUserID: '@test:fakeServer.notExisting',
