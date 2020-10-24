@@ -24,7 +24,11 @@ import '../../src/database/database.dart' show DbOutboundGroupSession;
 import '../../src/utils/logs.dart';
 
 class OutboundGroupSession {
-  List<String> devices;
+  /// The devices is a map from user id to device id to if the device is blocked.
+  /// This way we can easily know if a new user is added, leaves, a new devices is added, and,
+  /// very importantly, if we block a device. These are all important for determining if/when
+  /// an outbound session needs to be rotated.
+  Map<String, Map<String, bool>> devices;
   DateTime creationTime;
   olm.OutboundGroupSession outboundGroupSession;
   int sentMessages;
@@ -40,10 +44,21 @@ class OutboundGroupSession {
 
   OutboundGroupSession.fromDb(DbOutboundGroupSession dbEntry, String key)
       : key = key {
+    try {
+      devices = {};
+      for (final entry in json.decode(dbEntry.deviceIds).entries) {
+        devices[entry.key] = Map<String, bool>.from(entry.value);
+      }
+    } catch (e) {
+      // devices is bad (old data), so just not use this session
+      Logs.info(
+          '[OutboundGroupSession] Session in database is old, not using it. ' +
+              e.toString());
+      return;
+    }
     outboundGroupSession = olm.OutboundGroupSession();
     try {
       outboundGroupSession.unpickle(key, dbEntry.pickle);
-      devices = List<String>.from(json.decode(dbEntry.deviceIds));
       creationTime = DateTime.fromMillisecondsSinceEpoch(dbEntry.creationTime);
       sentMessages = dbEntry.sentMessages;
     } catch (e, s) {

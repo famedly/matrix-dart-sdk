@@ -231,6 +231,18 @@ class KeyManager {
     return sess;
   }
 
+  Map<String, Map<String, bool>> _getDeviceKeyIdMap(
+      List<DeviceKeys> deviceKeys) {
+    final deviceKeyIds = <String, Map<String, bool>>{};
+    for (final device in deviceKeys) {
+      if (!deviceKeyIds.containsKey(device.userId)) {
+        deviceKeyIds[device.userId] = <String, bool>{};
+      }
+      deviceKeyIds[device.userId][device.deviceId] = device.blocked;
+    }
+    return deviceKeyIds;
+  }
+
   /// clear all cached inbound group sessions. useful for testing
   void clearOutboundGroupSessions() {
     _outboundGroupSessions.clear();
@@ -238,8 +250,8 @@ class KeyManager {
 
   /// Clears the existing outboundGroupSession but first checks if the participating
   /// devices have been changed. Returns false if the session has not been cleared because
-  /// it wasn't necessary.
-  Future<bool> clearOutboundGroupSession(String roomId,
+  /// it wasn't necessary. Otherwise returns true.
+  Future<bool> clearOrUseOutboundGroupSession(String roomId,
       {bool wipe = false}) async {
     final room = client.getRoomById(roomId);
     final sess = getOutboundGroupSession(roomId);
@@ -247,15 +259,7 @@ class KeyManager {
       return true;
     }
     if (!wipe) {
-      // first check if the devices in the room changed
-      final deviceKeys = await room.getUserDeviceKeys();
-      deviceKeys.removeWhere((k) => k.blocked);
-      final deviceKeyIds = deviceKeys.map((k) => k.deviceId).toList();
-      deviceKeyIds.sort();
-      if (deviceKeyIds.toString() != sess.devices.toString()) {
-        wipe = true;
-      }
-      // next check if it needs to be rotated
+      // first check if it needs to be rotated
       final encryptionContent = room.getState(EventTypes.Encryption)?.content;
       final maxMessages = encryptionContent != null &&
               encryptionContent['rotation_period_msgs'] is int
@@ -271,7 +275,76 @@ class KeyManager {
               .isBefore(DateTime.now())) {
         wipe = true;
       }
+    }
+    if (!wipe) {
+      // next check if the devices in the room changed
+      final devicesToReceive = <DeviceKeys>[];
+      final newDeviceKeys = await room.getUserDeviceKeys();
+      final newDeviceKeyIds = _getDeviceKeyIdMap(newDeviceKeys);
+      // first check for user differences
+      final oldUserIds = Set.from(sess.devices.keys);
+      final newUserIds = Set.from(newDeviceKeyIds.keys);
+      if (oldUserIds.difference(newUserIds).isNotEmpty) {
+        // a user left the room, we must wipe the session
+        wipe = true;
+      } else {
+        final newUsers = newUserIds.difference(oldUserIds);
+        if (newUsers.isNotEmpty) {
+          // new user! Gotta send the megolm session to them
+          devicesToReceive
+              .addAll(newDeviceKeys.where((d) => newUsers.contains(d.userId)));
+        }
+        // okay, now we must test all the individual user devices, if anything new got blocked
+        // or if we need to send to any new devices.
+        // for this it is enough if we iterate over the old user Ids, as the new ones already have the needed keys in the list.
+        // we also know that all the old user IDs appear in the old one, else we have already wiped the session
+        for (final userId in oldUserIds) {
+          final oldBlockedDevices = Set.from(sess.devices[userId].entries
+              .where((e) => e.value)
+              .map((e) => e.key));
+          final newBlockedDevices = Set.from(newDeviceKeyIds[userId]
+              .entries
+              .where((e) => e.value)
+              .map((e) => e.key));
+          // we don't really care about old devices that got dropped (deleted), we only care if new ones got added and if new ones got blocked
+          // check if new devices got blocked
+          if (newBlockedDevices.difference(oldBlockedDevices).isNotEmpty) {
+            wipe = true;
+            break;
+          }
+          // and now add all the new devices!
+          final oldDeviceIds = Set.from(sess.devices[userId].keys);
+          final newDeviceIds = Set.from(newDeviceKeyIds[userId].keys);
+          final newDevices = newDeviceIds.difference(oldDeviceIds);
+          if (newDeviceIds.isNotEmpty) {
+            devicesToReceive.addAll(newDeviceKeys.where(
+                (d) => d.userId == userId && newDevices.contains(d.deviceId)));
+          }
+        }
+      }
+
       if (!wipe) {
+        // okay, we use the outbound group session!
+        sess.sentMessages++;
+        sess.devices = newDeviceKeyIds;
+        final rawSession = <String, dynamic>{
+          'algorithm': 'm.megolm.v1.aes-sha2',
+          'room_id': room.id,
+          'session_id': sess.outboundGroupSession.session_id(),
+          'session_key': sess.outboundGroupSession.session_key(),
+        };
+        try {
+          devicesToReceive.removeWhere((k) => k.blocked);
+          if (devicesToReceive.isNotEmpty) {
+            await client.sendToDeviceEncrypted(
+                devicesToReceive, 'm.room_key', rawSession);
+          }
+        } catch (e, s) {
+          Logs.error(
+              '[LibOlm] Unable to re-send the session key at later index to new devices: ' +
+                  e.toString(),
+              s);
+        }
         return false;
       }
     }
@@ -296,15 +369,13 @@ class KeyManager {
   }
 
   Future<OutboundGroupSession> createOutboundGroupSession(String roomId) async {
-    await clearOutboundGroupSession(roomId, wipe: true);
+    await clearOrUseOutboundGroupSession(roomId, wipe: true);
     final room = client.getRoomById(roomId);
     if (room == null) {
       return null;
     }
     final deviceKeys = await room.getUserDeviceKeys();
-    deviceKeys.removeWhere((k) => k.blocked);
-    final deviceKeyIds = deviceKeys.map((k) => k.deviceId).toList();
-    deviceKeyIds.sort();
+    final deviceKeyIds = _getDeviceKeyIdMap(deviceKeys);
     final outboundGroupSession = olm.OutboundGroupSession();
     try {
       outboundGroupSession.create();
@@ -331,6 +402,7 @@ class KeyManager {
       key: client.userID,
     );
     try {
+      deviceKeys.removeWhere((k) => k.blocked);
       await client.sendToDeviceEncrypted(deviceKeys, 'm.room_key', rawSession);
       await storeOutboundGroupSession(roomId, sess);
       _outboundGroupSessions[roomId] = sess;
