@@ -73,6 +73,16 @@ void main() {
     test('latex', () {
       expect(markdown('meep \$\\frac{2}{3}\$'),
           'meep <span data-mx-maths="\\frac{2}{3}"><code>\\frac{2}{3}</code></span>');
+      expect(markdown('meep \$hmm *yay*\$'),
+          'meep <span data-mx-maths="hmm *yay*"><code>hmm *yay*</code></span>');
+      expect(markdown('you have \$somevar and \$someothervar'),
+          'you have \$somevar and \$someothervar');
+      expect(markdown('meep ||\$\\frac{2}{3}\$||'),
+          'meep <span data-mx-spoiler=""><span data-mx-maths="\\frac{2}{3}"><code>\\frac{2}{3}</code></span></span>');
+      expect(markdown('meep `\$\\frac{2}{3}\$`'),
+          'meep <code>\$\\frac{2}{3}\$</code>');
+      expect(markdown('hey\n\$\$beep\$\$\nmeow'),
+          '<p>hey</p>\n<div data-mx-maths="beep">\n<pre><code>beep</code></pre>\n</div>\n<p>meow</p>');
       expect(markdown('hey\n\$\$\nbeep\nboop\n\$\$\nmeow'),
           '<p>hey</p>\n<div data-mx-maths="beep\nboop">\n<pre><code>beep\nboop</code></pre>\n</div>\n<p>meow</p>');
     });

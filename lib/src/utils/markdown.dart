@@ -76,12 +76,13 @@ class EmoteSyntax extends InlineSyntax {
   }
 }
 
-class InlineLatexSyntax extends InlineSyntax {
-  InlineLatexSyntax() : super(r'(?<=\s|^)\$(?=\S)([^\n$]+)(?<=\S)\$(?=\s|$)');
+class InlineLatexSyntax extends TagSyntax {
+  InlineLatexSyntax() : super(r'\$', requiresDelimiterRun: true);
 
   @override
-  bool onMatch(InlineParser parser, Match match) {
-    final latex = htmlEscape.convert(match[1]);
+  bool onMatchEnd(InlineParser parser, Match match, TagState state) {
+    final latex =
+        htmlEscape.convert(parser.source.substring(state.endPos, match.start));
     final element = Element('span', [Element.text('code', latex)]);
     element.attributes['data-mx-maths'] = latex;
     parser.addNode(element);
@@ -89,22 +90,28 @@ class InlineLatexSyntax extends InlineSyntax {
   }
 }
 
+// We also want to allow single-lines of like "$$latex$$"
 class BlockLatexSyntax extends BlockSyntax {
   @override
-  RegExp get pattern => RegExp(r'^[ ]{0,3}\${2}\s*$');
+  RegExp get pattern => RegExp(r'^[ ]{0,3}\$\$(.*)$');
+
+  final endPattern = RegExp(r'^(.*)\$\$\s*$');
 
   @override
   List<String> parseChildLines(BlockParser parser) {
     var childLines = <String>[];
-    parser.advance();
+    var first = true;
     while (!parser.isDone) {
-      if (!pattern.hasMatch(parser.current)) {
+      final match = endPattern.firstMatch(parser.current);
+      if (match == null || (first && match.group(1).trim().isEmpty)) {
         childLines.add(parser.current);
         parser.advance();
       } else {
+        childLines.add(match.group(1));
         parser.advance();
         break;
       }
+      first = false;
     }
     return childLines;
   }
@@ -112,7 +119,9 @@ class BlockLatexSyntax extends BlockSyntax {
   @override
   Node parse(BlockParser parser) {
     final childLines = parseChildLines(parser);
-    final latex = htmlEscape.convert(childLines.join('\n'));
+    // we use .substring(2) as childLines will *always* contain the first two '$$'
+    final latex =
+        htmlEscape.convert(childLines.join('\n').trim().substring(2).trim());
     final element = Element('div', [
       Element('pre', [Element.text('code', latex)])
     ]);
