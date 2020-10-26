@@ -133,14 +133,14 @@ pages:
 # Adds license-scanning job. Because Gitlab does not support pub.dev
 # we added https://github.com/oss-review-toolkit/ort
 
-include:
-  - template: Security/License-Scanning.gitlab-ci.yml
+#include:
+#  - template: Security/License-Scanning.gitlab-ci.yml
 
-license_scanning:
-  stage: coverage
-  image:
-    name: "registry.gitlab.com/gitlab-org/security-products/analyzers/ort/ort:latest"
-  script:
-    - /opt/ort/bin/ort analyze -i $CI_PROJECT_DIR -o $CI_PROJECT_DIR/ --allow-dynamic-versions
-    - /opt/ort/bin/ort scan -i $CI_PROJECT_DIR/analyzer-result.yml -o $CI_PROJECT_DIR/ || true
-    - /opt/ort/bin/ort report -f GitLabLicenseModel -i $CI_PROJECT_DIR/scan-result.yml -o $CI_PROJECT_DIR/
+#license_scanning:
+#  stage: coverage
+#  image:
+#    name: "registry.gitlab.com/gitlab-org/security-products/analyzers/ort/ort:latest"
+#  script:
+#    - /opt/ort/bin/ort analyze -i $CI_PROJECT_DIR -o $CI_PROJECT_DIR/ --allow-dynamic-versions
+#    - /opt/ort/bin/ort scan -i $CI_PROJECT_DIR/analyzer-result.yml -o $CI_PROJECT_DIR/ || true
+#    - /opt/ort/bin/ort report -f GitLabLicenseModel -i $CI_PROJECT_DIR/scan-result.yml -o $CI_PROJECT_DIR/
