@@ -215,7 +215,7 @@ class KeyManager {
         // do e2ee recovery
         _requestedSessionIds.add(requestIdent);
         unawaited(runInRoot(() =>
-            request(room, sessionId, senderKey, askOnlyOwnDevices: true)));
+            request(room, sessionId, senderKey, onlineKeyBackupOnly: true)));
       }
       return null;
     }
@@ -544,7 +544,7 @@ class KeyManager {
     String sessionId,
     String senderKey, {
     bool tryOnlineBackup = true,
-    bool askOnlyOwnDevices = false,
+    bool onlineKeyBackupOnly = false,
   }) async {
     if (tryOnlineBackup && await isCached()) {
       // let's first check our online key backup store thingy...
@@ -568,13 +568,13 @@ class KeyManager {
         return; // we managed to load the session from online backup, no need to care about it now
       }
     }
+    if (onlineKeyBackupOnly) {
+      return; // we only want to do the online key backup
+    }
     try {
       // while we just send the to-device event to '*', we still need to save the
       // devices themself to know where to send the cancel to after receiving a reply
       final devices = await room.getUserDeviceKeys();
-      if (askOnlyOwnDevices) {
-        devices.removeWhere((d) => d.userId != client.userID);
-      }
       final requestId = client.generateUniqueTransactionId();
       final request = KeyManagerKeyShareRequest(
         requestId: requestId,
