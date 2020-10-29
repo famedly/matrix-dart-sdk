@@ -902,6 +902,7 @@ class Room {
                 '$id': (JoinedRoomUpdate()
                   ..state = resp.state
                   ..timeline = (TimelineUpdate()
+                    ..limited = false
                     ..events = resp.chunk
                     ..prevBatch = resp.end)),
               }),
