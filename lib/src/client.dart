@@ -731,12 +731,33 @@ class Client extends MatrixApi {
     await _retryDelay;
     _retryDelay = Future.delayed(Duration(seconds: syncErrorTimeoutSec));
     if (!isLogged() || _disposed) return null;
+    SyncUpdate syncResp;
     try {
-      final syncResp = await sync(
+      syncResp = await sync(
         filter: syncFilters,
         since: prevBatch,
         timeout: prevBatch != null ? 30000 : null,
       );
+    } on MatrixException catch (e, s) {
+      if (e.error == MatrixError.M_UNKNOWN_TOKEN) {
+        Logs.warning('The user has been logged out!');
+        clear();
+      }
+      onSyncError.add(SdkError(
+        exception: e,
+        stackTrace: s,
+        step: SdkErrorStep.syncRequest,
+      ));
+      return;
+    } catch (e, s) {
+      onSyncError.add(SdkError(
+        exception: e is Exception ? e : Exception(e),
+        stackTrace: s,
+        step: SdkErrorStep.syncRequest,
+      ));
+      return;
+    }
+    try {
       if (_disposed) return;
       if (database != null) {
         _currentTransaction = database.transaction(() async {
@@ -763,17 +784,14 @@ class Client extends MatrixApi {
         encryption.onSync();
       }
       _retryDelay = Future.value();
-    } on MatrixException catch (e, s) {
-      onSyncError.add(SdkError(exception: e, stackTrace: s));
-      if (e.error == MatrixError.M_UNKNOWN_TOKEN) {
-        Logs.warning('The user has been logged out!');
-        clear();
-      }
     } catch (e, s) {
       if (!isLogged() || _disposed) return;
       Logs.error('Error during processing events: ' + e.toString(), s);
       onSyncError.add(SdkError(
-          exception: e is Exception ? e : Exception(e), stackTrace: s));
+        exception: e is Exception ? e : Exception(e),
+        stackTrace: s,
+        step: SdkErrorStep.syncProcessing,
+      ));
     }
   }
 
@@ -1622,8 +1640,11 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
   }
 }
 
+enum SdkErrorStep { syncRequest, syncProcessing }
+
 class SdkError {
   Exception exception;
   StackTrace stackTrace;
-  SdkError({this.exception, this.stackTrace});
+  SdkErrorStep step;
+  SdkError({this.exception, this.stackTrace, this.step});
 }
