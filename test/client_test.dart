@@ -78,7 +78,7 @@ void main() {
 
       try {
         await matrix.checkHomeserver('https://fakeserver.wrongaddress');
-      } on FormatException catch (exception) {
+      } on MatrixConnectionException catch (exception) {
         expect(exception != null, true);
       }
       await matrix.checkHomeserver('https://fakeserver.notexisting');

@@ -769,9 +769,12 @@ class Client extends MatrixApi {
         Logs.warning('The user has been logged out!');
         clear();
       }
+    } on MatrixConnectionException catch (e, s) {
+      Logs.warning('Synchronization connection failed: ${e.toString()}');
+      onSyncError.add(SdkError(exception: e, stackTrace: s));
     } catch (e, s) {
       if (!isLogged() || _disposed) return;
-      Logs.error('Error during processing events: ' + e.toString(), s);
+      Logs.error('Error during processing events: ${e.toString()}', s);
       onSyncError.add(SdkError(
           exception: e is Exception ? e : Exception(e), stackTrace: s));
     }

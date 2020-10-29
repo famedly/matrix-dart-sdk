@@ -30,6 +30,7 @@ import 'model/filter.dart';
 import 'model/keys_query_response.dart';
 import 'model/login_response.dart';
 import 'model/login_types.dart';
+import 'model/matrix_connection_exception.dart';
 import 'model/matrix_event.dart';
 import 'model/matrix_exception.dart';
 import 'model/matrix_keys.dart';
@@ -190,6 +191,9 @@ class MatrixApi {
       } catch (_) {
         // No-OP
       }
+      if (resp.statusCode >= 500 && resp.statusCode < 600) {
+        throw Exception(respBody);
+      }
       var jsonString = String.fromCharCodes(respBody.runes);
       if (jsonString.startsWith('[') && jsonString.endsWith(']')) {
         jsonString = '\{"chunk":$jsonString\}';
@@ -197,18 +201,15 @@ class MatrixApi {
       jsonResp = jsonDecode(jsonString)
           as Map<String, dynamic>; // May throw FormatException
 
-      if (resp.statusCode >= 400 && resp.statusCode < 500) {
-        // The server has responsed with an matrix related error.
-        var exception = MatrixException(resp);
-
-        throw exception;
-      }
       _timeoutFactor = 1;
-    } on TimeoutException catch (_) {
+    } on TimeoutException catch (e, s) {
       _timeoutFactor *= 2;
-      rethrow;
-    } catch (_) {
-      rethrow;
+      throw MatrixConnectionException(e, s);
+    } catch (e, s) {
+      throw MatrixConnectionException(e, s);
+    }
+    if (resp.statusCode >= 400 && resp.statusCode < 500) {
+      throw MatrixException(resp);
     }
 
     return jsonResp;

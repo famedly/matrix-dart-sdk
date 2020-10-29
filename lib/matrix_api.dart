@@ -30,6 +30,7 @@ export 'matrix_api/model/filter.dart';
 export 'matrix_api/model/keys_query_response.dart';
 export 'matrix_api/model/login_response.dart';
 export 'matrix_api/model/login_types.dart';
+export 'matrix_api/model/matrix_connection_exception.dart';
 export 'matrix_api/model/matrix_event.dart';
 export 'matrix_api/model/matrix_exception.dart';
 export 'matrix_api/model/matrix_keys.dart';
