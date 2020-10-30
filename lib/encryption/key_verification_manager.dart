@@ -65,9 +65,12 @@ class KeyVerificationManager {
       return; // TODO: send cancel with unknown transaction id
     }
     if (_requests.containsKey(transactionId)) {
-      await _requests[transactionId].handlePayload(event.type, event.content);
+      // make sure that new requests can't come from ourself
+      if (!{'m.key.verification.request'}.contains(event.type)) {
+        await _requests[transactionId].handlePayload(event.type, event.content);
+      }
     } else {
-      if (!['m.key.verification.request', 'm.key.verification.start']
+      if (!{'m.key.verification.request', 'm.key.verification.start'}
           .contains(event.type)) {
         return; // we can only start on these
       }
@@ -115,7 +118,7 @@ class KeyVerificationManager {
         _requests.remove(transactionId);
       }
     } else if (event['sender'] != client.userID) {
-      if (!['m.key.verification.request', 'm.key.verification.start']
+      if (!{'m.key.verification.request', 'm.key.verification.start'}
           .contains(type)) {
         return; // we can only start on these
       }

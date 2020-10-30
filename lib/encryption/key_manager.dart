@@ -563,6 +563,7 @@ class KeyManager {
               stacktrace);
         }
       }
+      // TODO: also don't request from others if we have an index of 0 now
       if (!hadPreviously &&
           getInboundGroupSession(room.id, sessionId, senderKey) != null) {
         return; // we managed to load the session from online backup, no need to care about it now

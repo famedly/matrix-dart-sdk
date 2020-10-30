@@ -54,18 +54,29 @@ class DeviceKeysList {
   }
 
   Future<KeyVerification> startVerification() async {
-    final roomId =
-        await User(userId, room: Room(client: client)).startDirectChat();
-    if (roomId == null) {
-      throw 'Unable to start new room';
+    if (userId != client.userID) {
+      // in-room verification with someone else
+      final roomId =
+          await User(userId, room: Room(client: client)).startDirectChat();
+      if (roomId == null) {
+        throw 'Unable to start new room';
+      }
+      final room =
+          client.getRoomById(roomId) ?? Room(id: roomId, client: client);
+      final request = KeyVerification(
+          encryption: client.encryption, room: room, userId: userId);
+      await request.start();
+      // no need to add to the request client object. As we are doing a room
+      // verification request that'll happen automatically once we know the transaction id
+      return request;
+    } else {
+      // broadcast self-verification
+      final request = KeyVerification(
+          encryption: client.encryption, userId: userId, deviceId: '*');
+      await request.start();
+      client.encryption.keyVerificationManager.addRequest(request);
+      return request;
     }
-    final room = client.getRoomById(roomId) ?? Room(id: roomId, client: client);
-    final request = KeyVerification(
-        encryption: client.encryption, room: room, userId: userId);
-    await request.start();
-    // no need to add to the request client object. As we are doing a room
-    // verification request that'll happen automatically once we know the transaction id
-    return request;
   }
 
   DeviceKeysList.fromDb(

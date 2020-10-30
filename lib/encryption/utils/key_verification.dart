@@ -140,6 +140,9 @@ class KeyVerification {
   bool canceled = false;
   String canceledCode;
   String canceledReason;
+  bool get isDone =>
+      canceled ||
+      {KeyVerificationState.error, KeyVerificationState.done}.contains(state);
 
   KeyVerification(
       {this.encryption,
@@ -200,6 +203,9 @@ class KeyVerification {
 
   Future<void> handlePayload(String type, Map<String, dynamic> payload,
       [String eventId]) async {
+    if (isDone) {
+      return; // no need to do anything with already canceled requests
+    }
     while (_handlePayloadLock) {
       await Future.delayed(Duration(milliseconds: 50));
     }
@@ -235,6 +241,21 @@ class KeyVerification {
           setState(KeyVerificationState.askAccept);
           break;
         case 'm.key.verification.ready':
+          if (deviceId == '*') {
+            _deviceId = payload['from_device']; // gotta set the real device id
+            // and broadcast the cancel to the other devices
+            final devices = List<DeviceKeys>.from(
+                client.userDeviceKeys[userId].deviceKeys.values);
+            devices.removeWhere(
+                (d) => {deviceId, client.deviceID}.contains(d.deviceId));
+            final cancelPayload = <String, dynamic>{
+              'reason': 'Another device accepted the request',
+              'code': 'm.accepted',
+            };
+            makePayload(cancelPayload);
+            await client.sendToDeviceEncrypted(
+                devices, 'm.key.verification.cancel', cancelPayload);
+          }
           _deviceId ??= payload['from_device'];
           possibleMethods =
               _intersect(knownVerificationMethods, payload['methods']);
@@ -383,6 +404,9 @@ class KeyVerification {
 
   /// called when the user rejects an incoming verification
   Future<void> rejectVerification() async {
+    if (isDone) {
+      return;
+    }
     if (!(await verifyLastStep(
         ['m.key.verification.request', 'm.key.verification.start']))) {
       return;
@@ -557,7 +581,7 @@ class KeyVerification {
     if (room != null) {
       Logs.info(
           '[Key Verification] Sending to ${userId} in room ${room.id}...');
-      if (['m.key.verification.request'].contains(type)) {
+      if ({'m.key.verification.request'}.contains(type)) {
         payload['msgtype'] = type;
         payload['to'] = userId;
         payload['body'] =
@@ -572,8 +596,19 @@ class KeyVerification {
     } else {
       Logs.info(
           '[Key Verification] Sending to ${userId} device ${deviceId}...');
-      await client.sendToDeviceEncrypted(
-          [client.userDeviceKeys[userId].deviceKeys[deviceId]], type, payload);
+      if (deviceId == '*') {
+        if ({'m.key.verification.request'}.contains(type)) {
+          await client.sendToDevicesOfUserIds({userId}, type, payload);
+        } else {
+          Logs.error(
+              '[Key Verification] Tried to broadcast and un-broadcastable type: ${type}');
+        }
+      } else {
+        await client.sendToDeviceEncrypted(
+            [client.userDeviceKeys[userId].deviceKeys[deviceId]],
+            type,
+            payload);
+      }
     }
   }
 
