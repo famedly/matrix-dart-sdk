@@ -232,30 +232,40 @@ class Encryption {
     if (event.type != EventTypes.Encrypted) {
       return event;
     }
-    if (client.database != null &&
-        keyManager.getInboundGroupSession(roomId, event.content['session_id'],
-                event.content['sender_key']) ==
-            null) {
-      await keyManager.loadInboundGroupSession(
-          roomId, event.content['session_id'], event.content['sender_key']);
-    }
-    event = decryptRoomEventSync(roomId, event);
-    if (event.type != EventTypes.Encrypted && store) {
-      if (updateType != EventUpdateType.history) {
-        event.room?.setState(event);
+    try {
+      if (client.database != null &&
+          keyManager.getInboundGroupSession(roomId, event.content['session_id'],
+                  event.content['sender_key']) ==
+              null) {
+        await keyManager.loadInboundGroupSession(
+            roomId, event.content['session_id'], event.content['sender_key']);
       }
-      await client.database?.storeEventUpdate(
-        client.id,
-        EventUpdate(
-          eventType: event.type,
-          content: event.toJson(),
-          roomID: event.roomId,
-          type: updateType,
-          sortOrder: event.sortOrder,
-        ),
-      );
+      event = decryptRoomEventSync(roomId, event);
+      if (event.type == EventTypes.Encrypted &&
+          event.content['can_request_session'] == true) {
+        keyManager.maybeAutoRequest(
+            roomId, event.content['session_id'], event.content['sender_key']);
+      }
+      if (event.type != EventTypes.Encrypted && store) {
+        if (updateType != EventUpdateType.history) {
+          event.room?.setState(event);
+        }
+        await client.database?.storeEventUpdate(
+          client.id,
+          EventUpdate(
+            eventType: event.type,
+            content: event.toJson(),
+            roomID: event.roomId,
+            type: updateType,
+            sortOrder: event.sortOrder,
+          ),
+        );
+      }
+      return event;
+    } catch (e, s) {
+      Logs.error('[Decrypt] Could not decrpyt event: ' + e.toString(), s);
+      return event;
     }
-    return event;
   }
 
   /// Encrypts the given json payload and creates a send-ready m.room.encrypted

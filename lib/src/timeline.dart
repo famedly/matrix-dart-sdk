@@ -135,6 +135,22 @@ class Timeline {
     if (decryptAtLeastOneEvent) onUpdate();
   }
 
+  /// Request the keys for undecryptable events of this timeline
+  void requestKeys() {
+    for (final event in events) {
+      if (event.type == EventTypes.Encrypted &&
+          event.messageType == MessageTypes.BadEncrypted &&
+          event.content['can_request_session'] == true) {
+        try {
+          room.client.encryption.keyManager.maybeAutoRequest(room.id,
+              event.content['session_id'], event.content['sender_key']);
+        } catch (_) {
+          // dispose
+        }
+      }
+    }
+  }
+
   int _findEvent({String event_id, String unsigned_txid}) {
     // we want to find any existing event where either the passed event_id or the passed unsigned_txid
     // matches either the event_id or transaction_id of the existing event.

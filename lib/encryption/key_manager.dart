@@ -19,7 +19,6 @@
 import 'dart:convert';
 
 import 'package:olm/olm.dart' as olm;
-import 'package:pedantic/pedantic.dart';
 
 import './encryption.dart';
 import './utils/outbound_group_session.dart';
@@ -51,16 +50,29 @@ class KeyManager {
         if (info.algorithm != RoomKeysAlgorithmType.v1Curve25519AesSha2) {
           return false;
         }
-        if (keyObj.init_with_private_key(base64.decode(secret)) ==
-            info.authData['public_key']) {
-          _requestedSessionIds.clear();
-          return true;
-        }
-        return false;
+        return keyObj.init_with_private_key(base64.decode(secret)) ==
+            info.authData['public_key'];
       } catch (_) {
         return false;
       } finally {
         keyObj.free();
+      }
+    });
+    encryption.ssss.setCacheCallback(MEGOLM_KEY, (String secret) {
+      // we got a megolm key cached, clear our requested keys and try to re-decrypt
+      // last events
+      _requestedSessionIds.clear();
+      for (final room in client.rooms) {
+        final lastEvent = room.lastEvent;
+        if (lastEvent.type == EventTypes.Encrypted &&
+            lastEvent.content['can_request_session'] == true) {
+          try {
+            maybeAutoRequest(room.id, lastEvent.content['session_id'],
+                lastEvent.content['sener_key']);
+          } catch (_) {
+            // dispose
+          }
+        }
       }
     });
   }
@@ -189,6 +201,21 @@ class KeyManager {
     return null;
   }
 
+  /// Attempt auto-request for a key
+  void maybeAutoRequest(String roomId, String sessionId, String senderKey) {
+    final room = client.getRoomById(roomId);
+    final requestIdent = '$roomId|$sessionId|$senderKey';
+    if (client.enableE2eeRecovery &&
+        room != null &&
+        !_requestedSessionIds.contains(requestIdent) &&
+        !client.isUnknownSession) {
+      // do e2ee recovery
+      _requestedSessionIds.add(requestIdent);
+      runInRoot(
+          () => request(room, sessionId, senderKey, onlineKeyBackupOnly: true));
+    }
+  }
+
   /// Loads an inbound group session
   Future<SessionKey> loadInboundGroupSession(
       String roomId, String sessionId, String senderKey) async {
@@ -206,17 +233,6 @@ class KeyManager {
     final session = await client.database
         ?.getDbInboundGroupSession(client.id, roomId, sessionId);
     if (session == null) {
-      final room = client.getRoomById(roomId);
-      final requestIdent = '$roomId|$sessionId|$senderKey';
-      if (client.enableE2eeRecovery &&
-          room != null &&
-          !_requestedSessionIds.contains(requestIdent) &&
-          !client.isUnknownSession) {
-        // do e2ee recovery
-        _requestedSessionIds.add(requestIdent);
-        unawaited(runInRoot(() =>
-            request(room, sessionId, senderKey, onlineKeyBackupOnly: true)));
-      }
       return null;
     }
     if (!_inboundGroupSessions.containsKey(roomId)) {

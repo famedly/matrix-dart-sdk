@@ -19,6 +19,7 @@
 import 'dart:core';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:async';
 
 import 'package:base58check/base58.dart';
 import 'package:crypto/crypto.dart';
@@ -48,7 +49,8 @@ class SSSS {
   final Encryption encryption;
   Client get client => encryption.client;
   final pendingShareRequests = <String, _ShareRequest>{};
-  final _validators = <String, Future<bool> Function(String)>{};
+  final _validators = <String, FutureOr<bool> Function(String)>{};
+  final _cacheCallbacks = <String, FutureOr<void> Function(String)>{};
   final Map<String, DbSSSSCache> _cache = <String, DbSSSSCache>{};
   SSSS(this.encryption);
 
@@ -145,8 +147,12 @@ class SSSS {
         info.iterations, info.bits != null ? (info.bits / 8).ceil() : 32));
   }
 
-  void setValidator(String type, Future<bool> Function(String) validator) {
+  void setValidator(String type, FutureOr<bool> Function(String) validator) {
     _validators[type] = validator;
+  }
+
+  void setCacheCallback(String type, FutureOr<void> Function(String) callback) {
+    _cacheCallbacks[type] = callback;
   }
 
   String get defaultKeyId {
@@ -221,12 +227,17 @@ class SSSS {
       // cache the thing
       await client.database
           .storeSSSSCache(client.id, type, keyId, enc['ciphertext'], decrypted);
+      if (_cacheCallbacks.containsKey(type) && await getCached(type) == null) {
+        _cacheCallbacks[type](decrypted);
+      }
     }
     return decrypted;
   }
 
   Future<void> store(
       String type, String secret, String keyId, Uint8List key) async {
+    final triggerCacheCallback =
+        _cacheCallbacks.containsKey(type) && await getCached(type) == null;
     final encrypted = encryptAes(secret, key, type);
     final content = <String, dynamic>{
       'encrypted': <String, dynamic>{},
@@ -242,6 +253,9 @@ class SSSS {
       // cache the thing
       await client.database
           .storeSSSSCache(client.id, type, keyId, encrypted.ciphertext, secret);
+      if (triggerCacheCallback) {
+        _cacheCallbacks[type](secret);
+      }
     }
   }
 
@@ -404,6 +418,9 @@ class SSSS {
               .content['encrypted'][keyId]['ciphertext'];
           await client.database.storeSSSSCache(
               client.id, request.type, keyId, ciphertext, secret);
+          if (_cacheCallbacks.containsKey(request.type)) {
+            _cacheCallbacks[request.type](secret);
+          }
         }
       }
     }
