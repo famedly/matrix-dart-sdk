@@ -799,7 +799,7 @@ class Room {
   /// Call the Matrix API to join this room if the user is not already a member.
   /// If this room is intended to be a direct chat, the direct chat flag will
   /// automatically be set.
-  Future<void> join() async {
+  Future<void> join({bool removeIfNotFound = true}) async {
     try {
       await client.joinRoom(id);
       final invitation = getState(EventTypes.RoomMember, client.userID);
@@ -809,7 +809,9 @@ class Room {
         await addToDirectChat(invitation.sender.id);
       }
     } on MatrixException catch (exception) {
-      if (exception.errorMessage == 'No known servers') {
+      if (removeIfNotFound &&
+          [MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN]
+              .contains(exception.error)) {
         await client.database?.forgetRoom(client.id, id);
         client.onRoomUpdate.add(
           RoomUpdate(
