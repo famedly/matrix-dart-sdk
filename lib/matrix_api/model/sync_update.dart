@@ -227,6 +227,8 @@ class LeftRoomUpdate extends SyncRoomUpdate {
   TimelineUpdate timeline;
   List<BasicRoomEvent> accountData;
 
+  LeftRoomUpdate();
+
   LeftRoomUpdate.fromJson(Map<String, dynamic> json) {
     state = (json['state'] != null && json['state']['events'] != null)
         ? (json['state']['events'] as List)

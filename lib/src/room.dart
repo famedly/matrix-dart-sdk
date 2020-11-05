@@ -33,7 +33,6 @@ import 'utils/logs.dart';
 import 'utils/markdown.dart';
 import 'utils/matrix_file.dart';
 import 'utils/matrix_localizations.dart';
-import 'utils/room_update.dart';
 import 'utils/states_map.dart';
 
 enum PushRuleState { notify, mentions_only, dont_notify }
@@ -812,13 +811,12 @@ class Room {
       if (removeIfNotFound &&
           [MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN]
               .contains(exception.error)) {
-        await client.database?.forgetRoom(client.id, id);
-        client.onRoomUpdate.add(
-          RoomUpdate(
-              id: id,
-              membership: Membership.leave,
-              notification_count: 0,
-              highlight_count: 0),
+        await _handleFakeSync(
+          SyncUpdate()
+            ..rooms = (RoomsUpdate()
+              ..leave = {
+                '$id': (LeftRoomUpdate()),
+              }),
         );
       }
       rethrow;
