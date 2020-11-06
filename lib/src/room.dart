@@ -798,7 +798,7 @@ class Room {
   /// Call the Matrix API to join this room if the user is not already a member.
   /// If this room is intended to be a direct chat, the direct chat flag will
   /// automatically be set.
-  Future<void> join({bool removeIfNotFound = true}) async {
+  Future<void> join({bool leaveIfNotFound = true}) async {
     try {
       await client.joinRoom(id);
       final invitation = getState(EventTypes.RoomMember, client.userID);
@@ -808,9 +808,25 @@ class Room {
         await addToDirectChat(invitation.sender.id);
       }
     } on MatrixException catch (exception) {
-      if (removeIfNotFound &&
+      if (leaveIfNotFound &&
           [MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN]
               .contains(exception.error)) {
+        await leave();
+      }
+      rethrow;
+    }
+    return;
+  }
+
+  /// Call the Matrix API to leave this room. If this room is set as a direct
+  /// chat, this will be removed too.
+  Future<void> leave() async {
+    if (directChatMatrixID != '') await removeFromDirectChat();
+    try {
+      await client.leaveRoom(id);
+    } on MatrixException catch (exception) {
+      if ([MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN]
+          .contains(exception.error)) {
         await _handleFakeSync(
           SyncUpdate()
             ..rooms = (RoomsUpdate()
@@ -821,13 +837,6 @@ class Room {
       }
       rethrow;
     }
-  }
-
-  /// Call the Matrix API to leave this room. If this room is set as a direct
-  /// chat, this will be removed too.
-  Future<void> leave() async {
-    if (directChatMatrixID != '') await removeFromDirectChat();
-    await client.leaveRoom(id);
     return;
   }
 
