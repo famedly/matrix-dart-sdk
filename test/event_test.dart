@@ -978,6 +978,24 @@ void main() {
       displayEvent = event.getDisplayEvent(
           Timeline(events: <Event>[event, edit1, edit2, edit3], room: room));
       expect(displayEvent.body, 'edit 2');
+      event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'body': 'blah',
+          'msgtype': 'm.text',
+        },
+        'event_id': '\$source',
+        'sender': '@alice:example.org',
+        'unsigned': {
+          'redacted_because': {
+            'evnet_id': '\$redact',
+            'sender': '@alice:example.org',
+          },
+        },
+      }, null);
+      displayEvent = event.getDisplayEvent(
+          Timeline(events: <Event>[event, edit1, edit2, edit3], room: room));
+      expect(displayEvent.body, 'Redacted');
     });
     test('downloadAndDecryptAttachment', () async {
       final FILE_BUFF = Uint8List.fromList([0]);

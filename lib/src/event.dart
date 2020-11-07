@@ -745,6 +745,9 @@ class Event extends MatrixEvent {
   /// Fetches the event to be rendered, taking into account all the edits and the like.
   /// It needs a [timeline] for that.
   Event getDisplayEvent(Timeline timeline) {
+    if (redacted) {
+      return this;
+    }
     if (hasAggregatedEvents(timeline, RelationshipTypes.Edit)) {
       // alright, we have an edit
       final allEditEvents = aggregatedEvents(timeline, RelationshipTypes.Edit)
