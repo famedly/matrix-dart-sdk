@@ -564,7 +564,7 @@ void main() {
         'state_key': '',
         'type': 'm.room.join_rules',
         'unsigned': {'age': 1234}
-      }, room));
+      }, room, 1432735824653.0));
       expect(room.joinRules, JoinRules.invite);
       await room.setJoinRules(JoinRules.invite);
     });
@@ -581,7 +581,7 @@ void main() {
         'state_key': '',
         'type': 'm.room.guest_access',
         'unsigned': {'age': 1234}
-      }, room));
+      }, room, 1432735824653.0));
       expect(room.guestAccess, GuestAccess.can_join);
       await room.setGuestAccess(GuestAccess.can_join);
     });
@@ -598,7 +598,7 @@ void main() {
         'state_key': '',
         'type': 'm.room.history_visibility',
         'unsigned': {'age': 1234}
-      }, room));
+      }, room, 1432735824653.0));
       expect(room.historyVisibility, HistoryVisibility.shared);
       await room.setHistoryVisibility(HistoryVisibility.joined);
     });
@@ -613,7 +613,7 @@ void main() {
         'sender': '@example:example.org',
         'type': 'm.custom',
         'unsigned': {'age': 1234}
-      }, room));
+      }, room, 1432735824653.0));
       expect(room.getState('m.custom') != null, false);
 
       // set state events
@@ -626,7 +626,7 @@ void main() {
         'state_key': '',
         'type': 'm.custom',
         'unsigned': {'age': 1234}
-      }, room));
+      }, room, 1432735824653.0));
       expect(room.getState('m.custom') != null, true);
 
       // sets messages as state events
@@ -638,7 +638,7 @@ void main() {
         'sender': '@example:example.org',
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
-      }, room));
+      }, room, 1432735824653.0));
       expect(room.getState('m.room.message') != null, true);
     });
 

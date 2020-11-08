@@ -145,11 +145,8 @@ class Room {
             .contains(state.type)) {
       return;
     }
-    if ((getState(state.type, state.stateKey ?? '')
-                ?.originServerTs
-                ?.millisecondsSinceEpoch ??
-            0) >
-        (state.originServerTs?.millisecondsSinceEpoch ?? 1)) {
+    final oldStateEvent = getState(state.type, state.stateKey ?? '');
+    if (oldStateEvent != null && oldStateEvent.sortOrder >= state.sortOrder) {
       return;
     }
     if (!states.states.containsKey(state.type)) {
