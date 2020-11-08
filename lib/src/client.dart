@@ -199,11 +199,24 @@ class Client extends MatrixApi {
     if (accountData['m.direct'] != null &&
         accountData['m.direct'].content[userId] is List<dynamic> &&
         accountData['m.direct'].content[userId].length > 0) {
+      final potentialRooms = <Room>{};
       for (final roomId in accountData['m.direct'].content[userId]) {
         final room = getRoomById(roomId);
         if (room != null && room.membership == Membership.join) {
-          return roomId;
+          potentialRooms.add(room);
         }
+      }
+      if (potentialRooms.isNotEmpty) {
+        return potentialRooms
+            .fold(
+                null,
+                (prev, r) => prev == null
+                    ? r
+                    : (prev.lastEvent.originServerTs <
+                            r.lastEvent.originServerTs
+                        ? r
+                        : prev))
+            .id;
       }
     }
     for (var i = 0; i < rooms.length; i++) {
