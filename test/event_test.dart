@@ -325,7 +325,7 @@ void main() {
     test('canRedact', () async {
       expect(event.canRedact, true);
     });
-    test('getLocalizedBody', () async {
+    test('getLocalizedBody, isEventKnown', () async {
       final matrix = Client('testclient', httpClient: FakeMatrixApi());
       final room = Room(id: '!1234:example.com', client: matrix);
       var event = Event.fromJson({
@@ -355,6 +355,7 @@ void main() {
         }
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -382,6 +383,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {'reason': 'Spamming'},
@@ -394,6 +396,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -408,6 +411,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -422,6 +426,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {'alias': '#somewhere:localhost'},
@@ -434,6 +439,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -454,6 +460,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -469,6 +476,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {'join_rule': 'public'},
@@ -481,6 +489,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -497,6 +506,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {'membership': 'invite'},
@@ -508,6 +518,7 @@ void main() {
         'type': 'm.room.member'
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {'membership': 'leave'},
@@ -522,6 +533,7 @@ void main() {
         }
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {'membership': 'ban'},
@@ -536,6 +548,7 @@ void main() {
         }
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {'membership': 'join'},
@@ -550,6 +563,7 @@ void main() {
         }
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {'membership': 'invite'},
@@ -564,6 +578,7 @@ void main() {
         }
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {'membership': 'leave'},
@@ -578,6 +593,7 @@ void main() {
         }
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {'membership': 'leave'},
@@ -592,6 +608,7 @@ void main() {
         }
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -615,6 +632,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {'name': 'The room name'},
@@ -627,6 +645,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {'topic': 'A room topic'},
@@ -639,6 +658,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -654,6 +674,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {'history_visibility': 'shared'},
@@ -666,6 +687,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -683,6 +705,7 @@ void main() {
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()),
           'Example activatedEndToEndEncryption. needPantalaimonWarning');
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -700,6 +723,7 @@ void main() {
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()),
           'This is an example text message');
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -717,6 +741,7 @@ void main() {
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()),
           '* thinks this is an example emote');
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -734,6 +759,7 @@ void main() {
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()),
           'This is an example notice');
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -750,6 +776,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -767,6 +794,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -787,6 +815,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -811,6 +840,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
         'content': {
@@ -840,6 +870,19 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, true);
+
+      event = Event.fromJson({
+        'content': {'beep': 'boop'},
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'unknown.event.type',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.isEventTypeKnown, false);
     });
 
     test('aggregations', () {

@@ -22,13 +22,13 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 
-import '../encryption.dart';
 import '../famedlysdk.dart';
 import '../matrix_api.dart';
 import 'database/database.dart' show DbRoomState, DbEvent;
 import 'room.dart';
 import 'utils/matrix_localizations.dart';
 import 'utils/receipt.dart';
+import 'utils/event_localizations.dart';
 
 abstract class RelationshipTypes {
   static const String Reply = 'm.in_reply_to';
@@ -45,6 +45,8 @@ class Event extends MatrixEvent {
 
   @Deprecated('Use [type] instead')
   String get typeKey => type;
+
+  String get senderName => sender.calcDisplayname();
 
   /// The room this event belongs to. May be null.
   final Room room;
@@ -450,6 +452,10 @@ class Event extends MatrixEvent {
     return MatrixFile(bytes: uint8list, name: body);
   }
 
+  /// Returns if this is a known event type.
+  bool get isEventTypeKnown =>
+      EventLocalizations.localizationsMap.containsKey(type);
+
   /// Returns a localized String representation of this event. For a
   /// room list you may find [withSenderNamePrefix] useful. Set [hideReply] to
   /// crop all lines starting with '>'.
@@ -458,210 +464,10 @@ class Event extends MatrixEvent {
     if (redacted) {
       return i18n.removedBy(redactedBecause.sender.calcDisplayname());
     }
-    var localizedBody = body;
-    final senderName = sender.calcDisplayname();
-    switch (type) {
-      case EventTypes.Sticker:
-        localizedBody = i18n.sentASticker(senderName);
-        break;
-      case EventTypes.Redaction:
-        localizedBody = i18n.redactedAnEvent(senderName);
-        break;
-      case EventTypes.RoomAliases:
-        localizedBody = i18n.changedTheRoomAliases(senderName);
-        break;
-      case EventTypes.RoomCanonicalAlias:
-        localizedBody = i18n.changedTheRoomInvitationLink(senderName);
-        break;
-      case EventTypes.RoomCreate:
-        localizedBody = i18n.createdTheChat(senderName);
-        break;
-      case EventTypes.RoomTombstone:
-        localizedBody = i18n.roomHasBeenUpgraded;
-        break;
-      case EventTypes.RoomJoinRules:
-        var joinRules = JoinRules.values.firstWhere(
-            (r) =>
-                r.toString().replaceAll('JoinRules.', '') ==
-                content['join_rule'],
-            orElse: () => null);
-        if (joinRules == null) {
-          localizedBody = i18n.changedTheJoinRules(senderName);
-        } else {
-          localizedBody = i18n.changedTheJoinRulesTo(
-              senderName, joinRules.getLocalizedString(i18n));
-        }
-        break;
-      case EventTypes.RoomMember:
-        var text = 'Failed to parse member event';
-        final targetName = stateKeyUser.calcDisplayname();
-        // Has the membership changed?
-        final newMembership = content['membership'] ?? '';
-        final oldMembership =
-            prevContent != null ? prevContent['membership'] ?? '' : '';
-        if (newMembership != oldMembership) {
-          if (oldMembership == 'invite' && newMembership == 'join') {
-            text = i18n.acceptedTheInvitation(targetName);
-          } else if (oldMembership == 'invite' && newMembership == 'leave') {
-            if (stateKey == senderId) {
-              text = i18n.rejectedTheInvitation(targetName);
-            } else {
-              text = i18n.hasWithdrawnTheInvitationFor(senderName, targetName);
-            }
-          } else if (oldMembership == 'leave' && newMembership == 'join') {
-            text = i18n.joinedTheChat(targetName);
-          } else if (oldMembership == 'join' && newMembership == 'ban') {
-            text = i18n.kickedAndBanned(senderName, targetName);
-          } else if (oldMembership == 'join' &&
-              newMembership == 'leave' &&
-              stateKey != senderId) {
-            text = i18n.kicked(senderName, targetName);
-          } else if (oldMembership == 'join' &&
-              newMembership == 'leave' &&
-              stateKey == senderId) {
-            text = i18n.userLeftTheChat(targetName);
-          } else if (oldMembership == 'invite' && newMembership == 'ban') {
-            text = i18n.bannedUser(senderName, targetName);
-          } else if (oldMembership == 'leave' && newMembership == 'ban') {
-            text = i18n.bannedUser(senderName, targetName);
-          } else if (oldMembership == 'ban' && newMembership == 'leave') {
-            text = i18n.unbannedUser(senderName, targetName);
-          } else if (newMembership == 'invite') {
-            text = i18n.invitedUser(senderName, targetName);
-          } else if (newMembership == 'join') {
-            text = i18n.joinedTheChat(targetName);
-          }
-        } else if (newMembership == 'join') {
-          final newAvatar = content['avatar_url'] ?? '';
-          final oldAvatar =
-              prevContent != null ? prevContent['avatar_url'] ?? '' : '';
-
-          final newDisplayname = content['displayname'] ?? '';
-          final oldDisplayname =
-              prevContent != null ? prevContent['displayname'] ?? '' : '';
-
-          // Has the user avatar changed?
-          if (newAvatar != oldAvatar) {
-            text = i18n.changedTheProfileAvatar(targetName);
-          }
-          // Has the user avatar changed?
-          else if (newDisplayname != oldDisplayname) {
-            text = i18n.changedTheDisplaynameTo(targetName, newDisplayname);
-          }
-        }
-        localizedBody = text;
-        break;
-      case EventTypes.RoomPowerLevels:
-        localizedBody = i18n.changedTheChatPermissions(senderName);
-        break;
-      case EventTypes.RoomName:
-        localizedBody = i18n.changedTheChatNameTo(senderName, content['name']);
-        break;
-      case EventTypes.RoomTopic:
-        localizedBody =
-            i18n.changedTheChatDescriptionTo(senderName, content['topic']);
-        break;
-      case EventTypes.RoomAvatar:
-        localizedBody = i18n.changedTheChatAvatar(senderName);
-        break;
-      case EventTypes.GuestAccess:
-        var guestAccess = GuestAccess.values.firstWhere(
-            (r) =>
-                r.toString().replaceAll('GuestAccess.', '') ==
-                content['guest_access'],
-            orElse: () => null);
-        if (guestAccess == null) {
-          localizedBody = i18n.changedTheGuestAccessRules(senderName);
-        } else {
-          localizedBody = i18n.changedTheGuestAccessRulesTo(
-              senderName, guestAccess.getLocalizedString(i18n));
-        }
-        break;
-      case EventTypes.HistoryVisibility:
-        var historyVisibility = HistoryVisibility.values.firstWhere(
-            (r) =>
-                r.toString().replaceAll('HistoryVisibility.', '') ==
-                content['history_visibility'],
-            orElse: () => null);
-        if (historyVisibility == null) {
-          localizedBody = i18n.changedTheHistoryVisibility(senderName);
-        } else {
-          localizedBody = i18n.changedTheHistoryVisibilityTo(
-              senderName, historyVisibility.getLocalizedString(i18n));
-        }
-        break;
-      case EventTypes.Encryption:
-        localizedBody = i18n.activatedEndToEndEncryption(senderName);
-        if (!room.client.encryptionEnabled) {
-          localizedBody += '. ' + i18n.needPantalaimonWarning;
-        }
-        break;
-      case EventTypes.CallAnswer:
-        localizedBody = i18n.answeredTheCall(senderName);
-        break;
-      case EventTypes.CallHangup:
-        localizedBody = i18n.endedTheCall(senderName);
-        break;
-      case EventTypes.CallInvite:
-        localizedBody = i18n.startedACall(senderName);
-        break;
-      case EventTypes.CallCandidates:
-        localizedBody = i18n.sentCallInformations(senderName);
-        break;
-      case EventTypes.Encrypted:
-      case EventTypes.Message:
-        switch (messageType) {
-          case MessageTypes.Image:
-            localizedBody = i18n.sentAPicture(senderName);
-            break;
-          case MessageTypes.File:
-            localizedBody = i18n.sentAFile(senderName);
-            break;
-          case MessageTypes.Audio:
-            localizedBody = i18n.sentAnAudio(senderName);
-            break;
-          case MessageTypes.Video:
-            localizedBody = i18n.sentAVideo(senderName);
-            break;
-          case MessageTypes.Location:
-            localizedBody = i18n.sharedTheLocation(senderName);
-            break;
-          case MessageTypes.Sticker:
-            localizedBody = i18n.sentASticker(senderName);
-            break;
-          case MessageTypes.Emote:
-            localizedBody = '* $body';
-            break;
-          case MessageTypes.BadEncrypted:
-            String errorText;
-            switch (body) {
-              case DecryptError.CHANNEL_CORRUPTED:
-                errorText = i18n.channelCorruptedDecryptError + '.';
-                break;
-              case DecryptError.NOT_ENABLED:
-                errorText = i18n.encryptionNotEnabled + '.';
-                break;
-              case DecryptError.UNKNOWN_ALGORITHM:
-                errorText = i18n.unknownEncryptionAlgorithm + '.';
-                break;
-              case DecryptError.UNKNOWN_SESSION:
-                errorText = i18n.noPermission + '.';
-                break;
-              default:
-                errorText = body;
-                break;
-            }
-            localizedBody = i18n.couldNotDecryptMessage(errorText);
-            break;
-          case MessageTypes.Text:
-          case MessageTypes.Notice:
-          case MessageTypes.None:
-            localizedBody = body;
-            break;
-        }
-        break;
-      default:
-        localizedBody = i18n.unknownEvent(type);
+    final callback = EventLocalizations.localizationsMap[type];
+    var localizedBody = i18n.unknownEvent(type);
+    if (callback != null) {
+      localizedBody = callback(this, i18n);
     }
 
     // Hide reply fallback
