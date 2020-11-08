@@ -287,8 +287,12 @@ class Timeline {
         if (i < events.length) {
           // if the old status is larger than the new one, we also want to preserve the old status
           final oldStatus = events[i].status;
-          events[i] =
-              Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder);
+          events[i] = Event.fromJson(
+              eventUpdate.content,
+              room,
+              eventUpdate.type == EventUpdateType.history
+                  ? events[i].sortOrder
+                  : eventUpdate.sortOrder);
           // do we preserve the status? we should allow 0 -> -1 updates and status increases
           if (status < oldStatus && !(status == -1 && oldStatus == 0)) {
             events[i].status = oldStatus;

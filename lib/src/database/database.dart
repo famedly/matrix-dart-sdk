@@ -421,6 +421,8 @@ class Database extends _$Database {
     if (roomUpdate.limitedTimeline) {
       await removeSuccessfulRoomEvents(clientId, roomUpdate.id);
       await updateRoomSortOrder(0.0, 0.0, clientId, roomUpdate.id);
+    }
+    if (roomUpdate.prev_batch != null) {
       await setRoomPrevBatch(roomUpdate.prev_batch, clientId, roomUpdate.id);
     }
   }
