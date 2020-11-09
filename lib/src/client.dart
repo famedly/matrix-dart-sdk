@@ -476,12 +476,20 @@ class Client extends MatrixApi {
             mHeroes: []);
         if (room.timeline?.events != null) {
           for (var event in room.timeline.events) {
-            leftRoom.setState(Event.fromMatrixEvent(event, leftRoom));
+            leftRoom.setState(Event.fromMatrixEvent(
+              event,
+              leftRoom,
+              sortOrder: event.originServerTs.millisecondsSinceEpoch.toDouble(),
+            ));
           }
         }
         if (room.state != null) {
           for (var event in room.state) {
-            leftRoom.setState(Event.fromMatrixEvent(event, leftRoom));
+            leftRoom.setState(Event.fromMatrixEvent(
+              event,
+              leftRoom,
+              sortOrder: event.originServerTs.millisecondsSinceEpoch.toDouble(),
+            ));
           }
         }
         archiveList.add(leftRoom);
