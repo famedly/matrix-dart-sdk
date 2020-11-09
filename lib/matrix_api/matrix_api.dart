@@ -257,6 +257,7 @@ class MatrixApi {
     String token,
     String deviceId,
     String initialDeviceDisplayName,
+    Map<String, dynamic> auth,
   }) async {
     final response = await request(RequestType.POST, '/client/r0/login', data: {
       'type': type,
@@ -272,6 +273,7 @@ class MatrixApi {
       if (deviceId != null) 'device_id': deviceId,
       if (initialDeviceDisplayName != null)
         'initial_device_display_name': initialDeviceDisplayName,
+      if (auth != null) 'auth': auth,
     });
     return LoginResponse.fromJson(response);
   }

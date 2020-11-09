@@ -348,6 +348,7 @@ class Client extends MatrixApi {
     String token,
     String deviceId,
     String initialDeviceDisplayName,
+    Map<String, dynamic> auth,
   }) async {
     final loginResp = await super.login(
       type: type,
@@ -359,6 +360,7 @@ class Client extends MatrixApi {
       medium: medium,
       address: address,
       token: token,
+      auth: auth,
     );
 
     // Connect if there is an access token in the response.
