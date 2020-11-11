@@ -1,17 +1,34 @@
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   runApp(FamedlySdkExampleApp());
 }
 
 class FamedlySdkExampleApp extends StatelessWidget {
-  static Client client = Client('Famedly SDK Example Client', debug: true);
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Famedly SDK Example App',
-      home: LoginView(),
+    return Provider<Client>(
+      create: (_) => Client('Famedly SDK Example App'),
+      child: Builder(
+        builder: (context) => MaterialApp(
+          title: 'Famedly SDK Example App',
+          home: StreamBuilder<LoginState>(
+            stream: Provider.of<Client>(context).onLoginStateChanged.stream,
+            builder:
+                (BuildContext context, AsyncSnapshot<LoginState> snapshot) {
+              if (snapshot.hasError) {
+                return Center(child: Text(snapshot.error.toString()));
+              }
+              if (snapshot.data == LoginState.logged) {
+                return ChatListView();
+              }
+              return LoginView();
+            },
+          ),
+        ),
+      ),
     );
   }
 }
@@ -22,80 +39,78 @@ class LoginView extends StatefulWidget {
 }
 
 class _LoginViewState extends State<LoginView> {
-  final TextEditingController _homeserverController = TextEditingController();
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  bool _isLoading = false;
-  String _error;
+  final TextEditingController _usernameController = TextEditingController(),
+      _passwordController = TextEditingController(),
+      _domainController = TextEditingController();
 
-  void _loginAction() async {
-    setState(() => _isLoading = true);
-    setState(() => _error = null);
+  String _errorText;
+
+  bool _isLoading = false;
+
+  void _loginAction(Client client) async {
+    setState(() {
+      _errorText = null;
+      _isLoading = true;
+    });
     try {
-      if (await FamedlySdkExampleApp.client
-              .checkServer(_homeserverController.text) ==
-          false) {
-        throw (Exception('Server not supported'));
-      }
-      if (await FamedlySdkExampleApp.client.login(
-            _usernameController.text,
-            _passwordController.text,
-          ) ==
-          false) {
-        throw (Exception('Username or password incorrect'));
-      }
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => ChatListView()),
-        (route) => false,
+      await client.checkHomeserver(_domainController.text);
+      await client.login(
+        user: _usernameController.text,
+        password: _passwordController.text,
       );
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() => _errorText = e.toString());
     }
     setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
+    final client = Provider.of<Client>(context);
     return Scaffold(
-      appBar: AppBar(title: Text('Login')),
+      appBar: AppBar(
+        title: Text('Famedly SDK Example App'),
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         children: [
-          TextField(
-            controller: _homeserverController,
-            readOnly: _isLoading,
-            autocorrect: false,
-            decoration: InputDecoration(
-              labelText: 'Homeserver',
-              hintText: 'https://matrix.org',
-            ),
-          ),
-          SizedBox(height: 8),
           TextField(
             controller: _usernameController,
             readOnly: _isLoading,
             autocorrect: false,
             decoration: InputDecoration(
+              border: OutlineInputBorder(),
               labelText: 'Username',
-              hintText: '@username:domain',
             ),
           ),
-          SizedBox(height: 8),
+          SizedBox(height: 16),
           TextField(
             controller: _passwordController,
+            readOnly: _isLoading,
+            autocorrect: false,
             obscureText: true,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'Password',
+            ),
+          ),
+          SizedBox(height: 16),
+          TextField(
+            controller: _domainController,
             readOnly: _isLoading,
             autocorrect: false,
             decoration: InputDecoration(
+              border: OutlineInputBorder(),
               labelText: 'Password',
-              hintText: '****',
-              errorText: _error,
+              hintText: 'https://matrix.org',
+              errorText: _errorText,
+              errorMaxLines: 4,
             ),
           ),
-          SizedBox(height: 8),
+          SizedBox(height: 16),
           RaisedButton(
             child: _isLoading ? LinearProgressIndicator() : Text('Login'),
-            onPressed: _isLoading ? null : _loginAction,
+            onPressed: _isLoading ? null : () => _loginAction(client),
           ),
         ],
       ),
@@ -103,162 +118,123 @@ class _LoginViewState extends State<LoginView> {
   }
 }
 
-class ChatListView extends StatefulWidget {
-  @override
-  _ChatListViewState createState() => _ChatListViewState();
-}
-
-class _ChatListViewState extends State<ChatListView> {
+class ChatListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final client = Provider.of<Client>(context);
     return Scaffold(
       appBar: AppBar(
         title: Text('Chats'),
       ),
       body: StreamBuilder(
-        stream: FamedlySdkExampleApp.client.onSync.stream,
-        builder: (c, s) => ListView.builder(
-          itemCount: FamedlySdkExampleApp.client.rooms.length,
-          itemBuilder: (BuildContext context, int i) {
-            final room = FamedlySdkExampleApp.client.rooms[i];
-            return ListTile(
-              title: Text(room.displayname + ' (${room.notificationCount})'),
-              subtitle: Text(room.lastMessage, maxLines: 1),
-              leading: CircleAvatar(
-                backgroundImage: NetworkImage(room.avatar.getThumbnail(
-                  FamedlySdkExampleApp.client,
-                  width: 64,
-                  height: 64,
-                )),
+        stream: client.onSync.stream,
+        builder: (context, _) => ListView.builder(
+          itemCount: client.rooms.length,
+          itemBuilder: (BuildContext context, int i) => ListTile(
+            leading: CircleAvatar(
+              backgroundImage: client.rooms[i].avatar == null
+                  ? null
+                  : NetworkImage(
+                      client.rooms[i].avatar.getThumbnail(
+                        client,
+                        width: 64,
+                        height: 64,
+                      ),
+                    ),
+            ),
+            title: Text(client.rooms[i].displayname),
+            subtitle: Text(client.rooms[i].lastMessage),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ChatView(roomId: client.rooms[i].id),
               ),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ChatView(room: room),
-                ),
-              ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class ChatView extends StatefulWidget {
-  final Room room;
+class ChatView extends StatelessWidget {
+  final String roomId;
 
-  const ChatView({Key key, @required this.room}) : super(key: key);
-
-  @override
-  _ChatViewState createState() => _ChatViewState();
-}
-
-class _ChatViewState extends State<ChatView> {
-  final TextEditingController _controller = TextEditingController();
-
-  void _sendAction() {
-    print('Send Text');
-    widget.room.sendTextEvent(_controller.text);
-    _controller.clear();
-  }
-
-  Timeline timeline;
-
-  Future<bool> getTimeline() async {
-    timeline ??=
-        await widget.room.getTimeline(onUpdate: () => setState(() => null));
-    return true;
-  }
-
-  @override
-  void dispose() {
-    timeline?.cancelSubscriptions();
-    super.dispose();
-  }
+  const ChatView({Key key, @required this.roomId}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: StreamBuilder<Object>(
-            stream: widget.room.onUpdate.stream,
-            builder: (context, snapshot) {
-              return Text(widget.room.displayname);
-            }),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: FutureBuilder(
-              future: getTimeline(),
-              builder: (context, snapshot) => !snapshot.hasData
-                  ? Center(
-                      child: CircularProgressIndicator(),
-                    )
-                  : ListView.builder(
-                      reverse: true,
-                      itemCount: timeline.events.length,
-                      itemBuilder: (BuildContext context, int i) => Opacity(
-                        opacity: timeline.events[i].status != 2 ? 0.5 : 1,
-                        child: ListTile(
-                          title: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  timeline.events[i].sender.calcDisplayname(),
-                                ),
-                              ),
-                              Text(
-                                timeline.events[i].originServerTs
-                                    .toIso8601String(),
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ],
-                          ),
-                          subtitle: Text(timeline.events[i].body),
-                          leading: CircleAvatar(
-                            child: timeline.events[i].sender?.avatarUrl == null
-                                ? Icon(Icons.person)
-                                : null,
-                            backgroundImage:
-                                timeline.events[i].sender?.avatarUrl != null
-                                    ? NetworkImage(
-                                        timeline.events[i].sender?.avatarUrl
-                                            ?.getThumbnail(
-                                          FamedlySdkExampleApp.client,
+    final client = Provider.of<Client>(context);
+    final TextEditingController _sendController = TextEditingController();
+    return StreamBuilder<Object>(
+        stream: client.onSync.stream,
+        builder: (context, _) {
+          final room = client.getRoomById(roomId);
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(room.displayname),
+            ),
+            body: SafeArea(
+              child: FutureBuilder<Timeline>(
+                future: room.getTimeline(),
+                builder:
+                    (BuildContext context, AsyncSnapshot<Timeline> snapshot) {
+                  if (!snapshot.hasData) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+                  final timeline = snapshot.data;
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: ListView.builder(
+                          reverse: true,
+                          itemCount: timeline.events.length,
+                          itemBuilder: (BuildContext context, int i) {
+                            final event = timeline.events[i];
+                            final sender = event.sender;
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundImage: sender.avatarUrl == null
+                                    ? null
+                                    : NetworkImage(
+                                        sender.avatarUrl.getThumbnail(
+                                          client,
                                           width: 64,
                                           height: 64,
                                         ),
-                                      )
-                                    : null,
-                          ),
+                                      ),
+                              ),
+                              title: Text(sender.calcDisplayname()),
+                              subtitle: Text(event.body),
+                            );
+                          },
                         ),
                       ),
-                    ),
+                      Divider(height: 1),
+                      Container(
+                        height: 56,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _sendController,
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.send),
+                              onPressed: () {
+                                room.sendTextEvent(_sendController.text);
+                                _sendController.clear();
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
-          Container(
-            height: 60,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                      labelText: 'Send a message ...',
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.send),
-                  onPressed: _sendAction,
-                )
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+          );
+        });
   }
 }
