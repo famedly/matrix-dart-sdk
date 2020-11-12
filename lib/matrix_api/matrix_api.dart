@@ -138,7 +138,6 @@ class MatrixApi {
     }
     timeout ??= (_timeoutFactor * syncTimeoutSec) + 5;
     dynamic json;
-    if (data is Map) data.removeWhere((k, v) => v == null);
     (!(data is String)) ? json = jsonEncode(data) : json = data;
     if (data is List<int> || action.startsWith('/media/r0/upload')) json = data;
 
