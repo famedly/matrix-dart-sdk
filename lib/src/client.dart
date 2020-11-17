@@ -575,6 +575,9 @@ class Client extends MatrixApi {
   /// Will be called on call answers.
   final StreamController<Event> onCallAnswer = StreamController.broadcast();
 
+  /// Will be called on new event notifications
+  final StreamController<Event> onNotification = StreamController.broadcast();
+
   /// Will be called when another device is requesting session keys for a room.
   final StreamController<RoomKeyRequest> onRoomKeyRequest =
       StreamController.broadcast();
@@ -1101,6 +1104,10 @@ class Client extends MatrixApi {
           onCallCandidates
               .add(Event.fromJson(rawUnencryptedEvent, room, sortOrder));
         }
+      }
+      if (room.notificationCount > 0 &&
+          room.lastEvent.eventId == event['event_id']) {
+        onNotification.add(room.lastEvent);
       }
     }
   }
