@@ -1040,7 +1040,7 @@ void main() {
           Timeline(events: <Event>[event, edit1, edit2, edit3], room: room));
       expect(displayEvent.body, 'Redacted');
     });
-    test('downloadAndDecryptAttachment', () async {
+    test('attachments', () async {
       final FILE_BUFF = Uint8List.fromList([0]);
       final THUMBNAIL_BUFF = Uint8List.fromList([2]);
       final downloadCallback = (String url) async {
@@ -1066,6 +1066,9 @@ void main() {
       var buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
       expect(buffer.bytes, FILE_BUFF);
+      expect(event.attachmentOrThumbnailMxcUrl(), 'mxc://example.org/file');
+      expect(event.attachmentOrThumbnailMxcUrl(getThumbnail: true),
+          'mxc://example.org/file');
 
       event = Event.fromJson({
         'type': EventTypes.Message,
@@ -1074,12 +1077,41 @@ void main() {
           'msgtype': 'm.image',
           'url': 'mxc://example.org/file',
           'info': {
+            'size': 8000000,
             'thumbnail_url': 'mxc://example.org/thumb',
+            'thumbnail_info': {
+              'mimetype': 'thumbnail/mimetype',
+            },
+            'mimetype': 'application/octet-stream',
           },
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
       }, room);
+      expect(event.hasAttachment, true);
+      expect(event.hasThumbnail, true);
+      expect(event.isAttachmentEncrypted, false);
+      expect(event.isThumbnailEncrypted, false);
+      expect(event.attachmentMimetype, 'application/octet-stream');
+      expect(event.thumbnailMimetype, 'thumbnail/mimetype');
+      expect(event.attachmentMxcUrl, 'mxc://example.org/file');
+      expect(event.thumbnailMxcUrl, 'mxc://example.org/thumb');
+      expect(event.attachmentOrThumbnailMxcUrl(), 'mxc://example.org/file');
+      expect(event.attachmentOrThumbnailMxcUrl(getThumbnail: true),
+          'mxc://example.org/thumb');
+      expect(event.getAttachmentUrl(),
+          'https://fakeserver.notexisting/_matrix/media/r0/download/example.org/file');
+      expect(event.getAttachmentUrl(getThumbnail: true),
+          'https://fakeserver.notexisting/_matrix/media/r0/thumbnail/example.org/file?width=800&height=800&method=scale');
+      expect(event.getAttachmentUrl(useThumbnailMxcUrl: true),
+          'https://fakeserver.notexisting/_matrix/media/r0/download/example.org/thumb');
+      expect(
+          event.getAttachmentUrl(getThumbnail: true, useThumbnailMxcUrl: true),
+          'https://fakeserver.notexisting/_matrix/media/r0/thumbnail/example.org/thumb?width=800&height=800&method=scale');
+      expect(
+          event.getAttachmentUrl(getThumbnail: true, minNoThumbSize: 9000000),
+          'https://fakeserver.notexisting/_matrix/media/r0/download/example.org/file');
+
       buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
       expect(buffer.bytes, FILE_BUFF);
@@ -1088,7 +1120,7 @@ void main() {
           getThumbnail: true, downloadCallback: downloadCallback);
       expect(buffer.bytes, THUMBNAIL_BUFF);
     });
-    test('downloadAndDecryptAttachment encrypted', () async {
+    test('encrypted attachments', () async {
       if (!olmEnabled) return;
 
       final FILE_BUFF_ENC = Uint8List.fromList([0x3B, 0x6B, 0xB2, 0x8C, 0xAF]);
@@ -1174,6 +1206,14 @@ void main() {
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
       }, room);
+      expect(event.hasAttachment, true);
+      expect(event.hasThumbnail, true);
+      expect(event.isAttachmentEncrypted, true);
+      expect(event.isThumbnailEncrypted, true);
+      expect(event.attachmentMimetype, 'text/plain');
+      expect(event.thumbnailMimetype, 'text/plain');
+      expect(event.attachmentMxcUrl, 'mxc://example.com/file');
+      expect(event.thumbnailMxcUrl, 'mxc://example.com/thumb');
       buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
       expect(buffer.bytes, FILE_BUFF_DEC);
@@ -1209,8 +1249,10 @@ void main() {
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
       }, room);
+      expect(await event.isAttachmentInLocalStore(), false);
       var buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
+      expect(await event.isAttachmentInLocalStore(), true);
       expect(buffer.bytes, FILE_BUFF);
       expect(serverHits, 1);
       buffer = await event.downloadAndDecryptAttachment(

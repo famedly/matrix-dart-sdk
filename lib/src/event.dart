@@ -370,10 +370,135 @@ class Event extends MatrixEvent {
     return;
   }
 
+  /// Gets the info map of file events, or a blank map if none present
+  Map get infoMap =>
+      content['info'] is Map ? content['info'] : <String, dynamic>{};
+
+  /// Gets the thumbnail info map of file events, or a blank map if nonepresent
+  Map get thumbnailInfoMap => infoMap['thumbnail_info'] is Map
+      ? infoMap['thumbnail_info']
+      : <String, dynamic>{};
+
+  /// Returns if a file event has an attachment
+  bool get hasAttachment => content['url'] is String || content['file'] is Map;
+
+  /// Returns if a file event has a thumbnail
   bool get hasThumbnail =>
-      content['info'] is Map<String, dynamic> &&
-      (content['info']['thumbnail_url'] is String ||
-          content['info']['thumbnail_file'] is Map);
+      infoMap['thumbnail_url'] is String || infoMap['thumbnail_file'] is Map;
+
+  /// Returns if a file events attachment is encrypted
+  bool get isAttachmentEncrypted => content['file'] is Map;
+
+  /// Returns if a file events thumbnail is encrypted
+  bool get isThumbnailEncrypted => infoMap['thumbnail_file'] is Map;
+
+  /// Gets the mimetipe of the attachment of a file event, or a blank string if not present
+  String get attachmentMimetype => infoMap['mimetype'] is String
+      ? infoMap['mimetype'].toLowerCase()
+      : (content['file'] is Map && content['file']['mimetype'] is String
+          ? content['file']['mimetype']
+          : '');
+
+  /// Gets the mimetype of the thumbnail of a file event, or a blank string if not present
+  String get thumbnailMimetype => thumbnailInfoMap['mimetype'] is String
+      ? thumbnailInfoMap['mimetype'].toLowerCase()
+      : (infoMap['thumbnail_file'] is Map &&
+              infoMap['thumbnail_file']['mimetype'] is String
+          ? infoMap['thumbnail_file']['mimetype']
+          : '');
+
+  /// Gets the underyling mxc url of an attachment of a file event, or null if not present
+  String get attachmentMxcUrl =>
+      isAttachmentEncrypted ? content['file']['url'] : content['url'];
+
+  /// Gets the underyling mxc url of a thumbnail of a file event, or null if not present
+  String get thumbnailMxcUrl => isThumbnailEncrypted
+      ? infoMap['thumbnail_file']['url']
+      : infoMap['thumbnail_url'];
+
+  /// Gets the mxc url of an attachemnt/thumbnail of a file event, taking sizes into account, or null if not present
+  String attachmentOrThumbnailMxcUrl({bool getThumbnail = false}) {
+    if (getThumbnail &&
+        infoMap['size'] is int &&
+        thumbnailInfoMap['size'] is int &&
+        infoMap['size'] <= thumbnailInfoMap['size']) {
+      getThumbnail = false;
+    }
+    if (getThumbnail && !hasThumbnail) {
+      getThumbnail = false;
+    }
+    return getThumbnail ? thumbnailMxcUrl : attachmentMxcUrl;
+  }
+
+  // size determined from an approximate 800x800 jpeg thumbnail with method=scale
+  static const _minNoThumbSize = 80 * 1024;
+
+  /// Gets the attachment https URL to display in the timeline, taking into account if the original image is tiny.
+  /// Returns null for encrypted rooms, if the image can't be fetched via http url or if the event does not contain an attachment.
+  /// Set [getThumbnail] to true to fetch the thumbnail, set [width], [height] and [method]
+  /// for the respective thumbnailing properties.
+  /// [minNoThumbSize] is the minimum size that an original image may be to not fetch its thumbnail, defaults to 80k
+  /// [useThumbnailMxcUrl] says weather to use the mxc url of the thumbnail, rather than the original attachment
+  String getAttachmentUrl(
+      {bool getThumbnail = false,
+      bool useThumbnailMxcUrl = false,
+      double width = 800.0,
+      double height = 800.0,
+      ThumbnailMethod method = ThumbnailMethod.scale,
+      int minNoThumbSize = _minNoThumbSize}) {
+    if (![EventTypes.Message, EventTypes.Sticker].contains(type) ||
+        !hasAttachment ||
+        isAttachmentEncrypted) {
+      return null; // can't url-thumbnail in encrypted rooms
+    }
+    if (useThumbnailMxcUrl && !hasThumbnail) {
+      return null; // can't fetch from thumbnail
+    }
+    final thisInfoMap = useThumbnailMxcUrl ? thumbnailInfoMap : infoMap;
+    final thisMxcUrl =
+        useThumbnailMxcUrl ? infoMap['thumbnail_url'] : content['url'];
+    // if we have as method scale, we can return safely the original image, should it be small enough
+    if (getThumbnail &&
+        method == ThumbnailMethod.scale &&
+        thisInfoMap['size'] is int &&
+        thisInfoMap['size'] < minNoThumbSize) {
+      getThumbnail = false;
+    }
+    // now generate the actual URLs
+    if (getThumbnail) {
+      return Uri.parse(thisMxcUrl).getThumbnail(
+        room.client,
+        width: width,
+        height: height,
+        method: method,
+      );
+    } else {
+      return Uri.parse(thisMxcUrl).getDownloadLink(room.client);
+    }
+  }
+
+  /// Returns if an attachment is in the local store
+  Future<bool> isAttachmentInLocalStore({bool getThumbnail = false}) async {
+    if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
+      throw ("This event has the type '$type' and so it can't contain an attachment.");
+    }
+    final mxcUrl = attachmentOrThumbnailMxcUrl(getThumbnail: getThumbnail);
+    if (!(mxcUrl is String)) {
+      throw ("This event hasn't any attachment or thumbnail.");
+    }
+    getThumbnail = mxcUrl != attachmentMxcUrl;
+    // Is this file storeable?
+    final thisInfoMap = getThumbnail ? thumbnailInfoMap : infoMap;
+    var storeable = room.client.database != null &&
+        thisInfoMap['size'] is int &&
+        thisInfoMap['size'] <= room.client.database.maxFileSize;
+
+    Uint8List uint8list;
+    if (storeable) {
+      uint8list = await room.client.database.getFile(mxcUrl);
+    }
+    return uint8list != null;
+  }
 
   /// Downloads (and decryptes if necessary) the attachment of this
   /// event and returns it as a [MatrixFile]. If this event doesn't
@@ -385,36 +510,26 @@ class Event extends MatrixEvent {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
-    if (!getThumbnail &&
-        !(content['url'] is String) &&
-        !(content['file'] is Map)) {
-      throw ("This event hasn't any attachment.");
+    final mxcUrl = attachmentOrThumbnailMxcUrl(getThumbnail: getThumbnail);
+    if (!(mxcUrl is String)) {
+      throw ("This event hasn't any attachment or thumbnail.");
     }
-    if (getThumbnail && !hasThumbnail) {
-      throw ("This event hasn't any thumbnail.");
-    }
-    final isEncrypted = getThumbnail
-        ? !(content['info']['thumbnail_url'] is String)
-        : !(content['url'] is String);
+    getThumbnail = mxcUrl != attachmentMxcUrl;
+    final isEncrypted =
+        getThumbnail ? isThumbnailEncrypted : isAttachmentEncrypted;
 
     if (isEncrypted && !room.client.encryptionEnabled) {
       throw ('Encryption is not enabled in your Client.');
     }
-    var mxContent = getThumbnail
-        ? Uri.parse(isEncrypted
-            ? content['info']['thumbnail_file']['url']
-            : content['info']['thumbnail_url'])
-        : Uri.parse(isEncrypted ? content['file']['url'] : content['url']);
+    final mxContent = Uri.parse(mxcUrl);
 
     Uint8List uint8list;
 
     // Is this file storeable?
-    final infoMap =
-        getThumbnail ? content['info']['thumbnail_info'] : content['info'];
+    final thisInfoMap = getThumbnail ? thumbnailInfoMap : infoMap;
     var storeable = room.client.database != null &&
-        infoMap is Map<String, dynamic> &&
-        infoMap['size'] is int &&
-        infoMap['size'] <= room.client.database.maxFileSize;
+        thisInfoMap['size'] is int &&
+        thisInfoMap['size'] <= room.client.database.maxFileSize;
 
     if (storeable) {
       uint8list = await room.client.database.getFile(mxContent.toString());
@@ -438,7 +553,7 @@ class Event extends MatrixEvent {
     // Decrypt the file
     if (isEncrypted) {
       final fileMap =
-          getThumbnail ? content['info']['thumbnail_file'] : content['file'];
+          getThumbnail ? infoMap['thumbnail_file'] : content['file'];
       if (!fileMap['key']['key_ops'].contains('decrypt')) {
         throw ("Missing 'decrypt' in 'key_ops'.");
       }
