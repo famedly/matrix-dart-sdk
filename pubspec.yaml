@@ -8,27 +8,27 @@ environment:
   sdk: ">=2.7.0 <3.0.0"
 
 dependencies:
-  http: ^0.12.1
-  mime: ^0.9.6
+  http: ^0.12.2
+  mime: ^0.9.7
   canonical_json: ^1.0.0
-  markdown: ^2.1.3
-  html_unescape: ^1.0.1+3
-  moor: ^3.0.2
-  random_string: ^2.0.1
-  encrypt: ^4.0.2
-  crypto: ^2.1.4
+  markdown: ^3.0.0
+  html_unescape: ^1.0.2
+  moor: ^3.4.0
+  random_string: ^2.1.0
+  encrypt: ^4.1.0
+  crypto: ^2.1.5
   base58check: ^1.0.1
   password_hash: ^2.0.0
   olm: ^1.2.1
-  matrix_file_e2ee: ^1.0.4
-  ansicolor: ^1.0.2
+  matrix_file_e2ee: ^1.0.5
+  ansicolor: ^1.0.5
   isolate: ^2.0.3
 
 dev_dependencies:
-  test: ^1.0.0
-  test_coverage: ^0.4.3
-  moor_generator: ^3.0.0
-  build_runner: ^1.5.2
+  test: ^1.15.5
+  test_coverage: ^0.5.0
+  moor_generator: ^3.4.0
+  build_runner: ^1.10.4
   pedantic: ^1.9.2
   dapackages: ^1.4.0
 
