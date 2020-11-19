@@ -23,10 +23,10 @@ import 'fake_database.dart';
 
 void main() {
   group('Databse', () {
-    final database = getDatabase();
     var clientId = -1;
     var room = Room(id: '!room:blubb');
     test('setupDatabase', () async {
+      final database = await getDatabase(null);
       clientId = await database.insertClient(
           'testclient',
           'https://example.org',
@@ -38,6 +38,7 @@ void main() {
           null);
     });
     test('storeEventUpdate', () async {
+      final database = await getDatabase(null);
       // store a simple update
       var update = EventUpdate(
         type: EventUpdateType.timeline,
