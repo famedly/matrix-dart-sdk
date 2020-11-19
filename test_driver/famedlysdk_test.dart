@@ -22,16 +22,14 @@ void test() async {
     Logs.success('[LibOlm] Enabled');
 
     Logs.success('++++ Login Alice at ++++');
-    testClientA = Client('TestClientA');
-    testClientA.database = getDatabase();
+    testClientA = Client('TestClientA', databaseBuilder: getDatabase);
     await testClientA.checkHomeserver(TestUser.homeserver);
     await testClientA.login(
         user: TestUser.username, password: TestUser.password);
     assert(testClientA.encryptionEnabled);
 
     Logs.success('++++ Login Bob ++++');
-    testClientB = Client('TestClientB');
-    testClientB.database = getDatabase();
+    testClientB = Client('TestClientB', databaseBuilder: getDatabase);
     await testClientB.checkHomeserver(TestUser.homeserver);
     await testClientB.login(
         user: TestUser.username2, password: TestUser.password);
@@ -221,7 +219,7 @@ void test() async {
         "++++ (Alice) Received decrypted message: '${room.lastMessage}' ++++");
 
     Logs.success('++++ Login Bob in another client ++++');
-    var testClientC = Client('TestClientC', database: getDatabase());
+    var testClientC = Client('TestClientC', databaseBuilder: getDatabase);
     await testClientC.checkHomeserver(TestUser.homeserver);
     await testClientC.login(
         user: TestUser.username2, password: TestUser.password);
@@ -269,7 +267,7 @@ void test() async {
         "++++ (Bob) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
 
     Logs.success('++++ Logout Bob another client ++++');
-    await testClientC.dispose();
+    await testClientC.dispose(closeDatabase: false);
     await testClientC.logout();
     testClientC = null;
     await Future.delayed(Duration(seconds: 5));
@@ -317,8 +315,8 @@ void test() async {
     Logs.success('++++ Logout Alice and Bob ++++');
     if (testClientA?.isLogged() ?? false) await testClientA.logoutAll();
     if (testClientA?.isLogged() ?? false) await testClientB.logoutAll();
-    await testClientA?.dispose();
-    await testClientB?.dispose();
+    await testClientA?.dispose(closeDatabase: false);
+    await testClientB?.dispose(closeDatabase: false);
     testClientA = null;
     testClientB = null;
   }

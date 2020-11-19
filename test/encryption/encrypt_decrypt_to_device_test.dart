@@ -22,6 +22,7 @@ import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../fake_client.dart';
+import '../fake_database.dart';
 import '../fake_matrix_api.dart';
 
 void main() {
@@ -43,15 +44,15 @@ void main() {
     if (!olmEnabled) return;
 
     Client client;
-    var otherClient = Client('othertestclient', httpClient: FakeMatrixApi());
+    var otherClient = Client('othertestclient',
+        httpClient: FakeMatrixApi(), databaseBuilder: getDatabase);
     DeviceKeys device;
     Map<String, dynamic> payload;
 
     test('setupClient', () async {
       client = await getClient();
-      otherClient.database = client.database;
       await otherClient.checkHomeserver('https://fakeServer.notExisting');
-      otherClient.connect(
+      otherClient.init(
         newToken: 'abc',
         newUserID: '@othertest:fakeServer.notExisting',
         newHomeserver: otherClient.homeserver,

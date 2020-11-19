@@ -20,7 +20,7 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:moor/moor.dart';
 import 'package:moor/ffi.dart' as moor;
 
-Database getDatabase() {
+Future<Database> getDatabase(Client _) async {
   moorRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   return Database(moor.VmDatabase.memory());
 }
