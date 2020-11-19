@@ -329,7 +329,8 @@ class Client extends MatrixApi {
         newUserID: response.userId,
         newHomeserver: homeserver,
         newDeviceName: initialDeviceDisplayName ?? '',
-        newDeviceID: response.deviceId);
+        newDeviceID: response.deviceId,
+        isNewLogin: true);
     return response;
   }
 
@@ -375,6 +376,7 @@ class Client extends MatrixApi {
       newHomeserver: homeserver,
       newDeviceName: initialDeviceDisplayName ?? '',
       newDeviceID: loginResp.deviceId,
+      isNewLogin: true,
     );
     return loginResp;
   }
@@ -589,6 +591,8 @@ class Client extends MatrixApi {
 
   /// Sets the user credentials and starts the synchronisation.
   ///
+  /// If this is due to a new login, make sure to set [isNewLogin] to true!
+  ///
   /// Before you can connect you need at least an [accessToken], a [homeserver],
   /// a [userID], a [deviceID], and a [deviceName].
   ///
@@ -627,6 +631,7 @@ class Client extends MatrixApi {
     String newDeviceID,
     String newPrevBatch,
     String newOlmAccount,
+    bool isNewLogin = false,
   }) async {
     String olmAccount;
     if (database != null) {
@@ -642,13 +647,23 @@ class Client extends MatrixApi {
         olmAccount = account.olmAccount;
       }
     }
-    accessToken = newToken ?? accessToken;
-    homeserver = newHomeserver ?? homeserver;
-    _userID = newUserID ?? _userID;
-    _deviceID = newDeviceID ?? _deviceID;
-    _deviceName = newDeviceName ?? _deviceName;
-    prevBatch = newPrevBatch ?? prevBatch;
-    olmAccount = newOlmAccount ?? olmAccount;
+    if (isNewLogin) {
+      accessToken = newToken;
+      homeserver = newHomeserver;
+      _userID = newUserID;
+      _deviceID = newDeviceID;
+      _deviceName = newDeviceName;
+      prevBatch = newPrevBatch;
+      olmAccount = newOlmAccount;
+    } else {
+      accessToken = newToken ?? accessToken;
+      homeserver = newHomeserver ?? homeserver;
+      _userID = newUserID ?? _userID;
+      _deviceID = newDeviceID ?? _deviceID;
+      _deviceName = newDeviceName ?? _deviceName;
+      prevBatch = newPrevBatch ?? prevBatch;
+      olmAccount = newOlmAccount ?? olmAccount;
+    }
 
     if (accessToken == null || homeserver == null || _userID == null) {
       // we aren't logged in
