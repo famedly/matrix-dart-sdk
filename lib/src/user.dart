@@ -94,10 +94,10 @@ class User extends Event {
   /// The avatar if the user has one.
   Uri get avatarUrl => content != null && content.containsKey('avatar_url')
       ? (content['avatar_url'] is String
-          ? Uri.parse(content['avatar_url'])
+          ? Uri.tryParse(content['avatar_url'])
           : null)
       : (prevContent != null && prevContent['avatar_url'] is String
-          ? Uri.parse(prevContent['avatar_url'])
+          ? Uri.tryParse(prevContent['avatar_url'])
           : null);
 
   /// Returns the displayname or the local part of the Matrix ID if the user

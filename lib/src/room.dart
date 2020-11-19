@@ -211,7 +211,7 @@ class Room {
   Uri get avatar {
     if (states[EventTypes.RoomAvatar] != null &&
         states[EventTypes.RoomAvatar].content['url'] is String) {
-      return Uri.parse(states[EventTypes.RoomAvatar].content['url']);
+      return Uri.tryParse(states[EventTypes.RoomAvatar].content['url']);
     }
     if (mHeroes != null && mHeroes.length == 1 && states[mHeroes[0]] != null) {
       return states[mHeroes[0]].asUser.avatarUrl;
