@@ -18,6 +18,7 @@
 
 import 'dart:async';
 
+import 'package:famedlysdk/src/utils/tombstone_content.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 
@@ -1665,4 +1666,14 @@ class Room {
       await client.handleSync(syncUpdate, sortAtTheEnd: sortAtTheEnd);
     }
   }
+
+  /// Whether this is an extinct room which has been archived in favor of a new
+  /// room which replaces this. Use [getLegacyRoomInformations] to get more
+  /// informations about it if this is true.
+  bool get isExtinct => getState(EventTypes.RoomTombstone) != null;
+
+  /// Returns informations about how this room is
+  TombstoneContent get extinctInformations => isExtinct
+      ? TombstoneContent.fromJson(getState(EventTypes.RoomTombstone).content)
+      : null;
 }
