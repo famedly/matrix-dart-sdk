@@ -2040,6 +2040,8 @@ class FakeMatrixApi extends MockClient {
           (var req) => {},
       '/client/r0/user/%40alice%3Aexample.com/rooms/1234/account_data/test.account.data':
           (var req) => {},
+      '/client/r0/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/account_data/com.famedly.marked_unread':
+          (var req) => {},
       '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/m.direct':
           (var req) => {},
       '/client/r0/user/%40othertest%3AfakeServer.notExisting/account_data/m.direct':

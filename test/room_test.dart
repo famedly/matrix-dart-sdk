@@ -16,21 +16,21 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:famedlysdk/matrix_api.dart';
 import 'package:famedlysdk/src/client.dart';
+import 'package:famedlysdk/src/database/database.dart'
+    show DbRoom, DbRoomState, DbRoomAccountData;
 import 'package:famedlysdk/src/event.dart';
 import 'package:famedlysdk/src/room.dart';
 import 'package:famedlysdk/src/user.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
-import 'package:famedlysdk/src/database/database.dart'
-    show DbRoom, DbRoomState, DbRoomAccountData;
 import 'package:test/test.dart';
 
 import 'fake_client.dart';
 import 'fake_matrix_api.dart';
-
-import 'dart:convert';
-import 'dart:typed_data';
 
 void main() {
   Client matrix;
@@ -550,6 +550,18 @@ void main() {
       expect(room.tags[TagType.Favourite].order, 0.1);
       expect(room.isFavourite, true);
       await room.setFavourite(false);
+    });
+
+    test('Test marked unread room', () async {
+      await room.setUnread(true);
+      await room.setUnread(false);
+      expect(room.isUnread, false);
+      room.roomAccountData['com.famedly.marked_unread'] =
+          BasicRoomEvent.fromJson({
+        'content': {'unread': true},
+        'type': 'com.famedly.marked_unread'
+      });
+      expect(room.isUnread, true);
     });
 
     test('joinRules', () async {

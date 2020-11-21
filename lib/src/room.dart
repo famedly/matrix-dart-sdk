@@ -18,6 +18,7 @@
 
 import 'dart:async';
 
+import 'package:famedlysdk/matrix_api/model/marked_unread.dart';
 import 'package:famedlysdk/src/utils/tombstone_content.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
@@ -40,6 +41,7 @@ enum PushRuleState { notify, mentions_only, dont_notify }
 enum JoinRules { public, knock, invite, private }
 enum GuestAccess { can_join, forbidden }
 enum HistoryVisibility { invited, joined, shared, world_readable }
+
 const String MessageSendingStatusKey =
     'com.famedly.famedlysdk.message_sending_status';
 
@@ -176,7 +178,7 @@ class Room {
       ? states[EventTypes.RoomName].content['name']
       : '';
 
-  /// The pinned events for this room. If there are no this returns an empty
+  /// The pinned events for this room. If there are none this returns an empty
   /// list.
   List<String> get pinnedEventIds => states[EventTypes.RoomPinnedEvents] != null
       ? (states[EventTypes.RoomPinnedEvents].content['pinned'] is List<String>
@@ -425,6 +427,24 @@ class Room {
         .map((k, v) => MapEntry<String, Tag>(k, Tag.fromJson(v)));
     tags.removeWhere((k, v) => !TagType.isValid(k));
     return tags;
+  }
+
+  bool get markedUnread {
+    return MarkedUnread.fromJson(
+            roomAccountData[EventType.MarkedUnread]?.content ?? {})
+        .unread;
+  }
+
+  /// Returns true if this room is unread
+  bool get isUnread => notificationCount > 0 || markedUnread;
+
+  Future<void> setUnread(bool unread) async {
+    await client.setRoomAccountData(
+      client.userID,
+      id,
+      EventType.MarkedUnread,
+      MarkedUnread(unread).toJson(),
+    );
   }
 
   /// Returns true if this room has a m.favourite tag.
@@ -973,7 +993,8 @@ class Room {
   /// Returns a Room from a json String which comes normally from the store. If the
   /// state are also given, the method will await them.
   static Future<Room> getRoomFromTableRow(
-    DbRoom row, // either Map<String, dynamic> or DbRoom
+    // either Map<String, dynamic> or DbRoom
+    DbRoom row,
     Client matrix, {
     dynamic states, // DbRoomState, as iterator and optionally as future
     dynamic
@@ -985,7 +1006,8 @@ class Room {
           .firstWhere((e) => e.toString() == 'Membership.' + row.membership),
       notificationCount: row.notificationCount,
       highlightCount: row.highlightCount,
-      notificationSettings: 'mention', // TODO: do proper things
+      // TODO: do proper things
+      notificationSettings: 'mention',
       prev_batch: row.prevBatch,
       mInvitedMemberCount: row.invitedMemberCount,
       mJoinedMemberCount: row.joinedMemberCount,
