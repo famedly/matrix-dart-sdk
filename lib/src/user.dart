@@ -163,10 +163,7 @@ class User extends Event {
   Presence get presence => room.client.presences[id];
 
   /// Whether the client is able to ban/unban this user.
-  bool get canBan =>
-      membership != Membership.ban &&
-      room.canBan &&
-      powerLevel < room.ownPowerLevel;
+  bool get canBan => room.canBan && powerLevel < room.ownPowerLevel;
 
   /// Whether the client is able to kick this user.
   bool get canKick =>

@@ -1023,8 +1023,8 @@ class MatrixApi {
   /// would otherwise be allowed to join according to its join rules.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-rooms-roomid-unban
   Future<void> unbanInRoom(String roomId, String userId) async {
-    await request(
-        RequestType.POST, '/client/r0/rooms/${Uri.encodeComponent(roomId)}/ban',
+    await request(RequestType.POST,
+        '/client/r0/rooms/${Uri.encodeComponent(roomId)}/unban',
         data: {
           'user_id': userId,
         });
