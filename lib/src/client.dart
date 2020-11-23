@@ -622,13 +622,14 @@ class Client extends MatrixApi {
   /// If one of [newToken], [newUserID], [newDeviceID], [newDeviceName] is set then
   /// all of them must be set! If you don't set them, this method will try to
   /// get them from the database.
-  void init({
+  Future<void> init({
     String newToken,
     Uri newHomeserver,
     String newUserID,
     String newDeviceName,
     String newDeviceID,
     String newOlmAccount,
+    bool startSyncLoop = true,
   }) async {
     if ((newToken != null ||
             newUserID != null ||
@@ -735,7 +736,9 @@ class Client extends MatrixApi {
       Logs.success(
         'Successfully connected as ${userID.localpart} with ${homeserver.toString()}',
       );
-      return _sync();
+      // ignore: unawaited_futures
+      if (startSyncLoop) _sync();
+      return;
     } catch (e, s) {
       Logs.error('Initialization failed: ${e.toString()}', s);
       clear();
@@ -1577,6 +1580,38 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
       muted,
     );
     return;
+  }
+
+  /// This API is used to paginate through the list of events that the user has
+  /// been, or would have been notified about.
+  /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-notifications
+  /// This also tries to decrypt the events.
+  @override
+  Future<NotificationsQueryResponse> requestNotifications({
+    String from,
+    int limit,
+    String only,
+  }) async {
+    final response = await super.requestNotifications(
+      from: from,
+      limit: limit,
+      only: only,
+    );
+    for (var i = 0; i < response.notifications.length; i++) {
+      final room = getRoomById(response.notifications[i].roomId);
+      if (response.notifications[i].event.type != EventTypes.Encrypted) {
+        continue;
+      }
+      response.notifications[i].event =
+          await room.client.encryption.decryptRoomEvent(
+        room.id,
+        Event.fromMatrixEvent(
+          response.notifications[i].event,
+          room,
+        ),
+      );
+    }
+    return response;
   }
 
   /// Changes the password. You should either set oldPasswort or another authentication flow.
