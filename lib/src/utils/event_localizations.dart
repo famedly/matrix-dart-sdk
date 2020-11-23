@@ -154,7 +154,7 @@ abstract class EventLocalizations {
         }
         // Has the user avatar changed?
         else if (newDisplayname != oldDisplayname) {
-          text = i18n.changedTheDisplaynameTo(targetName, newDisplayname);
+          text = i18n.changedTheDisplaynameTo(event.stateKey, newDisplayname);
         }
       }
       return text;
