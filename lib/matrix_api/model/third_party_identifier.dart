@@ -16,14 +16,17 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/matrix_api.dart';
+
 class ThirdPartyIdentifier {
-  String medium;
+  ThirdPartyIdentifierMedium medium;
   String address;
   int validatedAt;
   int addedAt;
 
   ThirdPartyIdentifier.fromJson(Map<String, dynamic> json) {
-    medium = json['medium'];
+    medium = ThirdPartyIdentifierMedium.values
+        .firstWhere((medium) => describeEnum(medium) == json['medium']);
     address = json['address'];
     validatedAt = json['validated_at'];
     addedAt = json['added_at'];
@@ -31,7 +34,7 @@ class ThirdPartyIdentifier {
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
-    data['medium'] = medium;
+    data['medium'] = describeEnum(medium);
     data['address'] = address;
     data['validated_at'] = validatedAt;
     data['added_at'] = addedAt;

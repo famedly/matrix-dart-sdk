@@ -287,7 +287,7 @@ void main() {
       final response = await matrixApi.deleteThirdPartyIdentifier(
         'alice@example.com',
         ThirdPartyIdentifierMedium.email,
-        'https://example.com',
+        idServer: 'https://example.com',
       );
       expect(response, IdServerUnbindResult.success);
       matrixApi.homeserver = matrixApi.accessToken = null;

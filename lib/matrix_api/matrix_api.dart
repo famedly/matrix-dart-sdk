@@ -517,15 +517,15 @@ class MatrixApi {
   /// https://matrix.org/docs/spec/client_server/r0.6.0#post-matrix-client-r0-account-3pid-delete
   Future<IdServerUnbindResult> deleteThirdPartyIdentifier(
     String address,
-    ThirdPartyIdentifierMedium medium,
+    ThirdPartyIdentifierMedium medium, {
     String idServer,
-  ) async {
+  }) async {
     final response = await request(
         RequestType.POST, '/client/r0/account/3pid/delete',
         data: {
           'address': address,
           'medium': describeEnum(medium),
-          'id_server': idServer,
+          if (idServer != null) 'id_server': idServer,
         });
     return IdServerUnbindResult.values.firstWhere(
       (i) => describeEnum(i) == response['id_server_unbind_result'],
