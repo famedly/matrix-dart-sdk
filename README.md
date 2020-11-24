@@ -1,6 +1,4 @@
-+++ This SDK is under development and highly experimental +++
-
-# famedlysdk
+# Famedly Matrix SDK
 
 Matrix SDK for the famedly talk app written in dart.
 
