@@ -526,7 +526,7 @@ class Room {
               addEmotePack(
                   (room.canonicalAlias?.isEmpty ?? true)
                       ? room.id
-                      : canonicalAlias,
+                      : room.canonicalAlias,
                   event.content,
                   stateKeyEntry.value['name']);
             }
