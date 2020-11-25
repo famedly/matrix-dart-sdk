@@ -507,9 +507,14 @@ class Client extends MatrixApi {
     return;
   }
 
-  /// Returns the push rules for the logged in user.
-  PushRuleSet get pushRules => accountData.containsKey('m.push_rules')
-      ? PushRuleSet.fromJson(accountData['m.push_rules'].content)
+  /// Returns the global push rules for the logged in user.
+  PushRuleSet get globalPushRules => accountData.containsKey('m.push_rules')
+      ? PushRuleSet.fromJson(accountData['m.push_rules'].content['global'])
+      : null;
+
+  /// Returns the device push rules for the logged in user.
+  PushRuleSet get devicePushRules => accountData.containsKey('m.push_rules')
+      ? PushRuleSet.fromJson(accountData['m.push_rules'].content['device'])
       : null;
 
   static const Set<String> supportedVersions = {'r0.5.0', 'r0.6.0'};
