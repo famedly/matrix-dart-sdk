@@ -445,6 +445,9 @@ class Room {
       EventType.MarkedUnread,
       MarkedUnread(unread).toJson(),
     );
+    if (unread == false) {
+      await sendReadReceipt(lastEvent.eventId);
+    }
   }
 
   /// Returns true if this room has a m.favourite tag.
