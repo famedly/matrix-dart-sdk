@@ -25,7 +25,7 @@ import 'package:olm/olm.dart' as olm;
 import 'package:pedantic/pedantic.dart';
 
 import '../encryption/utils/json_signature_check_extension.dart';
-import '../src/utils/logs.dart';
+import '../matrix_api/utils/logs.dart';
 import 'encryption.dart';
 import 'utils/olm_session.dart';
 import '../src/utils/run_in_root.dart';

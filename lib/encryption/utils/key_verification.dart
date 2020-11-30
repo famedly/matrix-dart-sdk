@@ -25,7 +25,7 @@ import 'package:pedantic/pedantic.dart';
 
 import '../../famedlysdk.dart';
 import '../../matrix_api.dart';
-import '../../src/utils/logs.dart';
+import '../../matrix_api/utils/logs.dart';
 import '../encryption.dart';
 
 /*

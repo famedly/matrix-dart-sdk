@@ -30,7 +30,7 @@ import 'room.dart';
 import 'user.dart';
 import 'utils/device_keys_list.dart';
 import 'utils/event_update.dart';
-import 'utils/logs.dart';
+import '../matrix_api/utils/logs.dart';
 import 'utils/matrix_file.dart';
 import 'utils/room_update.dart';
 import 'utils/to_device_event.dart';

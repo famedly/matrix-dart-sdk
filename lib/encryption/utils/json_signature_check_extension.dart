@@ -1,5 +1,5 @@
 import 'package:canonical_json/canonical_json.dart';
-import 'package:famedlysdk/src/utils/logs.dart';
+import 'package:famedlysdk/matrix_api/utils/logs.dart';
 import 'package:olm/olm.dart' as olm;
 
 extension JsonSignatureCheckExtension on Map<String, dynamic> {

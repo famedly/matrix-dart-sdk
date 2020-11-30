@@ -18,7 +18,7 @@
 
 import '../../famedlysdk.dart';
 import '../../matrix_api.dart';
-import 'logs.dart';
+import '../../matrix_api/utils/logs.dart';
 
 enum EventUpdateType {
   timeline,

@@ -19,7 +19,7 @@
 import 'package:olm/olm.dart' as olm;
 
 import '../../src/database/database.dart' show DbOlmSessions;
-import '../../src/utils/logs.dart';
+import '../../matrix_api/utils/logs.dart';
 
 class OlmSession {
   String identityKey;

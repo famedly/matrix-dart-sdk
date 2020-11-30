@@ -19,7 +19,6 @@
 import 'dart:async';
 
 import 'package:famedlysdk/matrix_api/model/marked_unread.dart';
-import 'package:famedlysdk/src/utils/tombstone_content.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 
@@ -31,7 +30,7 @@ import 'event.dart';
 import 'timeline.dart';
 import 'user.dart';
 import 'utils/event_update.dart';
-import 'utils/logs.dart';
+import '../matrix_api/utils/logs.dart';
 import 'utils/markdown.dart';
 import 'utils/matrix_file.dart';
 import 'utils/matrix_localizations.dart';
@@ -1699,6 +1698,6 @@ class Room {
 
   /// Returns informations about how this room is
   TombstoneContent get extinctInformations => isExtinct
-      ? TombstoneContent.fromJson(getState(EventTypes.RoomTombstone).content)
+      ? getState(EventTypes.RoomTombstone).parsedTombstoneContent
       : null;
 }

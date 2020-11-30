@@ -22,7 +22,7 @@ import '../matrix_api.dart';
 import 'event.dart';
 import 'room.dart';
 import 'utils/event_update.dart';
-import 'utils/logs.dart';
+import '../matrix_api/utils/logs.dart';
 import 'utils/room_update.dart';
 
 typedef onTimelineUpdateCallback = void Function();

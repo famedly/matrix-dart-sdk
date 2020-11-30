@@ -8,7 +8,7 @@ import '../../famedlysdk.dart' as sdk;
 import '../../matrix_api.dart' as api;
 import '../client.dart';
 import '../room.dart';
-import '../utils/logs.dart';
+import '../../matrix_api/utils/logs.dart';
 
 part 'database.g.dart';
 

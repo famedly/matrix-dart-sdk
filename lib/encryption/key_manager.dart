@@ -26,7 +26,7 @@ import './utils/session_key.dart';
 import '../famedlysdk.dart';
 import '../matrix_api.dart';
 import '../src/database/database.dart';
-import '../src/utils/logs.dart';
+import '../matrix_api/utils/logs.dart';
 import '../src/utils/run_in_background.dart';
 import '../src/utils/run_in_root.dart';
 

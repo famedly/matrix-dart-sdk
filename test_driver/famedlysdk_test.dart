@@ -1,6 +1,6 @@
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api.dart';
-import 'package:famedlysdk/src/utils/logs.dart';
+import 'package:famedlysdk/matrix_api/utils/logs.dart';
 import '../test/fake_database.dart';
 import 'test_config.dart';
 import 'package:olm/olm.dart' as olm;

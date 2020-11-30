@@ -22,7 +22,7 @@ import 'package:olm/olm.dart' as olm;
 
 import '../../famedlysdk.dart';
 import '../../src/database/database.dart' show DbInboundGroupSession;
-import '../../src/utils/logs.dart';
+import '../../matrix_api/utils/logs.dart';
 
 class SessionKey {
   Map<String, dynamic> content;

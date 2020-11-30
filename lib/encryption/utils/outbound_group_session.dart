@@ -21,7 +21,7 @@ import 'dart:convert';
 import 'package:olm/olm.dart' as olm;
 
 import '../../src/database/database.dart' show DbOutboundGroupSession;
-import '../../src/utils/logs.dart';
+import '../../matrix_api/utils/logs.dart';
 
 class OutboundGroupSession {
   /// The devices is a map from user id to device id to if the device is blocked.
