@@ -65,7 +65,10 @@ void main() {
       device = DeviceKeys.fromJson({
         'user_id': client.userID,
         'device_id': client.deviceID,
-        'algorithms': ['m.olm.v1.curve25519-aes-sha2', 'm.megolm.v1.aes-sha2'],
+        'algorithms': [
+          AlgorithmTypes.olmV1Curve25519AesSha2,
+          AlgorithmTypes.megolmV1AesSha2
+        ],
         'keys': {
           'curve25519:${client.deviceID}': client.identityKey,
           'ed25519:${client.deviceID}': client.fingerprintKey,

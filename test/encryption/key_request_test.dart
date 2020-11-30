@@ -98,7 +98,7 @@ void main() {
           content: {
             'action': 'request',
             'body': {
-              'algorithm': 'm.megolm.v1.aes-sha2',
+              'algorithm': AlgorithmTypes.megolmV1AesSha2,
               'room_id': '!726s6s6q:example.com',
               'sender_key': validSenderKey,
               'session_id': validSessionId,
@@ -139,7 +139,7 @@ void main() {
           content: {
             'action': 'request',
             'body': {
-              'algorithm': 'm.megolm.v1.aes-sha2',
+              'algorithm': AlgorithmTypes.megolmV1AesSha2,
               'room_id': '!726s6s6q:example.com',
               'sender_key': validSenderKey,
               'session_id': validSessionId,
@@ -161,7 +161,7 @@ void main() {
           content: {
             'action': 'request',
             'body': {
-              'algorithm': 'm.megolm.v1.aes-sha2',
+              'algorithm': AlgorithmTypes.megolmV1AesSha2,
               'room_id': '!726s6s6q:example.com',
               'sender_key': validSenderKey,
               'session_id': validSessionId,
@@ -183,7 +183,7 @@ void main() {
           content: {
             'action': 'request',
             'body': {
-              'algorithm': 'm.megolm.v1.aes-sha2',
+              'algorithm': AlgorithmTypes.megolmV1AesSha2,
               'room_id': '!invalid:example.com',
               'sender_key': validSenderKey,
               'session_id': validSessionId,
@@ -205,7 +205,7 @@ void main() {
           content: {
             'action': 'request',
             'body': {
-              'algorithm': 'm.megolm.v1.aes-sha2',
+              'algorithm': AlgorithmTypes.megolmV1AesSha2,
               'room_id': '!726s6s6q:example.com',
               'sender_key': validSenderKey,
               'session_id': 'invalid',
@@ -239,7 +239,7 @@ void main() {
           sender: '@alice:example.com',
           type: 'm.forwarded_room_key',
           content: {
-            'algorithm': 'm.megolm.v1.aes-sha2',
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
             'room_id': '!726s6s6q:example.com',
             'session_id': validSessionId,
             'session_key': sessionKey,
@@ -264,7 +264,7 @@ void main() {
           sender: '@alice:example.com',
           type: 'm.forwarded_room_key',
           content: {
-            'algorithm': 'm.megolm.v1.aes-sha2',
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
             'room_id': '!726s6s6q:example.com',
             'session_id': validSessionId,
             'session_key': sessionKey,
@@ -290,7 +290,7 @@ void main() {
           sender: '@alice:example.com',
           type: 'm.forwarded_room_key',
           content: {
-            'algorithm': 'm.megolm.v1.aes-sha2',
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
             'room_id': '!726s6s6q:example.com',
             'session_id': validSessionId,
             'session_key': sessionKey,
@@ -316,7 +316,7 @@ void main() {
           sender: '@alice:example.com',
           type: 'm.forwarded_room_key',
           content: {
-            'algorithm': 'm.megolm.v1.aes-sha2',
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
             'room_id': '!726s6s6q:example.com',
             'session_id': validSessionId,
             'session_key': sessionKey,

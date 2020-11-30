@@ -20,6 +20,7 @@ import 'dart:convert';
 import 'dart:core';
 import 'dart:math';
 
+import 'package:famedlysdk/matrix_api.dart';
 import 'package:http/http.dart';
 import 'package:http/testing.dart';
 
@@ -198,7 +199,7 @@ class FakeMatrixApi extends MockClient {
                 'sender': '@alice:example.com',
                 'type': 'm.room.encryption',
                 'state_key': '',
-                'content': {'algorithm': 'm.megolm.v1.aes-sha2'},
+                'content': {'algorithm': AlgorithmTypes.megolmV1AesSha2},
                 'origin_server_ts': 1417731086795,
                 'event_id': '666972737430353:example.com'
               },
@@ -543,7 +544,7 @@ class FakeMatrixApi extends MockClient {
         {
           'type': 'm.secret_storage.key.0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3',
           'content': {
-            'algorithm': 'm.secret_storage.v1.aes-hmac-sha2',
+            'algorithm': AlgorithmTypes.secretStorageV1AesHmcSha2,
             'passphrase': {
               'algorithm': 'm.pbkdf2',
               'iterations': 500000,
@@ -620,7 +621,7 @@ class FakeMatrixApi extends MockClient {
 //        {
 //          'sender': '@othertest:fakeServer.notExisting',
 //          'content': {
-//            'algorithm': 'm.megolm.v1.aes-sha2',
+//            'algorithm': AlgorithmTypes.megolmV1AesSha2,
 //            'room_id': '!726s6s6q:example.com',
 //            'session_id': 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU',
 //            'session_key':
@@ -632,7 +633,7 @@ class FakeMatrixApi extends MockClient {
           // this is the commented out m.room_key event - only encrypted
           'sender': '@othertest:fakeServer.notExisting',
           'content': {
-            'algorithm': 'm.olm.v1.curve25519-aes-sha2',
+            'algorithm': AlgorithmTypes.olmV1Curve25519AesSha2,
             'sender_key': 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg',
             'ciphertext': {
               '7rvl3jORJkBiK4XX1e5TnGnqz068XfYJ0W++Ml63rgk': {
@@ -1551,7 +1552,7 @@ class FakeMatrixApi extends MockClient {
                 'event_fields': ['type', 'content', 'sender']
               },
       '/client/unstable/room_keys/version': (var req) => {
-            'algorithm': 'm.megolm_backup.v1.curve25519-aes-sha2',
+            'algorithm': AlgorithmTypes.megolmBackupV1Curve25519AesSha2,
             'auth_data': {
               'public_key': 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM',
               'signatures': {},
@@ -1774,8 +1775,8 @@ class FakeMatrixApi extends MockClient {
                   'user_id': '@alice:example.com',
                   'device_id': 'JLAFKJWSCS',
                   'algorithms': [
-                    'm.olm.v1.curve25519-aes-sha2',
-                    'm.megolm.v1.aes-sha2'
+                    AlgorithmTypes.olmV1Curve25519AesSha2,
+                    AlgorithmTypes.megolmV1AesSha2
                   ],
                   'keys': {
                     'curve25519:JLAFKJWSCS':
@@ -1795,8 +1796,8 @@ class FakeMatrixApi extends MockClient {
                   'user_id': '@alice:example.com',
                   'device_id': 'OTHERDEVICE',
                   'algorithms': [
-                    'm.olm.v1.curve25519-aes-sha2',
-                    'm.megolm.v1.aes-sha2'
+                    AlgorithmTypes.olmV1Curve25519AesSha2,
+                    AlgorithmTypes.megolmV1AesSha2
                   ],
                   'keys': {
                     'curve25519:OTHERDEVICE': 'blah',
@@ -1810,8 +1811,8 @@ class FakeMatrixApi extends MockClient {
                   'user_id': '@test:fakeServer.notExisting',
                   'device_id': 'GHTYAJCE',
                   'algorithms': [
-                    'm.olm.v1.curve25519-aes-sha2',
-                    'm.megolm.v1.aes-sha2'
+                    AlgorithmTypes.olmV1Curve25519AesSha2,
+                    AlgorithmTypes.megolmV1AesSha2
                   ],
                   'keys': {
                     'curve25519:GHTYAJCE':
@@ -1830,8 +1831,8 @@ class FakeMatrixApi extends MockClient {
                   'user_id': '@test:fakeServer.notExisting',
                   'device_id': 'OTHERDEVICE',
                   'algorithms': [
-                    'm.olm.v1.curve25519-aes-sha2',
-                    'm.megolm.v1.aes-sha2'
+                    AlgorithmTypes.olmV1Curve25519AesSha2,
+                    AlgorithmTypes.megolmV1AesSha2
                   ],
                   'keys': {
                     'curve25519:OTHERDEVICE': 'blah',
@@ -1850,8 +1851,8 @@ class FakeMatrixApi extends MockClient {
                   'user_id': '@othertest:fakeServer.notExisting',
                   'device_id': 'FOXDEVICE',
                   'algorithms': [
-                    'm.olm.v1.curve25519-aes-sha2',
-                    'm.megolm.v1.aes-sha2'
+                    AlgorithmTypes.olmV1Curve25519AesSha2,
+                    AlgorithmTypes.megolmV1AesSha2
                   ],
                   'keys': {
                     'curve25519:FOXDEVICE':

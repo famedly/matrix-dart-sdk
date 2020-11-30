@@ -33,7 +33,10 @@ void main() {
       var rawJson = <String, dynamic>{
         'user_id': '@alice:example.com',
         'device_id': 'JLAFKJWSCS',
-        'algorithms': ['m.olm.v1.curve25519-aes-sha2', 'm.megolm.v1.aes-sha2'],
+        'algorithms': [
+          AlgorithmTypes.olmV1Curve25519AesSha2,
+          AlgorithmTypes.megolmV1AesSha2
+        ],
         'keys': {
           'curve25519:JLAFKJWSCS':
               '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',

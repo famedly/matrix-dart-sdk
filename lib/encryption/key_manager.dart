@@ -98,7 +98,7 @@ class KeyManager {
     }
     final oldSession =
         getInboundGroupSession(roomId, sessionId, senderKey, otherRooms: false);
-    if (content['algorithm'] != 'm.megolm.v1.aes-sha2') {
+    if (content['algorithm'] != AlgorithmTypes.megolmV1AesSha2) {
       return;
     }
     olm.InboundGroupSession inboundGroupSession;
@@ -344,7 +344,7 @@ class KeyManager {
         sess.sentMessages++;
         sess.devices = newDeviceKeyIds;
         final rawSession = <String, dynamic>{
-          'algorithm': 'm.megolm.v1.aes-sha2',
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
           'room_id': room.id,
           'session_id': sess.outboundGroupSession.session_id(),
           'session_key': sess.outboundGroupSession.session_key(),
@@ -403,7 +403,7 @@ class KeyManager {
       return null;
     }
     final rawSession = <String, dynamic>{
-      'algorithm': 'm.megolm.v1.aes-sha2',
+      'algorithm': AlgorithmTypes.megolmV1AesSha2,
       'room_id': room.id,
       'session_id': outboundGroupSession.session_id(),
       'session_key': outboundGroupSession.session_key(),
@@ -607,7 +607,7 @@ class KeyManager {
         {
           'action': 'request',
           'body': {
-            'algorithm': 'm.megolm.v1.aes-sha2',
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
             'room_id': room.id,
             'sender_key': senderKey,
             'session_id': sessionId,
@@ -949,7 +949,7 @@ RoomKeys _generateUploadKeys(_GenerateUploadKeysArgs args) {
       }
       // generate the encrypted content
       final payload = <String, dynamic>{
-        'algorithm': 'm.megolm.v1.aes-sha2',
+        'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'forwarding_curve25519_key_chain': sess.forwardingCurve25519KeyChain,
         'sender_key': sess.senderKey,
         'sender_clencaimed_keys': sess.senderClaimedKeys,

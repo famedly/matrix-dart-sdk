@@ -53,7 +53,7 @@ void main() {
         'msgtype': 'm.text',
         'text': 'Hello foxies!',
       });
-      expect(payload['algorithm'], 'm.megolm.v1.aes-sha2');
+      expect(payload['algorithm'], AlgorithmTypes.megolmV1AesSha2);
       expect(payload['ciphertext'] is String, true);
       expect(payload['device_id'], client.deviceID);
       expect(payload['sender_key'], client.identityKey);

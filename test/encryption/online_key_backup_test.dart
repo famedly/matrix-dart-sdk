@@ -81,7 +81,7 @@ void main() {
       final sessionId = inbound.session_id();
       // set a payload...
       var sessionPayload = <String, dynamic>{
-        'algorithm': 'm.megolm.v1.aes-sha2',
+        'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'room_id': roomId,
         'forwarding_curve25519_key_chain': [client.identityKey],
         'session_id': sessionId,

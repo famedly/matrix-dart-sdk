@@ -19,6 +19,7 @@
 library matrix_api;
 
 export 'matrix_api/matrix_api.dart';
+export 'matrix_api/model/algorithm_types.dart';
 export 'matrix_api/model/basic_event.dart';
 export 'matrix_api/model/basic_event_with_sender.dart';
 export 'matrix_api/model/basic_room_event.dart';

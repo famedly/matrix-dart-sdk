@@ -169,7 +169,7 @@ class SSSS {
 
   bool checkKey(Uint8List key, BasicEvent keyData) {
     final info = keyData.content;
-    if (info['algorithm'] == 'm.secret_storage.v1.aes-hmac-sha2') {
+    if (info['algorithm'] == AlgorithmTypes.secretStorageV1AesHmcSha2) {
       if ((info['mac'] is String) && (info['iv'] is String)) {
         final encrypted = encryptAes(ZERO_STR, key, '', info['iv']);
         return info['mac'].replaceAll(RegExp(r'=+$'), '') ==

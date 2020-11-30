@@ -523,10 +523,10 @@ class Client extends MatrixApi {
       '{"room":{"state":{"lazy_load_members":true}}}';
   static const String messagesFilters = '{"lazy_load_members":true}';
   static const List<String> supportedDirectEncryptionAlgorithms = [
-    'm.olm.v1.curve25519-aes-sha2'
+    AlgorithmTypes.olmV1Curve25519AesSha2
   ];
   static const List<String> supportedGroupEncryptionAlgorithms = [
-    'm.megolm.v1.aes-sha2'
+    AlgorithmTypes.megolmV1AesSha2
   ];
   static const int defaultThumbnailSize = 256;
 

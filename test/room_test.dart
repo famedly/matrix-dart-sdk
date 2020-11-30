@@ -516,14 +516,14 @@ void main() {
             eventId: '12345',
             originServerTs: DateTime.now(),
             content: {
-              'algorithm': 'm.megolm.v1.aes-sha2',
+              'algorithm': AlgorithmTypes.megolmV1AesSha2,
               'rotation_period_ms': 604800000,
               'rotation_period_msgs': 100
             },
             stateKey: ''),
       );
       expect(room.encrypted, true);
-      expect(room.encryptionAlgorithm, 'm.megolm.v1.aes-sha2');
+      expect(room.encryptionAlgorithm, AlgorithmTypes.megolmV1AesSha2);
     });
 
     test('setPushRuleState', () async {

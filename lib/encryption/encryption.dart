@@ -135,7 +135,7 @@ class Encryption {
     Map<String, dynamic> decryptedPayload;
     var canRequestSession = false;
     try {
-      if (event.content['algorithm'] != 'm.megolm.v1.aes-sha2') {
+      if (event.content['algorithm'] != AlgorithmTypes.megolmV1AesSha2) {
         throw (DecryptError.UNKNOWN_ALGORITHM);
       }
       final String sessionId = event.content['session_id'];
@@ -277,7 +277,7 @@ class Encryption {
     if (room == null || !room.encrypted || !enabled) {
       return payload;
     }
-    if (room.encryptionAlgorithm != 'm.megolm.v1.aes-sha2') {
+    if (room.encryptionAlgorithm != AlgorithmTypes.megolmV1AesSha2) {
       throw ('Unknown encryption algorithm');
     }
     if (keyManager.getOutboundGroupSession(roomId) == null) {
@@ -301,7 +301,7 @@ class Encryption {
       'room_id': roomId,
     };
     var encryptedPayload = <String, dynamic>{
-      'algorithm': 'm.megolm.v1.aes-sha2',
+      'algorithm': AlgorithmTypes.megolmV1AesSha2,
       'ciphertext':
           sess.outboundGroupSession.encrypt(json.encode(payloadContent)),
       'device_id': client.deviceID,

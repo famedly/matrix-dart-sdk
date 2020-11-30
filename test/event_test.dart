@@ -304,7 +304,7 @@ void main() {
           'msgtype': 'm.bad.encrypted',
           'body': DecryptError.UNKNOWN_SESSION,
           'can_request_session': true,
-          'algorithm': 'm.megolm.v1.aes-sha2',
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
           'ciphertext': 'AwgAEnACgAkLmt6qF84IK++J7UDH2Za1YVchHyprqTqsg...',
           'device_id': 'RJYKSTBOIE',
           'sender_key': 'IlRMeOPX2e0MurIyfWEucYBRVOEEUMrOHqn/8mLqMjA',
@@ -691,7 +691,7 @@ void main() {
 
       event = Event.fromJson({
         'content': {
-          'algorithm': 'm.megolm.v1.aes-sha2',
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
           'rotation_period_ms': 604800000,
           'rotation_period_msgs': 100
         },

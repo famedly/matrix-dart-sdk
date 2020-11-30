@@ -177,8 +177,8 @@ class OlmManager {
             'user_id': client.userID,
             'device_id': client.deviceID,
             'algorithms': [
-              'm.olm.v1.curve25519-aes-sha2',
-              'm.megolm.v1.aes-sha2'
+              AlgorithmTypes.olmV1Curve25519AesSha2,
+              AlgorithmTypes.megolmV1AesSha2
             ],
             'keys': <String, dynamic>{},
           },
@@ -251,7 +251,7 @@ class OlmManager {
     if (event.type != EventTypes.Encrypted) {
       return event;
     }
-    if (event.content['algorithm'] != 'm.olm.v1.curve25519-aes-sha2') {
+    if (event.content['algorithm'] != AlgorithmTypes.olmV1Curve25519AesSha2) {
       throw ('Unknown algorithm: ${event.content['algorithm']}');
     }
     if (!event.content['ciphertext'].containsKey(identityKey)) {
@@ -476,7 +476,7 @@ class OlmManager {
     final encryptResult = sess.first.session.encrypt(json.encode(fullPayload));
     storeOlmSession(sess.first);
     final encryptedBody = <String, dynamic>{
-      'algorithm': 'm.olm.v1.curve25519-aes-sha2',
+      'algorithm': AlgorithmTypes.olmV1Curve25519AesSha2,
       'sender_key': identityKey,
       'ciphertext': <String, dynamic>{},
     };

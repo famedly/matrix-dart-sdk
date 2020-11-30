@@ -16,13 +16,15 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import '../../matrix_api.dart';
+
 enum RoomKeysAlgorithmType { v1Curve25519AesSha2 }
 
 extension RoomKeysAlgorithmTypeExtension on RoomKeysAlgorithmType {
   String get algorithmString {
     switch (this) {
       case RoomKeysAlgorithmType.v1Curve25519AesSha2:
-        return 'm.megolm_backup.v1.curve25519-aes-sha2';
+        return AlgorithmTypes.megolmBackupV1Curve25519AesSha2;
       default:
         return null;
     }
@@ -30,7 +32,7 @@ extension RoomKeysAlgorithmTypeExtension on RoomKeysAlgorithmType {
 
   static RoomKeysAlgorithmType fromAlgorithmString(String s) {
     switch (s) {
-      case 'm.megolm_backup.v1.curve25519-aes-sha2':
+      case AlgorithmTypes.megolmBackupV1Curve25519AesSha2:
         return RoomKeysAlgorithmType.v1Curve25519AesSha2;
       default:
         return null;

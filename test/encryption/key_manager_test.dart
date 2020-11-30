@@ -56,7 +56,7 @@ void main() {
           sender: '@alice:example.com',
           type: 'm.room_key',
           content: {
-            'algorithm': 'm.megolm.v1.aes-sha2',
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
             'room_id': '!726s6s6q:example.com',
             'session_id': validSessionId,
             'session_key': sessionKey,
@@ -79,7 +79,7 @@ void main() {
           sender: '@alice:example.com',
           type: 'm.room_key',
           content: {
-            'algorithm': 'm.megolm.v1.aes-sha2',
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
             'room_id': '!726s6s6q:example.com',
             'session_id': validSessionId,
             'session_key': sessionKey,
@@ -161,7 +161,10 @@ void main() {
           DeviceKeys.fromJson({
         'user_id': '@alice:example.com',
         'device_id': 'NEWDEVICE',
-        'algorithms': ['m.olm.v1.curve25519-aes-sha2', 'm.megolm.v1.aes-sha2'],
+        'algorithms': [
+          AlgorithmTypes.olmV1Curve25519AesSha2,
+          AlgorithmTypes.megolmV1AesSha2
+        ],
         'keys': {
           'curve25519:JLAFKJWSCS':
               '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',
@@ -212,7 +215,7 @@ void main() {
       final sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
       final senderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
       final sessionContent = <String, dynamic>{
-        'algorithm': 'm.megolm.v1.aes-sha2',
+        'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'room_id': '!726s6s6q:example.com',
         'session_id': 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU',
         'session_key':
@@ -307,7 +310,7 @@ void main() {
         eventId: '12345',
         originServerTs: DateTime.now(),
         content: {
-          'algorithm': 'm.megolm.v1.aes-sha2',
+          'algorithm': AlgorithmTypes.megolmV1AesSha2,
           'ciphertext': session.encrypt(json.encode({
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'foxies'},
@@ -322,7 +325,7 @@ void main() {
       expect(room.lastEvent.type, 'm.room.encrypted');
       // set a payload...
       var sessionPayload = <String, dynamic>{
-        'algorithm': 'm.megolm.v1.aes-sha2',
+        'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'room_id': roomId,
         'forwarding_curve25519_key_chain': [client.identityKey],
         'session_id': sessionId,
@@ -348,7 +351,7 @@ void main() {
 
       // not set one with a higher first known index
       sessionPayload = <String, dynamic>{
-        'algorithm': 'm.megolm.v1.aes-sha2',
+        'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'room_id': roomId,
         'forwarding_curve25519_key_chain': [client.identityKey],
         'session_id': sessionId,
@@ -374,7 +377,7 @@ void main() {
 
       // set one with a lower first known index
       sessionPayload = <String, dynamic>{
-        'algorithm': 'm.megolm.v1.aes-sha2',
+        'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'room_id': roomId,
         'forwarding_curve25519_key_chain': [client.identityKey],
         'session_id': sessionId,
@@ -400,7 +403,7 @@ void main() {
 
       // not set one with a longer forwarding chain
       sessionPayload = <String, dynamic>{
-        'algorithm': 'm.megolm.v1.aes-sha2',
+        'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'room_id': roomId,
         'forwarding_curve25519_key_chain': [client.identityKey, 'beep'],
         'session_id': sessionId,
@@ -426,7 +429,7 @@ void main() {
 
       // set one with a shorter forwarding chain
       sessionPayload = <String, dynamic>{
-        'algorithm': 'm.megolm.v1.aes-sha2',
+        'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'room_id': roomId,
         'forwarding_curve25519_key_chain': [],
         'session_id': sessionId,
