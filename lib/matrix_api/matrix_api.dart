@@ -266,6 +266,7 @@ class MatrixApi {
           if (user != null) 'user': user,
         },
       if (user != null) 'user': user,
+      if (token != null) 'token': token,
       if (medium != null) 'medium': medium,
       if (address != null) 'address': address,
       if (password != null) 'password': password,
