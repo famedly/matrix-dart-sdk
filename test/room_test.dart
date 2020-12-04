@@ -204,8 +204,8 @@ void main() {
       expect(room.lastEvent.type, 'm.room.encrypted');
     });
 
-    test('sendReadReceipt', () async {
-      await room.sendReadReceipt('§1234:fakeServer.notExisting');
+    test('sendReadMarker', () async {
+      await room.sendReadMarker('§1234:fakeServer.notExisting');
     });
 
     test('requestParticipants', () async {

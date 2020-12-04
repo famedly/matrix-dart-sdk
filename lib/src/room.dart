@@ -445,7 +445,8 @@ class Room {
       MarkedUnread(unread).toJson(),
     );
     if (unread == false) {
-      await sendReadReceipt(lastEvent.eventId);
+      await sendReadMarker(lastEvent.eventId,
+          readReceiptLocationEventId: lastEvent.eventId);
     }
   }
 
@@ -980,7 +981,36 @@ class Room {
     return;
   }
 
+  /// Sets the position of the read marker for a given room, and optionally the
+  /// read receipt's location.
+  Future<void> sendReadMarker(String eventId,
+      {String readReceiptLocationEventId}) async {
+    if (readReceiptLocationEventId != null) {
+      notificationCount = 0;
+      await client.database?.resetNotificationCount(client.id, id);
+    }
+    await client.sendReadMarker(
+      id,
+      eventId,
+      readReceiptLocationEventId: readReceiptLocationEventId,
+    );
+    return;
+  }
+
+  /// This API updates the marker for the given receipt type to the event ID
+  /// specified.
+  Future<void> sendReceiptMarker(String eventId) async {
+    notificationCount = 0;
+    await client.database?.resetNotificationCount(client.id, id);
+    await client.sendReceiptMarker(
+      id,
+      eventId,
+    );
+    return;
+  }
+
   /// Sends *m.fully_read* and *m.read* for the given event ID.
+  @Deprecated('Use sendReadMarker instead')
   Future<void> sendReadReceipt(String eventID) async {
     notificationCount = 0;
     await client.database?.resetNotificationCount(client.id, id);
