@@ -745,6 +745,7 @@ class Client extends MatrixApi {
       Logs.error('Initialization failed: ${e.toString()}', s);
       clear();
       onLoginStateChanged.addError(e, s);
+      _initLock = false;
       rethrow;
     }
   }
