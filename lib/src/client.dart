@@ -797,6 +797,9 @@ class Client extends MatrixApi {
     return _currentSync;
   }
 
+  /// Presence that is set on sync.
+  PresenceType syncPresence;
+
   Future<void> _innerSync() async {
     await _retryDelay;
     _retryDelay = Future.delayed(Duration(seconds: syncErrorTimeoutSec));
@@ -806,6 +809,7 @@ class Client extends MatrixApi {
         filter: syncFilters,
         since: prevBatch,
         timeout: prevBatch != null ? 30000 : null,
+        setPresence: syncPresence,
       );
       if (_disposed) return;
       if (database != null) {
