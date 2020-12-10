@@ -269,6 +269,7 @@ class MatrixApi {
       if (medium != null) 'medium': medium,
       if (address != null) 'address': address,
       if (password != null) 'password': password,
+      if (token != null) 'token': token,
       if (deviceId != null) 'device_id': deviceId,
       if (initialDeviceDisplayName != null)
         'initial_device_display_name': initialDeviceDisplayName,
