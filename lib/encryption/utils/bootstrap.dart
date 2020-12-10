@@ -24,7 +24,6 @@ import 'package:olm/olm.dart' as olm;
 
 import '../encryption.dart';
 import '../ssss.dart';
-import '../cross_signing.dart';
 import '../key_manager.dart';
 import '../../famedlysdk.dart';
 import '../../matrix_api/utils/logs.dart';
@@ -45,6 +44,7 @@ enum BootstrapState {
   done, // done
 }
 
+/// Bootstrapping SSSS and cross-signing
 class Bootstrap {
   final Encryption encryption;
   Client get client => encryption.client;
@@ -162,7 +162,7 @@ class Bootstrap {
 
   void wipeSsss(bool wipe) {
     if (state != BootstrapState.askWipeSsss) {
-      throw Exception('Wrong State');
+      throw BootstrapBadStateException('Wrong State');
     }
     if (wipe) {
       state = BootstrapState.askNewSsss;
@@ -178,7 +178,7 @@ class Bootstrap {
 
   void useExistingSsss(bool use) {
     if (state != BootstrapState.askUseExistingSsss) {
-      throw Exception('Wrong State');
+      throw BootstrapBadStateException('Wrong State');
     }
     if (use) {
       newSsssKey = encryption.ssss.open(encryption.ssss.defaultKeyId);
@@ -192,7 +192,7 @@ class Bootstrap {
 
   void ignoreBadSecrets(bool ignore) {
     if (state != BootstrapState.askBadSsss) {
-      throw Exception('Wrong State');
+      throw BootstrapBadStateException('Wrong State');
     }
     if (ignore) {
       migrateOldSsss();
@@ -221,14 +221,14 @@ class Bootstrap {
 
   void unlockedSsss() {
     if (state != BootstrapState.askUnlockSsss) {
-      throw Exception('Wrong State');
+      throw BootstrapBadStateException('Wrong State');
     }
     state = BootstrapState.askNewSsss;
   }
 
   Future<void> newSsss([String passphrase]) async {
     if (state != BootstrapState.askNewSsss) {
-      throw Exception('Wrong State');
+      throw BootstrapBadStateException('Wrong State');
     }
     state = BootstrapState.loading;
     try {
@@ -285,10 +285,10 @@ class Bootstrap {
 
   void openExistingSsss() {
     if (state != BootstrapState.openExistingSsss) {
-      throw 'Bad State';
+      throw BootstrapBadStateException();
     }
     if (!newSsssKey.isUnlocked) {
-      throw 'Key not unlocked';
+      throw BootstrapBadStateException('Key not unlocked');
     }
     checkCrossSigning();
   }
@@ -306,7 +306,7 @@ class Bootstrap {
 
   void wipeCrossSigning(bool wipe) {
     if (state != BootstrapState.askWipeCrossSigning) {
-      throw 'Bad State';
+      throw BootstrapBadStateException();
     }
     if (wipe) {
       state = BootstrapState.askSetupCrossSigning;
@@ -320,7 +320,7 @@ class Bootstrap {
       bool setupSelfSigningKey = false,
       bool setupUserSigningKey = false}) async {
     if (state != BootstrapState.askSetupCrossSigning) {
-      throw 'Bad State';
+      throw BootstrapBadStateException();
     }
     if (!setupMasterKey && !setupSelfSigningKey && !setupUserSigningKey) {
       checkOnlineKeyBackup();
@@ -345,16 +345,17 @@ class Bootstrap {
           },
         };
         masterKey = MatrixCrossSigningKey.fromJson(json);
-        secretsToStore[MASTER_KEY] = base64.encode(masterSigningKey);
+        secretsToStore[EventTypes.CrossSigningMasterKey] =
+            base64.encode(masterSigningKey);
       } finally {
         master.free();
       }
     } else {
-      masterSigningKey =
-          base64.decode(await newSsssKey.getStored(MASTER_KEY) ?? '');
+      masterSigningKey = base64.decode(
+          await newSsssKey.getStored(EventTypes.CrossSigningMasterKey) ?? '');
       if (masterSigningKey == null || masterSigningKey.isEmpty) {
         // no master signing key :(
-        throw 'No master key';
+        throw BootstrapBadStateException('No master key');
       }
       final master = olm.PkSigning();
       try {
@@ -391,7 +392,8 @@ class Bootstrap {
           },
         };
         selfSigningKey = MatrixCrossSigningKey.fromJson(json);
-        secretsToStore[SELF_SIGNING_KEY] = base64.encode(selfSigningPriv);
+        secretsToStore[EventTypes.CrossSigningSelfSigning] =
+            base64.encode(selfSigningPriv);
       } finally {
         selfSigning.free();
       }
@@ -415,7 +417,8 @@ class Bootstrap {
           },
         };
         userSigningKey = MatrixCrossSigningKey.fromJson(json);
-        secretsToStore[USER_SIGNING_KEY] = base64.encode(userSigningPriv);
+        secretsToStore[EventTypes.CrossSigningUserSigning] =
+            base64.encode(userSigningPriv);
       } finally {
         userSigning.free();
       }
@@ -451,7 +454,8 @@ class Bootstrap {
       if (masterKey != null) {
         if (client.userDeviceKeys[client.userID].masterKey.ed25519Key !=
             masterKey.publicKey) {
-          throw 'ERROR: New master key does not match up!';
+          throw BootstrapBadStateException(
+              'ERROR: New master key does not match up!');
         }
         await client.userDeviceKeys[client.userID].masterKey
             .setVerified(true, false);
@@ -484,7 +488,7 @@ class Bootstrap {
 
   void wipeOnlineKeyBackup(bool wipe) {
     if (state != BootstrapState.askWipeOnlineKeyBackup) {
-      throw 'Bad State';
+      throw BootstrapBadStateException();
     }
     if (wipe) {
       state = BootstrapState.askSetupOnlineKeyBackup;
@@ -495,7 +499,7 @@ class Bootstrap {
 
   Future<void> askSetupOnlineKeyBackup(bool setup) async {
     if (state != BootstrapState.askSetupOnlineKeyBackup) {
-      throw 'Bad State';
+      throw BootstrapBadStateException();
     }
     if (!setup) {
       state = BootstrapState.done;
@@ -527,6 +531,7 @@ class Bootstrap {
           '[Bootstrapping] Error setting up online key backup: ' + e.toString(),
           s);
       state = BootstrapState.error;
+      encryption.onError.add(SdkError(exception: e, stackTrace: s));
       return;
     }
     state = BootstrapState.done;
@@ -540,4 +545,12 @@ class Bootstrap {
       onUpdate();
     }
   }
+}
+
+class BootstrapBadStateException implements Exception {
+  String cause;
+  BootstrapBadStateException([this.cause = 'Bad state']);
+
+  @override
+  String toString() => 'BootstrapBadStateException: $cause';
 }

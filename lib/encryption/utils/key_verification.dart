@@ -114,7 +114,7 @@ _KeyVerificationMethod _makeVerificationMethod(
   if (type == 'm.sas.v1') {
     return _KeyVerificationMethodSas(request: request);
   }
-  throw 'Unkown method type';
+  throw Exception('Unkown method type');
 }
 
 class KeyVerification {
@@ -883,7 +883,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
               : theirInfo + ourInfo) +
           request.transactionId;
     } else {
-      throw 'Unknown key agreement protocol';
+      throw Exception('Unknown key agreement protocol');
     }
     return sas.generate_bytes(sasInfo, bytes);
   }
@@ -965,14 +965,14 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
       olmutil.free();
       return ret;
     }
-    throw 'Unknown hash method';
+    throw Exception('Unknown hash method');
   }
 
   String _calculateMac(String input, String info) {
     if (messageAuthenticationCode == 'hkdf-hmac-sha256') {
       return sas.calculate_mac(input, info);
     } else {
-      throw 'Unknown message authentification code';
+      throw Exception('Unknown message authentification code');
     }
   }
 }

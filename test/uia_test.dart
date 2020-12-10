@@ -79,7 +79,7 @@ void main() {
       var finished = false;
       final request = UiaRequest(
         request: (auth) async {
-          throw 'nope';
+          throw Exception('nope');
         },
         onUpdate: () => updated = true,
         onDone: () => finished = true,

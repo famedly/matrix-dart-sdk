@@ -66,4 +66,6 @@ export 'matrix_api/model/upload_key_signatures_response.dart';
 export 'matrix_api/model/user_search_result.dart';
 export 'matrix_api/model/well_known_informations.dart';
 export 'matrix_api/model/who_is_info.dart';
+export 'matrix_api/model/events/secret_storage_default_key_content.dart';
+export 'matrix_api/model/events/secret_storage_key_content.dart';
 export 'matrix_api/model/events/tombstone_content.dart';

@@ -325,7 +325,7 @@ class Client extends MatrixApi {
     if (response.accessToken == null ||
         response.deviceId == null ||
         response.userId == null) {
-      throw 'Registered but token, device ID or user ID is null.';
+      throw Exception('Registered but token, device ID or user ID is null.');
     }
     await init(
         newToken: response.accessToken,
@@ -410,6 +410,7 @@ class Client extends MatrixApi {
     }
   }
 
+  /// Run any request and react on user interactive authentication flows here.
   Future<T> uiaRequestBackground<T>(
       Future<T> Function(Map<String, dynamic> auth) request) {
     final completer = Completer<T>();
@@ -573,6 +574,7 @@ class Client extends MatrixApi {
   final StreamController<SdkError> onSyncError = StreamController.broadcast();
 
   /// Synchronization erros are coming here.
+  @Deprecated('Please use encryption.onToDeviceEventDecryptionError instead')
   final StreamController<ToDeviceEventDecryptionError> onOlmError =
       StreamController.broadcast();
 
@@ -948,22 +950,7 @@ class Client extends MatrixApi {
     for (var i = 0; i < events.length; i++) {
       var toDeviceEvent = ToDeviceEvent.fromJson(events[i].toJson());
       if (toDeviceEvent.type == EventTypes.Encrypted && encryptionEnabled) {
-        try {
-          toDeviceEvent = await encryption.decryptToDeviceEvent(toDeviceEvent);
-        } catch (e, s) {
-          Logs.error(
-              '[LibOlm] Could not decrypt to device event from ${toDeviceEvent.sender} with content: ${toDeviceEvent.content}\n${e.toString()}',
-              s);
-
-          onOlmError.add(
-            ToDeviceEventDecryptionError(
-              exception: e is Exception ? e : Exception(e),
-              stackTrace: s,
-              toDeviceEvent: toDeviceEvent,
-            ),
-          );
-          toDeviceEvent = ToDeviceEvent.fromJson(events[i].toJson());
-        }
+        toDeviceEvent = await encryption.decryptToDeviceEvent(toDeviceEvent);
       }
       if (encryptionEnabled) {
         await encryption.handleToDeviceEvent(toDeviceEvent);

@@ -18,6 +18,7 @@
 
 import '../../famedlysdk.dart';
 
+/// Wrapper to handle User interactive authentication requests
 class UiaRequest<T> {
   void Function() onUpdate;
   void Function() onDone;

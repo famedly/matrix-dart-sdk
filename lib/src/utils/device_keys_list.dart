@@ -59,7 +59,7 @@ class DeviceKeysList {
       final roomId =
           await User(userId, room: Room(client: client)).startDirectChat();
       if (roomId == null) {
-        throw 'Unable to start new room';
+        throw Exception('Unable to start new room');
       }
       final room =
           client.getRoomById(roomId) ?? Room(id: roomId, client: client);
