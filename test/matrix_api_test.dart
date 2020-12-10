@@ -204,11 +204,14 @@ void main() {
     test('changePassword', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
-      await matrixApi.changePassword('1234', auth: {
-        'type': 'example.type.foo',
-        'session': 'xxxxx',
-        'example_credential': 'verypoorsharedsecret'
-      });
+      await matrixApi.changePassword(
+        '1234',
+        auth: AuthenticationData.fromJson({
+          'type': 'example.type.foo',
+          'session': 'xxxxx',
+          'example_credential': 'verypoorsharedsecret'
+        }),
+      );
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
     test('resetPasswordUsingEmail', () async {
@@ -241,12 +244,14 @@ void main() {
     test('deactivateAccount', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
-      final response = await matrixApi
-          .deactivateAccount(idServer: 'https://example.com', auth: {
-        'type': 'example.type.foo',
-        'session': 'xxxxx',
-        'example_credential': 'verypoorsharedsecret'
-      });
+      final response = await matrixApi.deactivateAccount(
+        idServer: 'https://example.com',
+        auth: AuthenticationData.fromJson({
+          'type': 'example.type.foo',
+          'session': 'xxxxx',
+          'example_credential': 'verypoorsharedsecret'
+        }),
+      );
       expect(response, IdServerUnbindResult.success);
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -267,7 +272,8 @@ void main() {
     test('addThirdPartyIdentifier', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
-      await matrixApi.addThirdPartyIdentifier('1234', '1234', auth: {});
+      await matrixApi.addThirdPartyIdentifier('1234', '1234',
+          auth: AuthenticationData.fromJson({'type': 'm.login.dummy'}));
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
     test('bindThirdPartyIdentifier', () async {
@@ -1041,7 +1047,8 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.deleteDevice('QBUAZIFURK', auth: {});
+      await matrixApi.deleteDevice('QBUAZIFURK',
+          auth: AuthenticationData.fromJson({}));
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -1049,7 +1056,8 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.deleteDevices(['QBUAZIFURK'], auth: {});
+      await matrixApi
+          .deleteDevices(['QBUAZIFURK'], auth: AuthenticationData.fromJson({}));
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -1784,6 +1792,123 @@ void main() {
           FakeMatrixApi.api['DELETE']
               ['/client/unstable/room_keys/keys?version=5']({}),
           ret.toJson());
+    });
+    test('AuthenticationData', () {
+      final json = {'session': '1234', 'type': 'm.login.dummy'};
+      expect(AuthenticationData.fromJson(json).toJson(), json);
+      expect(
+          AuthenticationData(session: '1234', type: 'm.login.dummy').toJson(),
+          json);
+    });
+    test('AuthenticationRecaptcha', () {
+      final json = {
+        'session': '1234',
+        'type': 'm.login.recaptcha',
+        'response': 'a',
+      };
+      expect(AuthenticationRecaptcha.fromJson(json).toJson(), json);
+      expect(AuthenticationRecaptcha(session: '1234', response: 'a').toJson(),
+          json);
+    });
+    test('AuthenticationToken', () {
+      final json = {
+        'session': '1234',
+        'type': 'm.login.token',
+        'token': 'a',
+        'txn_id': '1'
+      };
+      expect(AuthenticationToken.fromJson(json).toJson(), json);
+      expect(
+          AuthenticationToken(session: '1234', token: 'a', txnId: '1').toJson(),
+          json);
+    });
+    test('AuthenticationThreePidCreds', () {
+      final json = {
+        'type': 'm.login.email.identity',
+        'threepidCreds': [
+          {
+            'sid': '1',
+            'client_secret': 'a',
+            'id_server': 'matrix.org',
+            'id_access_token': 'a',
+          },
+        ],
+        'threepid_creds': [
+          {
+            'sid': '1',
+            'client_secret': 'a',
+            'id_server': 'matrix.org',
+            'id_access_token': 'a',
+          },
+        ],
+        'session': '1',
+      };
+      expect(AuthenticationThreePidCreds.fromJson(json).toJson(), json);
+      expect(
+          AuthenticationThreePidCreds(
+              session: '1',
+              type: AuthenticationTypes.emailIdentity,
+              threepidCreds: [
+                ThreepidCreds(
+                  sid: '1',
+                  clientSecret: 'a',
+                  idServer: 'matrix.org',
+                  idAccessToken: 'a',
+                ),
+              ]).toJson(),
+          json);
+    });
+    test('AuthenticationIdentifier', () {
+      final json = {'type': 'm.id.user'};
+      expect(AuthenticationIdentifier.fromJson(json).toJson(), json);
+      expect(AuthenticationIdentifier(type: 'm.id.user').toJson(), json);
+    });
+    test('AuthenticationPassword', () {
+      final json = {
+        'type': 'm.login.password',
+        'identifier': {'type': 'm.id.user', 'user': 'a'},
+        'password': 'a',
+        'session': '1',
+        'user': 'a',
+      };
+      expect(AuthenticationPassword.fromJson(json).toJson(), json);
+      expect(
+          AuthenticationPassword(
+            session: '1',
+            password: 'a',
+            user: 'a',
+            identifier: AuthenticationUserIdentifier(user: 'a'),
+          ).toJson(),
+          json);
+      json['identifier'] = {
+        'type': 'm.id.thirdparty',
+        'medium': 'a',
+        'address': 'a',
+      };
+      expect(AuthenticationPassword.fromJson(json).toJson(), json);
+      expect(
+          AuthenticationPassword(
+            session: '1',
+            password: 'a',
+            user: 'a',
+            identifier:
+                AuthenticationThirdPartyIdentifier(medium: 'a', address: 'a'),
+          ).toJson(),
+          json);
+      json['identifier'] = {
+        'type': 'm.id.phone',
+        'country': 'a',
+        'phone': 'a',
+      };
+      expect(AuthenticationPassword.fromJson(json).toJson(), json);
+      expect(
+          AuthenticationPassword(
+            session: '1',
+            password: 'a',
+            user: 'a',
+            identifier: AuthenticationPhoneIdentifier(country: 'a', phone: 'a'),
+          ).toJson(),
+          json);
     });
   });
 }
