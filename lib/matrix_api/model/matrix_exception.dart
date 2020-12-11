@@ -56,7 +56,8 @@ class MatrixException implements Exception {
   /// The frozen request which triggered this Error
   http.Response response;
 
-  MatrixException(this.response) : raw = json.decode(response.body);
+  MatrixException(this.response)
+      : raw = json.decode(utf8.decode(response.bodyBytes));
   MatrixException.fromJson(Map<String, dynamic> content) : raw = content;
 
   @override

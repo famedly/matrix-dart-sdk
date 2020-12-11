@@ -190,15 +190,20 @@ class MatrixApi {
       } catch (_) {
         // No-OP
       }
-      if (resp.statusCode >= 500 && resp.statusCode < 600) {
-        throw Exception(respBody);
-      }
+
       var jsonString = String.fromCharCodes(respBody.runes);
       if (jsonString.startsWith('[') && jsonString.endsWith(']')) {
         jsonString = '\{"chunk":$jsonString\}';
       }
-      jsonResp = jsonDecode(jsonString)
-          as Map<String, dynamic>; // May throw FormatException
+      try {
+        jsonResp = jsonDecode(jsonString) as Map<String, dynamic>;
+      } catch (_, s) {
+        throw MatrixConnectionException('No valid response from the server', s);
+      }
+      // If the status code is 4** or 5** it is an exception.
+      if ({'4', '5'}.contains(resp.statusCode.toString().substring(0, 1))) {
+        throw MatrixException(resp);
+      }
 
       _timeoutFactor = 1;
     } on TimeoutException catch (e, s) {
@@ -206,9 +211,6 @@ class MatrixApi {
       throw MatrixConnectionException(e, s);
     } catch (e, s) {
       throw MatrixConnectionException(e, s);
-    }
-    if (resp.statusCode >= 400 && resp.statusCode < 500) {
-      throw MatrixException(resp);
     }
 
     return jsonResp;
