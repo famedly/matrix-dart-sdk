@@ -29,8 +29,8 @@ class AuthenticationData {
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
-    data['type'] = type;
-    data['session'] = session;
+    if (type != null) data['type'] = type;
+    if (session != null) data['session'] = session;
     return data;
   }
 }
