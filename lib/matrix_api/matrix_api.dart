@@ -19,10 +19,12 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
 import 'package:moor/moor.dart';
 
+import 'model/auth/authentication_types.dart';
 import 'model/device.dart';
 import 'model/event_context.dart';
 import 'model/events_sync_update.dart';
@@ -247,7 +249,7 @@ class MatrixApi {
   /// Authenticates the user, and issues an access token they can use to authorize themself in subsequent requests.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#post-matrix-client-r0-login
   Future<LoginResponse> login({
-    String type = 'm.login.password',
+    String type = AuthenticationTypes.password,
     String userIdentifierType,
     String user,
     String medium,
@@ -256,7 +258,7 @@ class MatrixApi {
     String token,
     String deviceId,
     String initialDeviceDisplayName,
-    Map<String, dynamic> auth,
+    AuthenticationData auth,
   }) async {
     final response = await request(RequestType.POST, '/client/r0/login', data: {
       'type': type,
@@ -273,7 +275,7 @@ class MatrixApi {
       if (deviceId != null) 'device_id': deviceId,
       if (initialDeviceDisplayName != null)
         'initial_device_display_name': initialDeviceDisplayName,
-      if (auth != null) 'auth': auth,
+      if (auth != null) 'auth': auth.toJson(),
     });
     return LoginResponse.fromJson(response);
   }
@@ -303,13 +305,25 @@ class MatrixApi {
     return;
   }
 
+  /// Register for an account on this homeserver.
+  ///
+  /// There are two kinds of user account:
+  ///
+  /// user accounts. These accounts may use the full API described in this
+  /// specification.
+  /// guest accounts. These accounts may have limited permissions and may not
+  /// be supported by all servers.
+  ///
+  /// If registration is successful, this endpoint will issue an access token
+  /// the client can use to authorize itself in subsequent requests.
+  /// https://matrix.org/docs/spec/client_server/r0.6.0#post-matrix-client-r0-register
   Future<LoginResponse> register({
     String username,
     String password,
     String deviceId,
     String initialDeviceDisplayName,
     bool inhibitLogin,
-    Map<String, dynamic> auth,
+    AuthenticationData auth,
     String kind,
   }) async {
     var action = '/client/r0/register';
@@ -321,7 +335,7 @@ class MatrixApi {
       if (initialDeviceDisplayName != null)
         'initial_device_display_name': initialDeviceDisplayName,
       if (inhibitLogin != null) 'inhibit_login': inhibitLogin,
-      if (auth != null) 'auth': auth,
+      if (auth != null) 'auth': auth.toJson(),
     });
     return LoginResponse.fromJson(response);
   }
@@ -383,11 +397,11 @@ class MatrixApi {
   /// https://matrix.org/docs/spec/client_server/r0.6.0#post-matrix-client-r0-account-password
   Future<void> changePassword(
     String newPassword, {
-    Map<String, dynamic> auth,
+    AuthenticationData auth,
   }) async {
     await request(RequestType.POST, '/client/r0/account/password', data: {
       'new_password': newPassword,
-      if (auth != null) 'auth': auth,
+      if (auth != null) 'auth': auth.toJson(),
     });
     return;
   }
@@ -444,14 +458,15 @@ class MatrixApi {
     return RequestTokenResponse.fromJson(response);
   }
 
+  /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-account-deactivate
   Future<IdServerUnbindResult> deactivateAccount({
     String idServer,
-    Map<String, dynamic> auth,
+    AuthenticationData auth,
   }) async {
     final response =
         await request(RequestType.POST, '/client/r0/account/deactivate', data: {
       if (idServer != null) 'id_server': idServer,
-      if (auth != null) 'auth': auth,
+      if (auth != null) 'auth': auth.toJson(),
     });
 
     return IdServerUnbindResult.values.firstWhere(
@@ -487,12 +502,12 @@ class MatrixApi {
   Future<void> addThirdPartyIdentifier(
     String clientSecret,
     String sid, {
-    Map<String, dynamic> auth,
+    AuthenticationData auth,
   }) async {
     await request(RequestType.POST, '/client/r0/account/3pid/add', data: {
       'sid': sid,
       'client_secret': clientSecret,
-      if (auth != null && auth.isNotEmpty) 'auth': auth,
+      if (auth != null) 'auth': auth.toJson(),
     });
     return;
   }
@@ -1382,12 +1397,11 @@ class MatrixApi {
 
   /// Deletes the given device, and invalidates any access token associated with it.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#delete-matrix-client-r0-devices-deviceid
-  Future<void> deleteDevice(String deviceId,
-      {Map<String, dynamic> auth}) async {
+  Future<void> deleteDevice(String deviceId, {AuthenticationData auth}) async {
     await request(RequestType.DELETE,
         '/client/r0/devices/${Uri.encodeComponent(deviceId)}',
         data: {
-          if (auth != null) 'auth': auth,
+          if (auth != null) 'auth': auth.toJson(),
         });
     return;
   }
@@ -1395,10 +1409,10 @@ class MatrixApi {
   /// Deletes the given devices, and invalidates any access token associated with them.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-delete-devices
   Future<void> deleteDevices(List<String> deviceIds,
-      {Map<String, dynamic> auth}) async {
+      {AuthenticationData auth}) async {
     await request(RequestType.POST, '/client/r0/delete_devices', data: {
       'devices': deviceIds,
-      if (auth != null) 'auth': auth,
+      if (auth != null) 'auth': auth.toJson(),
     });
     return;
   }
@@ -1471,7 +1485,7 @@ class MatrixApi {
     MatrixCrossSigningKey masterKey,
     MatrixCrossSigningKey selfSigningKey,
     MatrixCrossSigningKey userSigningKey,
-    Map<String, dynamic> auth,
+    AuthenticationData auth,
   }) async {
     await request(
       RequestType.POST,
@@ -1480,7 +1494,7 @@ class MatrixApi {
         if (masterKey != null) 'master_key': masterKey.toJson(),
         if (selfSigningKey != null) 'self_signing_key': selfSigningKey.toJson(),
         if (userSigningKey != null) 'user_signing_key': userSigningKey.toJson(),
-        if (auth != null) 'auth': auth,
+        if (auth != null) 'auth': auth.toJson(),
       },
     );
   }

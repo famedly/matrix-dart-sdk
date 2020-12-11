@@ -29,19 +29,44 @@ import '../../famedlysdk.dart';
 import '../../matrix_api/utils/logs.dart';
 
 enum BootstrapState {
-  loading, // loading
-  askWipeSsss, // existing SSSS found, should we wipe it?
-  askUseExistingSsss, // ask if an existing SSSS should be userDeviceKeys
-  askBadSsss, // SSSS is in a bad state, continue with potential dataloss?
-  askUnlockSsss, // Ask to unlock all the SSSS keys
-  askNewSsss, // Ask for new SSSS key / passphrase
-  openExistingSsss, // Open an existing SSSS key
-  askWipeCrossSigning, // Ask if cross signing should be wiped
-  askSetupCrossSigning, // Ask if cross signing should be set up
-  askWipeOnlineKeyBackup, // Ask if online key backup should be wiped
-  askSetupOnlineKeyBackup, // Ask if the online key backup should be set up
-  error, // error
-  done, // done
+  /// Is loading.
+  loading,
+
+  /// Existing SSSS found, should we wipe it?
+  askWipeSsss,
+
+  /// Ask if an existing SSSS should be userDeviceKeys
+  askUseExistingSsss,
+
+  /// Ask to unlock all the SSSS keys
+  askUnlockSsss,
+
+  /// SSSS is in a bad state, continue with potential dataloss?
+  askBadSsss,
+
+  /// Ask for new SSSS key / passphrase
+  askNewSsss,
+
+  /// Open an existing SSSS key
+  openExistingSsss,
+
+  /// Ask if cross signing should be wiped
+  askWipeCrossSigning,
+
+  /// Ask if cross signing should be set up
+  askSetupCrossSigning,
+
+  /// Ask if online key backup should be wiped
+  askWipeOnlineKeyBackup,
+
+  /// Ask if the online key backup should be set up
+  askSetupOnlineKeyBackup,
+
+  /// An error has been occured.
+  error,
+
+  /// done
+  done,
 }
 
 /// Bootstrapping SSSS and cross-signing
@@ -425,8 +450,9 @@ class Bootstrap {
     }
     try {
       // upload the keys!
+      state = BootstrapState.loading;
       await client.uiaRequestBackground(
-          (Map<String, dynamic> auth) => client.uploadDeviceSigningKeys(
+          (AuthenticationData auth) => client.uploadDeviceSigningKeys(
                 masterKey: masterKey,
                 selfSigningKey: selfSigningKey,
                 userSigningKey: userSigningKey,

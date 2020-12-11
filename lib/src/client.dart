@@ -309,7 +309,7 @@ class Client extends MatrixApi {
     String deviceId,
     String initialDeviceDisplayName,
     bool inhibitLogin,
-    Map<String, dynamic> auth,
+    AuthenticationData auth,
     String kind,
   }) async {
     final response = await super.register(
@@ -342,8 +342,8 @@ class Client extends MatrixApi {
   /// You have to call [checkHomeserver] first to set a homeserver.
   @override
   Future<LoginResponse> login({
-    String type = 'm.login.password',
-    String userIdentifierType = 'm.id.user',
+    String type = AuthenticationTypes.password,
+    String userIdentifierType = AuthenticationIdentifierTypes.userId,
     String user,
     String medium,
     String address,
@@ -351,7 +351,7 @@ class Client extends MatrixApi {
     String token,
     String deviceId,
     String initialDeviceDisplayName,
-    Map<String, dynamic> auth,
+    AuthenticationData auth,
   }) async {
     final loginResp = await super.login(
       type: type,
@@ -412,15 +412,15 @@ class Client extends MatrixApi {
 
   /// Run any request and react on user interactive authentication flows here.
   Future<T> uiaRequestBackground<T>(
-      Future<T> Function(Map<String, dynamic> auth) request) {
+      Future<T> Function(AuthenticationData auth) request) {
     final completer = Completer<T>();
     UiaRequest uia;
     uia = UiaRequest(
       request: request,
-      onDone: () {
-        if (uia.done) {
+      onUpdate: (state) {
+        if (state == UiaRequestState.done) {
           completer.complete(uia.result);
-        } else if (uia.fail) {
+        } else if (state == UiaRequestState.fail) {
           completer.completeError(uia.error);
         }
       },
@@ -538,7 +538,7 @@ class Client extends MatrixApi {
       : null;
 
   static const Set<String> supportedVersions = {'r0.5.0', 'r0.6.0'};
-  static const Set<String> supportedLoginTypes = {'m.login.password'};
+  static const Set<String> supportedLoginTypes = {AuthenticationTypes.password};
   static const String syncFilters =
       '{"room":{"state":{"lazy_load_members":true}}}';
   static const String messagesFilters = '{"lazy_load_members":true}';
@@ -1603,14 +1603,14 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
   /// Changes the password. You should either set oldPasswort or another authentication flow.
   @override
   Future<void> changePassword(String newPassword,
-      {String oldPassword, Map<String, dynamic> auth}) async {
+      {String oldPassword, AuthenticationData auth}) async {
     try {
       if (oldPassword != null) {
-        auth = {
-          'type': 'm.login.password',
-          'user': userID,
-          'password': oldPassword,
-        };
+        auth = AuthenticationPassword(
+          user: userID,
+          identifier: AuthenticationUserIdentifier(user: userID),
+          password: oldPassword,
+        );
       }
       await super.changePassword(newPassword, auth: auth);
     } on MatrixException catch (matrixException) {
@@ -1619,7 +1619,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
       }
       if (matrixException.authenticationFlows.length != 1 ||
           !matrixException.authenticationFlows.first.stages
-              .contains('m.login.password')) {
+              .contains(AuthenticationTypes.password)) {
         rethrow;
       }
       if (oldPassword == null) {
@@ -1627,13 +1627,12 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
       }
       return changePassword(
         newPassword,
-        auth: {
-          'type': 'm.login.password',
-          'user': userID,
-          'identifier': {'type': 'm.id.user', 'user': userID},
-          'password': oldPassword,
-          'session': matrixException.session,
-        },
+        auth: AuthenticationPassword(
+          user: userID,
+          identifier: AuthenticationUserIdentifier(user: userID),
+          password: oldPassword,
+          session: matrixException.session,
+        ),
       );
     } catch (_) {
       rethrow;

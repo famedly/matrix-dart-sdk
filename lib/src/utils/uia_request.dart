@@ -18,30 +18,48 @@
 
 import '../../famedlysdk.dart';
 
+enum UiaRequestState {
+  /// The request is done
+  done,
+
+  /// The request has failed
+  fail,
+
+  /// The request is currently loading
+  loading,
+
+  /// The request is waiting for user interaction
+  waitForUser,
+}
+
 /// Wrapper to handle User interactive authentication requests
 class UiaRequest<T> {
-  void Function() onUpdate;
-  void Function() onDone;
-  final Future<T> Function(Map<String, dynamic> auth) request;
+  void Function(UiaRequestState state) onUpdate;
+  final Future<T> Function(AuthenticationData auth) request;
   String session;
-  bool done = false;
-  bool fail = false;
+  UiaRequestState _state = UiaRequestState.loading;
   T result;
   Exception error;
   Set<String> nextStages = <String>{};
   Map<String, dynamic> params = <String, dynamic>{};
-  UiaRequest({this.onUpdate, this.request, this.onDone}) {
-    run();
+
+  UiaRequestState get state => _state;
+  set state(UiaRequestState newState) {
+    if (_state == newState) return;
+    _state = newState;
+    onUpdate?.call(newState);
   }
 
-  Future<T> run([Map<String, dynamic> auth]) async {
+  UiaRequest({this.onUpdate, this.request}) {
+    _run();
+  }
+
+  Future<T> _run([AuthenticationData auth]) async {
+    state = UiaRequestState.loading;
     try {
-      auth ??= <String, dynamic>{};
-      if (session != null) {
-        auth['session'] = session;
-      }
+      auth ??= AuthenticationData(session: session);
       final res = await request(auth);
-      done = true;
+      state = UiaRequestState.done;
       result = res;
       return res;
     } on MatrixException catch (err) {
@@ -59,23 +77,16 @@ class UiaRequest<T> {
       return null;
     } catch (err) {
       error = err is Exception ? err : Exception(err);
-      fail = true;
+      state = UiaRequestState.fail;
       return null;
     } finally {
-      if (onUpdate != null) {
-        onUpdate();
-      }
-      if ((fail || done) && onDone != null) {
-        onDone();
+      if (state == UiaRequestState.loading) {
+        state = UiaRequestState.waitForUser;
       }
     }
   }
 
-  Future<T> completeStage(String type, [Map<String, dynamic> auth]) async {
-    auth ??= <String, dynamic>{};
-    auth['type'] = type;
-    return await run(auth);
-  }
+  Future<T> completeStage(AuthenticationData auth) => _run(auth);
 
   Set<String> getNextStages(
       List<AuthenticationFlow> flows, List<String> completed) {

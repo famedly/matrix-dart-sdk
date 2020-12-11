@@ -29,14 +29,14 @@ void main() {
       var finished = false;
       final request = UiaRequest(
         request: (auth) async {
-          if (auth['session'] != null && auth['session'] != 'foxies') {
+          if (auth.session != null && auth.session != 'foxies') {
             throw MatrixException.fromJson(<String, dynamic>{});
           }
-          if (auth['type'] == 'stage1') {
+          if (auth.type == 'stage1') {
             if (completed.isEmpty) {
               completed.add('stage1');
             }
-          } else if (auth['type'] == 'stage2') {
+          } else if (auth.type == 'stage2') {
             if (completed.length == 1 && completed[0] == 'stage1') {
               // okay, we are done!
               return 'FOXIES ARE FLOOOOOFY!!!!!';
@@ -54,24 +54,29 @@ void main() {
           };
           throw MatrixException.fromJson(res);
         },
-        onUpdate: () => updated++,
-        onDone: () => finished = true,
+        onUpdate: (state) {
+          if (state == UiaRequestState.done) {
+            finished = true;
+          }
+          updated++;
+        },
       );
       await Future.delayed(Duration(milliseconds: 50));
       expect(request.nextStages.contains('stage1'), true);
       expect(request.nextStages.length, 1);
       expect(updated, 1);
       expect(finished, false);
-      await request.completeStage('stage1');
+      await request.completeStage(AuthenticationData(type: 'stage1'));
       expect(request.nextStages.contains('stage2'), true);
       expect(request.nextStages.length, 1);
-      expect(updated, 2);
+      expect(updated, 3);
       expect(finished, false);
-      final res = await request.completeStage('stage2');
+      final res =
+          await request.completeStage(AuthenticationData(type: 'stage2'));
       expect(res, 'FOXIES ARE FLOOOOOFY!!!!!');
       expect(request.result, 'FOXIES ARE FLOOOOOFY!!!!!');
-      expect(request.done, true);
-      expect(updated, 3);
+      expect(request.state, UiaRequestState.done);
+      expect(updated, 5);
       expect(finished, true);
     });
     test('it should throw errors', () async {
@@ -81,11 +86,15 @@ void main() {
         request: (auth) async {
           throw Exception('nope');
         },
-        onUpdate: () => updated = true,
-        onDone: () => finished = true,
+        onUpdate: (state) {
+          if (state == UiaRequestState.fail) {
+            finished = true;
+          }
+          updated = true;
+        },
       );
       await Future.delayed(Duration(milliseconds: 50));
-      expect(request.fail, true);
+      expect(request.state, UiaRequestState.fail);
       expect(updated, true);
       expect(finished, true);
       expect(request.error.toString(), Exception('nope').toString());
