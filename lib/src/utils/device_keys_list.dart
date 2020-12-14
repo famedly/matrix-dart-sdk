@@ -184,6 +184,7 @@ abstract class SignableKey extends MatrixSignableKey {
       return false; // prevent recursion & validate hasValidSignatureChain
     }
     visited.add(setKey);
+    if (signatures == null) return false;
     for (final signatureEntries in signatures.entries) {
       final otherUserId = signatureEntries.key;
       if (!(signatureEntries.value is Map) ||
