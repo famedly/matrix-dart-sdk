@@ -16,13 +16,13 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'basic_event.dart';
 import 'basic_event_with_sender.dart';
 import 'basic_room_event.dart';
-import 'stripped_state_event.dart';
 import 'matrix_event.dart';
-import 'basic_event.dart';
 import 'presence.dart';
 import 'room_summary.dart';
+import 'stripped_state_event.dart';
 
 class SyncUpdate {
   String nextBatch;

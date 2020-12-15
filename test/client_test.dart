@@ -21,18 +21,18 @@ import 'dart:typed_data';
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api.dart';
+import 'package:famedlysdk/matrix_api/utils/logs.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/utils/event_update.dart';
-import 'package:famedlysdk/matrix_api/utils/logs.dart';
-import 'package:famedlysdk/src/utils/room_update.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
 import 'package:logger/logger.dart';
+import 'package:famedlysdk/src/utils/room_update.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
-import 'fake_matrix_api.dart';
-import 'fake_database.dart';
 import 'fake_client.dart';
+import 'fake_database.dart';
+import 'fake_matrix_api.dart';
 
 void main() {
   Client matrix;
@@ -485,6 +485,12 @@ void main() {
       expect(Room(id: '!room1') == Room(id: '!room2'), false);
       // ignore: unrelated_type_equality_checks
       expect(Room(id: '!room1') == 'beep', false);
+    });
+
+    test('clearCache', () async {
+      final client = await getClient();
+      client.backgroundSync = true;
+      await client.clearCache();
     });
 
     test('dispose', () async {

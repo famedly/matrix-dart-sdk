@@ -25,13 +25,13 @@ import 'package:http/http.dart' as http;
 
 import '../encryption.dart';
 import '../famedlysdk.dart';
+import '../matrix_api/utils/logs.dart';
 import 'database/database.dart' show Database;
 import 'event.dart';
 import 'room.dart';
 import 'user.dart';
 import 'utils/device_keys_list.dart';
 import 'utils/event_update.dart';
-import '../matrix_api/utils/logs.dart';
 import 'utils/matrix_file.dart';
 import 'utils/room_update.dart';
 import 'utils/to_device_event.dart';
@@ -46,10 +46,16 @@ enum LoginState { logged, loggedOut }
 /// SDK.
 class Client extends MatrixApi {
   int _id;
+
+  // Keeps track of the currently ongoing syncRequest
+  // in case we want to cancel it.
+  int _currentSyncId;
+
   int get id => _id;
 
   final FutureOr<Database> Function(Client) databaseBuilder;
   Database _database;
+
   Database get database => _database;
 
   bool enableE2eeRecovery;
@@ -153,6 +159,7 @@ class Client extends MatrixApi {
   bool get fileEncryptionEnabled => encryptionEnabled && true;
 
   String get identityKey => encryption?.identityKey ?? '';
+
   String get fingerprintKey => encryption?.fingerprintKey ?? '';
 
   /// Wheather this session is unknown to others
@@ -585,14 +592,17 @@ class Client extends MatrixApi {
   final StreamController<LoginState> onLoginStateChanged =
       StreamController.broadcast();
 
-  /// Synchronization erros are coming here.
+  /// Called when the local cache is reset
+  final StreamController<bool> onCacheCleared = StreamController.broadcast();
+
+  /// Synchronization errors are coming here.
   final StreamController<SdkError> onSyncError = StreamController.broadcast();
 
-  /// Encryption erros are coming here.
+  /// Encryption errors are coming here.
   final StreamController<SdkError> onEncryptionError =
       StreamController.broadcast();
 
-  /// This is called once, when the first sync has received.
+  /// This is called once, when the first sync has been processed.
   final StreamController<bool> onFirstSync = StreamController.broadcast();
 
   /// When a new sync response is coming in, this gives the complete payload.
@@ -808,6 +818,7 @@ class Client extends MatrixApi {
 
   bool _backgroundSync = true;
   Future<void> _currentSync, _retryDelay = Future.value();
+
   bool get syncPending => _currentSync != null;
 
   /// Controls the background sync (automatically looping forever if turned on).
@@ -843,15 +854,19 @@ class Client extends MatrixApi {
   Future<void> _innerSync() async {
     await _retryDelay;
     _retryDelay = Future.delayed(Duration(seconds: syncErrorTimeoutSec));
-    if (!isLogged() || _disposed) return null;
+    if (!isLogged() || _disposed || _aborted) return null;
     try {
-      final syncResp = await sync(
+      final syncRequest = sync(
         filter: syncFilters,
         since: prevBatch,
         timeout: prevBatch != null ? 30000 : null,
         setPresence: syncPresence,
       );
-      if (_disposed) return;
+      _currentSyncId = syncRequest.hashCode;
+      final syncResp = await syncRequest;
+      if (_currentSyncId != syncRequest.hashCode) {
+        return;
+      }
       if (database != null) {
         _currentTransaction = database.transaction(() async {
           await handleSync(syncResp);
@@ -863,7 +878,7 @@ class Client extends MatrixApi {
       } else {
         await handleSync(syncResp);
       }
-      if (_disposed) return;
+      if (_disposed || _aborted) return;
       if (prevBatch == null) {
         onFirstSync.add(true);
         prevBatch = syncResp.nextBatch;
@@ -887,7 +902,7 @@ class Client extends MatrixApi {
       Logs().w('Synchronization connection failed', e);
       onSyncError.add(SdkError(exception: e, stackTrace: s));
     } catch (e, s) {
-      if (!isLogged() || _disposed) return;
+      if (!isLogged() || _disposed || _aborted) return;
       Logs().e('Error during processing events', e, s);
       onSyncError.add(SdkError(
           exception: e is Exception ? e : Exception(e), stackTrace: s));
@@ -1349,6 +1364,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
   }
 
   final Map<String, DateTime> _keyQueryFailures = {};
+
   Future<void> _updateUserDeviceKeys() async {
     try {
       if (!isLogged()) return;
@@ -1654,11 +1670,21 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     }
   }
 
-  /// Clear all local cached messages and perform a new clean sync.
+  @Deprecated('Use clearCache()')
   Future<void> clearLocalCachedMessages() async {
+    await clearCache();
+  }
+
+  /// Clear all local cached messages, room information and outbound group
+  /// sessions and perform a new clean sync.
+  Future<void> clearCache() async {
+    await abortSync();
     prevBatch = null;
-    rooms.forEach((r) => r.prev_batch = null);
+    rooms.clear();
     await database?.clearCache(id);
+    onCacheCleared.add(true);
+    // Restart the syncloop
+    backgroundSync = true;
   }
 
   /// A list of mxids of users who are ignored.
@@ -1679,7 +1705,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
       'ignored_users': Map.fromEntries(
           (ignoredUsers..add(userId)).map((key) => MapEntry(key, {}))),
     });
-    await clearLocalCachedMessages();
+    await clearCache();
     return;
   }
 
@@ -1696,22 +1722,35 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
       'ignored_users': Map.fromEntries(
           (ignoredUsers..remove(userId)).map((key) => MapEntry(key, {}))),
     });
-    await clearLocalCachedMessages();
+    await clearCache();
     return;
   }
 
   bool _disposed = false;
+  bool _aborted = false;
   Future _currentTransaction = Future.sync(() => {});
 
-  /// Stops the synchronization and closes the database. After this
-  /// you can safely make this Client instance null.
-  Future<void> dispose({bool closeDatabase = true}) async {
-    _disposed = true;
+  /// Blackholes any ongoing sync call. Currently ongoing sync *processing* is
+  /// still going to be finished, new data is ignored.
+  Future<void> abortSync() async {
+    _aborted = true;
+    backgroundSync = false;
+    _currentSyncId = -1;
     try {
       await _currentTransaction;
     } catch (_) {
       // No-OP
     }
+    _currentSync = null;
+    // reset _aborted for being able to restart the sync.
+    _aborted = false;
+  }
+
+  /// Stops the synchronization and closes the database. After this
+  /// you can safely make this Client instance null.
+  Future<void> dispose({bool closeDatabase = true}) async {
+    _disposed = true;
+    await abortSync();
     encryption?.dispose();
     encryption = null;
     try {
@@ -1731,5 +1770,6 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
 class SdkError {
   Exception exception;
   StackTrace stackTrace;
+
   SdkError({this.exception, this.stackTrace});
 }
