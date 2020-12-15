@@ -46,13 +46,6 @@ class Encryption {
   String get fingerprintKey => olmManager.fingerprintKey;
   String get identityKey => olmManager.identityKey;
 
-  /// ToDeviceEventDecryptionError erros are coming here.
-  final StreamController<ToDeviceEventDecryptionError>
-      onToDeviceEventDecryptionError = StreamController.broadcast();
-
-  /// All other erros are coming here.
-  final StreamController<SdkError> onError = StreamController.broadcast();
-
   KeyManager keyManager;
   OlmManager olmManager;
   KeyVerificationManager keyVerificationManager;
@@ -145,11 +138,10 @@ class Encryption {
       Logs.error(
           '[LibOlm] Could not decrypt to device event from ${event.sender} with content: ${event.content}\n${e.toString()}',
           s);
-      onToDeviceEventDecryptionError.add(
-        ToDeviceEventDecryptionError(
+      client.onEncryptionError.add(
+        SdkError(
           exception: e is Exception ? e : Exception(e),
           stackTrace: s,
-          toDeviceEvent: event,
         ),
       );
       return event;

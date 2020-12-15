@@ -557,7 +557,9 @@ class Bootstrap {
           '[Bootstrapping] Error setting up online key backup: ' + e.toString(),
           s);
       state = BootstrapState.error;
-      encryption.onError.add(SdkError(exception: e, stackTrace: s));
+      encryption.client.onEncryptionError.add(
+        SdkError(exception: e, stackTrace: s),
+      );
       return;
     }
     state = BootstrapState.done;
