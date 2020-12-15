@@ -573,9 +573,8 @@ class Client extends MatrixApi {
   /// Synchronization erros are coming here.
   final StreamController<SdkError> onSyncError = StreamController.broadcast();
 
-  /// Synchronization erros are coming here.
-  @Deprecated('Please use encryption.onToDeviceEventDecryptionError instead')
-  final StreamController<ToDeviceEventDecryptionError> onOlmError =
+  /// Encryption erros are coming here.
+  final StreamController<SdkError> onEncryptionError =
       StreamController.broadcast();
 
   /// This is called once, when the first sync has received.
