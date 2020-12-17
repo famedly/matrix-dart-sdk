@@ -31,6 +31,7 @@ import 'package:test/test.dart';
 
 import 'fake_matrix_api.dart';
 import 'fake_database.dart';
+import 'fake_client.dart';
 
 void main() {
   Client matrix;
@@ -443,6 +444,13 @@ void main() {
     test('ignoredUsers', () async {
       await matrix.ignoreUser('@charley2:stupid.abc');
       await matrix.unignoreUser('@charley:stupid.abc');
+    });
+    test('upload', () async {
+      final client = await getClient();
+      final response = await client.upload(Uint8List(0), 'file.jpeg');
+      expect(response, 'mxc://example.com/AQwafuaFswefuhsfAFAgsw');
+      expect(await client.database.getFile(response) != null, true);
+      await client.dispose(closeDatabase: true);
     });
 
     test('dispose', () async {
