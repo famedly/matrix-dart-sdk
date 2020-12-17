@@ -384,7 +384,21 @@ class KeyManager {
         sess.sentMessages);
   }
 
+  final Map<String, Future<OutboundGroupSession>>
+      _pendingNewOutboundGroupSessions = {};
+
   Future<OutboundGroupSession> createOutboundGroupSession(String roomId) async {
+    if (_pendingNewOutboundGroupSessions.containsKey(roomId)) {
+      return _pendingNewOutboundGroupSessions[roomId];
+    }
+    _pendingNewOutboundGroupSessions[roomId] =
+        _createOutboundGroupSession(roomId);
+    await _pendingNewOutboundGroupSessions[roomId];
+    return _pendingNewOutboundGroupSessions.remove(roomId);
+  }
+
+  Future<OutboundGroupSession> _createOutboundGroupSession(
+      String roomId) async {
     await clearOrUseOutboundGroupSession(roomId, wipe: true);
     final room = client.getRoomById(roomId);
     if (room == null) {
