@@ -19,6 +19,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -518,6 +519,20 @@ class Client extends MatrixApi {
       }
     }
     return archiveList;
+  }
+
+  /// Uploads a file and automatically caches it in the database, if it is small enough
+  /// and returns the mxc url as a string.
+  @override
+  Future<String> upload(Uint8List file, String fileName,
+      {String contentType}) async {
+    final mxc = await super.upload(file, fileName, contentType: contentType);
+    final storeable = database != null && file.length <= database.maxFileSize;
+    if (storeable) {
+      await database.storeFile(
+          mxc, file, DateTime.now().millisecondsSinceEpoch);
+    }
+    return mxc;
   }
 
   /// Uploads a new user avatar for this user.
