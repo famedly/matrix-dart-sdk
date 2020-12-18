@@ -2262,6 +2262,7 @@ class DbInboundGroupSession extends DataClass
   final String pickle;
   final String content;
   final String indexes;
+  final String allowedAtIndex;
   final bool uploaded;
   final String senderKey;
   final String senderClaimedKeys;
@@ -2272,6 +2273,7 @@ class DbInboundGroupSession extends DataClass
       @required this.pickle,
       this.content,
       this.indexes,
+      this.allowedAtIndex,
       this.uploaded,
       this.senderKey,
       this.senderClaimedKeys});
@@ -2295,6 +2297,8 @@ class DbInboundGroupSession extends DataClass
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}content']),
       indexes:
           stringType.mapFromDatabaseResponse(data['${effectivePrefix}indexes']),
+      allowedAtIndex: stringType
+          .mapFromDatabaseResponse(data['${effectivePrefix}allowed_at_index']),
       uploaded:
           boolType.mapFromDatabaseResponse(data['${effectivePrefix}uploaded']),
       senderKey: stringType
@@ -2323,6 +2327,9 @@ class DbInboundGroupSession extends DataClass
     }
     if (!nullToAbsent || indexes != null) {
       map['indexes'] = Variable<String>(indexes);
+    }
+    if (!nullToAbsent || allowedAtIndex != null) {
+      map['allowed_at_index'] = Variable<String>(allowedAtIndex);
     }
     if (!nullToAbsent || uploaded != null) {
       map['uploaded'] = Variable<bool>(uploaded);
@@ -2354,6 +2361,9 @@ class DbInboundGroupSession extends DataClass
       indexes: indexes == null && nullToAbsent
           ? const Value.absent()
           : Value(indexes),
+      allowedAtIndex: allowedAtIndex == null && nullToAbsent
+          ? const Value.absent()
+          : Value(allowedAtIndex),
       uploaded: uploaded == null && nullToAbsent
           ? const Value.absent()
           : Value(uploaded),
@@ -2376,6 +2386,7 @@ class DbInboundGroupSession extends DataClass
       pickle: serializer.fromJson<String>(json['pickle']),
       content: serializer.fromJson<String>(json['content']),
       indexes: serializer.fromJson<String>(json['indexes']),
+      allowedAtIndex: serializer.fromJson<String>(json['allowed_at_index']),
       uploaded: serializer.fromJson<bool>(json['uploaded']),
       senderKey: serializer.fromJson<String>(json['sender_key']),
       senderClaimedKeys:
@@ -2392,6 +2403,7 @@ class DbInboundGroupSession extends DataClass
       'pickle': serializer.toJson<String>(pickle),
       'content': serializer.toJson<String>(content),
       'indexes': serializer.toJson<String>(indexes),
+      'allowed_at_index': serializer.toJson<String>(allowedAtIndex),
       'uploaded': serializer.toJson<bool>(uploaded),
       'sender_key': serializer.toJson<String>(senderKey),
       'sender_claimed_keys': serializer.toJson<String>(senderClaimedKeys),
@@ -2405,6 +2417,7 @@ class DbInboundGroupSession extends DataClass
           String pickle,
           String content,
           String indexes,
+          String allowedAtIndex,
           bool uploaded,
           String senderKey,
           String senderClaimedKeys}) =>
@@ -2415,6 +2428,7 @@ class DbInboundGroupSession extends DataClass
         pickle: pickle ?? this.pickle,
         content: content ?? this.content,
         indexes: indexes ?? this.indexes,
+        allowedAtIndex: allowedAtIndex ?? this.allowedAtIndex,
         uploaded: uploaded ?? this.uploaded,
         senderKey: senderKey ?? this.senderKey,
         senderClaimedKeys: senderClaimedKeys ?? this.senderClaimedKeys,
@@ -2428,6 +2442,7 @@ class DbInboundGroupSession extends DataClass
           ..write('pickle: $pickle, ')
           ..write('content: $content, ')
           ..write('indexes: $indexes, ')
+          ..write('allowedAtIndex: $allowedAtIndex, ')
           ..write('uploaded: $uploaded, ')
           ..write('senderKey: $senderKey, ')
           ..write('senderClaimedKeys: $senderClaimedKeys')
@@ -2449,9 +2464,11 @@ class DbInboundGroupSession extends DataClass
                       $mrjc(
                           indexes.hashCode,
                           $mrjc(
-                              uploaded.hashCode,
-                              $mrjc(senderKey.hashCode,
-                                  senderClaimedKeys.hashCode)))))))));
+                              allowedAtIndex.hashCode,
+                              $mrjc(
+                                  uploaded.hashCode,
+                                  $mrjc(senderKey.hashCode,
+                                      senderClaimedKeys.hashCode))))))))));
   @override
   bool operator ==(dynamic other) =>
       identical(this, other) ||
@@ -2462,6 +2479,7 @@ class DbInboundGroupSession extends DataClass
           other.pickle == this.pickle &&
           other.content == this.content &&
           other.indexes == this.indexes &&
+          other.allowedAtIndex == this.allowedAtIndex &&
           other.uploaded == this.uploaded &&
           other.senderKey == this.senderKey &&
           other.senderClaimedKeys == this.senderClaimedKeys);
@@ -2475,6 +2493,7 @@ class InboundGroupSessionsCompanion
   final Value<String> pickle;
   final Value<String> content;
   final Value<String> indexes;
+  final Value<String> allowedAtIndex;
   final Value<bool> uploaded;
   final Value<String> senderKey;
   final Value<String> senderClaimedKeys;
@@ -2485,6 +2504,7 @@ class InboundGroupSessionsCompanion
     this.pickle = const Value.absent(),
     this.content = const Value.absent(),
     this.indexes = const Value.absent(),
+    this.allowedAtIndex = const Value.absent(),
     this.uploaded = const Value.absent(),
     this.senderKey = const Value.absent(),
     this.senderClaimedKeys = const Value.absent(),
@@ -2496,6 +2516,7 @@ class InboundGroupSessionsCompanion
     @required String pickle,
     this.content = const Value.absent(),
     this.indexes = const Value.absent(),
+    this.allowedAtIndex = const Value.absent(),
     this.uploaded = const Value.absent(),
     this.senderKey = const Value.absent(),
     this.senderClaimedKeys = const Value.absent(),
@@ -2510,6 +2531,7 @@ class InboundGroupSessionsCompanion
     Expression<String> pickle,
     Expression<String> content,
     Expression<String> indexes,
+    Expression<String> allowedAtIndex,
     Expression<bool> uploaded,
     Expression<String> senderKey,
     Expression<String> senderClaimedKeys,
@@ -2521,6 +2543,7 @@ class InboundGroupSessionsCompanion
       if (pickle != null) 'pickle': pickle,
       if (content != null) 'content': content,
       if (indexes != null) 'indexes': indexes,
+      if (allowedAtIndex != null) 'allowed_at_index': allowedAtIndex,
       if (uploaded != null) 'uploaded': uploaded,
       if (senderKey != null) 'sender_key': senderKey,
       if (senderClaimedKeys != null) 'sender_claimed_keys': senderClaimedKeys,
@@ -2534,6 +2557,7 @@ class InboundGroupSessionsCompanion
       Value<String> pickle,
       Value<String> content,
       Value<String> indexes,
+      Value<String> allowedAtIndex,
       Value<bool> uploaded,
       Value<String> senderKey,
       Value<String> senderClaimedKeys}) {
@@ -2544,6 +2568,7 @@ class InboundGroupSessionsCompanion
       pickle: pickle ?? this.pickle,
       content: content ?? this.content,
       indexes: indexes ?? this.indexes,
+      allowedAtIndex: allowedAtIndex ?? this.allowedAtIndex,
       uploaded: uploaded ?? this.uploaded,
       senderKey: senderKey ?? this.senderKey,
       senderClaimedKeys: senderClaimedKeys ?? this.senderClaimedKeys,
@@ -2571,6 +2596,9 @@ class InboundGroupSessionsCompanion
     if (indexes.present) {
       map['indexes'] = Variable<String>(indexes.value);
     }
+    if (allowedAtIndex.present) {
+      map['allowed_at_index'] = Variable<String>(allowedAtIndex.value);
+    }
     if (uploaded.present) {
       map['uploaded'] = Variable<bool>(uploaded.value);
     }
@@ -2592,6 +2620,7 @@ class InboundGroupSessionsCompanion
           ..write('pickle: $pickle, ')
           ..write('content: $content, ')
           ..write('indexes: $indexes, ')
+          ..write('allowedAtIndex: $allowedAtIndex, ')
           ..write('uploaded: $uploaded, ')
           ..write('senderKey: $senderKey, ')
           ..write('senderClaimedKeys: $senderClaimedKeys')
@@ -2653,6 +2682,16 @@ class InboundGroupSessions extends Table
         $customConstraints: '');
   }
 
+  final VerificationMeta _allowedAtIndexMeta =
+      const VerificationMeta('allowedAtIndex');
+  GeneratedTextColumn _allowedAtIndex;
+  GeneratedTextColumn get allowedAtIndex =>
+      _allowedAtIndex ??= _constructAllowedAtIndex();
+  GeneratedTextColumn _constructAllowedAtIndex() {
+    return GeneratedTextColumn('allowed_at_index', $tableName, true,
+        $customConstraints: '');
+  }
+
   final VerificationMeta _uploadedMeta = const VerificationMeta('uploaded');
   GeneratedBoolColumn _uploaded;
   GeneratedBoolColumn get uploaded => _uploaded ??= _constructUploaded();
@@ -2688,6 +2727,7 @@ class InboundGroupSessions extends Table
         pickle,
         content,
         indexes,
+        allowedAtIndex,
         uploaded,
         senderKey,
         senderClaimedKeys
@@ -2735,6 +2775,12 @@ class InboundGroupSessions extends Table
     if (data.containsKey('indexes')) {
       context.handle(_indexesMeta,
           indexes.isAcceptableOrUnknown(data['indexes'], _indexesMeta));
+    }
+    if (data.containsKey('allowed_at_index')) {
+      context.handle(
+          _allowedAtIndexMeta,
+          allowedAtIndex.isAcceptableOrUnknown(
+              data['allowed_at_index'], _allowedAtIndexMeta));
     }
     if (data.containsKey('uploaded')) {
       context.handle(_uploadedMeta,
@@ -6293,10 +6339,11 @@ abstract class _$Database extends GeneratedDatabase {
       String pickle,
       String content,
       String indexes,
+      String allowed_at_index,
       String sender_key,
       String sender_claimed_keys) {
     return customInsert(
-      'INSERT OR REPLACE INTO inbound_group_sessions (client_id, room_id, session_id, pickle, content, indexes, sender_key, sender_claimed_keys) VALUES (:client_id, :room_id, :session_id, :pickle, :content, :indexes, :sender_key, :sender_claimed_keys)',
+      'INSERT OR REPLACE INTO inbound_group_sessions (client_id, room_id, session_id, pickle, content, indexes, allowed_at_index, sender_key, sender_claimed_keys) VALUES (:client_id, :room_id, :session_id, :pickle, :content, :indexes, :allowed_at_index, :sender_key, :sender_claimed_keys)',
       variables: [
         Variable.withInt(client_id),
         Variable.withString(room_id),
@@ -6304,6 +6351,7 @@ abstract class _$Database extends GeneratedDatabase {
         Variable.withString(pickle),
         Variable.withString(content),
         Variable.withString(indexes),
+        Variable.withString(allowed_at_index),
         Variable.withString(sender_key),
         Variable.withString(sender_claimed_keys)
       ],
@@ -6317,6 +6365,21 @@ abstract class _$Database extends GeneratedDatabase {
       'UPDATE inbound_group_sessions SET indexes = :indexes WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id',
       variables: [
         Variable.withString(indexes),
+        Variable.withInt(client_id),
+        Variable.withString(room_id),
+        Variable.withString(session_id)
+      ],
+      updates: {inboundGroupSessions},
+      updateKind: UpdateKind.update,
+    );
+  }
+
+  Future<int> updateInboundGroupSessionAllowedAtIndex(String allowed_at_index,
+      int client_id, String room_id, String session_id) {
+    return customUpdate(
+      'UPDATE inbound_group_sessions SET allowed_at_index = :allowed_at_index WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id',
+      variables: [
+        Variable.withString(allowed_at_index),
         Variable.withInt(client_id),
         Variable.withString(room_id),
         Variable.withString(session_id)

@@ -91,6 +91,9 @@ void main() {
       await matrix
           .userDeviceKeys['@alice:example.com'].deviceKeys['OTHERDEVICE']
           .setVerified(true);
+      final session = await matrix.encryption.keyManager
+          .loadInboundGroupSession(
+              '!726s6s6q:example.com', validSessionId, validSenderKey);
       // test a successful share
       var event = ToDeviceEvent(
           sender: '@alice:example.com',
@@ -113,7 +116,57 @@ void main() {
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
           true);
 
+      // test a successful foreign share
+      FakeMatrixApi.calledEndpoints.clear();
+      session.allowedAtIndex['@test:fakeServer.notExisting'] = <String, int>{
+        'OTHERDEVICE': 0,
+      };
+      event = ToDeviceEvent(
+          sender: '@test:fakeServer.notExisting',
+          type: 'm.room_key_request',
+          content: {
+            'action': 'request',
+            'body': {
+              'algorithm': AlgorithmTypes.megolmV1AesSha2,
+              'room_id': '!726s6s6q:example.com',
+              'sender_key': validSenderKey,
+              'session_id': validSessionId,
+            },
+            'request_id': 'request_a1',
+            'requesting_device_id': 'OTHERDEVICE',
+          });
+      await matrix.encryption.keyManager.handleToDeviceEvent(event);
+      Logs().i(FakeMatrixApi.calledEndpoints.keys.toString());
+      expect(
+          FakeMatrixApi.calledEndpoints.keys.any(
+              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+          true);
+      session.allowedAtIndex.remove('@test:fakeServer.notExisting');
+
       // test various fail scenarios
+
+      // unknown person
+      FakeMatrixApi.calledEndpoints.clear();
+      event = ToDeviceEvent(
+          sender: '@test:fakeServer.notExisting',
+          type: 'm.room_key_request',
+          content: {
+            'action': 'request',
+            'body': {
+              'algorithm': AlgorithmTypes.megolmV1AesSha2,
+              'room_id': '!726s6s6q:example.com',
+              'sender_key': validSenderKey,
+              'session_id': validSessionId,
+            },
+            'request_id': 'request_a2',
+            'requesting_device_id': 'OTHERDEVICE',
+          });
+      await matrix.encryption.keyManager.handleToDeviceEvent(event);
+      Logs().i(FakeMatrixApi.calledEndpoints.keys.toString());
+      expect(
+          FakeMatrixApi.calledEndpoints.keys.any(
+              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+          false);
 
       // no body
       FakeMatrixApi.calledEndpoints.clear();
