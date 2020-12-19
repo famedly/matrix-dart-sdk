@@ -27,5 +27,14 @@ class Logs extends Logger {
 
   set level(Level newLevel) => Logger.level = newLevel;
 
-  Logs._internal() : super(printer: PrettyPrinter(methodCount: 0));
+  Logs._internal()
+      : super(
+          printer: PrettyPrinter(methodCount: 0),
+          filter: MatrixSdkFilter(),
+        );
+}
+
+class MatrixSdkFilter extends LogFilter {
+  @override
+  bool shouldLog(LogEvent event) => event.level.index >= Logger.level.index;
 }
