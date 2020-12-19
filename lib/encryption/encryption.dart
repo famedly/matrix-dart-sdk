@@ -135,8 +135,9 @@ class Encryption {
     try {
       return await olmManager.decryptToDeviceEvent(event);
     } catch (e, s) {
-      Logs.error(
-          '[LibOlm] Could not decrypt to device event from ${event.sender} with content: ${event.content}\n${e.toString()}',
+      Logs().e(
+          '[LibOlm] Could not decrypt to device event from ${event.sender} with content: ${event.content}',
+          e,
           s);
       client.onEncryptionError.add(
         SdkError(
@@ -178,7 +179,7 @@ class Encryption {
       var haveIndex = inboundGroupSession.indexes.containsKey(messageIndexKey);
       if (haveIndex &&
           inboundGroupSession.indexes[messageIndexKey] != messageIndexValue) {
-        Logs.error('[Decrypt] Could not decrypt due to a corrupted session.');
+        Logs().e('[Decrypt] Could not decrypt due to a corrupted session.');
         throw (DecryptError.CHANNEL_CORRUPTED);
       }
       inboundGroupSession.indexes[messageIndexKey] = messageIndexValue;
@@ -282,7 +283,7 @@ class Encryption {
       }
       return event;
     } catch (e, s) {
-      Logs.error('[Decrypt] Could not decrpyt event: ' + e.toString(), s);
+      Logs().e('[Decrypt] Could not decrpyt event', e, s);
       return event;
     }
   }

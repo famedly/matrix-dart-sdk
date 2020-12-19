@@ -139,7 +139,7 @@ class Room {
       try {
         state = client.encryption.decryptRoomEventSync(id, state);
       } catch (e, s) {
-        Logs.error('[LibOlm] Could not decrypt room state: ' + e.toString(), s);
+        Logs().e('[LibOlm] Could not decrypt room state', e, s);
       }
     }
     if (!(state.stateKey is String) &&
@@ -794,13 +794,12 @@ class Room {
         if ((DateTime.now().millisecondsSinceEpoch -
                 sentDate.millisecondsSinceEpoch) <
             (1000 * client.sendMessageTimeoutSeconds)) {
-          Logs.warning('[Client] Problem while sending message because of "' +
+          Logs().w('[Client] Problem while sending message because of "' +
               e.toString() +
               '". Try again in 1 seconds...');
           await Future.delayed(Duration(seconds: 1));
         } else {
-          Logs.warning(
-              '[Client] Problem while sending message: ' + e.toString(), s);
+          Logs().w('[Client] Problem while sending message', e, s);
           syncUpdate.rooms.join.values.first.timeline.events.first
               .unsigned[MessageSendingStatusKey] = -1;
           await _handleFakeSync(syncUpdate);

@@ -76,11 +76,11 @@ void main() {
     try {
       olm.init();
       olm.Account();
-    } catch (_) {
+    } catch (e) {
       olmEnabled = false;
-      Logs.error('[LibOlm] Failed to load LibOlm: ' + _.toString());
+      Logs().e('[LibOlm] Failed to load LibOlm', e);
     }
-    Logs.success('[LibOlm] Enabled: $olmEnabled');
+    Logs().i('[LibOlm] Enabled: $olmEnabled');
 
     if (!olmEnabled) return;
 

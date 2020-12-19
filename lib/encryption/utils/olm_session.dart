@@ -49,7 +49,7 @@ class OlmSession {
           DateTime.fromMillisecondsSinceEpoch(dbEntry.lastReceived ?? 0);
       assert(sessionId == session.session_id());
     } catch (e, s) {
-      Logs.error('[LibOlm] Could not unpickle olm session: ' + e.toString(), s);
+      Logs().e('[LibOlm] Could not unpickle olm session', e, s);
       dispose();
     }
   }

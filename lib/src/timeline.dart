@@ -317,7 +317,7 @@ class Timeline {
         if (onUpdate != null) onUpdate();
       }
     } catch (e, s) {
-      Logs.warning('Handle event update failed: ${e.toString()}', s);
+      Logs().w('Handle event update failed', e, s);
     }
   }
 

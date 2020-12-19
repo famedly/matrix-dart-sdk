@@ -78,9 +78,7 @@ class SessionKey {
       inboundGroupSession.unpickle(key, dbEntry.pickle);
     } catch (e, s) {
       dispose();
-      Logs.error(
-          '[LibOlm] Unable to unpickle inboundGroupSession: ' + e.toString(),
-          s);
+      Logs().e('[LibOlm] Unable to unpickle inboundGroupSession', e, s);
     }
   }
 

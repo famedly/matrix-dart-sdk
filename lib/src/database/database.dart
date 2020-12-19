@@ -67,7 +67,7 @@ class Database extends _$Database {
           try {
             await m.createAll();
           } catch (e, s) {
-            Logs.error(e, s);
+            Logs().e('Create all failed in database migrator', e, s);
             onError.add(SdkError(exception: e, stackTrace: s));
             rethrow;
           }
@@ -138,7 +138,7 @@ class Database extends _$Database {
               await customStatement('UPDATE clients SET prev_batch = null');
             }
           } catch (e, s) {
-            Logs.error(e, s);
+            Logs().e('Database migration failed', e, s);
             onError.add(SdkError(exception: e, stackTrace: s));
             rethrow;
           }
@@ -148,12 +148,12 @@ class Database extends _$Database {
             if (executor.dialect == SqlDialect.sqlite) {
               final ret = await customSelect('PRAGMA journal_mode=WAL').get();
               if (ret.isNotEmpty) {
-                Logs.info('[Moor] Switched database to mode ' +
+                Logs().i('[Moor] Switched database to mode ' +
                     ret.first.data['journal_mode'].toString());
               }
             }
           } catch (e, s) {
-            Logs.error(e, s);
+            Logs().e('Database before open failed', e, s);
             onError.add(SdkError(exception: e, stackTrace: s));
             rethrow;
           }
@@ -202,8 +202,7 @@ class Database extends _$Database {
         session.unpickle(userId, row.pickle);
         res[row.identityKey].add(session);
       } catch (e, s) {
-        Logs.error(
-            '[LibOlm] Could not unpickle olm session: ' + e.toString(), s);
+        Logs().e('[LibOlm] Could not unpickle olm session', e, s);
       }
     }
     return res;

@@ -51,7 +51,7 @@ class OutboundGroupSession {
       }
     } catch (e) {
       // devices is bad (old data), so just not use this session
-      Logs.info(
+      Logs().i(
           '[OutboundGroupSession] Session in database is old, not using it. ' +
               e.toString());
       return;
@@ -63,9 +63,7 @@ class OutboundGroupSession {
       sentMessages = dbEntry.sentMessages;
     } catch (e, s) {
       dispose();
-      Logs.error(
-          '[LibOlm] Unable to unpickle outboundGroupSession: ' + e.toString(),
-          s);
+      Logs().e('[LibOlm] Unable to unpickle outboundGroupSession', e, s);
     }
   }
 

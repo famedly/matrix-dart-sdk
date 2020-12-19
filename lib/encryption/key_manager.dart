@@ -111,9 +111,7 @@ class KeyManager {
       }
     } catch (e, s) {
       inboundGroupSession.free();
-      Logs.error(
-          '[LibOlm] Could not create new InboundGroupSession: ' + e.toString(),
-          s);
+      Logs().e('[LibOlm] Could not create new InboundGroupSession', e, s);
       return;
     }
     final newSession = SessionKey(
@@ -356,9 +354,9 @@ class KeyManager {
                 devicesToReceive, 'm.room_key', rawSession);
           }
         } catch (e, s) {
-          Logs.error(
-              '[LibOlm] Unable to re-send the session key at later index to new devices: ' +
-                  e.toString(),
+          Logs().e(
+              '[LibOlm] Unable to re-send the session key at later index to new devices',
+              e,
               s);
         }
         return false;
@@ -411,9 +409,7 @@ class KeyManager {
       outboundGroupSession.create();
     } catch (e, s) {
       outboundGroupSession.free();
-      Logs.error(
-          '[LibOlm] Unable to create new outboundGroupSession: ' + e.toString(),
-          s);
+      Logs().e('[LibOlm] Unable to create new outboundGroupSession', e, s);
       return null;
     }
     final rawSession = <String, dynamic>{
@@ -437,9 +433,9 @@ class KeyManager {
       await storeOutboundGroupSession(roomId, sess);
       _outboundGroupSessions[roomId] = sess;
     } catch (e, s) {
-      Logs.error(
-          '[LibOlm] Unable to send the session key to the participating devices: ' +
-              e.toString(),
+      Logs().e(
+          '[LibOlm] Unable to send the session key to the participating devices',
+          e,
           s);
       sess.dispose();
       return null;
@@ -531,8 +527,7 @@ class KeyManager {
             decrypted = json.decode(decryption.decrypt(sessionData['ephemeral'],
                 sessionData['mac'], sessionData['ciphertext']));
           } catch (e, s) {
-            Logs.error(
-                '[LibOlm] Error decrypting room key: ' + e.toString(), s);
+            Logs().e('[LibOlm] Error decrypting room key', e, s);
           }
           if (decrypted != null) {
             decrypted['session_id'] = sessionId;
@@ -584,12 +579,10 @@ class KeyManager {
         await loadSingleKey(room.id, sessionId);
       } catch (err, stacktrace) {
         if (err is MatrixException && err.errcode == 'M_NOT_FOUND') {
-          Logs.info(
+          Logs().i(
               '[KeyManager] Key not in online key backup, requesting it from other devices...');
         } else {
-          Logs.error(
-              '[KeyManager] Failed to access online key backup: ' +
-                  err.toString(),
+          Logs().e('[KeyManager] Failed to access online key backup', err,
               stacktrace);
         }
       }
@@ -632,10 +625,7 @@ class KeyManager {
       );
       outgoingShareRequests[request.requestId] = request;
     } catch (e, s) {
-      Logs.error(
-          '[Key Manager] Sending key verification request failed: ' +
-              e.toString(),
-          s);
+      Logs().e('[Key Manager] Sending key verification request failed', e, s);
     }
   }
 
@@ -693,7 +683,7 @@ class KeyManager {
         final roomKeys =
             await runInBackground<RoomKeys, _GenerateUploadKeysArgs>(
                 _generateUploadKeys, args);
-        Logs.info('[Key Manager] Uploading ${dbSessions.length} room keys...');
+        Logs().i('[Key Manager] Uploading ${dbSessions.length} room keys...');
         // upload the payload...
         await client.storeRoomKeys(info.version, roomKeys);
         // and now finally mark all the keys as uploaded
@@ -706,7 +696,7 @@ class KeyManager {
         decryption.free();
       }
     } catch (e, s) {
-      Logs.error('[Key Manager] Error uploading room keys: ' + e.toString(), s);
+      Logs().e('[Key Manager] Error uploading room keys', e, s);
     } finally {
       _isUploadingKeys = false;
     }
@@ -720,27 +710,27 @@ class KeyManager {
       }
       if (event.content['action'] == 'request') {
         // we are *receiving* a request
-        Logs.info('[KeyManager] Received key sharing request...');
+        Logs().i('[KeyManager] Received key sharing request...');
         if (!event.content.containsKey('body')) {
-          Logs.info('[KeyManager] No body, doing nothing');
+          Logs().i('[KeyManager] No body, doing nothing');
           return; // no body
         }
         if (!client.userDeviceKeys.containsKey(event.sender) ||
             !client.userDeviceKeys[event.sender].deviceKeys
                 .containsKey(event.content['requesting_device_id'])) {
-          Logs.info('[KeyManager] Device not found, doing nothing');
+          Logs().i('[KeyManager] Device not found, doing nothing');
           return; // device not found
         }
         final device = client.userDeviceKeys[event.sender]
             .deviceKeys[event.content['requesting_device_id']];
         if (device.userId == client.userID &&
             device.deviceId == client.deviceID) {
-          Logs.info('[KeyManager] Request is by ourself, ignoring');
+          Logs().i('[KeyManager] Request is by ourself, ignoring');
           return; // ignore requests by ourself
         }
         final room = client.getRoomById(event.content['body']['room_id']);
         if (room == null) {
-          Logs.info('[KeyManager] Unknown room, ignoring');
+          Logs().i('[KeyManager] Unknown room, ignoring');
           return; // unknown room
         }
         final sessionId = event.content['body']['session_id'];
@@ -748,7 +738,7 @@ class KeyManager {
         // okay, let's see if we have this session at all
         if ((await loadInboundGroupSession(room.id, sessionId, senderKey)) ==
             null) {
-          Logs.info('[KeyManager] Unknown session, ignoring');
+          Logs().i('[KeyManager] Unknown session, ignoring');
           return; // we don't have this session anyways
         }
         final request = KeyManagerKeyShareRequest(
@@ -759,7 +749,7 @@ class KeyManager {
           senderKey: senderKey,
         );
         if (incomingShareRequests.containsKey(request.requestId)) {
-          Logs.info('[KeyManager] Already processed this request, ignoring');
+          Logs().i('[KeyManager] Already processed this request, ignoring');
           return; // we don't want to process one and the same request multiple times
         }
         incomingShareRequests[request.requestId] = request;
@@ -768,12 +758,12 @@ class KeyManager {
         if (device.userId == client.userID &&
             device.verified &&
             !device.blocked) {
-          Logs.info('[KeyManager] All checks out, forwarding key...');
+          Logs().i('[KeyManager] All checks out, forwarding key...');
           // alright, we can forward the key
           await roomKeyRequest.forwardKey();
         } else {
-          Logs.info(
-              '[KeyManager] Asking client, if the key should be forwarded');
+          Logs()
+              .i('[KeyManager] Asking client, if the key should be forwarded');
           client.onRoomKeyRequest
               .add(roomKeyRequest); // let the client handle this
         }
@@ -988,7 +978,7 @@ RoomKeys _generateUploadKeys(_GenerateUploadKeysArgs args) {
     }
     return roomKeys;
   } catch (e, s) {
-    Logs.error('[Key Manager] Error generating payload ' + e.toString(), s);
+    Logs().e('[Key Manager] Error generating payload', e, s);
     rethrow;
   } finally {
     enc.free();

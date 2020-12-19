@@ -19,23 +19,23 @@ void test() async {
   try {
     await olm.init();
     olm.Account();
-    Logs.success('[LibOlm] Enabled');
+    Logs().i('[LibOlm] Enabled');
 
-    Logs.success('++++ Login Alice at ++++');
+    Logs().i('++++ Login Alice at ++++');
     testClientA = Client('TestClientA', databaseBuilder: getDatabase);
     await testClientA.checkHomeserver(TestUser.homeserver);
     await testClientA.login(
         user: TestUser.username, password: TestUser.password);
     assert(testClientA.encryptionEnabled);
 
-    Logs.success('++++ Login Bob ++++');
+    Logs().i('++++ Login Bob ++++');
     testClientB = Client('TestClientB', databaseBuilder: getDatabase);
     await testClientB.checkHomeserver(TestUser.homeserver);
     await testClientB.login(
         user: TestUser.username2, password: TestUser.password);
     assert(testClientB.encryptionEnabled);
 
-    Logs.success('++++ (Alice) Leave all rooms ++++');
+    Logs().i('++++ (Alice) Leave all rooms ++++');
     while (testClientA.rooms.isNotEmpty) {
       var room = testClientA.rooms.first;
       if (room.canonicalAlias?.isNotEmpty ?? false) {
@@ -47,7 +47,7 @@ void test() async {
       } catch (_) {}
     }
 
-    Logs.success('++++ (Bob) Leave all rooms ++++');
+    Logs().i('++++ (Bob) Leave all rooms ++++');
     for (var i = 0; i < 3; i++) {
       if (testClientB.rooms.isNotEmpty) {
         var room = testClientB.rooms.first;
@@ -58,7 +58,7 @@ void test() async {
       }
     }
 
-    Logs.success('++++ Check if own olm device is verified by default ++++');
+    Logs().i('++++ Check if own olm device is verified by default ++++');
     assert(testClientA.userDeviceKeys.containsKey(TestUser.username));
     assert(testClientA.userDeviceKeys[TestUser.username].deviceKeys
         .containsKey(testClientA.deviceID));
@@ -74,20 +74,20 @@ void test() async {
     assert(!testClientB.userDeviceKeys[TestUser.username2]
         .deviceKeys[testClientB.deviceID].blocked);
 
-    Logs.success('++++ (Alice) Create room and invite Bob ++++');
+    Logs().i('++++ (Alice) Create room and invite Bob ++++');
     await testClientA.createRoom(invite: [TestUser.username2]);
     await Future.delayed(Duration(seconds: 1));
     var room = testClientA.rooms.first;
     assert(room != null);
     final roomId = room.id;
 
-    Logs.success('++++ (Bob) Join room ++++');
+    Logs().i('++++ (Bob) Join room ++++');
     var inviteRoom = testClientB.getRoomById(roomId);
     await inviteRoom.join();
     await Future.delayed(Duration(seconds: 1));
     assert(inviteRoom.membership == Membership.join);
 
-    Logs.success('++++ (Alice) Enable encryption ++++');
+    Logs().i('++++ (Alice) Enable encryption ++++');
     assert(room.encrypted == false);
     await room.enableEncryption();
     await Future.delayed(Duration(seconds: 5));
@@ -95,7 +95,7 @@ void test() async {
     assert(room.client.encryption.keyManager.getOutboundGroupSession(room.id) ==
         null);
 
-    Logs.success('++++ (Alice) Check known olm devices ++++');
+    Logs().i('++++ (Alice) Check known olm devices ++++');
     assert(testClientA.userDeviceKeys.containsKey(TestUser.username2));
     assert(testClientA.userDeviceKeys[TestUser.username2].deviceKeys
         .containsKey(testClientB.deviceID));
@@ -114,7 +114,7 @@ void test() async {
         .userDeviceKeys[TestUser.username2].deviceKeys[testClientB.deviceID]
         .setVerified(true);
 
-    Logs.success('++++ Check if own olm device is verified by default ++++');
+    Logs().i('++++ Check if own olm device is verified by default ++++');
     assert(testClientA.userDeviceKeys.containsKey(TestUser.username));
     assert(testClientA.userDeviceKeys[TestUser.username].deviceKeys
         .containsKey(testClientA.deviceID));
@@ -126,7 +126,7 @@ void test() async {
     assert(testClientB.userDeviceKeys[TestUser.username2]
         .deviceKeys[testClientB.deviceID].verified);
 
-    Logs.success("++++ (Alice) Send encrypted message: '$testMessage' ++++");
+    Logs().i("++++ (Alice) Send encrypted message: '$testMessage' ++++");
     await room.sendTextEvent(testMessage);
     await Future.delayed(Duration(seconds: 5));
     assert(room.client.encryption.keyManager.getOutboundGroupSession(room.id) !=
@@ -153,11 +153,10 @@ void test() async {
       null);*/
     assert(room.lastMessage == testMessage);
     assert(inviteRoom.lastMessage == testMessage);
-    Logs.success(
+    Logs().i(
         "++++ (Bob) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
 
-    Logs.success(
-        "++++ (Alice) Send again encrypted message: '$testMessage2' ++++");
+    Logs().i("++++ (Alice) Send again encrypted message: '$testMessage2' ++++");
     await room.sendTextEvent(testMessage2);
     await Future.delayed(Duration(seconds: 5));
     assert(testClientA.encryption.olmManager
@@ -181,11 +180,10 @@ void test() async {
       null);*/
     assert(room.lastMessage == testMessage2);
     assert(inviteRoom.lastMessage == testMessage2);
-    Logs.success(
+    Logs().i(
         "++++ (Bob) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
 
-    Logs.success(
-        "++++ (Bob) Send again encrypted message: '$testMessage3' ++++");
+    Logs().i("++++ (Bob) Send again encrypted message: '$testMessage3' ++++");
     await inviteRoom.sendTextEvent(testMessage3);
     await Future.delayed(Duration(seconds: 5));
     assert(testClientA.encryption.olmManager
@@ -215,18 +213,17 @@ void test() async {
       null);*/
     assert(inviteRoom.lastMessage == testMessage3);
     assert(room.lastMessage == testMessage3);
-    Logs.success(
+    Logs().i(
         "++++ (Alice) Received decrypted message: '${room.lastMessage}' ++++");
 
-    Logs.success('++++ Login Bob in another client ++++');
+    Logs().i('++++ Login Bob in another client ++++');
     var testClientC = Client('TestClientC', databaseBuilder: getDatabase);
     await testClientC.checkHomeserver(TestUser.homeserver);
     await testClientC.login(
         user: TestUser.username2, password: TestUser.password);
     await Future.delayed(Duration(seconds: 3));
 
-    Logs.success(
-        "++++ (Alice) Send again encrypted message: '$testMessage4' ++++");
+    Logs().i("++++ (Alice) Send again encrypted message: '$testMessage4' ++++");
     await room.sendTextEvent(testMessage4);
     await Future.delayed(Duration(seconds: 5));
     assert(testClientA.encryption.olmManager
@@ -263,17 +260,16 @@ void test() async {
       null);*/
     assert(room.lastMessage == testMessage4);
     assert(inviteRoom.lastMessage == testMessage4);
-    Logs.success(
+    Logs().i(
         "++++ (Bob) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
 
-    Logs.success('++++ Logout Bob another client ++++');
+    Logs().i('++++ Logout Bob another client ++++');
     await testClientC.dispose(closeDatabase: false);
     await testClientC.logout();
     testClientC = null;
     await Future.delayed(Duration(seconds: 5));
 
-    Logs.success(
-        "++++ (Alice) Send again encrypted message: '$testMessage6' ++++");
+    Logs().i("++++ (Alice) Send again encrypted message: '$testMessage6' ++++");
     await room.sendTextEvent(testMessage6);
     await Future.delayed(Duration(seconds: 5));
     assert(testClientA.encryption.olmManager
@@ -300,7 +296,7 @@ void test() async {
       null);*/
     assert(room.lastMessage == testMessage6);
     assert(inviteRoom.lastMessage == testMessage6);
-    Logs.success(
+    Logs().i(
         "++++ (Bob) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
 
     await room.leave();
@@ -309,10 +305,10 @@ void test() async {
     await inviteRoom.forget();
     await Future.delayed(Duration(seconds: 1));
   } catch (e, s) {
-    Logs.error('Test failed: ${e.toString()}', s);
+    Logs().e('Test failed', e, s);
     rethrow;
   } finally {
-    Logs.success('++++ Logout Alice and Bob ++++');
+    Logs().i('++++ Logout Alice and Bob ++++');
     if (testClientA?.isLogged() ?? false) await testClientA.logoutAll();
     if (testClientA?.isLogged() ?? false) await testClientB.logoutAll();
     await testClientA?.dispose(closeDatabase: false);

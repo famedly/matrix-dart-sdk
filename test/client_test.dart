@@ -55,15 +55,16 @@ void main() {
     roomUpdateListFuture = matrix.onRoomUpdate.stream.toList();
     eventUpdateListFuture = matrix.onEvent.stream.toList();
     toDeviceUpdateListFuture = matrix.onToDeviceEvent.stream.toList();
+
     var olmEnabled = true;
     try {
       olm.init();
       olm.Account();
-    } catch (_) {
+    } catch (e) {
       olmEnabled = false;
-      Logs.warning('[LibOlm] Failed to load LibOlm: ' + _.toString());
+      Logs().w('[LibOlm] Failed to load LibOlm', e);
     }
-    Logs.success('[LibOlm] Enabled: $olmEnabled');
+    Logs().w('[LibOlm] Enabled: $olmEnabled');
 
     test('Login', () async {
       var presenceCounter = 0;

@@ -68,7 +68,7 @@ class EventUpdate {
         sortOrder: sortOrder,
       );
     } catch (e, s) {
-      Logs.error('[LibOlm] Could not decrypt megolm event: ' + e.toString(), s);
+      Logs().e('[LibOlm] Could not decrypt megolm event', e, s);
       return this;
     }
   }
