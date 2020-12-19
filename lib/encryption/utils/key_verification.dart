@@ -155,7 +155,7 @@ class KeyVerification {
   }
 
   void dispose() {
-    Logs.info('[Key Verification] disposing object...');
+    Logs().i('[Key Verification] disposing object...');
     method?.dispose();
   }
 
@@ -210,8 +210,7 @@ class KeyVerification {
       await Future.delayed(Duration(milliseconds: 50));
     }
     _handlePayloadLock = true;
-    Logs.info(
-        '[Key Verification] Received type ${type}: ' + payload.toString());
+    Logs().i('[Key Verification] Received type ${type}: ' + payload.toString());
     try {
       var thisLastStep = lastStep;
       switch (type) {
@@ -321,7 +320,7 @@ class KeyVerification {
             startPaylaod = payload;
             setState(KeyVerificationState.askAccept);
           } else {
-            Logs.info('handling start in method.....');
+            Logs().i('handling start in method.....');
             await method.handlePayload(type, payload);
           }
           break;
@@ -346,8 +345,7 @@ class KeyVerification {
         lastStep = type;
       }
     } catch (err, stacktrace) {
-      Logs.error(
-          '[Key Verification] An error occured: ' + err.toString(), stacktrace);
+      Logs().e('[Key Verification] An error occured', err, stacktrace);
       await cancel('m.invalid_message');
     } finally {
       _handlePayloadLock = false;
@@ -583,10 +581,9 @@ class KeyVerification {
 
   Future<void> send(String type, Map<String, dynamic> payload) async {
     makePayload(payload);
-    Logs.info('[Key Verification] Sending type ${type}: ' + payload.toString());
+    Logs().i('[Key Verification] Sending type ${type}: ' + payload.toString());
     if (room != null) {
-      Logs.info(
-          '[Key Verification] Sending to ${userId} in room ${room.id}...');
+      Logs().i('[Key Verification] Sending to ${userId} in room ${room.id}...');
       if ({'m.key.verification.request'}.contains(type)) {
         payload['msgtype'] = type;
         payload['to'] = userId;
@@ -600,13 +597,12 @@ class KeyVerification {
         encryption.keyVerificationManager.addRequest(this);
       }
     } else {
-      Logs.info(
-          '[Key Verification] Sending to ${userId} device ${deviceId}...');
+      Logs().i('[Key Verification] Sending to ${userId} device ${deviceId}...');
       if (deviceId == '*') {
         if ({'m.key.verification.request'}.contains(type)) {
           await client.sendToDevicesOfUserIds({userId}, type, payload);
         } else {
-          Logs.error(
+          Logs().e(
               '[Key Verification] Tried to broadcast and un-broadcastable type: ${type}');
         }
       } else {
@@ -739,8 +735,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
           break;
       }
     } catch (err, stacktrace) {
-      Logs.error('[Key Verification SAS] An error occured: ' + err.toString(),
-          stacktrace);
+      Logs().e('[Key Verification SAS] An error occured', err, stacktrace);
       if (request.deviceId != null) {
         await request.cancel('m.invalid_message');
       }

@@ -44,11 +44,11 @@ void main() {
     try {
       olm.init();
       olm.Account();
-    } catch (_) {
+    } catch (e) {
       olmEnabled = false;
-      Logs.warning('[LibOlm] Failed to load LibOlm: ' + _.toString());
+      Logs().e('[LibOlm] Failed to load LibOlm', e);
     }
-    Logs.success('[LibOlm] Enabled: $olmEnabled');
+    Logs().i('[LibOlm] Enabled: $olmEnabled');
 
     if (!olmEnabled) return;
 
@@ -107,7 +107,7 @@ void main() {
             'requesting_device_id': 'OTHERDEVICE',
           });
       await matrix.encryption.keyManager.handleToDeviceEvent(event);
-      Logs.info(FakeMatrixApi.calledEndpoints.keys.toString());
+      Logs().i(FakeMatrixApi.calledEndpoints.keys.toString());
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),

@@ -127,7 +127,7 @@ class OlmManager {
       isValid = true;
     } catch (e, s) {
       isValid = false;
-      Logs.error('[LibOlm] Signature check failed: ' + e.toString(), s);
+      Logs().e('[LibOlm] Signature check failed', e, s);
     } finally {
       olmutil.free();
     }
@@ -442,10 +442,8 @@ class OlmManager {
             ));
           } catch (e, s) {
             session.free();
-            Logs.error(
-                '[LibOlm] Could not create new outbound olm session: ' +
-                    e.toString(),
-                s);
+            Logs()
+                .e('[LibOlm] Could not create new outbound olm session', e, s);
           }
         }
       }
@@ -518,8 +516,7 @@ class OlmManager {
         data[device.userId][device.deviceId] =
             await encryptToDeviceMessagePayload(device, type, payload);
       } catch (e, s) {
-        Logs.error(
-            '[LibOlm] Error encrypting to-device event: ' + e.toString(), s);
+        Logs().e('[LibOlm] Error encrypting to-device event', e, s);
         continue;
       }
     }

@@ -236,8 +236,7 @@ class Bootstrap {
       }
     } catch (e) {
       // very bad
-      Logs.error(
-          '[Bootstrapping] Error construction ssss key: ' + e.toString());
+      Logs().e('[Bootstrapping] Error construction ssss key', e);
       state = BootstrapState.error;
       return;
     }
@@ -296,10 +295,7 @@ class Bootstrap {
         await newSsssKey.maybeCacheAll();
       }
     } catch (e, s) {
-      Logs.error(
-          '[Bootstrapping] Error trying to migrate old secrets: ' +
-              e.toString(),
-          s);
+      Logs().e('[Bootstrapping] Error trying to migrate old secrets', e, s);
       state = BootstrapState.error;
       return;
     }
@@ -494,8 +490,7 @@ class Bootstrap {
       }
       await encryption.crossSigning.sign(keysToSign);
     } catch (e, s) {
-      Logs.error(
-          '[Bootstrapping] Error setting up cross signing: ' + e.toString(), s);
+      Logs().e('[Bootstrapping] Error setting up cross signing', e, s);
       state = BootstrapState.error;
       return;
     }
@@ -553,9 +548,7 @@ class Bootstrap {
       // and finally set all megolm keys as needing to be uploaded again
       await client.database?.markInboundGroupSessionsAsNeedingUpload(client.id);
     } catch (e, s) {
-      Logs.error(
-          '[Bootstrapping] Error setting up online key backup: ' + e.toString(),
-          s);
+      Logs().e('[Bootstrapping] Error setting up online key backup', e, s);
       state = BootstrapState.error;
       encryption.client.onEncryptionError.add(
         SdkError(exception: e, stackTrace: s),

@@ -16,37 +16,16 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:ansicolor/ansicolor.dart';
+import 'package:logger/logger.dart';
 
-abstract class Logs {
-  static final AnsiPen _infoPen = AnsiPen()..blue();
-  static final AnsiPen _warningPen = AnsiPen()..yellow();
-  static final AnsiPen _successPen = AnsiPen()..green();
-  static final AnsiPen _errorPen = AnsiPen()..red();
+class Logs extends Logger {
+  static final Logs _singleton = Logs._internal();
 
-  static const String _prefixText = '[Famedly Matrix SDK] ';
+  factory Logs() {
+    return _singleton;
+  }
 
-  // ignore: avoid_print
-  static void info(dynamic info) => print(
-        _prefixText + _infoPen(info.toString()),
-      );
+  set level(Level newLevel) => Logger.level = newLevel;
 
-  // ignore: avoid_print
-  static void success(dynamic obj, [dynamic stackTrace]) => print(
-        _prefixText + _successPen(obj.toString()),
-      );
-
-  // ignore: avoid_print
-  static void warning(dynamic warning, [dynamic stackTrace]) => print(
-        _prefixText +
-            _warningPen(warning.toString()) +
-            (stackTrace != null ? '\n${stackTrace.toString()}' : ''),
-      );
-
-  // ignore: avoid_print
-  static void error(dynamic obj, [dynamic stackTrace]) => print(
-        _prefixText +
-            _errorPen(obj.toString()) +
-            (stackTrace != null ? '\n${stackTrace.toString()}' : ''),
-      );
+  Logs._internal() : super(printer: PrettyPrinter(methodCount: 0));
 }

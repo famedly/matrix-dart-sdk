@@ -163,7 +163,7 @@ class Client extends MatrixApi {
 
   /// Warning! This endpoint is for testing only!
   set rooms(List<Room> newList) {
-    Logs.warning('Warning! This endpoint is for testing only!');
+    Logs().w('Warning! This endpoint is for testing only!');
     _rooms = newList;
   }
 
@@ -390,7 +390,7 @@ class Client extends MatrixApi {
     try {
       await super.logout();
     } catch (e, s) {
-      Logs.error(e, s);
+      Logs().e('Logout failed', e, s);
       rethrow;
     } finally {
       await clear();
@@ -404,7 +404,7 @@ class Client extends MatrixApi {
     try {
       await super.logoutAll();
     } catch (e, s) {
-      Logs.error(e, s);
+      Logs().e('Logout all failed', e, s);
       rethrow;
     } finally {
       await clear();
@@ -690,7 +690,7 @@ class Client extends MatrixApi {
     if (_initLock) throw Exception('[init()] has been called multiple times!');
     _initLock = true;
     try {
-      Logs.info('Initialize client $clientName');
+      Logs().i('Initialize client $clientName');
       if (isLogged()) {
         throw Exception('User is already logged in! Call [logout()] first!');
       }
@@ -734,7 +734,7 @@ class Client extends MatrixApi {
         encryption?.dispose();
         encryption = null;
         onLoginStateChanged.add(LoginState.loggedOut);
-        Logs.info('User is not logged in.');
+        Logs().i('User is not logged in.');
         _initLock = false;
         return;
       }
@@ -777,12 +777,12 @@ class Client extends MatrixApi {
       }
 
       onLoginStateChanged.add(LoginState.logged);
-      Logs.success(
+      Logs().i(
         'Successfully connected as ${userID.localpart} with ${homeserver.toString()}',
       );
       return _sync();
     } catch (e, s) {
-      Logs.error('Initialization failed: ${e.toString()}', s);
+      Logs().e('Initialization failed', e, s);
       clear();
       onLoginStateChanged.addError(e, s);
       _initLock = false;
@@ -880,15 +880,15 @@ class Client extends MatrixApi {
     } on MatrixException catch (e, s) {
       onSyncError.add(SdkError(exception: e, stackTrace: s));
       if (e.error == MatrixError.M_UNKNOWN_TOKEN) {
-        Logs.warning('The user has been logged out!');
+        Logs().w('The user has been logged out!');
         clear();
       }
     } on MatrixConnectionException catch (e, s) {
-      Logs.warning('Synchronization connection failed: ${e.toString()}');
+      Logs().w('Synchronization connection failed', e);
       onSyncError.add(SdkError(exception: e, stackTrace: s));
     } catch (e, s) {
       if (!isLogged() || _disposed) return;
-      Logs.error('Error during processing events: ${e.toString()}', s);
+      Logs().e('Error during processing events', e, s);
       onSyncError.add(SdkError(
           exception: e is Exception ? e : Exception(e), stackTrace: s));
     }
@@ -1255,7 +1255,7 @@ class Client extends MatrixApi {
             Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder);
         var prevState = room.getState(stateEvent.type, stateEvent.stateKey);
         if (prevState != null && prevState.sortOrder > stateEvent.sortOrder) {
-          Logs.warning('''
+          Logs().w('''
 A new ${eventUpdate.type} event of the type ${stateEvent.type} has arrived with a previews
 sort order ${stateEvent.sortOrder} than the current ${stateEvent.type} event with a
 sort order of ${prevState.sortOrder}. This should never happen...''');
@@ -1341,7 +1341,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
             }
           }
         } catch (e, s) {
-          Logs.error('[E2EE] Failed to fetch participants: ' + e.toString(), s);
+          Logs().e('[E2EE] Failed to fetch participants', e, s);
         }
       }
     }
@@ -1530,8 +1530,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
         });
       }
     } catch (e, s) {
-      Logs.error(
-          '[LibOlm] Unable to update user device keys: ' + e.toString(), s);
+      Logs().e('[LibOlm] Unable to update user device keys', e, s);
     }
   }
 
@@ -1715,11 +1714,13 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     encryption = null;
     try {
       if (closeDatabase && database != null) {
-        await database.close().catchError((e, s) => Logs.warning(e, s));
+        await database
+            .close()
+            .catchError((e, s) => Logs().w('Failed to close database: ', e, s));
         _database = null;
       }
     } catch (error, stacktrace) {
-      Logs.warning('Failed to close database: ' + error.toString(), stacktrace);
+      Logs().w('Failed to close database: ', error, stacktrace);
     }
     return;
   }

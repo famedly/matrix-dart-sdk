@@ -24,6 +24,7 @@ import 'package:famedlysdk/matrix_api/model/matrix_exception.dart';
 import 'package:famedlysdk/matrix_api/model/presence_content.dart';
 import 'package:famedlysdk/matrix_api/model/push_rule_set.dart';
 import 'package:famedlysdk/matrix_api/model/pusher.dart';
+import 'package:famedlysdk/matrix_api/utils/logs.dart';
 import 'package:test/test.dart';
 
 import 'fake_matrix_api.dart';
@@ -34,6 +35,20 @@ void main() {
     final matrixApi = MatrixApi(
       httpClient: FakeMatrixApi(),
     );
+
+    test('Logs', () {
+      Logs().i('Info');
+      Logs().d('Debug');
+      Logs().v('Verbose');
+      Logs().w('Warning');
+      Logs().wtf('Critical Error');
+      Logs().e('Error');
+      try {
+        throw 'Exception';
+      } catch (e, s) {
+        Logs().e('Caught', e, s);
+      }
+    });
     test('MatrixException test', () async {
       final exception = MatrixException.fromJson({
         'flows': [

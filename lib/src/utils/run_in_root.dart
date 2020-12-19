@@ -25,7 +25,7 @@ Future<T> runInRoot<T>(FutureOr<T> Function() fn) async {
     try {
       return await fn();
     } catch (e, s) {
-      Logs.error('Error thrown in root zone: ' + e.toString(), s);
+      Logs().e('Error thrown in root zone', e, s);
     }
     return null;
   });
