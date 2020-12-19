@@ -7,4 +7,9 @@ class Receipt {
   final DateTime time;
 
   const Receipt(this.user, this.time);
+
+  @override
+  bool operator ==(dynamic other) => (other is Receipt &&
+      other.user == user &&
+      other.time.microsecondsSinceEpoch == time.microsecondsSinceEpoch);
 }

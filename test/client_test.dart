@@ -453,6 +453,36 @@ void main() {
       await client.dispose(closeDatabase: true);
     });
 
+    test('object equality', () async {
+      final time1 = DateTime.fromMillisecondsSinceEpoch(1);
+      final time2 = DateTime.fromMillisecondsSinceEpoch(0);
+      final user1 = User('@user1:example.org', room: Room(id: '!room1'));
+      final user2 = User('@user2:example.org', room: Room(id: '!room1'));
+      // receipts
+      expect(Receipt(user1, time1) == Receipt(user1, time1), true);
+      expect(Receipt(user1, time1) == Receipt(user1, time2), false);
+      expect(Receipt(user1, time1) == Receipt(user2, time1), false);
+      // ignore: unrelated_type_equality_checks
+      expect(Receipt(user1, time1) == 'beep', false);
+      // users
+      expect(user1 == user1, true);
+      expect(user1 == user2, false);
+      expect(
+          user1 == User('@user1:example.org', room: Room(id: '!room2')), false);
+      expect(
+          user1 ==
+              User('@user1:example.org',
+                  room: Room(id: '!room1'), membership: 'leave'),
+          false);
+      // ignore: unrelated_type_equality_checks
+      expect(user1 == 'beep', false);
+      // rooms
+      expect(Room(id: '!room1') == Room(id: '!room1'), true);
+      expect(Room(id: '!room1') == Room(id: '!room2'), false);
+      // ignore: unrelated_type_equality_checks
+      expect(Room(id: '!room1') == 'beep', false);
+    });
+
     test('dispose', () async {
       await matrix.dispose(closeDatabase: true);
     });

@@ -175,4 +175,10 @@ class User extends Event {
   /// Please be aware that you can only set the power level to at least your own!
   bool get canChangePowerLevel =>
       room.canChangePowerLevel && powerLevel < room.ownPowerLevel;
+
+  @override
+  bool operator ==(dynamic other) => (other is User &&
+      other.id == id &&
+      other.room == room &&
+      other.membership == membership);
 }
