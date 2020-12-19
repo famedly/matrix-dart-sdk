@@ -1730,4 +1730,7 @@ class Room {
   TombstoneContent get extinctInformations => isExtinct
       ? getState(EventTypes.RoomTombstone).parsedTombstoneContent
       : null;
+
+  @override
+  bool operator ==(dynamic other) => (other is Room && other.id == id);
 }
