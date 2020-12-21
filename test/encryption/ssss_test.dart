@@ -23,6 +23,7 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api.dart';
 import 'package:famedlysdk/encryption.dart';
 import 'package:famedlysdk/matrix_api/utils/logs.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 import 'package:encrypt/encrypt.dart';
 import 'package:olm/olm.dart' as olm;
@@ -45,13 +46,14 @@ class MockSSSS extends SSSS {
 
 void main() {
   group('SSSS', () {
+    Logs().level = Level.error;
     var olmEnabled = true;
     try {
       olm.init();
       olm.Account();
     } catch (e) {
       olmEnabled = false;
-      Logs().e('[LibOlm] Failed to load LibOlm', e);
+      Logs().w('[LibOlm] Failed to load LibOlm', e);
     }
     Logs().i('[LibOlm] Enabled: $olmEnabled');
 

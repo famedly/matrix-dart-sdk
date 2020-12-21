@@ -135,7 +135,7 @@ class Encryption {
     try {
       return await olmManager.decryptToDeviceEvent(event);
     } catch (e, s) {
-      Logs().e(
+      Logs().w(
           '[LibOlm] Could not decrypt to device event from ${event.sender} with content: ${event.content}',
           e,
           s);

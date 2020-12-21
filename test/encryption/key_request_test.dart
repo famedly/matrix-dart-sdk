@@ -19,6 +19,7 @@
 import 'dart:convert';
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api/utils/logs.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 
@@ -40,13 +41,14 @@ Map<String, dynamic> jsonDecode(dynamic payload) {
 void main() {
   /// All Tests related to device keys
   group('Key Request', () {
+    Logs().level = Level.error;
     var olmEnabled = true;
     try {
       olm.init();
       olm.Account();
     } catch (e) {
       olmEnabled = false;
-      Logs().e('[LibOlm] Failed to load LibOlm', e);
+      Logs().w('[LibOlm] Failed to load LibOlm', e);
     }
     Logs().i('[LibOlm] Enabled: $olmEnabled');
 

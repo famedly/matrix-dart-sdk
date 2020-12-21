@@ -18,6 +18,7 @@
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api/utils/logs.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 
@@ -31,13 +32,14 @@ void main() {
       'VWhVApbkcilKAEGppsPDf9nNVjaK8/IxT3asSR0sYg0S5KgbfE8vXEPwoiKBX2cEvwX3OessOBOkk+ZE7TTbjlrh/KEd31p8Wo+47qj0AP+Ky+pabnhi+/rTBvZy+gfzTqUfCxZrkzfXI9Op4JnP6gYmy7dVX2lMYIIs9WCO1jcmIXiXum5jnfXu1WLfc7PZtO2hH+k9CDKosOFaXRBmsu8k/BGXPSoWqUpvu6WpEG9t5STk4FeAzA';
 
   group('Encrypt/Decrypt to-device messages', () {
+    Logs().level = Level.error;
     var olmEnabled = true;
     try {
       olm.init();
       olm.Account();
     } catch (e) {
       olmEnabled = false;
-      Logs().e('[LibOlm] Failed to load LibOlm', e);
+      Logs().w('[LibOlm] Failed to load LibOlm', e);
     }
     Logs().i('[LibOlm] Enabled: $olmEnabled');
 

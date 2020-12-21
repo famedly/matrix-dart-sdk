@@ -19,12 +19,14 @@
 import 'dart:typed_data';
 
 import 'package:famedlysdk/famedlysdk.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 
 void main() {
   /// All Tests related to device keys
   group('Matrix File', () {
+    Logs().level = Level.error;
     test('Decrypt', () async {
       final text = 'hello world';
       final file = MatrixFile(

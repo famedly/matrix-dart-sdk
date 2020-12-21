@@ -17,12 +17,14 @@
  */
 
 import 'package:famedlysdk/famedlysdk.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 import 'package:famedlysdk/src/utils/states_map.dart';
 
 void main() {
   /// All Tests related to the ChatTime
   group('StateKeys', () {
+    Logs().level = Level.error;
     test('Operator overload', () async {
       var states = StatesMap();
       states['m.room.name'] = Event(

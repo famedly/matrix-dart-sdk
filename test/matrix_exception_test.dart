@@ -17,11 +17,13 @@
  */
 import 'package:famedlysdk/matrix_api.dart';
 import 'package:http/http.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 
 void main() {
   /// All Tests related to device keys
   group('Matrix Exception', () {
+    Logs().level = Level.error;
     test('Matrix Exception', () async {
       final matrixException = MatrixException(
         Response(

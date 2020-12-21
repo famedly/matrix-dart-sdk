@@ -127,7 +127,7 @@ class OlmManager {
       isValid = true;
     } catch (e, s) {
       isValid = false;
-      Logs().e('[LibOlm] Signature check failed', e, s);
+      Logs().w('[LibOlm] Signature check failed', e, s);
     } finally {
       olmutil.free();
     }
@@ -516,7 +516,7 @@ class OlmManager {
         data[device.userId][device.deviceId] =
             await encryptToDeviceMessagePayload(device, type, payload);
       } catch (e, s) {
-        Logs().e('[LibOlm] Error encrypting to-device event', e, s);
+        Logs().w('[LibOlm] Error encrypting to-device event', e, s);
         continue;
       }
     }

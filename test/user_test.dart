@@ -20,6 +20,7 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api.dart';
 import 'package:famedlysdk/src/event.dart';
 import 'package:famedlysdk/src/user.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 
 import 'fake_matrix_api.dart';
@@ -27,6 +28,7 @@ import 'fake_matrix_api.dart';
 void main() {
   /// All Tests related to the Event
   group('User', () {
+    Logs().level = Level.error;
     var client = Client('testclient', httpClient: FakeMatrixApi());
     final user1 = User(
       '@alice:example.com',

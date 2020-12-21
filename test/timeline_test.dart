@@ -17,6 +17,7 @@
  */
 
 import 'package:famedlysdk/matrix_api.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/room.dart';
@@ -28,6 +29,7 @@ import 'fake_matrix_api.dart';
 void main() {
   /// All Tests related to the MxContent
   group('Timeline', () {
+    Logs().level = Level.error;
     final roomID = '!1234:example.com';
     final testTimeStamp = DateTime.now().millisecondsSinceEpoch;
     var updateCount = 0;

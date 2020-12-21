@@ -20,7 +20,7 @@ extension JsonSignatureCheckExtension on Map<String, dynamic> {
       isValid = true;
     } catch (e, s) {
       isValid = false;
-      Logs().e('[LibOlm] Signature check failed', e, s);
+      Logs().w('[LibOlm] Signature check failed', e, s);
     } finally {
       olmutil.free();
     }

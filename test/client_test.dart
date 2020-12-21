@@ -26,6 +26,7 @@ import 'package:famedlysdk/src/utils/event_update.dart';
 import 'package:famedlysdk/matrix_api/utils/logs.dart';
 import 'package:famedlysdk/src/utils/room_update.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
+import 'package:logger/logger.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
@@ -48,6 +49,8 @@ void main() {
 
   /// All Tests related to the Login
   group('Client', () {
+    Logs().level = Level.error;
+
     /// Check if all Elements get created
 
     matrix = Client('testclient', httpClient: FakeMatrixApi());
