@@ -54,7 +54,7 @@ class Database extends _$Database {
   Database.connect(DatabaseConnection connection) : super.connect(connection);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   int get maxFileSize => 1 * 1024 * 1024;
 
@@ -136,6 +136,12 @@ class Database extends _$Database {
               await delete(rooms).go();
               await delete(outboundGroupSessions).go();
               await customStatement('UPDATE clients SET prev_batch = null');
+              from++;
+            }
+            if (from == 7) {
+              await m.addColumnIfNotExists(
+                  inboundGroupSessions, inboundGroupSessions.allowedAtIndex);
+              from++;
             }
           } catch (e, s) {
             Logs().e('Database migration failed', e, s);

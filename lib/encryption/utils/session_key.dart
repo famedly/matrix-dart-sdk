@@ -16,8 +16,6 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'dart:convert';
-
 import 'package:olm/olm.dart' as olm;
 
 import '../../famedlysdk.dart';
@@ -25,19 +23,42 @@ import '../../src/database/database.dart' show DbInboundGroupSession;
 import '../../matrix_api/utils/logs.dart';
 
 class SessionKey {
+  /// The raw json content of the key
   Map<String, dynamic> content;
+
+  /// Map of stringified-index to event id, so that we can detect replay attacks
   Map<String, String> indexes;
+
+  /// Map of userId to map of deviceId to index, that we know that device receivied, e.g. sending it ourself.
+  /// Used for automatically answering key requests
+  Map<String, Map<String, int>> allowedAtIndex;
+
+  /// Underlying olm [InboundGroupSession] object
   olm.InboundGroupSession inboundGroupSession;
+
+  /// Key for libolm pickle / unpickle
   final String key;
+
+  /// Forwarding keychain
   List<String> get forwardingCurve25519KeyChain =>
       (content['forwarding_curve25519_key_chain'] != null
           ? List<String>.from(content['forwarding_curve25519_key_chain'])
           : null) ??
       <String>[];
+
+  /// Claimed keys of the original sender
   Map<String, String> senderClaimedKeys;
+
+  /// Sender curve25519 key
   String senderKey;
+
+  /// Is this session valid?
   bool get isValid => inboundGroupSession != null;
+
+  /// roomId for this session
   String roomId;
+
+  /// Id of this session
   String sessionId;
 
   SessionKey(
@@ -45,17 +66,22 @@ class SessionKey {
       this.inboundGroupSession,
       this.key,
       this.indexes,
+      this.allowedAtIndex,
       this.roomId,
       this.sessionId,
       String senderKey,
       Map<String, String> senderClaimedKeys}) {
     _setSenderKey(senderKey);
     _setSenderClaimedKeys(senderClaimedKeys);
+    indexes ??= <String, String>{};
+    allowedAtIndex ??= <String, Map<String, int>>{};
   }
 
   SessionKey.fromDb(DbInboundGroupSession dbEntry, String key) : key = key {
     final parsedContent = Event.getMapFromPayload(dbEntry.content);
     final parsedIndexes = Event.getMapFromPayload(dbEntry.indexes);
+    final parsedAllowedAtIndex =
+        Event.getMapFromPayload(dbEntry.allowedAtIndex);
     final parsedSenderClaimedKeys =
         Event.getMapFromPayload(dbEntry.senderClaimedKeys);
     content =
@@ -67,6 +93,14 @@ class SessionKey {
           : <String, String>{};
     } catch (e) {
       indexes = <String, String>{};
+    }
+    try {
+      allowedAtIndex = parsedAllowedAtIndex != null
+          ? Map<String, Map<String, int>>.from(parsedAllowedAtIndex
+              .map((k, v) => MapEntry(k, Map<String, int>.from(v))))
+          : <String, Map<String, int>>{};
+    } catch (e) {
+      allowedAtIndex = <String, Map<String, int>>{};
     }
     roomId = dbEntry.roomId;
     sessionId = dbEntry.sessionId;
@@ -98,23 +132,8 @@ class SessionKey {
                 : <String, String>{}));
   }
 
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    if (content != null) {
-      data['content'] = content;
-    }
-    if (indexes != null) {
-      data['indexes'] = indexes;
-    }
-    data['inboundGroupSession'] = inboundGroupSession.pickle(key);
-    return data;
-  }
-
   void dispose() {
     inboundGroupSession?.free();
     inboundGroupSession = null;
   }
-
-  @override
-  String toString() => json.encode(toJson());
 }

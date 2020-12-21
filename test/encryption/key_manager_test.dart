@@ -108,11 +108,11 @@ void main() {
       expect(
           client.encryption.keyManager.getOutboundGroupSession(roomId) != null,
           true);
-      expect(
-          client.encryption.keyManager.getInboundGroupSession(roomId,
-                  sess.outboundGroupSession.session_id(), client.identityKey) !=
-              null,
-          true);
+      var inbound = client.encryption.keyManager.getInboundGroupSession(
+          roomId, sess.outboundGroupSession.session_id(), client.identityKey);
+      expect(inbound != null, true);
+      expect(inbound.allowedAtIndex['@alice:example.com']['JLAFKJWSCS'], 0);
+      expect(inbound.allowedAtIndex['@alice:example.com']['OTHERDEVICE'], 0);
 
       // rotate after too many messages
       sess.sentMessages = 300;
@@ -159,6 +159,8 @@ void main() {
       // do not rotate if new device is added
       sess =
           await client.encryption.keyManager.createOutboundGroupSession(roomId);
+      sess.outboundGroupSession.encrypt(
+          'foxies'); // so that the new device will have a different index
       client.userDeviceKeys['@alice:example.com'].deviceKeys['NEWDEVICE'] =
           DeviceKeys.fromJson({
         'user_id': '@alice:example.com',
@@ -177,6 +179,11 @@ void main() {
       expect(
           client.encryption.keyManager.getOutboundGroupSession(roomId) != null,
           true);
+      inbound = client.encryption.keyManager.getInboundGroupSession(
+          roomId, sess.outboundGroupSession.session_id(), client.identityKey);
+      expect(inbound.allowedAtIndex['@alice:example.com']['JLAFKJWSCS'], 0);
+      expect(inbound.allowedAtIndex['@alice:example.com']['OTHERDEVICE'], 0);
+      expect(inbound.allowedAtIndex['@alice:example.com']['NEWDEVICE'], 1);
 
       // do not rotate if new user is added
       member.content['membership'] = 'leave';
