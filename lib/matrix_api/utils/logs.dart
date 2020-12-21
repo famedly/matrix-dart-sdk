@@ -31,7 +31,7 @@ class Logs extends Logger {
 
   Logs._internal()
       : super(
-          printer: PrettyPrinter(methodCount: 0),
+          printer: PrettyPrinter(methodCount: 0, lineLength: 100),
           filter: _MatrixSdkFilter(),
           output: _CacheOutput(),
         );

@@ -18,11 +18,13 @@
  */
 
 import 'package:famedlysdk/famedlysdk.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 import 'fake_database.dart';
 
 void main() {
   group('Databse', () {
+    Logs().level = Level.error;
     var clientId = -1;
     var room = Room(id: '!room:blubb');
     test('setupDatabase', () async {

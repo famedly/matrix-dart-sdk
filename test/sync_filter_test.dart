@@ -17,6 +17,7 @@
  */
 
 import 'package:famedlysdk/famedlysdk.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 
 const UPDATES = {
@@ -135,6 +136,7 @@ void testUpdates(bool Function(SyncUpdate s) test, Map<String, bool> expected) {
 
 void main() {
   group('Sync Filters', () {
+    Logs().level = Level.error;
     test('room update', () {
       var testFn = (SyncUpdate s) => s.hasRoomUpdate;
       final expected = {

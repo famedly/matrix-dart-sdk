@@ -16,6 +16,8 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/matrix_api/utils/logs.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/utils/uri_extension.dart';
@@ -25,6 +27,7 @@ import 'fake_matrix_api.dart';
 void main() {
   /// All Tests related to the MxContent
   group('MxContent', () {
+    Logs().level = Level.error;
     test('Formatting', () async {
       var client = Client('testclient', httpClient: FakeMatrixApi());
       await client.checkHomeserver('https://fakeserver.notexisting');

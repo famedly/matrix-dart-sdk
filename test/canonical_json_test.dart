@@ -17,11 +17,14 @@
  */
 
 import 'package:canonical_json/canonical_json.dart';
+import 'package:famedlysdk/matrix_api/utils/logs.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 
 void main() {
   /// All Tests related to the ChatTime
   group('Canonical Json', () {
+    Logs().level = Level.error;
     var textMap = <String, Map<String, dynamic>>{
       '{}': {},
       '{"one":1,"two":"Two"}': {'one': 1, 'two': 'Two'},

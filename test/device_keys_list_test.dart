@@ -20,6 +20,7 @@ import 'dart:convert';
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/matrix_api/utils/logs.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 
@@ -29,6 +30,7 @@ import './fake_matrix_api.dart';
 void main() {
   /// All Tests related to device keys
   group('Device keys', () {
+    Logs().level = Level.error;
     test('fromJson', () async {
       var rawJson = <String, dynamic>{
         'user_id': '@alice:example.com',
@@ -78,7 +80,7 @@ void main() {
       olm.Account();
     } catch (e) {
       olmEnabled = false;
-      Logs().e('[LibOlm] Failed to load LibOlm', e);
+      Logs().w('[LibOlm] Failed to load LibOlm', e);
     }
     Logs().i('[LibOlm] Enabled: $olmEnabled');
 

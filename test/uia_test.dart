@@ -19,10 +19,12 @@
 import 'dart:async';
 
 import 'package:famedlysdk/famedlysdk.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('UIA', () {
+    Logs().level = Level.error;
     test('it should work', () async {
       var completed = <String>[];
       var updated = 0;
