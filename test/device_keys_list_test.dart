@@ -95,6 +95,20 @@ void main() {
     test('set blocked / verified', () async {
       final key =
           client.userDeviceKeys[client.userID].deviceKeys['OTHERDEVICE'];
+      client.userDeviceKeys[client.userID].deviceKeys['UNSIGNEDDEVICE'] =
+          DeviceKeys.fromJson({
+        'user_id': '@test:fakeServer.notExisting',
+        'device_id': 'UNSIGNEDDEVICE',
+        'algorithms': [
+          AlgorithmTypes.olmV1Curve25519AesSha2,
+          AlgorithmTypes.megolmV1AesSha2
+        ],
+        'keys': {
+          'curve25519:UNSIGNEDDEVICE': 'blah',
+          'ed25519:UNSIGNEDDEVICE': 'blah'
+        },
+        'signatures': <String, dynamic>{},
+      }, client);
       final masterKey = client.userDeviceKeys[client.userID].masterKey;
       masterKey.setDirectVerified(true);
       // we need to populate the ssss cache to be able to test signing easily
@@ -103,15 +117,26 @@ void main() {
       await handle.maybeCacheAll();
 
       expect(key.verified, true);
+      expect(key.encryptToDevice, true);
       await key.setBlocked(true);
       expect(key.verified, false);
+      expect(key.encryptToDevice, false);
       await key.setBlocked(false);
       expect(key.directVerified, false);
       expect(key.verified, true); // still verified via cross-sgining
+      expect(key.encryptToDevice, true);
+      expect(
+          client.userDeviceKeys[client.userID].deviceKeys['UNSIGNEDDEVICE']
+              .encryptToDevice,
+          false);
 
       expect(masterKey.verified, true);
       await masterKey.setBlocked(true);
       expect(masterKey.verified, false);
+      expect(
+          client.userDeviceKeys[client.userID].deviceKeys['UNSIGNEDDEVICE']
+              .encryptToDevice,
+          true);
       await masterKey.setBlocked(false);
       expect(masterKey.verified, true);
 
@@ -132,6 +157,7 @@ void main() {
               .any((k) => k == '/client/r0/keys/signatures/upload'),
           false);
       expect(key.directVerified, false);
+      client.userDeviceKeys[client.userID].deviceKeys.remove('UNSIGNEDDEVICE');
     });
 
     test('verification based on signatures', () async {
@@ -153,6 +179,11 @@ void main() {
       expect(user.deviceKeys['GHTYAJCE'].crossVerified, false);
       expect(user.deviceKeys['OTHERDEVICE'].crossVerified, false);
       expect(user.verified, UserVerifiedStatus.unknown);
+
+      user.deviceKeys['OTHERDEVICE'].setDirectVerified(true);
+      expect(user.verified, UserVerifiedStatus.verified);
+      user.deviceKeys['OTHERDEVICE'].setDirectVerified(false);
+
       user.masterKey.setDirectVerified(true);
       user.deviceKeys['GHTYAJCE'].signatures.clear();
       expect(user.deviceKeys['GHTYAJCE'].verified,

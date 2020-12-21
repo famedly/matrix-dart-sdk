@@ -256,7 +256,7 @@ class KeyManager {
       if (!deviceKeyIds.containsKey(device.userId)) {
         deviceKeyIds[device.userId] = <String, bool>{};
       }
-      deviceKeyIds[device.userId][device.deviceId] = device.blocked;
+      deviceKeyIds[device.userId][device.deviceId] = !device.encryptToDevice;
     }
     return deviceKeyIds;
   }
@@ -429,7 +429,7 @@ class KeyManager {
     }
     final deviceKeys = await room.getUserDeviceKeys();
     final deviceKeyIds = _getDeviceKeyIdMap(deviceKeys);
-    deviceKeys.removeWhere((k) => k.blocked);
+    deviceKeys.removeWhere((k) => !k.encryptToDevice);
     final outboundGroupSession = olm.OutboundGroupSession();
     try {
       outboundGroupSession.create();
@@ -794,7 +794,7 @@ class KeyManager {
           Logs().i('[KeyManager] All checks out, forwarding key...');
           // alright, we can forward the key
           await roomKeyRequest.forwardKey();
-        } else if (!device.blocked &&
+        } else if (device.encryptToDevice &&
             session.allowedAtIndex
                     .tryGet<Map<String, dynamic>>(device.userId)
                     ?.tryGet(device.deviceId) !=

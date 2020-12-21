@@ -49,8 +49,14 @@ class DeviceKeysList {
         }
       }
       return UserVerifiedStatus.verified;
+    } else {
+      for (final key in deviceKeys.values) {
+        if (!key.verified) {
+          return UserVerifiedStatus.unknown;
+        }
+      }
+      return UserVerifiedStatus.verified;
     }
-    return UserVerifiedStatus.unknown;
   }
 
   Future<KeyVerification> startVerification() async {
@@ -117,6 +123,11 @@ abstract class SignableKey extends MatrixSignableKey {
 
   String get ed25519Key => keys['ed25519:$identifier'];
   bool get verified => (directVerified || crossVerified) && !blocked;
+  bool get encryptToDevice =>
+      !blocked &&
+      (client.userDeviceKeys[userId]?.masterKey?.verified ?? false
+          ? verified
+          : true);
 
   void setDirectVerified(bool v) {
     _verified = v;
