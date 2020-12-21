@@ -27,14 +27,25 @@ class Logs extends Logger {
 
   set level(Level newLevel) => Logger.level = newLevel;
 
+  final List<OutputEvent> outputEvents = [];
+
   Logs._internal()
       : super(
           printer: PrettyPrinter(methodCount: 0),
-          filter: MatrixSdkFilter(),
+          filter: _MatrixSdkFilter(),
+          output: _CacheOutput(),
         );
 }
 
-class MatrixSdkFilter extends LogFilter {
+class _MatrixSdkFilter extends LogFilter {
   @override
   bool shouldLog(LogEvent event) => event.level.index >= Logger.level.index;
+}
+
+class _CacheOutput extends ConsoleOutput {
+  @override
+  void output(OutputEvent event) {
+    Logs().outputEvents.add(event);
+    super.output(event);
+  }
 }

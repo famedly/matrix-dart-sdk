@@ -148,7 +148,7 @@ class Database extends _$Database {
             if (executor.dialect == SqlDialect.sqlite) {
               final ret = await customSelect('PRAGMA journal_mode=WAL').get();
               if (ret.isNotEmpty) {
-                Logs().i('[Moor] Switched database to mode ' +
+                Logs().v('[Moor] Switched database to mode ' +
                     ret.first.data['journal_mode'].toString());
               }
             }
