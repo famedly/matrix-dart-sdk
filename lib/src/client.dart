@@ -1419,6 +1419,8 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
                 _userDeviceKeys[userId].deviceKeys[deviceId] =
                     oldKeys[deviceId];
               }
+            } else {
+              Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
             }
             if (database != null) {
               dbActions.add(() => database.storeUserDeviceKey(

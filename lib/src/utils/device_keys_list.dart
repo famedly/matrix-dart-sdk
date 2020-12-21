@@ -164,8 +164,17 @@ abstract class SignableKey extends MatrixSignableKey {
     return String.fromCharCodes(canonicalJson.encode(data));
   }
 
-  bool _verifySignature(String pubKey, String signature) {
-    final olmutil = olm.Utility();
+  bool _verifySignature(String pubKey, String signature,
+      {bool isSignatureWithoutLibolmValid = false}) {
+    olm.Utility olmutil;
+    try {
+      olmutil = olm.Utility();
+    } on NoSuchMethodError {
+      // if no libolm is present we land in this catch block, and return the default
+      // set if no libolm is there. Some signatures should be assumed-valid while others
+      // should be assumed-invalid
+      return isSignatureWithoutLibolmValid;
+    }
     var valid = false;
     try {
       olmutil.ed25519_verify(pubKey, signingContent, signature);
@@ -209,6 +218,10 @@ abstract class SignableKey extends MatrixSignableKey {
           continue;
         }
         final keyId = fullKeyId.substring('ed25519:'.length);
+        // we ignore self-signatures here
+        if (otherUserId == userId && keyId == identifier) {
+          continue;
+        }
         SignableKey key;
         if (client.userDeviceKeys[otherUserId].deviceKeys.containsKey(keyId)) {
           key = client.userDeviceKeys[otherUserId].deviceKeys[keyId];
@@ -356,12 +369,26 @@ class DeviceKeys extends SignableKey {
   String get deviceDisplayName =>
       unsigned != null ? unsigned['device_display_name'] : null;
 
+  bool get selfSigned => signatures
+              ?.tryGet<Map<String, dynamic>>(userId)
+              ?.tryGet<String>('ed25519:$deviceId') ==
+          null
+      ? false
+      // without libolm we still want to be able to add devices. In that case we ofc just can't
+      // verify the signature
+      : _verifySignature(ed25519Key, signatures[userId]['ed25519:$deviceId'],
+          isSignatureWithoutLibolmValid: true);
+
+  @override
+  bool get blocked => super.blocked || !selfSigned;
+
   bool get isValid =>
       userId != null &&
       deviceId != null &&
       keys != null &&
       curve25519Key != null &&
-      ed25519Key != null;
+      ed25519Key != null &&
+      selfSigned;
 
   @override
   Future<void> setVerified(bool newVerified, [bool sign = true]) {

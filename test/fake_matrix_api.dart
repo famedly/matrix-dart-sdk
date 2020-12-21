@@ -26,6 +26,16 @@ import 'package:famedlysdk/matrix_api.dart';
 import 'package:http/http.dart';
 import 'package:http/testing.dart';
 
+Map<String, dynamic> decodeJson(dynamic data) {
+  if (data is String) {
+    return json.decode(data);
+  }
+  if (data.isEmpty) {
+    return <String, dynamic>{};
+  }
+  return data;
+}
+
 class FakeMatrixApi extends MockClient {
   static final calledEndpoints = <String, List<dynamic>>{};
   static int eventCounter = 0;
@@ -98,7 +108,7 @@ class FakeMatrixApi extends MockClient {
             final syncUpdate = sdk.SyncUpdate()
               ..accountData = [
                 sdk.BasicEvent()
-                  ..content = json.decode(data)
+                  ..content = decodeJson(data)
                   ..type = type
               ];
             if (client.database != null) {
@@ -1743,32 +1753,37 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/keys/claim': (var req) => {
             'failures': {},
             'one_time_keys': {
-              '@alice:example.com': {
-                'JLAFKJWSCS': {
-                  'signed_curve25519:AAAAHg': {
-                    'key': 'zKbLg+NrIjpnagy+pIY6uPL4ZwEG2v+8F9lmgsnlZzs',
-                    'signatures': {
-                      '@alice:example.com': {
-                        'ed25519:JLAFKJWSCS':
-                            'FLWxXqGbwrb8SM3Y795eB6OA8bwBcoMZFXBqnTn58AYWZSqiD45tlBVcDa2L7RwdKXebW/VzDlnfVJ+9jok1Bw'
+              if (decodeJson(req)['one_time_keys']['@alice:example.com'] !=
+                  null)
+                '@alice:example.com': {
+                  'JLAFKJWSCS': {
+                    'signed_curve25519:AAAAAQ': {
+                      'key': 'ikMXajRlkS7Xi9CROrAh3jXnbygk8mLBdSaY9/al0X0',
+                      'signatures': {
+                        '@alice:example.com': {
+                          'ed25519:JLAFKJWSCS':
+                              'XdboCa0Ljoh0Y0i/IVnmMqy/+T1hJyu8BA/nRYniJMQ7QWh/pGS5AsWswdARD+MAX+r4u98Qzk0y27HUddZXDA'
+                        }
                       }
                     }
                   }
-                }
-              },
-              '@test:fakeServer.notExisting': {
-                'GHTYAJCE': {
-                  'signed_curve25519:AAAAAQ': {
-                    'key': 'qc72ve94cA28iuE0fXa98QO3uls39DHWdQlYyvvhGh0',
-                    'signatures': {
-                      '@test:fakeServer.notExisting': {
-                        'ed25519:GHTYAJCE':
-                            'dFwffr5kTKefO7sjnWLMhTzw7oV31nkPIDRxFy5OQT2OP5++Ao0KRbaBZ6qfuT7lW1owKK0Xk3s7QTBvc/eNDA',
+                },
+              if (decodeJson(req)['one_time_keys']
+                      ['@test:fakeServer.notExisting'] !=
+                  null)
+                '@test:fakeServer.notExisting': {
+                  'GHTYAJCE': {
+                    'signed_curve25519:AAAAAQ': {
+                      'key': 'qc72ve94cA28iuE0fXa98QO3uls39DHWdQlYyvvhGh0',
+                      'signatures': {
+                        '@test:fakeServer.notExisting': {
+                          'ed25519:GHTYAJCE':
+                              'dFwffr5kTKefO7sjnWLMhTzw7oV31nkPIDRxFy5OQT2OP5++Ao0KRbaBZ6qfuT7lW1owKK0Xk3s7QTBvc/eNDA',
+                        },
                       },
                     },
                   },
                 },
-              },
             }
           },
       '/client/r0/rooms/!localpart%3Aexample.com/invite': (var req) => {},
@@ -1786,7 +1801,7 @@ class FakeMatrixApi extends MockClient {
             'one_time_key_counts': {
               'curve25519': 10,
               'signed_curve25519':
-                  json.decode(req)['one_time_keys']?.keys?.length ?? 0,
+                  decodeJson(req)['one_time_keys']?.keys?.length ?? 0,
             }
           },
       '/client/r0/keys/query': (var req) => {
@@ -1802,14 +1817,14 @@ class FakeMatrixApi extends MockClient {
                   ],
                   'keys': {
                     'curve25519:JLAFKJWSCS':
-                        '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',
+                        'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
                     'ed25519:JLAFKJWSCS':
-                        'lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI'
+                        'rUFJftIWpFF/jqqz3bexGGYiG8UobKhzkeabqw1v0zM'
                   },
                   'signatures': {
                     '@alice:example.com': {
                       'ed25519:JLAFKJWSCS':
-                          'dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA'
+                          'go3mi5o3Ile+Ik+lCEpHmBmyJmKWfnRDCBBvfaVlKsMyha5IORuYcxwEUrAeLyAeeeHvkWDFX+No5eY1jYeKBw'
                     }
                   },
                   'unsigned': {'device_display_name': 'Alices mobile phone'}
@@ -1822,10 +1837,17 @@ class FakeMatrixApi extends MockClient {
                     AlgorithmTypes.megolmV1AesSha2
                   ],
                   'keys': {
-                    'curve25519:OTHERDEVICE': 'blah',
-                    'ed25519:OTHERDEVICE': 'blah'
+                    'curve25519:OTHERDEVICE':
+                        'wMIDhiQl5jEXQrTB03ePOSQfR8sA/KMrW0CIfFfXKEE',
+                    'ed25519:OTHERDEVICE':
+                        '2Lyaj5NB7HPqKZMjZpA/pECXuQ+9wi8AGFdw33y3DuQ'
                   },
-                  'signatures': {},
+                  'signatures': {
+                    '@alice:example.com': {
+                      'ed25519:OTHERDEVICE':
+                          'bwHd6ylISP13AICdDPd0HQd4V6dvvd4vno8/OwUNdm9UAprr3YjkDqVw425I74u2UQAarq9bytBqVqFyD6trAw',
+                    }
+                  },
                 },
               },
               '@test:fakeServer.notExisting': {
@@ -1844,6 +1866,8 @@ class FakeMatrixApi extends MockClient {
                   },
                   'signatures': {
                     '@test:fakeServer.notExisting': {
+                      'ed25519:GHTYAJCE':
+                          'NEQeTgv7ew1IZSLQphWd0y60EdHdcNfHgvoaMQco5XKeIYyiUZIWd7F4x/mkPDjUizv6yWMbTDCWdSg5XcgNBA',
                       'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY':
                           'Q4/55vZjEJD7M2EC40bgZqd9Zuy/4C75UPVopJdXeioQVaKtFf6EF0nUUuql0yD+r3hinsZcock0wO6Q2xcoAQ',
                     },
@@ -1857,13 +1881,17 @@ class FakeMatrixApi extends MockClient {
                     AlgorithmTypes.megolmV1AesSha2
                   ],
                   'keys': {
-                    'curve25519:OTHERDEVICE': 'blah',
-                    'ed25519:OTHERDEVICE': 'blah'
+                    'curve25519:OTHERDEVICE':
+                        'R96BA0qE1+QAWLp7E1jyWSTJ1VXMLpEdiM2SZHlKMXM',
+                    'ed25519:OTHERDEVICE':
+                        'EQo9eYbSygIbOR+tVJziqAY1NI6Gga+JQOVIqJe4mr4'
                   },
                   'signatures': {
                     '@test:fakeServer.notExisting': {
+                      'ed25519:OTHERDEVICE':
+                          '/rT6pVRypJWxGos1QcI7jHL9HwcA83nkHLHqMcRPeLSxXHh4oHWvC0/tl0Xg06ogyiGw4NuB7TpOISvJBdt7BA',
                       'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY':
-                          'o7ucKPWrF2VKx7wYqP1f+aw4QohLMz7kX+SIw6aWCYsLC3XyIlg8rX/7QQ9B8figCVnRK7IjtjWvQodBCfWCAA',
+                          'qnjiLl36h/1jlLvcAgt46Igaod2T9lOSnoSVkV0KC+c7vYIjG4QBzXpH+hycfufOT/y+a/kl52dUTLQWctMKCA',
                     },
                   },
                 },
@@ -1882,7 +1910,12 @@ class FakeMatrixApi extends MockClient {
                     'ed25519:FOXDEVICE':
                         'R5/p04tticvdlNIxiiBIP0j9OQWv8ep6eEU6/lWKDxw',
                   },
-                  'signatures': {},
+                  'signatures': {
+                    '@othertest:fakeServer.notExisting': {
+                      'ed25519:FOXDEVICE':
+                          '2lJ3atmRIWgkyQNC9gvWEpxwuozsBQsg33M2IMDJqLhx/+g3Ds1vQ683dJsYIu04ORa4U0L9TqieHVpV/7qqDA',
+                    },
+                  },
                 },
               },
             },
@@ -2002,7 +2035,7 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/rooms/!localpart%3Aserver.abc/invite': (var reqI) => {},
       '/client/unstable/keys/device_signing/upload': (var reqI) {
         if (client != null) {
-          final jsonBody = json.decode(reqI);
+          final jsonBody = decodeJson(reqI);
           for (final keyType in {
             'master_key',
             'self_signing_key',
