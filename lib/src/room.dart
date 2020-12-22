@@ -31,6 +31,7 @@ import 'timeline.dart';
 import 'user.dart';
 import 'utils/event_update.dart';
 import '../matrix_api/utils/logs.dart';
+import '../matrix_api/utils/try_get_map_extension.dart';
 import 'utils/markdown.dart';
 import 'utils/matrix_file.dart';
 import 'utils/matrix_localizations.dart';
@@ -1283,8 +1284,10 @@ class Room {
     if (powerLevelState.content['users_default'] is int) {
       powerLevel = powerLevelState.content['users_default'];
     }
-    if (powerLevelState.content['users'] is Map<String, dynamic> &&
-        powerLevelState.content['users'][userId] != null) {
+    if (powerLevelState.content
+            .tryGet<Map<String, dynamic>>('users')
+            ?.tryGet<int>(userId) !=
+        null) {
       powerLevel = powerLevelState.content['users'][userId];
     }
     return powerLevel;
