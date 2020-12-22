@@ -384,7 +384,7 @@ class KeyManager {
                   sess.outboundGroupSession.session_id());
             }
             // send out the key
-            await client.sendToDeviceEncrypted(
+            await client.sendToDeviceEncryptedChunked(
                 devicesToReceive, EventTypes.RoomKey, rawSession);
           }
         } catch (e, s) {
@@ -484,7 +484,7 @@ class KeyManager {
       key: client.userID,
     );
     try {
-      await client.sendToDeviceEncrypted(
+      await client.sendToDeviceEncryptedChunked(
           deviceKeys, EventTypes.RoomKey, rawSession);
       await storeOutboundGroupSession(roomId, sess);
       _outboundGroupSessions[roomId] = sess;

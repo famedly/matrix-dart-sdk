@@ -227,7 +227,7 @@ class OlmManager {
     if (client.database == null) {
       return;
     }
-    _olmSessions[session.identityKey] ??= [];
+    _olmSessions[session.identityKey] ??= <OlmSession>[];
     final ix = _olmSessions[session.identityKey]
         .indexWhere((s) => s.sessionId == session.sessionId);
     if (ix == -1) {
@@ -262,10 +262,22 @@ class OlmManager {
     if (type != 0 && type != 1) {
       throw ('Unknown message type');
     }
+    final device = client.userDeviceKeys[event.sender]?.deviceKeys?.values
+        ?.firstWhere((d) => d.curve25519Key == senderKey, orElse: () => null);
     final existingSessions = olmSessions[senderKey];
-    final updateSessionUsage = (OlmSession session) => runInRoot(() {
-          session.lastReceived = DateTime.now();
-          storeOlmSession(session);
+    final updateSessionUsage = ([OlmSession session]) => runInRoot(() {
+          if (session != null) {
+            session.lastReceived = DateTime.now();
+            storeOlmSession(session);
+          }
+          if (device != null) {
+            device.lastActive = DateTime.now();
+            client.database?.setLastActiveUserDeviceKey(
+                device.lastActive.millisecondsSinceEpoch,
+                client.id,
+                device.userId,
+                device.deviceId);
+          }
         });
     if (existingSessions != null) {
       for (var session in existingSessions) {
@@ -302,6 +314,7 @@ class OlmManager {
               session: newSession,
               lastReceived: DateTime.now(),
             )));
+        updateSessionUsage();
       } catch (_) {
         newSession?.free();
         rethrow;
@@ -416,7 +429,6 @@ class OlmManager {
   Future<void> startOutgoingOlmSessions(List<DeviceKeys> deviceKeys) async {
     Logs().v(
         '[OlmManager] Starting session with ${deviceKeys.length} devices...');
-
     var requestingKeysFrom = <String, Map<String, String>>{};
     for (var device in deviceKeys) {
       if (requestingKeysFrom[device.userId] == null) {
@@ -468,7 +480,6 @@ class OlmManager {
     if (sess.isEmpty) {
       throw ('No olm session found for ${device.userId}:${device.deviceId}');
     }
-
     final fullPayload = {
       'type': type,
       'content': payload,

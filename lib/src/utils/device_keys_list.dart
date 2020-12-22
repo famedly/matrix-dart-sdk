@@ -363,6 +363,7 @@ class CrossSigningKey extends SignableKey {
 class DeviceKeys extends SignableKey {
   String get deviceId => identifier;
   List<String> algorithms;
+  DateTime lastActive;
 
   String get curve25519Key => keys['curve25519:$deviceId'];
   String get deviceDisplayName =>
@@ -407,11 +408,13 @@ class DeviceKeys extends SignableKey {
         ?.setBlockedUserDeviceKey(newBlocked, client.id, userId, deviceId);
   }
 
-  DeviceKeys.fromMatrixDeviceKeys(MatrixDeviceKeys k, Client cl)
+  DeviceKeys.fromMatrixDeviceKeys(MatrixDeviceKeys k, Client cl,
+      [DateTime lastActiveTs])
       : super.fromJson(k.toJson().copy(), cl) {
     final json = toJson();
     identifier = k.deviceId;
     algorithms = json['algorithms'].cast<String>();
+    lastActive = lastActiveTs ?? DateTime.now();
   }
 
   DeviceKeys.fromDb(DbUserDeviceKeysKey dbEntry, Client cl)
@@ -421,6 +424,7 @@ class DeviceKeys extends SignableKey {
     algorithms = json['algorithms'].cast<String>();
     _verified = dbEntry.verified;
     blocked = dbEntry.blocked;
+    lastActive = DateTime.fromMillisecondsSinceEpoch(dbEntry.lastActive ?? 0);
   }
 
   DeviceKeys.fromJson(Map<String, dynamic> json, Client cl)
@@ -428,6 +432,7 @@ class DeviceKeys extends SignableKey {
     final json = toJson();
     identifier = json['device_id'];
     algorithms = json['algorithms'].cast<String>();
+    lastActive = DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   KeyVerification startVerification() {

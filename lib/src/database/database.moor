@@ -28,6 +28,7 @@ CREATE TABLE user_device_keys_key (
   content TEXT NOT NULL,
   verified BOOLEAN DEFAULT false,
   blocked BOOLEAN DEFAULT false,
+  last_active BIGINT,
   UNIQUE(client_id, user_id, device_id)
 ) as DbUserDeviceKeysKey;
 CREATE INDEX user_device_keys_key_index ON user_device_keys_key(client_id);
@@ -199,8 +200,9 @@ markInboundGroupSessionsAsNeedingUpload: UPDATE inbound_group_sessions SET uploa
 storeUserDeviceKeysInfo: INSERT OR REPLACE INTO user_device_keys (client_id, user_id, outdated) VALUES (:client_id, :user_id, :outdated);
 setVerifiedUserDeviceKey: UPDATE user_device_keys_key SET verified = :verified WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
 setBlockedUserDeviceKey: UPDATE user_device_keys_key SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
-storeUserDeviceKey: INSERT OR REPLACE INTO user_device_keys_key (client_id, user_id, device_id, content, verified, blocked) VALUES (:client_id, :user_id, :device_id, :content, :verified, :blocked);
+storeUserDeviceKey: INSERT OR REPLACE INTO user_device_keys_key (client_id, user_id, device_id, content, verified, blocked, last_active) VALUES (:client_id, :user_id, :device_id, :content, :verified, :blocked, :last_active);
 removeUserDeviceKey: DELETE FROM user_device_keys_key WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
+setLastActiveUserDeviceKey: UPDATE user_device_keys_key SET last_active = :last_active WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
 setVerifiedUserCrossSigningKey: UPDATE user_cross_signing_keys SET verified = :verified WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key;
 setBlockedUserCrossSigningKey: UPDATE user_cross_signing_keys SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key;
 storeUserCrossSigningKey: INSERT OR REPLACE INTO user_cross_signing_keys (client_id, user_id, public_key, content, verified, blocked) VALUES (:client_id, :user_id, :public_key, :content, :verified, :blocked);
