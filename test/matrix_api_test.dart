@@ -1113,7 +1113,12 @@ void main() {
         },
         timeout: 10,
       );
-      expect(FakeMatrixApi.api['POST']['/client/r0/keys/claim']({}),
+      expect(
+          FakeMatrixApi.api['POST']['/client/r0/keys/claim']({
+            'one_time_keys': {
+              '@alice:example.com': {'JLAFKJWSCS': 'signed_curve25519'}
+            }
+          }),
           response.toJson());
 
       matrixApi.homeserver = matrixApi.accessToken = null;

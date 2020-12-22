@@ -170,10 +170,15 @@ void main() {
           AlgorithmTypes.megolmV1AesSha2
         ],
         'keys': {
-          'curve25519:JLAFKJWSCS':
-              '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',
-          'ed25519:JLAFKJWSCS': 'lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI'
+          'curve25519:NEWDEVICE': 'bnKQp6pPW0l9cGoIgHpBoK5OUi4h0gylJ7upc4asFV8',
+          'ed25519:NEWDEVICE': 'ZZhPdvWYg3MRpGy2MwtI+4MHXe74wPkBli5hiEOUi8Y'
         },
+        'signatures': {
+          '@alice:example.com': {
+            'ed25519:NEWDEVICE':
+                '94GSg8N9vNB8wyWHJtKaaX3MGNWPVOjBatJM+TijY6B1RlDFJT5Cl1h/tjr17AoQz0CDdOf6uFhrYsBkH1/ABg'
+          }
+        }
       }, client);
       await client.encryption.keyManager.clearOrUseOutboundGroupSession(roomId);
       expect(

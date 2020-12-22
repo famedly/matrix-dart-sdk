@@ -302,7 +302,7 @@ void main() {
             'forwarding_curve25519_key_chain': [],
           },
           encryptedContent: {
-            'sender_key': '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',
+            'sender_key': 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
           });
       await matrix.encryption.keyManager.handleToDeviceEvent(event);
       expect(
@@ -327,7 +327,7 @@ void main() {
             'forwarding_curve25519_key_chain': [],
           },
           encryptedContent: {
-            'sender_key': '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',
+            'sender_key': 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
           });
       await matrix.encryption.keyManager.handleToDeviceEvent(event);
       expect(
