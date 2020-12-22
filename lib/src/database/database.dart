@@ -6,9 +6,9 @@ import 'package:olm/olm.dart' as olm;
 
 import '../../famedlysdk.dart' as sdk;
 import '../../matrix_api.dart' as api;
+import '../../matrix_api/utils/logs.dart';
 import '../client.dart';
 import '../room.dart';
-import '../../matrix_api/utils/logs.dart';
 
 part 'database.g.dart';
 
@@ -633,6 +633,7 @@ class Database extends _$Database {
     await (delete(outboundGroupSessions)
           ..where((r) => r.clientId.equals(clientId)))
         .go();
+    _ensuredRooms.clear();
     await storePrevBatch(null, clientId);
   }
 
