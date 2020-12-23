@@ -376,7 +376,7 @@ class KeyManager {
             }
             // send out the key
             await client.sendToDeviceEncrypted(
-                devicesToReceive, 'm.room_key', rawSession);
+                devicesToReceive, EventTypes.RoomKey, rawSession);
           }
         } catch (e, s) {
           Logs().e(
@@ -461,7 +461,8 @@ class KeyManager {
       key: client.userID,
     );
     try {
-      await client.sendToDeviceEncrypted(deviceKeys, 'm.room_key', rawSession);
+      await client.sendToDeviceEncrypted(
+          deviceKeys, EventTypes.RoomKey, rawSession);
       await storeOutboundGroupSession(roomId, sess);
       _outboundGroupSessions[roomId] = sess;
     } catch (e, s) {
@@ -642,7 +643,7 @@ class KeyManager {
       final userList = await room.requestParticipants();
       await client.sendToDevicesOfUserIds(
         userList.map<String>((u) => u.id).toSet(),
-        'm.room_key_request',
+        EventTypes.RoomKeyRequest,
         {
           'action': 'request',
           'body': {
@@ -736,7 +737,7 @@ class KeyManager {
 
   /// Handle an incoming to_device event that is related to key sharing
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
-    if (event.type == 'm.room_key_request') {
+    if (event.type == EventTypes.RoomKeyRequest) {
       if (!(event.content['request_id'] is String)) {
         return; // invalid event
       }
@@ -822,7 +823,7 @@ class KeyManager {
         request.canceled = true;
         incomingShareRequests.remove(request.requestId);
       }
-    } else if (event.type == 'm.forwarded_room_key') {
+    } else if (event.type == EventTypes.ForwardedRoomKey) {
       // we *received* an incoming key request
       if (event.encryptedContent == null) {
         return; // event wasn't encrypted, this is a security risk
@@ -879,11 +880,11 @@ class KeyManager {
         data[device.userId][device.deviceId] = sendToDeviceMessage;
       }
       await client.sendToDevice(
-        'm.room_key_request',
+        EventTypes.RoomKeyRequest,
         client.generateUniqueTransactionId(),
         data,
       );
-    } else if (event.type == 'm.room_key') {
+    } else if (event.type == EventTypes.RoomKey) {
       if (event.encryptedContent == null) {
         return; // the event wasn't encrypted, this is a security risk;
       }
@@ -974,7 +975,7 @@ class RoomKeyRequest extends ToDeviceEvent {
     // send the actual reply of the key back to the requester
     await keyManager.client.sendToDeviceEncrypted(
       [requestingDevice],
-      'm.forwarded_room_key',
+      EventTypes.ForwardedRoomKey,
       message,
     );
     keyManager.incomingShareRequests.remove(request.requestId);

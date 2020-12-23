@@ -17,6 +17,7 @@
  */
 
 abstract class EventTypes {
+  // Room timeline and state event types
   static const String Message = 'm.room.message';
   static const String Sticker = 'm.sticker';
   static const String Reaction = 'm.reaction';
@@ -42,6 +43,17 @@ abstract class EventTypes {
   static const String CallHangup = 'm.call.hangup';
   static const String Unknown = 'm.unknown';
 
+  // To device event types
+  static const String RoomKey = 'm.room_key';
+  static const String ForwardedRoomKey = 'm.forwarded_room_key';
+  static const String RoomKeyRequest = 'm.room_key_request';
+  static const String KeyVerificationRequest = 'm.key.verification.request';
+  static const String KeyVerificationStart = 'm.key.verification.start';
+  static const String KeyVerificationDone = 'm.key.verification.done';
+  static const String KeyVerificationCancel = 'm.key.verification.cancel';
+  static const String KeyVerificationAccept = 'm.key.verification.accept';
+  static const String SecretRequest = 'm.secret.request';
+  static const String SecretSend = 'm.secret.send';
   static const String CrossSigningSelfSigning = 'm.cross_signing.self_signing';
   static const String CrossSigningUserSigning = 'm.cross_signing.user_signing';
   static const String CrossSigningMasterKey = 'm.cross_signing.master';
