@@ -408,7 +408,7 @@ class SSSS {
       devices: devices,
     );
     pendingShareRequests[requestId] = request;
-    await client.sendToDeviceEncrypted(devices, 'm.secret.request', {
+    await client.sendToDeviceEncrypted(devices, EventTypes.SecretRequest, {
       'action': 'request',
       'requesting_device_id': client.deviceID,
       'request_id': requestId,
@@ -438,7 +438,7 @@ class SSSS {
   }
 
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
-    if (event.type == 'm.secret.request') {
+    if (event.type == EventTypes.SecretRequest) {
       // got a request to share a secret
       Logs().i('[SSSS] Received sharing request...');
       if (event.sender != client.userID ||
@@ -468,12 +468,12 @@ class SSSS {
       Logs().i('[SSSS] Replying with secret for ${type}');
       await client.sendToDeviceEncrypted(
           [device],
-          'm.secret.send',
+          EventTypes.SecretSend,
           {
             'request_id': event.content['request_id'],
             'secret': secret,
           });
-    } else if (event.type == 'm.secret.send') {
+    } else if (event.type == EventTypes.SecretSend) {
       // receiving a secret we asked for
       Logs().i('[SSSS] Received shared secret...');
       if (event.sender != client.userID ||

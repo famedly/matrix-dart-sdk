@@ -55,7 +55,7 @@ class KeyVerificationManager {
   }
 
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
-    if (!event.type.startsWith('m.key.verification') ||
+    if (!event.type.startsWith('m.key.verification.') ||
         client.verificationMethods.isEmpty) {
       return;
     }
@@ -66,11 +66,11 @@ class KeyVerificationManager {
     }
     if (_requests.containsKey(transactionId)) {
       // make sure that new requests can't come from ourself
-      if (!{'m.key.verification.request'}.contains(event.type)) {
+      if (!{EventTypes.KeyVerificationRequest}.contains(event.type)) {
         await _requests[transactionId].handlePayload(event.type, event.content);
       }
     } else {
-      if (!{'m.key.verification.request', 'm.key.verification.start'}
+      if (!{EventTypes.KeyVerificationRequest, EventTypes.KeyVerificationStart}
           .contains(event.type)) {
         return; // we can only start on these
       }
@@ -97,7 +97,7 @@ class KeyVerificationManager {
         client.verificationMethods.isEmpty) {
       return;
     }
-    if (type == 'm.key.verification.request') {
+    if (type == EventTypes.KeyVerificationRequest) {
       event['content']['timestamp'] = event['origin_server_ts'];
     }
 
@@ -118,7 +118,7 @@ class KeyVerificationManager {
         _requests.remove(transactionId);
       }
     } else if (event['sender'] != client.userID) {
-      if (!{'m.key.verification.request', 'm.key.verification.start'}
+      if (!{EventTypes.KeyVerificationRequest, EventTypes.KeyVerificationStart}
           .contains(type)) {
         return; // we can only start on these
       }

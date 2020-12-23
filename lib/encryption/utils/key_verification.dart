@@ -176,7 +176,7 @@ class KeyVerification {
   }
 
   Future<void> sendStart() async {
-    await send('m.key.verification.request', {
+    await send(EventTypes.KeyVerificationRequest, {
       'methods': knownVerificationMethods,
       if (room == null) 'timestamp': DateTime.now().millisecondsSinceEpoch,
     });
@@ -214,7 +214,7 @@ class KeyVerification {
     try {
       var thisLastStep = lastStep;
       switch (type) {
-        case 'm.key.verification.request':
+        case EventTypes.KeyVerificationRequest:
           _deviceId ??= payload['from_device'];
           transactionId ??= eventId ?? payload['transaction_id'];
           // verify the timestamp
@@ -253,7 +253,7 @@ class KeyVerification {
             };
             makePayload(cancelPayload);
             await client.sendToDeviceEncrypted(
-                devices, 'm.key.verification.cancel', cancelPayload);
+                devices, EventTypes.KeyVerificationCancel, cancelPayload);
           }
           _deviceId ??= payload['from_device'];
           possibleMethods =
@@ -271,7 +271,7 @@ class KeyVerification {
           await method.sendStart();
           setState(KeyVerificationState.waitingAccept);
           break;
-        case 'm.key.verification.start':
+        case EventTypes.KeyVerificationStart:
           _deviceId ??= payload['from_device'];
           transactionId ??= eventId ?? payload['transaction_id'];
           if (method != null) {
@@ -288,7 +288,7 @@ class KeyVerification {
                 // the other start won, let's hand off
                 startedVerification = false; // it is now as if they started
                 thisLastStep = lastStep =
-                    'm.key.verification.request'; // we fake the last step
+                    EventTypes.KeyVerificationRequest; // we fake the last step
                 method.dispose(); // in case anything got created already
               }
             } else {
@@ -297,7 +297,8 @@ class KeyVerification {
               return;
             }
           }
-          if (!(await verifyLastStep(['m.key.verification.request', null]))) {
+          if (!(await verifyLastStep(
+              [EventTypes.KeyVerificationRequest, null]))) {
             return; // abort
           }
           if (!knownVerificationMethods.contains(payload['method'])) {
@@ -324,10 +325,10 @@ class KeyVerification {
             await method.handlePayload(type, payload);
           }
           break;
-        case 'm.key.verification.done':
+        case EventTypes.KeyVerificationDone:
           // do nothing
           break;
-        case 'm.key.verification.cancel':
+        case EventTypes.KeyVerificationCancel:
           canceled = true;
           canceledCode = payload['code'];
           canceledReason = payload['reason'];
@@ -390,19 +391,21 @@ class KeyVerification {
 
   /// called when the user accepts an incoming verification
   Future<void> acceptVerification() async {
-    if (!(await verifyLastStep(
-        ['m.key.verification.request', 'm.key.verification.start']))) {
+    if (!(await verifyLastStep([
+      EventTypes.KeyVerificationRequest,
+      EventTypes.KeyVerificationStart
+    ]))) {
       return;
     }
     setState(KeyVerificationState.waitingAccept);
-    if (lastStep == 'm.key.verification.request') {
+    if (lastStep == EventTypes.KeyVerificationRequest) {
       // we need to send a ready event
       await send('m.key.verification.ready', {
         'methods': possibleMethods,
       });
     } else {
       // we need to send an accept event
-      await method.handlePayload('m.key.verification.start', startPaylaod);
+      await method.handlePayload(EventTypes.KeyVerificationStart, startPaylaod);
     }
   }
 
@@ -411,8 +414,10 @@ class KeyVerification {
     if (isDone) {
       return;
     }
-    if (!(await verifyLastStep(
-        ['m.key.verification.request', 'm.key.verification.start']))) {
+    if (!(await verifyLastStep([
+      EventTypes.KeyVerificationRequest,
+      EventTypes.KeyVerificationStart
+    ]))) {
       return;
     }
     await cancel('m.user');
@@ -511,7 +516,7 @@ class KeyVerification {
       // we do it in the background, thus no await needed here
       unawaited(maybeRequestSSSSSecrets());
     }
-    await send('m.key.verification.done', {});
+    await send(EventTypes.KeyVerificationDone, {});
 
     var askingSSSS = false;
     if (encryption.crossSigning.enabled &&
@@ -555,7 +560,7 @@ class KeyVerification {
 
   Future<void> cancel([String code = 'm.unknown', bool quiet = false]) async {
     if (!quiet && (deviceId != null || room != null)) {
-      await send('m.key.verification.cancel', {
+      await send(EventTypes.KeyVerificationCancel, {
         'reason': code,
         'code': code,
       });
@@ -584,7 +589,7 @@ class KeyVerification {
     Logs().i('[Key Verification] Sending type ${type}: ' + payload.toString());
     if (room != null) {
       Logs().i('[Key Verification] Sending to ${userId} in room ${room.id}...');
-      if ({'m.key.verification.request'}.contains(type)) {
+      if ({EventTypes.KeyVerificationRequest}.contains(type)) {
         payload['msgtype'] = type;
         payload['to'] = userId;
         payload['body'] =
@@ -599,7 +604,7 @@ class KeyVerification {
     } else {
       Logs().i('[Key Verification] Sending to ${userId} device ${deviceId}...');
       if (deviceId == '*') {
-        if ({'m.key.verification.request'}.contains(type)) {
+        if ({EventTypes.KeyVerificationRequest}.contains(type)) {
           await client.sendToDevicesOfUserIds({userId}, type, payload);
         } else {
           Logs().e(
@@ -685,9 +690,11 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   Future<void> handlePayload(String type, Map<String, dynamic> payload) async {
     try {
       switch (type) {
-        case 'm.key.verification.start':
-          if (!(await request.verifyLastStep(
-              ['m.key.verification.request', 'm.key.verification.start']))) {
+        case EventTypes.KeyVerificationStart:
+          if (!(await request.verifyLastStep([
+            EventTypes.KeyVerificationRequest,
+            EventTypes.KeyVerificationStart
+          ]))) {
             return; // abort
           }
           if (!validateStart(payload)) {
@@ -696,7 +703,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
           }
           await _sendAccept();
           break;
-        case 'm.key.verification.accept':
+        case EventTypes.KeyVerificationAccept:
           if (!(await request.verifyLastStep(['m.key.verification.ready']))) {
             return;
           }
@@ -707,12 +714,14 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
           await _sendKey();
           break;
         case 'm.key.verification.key':
-          if (!(await request.verifyLastStep(
-              ['m.key.verification.accept', 'm.key.verification.start']))) {
+          if (!(await request.verifyLastStep([
+            EventTypes.KeyVerificationAccept,
+            EventTypes.KeyVerificationStart
+          ]))) {
             return;
           }
           _handleKey(payload);
-          if (request.lastStep == 'm.key.verification.start') {
+          if (request.lastStep == EventTypes.KeyVerificationStart) {
             // we need to send our key
             await _sendKey();
           } else {
@@ -766,7 +775,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     request.makePayload(payload);
     // We just store the canonical json in here for later verification
     startCanonicalJson = String.fromCharCodes(canonicalJson.encode(payload));
-    await request.send('m.key.verification.start', payload);
+    await request.send(EventTypes.KeyVerificationStart, payload);
   }
 
   @override
@@ -805,7 +814,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   Future<void> _sendAccept() async {
     sas = olm.SAS();
     commitment = _makeCommitment(sas.get_pubkey(), startCanonicalJson);
-    await request.send('m.key.verification.accept', {
+    await request.send(EventTypes.KeyVerificationAccept, {
       'method': type,
       'key_agreement_protocol': keyAgreementProtocol,
       'hash': hash,

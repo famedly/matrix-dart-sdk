@@ -84,12 +84,13 @@ class Encryption {
   }
 
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
-    if (event.type == 'm.room_key') {
+    if (event.type == EventTypes.RoomKey) {
       // a new room key. We need to handle this asap, before other
       // events in /sync are handled
       await keyManager.handleToDeviceEvent(event);
     }
-    if (['m.room_key_request', 'm.forwarded_room_key'].contains(event.type)) {
+    if ([EventTypes.RoomKeyRequest, EventTypes.ForwardedRoomKey]
+        .contains(event.type)) {
       // "just" room key request things. We don't need these asap, so we handle
       // them in the background
       unawaited(runInRoot(() => keyManager.handleToDeviceEvent(event)));
@@ -115,7 +116,7 @@ class Encryption {
       return;
     }
     if (update.eventType.startsWith('m.key.verification.') ||
-        (update.eventType == 'm.room.message' &&
+        (update.eventType == EventTypes.Message &&
             (update.content['content']['msgtype'] is String) &&
             update.content['content']['msgtype']
                 .startsWith('m.key.verification.'))) {
@@ -214,12 +215,12 @@ class Encryption {
           'type': EventTypes.Encrypted,
         };
         decryptedPayload['content']['body'] = exception.toString();
-        decryptedPayload['content']['msgtype'] = 'm.bad.encrypted';
+        decryptedPayload['content']['msgtype'] = MessageTypes.BadEncrypted;
         decryptedPayload['content']['can_request_session'] = true;
       } else {
         decryptedPayload = {
           'content': <String, dynamic>{
-            'msgtype': 'm.bad.encrypted',
+            'msgtype': MessageTypes.BadEncrypted,
             'body': exception.toString(),
           },
           'type': EventTypes.Encrypted,
