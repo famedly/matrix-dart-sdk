@@ -807,6 +807,7 @@ class Client extends MatrixApi {
 
   /// Resets all settings and stops the synchronisation.
   void clear() {
+    Logs().outputEvents.clear();
     database?.clear(id);
     _id = accessToken =
         homeserver = _userID = _deviceID = _deviceName = prevBatch = null;
