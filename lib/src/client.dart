@@ -1015,10 +1015,9 @@ class Client extends MatrixApi {
       if (room is JoinedRoomUpdate) {
         if (room.state?.isNotEmpty ?? false) {
           // TODO: This method seems to be comperatively slow for some updates
-          await _handleRoomEvents(
-              id,
-              room.state.map((i) => i.toJson()).toList(),
-              EventUpdateType.state);
+          await _handleRoomEvents(id,
+              room.state.map((i) => i.toJson()).toList(), EventUpdateType.state,
+              sortAtTheEnd: sortAtTheEnd);
           handledEvents = true;
         }
         if (room.timeline?.events?.isNotEmpty ?? false) {
