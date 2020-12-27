@@ -1469,13 +1469,15 @@ class Room {
     );
   }
 
-  Future<void> sendTypingInfo(bool isTyping, {int timeout}) {
-    var data = <String, dynamic>{
-      'typing': isTyping,
-    };
-    if (timeout != null) data['timeout'] = timeout;
-    return client.sendTypingNotification(client.userID, id, isTyping);
-  }
+  /// This tells the server that the user is typing for the next N milliseconds
+  /// where N is the value specified in the timeout key. Alternatively, if typing is false,
+  /// it tells the server that the user has stopped typing.
+  Future<void> sendTypingNotification(bool isTyping, {int timeout}) => client
+      .sendTypingNotification(client.userID, id, isTyping, timeout: timeout);
+
+  @Deprecated('Use sendTypingNotification instead')
+  Future<void> sendTypingInfo(bool isTyping, {int timeout}) =>
+      sendTypingNotification(isTyping, timeout: timeout);
 
   /// This is sent by the caller when they wish to establish a call.
   /// [callId] is a unique identifier for the call.
