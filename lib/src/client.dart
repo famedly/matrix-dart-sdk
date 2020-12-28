@@ -1428,7 +1428,17 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
                   // Always trust the own device
                   entry.setDirectVerified(true);
                 }
-              } else {
+                if (database != null) {
+                  dbActions.add(() => database.storeUserDeviceKey(
+                        id,
+                        userId,
+                        deviceId,
+                        json.encode(entry.toJson()),
+                        entry.directVerified,
+                        entry.blocked,
+                      ));
+                }
+              } else if (oldKeys.containsKey(deviceId)) {
                 // This shouldn't ever happen. The same device ID has gotten
                 // a new public key. So we ignore the update. TODO: ask krille
                 // if we should instead use the new key with unknown verified / blocked status
@@ -1437,16 +1447,6 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
               }
             } else {
               Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
-            }
-            if (database != null) {
-              dbActions.add(() => database.storeUserDeviceKey(
-                    id,
-                    userId,
-                    deviceId,
-                    json.encode(entry.toJson()),
-                    entry.directVerified,
-                    entry.blocked,
-                  ));
             }
           }
           // delete old/unused entries
@@ -1571,8 +1571,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     return;
   }
 
-  /// Sends an encrypted [message] of this [type] to these [deviceKeys]. To send
-  /// the request to all devices of the current user, pass an empty list to [deviceKeys].
+  /// Sends an encrypted [message] of this [type] to these [deviceKeys].
   Future<void> sendToDeviceEncrypted(
     List<DeviceKeys> deviceKeys,
     String eventType,
@@ -1586,7 +1585,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     if (deviceKeys.isNotEmpty) {
       deviceKeys.removeWhere((DeviceKeys deviceKeys) =>
           deviceKeys.blocked ||
-          deviceKeys.deviceId == deviceID ||
+          (deviceKeys.userId == userID && deviceKeys.deviceId == deviceID) ||
           (onlyVerified && !deviceKeys.verified));
       if (deviceKeys.isEmpty) return;
     }
