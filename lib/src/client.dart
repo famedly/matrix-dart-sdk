@@ -22,6 +22,7 @@ import 'dart:core';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:pedantic/pedantic.dart';
 
 import '../encryption.dart';
 import '../famedlysdk.dart';
@@ -540,6 +541,22 @@ class Client extends MatrixApi {
           mxc, file, DateTime.now().millisecondsSinceEpoch);
     }
     return mxc;
+  }
+
+  /// Sends a typing notification and initiates a megolm session, if needed
+  @override
+  Future<void> sendTypingNotification(
+    String userId,
+    String roomId,
+    bool typing, {
+    int timeout,
+  }) async {
+    await super
+        .sendTypingNotification(userId, roomId, typing, timeout: timeout);
+    final room = getRoomById(roomId);
+    if (typing && room != null && encryptionEnabled && room.encrypted) {
+      unawaited(encryption.keyManager.prepareOutboundGroupSession(roomId));
+    }
   }
 
   /// Uploads a new user avatar for this user.

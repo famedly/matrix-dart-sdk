@@ -133,6 +133,26 @@ void main() {
       client.userDeviceKeys['@alice:example.com'].deviceKeys['JLAFKJWSCS']
           .blocked = false;
 
+      // lazy-create if it would rotate
+      sess =
+          await client.encryption.keyManager.createOutboundGroupSession(roomId);
+      final oldSessKey = sess.outboundGroupSession.session_key();
+      client.userDeviceKeys['@alice:example.com'].deviceKeys['JLAFKJWSCS']
+          .blocked = true;
+      await client.encryption.keyManager.prepareOutboundGroupSession(roomId);
+      expect(
+          client.encryption.keyManager.getOutboundGroupSession(roomId) != null,
+          true);
+      expect(
+          client.encryption.keyManager
+                  .getOutboundGroupSession(roomId)
+                  .outboundGroupSession
+                  .session_key() !=
+              oldSessKey,
+          true);
+      client.userDeviceKeys['@alice:example.com'].deviceKeys['JLAFKJWSCS']
+          .blocked = false;
+
       // rotate if too far in the past
       sess =
           await client.encryption.keyManager.createOutboundGroupSession(roomId);
