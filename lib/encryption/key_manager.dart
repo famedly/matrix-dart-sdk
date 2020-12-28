@@ -30,6 +30,7 @@ import '../matrix_api/utils/logs.dart';
 import '../src/utils/run_in_background.dart';
 import '../src/utils/run_in_root.dart';
 import '../matrix_api/utils/try_get_map_extension.dart';
+import '../matrix_api/utils/map_copy_extension.dart';
 
 const MEGOLM_KEY = EventTypes.MegolmBackup;
 
@@ -743,7 +744,8 @@ class KeyManager {
       }
       if (event.content['action'] == 'request') {
         // we are *receiving* a request
-        Logs().i('[KeyManager] Received key sharing request...');
+        Logs().i(
+            '[KeyManager] Received key sharing request from ${event.sender}:${event.content['requesting_device_id']}...');
         if (!event.content.containsKey('body')) {
           Logs().i('[KeyManager] No body, doing nothing');
           return; // no body
@@ -954,10 +956,10 @@ class RoomKeyRequest extends ToDeviceEvent {
       keyManager.incomingShareRequests.remove(request.requestId);
       return; // request is canceled, don't send anything
     }
-    var room = this.room;
+    final room = this.room;
     final session = await keyManager.loadInboundGroupSession(
         room.id, request.sessionId, request.senderKey);
-    var message = session.content;
+    final message = session.content.copy();
     message['forwarding_curve25519_key_chain'] =
         List<String>.from(session.forwardingCurve25519KeyChain);
 

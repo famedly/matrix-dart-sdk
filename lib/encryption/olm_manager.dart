@@ -227,9 +227,7 @@ class OlmManager {
     if (client.database == null) {
       return;
     }
-    if (!_olmSessions.containsKey(session.identityKey)) {
-      _olmSessions[session.identityKey] = [];
-    }
+    _olmSessions[session.identityKey] ??= [];
     final ix = _olmSessions[session.identityKey]
         .indexWhere((s) => s.sessionId == session.sessionId);
     if (ix == -1) {
@@ -264,19 +262,21 @@ class OlmManager {
     if (type != 0 && type != 1) {
       throw ('Unknown message type');
     }
-    var existingSessions = olmSessions[senderKey];
+    final existingSessions = olmSessions[senderKey];
+    final updateSessionUsage = (OlmSession session) => runInRoot(() {
+          session.lastReceived = DateTime.now();
+          storeOlmSession(session);
+        });
     if (existingSessions != null) {
       for (var session in existingSessions) {
         if (type == 0 && session.session.matches_inbound(body) == true) {
           plaintext = session.session.decrypt(type, body);
-          session.lastReceived = DateTime.now();
-          storeOlmSession(session);
+          updateSessionUsage(session);
           break;
         } else if (type == 1) {
           try {
             plaintext = session.session.decrypt(type, body);
-            session.lastReceived = DateTime.now();
-            storeOlmSession(session);
+            updateSessionUsage(session);
             break;
           } catch (_) {
             plaintext = null;
@@ -295,13 +295,13 @@ class OlmManager {
         _olmAccount.remove_one_time_keys(newSession);
         client.database?.updateClientKeys(pickledOlmAccount, client.id);
         plaintext = newSession.decrypt(type, body);
-        storeOlmSession(OlmSession(
-          key: client.userID,
-          identityKey: senderKey,
-          sessionId: newSession.session_id(),
-          session: newSession,
-          lastReceived: DateTime.now(),
-        ));
+        runInRoot(() => storeOlmSession(OlmSession(
+              key: client.userID,
+              identityKey: senderKey,
+              sessionId: newSession.session_id(),
+              session: newSession,
+              lastReceived: DateTime.now(),
+            )));
       } catch (_) {
         newSession?.free();
         rethrow;
@@ -345,6 +345,21 @@ class OlmManager {
     return res;
   }
 
+  Future<List<OlmSession>> getOlmSessions(String senderKey) async {
+    var sess = olmSessions[senderKey];
+    if (sess == null || sess.isEmpty) {
+      final sessions = await getOlmSessionsFromDatabase(senderKey);
+      if (sessions.isEmpty) {
+        return [];
+      }
+      sess = _olmSessions[senderKey] = sessions;
+    }
+    sess.sort((a, b) => a.lastReceived == b.lastReceived
+        ? a.sessionId.compareTo(b.sessionId)
+        : b.lastReceived.compareTo(a.lastReceived));
+    return sess;
+  }
+
   final Map<String, DateTime> _restoredOlmSessionsTime = {};
 
   Future<void> restoreOlmSession(String userId, String senderKey) async {
@@ -375,15 +390,8 @@ class OlmManager {
     }
     final senderKey = event.content['sender_key'];
     final loadFromDb = () async {
-      if (client.database == null) {
-        return false;
-      }
-      final sessions = await getOlmSessionsFromDatabase(senderKey);
-      if (sessions.isEmpty) {
-        return false; // okay, can't do anything
-      }
-      _olmSessions[senderKey] = sessions;
-      return true;
+      final sessions = await getOlmSessions(senderKey);
+      return sessions.isNotEmpty;
     };
     if (!_olmSessions.containsKey(senderKey)) {
       await loadFromDb();
@@ -406,6 +414,9 @@ class OlmManager {
   }
 
   Future<void> startOutgoingOlmSessions(List<DeviceKeys> deviceKeys) async {
+    Logs().v(
+        '[OlmManager] Starting session with ${deviceKeys.length} devices...');
+
     var requestingKeysFrom = <String, Map<String, String>>{};
     for (var device in deviceKeys) {
       if (requestingKeysFrom[device.userId] == null) {
@@ -429,6 +440,7 @@ class OlmManager {
           if (!deviceKey.checkJsonSignature(fingerprintKey, userId, deviceId)) {
             continue;
           }
+          Logs().v('[OlmManager] Starting session with ${userId}:${deviceId}');
           var session = olm.Session();
           try {
             session.create_outbound(_olmAccount, identityKey, deviceKey['key']);
@@ -452,17 +464,11 @@ class OlmManager {
 
   Future<Map<String, dynamic>> encryptToDeviceMessagePayload(
       DeviceKeys device, String type, Map<String, dynamic> payload) async {
-    var sess = olmSessions[device.curve25519Key];
-    if (sess == null || sess.isEmpty) {
-      final sessions = await getOlmSessionsFromDatabase(device.curve25519Key);
-      if (sessions.isEmpty) {
-        throw ('No olm session found');
-      }
-      sess = _olmSessions[device.curve25519Key] = sessions;
+    final sess = await getOlmSessions(device.curve25519Key);
+    if (sess.isEmpty) {
+      throw ('No olm session found for ${device.userId}:${device.deviceId}');
     }
-    sess.sort((a, b) => a.lastReceived == b.lastReceived
-        ? a.sessionId.compareTo(b.sessionId)
-        : b.lastReceived.compareTo(a.lastReceived));
+
     final fullPayload = {
       'type': type,
       'content': payload,
@@ -493,18 +499,13 @@ class OlmManager {
     // first check if any of our sessions we want to encrypt for are in the database
     if (client.database != null) {
       for (final device in deviceKeys) {
-        if (!olmSessions.containsKey(device.curve25519Key)) {
-          final sessions =
-              await getOlmSessionsFromDatabase(device.curve25519Key);
-          if (sessions.isNotEmpty) {
-            _olmSessions[device.curve25519Key] = sessions;
-          }
-        }
+        await getOlmSessions(device.curve25519Key);
       }
     }
     final deviceKeysWithoutSession = List<DeviceKeys>.from(deviceKeys);
     deviceKeysWithoutSession.removeWhere((DeviceKeys deviceKeys) =>
-        olmSessions.containsKey(deviceKeys.curve25519Key));
+        olmSessions.containsKey(deviceKeys.curve25519Key) &&
+        olmSessions[deviceKeys.curve25519Key].isNotEmpty);
     if (deviceKeysWithoutSession.isNotEmpty) {
       await startOutgoingOlmSessions(deviceKeysWithoutSession);
     }
