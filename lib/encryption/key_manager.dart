@@ -271,7 +271,7 @@ class KeyManager {
   /// devices have been changed. Returns false if the session has not been cleared because
   /// it wasn't necessary. Otherwise returns true.
   Future<bool> clearOrUseOutboundGroupSession(String roomId,
-      {bool wipe = false}) async {
+      {bool wipe = false, bool use = true}) async {
     final room = client.getRoomById(roomId);
     final sess = getOutboundGroupSession(roomId);
     if (room == null || sess == null) {
@@ -334,8 +334,13 @@ class KeyManager {
             break;
           }
           // and now add all the new devices!
-          final oldDeviceIds = Set.from(sess.devices[userId].keys);
-          final newDeviceIds = Set.from(newDeviceKeyIds[userId].keys);
+          final oldDeviceIds = Set.from(sess.devices[userId].entries
+              .where((e) => !e.value)
+              .map((e) => e.key));
+          final newDeviceIds = Set.from(newDeviceKeyIds[userId]
+              .entries
+              .where((e) => !e.value)
+              .map((e) => e.key));
           final newDevices = newDeviceIds.difference(oldDeviceIds);
           if (newDeviceIds.isNotEmpty) {
             devicesToReceive.addAll(newDeviceKeys.where(
@@ -345,6 +350,9 @@ class KeyManager {
       }
 
       if (!wipe) {
+        if (!use) {
+          return false;
+        }
         // okay, we use the outbound group session!
         sess.sentMessages++;
         sess.devices = newDeviceKeyIds;
@@ -355,7 +363,7 @@ class KeyManager {
           'session_key': sess.outboundGroupSession.session_key(),
         };
         try {
-          devicesToReceive.removeWhere((k) => k.blocked);
+          devicesToReceive.removeWhere((k) => !k.encryptToDevice);
           if (devicesToReceive.isNotEmpty) {
             // update allowedAtIndex
             for (final device in devicesToReceive) {
@@ -394,6 +402,7 @@ class KeyManager {
     return true;
   }
 
+  /// Store an outbound group session in the database
   Future<void> storeOutboundGroupSession(
       String roomId, OutboundGroupSession sess) async {
     if (sess == null) {
@@ -411,6 +420,7 @@ class KeyManager {
   final Map<String, Future<OutboundGroupSession>>
       _pendingNewOutboundGroupSessions = {};
 
+  /// Creates an outbound group session for a given room id
   Future<OutboundGroupSession> createOutboundGroupSession(String roomId) async {
     if (_pendingNewOutboundGroupSessions.containsKey(roomId)) {
       return _pendingNewOutboundGroupSessions[roomId];
@@ -419,6 +429,18 @@ class KeyManager {
         _createOutboundGroupSession(roomId);
     await _pendingNewOutboundGroupSessions[roomId];
     return _pendingNewOutboundGroupSessions.remove(roomId);
+  }
+
+  /// Prepares an outbound group session for a given room ID. That is, load it from
+  /// the database, cycle it if needed and create it if absent.
+  Future<void> prepareOutboundGroupSession(String roomId) async {
+    if (getOutboundGroupSession(roomId) == null) {
+      await loadOutboundGroupSession(roomId);
+    }
+    await clearOrUseOutboundGroupSession(roomId, use: false);
+    if (getOutboundGroupSession(roomId) == null) {
+      await createOutboundGroupSession(roomId);
+    }
   }
 
   Future<OutboundGroupSession> _createOutboundGroupSession(
@@ -477,10 +499,12 @@ class KeyManager {
     return sess;
   }
 
+  /// Get an outbound group session for a room id
   OutboundGroupSession getOutboundGroupSession(String roomId) {
     return _outboundGroupSessions[roomId];
   }
 
+  /// Load an outbound group session from database
   Future<void> loadOutboundGroupSession(String roomId) async {
     if (_loadedOutboundGroupSessions.contains(roomId) ||
         _outboundGroupSessions.containsKey(roomId) ||
