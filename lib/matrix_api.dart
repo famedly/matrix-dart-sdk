@@ -20,6 +20,7 @@ library matrix_api;
 
 export 'matrix_api/matrix_api.dart';
 export 'matrix_api/utils/logs.dart';
+export 'matrix_api/utils/map_copy_extension.dart';
 export 'matrix_api/utils/try_get_map_extension.dart';
 export 'matrix_api/model/algorithm_types.dart';
 export 'matrix_api/model/basic_event.dart';

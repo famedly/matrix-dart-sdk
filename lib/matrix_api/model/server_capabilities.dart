@@ -16,6 +16,8 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import '../utils/map_copy_extension.dart';
+
 enum RoomVersionStability { stable, unstable }
 
 class ServerCapabilities {
@@ -30,7 +32,7 @@ class ServerCapabilities {
     mRoomVersions = json['m.room_versions'] != null
         ? MRoomVersions.fromJson(json['m.room_versions'])
         : null;
-    customCapabilities = Map<String, dynamic>.from(json);
+    customCapabilities = json.copy();
     customCapabilities.remove('m.change_password');
     customCapabilities.remove('m.room_versions');
   }

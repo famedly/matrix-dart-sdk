@@ -1,6 +1,6 @@
 /*
  *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020 Famedly GmbH
+ *   Copyright (C) 2020 Famedly GmbH
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU Affero General Public License as
@@ -16,24 +16,24 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import '../utils/map_copy_extension.dart';
+import 'package:famedlysdk/matrix_api/utils/map_copy_extension.dart';
+import 'package:test/test.dart';
 
-class ThirdPartyLocation {
-  String alias;
-  String protocol;
-  Map<String, dynamic> fields;
-
-  ThirdPartyLocation.fromJson(Map<String, dynamic> json) {
-    alias = json['alias'];
-    protocol = json['protocol'];
-    fields = (json['fields'] as Map<String, dynamic>).copy();
-  }
-
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    data['alias'] = alias;
-    data['protocol'] = protocol;
-    data['fields'] = fields;
-    return data;
-  }
+void main() {
+  group('Map-copy-extension', () {
+    test('it should work', () {
+      final original = <String, dynamic>{
+        'attr': 'fox',
+        'child': <String, dynamic>{
+          'attr': 'bunny',
+          'list': [1, 2],
+        },
+      };
+      final copy = original.copy();
+      original['child']['attr'] = 'raccoon';
+      expect(copy['child']['attr'], 'bunny');
+      original['child']['list'].add(3);
+      expect(copy['child']['list'], [1, 2]);
+    });
+  });
 }

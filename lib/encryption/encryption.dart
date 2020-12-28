@@ -314,7 +314,7 @@ class Encryption {
     }
     // we clone the payload as we do not want to remove 'm.relates_to' from the
     // original payload passed into this function
-    payload = Map<String, dynamic>.from(payload);
+    payload = payload.copy();
     final Map<String, dynamic> mRelatesTo = payload.remove('m.relates_to');
     final payloadContent = {
       'content': payload,

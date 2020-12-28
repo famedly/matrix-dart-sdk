@@ -49,10 +49,6 @@ const SSSS_KEY_LENGTH = 32;
 const PBKDF2_DEFAULT_ITERATIONS = 500000;
 const PBKDF2_SALT_LENGTH = 64;
 
-Map<String, dynamic> _deepcopy(Map<String, dynamic> data) {
-  return json.decode(json.encode(data));
-}
-
 /// SSSS: **S**ecure **S**ecret **S**torage and **S**haring
 /// Read more about SSSS at:
 /// https://matrix.org/docs/guides/implementing-more-advanced-e-2-ee-features-such-as-cross-signing#3-implementing-ssss
@@ -310,7 +306,7 @@ class SSSS {
     final encrypted = encryptAes(secret, key, type);
     Map<String, dynamic> content;
     if (add && client.accountData[type] != null) {
-      content = _deepcopy(client.accountData[type].content);
+      content = client.accountData[type].content.copy();
       if (!(content['encrypted'] is Map)) {
         content['encrypted'] = <String, dynamic>{};
       }
@@ -341,7 +337,7 @@ class SSSS {
       throw Exception('Secrets do not match up!');
     }
     // now remove all other keys
-    final content = _deepcopy(client.accountData[type].content);
+    final content = client.accountData[type].content.copy();
     final otherKeys =
         Set<String>.from(content['encrypted'].keys.where((k) => k != keyId));
     content['encrypted'].removeWhere((k, v) => otherKeys.contains(k));

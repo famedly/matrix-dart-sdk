@@ -145,8 +145,7 @@ abstract class SignableKey extends MatrixSignableKey {
   }
 
   MatrixSignableKey cloneForSigning() {
-    final newKey =
-        MatrixSignableKey.fromJson(Map<String, dynamic>.from(toJson()));
+    final newKey = MatrixSignableKey.fromJson(toJson().copy());
     newKey.identifier = identifier;
     newKey.signatures ??= <String, Map<String, String>>{};
     newKey.signatures.clear();
@@ -154,7 +153,7 @@ abstract class SignableKey extends MatrixSignableKey {
   }
 
   String get signingContent {
-    final data = Map<String, dynamic>.from(super.toJson());
+    final data = super.toJson().copy();
     // some old data might have the custom verified and blocked keys
     data.remove('verified');
     data.remove('blocked');
@@ -303,7 +302,7 @@ abstract class SignableKey extends MatrixSignableKey {
 
   @override
   Map<String, dynamic> toJson() {
-    final data = Map<String, dynamic>.from(super.toJson());
+    final data = super.toJson().copy();
     // some old data may have the verified and blocked keys which are unneeded now
     data.remove('verified');
     data.remove('blocked');
@@ -336,7 +335,7 @@ class CrossSigningKey extends SignableKey {
   }
 
   CrossSigningKey.fromMatrixCrossSigningKey(MatrixCrossSigningKey k, Client cl)
-      : super.fromJson(Map<String, dynamic>.from(k.toJson()), cl) {
+      : super.fromJson(k.toJson().copy(), cl) {
     final json = toJson();
     identifier = k.publicKey;
     usage = json['usage'].cast<String>();
@@ -352,7 +351,7 @@ class CrossSigningKey extends SignableKey {
   }
 
   CrossSigningKey.fromJson(Map<String, dynamic> json, Client cl)
-      : super.fromJson(Map<String, dynamic>.from(json), cl) {
+      : super.fromJson(json.copy(), cl) {
     final json = toJson();
     usage = json['usage'].cast<String>();
     if (keys != null && keys.isNotEmpty) {
@@ -409,7 +408,7 @@ class DeviceKeys extends SignableKey {
   }
 
   DeviceKeys.fromMatrixDeviceKeys(MatrixDeviceKeys k, Client cl)
-      : super.fromJson(Map<String, dynamic>.from(k.toJson()), cl) {
+      : super.fromJson(k.toJson().copy(), cl) {
     final json = toJson();
     identifier = k.deviceId;
     algorithms = json['algorithms'].cast<String>();
@@ -425,7 +424,7 @@ class DeviceKeys extends SignableKey {
   }
 
   DeviceKeys.fromJson(Map<String, dynamic> json, Client cl)
-      : super.fromJson(Map<String, dynamic>.from(json), cl) {
+      : super.fromJson(json.copy(), cl) {
     final json = toJson();
     identifier = json['device_id'];
     algorithms = json['algorithms'].cast<String>();

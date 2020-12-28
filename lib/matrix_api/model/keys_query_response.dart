@@ -17,6 +17,7 @@
  */
 
 import 'matrix_keys.dart';
+import '../utils/map_copy_extension.dart';
 
 class KeysQueryResponse {
   Map<String, dynamic> failures;
@@ -26,9 +27,7 @@ class KeysQueryResponse {
   Map<String, MatrixCrossSigningKey> userSigningKeys;
 
   KeysQueryResponse.fromJson(Map<String, dynamic> json) {
-    failures = json['failures'] != null
-        ? Map<String, dynamic>.from(json['failures'])
-        : null;
+    failures = (json['failures'] as Map<String, dynamic>)?.copy();
     deviceKeys = json['device_keys'] != null
         ? (json['device_keys'] as Map).map(
             (k, v) => MapEntry(

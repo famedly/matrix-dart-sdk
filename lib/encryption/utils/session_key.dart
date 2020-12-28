@@ -84,8 +84,7 @@ class SessionKey {
         Event.getMapFromPayload(dbEntry.allowedAtIndex);
     final parsedSenderClaimedKeys =
         Event.getMapFromPayload(dbEntry.senderClaimedKeys);
-    content =
-        parsedContent != null ? Map<String, dynamic>.from(parsedContent) : null;
+    content = parsedContent;
     // we need to try...catch as the map used to be <String, int> and that will throw an error.
     try {
       indexes = parsedIndexes != null
