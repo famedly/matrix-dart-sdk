@@ -31,15 +31,28 @@ extension MxcUriExtension on Uri {
   /// Returns a scaled thumbnail link to this content with the given [width] and
   /// [height]. [method] can be [ThumbnailMethod.crop] or
   /// [ThumbnailMethod.scale] and defaults to [ThumbnailMethod.scale].
+  /// If [animated] (default false) is set to true, an animated thumbnail is requested
+  /// as per MSC2705. Thumbnails only animate if the media repository supports that.
   String getThumbnail(Client matrix,
-      {num width, num height, ThumbnailMethod method = ThumbnailMethod.crop}) {
+      {num width,
+      num height,
+      ThumbnailMethod method = ThumbnailMethod.crop,
+      bool animated = false}) {
     if (!isScheme('mxc')) return toString();
-    final methodStr = method.toString().split('.').last;
-    width = width.round();
-    height = height.round();
-    return matrix.homeserver != null
-        ? '${matrix.homeserver.toString()}/_matrix/media/r0/thumbnail/$host$path?width=$width&height=$height&method=$methodStr'
-        : '';
+    if (matrix.homeserver == null) {
+      return '';
+    }
+    return Uri(
+      scheme: matrix.homeserver.scheme,
+      host: matrix.homeserver.host,
+      path: '/_matrix/media/r0/thumbnail/$host$path',
+      queryParameters: {
+        if (width != null) 'width': width.round().toString(),
+        if (height != null) 'height': height.round().toString(),
+        if (method != null) 'method': method.toString().split('.').last,
+        if (animated != null) 'animated': animated.toString(),
+      },
+    ).toString();
   }
 }
 
