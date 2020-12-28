@@ -16,6 +16,8 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import '../utils/map_copy_extension.dart';
+
 class MatrixSignableKey {
   String userId;
   String identifier;
@@ -33,13 +35,12 @@ class MatrixSignableKey {
     _json = json;
     userId = json['user_id'];
     keys = Map<String, String>.from(json['keys']);
+    // we need to manually copy to ensure that our map is Map<String, Map<String, String>>
     signatures = json['signatures'] is Map
         ? Map<String, Map<String, String>>.from((json['signatures'] as Map)
             .map((k, v) => MapEntry(k, Map<String, String>.from(v))))
         : null;
-    unsigned = json['unsigned'] is Map
-        ? Map<String, dynamic>.from(json['unsigned'])
-        : null;
+    unsigned = (json['unsigned'] as Map<String, dynamic>)?.copy();
   }
 
   Map<String, dynamic> toJson() {

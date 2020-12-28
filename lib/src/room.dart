@@ -750,7 +750,7 @@ class Room {
       };
     }
     if (editEventId != null) {
-      final newContent = Map<String, dynamic>.from(content);
+      final newContent = content.copy();
       content['m.new_content'] = newContent;
       content['m.relates_to'] = {
         'event_id': editEventId,

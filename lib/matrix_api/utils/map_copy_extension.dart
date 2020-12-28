@@ -1,6 +1,6 @@
 /*
  *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020 Famedly GmbH
+ *   Copyright (C) 2020 Famedly GmbH
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU Affero General Public License as
@@ -16,24 +16,18 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import '../utils/map_copy_extension.dart';
-
-class ThirdPartyLocation {
-  String alias;
-  String protocol;
-  Map<String, dynamic> fields;
-
-  ThirdPartyLocation.fromJson(Map<String, dynamic> json) {
-    alias = json['alias'];
-    protocol = json['protocol'];
-    fields = (json['fields'] as Map<String, dynamic>).copy();
-  }
-
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    data['alias'] = alias;
-    data['protocol'] = protocol;
-    data['fields'] = fields;
-    return data;
+extension MapCopyExtension on Map<String, dynamic> {
+  /// Deep-copies a given json map
+  Map<String, dynamic> copy() {
+    final copy = Map<String, dynamic>.from(this);
+    for (final entry in copy.entries) {
+      if (entry.value is Map<String, dynamic>) {
+        copy[entry.key] = (entry.value as Map<String, dynamic>).copy();
+      }
+      if (entry.value is List) {
+        copy[entry.key] = List.from(entry.value);
+      }
+    }
+    return copy;
   }
 }
