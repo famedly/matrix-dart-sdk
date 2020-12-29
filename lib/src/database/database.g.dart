@@ -768,13 +768,15 @@ class DbUserDeviceKeysKey extends DataClass
   final String content;
   final bool verified;
   final bool blocked;
+  final int lastActive;
   DbUserDeviceKeysKey(
       {@required this.clientId,
       @required this.userId,
       @required this.deviceId,
       @required this.content,
       this.verified,
-      this.blocked});
+      this.blocked,
+      this.lastActive});
   factory DbUserDeviceKeysKey.fromData(
       Map<String, dynamic> data, GeneratedDatabase db,
       {String prefix}) {
@@ -795,6 +797,8 @@ class DbUserDeviceKeysKey extends DataClass
           boolType.mapFromDatabaseResponse(data['${effectivePrefix}verified']),
       blocked:
           boolType.mapFromDatabaseResponse(data['${effectivePrefix}blocked']),
+      lastActive: intType
+          .mapFromDatabaseResponse(data['${effectivePrefix}last_active']),
     );
   }
   @override
@@ -818,6 +822,9 @@ class DbUserDeviceKeysKey extends DataClass
     if (!nullToAbsent || blocked != null) {
       map['blocked'] = Variable<bool>(blocked);
     }
+    if (!nullToAbsent || lastActive != null) {
+      map['last_active'] = Variable<int>(lastActive);
+    }
     return map;
   }
 
@@ -840,6 +847,9 @@ class DbUserDeviceKeysKey extends DataClass
       blocked: blocked == null && nullToAbsent
           ? const Value.absent()
           : Value(blocked),
+      lastActive: lastActive == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastActive),
     );
   }
 
@@ -853,6 +863,7 @@ class DbUserDeviceKeysKey extends DataClass
       content: serializer.fromJson<String>(json['content']),
       verified: serializer.fromJson<bool>(json['verified']),
       blocked: serializer.fromJson<bool>(json['blocked']),
+      lastActive: serializer.fromJson<int>(json['last_active']),
     );
   }
   @override
@@ -865,6 +876,7 @@ class DbUserDeviceKeysKey extends DataClass
       'content': serializer.toJson<String>(content),
       'verified': serializer.toJson<bool>(verified),
       'blocked': serializer.toJson<bool>(blocked),
+      'last_active': serializer.toJson<int>(lastActive),
     };
   }
 
@@ -874,7 +886,8 @@ class DbUserDeviceKeysKey extends DataClass
           String deviceId,
           String content,
           bool verified,
-          bool blocked}) =>
+          bool blocked,
+          int lastActive}) =>
       DbUserDeviceKeysKey(
         clientId: clientId ?? this.clientId,
         userId: userId ?? this.userId,
@@ -882,6 +895,7 @@ class DbUserDeviceKeysKey extends DataClass
         content: content ?? this.content,
         verified: verified ?? this.verified,
         blocked: blocked ?? this.blocked,
+        lastActive: lastActive ?? this.lastActive,
       );
   @override
   String toString() {
@@ -891,7 +905,8 @@ class DbUserDeviceKeysKey extends DataClass
           ..write('deviceId: $deviceId, ')
           ..write('content: $content, ')
           ..write('verified: $verified, ')
-          ..write('blocked: $blocked')
+          ..write('blocked: $blocked, ')
+          ..write('lastActive: $lastActive')
           ..write(')'))
         .toString();
   }
@@ -903,8 +918,10 @@ class DbUserDeviceKeysKey extends DataClass
           userId.hashCode,
           $mrjc(
               deviceId.hashCode,
-              $mrjc(content.hashCode,
-                  $mrjc(verified.hashCode, blocked.hashCode))))));
+              $mrjc(
+                  content.hashCode,
+                  $mrjc(verified.hashCode,
+                      $mrjc(blocked.hashCode, lastActive.hashCode)))))));
   @override
   bool operator ==(dynamic other) =>
       identical(this, other) ||
@@ -914,7 +931,8 @@ class DbUserDeviceKeysKey extends DataClass
           other.deviceId == this.deviceId &&
           other.content == this.content &&
           other.verified == this.verified &&
-          other.blocked == this.blocked);
+          other.blocked == this.blocked &&
+          other.lastActive == this.lastActive);
 }
 
 class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
@@ -924,6 +942,7 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
   final Value<String> content;
   final Value<bool> verified;
   final Value<bool> blocked;
+  final Value<int> lastActive;
   const UserDeviceKeysKeyCompanion({
     this.clientId = const Value.absent(),
     this.userId = const Value.absent(),
@@ -931,6 +950,7 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
     this.content = const Value.absent(),
     this.verified = const Value.absent(),
     this.blocked = const Value.absent(),
+    this.lastActive = const Value.absent(),
   });
   UserDeviceKeysKeyCompanion.insert({
     @required int clientId,
@@ -939,6 +959,7 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
     @required String content,
     this.verified = const Value.absent(),
     this.blocked = const Value.absent(),
+    this.lastActive = const Value.absent(),
   })  : clientId = Value(clientId),
         userId = Value(userId),
         deviceId = Value(deviceId),
@@ -950,6 +971,7 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
     Expression<String> content,
     Expression<bool> verified,
     Expression<bool> blocked,
+    Expression<int> lastActive,
   }) {
     return RawValuesInsertable({
       if (clientId != null) 'client_id': clientId,
@@ -958,6 +980,7 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
       if (content != null) 'content': content,
       if (verified != null) 'verified': verified,
       if (blocked != null) 'blocked': blocked,
+      if (lastActive != null) 'last_active': lastActive,
     });
   }
 
@@ -967,7 +990,8 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
       Value<String> deviceId,
       Value<String> content,
       Value<bool> verified,
-      Value<bool> blocked}) {
+      Value<bool> blocked,
+      Value<int> lastActive}) {
     return UserDeviceKeysKeyCompanion(
       clientId: clientId ?? this.clientId,
       userId: userId ?? this.userId,
@@ -975,6 +999,7 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
       content: content ?? this.content,
       verified: verified ?? this.verified,
       blocked: blocked ?? this.blocked,
+      lastActive: lastActive ?? this.lastActive,
     );
   }
 
@@ -999,6 +1024,9 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
     if (blocked.present) {
       map['blocked'] = Variable<bool>(blocked.value);
     }
+    if (lastActive.present) {
+      map['last_active'] = Variable<int>(lastActive.value);
+    }
     return map;
   }
 
@@ -1010,7 +1038,8 @@ class UserDeviceKeysKeyCompanion extends UpdateCompanion<DbUserDeviceKeysKey> {
           ..write('deviceId: $deviceId, ')
           ..write('content: $content, ')
           ..write('verified: $verified, ')
-          ..write('blocked: $blocked')
+          ..write('blocked: $blocked, ')
+          ..write('lastActive: $lastActive')
           ..write(')'))
         .toString();
   }
@@ -1071,9 +1100,17 @@ class UserDeviceKeysKey extends Table
         defaultValue: const CustomExpression<bool>('false'));
   }
 
+  final VerificationMeta _lastActiveMeta = const VerificationMeta('lastActive');
+  GeneratedIntColumn _lastActive;
+  GeneratedIntColumn get lastActive => _lastActive ??= _constructLastActive();
+  GeneratedIntColumn _constructLastActive() {
+    return GeneratedIntColumn('last_active', $tableName, true,
+        $customConstraints: '');
+  }
+
   @override
   List<GeneratedColumn> get $columns =>
-      [clientId, userId, deviceId, content, verified, blocked];
+      [clientId, userId, deviceId, content, verified, blocked, lastActive];
   @override
   UserDeviceKeysKey get asDslTable => this;
   @override
@@ -1117,6 +1154,12 @@ class UserDeviceKeysKey extends Table
     if (data.containsKey('blocked')) {
       context.handle(_blockedMeta,
           blocked.isAcceptableOrUnknown(data['blocked'], _blockedMeta));
+    }
+    if (data.containsKey('last_active')) {
+      context.handle(
+          _lastActiveMeta,
+          lastActive.isAcceptableOrUnknown(
+              data['last_active'], _lastActiveMeta));
     }
     return context;
   }
@@ -6462,17 +6505,24 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  Future<int> storeUserDeviceKey(int client_id, String user_id,
-      String device_id, String content, bool verified, bool blocked) {
+  Future<int> storeUserDeviceKey(
+      int client_id,
+      String user_id,
+      String device_id,
+      String content,
+      bool verified,
+      bool blocked,
+      int last_active) {
     return customInsert(
-      'INSERT OR REPLACE INTO user_device_keys_key (client_id, user_id, device_id, content, verified, blocked) VALUES (:client_id, :user_id, :device_id, :content, :verified, :blocked)',
+      'INSERT OR REPLACE INTO user_device_keys_key (client_id, user_id, device_id, content, verified, blocked, last_active) VALUES (:client_id, :user_id, :device_id, :content, :verified, :blocked, :last_active)',
       variables: [
         Variable.withInt(client_id),
         Variable.withString(user_id),
         Variable.withString(device_id),
         Variable.withString(content),
         Variable.withBool(verified),
-        Variable.withBool(blocked)
+        Variable.withBool(blocked),
+        Variable.withInt(last_active)
       ],
       updates: {userDeviceKeysKey},
     );
@@ -6489,6 +6539,21 @@ abstract class _$Database extends GeneratedDatabase {
       ],
       updates: {userDeviceKeysKey},
       updateKind: UpdateKind.delete,
+    );
+  }
+
+  Future<int> setLastActiveUserDeviceKey(
+      int last_active, int client_id, String user_id, String device_id) {
+    return customUpdate(
+      'UPDATE user_device_keys_key SET last_active = :last_active WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id',
+      variables: [
+        Variable.withInt(last_active),
+        Variable.withInt(client_id),
+        Variable.withString(user_id),
+        Variable.withString(device_id)
+      ],
+      updates: {userDeviceKeysKey},
+      updateKind: UpdateKind.update,
     );
   }
 

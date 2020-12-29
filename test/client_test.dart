@@ -17,6 +17,7 @@
  */
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:famedlysdk/famedlysdk.dart';
@@ -29,6 +30,7 @@ import 'package:logger/logger.dart';
 import 'package:famedlysdk/src/utils/room_update.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
+import 'package:canonical_json/canonical_json.dart';
 
 import 'fake_client.dart';
 import 'fake_database.dart';
@@ -359,32 +361,93 @@ void main() {
           'mxc://example.org/SEsfnsuifSDFSSEF');
       expect(aliceProfile.displayname, 'Alice Margatroid');
     });
-    var deviceKeys = DeviceKeys.fromJson({
-      'user_id': '@alice:example.com',
-      'device_id': 'JLAFKJWSCS',
-      'algorithms': [
-        AlgorithmTypes.olmV1Curve25519AesSha2,
-        AlgorithmTypes.megolmV1AesSha2
-      ],
-      'keys': {
-        'curve25519:JLAFKJWSCS': '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',
-        'ed25519:JLAFKJWSCS': 'lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI'
-      },
-      'signatures': {
-        '@alice:example.com': {
-          'ed25519:JLAFKJWSCS':
-              'dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA'
-        }
-      }
-    }, matrix);
     test('sendToDeviceEncrypted', () async {
+      if (!olmEnabled) {
+        return;
+      }
+      FakeMatrixApi.calledEndpoints.clear();
       await matrix.sendToDeviceEncrypted(
-          [deviceKeys],
+          matrix.userDeviceKeys['@alice:example.com'].deviceKeys.values
+              .toList(),
           'm.message',
           {
             'msgtype': 'm.text',
             'body': 'Hello world',
           });
+      expect(
+          FakeMatrixApi.calledEndpoints.keys.any(
+              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+          true);
+    });
+    test('sendToDeviceEncryptedChunked', () async {
+      if (!olmEnabled) {
+        return;
+      }
+      FakeMatrixApi.calledEndpoints.clear();
+      await matrix.sendToDeviceEncryptedChunked(
+          matrix.userDeviceKeys['@alice:example.com'].deviceKeys.values
+              .toList(),
+          'm.message',
+          {
+            'msgtype': 'm.text',
+            'body': 'Hello world',
+          });
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(
+          FakeMatrixApi.calledEndpoints.keys
+              .where((k) =>
+                  k.startsWith('/client/r0/sendToDevice/m.room.encrypted'))
+              .length,
+          1);
+
+      final deviceKeys = <DeviceKeys>[];
+      for (var i = 0; i < 30; i++) {
+        final account = olm.Account();
+        account.create();
+        final keys = json.decode(account.identity_keys());
+        final userId = '@testuser:example.org';
+        final deviceId = 'DEVICE$i';
+        final keyObj = {
+          'user_id': userId,
+          'device_id': deviceId,
+          'algorithms': [
+            'm.olm.v1.curve25519-aes-sha2',
+            'm.megolm.v1.aes-sha2',
+          ],
+          'keys': {
+            'curve25519:$deviceId': keys['curve25519'],
+            'ed25519:$deviceId': keys['ed25519'],
+          },
+        };
+        final signature =
+            account.sign(String.fromCharCodes(canonicalJson.encode(keyObj)));
+        keyObj['signatures'] = {
+          userId: {
+            'ed25519:$deviceId': signature,
+          },
+        };
+        account.free();
+        deviceKeys.add(DeviceKeys.fromJson(keyObj, matrix));
+      }
+      FakeMatrixApi.calledEndpoints.clear();
+      await matrix.sendToDeviceEncryptedChunked(deviceKeys, 'm.message', {
+        'msgtype': 'm.text',
+        'body': 'Hello world',
+      });
+      // it should send the first chunk right away
+      expect(
+          FakeMatrixApi.calledEndpoints.keys
+              .where((k) =>
+                  k.startsWith('/client/r0/sendToDevice/m.room.encrypted'))
+              .length,
+          1);
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(
+          FakeMatrixApi.calledEndpoints.keys
+              .where((k) =>
+                  k.startsWith('/client/r0/sendToDevice/m.room.encrypted'))
+              .length,
+          2);
     });
     test('Test the fake store api', () async {
       final database = await getDatabase(null);

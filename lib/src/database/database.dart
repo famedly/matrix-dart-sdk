@@ -54,7 +54,7 @@ class Database extends _$Database {
   Database.connect(DatabaseConnection connection) : super.connect(connection);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   int get maxFileSize => 1 * 1024 * 1024;
 
@@ -141,6 +141,11 @@ class Database extends _$Database {
             if (from == 7) {
               await m.addColumnIfNotExists(
                   inboundGroupSessions, inboundGroupSessions.allowedAtIndex);
+              from++;
+            }
+            if (from == 8) {
+              await m.addColumnIfNotExists(
+                  userDeviceKeysKey, userDeviceKeysKey.lastActive);
               from++;
             }
           } catch (e, s) {

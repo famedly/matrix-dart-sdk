@@ -1426,8 +1426,8 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
             final deviceId = rawDeviceKeyEntry.key;
 
             // Set the new device key for this device
-            final entry =
-                DeviceKeys.fromMatrixDeviceKeys(rawDeviceKeyEntry.value, this);
+            final entry = DeviceKeys.fromMatrixDeviceKeys(
+                rawDeviceKeyEntry.value, this, oldKeys[deviceId]?.lastActive);
             if (entry.isValid) {
               // is this a new key or the same one as an old one?
               // better store an update - the signatures might have changed!
@@ -1453,6 +1453,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
                         json.encode(entry.toJson()),
                         entry.directVerified,
                         entry.blocked,
+                        entry.lastActive.millisecondsSinceEpoch,
                       ));
                 }
               } else if (oldKeys.containsKey(deviceId)) {
@@ -1619,6 +1620,43 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     eventType = EventTypes.Encrypted;
     await sendToDevice(
         eventType, messageId ?? generateUniqueTransactionId(), data);
+  }
+
+  /// Sends an encrypted [message] of this [type] to these [deviceKeys]. This request happens
+  /// partly in the background and partly in the foreground. It automatically chunks sending
+  /// to device keys based on activity
+  Future<void> sendToDeviceEncryptedChunked(
+    List<DeviceKeys> deviceKeys,
+    String eventType,
+    Map<String, dynamic> message,
+  ) async {
+    if (!encryptionEnabled) return;
+    deviceKeys.removeWhere((DeviceKeys k) =>
+        k.blocked || (k.userId == userID && k.deviceId == deviceID));
+    if (deviceKeys.isEmpty) return;
+    message =
+        json.decode(json.encode(message)); // make sure we deep-copy the message
+    // make sure all the olm sessions are loaded from database
+    Logs().v('Sending to device chunked... (${deviceKeys.length} devices)');
+    // sort so that devices we last received messages from get our message first
+    deviceKeys.sort((keyA, keyB) => keyB.lastActive.compareTo(keyA.lastActive));
+    Logs().v(deviceKeys.map((k) => '${k.userId}:${k.deviceId}').toList());
+    // and now send out in chunks of 20
+    const chunkSize = 20;
+    for (var i = 0; i < deviceKeys.length; i += chunkSize) {
+      Logs().v('Sending chunk $i...');
+      final chunk = deviceKeys.sublist(
+          i,
+          i + chunkSize > deviceKeys.length
+              ? deviceKeys.length
+              : i + chunkSize);
+      // and send
+      Logs().v(chunk.map((k) => '${k.userId}:${k.deviceId}').toList());
+      final future = sendToDeviceEncrypted(chunk, eventType, message);
+      if (i == 0) {
+        await future;
+      }
+    }
   }
 
   /// Whether all push notifications are muted using the [.m.rule.master]
