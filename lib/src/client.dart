@@ -1508,6 +1508,11 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
               if (!oldEntry.value.usage.contains(keyType)) {
                 _userDeviceKeys[userId].crossSigningKeys[oldEntry.key] =
                     oldEntry.value;
+              } else if (database != null) {
+                // There is a previous cross-signing key with  this usage, that we no
+                // longer need/use. Clear it from the database.
+                dbActions.add(() => database.removeUserCrossSigningKey(
+                    id, userId, oldEntry.key));
               }
             }
             final entry = CrossSigningKey.fromMatrixCrossSigningKey(
