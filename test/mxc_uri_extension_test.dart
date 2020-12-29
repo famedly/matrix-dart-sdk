@@ -38,11 +38,14 @@ void main() {
       expect(content.getDownloadLink(client),
           '${client.homeserver.toString()}/_matrix/media/r0/download/exampleserver.abc/abcdefghijklmn');
       expect(content.getThumbnail(client, width: 50, height: 50),
-          '${client.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop');
+          '${client.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
       expect(
           content.getThumbnail(client,
-              width: 50, height: 50, method: ThumbnailMethod.scale),
-          '${client.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale');
+              width: 50,
+              height: 50,
+              method: ThumbnailMethod.scale,
+              animated: true),
+          '${client.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale&animated=true');
     });
   });
 }

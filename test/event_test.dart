@@ -1104,12 +1104,12 @@ void main() {
       expect(event.getAttachmentUrl(),
           'https://fakeserver.notexisting/_matrix/media/r0/download/example.org/file');
       expect(event.getAttachmentUrl(getThumbnail: true),
-          'https://fakeserver.notexisting/_matrix/media/r0/thumbnail/example.org/file?width=800&height=800&method=scale');
+          'https://fakeserver.notexisting/_matrix/media/r0/thumbnail/example.org/file?width=800&height=800&method=scale&animated=false');
       expect(event.getAttachmentUrl(useThumbnailMxcUrl: true),
           'https://fakeserver.notexisting/_matrix/media/r0/download/example.org/thumb');
       expect(
           event.getAttachmentUrl(getThumbnail: true, useThumbnailMxcUrl: true),
-          'https://fakeserver.notexisting/_matrix/media/r0/thumbnail/example.org/thumb?width=800&height=800&method=scale');
+          'https://fakeserver.notexisting/_matrix/media/r0/thumbnail/example.org/thumb?width=800&height=800&method=scale&animated=false');
       expect(
           event.getAttachmentUrl(getThumbnail: true, minNoThumbSize: 9000000),
           'https://fakeserver.notexisting/_matrix/media/r0/download/example.org/file');

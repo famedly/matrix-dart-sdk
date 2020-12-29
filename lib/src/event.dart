@@ -438,14 +438,16 @@ class Event extends MatrixEvent {
   /// Set [getThumbnail] to true to fetch the thumbnail, set [width], [height] and [method]
   /// for the respective thumbnailing properties.
   /// [minNoThumbSize] is the minimum size that an original image may be to not fetch its thumbnail, defaults to 80k
-  /// [useThumbnailMxcUrl] says weather to use the mxc url of the thumbnail, rather than the original attachment
+  /// [useThumbnailMxcUrl] says weather to use the mxc url of the thumbnail, rather than the original attachment.
+  ///  [animated] says weather the thumbnail is animated
   String getAttachmentUrl(
       {bool getThumbnail = false,
       bool useThumbnailMxcUrl = false,
       double width = 800.0,
       double height = 800.0,
       ThumbnailMethod method = ThumbnailMethod.scale,
-      int minNoThumbSize = _minNoThumbSize}) {
+      int minNoThumbSize = _minNoThumbSize,
+      bool animated = false}) {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type) ||
         !hasAttachment ||
         isAttachmentEncrypted) {
@@ -471,6 +473,7 @@ class Event extends MatrixEvent {
         width: width,
         height: height,
         method: method,
+        animated: animated,
       );
     } else {
       return Uri.parse(thisMxcUrl).getDownloadLink(room.client);
