@@ -445,9 +445,11 @@ class Room {
       EventType.MarkedUnread,
       MarkedUnread(unread).toJson(),
     );
-    if (unread == false) {
-      await sendReadMarker(lastEvent.eventId,
-          readReceiptLocationEventId: lastEvent.eventId);
+    if (unread == false && lastEvent != null) {
+      await sendReadMarker(
+        lastEvent.eventId,
+        readReceiptLocationEventId: lastEvent.eventId,
+      );
     }
   }
 
