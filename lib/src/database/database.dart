@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:moor/moor.dart';
-import 'package:olm/olm.dart' as olm;
 
 import '../../famedlysdk.dart' as sdk;
 import '../../matrix_api.dart' as api;
@@ -193,28 +192,6 @@ class Database extends _$Database {
           deviceKeysKeys.where((k) => k.userId == entry.userId).toList(),
           crossSigningKeys.where((k) => k.userId == entry.userId).toList(),
           client);
-    }
-    return res;
-  }
-
-  Future<Map<String, List<olm.Session>>> getOlmSessions(
-      int clientId, String userId) async {
-    final raw = await getAllOlmSessions(clientId).get();
-    if (raw.isEmpty) {
-      return {};
-    }
-    final res = <String, List<olm.Session>>{};
-    for (final row in raw) {
-      if (!res.containsKey(row.identityKey)) {
-        res[row.identityKey] = [];
-      }
-      try {
-        var session = olm.Session();
-        session.unpickle(userId, row.pickle);
-        res[row.identityKey].add(session);
-      } catch (e, s) {
-        Logs().e('[LibOlm] Could not unpickle olm session', e, s);
-      }
     }
     return res;
   }
