@@ -994,10 +994,12 @@ class Client extends MatrixApi {
   }
 
   Future<void> _handleToDeviceEvents(List<BasicEventWithSender> events) async {
-    for (var i = 0; i < events.length; i++) {
-      var toDeviceEvent = ToDeviceEvent.fromJson(events[i].toJson());
+    for (final event in events) {
+      var toDeviceEvent = ToDeviceEvent.fromJson(event.toJson());
+      Logs().v('Got to_device event of type ${toDeviceEvent.type}');
       if (toDeviceEvent.type == EventTypes.Encrypted && encryptionEnabled) {
         toDeviceEvent = await encryption.decryptToDeviceEvent(toDeviceEvent);
+        Logs().v('Decrypted type is: ${toDeviceEvent.type}');
       }
       if (encryptionEnabled) {
         await encryption.handleToDeviceEvent(toDeviceEvent);
@@ -1603,6 +1605,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     bool onlyVerified = false,
   }) async {
     if (!encryptionEnabled) return;
+    Logs().v('Sending to device message... (${deviceKeys.length} pre-devices)');
     // Don't send this message to blocked devices, and if specified onlyVerified
     // then only send it to verified devices
     if (deviceKeys.isNotEmpty) {
@@ -1612,6 +1615,8 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
           (onlyVerified && !deviceKeys.verified));
       if (deviceKeys.isEmpty) return;
     }
+    Logs().v('Sending to device message... (${deviceKeys.length} pre-devices)');
+    Logs().v(deviceKeys.map((k) => '${k.userId}:${k.deviceId}').toList());
 
     // Send with send-to-device messaging
     var data = <String, Map<String, Map<String, dynamic>>>{};
