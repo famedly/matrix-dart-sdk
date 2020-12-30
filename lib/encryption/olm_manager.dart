@@ -358,14 +358,39 @@ class OlmManager {
     return res;
   }
 
-  Future<List<OlmSession>> getOlmSessions(String senderKey) async {
+  Future<void> getOlmSessionsForDevicesFromDatabase(
+      List<String> senderKeys) async {
+    if (client.database == null) {
+      return;
+    }
+    final rows = await client.database
+        .dbGetOlmSessionsForDevices(client.id, senderKeys)
+        .get();
+    final res = <String, List<OlmSession>>{};
+    for (final row in rows) {
+      res[row.identityKey] ??= <OlmSession>[];
+      final sess = OlmSession.fromDb(row, client.userID);
+      if (sess.isValid) {
+        res[row.identityKey].add(sess);
+      }
+    }
+    for (final entry in res.entries) {
+      _olmSessions[entry.key] = entry.value;
+    }
+  }
+
+  Future<List<OlmSession>> getOlmSessions(String senderKey,
+      {bool getFromDb = true}) async {
     var sess = olmSessions[senderKey];
-    if (sess == null || sess.isEmpty) {
+    if ((getFromDb ?? true) && (sess == null || sess.isEmpty)) {
       final sessions = await getOlmSessionsFromDatabase(senderKey);
       if (sessions.isEmpty) {
         return [];
       }
       sess = _olmSessions[senderKey] = sessions;
+    }
+    if (sess == null) {
+      return [];
     }
     sess.sort((a, b) => a.lastReceived == b.lastReceived
         ? a.sessionId.compareTo(b.sessionId)
@@ -475,8 +500,10 @@ class OlmManager {
   }
 
   Future<Map<String, dynamic>> encryptToDeviceMessagePayload(
-      DeviceKeys device, String type, Map<String, dynamic> payload) async {
-    final sess = await getOlmSessions(device.curve25519Key);
+      DeviceKeys device, String type, Map<String, dynamic> payload,
+      {bool getFromDb}) async {
+    final sess =
+        await getOlmSessions(device.curve25519Key, getFromDb: getFromDb);
     if (sess.isEmpty) {
       throw ('No olm session found for ${device.userId}:${device.deviceId}');
     }
@@ -509,9 +536,8 @@ class OlmManager {
     var data = <String, Map<String, Map<String, dynamic>>>{};
     // first check if any of our sessions we want to encrypt for are in the database
     if (client.database != null) {
-      for (final device in deviceKeys) {
-        await getOlmSessions(device.curve25519Key);
-      }
+      await getOlmSessionsForDevicesFromDatabase(
+          deviceKeys.map((d) => d.curve25519Key).toList());
     }
     final deviceKeysWithoutSession = List<DeviceKeys>.from(deviceKeys);
     deviceKeysWithoutSession.removeWhere((DeviceKeys deviceKeys) =>
@@ -526,7 +552,8 @@ class OlmManager {
       }
       try {
         data[device.userId][device.deviceId] =
-            await encryptToDeviceMessagePayload(device, type, payload);
+            await encryptToDeviceMessagePayload(device, type, payload,
+                getFromDb: false);
       } catch (e, s) {
         Logs().w('[LibOlm] Error encrypting to-device event', e, s);
         continue;

@@ -6281,6 +6281,23 @@ abstract class _$Database extends GeneratedDatabase {
         }).map(olmSessions.mapFromRow);
   }
 
+  Selectable<DbOlmSessions> dbGetOlmSessionsForDevices(
+      int client_id, List<String> identity_keys) {
+    var $arrayStartIndex = 2;
+    final expandedidentity_keys =
+        $expandVar($arrayStartIndex, identity_keys.length);
+    $arrayStartIndex += identity_keys.length;
+    return customSelect(
+        'SELECT * FROM olm_sessions WHERE client_id = :client_id AND identity_key IN ($expandedidentity_keys)',
+        variables: [
+          Variable.withInt(client_id),
+          for (var $ in identity_keys) Variable.withString($)
+        ],
+        readsFrom: {
+          olmSessions
+        }).map(olmSessions.mapFromRow);
+  }
+
   Future<int> storeOlmSession(int client_id, String identitiy_key,
       String session_id, String pickle, int last_received) {
     return customInsert(
