@@ -911,7 +911,10 @@ class KeyManager {
         data,
       );
     } else if (event.type == EventTypes.RoomKey) {
+      Logs().v(
+          '[KeyManager] Received room key with session ${event.content['session_id']}');
       if (event.encryptedContent == null) {
+        Logs().v('[KeyManager] not encrypted, ignoring...');
         return; // the event wasn't encrypted, this is a security risk;
       }
       final String roomId = event.content['room_id'];
@@ -924,6 +927,7 @@ class KeyManager {
             .deviceKeys[event.content['requesting_device_id']]
             .ed25519Key;
       }
+      Logs().v('[KeyManager] Keeping room key');
       setInboundGroupSession(roomId, sessionId,
           event.encryptedContent['sender_key'], event.content,
           forwarded: false);
