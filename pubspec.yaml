@@ -1,7 +1,7 @@
 name: matrix_api_lite
-description: A starting point for Dart libraries or applications.
-# version: 1.0.0
-# homepage: https://www.example.com
+description: Dead simple data model for the matrix.org client-server API.
+version: 0.1.0
+homepage: https://famedly.com
 
 environment:
   sdk: '>=2.10.0 <3.0.0'

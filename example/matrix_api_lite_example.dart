@@ -1,5 +1,3 @@
-//import 'package:matrix_api_lite/matrix_api_lite.dart';
-
 import 'package:matrix_api_lite/src/matrix_api.dart';
 
 void main() async {
