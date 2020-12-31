@@ -1746,6 +1746,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     prevBatch = null;
     rooms.clear();
     await database?.clearCache(id);
+    encryption?.keyManager?.clearOutboundGroupSessions();
     onCacheCleared.add(true);
     // Restart the syncloop
     backgroundSync = true;
