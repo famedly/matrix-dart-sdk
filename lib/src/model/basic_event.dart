@@ -16,6 +16,8 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import '../utils/map_copy_extension.dart';
+
 class BasicEvent {
   String type;
   Map<String, dynamic> content;
@@ -27,7 +29,7 @@ class BasicEvent {
 
   BasicEvent.fromJson(Map<String, dynamic> json) {
     type = json['type'];
-    content = Map<String, dynamic>.from(json['content']);
+    content = (json['content'] as Map<String, dynamic>).copy();
   }
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

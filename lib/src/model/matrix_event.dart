@@ -17,6 +17,7 @@
  */
 
 import 'stripped_state_event.dart';
+import '../utils/map_copy_extension.dart';
 
 class MatrixEvent extends StrippedStateEvent {
   String eventId;
@@ -38,12 +39,8 @@ class MatrixEvent extends StrippedStateEvent {
     roomId = json['room_id'];
     originServerTs =
         DateTime.fromMillisecondsSinceEpoch(json['origin_server_ts']);
-    unsigned = json['unsigned'] != null
-        ? Map<String, dynamic>.from(json['unsigned'])
-        : null;
-    prevContent = json['prev_content'] != null
-        ? Map<String, dynamic>.from(json['prev_content'])
-        : null;
+    unsigned = (json['unsigned'] as Map<String, dynamic>)?.copy();
+    prevContent = (json['prev_content'] as Map<String, dynamic>)?.copy();
     redacts = json['redacts'];
   }
 

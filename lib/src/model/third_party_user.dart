@@ -16,6 +16,8 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import '../utils/map_copy_extension.dart';
+
 class ThirdPartyUser {
   String userId;
   String protocol;
@@ -24,7 +26,7 @@ class ThirdPartyUser {
   ThirdPartyUser.fromJson(Map<String, dynamic> json) {
     userId = json['userid'];
     protocol = json['protocol'];
-    fields = Map<String, dynamic>.from(json['fields']);
+    fields = (json['fields'] as Map<String, dynamic>).copy();
   }
 
   Map<String, dynamic> toJson() {

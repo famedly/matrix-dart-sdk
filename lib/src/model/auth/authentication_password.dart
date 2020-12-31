@@ -17,6 +17,7 @@
  */
 
 import 'authentication_user_identifier.dart';
+
 import 'authentication_data.dart';
 import 'authentication_identifier.dart';
 import 'authentication_phone_identifier.dart';

@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'algorithm_types.dart';
+import '../../matrix_api_lite.dart';
 
 enum RoomKeysAlgorithmType { v1Curve25519AesSha2 }
 
