@@ -18,10 +18,9 @@
 
 import 'dart:typed_data';
 import 'package:logger/logger.dart';
+import 'package:matrix_api_lite/fake_matrix_api.dart';
 import 'package:matrix_api_lite/matrix_api_lite.dart';
 import 'package:test/test.dart';
-
-import 'fake_matrix_api.dart';
 
 void main() {
   /// All Tests related to device keys

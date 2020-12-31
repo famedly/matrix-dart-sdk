@@ -1,5 +1,5 @@
 /*
- *   Famedly Matrix SDK
+ *   Matrix API Lite
  *   Copyright (C) 2019, 2020 Famedly GmbH
  *
  *   This program is free software: you can redistribute it and/or modify

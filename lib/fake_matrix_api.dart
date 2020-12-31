@@ -34,6 +34,7 @@ Map<String, dynamic> decodeJson(dynamic data) {
   return data;
 }
 
+/// A mock http client for testing purposes.
 class FakeMatrixApi extends MockClient {
   static final calledEndpoints = <String, List<dynamic>>{};
   static int eventCounter = 0;
