@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/matrix_api.dart';
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 import 'package:famedlysdk/src/client.dart';

@@ -18,8 +18,8 @@
 
 import 'package:olm/olm.dart' as olm;
 
+import '../../famedlysdk.dart';
 import '../../src/database/database.dart' show DbOlmSessions;
-import '../../matrix_api/utils/logs.dart';
 
 class OlmSession {
   String identityKey;

@@ -27,9 +27,7 @@ import 'package:encrypt/encrypt.dart';
 import 'package:password_hash/password_hash.dart';
 
 import '../famedlysdk.dart';
-import '../matrix_api.dart';
 import '../src/database/database.dart';
-import '../matrix_api/utils/logs.dart';
 import '../src/utils/run_in_background.dart';
 import 'encryption.dart';
 

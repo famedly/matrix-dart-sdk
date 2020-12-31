@@ -4,8 +4,7 @@ import 'dart:convert';
 import 'package:moor/moor.dart';
 
 import '../../famedlysdk.dart' as sdk;
-import '../../matrix_api.dart' as api;
-import '../../matrix_api/utils/logs.dart';
+import 'package:matrix_api_lite/matrix_api_lite.dart' as api;
 import '../client.dart';
 import '../room.dart';
 
@@ -66,7 +65,7 @@ class Database extends _$Database {
           try {
             await m.createAll();
           } catch (e, s) {
-            Logs().e('Create all failed in database migrator', e, s);
+            api.Logs().e('Create all failed in database migrator', e, s);
             onError.add(SdkError(exception: e, stackTrace: s));
             rethrow;
           }
@@ -148,7 +147,7 @@ class Database extends _$Database {
               from++;
             }
           } catch (e, s) {
-            Logs().e('Database migration failed', e, s);
+            api.Logs().e('Database migration failed', e, s);
             onError.add(SdkError(exception: e, stackTrace: s));
             rethrow;
           }
@@ -158,12 +157,12 @@ class Database extends _$Database {
             if (executor.dialect == SqlDialect.sqlite) {
               final ret = await customSelect('PRAGMA journal_mode=WAL').get();
               if (ret.isNotEmpty) {
-                Logs().v('[Moor] Switched database to mode ' +
+                api.Logs().v('[Moor] Switched database to mode ' +
                     ret.first.data['journal_mode'].toString());
               }
             }
           } catch (e, s) {
-            Logs().e('Database before open failed', e, s);
+            api.Logs().e('Database before open failed', e, s);
             onError.add(SdkError(exception: e, stackTrace: s));
             rethrow;
           }

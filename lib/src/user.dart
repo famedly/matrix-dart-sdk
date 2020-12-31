@@ -17,7 +17,7 @@
  */
 
 import '../famedlysdk.dart';
-import '../matrix_api.dart';
+
 import 'event.dart';
 import 'room.dart';
 

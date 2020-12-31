@@ -23,7 +23,6 @@ import 'package:http/http.dart' as http;
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 
 import '../famedlysdk.dart';
-import '../matrix_api.dart';
 import 'database/database.dart' show DbRoomState, DbEvent;
 import 'room.dart';
 import 'utils/matrix_localizations.dart';

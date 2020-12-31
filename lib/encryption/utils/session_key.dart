@@ -20,7 +20,6 @@ import 'package:olm/olm.dart' as olm;
 
 import '../../famedlysdk.dart';
 import '../../src/database/database.dart' show DbInboundGroupSession;
-import '../../matrix_api/utils/logs.dart';
 
 class SessionKey {
   /// The raw json content of the key

@@ -1,10 +1,11 @@
 import 'dart:convert';
 
 import 'package:canonical_json/canonical_json.dart';
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../../encryption.dart';
-import '../../matrix_api.dart';
+
 import '../client.dart';
 import '../database/database.dart'
     show DbUserDeviceKey, DbUserDeviceKeysKey, DbUserCrossSigningKey;

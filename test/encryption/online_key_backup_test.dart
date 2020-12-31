@@ -19,8 +19,6 @@
 import 'dart:convert';
 
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/matrix_api/utils/logs.dart';
-import 'package:famedlysdk/matrix_api.dart';
 import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;

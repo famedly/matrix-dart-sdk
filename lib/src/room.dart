@@ -18,21 +18,18 @@
 
 import 'dart:async';
 
-import 'package:famedlysdk/matrix_api/model/marked_unread.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 
 import '../famedlysdk.dart';
-import '../matrix_api.dart';
 import 'client.dart';
 import 'database/database.dart' show DbRoom;
 import 'event.dart';
 import 'timeline.dart';
 import 'user.dart';
 import 'utils/event_update.dart';
-import '../matrix_api/utils/logs.dart';
-import '../matrix_api/utils/try_get_map_extension.dart';
 import 'utils/markdown.dart';
+import 'utils/marked_unread.dart';
 import 'utils/matrix_file.dart';
 import 'utils/matrix_localizations.dart';
 import 'utils/states_map.dart';

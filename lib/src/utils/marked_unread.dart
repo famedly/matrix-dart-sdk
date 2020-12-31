@@ -1,6 +1,6 @@
 /*
  *   Famedly Matrix SDK
- *   Copyright (C) 2019, 2020 Famedly GmbH
+ *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU Affero General Public License as
@@ -16,24 +16,28 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'basic_event.dart';
+mixin EventType {
+  static const String MarkedUnread = 'com.famedly.marked_unread';
+}
 
-class BasicEventWithSender extends BasicEvent {
-  String senderId;
+class MarkedUnread {
+  bool unread;
 
-  BasicEventWithSender();
+  MarkedUnread(this.unread);
 
-  BasicEventWithSender.fromJson(Map<String, dynamic> json) {
-    final basicEvent = BasicEvent.fromJson(json);
-    type = basicEvent.type;
-    content = basicEvent.content;
-    senderId = json['sender'];
+  MarkedUnread.fromJson(Map<String, dynamic> json) {
+    if (!(json['unread'] is bool)) {
+      unread = false;
+    } else {
+      unread = json['unread'];
+    }
   }
 
-  @override
   Map<String, dynamic> toJson() {
-    final data = super.toJson();
-    data['sender'] = senderId;
+    final data = <String, dynamic>{};
+    if (unread != null) {
+      data['unread'] = unread;
+    }
     return data;
   }
 }

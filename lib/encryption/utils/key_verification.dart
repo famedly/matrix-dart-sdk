@@ -24,8 +24,6 @@ import 'package:olm/olm.dart' as olm;
 import 'package:pedantic/pedantic.dart';
 
 import '../../famedlysdk.dart';
-import '../../matrix_api.dart';
-import '../../matrix_api/utils/logs.dart';
 import '../encryption.dart';
 
 /*
