@@ -33,6 +33,7 @@ export 'src/model/filter.dart';
 export 'src/model/keys_query_response.dart';
 export 'src/model/login_response.dart';
 export 'src/model/login_types.dart';
+export 'src/model/marked_unread.dart';
 export 'src/model/matrix_connection_exception.dart';
 export 'src/model/matrix_event.dart';
 export 'src/model/matrix_exception.dart';
