@@ -297,7 +297,7 @@ class OlmManager {
       }
     }
     if (plaintext == null && type != 0) {
-      return event;
+      throw ('Unable to decrypt with any existing OLM session');
     }
 
     if (plaintext == null) {
