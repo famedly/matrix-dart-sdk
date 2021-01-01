@@ -38,4 +38,115 @@ extension MatrixIdExtension on String {
   String get domain => isValidMatrixId ? _getParts().last : null;
 
   bool equals(String other) => toLowerCase() == other?.toLowerCase();
+
+  /// Separate a matrix identifier string into a primary indentifier, a secondary identifier,
+  /// a query string and already parsed `via` parameters. A matrix identifier string
+  /// can be an mxid, a matrix.to-url or a matrix-uri.
+  MatrixIdentifierStringExtensionResults parseIdentifierIntoParts() {
+    const matrixUriPrefix = 'matrix:';
+
+    final via = <String>{};
+    String action;
+    final parseQueryString = (qs) {
+      if (qs != null) {
+        // as there might be multiple "via" tags we can't just use Uri.splitQueryString, we need to do our own thing
+        for (final parameterStr in qs.split('&')) {
+          final index = parameterStr.indexOf('=');
+          if (index == -1) {
+            continue;
+          }
+          final parameter =
+              Uri.decodeQueryComponent(parameterStr.substring(0, index));
+          final value =
+              Uri.decodeQueryComponent(parameterStr.substring(index + 1));
+          if (parameter == 'via') {
+            via.add(value);
+          }
+          if (parameter == 'action') {
+            action = value;
+          }
+        }
+      }
+    };
+
+    // check if we have a "matrix:" uri
+    if (toLowerCase().startsWith(matrixUriPrefix)) {
+      final uri = Uri.tryParse(this);
+      if (uri == null) {
+        return null;
+      }
+      final pathSegments = uri.pathSegments;
+      final identifiers = <String>[];
+      for (var i = 0; i < pathSegments.length - 1; i += 2) {
+        final thisSigil = {
+          'user': '@',
+          'roomid': '!',
+          'room': '#',
+          'group': '+',
+          'event': '\$',
+        }[pathSegments[i].toLowerCase()];
+        if (thisSigil == null) {
+          break;
+        }
+        final identifier = thisSigil + pathSegments[i + 1];
+        if (!identifier.isValidMatrixId) {
+          return null;
+        }
+        identifiers.add(identifier);
+      }
+      if (identifiers.isEmpty) {
+        return null;
+      }
+      final queryString = uri.query.isNotEmpty ? uri.query : null;
+      parseQueryString(queryString);
+      return MatrixIdentifierStringExtensionResults(
+        primaryIdentifier: identifiers.first,
+        secondaryIdentifier: identifiers.length > 1 ? identifiers[1] : null,
+        queryString: queryString,
+        via: via,
+        action: action,
+      );
+    }
+
+    const matrixToPrefix = 'https://matrix.to/#/';
+    // matrix identifiers and matrix.to URLs are parsed similarly, so we do them here
+    var s = this;
+    if (toLowerCase().startsWith(matrixToPrefix)) {
+      // as we decode a component we may only call it on the url part *before* the "query" part
+      final parts = substring(matrixToPrefix.length).split('?');
+      s = Uri.decodeComponent(parts.removeAt(0)) + '?' + parts.join('?');
+    }
+    final match = RegExp(r'^([#!@+][^:]*:[^\/?]*)(?:\/(\$[^?]*))?(?:\?(.*))?$')
+        .firstMatch(s);
+    if (match == null ||
+        !match.group(1).isValidMatrixId ||
+        !(match.group(2)?.isValidMatrixId ?? true)) {
+      return null;
+    }
+    final queryString =
+        match.group(3)?.isNotEmpty ?? false ? match.group(3) : null;
+    parseQueryString(queryString);
+    return MatrixIdentifierStringExtensionResults(
+      primaryIdentifier: match.group(1),
+      secondaryIdentifier: match.group(2),
+      queryString: queryString,
+      via: via,
+      action: action,
+    );
+  }
+}
+
+class MatrixIdentifierStringExtensionResults {
+  final String primaryIdentifier;
+  final String secondaryIdentifier;
+  final String queryString;
+  final Set<String> via;
+  final String action;
+
+  MatrixIdentifierStringExtensionResults(
+      {this.primaryIdentifier,
+      this.secondaryIdentifier,
+      this.queryString,
+      this.via,
+      this.action});
 }
