@@ -28,6 +28,7 @@ import 'database/database.dart' show DbRoomState, DbEvent;
 import 'room.dart';
 import 'utils/matrix_localizations.dart';
 import 'utils/receipt.dart';
+import 'utils/run_in_background.dart';
 import 'utils/event_localizations.dart';
 
 abstract class RelationshipTypes {
@@ -565,7 +566,7 @@ class Event extends MatrixEvent {
       encryptedFile.iv = fileMap['iv'];
       encryptedFile.k = fileMap['key']['k'];
       encryptedFile.sha256 = fileMap['hashes']['sha256'];
-      uint8list = await decryptFile(encryptedFile);
+      uint8list = await runInBackground(decryptFile, encryptedFile);
     }
     return MatrixFile(bytes: uint8list, name: body);
   }
