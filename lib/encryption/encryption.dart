@@ -22,9 +22,7 @@ import 'dart:async';
 import 'package:pedantic/pedantic.dart';
 
 import '../famedlysdk.dart';
-import '../matrix_api.dart';
 import '../src/utils/run_in_root.dart';
-import '../matrix_api/utils/logs.dart';
 import 'cross_signing.dart';
 import 'key_manager.dart';
 import 'key_verification_manager.dart';

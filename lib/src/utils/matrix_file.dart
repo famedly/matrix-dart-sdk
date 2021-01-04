@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 import 'package:mime/mime.dart';
 
-import '../../matrix_api/model/message_types.dart';
+import '../../famedlysdk.dart';
 
 class MatrixFile {
   Uint8List bytes;

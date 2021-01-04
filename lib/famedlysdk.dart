@@ -18,7 +18,7 @@
 
 library famedlysdk;
 
-export 'matrix_api.dart';
+export 'package:matrix_api_lite/matrix_api_lite.dart';
 export 'src/utils/room_update.dart';
 export 'src/utils/event_update.dart';
 export 'src/utils/device_keys_list.dart';

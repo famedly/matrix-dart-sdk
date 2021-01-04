@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/matrix_api/utils/try_get_map_extension.dart';
+import 'package:matrix_api_lite/matrix_api_lite.dart';
 import 'package:test/test.dart';
 
 void main() {

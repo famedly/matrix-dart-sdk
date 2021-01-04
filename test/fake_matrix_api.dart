@@ -17,12 +17,12 @@
  */
 
 import 'package:famedlysdk/famedlysdk.dart' as sdk;
+import 'package:famedlysdk/famedlysdk.dart';
 
 import 'dart:convert';
 import 'dart:core';
 import 'dart:math';
 
-import 'package:famedlysdk/matrix_api.dart';
 import 'package:http/http.dart';
 import 'package:http/testing.dart';
 

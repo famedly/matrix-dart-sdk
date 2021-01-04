@@ -16,8 +16,8 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import '../../matrix_api.dart';
 import '../../encryption.dart';
+import '../../famedlysdk.dart';
 import '../event.dart';
 import '../room.dart';
 import 'matrix_localizations.dart';

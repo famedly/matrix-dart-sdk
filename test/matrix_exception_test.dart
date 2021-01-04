@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU Affero General Public License
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import 'package:famedlysdk/matrix_api.dart';
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:http/http.dart';
 import 'package:logger/logger.dart';
 import 'package:test/test.dart';

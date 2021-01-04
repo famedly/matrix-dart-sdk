@@ -26,7 +26,6 @@ import '../encryption.dart';
 import '../ssss.dart';
 import '../key_manager.dart';
 import '../../famedlysdk.dart';
-import '../../matrix_api/utils/logs.dart';
 
 enum BootstrapState {
   /// Is loading.

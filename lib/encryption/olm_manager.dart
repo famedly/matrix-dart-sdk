@@ -20,12 +20,10 @@ import 'dart:convert';
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/matrix_api.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:pedantic/pedantic.dart';
 
 import '../encryption/utils/json_signature_check_extension.dart';
-import '../matrix_api/utils/logs.dart';
 import 'encryption.dart';
 import 'utils/olm_session.dart';
 import '../src/utils/run_in_root.dart';

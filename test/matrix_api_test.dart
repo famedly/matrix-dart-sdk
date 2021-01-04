@@ -17,15 +17,7 @@
  */
 
 import 'dart:typed_data';
-
-import 'package:famedlysdk/matrix_api.dart';
-import 'package:famedlysdk/matrix_api/model/filter.dart';
-import 'package:famedlysdk/matrix_api/model/matrix_exception.dart';
-import 'package:famedlysdk/matrix_api/model/matrix_keys.dart';
-import 'package:famedlysdk/matrix_api/model/presence_content.dart';
-import 'package:famedlysdk/matrix_api/model/push_rule_set.dart';
-import 'package:famedlysdk/matrix_api/model/pusher.dart';
-import 'package:famedlysdk/matrix_api/utils/logs.dart';
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 

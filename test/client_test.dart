@@ -21,8 +21,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/matrix_api.dart';
-import 'package:famedlysdk/matrix_api/utils/logs.dart';
+
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/utils/event_update.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';

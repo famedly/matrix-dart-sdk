@@ -18,7 +18,7 @@
 
 import 'dart:async';
 
-import '../../matrix_api/utils/logs.dart';
+import '../../famedlysdk.dart';
 
 Future<T> runInRoot<T>(FutureOr<T> Function() fn) async {
   return await Zone.root.run(() async {

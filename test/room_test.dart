@@ -19,7 +19,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:famedlysdk/matrix_api.dart';
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/database/database.dart'
     show DbRoom, DbRoomState, DbRoomAccountData;

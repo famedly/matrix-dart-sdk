@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/matrix_api/utils/map_copy_extension.dart';
+import 'package:famedlysdk/src/utils/map_copy_extension.dart';
 import 'package:test/test.dart';
 
 void main() {

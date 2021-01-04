@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import '../../matrix_api.dart';
+import '../../famedlysdk.dart';
 
 /// This extension adds easy-to-use filters for the sync update, meant to be used on the `client.onSync` stream, e.g.
 /// `client.onSync.stream.where((s) => s.hasRoomUpdate)`. Multiple filters can easily be

@@ -17,7 +17,6 @@
  */
 
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/matrix_api.dart';
 import 'package:famedlysdk/src/event.dart';
 import 'package:famedlysdk/src/user.dart';
 import 'package:logger/logger.dart';

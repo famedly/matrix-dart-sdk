@@ -24,13 +24,9 @@ import './encryption.dart';
 import './utils/outbound_group_session.dart';
 import './utils/session_key.dart';
 import '../famedlysdk.dart';
-import '../matrix_api.dart';
 import '../src/database/database.dart';
-import '../matrix_api/utils/logs.dart';
 import '../src/utils/run_in_background.dart';
 import '../src/utils/run_in_root.dart';
-import '../matrix_api/utils/try_get_map_extension.dart';
-import '../matrix_api/utils/map_copy_extension.dart';
 
 const MEGOLM_KEY = EventTypes.MegolmBackup;
 
