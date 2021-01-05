@@ -456,21 +456,29 @@ class Bootstrap {
       // aaaand set the SSSS secrets
       final futures = <Future<void>>[];
       if (masterKey != null) {
-        futures.add(client.onSync.stream.firstWhere((syncUpdate) =>
-            client.userDeviceKeys.containsKey(client.userID) &&
-            client.userDeviceKeys[client.userID].masterKey != null &&
-            client.userDeviceKeys[client.userID].masterKey.ed25519Key ==
-                masterKey.publicKey));
+        futures.add(
+          client.onSync.stream
+              .firstWhere((syncUpdate) =>
+                  client.userDeviceKeys.containsKey(client.userID) &&
+                  client.userDeviceKeys[client.userID].masterKey != null &&
+                  client.userDeviceKeys[client.userID].masterKey.ed25519Key ==
+                      masterKey.publicKey)
+              .then((_) => Logs().v('New Master Key was created')),
+        );
       }
       for (final entry in secretsToStore.entries) {
-        futures.add(client.onSync.stream.firstWhere((syncUpdate) => syncUpdate
-            .accountData
-            .any((accountData) => accountData.type == entry.key)));
+        futures.add(
+          client.onSync.stream
+              .firstWhere((syncUpdate) => syncUpdate.accountData
+                  .any((accountData) => accountData.type == entry.key))
+              .then((_) =>
+                  Logs().v('New Key with type ${entry.key} was created')),
+        );
         await newSsssKey.store(entry.key, entry.value);
       }
-      for (final f in futures) {
-        await f;
-      }
+      Logs().v(
+          'Wait for MasterKey and ${secretsToStore.entries.length} keys to be created');
+      await Future.wait<void>(futures);
       final keysToSign = <SignableKey>[];
       if (masterKey != null) {
         if (client.userDeviceKeys[client.userID].masterKey.ed25519Key !=
@@ -558,6 +566,7 @@ class Bootstrap {
   }
 
   set state(BootstrapState newState) {
+    Logs().v('BootstrapState', newState);
     if (state != BootstrapState.error) {
       _state = newState;
     }
