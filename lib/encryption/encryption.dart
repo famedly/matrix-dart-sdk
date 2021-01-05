@@ -368,7 +368,7 @@ class Encryption {
 
     keyManager.backgroundTasks();
 
-    autovalidateMasterOwnKey();
+//    autovalidateMasterOwnKey();
 
     if (_backgroundTasksRunning) {
       Timer(Duration(seconds: 10), _backgroundTasks);
