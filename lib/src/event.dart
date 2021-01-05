@@ -626,16 +626,15 @@ class Event extends MatrixEvent {
 
   /// Get the relationship type of an event. `null` if there is none
   String get relationshipType {
-    if (content == null || !(content['m.relates_to'] is Map)) {
+    if (content?.tryGet<Map<String, dynamic>>('m.relates_to') == null) {
       return null;
-    }
-    if (content['m.relates_to'].containsKey('rel_type')) {
-      return content['m.relates_to']['rel_type'];
     }
     if (content['m.relates_to'].containsKey('m.in_reply_to')) {
       return RelationshipTypes.Reply;
     }
-    return null;
+    return content
+        .tryGet<Map<String, dynamic>>('m.relates_to')
+        .tryGet<String>('rel_type');
   }
 
   /// Get the event ID that this relationship will reference. `null` if there is none
