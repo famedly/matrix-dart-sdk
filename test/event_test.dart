@@ -174,7 +174,7 @@ void main() {
 
       jsonObj['type'] = 'm.room.message';
       jsonObj['content']['msgtype'] = 'm.text';
-      jsonObj['content']['m.relates_to'] = {};
+      jsonObj['content']['m.relates_to'] = <String, dynamic>{};
       jsonObj['content']['m.relates_to']['m.in_reply_to'] = {
         'event_id': '1234',
       };
