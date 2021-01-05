@@ -362,7 +362,7 @@ class Encryption {
   // this method is responsible for all background tasks, such as uploading online key backups
   bool _backgroundTasksRunning = true;
   void _backgroundTasks() {
-    if (!_backgroundTasksRunning) {
+    if (!_backgroundTasksRunning || !client.isLogged()) {
       return;
     }
 
