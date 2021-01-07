@@ -302,7 +302,7 @@ void main() {
         'status': 2,
         'content': json.encode({
           'msgtype': 'm.bad.encrypted',
-          'body': DecryptError.UNKNOWN_SESSION,
+          'body': DecryptException.unknownSession,
           'can_request_session': true,
           'algorithm': AlgorithmTypes.megolmV1AesSha2,
           'ciphertext': 'AwgAEnACgAkLmt6qF84IK++J7UDH2Za1YVchHyprqTqsg...',
