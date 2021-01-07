@@ -248,17 +248,17 @@ class OlmManager {
       return event;
     }
     if (event.content['algorithm'] != AlgorithmTypes.olmV1Curve25519AesSha2) {
-      throw ('Unknown algorithm: ${event.content['algorithm']}');
+      throw DecryptException(DecryptException.unknownAlgorithm);
     }
     if (!event.content['ciphertext'].containsKey(identityKey)) {
-      throw ("The message isn't sent for this device");
+      throw DecryptException(DecryptException.isntSentForThisDevice);
     }
     String plaintext;
     final String senderKey = event.content['sender_key'];
     final String body = event.content['ciphertext'][identityKey]['body'];
     final int type = event.content['ciphertext'][identityKey]['type'];
     if (type != 0 && type != 1) {
-      throw ('Unknown message type');
+      throw DecryptException(DecryptException.unknownMessageType);
     }
     final device = client.userDeviceKeys[event.sender]?.deviceKeys?.values
         ?.firstWhere((d) => d.curve25519Key == senderKey, orElse: () => null);
@@ -280,7 +280,12 @@ class OlmManager {
     if (existingSessions != null) {
       for (var session in existingSessions) {
         if (type == 0 && session.session.matches_inbound(body) == true) {
-          plaintext = session.session.decrypt(type, body);
+          try {
+            plaintext = session.session.decrypt(type, body);
+          } catch (e) {
+            throw DecryptException(
+                DecryptException.decryptionFailed, e.toString());
+          }
           updateSessionUsage(session);
           break;
         } else if (type == 1) {
@@ -295,7 +300,7 @@ class OlmManager {
       }
     }
     if (plaintext == null && type != 0) {
-      throw ('Unable to decrypt with any existing OLM session');
+      throw DecryptException(DecryptException.unableToDecryptWithAnyOlmSession);
     }
 
     if (plaintext == null) {
@@ -313,24 +318,24 @@ class OlmManager {
               lastReceived: DateTime.now(),
             )));
         updateSessionUsage();
-      } catch (_) {
+      } catch (e) {
         newSession?.free();
-        rethrow;
+        throw DecryptException(DecryptException.decryptionFailed, e.toString());
       }
     }
     final Map<String, dynamic> plainContent = json.decode(plaintext);
     if (plainContent.containsKey('sender') &&
         plainContent['sender'] != event.sender) {
-      throw ("Message was decrypted but sender doesn't match");
+      throw DecryptException(DecryptException.senderDoesntMatch);
     }
     if (plainContent.containsKey('recipient') &&
         plainContent['recipient'] != client.userID) {
-      throw ("Message was decrypted but recipient doesn't match");
+      throw DecryptException(DecryptException.recipientDoesntMatch);
     }
     if (plainContent['recipient_keys'] is Map &&
         plainContent['recipient_keys']['ed25519'] is String &&
         plainContent['recipient_keys']['ed25519'] != fingerprintKey) {
-      throw ("Message was decrypted but own fingerprint Key doesn't match");
+      throw DecryptException(DecryptException.ownFingerprintDoesntMatch);
     }
     return ToDeviceEvent(
       content: plainContent['content'],

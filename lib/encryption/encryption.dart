@@ -155,7 +155,7 @@ class Encryption {
     var canRequestSession = false;
     try {
       if (event.content['algorithm'] != AlgorithmTypes.megolmV1AesSha2) {
-        throw (DecryptError.UNKNOWN_ALGORITHM);
+        throw DecryptException(DecryptException.unknownAlgorithm);
       }
       final String sessionId = event.content['session_id'];
       final String senderKey = event.content['sender_key'];
@@ -163,10 +163,11 @@ class Encryption {
           keyManager.getInboundGroupSession(roomId, sessionId, senderKey);
       if (inboundGroupSession == null) {
         canRequestSession = true;
-        throw (DecryptError.UNKNOWN_SESSION);
+        throw DecryptException(DecryptException.unknownSession);
       }
       // decrypt errors here may mean we have a bad session key - others might have a better one
       canRequestSession = true;
+
       final decryptResult = inboundGroupSession.inboundGroupSession
           .decrypt(event.content['ciphertext']);
       canRequestSession = false;
@@ -179,7 +180,7 @@ class Encryption {
       if (haveIndex &&
           inboundGroupSession.indexes[messageIndexKey] != messageIndexValue) {
         Logs().e('[Decrypt] Could not decrypt due to a corrupted session.');
-        throw (DecryptError.CHANNEL_CORRUPTED);
+        throw DecryptException(DecryptException.channelCorrupted);
       }
       inboundGroupSession.indexes[messageIndexKey] = messageIndexValue;
       if (!haveIndex) {
@@ -197,7 +198,7 @@ class Encryption {
     } catch (exception) {
       // alright, if this was actually by our own outbound group session, we might as well clear it
       if (client.enableE2eeRecovery &&
-          exception != DecryptError.UNKNOWN_SESSION &&
+          exception.toString() != DecryptException.unknownSession &&
           (keyManager
                       .getOutboundGroupSession(roomId)
                       ?.outboundGroupSession
@@ -383,11 +384,30 @@ class Encryption {
   }
 }
 
-abstract class DecryptError {
-  static const String NOT_ENABLED = 'Encryption is not enabled in your client.';
-  static const String UNKNOWN_ALGORITHM = 'Unknown encryption algorithm.';
-  static const String UNKNOWN_SESSION =
+class DecryptException implements Exception {
+  String cause;
+  String libolmMessage;
+  DecryptException(this.cause, [this.libolmMessage]);
+
+  @override
+  String toString() => cause;
+
+  static const String notEnabled = 'Encryption is not enabled in your client.';
+  static const String unknownAlgorithm = 'Unknown encryption algorithm.';
+  static const String unknownSession =
       'The sender has not sent us the session key.';
-  static const String CHANNEL_CORRUPTED =
+  static const String channelCorrupted =
       'The secure channel with the sender was corrupted.';
+  static const String unableToDecryptWithAnyOlmSession =
+      'Unable to decrypt with any existing OLM session';
+  static const String senderDoesntMatch =
+      "Message was decrypted but sender doesn't match";
+  static const String recipientDoesntMatch =
+      "Message was decrypted but recipient doesn't match";
+  static const String ownFingerprintDoesntMatch =
+      "Message was decrypted but own fingerprint Key doesn't match";
+  static const String isntSentForThisDevice =
+      "The message isn't sent for this device";
+  static const String unknownMessageType = 'Unknown message type';
+  static const String decryptionFailed = 'Decryption failed';
 }

@@ -43,16 +43,16 @@ abstract class EventLocalizations {
       case MessageTypes.BadEncrypted:
         String errorText;
         switch (event.body) {
-          case DecryptError.CHANNEL_CORRUPTED:
+          case DecryptException.channelCorrupted:
             errorText = i18n.channelCorruptedDecryptError + '.';
             break;
-          case DecryptError.NOT_ENABLED:
+          case DecryptException.notEnabled:
             errorText = i18n.encryptionNotEnabled + '.';
             break;
-          case DecryptError.UNKNOWN_ALGORITHM:
+          case DecryptException.unknownAlgorithm:
             errorText = i18n.unknownEncryptionAlgorithm + '.';
             break;
-          case DecryptError.UNKNOWN_SESSION:
+          case DecryptException.unknownSession:
             errorText = i18n.noPermission + '.';
             break;
           default:
