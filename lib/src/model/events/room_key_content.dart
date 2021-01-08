@@ -11,6 +11,8 @@ class RoomKeyContent {
   String sessionId;
   String sessionKey;
 
+  RoomKeyContent();
+
   RoomKeyContent.fromJson(Map<String, dynamic> json)
       : algorithm = json.tryGet<String>('algorithm', ''),
         roomId = json.tryGet<String>('room_id', ''),

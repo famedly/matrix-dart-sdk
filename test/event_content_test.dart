@@ -18,6 +18,7 @@
 
 import 'package:matrix_api_lite/matrix_api_lite.dart';
 import 'package:test/test.dart';
+import 'dart:convert';
 
 void main() {
   group('Event Content tests', () {
@@ -36,6 +37,7 @@ void main() {
         'type': 'm.room.encryption',
         'unsigned': {'age': 1234}
       };
+      json = jsonDecode(jsonEncode(json));
       expect(MatrixEvent.fromJson(json).parsedRoomEncryptionContent.toJson(),
           json['content']);
     });
@@ -55,6 +57,7 @@ void main() {
         'type': 'm.room.encrypted',
         'unsigned': {'age': 1234}
       };
+      json = jsonDecode(jsonEncode(json));
       expect(MatrixEvent.fromJson(json).parsedRoomEncryptedContent.toJson(),
           json['content']);
       json = <String, dynamic>{
@@ -75,6 +78,7 @@ void main() {
         'type': 'm.room.encrypted',
         'unsigned': {'age': 1234}
       };
+      json = jsonDecode(jsonEncode(json));
       expect(MatrixEvent.fromJson(json).parsedRoomEncryptedContent.toJson(),
           json['content']);
     });
@@ -88,6 +92,7 @@ void main() {
         },
         'type': 'm.room_key'
       };
+      json = jsonDecode(jsonEncode(json));
       expect(BasicEvent.fromJson(json).parsedRoomKeyContent.toJson(),
           json['content']);
     });
@@ -100,6 +105,7 @@ void main() {
         },
         'type': 'm.room_key_request'
       };
+      json = jsonDecode(jsonEncode(json));
       expect(BasicEvent.fromJson(json).parsedRoomKeyRequestContent.toJson(),
           json['content']);
       json = <String, dynamic>{
@@ -116,7 +122,28 @@ void main() {
         },
         'type': 'm.room_key_request'
       };
+      json = jsonDecode(jsonEncode(json));
       expect(BasicEvent.fromJson(json).parsedRoomKeyRequestContent.toJson(),
+          json['content']);
+    });
+    test('Forwarded Room Key Content', () {
+      var json = <String, dynamic>{
+        'content': {
+          'algorithm': 'm.megolm.v1.aes-sha2',
+          'forwarding_curve25519_key_chain': [
+            'hPQNcabIABgGnx3/ACv/jmMmiQHoeFfuLB17tzWp6Hw'
+          ],
+          'room_id': '!Cuyf34gef24t:localhost',
+          'sender_claimed_ed25519_key':
+              'aj40p+aw64yPIdsxoog8jhPu9i7l7NcFRecuOQblE3Y',
+          'sender_key': 'RF3s+E7RkTQTGF2d8Deol0FkQvgII2aJDf3/Jp5mxVU',
+          'session_id': 'X3lUlvLELLYxeTx4yOVu6UDpasGEVO0Jbu+QFnm0cKQ',
+          'session_key': 'AgAAAADxKHa9uFxcXzwYoNueL5Xqi69IkD4sni8Llf...'
+        },
+        'type': 'm.forwarded_room_key'
+      };
+      json = jsonDecode(jsonEncode(json));
+      expect(BasicEvent.fromJson(json).parsedForwardedRoomKeyContent.toJson(),
           json['content']);
     });
   });
