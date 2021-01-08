@@ -1,3 +1,7 @@
+## 0.1.4
+
+- Fix creating shallow copies all the time
+
 ## 0.1.3
 
 - Set Content-Length on upload
