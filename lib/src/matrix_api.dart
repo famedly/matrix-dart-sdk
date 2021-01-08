@@ -1295,16 +1295,18 @@ class MatrixApi {
   Future<String> upload(Uint8List file, String fileName,
       {String contentType}) async {
     fileName = fileName.split('/').last;
+    final length = file.length;
     var headers = <String, String>{};
     headers['Authorization'] = 'Bearer $accessToken';
     headers['Content-Type'] =
         contentType ?? lookupMimeType(fileName, headerBytes: file);
+    headers['Content-Length'] = length.toString();
     fileName = Uri.encodeQueryComponent(fileName);
     final url =
         '${homeserver.toString()}/_matrix/media/r0/upload?filename=$fileName';
     final streamedRequest = http.StreamedRequest('POST', Uri.parse(url))
       ..headers.addAll(headers);
-    streamedRequest.contentLength = await file.length;
+    streamedRequest.contentLength = length;
     streamedRequest.sink.add(file);
     streamedRequest.sink.close();
     var streamedResponse = _testMode ? null : await streamedRequest.send();

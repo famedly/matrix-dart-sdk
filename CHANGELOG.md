@@ -1,3 +1,7 @@
+## 0.1.3
+
+- Set Content-Length on upload
+
 ## 0.1.2
 
 - Add more encryption and decryption content parsing
