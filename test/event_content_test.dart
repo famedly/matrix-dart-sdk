@@ -91,5 +91,33 @@ void main() {
       expect(BasicEvent.fromJson(json).parsedRoomKeyContent.toJson(),
           json['content']);
     });
+    test('Room Key Request Content', () {
+      var json = <String, dynamic>{
+        'content': {
+          'action': 'request_cancellation',
+          'request_id': '1495474790150.19',
+          'requesting_device_id': 'RJYKSTBOIE'
+        },
+        'type': 'm.room_key_request'
+      };
+      expect(BasicEvent.fromJson(json).parsedRoomKeyRequestContent.toJson(),
+          json['content']);
+      json = <String, dynamic>{
+        'content': {
+          'action': 'request',
+          'body': {
+            'algorithm': 'm.megolm.v1.aes-sha2',
+            'room_id': '!Cuyf34gef24t:localhost',
+            'sender_key': 'RF3s+E7RkTQTGF2d8Deol0FkQvgII2aJDf3/Jp5mxVU',
+            'session_id': 'X3lUlvLELLYxeTx4yOVu6UDpasGEVO0Jbu+QFnm0cKQ'
+          },
+          'request_id': '1495474790150.19',
+          'requesting_device_id': 'RJYKSTBOIE'
+        },
+        'type': 'm.room_key_request'
+      };
+      expect(BasicEvent.fromJson(json).parsedRoomKeyRequestContent.toJson(),
+          json['content']);
+    });
   });
 }
