@@ -81,6 +81,7 @@ export 'src/model/auth/authentication_types.dart';
 export 'src/model/auth/authentication_user_identifier.dart';
 export 'src/model/events/room_encrypted_content.dart';
 export 'src/model/events/room_encryption_content.dart';
+export 'src/model/events/room_key_content.dart';
 export 'src/model/events/secret_storage_default_key_content.dart';
 export 'src/model/events/secret_storage_key_content.dart';
 export 'src/model/events/tombstone_content.dart';

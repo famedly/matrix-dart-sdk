@@ -16,11 +16,13 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:logger/logger.dart';
 import 'package:matrix_api_lite/matrix_api_lite.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('Try-get-map-extension', () {
+    Logs().level = Level.error;
     test('it should work', () {
       final data = <String, dynamic>{
         'str': 'foxies',

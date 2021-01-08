@@ -21,10 +21,14 @@ class RoomEncryptedContent {
         senderKey = json.tryGet<String>('sender_key', ''),
         deviceId = json.tryGet<String>('device_id'),
         sessionId = json.tryGet<String>('session_id'),
-        ciphertextMegolm = json.tryGet<String>('ciphertext'),
-        ciphertextOlm = json
-            .tryGet<Map<String, dynamic>>('ciphertext')
-            ?.map((k, v) => MapEntry(k, CiphertextInfo.fromJson(v)));
+        ciphertextMegolm = json['ciphertext'] is String
+            ? json.tryGet<String>('ciphertext')
+            : null,
+        ciphertextOlm = json['ciphertext'] is Map<String, dynamic>
+            ? json
+                .tryGet<Map<String, dynamic>>('ciphertext')
+                ?.map((k, v) => MapEntry(k, CiphertextInfo.fromJson(v)))
+            : null;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

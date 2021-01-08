@@ -78,5 +78,18 @@ void main() {
       expect(MatrixEvent.fromJson(json).parsedRoomEncryptedContent.toJson(),
           json['content']);
     });
+    test('Room Key Content', () {
+      var json = <String, dynamic>{
+        'content': {
+          'algorithm': 'm.megolm.v1.aes-sha2',
+          'room_id': '!Cuyf34gef24t:localhost',
+          'session_id': 'X3lUlvLELLYxeTx4yOVu6UDpasGEVO0Jbu+QFnm0cKQ',
+          'session_key': 'AgAAAADxKHa9uFxcXzwYoNueL5Xqi69IkD4sni8LlfJL7qNBEY...'
+        },
+        'type': 'm.room_key'
+      };
+      expect(BasicEvent.fromJson(json).parsedRoomKeyContent.toJson(),
+          json['content']);
+    });
   });
 }
