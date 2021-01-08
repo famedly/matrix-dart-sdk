@@ -29,7 +29,7 @@ extension TryGetMapExtension on Map<String, dynamic> {
       return fallbackValue;
     }
     try {
-      return List<T>.from(value);
+      return (value as List).cast<T>();
     } catch (_) {
       Logs().w(
           'Unable to create "List<${T.runtimeType}>" in event content for the key "$key"');
@@ -50,7 +50,7 @@ extension TryGetMapExtension on Map<String, dynamic> {
       return fallbackValue;
     }
     try {
-      return Map<A, B>.from(value);
+      return (value as Map).cast<A, B>();
     } catch (_) {
       Logs().w(
           'Unable to create "Map<${A.runtimeType},${B.runtimeType}>" in event content for the key "$key"');
