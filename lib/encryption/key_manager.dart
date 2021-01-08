@@ -275,15 +275,11 @@ class KeyManager {
     }
     if (!wipe) {
       // first check if it needs to be rotated
-      final encryptionContent = room.getState(EventTypes.Encryption)?.content;
-      final maxMessages = encryptionContent != null &&
-              encryptionContent['rotation_period_msgs'] is int
-          ? encryptionContent['rotation_period_msgs']
-          : 100;
-      final maxAge = encryptionContent != null &&
-              encryptionContent['rotation_period_ms'] is int
-          ? encryptionContent['rotation_period_ms']
-          : 604800000; // default of one week
+      final encryptionContent =
+          room.getState(EventTypes.Encryption)?.parsedRoomEncryptionContent;
+      final maxMessages = encryptionContent?.rotationPeriodMsgs ?? 100;
+      final maxAge = encryptionContent?.rotationPeriodMs ??
+          604800000; // default of one week
       if (sess.sentMessages >= maxMessages ||
           sess.creationTime
               .add(Duration(milliseconds: maxAge))
