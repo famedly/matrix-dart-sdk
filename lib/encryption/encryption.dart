@@ -149,16 +149,19 @@ class Encryption {
   }
 
   Event decryptRoomEventSync(String roomId, Event event) {
+    final content = event.parsedRoomEncryptedContent;
     if (event.type != EventTypes.Encrypted ||
-        event.content['ciphertext'] == null) return event;
+        content.ciphertextMegolm == null) {
+      return event;
+    }
     Map<String, dynamic> decryptedPayload;
     var canRequestSession = false;
     try {
-      if (event.content['algorithm'] != AlgorithmTypes.megolmV1AesSha2) {
+      if (content.algorithm != AlgorithmTypes.megolmV1AesSha2) {
         throw DecryptException(DecryptException.unknownAlgorithm);
       }
-      final String sessionId = event.content['session_id'];
-      final String senderKey = event.content['sender_key'];
+      final sessionId = content.sessionId;
+      final senderKey = content.senderKey;
       final inboundGroupSession =
           keyManager.getInboundGroupSession(roomId, sessionId, senderKey);
       if (inboundGroupSession == null) {
@@ -169,7 +172,7 @@ class Encryption {
       canRequestSession = true;
 
       final decryptResult = inboundGroupSession.inboundGroupSession
-          .decrypt(event.content['ciphertext']);
+          .decrypt(content.ciphertextMegolm);
       canRequestSession = false;
       // we can't have the key be an int, else json-serializing will fail, thus we need it to be a string
       final messageIndexKey = 'key-' + decryptResult.message_index.toString();
@@ -204,7 +207,7 @@ class Encryption {
                       ?.outboundGroupSession
                       ?.session_id() ??
                   '') ==
-              event.content['session_id']) {
+              content.sessionId) {
         runInRoot(() =>
             keyManager.clearOrUseOutboundGroupSession(roomId, wipe: true));
       }

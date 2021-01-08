@@ -1670,9 +1670,8 @@ class Room {
 
   /// Returns the encryption algorithm. Currently only `m.megolm.v1.aes-sha2` is supported.
   /// Returns null if there is no encryption algorithm.
-  String get encryptionAlgorithm => getState(EventTypes.Encryption) != null
-      ? getState(EventTypes.Encryption).content['algorithm'].toString()
-      : null;
+  String get encryptionAlgorithm =>
+      getState(EventTypes.Encryption)?.parsedRoomEncryptionContent?.algorithm;
 
   /// Checks if this room is encrypted.
   bool get encrypted => encryptionAlgorithm != null;

@@ -247,16 +247,17 @@ class OlmManager {
     if (event.type != EventTypes.Encrypted) {
       return event;
     }
-    if (event.content['algorithm'] != AlgorithmTypes.olmV1Curve25519AesSha2) {
+    final content = event.parsedRoomEncryptedContent;
+    if (content.algorithm != AlgorithmTypes.olmV1Curve25519AesSha2) {
       throw DecryptException(DecryptException.unknownAlgorithm);
     }
-    if (!event.content['ciphertext'].containsKey(identityKey)) {
+    if (!content.ciphertextOlm.containsKey(identityKey)) {
       throw DecryptException(DecryptException.isntSentForThisDevice);
     }
     String plaintext;
-    final String senderKey = event.content['sender_key'];
-    final String body = event.content['ciphertext'][identityKey]['body'];
-    final int type = event.content['ciphertext'][identityKey]['type'];
+    final senderKey = content.senderKey;
+    final body = content.ciphertextOlm[identityKey].body;
+    final type = content.ciphertextOlm[identityKey].type;
     if (type != 0 && type != 1) {
       throw DecryptException(DecryptException.unknownMessageType);
     }
@@ -429,7 +430,7 @@ class OlmManager {
     if (event.type != EventTypes.Encrypted) {
       return event;
     }
-    final senderKey = event.content['sender_key'];
+    final senderKey = event.parsedRoomEncryptedContent.senderKey;
     final loadFromDb = () async {
       final sessions = await getOlmSessions(senderKey);
       return sessions.isNotEmpty;
