@@ -80,6 +80,7 @@ export 'src/model/auth/authentication_token.dart';
 export 'src/model/auth/authentication_types.dart';
 export 'src/model/auth/authentication_user_identifier.dart';
 export 'src/model/events/forwarded_room_key_content.dart';
+export 'src/model/events/olm_plaintext_payload.dart';
 export 'src/model/events/room_encrypted_content.dart';
 export 'src/model/events/room_encryption_content.dart';
 export 'src/model/events/room_key_content.dart';

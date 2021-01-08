@@ -146,5 +146,20 @@ void main() {
       expect(BasicEvent.fromJson(json).parsedForwardedRoomKeyContent.toJson(),
           json['content']);
     });
+    test('OLM Plaintext Payload', () {
+      var json = <String, dynamic>{
+        'type': '<type of the plaintext event>',
+        'content': <String, dynamic>{
+          'msgtype': 'm.text',
+          'body': 'Hello world',
+        },
+        'sender': '<sender_user_id>',
+        'recipient': '<recipient_user_id>',
+        'recipient_keys': {'ed25519': '<our_ed25519_key>'},
+        'keys': {'ed25519': '<sender_ed25519_key>'}
+      };
+      json = jsonDecode(jsonEncode(json));
+      expect(OlmPlaintextPayload.fromJson(json).toJson(), json);
+    });
   });
 }
