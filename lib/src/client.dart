@@ -22,6 +22,7 @@ import 'dart:core';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:olm/olm.dart' as olm;
 import 'package:pedantic/pedantic.dart';
 
 import '../encryption.dart';
@@ -335,12 +336,17 @@ class Client extends MatrixApi {
         response.userId == null) {
       throw Exception('Registered but token, device ID or user ID is null.');
     }
-    await init(
-        newToken: response.accessToken,
-        newUserID: response.userId,
-        newHomeserver: homeserver,
-        newDeviceName: initialDeviceDisplayName ?? '',
-        newDeviceID: response.deviceId);
+    try {
+      await init(
+          newToken: response.accessToken,
+          newUserID: response.userId,
+          newHomeserver: homeserver,
+          newDeviceName: initialDeviceDisplayName ?? '',
+          newDeviceID: response.deviceId);
+    } catch (_) {
+      await logout().catchError((_) => null);
+      rethrow;
+    }
     return response;
   }
 
@@ -380,14 +386,19 @@ class Client extends MatrixApi {
         loginResp.userId == null) {
       throw Exception('Registered but token, device ID or user ID is null.');
     }
-    await init(
-      newToken: loginResp.accessToken,
-      newUserID: loginResp.userId,
-      newHomeserver: homeserver,
-      newDeviceName: initialDeviceDisplayName ?? '',
-      newDeviceID: loginResp.deviceId,
-    );
-    return loginResp;
+    try {
+      await init(
+        newToken: loginResp.accessToken,
+        newUserID: loginResp.userId,
+        newHomeserver: homeserver,
+        newDeviceName: initialDeviceDisplayName ?? '',
+        newDeviceID: loginResp.deviceId,
+      );
+      return loginResp;
+    } catch (_) {
+      await logout().catchError((_) => null);
+      rethrow;
+    }
   }
 
   /// Sends a logout command to the homeserver and clears all local data,
@@ -767,9 +778,17 @@ class Client extends MatrixApi {
       _initLock = false;
 
       encryption?.dispose();
-      encryption =
-          Encryption(client: this, enableE2eeRecovery: enableE2eeRecovery);
-      await encryption.init(olmAccount);
+      try {
+        // make sure to throw an exception if libolm doesn't exist
+        await olm.init();
+        olm.get_library_version();
+        encryption =
+            Encryption(client: this, enableE2eeRecovery: enableE2eeRecovery);
+      } catch (_) {
+        encryption?.dispose();
+        encryption = null;
+      }
+      await encryption?.init(olmAccount);
 
       if (database != null) {
         if (id != null) {
