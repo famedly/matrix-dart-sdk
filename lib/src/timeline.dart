@@ -43,7 +43,7 @@ class Timeline {
   StreamSubscription<EventUpdate> sub;
   StreamSubscription<RoomUpdate> roomSub;
   StreamSubscription<String> sessionIdReceivedSub;
-  bool _requestingHistoryLock = false;
+  bool isRequestingHistory = false;
 
   final Map<String, Event> _eventCache = {};
 
@@ -70,8 +70,8 @@ class Timeline {
 
   Future<void> requestHistory(
       {int historyCount = Room.DefaultHistoryCount}) async {
-    if (!_requestingHistoryLock) {
-      _requestingHistoryLock = true;
+    if (!isRequestingHistory) {
+      isRequestingHistory = true;
       await room.requestHistory(
         historyCount: historyCount,
         onHistoryReceived: () {
@@ -83,7 +83,7 @@ class Timeline {
         _proccessHistoryUpdates();
       } finally {
         _collectHistoryUpdates = false;
-        _requestingHistoryLock = false;
+        isRequestingHistory = false;
       }
     }
   }

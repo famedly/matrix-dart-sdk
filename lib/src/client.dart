@@ -1306,7 +1306,9 @@ class Client extends MatrixApi {
         var stateEvent =
             Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder);
         var prevState = room.getState(stateEvent.type, stateEvent.stateKey);
-        if (prevState != null && prevState.sortOrder > stateEvent.sortOrder) {
+        if (eventUpdate.type == EventUpdateType.timeline &&
+            prevState != null &&
+            prevState.sortOrder > stateEvent.sortOrder) {
           Logs().w('''
 A new ${eventUpdate.type} event of the type ${stateEvent.type} has arrived with a previews
 sort order ${stateEvent.sortOrder} than the current ${stateEvent.type} event with a
