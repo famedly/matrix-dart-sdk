@@ -56,12 +56,14 @@ class OlmManager {
         await olm.init();
         _olmAccount = olm.Account();
         _olmAccount.create();
-        if (await uploadKeys(uploadDeviceKeys: true) == false) {
+        if (await uploadKeys(uploadDeviceKeys: true, updateDatabase: false) ==
+            false) {
           throw ('Upload key failed');
         }
       } catch (_) {
         _olmAccount?.free();
         _olmAccount = null;
+        rethrow;
       }
     } else {
       try {
@@ -71,6 +73,7 @@ class OlmManager {
       } catch (_) {
         _olmAccount?.free();
         _olmAccount = null;
+        rethrow;
       }
     }
   }
@@ -136,7 +139,9 @@ class OlmManager {
 
   /// Generates new one time keys, signs everything and upload it to the server.
   Future<bool> uploadKeys(
-      {bool uploadDeviceKeys = false, int oldKeyCount = 0}) async {
+      {bool uploadDeviceKeys = false,
+      int oldKeyCount = 0,
+      bool updateDatabase = true}) async {
     if (!enabled) {
       return true;
     }
@@ -147,13 +152,20 @@ class OlmManager {
     _uploadKeysLock = true;
 
     try {
+      // check if we have OTKs that still need uploading. If we do, we don't try to generate new ones,
+      // instead we try to upload the old ones first
+      final oldOTKsNeedingUpload =
+          json.decode(_olmAccount.one_time_keys())['curve25519'].entries.length;
       // generate one-time keys
       // we generate 2/3rds of max, so that other keys people may still have can
       // still be used
       final oneTimeKeysCount =
           (_olmAccount.max_number_of_one_time_keys() * 2 / 3).floor() -
-              oldKeyCount;
-      _olmAccount.generate_one_time_keys(oneTimeKeysCount);
+              oldKeyCount -
+              oldOTKsNeedingUpload;
+      if (oneTimeKeysCount > 0) {
+        _olmAccount.generate_one_time_keys(oneTimeKeysCount);
+      }
       final Map<String, dynamic> oneTimeKeys =
           json.decode(_olmAccount.one_time_keys());
 
@@ -194,14 +206,23 @@ class OlmManager {
             signJson(keysContent['device_keys'] as Map<String, dynamic>);
       }
 
+      // we save the generated OTKs into the database.
+      // in case the app gets killed during upload or the upload fails due to bad network
+      // we can still re-try later
+      if (updateDatabase) {
+        await client.database?.updateClientKeys(pickledOlmAccount, client.id);
+      }
       final response = await client.uploadDeviceKeys(
         deviceKeys: uploadDeviceKeys
             ? MatrixDeviceKeys.fromJson(keysContent['device_keys'])
             : null,
         oneTimeKeys: signedOneTimeKeys,
       );
+      // mark the OTKs as published and save that to datbase
       _olmAccount.mark_keys_as_published();
-      await client.database?.updateClientKeys(pickledOlmAccount, client.id);
+      if (updateDatabase) {
+        await client.database?.updateClientKeys(pickledOlmAccount, client.id);
+      }
       return response['signed_curve25519'] == oneTimeKeysCount;
     } finally {
       _uploadKeysLock = false;
