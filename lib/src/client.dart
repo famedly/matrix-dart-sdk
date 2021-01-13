@@ -21,6 +21,7 @@ import 'dart:convert';
 import 'dart:core';
 import 'dart:typed_data';
 
+import 'package:famedlysdk/src/utils/run_in_root.dart';
 import 'package:http/http.dart' as http;
 import 'package:olm/olm.dart' as olm;
 import 'package:pedantic/pedantic.dart';
@@ -74,6 +75,8 @@ class Client extends MatrixApi {
 
   int sendMessageTimeoutSeconds;
 
+  bool requestHistoryOnLimitedTimeline;
+
   /// Create a client
   /// [clientName] = unique identifier of this client
   /// [database]: The database instance to use
@@ -96,6 +99,8 @@ class Client extends MatrixApi {
   ///     - *some* m.room.member events, where needed
   /// [roomPreviewLastEvents]: The event types that should be used to calculate the last event
   ///     in a room for the room list.
+  /// Set [requestHistoryOnLimitedTimeline] to controll the automatic behaviour if the client
+  /// receives a limited timeline flag for a room.
   Client(
     this.clientName, {
     this.databaseBuilder,
@@ -106,6 +111,7 @@ class Client extends MatrixApi {
     this.roomPreviewLastEvents,
     this.pinUnreadRooms = false,
     this.sendMessageTimeoutSeconds = 60,
+    this.requestHistoryOnLimitedTimeline = true,
     @deprecated bool debug,
   }) {
     verificationMethods ??= <KeyVerificationMethod>{};
@@ -1290,6 +1296,10 @@ class Client extends MatrixApi {
         }
       }
       if (rooms[j].onUpdate != null) rooms[j].onUpdate.add(rooms[j].id);
+      if (chatUpdate.limitedTimeline) {
+        Logs().v('Limited timeline for ${rooms[j].id} request history now');
+        runInRoot(rooms[j].requestHistory);
+      }
     }
   }
 
