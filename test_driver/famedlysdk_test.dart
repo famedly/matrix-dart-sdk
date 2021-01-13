@@ -149,10 +149,10 @@ void test() async {
     /*assert(inviteRoom.client.encryption.keyManager
           .getInboundGroupSession(inviteRoom.id, currentSessionIdA, '') !=
       null);*/
-    assert(room.lastMessage == testMessage);
-    assert(inviteRoom.lastMessage == testMessage);
+    assert(room.lastEvent.body == testMessage);
+    assert(inviteRoom.lastEvent.body == testMessage);
     Logs().i(
-        "++++ (Bob) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
+        "++++ (Bob) Received decrypted message: '${inviteRoom.lastEvent.body}' ++++");
 
     Logs().i("++++ (Alice) Send again encrypted message: '$testMessage2' ++++");
     await room.sendTextEvent(testMessage2);
@@ -176,10 +176,10 @@ void test() async {
     /*assert(room.client.encryption.keyManager
           .getInboundGroupSession(room.id, currentSessionIdA, '') !=
       null);*/
-    assert(room.lastMessage == testMessage2);
-    assert(inviteRoom.lastMessage == testMessage2);
+    assert(room.lastEvent.body == testMessage2);
+    assert(inviteRoom.lastEvent.body == testMessage2);
     Logs().i(
-        "++++ (Bob) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
+        "++++ (Bob) Received decrypted message: '${inviteRoom.lastEvent.body}' ++++");
 
     Logs().i("++++ (Bob) Send again encrypted message: '$testMessage3' ++++");
     await inviteRoom.sendTextEvent(testMessage3);
@@ -209,10 +209,10 @@ void test() async {
           inviteRoomOutboundGroupSession.outboundGroupSession.session_id(),
           '') !=
       null);*/
-    assert(inviteRoom.lastMessage == testMessage3);
-    assert(room.lastMessage == testMessage3);
+    assert(inviteRoom.lastEvent.body == testMessage3);
+    assert(room.lastEvent.body == testMessage3);
     Logs().i(
-        "++++ (Alice) Received decrypted message: '${room.lastMessage}' ++++");
+        "++++ (Alice) Received decrypted message: '${room.lastEvent.body}' ++++");
 
     Logs().i('++++ Login Bob in another client ++++');
     var testClientC = Client('TestClientC', databaseBuilder: getDatabase);
@@ -256,10 +256,10 @@ void test() async {
     /*assert(inviteRoom.client.encryption.keyManager
           .getInboundGroupSession(inviteRoom.id, currentSessionIdA, '') !=
       null);*/
-    assert(room.lastMessage == testMessage4);
-    assert(inviteRoom.lastMessage == testMessage4);
+    assert(room.lastEvent.body == testMessage4);
+    assert(inviteRoom.lastEvent.body == testMessage4);
     Logs().i(
-        "++++ (Bob) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
+        "++++ (Bob) Received decrypted message: '${inviteRoom.lastEvent.body}' ++++");
 
     Logs().i('++++ Logout Bob another client ++++');
     await testClientC.dispose(closeDatabase: false);
@@ -292,10 +292,10 @@ void test() async {
     /*assert(inviteRoom.client.encryption.keyManager
           .getInboundGroupSession(inviteRoom.id, currentSessionIdA, '') !=
       null);*/
-    assert(room.lastMessage == testMessage6);
-    assert(inviteRoom.lastMessage == testMessage6);
+    assert(room.lastEvent.body == testMessage6);
+    assert(inviteRoom.lastEvent.body == testMessage6);
     Logs().i(
-        "++++ (Bob) Received decrypted message: '${inviteRoom.lastMessage}' ++++");
+        "++++ (Bob) Received decrypted message: '${inviteRoom.lastEvent.body}' ++++");
 
     await room.leave();
     await room.forget();

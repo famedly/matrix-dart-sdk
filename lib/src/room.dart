@@ -141,8 +141,10 @@ class Room {
       }
     }
     if (!(state.stateKey is String) &&
-        ![EventTypes.Message, EventTypes.Sticker, EventTypes.Encrypted]
-            .contains(state.type)) {
+            ![EventTypes.Message, EventTypes.Sticker, EventTypes.Encrypted]
+                .contains(state.type) ||
+        (state.type == EventTypes.Message &&
+            state.messageType.startsWith('m.room.verification.'))) {
       return;
     }
     final oldStateEvent = getState(state.type, state.stateKey ?? '');
@@ -367,7 +369,7 @@ class Room {
     return 'Empty chat';
   }
 
-  /// The last message sent to this room.
+  @Deprecated('Use [lastEvent.body] instead')
   String get lastMessage {
     if (lastEvent != null) {
       return lastEvent.body;

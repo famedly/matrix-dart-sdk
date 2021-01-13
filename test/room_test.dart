@@ -177,7 +177,7 @@ void main() {
           content: {'msgtype': 'm.text', 'body': 'test'},
           stateKey: '');
       expect(room.lastEvent.eventId, '12345');
-      expect(room.lastMessage, 'test');
+      expect(room.lastEvent.body, 'test');
       expect(room.timeCreated, room.lastEvent.originServerTs);
     });
 
