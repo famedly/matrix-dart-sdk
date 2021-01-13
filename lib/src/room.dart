@@ -435,12 +435,25 @@ class Room {
   /// Returns true if this room is unread
   bool get isUnread => notificationCount > 0 || markedUnread;
 
+  /// Sets an unread flag manually for this room. Similar to the setUnreadMarker
+  /// this changes the local account data model before syncing it to make sure
+  /// this works if there is no connection to the homeserver.
   Future<void> setUnread(bool unread) async {
+    final content = MarkedUnread(unread).toJson();
+    await _handleFakeSync(SyncUpdate()
+      ..rooms = (RoomsUpdate()
+        ..join = (({}..[id] = (JoinedRoomUpdate()
+          ..accountData = [
+            BasicRoomEvent()
+              ..content = content
+              ..roomId = id
+              ..type = EventType.MarkedUnread
+          ])))));
     await client.setRoomAccountData(
       client.userID,
       id,
       EventType.MarkedUnread,
-      MarkedUnread(unread).toJson(),
+      content,
     );
     if (unread == false && lastEvent != null) {
       await sendReadMarker(
@@ -918,14 +931,12 @@ class Room {
       await client.handleSync(
           SyncUpdate()
             ..rooms = (RoomsUpdate()
-              ..join = {
-                '$id': (JoinedRoomUpdate()
-                  ..state = resp.state
-                  ..timeline = (TimelineUpdate()
-                    ..limited = false
-                    ..events = resp.chunk
-                    ..prevBatch = resp.end)),
-              }),
+              ..join = ({}..[id] = (JoinedRoomUpdate()
+                ..state = resp.state
+                ..timeline = (TimelineUpdate()
+                  ..limited = false
+                  ..events = resp.chunk
+                  ..prevBatch = resp.end)))),
           sortAtTheEnd: true);
     };
 
