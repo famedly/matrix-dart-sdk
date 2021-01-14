@@ -342,7 +342,7 @@ void main() {
       expect(archive[0].id, '!5345234234:example.com');
       expect(archive[0].membership, Membership.leave);
       expect(archive[0].name, 'The room name');
-      expect(archive[0].lastMessage, 'This is an example text message');
+      expect(archive[0].lastEvent.body, 'This is an example text message');
       expect(archive[0].roomAccountData.length, 1);
       expect(archive[1].id, '!5345234235:example.com');
       expect(archive[1].membership, Membership.leave);
