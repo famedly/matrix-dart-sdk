@@ -391,7 +391,7 @@ void main() {
             'msgtype': 'm.text',
             'body': 'Hello world',
           });
-      await Future.delayed(Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 100));
       expect(
           FakeMatrixApi.calledEndpoints.keys
               .where((k) =>
@@ -440,7 +440,7 @@ void main() {
                   k.startsWith('/client/r0/sendToDevice/m.room.encrypted'))
               .length,
           1);
-      await Future.delayed(Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 100));
       expect(
           FakeMatrixApi.calledEndpoints.keys
               .where((k) =>
