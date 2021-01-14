@@ -17,6 +17,7 @@
  */
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:html_unescape/html_unescape.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
@@ -583,7 +584,8 @@ class Room {
     if (parseMarkdown) {
       final html = markdown(event['body'], emotePacks ?? this.emotePacks);
       // if the decoded html is the same as the body, there is no need in sending a formatted message
-      if (HtmlUnescape().convert(html) != event['body']) {
+      if (HtmlUnescape().convert(html.replaceAll(RegExp(r'<br />\n?'), '\n')) !=
+          event['body']) {
         event['format'] = 'org.matrix.custom.html';
         event['formatted_body'] = html;
       }
@@ -754,9 +756,22 @@ class Room {
       }
       replyText = replyTextLines.join('\n');
       content['format'] = 'org.matrix.custom.html';
+      // be sure that we strip any previous reply fallbacks
+      final replyHtml = (inReplyTo.formattedText.isNotEmpty
+              ? inReplyTo.formattedText
+              : htmlEscape.convert(inReplyTo.body).replaceAll('\n', '<br>'))
+          .replaceAll(
+              RegExp(r'<mx-reply>.*<\/mx-reply>',
+                  caseSensitive: false, multiLine: false, dotAll: true),
+              '');
+      final repliedHtml = content.tryGet<String>(
+          'formatted_body',
+          htmlEscape
+              .convert(content.tryGet<String>('body', ''))
+              .replaceAll('\n', '<br>'));
       content['formatted_body'] =
-          '<mx-reply><blockquote><a href="https://matrix.to/#/${inReplyTo.room.id}/${inReplyTo.eventId}">In reply to</a> <a href="https://matrix.to/#/${inReplyTo.senderId}">${inReplyTo.senderId}</a><br>${inReplyTo.body}</blockquote></mx-reply>${content["formatted_body"] ?? content["body"]}';
-      content['body'] = replyText + "\n\n${content["body"] ?? ""}";
+          '<mx-reply><blockquote><a href="https://matrix.to/#/${inReplyTo.room.id}/${inReplyTo.eventId}">In reply to</a> <a href="https://matrix.to/#/${inReplyTo.senderId}">${inReplyTo.senderId}</a><br>$replyHtml</blockquote></mx-reply>$repliedHtml';
+      content['body'] = replyText + "\n\n${content.tryGet<String>('body', '')}";
       content['m.relates_to'] = {
         'm.in_reply_to': {
           'event_id': inReplyTo.eventId,
