@@ -106,8 +106,12 @@ class User extends Event {
   /// the first character of each word becomes uppercase.
   /// If [mxidLocalPartFallback] is true, then the local part of the mxid will be shown
   /// if there is no other displayname available. If not then this will return "Unknown user".
-  String calcDisplayname(
-      {bool formatLocalpart = true, bool mxidLocalPartFallback = true}) {
+  String calcDisplayname({
+    bool formatLocalpart,
+    bool mxidLocalPartFallback,
+  }) {
+    formatLocalpart ??= room?.client?.formatLocalpart ?? true;
+    mxidLocalPartFallback ??= room?.client?.mxidLocalPartFallback ?? true;
     if (displayName?.isNotEmpty ?? false) {
       return displayName;
     }

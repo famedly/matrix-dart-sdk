@@ -27,17 +27,17 @@ abstract class EventLocalizations {
       Event event, MatrixLocalizations i18n) {
     switch (event.messageType) {
       case MessageTypes.Image:
-        return i18n.sentAPicture(event.senderName);
+        return i18n.sentAPicture(event.sender.calcDisplayname());
       case MessageTypes.File:
-        return i18n.sentAFile(event.senderName);
+        return i18n.sentAFile(event.sender.calcDisplayname());
       case MessageTypes.Audio:
-        return i18n.sentAnAudio(event.senderName);
+        return i18n.sentAnAudio(event.sender.calcDisplayname());
       case MessageTypes.Video:
-        return i18n.sentAVideo(event.senderName);
+        return i18n.sentAVideo(event.sender.calcDisplayname());
       case MessageTypes.Location:
-        return i18n.sharedTheLocation(event.senderName);
+        return i18n.sharedTheLocation(event.sender.calcDisplayname());
       case MessageTypes.Sticker:
-        return i18n.sentASticker(event.senderName);
+        return i18n.sentASticker(event.sender.calcDisplayname());
       case MessageTypes.Emote:
         return '* ${event.body}';
       case MessageTypes.BadEncrypted:
@@ -73,15 +73,16 @@ abstract class EventLocalizations {
   static final Map<String,
           String Function(Event event, MatrixLocalizations i18n)>
       localizationsMap = {
-    EventTypes.Sticker: (event, i18n) => i18n.sentASticker(event.senderName),
+    EventTypes.Sticker: (event, i18n) =>
+        i18n.sentASticker(event.sender.calcDisplayname()),
     EventTypes.Redaction: (event, i18n) =>
-        i18n.redactedAnEvent(event.senderName),
+        i18n.redactedAnEvent(event.sender.calcDisplayname()),
     EventTypes.RoomAliases: (event, i18n) =>
-        i18n.changedTheRoomAliases(event.senderName),
+        i18n.changedTheRoomAliases(event.sender.calcDisplayname()),
     EventTypes.RoomCanonicalAlias: (event, i18n) =>
-        i18n.changedTheRoomInvitationLink(event.senderName),
+        i18n.changedTheRoomInvitationLink(event.sender.calcDisplayname()),
     EventTypes.RoomCreate: (event, i18n) =>
-        i18n.createdTheChat(event.senderName),
+        i18n.createdTheChat(event.sender.calcDisplayname()),
     EventTypes.RoomTombstone: (event, i18n) => i18n.roomHasBeenUpgraded,
     EventTypes.RoomJoinRules: (event, i18n) {
       var joinRules = JoinRules.values.firstWhere(
@@ -90,10 +91,10 @@ abstract class EventLocalizations {
               event.content['join_rule'],
           orElse: () => null);
       if (joinRules == null) {
-        return i18n.changedTheJoinRules(event.senderName);
+        return i18n.changedTheJoinRules(event.sender.calcDisplayname());
       } else {
         return i18n.changedTheJoinRulesTo(
-            event.senderName, joinRules.getLocalizedString(i18n));
+            event.sender.calcDisplayname(), joinRules.getLocalizedString(i18n));
       }
     },
     EventTypes.RoomMember: (event, i18n) {
@@ -111,29 +112,30 @@ abstract class EventLocalizations {
           if (event.stateKey == event.senderId) {
             text = i18n.rejectedTheInvitation(targetName);
           } else {
-            text =
-                i18n.hasWithdrawnTheInvitationFor(event.senderName, targetName);
+            text = i18n.hasWithdrawnTheInvitationFor(
+                event.sender.calcDisplayname(), targetName);
           }
         } else if (oldMembership == 'leave' && newMembership == 'join') {
           text = i18n.joinedTheChat(targetName);
         } else if (oldMembership == 'join' && newMembership == 'ban') {
-          text = i18n.kickedAndBanned(event.senderName, targetName);
+          text =
+              i18n.kickedAndBanned(event.sender.calcDisplayname(), targetName);
         } else if (oldMembership == 'join' &&
             newMembership == 'leave' &&
             event.stateKey != event.senderId) {
-          text = i18n.kicked(event.senderName, targetName);
+          text = i18n.kicked(event.sender.calcDisplayname(), targetName);
         } else if (oldMembership == 'join' &&
             newMembership == 'leave' &&
             event.stateKey == event.senderId) {
           text = i18n.userLeftTheChat(targetName);
         } else if (oldMembership == 'invite' && newMembership == 'ban') {
-          text = i18n.bannedUser(event.senderName, targetName);
+          text = i18n.bannedUser(event.sender.calcDisplayname(), targetName);
         } else if (oldMembership == 'leave' && newMembership == 'ban') {
-          text = i18n.bannedUser(event.senderName, targetName);
+          text = i18n.bannedUser(event.sender.calcDisplayname(), targetName);
         } else if (oldMembership == 'ban' && newMembership == 'leave') {
-          text = i18n.unbannedUser(event.senderName, targetName);
+          text = i18n.unbannedUser(event.sender.calcDisplayname(), targetName);
         } else if (newMembership == 'invite') {
-          text = i18n.invitedUser(event.senderName, targetName);
+          text = i18n.invitedUser(event.sender.calcDisplayname(), targetName);
         } else if (newMembership == 'join') {
           text = i18n.joinedTheChat(targetName);
         }
@@ -160,13 +162,13 @@ abstract class EventLocalizations {
       return text;
     },
     EventTypes.RoomPowerLevels: (event, i18n) =>
-        i18n.changedTheChatPermissions(event.senderName),
-    EventTypes.RoomName: (event, i18n) =>
-        i18n.changedTheChatNameTo(event.senderName, event.content['name']),
+        i18n.changedTheChatPermissions(event.sender.calcDisplayname()),
+    EventTypes.RoomName: (event, i18n) => i18n.changedTheChatNameTo(
+        event.sender.calcDisplayname(), event.content['name']),
     EventTypes.RoomTopic: (event, i18n) => i18n.changedTheChatDescriptionTo(
-        event.senderName, event.content['topic']),
+        event.sender.calcDisplayname(), event.content['topic']),
     EventTypes.RoomAvatar: (event, i18n) =>
-        i18n.changedTheChatAvatar(event.senderName),
+        i18n.changedTheChatAvatar(event.sender.calcDisplayname()),
     EventTypes.GuestAccess: (event, i18n) {
       var guestAccess = GuestAccess.values.firstWhere(
           (r) =>
@@ -174,10 +176,10 @@ abstract class EventLocalizations {
               event.content['guest_access'],
           orElse: () => null);
       if (guestAccess == null) {
-        return i18n.changedTheGuestAccessRules(event.senderName);
+        return i18n.changedTheGuestAccessRules(event.sender.calcDisplayname());
       } else {
-        return i18n.changedTheGuestAccessRulesTo(
-            event.senderName, guestAccess.getLocalizedString(i18n));
+        return i18n.changedTheGuestAccessRulesTo(event.sender.calcDisplayname(),
+            guestAccess.getLocalizedString(i18n));
       }
     },
     EventTypes.HistoryVisibility: (event, i18n) {
@@ -187,25 +189,29 @@ abstract class EventLocalizations {
               event.content['history_visibility'],
           orElse: () => null);
       if (historyVisibility == null) {
-        return i18n.changedTheHistoryVisibility(event.senderName);
+        return i18n.changedTheHistoryVisibility(event.sender.calcDisplayname());
       } else {
         return i18n.changedTheHistoryVisibilityTo(
-            event.senderName, historyVisibility.getLocalizedString(i18n));
+            event.sender.calcDisplayname(),
+            historyVisibility.getLocalizedString(i18n));
       }
     },
     EventTypes.Encryption: (event, i18n) {
-      var localizedBody = i18n.activatedEndToEndEncryption(event.senderName);
+      var localizedBody =
+          i18n.activatedEndToEndEncryption(event.sender.calcDisplayname());
       if (!event.room.client.encryptionEnabled) {
         localizedBody += '. ' + i18n.needPantalaimonWarning;
       }
       return localizedBody;
     },
     EventTypes.CallAnswer: (event, i18n) =>
-        i18n.answeredTheCall(event.senderName),
-    EventTypes.CallHangup: (event, i18n) => i18n.endedTheCall(event.senderName),
-    EventTypes.CallInvite: (event, i18n) => i18n.startedACall(event.senderName),
+        i18n.answeredTheCall(event.sender.calcDisplayname()),
+    EventTypes.CallHangup: (event, i18n) =>
+        i18n.endedTheCall(event.sender.calcDisplayname()),
+    EventTypes.CallInvite: (event, i18n) =>
+        i18n.startedACall(event.sender.calcDisplayname()),
     EventTypes.CallCandidates: (event, i18n) =>
-        i18n.sentCallInformations(event.senderName),
+        i18n.sentCallInformations(event.sender.calcDisplayname()),
     EventTypes.Encrypted: (event, i18n) =>
         _localizedBodyNormalMessage(event, i18n),
     EventTypes.Message: (event, i18n) =>

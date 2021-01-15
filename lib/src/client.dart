@@ -77,6 +77,10 @@ class Client extends MatrixApi {
 
   bool requestHistoryOnLimitedTimeline;
 
+  bool formatLocalpart = true;
+
+  bool mxidLocalPartFallback = true;
+
   /// Create a client
   /// [clientName] = unique identifier of this client
   /// [database]: The database instance to use
@@ -101,6 +105,11 @@ class Client extends MatrixApi {
   ///     in a room for the room list.
   /// Set [requestHistoryOnLimitedTimeline] to controll the automatic behaviour if the client
   /// receives a limited timeline flag for a room.
+  /// If [mxidLocalPartFallback] is true, then the local part of the mxid will be shown
+  /// if there is no other displayname available. If not then this will return "Unknown user".
+  /// If [formatLocalpart] is true, then the localpart of an mxid will
+  /// be formatted in the way, that all "_" characters are becomming white spaces and
+  /// the first character of each word becomes uppercase.
   Client(
     this.clientName, {
     this.databaseBuilder,
