@@ -46,6 +46,7 @@ class Event extends MatrixEvent {
   @Deprecated('Use [type] instead')
   String get typeKey => type;
 
+  @Deprecated('Use [sender.calcDisplayname()] instead')
   String get senderName => sender.calcDisplayname();
 
   /// The room this event belongs to. May be null.
@@ -599,7 +600,7 @@ class Event extends MatrixEvent {
         type == EventTypes.Message &&
         textOnlyMessageTypes.contains(messageType)) {
       final senderNameOrYou =
-          senderId == room.client.userID ? i18n.you : senderName;
+          senderId == room.client.userID ? i18n.you : sender.calcDisplayname();
       localizedBody = '$senderNameOrYou: $localizedBody';
     }
 
