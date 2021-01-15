@@ -1635,7 +1635,6 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     bool onlyVerified = false,
   }) async {
     if (!encryptionEnabled) return;
-    Logs().v('Sending to device message... (${deviceKeys.length} pre-devices)');
     // Don't send this message to blocked devices, and if specified onlyVerified
     // then only send it to verified devices
     if (deviceKeys.isNotEmpty) {
@@ -1645,8 +1644,6 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
           (onlyVerified && !deviceKeys.verified));
       if (deviceKeys.isEmpty) return;
     }
-    Logs().v('Sending to device message... (${deviceKeys.length} pre-devices)');
-    Logs().v(deviceKeys.map((k) => '${k.userId}:${k.deviceId}').toList());
 
     // Send with send-to-device messaging
     var data = <String, Map<String, Map<String, dynamic>>>{};
@@ -1666,19 +1663,24 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     Map<String, dynamic> message,
   ) async {
     if (!encryptionEnabled) return;
+    // be sure to copy our device keys list
+    deviceKeys = List<DeviceKeys>.from(deviceKeys);
     deviceKeys.removeWhere((DeviceKeys k) =>
         k.blocked || (k.userId == userID && k.deviceId == deviceID));
     if (deviceKeys.isEmpty) return;
-    message =
-        json.decode(json.encode(message)); // make sure we deep-copy the message
+    message = message.copy(); // make sure we deep-copy the message
     // make sure all the olm sessions are loaded from database
     Logs().v('Sending to device chunked... (${deviceKeys.length} devices)');
     // sort so that devices we last received messages from get our message first
     deviceKeys.sort((keyA, keyB) => keyB.lastActive.compareTo(keyA.lastActive));
-    Logs().v(deviceKeys.map((k) => '${k.userId}:${k.deviceId}').toList());
     // and now send out in chunks of 20
     const chunkSize = 20;
-    for (var i = 0; i < deviceKeys.length; i += chunkSize) {
+
+    // first we send out all the chunks that we await
+    var i = 0;
+    // we leave this in a for-loop for now, so that we can easily adjust the break condition
+    // based on other things, if we want to hard-`await` more devices in the future
+    for (; i < deviceKeys.length && i <= 0; i += chunkSize) {
       Logs().v('Sending chunk $i...');
       final chunk = deviceKeys.sublist(
           i,
@@ -1686,11 +1688,24 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
               ? deviceKeys.length
               : i + chunkSize);
       // and send
-      Logs().v(chunk.map((k) => '${k.userId}:${k.deviceId}').toList());
-      final future = sendToDeviceEncrypted(chunk, eventType, message);
-      if (i == 0) {
-        await future;
-      }
+      await sendToDeviceEncrypted(chunk, eventType, message);
+    }
+    // now send out the background chunks
+    if (i < deviceKeys.length) {
+      unawaited(() async {
+        for (; i < deviceKeys.length; i += chunkSize) {
+          // wait 50ms to not freeze the UI
+          await Future.delayed(Duration(milliseconds: 50));
+          Logs().v('Sending chunk $i...');
+          final chunk = deviceKeys.sublist(
+              i,
+              i + chunkSize > deviceKeys.length
+                  ? deviceKeys.length
+                  : i + chunkSize);
+          // and send
+          unawaited(sendToDeviceEncrypted(chunk, eventType, message));
+        }
+      }());
     }
   }
 
