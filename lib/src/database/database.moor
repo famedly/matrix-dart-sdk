@@ -29,6 +29,7 @@ CREATE TABLE user_device_keys_key (
   verified BOOLEAN DEFAULT false,
   blocked BOOLEAN DEFAULT false,
   last_active BIGINT,
+  last_sent_message TEXT,
   UNIQUE(client_id, user_id, device_id)
 ) as DbUserDeviceKeysKey;
 CREATE INDEX user_device_keys_key_index ON user_device_keys_key(client_id);
@@ -53,6 +54,7 @@ CREATE TABLE olm_sessions (
   UNIQUE(client_id, identity_key, session_id)
 ) AS DbOlmSessions;
 CREATE INDEX olm_sessions_index ON olm_sessions(client_id);
+CREATE INDEX olm_sessions_identity_index ON olm_sessions(client_id, identity_key);
 
 CREATE TABLE outbound_group_sessions (
   client_id INTEGER NOT NULL REFERENCES clients(client_id),
@@ -204,6 +206,8 @@ setBlockedUserDeviceKey: UPDATE user_device_keys_key SET blocked = :blocked WHER
 storeUserDeviceKey: INSERT OR REPLACE INTO user_device_keys_key (client_id, user_id, device_id, content, verified, blocked, last_active) VALUES (:client_id, :user_id, :device_id, :content, :verified, :blocked, :last_active);
 removeUserDeviceKey: DELETE FROM user_device_keys_key WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
 setLastActiveUserDeviceKey: UPDATE user_device_keys_key SET last_active = :last_active WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
+setLastSentMessageUserDeviceKey: UPDATE user_device_keys_key SET last_sent_message = :last_sent_message WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
+getLastSentMessageUserDeviceKey: SELECT last_sent_message FROM user_device_keys_key WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
 setVerifiedUserCrossSigningKey: UPDATE user_cross_signing_keys SET verified = :verified WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key;
 setBlockedUserCrossSigningKey: UPDATE user_cross_signing_keys SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key;
 storeUserCrossSigningKey: INSERT OR REPLACE INTO user_cross_signing_keys (client_id, user_id, public_key, content, verified, blocked) VALUES (:client_id, :user_id, :public_key, :content, :verified, :blocked);

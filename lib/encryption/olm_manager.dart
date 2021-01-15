@@ -444,7 +444,7 @@ class OlmManager {
     }
     _restoredOlmSessionsTime[mapKey] = DateTime.now();
     await startOutgoingOlmSessions([device]);
-    await client.sendToDeviceEncrypted([device], 'm.dummy', {});
+    await client.sendToDeviceEncrypted([device], EventTypes.Dummy, {});
   }
 
   Future<ToDeviceEvent> decryptToDeviceEvent(ToDeviceEvent event) async {
@@ -542,6 +542,16 @@ class OlmManager {
     };
     final encryptResult = sess.first.session.encrypt(json.encode(fullPayload));
     storeOlmSession(sess.first);
+    if (client.database != null) {
+      unawaited(client.database.setLastSentMessageUserDeviceKey(
+          json.encode({
+            'type': type,
+            'content': payload,
+          }),
+          client.id,
+          device.userId,
+          device.deviceId));
+    }
     final encryptedBody = <String, dynamic>{
       'algorithm': AlgorithmTypes.olmV1Curve25519AesSha2,
       'sender_key': identityKey,
@@ -585,6 +595,35 @@ class OlmManager {
       }
     }
     return data;
+  }
+
+  Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
+    if (event.type == EventTypes.Dummy) {
+      // We receive dan encrypted m.dummy. This means that the other end was not able to
+      // decrypt our last message. So, we re-send it.
+      if (event.encryptedContent == null || client.database == null) {
+        return;
+      }
+      final device = client.getUserDeviceKeysByCurve25519Key(
+          event.encryptedContent.tryGet<String>('sender_key', ''));
+      if (device == null) {
+        return; // device not found
+      }
+      Logs().v(
+          '[OlmManager] Device ${device.userId}:${device.deviceId} generated a new olm session, replaying last sent message...');
+      final lastSentMessageRes = await client.database
+          .getLastSentMessageUserDeviceKey(
+              client.id, device.userId, device.deviceId)
+          .get();
+      if (lastSentMessageRes.isEmpty ||
+          (lastSentMessageRes.first?.isEmpty ?? true)) {
+        return;
+      }
+      final lastSentMessage = json.decode(lastSentMessageRes.first);
+      // okay, time to send the message!
+      await client.sendToDeviceEncrypted(
+          [device], lastSentMessage['type'], lastSentMessage['content']);
+    }
   }
 
   void dispose() {

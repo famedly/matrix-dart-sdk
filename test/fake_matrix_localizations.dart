@@ -1,5 +1,5 @@
 /*
- *   Ansible inventory script used at Famedly GmbH for managing many hosts
+ *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020 Famedly GmbH
  *
  *   This program is free software: you can redistribute it and/or modify
