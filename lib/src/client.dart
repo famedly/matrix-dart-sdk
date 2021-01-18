@@ -351,17 +351,12 @@ class Client extends MatrixApi {
         response.userId == null) {
       throw Exception('Registered but token, device ID or user ID is null.');
     }
-    try {
-      await init(
-          newToken: response.accessToken,
-          newUserID: response.userId,
-          newHomeserver: homeserver,
-          newDeviceName: initialDeviceDisplayName ?? '',
-          newDeviceID: response.deviceId);
-    } catch (_) {
-      await logout().catchError((_) => null);
-      rethrow;
-    }
+    await init(
+        newToken: response.accessToken,
+        newUserID: response.userId,
+        newHomeserver: homeserver,
+        newDeviceName: initialDeviceDisplayName ?? '',
+        newDeviceID: response.deviceId);
     return response;
   }
 
@@ -401,19 +396,14 @@ class Client extends MatrixApi {
         loginResp.userId == null) {
       throw Exception('Registered but token, device ID or user ID is null.');
     }
-    try {
-      await init(
-        newToken: loginResp.accessToken,
-        newUserID: loginResp.userId,
-        newHomeserver: homeserver,
-        newDeviceName: initialDeviceDisplayName ?? '',
-        newDeviceID: loginResp.deviceId,
-      );
-      return loginResp;
-    } catch (_) {
-      await logout().catchError((_) => null);
-      rethrow;
-    }
+    await init(
+      newToken: loginResp.accessToken,
+      newUserID: loginResp.userId,
+      newHomeserver: homeserver,
+      newDeviceName: initialDeviceDisplayName ?? '',
+      newDeviceID: loginResp.deviceId,
+    );
+    return loginResp;
   }
 
   /// Sends a logout command to the homeserver and clears all local data,
@@ -843,7 +833,7 @@ class Client extends MatrixApi {
       return _sync();
     } catch (e, s) {
       Logs().e('Initialization failed', e, s);
-      clear();
+      await logout().catchError((_) => null);
       onLoginStateChanged.addError(e, s);
       _initLock = false;
       rethrow;
