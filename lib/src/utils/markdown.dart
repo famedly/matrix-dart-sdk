@@ -153,6 +153,11 @@ class PillSyntax extends InlineSyntax {
 
   @override
   bool onMatch(InlineParser parser, Match match) {
+    if (match.start > 0 &&
+        !RegExp(r'[\s.!?:;\(]').hasMatch(match.input[match.start - 1])) {
+      parser.addNode(Text(match[0]));
+      return true;
+    }
     final identifier = match[1];
     final element = Element.text('a', identifier);
     element.attributes['href'] = 'https://matrix.to/#/${identifier}';

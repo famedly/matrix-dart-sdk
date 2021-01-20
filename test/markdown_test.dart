@@ -69,6 +69,8 @@ void main() {
           '<a href="https://matrix.to/#/#fox:sorunome.de">#fox:sorunome.de</a>: you all are awesome');
       expect(markdown('!blah:example.org'),
           '<a href="https://matrix.to/#/!blah:example.org">!blah:example.org</a>');
+      expect(markdown('https://matrix.to/#/#fox:sorunome.de'),
+          'https://matrix.to/#/#fox:sorunome.de');
     });
     test('latex', () {
       expect(markdown('meep \$\\frac{2}{3}\$'),
