@@ -495,8 +495,8 @@ class Room {
       if (!(content['emoticons'] is Map) && !(content['short'] is Map)) {
         return;
       }
-      if (content['pack'] is Map && content['pack']['name'] is String) {
-        packName = content['pack']['name'];
+      if (content['pack'] is Map && content['pack']['short'] is String) {
+        packName = content['pack']['short'];
       }
       if (packNameOverride != null && packNameOverride.isNotEmpty) {
         packName = packNameOverride;
