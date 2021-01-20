@@ -70,7 +70,7 @@ class Database extends _$Database {
   Database.connect(DatabaseConnection connection) : super.connect(connection);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   int get maxFileSize => 1 * 1024 * 1024;
 
@@ -162,6 +162,12 @@ class Database extends _$Database {
             if (from == 8) {
               await m.addColumnIfNotExists(
                   userDeviceKeysKey, userDeviceKeysKey.lastActive);
+              from++;
+            }
+            if (from == 9) {
+              await m.addColumnIfNotExists(
+                  userDeviceKeysKey, userDeviceKeysKey.lastSentMessage);
+              await m.createIndexIfNotExists(olmSessionsIdentityIndex);
               from++;
             }
           } catch (e, s) {

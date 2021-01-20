@@ -1,5 +1,5 @@
 /*
- *   Ansible inventory script used at Famedly GmbH for managing many hosts
+ *   Famedly Matrix SDK
  *   Copyright (C) 2020 Famedly GmbH
  *
  *   This program is free software: you can redistribute it and/or modify
@@ -80,12 +80,6 @@ void main() {
     test('encryptToDeviceMessage', () async {
       payload = await otherClient.encryption
           .encryptToDeviceMessage([device], 'm.to_device', {'hello': 'foxies'});
-    });
-
-    test('encryptToDeviceMessagePayload', () async {
-      // just a hard test if nothing errors
-      await otherClient.encryption.encryptToDeviceMessagePayload(
-          device, 'm.to_device', {'hello': 'foxies'});
     });
 
     test('decryptToDeviceEvent', () async {

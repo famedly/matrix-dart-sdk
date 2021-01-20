@@ -1,6 +1,6 @@
 /*
- *   Ansible inventory script used at Famedly GmbH for managing many hosts
- *   Copyright (C) 2020 Famedly GmbH
+ *   Famedly Matrix SDK
+ *   Copyright (C) 2020, 2021 Famedly GmbH
  *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU Affero General Public License as
@@ -124,6 +124,88 @@ void main() {
           client.encryption.olmManager.olmSessions
               .containsKey(client.identityKey),
           true);
+    });
+
+    test('replay to_device events', () async {
+      final userId = '@alice:example.com';
+      final deviceId = 'JLAFKJWSCS';
+      final senderKey = 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8';
+      FakeMatrixApi.calledEndpoints.clear();
+      await client.database.setLastSentMessageUserDeviceKey(
+          json.encode({
+            'type': 'm.foxies',
+            'content': {
+              'floof': 'foxhole',
+            },
+          }),
+          client.id,
+          userId,
+          deviceId);
+      var event = ToDeviceEvent(
+        sender: userId,
+        type: 'm.dummy',
+        content: {},
+        encryptedContent: {
+          'sender_key': senderKey,
+        },
+      );
+      await client.encryption.olmManager.handleToDeviceEvent(event);
+      expect(
+          FakeMatrixApi.calledEndpoints.keys.any(
+              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+          true);
+
+      // fail scenarios
+
+      // not encrypted
+      FakeMatrixApi.calledEndpoints.clear();
+      await client.database.setLastSentMessageUserDeviceKey(
+          json.encode({
+            'type': 'm.foxies',
+            'content': {
+              'floof': 'foxhole',
+            },
+          }),
+          client.id,
+          userId,
+          deviceId);
+      event = ToDeviceEvent(
+        sender: userId,
+        type: 'm.dummy',
+        content: {},
+        encryptedContent: null,
+      );
+      await client.encryption.olmManager.handleToDeviceEvent(event);
+      expect(
+          FakeMatrixApi.calledEndpoints.keys.any(
+              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+          false);
+
+      // device not found
+      FakeMatrixApi.calledEndpoints.clear();
+      await client.database.setLastSentMessageUserDeviceKey(
+          json.encode({
+            'type': 'm.foxies',
+            'content': {
+              'floof': 'foxhole',
+            },
+          }),
+          client.id,
+          userId,
+          deviceId);
+      event = ToDeviceEvent(
+        sender: userId,
+        type: 'm.dummy',
+        content: {},
+        encryptedContent: {
+          'sender_key': 'invalid',
+        },
+      );
+      await client.encryption.olmManager.handleToDeviceEvent(event);
+      expect(
+          FakeMatrixApi.calledEndpoints.keys.any(
+              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+          false);
     });
 
     test('dispose client', () async {

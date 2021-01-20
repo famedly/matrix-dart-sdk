@@ -93,6 +93,11 @@ class Encryption {
       // them in the background
       unawaited(runInRoot(() => keyManager.handleToDeviceEvent(event)));
     }
+    if (event.type == EventTypes.Dummy) {
+      // the previous device just had to create a new olm session, due to olm session
+      // corruption. We want to try to send it the last message we just sent it, if possible
+      unawaited(runInRoot(() => olmManager.handleToDeviceEvent(event)));
+    }
     if (event.type.startsWith('m.key.verification.')) {
       // some key verification event. No need to handle it now, we can easily
       // do this in the background
@@ -334,12 +339,6 @@ class Encryption {
     };
     await keyManager.storeOutboundGroupSession(roomId, sess);
     return encryptedPayload;
-  }
-
-  Future<Map<String, dynamic>> encryptToDeviceMessagePayload(
-      DeviceKeys device, String type, Map<String, dynamic> payload) async {
-    return await olmManager.encryptToDeviceMessagePayload(
-        device, type, payload);
   }
 
   Future<Map<String, dynamic>> encryptToDeviceMessage(
