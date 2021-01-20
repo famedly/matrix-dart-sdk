@@ -52,7 +52,8 @@ void main() {
 
     test('setupClient', () async {
       client = await getClient();
-      await otherClient.checkHomeserver('https://fakeServer.notExisting');
+      await otherClient.checkHomeserver('https://fakeserver.notexisting',
+          checkWellKnown: false);
       otherClient.init(
         newToken: 'abc',
         newUserID: '@othertest:fakeServer.notExisting',

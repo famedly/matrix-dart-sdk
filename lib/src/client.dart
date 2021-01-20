@@ -73,6 +73,8 @@ class Client extends MatrixApi {
 
   Set<String> roomPreviewLastEvents;
 
+  Set<String> supportedLoginTypes;
+
   int sendMessageTimeoutSeconds;
 
   bool requestHistoryOnLimitedTimeline;
@@ -110,6 +112,8 @@ class Client extends MatrixApi {
   /// If [formatLocalpart] is true, then the localpart of an mxid will
   /// be formatted in the way, that all "_" characters are becomming white spaces and
   /// the first character of each word becomes uppercase.
+  /// If your client supports more login types like login with token or SSO, then add this to
+  /// [supportedLoginTypes].
   Client(
     this.clientName, {
     this.databaseBuilder,
@@ -121,8 +125,10 @@ class Client extends MatrixApi {
     this.pinUnreadRooms = false,
     this.sendMessageTimeoutSeconds = 60,
     this.requestHistoryOnLimitedTimeline = true,
+    this.supportedLoginTypes,
     @deprecated bool debug,
   }) {
+    supportedLoginTypes ??= {AuthenticationTypes.password};
     verificationMethods ??= <KeyVerificationMethod>{};
     importantStateEvents ??= {};
     importantStateEvents.addAll([
@@ -287,7 +293,7 @@ class Client extends MatrixApi {
   /// client and sets [homeserver] to [serverUrl] if it is. Supports the types [Uri]
   /// and [String].
   Future<void> checkHomeserver(dynamic homeserverUrl,
-      {Set<String> supportedLoginTypes = supportedLoginTypes}) async {
+      {bool checkWellKnown = true}) async {
     try {
       if (homeserverUrl is Uri) {
         homeserver = homeserverUrl;
@@ -302,8 +308,19 @@ class Client extends MatrixApi {
         }
         homeserver = Uri.parse(homeserverUrl);
       }
-      final versions = await requestSupportedVersions();
 
+      // Look up well known
+      if (checkWellKnown) {
+        try {
+          final wellKnown = await requestWellKnownInformations();
+          homeserver = Uri.parse(wellKnown.mHomeserver.baseUrl);
+        } catch (e) {
+          Logs().v('Found no well known information', e);
+        }
+      }
+
+      // Check if server supports at least one supported version
+      final versions = await requestSupportedVersions();
       if (!versions.versions
           .any((version) => supportedVersions.contains(version))) {
         throw Exception(
@@ -363,7 +380,6 @@ class Client extends MatrixApi {
   /// Handles the login and allows the client to call all APIs which require
   /// authentication. Returns false if the login was not successful. Throws
   /// MatrixException if login was not successful.
-  /// You have to call [checkHomeserver] first to set a homeserver.
   @override
   Future<LoginResponse> login({
     String type = AuthenticationTypes.password,
@@ -377,6 +393,9 @@ class Client extends MatrixApi {
     String initialDeviceDisplayName,
     AuthenticationData auth,
   }) async {
+    if (homeserver == null && user.isValidMatrixId) {
+      await checkHomeserver(user.domain);
+    }
     final loginResp = await super.login(
       type: type,
       userIdentifierType: userIdentifierType,
@@ -592,7 +611,6 @@ class Client extends MatrixApi {
       : null;
 
   static const Set<String> supportedVersions = {'r0.5.0', 'r0.6.0'};
-  static const Set<String> supportedLoginTypes = {AuthenticationTypes.password};
   static const String syncFilters =
       '{"room":{"state":{"lazy_load_members":true}}}';
   static const String messagesFilters = '{"lazy_load_members":true}';

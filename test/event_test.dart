@@ -264,7 +264,8 @@ void main() {
 
     test('sendAgain', () async {
       var matrix = Client('testclient', httpClient: FakeMatrixApi());
-      await matrix.checkHomeserver('https://fakeServer.notExisting');
+      await matrix.checkHomeserver('https://fakeserver.notexisting',
+          checkWellKnown: false);
       await matrix.login(user: 'test', password: '1234');
 
       var event = Event.fromJson(
@@ -280,7 +281,8 @@ void main() {
 
     test('requestKey', () async {
       var matrix = Client('testclient', httpClient: FakeMatrixApi());
-      await matrix.checkHomeserver('https://fakeServer.notExisting');
+      await matrix.checkHomeserver('https://fakeserver.notexisting',
+          checkWellKnown: false);
       await matrix.login(user: 'test', password: '1234');
 
       var event = Event.fromJson(
@@ -1051,7 +1053,8 @@ void main() {
               THUMBNAIL_BUFF,
         }[url];
       };
-      await client.checkHomeserver('https://fakeServer.notExisting');
+      await client.checkHomeserver('https://fakeserver.notexisting',
+          checkWellKnown: false);
       final room = Room(id: '!localpart:server.abc', client: client);
       var event = Event.fromJson({
         'type': EventTypes.Message,
@@ -1234,7 +1237,8 @@ void main() {
               FILE_BUFF,
         }[url];
       };
-      await client.checkHomeserver('https://fakeServer.notExisting');
+      await client.checkHomeserver('https://fakeserver.notexisting',
+          checkWellKnown: false);
       final room = Room(id: '!localpart:server.abc', client: await getClient());
       var event = Event.fromJson({
         'type': EventTypes.Message,
