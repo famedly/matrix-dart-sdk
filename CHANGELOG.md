@@ -1,3 +1,8 @@
+## 0.1.5
+
+- Add m.dummy event
+- fix: Deep-copy arrays correctly
+
 ## 0.1.4
 
 - Fix creating shallow copies all the time
