@@ -763,10 +763,14 @@ class FakeMatrixApi extends MockClient {
           },
       '/media/r0/config': (var req) => {'m.upload.size': 50000000},
       '/.well-known/matrix/client': (var req) => {
-            'm.homeserver': {'base_url': 'https://matrix.example.com'},
-            'm.identity_server': {'base_url': 'https://identity.example.com'},
+            'm.homeserver': {
+              'base_url': 'https://fakeserver.notexisting',
+            },
+            'm.identity_server': {
+              'base_url': 'https://identity.fakeserver.notexisting'
+            },
             'org.example.custom.property': {
-              'app_url': 'https://custom.app.example.org'
+              'app_url': 'https://custom.app.fakeserver.notexisting'
             }
           },
       '/client/r0/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags':

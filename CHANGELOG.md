@@ -1,3 +1,6 @@
+## 0.1.6
+
+- fix: well-known in fake_matrix_api
 ## 0.1.5
 
 - Add m.dummy event
