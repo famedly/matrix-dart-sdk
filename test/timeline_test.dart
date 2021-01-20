@@ -51,7 +51,8 @@ void main() {
         });
 
     test('Create', () async {
-      await client.checkHomeserver('https://fakeServer.notExisting');
+      await client.checkHomeserver('https://fakeserver.notexisting',
+          checkWellKnown: false);
 
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,

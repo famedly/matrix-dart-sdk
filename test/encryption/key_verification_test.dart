@@ -87,7 +87,8 @@ void main() {
       client2 = Client('othertestclient',
           httpClient: FakeMatrixApi(),
           databaseBuilder: (_) => client1.database);
-      await client2.checkHomeserver('https://fakeServer.notExisting');
+      await client2.checkHomeserver('https://fakeserver.notexisting',
+          checkWellKnown: false);
       client2.init(
         newToken: 'abc',
         newUserID: '@othertest:fakeServer.notExisting',

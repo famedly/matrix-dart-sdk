@@ -30,7 +30,8 @@ void main() {
     Logs().level = Level.error;
     test('Formatting', () async {
       var client = Client('testclient', httpClient: FakeMatrixApi());
-      await client.checkHomeserver('https://fakeserver.notexisting');
+      await client.checkHomeserver('https://fakeserver.notexisting',
+          checkWellKnown: false);
       final mxc = 'mxc://exampleserver.abc/abcdefghijklmn';
       final content = Uri.parse(mxc);
       expect(content.isScheme('mxc'), true);

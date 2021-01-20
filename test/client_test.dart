@@ -87,7 +87,8 @@ void main() {
       } on MatrixConnectionException catch (exception) {
         expect(exception != null, true);
       }
-      await matrix.checkHomeserver('https://fakeserver.notexisting');
+      await matrix.checkHomeserver('https://fakeserver.notexisting',
+          checkWellKnown: false);
       expect(matrix.homeserver.toString(), 'https://fakeserver.notexisting');
 
       final available = await matrix.usernameAvailable('testuser');
@@ -318,7 +319,8 @@ void main() {
       roomUpdateListFuture = matrix.onRoomUpdate.stream.toList();
       eventUpdateListFuture = matrix.onEvent.stream.toList();
 
-      await matrix.checkHomeserver('https://fakeServer.notExisting');
+      await matrix.checkHomeserver('https://fakeserver.notexisting',
+          checkWellKnown: false);
 
       final loginResp = await matrix.login(user: 'test', password: '1234');
 
