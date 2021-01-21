@@ -124,7 +124,7 @@ class Client extends MatrixApi {
     this.roomPreviewLastEvents,
     this.pinUnreadRooms = false,
     this.sendMessageTimeoutSeconds = 60,
-    this.requestHistoryOnLimitedTimeline = true,
+    this.requestHistoryOnLimitedTimeline = false,
     this.supportedLoginTypes,
     @deprecated bool debug,
   }) {
