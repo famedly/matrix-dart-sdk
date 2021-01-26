@@ -30,6 +30,19 @@ import 'package:test/test.dart';
 void main() {
   /// All Tests related to device keys
   group('Matrix API', () {
+    test('Logger', () async {
+      Logs().level = Level.verbose;
+      Logs().v('Test log');
+      Logs().d('Test log');
+      Logs().w('Test log');
+      Logs().e('Test log');
+      Logs().wtf('Test log');
+      Logs().v('Test log', Exception('Test'));
+      Logs().d('Test log', Exception('Test'));
+      Logs().w('Test log', Exception('Test'));
+      Logs().e('Test log', Exception('Test'));
+      Logs().wtf('Test log', Exception('Test'));
+    });
     Logs().level = Level.error;
     final matrixApi = MatrixApi(
       httpClient: FakeMatrixApi(),

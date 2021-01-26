@@ -36,7 +36,7 @@ class Logs extends Logger {
 
   Logs._internal()
       : super(
-          printer: PrettyPrinter(methodCount: 0, lineLength: 100),
+          printer: _MatrixSdkPrinter(),
           filter: _MatrixSdkFilter(),
           output: _CacheOutput(),
         );
@@ -52,5 +52,19 @@ class _CacheOutput extends ConsoleOutput {
   void output(OutputEvent event) {
     Logs().outputEvents.add(event);
     super.output(event);
+  }
+}
+
+class _MatrixSdkPrinter extends PrettyPrinter {
+  _MatrixSdkPrinter() : super(methodCount: 0, lineLength: 100);
+
+  @override
+  List<String> log(LogEvent event) {
+    if (event.error == null && event.stackTrace == null) {
+      return [
+        '${PrettyPrinter.levelColors[event.level]}${PrettyPrinter.levelEmojis[event.level]} ${event.message.toString()}'
+      ];
+    }
+    return super.log(event);
   }
 }
