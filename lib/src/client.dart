@@ -1442,6 +1442,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
       if (!isLogged()) return;
       final dbActions = <Future<dynamic> Function()>[];
       var trackedUserIds = await _getUserIdsInEncryptedRooms();
+      if (!isLogged()) return;
       trackedUserIds.add(userID);
 
       // Remove all userIds we no longer need to track the devices of.
@@ -1466,8 +1467,8 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
 
       if (outdatedLists.isNotEmpty) {
         // Request the missing device key lists from the server.
-        if (!isLogged()) return;
         final response = await requestDeviceKeys(outdatedLists, timeout: 10000);
+        if (!isLogged()) return;
 
         for (final rawDeviceKeyListEntry in response.deviceKeys.entries) {
           final userId = rawDeviceKeyListEntry.key;
@@ -1619,6 +1620,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
       }
 
       if (dbActions.isNotEmpty) {
+        if (!isLogged()) return;
         await database?.transaction(() async {
           for (final f in dbActions) {
             await f();
