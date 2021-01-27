@@ -313,7 +313,13 @@ class Client extends MatrixApi {
       if (checkWellKnown) {
         try {
           final wellKnown = await requestWellKnownInformations();
-          homeserver = Uri.parse(wellKnown.mHomeserver.baseUrl);
+          homeserverUrl = wellKnown.mHomeserver.baseUrl.trim();
+          // strip a trailing slash
+          if (homeserverUrl.endsWith('/')) {
+            homeserverUrl =
+                homeserverUrl.substring(0, homeserverUrl.length - 1);
+          }
+          homeserver = Uri.parse(homeserverUrl);
         } catch (e) {
           Logs().v('Found no well known information', e);
         }
