@@ -6,6 +6,8 @@ linter:
     - avoid_print
 
 analyzer:
+  enable-experiment:
+    - non-nullable
   errors:
     todo: ignore
   exclude:

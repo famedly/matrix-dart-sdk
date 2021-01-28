@@ -10,6 +10,7 @@ coverage:
   image: debian:testing
   dependencies: []
   script:
+    - rm -r example
     - apt update
     - apt install -y curl gnupg2 git unzip
     - git clone https://github.com/flutter/flutter.git -b stable
@@ -23,7 +24,6 @@ coverage:
     - chown -R 'test:' '.'
     - chmod +x ./prepare.sh
     - chmod +x ./test.sh
-    - rm -r example
     - su -c ./prepare.sh test
     - su -c ./test.sh test
   artifacts:
@@ -37,19 +37,22 @@ coverage_without_olm:
   image: debian:testing
   dependencies: []
   script:    
+    - rm -r example
     - apt update
-    - apt install -y curl gnupg2 git sqlite3 libsqlite3-dev
-    - curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
-    - curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list
+    - apt install -y curl gnupg2 git unzip
+    - git clone https://github.com/flutter/flutter.git -b stable
+    - export PATH="$PATH:`pwd`/flutter/bin"
+    - sed -i s/#//g pubspec.yaml
+    - flutter doctor
     - apt update
-    - apt install -y dart
+    - apt install -y lcov sqlite3 libsqlite3-dev
     - ln -s /usr/lib/dart/bin/pub /usr/bin/
     - useradd -m test
     - chown -R 'test:' '.'
     - chmod +x ./test.sh
-    - pub get
-    - pub run test
+    - su -c ./test.sh test
   
+
 e2ee_test:
   tags:
     - linux
@@ -62,7 +65,8 @@ e2ee_test:
     - curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
     - curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list
     - apt update
-    - apt install -y dart lcov libolm3 sqlite3 libsqlite3-dev
+    - apt install -y lcov libolm3 sqlite3 libsqlite3-dev
+    - apt-get -t testing install dart
     - ln -s /usr/lib/dart/bin/pub /usr/bin/
     - useradd -m test
     - chown -R 'test:' '.'
@@ -73,6 +77,7 @@ e2ee_test:
     - su -c ./test_driver.sh test
   timeout: 16m
   resource_group: e2ee_test
+
 
 code_analyze:
   tags:
