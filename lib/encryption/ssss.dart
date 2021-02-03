@@ -142,6 +142,24 @@ class SSSS {
         OLM_RECOVERY_KEY_PREFIX.length + SSSS_KEY_LENGTH));
   }
 
+  static String encodeRecoveryKey(Uint8List recoveryKey) {
+    final keyToEncode = <int>[];
+    for (final b in OLM_RECOVERY_KEY_PREFIX) {
+      keyToEncode.add(b);
+    }
+    keyToEncode.addAll(recoveryKey);
+    var parity = 0;
+    for (final b in keyToEncode) {
+      parity ^= b;
+    }
+    keyToEncode.add(parity);
+    // base58-encode and add a space every four chars
+    return base58
+        .encode(keyToEncode)
+        .replaceAllMapped(RegExp(r'.{4}'), (s) => '${s.group(0)} ')
+        .trim();
+  }
+
   static Uint8List keyFromPassphrase(String passphrase, PassphraseInfo info) {
     if (info.algorithm != AlgorithmTypes.pbkdf2) {
       throw Exception('Unknown algorithm');
@@ -595,6 +613,9 @@ class OpenSSSS {
   Uint8List privateKey;
 
   bool get isUnlocked => privateKey != null;
+
+  String get recoveryKey =>
+      isUnlocked ? SSSS.encodeRecoveryKey(privateKey) : null;
 
   Future<void> unlock(
       {String passphrase, String recoveryKey, String keyOrPassphrase}) async {
