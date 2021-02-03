@@ -308,13 +308,14 @@ class Bootstrap {
     checkCrossSigning();
   }
 
-  void openExistingSsss() {
+  Future<void> openExistingSsss() async {
     if (state != BootstrapState.openExistingSsss) {
       throw BootstrapBadStateException();
     }
     if (!newSsssKey.isUnlocked) {
       throw BootstrapBadStateException('Key not unlocked');
     }
+    await newSsssKey.maybeCacheAll();
     checkCrossSigning();
   }
 
