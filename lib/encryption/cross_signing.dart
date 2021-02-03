@@ -70,9 +70,13 @@ class CrossSigning {
             null;
   }
 
-  Future<void> selfSign({String passphrase, String recoveryKey}) async {
+  Future<void> selfSign(
+      {String passphrase, String recoveryKey, String keyOrPassphrase}) async {
     final handle = encryption.ssss.open(EventTypes.CrossSigningMasterKey);
-    await handle.unlock(passphrase: passphrase, recoveryKey: recoveryKey);
+    await handle.unlock(
+        passphrase: passphrase,
+        recoveryKey: recoveryKey,
+        keyOrPassphrase: keyOrPassphrase);
     await handle.maybeCacheAll();
     final masterPrivateKey =
         base64.decode(await handle.getStored(EventTypes.CrossSigningMasterKey));
