@@ -112,6 +112,17 @@ void main() {
       expect(await handle.getStored('best animal'), 'foxies');
     });
 
+    test('encode / decode recovery key', () async {
+      final key = Uint8List.fromList(SecureRandom(32).bytes);
+      final encoded = SSSS.encodeRecoveryKey(key);
+      final decoded = SSSS.decodeRecoveryKey(encoded);
+      expect(key, decoded);
+
+      final handle = client.encryption.ssss.open();
+      await handle.unlock(recoveryKey: SSSS_KEY);
+      expect(handle.recoveryKey, SSSS_KEY);
+    });
+
     test('cache', () async {
       final handle =
           client.encryption.ssss.open(EventTypes.CrossSigningSelfSigning);
