@@ -236,6 +236,12 @@ class Room {
   /// Returns null otherwise.
   String get directChatMatrixID {
     String returnUserId;
+    if (membership == Membership.invite) {
+      final invitation = getState(EventTypes.RoomMember, client.userID);
+      if (invitation != null && invitation.content['is_direct'] == true) {
+        return invitation.senderId;
+      }
+    }
     if (client.directChats is Map<String, dynamic>) {
       client.directChats.forEach((String userId, dynamic roomIds) {
         if (roomIds is List<dynamic>) {
