@@ -104,6 +104,10 @@ class FakeMatrixApi extends MockClient {
               action.contains(
                   '/client/r0/rooms/!1234%3AfakeServer.notExisting/send/')) {
             res = {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
+          } else if (method == 'PUT' &&
+              action.contains(
+                  '/client/r0/rooms/!1234%3AfakeServer.notExisting/state/')) {
+            res = {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
           } else if (action.contains('/client/r0/sync')) {
             res = {
               'next_batch': DateTime.now().millisecondsSinceEpoch.toString
@@ -1830,16 +1834,23 @@ class FakeMatrixApi extends MockClient {
             }
           },
       '/client/r0/rooms/!localpart%3Aexample.com/invite': (var req) => {},
+      '/client/r0/rooms/!1234%3AfakeServer.notExisting/invite': (var req) => {},
       '/client/r0/rooms/!localpart%3Aexample.com/leave': (var req) => {},
+      '/client/r0/rooms/!1234%3AfakeServer.notExisting/leave': (var req) => {},
       '/client/r0/rooms/!localpart%3Aexample.com/forget': (var req) => {},
       '/client/r0/rooms/!localpart%3Aserver.abc/kick': (var req) => {},
+      '/client/r0/rooms/!1234%3AfakeServer.notExisting/kick': (var req) => {},
       '/client/r0/rooms/!localpart%3Aexample.com/kick': (var req) => {},
       '/client/r0/rooms/!localpart%3Aexample.com/ban': (var req) => {},
+      '/client/r0/rooms/!1234%3AfakeServer.notExisting/ban': (var req) => {},
       '/client/r0/rooms/!localpart%3Aexample.com/unban': (var req) => {},
+      '/client/r0/rooms/!1234%3AfakeServer.notExisting/unban': (var req) => {},
       '/client/r0/rooms/!localpart%3Aexample.com/join': (var req) =>
           {'room_id': '!localpart:example.com'},
       '/client/r0/join/!localpart%3Aexample.com?server_name=example.com&server_name=example.abc':
           (var req) => {'room_id': '!localpart:example.com'},
+      '/client/r0/join/!newroom%3Aexample.com': (var req) =>
+          {'room_id': '!newroom%3A:example.com'},
       '/client/r0/keys/upload': (var req) => {
             'one_time_key_counts': {
               'curve25519': 10,

@@ -31,6 +31,7 @@ export 'src/utils/states_map.dart';
 export 'src/utils/sync_update_extension.dart';
 export 'src/utils/to_device_event.dart';
 export 'src/utils/uia_request.dart';
+export 'src/utils/commands_extension.dart';
 export 'src/client.dart';
 export 'src/event.dart';
 export 'src/room.dart';

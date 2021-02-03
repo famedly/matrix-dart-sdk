@@ -32,6 +32,7 @@ import 'database/database.dart' show Database;
 import 'event.dart';
 import 'room.dart';
 import 'user.dart';
+import 'utils/commands_extension.dart';
 import 'utils/device_keys_list.dart';
 import 'utils/event_update.dart';
 import 'utils/matrix_file.dart';
@@ -82,6 +83,9 @@ class Client extends MatrixApi {
   bool formatLocalpart = true;
 
   bool mxidLocalPartFallback = true;
+
+  // For CommandsClientExtension
+  final Map<String, FutureOr<String> Function(CommandArgs)> commands = {};
 
   /// Create a client
   /// [clientName] = unique identifier of this client
@@ -147,6 +151,9 @@ class Client extends MatrixApi {
       EventTypes.Sticker,
     ]);
     this.httpClient = httpClient ?? http.Client();
+
+    // register all the default commands
+    registerDefaultCommands();
   }
 
   /// The required name for this client.
