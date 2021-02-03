@@ -83,7 +83,11 @@ class FakeMatrixApi extends MockClient {
           if (api.containsKey(method) && api[method].containsKey(action)) {
             res = api[method][action](data);
             if (res is Map && res.containsKey('errcode')) {
-              statusCode = 405;
+              if (res['errcode'] == 'M_NOT_FOUND') {
+                statusCode = 404;
+              } else {
+                statusCode = 405;
+              }
             }
           } else if (method == 'PUT' &&
               action.contains('/client/r0/sendToDevice/')) {
@@ -1277,6 +1281,41 @@ class FakeMatrixApi extends MockClient {
               'formatted_body': '<b>This is an example text message</b>'
             },
             'type': 'm.room.message',
+            'event_id': '143273582443PhrSn:example.org',
+            'room_id': '!localpart:server.abc',
+            'sender': '@example:example.org',
+            'origin_server_ts': 1432735824653,
+            'unsigned': {'age': 1234}
+          },
+      '/client/r0/rooms/!1234%3Aexample.com/event/not_found': (var req) => {
+            'errcode': 'M_NOT_FOUND',
+            'error': 'Event not found',
+          },
+      '/client/r0/rooms/!1234%3Aexample.com/event/unencrypted_event':
+          (var req) => {
+                'content': {
+                  'body': 'This is an example text message',
+                  'msgtype': 'm.text',
+                  'format': 'org.matrix.custom.html',
+                  'formatted_body': '<b>This is an example text message</b>'
+                },
+                'type': 'm.room.message',
+                'event_id': '143273582443PhrSn:example.org',
+                'room_id': '!localpart:server.abc',
+                'sender': '@example:example.org',
+                'origin_server_ts': 1432735824653,
+                'unsigned': {'age': 1234}
+              },
+      '/client/r0/rooms/!1234%3Aexample.com/event/encrypted_event': (var req) =>
+          {
+            'content': {
+              'algorithm': 'm.megolm.v1.aes-sha2',
+              'ciphertext': 'invalid',
+              'device_id': 'SOME_DEVICE',
+              'sender_key': 'invalid',
+              'session_id': 'not_found'
+            },
+            'type': 'm.room.encrypted',
             'event_id': '143273582443PhrSn:example.org',
             'room_id': '!localpart:server.abc',
             'sender': '@example:example.org',

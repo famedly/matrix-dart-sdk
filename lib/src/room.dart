@@ -1299,8 +1299,21 @@ class Room {
 
   /// Searches for the event on the server. Returns null if not found.
   Future<Event> getEventById(String eventID) async {
-    final matrixEvent = await client.requestEvent(id, eventID);
-    return Event.fromMatrixEvent(matrixEvent, this);
+    try {
+      final matrixEvent = await client.requestEvent(id, eventID);
+      final event = Event.fromMatrixEvent(matrixEvent, this);
+      if (event.type == EventTypes.Encrypted && client.encryptionEnabled) {
+        // attempt decryption
+        return await client.encryption
+            .decryptRoomEvent(id, event, store: false);
+      }
+      return event;
+    } on MatrixException catch (err) {
+      if (err.errcode == 'M_NOT_FOUND') {
+        return null;
+      }
+      rethrow;
+    }
   }
 
   /// Returns the power level of the given user ID.

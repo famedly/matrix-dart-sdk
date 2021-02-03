@@ -24,7 +24,8 @@ import 'package:famedlysdk/src/room.dart';
 import 'package:famedlysdk/src/timeline.dart';
 import 'package:famedlysdk/src/utils/event_update.dart';
 import 'package:famedlysdk/src/utils/room_update.dart';
-import 'fake_matrix_api.dart';
+import 'package:olm/olm.dart' as olm;
+import 'fake_client.dart';
 
 void main() {
   /// All Tests related to the MxContent
@@ -34,21 +35,35 @@ void main() {
     final testTimeStamp = DateTime.now().millisecondsSinceEpoch;
     var updateCount = 0;
     var insertList = <int>[];
+    var olmEnabled = true;
+    try {
+      olm.init();
+      olm.Account();
+    } catch (e) {
+      olmEnabled = false;
+      Logs().w('[LibOlm] Failed to load LibOlm', e);
+    }
+    Logs().i('[LibOlm] Enabled: $olmEnabled');
 
-    var client = Client('testclient',
-        httpClient: FakeMatrixApi(), sendMessageTimeoutSeconds: 5);
+    Client client;
+    Room room;
+    Timeline timeline;
+    test('create stuff', () async {
+      client = await getClient();
+      client.sendMessageTimeoutSeconds = 5;
 
-    var room = Room(
-        id: roomID, client: client, prev_batch: '1234', roomAccountData: {});
-    var timeline = Timeline(
-        room: room,
-        events: [],
-        onUpdate: () {
-          updateCount++;
-        },
-        onInsert: (int insertID) {
-          insertList.add(insertID);
-        });
+      room = Room(
+          id: roomID, client: client, prev_batch: '1234', roomAccountData: {});
+      timeline = Timeline(
+          room: room,
+          events: [],
+          onUpdate: () {
+            updateCount++;
+          },
+          onInsert: (int insertID) {
+            insertList.add(insertID);
+          });
+    });
 
     test('Create', () async {
       await client.checkHomeserver('https://fakeserver.notexisting',
@@ -219,6 +234,23 @@ void main() {
       expect(insertList, [0, 0, 0, 0, 0, 0, 0]);
       expect(timeline.events.length, 6);
       expect(timeline.events[0].status, -1);
+    });
+
+    test('getEventById', () async {
+      var event = await timeline.getEventById('abc');
+      expect(event.content, {'msgtype': 'm.text', 'body': 'Testcase'});
+
+      event = await timeline.getEventById('not_found');
+      expect(event, null);
+
+      event = await timeline.getEventById('unencrypted_event');
+      expect(event.body, 'This is an example text message');
+
+      if (olmEnabled) {
+        event = await timeline.getEventById('encrypted_event');
+        // the event is invalid but should have traces of attempting to decrypt
+        expect(event.messageType, MessageTypes.BadEncrypted);
+      }
     });
 
     test('Resend message', () async {
@@ -564,6 +596,9 @@ void main() {
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, 2);
       expect(timeline.events.length, 1);
+    });
+    test('logout', () async {
+      await client.logout();
     });
   });
 }
