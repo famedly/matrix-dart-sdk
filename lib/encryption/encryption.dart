@@ -392,7 +392,8 @@ class DecryptException implements Exception {
   DecryptException(this.cause, [this.libolmMessage]);
 
   @override
-  String toString() => cause;
+  String toString() =>
+      cause + (libolmMessage != null ? ': $libolmMessage' : '');
 
   static const String notEnabled = 'Encryption is not enabled in your client.';
   static const String unknownAlgorithm = 'Unknown encryption algorithm.';

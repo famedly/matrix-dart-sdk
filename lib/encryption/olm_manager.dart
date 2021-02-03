@@ -305,6 +305,7 @@ class OlmManager {
           try {
             plaintext = session.session.decrypt(type, body);
           } catch (e) {
+            // The message was encrypted during this session, but is unable to decrypt
             throw DecryptException(
                 DecryptException.decryptionFailed, e.toString());
           }
