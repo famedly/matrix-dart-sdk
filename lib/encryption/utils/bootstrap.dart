@@ -205,8 +205,14 @@ class Bootstrap {
       throw BootstrapBadStateException('Wrong State');
     }
     if (use) {
-      newSsssKey = encryption.ssss.open(encryption.ssss.defaultKeyId);
-      state = BootstrapState.openExistingSsss;
+      try {
+        newSsssKey = encryption.ssss.open(encryption.ssss.defaultKeyId);
+        state = BootstrapState.openExistingSsss;
+      } catch (e, s) {
+        Logs().e('[Bootstrapping] Error open SSSS', e, s);
+        state = BootstrapState.error;
+        return;
+      }
     } else if (badSecrets().isNotEmpty) {
       state = BootstrapState.askBadSsss;
     } else {
@@ -233,9 +239,8 @@ class Bootstrap {
       for (final key in keys) {
         oldSsssKeys[key] = encryption.ssss.open(key);
       }
-    } catch (e) {
-      // very bad
-      Logs().e('[Bootstrapping] Error construction ssss key', e);
+    } catch (e, s) {
+      Logs().e('[Bootstrapping] Error construction ssss key', e, s);
       state = BootstrapState.error;
       return;
     }
@@ -346,104 +351,105 @@ class Bootstrap {
       checkOnlineKeyBackup();
       return;
     }
-    Uint8List masterSigningKey;
-    final secretsToStore = <String, String>{};
-    MatrixCrossSigningKey masterKey;
-    MatrixCrossSigningKey selfSigningKey;
-    MatrixCrossSigningKey userSigningKey;
-    String masterPub;
-    if (setupMasterKey) {
-      final master = olm.PkSigning();
-      try {
-        masterSigningKey = master.generate_seed();
-        masterPub = master.init_with_seed(masterSigningKey);
-        final json = <String, dynamic>{
-          'user_id': client.userID,
-          'usage': ['master'],
-          'keys': <String, dynamic>{
-            'ed25519:$masterPub': masterPub,
-          },
-        };
-        masterKey = MatrixCrossSigningKey.fromJson(json);
-        secretsToStore[EventTypes.CrossSigningMasterKey] =
-            base64.encode(masterSigningKey);
-      } finally {
-        master.free();
-      }
-    } else {
-      masterSigningKey = base64.decode(
-          await newSsssKey.getStored(EventTypes.CrossSigningMasterKey) ?? '');
-      if (masterSigningKey == null || masterSigningKey.isEmpty) {
-        // no master signing key :(
-        throw BootstrapBadStateException('No master key');
-      }
-      final master = olm.PkSigning();
-      try {
-        masterPub = master.init_with_seed(masterSigningKey);
-      } finally {
-        master.free();
-      }
-    }
-    final _sign = (Map<String, dynamic> object) {
-      final keyObj = olm.PkSigning();
-      try {
-        keyObj.init_with_seed(masterSigningKey);
-        return keyObj.sign(String.fromCharCodes(canonicalJson.encode(object)));
-      } finally {
-        keyObj.free();
-      }
-    };
-    if (setupSelfSigningKey) {
-      final selfSigning = olm.PkSigning();
-      try {
-        final selfSigningPriv = selfSigning.generate_seed();
-        final selfSigningPub = selfSigning.init_with_seed(selfSigningPriv);
-        final json = <String, dynamic>{
-          'user_id': client.userID,
-          'usage': ['self_signing'],
-          'keys': <String, dynamic>{
-            'ed25519:$selfSigningPub': selfSigningPub,
-          },
-        };
-        final signature = _sign(json);
-        json['signatures'] = <String, dynamic>{
-          client.userID: <String, dynamic>{
-            'ed25519:$masterPub': signature,
-          },
-        };
-        selfSigningKey = MatrixCrossSigningKey.fromJson(json);
-        secretsToStore[EventTypes.CrossSigningSelfSigning] =
-            base64.encode(selfSigningPriv);
-      } finally {
-        selfSigning.free();
-      }
-    }
-    if (setupUserSigningKey) {
-      final userSigning = olm.PkSigning();
-      try {
-        final userSigningPriv = userSigning.generate_seed();
-        final userSigningPub = userSigning.init_with_seed(userSigningPriv);
-        final json = <String, dynamic>{
-          'user_id': client.userID,
-          'usage': ['user_signing'],
-          'keys': <String, dynamic>{
-            'ed25519:$userSigningPub': userSigningPub,
-          },
-        };
-        final signature = _sign(json);
-        json['signatures'] = <String, dynamic>{
-          client.userID: <String, dynamic>{
-            'ed25519:$masterPub': signature,
-          },
-        };
-        userSigningKey = MatrixCrossSigningKey.fromJson(json);
-        secretsToStore[EventTypes.CrossSigningUserSigning] =
-            base64.encode(userSigningPriv);
-      } finally {
-        userSigning.free();
-      }
-    }
     try {
+      Uint8List masterSigningKey;
+      final secretsToStore = <String, String>{};
+      MatrixCrossSigningKey masterKey;
+      MatrixCrossSigningKey selfSigningKey;
+      MatrixCrossSigningKey userSigningKey;
+      String masterPub;
+      if (setupMasterKey) {
+        final master = olm.PkSigning();
+        try {
+          masterSigningKey = master.generate_seed();
+          masterPub = master.init_with_seed(masterSigningKey);
+          final json = <String, dynamic>{
+            'user_id': client.userID,
+            'usage': ['master'],
+            'keys': <String, dynamic>{
+              'ed25519:$masterPub': masterPub,
+            },
+          };
+          masterKey = MatrixCrossSigningKey.fromJson(json);
+          secretsToStore[EventTypes.CrossSigningMasterKey] =
+              base64.encode(masterSigningKey);
+        } finally {
+          master.free();
+        }
+      } else {
+        masterSigningKey = base64.decode(
+            await newSsssKey.getStored(EventTypes.CrossSigningMasterKey) ?? '');
+        if (masterSigningKey == null || masterSigningKey.isEmpty) {
+          // no master signing key :(
+          throw BootstrapBadStateException('No master key');
+        }
+        final master = olm.PkSigning();
+        try {
+          masterPub = master.init_with_seed(masterSigningKey);
+        } finally {
+          master.free();
+        }
+      }
+      final _sign = (Map<String, dynamic> object) {
+        final keyObj = olm.PkSigning();
+        try {
+          keyObj.init_with_seed(masterSigningKey);
+          return keyObj
+              .sign(String.fromCharCodes(canonicalJson.encode(object)));
+        } finally {
+          keyObj.free();
+        }
+      };
+      if (setupSelfSigningKey) {
+        final selfSigning = olm.PkSigning();
+        try {
+          final selfSigningPriv = selfSigning.generate_seed();
+          final selfSigningPub = selfSigning.init_with_seed(selfSigningPriv);
+          final json = <String, dynamic>{
+            'user_id': client.userID,
+            'usage': ['self_signing'],
+            'keys': <String, dynamic>{
+              'ed25519:$selfSigningPub': selfSigningPub,
+            },
+          };
+          final signature = _sign(json);
+          json['signatures'] = <String, dynamic>{
+            client.userID: <String, dynamic>{
+              'ed25519:$masterPub': signature,
+            },
+          };
+          selfSigningKey = MatrixCrossSigningKey.fromJson(json);
+          secretsToStore[EventTypes.CrossSigningSelfSigning] =
+              base64.encode(selfSigningPriv);
+        } finally {
+          selfSigning.free();
+        }
+      }
+      if (setupUserSigningKey) {
+        final userSigning = olm.PkSigning();
+        try {
+          final userSigningPriv = userSigning.generate_seed();
+          final userSigningPub = userSigning.init_with_seed(userSigningPriv);
+          final json = <String, dynamic>{
+            'user_id': client.userID,
+            'usage': ['user_signing'],
+            'keys': <String, dynamic>{
+              'ed25519:$userSigningPub': userSigningPub,
+            },
+          };
+          final signature = _sign(json);
+          json['signatures'] = <String, dynamic>{
+            client.userID: <String, dynamic>{
+              'ed25519:$masterPub': signature,
+            },
+          };
+          userSigningKey = MatrixCrossSigningKey.fromJson(json);
+          secretsToStore[EventTypes.CrossSigningUserSigning] =
+              base64.encode(userSigningPriv);
+        } finally {
+          userSigning.free();
+        }
+      }
       // upload the keys!
       state = BootstrapState.loading;
       await client.uiaRequestBackground(
@@ -533,16 +539,16 @@ class Bootstrap {
       state = BootstrapState.done;
       return;
     }
-    final keyObj = olm.PkDecryption();
-    String pubKey;
-    Uint8List privKey;
     try {
-      pubKey = keyObj.generate_key();
-      privKey = keyObj.get_private_key();
-    } finally {
-      keyObj.free();
-    }
-    try {
+      final keyObj = olm.PkDecryption();
+      String pubKey;
+      Uint8List privKey;
+      try {
+        pubKey = keyObj.generate_key();
+        privKey = keyObj.get_private_key();
+      } finally {
+        keyObj.free();
+      }
       // create the new backup version
       await client.createRoomKeysBackup(
         RoomKeysAlgorithmType.v1Curve25519AesSha2,
