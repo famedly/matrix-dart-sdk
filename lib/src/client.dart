@@ -471,10 +471,11 @@ class Client extends MatrixApi {
           completer.complete(uia.result);
         } else if (state == UiaRequestState.fail) {
           completer.completeError(uia.error);
+        } else {
+          onUiaRequest.add(uia);
         }
       },
     );
-    onUiaRequest.add(uia);
     return completer.future;
   }
 
