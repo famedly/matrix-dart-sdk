@@ -453,6 +453,7 @@ class Bootstrap {
       }
       // upload the keys!
       state = BootstrapState.loading;
+      Logs().v('Upload device signing keys.');
       await client.uiaRequestBackground(
           (AuthenticationData auth) => client.uploadDeviceSigningKeys(
                 masterKey: masterKey,
@@ -460,6 +461,7 @@ class Bootstrap {
                 userSigningKey: userSigningKey,
                 auth: auth,
               ));
+      Logs().v('Device signing keys have been uploaded.');
       // aaaand set the SSSS secrets
       final futures = <Future<void>>[];
       if (masterKey != null) {
@@ -481,6 +483,7 @@ class Bootstrap {
               .then((_) =>
                   Logs().v('New Key with type ${entry.key} was created')),
         );
+        Logs().v('Store new SSSS key ${entry.key}...');
         await newSsssKey.store(entry.key, entry.value);
       }
       Logs().v(
