@@ -144,24 +144,7 @@ class User extends Event {
 
   /// Returns an existing direct chat ID with this user or creates a new one.
   /// Returns null on error.
-  Future<String> startDirectChat() async {
-    // Try to find an existing direct chat
-    var roomID = await room.client?.getDirectChatFromUserId(id);
-    if (roomID != null) return roomID;
-
-    // Start a new direct chat
-    final newRoomID = await room.client.createRoom(
-      invite: [id],
-      isDirect: true,
-      preset: CreateRoomPreset.trusted_private_chat,
-    );
-
-    if (newRoomID == null) return newRoomID;
-
-    await Room(id: newRoomID, client: room.client).addToDirectChat(id);
-
-    return newRoomID;
-  }
+  Future<String> startDirectChat() => room.client.startDirectChat(id);
 
   /// The newest presence of this user if there is any and null if not.
   Presence get presence => room.client.presences[id];

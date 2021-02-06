@@ -479,6 +479,27 @@ class Client extends MatrixApi {
     return completer.future;
   }
 
+  /// Returns an existing direct room ID with this user or creates a new one.
+  /// Returns null on error.
+  Future<String> startDirectChat(String mxid) async {
+    // Try to find an existing direct chat
+    var roomId = getDirectChatFromUserId(mxid);
+    if (roomId != null) return roomId;
+
+    // Start a new direct chat
+    roomId = await createRoom(
+      invite: [mxid],
+      isDirect: true,
+      preset: CreateRoomPreset.trusted_private_chat,
+    );
+
+    if (roomId == null) return roomId;
+
+    await Room(id: roomId, client: this).addToDirectChat(mxid);
+
+    return roomId;
+  }
+
   /// Returns the user's own displayname and avatar url. In Matrix it is possible that
   /// one user can have different displaynames and avatar urls in different rooms. So
   /// this endpoint first checks if the profile is the same in all rooms. If not, the
