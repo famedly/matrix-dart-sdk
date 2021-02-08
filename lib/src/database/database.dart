@@ -70,7 +70,7 @@ class Database extends _$Database {
   Database.connect(DatabaseConnection connection) : super.connect(connection);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   int get maxFileSize => 1 * 1024 * 1024;
 
@@ -168,6 +168,11 @@ class Database extends _$Database {
               await m.addColumnIfNotExists(
                   userDeviceKeysKey, userDeviceKeysKey.lastSentMessage);
               await m.createIndexIfNotExists(olmSessionsIdentityIndex);
+              from++;
+            }
+            if (from == 10) {
+              await m.createTableIfNotExists(toDeviceQueue);
+              await m.createIndexIfNotExists(toDeviceQueueIndex);
               from++;
             }
           } catch (e, s) {
@@ -658,6 +663,8 @@ class Database extends _$Database {
         .go();
     await (delete(ssssCache)..where((r) => r.clientId.equals(clientId))).go();
     await (delete(clients)..where((r) => r.clientId.equals(clientId))).go();
+    await (delete(toDeviceQueue)..where((r) => r.clientId.equals(clientId)))
+        .go();
   }
 
   Future<sdk.User> getUser(int clientId, String userId, sdk.Room room) async {

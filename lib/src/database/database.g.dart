@@ -5595,6 +5595,326 @@ class Presences extends Table with TableInfo<Presences, DbPresence> {
   bool get dontWriteConstraints => true;
 }
 
+class DbToDeviceQueue extends DataClass implements Insertable<DbToDeviceQueue> {
+  final int clientId;
+  final int id;
+  final String type;
+  final String txnId;
+  final String content;
+  DbToDeviceQueue(
+      {@required this.clientId,
+      @required this.id,
+      @required this.type,
+      @required this.txnId,
+      @required this.content});
+  factory DbToDeviceQueue.fromData(
+      Map<String, dynamic> data, GeneratedDatabase db,
+      {String prefix}) {
+    final effectivePrefix = prefix ?? '';
+    final intType = db.typeSystem.forDartType<int>();
+    final stringType = db.typeSystem.forDartType<String>();
+    return DbToDeviceQueue(
+      clientId:
+          intType.mapFromDatabaseResponse(data['${effectivePrefix}client_id']),
+      id: intType.mapFromDatabaseResponse(data['${effectivePrefix}id']),
+      type: stringType.mapFromDatabaseResponse(data['${effectivePrefix}type']),
+      txnId:
+          stringType.mapFromDatabaseResponse(data['${effectivePrefix}txn_id']),
+      content:
+          stringType.mapFromDatabaseResponse(data['${effectivePrefix}content']),
+    );
+  }
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (!nullToAbsent || clientId != null) {
+      map['client_id'] = Variable<int>(clientId);
+    }
+    if (!nullToAbsent || id != null) {
+      map['id'] = Variable<int>(id);
+    }
+    if (!nullToAbsent || type != null) {
+      map['type'] = Variable<String>(type);
+    }
+    if (!nullToAbsent || txnId != null) {
+      map['txn_id'] = Variable<String>(txnId);
+    }
+    if (!nullToAbsent || content != null) {
+      map['content'] = Variable<String>(content);
+    }
+    return map;
+  }
+
+  ToDeviceQueueCompanion toCompanion(bool nullToAbsent) {
+    return ToDeviceQueueCompanion(
+      clientId: clientId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(clientId),
+      id: id == null && nullToAbsent ? const Value.absent() : Value(id),
+      type: type == null && nullToAbsent ? const Value.absent() : Value(type),
+      txnId:
+          txnId == null && nullToAbsent ? const Value.absent() : Value(txnId),
+      content: content == null && nullToAbsent
+          ? const Value.absent()
+          : Value(content),
+    );
+  }
+
+  factory DbToDeviceQueue.fromJson(Map<String, dynamic> json,
+      {ValueSerializer serializer}) {
+    serializer ??= moorRuntimeOptions.defaultSerializer;
+    return DbToDeviceQueue(
+      clientId: serializer.fromJson<int>(json['client_id']),
+      id: serializer.fromJson<int>(json['id']),
+      type: serializer.fromJson<String>(json['type']),
+      txnId: serializer.fromJson<String>(json['txn_id']),
+      content: serializer.fromJson<String>(json['content']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer serializer}) {
+    serializer ??= moorRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'client_id': serializer.toJson<int>(clientId),
+      'id': serializer.toJson<int>(id),
+      'type': serializer.toJson<String>(type),
+      'txn_id': serializer.toJson<String>(txnId),
+      'content': serializer.toJson<String>(content),
+    };
+  }
+
+  DbToDeviceQueue copyWith(
+          {int clientId, int id, String type, String txnId, String content}) =>
+      DbToDeviceQueue(
+        clientId: clientId ?? this.clientId,
+        id: id ?? this.id,
+        type: type ?? this.type,
+        txnId: txnId ?? this.txnId,
+        content: content ?? this.content,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('DbToDeviceQueue(')
+          ..write('clientId: $clientId, ')
+          ..write('id: $id, ')
+          ..write('type: $type, ')
+          ..write('txnId: $txnId, ')
+          ..write('content: $content')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => $mrjf($mrjc(
+      clientId.hashCode,
+      $mrjc(id.hashCode,
+          $mrjc(type.hashCode, $mrjc(txnId.hashCode, content.hashCode)))));
+  @override
+  bool operator ==(dynamic other) =>
+      identical(this, other) ||
+      (other is DbToDeviceQueue &&
+          other.clientId == this.clientId &&
+          other.id == this.id &&
+          other.type == this.type &&
+          other.txnId == this.txnId &&
+          other.content == this.content);
+}
+
+class ToDeviceQueueCompanion extends UpdateCompanion<DbToDeviceQueue> {
+  final Value<int> clientId;
+  final Value<int> id;
+  final Value<String> type;
+  final Value<String> txnId;
+  final Value<String> content;
+  const ToDeviceQueueCompanion({
+    this.clientId = const Value.absent(),
+    this.id = const Value.absent(),
+    this.type = const Value.absent(),
+    this.txnId = const Value.absent(),
+    this.content = const Value.absent(),
+  });
+  ToDeviceQueueCompanion.insert({
+    @required int clientId,
+    this.id = const Value.absent(),
+    @required String type,
+    @required String txnId,
+    @required String content,
+  })  : clientId = Value(clientId),
+        type = Value(type),
+        txnId = Value(txnId),
+        content = Value(content);
+  static Insertable<DbToDeviceQueue> custom({
+    Expression<int> clientId,
+    Expression<int> id,
+    Expression<String> type,
+    Expression<String> txnId,
+    Expression<String> content,
+  }) {
+    return RawValuesInsertable({
+      if (clientId != null) 'client_id': clientId,
+      if (id != null) 'id': id,
+      if (type != null) 'type': type,
+      if (txnId != null) 'txn_id': txnId,
+      if (content != null) 'content': content,
+    });
+  }
+
+  ToDeviceQueueCompanion copyWith(
+      {Value<int> clientId,
+      Value<int> id,
+      Value<String> type,
+      Value<String> txnId,
+      Value<String> content}) {
+    return ToDeviceQueueCompanion(
+      clientId: clientId ?? this.clientId,
+      id: id ?? this.id,
+      type: type ?? this.type,
+      txnId: txnId ?? this.txnId,
+      content: content ?? this.content,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientId.present) {
+      map['client_id'] = Variable<int>(clientId.value);
+    }
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (txnId.present) {
+      map['txn_id'] = Variable<String>(txnId.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ToDeviceQueueCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('id: $id, ')
+          ..write('type: $type, ')
+          ..write('txnId: $txnId, ')
+          ..write('content: $content')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class ToDeviceQueue extends Table
+    with TableInfo<ToDeviceQueue, DbToDeviceQueue> {
+  final GeneratedDatabase _db;
+  final String _alias;
+  ToDeviceQueue(this._db, [this._alias]);
+  final VerificationMeta _clientIdMeta = const VerificationMeta('clientId');
+  GeneratedIntColumn _clientId;
+  GeneratedIntColumn get clientId => _clientId ??= _constructClientId();
+  GeneratedIntColumn _constructClientId() {
+    return GeneratedIntColumn('client_id', $tableName, false,
+        $customConstraints: 'NOT NULL REFERENCES clients(client_id)');
+  }
+
+  final VerificationMeta _idMeta = const VerificationMeta('id');
+  GeneratedIntColumn _id;
+  GeneratedIntColumn get id => _id ??= _constructId();
+  GeneratedIntColumn _constructId() {
+    return GeneratedIntColumn('id', $tableName, false,
+        declaredAsPrimaryKey: true,
+        hasAutoIncrement: true,
+        $customConstraints: 'NOT NULL PRIMARY KEY AUTOINCREMENT');
+  }
+
+  final VerificationMeta _typeMeta = const VerificationMeta('type');
+  GeneratedTextColumn _type;
+  GeneratedTextColumn get type => _type ??= _constructType();
+  GeneratedTextColumn _constructType() {
+    return GeneratedTextColumn('type', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  final VerificationMeta _txnIdMeta = const VerificationMeta('txnId');
+  GeneratedTextColumn _txnId;
+  GeneratedTextColumn get txnId => _txnId ??= _constructTxnId();
+  GeneratedTextColumn _constructTxnId() {
+    return GeneratedTextColumn('txn_id', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  final VerificationMeta _contentMeta = const VerificationMeta('content');
+  GeneratedTextColumn _content;
+  GeneratedTextColumn get content => _content ??= _constructContent();
+  GeneratedTextColumn _constructContent() {
+    return GeneratedTextColumn('content', $tableName, false,
+        $customConstraints: 'NOT NULL');
+  }
+
+  @override
+  List<GeneratedColumn> get $columns => [clientId, id, type, txnId, content];
+  @override
+  ToDeviceQueue get asDslTable => this;
+  @override
+  String get $tableName => _alias ?? 'to_device_queue';
+  @override
+  final String actualTableName = 'to_device_queue';
+  @override
+  VerificationContext validateIntegrity(Insertable<DbToDeviceQueue> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_id')) {
+      context.handle(_clientIdMeta,
+          clientId.isAcceptableOrUnknown(data['client_id'], _clientIdMeta));
+    } else if (isInserting) {
+      context.missing(_clientIdMeta);
+    }
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id'], _idMeta));
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+          _typeMeta, type.isAcceptableOrUnknown(data['type'], _typeMeta));
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('txn_id')) {
+      context.handle(
+          _txnIdMeta, txnId.isAcceptableOrUnknown(data['txn_id'], _txnIdMeta));
+    } else if (isInserting) {
+      context.missing(_txnIdMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(_contentMeta,
+          content.isAcceptableOrUnknown(data['content'], _contentMeta));
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DbToDeviceQueue map(Map<String, dynamic> data, {String tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : null;
+    return DbToDeviceQueue.fromData(data, _db, prefix: effectivePrefix);
+  }
+
+  @override
+  ToDeviceQueue createAlias(String alias) {
+    return ToDeviceQueue(_db, alias);
+  }
+
+  @override
+  bool get dontWriteConstraints => true;
+}
+
 class DbSSSSCache extends DataClass implements Insertable<DbSSSSCache> {
   final int clientId;
   final String type;
@@ -6242,6 +6562,12 @@ abstract class _$Database extends GeneratedDatabase {
   Index _presencesIndex;
   Index get presencesIndex => _presencesIndex ??= Index('presences_index',
       'CREATE INDEX presences_index ON presences(client_id);');
+  ToDeviceQueue _toDeviceQueue;
+  ToDeviceQueue get toDeviceQueue => _toDeviceQueue ??= ToDeviceQueue(this);
+  Index _toDeviceQueueIndex;
+  Index get toDeviceQueueIndex => _toDeviceQueueIndex ??= Index(
+      'to_device_queue_index',
+      'CREATE INDEX to_device_queue_index ON to_device_queue(client_id);');
   SsssCache _ssssCache;
   SsssCache get ssssCache => _ssssCache ??= SsssCache(this);
   Files _files;
@@ -7143,6 +7469,36 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
+  Future<int> insertIntoToDeviceQueue(
+      int client_id, String type, String txn_id, String content) {
+    return customInsert(
+      'INSERT INTO to_device_queue (client_id, type, txn_id, content) VALUES (:client_id, :type, :txn_id, :content)',
+      variables: [
+        Variable.withInt(client_id),
+        Variable.withString(type),
+        Variable.withString(txn_id),
+        Variable.withString(content)
+      ],
+      updates: {toDeviceQueue},
+    );
+  }
+
+  Selectable<DbToDeviceQueue> getToDeviceQueue(int client_id) {
+    return customSelect(
+        'SELECT * FROM to_device_queue WHERE client_id = :client_id',
+        variables: [Variable.withInt(client_id)],
+        readsFrom: {toDeviceQueue}).map(toDeviceQueue.mapFromRow);
+  }
+
+  Future<int> deleteFromToDeviceQueue(int client_id, int id) {
+    return customUpdate(
+      'DELETE FROM to_device_queue WHERE client_id = :client_id AND id = :id',
+      variables: [Variable.withInt(client_id), Variable.withInt(id)],
+      updates: {toDeviceQueue},
+      updateKind: UpdateKind.delete,
+    );
+  }
+
   @override
   Iterable<TableInfo> get allTables => allSchemaEntities.whereType<TableInfo>();
   @override
@@ -7173,6 +7529,8 @@ abstract class _$Database extends GeneratedDatabase {
         roomAccountDataIndex,
         presences,
         presencesIndex,
+        toDeviceQueue,
+        toDeviceQueueIndex,
         ssssCache,
         files
       ];

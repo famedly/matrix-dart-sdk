@@ -174,6 +174,15 @@ CREATE TABLE files (
   UNIQUE(mxc_uri)
 ) AS DbFile;
 
+CREATE TABLE to_device_queue (
+  client_id INTEGER NOT NULL REFERENCES clients(client_id),
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL,
+  txn_id TEXT NOT NULL,
+  content TEXT NOT NULL
+) as DbToDeviceQueue;
+CREATE INDEX to_device_queue_index ON to_device_queue(client_id);
+
 -- named queries
 
 dbGetClient: SELECT * FROM clients WHERE name = :name;
@@ -245,3 +254,6 @@ storeFile: INSERT OR REPLACE INTO files (mxc_uri, bytes, saved_at) VALUES (:mxc_
 dbGetFile: SELECT * FROM files WHERE mxc_uri = :mxc_uri;
 markPendingEventsAsError: UPDATE events SET status = -1 WHERE client_id = :client_id AND status = 0;
 deleteOldFiles: DELETE FROM files WHERE saved_at < :saved_at;
+insertIntoToDeviceQueue: INSERT INTO to_device_queue (client_id, type, txn_id, content) VALUES (:client_id, :type, :txn_id, :content);
+getToDeviceQueue: SELECT * FROM to_device_queue WHERE client_id = :client_id;
+deleteFromToDeviceQueue: DELETE FROM to_device_queue WHERE client_id = :client_id AND id = :id;
