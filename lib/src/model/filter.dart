@@ -214,13 +214,13 @@ class StateFilter extends EventFilter {
       data['not_types'] = notTypes;
     }
     if (lazyLoadMembers != null) {
-      data['lazy_load_members'] = notTypes;
+      data['lazy_load_members'] = lazyLoadMembers;
     }
     if (includeRedundantMembers != null) {
-      data['include_redundant_members'] = notTypes;
+      data['include_redundant_members'] = includeRedundantMembers;
     }
     if (containsUrl != null) {
-      data['contains_url'] = notTypes;
+      data['contains_url'] = containsUrl;
     }
     return data;
   }

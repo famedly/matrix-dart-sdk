@@ -134,12 +134,14 @@ void main() {
       final wellKnownInformations =
           await matrixApi.requestWellKnownInformations();
       expect(wellKnownInformations.mHomeserver.baseUrl,
-          'https://matrix.example.com');
+          'https://fakeserver.notexisting');
       expect(wellKnownInformations.toJson(), {
-        'm.homeserver': {'base_url': 'https://matrix.example.com'},
-        'm.identity_server': {'base_url': 'https://identity.example.com'},
+        'm.homeserver': {'base_url': 'https://fakeserver.notexisting'},
+        'm.identity_server': {
+          'base_url': 'https://identity.fakeserver.notexisting'
+        },
         'org.example.custom.property': {
-          'app_url': 'https://custom.app.example.org'
+          'app_url': 'https://custom.app.fakeserver.notexisting'
         }
       });
     });
@@ -414,9 +416,9 @@ void main() {
             'not_rooms': ['!1234'],
             'not_senders': ['@bob:example.com'],
             'not_types': ['type2'],
-            'lazy_load_members': ['type2'],
-            'include_redundant_members': ['type2'],
-            'contains_url': ['type2']
+            'lazy_load_members': true,
+            'include_redundant_members': false,
+            'contains_url': true,
           },
           'account_data': {
             'limit': 10,

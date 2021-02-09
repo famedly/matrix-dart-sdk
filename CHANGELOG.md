@@ -1,3 +1,7 @@
+## 0.1.8
+
+- fix: Wrong parameters use
+
 ## 0.1.7
 
 - change: Less noisy one-line logs

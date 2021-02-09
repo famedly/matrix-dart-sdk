@@ -2038,7 +2038,8 @@ class MatrixApi {
       String sessionId, String version, RoomKeysSingleKey session) async {
     final ret = await request(
       RequestType.PUT,
-      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=${Uri.encodeComponent(version)}',
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}',
+      query: {'version': version},
       data: session.toJson(),
     );
     return RoomKeysUpdateResponse.fromJson(ret);
@@ -2050,7 +2051,8 @@ class MatrixApi {
       String roomId, String sessionId, String version) async {
     final ret = await request(
       RequestType.GET,
-      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=${Uri.encodeComponent(version)}',
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}',
+      query: {'version': version},
     );
     return RoomKeysSingleKey.fromJson(ret);
   }
@@ -2061,7 +2063,8 @@ class MatrixApi {
       String roomId, String sessionId, String version) async {
     final ret = await request(
       RequestType.DELETE,
-      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}?version=${Uri.encodeComponent(version)}',
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}',
+      query: {'version': version},
     );
     return RoomKeysUpdateResponse.fromJson(ret);
   }
@@ -2072,7 +2075,8 @@ class MatrixApi {
       String roomId, String version, RoomKeysRoom keys) async {
     final ret = await request(
       RequestType.PUT,
-      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}?version=${Uri.encodeComponent(version)}',
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}',
+      query: {'version': version},
       data: keys.toJson(),
     );
     return RoomKeysUpdateResponse.fromJson(ret);
@@ -2083,7 +2087,8 @@ class MatrixApi {
   Future<RoomKeysRoom> getRoomKeysRoom(String roomId, String version) async {
     final ret = await request(
       RequestType.GET,
-      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}?version=${Uri.encodeComponent(version)}',
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}',
+      query: {'version': version},
     );
     return RoomKeysRoom.fromJson(ret);
   }
@@ -2094,7 +2099,8 @@ class MatrixApi {
       String roomId, String version) async {
     final ret = await request(
       RequestType.DELETE,
-      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}?version=${Uri.encodeComponent(version)}',
+      '/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}',
+      query: {'version': version},
     );
     return RoomKeysUpdateResponse.fromJson(ret);
   }
@@ -2105,7 +2111,8 @@ class MatrixApi {
       String version, RoomKeys keys) async {
     final ret = await request(
       RequestType.PUT,
-      '/client/unstable/room_keys/keys?version=${Uri.encodeComponent(version)}',
+      '/client/unstable/room_keys/keys',
+      query: {'version': version},
       data: keys.toJson(),
     );
     return RoomKeysUpdateResponse.fromJson(ret);
@@ -2116,7 +2123,8 @@ class MatrixApi {
   Future<RoomKeys> getRoomKeys(String version) async {
     final ret = await request(
       RequestType.GET,
-      '/client/unstable/room_keys/keys?version=${Uri.encodeComponent(version)}',
+      '/client/unstable/room_keys/keys',
+      query: {'version': version},
     );
     return RoomKeys.fromJson(ret);
   }
@@ -2126,7 +2134,8 @@ class MatrixApi {
   Future<RoomKeysUpdateResponse> deleteRoomKeys(String version) async {
     final ret = await request(
       RequestType.DELETE,
-      '/client/unstable/room_keys/keys?version=${Uri.encodeComponent(version)}',
+      '/client/unstable/room_keys/keys',
+      query: {'version': version},
     );
     return RoomKeysUpdateResponse.fromJson(ret);
   }
