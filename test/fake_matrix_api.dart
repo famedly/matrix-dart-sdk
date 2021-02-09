@@ -40,6 +40,7 @@ class FakeMatrixApi extends MockClient {
   static final calledEndpoints = <String, List<dynamic>>{};
   static int eventCounter = 0;
   static sdk.Client client;
+  static bool failToDevice = false;
 
   FakeMatrixApi()
       : super((request) async {
@@ -92,6 +93,9 @@ class FakeMatrixApi extends MockClient {
           } else if (method == 'PUT' &&
               action.contains('/client/r0/sendToDevice/')) {
             res = {};
+            if (failToDevice) {
+              statusCode = 500;
+            }
           } else if (method == 'GET' &&
               action.contains('/client/r0/rooms/') &&
               action.contains('/state/m.room.member/')) {

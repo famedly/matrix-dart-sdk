@@ -242,10 +242,7 @@ class OlmManager {
     }
   }
 
-  void storeOlmSession(OlmSession session) {
-    if (client.database == null) {
-      return;
-    }
+  Future<void> storeOlmSession(OlmSession session) async {
     _olmSessions[session.identityKey] ??= <OlmSession>[];
     final ix = _olmSessions[session.identityKey]
         .indexWhere((s) => s.sessionId == session.sessionId);
@@ -256,7 +253,10 @@ class OlmManager {
       // update an existing session
       _olmSessions[session.identityKey][ix] = session;
     }
-    client.database.storeOlmSession(
+    if (client.database == null) {
+      return;
+    }
+    await client.database.storeOlmSession(
         client.id,
         session.identityKey,
         session.sessionId,
@@ -285,14 +285,14 @@ class OlmManager {
     final device = client.userDeviceKeys[event.sender]?.deviceKeys?.values
         ?.firstWhere((d) => d.curve25519Key == senderKey, orElse: () => null);
     final existingSessions = olmSessions[senderKey];
-    final updateSessionUsage = ([OlmSession session]) => runInRoot(() {
+    final updateSessionUsage = ([OlmSession session]) => runInRoot(() async {
           if (session != null) {
             session.lastReceived = DateTime.now();
-            storeOlmSession(session);
+            await storeOlmSession(session);
           }
           if (device != null) {
             device.lastActive = DateTime.now();
-            client.database?.setLastActiveUserDeviceKey(
+            await client.database?.setLastActiveUserDeviceKey(
                 device.lastActive.millisecondsSinceEpoch,
                 client.id,
                 device.userId,
@@ -542,9 +542,10 @@ class OlmManager {
       'recipient_keys': {'ed25519': device.ed25519Key},
     };
     final encryptResult = sess.first.session.encrypt(json.encode(fullPayload));
-    storeOlmSession(sess.first);
+    await storeOlmSession(sess.first);
     if (client.database != null) {
-      unawaited(client.database.setLastSentMessageUserDeviceKey(
+      // ignore: unawaited_futures
+      runInRoot(() => client.database.setLastSentMessageUserDeviceKey(
           json.encode({
             'type': type,
             'content': payload,

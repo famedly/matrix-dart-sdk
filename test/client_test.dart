@@ -450,6 +450,66 @@ void main() {
               .length,
           2);
     });
+    test('send to_device queue', () async {
+      // we test:
+      // send fox --> fail
+      // send raccoon --> fox & raccoon sent
+      // send bunny --> only bunny sent
+      final client = await getClient();
+      FakeMatrixApi.failToDevice = true;
+      final foxContent = {
+        '@fox:example.org': {
+          '*': {
+            'fox': 'hole',
+          },
+        },
+      };
+      final raccoonContent = {
+        '@fox:example.org': {
+          '*': {
+            'raccoon': 'mask',
+          },
+        },
+      };
+      final bunnyContent = {
+        '@fox:example.org': {
+          '*': {
+            'bunny': 'burrow',
+          },
+        },
+      };
+      await client
+          .sendToDevice('foxies', 'floof_txnid', foxContent)
+          .catchError((e) => null); // ignore the error
+      FakeMatrixApi.failToDevice = false;
+      FakeMatrixApi.calledEndpoints.clear();
+      await client.sendToDevice('raccoon', 'raccoon_txnid', raccoonContent);
+      expect(
+          json.decode(FakeMatrixApi
+                  .calledEndpoints['/client/r0/sendToDevice/foxies/floof_txnid']
+              [0])['messages'],
+          foxContent);
+      expect(
+          json.decode(FakeMatrixApi.calledEndpoints[
+              '/client/r0/sendToDevice/raccoon/raccoon_txnid'][0])['messages'],
+          raccoonContent);
+      FakeMatrixApi.calledEndpoints.clear();
+      await client.sendToDevice('bunny', 'bunny_txnid', bunnyContent);
+      expect(
+          FakeMatrixApi
+              .calledEndpoints['/client/r0/sendToDevice/foxies/floof_txnid'],
+          null);
+      expect(
+          FakeMatrixApi
+              .calledEndpoints['/client/r0/sendToDevice/raccoon/raccoon_txnid'],
+          null);
+      expect(
+          json.decode(FakeMatrixApi
+                  .calledEndpoints['/client/r0/sendToDevice/bunny/bunny_txnid']
+              [0])['messages'],
+          bunnyContent);
+      await client.dispose(closeDatabase: true);
+    });
     test('Test the fake store api', () async {
       final database = await getDatabase(null);
       var client1 = Client(
