@@ -48,6 +48,7 @@ void main() {
 
     test('setupClient', () async {
       client = await getClient();
+      await client.abortSync();
     });
 
     test('setup', () async {

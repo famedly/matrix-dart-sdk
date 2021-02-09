@@ -110,7 +110,7 @@ class FakeMatrixApi extends MockClient {
             res = {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
           } else if (action.contains('/client/r0/sync')) {
             res = {
-              'next_batch': DateTime.now().millisecondsSinceEpoch.toString
+              'next_batch': DateTime.now().millisecondsSinceEpoch.toString(),
             };
           } else if (method == 'PUT' &&
               client != null &&
@@ -1593,13 +1593,12 @@ class FakeMatrixApi extends MockClient {
           },
       '/client/r0/sync?filter=%7B%22room%22%3A%7B%22include_leave%22%3Atrue%2C%22timeline%22%3A%7B%22limit%22%3A10%7D%7D%7D&timeout=0':
           (var req) => archiveSyncResponse,
-      '/client/r0/sync?filter=%7B%22room%22%3A%7B%22state%22%3A%7B%22lazy_load_members%22%3Atrue%7D%7D%7D':
-          (var req) => syncResponse,
-      '/client/r0/sync?filter=%7B%7D&since=1234&full_state=false&set_presence=unavailable&timeout=15':
+      '/client/r0/sync?filter=1234': (var req) => syncResponse,
+      '/client/r0/sync?filter=1234&since=1234&full_state=false&set_presence=unavailable&timeout=15':
           (var req) => syncResponse,
       '/client/r0/register/available?username=testuser': (var req) =>
           {'available': true},
-      '/client/r0/user/${Uri.encodeComponent('alice@example.com')}/filter/1234':
+      '/client/r0/user/${Uri.encodeComponent('@test:fakeServer.notExisting')}/filter/1234':
           (var req) => {
                 'room': {
                   'state': {
@@ -1777,7 +1776,9 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/rooms/!localpart%3Aexample.com/receipt/m.read/%241234%3Aexample.com':
           (var req) => {},
       '/client/r0/rooms/!localpart%3Aexample.com/read_markers': (var req) => {},
-      '/client/r0/user/${Uri.encodeComponent('alice@example.com')}/filter':
+      '/client/r0/user/${Uri.encodeComponent('@othertest:fakeServer.notExisting')}/filter':
+          (var req) => {'filter_id': '1234'},
+      '/client/r0/user/${Uri.encodeComponent('@test:fakeServer.notExisting')}/filter':
           (var req) => {'filter_id': '1234'},
       '/client/r0/publicRooms?server=example.com': (var req) => {
             'chunk': [

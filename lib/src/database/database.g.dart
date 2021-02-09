@@ -16,6 +16,7 @@ class DbClient extends DataClass implements Insertable<DbClient> {
   final String deviceId;
   final String deviceName;
   final String prevBatch;
+  final String syncFilterId;
   final String olmAccount;
   DbClient(
       {@required this.clientId,
@@ -26,6 +27,7 @@ class DbClient extends DataClass implements Insertable<DbClient> {
       this.deviceId,
       this.deviceName,
       this.prevBatch,
+      this.syncFilterId,
       this.olmAccount});
   factory DbClient.fromData(Map<String, dynamic> data, GeneratedDatabase db,
       {String prefix}) {
@@ -48,6 +50,8 @@ class DbClient extends DataClass implements Insertable<DbClient> {
           .mapFromDatabaseResponse(data['${effectivePrefix}device_name']),
       prevBatch: stringType
           .mapFromDatabaseResponse(data['${effectivePrefix}prev_batch']),
+      syncFilterId: stringType
+          .mapFromDatabaseResponse(data['${effectivePrefix}sync_filter_id']),
       olmAccount: stringType
           .mapFromDatabaseResponse(data['${effectivePrefix}olm_account']),
     );
@@ -79,6 +83,9 @@ class DbClient extends DataClass implements Insertable<DbClient> {
     if (!nullToAbsent || prevBatch != null) {
       map['prev_batch'] = Variable<String>(prevBatch);
     }
+    if (!nullToAbsent || syncFilterId != null) {
+      map['sync_filter_id'] = Variable<String>(syncFilterId);
+    }
     if (!nullToAbsent || olmAccount != null) {
       map['olm_account'] = Variable<String>(olmAccount);
     }
@@ -107,6 +114,9 @@ class DbClient extends DataClass implements Insertable<DbClient> {
       prevBatch: prevBatch == null && nullToAbsent
           ? const Value.absent()
           : Value(prevBatch),
+      syncFilterId: syncFilterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncFilterId),
       olmAccount: olmAccount == null && nullToAbsent
           ? const Value.absent()
           : Value(olmAccount),
@@ -125,6 +135,7 @@ class DbClient extends DataClass implements Insertable<DbClient> {
       deviceId: serializer.fromJson<String>(json['device_id']),
       deviceName: serializer.fromJson<String>(json['device_name']),
       prevBatch: serializer.fromJson<String>(json['prev_batch']),
+      syncFilterId: serializer.fromJson<String>(json['sync_filter_id']),
       olmAccount: serializer.fromJson<String>(json['olm_account']),
     );
   }
@@ -140,6 +151,7 @@ class DbClient extends DataClass implements Insertable<DbClient> {
       'device_id': serializer.toJson<String>(deviceId),
       'device_name': serializer.toJson<String>(deviceName),
       'prev_batch': serializer.toJson<String>(prevBatch),
+      'sync_filter_id': serializer.toJson<String>(syncFilterId),
       'olm_account': serializer.toJson<String>(olmAccount),
     };
   }
@@ -153,6 +165,7 @@ class DbClient extends DataClass implements Insertable<DbClient> {
           String deviceId,
           String deviceName,
           String prevBatch,
+          String syncFilterId,
           String olmAccount}) =>
       DbClient(
         clientId: clientId ?? this.clientId,
@@ -163,6 +176,7 @@ class DbClient extends DataClass implements Insertable<DbClient> {
         deviceId: deviceId ?? this.deviceId,
         deviceName: deviceName ?? this.deviceName,
         prevBatch: prevBatch ?? this.prevBatch,
+        syncFilterId: syncFilterId ?? this.syncFilterId,
         olmAccount: olmAccount ?? this.olmAccount,
       );
   @override
@@ -176,6 +190,7 @@ class DbClient extends DataClass implements Insertable<DbClient> {
           ..write('deviceId: $deviceId, ')
           ..write('deviceName: $deviceName, ')
           ..write('prevBatch: $prevBatch, ')
+          ..write('syncFilterId: $syncFilterId, ')
           ..write('olmAccount: $olmAccount')
           ..write(')'))
         .toString();
@@ -196,8 +211,10 @@ class DbClient extends DataClass implements Insertable<DbClient> {
                           deviceId.hashCode,
                           $mrjc(
                               deviceName.hashCode,
-                              $mrjc(prevBatch.hashCode,
-                                  olmAccount.hashCode)))))))));
+                              $mrjc(
+                                  prevBatch.hashCode,
+                                  $mrjc(syncFilterId.hashCode,
+                                      olmAccount.hashCode))))))))));
   @override
   bool operator ==(dynamic other) =>
       identical(this, other) ||
@@ -210,6 +227,7 @@ class DbClient extends DataClass implements Insertable<DbClient> {
           other.deviceId == this.deviceId &&
           other.deviceName == this.deviceName &&
           other.prevBatch == this.prevBatch &&
+          other.syncFilterId == this.syncFilterId &&
           other.olmAccount == this.olmAccount);
 }
 
@@ -222,6 +240,7 @@ class ClientsCompanion extends UpdateCompanion<DbClient> {
   final Value<String> deviceId;
   final Value<String> deviceName;
   final Value<String> prevBatch;
+  final Value<String> syncFilterId;
   final Value<String> olmAccount;
   const ClientsCompanion({
     this.clientId = const Value.absent(),
@@ -232,6 +251,7 @@ class ClientsCompanion extends UpdateCompanion<DbClient> {
     this.deviceId = const Value.absent(),
     this.deviceName = const Value.absent(),
     this.prevBatch = const Value.absent(),
+    this.syncFilterId = const Value.absent(),
     this.olmAccount = const Value.absent(),
   });
   ClientsCompanion.insert({
@@ -243,6 +263,7 @@ class ClientsCompanion extends UpdateCompanion<DbClient> {
     this.deviceId = const Value.absent(),
     this.deviceName = const Value.absent(),
     this.prevBatch = const Value.absent(),
+    this.syncFilterId = const Value.absent(),
     this.olmAccount = const Value.absent(),
   })  : name = Value(name),
         homeserverUrl = Value(homeserverUrl),
@@ -257,6 +278,7 @@ class ClientsCompanion extends UpdateCompanion<DbClient> {
     Expression<String> deviceId,
     Expression<String> deviceName,
     Expression<String> prevBatch,
+    Expression<String> syncFilterId,
     Expression<String> olmAccount,
   }) {
     return RawValuesInsertable({
@@ -268,6 +290,7 @@ class ClientsCompanion extends UpdateCompanion<DbClient> {
       if (deviceId != null) 'device_id': deviceId,
       if (deviceName != null) 'device_name': deviceName,
       if (prevBatch != null) 'prev_batch': prevBatch,
+      if (syncFilterId != null) 'sync_filter_id': syncFilterId,
       if (olmAccount != null) 'olm_account': olmAccount,
     });
   }
@@ -281,6 +304,7 @@ class ClientsCompanion extends UpdateCompanion<DbClient> {
       Value<String> deviceId,
       Value<String> deviceName,
       Value<String> prevBatch,
+      Value<String> syncFilterId,
       Value<String> olmAccount}) {
     return ClientsCompanion(
       clientId: clientId ?? this.clientId,
@@ -291,6 +315,7 @@ class ClientsCompanion extends UpdateCompanion<DbClient> {
       deviceId: deviceId ?? this.deviceId,
       deviceName: deviceName ?? this.deviceName,
       prevBatch: prevBatch ?? this.prevBatch,
+      syncFilterId: syncFilterId ?? this.syncFilterId,
       olmAccount: olmAccount ?? this.olmAccount,
     );
   }
@@ -322,6 +347,9 @@ class ClientsCompanion extends UpdateCompanion<DbClient> {
     if (prevBatch.present) {
       map['prev_batch'] = Variable<String>(prevBatch.value);
     }
+    if (syncFilterId.present) {
+      map['sync_filter_id'] = Variable<String>(syncFilterId.value);
+    }
     if (olmAccount.present) {
       map['olm_account'] = Variable<String>(olmAccount.value);
     }
@@ -339,6 +367,7 @@ class ClientsCompanion extends UpdateCompanion<DbClient> {
           ..write('deviceId: $deviceId, ')
           ..write('deviceName: $deviceName, ')
           ..write('prevBatch: $prevBatch, ')
+          ..write('syncFilterId: $syncFilterId, ')
           ..write('olmAccount: $olmAccount')
           ..write(')'))
         .toString();
@@ -417,6 +446,16 @@ class Clients extends Table with TableInfo<Clients, DbClient> {
         $customConstraints: '');
   }
 
+  final VerificationMeta _syncFilterIdMeta =
+      const VerificationMeta('syncFilterId');
+  GeneratedTextColumn _syncFilterId;
+  GeneratedTextColumn get syncFilterId =>
+      _syncFilterId ??= _constructSyncFilterId();
+  GeneratedTextColumn _constructSyncFilterId() {
+    return GeneratedTextColumn('sync_filter_id', $tableName, true,
+        $customConstraints: '');
+  }
+
   final VerificationMeta _olmAccountMeta = const VerificationMeta('olmAccount');
   GeneratedTextColumn _olmAccount;
   GeneratedTextColumn get olmAccount => _olmAccount ??= _constructOlmAccount();
@@ -435,6 +474,7 @@ class Clients extends Table with TableInfo<Clients, DbClient> {
         deviceId,
         deviceName,
         prevBatch,
+        syncFilterId,
         olmAccount
       ];
   @override
@@ -491,6 +531,12 @@ class Clients extends Table with TableInfo<Clients, DbClient> {
     if (data.containsKey('prev_batch')) {
       context.handle(_prevBatchMeta,
           prevBatch.isAcceptableOrUnknown(data['prev_batch'], _prevBatchMeta));
+    }
+    if (data.containsKey('sync_filter_id')) {
+      context.handle(
+          _syncFilterIdMeta,
+          syncFilterId.isAcceptableOrUnknown(
+              data['sync_filter_id'], _syncFilterIdMeta));
     }
     if (data.containsKey('olm_account')) {
       context.handle(
@@ -6620,6 +6666,18 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE clients SET prev_batch = :prev_batch WHERE client_id = :client_id',
       variables: [Variable.withString(prev_batch), Variable.withInt(client_id)],
+      updates: {clients},
+      updateKind: UpdateKind.update,
+    );
+  }
+
+  Future<int> storeSyncFilterId(String sync_filter_id, int client_id) {
+    return customUpdate(
+      'UPDATE clients SET sync_filter_id = :sync_filter_id WHERE client_id = :client_id',
+      variables: [
+        Variable.withString(sync_filter_id),
+        Variable.withInt(client_id)
+      ],
       updates: {clients},
       updateKind: UpdateKind.update,
     );

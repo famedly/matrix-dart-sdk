@@ -949,7 +949,7 @@ class Room {
       prev_batch,
       Direction.b,
       limit: historyCount,
-      filter: Client.messagesFilters,
+      filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
     );
 
     if (onHistoryReceived != null) onHistoryReceived();

@@ -28,7 +28,6 @@ import 'package:olm/olm.dart' as olm;
 import 'fake_client.dart';
 
 void main() {
-  /// All Tests related to the MxContent
   group('Timeline', () {
     Logs().level = Level.error;
     final roomID = '!1234:example.com';

@@ -52,6 +52,7 @@ void main() {
 
     test('setupClient', () async {
       client = await getClient();
+      await client.abortSync();
       await otherClient.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
       otherClient.init(
@@ -62,6 +63,7 @@ void main() {
         newDeviceID: 'FOXDEVICE',
         newOlmAccount: otherPickledOlmAccount,
       );
+      await otherClient.abortSync();
 
       await Future.delayed(Duration(milliseconds: 10));
       device = DeviceKeys.fromJson({
