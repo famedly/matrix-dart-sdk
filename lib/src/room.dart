@@ -578,15 +578,17 @@ class Room {
       Event inReplyTo,
       String editEventId,
       bool parseMarkdown = true,
-      Map<String, Map<String, String>> emotePacks}) {
+      Map<String, Map<String, String>> emotePacks,
+      bool parseCommands = true,
+      String msgtype = MessageTypes.Text}) {
+    if (parseCommands) {
+      return client.parseAndRunCommand(this, message,
+          inReplyTo: inReplyTo, editEventId: editEventId, txid: txid);
+    }
     final event = <String, dynamic>{
-      'msgtype': 'm.text',
+      'msgtype': msgtype,
       'body': message,
     };
-    if (message.startsWith('/me ')) {
-      event['msgtype'] = 'm.emote';
-      event['body'] = message.substring(4);
-    }
     if (parseMarkdown) {
       final html = markdown(event['body'], emotePacks ?? this.emotePacks);
       // if the decoded html is the same as the body, there is no need in sending a formatted message
