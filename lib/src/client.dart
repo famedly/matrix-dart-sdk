@@ -1347,7 +1347,7 @@ class Client extends MatrixApi {
         }
       }
       if (rooms[j].onUpdate != null) rooms[j].onUpdate.add(rooms[j].id);
-      if (chatUpdate.limitedTimeline) {
+      if (chatUpdate.limitedTimeline && requestHistoryOnLimitedTimeline) {
         Logs().v('Limited timeline for ${rooms[j].id} request history now');
         runInRoot(rooms[j].requestHistory);
       }
