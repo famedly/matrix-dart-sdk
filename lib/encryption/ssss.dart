@@ -264,6 +264,10 @@ class SSSS {
     }
   }
 
+  bool isSecret(String type) =>
+      client.accountData[type] != null &&
+      client.accountData[type].content['encrypted'] is Map;
+
   Future<String> getCached(String type) async {
     if (client.database == null) {
       return null;

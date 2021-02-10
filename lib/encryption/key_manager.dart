@@ -75,7 +75,7 @@ class KeyManager {
     });
   }
 
-  bool get enabled => client.accountData[MEGOLM_KEY] != null;
+  bool get enabled => encryption.ssss.isSecret(MEGOLM_KEY);
 
   /// clear all cached inbound group sessions. useful for testing
   void clearInboundGroupSessions() {
