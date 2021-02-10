@@ -88,6 +88,12 @@ class UiaRequest<T> {
 
   Future<T> completeStage(AuthenticationData auth) => _run(auth);
 
+  /// Cancel this uia request for example if the app can not handle this stage.
+  void cancel([Exception err]) {
+    error = err ?? Exception('Request has been canceled');
+    state = UiaRequestState.fail;
+  }
+
   Set<String> getNextStages(
       List<AuthenticationFlow> flows, List<String> completed) {
     final nextStages = <String>{};
