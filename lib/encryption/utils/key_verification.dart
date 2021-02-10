@@ -602,7 +602,10 @@ class KeyVerification {
     } else {
       Logs().i('[Key Verification] Sending to ${userId} device ${deviceId}...');
       if (deviceId == '*') {
-        if ({EventTypes.KeyVerificationRequest}.contains(type)) {
+        if ({
+          EventTypes.KeyVerificationRequest,
+          EventTypes.KeyVerificationCancel,
+        }.contains(type)) {
           await client.sendToDevicesOfUserIds({userId}, type, payload);
         } else {
           Logs().e(
