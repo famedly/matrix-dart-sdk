@@ -55,9 +55,9 @@ class CrossSigning {
   }
 
   bool get enabled =>
-      client.accountData[EventTypes.CrossSigningSelfSigning] != null &&
-      client.accountData[EventTypes.CrossSigningUserSigning] != null &&
-      client.accountData[EventTypes.CrossSigningMasterKey] != null;
+      encryption.ssss.isSecret(EventTypes.CrossSigningSelfSigning) &&
+      encryption.ssss.isSecret(EventTypes.CrossSigningUserSigning) &&
+      encryption.ssss.isSecret(EventTypes.CrossSigningMasterKey);
 
   Future<bool> isCached() async {
     if (!enabled) {
