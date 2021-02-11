@@ -318,19 +318,24 @@ class Room {
   Room({
     this.id,
     this.membership = Membership.join,
-    this.notificationCount = 0,
-    this.highlightCount = 0,
-    this.prev_batch = '',
+    int notificationCount,
+    int highlightCount,
+    String prev_batch,
     this.client,
     this.notificationSettings,
     this.mHeroes = const [],
-    this.mInvitedMemberCount = 0,
-    this.mJoinedMemberCount = 0,
+    int mInvitedMemberCount,
+    int mJoinedMemberCount,
     this.roomAccountData = const {},
     double newestSortOrder = 0.0,
     double oldestSortOrder = 0.0,
   })  : _newestSortOrder = newestSortOrder,
-        _oldestSortOrder = oldestSortOrder;
+        _oldestSortOrder = oldestSortOrder,
+        notificationCount = notificationCount ?? 0,
+        highlightCount = highlightCount ?? 0,
+        prev_batch = prev_batch ?? '',
+        mInvitedMemberCount = mInvitedMemberCount ?? 0,
+        mJoinedMemberCount = mJoinedMemberCount ?? 0;
 
   /// The default count of how much events should be requested when requesting the
   /// history of this room.
