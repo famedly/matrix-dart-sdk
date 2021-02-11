@@ -2,7 +2,7 @@ stages:
   - coverage
   - builddocs
   - deploy
-  
+
 coverage:
   tags:
     - linux
@@ -36,7 +36,7 @@ coverage_without_olm:
   stage: coverage
   image: debian:testing
   dependencies: []
-  script:    
+  script:
     - apt update
     - apt install -y curl gnupg2 git sqlite3 libsqlite3-dev
     - curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
@@ -49,7 +49,7 @@ coverage_without_olm:
     - chmod +x ./test.sh
     - pub get
     - pub run test
-  
+
 e2ee_test:
   tags:
     - linux
@@ -91,10 +91,9 @@ build_api_doc:
   image: cirrusci/flutter
   script:
     - dartdoc --exclude "dart:async,dart:collection,dart:convert,dart:core,dart:developer,dart:io,dart:isolate,dart:math,dart:typed_data,dart:ui"
-    - mv doc docs
   artifacts:
     paths:
-      - docs/api/
+      - doc/api/
   only:
     - main
 
@@ -119,7 +118,7 @@ pages:
   stage: deploy
   image: alpine:latest
   script:
-    - mv docs/api/ ./home/api
+    - mv doc/api/ ./home/api
     - mv doc-public ./home/doc
     - mv home public
   dependencies:
@@ -182,4 +181,3 @@ update-dependencies:
     - pub get
     - git remote set-url --push origin git@gitlab.com:$CI_PROJECT_PATH
     - 'git diff --exit-code || (git checkout -B ${UPDATE_BRANCH} && git add . && git commit -m "chore: Update dependencies" && git push -f origin ${UPDATE_BRANCH} && ./scripts/open-mr.sh)'
-
