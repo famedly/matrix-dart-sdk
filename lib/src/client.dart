@@ -299,7 +299,7 @@ class Client extends MatrixApi {
   /// login types. Throws an exception if the server is not compatible with the
   /// client and sets [homeserver] to [serverUrl] if it is. Supports the types [Uri]
   /// and [String].
-  Future<void> checkHomeserver(dynamic homeserverUrl,
+  Future<WellKnownInformations> checkHomeserver(dynamic homeserverUrl,
       {bool checkWellKnown = true}) async {
     try {
       if (homeserverUrl is Uri) {
@@ -317,9 +317,10 @@ class Client extends MatrixApi {
       }
 
       // Look up well known
+      WellKnownInformations wellKnown;
       if (checkWellKnown) {
         try {
-          final wellKnown = await requestWellKnownInformations();
+          wellKnown = await requestWellKnownInformations();
           homeserverUrl = wellKnown.mHomeserver.baseUrl.trim();
           // strip a trailing slash
           if (homeserverUrl.endsWith('/')) {
@@ -336,17 +337,17 @@ class Client extends MatrixApi {
       final versions = await requestSupportedVersions();
       if (!versions.versions
           .any((version) => supportedVersions.contains(version))) {
-        throw Exception(
-            'Server supports the versions: ${versions.versions.toString()} but this application is only compatible with ${supportedVersions.toString()}.');
+        throw BadServerVersionsException(
+            versions.versions.toSet(), supportedVersions);
       }
 
       final loginTypes = await requestLoginTypes();
       if (!loginTypes.flows.any((f) => supportedLoginTypes.contains(f.type))) {
-        throw Exception(
-            'Server supports the Login Types: ${loginTypes.flows.map((f) => f.toJson).toList().toString()} but this application is only compatible with ${supportedLoginTypes.toString()}.');
+        throw BadServerLoginTypesException(
+            loginTypes.flows.map((f) => f.type).toSet(), supportedLoginTypes);
       }
 
-      return;
+      return wellKnown;
     } catch (_) {
       homeserver = null;
       rethrow;
@@ -1987,4 +1988,22 @@ class SdkError {
   StackTrace stackTrace;
 
   SdkError({this.exception, this.stackTrace});
+}
+
+class BadServerVersionsException implements Exception {
+  final Set<String> serverVersions, supportedVersions;
+  BadServerVersionsException(this.serverVersions, this.supportedVersions);
+
+  @override
+  String toString() =>
+      'Server supports the versions: ${serverVersions.toString()} but this application is only compatible with ${supportedVersions.toString()}.';
+}
+
+class BadServerLoginTypesException implements Exception {
+  final Set<String> serverLoginTypes, supportedLoginTypes;
+  BadServerLoginTypesException(this.serverLoginTypes, this.supportedLoginTypes);
+
+  @override
+  String toString() =>
+      'Server supports the Login Types: ${serverLoginTypes.toString()} but this application is only compatible with ${supportedLoginTypes.toString()}.';
 }
