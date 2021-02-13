@@ -29,6 +29,7 @@ import 'package:password_hash/password_hash.dart';
 import '../famedlysdk.dart';
 import '../src/database/database.dart';
 import '../src/utils/run_in_background.dart';
+import '../src/utils/run_in_root.dart';
 import 'encryption.dart';
 
 const CACHE_TYPES = <String>{
@@ -617,20 +618,32 @@ class OpenSSSS {
   Uint8List privateKey;
 
   bool get isUnlocked => privateKey != null;
+  bool get hasPassphrase => keyData.passphrase != null;
 
   String get recoveryKey =>
       isUnlocked ? SSSS.encodeRecoveryKey(privateKey) : null;
 
   Future<void> unlock(
-      {String passphrase, String recoveryKey, String keyOrPassphrase}) async {
+      {String passphrase,
+      String recoveryKey,
+      String keyOrPassphrase,
+      bool postUnlock = true}) async {
     if (keyOrPassphrase != null) {
       try {
-        await unlock(recoveryKey: keyOrPassphrase);
+        await unlock(recoveryKey: keyOrPassphrase, postUnlock: postUnlock);
       } catch (_) {
-        await unlock(passphrase: keyOrPassphrase);
+        if (hasPassphrase) {
+          await unlock(passphrase: keyOrPassphrase, postUnlock: postUnlock);
+        } else {
+          rethrow;
+        }
       }
       return;
     } else if (passphrase != null) {
+      if (!hasPassphrase) {
+        throw Exception(
+            'Tried to unlock with passphrase while key does not have a passphrase');
+      }
       privateKey = await runInBackground(
           _keyFromPassphrase,
           _KeyFromPassphraseArgs(
@@ -646,6 +659,9 @@ class OpenSSSS {
     if (!ssss.checkKey(privateKey, keyData)) {
       privateKey = null;
       throw Exception('Inalid key');
+    }
+    if (postUnlock) {
+      await runInRoot(() => _postUnlock());
     }
   }
 
@@ -670,6 +686,19 @@ class OpenSSSS {
 
   Future<void> maybeCacheAll() async {
     await ssss.maybeCacheAll(keyId, privateKey);
+  }
+
+  Future<void> _postUnlock() async {
+    // first try to cache all secrets that aren't cached yet
+    await maybeCacheAll();
+    // now try to self-sign
+    if (ssss.encryption.crossSigning.enabled && ssss.client.isUnknownSession) {
+      try {
+        await ssss.encryption.crossSigning.selfSign(openSsss: this);
+      } catch (e, s) {
+        Logs().e('[SSSS] Failed to self-sign', e, s);
+      }
+    }
   }
 }
 
