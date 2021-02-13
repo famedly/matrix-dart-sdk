@@ -692,7 +692,11 @@ class OpenSSSS {
     // first try to cache all secrets that aren't cached yet
     await maybeCacheAll();
     // now try to self-sign
-    if (ssss.encryption.crossSigning.enabled && ssss.client.isUnknownSession) {
+    if (ssss.encryption.crossSigning.enabled &&
+        ssss.client.userDeviceKeys[ssss.client.userID]?.masterKey != null &&
+        (ssss.client.isUnknownSession ||
+            !ssss.client.userDeviceKeys[ssss.client.userID].masterKey
+                .directVerified)) {
       try {
         await ssss.encryption.crossSigning.selfSign(openSsss: this);
       } catch (e, s) {
