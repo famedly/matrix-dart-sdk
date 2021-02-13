@@ -124,9 +124,10 @@ void main() {
     });
 
     test('cache', () async {
+      await client.encryption.ssss.clearCache();
       final handle =
           client.encryption.ssss.open(EventTypes.CrossSigningSelfSigning);
-      await handle.unlock(recoveryKey: SSSS_KEY);
+      await handle.unlock(recoveryKey: SSSS_KEY, postUnlock: false);
       expect(
           (await client.encryption.ssss
                   .getCached(EventTypes.CrossSigningSelfSigning)) !=
@@ -153,6 +154,30 @@ void main() {
           (await client.encryption.ssss.getCached(EventTypes.MegolmBackup)) !=
               null,
           true);
+    });
+
+    test('postUnlock', () async {
+      await client.encryption.ssss.clearCache();
+      client.userDeviceKeys[client.userID].masterKey.setDirectVerified(false);
+      final handle =
+          client.encryption.ssss.open(EventTypes.CrossSigningSelfSigning);
+      await handle.unlock(recoveryKey: SSSS_KEY);
+      expect(
+          (await client.encryption.ssss
+                  .getCached(EventTypes.CrossSigningSelfSigning)) !=
+              null,
+          true);
+      expect(
+          (await client.encryption.ssss
+                  .getCached(EventTypes.CrossSigningUserSigning)) !=
+              null,
+          true);
+      expect(
+          (await client.encryption.ssss.getCached(EventTypes.MegolmBackup)) !=
+              null,
+          true);
+      expect(
+          client.userDeviceKeys[client.userID].masterKey.directVerified, true);
     });
 
     test('make share requests', () async {
@@ -245,6 +270,7 @@ void main() {
       final key =
           client.userDeviceKeys[client.userID].deviceKeys['OTHERDEVICE'];
       key.setDirectVerified(false);
+      client.userDeviceKeys[client.userID].masterKey.setDirectVerified(false);
       event = ToDeviceEvent(
         sender: client.userID,
         type: 'm.secret.request',

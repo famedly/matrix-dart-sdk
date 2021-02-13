@@ -23,6 +23,7 @@ import 'package:olm/olm.dart' as olm;
 
 import '../famedlysdk.dart';
 import 'encryption.dart';
+import 'ssss.dart';
 
 class CrossSigning {
   final Encryption encryption;
@@ -71,13 +72,21 @@ class CrossSigning {
   }
 
   Future<void> selfSign(
-      {String passphrase, String recoveryKey, String keyOrPassphrase}) async {
-    final handle = encryption.ssss.open(EventTypes.CrossSigningMasterKey);
-    await handle.unlock(
+      {String passphrase,
+      String recoveryKey,
+      String keyOrPassphrase,
+      OpenSSSS openSsss}) async {
+    var handle = openSsss;
+    if (handle == null) {
+      handle = encryption.ssss.open(EventTypes.CrossSigningMasterKey);
+      await handle.unlock(
         passphrase: passphrase,
         recoveryKey: recoveryKey,
-        keyOrPassphrase: keyOrPassphrase);
-    await handle.maybeCacheAll();
+        keyOrPassphrase: keyOrPassphrase,
+        postUnlock: false,
+      );
+      await handle.maybeCacheAll();
+    }
     final masterPrivateKey =
         base64.decode(await handle.getStored(EventTypes.CrossSigningMasterKey));
     final keyObj = olm.PkSigning();
