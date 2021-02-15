@@ -229,6 +229,10 @@ abstract class SignableKey extends MatrixSignableKey {
           !client.userDeviceKeys.containsKey(otherUserId)) {
         continue;
       }
+      // we don't allow transitive trust unless it is for ourself
+      if (otherUserId != userId && otherUserId != client.userID) {
+        continue;
+      }
       for (final signatureEntry in signatureEntries.value.entries) {
         final fullKeyId = signatureEntry.key;
         final signature = signatureEntry.value;
