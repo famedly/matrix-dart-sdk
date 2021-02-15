@@ -1,17 +1,17 @@
 /* MIT License
-* 
+*
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
 * in the Software without restriction, including without limitation the rights
 * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 * copies of the Software, and to permit persons to whom the Software is
 * furnished to do so, subject to the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included in all
 * copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -37,6 +37,7 @@ class SyncUpdate {
   List<BasicEventWithSender> toDevice;
   DeviceListsUpdate deviceLists;
   Map<String, int> deviceOneTimeKeysCount;
+  List<String> deviceUnusedFallbackKeyTypes;
 
   SyncUpdate();
 
@@ -66,6 +67,12 @@ class SyncUpdate {
     deviceOneTimeKeysCount = json['device_one_time_keys_count'] != null
         ? Map<String, int>.from(json['device_one_time_keys_count'])
         : null;
+    deviceUnusedFallbackKeyTypes = (json['device_unused_fallback_key_types'] ??
+                json['org.matrix.msc2732.device_unused_fallback_key_types']) !=
+            null
+        ? List<String>.from(json['device_unused_fallback_key_types'] ??
+            json['org.matrix.msc2732.device_unused_fallback_key_types'])
+        : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -94,6 +101,11 @@ class SyncUpdate {
     }
     if (deviceOneTimeKeysCount != null) {
       data['device_one_time_keys_count'] = deviceOneTimeKeysCount;
+    }
+    if (deviceUnusedFallbackKeyTypes != null) {
+      data['device_unused_fallback_key_types'] = deviceUnusedFallbackKeyTypes;
+      data['org.matrix.msc2732.device_unused_fallback_key_types'] =
+          deviceUnusedFallbackKeyTypes;
     }
     return data;
   }

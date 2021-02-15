@@ -1,17 +1,17 @@
 /* MIT License
-* 
+*
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
 * in the Software without restriction, including without limitation the rights
 * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 * copies of the Software, and to permit persons to whom the Software is
 * furnished to do so, subject to the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included in all
 * copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -1427,13 +1427,19 @@ class MatrixApi {
   /// Publishes end-to-end encryption keys for the device.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-keys-query
   Future<Map<String, int>> uploadDeviceKeys(
-      {MatrixDeviceKeys deviceKeys, Map<String, dynamic> oneTimeKeys}) async {
+      {MatrixDeviceKeys deviceKeys,
+      Map<String, dynamic> oneTimeKeys,
+      Map<String, dynamic> fallbackKeys}) async {
     final response = await request(
       RequestType.POST,
       '/client/r0/keys/upload',
       data: {
         if (deviceKeys != null) 'device_keys': deviceKeys.toJson(),
         if (oneTimeKeys != null) 'one_time_keys': oneTimeKeys,
+        if (fallbackKeys != null) ...{
+          'fallback_keys': fallbackKeys,
+          'org.matrix.msc2732.fallback_keys': fallbackKeys,
+        },
       },
     );
     return Map<String, int>.from(response['one_time_key_counts']);
