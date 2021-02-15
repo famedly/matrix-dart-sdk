@@ -30,16 +30,6 @@ void main() {
   group('Online Key Backup', () {
     Logs().level = Level.error;
     var olmEnabled = true;
-    try {
-      olm.init();
-      olm.Account();
-    } catch (e) {
-      olmEnabled = false;
-      Logs().w('[LibOlm] Failed to load LibOlm', e);
-    }
-    Logs().i('[LibOlm] Enabled: $olmEnabled');
-
-    if (!olmEnabled) return;
 
     Client client;
 
@@ -48,10 +38,21 @@ void main() {
     final senderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
 
     test('setupClient', () async {
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().i('[LibOlm] Enabled: $olmEnabled');
+      if (!olmEnabled) return;
+
       client = await getClient();
     });
 
     test('basic things', () async {
+      if (!olmEnabled) return;
       expect(client.encryption.keyManager.enabled, true);
       expect(await client.encryption.keyManager.isCached(), false);
       final handle = client.encryption.ssss.open();
@@ -61,6 +62,7 @@ void main() {
     });
 
     test('load key', () async {
+      if (!olmEnabled) return;
       client.encryption.keyManager.clearInboundGroupSessions();
       await client.encryption.keyManager
           .request(client.getRoomById(roomId), sessionId, senderKey);
@@ -72,6 +74,7 @@ void main() {
     });
 
     test('upload key', () async {
+      if (!olmEnabled) return;
       final session = olm.OutboundGroupSession();
       session.create();
       final inbound = olm.InboundGroupSession();
@@ -115,6 +118,7 @@ void main() {
     });
 
     test('dispose client', () async {
+      if (!olmEnabled) return;
       await client.dispose(closeDatabase: true);
     });
   });

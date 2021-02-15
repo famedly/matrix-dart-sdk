@@ -30,24 +30,25 @@ void main() {
   group('Olm Manager', () {
     Logs().level = Level.error;
     var olmEnabled = true;
-    try {
-      olm.init();
-      olm.Account();
-    } catch (e) {
-      olmEnabled = false;
-      Logs().w('[LibOlm] Failed to load LibOlm', e);
-    }
-    Logs().i('[LibOlm] Enabled: $olmEnabled');
-
-    if (!olmEnabled) return;
 
     Client client;
 
     test('setupClient', () async {
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().i('[LibOlm] Enabled: $olmEnabled');
+      if (!olmEnabled) return;
+
       client = await getClient();
     });
 
     test('signatures', () async {
+      if (!olmEnabled) return;
       final payload = <String, dynamic>{
         'fox': 'floof',
       };
@@ -59,6 +60,7 @@ void main() {
     });
 
     test('uploadKeys', () async {
+      if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
       final res =
           await client.encryption.olmManager.uploadKeys(uploadDeviceKeys: true);
@@ -68,22 +70,28 @@ void main() {
       expect(sent['device_keys'] != null, true);
       expect(sent['one_time_keys'] != null, true);
       expect(sent['one_time_keys'].keys.length, 66);
+      expect(sent['fallback_keys'] != null, true);
+      expect(sent['fallback_keys'].keys.length, 1);
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption.olmManager.uploadKeys();
       sent = json.decode(
           FakeMatrixApi.calledEndpoints['/client/r0/keys/upload'].first);
       expect(sent['device_keys'] != null, false);
+      expect(sent['fallback_keys'].keys.length, 1);
       FakeMatrixApi.calledEndpoints.clear();
-      await client.encryption.olmManager.uploadKeys(oldKeyCount: 20);
+      await client.encryption.olmManager
+          .uploadKeys(oldKeyCount: 20, unusedFallbackKey: true);
       sent = json.decode(
           FakeMatrixApi.calledEndpoints['/client/r0/keys/upload'].first);
       expect(sent['one_time_keys'].keys.length, 46);
+      expect(sent['fallback_keys'].keys.length, 0);
     });
 
     test('handleDeviceOneTimeKeysCount', () async {
+      if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
       client.encryption.olmManager
-          .handleDeviceOneTimeKeysCount({'signed_curve25519': 20});
+          .handleDeviceOneTimeKeysCount({'signed_curve25519': 20}, null);
       await Future.delayed(Duration(milliseconds: 50));
       expect(
           FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'),
@@ -91,7 +99,22 @@ void main() {
 
       FakeMatrixApi.calledEndpoints.clear();
       client.encryption.olmManager
-          .handleDeviceOneTimeKeysCount({'signed_curve25519': 70});
+          .handleDeviceOneTimeKeysCount({'signed_curve25519': 70}, null);
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(
+          FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'),
+          false);
+
+      FakeMatrixApi.calledEndpoints.clear();
+      client.encryption.olmManager.handleDeviceOneTimeKeysCount(null, []);
+      await Future.delayed(Duration(milliseconds: 50));
+      expect(
+          FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'),
+          true);
+
+      FakeMatrixApi.calledEndpoints.clear();
+      client.encryption.olmManager
+          .handleDeviceOneTimeKeysCount(null, ['signed_curve25519']);
       await Future.delayed(Duration(milliseconds: 50));
       expect(
           FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'),
@@ -99,6 +122,7 @@ void main() {
     });
 
     test('restoreOlmSession', () async {
+      if (!olmEnabled) return;
       client.encryption.olmManager.olmSessions.clear();
       await client.encryption.olmManager
           .restoreOlmSession(client.userID, client.identityKey);
@@ -116,6 +140,7 @@ void main() {
     });
 
     test('startOutgoingOlmSessions', () async {
+      if (!olmEnabled) return;
       // start an olm session.....with ourself!
       client.encryption.olmManager.olmSessions.clear();
       await client.encryption.olmManager.startOutgoingOlmSessions(
@@ -127,6 +152,7 @@ void main() {
     });
 
     test('replay to_device events', () async {
+      if (!olmEnabled) return;
       final userId = '@alice:example.com';
       final deviceId = 'JLAFKJWSCS';
       final senderKey = 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8';
@@ -209,6 +235,7 @@ void main() {
     });
 
     test('dispose client', () async {
+      if (!olmEnabled) return;
       await client.dispose(closeDatabase: true);
     });
   });

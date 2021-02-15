@@ -74,24 +74,25 @@ void main() {
     });
 
     var olmEnabled = true;
-    try {
-      olm.init();
-      olm.Account();
-    } catch (e) {
-      olmEnabled = false;
-      Logs().w('[LibOlm] Failed to load LibOlm', e);
-    }
-    Logs().i('[LibOlm] Enabled: $olmEnabled');
-
-    if (!olmEnabled) return;
 
     Client client;
 
     test('setupClient', () async {
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().i('[LibOlm] Enabled: $olmEnabled');
+      if (!olmEnabled) return;
+
       client = await getClient();
     });
 
     test('reject devices without self-signature', () async {
+      if (!olmEnabled) return;
       var key = DeviceKeys.fromJson({
         'user_id': '@test:fakeServer.notExisting',
         'device_id': 'BADDEVICE',
@@ -128,6 +129,7 @@ void main() {
     });
 
     test('set blocked / verified', () async {
+      if (!olmEnabled) return;
       final key =
           client.userDeviceKeys[client.userID].deviceKeys['OTHERDEVICE'];
       client.userDeviceKeys[client.userID].deviceKeys['UNSIGNEDDEVICE'] =
@@ -203,6 +205,7 @@ void main() {
     });
 
     test('verification based on signatures', () async {
+      if (!olmEnabled) return;
       final user = client.userDeviceKeys[client.userID];
       user.masterKey.setDirectVerified(true);
       expect(user.deviceKeys['GHTYAJCE'].crossVerified, true);
@@ -238,6 +241,7 @@ void main() {
     });
 
     test('start verification', () async {
+      if (!olmEnabled) return;
       var req = client
           .userDeviceKeys['@alice:example.com'].deviceKeys['JLAFKJWSCS']
           .startVerification();
@@ -251,6 +255,7 @@ void main() {
     });
 
     test('dispose client', () async {
+      if (!olmEnabled) return;
       await client.dispose(closeDatabase: true);
     });
   });

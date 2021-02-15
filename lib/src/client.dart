@@ -1073,8 +1073,11 @@ class Client extends MatrixApi {
     if (sync.deviceLists != null) {
       await _handleDeviceListsEvents(sync.deviceLists);
     }
-    if (sync.deviceOneTimeKeysCount != null && encryptionEnabled) {
-      encryption.handleDeviceOneTimeKeysCount(sync.deviceOneTimeKeysCount);
+    if ((sync.deviceUnusedFallbackKeyTypes != null ||
+            sync.deviceOneTimeKeysCount != null) &&
+        encryptionEnabled) {
+      encryption.handleDeviceOneTimeKeysCount(
+          sync.deviceOneTimeKeysCount, sync.deviceUnusedFallbackKeyTypes);
     }
     onSync.add(sync);
   }

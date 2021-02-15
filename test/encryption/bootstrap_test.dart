@@ -31,16 +31,6 @@ void main() {
   group('Bootstrap', () {
     Logs().level = Level.error;
     var olmEnabled = true;
-    try {
-      olm.init();
-      olm.Account();
-    } catch (e) {
-      olmEnabled = false;
-      Logs().w('[LibOlm] Failed to load LibOlm', e);
-    }
-    Logs().i('[LibOlm] Enabled: $olmEnabled');
-
-    if (!olmEnabled) return;
 
     Client client;
     Map<String, dynamic> oldSecret;
@@ -52,6 +42,16 @@ void main() {
     });
 
     test('setup', () async {
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().i('[LibOlm] Enabled: $olmEnabled');
+      if (!olmEnabled) return;
+
       Bootstrap bootstrap;
       bootstrap = client.encryption.bootstrap(
         onUpdate: () async {
@@ -108,6 +108,7 @@ void main() {
     }, timeout: Timeout(Duration(minutes: 2)));
 
     test('change recovery passphrase', () async {
+      if (!olmEnabled) return;
       Bootstrap bootstrap;
       bootstrap = client.encryption.bootstrap(
         onUpdate: () async {
@@ -158,6 +159,7 @@ void main() {
     }, timeout: Timeout(Duration(minutes: 2)));
 
     test('change passphrase with multiple keys', () async {
+      if (!olmEnabled) return;
       await client.setAccountData(client.userID, 'foxes', oldSecret);
       await Future.delayed(Duration(milliseconds: 50));
 
@@ -212,6 +214,7 @@ void main() {
     }, timeout: Timeout(Duration(minutes: 2)));
 
     test('setup new ssss', () async {
+      if (!olmEnabled) return;
       client.accountData.clear();
       Bootstrap bootstrap;
       bootstrap = client.encryption.bootstrap(
@@ -237,6 +240,7 @@ void main() {
     }, timeout: Timeout(Duration(minutes: 2)));
 
     test('bad ssss', () async {
+      if (!olmEnabled) return;
       client.accountData.clear();
       await client.setAccountData(client.userID, 'foxes', oldSecret);
       await Future.delayed(Duration(milliseconds: 50));
@@ -262,6 +266,7 @@ void main() {
     });
 
     test('dispose client', () async {
+      if (!olmEnabled) return;
       await client.dispose(closeDatabase: true);
     });
   });

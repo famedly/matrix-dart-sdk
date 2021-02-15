@@ -61,16 +61,17 @@ void main() {
     toDeviceUpdateListFuture = matrix.onToDeviceEvent.stream.toList();
 
     var olmEnabled = true;
-    try {
-      olm.init();
-      olm.Account();
-    } catch (e) {
-      olmEnabled = false;
-      Logs().w('[LibOlm] Failed to load LibOlm', e);
-    }
-    Logs().w('[LibOlm] Enabled: $olmEnabled');
 
     test('Login', () async {
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().w('[LibOlm] Enabled: $olmEnabled');
+
       var presenceCounter = 0;
       var accountDataCounter = 0;
       matrix.onPresence.stream.listen((Presence data) {

@@ -138,10 +138,12 @@ class OlmManager {
   bool _uploadKeysLock = false;
 
   /// Generates new one time keys, signs everything and upload it to the server.
-  Future<bool> uploadKeys(
-      {bool uploadDeviceKeys = false,
-      int oldKeyCount = 0,
-      bool updateDatabase = true}) async {
+  Future<bool> uploadKeys({
+    bool uploadDeviceKeys = false,
+    int oldKeyCount = 0,
+    bool updateDatabase = true,
+    bool unusedFallbackKey = false,
+  }) async {
     if (!enabled) {
       return true;
     }
@@ -152,32 +154,53 @@ class OlmManager {
     _uploadKeysLock = true;
 
     try {
-      // check if we have OTKs that still need uploading. If we do, we don't try to generate new ones,
-      // instead we try to upload the old ones first
-      final oldOTKsNeedingUpload =
-          json.decode(_olmAccount.one_time_keys())['curve25519'].entries.length;
-      // generate one-time keys
-      // we generate 2/3rds of max, so that other keys people may still have can
-      // still be used
-      final oneTimeKeysCount =
-          (_olmAccount.max_number_of_one_time_keys() * 2 / 3).floor() -
-              oldKeyCount -
-              oldOTKsNeedingUpload;
-      if (oneTimeKeysCount > 0) {
-        _olmAccount.generate_one_time_keys(oneTimeKeysCount);
-      }
-      final Map<String, dynamic> oneTimeKeys =
-          json.decode(_olmAccount.one_time_keys());
-
-      // now sign all the one-time keys
       final signedOneTimeKeys = <String, dynamic>{};
-      for (final entry in oneTimeKeys['curve25519'].entries) {
-        final key = entry.key;
-        final value = entry.value;
-        signedOneTimeKeys['signed_curve25519:$key'] = <String, dynamic>{};
-        signedOneTimeKeys['signed_curve25519:$key'] = signJson({
-          'key': value,
-        });
+      int uploadedOneTimeKeysCount;
+      if (oldKeyCount != null) {
+        // check if we have OTKs that still need uploading. If we do, we don't try to generate new ones,
+        // instead we try to upload the old ones first
+        final oldOTKsNeedingUpload = json
+            .decode(_olmAccount.one_time_keys())['curve25519']
+            .entries
+            .length;
+        // generate one-time keys
+        // we generate 2/3rds of max, so that other keys people may still have can
+        // still be used
+        final oneTimeKeysCount =
+            (_olmAccount.max_number_of_one_time_keys() * 2 / 3).floor() -
+                oldKeyCount -
+                oldOTKsNeedingUpload;
+        if (oneTimeKeysCount > 0) {
+          _olmAccount.generate_one_time_keys(oneTimeKeysCount);
+        }
+        uploadedOneTimeKeysCount = oneTimeKeysCount + oldOTKsNeedingUpload;
+        final Map<String, dynamic> oneTimeKeys =
+            json.decode(_olmAccount.one_time_keys());
+
+        // now sign all the one-time keys
+        for (final entry in oneTimeKeys['curve25519'].entries) {
+          final key = entry.key;
+          final value = entry.value;
+          signedOneTimeKeys['signed_curve25519:$key'] = signJson({
+            'key': value,
+          });
+        }
+      }
+
+      final signedFallbackKeys = <String, dynamic>{};
+      if (encryption.isMinOlmVersion(3, 2, 0) && unusedFallbackKey == false) {
+        // we don't have an unused fallback key uploaded....so let's change that!
+        _olmAccount.generate_fallback_key();
+        final fallbackKey = json.decode(_olmAccount.fallback_key());
+        // now sign all the fallback keys
+        for (final entry in fallbackKey['curve25519'].entries) {
+          final key = entry.key;
+          final value = entry.value;
+          signedFallbackKeys['signed_curve25519:$key'] = signJson({
+            'key': value,
+            'fallback': true,
+          });
+        }
       }
 
       // and now generate the payload to upload
@@ -217,28 +240,43 @@ class OlmManager {
             ? MatrixDeviceKeys.fromJson(keysContent['device_keys'])
             : null,
         oneTimeKeys: signedOneTimeKeys,
+        fallbackKeys: signedFallbackKeys,
       );
       // mark the OTKs as published and save that to datbase
       _olmAccount.mark_keys_as_published();
       if (updateDatabase) {
         await client.database?.updateClientKeys(pickledOlmAccount, client.id);
       }
-      return response['signed_curve25519'] == oneTimeKeysCount;
+      return (uploadedOneTimeKeysCount != null &&
+              response['signed_curve25519'] == uploadedOneTimeKeysCount) ||
+          uploadedOneTimeKeysCount == null;
     } finally {
       _uploadKeysLock = false;
     }
   }
 
-  void handleDeviceOneTimeKeysCount(Map<String, int> countJson) {
+  void handleDeviceOneTimeKeysCount(
+      Map<String, int> countJson, List<String> unusedFallbackKeyTypes) {
     if (!enabled) {
       return;
     }
+    final haveFallbackKeys = encryption.isMinOlmVersion(3, 2, 0);
     // Check if there are at least half of max_number_of_one_time_keys left on the server
     // and generate and upload more if not.
-    if (countJson.containsKey('signed_curve25519') &&
-        countJson['signed_curve25519'] <
-            (_olmAccount.max_number_of_one_time_keys() / 2)) {
-      uploadKeys(oldKeyCount: countJson['signed_curve25519']);
+    if ((countJson != null &&
+            ((countJson.containsKey('signed_curve25519') &&
+                    countJson['signed_curve25519'] <
+                        (_olmAccount.max_number_of_one_time_keys() / 2)) ||
+                !countJson.containsKey('signed_curve25519'))) ||
+        (haveFallbackKeys &&
+            unusedFallbackKeyTypes?.contains('signed_curve25519') == false)) {
+      uploadKeys(
+        oldKeyCount:
+            countJson != null ? (countJson['signed_curve25519'] ?? 0) : null,
+        unusedFallbackKey: haveFallbackKeys
+            ? unusedFallbackKeyTypes?.contains('signed_curve25519')
+            : null,
+      );
     }
   }
 

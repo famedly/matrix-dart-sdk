@@ -64,16 +64,6 @@ void main() {
   group('Key Verification', () {
     Logs().level = Level.error;
     var olmEnabled = true;
-    try {
-      olm.init();
-      olm.Account();
-    } catch (e) {
-      olmEnabled = false;
-      Logs().w('[LibOlm] Failed to load LibOlm', e);
-    }
-    Logs().i('[LibOlm] Enabled: $olmEnabled');
-
-    if (!olmEnabled) return;
 
     // key @othertest:fakeServer.notExisting
     const otherPickledOlmAccount =
@@ -83,6 +73,16 @@ void main() {
     Client client2;
 
     test('setupClient', () async {
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().i('[LibOlm] Enabled: $olmEnabled');
+      if (!olmEnabled) return;
+
       client1 = await getClient();
       client2 = Client('othertestclient',
           httpClient: FakeMatrixApi(),
@@ -109,6 +109,7 @@ void main() {
     });
 
     test('Run emoji / number verification', () async {
+      if (!olmEnabled) return;
       // for a full run we test in-room verification in a cleartext room
       // because then we can easily intercept the payloads and inject in the other client
       FakeMatrixApi.calledEndpoints.clear();
@@ -209,6 +210,7 @@ void main() {
     });
 
     test('ask SSSS start', () async {
+      if (!olmEnabled) return;
       client1.userDeviceKeys[client1.userID].masterKey.setDirectVerified(true);
       await client1.encryption.ssss.clearCache();
       final req1 =
@@ -223,6 +225,7 @@ void main() {
     });
 
     test('ask SSSS end', () async {
+      if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
       // make sure our master key is *not* verified to not triger SSSS for now
       client1.userDeviceKeys[client1.userID].masterKey.setDirectVerified(false);
@@ -327,6 +330,7 @@ void main() {
     });
 
     test('reject verification', () async {
+      if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
       // make sure our master key is *not* verified to not triger SSSS for now
       client1.userDeviceKeys[client1.userID].masterKey.setDirectVerified(false);
@@ -355,6 +359,7 @@ void main() {
     });
 
     test('reject sas', () async {
+      if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
       // make sure our master key is *not* verified to not triger SSSS for now
       client1.userDeviceKeys[client1.userID].masterKey.setDirectVerified(false);
@@ -415,6 +420,7 @@ void main() {
     });
 
     test('other device accepted', () async {
+      if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
       // make sure our master key is *not* verified to not triger SSSS for now
       client1.userDeviceKeys[client1.userID].masterKey.setDirectVerified(false);
@@ -460,6 +466,7 @@ void main() {
     });
 
     test('dispose client', () async {
+      if (!olmEnabled) return;
       await client1.dispose(closeDatabase: true);
       await client2.dispose(closeDatabase: true);
     });

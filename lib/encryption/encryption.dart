@@ -20,6 +20,7 @@ import 'dart:convert';
 import 'dart:async';
 
 import 'package:pedantic/pedantic.dart';
+import 'package:olm/olm.dart' as olm;
 
 import '../famedlysdk.dart';
 import '../src/utils/run_in_root.dart';
@@ -68,13 +69,27 @@ class Encryption {
     _backgroundTasks(); // start the background tasks
   }
 
+  bool isMinOlmVersion(int major, int minor, int patch) {
+    try {
+      final version = olm.get_library_version();
+      return version[0] > major ||
+          (version[0] == major &&
+              (version[1] > minor ||
+                  (version[1] == minor && version[2] >= patch)));
+    } catch (_) {
+      return false;
+    }
+  }
+
   Bootstrap bootstrap({void Function() onUpdate}) => Bootstrap(
         encryption: this,
         onUpdate: onUpdate,
       );
 
-  void handleDeviceOneTimeKeysCount(Map<String, int> countJson) {
-    runInRoot(() => olmManager.handleDeviceOneTimeKeysCount(countJson));
+  void handleDeviceOneTimeKeysCount(
+      Map<String, int> countJson, List<String> unusedFallbackKeyTypes) {
+    runInRoot(() => olmManager.handleDeviceOneTimeKeysCount(
+        countJson, unusedFallbackKeyTypes));
   }
 
   void onSync() {
