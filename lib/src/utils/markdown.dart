@@ -19,6 +19,8 @@
 import 'package:markdown/markdown.dart';
 import 'dart:convert';
 
+const htmlAttrEscape = HtmlEscape(HtmlEscapeMode.attribute);
+
 class LinebreakSyntax extends InlineSyntax {
   LinebreakSyntax() : super(r'\n');
 
@@ -51,7 +53,7 @@ class SpoilerSyntax extends TagSyntax {
   bool onMatchEnd(InlineParser parser, Match match, TagState state) {
     final element = Element('span', state.children);
     element.attributes['data-mx-spoiler'] =
-        htmlEscape.convert(reasonMap[match.input] ?? '');
+        htmlAttrEscape.convert(reasonMap[match.input] ?? '');
     parser.addNode(element);
     return true;
   }
@@ -84,9 +86,9 @@ class EmoteSyntax extends InlineSyntax {
     }
     final element = Element.empty('img');
     element.attributes['data-mx-emoticon'] = '';
-    element.attributes['src'] = htmlEscape.convert(mxc);
-    element.attributes['alt'] = htmlEscape.convert(emote);
-    element.attributes['title'] = htmlEscape.convert(emote);
+    element.attributes['src'] = htmlAttrEscape.convert(mxc);
+    element.attributes['alt'] = htmlAttrEscape.convert(emote);
+    element.attributes['title'] = htmlAttrEscape.convert(emote);
     element.attributes['height'] = '32';
     element.attributes['vertical-align'] = 'middle';
     parser.addNode(element);
