@@ -951,15 +951,19 @@ class Client extends MatrixApi {
     _retryDelay = Future.delayed(Duration(seconds: syncErrorTimeoutSec));
     if (!isLogged() || _disposed || _aborted) return null;
     try {
+      var syncError;
       final syncRequest = sync(
         filter: syncFilters,
         since: prevBatch,
         timeout: prevBatch != null ? 30000 : null,
         setPresence: syncPresence,
-      );
+      ).catchError((e) => syncError = e);
       _currentSyncId = syncRequest.hashCode;
       final syncResp = await syncRequest;
+      if (syncError != null) throw syncError;
       if (_currentSyncId != syncRequest.hashCode) {
+        Logs()
+            .w('Current sync request ID has changed. Dropping this sync loop!');
         return;
       }
       if (database != null) {
