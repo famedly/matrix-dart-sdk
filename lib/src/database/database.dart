@@ -70,7 +70,7 @@ class Database extends _$Database {
   Database.connect(DatabaseConnection connection) : super.connect(connection);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   int get maxFileSize => 1 * 1024 * 1024;
 
@@ -173,6 +173,10 @@ class Database extends _$Database {
             if (from == 10) {
               await m.createTableIfNotExists(toDeviceQueue);
               await m.createIndexIfNotExists(toDeviceQueueIndex);
+              from++;
+            }
+            if (from == 11) {
+              await m.addColumnIfNotExists(clients, clients.syncFilterId);
               from++;
             }
           } catch (e, s) {

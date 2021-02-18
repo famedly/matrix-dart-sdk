@@ -23,7 +23,7 @@ dependencies:
   matrix_file_e2ee: ^1.0.5
   isolate: ^2.0.3
   logger: ^0.9.4
-  matrix_api_lite: ^0.1.7
+  matrix_api_lite: ^0.1.8
 
 dev_dependencies:
   test: ^1.15.7

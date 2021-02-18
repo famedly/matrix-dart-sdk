@@ -9,6 +9,7 @@ CREATE TABLE clients (
   device_id TEXT,
   device_name TEXT,
   prev_batch TEXT,
+  sync_filter_id TEXT,
   olm_account TEXT,
   UNIQUE(name)
 ) AS DbClient;
@@ -189,6 +190,7 @@ dbGetClient: SELECT * FROM clients WHERE name = :name;
 updateClient: UPDATE clients SET homeserver_url = :homeserver_url, token = :token, user_id = :user_id, device_id = :device_id, device_name = :device_name, prev_batch = :prev_batch, olm_account = :olm_account WHERE client_id = :client_id;
 updateClientKeys: UPDATE clients SET olm_account = :olm_account WHERE client_id = :client_id;
 storePrevBatch: UPDATE clients SET prev_batch = :prev_batch WHERE client_id = :client_id;
+storeSyncFilterId: UPDATE clients SET sync_filter_id = :sync_filter_id WHERE client_id = :client_id;
 getAllUserDeviceKeys: SELECT * FROM user_device_keys WHERE client_id = :client_id;
 getAllUserDeviceKeysKeys: SELECT * FROM user_device_keys_key WHERE client_id = :client_id;
 getAllUserCrossSigningKeys: SELECT * FROM user_cross_signing_keys WHERE client_id = :client_id;

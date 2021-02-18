@@ -86,6 +86,9 @@ class Client extends MatrixApi {
 
   // For CommandsClientExtension
   final Map<String, FutureOr<String> Function(CommandArgs)> commands = {};
+  final Filter syncFilter;
+
+  String syncFilterId;
 
   /// Create a client
   /// [clientName] = unique identifier of this client
@@ -117,7 +120,8 @@ class Client extends MatrixApi {
   /// be formatted in the way, that all "_" characters are becomming white spaces and
   /// the first character of each word becomes uppercase.
   /// If your client supports more login types like login with token or SSO, then add this to
-  /// [supportedLoginTypes].
+  /// [supportedLoginTypes]. Set a custom [syncFilter] if you like. By default the app
+  /// will use lazy_load_members.
   Client(
     this.clientName, {
     this.databaseBuilder,
@@ -130,8 +134,14 @@ class Client extends MatrixApi {
     this.sendMessageTimeoutSeconds = 60,
     this.requestHistoryOnLimitedTimeline = false,
     this.supportedLoginTypes,
+    Filter syncFilter,
     @deprecated bool debug,
-  }) {
+  }) : syncFilter = syncFilter ??
+            Filter(
+              room: RoomFilter(
+                state: StateFilter(lazyLoadMembers: true),
+              ),
+            ) {
     supportedLoginTypes ??= {AuthenticationTypes.password};
     verificationMethods ??= <KeyVerificationMethod>{};
     importantStateEvents ??= {};
@@ -647,9 +657,6 @@ class Client extends MatrixApi {
       : null;
 
   static const Set<String> supportedVersions = {'r0.5.0', 'r0.6.0'};
-  static const String syncFilters =
-      '{"room":{"state":{"lazy_load_members":true}}}';
-  static const String messagesFilters = '{"lazy_load_members":true}';
   static const List<String> supportedDirectEncryptionAlgorithms = [
     AlgorithmTypes.olmV1Curve25519AesSha2
   ];
@@ -805,6 +812,7 @@ class Client extends MatrixApi {
           _userID = account.userId;
           _deviceID = account.deviceId;
           _deviceName = account.deviceName;
+          syncFilterId = account.syncFilterId;
           prevBatch = account.prevBatch;
           olmAccount = account.olmAccount;
         }
@@ -903,7 +911,7 @@ class Client extends MatrixApi {
   void clear() {
     Logs().outputEvents.clear();
     database?.clear(id);
-    _id = accessToken =
+    _id = accessToken = syncFilterId =
         homeserver = _userID = _deviceID = _deviceName = prevBatch = null;
     _rooms = [];
     encryption?.dispose();
@@ -946,14 +954,23 @@ class Client extends MatrixApi {
   /// Presence that is set on sync.
   PresenceType syncPresence;
 
+  Future<void> _checkSyncFilter() async {
+    if (syncFilterId == null) {
+      syncFilterId = await uploadFilter(userID, syncFilter);
+      await database?.storeSyncFilterId(syncFilterId, id);
+    }
+    return;
+  }
+
   Future<void> _innerSync() async {
     await _retryDelay;
     _retryDelay = Future.delayed(Duration(seconds: syncErrorTimeoutSec));
     if (!isLogged() || _disposed || _aborted) return null;
     try {
       var syncError;
+      await _checkSyncFilter();
       final syncRequest = sync(
-        filter: syncFilters,
+        filter: syncFilterId,
         since: prevBatch,
         timeout: prevBatch != null ? 30000 : null,
         setPresence: syncPresence,
