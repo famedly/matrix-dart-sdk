@@ -54,11 +54,11 @@ void main() {
     });
     test('emotes', () {
       expect(markdown(':fox:', emotePacks),
-          '<img data-mx-emoticon="" src="mxc:&#47;&#47;roomfox" alt=":fox:" title=":fox:" height="32" vertical-align="middle" />');
+          '<img data-mx-emoticon="" src="mxc://roomfox" alt=":fox:" title=":fox:" height="32" vertical-align="middle" />');
       expect(markdown(':user~fox:', emotePacks),
-          '<img data-mx-emoticon="" src="mxc:&#47;&#47;userfox" alt=":fox:" title=":fox:" height="32" vertical-align="middle" />');
+          '<img data-mx-emoticon="" src="mxc://userfox" alt=":fox:" title=":fox:" height="32" vertical-align="middle" />');
       expect(markdown(':raccoon:', emotePacks),
-          '<img data-mx-emoticon="" src="mxc:&#47;&#47;raccoon" alt=":raccoon:" title=":raccoon:" height="32" vertical-align="middle" />');
+          '<img data-mx-emoticon="" src="mxc://raccoon" alt=":raccoon:" title=":raccoon:" height="32" vertical-align="middle" />');
       expect(markdown(':invalid:', emotePacks), ':invalid:');
       expect(markdown(':room~invalid:', emotePacks), ':room~invalid:');
     });
