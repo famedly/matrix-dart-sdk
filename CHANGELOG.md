@@ -1,3 +1,6 @@
+## 0.1.9
+- feat: Add support for fallback keys
+
 ## 0.1.8
 
 - fix: Wrong parameters use
