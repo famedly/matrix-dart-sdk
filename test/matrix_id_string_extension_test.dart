@@ -88,26 +88,23 @@ void main() {
           .parseIdentifierIntoParts();
       expect(res.via, <String>{'fox.com', 'fox.org'});
 
-      res = 'matrix:user/her:example.org'.parseIdentifierIntoParts();
+      res = 'matrix:u/her:example.org'.parseIdentifierIntoParts();
       expect(res.primaryIdentifier, '@her:example.org');
       expect(res.secondaryIdentifier, null);
-      res = 'matrix:user/bad'.parseIdentifierIntoParts();
+      res = 'matrix:u/bad'.parseIdentifierIntoParts();
       expect(res, null);
       res = 'matrix:roomid/rid:example.org'.parseIdentifierIntoParts();
       expect(res.primaryIdentifier, '!rid:example.org');
       expect(res.secondaryIdentifier, null);
       expect(res.action, null);
-      res = 'matrix:room/us:example.org?action=chat'.parseIdentifierIntoParts();
+      res = 'matrix:r/us:example.org?action=chat'.parseIdentifierIntoParts();
       expect(res.primaryIdentifier, '#us:example.org');
       expect(res.secondaryIdentifier, null);
       expect(res.action, 'chat');
-      res = 'matrix:room/us:example.org/event/lol823y4bcp3qo4'
+      res = 'matrix:r/us:example.org/e/lol823y4bcp3qo4'
           .parseIdentifierIntoParts();
       expect(res.primaryIdentifier, '#us:example.org');
       expect(res.secondaryIdentifier, '\$lol823y4bcp3qo4');
-      res = 'matrix:group/them:example.org'.parseIdentifierIntoParts();
-      expect(res.primaryIdentifier, '+them:example.org');
-      expect(res.secondaryIdentifier, null);
       res = 'matrix:roomid/rid:example.org?via=fox.com&via=fox.org'
           .parseIdentifierIntoParts();
       expect(res.primaryIdentifier, '!rid:example.org');
