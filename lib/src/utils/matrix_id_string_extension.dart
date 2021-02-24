@@ -97,11 +97,10 @@ extension MatrixIdExtension on String {
       final identifiers = <String>[];
       for (var i = 0; i < pathSegments.length - 1; i += 2) {
         final thisSigil = {
-          'user': '@',
+          'u': '@',
           'roomid': '!',
-          'room': '#',
-          'group': '+',
-          'event': '\$',
+          'r': '#',
+          'e': '\$',
         }[pathSegments[i].toLowerCase()];
         if (thisSigil == null) {
           break;
