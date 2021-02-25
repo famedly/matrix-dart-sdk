@@ -68,6 +68,11 @@ class Timeline {
   bool _collectHistoryUpdates = false;
   final Set<EventUpdate> _historyUpdates = <EventUpdate>{};
 
+  bool get canRequestHistory {
+    if (events.isEmpty) return true;
+    return events.last.type != EventTypes.RoomCreate;
+  }
+
   Future<void> requestHistory(
       {int historyCount = Room.DefaultHistoryCount}) async {
     if (!isRequestingHistory) {

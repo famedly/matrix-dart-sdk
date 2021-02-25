@@ -283,6 +283,7 @@ void main() {
 
     test('Request history', () async {
       timeline.events.clear();
+      expect(timeline.canRequestHistory, true);
       await room.requestHistory();
 
       await Future.delayed(Duration(milliseconds: 50));
