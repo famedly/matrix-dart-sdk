@@ -40,6 +40,8 @@ abstract class RelationshipTypes {
 class Event extends MatrixEvent {
   User get sender => room.getUserByMXIDSync(senderId ?? '@unknown');
 
+  static const String _unsignedSpecialKeys = 'com.famedly.matrix_dart_sdk';
+
   @Deprecated('Use [originServerTs] instead')
   DateTime get time => originServerTs;
 
@@ -58,7 +60,37 @@ class Event extends MatrixEvent {
   ///  1=SENT
   ///  2=TIMELINE
   ///  3=ROOM_STATE
-  int status;
+  int get status =>
+      unsigned
+          ?.tryGetMap<String, dynamic>(_unsignedSpecialKeys)
+          ?.tryGet<int>('status') ??
+      defaultStatus;
+
+  set status(int newStatus) {
+    if (unsigned != null) {
+      unsigned = {};
+    }
+    if (unsigned.tryGetMap<String, dynamic>(_unsignedSpecialKeys) == null) {
+      unsigned[_unsignedSpecialKeys] = <String, dynamic>{};
+    }
+    unsigned[_unsignedSpecialKeys]['status'] = newStatus;
+  }
+
+  double get sortOrder =>
+      unsigned
+          ?.tryGetMap<String, dynamic>(_unsignedSpecialKeys)
+          ?.tryGet<double>('sort_order') ??
+      0.0;
+
+  set sortOrder(double newSortorder) {
+    if (unsigned != null) {
+      unsigned = {};
+    }
+    if (unsigned.tryGetMap<String, dynamic>(_unsignedSpecialKeys) == null) {
+      unsigned[_unsignedSpecialKeys] = <String, dynamic>{};
+    }
+    unsigned[_unsignedSpecialKeys]['sort_order'] = newSortorder;
+  }
 
   static const int defaultStatus = 2;
   static const Map<String, int> STATUS_TYPE = {
@@ -79,10 +111,8 @@ class Event extends MatrixEvent {
 
   User get stateKeyUser => room.getUserByMXIDSync(stateKey);
 
-  double sortOrder;
-
   Event(
-      {this.status = defaultStatus,
+      {int status,
       Map<String, dynamic> content,
       String type,
       String eventId,
@@ -93,7 +123,9 @@ class Event extends MatrixEvent {
       Map<String, dynamic> prevContent,
       String stateKey,
       this.room,
-      this.sortOrder = 0.0}) {
+      double sortOrder}) {
+    this.status = status ?? defaultStatus;
+    this.sortOrder = sortOrder ?? 0.0;
     this.content = content;
     this.type = type;
     this.eventId = eventId;
