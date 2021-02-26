@@ -118,8 +118,8 @@ class Encryption {
     if (update.type == EventUpdateType.ephemeral) {
       return;
     }
-    if (update.eventType.startsWith('m.key.verification.') ||
-        (update.eventType == EventTypes.Message &&
+    if (update.content['type'].startsWith('m.key.verification.') ||
+        (update.content['type'] == EventTypes.Message &&
             (update.content['content']['msgtype'] is String) &&
             update.content['content']['msgtype']
                 .startsWith('m.key.verification.'))) {
@@ -281,7 +281,6 @@ class Encryption {
         await client.database?.storeEventUpdate(
           client.id,
           EventUpdate(
-            eventType: event.type,
             content: event.toJson(),
             roomID: event.roomId,
             type: updateType,

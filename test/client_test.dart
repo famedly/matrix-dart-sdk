@@ -245,55 +245,56 @@ void main() {
 
       expect(eventUpdateList.length, 14);
 
-      expect(eventUpdateList[0].eventType, 'm.room.member');
+      expect(eventUpdateList[0].content['type'], 'm.room.member');
       expect(eventUpdateList[0].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[0].type, EventUpdateType.state);
 
-      expect(eventUpdateList[1].eventType, 'm.room.canonical_alias');
+      expect(eventUpdateList[1].content['type'], 'm.room.canonical_alias');
       expect(eventUpdateList[1].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[1].type, EventUpdateType.state);
 
-      expect(eventUpdateList[2].eventType, 'm.room.encryption');
+      expect(eventUpdateList[2].content['type'], 'm.room.encryption');
       expect(eventUpdateList[2].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[2].type, EventUpdateType.state);
 
-      expect(eventUpdateList[3].eventType, 'm.room.pinned_events');
+      expect(eventUpdateList[3].content['type'], 'm.room.pinned_events');
       expect(eventUpdateList[3].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[3].type, EventUpdateType.state);
 
-      expect(eventUpdateList[4].eventType, 'm.room.member');
+      expect(eventUpdateList[4].content['type'], 'm.room.member');
       expect(eventUpdateList[4].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[4].type, EventUpdateType.timeline);
 
-      expect(eventUpdateList[5].eventType, 'm.room.message');
+      expect(eventUpdateList[5].content['type'], 'm.room.message');
       expect(eventUpdateList[5].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[5].type, EventUpdateType.timeline);
 
-      expect(eventUpdateList[6].eventType, 'm.typing');
+      expect(eventUpdateList[6].content['type'], 'm.typing');
       expect(eventUpdateList[6].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[6].type, EventUpdateType.ephemeral);
 
-      expect(eventUpdateList[7].eventType, 'm.receipt');
+      expect(eventUpdateList[7].content['type'], 'm.receipt');
       expect(eventUpdateList[7].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[7].type, EventUpdateType.ephemeral);
 
-      expect(eventUpdateList[8].eventType, 'm.receipt');
+      expect(eventUpdateList[8].content['type'], 'm.receipt');
       expect(eventUpdateList[8].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[8].type, EventUpdateType.accountData);
 
-      expect(eventUpdateList[9].eventType, 'm.tag');
+      expect(eventUpdateList[9].content['type'], 'm.tag');
       expect(eventUpdateList[9].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[9].type, EventUpdateType.accountData);
 
-      expect(eventUpdateList[10].eventType, 'org.example.custom.room.config');
+      expect(eventUpdateList[10].content['type'],
+          'org.example.custom.room.config');
       expect(eventUpdateList[10].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[10].type, EventUpdateType.accountData);
 
-      expect(eventUpdateList[11].eventType, 'm.room.name');
+      expect(eventUpdateList[11].content['type'], 'm.room.name');
       expect(eventUpdateList[11].roomID, '!696r7674:example.com');
       expect(eventUpdateList[11].type, EventUpdateType.inviteState);
 
-      expect(eventUpdateList[12].eventType, 'm.room.member');
+      expect(eventUpdateList[12].content['type'], 'm.room.member');
       expect(eventUpdateList[12].roomID, '!696r7674:example.com');
       expect(eventUpdateList[12].type, EventUpdateType.inviteState);
     });

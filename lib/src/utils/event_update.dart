@@ -36,10 +36,8 @@ class EventUpdate {
   /// Most events belong to a room. If not, this equals to eventType.
   final String roomID;
 
-  /// See (Matrix Room Events)[https://matrix.org/docs/spec/client_server/r0.4.0.html#room-events]
-  /// and (Matrix Events)[https://matrix.org/docs/spec/client_server/r0.4.0.html#id89] for more
-  /// informations.
-  final String eventType;
+  @Deprecated("Use `content['eventType']` instead.")
+  String get eventType => content['type'];
 
   // The json payload of the content of this event.
   final Map<String, dynamic> content;
@@ -47,11 +45,11 @@ class EventUpdate {
   // the order where to stort this event
   final double sortOrder;
 
-  EventUpdate(
-      {this.eventType, this.roomID, this.type, this.content, this.sortOrder});
+  EventUpdate({this.roomID, this.type, this.content, this.sortOrder});
 
   Future<EventUpdate> decrypt(Room room, {bool store = false}) async {
-    if (eventType != EventTypes.Encrypted || !room.client.encryptionEnabled) {
+    if (content['type'] != EventTypes.Encrypted ||
+        !room.client.encryptionEnabled) {
       return this;
     }
     try {
@@ -59,7 +57,6 @@ class EventUpdate {
           room.id, Event.fromJson(content, room, sortOrder),
           store: store, updateType: type);
       return EventUpdate(
-        eventType: decrpytedEvent.type,
         roomID: roomID,
         type: type,
         content: decrpytedEvent.toJson(),

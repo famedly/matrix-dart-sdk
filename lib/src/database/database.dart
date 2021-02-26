@@ -461,7 +461,7 @@ class Database extends _$Database {
       stateKey = eventContent['state_key'];
     }
 
-    if (eventUpdate.eventType == api.EventTypes.Redaction) {
+    if (eventUpdate.content['type'] == api.EventTypes.Redaction) {
       await redactMessage(clientId, eventUpdate);
     }
 
@@ -556,7 +556,7 @@ class Database extends _$Database {
               api.EventTypes.Message,
               api.EventTypes.Sticker,
               api.EventTypes.Encrypted
-            ].contains(eventUpdate.eventType))) {
+            ].contains(eventUpdate.content['type']))) {
       final now = DateTime.now();
       await storeRoomState(
         clientId,

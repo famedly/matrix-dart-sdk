@@ -53,7 +53,6 @@ EventUpdate getLastSentEvent(KeyVerification req) {
       'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
       'sender': req.client.userID,
     },
-    eventType: type,
     type: EventUpdateType.timeline,
     roomID: req.room.id,
   );
@@ -448,7 +447,6 @@ void main() {
           'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
           'sender': client2.userID,
         },
-        eventType: 'm.key.verification.ready',
         type: EventUpdateType.timeline,
         roomID: req2.room.id,
       ));

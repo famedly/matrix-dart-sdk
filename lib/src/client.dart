@@ -1271,7 +1271,6 @@ class Client extends MatrixApi {
           ? (sortAtTheEnd ? room.oldSortOrder : room.newSortOrder)
           : 0.0;
       var update = EventUpdate(
-        eventType: event['type'],
         roomID: roomID,
         type: type,
         content: event,
@@ -1421,11 +1420,11 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
         }
         break;
       case EventUpdateType.accountData:
-        room.roomAccountData[eventUpdate.eventType] =
+        room.roomAccountData[eventUpdate.content['type']] =
             BasicRoomEvent.fromJson(eventUpdate.content);
         break;
       case EventUpdateType.ephemeral:
-        room.ephemerals[eventUpdate.eventType] =
+        room.ephemerals[eventUpdate.content['type']] =
             BasicRoomEvent.fromJson(eventUpdate.content);
         break;
       case EventUpdateType.history:

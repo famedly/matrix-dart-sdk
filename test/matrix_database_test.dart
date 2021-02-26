@@ -45,7 +45,6 @@ void main() {
       var update = EventUpdate(
         type: EventUpdateType.timeline,
         roomID: room.id,
-        eventType: 'm.room.message',
         content: {
           'type': 'm.room.message',
           'origin_server_ts': 100,
@@ -63,7 +62,6 @@ void main() {
       update = EventUpdate(
         type: EventUpdateType.timeline,
         roomID: room.id,
-        eventType: 'm.room.message',
         content: {
           'type': 'm.room.message',
           'origin_server_ts': 100,
@@ -80,7 +78,6 @@ void main() {
       update = EventUpdate(
         type: EventUpdateType.timeline,
         roomID: room.id,
-        eventType: 'm.room.message',
         content: {
           'type': 'm.room.message',
           'origin_server_ts': 100,
@@ -103,7 +100,6 @@ void main() {
       update = EventUpdate(
         type: EventUpdateType.timeline,
         roomID: room.id,
-        eventType: 'm.room.message',
         content: {
           'type': 'm.room.message',
           'origin_server_ts': 100,
@@ -120,7 +116,6 @@ void main() {
       update = EventUpdate(
         type: EventUpdateType.timeline,
         roomID: room.id,
-        eventType: 'm.room.message',
         content: {
           'type': 'm.room.message',
           'origin_server_ts': 100,
@@ -145,7 +140,6 @@ void main() {
       update = EventUpdate(
         type: EventUpdateType.timeline,
         roomID: room.id,
-        eventType: 'm.room.message',
         content: {
           'type': 'm.room.message',
           'origin_server_ts': 100,
@@ -162,7 +156,6 @@ void main() {
       update = EventUpdate(
         type: EventUpdateType.timeline,
         roomID: room.id,
-        eventType: 'm.room.message',
         content: {
           'type': 'm.room.message',
           'origin_server_ts': 100,

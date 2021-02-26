@@ -263,7 +263,7 @@ class Timeline {
               : null) ??
           2;
       // Redaction events are handled as modification for existing events.
-      if (eventUpdate.eventType == EventTypes.Redaction) {
+      if (eventUpdate.content['type'] == EventTypes.Redaction) {
         final eventId = _findEvent(event_id: eventUpdate.content['redacts']);
         if (eventId < events.length) {
           removeAggregatedEvent(events[eventId]);

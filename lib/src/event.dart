@@ -320,7 +320,6 @@ class Event extends MatrixEvent {
       room.client.onEvent.add(EventUpdate(
           roomID: room.id,
           type: EventUpdateType.timeline,
-          eventType: type,
           content: {
             'event_id': eventId,
             'status': -2,
