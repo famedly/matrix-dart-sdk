@@ -974,10 +974,13 @@ class Client extends MatrixApi {
         since: prevBatch,
         timeout: prevBatch != null ? 30000 : null,
         setPresence: syncPresence,
-      ).catchError((e) => syncError = e);
+      ).catchError((e) {
+        syncError = e;
+        return null;
+      });
       _currentSyncId = syncRequest.hashCode;
       final syncResp = await syncRequest;
-      if (syncError != null) throw syncError;
+      if (syncResp == null) throw syncError ?? 'Unknown sync error';
       if (_currentSyncId != syncRequest.hashCode) {
         Logs()
             .w('Current sync request ID has changed. Dropping this sync loop!');
@@ -1021,7 +1024,7 @@ class Client extends MatrixApi {
         clear();
       }
     } on MatrixConnectionException catch (e, s) {
-      Logs().w('Synchronization connection failed', e);
+      Logs().w('Synchronization connection failed');
       onSyncError.add(SdkError(exception: e, stackTrace: s));
     } catch (e, s) {
       if (!isLogged() || _disposed || _aborted) return;
