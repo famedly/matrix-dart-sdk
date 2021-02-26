@@ -333,6 +333,11 @@ abstract class SignableKey extends MatrixSignableKey {
 
   @override
   String toString() => json.encode(toJson());
+
+  @override
+  bool operator ==(dynamic other) => (other is SignableKey &&
+      other.userId == userId &&
+      other.identifier == identifier);
 }
 
 class CrossSigningKey extends SignableKey {
