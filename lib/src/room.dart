@@ -1301,7 +1301,6 @@ class Room {
             content: content,
             roomID: id,
             type: EventUpdateType.state,
-            eventType: EventTypes.RoomMember,
             sortOrder: 0.0),
       );
     });

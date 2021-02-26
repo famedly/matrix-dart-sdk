@@ -71,7 +71,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -84,7 +83,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -133,7 +131,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.redaction',
           content: {
             'type': 'm.room.redaction',
             'content': {'reason': 'spamming'},
@@ -168,7 +165,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'test'},
@@ -193,7 +189,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -257,7 +252,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -315,7 +309,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -328,7 +321,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -348,7 +340,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -364,7 +355,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -384,7 +374,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -400,7 +389,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -417,7 +405,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -438,7 +425,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -457,7 +443,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -476,7 +461,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -498,7 +482,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -514,7 +497,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -530,7 +512,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -550,7 +531,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -566,7 +546,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
@@ -583,7 +562,6 @@ void main() {
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
           roomID: roomID,
-          eventType: 'm.room.message',
           content: {
             'type': 'm.room.message',
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
