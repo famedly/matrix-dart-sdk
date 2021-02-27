@@ -71,7 +71,7 @@ import 'model/well_known_information.dart';
 import 'model/who_is_info.dart';
 
 enum RequestType { GET, POST, PUT, DELETE }
-enum IdServerUnbindResult { success, no_success }
+enum IdServerUnbindResult { success, no_support }
 enum ThirdPartyIdentifierMedium { email, msisdn }
 enum Membership { join, invite, leave, ban }
 enum Direction { b, f }
