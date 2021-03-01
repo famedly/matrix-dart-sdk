@@ -51,7 +51,7 @@ import 'model/public_rooms_response.dart';
 import 'model/push_rule_set.dart';
 import 'model/pusher.dart';
 import 'model/request_token_response.dart';
-import 'model/room_alias_informations.dart';
+import 'model/room_alias_information.dart';
 import 'model/room_keys_info.dart';
 import 'model/room_keys_keys.dart';
 import 'model/server_capabilities.dart';
@@ -66,7 +66,7 @@ import 'model/timeline_history_response.dart';
 import 'model/turn_server_credentials.dart';
 import 'model/upload_key_signatures_response.dart';
 import 'model/user_search_result.dart';
-import 'model/well_known_informations.dart';
+import 'model/well_known_information.dart';
 import 'model/who_is_info.dart';
 
 enum RequestType { GET, POST, PUT, DELETE }
@@ -233,14 +233,14 @@ class MatrixApi {
 
   /// Gets discovery information about the domain. The file may include additional keys.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#get-well-known-matrix-client
-  Future<WellKnownInformations> requestWellKnownInformations() async {
+  Future<WellKnownInformation> requestWellKnownInformation() async {
     var baseUrl = homeserver.toString();
     if (baseUrl.endsWith('/')) {
       baseUrl = baseUrl.substring(0, baseUrl.length - 1);
     }
     final response = await httpClient.get('$baseUrl/.well-known/matrix/client');
     final rawJson = json.decode(response.body);
-    return WellKnownInformations.fromJson(rawJson);
+    return WellKnownInformation.fromJson(rawJson);
   }
 
   Future<LoginTypes> requestLoginTypes() async {
@@ -883,13 +883,12 @@ class MatrixApi {
 
   /// Requests that the server resolve a room alias to a room ID.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-directory-room-roomalias
-  Future<RoomAliasInformations> requestRoomAliasInformations(
-      String alias) async {
+  Future<RoomAliasInformation> requestRoomAliasInformation(String alias) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/directory/room/${Uri.encodeComponent(alias)}',
     );
-    return RoomAliasInformations.fromJson(response);
+    return RoomAliasInformation.fromJson(response);
   }
 
   /// Remove a mapping of room alias to room ID.
@@ -1726,7 +1725,7 @@ class MatrixApi {
   /// Performs a full text search across different categories.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-search
   /// Please note: The specification is not 100% clear what it is expecting and sending here.
-  /// So we stick with pure json until we have more informations.
+  /// So we stick with pure json until we have more information.
   Future<Map<String, dynamic>> globalSearch(Map<String, dynamic> query) async {
     return await request(
       RequestType.POST,

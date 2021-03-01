@@ -129,13 +129,13 @@ void main() {
           supportedVersions.toJson());
       matrixApi.homeserver = null;
     });
-    test('getWellKnownInformations', () async {
+    test('getWellKnownInformation', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
-      final wellKnownInformations =
-          await matrixApi.requestWellKnownInformations();
-      expect(wellKnownInformations.mHomeserver.baseUrl,
+      final wellKnownInformation =
+          await matrixApi.requestWellKnownInformation();
+      expect(wellKnownInformation.mHomeserver.baseUrl,
           'https://fakeserver.notexisting');
-      expect(wellKnownInformations.toJson(), {
+      expect(wellKnownInformation.toJson(), {
         'm.homeserver': {'base_url': 'https://fakeserver.notexisting'},
         'm.identity_server': {
           'base_url': 'https://identity.fakeserver.notexisting'
@@ -654,19 +654,18 @@ void main() {
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
-    test('requestRoomAliasInformations', () async {
+    test('requestRoomAliasInformation', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final roomAliasInformations =
-          await matrixApi.requestRoomAliasInformations(
+      final roomAliasInformation = await matrixApi.requestRoomAliasInformation(
         '#testalias:example.com',
       );
 
       expect(
           FakeMatrixApi.api['GET']
               ['/client/r0/directory/room/%23testalias%3Aexample.com']({}),
-          roomAliasInformations.toJson());
+          roomAliasInformation.toJson());
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });

@@ -21,39 +21,19 @@
 * SOFTWARE.
 */
 
-class WellKnownInformations {
-  MHomeserver mHomeserver;
-  MHomeserver mIdentityServer;
-  Map<String, dynamic> content;
+class RoomAliasInformation {
+  String roomId;
+  List<String> servers;
 
-  WellKnownInformations.fromJson(Map<String, dynamic> json) {
-    content = json;
-    mHomeserver = json['m.homeserver'] != null
-        ? MHomeserver.fromJson(json['m.homeserver'])
-        : null;
-    mIdentityServer = json['m.identity_server'] != null
-        ? MHomeserver.fromJson(json['m.identity_server'])
-        : null;
-  }
-
-  Map<String, dynamic> toJson() {
-    final data = content;
-    data['m.homeserver'] = mHomeserver.toJson();
-    data['m.identity_server'] = mIdentityServer.toJson();
-    return data;
-  }
-}
-
-class MHomeserver {
-  String baseUrl;
-
-  MHomeserver.fromJson(Map<String, dynamic> json) {
-    baseUrl = json['base_url'];
+  RoomAliasInformation.fromJson(Map<String, dynamic> json) {
+    roomId = json['room_id'];
+    servers = json['servers'].cast<String>();
   }
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
-    data['base_url'] = baseUrl;
+    data['room_id'] = roomId;
+    data['servers'] = servers;
     return data;
   }
 }

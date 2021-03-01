@@ -34,4 +34,4 @@ flutter format lib/**/*/*.dart
 - Don't repeat yourself! Use local variables, functions, classes.
 - Write tests for new classes, functions and widgets.
 - Keep it simple stupid: https://en.wikipedia.org/wiki/KISS_principle
-- Describe all of your classes, methods and attributes using **dartdoc** comments. Read this for more informations: https://dart.dev/guides/language/effective-dart/documentation
+- Describe all of your classes, methods and attributes using **dartdoc** comments. Read this for more information: https://dart.dev/guides/language/effective-dart/documentation

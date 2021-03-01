@@ -21,19 +21,48 @@
 * SOFTWARE.
 */
 
-class RoomAliasInformations {
-  String roomId;
-  List<String> servers;
+import '../utils/try_get_map_extension.dart';
 
-  RoomAliasInformations.fromJson(Map<String, dynamic> json) {
-    roomId = json['room_id'];
-    servers = json['servers'].cast<String>();
+class WellKnownInformation {
+  MHomeserver mHomeserver;
+  MHomeserver mIdentityServer;
+  Map<String, dynamic> content;
+
+  WellKnownInformation.fromJson(Map<String, dynamic> json) {
+    content = json;
+    final mHomeserverMap = json.tryGetMap<String, dynamic>('m.homeserver');
+    if (mHomeserverMap != null) {
+      mHomeserver = MHomeserver.fromJson(mHomeserverMap);
+    }
+    final mIdentityServerMap =
+        json.tryGetMap<String, dynamic>('m.identity_server');
+    if (mIdentityServerMap != null) {
+      mIdentityServer = MHomeserver.fromJson(mIdentityServerMap);
+    }
+  }
+
+  Map<String, dynamic> toJson() {
+    final data = content;
+    if (mHomeserver != null) {
+      data['m.homeserver'] = mHomeserver.toJson();
+    }
+    if (mIdentityServer != null) {
+      data['m.identity_server'] = mIdentityServer.toJson();
+    }
+    return data;
+  }
+}
+
+class MHomeserver {
+  String baseUrl;
+
+  MHomeserver.fromJson(Map<String, dynamic> json) {
+    baseUrl = json.tryGet<String>('base_url');
   }
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
-    data['room_id'] = roomId;
-    data['servers'] = servers;
+    if (baseUrl != null) data['base_url'] = baseUrl;
     return data;
   }
 }

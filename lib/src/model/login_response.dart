@@ -21,21 +21,20 @@
 * SOFTWARE.
 */
 
-import 'well_known_informations.dart';
+import 'well_known_information.dart';
 
 class LoginResponse {
   String userId;
   String accessToken;
   String deviceId;
-  WellKnownInformations wellKnownInformations;
+  WellKnownInformation wellKnownInformation;
 
   LoginResponse.fromJson(Map<String, dynamic> json) {
     userId = json['user_id'];
     accessToken = json['access_token'];
     deviceId = json['device_id'];
     if (json['well_known'] is Map) {
-      wellKnownInformations =
-          WellKnownInformations.fromJson(json['well_known']);
+      wellKnownInformation = WellKnownInformation.fromJson(json['well_known']);
     }
   }
 
@@ -44,8 +43,8 @@ class LoginResponse {
     if (userId != null) data['user_id'] = userId;
     if (accessToken != null) data['access_token'] = accessToken;
     if (deviceId != null) data['device_id'] = deviceId;
-    if (wellKnownInformations != null) {
-      data['well_known'] = wellKnownInformations.toJson();
+    if (wellKnownInformation != null) {
+      data['well_known'] = wellKnownInformation.toJson();
     }
     return data;
   }
