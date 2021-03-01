@@ -354,7 +354,7 @@ void main() {
     test('getUserByMXID', () async {
       User user;
       try {
-        user = await room.getUserByMXID('@getme:example.com');
+        user = await room.requestUser('@getme:example.com');
       } catch (_) {}
       expect(user.stateKey, '@getme:example.com');
       expect(user.calcDisplayname(), 'Getme');
