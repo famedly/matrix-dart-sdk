@@ -1216,6 +1216,7 @@ class Room {
 
   /// Returns the [User] object for the given [mxID] or requests it from
   /// the homeserver and waits for a response.
+  @Deprecated('Use [requestUser] instead')
   Future<User> getUserByMXID(String mxID) async {
     if (states[mxID] != null) return states[mxID].asUser;
     return requestUser(mxID);
@@ -1224,8 +1225,8 @@ class Room {
   /// Returns the [User] object for the given [mxID] or requests it from
   /// the homeserver and returns a default [User] object while waiting.
   User getUserByMXIDSync(String mxID) {
-    if (states[mxID] != null) {
-      return states[mxID].asUser;
+    if (getState(EventTypes.RoomMember, mxID) != null) {
+      return getState(EventTypes.RoomMember, mxID).asUser;
     } else {
       requestUser(mxID, ignoreErrors: true);
       return User(mxID, room: this);
@@ -1242,6 +1243,17 @@ class Room {
     bool ignoreErrors = false,
     bool requestProfile = true,
   }) async {
+    // TODO: Why is this bug happening at all?
+    if (mxID == null) {
+      // Show a warning but first generate a stacktrace.
+      try {
+        throw Exception();
+      } catch (e, s) {
+        Logs().w('requestUser has been called with a null mxID', e, s);
+      }
+      return null;
+    }
+
     if (getState(EventTypes.RoomMember, mxID) != null) {
       return getState(EventTypes.RoomMember, mxID).asUser;
     }
@@ -1250,22 +1262,26 @@ class Room {
       final user = await client.database.getUser(client.id, mxID, this);
       if (user != null) {
         setState(user);
-        if (onUpdate != null) onUpdate.add(id);
+        onUpdate.add(id);
         return user;
       }
     }
-    if (mxID == null || !_requestingMatrixIds.add(mxID)) return null;
+    if (!_requestingMatrixIds.add(mxID)) return null;
     Map<String, dynamic> resp;
     try {
+      Logs().v(
+          'Request missing user $mxID in room $displayname from the server...');
       resp = await client.requestStateContent(
         id,
         EventTypes.RoomMember,
         mxID,
       );
-    } catch (exception) {
+    } catch (e, s) {
       if (!ignoreErrors) {
         _requestingMatrixIds.remove(mxID);
         rethrow;
+      } else {
+        Logs().w('Unable to request the user $mxID from the server', e, s);
       }
     }
     if (resp == null && requestProfile) {
@@ -1275,9 +1291,13 @@ class Room {
           'displayname': profile.displayname,
           'avatar_url': profile.avatarUrl.toString(),
         };
-      } catch (exception) {
+      } catch (e, s) {
         _requestingMatrixIds.remove(mxID);
-        if (!ignoreErrors) rethrow;
+        if (!ignoreErrors) {
+          rethrow;
+        } else {
+          Logs().w('Unable to request the profile $mxID from the server', e, s);
+        }
       }
     }
     if (resp == null) {
@@ -1287,7 +1307,7 @@ class Room {
         displayName: resp['displayname'],
         avatarUrl: resp['avatar_url'],
         room: this);
-    states[mxID] = user;
+    setState(user);
     await client.database?.transaction(() async {
       final content = <String, dynamic>{
         'sender': mxID,
@@ -1304,7 +1324,7 @@ class Room {
             sortOrder: 0.0),
       );
     });
-    if (onUpdate != null) onUpdate.add(id);
+    onUpdate.add(id);
     _requestingMatrixIds.remove(mxID);
     return user;
   }
