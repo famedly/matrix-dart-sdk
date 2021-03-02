@@ -33,7 +33,6 @@ import 'utils/markdown.dart';
 import 'utils/marked_unread.dart';
 import 'utils/matrix_file.dart';
 import 'utils/matrix_localizations.dart';
-import 'utils/states_map.dart';
 
 enum PushRuleState { notify, mentions_only, dont_notify }
 enum JoinRules { public, knock, invite, private }
@@ -70,7 +69,10 @@ class Room {
   /// The number of users with membership of invite.
   int mInvitedMemberCount;
 
-  StatesMap states = StatesMap();
+  /// The room states are a key value store of the key ([type],[state_key]) => State(event).
+  /// In a lot of cases the [state_key] might be an empty string. You **should** use the
+  /// methods [getState] and [setState] to interact with the room states.
+  Map<String, Map<String, Event>> states = {};
 
   /// Key-Value store for ephemerals.
   Map<String, BasicRoomEvent> ephemerals = {};
@@ -128,7 +130,7 @@ class Room {
   /// Returns the [Event] for the given [typeKey] and optional [stateKey].
   /// If no [stateKey] is provided, it defaults to an empty string.
   Event getState(String typeKey, [String stateKey = '']) =>
-      states.states[typeKey] != null ? states.states[typeKey][stateKey] : null;
+      states[typeKey] != null ? states[typeKey][stateKey] : null;
 
   /// Adds the [state] to this room and overwrites a state with the same
   /// typeKey/stateKey key pair if there is one.
@@ -152,10 +154,10 @@ class Room {
     if (oldStateEvent != null && oldStateEvent.sortOrder >= state.sortOrder) {
       return;
     }
-    if (!states.states.containsKey(state.type)) {
-      states.states[state.type] = {};
+    if (!states.containsKey(state.type)) {
+      states[state.type] = {};
     }
-    states.states[state.type][state.stateKey ?? ''] = state;
+    states[state.type][state.stateKey ?? ''] = state;
   }
 
   /// ID of the fully read marker event.
@@ -173,16 +175,17 @@ class Room {
       StreamController.broadcast();
 
   /// The name of the room if set by a participant.
-  String get name => states[EventTypes.RoomName] != null &&
-          states[EventTypes.RoomName].content['name'] is String
-      ? states[EventTypes.RoomName].content['name']
+  String get name => getState(EventTypes.RoomName) != null &&
+          getState(EventTypes.RoomName).content['name'] is String
+      ? getState(EventTypes.RoomName).content['name']
       : '';
 
   /// The pinned events for this room. If there are none this returns an empty
   /// list.
-  List<String> get pinnedEventIds => states[EventTypes.RoomPinnedEvents] != null
-      ? (states[EventTypes.RoomPinnedEvents].content['pinned'] is List<String>
-          ? states[EventTypes.RoomPinnedEvents].content['pinned']
+  List<String> get pinnedEventIds => getState(EventTypes.RoomPinnedEvents) !=
+          null
+      ? (getState(EventTypes.RoomPinnedEvents).content['pinned'] is List<String>
+          ? getState(EventTypes.RoomPinnedEvents).content['pinned']
           : <String>[])
       : <String>[];
 
@@ -205,19 +208,21 @@ class Room {
   }
 
   /// The topic of the room if set by a participant.
-  String get topic => states[EventTypes.RoomTopic] != null &&
-          states[EventTypes.RoomTopic].content['topic'] is String
-      ? states[EventTypes.RoomTopic].content['topic']
+  String get topic => getState(EventTypes.RoomTopic) != null &&
+          getState(EventTypes.RoomTopic).content['topic'] is String
+      ? getState(EventTypes.RoomTopic).content['topic']
       : '';
 
   /// The avatar of the room if set by a participant.
   Uri get avatar {
-    if (states[EventTypes.RoomAvatar] != null &&
-        states[EventTypes.RoomAvatar].content['url'] is String) {
-      return Uri.tryParse(states[EventTypes.RoomAvatar].content['url']);
+    if (getState(EventTypes.RoomAvatar) != null &&
+        getState(EventTypes.RoomAvatar).content['url'] is String) {
+      return Uri.tryParse(getState(EventTypes.RoomAvatar).content['url']);
     }
-    if (mHeroes != null && mHeroes.length == 1 && states[mHeroes[0]] != null) {
-      return states[mHeroes[0]].asUser.avatarUrl;
+    if (mHeroes != null &&
+        mHeroes.length == 1 &&
+        getState(EventTypes.RoomMember, mHeroes.first) != null) {
+      return getState(EventTypes.RoomMember, mHeroes.first).asUser.avatarUrl;
     }
     if (membership == Membership.invite &&
         getState(EventTypes.RoomMember, client.userID) != null) {
@@ -227,10 +232,11 @@ class Room {
   }
 
   /// The address in the format: #roomname:homeserver.org.
-  String get canonicalAlias => states[EventTypes.RoomCanonicalAlias] != null &&
-          states[EventTypes.RoomCanonicalAlias].content['alias'] is String
-      ? states[EventTypes.RoomCanonicalAlias].content['alias']
-      : '';
+  String get canonicalAlias =>
+      getState(EventTypes.RoomCanonicalAlias) != null &&
+              getState(EventTypes.RoomCanonicalAlias).content['alias'] is String
+          ? getState(EventTypes.RoomCanonicalAlias).content['alias']
+          : '';
 
   /// If this room is a direct chat, this is the matrix ID of the user.
   /// Returns null otherwise.
@@ -289,7 +295,7 @@ class Room {
     if (lastEvent == null) {
       states.forEach((final String key, final entry) {
         if (!entry.containsKey('')) return;
-        final Event state = entry[''];
+        final state = entry[''];
         if (state.originServerTs != null &&
             state.originServerTs.millisecondsSinceEpoch >
                 lastTime.millisecondsSinceEpoch) {
@@ -358,7 +364,7 @@ class Room {
     } else {
       if (states[EventTypes.RoomMember] is Map<String, dynamic>) {
         for (var entry in states[EventTypes.RoomMember].entries) {
-          Event state = entry.value;
+          final state = entry.value;
           if (state.type == EventTypes.RoomMember &&
               state.stateKey != client?.userID) heroes.add(state.stateKey);
         }
@@ -565,7 +571,7 @@ class Room {
       }
     }
     // finally add all the room emotes
-    final allRoomEmotes = states.states['im.ponies.room_emotes'];
+    final allRoomEmotes = states['im.ponies.room_emotes'];
     if (allRoomEmotes != null) {
       for (final entry in allRoomEmotes.entries) {
         final stateKey = entry.key;
@@ -923,9 +929,9 @@ class Room {
   /// Returns the event ID of the new state event. If there is no known
   /// power level event, there might something broken and this returns null.
   Future<String> setPower(String userID, int power) async {
-    if (states[EventTypes.RoomPowerLevels] == null) return null;
+    if (getState(EventTypes.RoomPowerLevels) == null) return null;
     final powerMap = <String, dynamic>{}
-      ..addAll(states[EventTypes.RoomPowerLevels].content);
+      ..addAll(getState(EventTypes.RoomPowerLevels).content);
     if (powerMap['users'] == null) powerMap['users'] = {};
     powerMap['users'][userID] = power;
 
@@ -1171,7 +1177,7 @@ class Room {
     var userList = <User>[];
     if (states[EventTypes.RoomMember] is Map<String, dynamic>) {
       for (var entry in states[EventTypes.RoomMember].entries) {
-        Event state = entry.value;
+        final state = entry.value;
         if (state.type == EventTypes.RoomMember) userList.add(state.asUser);
       }
     }
@@ -1218,7 +1224,9 @@ class Room {
   /// the homeserver and waits for a response.
   @Deprecated('Use [requestUser] instead')
   Future<User> getUserByMXID(String mxID) async {
-    if (states[mxID] != null) return states[mxID].asUser;
+    if (getState(EventTypes.RoomMember, mxID) != null) {
+      return getState(EventTypes.RoomMember, mxID).asUser;
+    }
     return requestUser(mxID);
   }
 
@@ -1351,7 +1359,7 @@ class Room {
   /// Returns the power level of the given user ID.
   int getPowerLevelByUserId(String userId) {
     var powerLevel = 0;
-    Event powerLevelState = states[EventTypes.RoomPowerLevels];
+    final powerLevelState = getState(EventTypes.RoomPowerLevels);
     if (powerLevelState == null) return powerLevel;
     if (powerLevelState.content['users_default'] is int) {
       powerLevel = powerLevelState.content['users_default'];
@@ -1370,7 +1378,7 @@ class Room {
 
   /// Returns the power levels from all users for this room or null if not given.
   Map<String, int> get powerLevels {
-    Event powerLevelState = states[EventTypes.RoomPowerLevels];
+    final powerLevelState = getState(EventTypes.RoomPowerLevels);
     if (powerLevelState.content['users'] is Map<String, int>) {
       return powerLevelState.content['users'];
     }
@@ -1653,7 +1661,7 @@ class Room {
   /// Returns all aliases for this room.
   List<String> get aliases {
     var aliases = <String>[];
-    for (var aliasEvent in states.states[EventTypes.RoomAliases].values) {
+    for (var aliasEvent in states[EventTypes.RoomAliases].values) {
       if (aliasEvent.content['aliases'] is List) {
         aliases.addAll(aliasEvent.content['aliases']);
       }

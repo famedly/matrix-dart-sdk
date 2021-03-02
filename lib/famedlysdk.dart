@@ -27,7 +27,6 @@ export 'src/utils/matrix_id_string_extension.dart';
 export 'src/utils/uri_extension.dart';
 export 'src/utils/matrix_localizations.dart';
 export 'src/utils/receipt.dart';
-export 'src/utils/states_map.dart';
 export 'src/utils/sync_update_extension.dart';
 export 'src/utils/to_device_event.dart';
 export 'src/utils/uia_request.dart';

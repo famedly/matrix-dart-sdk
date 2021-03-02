@@ -112,97 +112,113 @@ void main() {
       expect(room.getState('m.room.join_rules').content['join_rule'], 'public');
       expect(room.roomAccountData['com.test.foo'].content['foo'], 'bar');
 
-      room.states['m.room.canonical_alias'] = Event(
-          senderId: '@test:example.com',
-          type: 'm.room.canonical_alias',
-          roomId: room.id,
-          room: room,
-          eventId: '123',
-          content: {'alias': '#testalias:example.com'},
-          stateKey: '');
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.canonical_alias',
+            roomId: room.id,
+            room: room,
+            eventId: '123',
+            content: {'alias': '#testalias:example.com'},
+            stateKey: ''),
+      );
       expect(room.displayname, 'testalias');
       expect(room.canonicalAlias, '#testalias:example.com');
 
-      room.states['m.room.name'] = Event(
-          senderId: '@test:example.com',
-          type: 'm.room.name',
-          roomId: room.id,
-          room: room,
-          eventId: '123',
-          content: {'name': 'testname'},
-          stateKey: '');
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.name',
+            roomId: room.id,
+            room: room,
+            eventId: '123',
+            content: {'name': 'testname'},
+            stateKey: ''),
+      );
       expect(room.displayname, 'testname');
 
       expect(room.topic, '');
-      room.states['m.room.topic'] = Event(
-          senderId: '@test:example.com',
-          type: 'm.room.topic',
-          roomId: room.id,
-          room: room,
-          eventId: '123',
-          content: {'topic': 'testtopic'},
-          stateKey: '');
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.topic',
+            roomId: room.id,
+            room: room,
+            eventId: '123',
+            content: {'topic': 'testtopic'},
+            stateKey: ''),
+      );
       expect(room.topic, 'testtopic');
 
       expect(room.avatar, null);
-      room.states['m.room.avatar'] = Event(
-          senderId: '@test:example.com',
-          type: 'm.room.avatar',
-          roomId: room.id,
-          room: room,
-          eventId: '123',
-          content: {'url': 'mxc://testurl'},
-          stateKey: '');
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.avatar',
+            roomId: room.id,
+            room: room,
+            eventId: '123',
+            content: {'url': 'mxc://testurl'},
+            stateKey: ''),
+      );
       expect(room.avatar.toString(), 'mxc://testurl');
 
       expect(room.pinnedEventIds, <String>[]);
-      room.states['m.room.pinned_events'] = Event(
-          senderId: '@test:example.com',
-          type: 'm.room.pinned_events',
-          roomId: room.id,
-          room: room,
-          eventId: '123',
-          content: {
-            'pinned': ['1234']
-          },
-          stateKey: '');
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.pinned_events',
+            roomId: room.id,
+            room: room,
+            eventId: '123',
+            content: {
+              'pinned': ['1234']
+            },
+            stateKey: ''),
+      );
       expect(room.pinnedEventIds.first, '1234');
-      room.states['m.room.message'] = Event(
-          senderId: '@test:example.com',
-          type: 'm.room.message',
-          roomId: room.id,
-          room: room,
-          eventId: '12345',
-          originServerTs: DateTime.now(),
-          content: {'msgtype': 'm.text', 'body': 'test'},
-          stateKey: '');
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.message',
+            roomId: room.id,
+            room: room,
+            eventId: '12345',
+            originServerTs: DateTime.now(),
+            content: {'msgtype': 'm.text', 'body': 'test'},
+            stateKey: ''),
+      );
       expect(room.lastEvent.eventId, '12345');
       expect(room.lastEvent.body, 'test');
       expect(room.timeCreated, room.lastEvent.originServerTs);
     });
 
     test('multiple last event with same sort order', () {
-      room.states['m.room.encrypted'] = Event(
-          senderId: '@test:example.com',
-          type: 'm.room.encrypted',
-          roomId: room.id,
-          room: room,
-          eventId: '12345',
-          originServerTs: DateTime.now(),
-          content: {'msgtype': 'm.text', 'body': 'test'},
-          stateKey: '',
-          sortOrder: 42.0);
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.encrypted',
+            roomId: room.id,
+            room: room,
+            eventId: '12345',
+            originServerTs: DateTime.now(),
+            content: {'msgtype': 'm.text', 'body': 'test'},
+            stateKey: '',
+            sortOrder: 42.0),
+      );
       expect(room.lastEvent.type, 'm.room.encrypted');
-      room.states['m.room.messge'] = Event(
-          senderId: '@test:example.com',
-          type: 'm.room.messge',
-          roomId: room.id,
-          room: room,
-          eventId: '12345',
-          originServerTs: DateTime.now(),
-          content: {'msgtype': 'm.text', 'body': 'test'},
-          stateKey: '',
-          sortOrder: 42.0);
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.messge',
+            roomId: room.id,
+            room: room,
+            eventId: '12345',
+            originServerTs: DateTime.now(),
+            content: {'msgtype': 'm.text', 'body': 'test'},
+            stateKey: '',
+            sortOrder: 42.0),
+      );
       expect(room.lastEvent.type, 'm.room.encrypted');
     });
 
@@ -249,25 +265,27 @@ void main() {
     });
 
     test('PowerLevels', () async {
-      room.states['m.room.power_levels'] = Event(
-          senderId: '@test:example.com',
-          type: 'm.room.power_levels',
-          roomId: room.id,
-          room: room,
-          eventId: '123',
-          content: {
-            'ban': 50,
-            'events': {'m.room.name': 100, 'm.room.power_levels': 100},
-            'events_default': 0,
-            'invite': 50,
-            'kick': 50,
-            'notifications': {'room': 20},
-            'redact': 50,
-            'state_default': 50,
-            'users': {'@test:fakeServer.notExisting': 100},
-            'users_default': 10
-          },
-          stateKey: '');
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.power_levels',
+            roomId: room.id,
+            room: room,
+            eventId: '123',
+            content: {
+              'ban': 50,
+              'events': {'m.room.name': 100, 'm.room.power_levels': 100},
+              'events_default': 0,
+              'invite': 50,
+              'kick': 50,
+              'notifications': {'room': 20},
+              'redact': 50,
+              'state_default': 50,
+              'users': {'@test:fakeServer.notExisting': 100},
+              'users_default': 10
+            },
+            stateKey: ''),
+      );
       expect(room.ownPowerLevel, 100);
       expect(room.getPowerLevelByUserId(matrix.userID), room.ownPowerLevel);
       expect(room.getPowerLevelByUserId('@nouser:example.com'), 10);
@@ -283,9 +301,10 @@ void main() {
       expect(room.canSendEvent('m.room.power_levels'), true);
       expect(room.canSendEvent('m.room.member'), true);
       expect(room.powerLevels,
-          room.states['m.room.power_levels'].content['users']);
+          room.getState('m.room.power_levels').content['users']);
 
-      room.states['m.room.power_levels'] = Event(
+      room.setState(
+        Event(
           senderId: '@test:example.com',
           type: 'm.room.power_levels',
           roomId: room.id,
@@ -303,7 +322,10 @@ void main() {
             'users': {},
             'users_default': 0
           },
-          stateKey: '');
+          stateKey: '',
+          sortOrder: 1,
+        ),
+      );
       expect(room.ownPowerLevel, 0);
       expect(room.canBan, false);
       expect(room.canInvite, false);

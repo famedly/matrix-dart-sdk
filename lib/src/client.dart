@@ -271,8 +271,12 @@ class Client extends MatrixApi {
     }
     for (var i = 0; i < rooms.length; i++) {
       if (rooms[i].membership == Membership.invite &&
-          rooms[i].states[userID]?.senderId == userId &&
-          rooms[i].states[userID].content['is_direct'] == true) {
+          rooms[i].getState(EventTypes.RoomMember, userID)?.senderId ==
+              userId &&
+          rooms[i]
+                  .getState(EventTypes.RoomMember, userID)
+                  .content['is_direct'] ==
+              true) {
         return rooms[i].id;
       }
     }
@@ -1412,7 +1416,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
         }
         if (stateEvent.type == EventTypes.Redaction) {
           final String redacts = eventUpdate.content['redacts'];
-          room.states.states.forEach(
+          room.states.forEach(
             (String key, Map<String, Event> states) => states.forEach(
               (String key, Event state) {
                 if (state.eventId == redacts) {
