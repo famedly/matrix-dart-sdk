@@ -35,14 +35,6 @@ void main() {
   group('Event', () {
     Logs().level = Level.error;
     var olmEnabled = true;
-    try {
-      olm.init();
-      olm.Account();
-    } catch (e) {
-      olmEnabled = false;
-      Logs().w('[LibOlm] Failed to load LibOlm', e);
-    }
-    Logs().i('[LibOlm] Enabled: $olmEnabled');
 
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final id = '!4fsdfjisjf:server.abc';
@@ -67,6 +59,17 @@ void main() {
     var client = Client('testclient', httpClient: FakeMatrixApi());
     var event = Event.fromJson(
         jsonObj, Room(id: '!localpart:server.abc', client: client));
+
+    test('setup', () async {
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().i('[LibOlm] Enabled: $olmEnabled');
+    });
 
     test('Create from json', () async {
       jsonObj.remove('status');

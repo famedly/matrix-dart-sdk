@@ -35,19 +35,19 @@ void main() {
     var updateCount = 0;
     var insertList = <int>[];
     var olmEnabled = true;
-    try {
-      olm.init();
-      olm.Account();
-    } catch (e) {
-      olmEnabled = false;
-      Logs().w('[LibOlm] Failed to load LibOlm', e);
-    }
-    Logs().i('[LibOlm] Enabled: $olmEnabled');
 
     Client client;
     Room room;
     Timeline timeline;
     test('create stuff', () async {
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().i('[LibOlm] Enabled: $olmEnabled');
       client = await getClient();
       client.sendMessageTimeoutSeconds = 5;
 

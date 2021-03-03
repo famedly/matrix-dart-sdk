@@ -33,16 +33,6 @@ void main() {
   group('Encrypt/Decrypt to-device messages', () {
     Logs().level = Level.error;
     var olmEnabled = true;
-    try {
-      olm.init();
-      olm.Account();
-    } catch (e) {
-      olmEnabled = false;
-      Logs().w('[LibOlm] Failed to load LibOlm', e);
-    }
-    Logs().i('[LibOlm] Enabled: $olmEnabled');
-
-    if (!olmEnabled) return;
 
     Client client;
     var otherClient = Client('othertestclient',
@@ -51,6 +41,16 @@ void main() {
     Map<String, dynamic> payload;
 
     test('setupClient', () async {
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().i('[LibOlm] Enabled: $olmEnabled');
+      if (!olmEnabled) return;
+
       client = await getClient();
       await client.abortSync();
       await otherClient.checkHomeserver('https://fakeserver.notexisting',
@@ -81,11 +81,13 @@ void main() {
     });
 
     test('encryptToDeviceMessage', () async {
+      if (!olmEnabled) return;
       payload = await otherClient.encryption
           .encryptToDeviceMessage([device], 'm.to_device', {'hello': 'foxies'});
     });
 
     test('decryptToDeviceEvent', () async {
+      if (!olmEnabled) return;
       final encryptedEvent = ToDeviceEvent(
         sender: '@othertest:fakeServer.notExisting',
         type: EventTypes.Encrypted,
@@ -98,6 +100,7 @@ void main() {
     });
 
     test('decryptToDeviceEvent nocache', () async {
+      if (!olmEnabled) return;
       client.encryption.olmManager.olmSessions.clear();
       payload = await otherClient.encryption.encryptToDeviceMessage(
           [device], 'm.to_device', {'hello': 'superfoxies'});
@@ -113,6 +116,7 @@ void main() {
     });
 
     test('dispose client', () async {
+      if (!olmEnabled) return;
       await client.dispose(closeDatabase: true);
       await otherClient.dispose(closeDatabase: true);
     });

@@ -29,24 +29,25 @@ void main() {
   group('Key Manager', () {
     Logs().level = Level.error;
     var olmEnabled = true;
-    try {
-      olm.init();
-      olm.Account();
-    } catch (e) {
-      olmEnabled = false;
-      Logs().w('[LibOlm] Failed to load LibOlm', e);
-    }
-    Logs().i('[LibOlm] Enabled: $olmEnabled');
-
-    if (!olmEnabled) return;
 
     Client client;
 
     test('setupClient', () async {
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().i('[LibOlm] Enabled: $olmEnabled');
+      if (!olmEnabled) return;
+
       client = await getClient();
     });
 
     test('handle new m.room_key', () async {
+      if (!olmEnabled) return;
       final validSessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
       final validSenderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
       final sessionKey =
@@ -94,6 +95,7 @@ void main() {
     });
 
     test('outbound group session', () async {
+      if (!olmEnabled) return;
       final roomId = '!726s6s6q:example.com';
       expect(
           client.encryption.keyManager.getOutboundGroupSession(roomId) != null,
@@ -244,6 +246,7 @@ void main() {
     });
 
     test('inbound group session', () async {
+      if (!olmEnabled) return;
       final roomId = '!726s6s6q:example.com';
       final sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
       final senderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
@@ -325,6 +328,7 @@ void main() {
     });
 
     test('setInboundGroupSession', () async {
+      if (!olmEnabled) return;
       final session = olm.OutboundGroupSession();
       session.create();
       final inbound = olm.InboundGroupSession();
@@ -495,6 +499,7 @@ void main() {
     });
 
     test('dispose client', () async {
+      if (!olmEnabled) return;
       await client.dispose(closeDatabase: true);
     });
   });

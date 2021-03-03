@@ -27,16 +27,6 @@ void main() {
   group('Encrypt/Decrypt room message', () {
     Logs().level = Level.error;
     var olmEnabled = true;
-    try {
-      olm.init();
-      olm.Account();
-    } catch (e) {
-      olmEnabled = false;
-      Logs().w('[LibOlm] Failed to load LibOlm', e);
-    }
-    Logs().i('[LibOlm] Enabled: $olmEnabled');
-
-    if (!olmEnabled) return;
 
     Client client;
     final roomId = '!726s6s6q:example.com';
@@ -45,11 +35,22 @@ void main() {
     final now = DateTime.now();
 
     test('setupClient', () async {
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().i('[LibOlm] Enabled: $olmEnabled');
+      if (!olmEnabled) return;
+
       client = await getClient();
       room = client.getRoomById(roomId);
     });
 
     test('encrypt payload', () async {
+      if (!olmEnabled) return;
       payload = await client.encryption.encryptGroupMessagePayload(roomId, {
         'msgtype': 'm.text',
         'text': 'Hello foxies!',
@@ -62,6 +63,7 @@ void main() {
     });
 
     test('decrypt payload', () async {
+      if (!olmEnabled) return;
       final encryptedEvent = Event(
         type: EventTypes.Encrypted,
         content: payload,
@@ -78,6 +80,7 @@ void main() {
     });
 
     test('decrypt payload nocache', () async {
+      if (!olmEnabled) return;
       client.encryption.keyManager.clearInboundGroupSessions();
       final encryptedEvent = Event(
         type: EventTypes.Encrypted,
@@ -98,6 +101,7 @@ void main() {
     });
 
     test('dispose client', () async {
+      if (!olmEnabled) return;
       await client.dispose(closeDatabase: true);
     });
   });
