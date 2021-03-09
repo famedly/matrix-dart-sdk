@@ -339,25 +339,27 @@ void main() {
       final room = Room(id: roomId, client: client);
       client.rooms.add(room);
       // we build up an encrypted message so that we can test if it successfully decrypted afterwards
-      room.states['m.room.encrypted'] = Event(
-        senderId: '@test:example.com',
-        type: 'm.room.encrypted',
-        roomId: room.id,
-        room: room,
-        eventId: '12345',
-        originServerTs: DateTime.now(),
-        content: {
-          'algorithm': AlgorithmTypes.megolmV1AesSha2,
-          'ciphertext': session.encrypt(json.encode({
-            'type': 'm.room.message',
-            'content': {'msgtype': 'm.text', 'body': 'foxies'},
-          })),
-          'device_id': client.deviceID,
-          'sender_key': client.identityKey,
-          'session_id': sessionId,
-        },
-        stateKey: '',
-        sortOrder: 42.0,
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          roomId: room.id,
+          room: room,
+          eventId: '12345',
+          originServerTs: DateTime.now(),
+          content: {
+            'algorithm': AlgorithmTypes.megolmV1AesSha2,
+            'ciphertext': session.encrypt(json.encode({
+              'type': 'm.room.message',
+              'content': {'msgtype': 'm.text', 'body': 'foxies'},
+            })),
+            'device_id': client.deviceID,
+            'sender_key': client.identityKey,
+            'session_id': sessionId,
+          },
+          stateKey: '',
+          sortOrder: 42.0,
+        ),
       );
       expect(room.lastEvent.type, 'm.room.encrypted');
       // set a payload...
