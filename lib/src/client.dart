@@ -284,7 +284,7 @@ class Client extends MatrixApi {
   }
 
   /// Gets discovery information about the domain. The file may include additional keys.
-  Future<WellKnownInformations> getWellKnownInformationsByUserId(
+  Future<WellKnownInformation> getWellKnownInformationsByUserId(
     String MatrixIdOrDomain,
   ) async {
     final response = await http
@@ -296,7 +296,7 @@ class Client extends MatrixApi {
       // No-OP
     }
     final rawJson = json.decode(respBody);
-    return WellKnownInformations.fromJson(rawJson);
+    return WellKnownInformation.fromJson(rawJson);
   }
 
   @Deprecated('Use [checkHomeserver] instead.')
@@ -313,7 +313,7 @@ class Client extends MatrixApi {
   /// login types. Throws an exception if the server is not compatible with the
   /// client and sets [homeserver] to [serverUrl] if it is. Supports the types [Uri]
   /// and [String].
-  Future<WellKnownInformations> checkHomeserver(dynamic homeserverUrl,
+  Future<WellKnownInformation> checkHomeserver(dynamic homeserverUrl,
       {bool checkWellKnown = true}) async {
     try {
       if (homeserverUrl is Uri) {
@@ -331,10 +331,10 @@ class Client extends MatrixApi {
       }
 
       // Look up well known
-      WellKnownInformations wellKnown;
+      WellKnownInformation wellKnown;
       if (checkWellKnown) {
         try {
-          wellKnown = await requestWellKnownInformations();
+          wellKnown = await requestWellKnownInformation();
           homeserverUrl = wellKnown.mHomeserver.baseUrl.trim();
           // strip a trailing slash
           if (homeserverUrl.endsWith('/')) {
@@ -408,33 +408,40 @@ class Client extends MatrixApi {
   /// Handles the login and allows the client to call all APIs which require
   /// authentication. Returns false if the login was not successful. Throws
   /// MatrixException if login was not successful.
+  /// To just login with the username 'alice' you set [identifier] to:
+  /// `AuthenticationUserIdentifier(user: 'alice')`
+  /// Maybe you want to set [user] to the same String to stay compatible with
+  /// older server versions.
   @override
   Future<LoginResponse> login({
     String type = AuthenticationTypes.password,
-    String userIdentifierType = AuthenticationIdentifierTypes.userId,
-    String user,
-    String medium,
-    String address,
+    AuthenticationIdentifier identifier,
     String password,
     String token,
     String deviceId,
     String initialDeviceDisplayName,
     AuthenticationData auth,
+    @Deprecated('Deprecated in favour of identifier.') String user,
+    @Deprecated('Deprecated in favour of identifier.') String medium,
+    @Deprecated('Deprecated in favour of identifier.') String address,
   }) async {
     if (homeserver == null && user.isValidMatrixId) {
       await checkHomeserver(user.domain);
     }
     final loginResp = await super.login(
       type: type,
-      userIdentifierType: userIdentifierType,
-      user: user,
+      identifier: identifier,
       password: password,
+      token: token,
       deviceId: deviceId,
       initialDeviceDisplayName: initialDeviceDisplayName,
-      medium: medium,
-      address: address,
-      token: token,
       auth: auth,
+      // ignore: deprecated_member_use
+      user: user,
+      // ignore: deprecated_member_use
+      medium: medium,
+      // ignore: deprecated_member_use
+      address: address,
     );
 
     // Connect if there is an access token in the response.
