@@ -1,3 +1,13 @@
+## 0.2.0
+- refactor: login method AuthenticationIdentifier
+
+This is a breaking change for the login method to use the correct format.
+It makes it possible to login with email or phone.
+Also this does some housekeeping stuff while
+upgrading to pedantic 1.11.0 which doesnt
+allow curly braces in Strings where not needed
+anymore.
+
 ## 0.1.9
 - feat: Add support for fallback keys
 

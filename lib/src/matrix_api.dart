@@ -28,6 +28,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
 
+import '../matrix_api_lite.dart';
 import 'model/auth/authentication_data.dart';
 import 'model/auth/authentication_types.dart';
 import 'model/device.dart';
@@ -152,7 +153,7 @@ class MatrixApi {
         ?.where((x) => x.value != null)
         ?.map((x) => [x.key, x.value].map(Uri.encodeQueryComponent).join('='))
         ?.join('&');
-    final url = ['${homeserver.toString()}/_matrix${action}', queryPart]
+    final url = ['${homeserver.toString()}/_matrix$action', queryPart]
         .where((x) => x != null && x != '')
         .join('?');
 
@@ -161,7 +162,7 @@ class MatrixApi {
       headers['Content-Type'] = contentType;
     }
     if (accessToken != null) {
-      headers['Authorization'] = 'Bearer ${accessToken}';
+      headers['Authorization'] = 'Bearer $accessToken';
     }
 
     http.Response resp;
@@ -253,25 +254,25 @@ class MatrixApi {
 
   /// Authenticates the user, and issues an access token they can use to authorize themself in subsequent requests.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#post-matrix-client-r0-login
+  /// To just login with the username 'alice' you set [identifier] to:
+  /// `AuthenticationUserIdentifier(user: 'alice')`
+  /// Maybe you want to set [user] to the same String to stay compatible with
+  /// older server versions.
   Future<LoginResponse> login({
     String type = AuthenticationTypes.password,
-    String userIdentifierType,
-    String user,
-    String medium,
-    String address,
+    AuthenticationIdentifier identifier,
     String password,
     String token,
     String deviceId,
     String initialDeviceDisplayName,
     AuthenticationData auth,
+    @Deprecated('Deprecated in favour of identifier.') String user,
+    @Deprecated('Deprecated in favour of identifier.') String medium,
+    @Deprecated('Deprecated in favour of identifier.') String address,
   }) async {
     final response = await request(RequestType.POST, '/client/r0/login', data: {
       'type': type,
-      if (userIdentifierType != null)
-        'identifier': {
-          'type': userIdentifierType,
-          if (user != null) 'user': user,
-        },
+      if (identifier != null) 'identifier': identifier.toJson(),
       if (user != null) 'user': user,
       if (medium != null) 'medium': medium,
       if (address != null) 'address': address,

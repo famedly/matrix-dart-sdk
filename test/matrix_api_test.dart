@@ -155,8 +155,9 @@ void main() {
     });
     test('login', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
-      final loginResponse =
-          await matrixApi.login(userIdentifierType: 'username');
+      final loginResponse = await matrixApi.login(
+        identifier: AuthenticationUserIdentifier(user: 'username'),
+      );
       expect(FakeMatrixApi.api['POST']['/client/r0/login']({}),
           loginResponse.toJson());
       matrixApi.homeserver = null;
