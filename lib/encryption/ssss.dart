@@ -275,6 +275,9 @@ class SSSS {
     }
     // check if it is still valid
     final keys = keyIdsFromType(type);
+    if (keys == null) {
+      return null;
+    }
     final isValid = (dbEntry) =>
         keys.contains(dbEntry.keyId) &&
         client.accountData[type].content['encrypted'][dbEntry.keyId]
@@ -694,6 +697,10 @@ class OpenSSSS {
     // now try to self-sign
     if (ssss.encryption.crossSigning.enabled &&
         ssss.client.userDeviceKeys[ssss.client.userID]?.masterKey != null &&
+        (ssss
+                .keyIdsFromType(EventTypes.CrossSigningMasterKey)
+                ?.contains(keyId) ??
+            false) &&
         (ssss.client.isUnknownSession ||
             !ssss.client.userDeviceKeys[ssss.client.userID].masterKey
                 .directVerified)) {
