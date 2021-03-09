@@ -269,7 +269,9 @@ void main() {
       var matrix = Client('testclient', httpClient: FakeMatrixApi());
       await matrix.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
-      await matrix.login(user: 'test', password: '1234');
+      await matrix.login(
+          identifier: AuthenticationUserIdentifier(user: 'test'),
+          password: '1234');
 
       var event = Event.fromJson(
           jsonObj, Room(id: '!1234:example.com', client: matrix));
@@ -286,7 +288,9 @@ void main() {
       var matrix = Client('testclient', httpClient: FakeMatrixApi());
       await matrix.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
-      await matrix.login(user: 'test', password: '1234');
+      await matrix.login(
+          identifier: AuthenticationUserIdentifier(user: 'test'),
+          password: '1234');
 
       var event = Event.fromJson(
           jsonObj, Room(id: '!1234:example.com', client: matrix));

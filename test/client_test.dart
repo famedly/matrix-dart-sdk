@@ -324,7 +324,9 @@ void main() {
       await matrix.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
 
-      final loginResp = await matrix.login(user: 'test', password: '1234');
+      final loginResp = await matrix.login(
+          identifier: AuthenticationUserIdentifier(user: 'test'),
+          password: '1234');
 
       expect(loginResp != null, true);
     });

@@ -23,14 +23,16 @@ void test() async {
     testClientA = Client('TestClientA', databaseBuilder: getDatabase);
     await testClientA.checkHomeserver(TestUser.homeserver);
     await testClientA.login(
-        user: TestUser.username, password: TestUser.password);
+        identifier: AuthenticationUserIdentifier(user: TestUser.username),
+        password: TestUser.password);
     assert(testClientA.encryptionEnabled);
 
     Logs().i('++++ Login Bob ++++');
     testClientB = Client('TestClientB', databaseBuilder: getDatabase);
     await testClientB.checkHomeserver(TestUser.homeserver);
     await testClientB.login(
-        user: TestUser.username2, password: TestUser.password);
+        identifier: AuthenticationUserIdentifier(user: TestUser.username2),
+        password: TestUser.password);
     assert(testClientB.encryptionEnabled);
 
     Logs().i('++++ (Alice) Leave all rooms ++++');
@@ -218,7 +220,8 @@ void test() async {
     var testClientC = Client('TestClientC', databaseBuilder: getDatabase);
     await testClientC.checkHomeserver(TestUser.homeserver);
     await testClientC.login(
-        user: TestUser.username2, password: TestUser.password);
+        identifier: AuthenticationUserIdentifier(user: TestUser.username2),
+        password: TestUser.password);
     await Future.delayed(Duration(seconds: 3));
 
     Logs().i("++++ (Alice) Send again encrypted message: '$testMessage4' ++++");
