@@ -541,7 +541,7 @@ class OlmManager {
           if (!deviceKey.checkJsonSignature(fingerprintKey, userId, deviceId)) {
             continue;
           }
-          Logs().v('[OlmManager] Starting session with ${userId}:${deviceId}');
+          Logs().v('[OlmManager] Starting session with $userId:$deviceId');
           var session = olm.Session();
           try {
             session.create_outbound(_olmAccount, identityKey, deviceKey['key']);

@@ -223,7 +223,7 @@ class Client extends MatrixApi {
 
   String generateUniqueTransactionId() {
     _transactionCounter++;
-    return '${clientName}-${_transactionCounter}-${DateTime.now().millisecondsSinceEpoch}';
+    return '$clientName-$_transactionCounter-${DateTime.now().millisecondsSinceEpoch}';
   }
 
   Room getRoomByAlias(String alias) {
@@ -459,7 +459,7 @@ class Client extends MatrixApi {
       Logs().e('Logout failed', e, s);
       rethrow;
     } finally {
-      await clear();
+      clear();
     }
   }
 
@@ -473,7 +473,7 @@ class Client extends MatrixApi {
       Logs().e('Logout all failed', e, s);
       rethrow;
     } finally {
-      await clear();
+      clear();
     }
   }
 
@@ -770,7 +770,7 @@ class Client extends MatrixApi {
   /// If one of [newToken], [newUserID], [newDeviceID], [newDeviceName] is set then
   /// all of them must be set! If you don't set them, this method will try to
   /// get them from the database.
-  void init({
+  Future<void> init({
     String newToken,
     Uri newHomeserver,
     String newUserID,

@@ -215,7 +215,7 @@ abstract class SignableKey extends MatrixSignableKey {
     }
     visited ??= <String>{};
     onlyValidateUserIds ??= <String>{};
-    final setKey = '${userId};${identifier}';
+    final setKey = '$userId;$identifier';
     if (visited.contains(setKey) ||
         (onlyValidateUserIds.isNotEmpty &&
             !onlyValidateUserIds.contains(userId))) {
@@ -310,13 +310,14 @@ abstract class SignableKey extends MatrixSignableKey {
     return false;
   }
 
-  void setVerified(bool newVerified, [bool sign = true]) {
+  Future<void> setVerified(bool newVerified, [bool sign = true]) async {
     _verified = newVerified;
     if (newVerified &&
         sign &&
         client.encryptionEnabled &&
         client.encryption.crossSigning.signable([this])) {
       // sign the key!
+      // ignore: unawaited_futures
       client.encryption.crossSigning.sign([this]);
     }
   }
@@ -344,8 +345,8 @@ class CrossSigningKey extends SignableKey {
       userId != null && publicKey != null && keys != null && ed25519Key != null;
 
   @override
-  Future<void> setVerified(bool newVerified, [bool sign = true]) {
-    super.setVerified(newVerified, sign);
+  Future<void> setVerified(bool newVerified, [bool sign = true]) async {
+    await super.setVerified(newVerified, sign);
     return client.database?.setVerifiedUserCrossSigningKey(
         newVerified, client.id, userId, publicKey);
   }
@@ -418,8 +419,8 @@ class DeviceKeys extends SignableKey {
       selfSigned;
 
   @override
-  Future<void> setVerified(bool newVerified, [bool sign = true]) {
-    super.setVerified(newVerified, sign);
+  Future<void> setVerified(bool newVerified, [bool sign = true]) async {
+    await super.setVerified(newVerified, sign);
     return client?.database
         ?.setVerifiedUserDeviceKey(newVerified, client.id, userId, deviceId);
   }

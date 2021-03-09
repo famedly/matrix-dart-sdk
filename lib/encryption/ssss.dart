@@ -401,7 +401,7 @@ class SSSS {
 
   Future<void> request(String type, [List<DeviceKeys> devices]) async {
     // only send to own, verified devices
-    Logs().i('[SSSS] Requesting type ${type}...');
+    Logs().i('[SSSS] Requesting type $type...');
     if (devices == null || devices.isEmpty) {
       if (!client.userDeviceKeys.containsKey(client.userID)) {
         Logs().w('[SSSS] User does not have any devices');
@@ -477,12 +477,12 @@ class SSSS {
       final type = event.content['name'];
       final secret = await getCached(type);
       if (secret == null) {
-        Logs().i(
-            '[SSSS] We don\'t have the secret for ${type} ourself, ignoring');
+        Logs()
+            .i('[SSSS] We don\'t have the secret for $type ourself, ignoring');
         return; // seems like we don't have this, either
       }
       // okay, all checks out...time to share this secret!
-      Logs().i('[SSSS] Replying with secret for ${type}');
+      Logs().i('[SSSS] Replying with secret for $type');
       await client.sendToDeviceEncrypted(
           [device],
           EventTypes.SecretSend,

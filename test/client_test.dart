@@ -99,7 +99,7 @@ void main() {
       var firstSyncFuture = matrix.onFirstSync.stream.first;
       var syncFuture = matrix.onSync.stream.first;
 
-      matrix.init(
+      await matrix.init(
         newToken: 'abcd',
         newUserID: '@test:fakeServer.notExisting',
         newHomeserver: matrix.homeserver,
@@ -520,7 +520,7 @@ void main() {
         databaseBuilder: (_) => database,
       );
 
-      client1.init(
+      await client1.init(
         newToken: 'abc123',
         newUserID: '@test:fakeServer.notExisting',
         newHomeserver: Uri.parse('https://fakeServer.notExisting'),
@@ -540,7 +540,7 @@ void main() {
         databaseBuilder: (_) => database,
       );
 
-      client2.init();
+      await client2.init();
       await Future.delayed(Duration(milliseconds: 100));
 
       expect(client2.isLogged(), true);

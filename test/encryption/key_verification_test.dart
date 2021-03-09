@@ -88,7 +88,7 @@ void main() {
           databaseBuilder: (_) => client1.database);
       await client2.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
-      client2.init(
+      await client2.init(
         newToken: 'abc',
         newUserID: '@othertest:fakeServer.notExisting',
         newHomeserver: client2.homeserver,

@@ -470,15 +470,15 @@ void main() {
       // with passphrase
       var newKey = await client.encryption.ssss.createKey('test');
       expect(client.encryption.ssss.isKeyValid(newKey.keyId), true);
-      var testKey = await client.encryption.ssss.open(newKey.keyId);
+      var testKey = client.encryption.ssss.open(newKey.keyId);
       await testKey.unlock(passphrase: 'test');
-      await testKey.setPrivateKey(newKey.privateKey);
+      testKey.setPrivateKey(newKey.privateKey);
 
       // without passphrase
       newKey = await client.encryption.ssss.createKey();
       expect(client.encryption.ssss.isKeyValid(newKey.keyId), true);
-      testKey = await client.encryption.ssss.open(newKey.keyId);
-      await testKey.setPrivateKey(newKey.privateKey);
+      testKey = client.encryption.ssss.open(newKey.keyId);
+      testKey.setPrivateKey(newKey.privateKey);
     });
 
     test('dispose client', () async {

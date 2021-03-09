@@ -208,7 +208,7 @@ class KeyVerification {
       await Future.delayed(Duration(milliseconds: 50));
     }
     _handlePayloadLock = true;
-    Logs().i('[Key Verification] Received type ${type}: ' + payload.toString());
+    Logs().i('[Key Verification] Received type $type: ' + payload.toString());
     try {
       var thisLastStep = lastStep;
       switch (type) {
@@ -277,7 +277,7 @@ class KeyVerification {
             if (payload['method'] == method.type) {
               // same method. Determine priority
               final ourEntry = '${client.userID}|${client.deviceID}';
-              final entries = [ourEntry, '${userId}|${deviceId}'];
+              final entries = [ourEntry, '$userId|$deviceId'];
               entries.sort();
               if (entries.first == ourEntry) {
                 // our start won, nothing to do
@@ -584,14 +584,14 @@ class KeyVerification {
 
   Future<void> send(String type, Map<String, dynamic> payload) async {
     makePayload(payload);
-    Logs().i('[Key Verification] Sending type ${type}: ' + payload.toString());
+    Logs().i('[Key Verification] Sending type $type: ' + payload.toString());
     if (room != null) {
-      Logs().i('[Key Verification] Sending to ${userId} in room ${room.id}...');
+      Logs().i('[Key Verification] Sending to $userId in room ${room.id}...');
       if ({EventTypes.KeyVerificationRequest}.contains(type)) {
         payload['msgtype'] = type;
         payload['to'] = userId;
         payload['body'] =
-            'Attempting verification request. (${type}) Apparently your client doesn\'t support this';
+            'Attempting verification request. ($type) Apparently your client doesn\'t support this';
         type = EventTypes.Message;
       }
       final newTransactionId = await room.sendEvent(payload, type: type);
@@ -600,7 +600,7 @@ class KeyVerification {
         encryption.keyVerificationManager.addRequest(this);
       }
     } else {
-      Logs().i('[Key Verification] Sending to ${userId} device ${deviceId}...');
+      Logs().i('[Key Verification] Sending to $userId device $deviceId...');
       if (deviceId == '*') {
         if ({
           EventTypes.KeyVerificationRequest,
@@ -609,7 +609,7 @@ class KeyVerification {
           await client.sendToDevicesOfUserIds({userId}, type, payload);
         } else {
           Logs().e(
-              '[Key Verification] Tried to broadcast and un-broadcastable type: ${type}');
+              '[Key Verification] Tried to broadcast and un-broadcastable type: $type');
         }
       } else {
         await client.sendToDeviceEncrypted(
@@ -873,7 +873,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
       final ourInfo =
           '${client.userID}|${client.deviceID}|${sas.get_pubkey()}|';
       final theirInfo =
-          '${request.userId}|${request.deviceId}|${theirPublicKey}|';
+          '${request.userId}|${request.deviceId}|$theirPublicKey|';
       sasInfo = 'MATRIX_KEY_VERIFICATION_SAS|' +
           (request.startedVerification
               ? ourInfo + theirInfo

@@ -385,7 +385,7 @@ class Database extends _$Database {
   final Set<String> _ensuredRooms = {};
   Future<void> storeRoomUpdate(int clientId, sdk.RoomUpdate roomUpdate,
       [sdk.Room oldRoom]) async {
-    final setKey = '${clientId};${roomUpdate.id}';
+    final setKey = '$clientId;${roomUpdate.id}';
     if (roomUpdate.membership != api.Membership.leave) {
       if (!_ensuredRooms.contains(setKey)) {
         await ensureRoomExists(clientId, roomUpdate.id,
@@ -620,7 +620,7 @@ class Database extends _$Database {
   }
 
   Future<void> forgetRoom(int clientId, String roomId) async {
-    final setKey = '${clientId};${roomId}';
+    final setKey = '$clientId;$roomId';
     _ensuredRooms.remove(setKey);
     await (delete(rooms)
           ..where((r) => r.roomId.equals(roomId) & r.clientId.equals(clientId)))
