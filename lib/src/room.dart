@@ -784,7 +784,10 @@ class Room {
               .replaceAll('\n', '<br>'));
       content['formatted_body'] =
           '<mx-reply><blockquote><a href="https://matrix.to/#/${inReplyTo.room.id}/${inReplyTo.eventId}">In reply to</a> <a href="https://matrix.to/#/${inReplyTo.senderId}">${inReplyTo.senderId}</a><br>$replyHtml</blockquote></mx-reply>$repliedHtml';
-      content['body'] = replyText + "\n\n${content.tryGet<String>('body', '')}";
+      // We escape all @room-mentions here to prevent accidental room pings when an admin
+      // replies to a message containing that!
+      content['body'] =
+          '${replyText.replaceAll('@room', '@\u200broom')}\n\n${content.tryGet<String>('body', '')}';
       content['m.relates_to'] = {
         'm.in_reply_to': {
           'event_id': inReplyTo.eventId,
