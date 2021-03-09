@@ -521,6 +521,35 @@ void main() {
           },
         },
       });
+
+      event = Event.fromJson({
+        'event_id': '\$replyEvent',
+        'content': {
+          'body': 'Hey @room',
+          'msgtype': 'm.text',
+        },
+        'type': 'm.room.message',
+        'sender': '@alice:example.org',
+      }, room);
+      FakeMatrixApi.calledEndpoints.clear();
+      resp = await room.sendTextEvent('Hello world',
+          txid: 'testtxid', inReplyTo: event);
+      expect(resp.startsWith('\$event'), true);
+      entry = FakeMatrixApi.calledEndpoints.entries
+          .firstWhere((p) => p.key.contains('/send/m.room.message/'));
+      content = json.decode(entry.value.first);
+      expect(content, {
+        'body': '> <@alice:example.org> Hey @\u{200b}room\n\nHello world',
+        'msgtype': 'm.text',
+        'format': 'org.matrix.custom.html',
+        'formatted_body':
+            '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>Hey @room</blockquote></mx-reply>Hello world',
+        'm.relates_to': {
+          'm.in_reply_to': {
+            'event_id': '\$replyEvent',
+          },
+        },
+      });
     });
 
     test('send reaction', () async {
