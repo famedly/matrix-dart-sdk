@@ -55,7 +55,7 @@ void main() {
       await client.abortSync();
       await otherClient.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
-      otherClient.init(
+      await otherClient.init(
         newToken: 'abc',
         newUserID: '@othertest:fakeServer.notExisting',
         newHomeserver: otherClient.homeserver,

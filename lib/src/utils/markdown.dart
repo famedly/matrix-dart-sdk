@@ -162,7 +162,7 @@ class PillSyntax extends InlineSyntax {
     }
     final identifier = match[1];
     final element = Element.text('a', identifier);
-    element.attributes['href'] = 'https://matrix.to/#/${identifier}';
+    element.attributes['href'] = 'https://matrix.to/#/$identifier';
     parser.addNode(element);
     return true;
   }
@@ -204,7 +204,7 @@ String markdown(String text, [Map<String, Map<String, String>> emotePacks]) {
     };
     for (final tag in otherBlockTags) {
       // we check for the close tag as the opening one might have attributes
-      if (ret.contains('</${tag}>')) {
+      if (ret.contains('</$tag>')) {
         stripPTags = false;
         break;
       }

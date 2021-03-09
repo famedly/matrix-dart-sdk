@@ -24,8 +24,8 @@ coverage:
     - chmod +x ./prepare.sh
     - chmod +x ./test.sh
     - rm -r example
-    - su -c ./prepare.sh test
-    - su -c ./test.sh test
+    - ./prepare.sh test
+    - ./test.sh test
   artifacts:
     paths:
       - coverage/

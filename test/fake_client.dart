@@ -37,7 +37,7 @@ Future<Client> getClient() async {
   FakeMatrixApi.client = client;
   await client.checkHomeserver('https://fakeServer.notExisting',
       checkWellKnown: false);
-  client.init(
+  await client.init(
     newToken: 'abcd',
     newUserID: '@test:fakeServer.notExisting',
     newHomeserver: client.homeserver,

@@ -30,8 +30,7 @@ dev_dependencies:
   test_coverage: ^0.5.0
   moor_generator: ^3.4.1
   build_runner: ^1.11.1
-  pedantic: ^1.9.2
+  pedantic: ^1.11.0
   dapackages: ^1.4.0
-
   #flutter_test:
   #  sdk: flutter
