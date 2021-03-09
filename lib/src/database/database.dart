@@ -282,7 +282,8 @@ class Database extends _$Database {
       );
       roomList.add(room);
       // let's see if we need any m.room.member events
-      final membersToPostload = <String>{};
+      // We always need the member event for ourself
+      final membersToPostload = <String>{client.userID};
       // the lastEvent message preview might have an author we need to fetch, if it is a group chat
       if (room.getState(api.EventTypes.Message) != null && !room.isDirectChat) {
         membersToPostload.add(room.getState(api.EventTypes.Message).senderId);
@@ -296,11 +297,8 @@ class Database extends _$Database {
         // post-load the heroes
         membersToPostload.addAll(room.mHeroes.where((h) => h.isNotEmpty));
       }
-      // okay, only load from the database if we actually have stuff to load
-      if (membersToPostload.isNotEmpty) {
-        // save it for loading later
-        allMembersToPostload[room.id] = membersToPostload;
-      }
+      // save it for loading later
+      allMembersToPostload[room.id] = membersToPostload;
     }
     // now we postload all members, if thre are any
     if (allMembersToPostload.isNotEmpty) {

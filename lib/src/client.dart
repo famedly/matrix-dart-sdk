@@ -1698,14 +1698,20 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     }
   }
 
+  bool _toDeviceQueueNeedsProcessing = true;
+
   /// Processes the to_device queue and tries to send every entry.
   /// This function MAY throw an error, which just means the to_device queue wasn't
   /// proccessed all the way.
   Future<void> processToDeviceQueue() async {
-    if (database == null) {
+    if (database == null || !_toDeviceQueueNeedsProcessing) {
       return;
     }
     final entries = await database.getToDeviceQueue(id).get();
+    if (entries.isEmpty) {
+      _toDeviceQueueNeedsProcessing = false;
+      return;
+    }
     for (final entry in entries) {
       // ohgod what is this...
       final data = (json.decode(entry.content) as Map).map((k, v) =>
@@ -1736,6 +1742,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
           e,
           s);
       if (database != null) {
+        _toDeviceQueueNeedsProcessing = true;
         await database.insertIntoToDeviceQueue(
             id, eventType, txnId, json.encode(messages));
       }
