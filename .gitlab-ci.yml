@@ -27,11 +27,11 @@ coverage:
     - ln -s /usr/lib/dart/bin/pub /usr/bin/
     - useradd -m test
     - chown -R 'test:' '.'
-    - chmod +x ./prepare.sh
-    - chmod +x ./test.sh
+    - chmod +x ./scripts/prepare.sh
+    - chmod +x ./scripts/test.sh
     - rm -r example
-    - ./prepare.sh test
-    - ./test.sh test
+    - ./scripts/prepare.sh test
+    - ./scripts/test.sh test
   artifacts:
     paths:
       - coverage/
@@ -50,9 +50,6 @@ coverage_without_olm:
     - apt update
     - apt install -y dart
     - ln -s /usr/lib/dart/bin/pub /usr/bin/
-    - useradd -m test
-    - chown -R 'test:' '.'
-    - chmod +x ./test.sh
     - pub get
     - pub run test
 
@@ -72,11 +69,11 @@ e2ee_test:
     - ln -s /usr/lib/dart/bin/pub /usr/bin/
     - useradd -m test
     - chown -R 'test:' '.'
-    - chmod +x ./prepare.sh
-    - chmod +x ./test_driver.sh
+    - chmod +x ./scripts/prepare.sh
+    - chmod +x ./scripts/test_driver.sh
     - printf "abstract class TestUser {\n  static const String homeserver = '$TEST_HOMESERVER';\n  static const String username = '$TEST_USER1';\n  static const String username2 = '$TEST_USER2';\n  static const String password = '$TEST_USER_PASSWORD';\n}" > ./test_driver/test_config.dart
-    - su -c ./prepare.sh test
-    - su -c ./test_driver.sh test
+    - su -c ./scripts/prepare.sh test
+    - su -c ./scripts/test_driver.sh test
   timeout: 16m
   resource_group: e2ee_test
 
@@ -94,14 +91,14 @@ build_api_doc:
   tags:
     - docker
   stage: builddocs
-  image: cirrusci/flutter
+  image: registry.gitlab.com/famedly/containers/flutter-dockerimages:stable
   script:
+    - flutter pub global activate dartdoc
+    - export PATH="$PATH":"/opt/flutter/flutter/.pub-cache/bin"
     - dartdoc --exclude "dart:async,dart:collection,dart:convert,dart:core,dart:developer,dart:io,dart:isolate,dart:math,dart:typed_data,dart:ui"
   artifacts:
     paths:
       - doc/api/
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 build_doc:
   tags:

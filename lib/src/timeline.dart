@@ -27,9 +27,9 @@ import 'utils/room_update.dart';
 typedef onTimelineUpdateCallback = void Function();
 typedef onTimelineInsertCallback = void Function(int insertID);
 
-/// Represents the timeline of a room. The callbacks [onUpdate], [onDelete],
-/// [onInsert] and [onResort] will be triggered automatically. The initial
-/// event list will be retreived when created by the [room.getTimeline] method.
+/// Represents the timeline of a room. The callback [onUpdate] will be triggered
+/// automatically. The initial
+/// event list will be retreived when created by the `room.getTimeline()` method.
 class Timeline {
   final Room room;
   final List<Event> events;

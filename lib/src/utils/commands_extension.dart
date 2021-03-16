@@ -21,15 +21,15 @@ import 'dart:async';
 import '../../famedlysdk.dart';
 
 extension CommandsClientExtension on Client {
-  /// Add a command to the command handler. [command] is its name, and [callback] is the
+  /// Add a command to the command handler. `command` is its name, and `callback` is the
   /// callback to invoke
   void addCommand(
       String command, FutureOr<String> Function(CommandArgs) callback) {
     commands[command.toLowerCase()] = callback;
   }
 
-  /// Parse and execute a string, [msg] is the input. Optionally [inReplyTo] is the event being
-  /// replied to and [editEventId] is the eventId of the event being replied to
+  /// Parse and execute a string, `msg` is the input. Optionally `inReplyTo` is the event being
+  /// replied to and `editEventId` is the eventId of the event being replied to
   Future<String> parseAndRunCommand(Room room, String msg,
       {Event inReplyTo, String editEventId, String txid}) async {
     final args = CommandArgs(

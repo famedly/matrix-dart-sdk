@@ -200,7 +200,7 @@ class SSSS {
       getKey(keyId)?.algorithm == AlgorithmTypes.secretStorageV1AesHmcSha2;
 
   /// Creates a new secret storage key, optional encrypts it with [passphrase]
-  /// and stores it in the user's [accountData].
+  /// and stores it in the user's `accountData`.
   Future<OpenSSSS> createKey([String passphrase]) async {
     Uint8List privateKey;
     final content = SecretStorageKeyContent();

@@ -28,10 +28,10 @@ extension MxcUriExtension on Uri {
           : ''
       : toString();
 
-  /// Returns a scaled thumbnail link to this content with the given [width] and
-  /// [height]. [method] can be [ThumbnailMethod.crop] or
-  /// [ThumbnailMethod.scale] and defaults to [ThumbnailMethod.scale].
-  /// If [animated] (default false) is set to true, an animated thumbnail is requested
+  /// Returns a scaled thumbnail link to this content with the given `width` and
+  /// `height`. `method` can be `ThumbnailMethod.crop` or
+  /// `ThumbnailMethod.scale` and defaults to `ThumbnailMethod.scale`.
+  /// If `animated` (default false) is set to true, an animated thumbnail is requested
   /// as per MSC2705. Thumbnails only animate if the media repository supports that.
   String getThumbnail(Client matrix,
       {num width,

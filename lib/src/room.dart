@@ -69,9 +69,9 @@ class Room {
   /// The number of users with membership of invite.
   int mInvitedMemberCount;
 
-  /// The room states are a key value store of the key ([type],[state_key]) => State(event).
-  /// In a lot of cases the [state_key] might be an empty string. You **should** use the
-  /// methods [getState] and [setState] to interact with the room states.
+  /// The room states are a key value store of the key (`type`,`state_key`) => State(event).
+  /// In a lot of cases the `state_key` might be an empty string. You **should** use the
+  /// methods `getState()` and `setState()` to interact with the room states.
   Map<String, Map<String, Event>> states = {};
 
   /// Key-Value store for ephemerals.
@@ -1531,7 +1531,7 @@ class Room {
     return resp;
   }
 
-  /// Redacts this event. Returns [ErrorResponse] on error.
+  /// Redacts this event. Throws `ErrorResponse` on error.
   Future<String> redactEvent(String eventId,
       {String reason, String txid}) async {
     // Create new transaction id
@@ -1808,7 +1808,7 @@ class Room {
   }
 
   /// Whether this is an extinct room which has been archived in favor of a new
-  /// room which replaces this. Use [getLegacyRoomInformations] to get more
+  /// room which replaces this. Use `getLegacyRoomInformations()` to get more
   /// informations about it if this is true.
   bool get isExtinct => getState(EventTypes.RoomTombstone) != null;
 

@@ -346,7 +346,7 @@ class Event extends MatrixEvent {
   /// Whether the client is allowed to redact this event.
   bool get canRedact => senderId == room.client.userID || room.canRedact;
 
-  /// Redacts this event. Returns [ErrorResponse] on error.
+  /// Redacts this event. Throws `ErrorResponse` on error.
   Future<dynamic> redact({String reason, String txid}) =>
       room.redactEvent(eventId, reason: reason, txid: txid);
 

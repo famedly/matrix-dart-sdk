@@ -16,11 +16,11 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+const Set<String> VALID_SIGILS = {'@', '!', '#', '\$', '+'};
+
+const int MAX_LENGTH = 255;
+
 extension MatrixIdExtension on String {
-  static const Set<String> VALID_SIGILS = {'@', '!', '#', '\$', '+'};
-
-  static const int MAX_LENGTH = 255;
-
   List<String> _getParts() {
     final s = substring(1);
     final ix = s.indexOf(':');

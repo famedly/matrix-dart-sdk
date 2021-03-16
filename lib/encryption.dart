@@ -16,6 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/// Matrix SDK encryption specific extension
 library encryption;
 
 export 'encryption/encryption.dart';

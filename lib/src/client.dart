@@ -311,8 +311,8 @@ class Client extends MatrixApi {
 
   /// Checks the supported versions of the Matrix protocol and the supported
   /// login types. Throws an exception if the server is not compatible with the
-  /// client and sets [homeserver] to [serverUrl] if it is. Supports the types [Uri]
-  /// and [String].
+  /// client and sets [homeserver] to [homeserverUrl] if it is. Supports the
+  /// types `Uri` and `String`.
   Future<WellKnownInformation> checkHomeserver(dynamic homeserverUrl,
       {bool checkWellKnown = true}) async {
     try {
@@ -1452,7 +1452,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
 
   bool _sortLock = false;
 
-  /// If [true] then unread rooms are pinned at the top of the room list.
+  /// If `true` then unread rooms are pinned at the top of the room list.
   bool pinUnreadRooms;
 
   /// The compare function how the rooms should be sorted internally. By default
@@ -1731,9 +1731,9 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     }
   }
 
-  /// Sends a raw to_device event with a [eventType], a [txnId] and a content [data].
-  /// Before sending, it tries to re-send potentially queued to_device events and adds
-  /// the current one to the queue, should it fail.
+  /// Sends a raw to_device event with a [eventType], a [txnId] and a content
+  /// [messages]. Before sending, it tries to re-send potentially queued
+  /// to_device events and adds the current one to the queue, should it fail.
   @override
   Future<void> sendToDevice(
     String eventType,
@@ -1776,7 +1776,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     return;
   }
 
-  /// Sends an encrypted [message] of this [type] to these [deviceKeys].
+  /// Sends an encrypted [message] of this [eventType] to these [deviceKeys].
   Future<void> sendToDeviceEncrypted(
     List<DeviceKeys> deviceKeys,
     String eventType,
@@ -1804,9 +1804,10 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
         eventType, messageId ?? generateUniqueTransactionId(), data);
   }
 
-  /// Sends an encrypted [message] of this [type] to these [deviceKeys]. This request happens
-  /// partly in the background and partly in the foreground. It automatically chunks sending
-  /// to device keys based on activity
+  /// Sends an encrypted [message] of this [eventType] to these [deviceKeys].
+  /// This request happens partly in the background and partly in the
+  /// foreground. It automatically chunks sending to device keys based on
+  /// activity.
   Future<void> sendToDeviceEncryptedChunked(
     List<DeviceKeys> deviceKeys,
     String eventType,
