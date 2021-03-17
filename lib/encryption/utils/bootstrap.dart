@@ -260,6 +260,7 @@ class Bootstrap {
     }
     state = BootstrapState.loading;
     try {
+      Logs().v('Create key...');
       newSsssKey = await encryption.ssss.createKey(passphrase);
       if (oldSsssKeys != null) {
         // alright, we have to re-encrypt old secrets with the new key
@@ -280,7 +281,9 @@ class Bootstrap {
             continue;
           }
           for (final s in removeKey(keyId)) {
+            Logs().v('Get stored key of type $s...');
             secretMap[s] = await key.getStored(s);
+            Logs().v('Store new secret with this key...');
             await newSsssKey.store(s, secretMap[s], add: true);
           }
         }
@@ -293,9 +296,10 @@ class Bootstrap {
       await updatedAccountData;
       if (oldSsssKeys != null) {
         for (final entry in secretMap.entries) {
+          Logs().v('Validate and stripe other keys ${entry.key}...');
           await newSsssKey.validateAndStripOtherKeys(entry.key, entry.value);
         }
-        // and make super sure we have everything cached
+        Logs().v('And make super sure we have everything cached...');
         await newSsssKey.maybeCacheAll();
       }
     } catch (e, s) {
@@ -315,6 +319,7 @@ class Bootstrap {
     if (!newSsssKey.isUnlocked) {
       throw BootstrapBadStateException('Key not unlocked');
     }
+    Logs().v('Maybe cache all...');
     await newSsssKey.maybeCacheAll();
     checkCrossSigning();
   }
@@ -378,6 +383,7 @@ class Bootstrap {
           master.free();
         }
       } else {
+        Logs().v('Get stored key...');
         masterSigningKey = base64.decode(
             await newSsssKey.getStored(EventTypes.CrossSigningMasterKey) ?? '');
         if (masterSigningKey == null || masterSigningKey.isEmpty) {
@@ -496,15 +502,16 @@ class Bootstrap {
           throw BootstrapBadStateException(
               'ERROR: New master key does not match up!');
         }
+        Logs().v('Set own master key to verified...');
         await client.userDeviceKeys[client.userID].masterKey
             .setVerified(true, false);
         keysToSign.add(client.userDeviceKeys[client.userID].masterKey);
       }
-      // and sign ourself!
       if (selfSigningKey != null) {
         keysToSign.add(
             client.userDeviceKeys[client.userID].deviceKeys[client.deviceID]);
       }
+      Logs().v('Sign ourself...');
       await encryption.crossSigning.sign(keysToSign);
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error setting up cross signing', e, s);
@@ -553,16 +560,17 @@ class Bootstrap {
       } finally {
         keyObj.free();
       }
-      // create the new backup version
+      Logs().v('Create the new backup version...');
       await client.createRoomKeysBackup(
         RoomKeysAlgorithmType.v1Curve25519AesSha2,
         <String, dynamic>{
           'public_key': pubKey,
         },
       );
-      // store the secret
+      Logs().v('Store the secret...');
       await newSsssKey.store(MEGOLM_KEY, base64.encode(privKey));
-      // and finally set all megolm keys as needing to be uploaded again
+      Logs().v(
+          'And finally set all megolm keys as needing to be uploaded again...');
       await client.database?.markInboundGroupSessionsAsNeedingUpload(client.id);
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error setting up online key backup', e, s);
@@ -576,7 +584,7 @@ class Bootstrap {
   }
 
   set state(BootstrapState newState) {
-    Logs().v('BootstrapState', newState);
+    Logs().v('BootstrapState: $newState');
     if (state != BootstrapState.error) {
       _state = newState;
     }
