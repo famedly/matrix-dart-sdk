@@ -213,11 +213,13 @@ class SSSS {
       content.passphrase.iterations = PBKDF2_DEFAULT_ITERATIONS;
       content.passphrase.bits = SSSS_KEY_LENGTH * 8;
       privateKey = await runInBackground(
-          _keyFromPassphrase,
-          _KeyFromPassphraseArgs(
-            passphrase: passphrase,
-            info: content.passphrase,
-          ));
+        _keyFromPassphrase,
+        _KeyFromPassphraseArgs(
+          passphrase: passphrase,
+          info: content.passphrase,
+        ),
+        timeout: Duration(seconds: 10),
+      );
     } else {
       // we need to just generate a new key from scratch
       privateKey = Uint8List.fromList(SecureRandom(SSSS_KEY_LENGTH).bytes);
@@ -648,11 +650,13 @@ class OpenSSSS {
             'Tried to unlock with passphrase while key does not have a passphrase');
       }
       privateKey = await runInBackground(
-          _keyFromPassphrase,
-          _KeyFromPassphraseArgs(
-            passphrase: passphrase,
-            info: keyData.passphrase,
-          ));
+        _keyFromPassphrase,
+        _KeyFromPassphraseArgs(
+          passphrase: passphrase,
+          info: keyData.passphrase,
+        ),
+        timeout: Duration(seconds: 10),
+      );
     } else if (recoveryKey != null) {
       privateKey = SSSS.decodeRecoveryKey(recoveryKey);
     } else {

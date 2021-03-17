@@ -16,11 +16,16 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/famedlysdk.dart';
 import 'package:isolate/isolate.dart';
 import 'dart:async';
 
 Future<T> runInBackground<T, U>(
-    FutureOr<T> Function(U arg) function, U arg) async {
+  FutureOr<T> Function(U arg) function,
+  U arg, {
+  Duration timeout,
+  dynamic Function() onTimeout,
+}) async {
   IsolateRunner isolate;
   try {
     isolate = await IsolateRunner.spawn();
@@ -28,9 +33,17 @@ Future<T> runInBackground<T, U>(
     // web does not support isolates (yet), so we fall back to calling the method directly
     return await function(arg);
   }
+  final sub = isolate.errors
+      .listen((error) => Logs().e('Error caught in isolate', error));
   try {
-    return await isolate.run(function, arg);
+    return await isolate.run(
+      function,
+      arg,
+      timeout: timeout,
+      onTimeout: onTimeout,
+    );
   } finally {
+    await sub.cancel();
     await isolate.close();
   }
 }
