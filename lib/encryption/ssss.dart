@@ -24,7 +24,10 @@ import 'dart:async';
 import 'package:base58check/base58.dart';
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart';
-import 'package:password_hash/password_hash.dart';
+import 'package:pointycastle/digests/sha512.dart';
+import 'package:pointycastle/key_derivators/api.dart';
+import 'package:pointycastle/key_derivators/pbkdf2.dart';
+import 'package:pointycastle/macs/hmac.dart';
 
 import '../famedlysdk.dart';
 import '../src/database/database.dart';
@@ -155,9 +158,12 @@ class SSSS {
     if (info.algorithm != AlgorithmTypes.pbkdf2) {
       throw Exception('Unknown algorithm');
     }
-    final generator = PBKDF2(hashAlgorithm: sha512);
-    return Uint8List.fromList(generator.generateKey(passphrase, info.salt,
-        info.iterations, info.bits != null ? (info.bits / 8).ceil() : 32));
+    final out = Uint8List(info.bits != null ? (info.bits / 8).ceil() : 32);
+    final generator = PBKDF2KeyDerivator(HMac(SHA512Digest(), 128));
+    generator.init(
+        Pbkdf2Parameters(utf8.encode(info.salt), info.iterations, out.length));
+    generator.deriveKey(utf8.encode(passphrase), 0, out, 0);
+    return out;
   }
 
   void setValidator(String type, FutureOr<bool> Function(String) validator) {
