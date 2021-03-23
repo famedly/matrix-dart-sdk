@@ -5,6 +5,7 @@ Matrix SDK for the famedly talk app written in dart.
 ## Native libraries
 
 For E2EE, libolm must be provided (see https://pub.dev/packages/olm#using-dart-olm).
+Additionally, OpenSSL (libcrypto) must be provided on native platforms for E2EE.
 
 ## API
 

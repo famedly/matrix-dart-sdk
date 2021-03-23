@@ -24,13 +24,10 @@ import 'dart:async';
 import 'package:base58check/base58.dart';
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart';
-import 'package:pointycastle/digests/sha512.dart';
-import 'package:pointycastle/key_derivators/api.dart';
-import 'package:pointycastle/key_derivators/pbkdf2.dart';
-import 'package:pointycastle/macs/hmac.dart';
 
 import '../famedlysdk.dart';
 import '../src/database/database.dart';
+import '../src/utils/crypto/crypto.dart';
 import '../src/utils/run_in_background.dart';
 import '../src/utils/run_in_root.dart';
 import 'encryption.dart';
@@ -154,16 +151,11 @@ class SSSS {
         .trim();
   }
 
-  static Uint8List keyFromPassphrase(String passphrase, PassphraseInfo info) {
+  static Future<Uint8List> keyFromPassphrase(String passphrase, PassphraseInfo info) async {
     if (info.algorithm != AlgorithmTypes.pbkdf2) {
       throw Exception('Unknown algorithm');
     }
-    final out = Uint8List(info.bits != null ? (info.bits / 8).ceil() : 32);
-    final generator = PBKDF2KeyDerivator(HMac(SHA512Digest(), 128));
-    generator.init(
-        Pbkdf2Parameters(utf8.encode(info.salt), info.iterations, out.length));
-    generator.deriveKey(utf8.encode(passphrase), 0, out, 0);
-    return out;
+    return await pbkdf2(utf8.encode(passphrase), utf8.encode(info.salt), info.iterations, info.bits ?? 256);
   }
 
   void setValidator(String type, FutureOr<bool> Function(String) validator) {
@@ -717,6 +709,6 @@ class _KeyFromPassphraseArgs {
   _KeyFromPassphraseArgs({this.passphrase, this.info});
 }
 
-Uint8List _keyFromPassphrase(_KeyFromPassphraseArgs args) {
-  return SSSS.keyFromPassphrase(args.passphrase, args.info);
+Future<Uint8List> _keyFromPassphrase(_KeyFromPassphraseArgs args) async {
+  return await SSSS.keyFromPassphrase(args.passphrase, args.info);
 }

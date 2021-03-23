@@ -50,6 +50,10 @@ coverage_without_olm:
     - apt update
     - apt install -y dart
     - ln -s /usr/lib/dart/bin/pub /usr/bin/
+    # Need to check if famedlysdk works without OpenSSL.
+    # Cannot uninstall OpenSSL, because it may be used internally.
+    # Break famedlysdk's FFI to OpenSSL instead:
+    - sed -i 's/libcrypto/libnocrypto/g' lib/src/utils/crypto/ffi.dart
     - pub get
     - pub run test
 
