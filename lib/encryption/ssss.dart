@@ -27,7 +27,7 @@ import 'package:encrypt/encrypt.dart';
 
 import '../famedlysdk.dart';
 import '../src/database/database.dart';
-import '../src/utils/crypto/crypto.dart';
+import '../src/utils/crypto/crypto.dart' as uc;
 import '../src/utils/run_in_background.dart';
 import '../src/utils/run_in_root.dart';
 import 'encryption.dart';
@@ -155,7 +155,7 @@ class SSSS {
     if (info.algorithm != AlgorithmTypes.pbkdf2) {
       throw Exception('Unknown algorithm');
     }
-    return await pbkdf2(utf8.encode(passphrase), utf8.encode(info.salt), info.iterations, info.bits ?? 256);
+    return await uc.pbkdf2(utf8.encode(passphrase), utf8.encode(info.salt), uc.sha512, info.iterations, info.bits ?? 256);
   }
 
   void setValidator(String type, FutureOr<bool> Function(String) validator) {

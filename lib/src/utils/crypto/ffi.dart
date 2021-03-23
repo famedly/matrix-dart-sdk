@@ -14,6 +14,16 @@ final PKCS5_PBKDF2_HMAC = libcrypto.lookupFunction<
   int Function(Pointer<Uint8> pass, int passlen, Pointer<Uint8> salt, int saltlen, int iter, Pointer<NativeType> digest, int keylen, Pointer<Uint8> out)
 >('PKCS5_PBKDF2_HMAC');
 
+final EVP_sha1 = libcrypto.lookupFunction<
+  Pointer<NativeType> Function(),
+  Pointer<NativeType> Function()
+>('EVP_sha1');
+
+final EVP_sha256 = libcrypto.lookupFunction<
+  Pointer<NativeType> Function(),
+  Pointer<NativeType> Function()
+>('EVP_sha256');
+
 final EVP_sha512 = libcrypto.lookupFunction<
   Pointer<NativeType> Function(),
   Pointer<NativeType> Function()
