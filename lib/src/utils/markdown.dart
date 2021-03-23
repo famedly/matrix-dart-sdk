@@ -32,30 +32,27 @@ class LinebreakSyntax extends InlineSyntax {
 }
 
 class SpoilerSyntax extends TagSyntax {
-  Map<String, String> reasonMap = <String, String>{};
-  SpoilerSyntax()
-      : super(
-          r'\|\|(?:([^\|]+)\|(?!\|))?',
-          requiresDelimiterRun: true,
-          end: r'\|\|',
-        );
+  SpoilerSyntax() : super(r'\|\|', requiresDelimiterRun: true);
 
   @override
-  bool onMatch(InlineParser parser, Match match) {
-    if (super.onMatch(parser, match)) {
-      reasonMap[match.input] = match[1];
-      return true;
+  Node close(InlineParser parser, Delimiter opener, Delimiter closer,
+      {List<Node> Function() getChildren}) {
+    var reason = '';
+    final children = getChildren();
+    if (children.isNotEmpty) {
+      final te = children[0];
+      if (te is Text) {
+        final tx = te.text;
+        final ix = tx.indexOf('|');
+        if (ix > 0) {
+          reason = tx.substring(0, ix);
+          children[0] = Text(tx.substring(ix + 1));
+        }
+      }
     }
-    return false;
-  }
-
-  @override
-  bool onMatchEnd(InlineParser parser, Match match, TagState state) {
-    final element = Element('span', state.children);
-    element.attributes['data-mx-spoiler'] =
-        htmlAttrEscape.convert(reasonMap[match.input] ?? '');
-    parser.addNode(element);
-    return true;
+    final element = Element('span', children);
+    element.attributes['data-mx-spoiler'] = htmlAttrEscape.convert(reason);
+    return element;
   }
 }
 
@@ -97,14 +94,12 @@ class EmoteSyntax extends InlineSyntax {
 }
 
 class InlineLatexSyntax extends TagSyntax {
-  InlineLatexSyntax() : super(r'\$', requiresDelimiterRun: true);
+  InlineLatexSyntax() : super(r'\$([^\s$]([^\$]*[^\s$])?)\$');
 
   @override
-  bool onMatchEnd(InlineParser parser, Match match, TagState state) {
-    final latex =
-        htmlEscape.convert(parser.source.substring(state.endPos, match.start));
-    final element = Element('span', [Element.text('code', latex)]);
-    element.attributes['data-mx-maths'] = latex;
+  bool onMatch(InlineParser parser, Match match) {
+    final element = Element('span', [Element.text('code', match[1])]);
+    element.attributes['data-mx-maths'] = match[1];
     parser.addNode(element);
     return true;
   }
