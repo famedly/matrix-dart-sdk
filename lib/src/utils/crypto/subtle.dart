@@ -22,6 +22,29 @@ class Pbkdf2Params {
   int iterations;
 }
 
+@JS()
+@anonymous
+class AesCtrParams {
+  external factory AesCtrParams({String name, Uint8List counter, int length});
+  String name;
+  Uint8List counter;
+  int length;
+}
+
+@JS('crypto.subtle.encrypt')
+external dynamic _encrypt(dynamic algorithm, CryptoKey key, Uint8List data);
+
+Future<ByteBuffer> encrypt(dynamic algorithm, CryptoKey key, Uint8List data) {
+  return promiseToFuture(_encrypt(algorithm, key, data));
+}
+
+@JS('crypto.subtle.decrypt')
+external dynamic _decrypt(dynamic algorithm, CryptoKey key, Uint8List data);
+
+Future<ByteBuffer> decrypt(dynamic algorithm, CryptoKey key, Uint8List data) {
+  return promiseToFuture(_decrypt(algorithm, key, data));
+}
+
 @JS('crypto.subtle.importKey')
 external dynamic _importKey(String format, dynamic keyData, dynamic algorithm,
     bool extractable, List<String> keyUsages);

@@ -28,3 +28,38 @@ final EVP_sha512 = libcrypto.lookupFunction<
   Pointer<NativeType> Function(),
   Pointer<NativeType> Function()
 >('EVP_sha512');
+
+final EVP_aes_128_ctr = libcrypto.lookupFunction<
+  Pointer<NativeType> Function(),
+  Pointer<NativeType> Function()
+>('EVP_aes_128_ctr');
+
+final EVP_aes_256_ctr = libcrypto.lookupFunction<
+  Pointer<NativeType> Function(),
+  Pointer<NativeType> Function()
+>('EVP_aes_256_ctr');
+
+final EVP_CIPHER_CTX_new = libcrypto.lookupFunction<
+  Pointer<NativeType> Function(),
+  Pointer<NativeType> Function()
+>('EVP_CIPHER_CTX_new');
+
+final EVP_EncryptInit_ex = libcrypto.lookupFunction<
+  Pointer<NativeType> Function(Pointer<NativeType> ctx, Pointer<NativeType> alg, Pointer<NativeType> some, Pointer<Uint8> key, Pointer<Uint8> iv),
+  Pointer<NativeType> Function(Pointer<NativeType> ctx, Pointer<NativeType> alg, Pointer<NativeType> some, Pointer<Uint8> key, Pointer<Uint8> iv)
+>('EVP_EncryptInit_ex');
+
+final EVP_EncryptUpdate = libcrypto.lookupFunction<
+  Pointer<NativeType> Function(Pointer<NativeType> ctx, Pointer<Uint8> output, Pointer<IntPtr> outputLen, Pointer<Uint8> input, IntPtr inputLen),
+  Pointer<NativeType> Function(Pointer<NativeType> ctx, Pointer<Uint8> output, Pointer<IntPtr> outputLen, Pointer<Uint8> input, int inputLen)
+>('EVP_EncryptUpdate');
+
+final EVP_EncryptFinal_ex = libcrypto.lookupFunction<
+  Pointer<NativeType> Function(Pointer<NativeType> ctx, Pointer<Uint8> data, Pointer<IntPtr> len),
+  Pointer<NativeType> Function(Pointer<NativeType> ctx, Pointer<Uint8> data, Pointer<IntPtr> len)
+>('EVP_EncryptFinal_ex');
+
+final EVP_CIPHER_CTX_free = libcrypto.lookupFunction<
+  Pointer<NativeType> Function(Pointer<NativeType> ctx),
+  Pointer<NativeType> Function(Pointer<NativeType> ctx)
+>('EVP_CIPHER_CTX_free');

@@ -18,16 +18,23 @@
 
 import 'dart:typed_data';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/encryption.dart';
 import 'package:logger/logger.dart';
 import 'package:test/test.dart';
-import 'package:encrypt/encrypt.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../fake_client.dart';
 import '../fake_matrix_api.dart';
+
+Uint8List secureRandomBytes(int len) {
+  final rng = Random.secure();
+  final list = Uint8List(len);
+  list.setAll(0, Iterable.generate(list.length, (i) => rng.nextInt(256)));
+  return list;
+}
 
 class MockSSSS extends SSSS {
   MockSSSS(Encryption encryption) : super(encryption);
@@ -69,12 +76,12 @@ void main() {
           '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3');
     });
 
-    test('encrypt / decrypt', () {
+    test('encrypt / decrypt', () async {
       if (!olmEnabled) return;
-      final key = Uint8List.fromList(SecureRandom(32).bytes);
+      final key = Uint8List.fromList(secureRandomBytes(32));
 
-      final enc = SSSS.encryptAes('secret foxies', key, 'name');
-      final dec = SSSS.decryptAes(enc, key, 'name');
+      final enc = await SSSS.encryptAes('secret foxies', key, 'name');
+      final dec = await SSSS.decryptAes(enc, key, 'name');
       expect(dec, 'secret foxies');
     });
 
@@ -117,7 +124,7 @@ void main() {
 
     test('encode / decode recovery key', () async {
       if (!olmEnabled) return;
-      final key = Uint8List.fromList(SecureRandom(32).bytes);
+      final key = Uint8List.fromList(secureRandomBytes(32));
       final encoded = SSSS.encodeRecoveryKey(key);
       final decoded = SSSS.decodeRecoveryKey(encoded);
       expect(key, decoded);
@@ -472,13 +479,13 @@ void main() {
       expect(client.encryption.ssss.isKeyValid(newKey.keyId), true);
       var testKey = client.encryption.ssss.open(newKey.keyId);
       await testKey.unlock(passphrase: 'test');
-      testKey.setPrivateKey(newKey.privateKey);
+      await testKey.setPrivateKey(newKey.privateKey);
 
       // without passphrase
       newKey = await client.encryption.ssss.createKey();
       expect(client.encryption.ssss.isKeyValid(newKey.keyId), true);
       testKey = client.encryption.ssss.open(newKey.keyId);
-      testKey.setPrivateKey(newKey.privateKey);
+      await testKey.setPrivateKey(newKey.privateKey);
     });
 
     test('dispose client', () async {

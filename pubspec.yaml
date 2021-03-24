@@ -15,7 +15,6 @@ dependencies:
   html_unescape: ^1.0.2
   moor: ^4.0.0
   random_string: ^2.1.0
-  encrypt: ^5.0.0-beta.1
   crypto: ^3.0.0
   base58check: ^2.0.0
   olm: ^2.0.0
@@ -26,7 +25,6 @@ dependencies:
   isolate: ^2.0.3
   logger: ^1.0.0
   matrix_api_lite: ^0.2.4
-  pointycastle: ^3.0.0-nullsafety.2
 
 dev_dependencies:
   test: ^1.15.7

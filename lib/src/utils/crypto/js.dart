@@ -4,6 +4,7 @@
 import 'dart:typed_data';
 
 import 'subtle.dart';
+import 'subtle.dart' as subtle;
 
 abstract class Hash {
   Hash._(this.name);
@@ -24,6 +25,26 @@ class _Sha256 extends Hash {
 
 class _Sha512 extends Hash {
   _Sha512() : super._('SHA-512');
+}
+
+abstract class Cipher {
+  Cipher._(this.name);
+  String name;
+  Object params(Uint8List iv);
+  Future<Uint8List> encrypt(Uint8List input, Uint8List key, Uint8List iv) async {
+    final subtleKey = await importKey('raw', key, name, false, ['encrypt']);
+    return (await subtle.encrypt(params(iv), subtleKey, input))
+      .asUint8List();
+  }
+}
+
+final Cipher aesCtr = _AesCtr();
+
+class _AesCtr extends Cipher {
+  _AesCtr() : super._('AES-CTR');
+
+  @override
+  Object params(Uint8List iv) => AesCtrParams(name: name, counter: iv, length: 64);
 }
 
 Future<Uint8List> pbkdf2(Uint8List passphrase, Uint8List salt, Hash hash, int iterations, int bits) async {

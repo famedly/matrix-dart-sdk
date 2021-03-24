@@ -23,7 +23,6 @@ import 'dart:async';
 
 import 'package:base58check/base58.dart';
 import 'package:crypto/crypto.dart';
-import 'package:encrypt/encrypt.dart';
 
 import '../famedlysdk.dart';
 import '../src/database/database.dart';
@@ -78,13 +77,13 @@ class SSSS {
     return _DerivedKeys(aesKey: aesKey.bytes, hmacKey: hmacKey.bytes);
   }
 
-  static _Encrypted encryptAes(String data, Uint8List key, String name,
-      [String ivStr]) {
+  static Future<_Encrypted> encryptAes(String data, Uint8List key, String name,
+      [String ivStr]) async {
     Uint8List iv;
     if (ivStr != null) {
       iv = base64.decode(ivStr);
     } else {
-      iv = Uint8List.fromList(SecureRandom(16).bytes);
+      iv = Uint8List.fromList(uc.secureRandomBytes(16));
     }
     // we need to clear bit 63 of the IV
     iv[8] &= 0x7f;
@@ -92,9 +91,7 @@ class SSSS {
     final keys = deriveKeys(key, name);
 
     final plain = Uint8List.fromList(utf8.encode(data));
-    final ciphertext = AES(Key(keys.aesKey), mode: AESMode.ctr, padding: null)
-        .encrypt(plain, iv: IV(iv))
-        .bytes;
+    final ciphertext = await uc.aesCtr.encrypt(plain, keys.aesKey, iv);
 
     final hmac = Hmac(sha256, keys.hmacKey).convert(ciphertext);
 
@@ -104,7 +101,7 @@ class SSSS {
         mac: base64.encode(hmac.bytes));
   }
 
-  static String decryptAes(_Encrypted data, Uint8List key, String name) {
+  static Future<String> decryptAes(_Encrypted data, Uint8List key, String name) async {
     final keys = deriveKeys(key, name);
     final cipher = base64.decode(data.ciphertext);
     final hmac = base64
@@ -113,8 +110,7 @@ class SSSS {
     if (hmac != data.mac.replaceAll(RegExp(r'=+$'), '')) {
       throw Exception('Bad MAC');
     }
-    final decipher = AES(Key(keys.aesKey), mode: AESMode.ctr, padding: null)
-        .decrypt(Encrypted(cipher), iv: IV(base64.decode(data.iv)));
+    final decipher = await uc.aesCtr.encrypt(cipher, keys.aesKey, base64.decode(data.iv));
     return String.fromCharCodes(decipher);
   }
 
@@ -196,9 +192,9 @@ class SSSS {
       // we need to derive the key off of the passphrase
       content.passphrase = PassphraseInfo();
       content.passphrase.algorithm = AlgorithmTypes.pbkdf2;
-      content.passphrase.salt =
-          base64.encode(SecureRandom(pbkdf2SaltLength).bytes); // generate salt
-      content.passphrase.iterations = pbkdf2DefaultIterations;
+      content.passphrase.salt = base64
+          .encode(uc.secureRandomBytes(pbkdf2SaltLength)); // generate salt
+      content.passphrase.iterations = pbkdf2DefaultIterations;;
       content.passphrase.bits = ssssKeyLength * 8;
       privateKey = await runInBackground(
         _keyFromPassphrase,
@@ -210,10 +206,10 @@ class SSSS {
       );
     } else {
       // we need to just generate a new key from scratch
-      privateKey = Uint8List.fromList(SecureRandom(ssssKeyLength).bytes);
+      privateKey = Uint8List.fromList(uc.secureRandomBytes(ssssKeyLength));
     }
     // now that we have the private key, let's create the iv and mac
-    final encrypted = encryptAes(zeroStr, privateKey, '');
+    final encrypted = await encryptAes(zeroStr, privateKey, '');
     content.iv = encrypted.iv;
     content.mac = encrypted.mac;
     content.algorithm = AlgorithmTypes.secretStorageV1AesHmcSha2;
@@ -223,7 +219,7 @@ class SSSS {
     // make sure we generate a unique key id
     final keyId = () sync* {
       for (;;) {
-        yield base64.encode(SecureRandom(keyidByteLength).bytes);
+        yield base64.encode(uc.secureRandomBytes(keyidByteLength));
       }
     }()
         .firstWhere((keyId) => getKey(keyId) == null);
@@ -238,14 +234,14 @@ class SSSS {
     await waitForAccountData;
 
     final key = open(keyId);
-    key.setPrivateKey(privateKey);
+    await key.setPrivateKey(privateKey);
     return key;
   }
 
-  bool checkKey(Uint8List key, SecretStorageKeyContent info) {
+  Future<bool> checkKey(Uint8List key, SecretStorageKeyContent info) async {
     if (info.algorithm == AlgorithmTypes.secretStorageV1AesHmcSha2) {
       if ((info.mac is String) && (info.iv is String)) {
-        final encrypted = encryptAes(zeroStr, key, '', info.iv);
+        final encrypted = await encryptAes(zeroStr, key, '', info.iv);
         return info.mac.replaceAll(RegExp(r'=+$'), '') ==
             encrypted.mac.replaceAll(RegExp(r'=+$'), '');
       } else {
@@ -303,7 +299,7 @@ class SSSS {
     final enc = secretInfo.content['encrypted'][keyId];
     final encryptInfo = _Encrypted(
         iv: enc['iv'], ciphertext: enc['ciphertext'], mac: enc['mac']);
-    final decrypted = decryptAes(encryptInfo, key, type);
+    final decrypted = await decryptAes(encryptInfo, key, type);
     if (cacheTypes.contains(type) && client.database != null) {
       // cache the thing
       await client.database
@@ -319,7 +315,7 @@ class SSSS {
       {bool add = false}) async {
     final triggerCacheCallback =
         _cacheCallbacks.containsKey(type) && await getCached(type) == null;
-    final encrypted = encryptAes(secret, key, type);
+    final encrypted = await encryptAes(secret, key, type);
     Map<String, dynamic> content;
     if (add && client.accountData[type] != null) {
       content = client.accountData[type].content.copy();
@@ -649,7 +645,7 @@ class OpenSSSS {
       throw Exception('Nothing specified');
     }
     // verify the validity of the key
-    if (!ssss.checkKey(privateKey, keyData)) {
+    if (!await ssss.checkKey(privateKey, keyData)) {
       privateKey = null;
       throw Exception('Inalid key');
     }
@@ -658,8 +654,8 @@ class OpenSSSS {
     }
   }
 
-  void setPrivateKey(Uint8List key) {
-    if (!ssss.checkKey(key, keyData)) {
+  Future<void> setPrivateKey(Uint8List key) async {
+    if (!await ssss.checkKey(key, keyData)) {
       throw Exception('Invalid key');
     }
     privateKey = key;
