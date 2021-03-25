@@ -20,7 +20,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
-import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 
 import '../famedlysdk.dart';
 import 'database/database.dart' show DbRoomState, DbEvent;
@@ -29,6 +28,7 @@ import 'utils/matrix_localizations.dart';
 import 'utils/receipt.dart';
 import 'utils/run_in_background.dart';
 import 'utils/event_localizations.dart';
+import 'utils/crypto/encrypted_file.dart';
 
 abstract class RelationshipTypes {
   static const String reply = 'm.in_reply_to';

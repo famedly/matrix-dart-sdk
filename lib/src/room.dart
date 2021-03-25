@@ -21,7 +21,6 @@ import 'dart:convert';
 
 import 'package:famedlysdk/src/utils/space_child.dart';
 import 'package:html_unescape/html_unescape.dart';
-import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 
 import '../famedlysdk.dart';
 import 'client.dart';
@@ -29,6 +28,7 @@ import 'database/database.dart' show DbRoom;
 import 'event.dart';
 import 'timeline.dart';
 import 'user.dart';
+import 'utils/crypto/encrypted_file.dart';
 import 'utils/event_update.dart';
 import 'utils/markdown.dart';
 import 'utils/marked_unread.dart';

@@ -63,3 +63,14 @@ final EVP_CIPHER_CTX_free = libcrypto.lookupFunction<
   Pointer<NativeType> Function(Pointer<NativeType> ctx),
   Pointer<NativeType> Function(Pointer<NativeType> ctx)
 >('EVP_CIPHER_CTX_free');
+
+final EVP_Digest = libcrypto.lookupFunction<
+  IntPtr Function(Pointer<Uint8> data, IntPtr len, Pointer<Uint8> hash, Pointer<IntPtr> hsize, Pointer<NativeType> alg, Pointer<NativeType> engine),
+  int Function(Pointer<Uint8> data, int len, Pointer<Uint8> hash, Pointer<IntPtr> hsize, Pointer<NativeType> alg, Pointer<NativeType> engine)
+>('EVP_Digest');
+
+final EVP_MD_size = libcrypto.lookupFunction<
+  IntPtr Function(Pointer<NativeType> ctx),
+  int Function(Pointer<NativeType> ctx)
+>('EVP_MD_size');
+

@@ -7,6 +7,19 @@ import 'ffi.dart';
 abstract class Hash {
   Hash._(this.ptr);
   Pointer<NativeType> ptr;
+
+  Uint8List call(Uint8List data) {
+    final outSize = EVP_MD_size(ptr);
+    final mem = malloc.call<Uint8>(outSize + data.length);
+    final dataMem = mem.elementAt(outSize);
+    try {
+      dataMem.asTypedList(data.length).setAll(0, data);
+      EVP_Digest(dataMem, data.length, mem, nullptr, ptr, nullptr);
+      return Uint8List.fromList(mem.asTypedList(outSize));
+    } finally {
+      malloc.free(mem);
+    }
+  }
 }
 
 final Hash sha1 = _Sha1();

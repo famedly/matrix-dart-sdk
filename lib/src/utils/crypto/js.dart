@@ -9,6 +9,8 @@ import 'subtle.dart' as subtle;
 abstract class Hash {
   Hash._(this.name);
   String name;
+
+  Future<Uint8List> call(Uint8List input) async => Uint8List.view(await digest(name, input));
 }
 
 final Hash sha1 = _Sha1();

@@ -20,7 +20,7 @@
 
 import 'dart:typed_data';
 
-import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
+import 'crypto/encrypted_file.dart';
 import 'package:mime/mime.dart';
 
 import '../../famedlysdk.dart';

@@ -75,3 +75,10 @@ external dynamic _deriveBits(dynamic algorithm, CryptoKey baseKey, int length);
 Future<ByteBuffer> deriveBits(dynamic algorithm, CryptoKey baseKey, int length) {
   return promiseToFuture(_deriveBits(algorithm, baseKey, length));
 }
+
+@JS('crypto.subtle.digest')
+external dynamic _digest(String algorithm, Uint8List data);
+
+Future<ByteBuffer> digest(String algorithm, Uint8List data) {
+  return promiseToFuture(_digest(algorithm, data));
+}
