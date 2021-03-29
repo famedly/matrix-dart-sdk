@@ -20,7 +20,7 @@ coverage:
     - apt install -y curl gnupg2 git unzip
     - git clone https://github.com/flutter/flutter.git -b stable
     - export PATH="$PATH:`pwd`/flutter/bin"
-    - sed -i s/#//g pubspec.yaml
+    - sed -i 's/#\([^ ]\)/\1/g' pubspec.yaml
     - flutter doctor
     - apt update
     - apt install -y lcov libolm3 sqlite3 libsqlite3-dev
