@@ -74,7 +74,7 @@ class Timeline {
   }
 
   Future<void> requestHistory(
-      {int historyCount = Room.DefaultHistoryCount}) async {
+      {int historyCount = Room.defaultHistoryCount}) async {
     if (!isRequestingHistory) {
       isRequestingHistory = true;
       await room.requestHistory(
@@ -264,7 +264,7 @@ class Timeline {
       }
       var status = eventUpdate.content['status'] ??
           (eventUpdate.content['unsigned'] is Map<String, dynamic>
-              ? eventUpdate.content['unsigned'][MessageSendingStatusKey]
+              ? eventUpdate.content['unsigned'][messageSendingStatusKey]
               : null) ??
           2;
       // Redaction events are handled as modification for existing events.

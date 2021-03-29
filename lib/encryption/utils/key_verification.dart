@@ -648,9 +648,9 @@ abstract class _KeyVerificationMethod {
   void dispose() {}
 }
 
-const KNOWN_KEY_AGREEMENT_PROTOCOLS = ['curve25519-hkdf-sha256', 'curve25519'];
-const KNOWN_HASHES = ['sha256'];
-const KNOWN_MESSAGE_AUTHENTIFICATION_CODES = ['hkdf-hmac-sha256'];
+const knownKeyAgreementProtocols = ['curve25519-hkdf-sha256', 'curve25519'];
+const knownHashes = ['sha256'];
+const knownHashesAuthentificationCodes = ['hkdf-hmac-sha256'];
 
 class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   _KeyVerificationMethodSas({KeyVerification request})
@@ -768,9 +768,9 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   Future<void> sendStart() async {
     final payload = <String, dynamic>{
       'method': type,
-      'key_agreement_protocols': KNOWN_KEY_AGREEMENT_PROTOCOLS,
-      'hashes': KNOWN_HASHES,
-      'message_authentication_codes': KNOWN_MESSAGE_AUTHENTIFICATION_CODES,
+      'key_agreement_protocols': knownKeyAgreementProtocols,
+      'hashes': knownHashes,
+      'message_authentication_codes': knownHashesAuthentificationCodes,
       'short_authentication_string': knownAuthentificationTypes,
     };
     request.makePayload(payload);
@@ -785,18 +785,18 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
       return false;
     }
     final possibleKeyAgreementProtocols = _intersect(
-        KNOWN_KEY_AGREEMENT_PROTOCOLS, payload['key_agreement_protocols']);
+        knownKeyAgreementProtocols, payload['key_agreement_protocols']);
     if (possibleKeyAgreementProtocols.isEmpty) {
       return false;
     }
     keyAgreementProtocol = possibleKeyAgreementProtocols.first;
-    final possibleHashes = _intersect(KNOWN_HASHES, payload['hashes']);
+    final possibleHashes = _intersect(knownHashes, payload['hashes']);
     if (possibleHashes.isEmpty) {
       return false;
     }
     hash = possibleHashes.first;
     final possibleMessageAuthenticationCodes = _intersect(
-        KNOWN_MESSAGE_AUTHENTIFICATION_CODES,
+        knownHashesAuthentificationCodes,
         payload['message_authentication_codes']);
     if (possibleMessageAuthenticationCodes.isEmpty) {
       return false;
@@ -826,16 +826,16 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   }
 
   bool _handleAccept(Map<String, dynamic> payload) {
-    if (!KNOWN_KEY_AGREEMENT_PROTOCOLS
+    if (!knownKeyAgreementProtocols
         .contains(payload['key_agreement_protocol'])) {
       return false;
     }
     keyAgreementProtocol = payload['key_agreement_protocol'];
-    if (!KNOWN_HASHES.contains(payload['hash'])) {
+    if (!knownHashes.contains(payload['hash'])) {
       return false;
     }
     hash = payload['hash'];
-    if (!KNOWN_MESSAGE_AUTHENTIFICATION_CODES
+    if (!knownHashesAuthentificationCodes
         .contains(payload['message_authentication_code'])) {
       return false;
     }

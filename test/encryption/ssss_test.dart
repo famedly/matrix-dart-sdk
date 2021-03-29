@@ -37,7 +37,7 @@ class MockSSSS extends SSSS {
   Future<void> maybeRequestAll([List<DeviceKeys> devices]) async {
     requestedSecrets = true;
     final handle = open();
-    await handle.unlock(recoveryKey: SSSS_KEY);
+    await handle.unlock(recoveryKey: ssssKey);
     await handle.maybeCacheAll();
   }
 }
@@ -97,8 +97,8 @@ void main() {
       }
       expect(failed, true);
       expect(handle.isUnlocked, false);
-      await handle.unlock(passphrase: SSSS_PASSPHRASE);
-      await handle.unlock(recoveryKey: SSSS_KEY);
+      await handle.unlock(passphrase: ssssPassphrase);
+      await handle.unlock(recoveryKey: ssssKey);
       expect(handle.isUnlocked, true);
       FakeMatrixApi.calledEndpoints.clear();
       await handle.store('best animal', 'foxies');
@@ -123,8 +123,8 @@ void main() {
       expect(key, decoded);
 
       final handle = client.encryption.ssss.open();
-      await handle.unlock(recoveryKey: SSSS_KEY);
-      expect(handle.recoveryKey, SSSS_KEY);
+      await handle.unlock(recoveryKey: ssssKey);
+      expect(handle.recoveryKey, ssssKey);
     });
 
     test('cache', () async {
@@ -132,7 +132,7 @@ void main() {
       await client.encryption.ssss.clearCache();
       final handle =
           client.encryption.ssss.open(EventTypes.CrossSigningSelfSigning);
-      await handle.unlock(recoveryKey: SSSS_KEY, postUnlock: false);
+      await handle.unlock(recoveryKey: ssssKey, postUnlock: false);
       expect(
           (await client.encryption.ssss
                   .getCached(EventTypes.CrossSigningSelfSigning)) !=
@@ -167,7 +167,7 @@ void main() {
       client.userDeviceKeys[client.userID].masterKey.setDirectVerified(false);
       final handle =
           client.encryption.ssss.open(EventTypes.CrossSigningSelfSigning);
-      await handle.unlock(recoveryKey: SSSS_KEY);
+      await handle.unlock(recoveryKey: ssssKey);
       expect(
           (await client.encryption.ssss
                   .getCached(EventTypes.CrossSigningSelfSigning)) !=
@@ -305,7 +305,7 @@ void main() {
       key.setDirectVerified(true);
       final handle =
           client.encryption.ssss.open(EventTypes.CrossSigningSelfSigning);
-      await handle.unlock(recoveryKey: SSSS_KEY);
+      await handle.unlock(recoveryKey: ssssKey);
 
       await client.encryption.ssss.clearCache();
       client.encryption.ssss.pendingShareRequests.clear();

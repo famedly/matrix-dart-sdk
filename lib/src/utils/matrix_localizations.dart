@@ -146,7 +146,7 @@ extension HistoryVisibilityDisplayString on HistoryVisibility {
         return i18n.fromJoining;
       case HistoryVisibility.shared:
         return i18n.visibleForAllParticipants;
-      case HistoryVisibility.world_readable:
+      case HistoryVisibility.worldReadable:
         return i18n.visibleForEveryone;
     }
     return null;
@@ -156,7 +156,7 @@ extension HistoryVisibilityDisplayString on HistoryVisibility {
 extension GuestAccessDisplayString on GuestAccess {
   String getLocalizedString(MatrixLocalizations i18n) {
     switch (this) {
-      case GuestAccess.can_join:
+      case GuestAccess.canJoin:
         return i18n.guestsCanJoin;
       case GuestAccess.forbidden:
         return i18n.guestsAreForbidden;

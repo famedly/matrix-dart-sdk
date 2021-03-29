@@ -603,10 +603,10 @@ void main() {
     });
 
     test('pushRuleState', () async {
-      expect(room.pushRuleState, PushRuleState.mentions_only);
+      expect(room.pushRuleState, PushRuleState.mentionsOnly);
       matrix.accountData['m.push_rules'].content['global']['override']
           .add(matrix.accountData['m.push_rules'].content['global']['room'][0]);
-      expect(room.pushRuleState, PushRuleState.dont_notify);
+      expect(room.pushRuleState, PushRuleState.dontNotify);
     });
 
     test('Test call methods', () async {
@@ -642,8 +642,8 @@ void main() {
 
     test('setPushRuleState', () async {
       await room.setPushRuleState(PushRuleState.notify);
-      await room.setPushRuleState(PushRuleState.dont_notify);
-      await room.setPushRuleState(PushRuleState.mentions_only);
+      await room.setPushRuleState(PushRuleState.dontNotify);
+      await room.setPushRuleState(PushRuleState.mentionsOnly);
       await room.setPushRuleState(PushRuleState.notify);
     });
 
@@ -708,8 +708,8 @@ void main() {
         'type': 'm.room.guest_access',
         'unsigned': {'age': 1234}
       }, room, 1432735824653.0));
-      expect(room.guestAccess, GuestAccess.can_join);
-      await room.setGuestAccess(GuestAccess.can_join);
+      expect(room.guestAccess, GuestAccess.canJoin);
+      await room.setGuestAccess(GuestAccess.canJoin);
     });
 
     test('historyVisibility', () async {

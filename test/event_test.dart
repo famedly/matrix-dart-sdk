@@ -84,7 +84,7 @@ void main() {
       expect(event.formattedText, formatted_body);
       expect(event.body, body);
       expect(event.type, EventTypes.Message);
-      expect(event.relationshipType, RelationshipTypes.Reply);
+      expect(event.relationshipType, RelationshipTypes.reply);
       jsonObj['state_key'] = '';
       var state = Event.fromJson(jsonObj, null);
       expect(state.eventId, id);
@@ -183,7 +183,7 @@ void main() {
       };
       event = Event.fromJson(jsonObj, null);
       expect(event.messageType, MessageTypes.Text);
-      expect(event.relationshipType, RelationshipTypes.Reply);
+      expect(event.relationshipType, RelationshipTypes.reply);
       expect(event.relationshipEventId, '1234');
     });
 
@@ -203,12 +203,12 @@ void main() {
         'event_id': 'abc',
       };
       event = Event.fromJson(jsonObj, null);
-      expect(event.relationshipType, RelationshipTypes.Edit);
+      expect(event.relationshipType, RelationshipTypes.edit);
       expect(event.relationshipEventId, 'abc');
 
       jsonObj['content']['m.relates_to']['rel_type'] = 'm.annotation';
       event = Event.fromJson(jsonObj, null);
-      expect(event.relationshipType, RelationshipTypes.Reaction);
+      expect(event.relationshipType, RelationshipTypes.reaction);
       expect(event.relationshipEventId, 'abc');
 
       jsonObj['content']['m.relates_to'] = {
@@ -217,7 +217,7 @@ void main() {
         },
       };
       event = Event.fromJson(jsonObj, null);
-      expect(event.relationshipType, RelationshipTypes.Reply);
+      expect(event.relationshipType, RelationshipTypes.reply);
       expect(event.relationshipEventId, 'def');
     });
 
@@ -908,7 +908,7 @@ void main() {
           'msgtype': 'm.text',
           'm.relates_to': {
             'event_id': '\$source',
-            'rel_type': RelationshipTypes.Edit,
+            'rel_type': RelationshipTypes.edit,
           },
         },
         'event_id': '\$edit1',
@@ -919,30 +919,30 @@ void main() {
           'msgtype': 'm.text',
           'm.relates_to': {
             'event_id': '\$source',
-            'rel_type': RelationshipTypes.Edit,
+            'rel_type': RelationshipTypes.edit,
           },
         },
         'event_id': '\$edit2',
       }, null);
       var room = Room(client: client);
       var timeline = Timeline(events: <Event>[event, edit1, edit2], room: room);
-      expect(event.hasAggregatedEvents(timeline, RelationshipTypes.Edit), true);
-      expect(event.aggregatedEvents(timeline, RelationshipTypes.Edit),
+      expect(event.hasAggregatedEvents(timeline, RelationshipTypes.edit), true);
+      expect(event.aggregatedEvents(timeline, RelationshipTypes.edit),
           {edit1, edit2});
-      expect(event.aggregatedEvents(timeline, RelationshipTypes.Reaction),
+      expect(event.aggregatedEvents(timeline, RelationshipTypes.reaction),
           <Event>{});
-      expect(event.hasAggregatedEvents(timeline, RelationshipTypes.Reaction),
+      expect(event.hasAggregatedEvents(timeline, RelationshipTypes.reaction),
           false);
 
       timeline.removeAggregatedEvent(edit2);
-      expect(event.aggregatedEvents(timeline, RelationshipTypes.Edit), {edit1});
+      expect(event.aggregatedEvents(timeline, RelationshipTypes.edit), {edit1});
       timeline.addAggregatedEvent(edit2);
-      expect(event.aggregatedEvents(timeline, RelationshipTypes.Edit),
+      expect(event.aggregatedEvents(timeline, RelationshipTypes.edit),
           {edit1, edit2});
 
       timeline.removeAggregatedEvent(event);
       expect(
-          event.aggregatedEvents(timeline, RelationshipTypes.Edit), <Event>{});
+          event.aggregatedEvents(timeline, RelationshipTypes.edit), <Event>{});
     });
     test('getDisplayEvent', () {
       var event = Event.fromJson({
@@ -966,7 +966,7 @@ void main() {
           },
           'm.relates_to': {
             'event_id': '\$source',
-            'rel_type': RelationshipTypes.Edit,
+            'rel_type': RelationshipTypes.edit,
           },
         },
         'event_id': '\$edit1',
@@ -984,7 +984,7 @@ void main() {
           },
           'm.relates_to': {
             'event_id': '\$source',
-            'rel_type': RelationshipTypes.Edit,
+            'rel_type': RelationshipTypes.edit,
           },
         },
         'event_id': '\$edit2',
@@ -1002,7 +1002,7 @@ void main() {
           },
           'm.relates_to': {
             'event_id': '\$source',
-            'rel_type': RelationshipTypes.Edit,
+            'rel_type': RelationshipTypes.edit,
           },
         },
         'event_id': '\$edit3',

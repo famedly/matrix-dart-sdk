@@ -20,7 +20,7 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 
-const UPDATES = {
+const updates = {
   'empty': {
     'next_batch': 'blah',
     'account_data': {
@@ -128,7 +128,7 @@ const UPDATES = {
 };
 
 void testUpdates(bool Function(SyncUpdate s) test, Map<String, bool> expected) {
-  for (final update in UPDATES.entries) {
+  for (final update in updates.entries) {
     var sync = SyncUpdate.fromJson(update.value);
     expect(test(sync), expected[update.key]);
   }

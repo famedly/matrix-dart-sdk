@@ -307,7 +307,7 @@ class Database extends _$Database {
       // we limit to only fetching 500 rooms at once.
       // This value might be fine-tune-able to be larger (and thus increase performance more for very large accounts),
       // however this very conservative value should be on the safe side.
-      const MAX_ROOMS_PER_QUERY = 500;
+      const maxRoomsPerQuery = 500;
       // as we iterate over our entries in separate chunks one-by-one we use an iterator
       // which persists accross the chunks, and thus we just re-sume iteration at the place
       // we prreviously left off.
@@ -315,7 +315,7 @@ class Database extends _$Database {
       // now we iterate over all our 500-room-chunks...
       for (var i = 0;
           i < allMembersToPostload.keys.length;
-          i += MAX_ROOMS_PER_QUERY) {
+          i += maxRoomsPerQuery) {
         // query the current chunk and build the query
         final membersRes = await (select(roomStates)
               ..where((s) {
@@ -330,7 +330,7 @@ class Database extends _$Database {
                 // we must check for if our chunk is done *before* progressing the
                 // iterator, else we might progress it twice around chunk edges, missing on rooms
                 for (var j = 0;
-                    j < MAX_ROOMS_PER_QUERY && entriesIterator.moveNext();
+                    j < maxRoomsPerQuery && entriesIterator.moveNext();
                     j++) {
                   final entry = entriesIterator.current;
                   // builds room_id = '!roomId1' AND state_key IN ('@member')
@@ -468,8 +468,8 @@ class Database extends _$Database {
       // calculate the status
       var status = 2;
       if (eventContent['unsigned'] is Map<String, dynamic> &&
-          eventContent['unsigned'][MessageSendingStatusKey] is num) {
-        status = eventContent['unsigned'][MessageSendingStatusKey];
+          eventContent['unsigned'][messageSendingStatusKey] is num) {
+        status = eventContent['unsigned'][messageSendingStatusKey];
       }
       if (eventContent['status'] is num) status = eventContent['status'];
       var storeNewEvent = !((status == 1 || status == -1) &&

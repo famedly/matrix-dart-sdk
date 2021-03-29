@@ -17,7 +17,7 @@
  */
 
 mixin EventType {
-  static const String MarkedUnread = 'com.famedly.marked_unread';
+  static const String markedUnread = 'com.famedly.marked_unread';
 }
 
 class MarkedUnread {

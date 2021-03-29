@@ -34,12 +34,24 @@ import 'utils/marked_unread.dart';
 import 'utils/matrix_file.dart';
 import 'utils/matrix_localizations.dart';
 
-enum PushRuleState { notify, mentions_only, dont_notify }
+enum PushRuleState { notify, mentionsOnly, dontNotify }
 enum JoinRules { public, knock, invite, private }
-enum GuestAccess { can_join, forbidden }
-enum HistoryVisibility { invited, joined, shared, world_readable }
+enum GuestAccess { canJoin, forbidden }
+enum HistoryVisibility { invited, joined, shared, worldReadable }
 
-const String MessageSendingStatusKey =
+const Map<GuestAccess, String> _guestAccessMap = {
+  GuestAccess.canJoin: 'can_join',
+  GuestAccess.forbidden: 'forbidden',
+};
+
+const Map<HistoryVisibility, String> _historyVisibilityMap = {
+  HistoryVisibility.invited: 'invited',
+  HistoryVisibility.joined: 'joined',
+  HistoryVisibility.shared: 'shared',
+  HistoryVisibility.worldReadable: 'world_readable',
+};
+
+const String messageSendingStatusKey =
     'com.famedly.famedlysdk.message_sending_status';
 
 /// Represents a Matrix room.
@@ -345,7 +357,7 @@ class Room {
 
   /// The default count of how much events should be requested when requesting the
   /// history of this room.
-  static const int DefaultHistoryCount = 100;
+  static const int defaultHistoryCount = 100;
 
   /// Calculates the displayname. First checks if there is a name, then checks for a canonical alias and
   /// then generates a name from the heroes.
@@ -448,7 +460,7 @@ class Room {
 
   bool get markedUnread {
     return MarkedUnread.fromJson(
-            roomAccountData[EventType.MarkedUnread]?.content ?? {})
+            roomAccountData[EventType.markedUnread]?.content ?? {})
         .unread;
   }
 
@@ -467,12 +479,12 @@ class Room {
             BasicRoomEvent()
               ..content = content
               ..roomId = id
-              ..type = EventType.MarkedUnread
+              ..type = EventType.markedUnread
           ])))));
     await client.setRoomAccountData(
       client.userID,
       id,
-      EventType.MarkedUnread,
+      EventType.markedUnread,
       content,
     );
     if (unread == false && lastEvent != null) {
@@ -618,7 +630,7 @@ class Room {
   Future<String> sendReaction(String eventId, String key, {String txid}) {
     return sendEvent({
       'm.relates_to': {
-        'rel_type': RelationshipTypes.Reaction,
+        'rel_type': RelationshipTypes.reaction,
         'event_id': eventId,
         'key': key,
       },
@@ -805,7 +817,7 @@ class Room {
       content['m.new_content'] = newContent;
       content['m.relates_to'] = {
         'event_id': editEventId,
-        'rel_type': RelationshipTypes.Edit,
+        'rel_type': RelationshipTypes.edit,
       };
       if (content['body'] is String) {
         content['body'] = '* ' + content['body'];
@@ -827,7 +839,7 @@ class Room {
                 ..senderId = client.userID
                 ..originServerTs = sentDate
                 ..unsigned = {
-                  MessageSendingStatusKey: 0,
+                  messageSendingStatusKey: 0,
                   'transaction_id': messageID,
                 },
             ]))));
@@ -853,14 +865,14 @@ class Room {
         } else {
           Logs().w('[Client] Problem while sending message', e, s);
           syncUpdate.rooms.join.values.first.timeline.events.first
-              .unsigned[MessageSendingStatusKey] = -1;
+              .unsigned[messageSendingStatusKey] = -1;
           await _handleFakeSync(syncUpdate);
           return null;
         }
       }
     }
     syncUpdate.rooms.join.values.first.timeline.events.first
-        .unsigned[MessageSendingStatusKey] = 1;
+        .unsigned[messageSendingStatusKey] = 1;
     syncUpdate.rooms.join.values.first.timeline.events.first.eventId = res;
     await _handleFakeSync(syncUpdate);
 
@@ -952,7 +964,7 @@ class Room {
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
   /// the historical events will be published in the onEvent stream.
   Future<void> requestHistory(
-      {int historyCount = DefaultHistoryCount, onHistoryReceived}) async {
+      {int historyCount = defaultHistoryCount, onHistoryReceived}) async {
     final resp = await client.requestMessages(
       id,
       prev_batch,
@@ -1458,7 +1470,7 @@ class Room {
           if (globalPushRules['override'][i]['actions']
                   .indexOf('dont_notify') !=
               -1) {
-            return PushRuleState.dont_notify;
+            return PushRuleState.dontNotify;
           }
           break;
         }
@@ -1470,7 +1482,7 @@ class Room {
         if (globalPushRules['room'][i]['rule_id'] == id) {
           if (globalPushRules['room'][i]['actions'].indexOf('dont_notify') !=
               -1) {
-            return PushRuleState.mentions_only;
+            return PushRuleState.mentionsOnly;
           }
           break;
         }
@@ -1488,15 +1500,15 @@ class Room {
     switch (newState) {
       // All push notifications should be sent to the user
       case PushRuleState.notify:
-        if (pushRuleState == PushRuleState.dont_notify) {
+        if (pushRuleState == PushRuleState.dontNotify) {
           await client.deletePushRule('global', PushRuleKind.override, id);
-        } else if (pushRuleState == PushRuleState.mentions_only) {
+        } else if (pushRuleState == PushRuleState.mentionsOnly) {
           await client.deletePushRule('global', PushRuleKind.room, id);
         }
         break;
       // Only when someone mentions the user, a push notification should be sent
-      case PushRuleState.mentions_only:
-        if (pushRuleState == PushRuleState.dont_notify) {
+      case PushRuleState.mentionsOnly:
+        if (pushRuleState == PushRuleState.dontNotify) {
           await client.deletePushRule('global', PushRuleKind.override, id);
           await client.setPushRule(
             'global',
@@ -1514,8 +1526,8 @@ class Room {
         }
         break;
       // No push notification should be ever sent for this room.
-      case PushRuleState.dont_notify:
-        if (pushRuleState == PushRuleState.mentions_only) {
+      case PushRuleState.dontNotify:
+        if (pushRuleState == PushRuleState.mentionsOnly) {
           await client.deletePushRule('global', PushRuleKind.room, id);
         }
         await client.setPushRule(
@@ -1702,11 +1714,8 @@ class Room {
   /// This event controls whether guest users are allowed to join rooms. If this event
   /// is absent, servers should act as if it is present and has the guest_access value "forbidden".
   GuestAccess get guestAccess => getState(EventTypes.GuestAccess) != null
-      ? GuestAccess.values.firstWhere(
-          (r) =>
-              r.toString().replaceAll('GuestAccess.', '') ==
-              getState(EventTypes.GuestAccess).content['guest_access'],
-          orElse: () => GuestAccess.forbidden)
+      ? _guestAccessMap.map((k, v) => MapEntry(v, k))[
+          getState(EventTypes.GuestAccess).content['guest_access']]
       : GuestAccess.forbidden;
 
   /// Changes the guest access. You should check first if the user is able to change it.
@@ -1715,7 +1724,7 @@ class Room {
       id,
       EventTypes.GuestAccess,
       {
-        'guest_access': guestAccess.toString().replaceAll('GuestAccess.', ''),
+        'guest_access': _guestAccessMap[guestAccess],
       },
     );
     return;
@@ -1727,12 +1736,9 @@ class Room {
   /// This event controls whether a user can see the events that happened in a room from before they joined.
   HistoryVisibility get historyVisibility =>
       getState(EventTypes.HistoryVisibility) != null
-          ? HistoryVisibility.values.firstWhere(
-              (r) =>
-                  r.toString().replaceAll('HistoryVisibility.', '') ==
-                  getState(EventTypes.HistoryVisibility)
-                      .content['history_visibility'],
-              orElse: () => null)
+          ? _historyVisibilityMap.map((k, v) => MapEntry(v, k))[
+              getState(EventTypes.HistoryVisibility)
+                  .content['history_visibility']]
           : null;
 
   /// Changes the history visibility. You should check first if the user is able to change it.
@@ -1741,8 +1747,7 @@ class Room {
       id,
       EventTypes.HistoryVisibility,
       {
-        'history_visibility':
-            historyVisibility.toString().replaceAll('HistoryVisibility.', ''),
+        'history_visibility': _historyVisibilityMap[historyVisibility],
       },
     );
     return;

@@ -568,7 +568,7 @@ class Bootstrap {
         },
       );
       Logs().v('Store the secret...');
-      await newSsssKey.store(MEGOLM_KEY, base64.encode(privKey));
+      await newSsssKey.store(megolmKey, base64.encode(privKey));
       Logs().v(
           'And finally set all megolm keys as needing to be uploaded again...');
       await client.database?.markInboundGroupSessionsAsNeedingUpload(client.id);

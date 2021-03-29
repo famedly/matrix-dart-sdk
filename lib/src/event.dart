@@ -31,9 +31,9 @@ import 'utils/run_in_background.dart';
 import 'utils/event_localizations.dart';
 
 abstract class RelationshipTypes {
-  static const String Reply = 'm.in_reply_to';
-  static const String Edit = 'm.replace';
-  static const String Reaction = 'm.annotation';
+  static const String reply = 'm.in_reply_to';
+  static const String edit = 'm.replace';
+  static const String reaction = 'm.annotation';
 }
 
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
@@ -61,12 +61,12 @@ class Event extends MatrixEvent {
   int status;
 
   static const int defaultStatus = 2;
-  static const Map<String, int> STATUS_TYPE = {
-    'ERROR': -1,
-    'SENDING': 0,
-    'SENT': 1,
-    'TIMELINE': 2,
-    'ROOM_STATE': 3,
+  static const Map<String, int> statusType = {
+    'error': -1,
+    'sending': 0,
+    'sent': 1,
+    'timeline': 2,
+    'roomState': 3,
   };
 
   /// Optional. The event that redacted this event, if any. Otherwise null.
@@ -160,7 +160,7 @@ class Event extends MatrixEvent {
     final prevContent = Event.getMapFromPayload(jsonPayload['prev_content']);
     return Event(
       status: jsonPayload['status'] ??
-          unsigned[MessageSendingStatusKey] ??
+          unsigned[messageSendingStatusKey] ??
           defaultStatus,
       stateKey: jsonPayload['state_key'],
       prevContent: prevContent,
@@ -352,7 +352,7 @@ class Event extends MatrixEvent {
 
   /// Searches for the reply event in the given timeline.
   Future<Event> getReplyEvent(Timeline timeline) async {
-    if (relationshipType != RelationshipTypes.Reply) return null;
+    if (relationshipType != RelationshipTypes.reply) return null;
     return await timeline.getEventById(relationshipEventId);
   }
 
@@ -630,7 +630,7 @@ class Event extends MatrixEvent {
       return null;
     }
     if (content['m.relates_to'].containsKey('m.in_reply_to')) {
-      return RelationshipTypes.Reply;
+      return RelationshipTypes.reply;
     }
     return content
         .tryGet<Map<String, dynamic>>('m.relates_to')
@@ -671,9 +671,9 @@ class Event extends MatrixEvent {
     if (redacted) {
       return this;
     }
-    if (hasAggregatedEvents(timeline, RelationshipTypes.Edit)) {
+    if (hasAggregatedEvents(timeline, RelationshipTypes.edit)) {
       // alright, we have an edit
-      final allEditEvents = aggregatedEvents(timeline, RelationshipTypes.Edit)
+      final allEditEvents = aggregatedEvents(timeline, RelationshipTypes.edit)
           // we only allow edits made by the original author themself
           .where((e) => e.senderId == senderId && e.type == EventTypes.Message)
           .toList();

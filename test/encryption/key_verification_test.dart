@@ -35,7 +35,7 @@ class MockSSSS extends SSSS {
   Future<void> maybeRequestAll([List<DeviceKeys> devices]) async {
     requestedSecrets = true;
     final handle = open();
-    await handle.unlock(recoveryKey: SSSS_KEY);
+    await handle.unlock(recoveryKey: ssssKey);
     await handle.maybeCacheAll();
   }
 }
@@ -215,7 +215,7 @@ void main() {
       final req1 =
           await client1.userDeviceKeys[client2.userID].startVerification();
       expect(req1.state, KeyVerificationState.askSSSS);
-      await req1.openSSSS(recoveryKey: SSSS_KEY);
+      await req1.openSSSS(recoveryKey: ssssKey);
       await Future.delayed(Duration(milliseconds: 10));
       expect(req1.state, KeyVerificationState.waitingAccept);
 
@@ -311,7 +311,7 @@ void main() {
       expect(req1.state, KeyVerificationState.askSSSS);
       expect(req2.state, KeyVerificationState.done);
 
-      await req1.openSSSS(recoveryKey: SSSS_KEY);
+      await req1.openSSSS(recoveryKey: ssssKey);
       await Future.delayed(Duration(milliseconds: 10));
       expect(req1.state, KeyVerificationState.done);
 

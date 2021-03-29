@@ -4,12 +4,12 @@ linter:
   rules:
     - camel_case_types
     - avoid_print
+    - constant_identifier_names
 
 analyzer:
   errors:
     todo: ignore
   exclude:
     - example/main.dart
-
     # needed until crypto packages upgrade
     - lib/src/database/database.g.dart

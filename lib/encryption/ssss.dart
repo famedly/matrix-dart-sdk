@@ -32,21 +32,21 @@ import '../src/utils/run_in_background.dart';
 import '../src/utils/run_in_root.dart';
 import 'encryption.dart';
 
-const CACHE_TYPES = <String>{
+const cacheTypes = <String>{
   EventTypes.CrossSigningSelfSigning,
   EventTypes.CrossSigningUserSigning,
   EventTypes.MegolmBackup,
 };
 
-const ZERO_STR =
+const zeroStr =
     '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00';
-const BASE58_ALPHABET =
+const base58Alphabet =
     '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-const base58 = Base58Codec(BASE58_ALPHABET);
-const OLM_RECOVERY_KEY_PREFIX = [0x8B, 0x01];
-const SSSS_KEY_LENGTH = 32;
-const PBKDF2_DEFAULT_ITERATIONS = 500000;
-const PBKDF2_SALT_LENGTH = 64;
+const base58 = Base58Codec(base58Alphabet);
+const olmRecoveryKeyPrefix = [0x8B, 0x01];
+const ssssKeyLength = 32;
+const pbkdf2DefaultIterations = 500000;
+const pbkdf2SaltLength = 64;
 
 /// SSSS: **S**ecure **S**ecret **S**torage and **S**haring
 /// Read more about SSSS at:
@@ -129,23 +129,23 @@ class SSSS {
       throw Exception('Incorrect parity');
     }
 
-    for (var i = 0; i < OLM_RECOVERY_KEY_PREFIX.length; i++) {
-      if (result[i] != OLM_RECOVERY_KEY_PREFIX[i]) {
+    for (var i = 0; i < olmRecoveryKeyPrefix.length; i++) {
+      if (result[i] != olmRecoveryKeyPrefix[i]) {
         throw Exception('Incorrect prefix');
       }
     }
 
-    if (result.length != OLM_RECOVERY_KEY_PREFIX.length + SSSS_KEY_LENGTH + 1) {
+    if (result.length != olmRecoveryKeyPrefix.length + ssssKeyLength + 1) {
       throw Exception('Incorrect length');
     }
 
-    return Uint8List.fromList(result.sublist(OLM_RECOVERY_KEY_PREFIX.length,
-        OLM_RECOVERY_KEY_PREFIX.length + SSSS_KEY_LENGTH));
+    return Uint8List.fromList(result.sublist(olmRecoveryKeyPrefix.length,
+        olmRecoveryKeyPrefix.length + ssssKeyLength));
   }
 
   static String encodeRecoveryKey(Uint8List recoveryKey) {
     final keyToEncode = <int>[];
-    for (final b in OLM_RECOVERY_KEY_PREFIX) {
+    for (final b in olmRecoveryKeyPrefix) {
       keyToEncode.add(b);
     }
     keyToEncode.addAll(recoveryKey);
@@ -208,10 +208,10 @@ class SSSS {
       // we need to derive the key off of the passphrase
       content.passphrase = PassphraseInfo();
       content.passphrase.algorithm = AlgorithmTypes.pbkdf2;
-      content.passphrase.salt = base64
-          .encode(SecureRandom(PBKDF2_SALT_LENGTH).bytes); // generate salt
-      content.passphrase.iterations = PBKDF2_DEFAULT_ITERATIONS;
-      content.passphrase.bits = SSSS_KEY_LENGTH * 8;
+      content.passphrase.salt =
+          base64.encode(SecureRandom(pbkdf2SaltLength).bytes); // generate salt
+      content.passphrase.iterations = pbkdf2DefaultIterations;
+      content.passphrase.bits = ssssKeyLength * 8;
       privateKey = await runInBackground(
         _keyFromPassphrase,
         _KeyFromPassphraseArgs(
@@ -222,20 +222,20 @@ class SSSS {
       );
     } else {
       // we need to just generate a new key from scratch
-      privateKey = Uint8List.fromList(SecureRandom(SSSS_KEY_LENGTH).bytes);
+      privateKey = Uint8List.fromList(SecureRandom(ssssKeyLength).bytes);
     }
     // now that we have the private key, let's create the iv and mac
-    final encrypted = encryptAes(ZERO_STR, privateKey, '');
+    final encrypted = encryptAes(zeroStr, privateKey, '');
     content.iv = encrypted.iv;
     content.mac = encrypted.mac;
     content.algorithm = AlgorithmTypes.secretStorageV1AesHmcSha2;
 
-    const KEYID_BYTE_LENGTH = 24;
+    const keyidByteLength = 24;
 
     // make sure we generate a unique key id
-    var keyId = base64.encode(SecureRandom(KEYID_BYTE_LENGTH).bytes);
+    var keyId = base64.encode(SecureRandom(keyidByteLength).bytes);
     while (getKey(keyId) != null) {
-      keyId = base64.encode(SecureRandom(KEYID_BYTE_LENGTH).bytes);
+      keyId = base64.encode(SecureRandom(keyidByteLength).bytes);
     }
 
     final accountDataType = EventTypes.secretStorageKey(keyId);
@@ -255,7 +255,7 @@ class SSSS {
   bool checkKey(Uint8List key, SecretStorageKeyContent info) {
     if (info.algorithm == AlgorithmTypes.secretStorageV1AesHmcSha2) {
       if ((info.mac is String) && (info.iv is String)) {
-        final encrypted = encryptAes(ZERO_STR, key, '', info.iv);
+        final encrypted = encryptAes(zeroStr, key, '', info.iv);
         return info.mac.replaceAll(RegExp(r'=+$'), '') ==
             encrypted.mac.replaceAll(RegExp(r'=+$'), '');
       } else {
@@ -314,7 +314,7 @@ class SSSS {
     final encryptInfo = _Encrypted(
         iv: enc['iv'], ciphertext: enc['ciphertext'], mac: enc['mac']);
     final decrypted = decryptAes(encryptInfo, key, type);
-    if (CACHE_TYPES.contains(type) && client.database != null) {
+    if (cacheTypes.contains(type) && client.database != null) {
       // cache the thing
       await client.database
           .storeSSSSCache(client.id, type, keyId, enc['ciphertext'], decrypted);
@@ -347,7 +347,7 @@ class SSSS {
     };
     // store the thing in your account data
     await client.setAccountData(client.userID, type, content);
-    if (CACHE_TYPES.contains(type) && client.database != null) {
+    if (cacheTypes.contains(type) && client.database != null) {
       // cache the thing
       await client.database
           .storeSSSSCache(client.id, type, keyId, encrypted.ciphertext, secret);
@@ -373,7 +373,7 @@ class SSSS {
     }
     // store the thing in your account data
     await client.setAccountData(client.userID, type, content);
-    if (CACHE_TYPES.contains(type) && client.database != null) {
+    if (cacheTypes.contains(type) && client.database != null) {
       // cache the thing
       await client.database.storeSSSSCache(client.id, type, keyId,
           content['encrypted'][keyId]['ciphertext'], secret);
@@ -381,7 +381,7 @@ class SSSS {
   }
 
   Future<void> maybeCacheAll(String keyId, Uint8List key) async {
-    for (final type in CACHE_TYPES) {
+    for (final type in cacheTypes) {
       final secret = await getCached(type);
       if (secret == null) {
         try {
@@ -394,7 +394,7 @@ class SSSS {
   }
 
   Future<void> maybeRequestAll([List<DeviceKeys> devices]) async {
-    for (final type in CACHE_TYPES) {
+    for (final type in cacheTypes) {
       if (keyIdsFromType(type) != null) {
         final secret = await getCached(type);
         if (secret == null) {

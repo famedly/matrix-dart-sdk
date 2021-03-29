@@ -28,7 +28,7 @@ import '../src/database/database.dart';
 import '../src/utils/run_in_background.dart';
 import '../src/utils/run_in_root.dart';
 
-const MEGOLM_KEY = EventTypes.MegolmBackup;
+const megolmKey = EventTypes.MegolmBackup;
 
 class KeyManager {
   final Encryption encryption;
@@ -41,7 +41,7 @@ class KeyManager {
   final Set<String> _requestedSessionIds = <String>{};
 
   KeyManager(this.encryption) {
-    encryption.ssss.setValidator(MEGOLM_KEY, (String secret) async {
+    encryption.ssss.setValidator(megolmKey, (String secret) async {
       final keyObj = olm.PkDecryption();
       try {
         final info = await getRoomKeysBackupInfo(false);
@@ -56,7 +56,7 @@ class KeyManager {
         keyObj.free();
       }
     });
-    encryption.ssss.setCacheCallback(MEGOLM_KEY, (String secret) {
+    encryption.ssss.setCacheCallback(megolmKey, (String secret) {
       // we got a megolm key cached, clear our requested keys and try to re-decrypt
       // last events
       _requestedSessionIds.clear();
@@ -75,7 +75,7 @@ class KeyManager {
     });
   }
 
-  bool get enabled => encryption.ssss.isSecret(MEGOLM_KEY);
+  bool get enabled => encryption.ssss.isSecret(megolmKey);
 
   /// clear all cached inbound group sessions. useful for testing
   void clearInboundGroupSessions() {
@@ -522,7 +522,7 @@ class KeyManager {
     if (!enabled) {
       return false;
     }
-    return (await encryption.ssss.getCached(MEGOLM_KEY)) != null;
+    return (await encryption.ssss.getCached(megolmKey)) != null;
   }
 
   RoomKeysVersionResponse _roomKeysVersionCache;
@@ -547,7 +547,7 @@ class KeyManager {
       return;
     }
     final privateKey =
-        base64.decode(await encryption.ssss.getCached(MEGOLM_KEY));
+        base64.decode(await encryption.ssss.getCached(megolmKey));
     final decryption = olm.PkDecryption();
     final info = await getRoomKeysBackupInfo();
     String backupPubKey;
@@ -699,7 +699,7 @@ class KeyManager {
         return; // nothing to do
       }
       final privateKey =
-          base64.decode(await encryption.ssss.getCached(MEGOLM_KEY));
+          base64.decode(await encryption.ssss.getCached(megolmKey));
       // decryption is needed to calculate the public key and thus see if the claimed information is in fact valid
       final decryption = olm.PkDecryption();
       final info = await getRoomKeysBackupInfo(false);

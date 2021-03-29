@@ -16,9 +16,9 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-const Set<String> VALID_SIGILS = {'@', '!', '#', '\$', '+'};
+const Set<String> validSigils = {'@', '!', '#', '\$', '+'};
 
-const int MAX_LENGTH = 255;
+const int maxLength = 255;
 
 extension MatrixIdExtension on String {
   List<String> _getParts() {
@@ -32,8 +32,8 @@ extension MatrixIdExtension on String {
 
   bool get isValidMatrixId {
     if (isEmpty ?? true) return false;
-    if (length > MAX_LENGTH) return false;
-    if (!VALID_SIGILS.contains(substring(0, 1))) {
+    if (length > maxLength) return false;
+    if (!validSigils.contains(substring(0, 1))) {
       return false;
     }
     // event IDs do not have to have a domain

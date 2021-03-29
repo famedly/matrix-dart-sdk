@@ -157,7 +157,7 @@ void main() {
       masterKey.setDirectVerified(true);
       // we need to populate the ssss cache to be able to test signing easily
       final handle = client.encryption.ssss.open();
-      await handle.unlock(recoveryKey: SSSS_KEY);
+      await handle.unlock(recoveryKey: ssssKey);
       await handle.maybeCacheAll();
 
       expect(key.verified, true);

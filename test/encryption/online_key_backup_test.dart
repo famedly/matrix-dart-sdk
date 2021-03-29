@@ -56,7 +56,7 @@ void main() {
       expect(client.encryption.keyManager.enabled, true);
       expect(await client.encryption.keyManager.isCached(), false);
       final handle = client.encryption.ssss.open();
-      await handle.unlock(recoveryKey: SSSS_KEY);
+      await handle.unlock(recoveryKey: ssssKey);
       await handle.maybeCacheAll();
       expect(await client.encryption.keyManager.isCached(), true);
     });

@@ -57,7 +57,7 @@ void main() {
       final key = client.userDeviceKeys[client.userID].masterKey;
       key.setDirectVerified(false);
       FakeMatrixApi.calledEndpoints.clear();
-      await client.encryption.crossSigning.selfSign(recoveryKey: SSSS_KEY);
+      await client.encryption.crossSigning.selfSign(recoveryKey: ssssKey);
       expect(key.directVerified, true);
       expect(
           FakeMatrixApi.calledEndpoints

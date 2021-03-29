@@ -37,11 +37,11 @@ void main() {
               .getLocalizedString(MatrixDefaultLocalizations()),
           'Visible for all participants');
       expect(
-          HistoryVisibility.world_readable
+          HistoryVisibility.worldReadable
               .getLocalizedString(MatrixDefaultLocalizations()),
           'Visible for everyone');
       expect(
-          GuestAccess.can_join.getLocalizedString(MatrixDefaultLocalizations()),
+          GuestAccess.canJoin.getLocalizedString(MatrixDefaultLocalizations()),
           'Guests can join');
       expect(
           GuestAccess.forbidden

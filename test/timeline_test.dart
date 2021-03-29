@@ -432,7 +432,7 @@ void main() {
             'event_id': 'transaction',
             'origin_server_ts': testTimeStamp,
             'unsigned': {
-              MessageSendingStatusKey: 0,
+              messageSendingStatusKey: 0,
               'transaction_id': 'transaction',
             },
           },
@@ -451,7 +451,7 @@ void main() {
             'origin_server_ts': testTimeStamp,
             'unsigned': {
               'transaction_id': 'transaction',
-              MessageSendingStatusKey: 2,
+              messageSendingStatusKey: 2,
             },
           },
           sortOrder: room.newSortOrder));
@@ -469,7 +469,7 @@ void main() {
             'origin_server_ts': testTimeStamp,
             'unsigned': {
               'transaction_id': 'transaction',
-              MessageSendingStatusKey: 1,
+              messageSendingStatusKey: 1,
             },
           },
           sortOrder: room.newSortOrder));
