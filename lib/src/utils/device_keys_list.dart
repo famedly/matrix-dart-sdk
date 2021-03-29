@@ -187,7 +187,7 @@ abstract class SignableKey extends MatrixSignableKey {
     olm.Utility olmutil;
     try {
       olmutil = olm.Utility();
-    } on NoSuchMethodError {
+    } catch (e) {
       // if no libolm is present we land in this catch block, and return the default
       // set if no libolm is there. Some signatures should be assumed-valid while others
       // should be assumed-invalid

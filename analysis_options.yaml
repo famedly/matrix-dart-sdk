@@ -10,3 +10,6 @@ analyzer:
     todo: ignore
   exclude:
     - example/main.dart
+
+    # needed until crypto packages upgrade
+    - lib/src/database/database.g.dart
