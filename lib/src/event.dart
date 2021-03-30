@@ -274,13 +274,7 @@ class Event extends MatrixEvent {
       default:
         break;
     }
-    var toRemoveList = <String>[];
-    for (var entry in content.entries) {
-      if (!contentKeyWhiteList.contains(entry.key)) {
-        toRemoveList.add(entry.key);
-      }
-    }
-    toRemoveList.forEach((s) => content.remove(s));
+    content.removeWhere((k, v) => !contentKeyWhiteList.contains(k));
   }
 
   /// Returns the body of this event if it has a body.

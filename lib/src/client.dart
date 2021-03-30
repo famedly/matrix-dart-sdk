@@ -227,15 +227,15 @@ class Client extends MatrixApi {
   }
 
   Room getRoomByAlias(String alias) {
-    for (var i = 0; i < rooms.length; i++) {
-      if (rooms[i].canonicalAlias == alias) return rooms[i];
+    for (final room in rooms) {
+      if (room.canonicalAlias == alias) return room;
     }
     return null;
   }
 
   Room getRoomById(String id) {
-    for (var j = 0; j < rooms.length; j++) {
-      if (rooms[j].id == id) return rooms[j];
+    for (final room in rooms) {
+      if (room.id == id) return room;
     }
     return null;
   }
@@ -269,15 +269,12 @@ class Client extends MatrixApi {
             .id;
       }
     }
-    for (var i = 0; i < rooms.length; i++) {
-      if (rooms[i].membership == Membership.invite &&
-          rooms[i].getState(EventTypes.RoomMember, userID)?.senderId ==
-              userId &&
-          rooms[i]
-                  .getState(EventTypes.RoomMember, userID)
-                  .content['is_direct'] ==
+    for (final room in rooms) {
+      if (room.membership == Membership.invite &&
+          room.getState(EventTypes.RoomMember, userID)?.senderId == userId &&
+          room.getState(EventTypes.RoomMember, userID).content['is_direct'] ==
               true) {
-        return rooms[i].id;
+        return room.id;
       }
     }
     return null;
@@ -1216,23 +1213,23 @@ class Client extends MatrixApi {
   }
 
   Future<void> _handleEphemerals(String id, List<dynamic> events) async {
-    for (num i = 0; i < events.length; i++) {
-      await _handleEvent(events[i], id, EventUpdateType.ephemeral);
+    for (final event in events) {
+      await _handleEvent(event, id, EventUpdateType.ephemeral);
 
       // Receipt events are deltas between two states. We will create a
       // fake room account data event for this and store the difference
       // there.
-      if (events[i]['type'] == 'm.receipt') {
+      if (event['type'] == 'm.receipt') {
         var room = getRoomById(id);
         room ??= Room(id: id);
 
         var receiptStateContent =
             room.roomAccountData['m.receipt']?.content ?? {};
-        for (var eventEntry in events[i]['content'].entries) {
+        for (var eventEntry in event['content'].entries) {
           final String eventID = eventEntry.key;
-          if (events[i]['content'][eventID]['m.read'] != null) {
+          if (event['content'][eventID]['m.read'] != null) {
             final Map<String, dynamic> userTimestampMap =
-                events[i]['content'][eventID]['m.read'];
+                event['content'][eventID]['m.read'];
             for (var userTimestampMapEntry in userTimestampMap.entries) {
               final mxid = userTimestampMapEntry.key;
 
@@ -1253,8 +1250,8 @@ class Client extends MatrixApi {
             }
           }
         }
-        events[i]['content'] = receiptStateContent;
-        await _handleEvent(events[i], id, EventUpdateType.accountData);
+        event['content'] = receiptStateContent;
+        await _handleEvent(event, id, EventUpdateType.accountData);
       }
     }
   }
@@ -1262,8 +1259,8 @@ class Client extends MatrixApi {
   Future<void> _handleRoomEvents(
       String chat_id, List<dynamic> events, EventUpdateType type,
       {bool sortAtTheEnd = false}) async {
-    for (num i = 0; i < events.length; i++) {
-      await _handleEvent(events[i], chat_id, type, sortAtTheEnd: sortAtTheEnd);
+    for (final event in events) {
+      await _handleEvent(event, chat_id, type, sortAtTheEnd: sortAtTheEnd);
     }
   }
 
@@ -1490,10 +1487,10 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
 
   Future<Set<String>> _getUserIdsInEncryptedRooms() async {
     var userIds = <String>{};
-    for (var i = 0; i < rooms.length; i++) {
-      if (rooms[i].encrypted) {
+    for (final room in rooms) {
+      if (room.encrypted) {
         try {
-          var userList = await rooms[i].requestParticipants();
+          var userList = await room.requestParticipants();
           for (var user in userList) {
             if ([Membership.join, Membership.invite]
                 .contains(user.membership)) {
@@ -1872,9 +1869,9 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     if (globalPushRules == null) return false;
 
     if (globalPushRules['override'] is List) {
-      for (var i = 0; i < globalPushRules['override'].length; i++) {
-        if (globalPushRules['override'][i]['rule_id'] == '.m.rule.master') {
-          return globalPushRules['override'][i]['enabled'];
+      for (final pushRule in globalPushRules['override']) {
+        if (pushRule['rule_id'] == '.m.rule.master') {
+          return pushRule['enabled'];
         }
       }
     }

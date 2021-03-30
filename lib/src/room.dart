@@ -262,13 +262,8 @@ class Room {
     }
     if (client.directChats is Map<String, dynamic>) {
       client.directChats.forEach((String userId, dynamic roomIds) {
-        if (roomIds is List<dynamic>) {
-          for (var i = 0; i < roomIds.length; i++) {
-            if (roomIds[i] == id) {
-              returnUserId = userId;
-              break;
-            }
-          }
+        if (roomIds is List<dynamic> && roomIds.contains(id)) {
+          returnUserId = userId;
         }
       });
     }
@@ -323,11 +318,7 @@ class Room {
   List<User> get typingUsers {
     if (!ephemerals.containsKey('m.typing')) return [];
     List<dynamic> typingMxid = ephemerals['m.typing'].content['user_ids'];
-    var typingUsers = <User>[];
-    for (var i = 0; i < typingMxid.length; i++) {
-      typingUsers.add(getUserByMXIDSync(typingMxid[i]));
-    }
-    return typingUsers;
+    return typingMxid.cast<String>().map(getUserByMXIDSync).toList();
   }
 
   /// Your current client instance.
@@ -384,9 +375,9 @@ class Room {
     }
     if (heroes.isNotEmpty) {
       var displayname = '';
-      for (var i = 0; i < heroes.length; i++) {
-        if (heroes[i].isEmpty) continue;
-        displayname += getUserByMXIDSync(heroes[i]).calcDisplayname() + ', ';
+      for (final hero in heroes) {
+        if (hero.isEmpty) continue;
+        displayname += getUserByMXIDSync(hero).calcDisplayname() + ', ';
       }
       return displayname.substring(0, displayname.length - 2);
     }
@@ -781,11 +772,7 @@ class Room {
 
     if (inReplyTo != null) {
       var replyText = '<${inReplyTo.senderId}> ' + inReplyTo.body;
-      var replyTextLines = replyText.split('\n');
-      for (var i = 0; i < replyTextLines.length; i++) {
-        replyTextLines[i] = '> ' + replyTextLines[i];
-      }
-      replyText = replyTextLines.join('\n');
+      replyText = replyText.split('\n').map((line) => '> $line').join('\n');
       content['format'] = 'org.matrix.custom.html';
       // be sure that we strip any previous reply fallbacks
       final replyHtml = (inReplyTo.formattedText.isNotEmpty
@@ -1465,11 +1452,9 @@ class Room {
     if (globalPushRules == null) return PushRuleState.notify;
 
     if (globalPushRules['override'] is List) {
-      for (var i = 0; i < globalPushRules['override'].length; i++) {
-        if (globalPushRules['override'][i]['rule_id'] == id) {
-          if (globalPushRules['override'][i]['actions']
-                  .indexOf('dont_notify') !=
-              -1) {
+      for (final pushRule in globalPushRules['override']) {
+        if (pushRule['rule_id'] == id) {
+          if (pushRule['actions'].indexOf('dont_notify') != -1) {
             return PushRuleState.dontNotify;
           }
           break;
@@ -1478,10 +1463,9 @@ class Room {
     }
 
     if (globalPushRules['room'] is List) {
-      for (var i = 0; i < globalPushRules['room'].length; i++) {
-        if (globalPushRules['room'][i]['rule_id'] == id) {
-          if (globalPushRules['room'][i]['actions'].indexOf('dont_notify') !=
-              -1) {
+      for (final pushRule in globalPushRules['room']) {
+        if (pushRule['rule_id'] == id) {
+          if (pushRule['actions'].indexOf('dont_notify') != -1) {
             return PushRuleState.mentionsOnly;
           }
           break;

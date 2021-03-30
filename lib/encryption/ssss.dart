@@ -121,10 +121,7 @@ class SSSS {
   static Uint8List decodeRecoveryKey(String recoveryKey) {
     final result = base58.decode(recoveryKey.replaceAll(' ', ''));
 
-    var parity = 0;
-    for (final b in result) {
-      parity ^= b;
-    }
+    final parity = result.fold(0, (a, b) => a ^ b);
     if (parity != 0) {
       throw Exception('Incorrect parity');
     }
@@ -144,15 +141,8 @@ class SSSS {
   }
 
   static String encodeRecoveryKey(Uint8List recoveryKey) {
-    final keyToEncode = <int>[];
-    for (final b in olmRecoveryKeyPrefix) {
-      keyToEncode.add(b);
-    }
-    keyToEncode.addAll(recoveryKey);
-    var parity = 0;
-    for (final b in keyToEncode) {
-      parity ^= b;
-    }
+    final keyToEncode = <int>[...olmRecoveryKeyPrefix, ...recoveryKey];
+    final parity = keyToEncode.fold(0, (a, b) => a ^ b);
     keyToEncode.add(parity);
     // base58-encode and add a space every four chars
     return base58
@@ -233,10 +223,12 @@ class SSSS {
     const keyidByteLength = 24;
 
     // make sure we generate a unique key id
-    var keyId = base64.encode(SecureRandom(keyidByteLength).bytes);
-    while (getKey(keyId) != null) {
-      keyId = base64.encode(SecureRandom(keyidByteLength).bytes);
-    }
+    final keyId = () sync* {
+      for (;;) {
+        yield base64.encode(SecureRandom(keyidByteLength).bytes);
+      }
+    }()
+        .firstWhere((keyId) => getKey(keyId) == null);
 
     final accountDataType = EventTypes.secretStorageKey(keyId);
     // noooow we set the account data
@@ -553,11 +545,7 @@ class SSSS {
       return null;
     }
     if (data.content['encrypted'] is Map) {
-      final Set keys = <String>{};
-      for (final key in data.content['encrypted'].keys) {
-        keys.add(key);
-      }
-      return keys;
+      return data.content['encrypted'].keys.toSet();
     }
     return null;
   }

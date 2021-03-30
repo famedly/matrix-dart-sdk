@@ -51,8 +51,8 @@ class Timeline {
   /// found, requests from the server. Requested events
   /// are cached.
   Future<Event> getEventById(String id) async {
-    for (var i = 0; i < events.length; i++) {
-      if (events[i].eventId == id) return events[i];
+    for (final event in events) {
+      if (event.eventId == id) return event;
     }
     if (_eventCache.containsKey(id)) return _eventCache[id];
     final requestedEvent = await room.getEventById(id);
