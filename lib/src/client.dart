@@ -285,7 +285,7 @@ class Client extends MatrixApi {
     String MatrixIdOrDomain,
   ) async {
     final response = await http
-        .get('https://${MatrixIdOrDomain.domain}/.well-known/matrix/client');
+        .get(Uri.https(MatrixIdOrDomain.domain, '/.well-known/matrix/client'));
     var respBody = response.body;
     try {
       respBody = utf8.decode(response.bodyBytes);

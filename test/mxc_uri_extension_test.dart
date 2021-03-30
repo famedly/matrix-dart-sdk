@@ -36,16 +36,18 @@ void main() {
       final content = Uri.parse(mxc);
       expect(content.isScheme('mxc'), true);
 
-      expect(content.getDownloadLink(client),
+      expect(content.getDownloadLink(client).toString(),
           '${client.homeserver.toString()}/_matrix/media/r0/download/exampleserver.abc/abcdefghijklmn');
-      expect(content.getThumbnail(client, width: 50, height: 50),
+      expect(content.getThumbnail(client, width: 50, height: 50).toString(),
           '${client.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
       expect(
-          content.getThumbnail(client,
-              width: 50,
-              height: 50,
-              method: ThumbnailMethod.scale,
-              animated: true),
+          content
+              .getThumbnail(client,
+                  width: 50,
+                  height: 50,
+                  method: ThumbnailMethod.scale,
+                  animated: true)
+              .toString(),
           '${client.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale&animated=true');
     });
   });

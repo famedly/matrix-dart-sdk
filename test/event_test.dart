@@ -1052,13 +1052,11 @@ void main() {
     test('attachments', () async {
       final FILE_BUFF = Uint8List.fromList([0]);
       final THUMBNAIL_BUFF = Uint8List.fromList([2]);
-      final downloadCallback = (String url) async {
+      final downloadCallback = (Uri uri) async {
         return {
-          'https://fakeserver.notexisting/_matrix/media/r0/download/example.org/file':
-              FILE_BUFF,
-          'https://fakeserver.notexisting/_matrix/media/r0/download/example.org/thumb':
-              THUMBNAIL_BUFF,
-        }[url];
+          '/_matrix/media/r0/download/example.org/file': FILE_BUFF,
+          '/_matrix/media/r0/download/example.org/thumb': THUMBNAIL_BUFF,
+        }[uri.path];
       };
       await client.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
@@ -1109,17 +1107,21 @@ void main() {
       expect(event.attachmentOrThumbnailMxcUrl(), 'mxc://example.org/file');
       expect(event.attachmentOrThumbnailMxcUrl(getThumbnail: true),
           'mxc://example.org/thumb');
-      expect(event.getAttachmentUrl(),
+      expect(event.getAttachmentUrl().toString(),
           'https://fakeserver.notexisting/_matrix/media/r0/download/example.org/file');
-      expect(event.getAttachmentUrl(getThumbnail: true),
+      expect(event.getAttachmentUrl(getThumbnail: true).toString(),
           'https://fakeserver.notexisting/_matrix/media/r0/thumbnail/example.org/file?width=800&height=800&method=scale&animated=false');
-      expect(event.getAttachmentUrl(useThumbnailMxcUrl: true),
+      expect(event.getAttachmentUrl(useThumbnailMxcUrl: true).toString(),
           'https://fakeserver.notexisting/_matrix/media/r0/download/example.org/thumb');
       expect(
-          event.getAttachmentUrl(getThumbnail: true, useThumbnailMxcUrl: true),
+          event
+              .getAttachmentUrl(getThumbnail: true, useThumbnailMxcUrl: true)
+              .toString(),
           'https://fakeserver.notexisting/_matrix/media/r0/thumbnail/example.org/thumb?width=800&height=800&method=scale&animated=false');
       expect(
-          event.getAttachmentUrl(getThumbnail: true, minNoThumbSize: 9000000),
+          event
+              .getAttachmentUrl(getThumbnail: true, minNoThumbSize: 9000000)
+              .toString(),
           'https://fakeserver.notexisting/_matrix/media/r0/download/example.org/file');
 
       buffer = await event.downloadAndDecryptAttachment(
@@ -1139,13 +1141,11 @@ void main() {
           Uint8List.fromList([0x55, 0xD7, 0xEB, 0x72, 0x05, 0x13]);
       final THUMB_BUFF_DEC =
           Uint8List.fromList([0x74, 0x68, 0x75, 0x6D, 0x62, 0x0A]);
-      final downloadCallback = (String url) async {
+      final downloadCallback = (Uri uri) async {
         return {
-          'https://fakeserver.notexisting/_matrix/media/r0/download/example.com/file':
-              FILE_BUFF_ENC,
-          'https://fakeserver.notexisting/_matrix/media/r0/download/example.com/thumb':
-              THUMB_BUFF_ENC,
-        }[url];
+          '/_matrix/media/r0/download/example.com/file': FILE_BUFF_ENC,
+          '/_matrix/media/r0/download/example.com/thumb': THUMB_BUFF_ENC,
+        }[uri.path];
       };
       final room = Room(id: '!localpart:server.abc', client: await getClient());
       var event = Event.fromJson({
@@ -1237,12 +1237,11 @@ void main() {
     test('downloadAndDecryptAttachment store', () async {
       final FILE_BUFF = Uint8List.fromList([0]);
       var serverHits = 0;
-      final downloadCallback = (String url) async {
+      final downloadCallback = (Uri uri) async {
         serverHits++;
         return {
-          'https://fakeserver.notexisting/_matrix/media/r0/download/example.org/newfile':
-              FILE_BUFF,
-        }[url];
+          '/_matrix/media/r0/download/example.org/newfile': FILE_BUFF,
+        }[uri.path];
       };
       await client.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);

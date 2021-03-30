@@ -434,7 +434,7 @@ class Event extends MatrixEvent {
   /// [minNoThumbSize] is the minimum size that an original image may be to not fetch its thumbnail, defaults to 80k
   /// [useThumbnailMxcUrl] says weather to use the mxc url of the thumbnail, rather than the original attachment.
   ///  [animated] says weather the thumbnail is animated
-  String getAttachmentUrl(
+  Uri getAttachmentUrl(
       {bool getThumbnail = false,
       bool useThumbnailMxcUrl = false,
       double width = 800.0,
@@ -503,7 +503,7 @@ class Event extends MatrixEvent {
   /// true to download the thumbnail instead.
   Future<MatrixFile> downloadAndDecryptAttachment(
       {bool getThumbnail = false,
-      Future<Uint8List> Function(String) downloadCallback}) async {
+      Future<Uint8List> Function(Uri) downloadCallback}) async {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
@@ -534,7 +534,7 @@ class Event extends MatrixEvent {
 
     // Download the file
     if (uint8list == null) {
-      downloadCallback ??= (String url) async {
+      downloadCallback ??= (Uri url) async {
         return (await http.get(url)).bodyBytes;
       };
       uint8list =

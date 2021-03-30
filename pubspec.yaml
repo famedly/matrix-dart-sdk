@@ -8,7 +8,7 @@ environment:
   sdk: ">=2.7.0 <3.0.0"
 
 dependencies:
-  http: ^0.12.2
+  http: ^0.13.0
   mime: ^1.0.0
   canonical_json: ^1.0.0
   markdown: ^3.0.0
@@ -22,8 +22,8 @@ dependencies:
   olm: ^2.0.0
   matrix_file_e2ee: ^1.1.0
   isolate: ^2.0.3
-  logger: ^0.9.4
-  matrix_api_lite: ^0.2.1
+  logger: ^1.0.0
+  matrix_api_lite: ^0.2.2
 
 dev_dependencies:
   test: ^1.15.7
