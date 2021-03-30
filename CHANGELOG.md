@@ -1,5 +1,5 @@
 ## 0.2.1
-- fix: Remove unused dependency mime
+- fix: Update dependency mime
 
 ## 0.2.0
 - refactor: login method AuthenticationIdentifier
