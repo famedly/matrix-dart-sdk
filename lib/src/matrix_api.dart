@@ -139,7 +139,7 @@ class MatrixApi {
     dynamic data = '',
     int timeout,
     String contentType = 'application/json',
-    Map<String, String> query,
+    Map<String, dynamic> query,
   }) async {
     if (homeserver == null) {
       throw ('No homeserver specified.');
@@ -149,13 +149,8 @@ class MatrixApi {
     (!(data is String)) ? json = jsonEncode(data) : json = data;
     if (data is List<int> || action.startsWith('/media/r0/upload')) json = data;
 
-    final queryPart = query?.entries
-        ?.where((x) => x.value != null)
-        ?.map((x) => [x.key, x.value].map(Uri.encodeQueryComponent).join('='))
-        ?.join('&');
-    final url = ['${homeserver.toString()}/_matrix$action', queryPart]
-        .where((x) => x != null && x != '')
-        .join('?');
+    final url = homeserver
+        .resolveUri(Uri(path: '_matrix$action', queryParameters: query));
 
     var headers = <String, String>{};
     if (type == RequestType.PUT || type == RequestType.POST) {
@@ -235,11 +230,8 @@ class MatrixApi {
   /// Gets discovery information about the domain. The file may include additional keys.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#get-well-known-matrix-client
   Future<WellKnownInformation> requestWellKnownInformation() async {
-    var baseUrl = homeserver.toString();
-    if (baseUrl.endsWith('/')) {
-      baseUrl = baseUrl.substring(0, baseUrl.length - 1);
-    }
-    final response = await httpClient.get('$baseUrl/.well-known/matrix/client');
+    final response =
+        await httpClient.get(homeserver.resolve('.well-known/matrix/client'));
     final rawJson = json.decode(response.body);
     return WellKnownInformation.fromJson(rawJson);
   }
@@ -332,9 +324,10 @@ class MatrixApi {
     AuthenticationData auth,
     String kind,
   }) async {
-    var action = '/client/r0/register';
-    if (kind != null) action += '?kind=${Uri.encodeQueryComponent(kind)}';
-    final response = await request(RequestType.POST, action, data: {
+    final response =
+        await request(RequestType.POST, '/client/r0/register', query: {
+      if (kind != null) 'kind': kind,
+    }, data: {
       if (username != null) 'username': username,
       if (password != null) 'password': password,
       if (deviceId != null) 'device_id': deviceId,
@@ -483,7 +476,10 @@ class MatrixApi {
   Future<bool> usernameAvailable(String username) async {
     final response = await request(
       RequestType.GET,
-      '/client/r0/register/available?username=$username',
+      '/client/r0/register/available',
+      query: {
+        'username': username,
+      },
     );
     return response['available'];
   }
@@ -970,16 +966,10 @@ class MatrixApi {
     String thirdPidSignedToken,
     Map<String, dynamic> thirdPidSignedSiganture,
   }) async {
-    var action = '/client/r0/join/${Uri.encodeComponent(roomIdOrAlias)}';
-    final queryPart = servers
-        ?.map((x) => 'server_name=${Uri.encodeQueryComponent(x)}')
-        ?.join('&');
-    if (queryPart != null && queryPart != '') {
-      action += '?' + queryPart;
-    }
     final response = await request(
       RequestType.POST,
-      action,
+      '/client/r0/join/${Uri.encodeComponent(roomIdOrAlias)}',
+      query: {'server_name': servers},
       data: {
         if (thirdPidSignedSiganture != null)
           'third_party_signed': {
@@ -1307,9 +1297,11 @@ class MatrixApi {
         contentType ?? lookupMimeType(fileName, headerBytes: file);
     headers['Content-Length'] = length.toString();
     fileName = Uri.encodeQueryComponent(fileName);
-    final url =
-        '${homeserver.toString()}/_matrix/media/r0/upload?filename=$fileName';
-    final streamedRequest = http.StreamedRequest('POST', Uri.parse(url))
+    final url = homeserver.resolveUri(Uri(
+      path: '_matrix/media/r0/upload',
+      queryParameters: {'filename': fileName},
+    ));
+    final streamedRequest = http.StreamedRequest('POST', url)
       ..headers.addAll(headers);
     streamedRequest.contentLength = length;
     streamedRequest.sink.add(file);
@@ -1333,11 +1325,11 @@ class MatrixApi {
   /// URL in a message and wants to render a preview for the user.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-media-r0-preview-url
   Future<OpenGraphData> requestOpenGraphDataForUrl(Uri url, {int ts}) async {
-    var action =
-        '${homeserver.toString()}/_matrix/media/r0/preview_url?url=${Uri.encodeQueryComponent(url.toString())}';
-    if (ts != null) {
-      action += '&ts=${Uri.encodeQueryComponent(ts.toString())}';
-    }
+    var action = homeserver
+        .resolveUri(Uri(path: '_matrix/media/r0/preview_url', queryParameters: {
+      'url': url.toString(),
+      if (ts != null) 'ts': ts.toString(),
+    }));
     final response = await httpClient.get(action);
     final rawJson = json.decode(response.body.isEmpty ? '{}' : response.body);
     return OpenGraphData.fromJson(rawJson);
@@ -1346,7 +1338,7 @@ class MatrixApi {
   /// This endpoint allows clients to retrieve the configuration of the content repository, such as upload limitations.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-media-r0-config
   Future<int> requestMaxUploadSize() async {
-    var action = '${homeserver.toString()}/_matrix/media/r0/config';
+    var action = homeserver.resolve('_matrix/media/r0/config');
     final response = await httpClient.get(action);
     final rawJson = json.decode(response.body.isEmpty ? '{}' : response.body);
     return rawJson['m.upload.size'];
@@ -1485,10 +1477,11 @@ class MatrixApi {
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-keys-upload
   Future<DeviceListsUpdate> requestDeviceListsUpdate(
       String from, String to) async {
-    final response = await request(
-      RequestType.GET,
-      '/client/r0/keys/changes?from=${Uri.encodeQueryComponent(from)}&to=${Uri.encodeQueryComponent(to)}',
-    );
+    final response =
+        await request(RequestType.GET, '/client/r0/keys/changes', query: {
+      'from': from,
+      'to': to,
+    });
     return DeviceListsUpdate.fromJson(response);
   }
 
@@ -1946,9 +1939,10 @@ class MatrixApi {
   Future<List<ThirdPartyLocation>> requestThirdPartyLocationsByAlias(
       String alias) async {
     final response = await request(
-      RequestType.GET,
-      '/client/r0/thirdparty/location?alias=${Uri.encodeComponent(alias)}',
-    );
+        RequestType.GET, '/client/r0/thirdparty/location',
+        query: {
+          'alias': alias,
+        });
     return (response['chunk'] as List)
         .map((i) => ThirdPartyLocation.fromJson(i))
         .toList();
@@ -1958,10 +1952,10 @@ class MatrixApi {
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-thirdparty-user
   Future<List<ThirdPartyUser>> requestThirdPartyUsersByUserId(
       String userId) async {
-    final response = await request(
-      RequestType.GET,
-      '/client/r0/thirdparty/user?userid=${Uri.encodeComponent(userId)}',
-    );
+    final response =
+        await request(RequestType.GET, '/client/r0/thirdparty/user', query: {
+      'userid': userId,
+    });
     return (response['chunk'] as List)
         .map((i) => ThirdPartyUser.fromJson(i))
         .toList();

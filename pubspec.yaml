@@ -7,7 +7,7 @@ environment:
   sdk: ">=2.10.0 <3.0.0"
 
 dependencies:
-  http: ^0.12.2
+  http: ^0.13.0
   logger: ^0.9.4
   mime: ^1.0.0
 
