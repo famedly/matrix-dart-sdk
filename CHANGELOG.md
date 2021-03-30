@@ -1,3 +1,6 @@
+## 0.2.1
+- fix: Remove unused dependency mime
+
 ## 0.2.0
 - refactor: login method AuthenticationIdentifier
 
