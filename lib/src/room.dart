@@ -19,6 +19,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:famedlysdk/src/utils/space_child.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:matrix_file_e2ee/matrix_file_e2ee.dart';
 
@@ -1805,6 +1806,73 @@ class Room {
   TombstoneContent get extinctInformations => isExtinct
       ? getState(EventTypes.RoomTombstone).parsedTombstoneContent
       : null;
+
+  /// Checks if the `m.room.create` state has a `type` key with the value
+  /// `m.space`.
+  bool get isSpace =>
+      getState(EventTypes.RoomCreate)?.content?.tryGet<String>('type') ==
+      RoomCreationTypes.mSpace; // TODO: Magic string!
+
+  /// The parents of this room. Currently this SDK doesn't yet set the canonical
+  /// flag and is not checking if this room is in fact a child of this space.
+  /// You should therefore not rely on this and always check the children of
+  /// the space.
+  List<SpaceParent> get spaceParents =>
+      states[EventTypes.spaceParent]
+          ?.values
+          ?.map((state) => SpaceParent.fromState(state))
+          ?.where((child) => child.via?.isNotEmpty ?? false)
+          ?.toList() ??
+      [];
+
+  /// List all children of this space. Children without a `via` domain will be
+  /// ignored.
+  /// Children are sorted by the `order` while those without this field will be
+  /// sorted at the end of the list.
+  List<SpaceChild> get spaceChildren => !isSpace
+      ? throw Exception('Room is not a space!')
+      : (states[EventTypes.spaceChild]
+              ?.values
+              ?.map((state) => SpaceChild.fromState(state))
+              ?.where((child) => child.via?.isNotEmpty ?? false)
+              ?.toList() ??
+          [])
+    ..sort((a, b) => a.order.isEmpty || b.order.isEmpty
+        ? b.order.compareTo(a.order)
+        : a.order.compareTo(b.order));
+
+  /// Adds or edits a child of this space.
+  Future<void> setSpaceChild(
+    String roomId, {
+    List<String> via,
+    String order,
+    bool suggested,
+  }) async {
+    if (!isSpace) throw Exception('Room is not a space!');
+    via ??= [roomId.domain];
+    await client.sendState(
+        id,
+        EventTypes.spaceChild,
+        {
+          'via': via,
+          if (order != null) 'order': order,
+          if (suggested != null) 'suggested': suggested,
+        },
+        roomId);
+    await client.sendState(
+        roomId,
+        EventTypes.spaceParent,
+        {
+          'via': via,
+        },
+        id);
+    return;
+  }
+
+  /// Remove a child from this space by setting the `via` to an empty list.
+  Future<void> removeSpaceChild(String roomId) => !isSpace
+      ? throw Exception('Room is not a space!')
+      : setSpaceChild(roomId, via: const []);
 
   @override
   bool operator ==(dynamic other) => (other is Room && other.id == id);

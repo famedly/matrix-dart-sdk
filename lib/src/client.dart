@@ -526,6 +526,34 @@ class Client extends MatrixApi {
     return roomId;
   }
 
+  /// Creates a new space and returns the Room ID. The parameters are mostly
+  /// the same like in [createRoom()].
+  /// Be aware that spaces appear in the [rooms] list. You should check if a
+  /// room is a space by using the `room.isSpace` getter and then just use the
+  /// room as a space with `room.toSpace()`.
+  ///
+  /// https://github.com/matrix-org/matrix-doc/blob/matthew/msc1772/proposals/1772-groups-as-rooms.md
+  Future<String> createSpace({
+    String name,
+    String topic,
+    Visibility visibility = Visibility.public,
+    String spaceAliasName,
+    List<String> invite,
+    List<Map<String, dynamic>> invite3pid,
+    String roomVersion,
+  }) =>
+      createRoom(
+        name: name,
+        topic: topic,
+        visibility: visibility,
+        roomAliasName: spaceAliasName,
+        creationContent: {'type': 'm.space'},
+        powerLevelContentOverride: {'events_default': 100},
+        invite: invite,
+        invite3pid: invite3pid,
+        roomVersion: roomVersion,
+      );
+
   /// Returns the user's own displayname and avatar url. In Matrix it is possible that
   /// one user can have different displaynames and avatar urls in different rooms. So
   /// this endpoint first checks if the profile is the same in all rooms. If not, the

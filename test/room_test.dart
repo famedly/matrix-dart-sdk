@@ -768,6 +768,110 @@ void main() {
       expect(room.getState('m.room.message') != null, true);
     });
 
+    test('Spaces', () async {
+      expect(room.isSpace, false);
+      room.states['m.room.create'] = {
+        '': Event.fromJson({
+          'content': {'type': 'm.space'},
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'type': 'm.room.create',
+          'unsigned': {'age': 1234},
+          'state_key': '',
+        }, room, 1432735824653.0),
+      };
+      expect(room.isSpace, true);
+
+      expect(room.spaceParents.isEmpty, true);
+      room.states[EventTypes.spaceParent] = {
+        '!1234:example.invalid': Event.fromJson({
+          'content': {
+            'via': ['example.invalid']
+          },
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'type': EventTypes.spaceParent,
+          'unsigned': {'age': 1234},
+          'state_key': '!1234:example.invalid',
+        }, room, 1432735824653.0),
+      };
+      expect(room.spaceParents.length, 1);
+
+      expect(room.spaceChildren.isEmpty, true);
+      room.states[EventTypes.spaceChild] = {
+        '!b:example.invalid': Event.fromJson({
+          'content': {
+            'via': ['example.invalid'],
+            'order': 'b',
+          },
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'type': EventTypes.spaceChild,
+          'unsigned': {'age': 1234},
+          'state_key': '!b:example.invalid',
+        }, room, 1432735824653.0),
+        '!c:example.invalid': Event.fromJson({
+          'content': {
+            'via': ['example.invalid'],
+            'order': 'c',
+          },
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'type': EventTypes.spaceChild,
+          'unsigned': {'age': 1234},
+          'state_key': '!c:example.invalid',
+        }, room, 1432735824653.0),
+        '!noorder:example.invalid': Event.fromJson({
+          'content': {
+            'via': ['example.invalid'],
+          },
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'type': EventTypes.spaceChild,
+          'unsigned': {'age': 1234},
+          'state_key': '!noorder:example.invalid',
+        }, room, 1432735824653.0),
+        '!a:example.invalid': Event.fromJson({
+          'content': {
+            'via': ['example.invalid'],
+            'order': 'a',
+          },
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'type': EventTypes.spaceChild,
+          'unsigned': {'age': 1234},
+          'state_key': '!a:example.invalid',
+        }, room, 1432735824653.0),
+      };
+      expect(room.spaceChildren.length, 4);
+
+      expect(room.spaceChildren[0].roomId, '!a:example.invalid');
+      expect(room.spaceChildren[1].roomId, '!b:example.invalid');
+      expect(room.spaceChildren[2].roomId, '!c:example.invalid');
+      expect(room.spaceChildren[3].roomId, '!noorder:example.invalid');
+
+      // TODO: Implement a more generic fake api
+      /*await room.setSpaceChild(
+        '!jEsUZKDJdhlrceRyVU:example.org',
+        via: ['example.invalid'],
+        order: '5',
+        suggested: true,
+      );
+      await room.removeSpaceChild('!1234:example.invalid');*/
+    });
+
     test('logout', () async {
       await matrix.logout();
     });

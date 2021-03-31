@@ -340,6 +340,16 @@ void main() {
       await matrix.setMuteAllPushNotifications(false);
     });
 
+    test('createSpace', () async {
+      await matrix.createSpace(
+        name: 'space',
+        topic: 'My test space',
+        spaceAliasName: '#myspace:example.invalid',
+        invite: ['@alice:example.invalid'],
+        roomVersion: '3',
+      );
+    });
+
     test('get archive', () async {
       var archive = await matrix.archive;
 
