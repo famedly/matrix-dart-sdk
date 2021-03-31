@@ -1,3 +1,7 @@
+## 0.2.2
+- chore: upgrade logger to 1.0.0
+- refactor: upgrade to http 0.13
+
 ## 0.2.1
 - fix: Update dependency mime
 
