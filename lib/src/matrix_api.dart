@@ -969,7 +969,7 @@ class MatrixApi {
     final response = await request(
       RequestType.POST,
       '/client/r0/join/${Uri.encodeComponent(roomIdOrAlias)}',
-      query: {'server_name': servers},
+      query: {'server_name': servers ?? []},
       data: {
         if (thirdPidSignedSiganture != null)
           'third_party_signed': {
