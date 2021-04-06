@@ -12,7 +12,7 @@ dependencies:
   mime: ^1.0.0
   canonical_json: ^1.0.0
   markdown: ^4.0.0
-  html_unescape: ^1.0.2
+  html_unescape: ^2.0.0
   moor: ^4.0.0
   random_string: ^2.1.0
   crypto: ^3.0.0
