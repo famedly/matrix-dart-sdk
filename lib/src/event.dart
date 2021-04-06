@@ -554,11 +554,12 @@ class Event extends MatrixEvent {
       if (!fileMap['key']['key_ops'].contains('decrypt')) {
         throw ("Missing 'decrypt' in 'key_ops'.");
       }
-      final encryptedFile = EncryptedFile();
-      encryptedFile.data = uint8list;
-      encryptedFile.iv = fileMap['iv'];
-      encryptedFile.k = fileMap['key']['k'];
-      encryptedFile.sha256 = fileMap['hashes']['sha256'];
+      final encryptedFile = EncryptedFile(
+        data: uint8list,
+        iv: fileMap['iv'],
+        k: fileMap['key']['k'],
+        sha256: fileMap['hashes']['sha256'],
+      );
       uint8list = await runInBackground(decryptFile, encryptedFile);
     }
     return MatrixFile(bytes: uint8list, name: body);
