@@ -1,7 +1,7 @@
 name: famedlysdk
-description: Matrix SDK for the famedly talk app written in dart.
+description: Matrix Dart SDK
 version: 0.0.1
-author: Zender & Kurtz GbR <p.kurtz@famedly.com>
+author: Famedly GmbH <info@famedly.com>
 homepage: https://famedly.com
 
 environment:
