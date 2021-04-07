@@ -16,4 +16,11 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-export 'fake_database_native.dart' if (dart.library.js) 'fake_database_web.dart';
+import 'package:famedlysdk/famedlysdk.dart';
+import 'package:moor/moor.dart';
+import 'package:moor/moor_web.dart' as moor;
+
+Future<Database> getDatabase(Client _) async {
+  moorRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+  return Database(moor.WebDatabase('test'));
+}
