@@ -57,6 +57,7 @@ class Client extends MatrixApi {
   int get id => _id;
 
   final FutureOr<Database> Function(Client) databaseBuilder;
+  final FutureOr<void> Function(Client) databaseDestroyer;
   Database _database;
 
   Database get database => _database;
@@ -92,7 +93,8 @@ class Client extends MatrixApi {
 
   /// Create a client
   /// [clientName] = unique identifier of this client
-  /// [database]: The database instance to use
+  /// [databaseBuilder]: A function that creates the database instance, that will be used.
+  /// [databaseDestroyer]: A function that can be used to destroy a database instance, for example by deleting files from disk.
   /// [enableE2eeRecovery]: Enable additional logic to try to recover from bad e2ee sessions
   /// [verificationMethods]: A set of all the verification methods this client can handle. Includes:
   ///    KeyVerificationMethod.numbers: Compare numbers. Most basic, should be supported
@@ -125,6 +127,7 @@ class Client extends MatrixApi {
   Client(
     this.clientName, {
     this.databaseBuilder,
+    this.databaseDestroyer,
     this.enableE2eeRecovery = false,
     this.verificationMethods,
     http.Client httpClient,
@@ -465,7 +468,7 @@ class Client extends MatrixApi {
       Logs().e('Logout failed', e, s);
       rethrow;
     } finally {
-      clear();
+      await clear();
     }
   }
 
@@ -479,7 +482,7 @@ class Client extends MatrixApi {
       Logs().e('Logout all failed', e, s);
       rethrow;
     } finally {
-      clear();
+      await clear();
     }
   }
 
@@ -942,14 +945,19 @@ class Client extends MatrixApi {
   }
 
   /// Resets all settings and stops the synchronisation.
-  void clear() {
+  Future<void> clear() async {
     Logs().outputEvents.clear();
-    database?.clear(id);
+    await database?.clear(id);
     _id = accessToken = syncFilterId =
         homeserver = _userID = _deviceID = _deviceName = prevBatch = null;
     _rooms = [];
     encryption?.dispose();
     encryption = null;
+    if (databaseDestroyer != null) {
+      await database?.close();
+      await databaseDestroyer(this);
+      _database = null;
+    }
     onLoginStateChanged.add(LoginState.loggedOut);
   }
 
@@ -1055,7 +1063,7 @@ class Client extends MatrixApi {
       onSyncError.add(SdkError(exception: e, stackTrace: s));
       if (e.error == MatrixError.M_UNKNOWN_TOKEN) {
         Logs().w('The user has been logged out!');
-        clear();
+        await clear();
       }
     } on MatrixConnectionException catch (e, s) {
       Logs().w('Synchronization connection failed');
