@@ -101,7 +101,8 @@ class SSSS {
         mac: base64.encode(hmac.bytes));
   }
 
-  static Future<String> decryptAes(_Encrypted data, Uint8List key, String name) async {
+  static Future<String> decryptAes(
+      _Encrypted data, Uint8List key, String name) async {
     final keys = deriveKeys(key, name);
     final cipher = base64.decode(data.ciphertext);
     final hmac = base64
@@ -110,7 +111,8 @@ class SSSS {
     if (hmac != data.mac.replaceAll(RegExp(r'=+$'), '')) {
       throw Exception('Bad MAC');
     }
-    final decipher = await uc.aesCtr.encrypt(cipher, keys.aesKey, base64.decode(data.iv));
+    final decipher =
+        await uc.aesCtr.encrypt(cipher, keys.aesKey, base64.decode(data.iv));
     return String.fromCharCodes(decipher);
   }
 
@@ -147,11 +149,13 @@ class SSSS {
         .trim();
   }
 
-  static Future<Uint8List> keyFromPassphrase(String passphrase, PassphraseInfo info) async {
+  static Future<Uint8List> keyFromPassphrase(
+      String passphrase, PassphraseInfo info) async {
     if (info.algorithm != AlgorithmTypes.pbkdf2) {
       throw Exception('Unknown algorithm');
     }
-    return await uc.pbkdf2(utf8.encode(passphrase), utf8.encode(info.salt), uc.sha512, info.iterations, info.bits ?? 256);
+    return await uc.pbkdf2(utf8.encode(passphrase), utf8.encode(info.salt),
+        uc.sha512, info.iterations, info.bits ?? 256);
   }
 
   void setValidator(String type, FutureOr<bool> Function(String) validator) {
@@ -194,7 +198,8 @@ class SSSS {
       content.passphrase.algorithm = AlgorithmTypes.pbkdf2;
       content.passphrase.salt = base64
           .encode(uc.secureRandomBytes(pbkdf2SaltLength)); // generate salt
-      content.passphrase.iterations = pbkdf2DefaultIterations;;
+      content.passphrase.iterations = pbkdf2DefaultIterations;
+      ;
       content.passphrase.bits = ssssKeyLength * 8;
       privateKey = await runInBackground(
         _keyFromPassphrase,

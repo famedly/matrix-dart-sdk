@@ -30,7 +30,8 @@ Future<EncryptedFile> encryptFile(Uint8List input) async {
 }
 
 Future<Uint8List> decryptFile(EncryptedFile input) async {
-  if (base64.encode(await sha256(input.data)) != base64.normalize(input.sha256)) {
+  if (base64.encode(await sha256(input.data)) !=
+      base64.normalize(input.sha256)) {
     return null;
   }
 

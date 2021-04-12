@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
@@ -8,7 +9,7 @@ abstract class Hash {
   Hash._(this.ptr);
   Pointer<NativeType> ptr;
 
-  Uint8List call(Uint8List data) {
+  FutureOr<Uint8List> call(Uint8List data) {
     final outSize = EVP_MD_size(ptr);
     final mem = malloc.call<Uint8>(outSize + data.length);
     final dataMem = mem.elementAt(outSize);
@@ -41,9 +42,10 @@ class _Sha512 extends Hash {
 abstract class Cipher {
   Cipher._();
   Pointer<NativeType> getAlg(int keysize);
-  Uint8List encrypt(Uint8List input, Uint8List key, Uint8List iv) {
+  FutureOr<Uint8List> encrypt(Uint8List input, Uint8List key, Uint8List iv) {
     final alg = getAlg(key.length * 8);
-    final mem = malloc.call<Uint8>(sizeOf<IntPtr>() + key.length + iv.length + input.length);
+    final mem = malloc
+        .call<Uint8>(sizeOf<IntPtr>() + key.length + iv.length + input.length);
     final lenMem = mem.cast<IntPtr>();
     final keyMem = mem.elementAt(sizeOf<IntPtr>());
     final ivMem = keyMem.elementAt(key.length);
@@ -72,14 +74,18 @@ class _AesCtr extends Cipher {
   @override
   Pointer<NativeType> getAlg(int keysize) {
     switch (keysize) {
-      case 128: return EVP_aes_128_ctr();
-      case 256: return EVP_aes_256_ctr();
-      default: throw ArgumentError('invalid key size');
+      case 128:
+        return EVP_aes_128_ctr();
+      case 256:
+        return EVP_aes_256_ctr();
+      default:
+        throw ArgumentError('invalid key size');
     }
   }
 }
 
-Uint8List pbkdf2(Uint8List passphrase, Uint8List salt, Hash hash, int iterations, int bits) {
+FutureOr<Uint8List> pbkdf2(
+    Uint8List passphrase, Uint8List salt, Hash hash, int iterations, int bits) {
   final outLen = bits ~/ 8;
   final mem = malloc.call<Uint8>(passphrase.length + salt.length + outLen);
   final saltMem = mem.elementAt(passphrase.length);
@@ -87,7 +93,8 @@ Uint8List pbkdf2(Uint8List passphrase, Uint8List salt, Hash hash, int iterations
   try {
     mem.asTypedList(passphrase.length).setAll(0, passphrase);
     saltMem.asTypedList(salt.length).setAll(0, salt);
-    PKCS5_PBKDF2_HMAC(mem, passphrase.length, saltMem, salt.length, iterations, hash.ptr, outLen, outMem);
+    PKCS5_PBKDF2_HMAC(mem, passphrase.length, saltMem, salt.length, iterations,
+        hash.ptr, outLen, outMem);
     return Uint8List.fromList(outMem.asTypedList(outLen));
   } finally {
     malloc.free(mem);

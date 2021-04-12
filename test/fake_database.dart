@@ -16,4 +16,5 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-export 'fake_database_native.dart' if (dart.library.js) 'fake_database_web.dart';
+export 'fake_database_native.dart'
+    if (dart.library.js) 'fake_database_web.dart';

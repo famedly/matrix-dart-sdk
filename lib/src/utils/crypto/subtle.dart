@@ -15,7 +15,8 @@ class CryptoKey {}
 @JS()
 @anonymous
 class Pbkdf2Params {
-  external factory Pbkdf2Params({String name, String hash, Uint8List salt, int iterations});
+  external factory Pbkdf2Params(
+      {String name, String hash, Uint8List salt, int iterations});
   String name;
   String hash;
   Uint8List salt;
@@ -63,16 +64,20 @@ Future<dynamic> exportKey(String algorithm, CryptoKey key) {
 }
 
 @JS('crypto.subtle.deriveKey')
-external dynamic _deriveKey(dynamic algorithm, CryptoKey baseKey, dynamic derivedKeyAlgorithm, bool extractable, List<String> keyUsages);
+external dynamic _deriveKey(dynamic algorithm, CryptoKey baseKey,
+    dynamic derivedKeyAlgorithm, bool extractable, List<String> keyUsages);
 
-Future<ByteBuffer> deriveKey(dynamic algorithm, CryptoKey baseKey, dynamic derivedKeyAlgorithm, bool extractable, List<String> keyUsages) {
-  return promiseToFuture(_deriveKey(algorithm, baseKey, derivedKeyAlgorithm, extractable, keyUsages));
+Future<ByteBuffer> deriveKey(dynamic algorithm, CryptoKey baseKey,
+    dynamic derivedKeyAlgorithm, bool extractable, List<String> keyUsages) {
+  return promiseToFuture(_deriveKey(
+      algorithm, baseKey, derivedKeyAlgorithm, extractable, keyUsages));
 }
 
 @JS('crypto.subtle.deriveBits')
 external dynamic _deriveBits(dynamic algorithm, CryptoKey baseKey, int length);
 
-Future<ByteBuffer> deriveBits(dynamic algorithm, CryptoKey baseKey, int length) {
+Future<ByteBuffer> deriveBits(
+    dynamic algorithm, CryptoKey baseKey, int length) {
   return promiseToFuture(_deriveBits(algorithm, baseKey, length));
 }
 
