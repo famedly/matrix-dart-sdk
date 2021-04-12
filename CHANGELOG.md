@@ -1,4 +1,4 @@
-## 0.2.2
+## 0.2.3
 - feat: Add room and event types for spaces
 
 ## 0.2.2
