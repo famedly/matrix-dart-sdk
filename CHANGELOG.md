@@ -1,4 +1,7 @@
 ## 0.2.2
+- feat: Add room and event types for spaces
+
+## 0.2.2
 - chore: upgrade logger to 1.0.0
 - refactor: upgrade to http 0.13
 
