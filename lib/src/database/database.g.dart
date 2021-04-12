@@ -6620,7 +6620,7 @@ abstract class _$Database extends GeneratedDatabase {
   Files get files => _files ??= Files(this);
   Selectable<DbClient> dbGetClient(String name) {
     return customSelect('SELECT * FROM clients WHERE name = :name',
-        variables: [Variable.withString(name)],
+        variables: [Variable<String>(name)],
         readsFrom: {clients}).map(clients.mapFromRow);
   }
 
@@ -6636,14 +6636,14 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE clients SET homeserver_url = :homeserver_url, token = :token, user_id = :user_id, device_id = :device_id, device_name = :device_name, prev_batch = :prev_batch, olm_account = :olm_account WHERE client_id = :client_id',
       variables: [
-        Variable.withString(homeserver_url),
-        Variable.withString(token),
-        Variable.withString(user_id),
-        Variable.withString(device_id),
-        Variable.withString(device_name),
-        Variable.withString(prev_batch),
-        Variable.withString(olm_account),
-        Variable.withInt(client_id)
+        Variable<String>(homeserver_url),
+        Variable<String>(token),
+        Variable<String>(user_id),
+        Variable<String>(device_id),
+        Variable<String>(device_name),
+        Variable<String>(prev_batch),
+        Variable<String>(olm_account),
+        Variable<int>(client_id)
       ],
       updates: {clients},
       updateKind: UpdateKind.update,
@@ -6653,10 +6653,7 @@ abstract class _$Database extends GeneratedDatabase {
   Future<int> updateClientKeys(String olm_account, int client_id) {
     return customUpdate(
       'UPDATE clients SET olm_account = :olm_account WHERE client_id = :client_id',
-      variables: [
-        Variable.withString(olm_account),
-        Variable.withInt(client_id)
-      ],
+      variables: [Variable<String>(olm_account), Variable<int>(client_id)],
       updates: {clients},
       updateKind: UpdateKind.update,
     );
@@ -6665,7 +6662,7 @@ abstract class _$Database extends GeneratedDatabase {
   Future<int> storePrevBatch(String prev_batch, int client_id) {
     return customUpdate(
       'UPDATE clients SET prev_batch = :prev_batch WHERE client_id = :client_id',
-      variables: [Variable.withString(prev_batch), Variable.withInt(client_id)],
+      variables: [Variable<String>(prev_batch), Variable<int>(client_id)],
       updates: {clients},
       updateKind: UpdateKind.update,
     );
@@ -6674,10 +6671,7 @@ abstract class _$Database extends GeneratedDatabase {
   Future<int> storeSyncFilterId(String sync_filter_id, int client_id) {
     return customUpdate(
       'UPDATE clients SET sync_filter_id = :sync_filter_id WHERE client_id = :client_id',
-      variables: [
-        Variable.withString(sync_filter_id),
-        Variable.withInt(client_id)
-      ],
+      variables: [Variable<String>(sync_filter_id), Variable<int>(client_id)],
       updates: {clients},
       updateKind: UpdateKind.update,
     );
@@ -6686,28 +6680,28 @@ abstract class _$Database extends GeneratedDatabase {
   Selectable<DbUserDeviceKey> getAllUserDeviceKeys(int client_id) {
     return customSelect(
         'SELECT * FROM user_device_keys WHERE client_id = :client_id',
-        variables: [Variable.withInt(client_id)],
+        variables: [Variable<int>(client_id)],
         readsFrom: {userDeviceKeys}).map(userDeviceKeys.mapFromRow);
   }
 
   Selectable<DbUserDeviceKeysKey> getAllUserDeviceKeysKeys(int client_id) {
     return customSelect(
         'SELECT * FROM user_device_keys_key WHERE client_id = :client_id',
-        variables: [Variable.withInt(client_id)],
+        variables: [Variable<int>(client_id)],
         readsFrom: {userDeviceKeysKey}).map(userDeviceKeysKey.mapFromRow);
   }
 
   Selectable<DbUserCrossSigningKey> getAllUserCrossSigningKeys(int client_id) {
     return customSelect(
         'SELECT * FROM user_cross_signing_keys WHERE client_id = :client_id',
-        variables: [Variable.withInt(client_id)],
+        variables: [Variable<int>(client_id)],
         readsFrom: {userCrossSigningKeys}).map(userCrossSigningKeys.mapFromRow);
   }
 
   Selectable<DbOlmSessions> getAllOlmSessions(int client_id) {
     return customSelect(
         'SELECT * FROM olm_sessions WHERE client_id = :client_id',
-        variables: [Variable.withInt(client_id)],
+        variables: [Variable<int>(client_id)],
         readsFrom: {olmSessions}).map(olmSessions.mapFromRow);
   }
 
@@ -6715,13 +6709,8 @@ abstract class _$Database extends GeneratedDatabase {
       int client_id, String identity_key) {
     return customSelect(
         'SELECT * FROM olm_sessions WHERE client_id = :client_id AND identity_key = :identity_key',
-        variables: [
-          Variable.withInt(client_id),
-          Variable.withString(identity_key)
-        ],
-        readsFrom: {
-          olmSessions
-        }).map(olmSessions.mapFromRow);
+        variables: [Variable<int>(client_id), Variable<String>(identity_key)],
+        readsFrom: {olmSessions}).map(olmSessions.mapFromRow);
   }
 
   Selectable<DbOlmSessions> dbGetOlmSessionsForDevices(
@@ -6733,8 +6722,8 @@ abstract class _$Database extends GeneratedDatabase {
     return customSelect(
         'SELECT * FROM olm_sessions WHERE client_id = :client_id AND identity_key IN ($expandedidentity_keys)',
         variables: [
-          Variable.withInt(client_id),
-          for (var $ in identity_keys) Variable.withString($)
+          Variable<int>(client_id),
+          for (var $ in identity_keys) Variable<String>($)
         ],
         readsFrom: {
           olmSessions
@@ -6746,11 +6735,11 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT OR REPLACE INTO olm_sessions (client_id, identity_key, session_id, pickle, last_received) VALUES (:client_id, :identitiy_key, :session_id, :pickle, :last_received)',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(identitiy_key),
-        Variable.withString(session_id),
-        Variable.withString(pickle),
-        Variable.withInt(last_received)
+        Variable<int>(client_id),
+        Variable<String>(identitiy_key),
+        Variable<String>(session_id),
+        Variable<String>(pickle),
+        Variable<int>(last_received)
       ],
       updates: {olmSessions},
     );
@@ -6761,7 +6750,7 @@ abstract class _$Database extends GeneratedDatabase {
     return customSelect(
         'SELECT * FROM outbound_group_sessions WHERE client_id = :client_id',
         variables: [
-          Variable.withInt(client_id)
+          Variable<int>(client_id)
         ],
         readsFrom: {
           outboundGroupSessions
@@ -6773,8 +6762,8 @@ abstract class _$Database extends GeneratedDatabase {
     return customSelect(
         'SELECT * FROM outbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id',
         variables: [
-          Variable.withInt(client_id),
-          Variable.withString(room_id)
+          Variable<int>(client_id),
+          Variable<String>(room_id)
         ],
         readsFrom: {
           outboundGroupSessions
@@ -6786,12 +6775,12 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT OR REPLACE INTO outbound_group_sessions (client_id, room_id, pickle, device_ids, creation_time, sent_messages) VALUES (:client_id, :room_id, :pickle, :device_ids, :creation_time, :sent_messages)',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(room_id),
-        Variable.withString(pickle),
-        Variable.withString(device_ids),
-        Variable.withInt(creation_time),
-        Variable.withInt(sent_messages)
+        Variable<int>(client_id),
+        Variable<String>(room_id),
+        Variable<String>(pickle),
+        Variable<String>(device_ids),
+        Variable<int>(creation_time),
+        Variable<int>(sent_messages)
       ],
       updates: {outboundGroupSessions},
     );
@@ -6800,7 +6789,7 @@ abstract class _$Database extends GeneratedDatabase {
   Future<int> removeOutboundGroupSession(int client_id, String room_id) {
     return customUpdate(
       'DELETE FROM outbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id',
-      variables: [Variable.withInt(client_id), Variable.withString(room_id)],
+      variables: [Variable<int>(client_id), Variable<String>(room_id)],
       updates: {outboundGroupSessions},
       updateKind: UpdateKind.delete,
     );
@@ -6811,9 +6800,9 @@ abstract class _$Database extends GeneratedDatabase {
     return customSelect(
         'SELECT * FROM inbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id',
         variables: [
-          Variable.withInt(client_id),
-          Variable.withString(room_id),
-          Variable.withString(session_id)
+          Variable<int>(client_id),
+          Variable<String>(room_id),
+          Variable<String>(session_id)
         ],
         readsFrom: {
           inboundGroupSessions
@@ -6824,14 +6813,14 @@ abstract class _$Database extends GeneratedDatabase {
       int client_id, String room_id) {
     return customSelect(
         'SELECT * FROM inbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id',
-        variables: [Variable.withInt(client_id), Variable.withString(room_id)],
+        variables: [Variable<int>(client_id), Variable<String>(room_id)],
         readsFrom: {inboundGroupSessions}).map(inboundGroupSessions.mapFromRow);
   }
 
   Selectable<DbInboundGroupSession> getAllInboundGroupSessions(int client_id) {
     return customSelect(
         'SELECT * FROM inbound_group_sessions WHERE client_id = :client_id',
-        variables: [Variable.withInt(client_id)],
+        variables: [Variable<int>(client_id)],
         readsFrom: {inboundGroupSessions}).map(inboundGroupSessions.mapFromRow);
   }
 
@@ -6848,15 +6837,15 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT OR REPLACE INTO inbound_group_sessions (client_id, room_id, session_id, pickle, content, indexes, allowed_at_index, sender_key, sender_claimed_keys) VALUES (:client_id, :room_id, :session_id, :pickle, :content, :indexes, :allowed_at_index, :sender_key, :sender_claimed_keys)',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(room_id),
-        Variable.withString(session_id),
-        Variable.withString(pickle),
-        Variable.withString(content),
-        Variable.withString(indexes),
-        Variable.withString(allowed_at_index),
-        Variable.withString(sender_key),
-        Variable.withString(sender_claimed_keys)
+        Variable<int>(client_id),
+        Variable<String>(room_id),
+        Variable<String>(session_id),
+        Variable<String>(pickle),
+        Variable<String>(content),
+        Variable<String>(indexes),
+        Variable<String>(allowed_at_index),
+        Variable<String>(sender_key),
+        Variable<String>(sender_claimed_keys)
       ],
       updates: {inboundGroupSessions},
     );
@@ -6867,10 +6856,10 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE inbound_group_sessions SET indexes = :indexes WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id',
       variables: [
-        Variable.withString(indexes),
-        Variable.withInt(client_id),
-        Variable.withString(room_id),
-        Variable.withString(session_id)
+        Variable<String>(indexes),
+        Variable<int>(client_id),
+        Variable<String>(room_id),
+        Variable<String>(session_id)
       ],
       updates: {inboundGroupSessions},
       updateKind: UpdateKind.update,
@@ -6882,10 +6871,10 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE inbound_group_sessions SET allowed_at_index = :allowed_at_index WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id',
       variables: [
-        Variable.withString(allowed_at_index),
-        Variable.withInt(client_id),
-        Variable.withString(room_id),
-        Variable.withString(session_id)
+        Variable<String>(allowed_at_index),
+        Variable<int>(client_id),
+        Variable<String>(room_id),
+        Variable<String>(session_id)
       ],
       updates: {inboundGroupSessions},
       updateKind: UpdateKind.update,
@@ -6904,9 +6893,9 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE inbound_group_sessions SET uploaded = true WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(room_id),
-        Variable.withString(session_id)
+        Variable<int>(client_id),
+        Variable<String>(room_id),
+        Variable<String>(session_id)
       ],
       updates: {inboundGroupSessions},
       updateKind: UpdateKind.update,
@@ -6916,7 +6905,7 @@ abstract class _$Database extends GeneratedDatabase {
   Future<int> markInboundGroupSessionsAsNeedingUpload(int client_id) {
     return customUpdate(
       'UPDATE inbound_group_sessions SET uploaded = false WHERE client_id = :client_id',
-      variables: [Variable.withInt(client_id)],
+      variables: [Variable<int>(client_id)],
       updates: {inboundGroupSessions},
       updateKind: UpdateKind.update,
     );
@@ -6927,9 +6916,9 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT OR REPLACE INTO user_device_keys (client_id, user_id, outdated) VALUES (:client_id, :user_id, :outdated)',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(user_id),
-        Variable.withBool(outdated)
+        Variable<int>(client_id),
+        Variable<String>(user_id),
+        Variable<bool>(outdated)
       ],
       updates: {userDeviceKeys},
     );
@@ -6940,10 +6929,10 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE user_device_keys_key SET verified = :verified WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id',
       variables: [
-        Variable.withBool(verified),
-        Variable.withInt(client_id),
-        Variable.withString(user_id),
-        Variable.withString(device_id)
+        Variable<bool>(verified),
+        Variable<int>(client_id),
+        Variable<String>(user_id),
+        Variable<String>(device_id)
       ],
       updates: {userDeviceKeysKey},
       updateKind: UpdateKind.update,
@@ -6955,10 +6944,10 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE user_device_keys_key SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id',
       variables: [
-        Variable.withBool(blocked),
-        Variable.withInt(client_id),
-        Variable.withString(user_id),
-        Variable.withString(device_id)
+        Variable<bool>(blocked),
+        Variable<int>(client_id),
+        Variable<String>(user_id),
+        Variable<String>(device_id)
       ],
       updates: {userDeviceKeysKey},
       updateKind: UpdateKind.update,
@@ -6976,13 +6965,13 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT OR REPLACE INTO user_device_keys_key (client_id, user_id, device_id, content, verified, blocked, last_active) VALUES (:client_id, :user_id, :device_id, :content, :verified, :blocked, :last_active)',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(user_id),
-        Variable.withString(device_id),
-        Variable.withString(content),
-        Variable.withBool(verified),
-        Variable.withBool(blocked),
-        Variable.withInt(last_active)
+        Variable<int>(client_id),
+        Variable<String>(user_id),
+        Variable<String>(device_id),
+        Variable<String>(content),
+        Variable<bool>(verified),
+        Variable<bool>(blocked),
+        Variable<int>(last_active)
       ],
       updates: {userDeviceKeysKey},
     );
@@ -6993,9 +6982,9 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'DELETE FROM user_device_keys_key WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(user_id),
-        Variable.withString(device_id)
+        Variable<int>(client_id),
+        Variable<String>(user_id),
+        Variable<String>(device_id)
       ],
       updates: {userDeviceKeysKey},
       updateKind: UpdateKind.delete,
@@ -7007,10 +6996,10 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE user_device_keys_key SET last_active = :last_active WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id',
       variables: [
-        Variable.withInt(last_active),
-        Variable.withInt(client_id),
-        Variable.withString(user_id),
-        Variable.withString(device_id)
+        Variable<int>(last_active),
+        Variable<int>(client_id),
+        Variable<String>(user_id),
+        Variable<String>(device_id)
       ],
       updates: {userDeviceKeysKey},
       updateKind: UpdateKind.update,
@@ -7022,10 +7011,10 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE user_device_keys_key SET last_sent_message = :last_sent_message WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id',
       variables: [
-        Variable.withString(last_sent_message),
-        Variable.withInt(client_id),
-        Variable.withString(user_id),
-        Variable.withString(device_id)
+        Variable<String>(last_sent_message),
+        Variable<int>(client_id),
+        Variable<String>(user_id),
+        Variable<String>(device_id)
       ],
       updates: {userDeviceKeysKey},
       updateKind: UpdateKind.update,
@@ -7037,9 +7026,9 @@ abstract class _$Database extends GeneratedDatabase {
     return customSelect(
         'SELECT last_sent_message FROM user_device_keys_key WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id',
         variables: [
-          Variable.withInt(client_id),
-          Variable.withString(user_id),
-          Variable.withString(device_id)
+          Variable<int>(client_id),
+          Variable<String>(user_id),
+          Variable<String>(device_id)
         ],
         readsFrom: {
           userDeviceKeysKey
@@ -7051,10 +7040,10 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE user_cross_signing_keys SET verified = :verified WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key',
       variables: [
-        Variable.withBool(verified),
-        Variable.withInt(client_id),
-        Variable.withString(user_id),
-        Variable.withString(public_key)
+        Variable<bool>(verified),
+        Variable<int>(client_id),
+        Variable<String>(user_id),
+        Variable<String>(public_key)
       ],
       updates: {userCrossSigningKeys},
       updateKind: UpdateKind.update,
@@ -7066,10 +7055,10 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE user_cross_signing_keys SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key',
       variables: [
-        Variable.withBool(blocked),
-        Variable.withInt(client_id),
-        Variable.withString(user_id),
-        Variable.withString(public_key)
+        Variable<bool>(blocked),
+        Variable<int>(client_id),
+        Variable<String>(user_id),
+        Variable<String>(public_key)
       ],
       updates: {userCrossSigningKeys},
       updateKind: UpdateKind.update,
@@ -7081,12 +7070,12 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT OR REPLACE INTO user_cross_signing_keys (client_id, user_id, public_key, content, verified, blocked) VALUES (:client_id, :user_id, :public_key, :content, :verified, :blocked)',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(user_id),
-        Variable.withString(public_key),
-        Variable.withString(content),
-        Variable.withBool(verified),
-        Variable.withBool(blocked)
+        Variable<int>(client_id),
+        Variable<String>(user_id),
+        Variable<String>(public_key),
+        Variable<String>(content),
+        Variable<bool>(verified),
+        Variable<bool>(blocked)
       ],
       updates: {userCrossSigningKeys},
     );
@@ -7097,9 +7086,9 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'DELETE FROM user_cross_signing_keys WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(user_id),
-        Variable.withString(public_key)
+        Variable<int>(client_id),
+        Variable<String>(user_id),
+        Variable<String>(public_key)
       ],
       updates: {userCrossSigningKeys},
       updateKind: UpdateKind.delete,
@@ -7111,11 +7100,11 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT OR REPLACE INTO ssss_cache (client_id, type, key_id, ciphertext, content) VALUES (:client_id, :type, :key_id, :ciphertext, :content)',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(type),
-        Variable.withString(key_id),
-        Variable.withString(ciphertext),
-        Variable.withString(content)
+        Variable<int>(client_id),
+        Variable<String>(type),
+        Variable<String>(key_id),
+        Variable<String>(ciphertext),
+        Variable<String>(content)
       ],
       updates: {ssssCache},
     );
@@ -7124,14 +7113,14 @@ abstract class _$Database extends GeneratedDatabase {
   Selectable<DbSSSSCache> dbGetSSSSCache(int client_id, String type) {
     return customSelect(
         'SELECT * FROM ssss_cache WHERE client_id = :client_id AND type = :type',
-        variables: [Variable.withInt(client_id), Variable.withString(type)],
+        variables: [Variable<int>(client_id), Variable<String>(type)],
         readsFrom: {ssssCache}).map(ssssCache.mapFromRow);
   }
 
   Future<int> clearSSSSCache(int client_id) {
     return customUpdate(
       'DELETE FROM ssss_cache WHERE client_id = :client_id',
-      variables: [Variable.withInt(client_id)],
+      variables: [Variable<int>(client_id)],
       updates: {ssssCache},
       updateKind: UpdateKind.delete,
     );
@@ -7149,14 +7138,14 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT INTO clients (name, homeserver_url, token, user_id, device_id, device_name, prev_batch, olm_account) VALUES (:name, :homeserver_url, :token, :user_id, :device_id, :device_name, :prev_batch, :olm_account)',
       variables: [
-        Variable.withString(name),
-        Variable.withString(homeserver_url),
-        Variable.withString(token),
-        Variable.withString(user_id),
-        Variable.withString(device_id),
-        Variable.withString(device_name),
-        Variable.withString(prev_batch),
-        Variable.withString(olm_account)
+        Variable<String>(name),
+        Variable<String>(homeserver_url),
+        Variable<String>(token),
+        Variable<String>(user_id),
+        Variable<String>(device_id),
+        Variable<String>(device_name),
+        Variable<String>(prev_batch),
+        Variable<String>(olm_account)
       ],
       updates: {clients},
     );
@@ -7167,9 +7156,9 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT OR IGNORE INTO rooms (client_id, room_id, membership) VALUES (:client_id, :room_id, :membership)',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(room_id),
-        Variable.withString(membership)
+        Variable<int>(client_id),
+        Variable<String>(room_id),
+        Variable<String>(membership)
       ],
       updates: {rooms},
     );
@@ -7180,9 +7169,9 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE rooms SET prev_batch = :prev_batch WHERE client_id = :client_id AND room_id = :room_id',
       variables: [
-        Variable.withString(prev_batch),
-        Variable.withInt(client_id),
-        Variable.withString(room_id)
+        Variable<String>(prev_batch),
+        Variable<int>(client_id),
+        Variable<String>(room_id)
       ],
       updates: {rooms},
       updateKind: UpdateKind.update,
@@ -7194,10 +7183,10 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE rooms SET oldest_sort_order = :oldest_sort_order, newest_sort_order = :newest_sort_order WHERE client_id = :client_id AND room_id = :room_id',
       variables: [
-        Variable.withReal(oldest_sort_order),
-        Variable.withReal(newest_sort_order),
-        Variable.withInt(client_id),
-        Variable.withString(room_id)
+        Variable<double>(oldest_sort_order),
+        Variable<double>(newest_sort_order),
+        Variable<int>(client_id),
+        Variable<String>(room_id)
       ],
       updates: {rooms},
       updateKind: UpdateKind.update,
@@ -7207,7 +7196,7 @@ abstract class _$Database extends GeneratedDatabase {
   Selectable<DbAccountData> getAllAccountData(int client_id) {
     return customSelect(
         'SELECT * FROM account_data WHERE client_id = :client_id',
-        variables: [Variable.withInt(client_id)],
+        variables: [Variable<int>(client_id)],
         readsFrom: {accountData}).map(accountData.mapFromRow);
   }
 
@@ -7215,9 +7204,9 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT OR REPLACE INTO account_data (client_id, type, content) VALUES (:client_id, :type, :content)',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(type),
-        Variable.withString(content)
+        Variable<int>(client_id),
+        Variable<String>(type),
+        Variable<String>(content)
       ],
       updates: {accountData},
     );
@@ -7228,12 +7217,12 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE events SET unsigned = :unsigned, content = :content, prev_content = :prev_content WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id',
       variables: [
-        Variable.withString(unsigned),
-        Variable.withString(content),
-        Variable.withString(prev_content),
-        Variable.withInt(client_id),
-        Variable.withString(event_id),
-        Variable.withString(room_id)
+        Variable<String>(unsigned),
+        Variable<String>(content),
+        Variable<String>(prev_content),
+        Variable<int>(client_id),
+        Variable<String>(event_id),
+        Variable<String>(room_id)
       ],
       updates: {events},
       updateKind: UpdateKind.update,
@@ -7245,11 +7234,11 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE events SET status = :status, event_id = :new_event_id WHERE client_id = :client_id AND event_id = :old_event_id AND room_id = :room_id',
       variables: [
-        Variable.withInt(status),
-        Variable.withString(new_event_id),
-        Variable.withInt(client_id),
-        Variable.withString(old_event_id),
-        Variable.withString(room_id)
+        Variable<int>(status),
+        Variable<String>(new_event_id),
+        Variable<int>(client_id),
+        Variable<String>(old_event_id),
+        Variable<String>(room_id)
       ],
       updates: {events},
       updateKind: UpdateKind.update,
@@ -7261,10 +7250,10 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'UPDATE events SET status = :status WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id',
       variables: [
-        Variable.withInt(status),
-        Variable.withInt(client_id),
-        Variable.withString(event_id),
-        Variable.withString(room_id)
+        Variable<int>(status),
+        Variable<int>(client_id),
+        Variable<String>(event_id),
+        Variable<String>(room_id)
       ],
       updates: {events},
       updateKind: UpdateKind.update,
@@ -7279,8 +7268,8 @@ abstract class _$Database extends GeneratedDatabase {
     return customSelect(
         'SELECT * FROM room_states WHERE client_id = :client_id AND type IN ($expandedevents)',
         variables: [
-          Variable.withInt(client_id),
-          for (var $ in events) Variable.withString($)
+          Variable<int>(client_id),
+          for (var $ in events) Variable<String>($)
         ],
         readsFrom: {
           roomStates
@@ -7290,7 +7279,7 @@ abstract class _$Database extends GeneratedDatabase {
   Selectable<DbRoomState> getAllRoomStates(int client_id) {
     return customSelect(
         'SELECT * FROM room_states WHERE client_id = :client_id',
-        variables: [Variable.withInt(client_id)],
+        variables: [Variable<int>(client_id)],
         readsFrom: {roomStates}).map(roomStates.mapFromRow);
   }
 
@@ -7302,9 +7291,9 @@ abstract class _$Database extends GeneratedDatabase {
     return customSelect(
         'SELECT * FROM room_states WHERE client_id = :client_id AND room_id = :room_id AND type NOT IN ($expandedevents)',
         variables: [
-          Variable.withInt(client_id),
-          Variable.withString(room_id),
-          for (var $ in events) Variable.withString($)
+          Variable<int>(client_id),
+          Variable<String>(room_id),
+          for (var $ in events) Variable<String>($)
         ],
         readsFrom: {
           roomStates
@@ -7327,18 +7316,18 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT OR REPLACE INTO events (client_id, event_id, room_id, sort_order, origin_server_ts, sender, type, unsigned, content, prev_content, state_key, status) VALUES (:client_id, :event_id, :room_id, :sort_order, :origin_server_ts, :sender, :type, :unsigned, :content, :prev_content, :state_key, :status)',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(event_id),
-        Variable.withString(room_id),
-        Variable.withReal(sort_order),
-        Variable.withInt(origin_server_ts),
-        Variable.withString(sender),
-        Variable.withString(type),
-        Variable.withString(unsigned),
-        Variable.withString(content),
-        Variable.withString(prev_content),
-        Variable.withString(state_key),
-        Variable.withInt(status)
+        Variable<int>(client_id),
+        Variable<String>(event_id),
+        Variable<String>(room_id),
+        Variable<double>(sort_order),
+        Variable<int>(origin_server_ts),
+        Variable<String>(sender),
+        Variable<String>(type),
+        Variable<String>(unsigned),
+        Variable<String>(content),
+        Variable<String>(prev_content),
+        Variable<String>(state_key),
+        Variable<int>(status)
       ],
       updates: {events},
     );
@@ -7359,17 +7348,17 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT OR REPLACE INTO room_states (client_id, event_id, room_id, sort_order, origin_server_ts, sender, type, unsigned, content, prev_content, state_key) VALUES (:client_id, :event_id, :room_id, :sort_order, :origin_server_ts, :sender, :type, :unsigned, :content, :prev_content, :state_key)',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(event_id),
-        Variable.withString(room_id),
-        Variable.withReal(sort_order),
-        Variable.withInt(origin_server_ts),
-        Variable.withString(sender),
-        Variable.withString(type),
-        Variable.withString(unsigned),
-        Variable.withString(content),
-        Variable.withString(prev_content),
-        Variable.withString(state_key)
+        Variable<int>(client_id),
+        Variable<String>(event_id),
+        Variable<String>(room_id),
+        Variable<double>(sort_order),
+        Variable<int>(origin_server_ts),
+        Variable<String>(sender),
+        Variable<String>(type),
+        Variable<String>(unsigned),
+        Variable<String>(content),
+        Variable<String>(prev_content),
+        Variable<String>(state_key)
       ],
       updates: {roomStates},
     );
@@ -7378,7 +7367,7 @@ abstract class _$Database extends GeneratedDatabase {
   Selectable<DbRoomAccountData> getAllRoomAccountData(int client_id) {
     return customSelect(
         'SELECT * FROM room_account_data WHERE client_id = :client_id',
-        variables: [Variable.withInt(client_id)],
+        variables: [Variable<int>(client_id)],
         readsFrom: {roomAccountData}).map(roomAccountData.mapFromRow);
   }
 
@@ -7387,10 +7376,10 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT OR REPLACE INTO room_account_data (client_id, type, room_id, content) VALUES (:client_id, :type, :room_id, :content)',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(type),
-        Variable.withString(room_id),
-        Variable.withString(content)
+        Variable<int>(client_id),
+        Variable<String>(type),
+        Variable<String>(room_id),
+        Variable<String>(content)
       ],
       updates: {roomAccountData},
     );
@@ -7401,9 +7390,9 @@ abstract class _$Database extends GeneratedDatabase {
     return customSelect(
         'SELECT * FROM room_states WHERE client_id = :client_id AND type = \'m.room.member\' AND state_key = :state_key AND room_id = :room_id',
         variables: [
-          Variable.withInt(client_id),
-          Variable.withString(state_key),
-          Variable.withString(room_id)
+          Variable<int>(client_id),
+          Variable<String>(state_key),
+          Variable<String>(room_id)
         ],
         readsFrom: {
           roomStates
@@ -7413,28 +7402,28 @@ abstract class _$Database extends GeneratedDatabase {
   Selectable<DbRoomState> dbGetUsers(int client_id, String room_id) {
     return customSelect(
         'SELECT * FROM room_states WHERE client_id = :client_id AND type = \'m.room.member\' AND room_id = :room_id',
-        variables: [Variable.withInt(client_id), Variable.withString(room_id)],
+        variables: [Variable<int>(client_id), Variable<String>(room_id)],
         readsFrom: {roomStates}).map(roomStates.mapFromRow);
   }
 
   Selectable<DbEvent> dbGetEventList(int client_id, String room_id) {
     return customSelect(
         'SELECT * FROM events WHERE client_id = :client_id AND room_id = :room_id GROUP BY event_id ORDER BY sort_order DESC',
-        variables: [Variable.withInt(client_id), Variable.withString(room_id)],
+        variables: [Variable<int>(client_id), Variable<String>(room_id)],
         readsFrom: {events}).map(events.mapFromRow);
   }
 
   Selectable<DbRoomState> getStates(int client_id, String room_id) {
     return customSelect(
         'SELECT * FROM room_states WHERE client_id = :client_id AND room_id = :room_id',
-        variables: [Variable.withInt(client_id), Variable.withString(room_id)],
+        variables: [Variable<int>(client_id), Variable<String>(room_id)],
         readsFrom: {roomStates}).map(roomStates.mapFromRow);
   }
 
   Future<int> resetNotificationCount(int client_id, String room_id) {
     return customUpdate(
       'UPDATE rooms SET notification_count = 0, highlight_count = 0 WHERE client_id = :client_id AND room_id = :room_id',
-      variables: [Variable.withInt(client_id), Variable.withString(room_id)],
+      variables: [Variable<int>(client_id), Variable<String>(room_id)],
       updates: {rooms},
       updateKind: UpdateKind.update,
     );
@@ -7443,7 +7432,7 @@ abstract class _$Database extends GeneratedDatabase {
   Selectable<DbRoom> getRoom(int client_id, String room_id) {
     return customSelect(
         'SELECT * FROM rooms WHERE client_id = :client_id AND room_id = :room_id',
-        variables: [Variable.withInt(client_id), Variable.withString(room_id)],
+        variables: [Variable<int>(client_id), Variable<String>(room_id)],
         readsFrom: {rooms}).map(rooms.mapFromRow);
   }
 
@@ -7451,9 +7440,9 @@ abstract class _$Database extends GeneratedDatabase {
     return customSelect(
         'SELECT * FROM events WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id',
         variables: [
-          Variable.withInt(client_id),
-          Variable.withString(event_id),
-          Variable.withString(room_id)
+          Variable<int>(client_id),
+          Variable<String>(event_id),
+          Variable<String>(room_id)
         ],
         readsFrom: {
           events
@@ -7464,9 +7453,9 @@ abstract class _$Database extends GeneratedDatabase {
     return customUpdate(
       'DELETE FROM events WHERE client_id = :client_id AND event_id = :event_id AND room_id = :room_id',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(event_id),
-        Variable.withString(room_id)
+        Variable<int>(client_id),
+        Variable<String>(event_id),
+        Variable<String>(room_id)
       ],
       updates: {events},
       updateKind: UpdateKind.delete,
@@ -7476,7 +7465,7 @@ abstract class _$Database extends GeneratedDatabase {
   Future<int> removeRoom(int client_id, String room_id) {
     return customUpdate(
       'DELETE FROM rooms WHERE client_id = :client_id AND room_id = :room_id',
-      variables: [Variable.withInt(client_id), Variable.withString(room_id)],
+      variables: [Variable<int>(client_id), Variable<String>(room_id)],
       updates: {rooms},
       updateKind: UpdateKind.delete,
     );
@@ -7485,7 +7474,7 @@ abstract class _$Database extends GeneratedDatabase {
   Future<int> removeSuccessfulRoomEvents(int client_id, String room_id) {
     return customUpdate(
       'DELETE FROM events WHERE client_id = :client_id AND room_id = :room_id AND status <> -1 AND status <> 0',
-      variables: [Variable.withInt(client_id), Variable.withString(room_id)],
+      variables: [Variable<int>(client_id), Variable<String>(room_id)],
       updates: {events},
       updateKind: UpdateKind.delete,
     );
@@ -7495,9 +7484,9 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT OR REPLACE INTO files (mxc_uri, bytes, saved_at) VALUES (:mxc_uri, :bytes, :time)',
       variables: [
-        Variable.withString(mxc_uri),
-        Variable.withBlob(bytes),
-        Variable.withInt(time)
+        Variable<String>(mxc_uri),
+        Variable<Uint8List>(bytes),
+        Variable<int>(time)
       ],
       updates: {files},
     );
@@ -7505,14 +7494,14 @@ abstract class _$Database extends GeneratedDatabase {
 
   Selectable<DbFile> dbGetFile(String mxc_uri) {
     return customSelect('SELECT * FROM files WHERE mxc_uri = :mxc_uri',
-        variables: [Variable.withString(mxc_uri)],
+        variables: [Variable<String>(mxc_uri)],
         readsFrom: {files}).map(files.mapFromRow);
   }
 
   Future<int> markPendingEventsAsError(int client_id) {
     return customUpdate(
       'UPDATE events SET status = -1 WHERE client_id = :client_id AND status = 0',
-      variables: [Variable.withInt(client_id)],
+      variables: [Variable<int>(client_id)],
       updates: {events},
       updateKind: UpdateKind.update,
     );
@@ -7521,7 +7510,7 @@ abstract class _$Database extends GeneratedDatabase {
   Future<int> deleteOldFiles(int saved_at) {
     return customUpdate(
       'DELETE FROM files WHERE saved_at < :saved_at',
-      variables: [Variable.withInt(saved_at)],
+      variables: [Variable<int>(saved_at)],
       updates: {files},
       updateKind: UpdateKind.delete,
     );
@@ -7532,10 +7521,10 @@ abstract class _$Database extends GeneratedDatabase {
     return customInsert(
       'INSERT INTO to_device_queue (client_id, type, txn_id, content) VALUES (:client_id, :type, :txn_id, :content)',
       variables: [
-        Variable.withInt(client_id),
-        Variable.withString(type),
-        Variable.withString(txn_id),
-        Variable.withString(content)
+        Variable<int>(client_id),
+        Variable<String>(type),
+        Variable<String>(txn_id),
+        Variable<String>(content)
       ],
       updates: {toDeviceQueue},
     );
@@ -7544,14 +7533,14 @@ abstract class _$Database extends GeneratedDatabase {
   Selectable<DbToDeviceQueue> getToDeviceQueue(int client_id) {
     return customSelect(
         'SELECT * FROM to_device_queue WHERE client_id = :client_id',
-        variables: [Variable.withInt(client_id)],
+        variables: [Variable<int>(client_id)],
         readsFrom: {toDeviceQueue}).map(toDeviceQueue.mapFromRow);
   }
 
   Future<int> deleteFromToDeviceQueue(int client_id, int id) {
     return customUpdate(
       'DELETE FROM to_device_queue WHERE client_id = :client_id AND id = :id',
-      variables: [Variable.withInt(client_id), Variable.withInt(id)],
+      variables: [Variable<int>(client_id), Variable<int>(id)],
       updates: {toDeviceQueue},
       updateKind: UpdateKind.delete,
     );
