@@ -55,7 +55,7 @@ void main() {
         '@charley:example.org'
       ];
 
-      var dbRoom = DbRoom(
+      final dbRoom = DbRoom(
         clientId: 1,
         roomId: id,
         membership: membership.toString().split('.').last,
@@ -69,7 +69,7 @@ void main() {
         heroes: heroes.join(','),
       );
 
-      var states = [
+      final states = [
         DbRoomState(
           clientId: 1,
           eventId: '143273582443PhrSn:example.org',
@@ -85,7 +85,7 @@ void main() {
         ),
       ];
 
-      var roomAccountData = [
+      final roomAccountData = [
         DbRoomAccountData(
           clientId: 1,
           type: 'com.test.foo',
@@ -229,7 +229,7 @@ void main() {
     test('requestParticipants', () async {
       final participants = await room.requestParticipants();
       expect(participants.length, 1);
-      var user = participants[0];
+      final user = participants[0];
       expect(user.id, '@alice:example.org');
       expect(user.displayName, 'Alice Margatroid');
       expect(user.membership, Membership.join);

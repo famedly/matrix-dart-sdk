@@ -30,7 +30,7 @@ class User extends Event {
     String avatarUrl,
     Room room,
   }) {
-    var content = <String, String>{};
+    final content = <String, String>{};
     if (membership != null) content['membership'] = membership;
     if (displayName != null) content['displayname'] = displayName;
     if (avatarUrl != null) content['avatar_url'] = avatarUrl;
@@ -119,7 +119,7 @@ class User extends Event {
       if (!formatLocalpart) {
         return stateKey.localpart;
       }
-      var words = stateKey.localpart.replaceAll('_', ' ').split(' ');
+      final words = stateKey.localpart.replaceAll('_', ' ').split(' ');
       for (var i = 0; i < words.length; i++) {
         if (words[i].isNotEmpty) {
           words[i] = words[i][0].toUpperCase() + words[i].substring(1);

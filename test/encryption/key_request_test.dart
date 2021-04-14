@@ -56,13 +56,13 @@ void main() {
       Logs().i('[LibOlm] Enabled: $olmEnabled');
       if (!olmEnabled) return;
 
-      var matrix = await getClient();
+      final matrix = await getClient();
       final requestRoom = matrix.getRoomById('!726s6s6q:example.com');
       await matrix.encryption.keyManager.request(
           requestRoom, 'sessionId', validSenderKey,
           tryOnlineBackup: false);
       var foundEvent = false;
-      for (var entry in FakeMatrixApi.calledEndpoints.entries) {
+      for (final entry in FakeMatrixApi.calledEndpoints.entries) {
         final payload = jsonDecode(entry.value.first);
         if (entry.key
                 .startsWith('/client/r0/sendToDevice/m.room_key_request') &&
@@ -84,7 +84,7 @@ void main() {
     });
     test('Reply To Request', () async {
       if (!olmEnabled) return;
-      var matrix = await getClient();
+      final matrix = await getClient();
       matrix.setUserId('@alice:example.com'); // we need to pretend to be alice
       FakeMatrixApi.calledEndpoints.clear();
       await matrix
@@ -279,7 +279,7 @@ void main() {
     });
     test('Receive shared keys', () async {
       if (!olmEnabled) return;
-      var matrix = await getClient();
+      final matrix = await getClient();
       final requestRoom = matrix.getRoomById('!726s6s6q:example.com');
       await matrix.encryption.keyManager.request(
           requestRoom, validSessionId, validSenderKey,

@@ -37,7 +37,7 @@ void test() async {
 
     Logs().i('++++ (Alice) Leave all rooms ++++');
     while (testClientA.rooms.isNotEmpty) {
-      var room = testClientA.rooms.first;
+      final room = testClientA.rooms.first;
       if (room.canonicalAlias?.isNotEmpty ?? false) {
         break;
       }
@@ -50,7 +50,7 @@ void test() async {
     Logs().i('++++ (Bob) Leave all rooms ++++');
     for (var i = 0; i < 3; i++) {
       if (testClientB.rooms.isNotEmpty) {
-        var room = testClientB.rooms.first;
+        final room = testClientB.rooms.first;
         try {
           await room.leave();
           await room.forget();
@@ -77,12 +77,12 @@ void test() async {
     Logs().i('++++ (Alice) Create room and invite Bob ++++');
     await testClientA.createRoom(invite: [TestUser.username2]);
     await Future.delayed(Duration(seconds: 1));
-    var room = testClientA.rooms.first;
+    final room = testClientA.rooms.first;
     assert(room != null);
     final roomId = room.id;
 
     Logs().i('++++ (Bob) Join room ++++');
-    var inviteRoom = testClientB.getRoomById(roomId);
+    final inviteRoom = testClientB.getRoomById(roomId);
     await inviteRoom.join();
     await Future.delayed(Duration(seconds: 1));
     assert(inviteRoom.membership == Membership.join);
@@ -197,7 +197,8 @@ void test() async {
             .outboundGroupSession
             .session_id() ==
         currentSessionIdA);
-    var inviteRoomOutboundGroupSession = inviteRoom.client.encryption.keyManager
+    final inviteRoomOutboundGroupSession = inviteRoom
+        .client.encryption.keyManager
         .getOutboundGroupSession(inviteRoom.id);
 
     assert(inviteRoomOutboundGroupSession != null);

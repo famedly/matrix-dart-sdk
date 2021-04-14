@@ -83,7 +83,7 @@ void main() {
       final roomId = '!someroom:example.org';
       final sessionId = inbound.session_id();
       // set a payload...
-      var sessionPayload = <String, dynamic>{
+      final sessionPayload = <String, dynamic>{
         'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'room_id': roomId,
         'forwarding_curve25519_key_chain': [client.identityKey],

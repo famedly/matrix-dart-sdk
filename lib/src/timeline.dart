@@ -262,7 +262,7 @@ class Timeline {
           eventUpdate.type != EventUpdateType.history) {
         return;
       }
-      var status = eventUpdate.content['status'] ??
+      final status = eventUpdate.content['status'] ??
           (eventUpdate.content['unsigned'] is Map<String, dynamic>
               ? eventUpdate.content['unsigned'][messageSendingStatusKey]
               : null) ??
@@ -276,13 +276,13 @@ class Timeline {
               Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder));
         }
       } else if (status == -2) {
-        var i = _findEvent(event_id: eventUpdate.content['event_id']);
+        final i = _findEvent(event_id: eventUpdate.content['event_id']);
         if (i < events.length) {
           removeAggregatedEvent(events[i]);
           events.removeAt(i);
         }
       } else {
-        var i = _findEvent(
+        final i = _findEvent(
             event_id: eventUpdate.content['event_id'],
             unsigned_txid: eventUpdate.content['unsigned'] is Map
                 ? eventUpdate.content['unsigned']['transaction_id']
@@ -303,7 +303,7 @@ class Timeline {
           }
           addAggregatedEvent(events[i]);
         } else {
-          var newEvent =
+          final newEvent =
               Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder);
 
           if (eventUpdate.type == EventUpdateType.history &&

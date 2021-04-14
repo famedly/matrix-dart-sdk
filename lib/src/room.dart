@@ -318,7 +318,7 @@ class Room {
   /// Returns a list of all current typing users.
   List<User> get typingUsers {
     if (!ephemerals.containsKey('m.typing')) return [];
-    List<dynamic> typingMxid = ephemerals['m.typing'].content['user_ids'];
+    final List<dynamic> typingMxid = ephemerals['m.typing'].content['user_ids'];
     return typingMxid.cast<String>().map(getUserByMXIDSync).toList();
   }
 
@@ -367,7 +367,7 @@ class Room {
       heroes = mHeroes;
     } else {
       if (states[EventTypes.RoomMember] is Map<String, dynamic>) {
-        for (var entry in states[EventTypes.RoomMember].entries) {
+        for (final entry in states[EventTypes.RoomMember].entries) {
           final state = entry.value;
           if (state.type == EventTypes.RoomMember &&
               state.stateKey != client?.userID) heroes.add(state.stateKey);
@@ -679,7 +679,7 @@ class Room {
         : null;
 
     // Send event
-    var content = <String, dynamic>{
+    final content = <String, dynamic>{
       'msgtype': file.msgType,
       'body': file.name,
       'filename': file.name,
@@ -992,7 +992,7 @@ class Room {
 
   /// Sets this room as a direct chat for this user if not already.
   Future<void> addToDirectChat(String userID) async {
-    var directChats = client.directChats;
+    final directChats = client.directChats;
     if (directChats[userID] is List) {
       if (!directChats[userID].contains(id)) {
         directChats[userID].add(id);
@@ -1013,7 +1013,7 @@ class Room {
 
   /// Removes this room from all direct chat tags.
   Future<void> removeFromDirectChat() async {
-    var directChats = client.directChats;
+    final directChats = client.directChats;
     if (directChats[directChatMatrixID] is List &&
         directChats[directChatMatrixID].contains(id)) {
       directChats[directChatMatrixID].remove(id);
@@ -1112,7 +1112,7 @@ class Room {
       }
     }
 
-    var newRoomAccountData = <String, BasicRoomEvent>{};
+    final newRoomAccountData = <String, BasicRoomEvent>{};
     if (roomAccountData != null) {
       var rawRoomAccountData;
       if (roomAccountData is Future) {
@@ -1160,7 +1160,7 @@ class Room {
       });
     }
 
-    var timeline = Timeline(
+    final timeline = Timeline(
       room: this,
       events: events,
       onUpdate: onUpdate,
@@ -1177,9 +1177,9 @@ class Room {
   /// list may not be complete. User [requestParticipants] in this
   /// case.
   List<User> getParticipants() {
-    var userList = <User>[];
+    final userList = <User>[];
     if (states[EventTypes.RoomMember] is Map<String, dynamic>) {
-      for (var entry in states[EventTypes.RoomMember].entries) {
+      for (final entry in states[EventTypes.RoomMember].entries) {
         final state = entry.value;
         if (state.type == EventTypes.RoomMember) userList.add(state.asUser);
       }
@@ -1216,7 +1216,7 @@ class Room {
 
   /// Checks if the local participant list of joined and invited users is complete.
   bool get participantListComplete {
-    var knownParticipants = getParticipants();
+    final knownParticipants = getParticipants();
     knownParticipants.removeWhere(
         (u) => ![Membership.join, Membership.invite].contains(u.membership));
     return knownParticipants.length ==
@@ -1539,7 +1539,7 @@ class Room {
     } else {
       messageID = txid;
     }
-    var data = <String, dynamic>{};
+    final data = <String, dynamic>{};
     if (reason != null) data['reason'] = reason;
     return await client.redact(
       id,
@@ -1660,8 +1660,8 @@ class Room {
 
   /// Returns all aliases for this room.
   List<String> get aliases {
-    var aliases = <String>[];
-    for (var aliasEvent in states[EventTypes.RoomAliases].values) {
+    final aliases = <String>[];
+    for (final aliasEvent in states[EventTypes.RoomAliases].values) {
       if (aliasEvent.content['aliases'] is List) {
         aliases.addAll(aliasEvent.content['aliases']);
       }
@@ -1765,12 +1765,12 @@ class Room {
 
   /// Returns all known device keys for all participants in this room.
   Future<List<DeviceKeys>> getUserDeviceKeys() async {
-    var deviceKeys = <DeviceKeys>[];
-    var users = await requestParticipants();
+    final deviceKeys = <DeviceKeys>[];
+    final users = await requestParticipants();
     for (final user in users) {
       if ([Membership.invite, Membership.join].contains(user.membership) &&
           client.userDeviceKeys.containsKey(user.id)) {
-        for (var deviceKeyEntry
+        for (final deviceKeyEntry
             in client.userDeviceKeys[user.id].deviceKeys.values) {
           deviceKeys.add(deviceKeyEntry);
         }

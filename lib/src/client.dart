@@ -560,8 +560,8 @@ class Client extends MatrixApi {
   /// profile will be requested from the homserver.
   Future<Profile> get ownProfile async {
     if (rooms.isNotEmpty) {
-      var profileSet = <Profile>{};
-      for (var room in rooms) {
+      final profileSet = <Profile>{};
+      for (final room in rooms) {
         final user = room.getUserByMXIDSync(userID);
         profileSet.add(Profile.fromJson(user.content));
       }
@@ -604,16 +604,16 @@ class Client extends MatrixApi {
   }
 
   Future<List<Room>> get archive async {
-    var archiveList = <Room>[];
+    final archiveList = <Room>[];
     final syncResp = await sync(
       filter: '{"room":{"include_leave":true,"timeline":{"limit":10}}}',
       timeout: 0,
     );
     if (syncResp.rooms.leave is Map<String, dynamic>) {
-      for (var entry in syncResp.rooms.leave.entries) {
+      for (final entry in syncResp.rooms.leave.entries) {
         final id = entry.key;
         final room = entry.value;
-        var leftRoom = Room(
+        final leftRoom = Room(
             id: id,
             membership: Membership.leave,
             client: this,
@@ -622,7 +622,7 @@ class Client extends MatrixApi {
                     <String, BasicRoomEvent>{},
             mHeroes: []);
         if (room.timeline?.events != null) {
-          for (var event in room.timeline.events) {
+          for (final event in room.timeline.events) {
             leftRoom.setState(Event.fromMatrixEvent(
               event,
               leftRoom,
@@ -631,7 +631,7 @@ class Client extends MatrixApi {
           }
         }
         if (room.state != null) {
-          for (var event in room.state) {
+          for (final event in room.state) {
             leftRoom.setState(Event.fromMatrixEvent(
               event,
               leftRoom,
@@ -1161,7 +1161,7 @@ class Client extends MatrixApi {
       final id = entry.key;
       final room = entry.value;
 
-      var update = RoomUpdate.fromSyncRoomUpdate(room, id);
+      final update = RoomUpdate.fromSyncRoomUpdate(room, id);
       if (database != null) {
         // TODO: This method seems to be rather slow for some updates
         // Perhaps don't dynamically build that one query?
@@ -1251,14 +1251,14 @@ class Client extends MatrixApi {
         var room = getRoomById(id);
         room ??= Room(id: id);
 
-        var receiptStateContent =
+        final receiptStateContent =
             room.roomAccountData['m.receipt']?.content ?? {};
-        for (var eventEntry in event['content'].entries) {
+        for (final eventEntry in event['content'].entries) {
           final String eventID = eventEntry.key;
           if (event['content'][eventID]['m.read'] != null) {
             final Map<String, dynamic> userTimestampMap =
                 event['content'][eventID]['m.read'];
-            for (var userTimestampMapEntry in userTimestampMap.entries) {
+            for (final userTimestampMapEntry in userTimestampMap.entries) {
               final mxid = userTimestampMapEntry.key;
 
               // Remove previous receipt event from this user
@@ -1372,9 +1372,9 @@ class Client extends MatrixApi {
 
     // Does the chat already exist in the list rooms?
     if (!found && !isLeftRoom) {
-      var position = chatUpdate.membership == Membership.invite ? 0 : j;
+      final position = chatUpdate.membership == Membership.invite ? 0 : j;
       // Add the new chat to the list
-      var newRoom = Room(
+      final newRoom = Room(
         id: chatUpdate.id,
         membership: chatUpdate.membership,
         prev_batch: chatUpdate.prev_batch,
@@ -1434,9 +1434,9 @@ class Client extends MatrixApi {
       case EventUpdateType.timeline:
       case EventUpdateType.state:
       case EventUpdateType.inviteState:
-        var stateEvent =
+        final stateEvent =
             Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder);
-        var prevState = room.getState(stateEvent.type, stateEvent.stateKey);
+        final prevState = room.getState(stateEvent.type, stateEvent.stateKey);
         if (eventUpdate.type == EventUpdateType.timeline &&
             prevState != null &&
             prevState.sortOrder > stateEvent.sortOrder) {
@@ -1514,12 +1514,12 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
   }
 
   Future<Set<String>> _getUserIdsInEncryptedRooms() async {
-    var userIds = <String>{};
+    final userIds = <String>{};
     for (final room in rooms) {
       if (room.encrypted) {
         try {
-          var userList = await room.requestParticipants();
-          for (var user in userList) {
+          final userList = await room.requestParticipants();
+          for (final user in userList) {
             if ([Membership.join, Membership.invite]
                 .contains(user.membership)) {
               userIds.add(user.id);
@@ -1539,7 +1539,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     try {
       if (!isLogged()) return;
       final dbActions = <Future<dynamic> Function()>[];
-      var trackedUserIds = await _getUserIdsInEncryptedRooms();
+      final trackedUserIds = await _getUserIdsInEncryptedRooms();
       if (!isLogged()) return;
       trackedUserIds.add(userID);
 
@@ -1548,12 +1548,12 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
           .removeWhere((String userId, v) => !trackedUserIds.contains(userId));
 
       // Check if there are outdated device key lists. Add it to the set.
-      var outdatedLists = <String, dynamic>{};
-      for (var userId in trackedUserIds) {
+      final outdatedLists = <String, dynamic>{};
+      for (final userId in trackedUserIds) {
         if (!userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys[userId] = DeviceKeysList(userId, this);
         }
-        var deviceKeysList = userDeviceKeys[userId];
+        final deviceKeysList = userDeviceKeys[userId];
         if (deviceKeysList.outdated &&
             (!_keyQueryFailures.containsKey(userId.domain) ||
                 DateTime.now()
@@ -1791,8 +1791,8 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     String messageId,
   }) async {
     // Send with send-to-device messaging
-    var data = <String, Map<String, Map<String, dynamic>>>{};
-    for (var user in users) {
+    final data = <String, Map<String, Map<String, dynamic>>>{};
+    for (final user in users) {
       data[user] = {};
       data[user]['*'] = message;
     }

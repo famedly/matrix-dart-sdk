@@ -425,7 +425,7 @@ void main() {
       client1.userDeviceKeys[client1.userID].masterKey.setDirectVerified(false);
       final req1 =
           await client1.userDeviceKeys[client2.userID].startVerification();
-      var evt = getLastSentEvent(req1);
+      final evt = getLastSentEvent(req1);
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       KeyVerification req2;

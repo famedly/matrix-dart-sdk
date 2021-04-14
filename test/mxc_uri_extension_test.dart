@@ -29,7 +29,7 @@ void main() {
   group('MxContent', () {
     Logs().level = Level.error;
     test('Formatting', () async {
-      var client = Client('testclient', httpClient: FakeMatrixApi());
+      final client = Client('testclient', httpClient: FakeMatrixApi());
       await client.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
       final mxc = 'mxc://exampleserver.abc/abcdefghijklmn';

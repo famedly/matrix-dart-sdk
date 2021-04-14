@@ -35,7 +35,7 @@ void main() {
     var olmEnabled = true;
 
     Client client;
-    var otherClient = Client('othertestclient',
+    final otherClient = Client('othertestclient',
         httpClient: FakeMatrixApi(), databaseBuilder: getDatabase);
     DeviceKeys device;
     Map<String, dynamic> payload;

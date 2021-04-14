@@ -85,7 +85,7 @@ abstract class EventLocalizations {
         i18n.createdTheChat(event.sender.calcDisplayname()),
     EventTypes.RoomTombstone: (event, i18n) => i18n.roomHasBeenUpgraded,
     EventTypes.RoomJoinRules: (event, i18n) {
-      var joinRules = JoinRules.values.firstWhere(
+      final joinRules = JoinRules.values.firstWhere(
           (r) =>
               r.toString().replaceAll('JoinRules.', '') ==
               event.content['join_rule'],
@@ -170,7 +170,7 @@ abstract class EventLocalizations {
     EventTypes.RoomAvatar: (event, i18n) =>
         i18n.changedTheChatAvatar(event.sender.calcDisplayname()),
     EventTypes.GuestAccess: (event, i18n) {
-      var guestAccess = GuestAccess.values.firstWhere(
+      final guestAccess = GuestAccess.values.firstWhere(
           (r) =>
               r.toString().replaceAll('GuestAccess.', '') ==
               event.content['guest_access'],
@@ -183,7 +183,7 @@ abstract class EventLocalizations {
       }
     },
     EventTypes.HistoryVisibility: (event, i18n) {
-      var historyVisibility = HistoryVisibility.values.firstWhere(
+      final historyVisibility = HistoryVisibility.values.firstWhere(
           (r) =>
               r.toString().replaceAll('HistoryVisibility.', '') ==
               event.content['history_visibility'],

@@ -47,7 +47,7 @@ void main() {
     final contentJson =
         '{"msgtype":"$msgtype","body":"$body","formatted_body":"$formatted_body","m.relates_to":{"m.in_reply_to":{"event_id":"\$1234:example.com"}}}';
 
-    var jsonObj = <String, dynamic>{
+    final jsonObj = <String, dynamic>{
       'event_id': id,
       'sender': senderID,
       'origin_server_ts': timestamp,
@@ -56,8 +56,8 @@ void main() {
       'status': 2,
       'content': contentJson,
     };
-    var client = Client('testclient', httpClient: FakeMatrixApi());
-    var event = Event.fromJson(
+    final client = Client('testclient', httpClient: FakeMatrixApi());
+    final event = Event.fromJson(
         jsonObj, Room(id: '!localpart:server.abc', client: client));
 
     test('setup', () async {
@@ -86,7 +86,7 @@ void main() {
       expect(event.type, EventTypes.Message);
       expect(event.relationshipType, RelationshipTypes.reply);
       jsonObj['state_key'] = '';
-      var state = Event.fromJson(jsonObj, null);
+      final state = Event.fromJson(jsonObj, null);
       expect(state.eventId, id);
       expect(state.stateKey, '');
       expect(state.status, 2);
@@ -244,8 +244,8 @@ void main() {
           'type': 'm.room.redaction',
           'unsigned': {'age': 1234}
         };
-        var redactedBecause = Event.fromJson(redactionEventJson, room);
-        var event = Event.fromJson(redactJsonObj, room);
+        final redactedBecause = Event.fromJson(redactionEventJson, room);
+        final event = Event.fromJson(redactJsonObj, room);
         event.setRedactionEvent(redactedBecause);
         expect(event.redacted, true);
         expect(event.redactedBecause.toJson(), redactedBecause.toJson());
@@ -256,7 +256,7 @@ void main() {
     });
 
     test('remove', () async {
-      var event = Event.fromJson(
+      final event = Event.fromJson(
           jsonObj, Room(id: '1234', client: Client('testclient')));
       final removed1 = await event.remove();
       event.status = 0;
@@ -266,14 +266,14 @@ void main() {
     });
 
     test('sendAgain', () async {
-      var matrix = Client('testclient', httpClient: FakeMatrixApi());
+      final matrix = Client('testclient', httpClient: FakeMatrixApi());
       await matrix.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
       await matrix.login(
           identifier: AuthenticationUserIdentifier(user: 'test'),
           password: '1234');
 
-      var event = Event.fromJson(
+      final event = Event.fromJson(
           jsonObj, Room(id: '!1234:example.com', client: matrix));
       final resp1 = await event.sendAgain();
       event.status = -1;
@@ -285,14 +285,14 @@ void main() {
     });
 
     test('requestKey', () async {
-      var matrix = Client('testclient', httpClient: FakeMatrixApi());
+      final matrix = Client('testclient', httpClient: FakeMatrixApi());
       await matrix.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
       await matrix.login(
           identifier: AuthenticationUserIdentifier(user: 'test'),
           password: '1234');
 
-      var event = Event.fromJson(
+      final event = Event.fromJson(
           jsonObj, Room(id: '!1234:example.com', client: matrix));
       String exception;
       try {
@@ -302,7 +302,7 @@ void main() {
       }
       expect(exception, 'Session key not requestable');
 
-      var event2 = Event.fromJson({
+      final event2 = Event.fromJson({
         'event_id': id,
         'sender': senderID,
         'origin_server_ts': timestamp,
@@ -327,7 +327,7 @@ void main() {
     });
     test('requestKey', () async {
       jsonObj['state_key'] = '@alice:example.com';
-      var event = Event.fromJson(
+      final event = Event.fromJson(
           jsonObj, Room(id: '!localpart:server.abc', client: client));
       expect(event.stateKeyUser.id, '@alice:example.com');
     });
@@ -895,14 +895,14 @@ void main() {
     });
 
     test('aggregations', () {
-      var event = Event.fromJson({
+      final event = Event.fromJson({
         'content': {
           'body': 'blah',
           'msgtype': 'm.text',
         },
         'event_id': '\$source',
       }, null);
-      var edit1 = Event.fromJson({
+      final edit1 = Event.fromJson({
         'content': {
           'body': 'blah',
           'msgtype': 'm.text',
@@ -913,7 +913,7 @@ void main() {
         },
         'event_id': '\$edit1',
       }, null);
-      var edit2 = Event.fromJson({
+      final edit2 = Event.fromJson({
         'content': {
           'body': 'blah',
           'msgtype': 'm.text',
@@ -924,8 +924,9 @@ void main() {
         },
         'event_id': '\$edit2',
       }, null);
-      var room = Room(client: client);
-      var timeline = Timeline(events: <Event>[event, edit1, edit2], room: room);
+      final room = Room(client: client);
+      final timeline =
+          Timeline(events: <Event>[event, edit1, edit2], room: room);
       expect(event.hasAggregatedEvents(timeline, RelationshipTypes.edit), true);
       expect(event.aggregatedEvents(timeline, RelationshipTypes.edit),
           {edit1, edit2});
@@ -955,7 +956,7 @@ void main() {
         'sender': '@alice:example.org',
       }, null);
       event.sortOrder = 0;
-      var edit1 = Event.fromJson({
+      final edit1 = Event.fromJson({
         'type': EventTypes.Message,
         'content': {
           'body': '* edit 1',
@@ -973,7 +974,7 @@ void main() {
         'sender': '@alice:example.org',
       }, null);
       edit1.sortOrder = 1;
-      var edit2 = Event.fromJson({
+      final edit2 = Event.fromJson({
         'type': EventTypes.Message,
         'content': {
           'body': '* edit 2',
@@ -991,7 +992,7 @@ void main() {
         'sender': '@alice:example.org',
       }, null);
       edit2.sortOrder = 2;
-      var edit3 = Event.fromJson({
+      final edit3 = Event.fromJson({
         'type': EventTypes.Message,
         'content': {
           'body': '* edit 3',
@@ -1009,7 +1010,7 @@ void main() {
         'sender': '@bob:example.org',
       }, null);
       edit3.sortOrder = 3;
-      var room = Room(client: client);
+      final room = Room(client: client);
       // no edits
       var displayEvent =
           event.getDisplayEvent(Timeline(events: <Event>[event], room: room));
@@ -1246,7 +1247,7 @@ void main() {
       await client.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
       final room = Room(id: '!localpart:server.abc', client: await getClient());
-      var event = Event.fromJson({
+      final event = Event.fromJson({
         'type': EventTypes.Message,
         'content': {
           'body': 'image',

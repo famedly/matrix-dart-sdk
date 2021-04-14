@@ -244,7 +244,7 @@ class Event extends MatrixEvent {
       'redacted_because': redactedBecause.toJson(),
     };
     prevContent = null;
-    var contentKeyWhiteList = <String>[];
+    final contentKeyWhiteList = <String>[];
     switch (type) {
       case EventTypes.RoomMember:
         contentKeyWhiteList.add('membership');
@@ -295,8 +295,8 @@ class Event extends MatrixEvent {
   /// Returns a list of [Receipt] instances for this event.
   List<Receipt> get receipts {
     if (!(room.roomAccountData.containsKey('m.receipt'))) return [];
-    var receiptsList = <Receipt>[];
-    for (var entry in room.roomAccountData['m.receipt'].content.entries) {
+    final receiptsList = <Receipt>[];
+    for (final entry in room.roomAccountData['m.receipt'].content.entries) {
       if (entry.value['event_id'] == eventId) {
         receiptsList.add(Receipt(room.getUserByMXIDSync(entry.key),
             DateTime.fromMillisecondsSinceEpoch(entry.value['ts'])));
@@ -486,7 +486,7 @@ class Event extends MatrixEvent {
     getThumbnail = mxcUrl != attachmentMxcUrl;
     // Is this file storeable?
     final thisInfoMap = getThumbnail ? thumbnailInfoMap : infoMap;
-    var storeable = room.client.database != null &&
+    final storeable = room.client.database != null &&
         thisInfoMap['size'] is int &&
         thisInfoMap['size'] <= room.client.database.maxFileSize;
 
@@ -676,7 +676,7 @@ class Event extends MatrixEvent {
       // aggregated edits
       if (allEditEvents.isNotEmpty) {
         allEditEvents.sort((a, b) => a.sortOrder - b.sortOrder > 0 ? 1 : -1);
-        var rawEvent = allEditEvents.last.toJson();
+        final rawEvent = allEditEvents.last.toJson();
         // update the content of the new event to render
         if (rawEvent['content']['m.new_content'] is Map) {
           rawEvent['content'] = rawEvent['content']['m.new_content'];

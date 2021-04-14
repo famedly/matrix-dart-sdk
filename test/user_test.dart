@@ -28,7 +28,7 @@ void main() {
   /// All Tests related to the Event
   group('User', () {
     Logs().level = Level.error;
-    var client = Client('testclient', httpClient: FakeMatrixApi());
+    final client = Client('testclient', httpClient: FakeMatrixApi());
     final user1 = User(
       '@alice:example.com',
       membership: 'join',
@@ -65,7 +65,7 @@ void main() {
         'state_key': id
       };
 
-      var user = Event.fromJson(jsonObj, null).asUser;
+      final user = Event.fromJson(jsonObj, null).asUser;
 
       expect(user.id, id);
       expect(user.membership, membership);

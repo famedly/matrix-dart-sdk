@@ -114,7 +114,7 @@ class BlockLatexSyntax extends BlockSyntax {
 
   @override
   List<String> parseChildLines(BlockParser parser) {
-    var childLines = <String>[];
+    final childLines = <String>[];
     var first = true;
     while (!parser.isDone) {
       final match = endPattern.firstMatch(parser.current);

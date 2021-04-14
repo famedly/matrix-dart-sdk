@@ -199,7 +199,8 @@ class Encryption {
       final messageIndexValue = event.eventId +
           '|' +
           event.originServerTs.millisecondsSinceEpoch.toString();
-      var haveIndex = inboundGroupSession.indexes.containsKey(messageIndexKey);
+      final haveIndex =
+          inboundGroupSession.indexes.containsKey(messageIndexKey);
       if (haveIndex &&
           inboundGroupSession.indexes[messageIndexKey] != messageIndexValue) {
         Logs().e('[Decrypt] Could not decrypt due to a corrupted session.');
@@ -342,7 +343,7 @@ class Encryption {
       'type': type,
       'room_id': roomId,
     };
-    var encryptedPayload = <String, dynamic>{
+    final encryptedPayload = <String, dynamic>{
       'algorithm': AlgorithmTypes.megolmV1AesSha2,
       'ciphertext':
           sess.outboundGroupSession.encrypt(json.encode(payloadContent)),

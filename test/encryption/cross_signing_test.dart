@@ -96,7 +96,7 @@ void main() {
         client.userDeviceKeys[client.userID].deviceKeys['OTHERDEVICE'],
         client.userDeviceKeys['@othertest:fakeServer.notExisting'].masterKey
       ]);
-      var body = json.decode(FakeMatrixApi
+      final body = json.decode(FakeMatrixApi
           .calledEndpoints['/client/r0/keys/signatures/upload'].first);
       expect(body['@test:fakeServer.notExisting'].containsKey('OTHERDEVICE'),
           true);

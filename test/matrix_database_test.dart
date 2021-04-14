@@ -26,7 +26,7 @@ void main() {
   group('Databse', () {
     Logs().level = Level.error;
     var clientId = -1;
-    var room = Room(id: '!room:blubb');
+    final room = Room(id: '!room:blubb');
     test('setupDatabase', () async {
       final database = await getDatabase(null);
       clientId = await database.insertClient(

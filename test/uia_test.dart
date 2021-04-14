@@ -26,7 +26,7 @@ void main() {
   group('UIA', () {
     Logs().level = Level.error;
     test('it should work', () async {
-      var completed = <String>[];
+      final completed = <String>[];
       var updated = 0;
       var finished = false;
       final request = UiaRequest(

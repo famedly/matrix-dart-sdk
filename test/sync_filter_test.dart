@@ -129,7 +129,7 @@ const updates = {
 
 void testUpdates(bool Function(SyncUpdate s) test, Map<String, bool> expected) {
   for (final update in updates.entries) {
-    var sync = SyncUpdate.fromJson(update.value);
+    final sync = SyncUpdate.fromJson(update.value);
     expect(test(sync), expected[update.key]);
   }
 }
@@ -138,7 +138,7 @@ void main() {
   group('Sync Filters', () {
     Logs().level = Level.error;
     test('room update', () {
-      var testFn = (SyncUpdate s) => s.hasRoomUpdate;
+      final testFn = (SyncUpdate s) => s.hasRoomUpdate;
       final expected = {
         'empty': false,
         'presence': false,
@@ -152,7 +152,7 @@ void main() {
     });
 
     test('presence update', () {
-      var testFn = (SyncUpdate s) => s.hasPresenceUpdate;
+      final testFn = (SyncUpdate s) => s.hasPresenceUpdate;
       final expected = {
         'empty': false,
         'presence': true,

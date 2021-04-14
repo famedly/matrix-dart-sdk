@@ -338,7 +338,7 @@ class OlmManager {
           }
         });
     if (existingSessions != null) {
-      for (var session in existingSessions) {
+      for (final session in existingSessions) {
         if (type == 0 && session.session.matches_inbound(body) == true) {
           try {
             plaintext = session.session.decrypt(type, body);
@@ -365,7 +365,7 @@ class OlmManager {
     }
 
     if (plaintext == null) {
-      var newSession = olm.Session();
+      final newSession = olm.Session();
       try {
         newSession.create_inbound_from(_olmAccount, senderKey, body);
         _olmAccount.remove_one_time_keys(newSession);
@@ -518,8 +518,8 @@ class OlmManager {
   Future<void> startOutgoingOlmSessions(List<DeviceKeys> deviceKeys) async {
     Logs().v(
         '[OlmManager] Starting session with ${deviceKeys.length} devices...');
-    var requestingKeysFrom = <String, Map<String, String>>{};
-    for (var device in deviceKeys) {
+    final requestingKeysFrom = <String, Map<String, String>>{};
+    for (final device in deviceKeys) {
       if (requestingKeysFrom[device.userId] == null) {
         requestingKeysFrom[device.userId] = {};
       }
@@ -529,20 +529,21 @@ class OlmManager {
     final response =
         await client.requestOneTimeKeys(requestingKeysFrom, timeout: 10000);
 
-    for (var userKeysEntry in response.oneTimeKeys.entries) {
+    for (final userKeysEntry in response.oneTimeKeys.entries) {
       final userId = userKeysEntry.key;
-      for (var deviceKeysEntry in userKeysEntry.value.entries) {
+      for (final deviceKeysEntry in userKeysEntry.value.entries) {
         final deviceId = deviceKeysEntry.key;
         final fingerprintKey =
             client.userDeviceKeys[userId].deviceKeys[deviceId].ed25519Key;
         final identityKey =
             client.userDeviceKeys[userId].deviceKeys[deviceId].curve25519Key;
-        for (Map<String, dynamic> deviceKey in deviceKeysEntry.value.values) {
+        for (final Map<String, dynamic> deviceKey
+            in deviceKeysEntry.value.values) {
           if (!deviceKey.checkJsonSignature(fingerprintKey, userId, deviceId)) {
             continue;
           }
           Logs().v('[OlmManager] Starting session with $userId:$deviceId');
-          var session = olm.Session();
+          final session = olm.Session();
           try {
             session.create_outbound(_olmAccount, identityKey, deviceKey['key']);
             await storeOlmSession(OlmSession(
@@ -608,7 +609,7 @@ class OlmManager {
       List<DeviceKeys> deviceKeys,
       String type,
       Map<String, dynamic> payload) async {
-    var data = <String, Map<String, Map<String, dynamic>>>{};
+    final data = <String, Map<String, Map<String, dynamic>>>{};
     // first check if any of our sessions we want to encrypt for are in the database
     if (client.database != null) {
       await getOlmSessionsForDevicesFromDatabase(

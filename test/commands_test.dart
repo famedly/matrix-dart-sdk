@@ -94,7 +94,7 @@ void main() {
     test('me', () async {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/me heya');
-      var sent = getLastMessagePayload();
+      final sent = getLastMessagePayload();
       expect(sent, {
         'msgtype': 'm.emote',
         'body': 'heya',
@@ -104,7 +104,7 @@ void main() {
     test('plain', () async {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/plain *floof*');
-      var sent = getLastMessagePayload();
+      final sent = getLastMessagePayload();
       expect(sent, {
         'msgtype': 'm.text',
         'body': '*floof*',
@@ -114,7 +114,7 @@ void main() {
     test('html', () async {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/html <b>yay</b>');
-      var sent = getLastMessagePayload();
+      final sent = getLastMessagePayload();
       expect(sent, {
         'msgtype': 'm.text',
         'body': '<b>yay</b>',
@@ -127,7 +127,7 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/react 🦊',
           inReplyTo: Event(eventId: '\$event'));
-      var sent = getLastMessagePayload('m.reaction');
+      final sent = getLastMessagePayload('m.reaction');
       expect(sent, {
         'm.relates_to': {
           'rel_type': 'm.annotation',
@@ -231,7 +231,7 @@ void main() {
     test('myroomnick', () async {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/myroomnick Foxies~');
-      var sent = getLastMessagePayload('m.room.member', client.userID);
+      final sent = getLastMessagePayload('m.room.member', client.userID);
       expect(sent, {
         'displayname': 'Foxies~',
         'membership': 'join',
@@ -241,7 +241,7 @@ void main() {
     test('myroomavatar', () async {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/myroomavatar mxc://beep/boop');
-      var sent = getLastMessagePayload('m.room.member', client.userID);
+      final sent = getLastMessagePayload('m.room.member', client.userID);
       expect(sent, {
         'avatar_url': 'mxc://beep/boop',
         'membership': 'join',

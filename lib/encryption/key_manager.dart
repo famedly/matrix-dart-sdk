@@ -625,7 +625,7 @@ class KeyManager {
   }) async {
     if (tryOnlineBackup && await isCached()) {
       // let's first check our online key backup store thingy...
-      var hadPreviously =
+      final hadPreviously =
           getInboundGroupSession(room.id, sessionId, senderKey) != null;
       try {
         await loadSingleKey(room.id, sessionId);
@@ -894,7 +894,7 @@ class KeyManager {
         'request_id': request.requestId,
         'requesting_device_id': client.deviceID,
       };
-      var data = <String, Map<String, Map<String, dynamic>>>{};
+      final data = <String, Map<String, Map<String, dynamic>>>{};
       for (final device in request.devices) {
         if (!data.containsKey(device.userId)) {
           data[device.userId] = {};

@@ -95,9 +95,9 @@ void main() {
       final available = await matrix.usernameAvailable('testuser');
       expect(available, true);
 
-      var loginStateFuture = matrix.onLoginStateChanged.stream.first;
-      var firstSyncFuture = matrix.onFirstSync.stream.first;
-      var syncFuture = matrix.onSync.stream.first;
+      final loginStateFuture = matrix.onLoginStateChanged.stream.first;
+      final firstSyncFuture = matrix.onFirstSync.stream.first;
+      final syncFuture = matrix.onSync.stream.first;
 
       await matrix.init(
         newToken: 'abcd',
@@ -110,9 +110,9 @@ void main() {
 
       await Future.delayed(Duration(milliseconds: 50));
 
-      var loginState = await loginStateFuture;
-      var firstSync = await firstSyncFuture;
-      var sync = await syncFuture;
+      final loginState = await loginStateFuture;
+      final firstSync = await firstSyncFuture;
+      final sync = await syncFuture;
 
       expect(loginState, LoginState.logged);
       expect(firstSync, true);
@@ -203,7 +203,7 @@ void main() {
     });
 
     test('Logout', () async {
-      var loginStateFuture = matrix.onLoginStateChanged.stream.first;
+      final loginStateFuture = matrix.onLoginStateChanged.stream.first;
       await matrix.logout();
 
       expect(matrix.accessToken == null, true);
@@ -213,14 +213,14 @@ void main() {
       expect(matrix.deviceName == null, true);
       expect(matrix.prevBatch == null, true);
 
-      var loginState = await loginStateFuture;
+      final loginState = await loginStateFuture;
       expect(loginState, LoginState.loggedOut);
     });
 
     test('Room Update Test', () async {
       await matrix.onRoomUpdate.close();
 
-      var roomUpdateList = await roomUpdateListFuture;
+      final roomUpdateList = await roomUpdateListFuture;
 
       expect(roomUpdateList.length, 4);
 
@@ -242,7 +242,7 @@ void main() {
     test('Event Update Test', () async {
       await matrix.onEvent.close();
 
-      var eventUpdateList = await eventUpdateListFuture;
+      final eventUpdateList = await eventUpdateListFuture;
 
       expect(eventUpdateList.length, 14);
 
@@ -303,7 +303,7 @@ void main() {
     test('To Device Update Test', () async {
       await matrix.onToDeviceEvent.close();
 
-      var eventUpdateList = await toDeviceUpdateListFuture;
+      final eventUpdateList = await toDeviceUpdateListFuture;
 
       expect(eventUpdateList.length, 2);
 
@@ -351,7 +351,7 @@ void main() {
     });
 
     test('get archive', () async {
-      var archive = await matrix.archive;
+      final archive = await matrix.archive;
 
       await Future.delayed(Duration(milliseconds: 50));
       expect(archive.length, 2);
@@ -526,7 +526,7 @@ void main() {
     });
     test('Test the fake store api', () async {
       final database = await getDatabase(null);
-      var client1 = Client(
+      final client1 = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
         databaseBuilder: (_) => database,
@@ -546,7 +546,7 @@ void main() {
       expect(client1.isLogged(), true);
       expect(client1.rooms.length, 2);
 
-      var client2 = Client(
+      final client2 = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
         databaseBuilder: (_) => database,

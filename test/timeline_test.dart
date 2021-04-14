@@ -33,7 +33,7 @@ void main() {
     final roomID = '!1234:example.com';
     final testTimeStamp = DateTime.now().millisecondsSinceEpoch;
     var updateCount = 0;
-    var insertList = <int>[];
+    final insertList = <int>[];
     var olmEnabled = true;
 
     Client client;

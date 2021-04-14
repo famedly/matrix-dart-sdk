@@ -25,7 +25,7 @@ void main() {
   /// All Tests related to the ChatTime
   group('Canonical Json', () {
     Logs().level = Level.error;
-    var textMap = <String, Map<String, dynamic>>{
+    final textMap = <String, Map<String, dynamic>>{
       '{}': {},
       '{"one":1,"two":"Two"}': {'one': 1, 'two': 'Two'},
       '{"a":"1","b":"2"}': {'b': '2', 'a': '1'},

@@ -53,7 +53,7 @@ class EventUpdate {
       return this;
     }
     try {
-      var decrpytedEvent = await room.client.encryption.decryptRoomEvent(
+      final decrpytedEvent = await room.client.encryption.decryptRoomEvent(
           room.id, Event.fromJson(content, room, sortOrder),
           store: store, updateType: type);
       return EventUpdate(
