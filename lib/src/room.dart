@@ -1100,13 +1100,7 @@ class Room {
     );
 
     if (states != null) {
-      var rawStates;
-      if (states is Future) {
-        rawStates = await states;
-      } else {
-        rawStates = states;
-      }
-      for (final rawState in rawStates) {
+      for (final rawState in await states) {
         final newState = Event.fromDb(rawState, newRoom);
         newRoom.setState(newState);
       }
@@ -1114,13 +1108,7 @@ class Room {
 
     final newRoomAccountData = <String, BasicRoomEvent>{};
     if (roomAccountData != null) {
-      var rawRoomAccountData;
-      if (roomAccountData is Future) {
-        rawRoomAccountData = await roomAccountData;
-      } else {
-        rawRoomAccountData = roomAccountData;
-      }
-      for (final singleAccountData in rawRoomAccountData) {
+      for (final singleAccountData in await roomAccountData) {
         final content = Event.getMapFromPayload(singleAccountData.content);
         final newData = BasicRoomEvent(
           content: content,
