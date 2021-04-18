@@ -27,6 +27,7 @@ import 'utils/matrix_localizations.dart';
 import 'utils/receipt.dart';
 import 'utils/event_localizations.dart';
 import 'utils/crypto/encrypted_file.dart';
+import 'utils/html_to_text.dart';
 
 abstract class RelationshipTypes {
   static const String reply = 'm.in_reply_to';
@@ -285,6 +286,12 @@ class Event extends MatrixEvent {
     if (formattedText != '') return formattedText;
     return '$type';
   }
+
+  /// Use this to get a plain-text representation of the event, stripping things
+  /// like spoilers and thelike. Useful for plain text notifications.
+  String get plaintextBody => content['format'] == 'org.matrix.custom.html'
+      ? HtmlToText.convert(formattedText)
+      : body;
 
   /// Returns a list of [Receipt] instances for this event.
   List<Receipt> get receipts {

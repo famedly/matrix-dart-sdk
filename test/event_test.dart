@@ -945,6 +945,20 @@ void main() {
       expect(
           event.aggregatedEvents(timeline, RelationshipTypes.edit), <Event>{});
     });
+    test('plaintextBody', () {
+      final event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'body': 'blah',
+          'msgtype': 'm.text',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '<b>blah</b>',
+        },
+        'event_id': '\$source',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.plaintextBody, '**blah**');
+    });
     test('getDisplayEvent', () {
       var event = Event.fromJson({
         'type': EventTypes.Message,
