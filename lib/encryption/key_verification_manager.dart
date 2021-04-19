@@ -42,9 +42,7 @@ class KeyVerificationManager {
         entriesToDispose.add(entry.key);
       }
     }
-    for (final k in entriesToDispose) {
-      _requests.remove(k);
-    }
+    entriesToDispose.forEach(_requests.remove);
   }
 
   void addRequest(KeyVerification request) {

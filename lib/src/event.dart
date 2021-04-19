@@ -295,14 +295,11 @@ class Event extends MatrixEvent {
   /// Returns a list of [Receipt] instances for this event.
   List<Receipt> get receipts {
     if (!(room.roomAccountData.containsKey('m.receipt'))) return [];
-    final receiptsList = <Receipt>[];
-    for (final entry in room.roomAccountData['m.receipt'].content.entries) {
-      if (entry.value['event_id'] == eventId) {
-        receiptsList.add(Receipt(room.getUserByMXIDSync(entry.key),
-            DateTime.fromMillisecondsSinceEpoch(entry.value['ts'])));
-      }
-    }
-    return receiptsList;
+    return room.roomAccountData['m.receipt'].content.entries
+        .where((entry) => entry.value['event_id'] == eventId)
+        .map((entry) => Receipt(room.getUserByMXIDSync(entry.key),
+            DateTime.fromMillisecondsSinceEpoch(entry.value['ts'])))
+        .toList();
   }
 
   /// Removes this event if the status is < 1. This event will just be removed

@@ -249,13 +249,11 @@ class Client extends MatrixApi {
     if (accountData['m.direct'] != null &&
         accountData['m.direct'].content[userId] is List<dynamic> &&
         accountData['m.direct'].content[userId].length > 0) {
-      final potentialRooms = <Room>{};
-      for (final roomId in accountData['m.direct'].content[userId]) {
-        final room = getRoomById(roomId);
-        if (room != null && room.membership == Membership.join) {
-          potentialRooms.add(room);
-        }
-      }
+      final potentialRooms = accountData['m.direct']
+          .content[userId]
+          .cast<String>()
+          .map(getRoomById)
+          .where((room) => room != null && room.membership == Membership.join);
       if (potentialRooms.isNotEmpty) {
         return potentialRooms
             .fold(

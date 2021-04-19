@@ -285,9 +285,8 @@ class Room {
     // perfect, it is only used for the room preview in the room list and sorting
     // said room list, so it should be good enough.
     var lastTime = DateTime.fromMillisecondsSinceEpoch(0);
-    final lastEvents = <Event>[
-      for (var type in client.roomPreviewLastEvents) getState(type)
-    ]..removeWhere((e) => e == null);
+    final lastEvents =
+        client.roomPreviewLastEvents.map(getState).where((e) => e != null);
 
     var lastEvent = lastEvents.isEmpty
         ? null
@@ -375,12 +374,10 @@ class Room {
       }
     }
     if (heroes.isNotEmpty) {
-      var displayname = '';
-      for (final hero in heroes) {
-        if (hero.isEmpty) continue;
-        displayname += getUserByMXIDSync(hero).calcDisplayname() + ', ';
-      }
-      return displayname.substring(0, displayname.length - 2);
+      return heroes
+          .where((hero) => hero.isNotEmpty)
+          .map((hero) => getUserByMXIDSync(hero).calcDisplayname())
+          .join(', ');
     }
     if (membership == Membership.invite &&
         getState(EventTypes.RoomMember, client.userID) != null) {

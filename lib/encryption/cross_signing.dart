@@ -115,19 +115,11 @@ class CrossSigning {
     ]);
   }
 
-  bool signable(List<SignableKey> keys) {
-    for (final key in keys) {
-      if (key is CrossSigningKey && key.usage.contains('master')) {
-        return true;
-      }
-      if (key.userId == client.userID &&
-          (key is DeviceKeys) &&
-          key.identifier != client.deviceID) {
-        return true;
-      }
-    }
-    return false;
-  }
+  bool signable(List<SignableKey> keys) => keys.any((key) =>
+      key is CrossSigningKey && key.usage.contains('master') ||
+      key is DeviceKeys &&
+          key.userId == client.userID &&
+          key.identifier != client.deviceID);
 
   Future<void> sign(List<SignableKey> keys) async {
     Uint8List selfSigningKey;

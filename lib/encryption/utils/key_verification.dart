@@ -74,18 +74,8 @@ enum KeyVerificationState {
 
 enum KeyVerificationMethod { emoji, numbers }
 
-List<String> _intersect(List<String> a, List<dynamic> b) {
-  if (b == null || a == null) {
-    return [];
-  }
-  final res = <String>[];
-  for (final v in a) {
-    if (b.contains(v)) {
-      res.add(v);
-    }
-  }
-  return res;
-}
+List<String> _intersect(List<String> a, List<dynamic> b) =>
+    (b == null || a == null) ? [] : a.where(b.contains).toList();
 
 List<int> _bytesToInt(Uint8List bytes, int totalBits) {
   final ret = <int>[];
