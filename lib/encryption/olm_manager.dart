@@ -166,14 +166,17 @@ class OlmManager {
         // generate one-time keys
         // we generate 2/3rds of max, so that other keys people may still have can
         // still be used
+        final max_number = _olmAccount.max_number_of_one_time_keys();
+        Logs().d("max_number_of_one_time_keys: $max_number");
         final oneTimeKeysCount =
-            (_olmAccount.max_number_of_one_time_keys() * 2 / 3).floor() -
+            (max_number * 2 / 3).floor() -
                 oldKeyCount -
                 oldOTKsNeedingUpload;
         if (oneTimeKeysCount > 0) {
           _olmAccount.generate_one_time_keys(oneTimeKeysCount);
         }
         uploadedOneTimeKeysCount = oneTimeKeysCount + oldOTKsNeedingUpload;
+        Logs().d("$uploadedOneTimeKeysCount = $oneTimeKeysCount + $oldOTKsNeedingUpload");
         final Map<String, dynamic> oneTimeKeys =
             json.decode(_olmAccount.one_time_keys());
 
@@ -247,6 +250,7 @@ class OlmManager {
       if (updateDatabase) {
         await client.database?.updateClientKeys(pickledOlmAccount, client.id);
       }
+      Logs().d("uploadedOneTimeKeysCount: $uploadedOneTimeKeysCount response['signed_curve25519']: $response['signed_curve25519']");
       return (uploadedOneTimeKeysCount != null &&
               response['signed_curve25519'] == uploadedOneTimeKeysCount) ||
           uploadedOneTimeKeysCount == null;
