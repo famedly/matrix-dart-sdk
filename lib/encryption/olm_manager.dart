@@ -24,9 +24,9 @@ import 'package:olm/olm.dart' as olm;
 import 'package:pedantic/pedantic.dart';
 
 import '../encryption/utils/json_signature_check_extension.dart';
+import '../src/utils/run_in_root.dart';
 import 'encryption.dart';
 import 'utils/olm_session.dart';
-import '../src/utils/run_in_root.dart';
 
 class OlmManager {
   final Encryption encryption;
@@ -149,6 +149,7 @@ class OlmManager {
     }
 
     if (_uploadKeysLock) {
+      Logs().d("No _uploadKeysLock");
       return false;
     }
     _uploadKeysLock = true;
@@ -247,6 +248,8 @@ class OlmManager {
       if (updateDatabase) {
         await client.database?.updateClientKeys(pickledOlmAccount, client.id);
       }
+      Logs().d(
+          'uploadedOneTimeKeysCount: $uploadedOneTimeKeysCount \t response: $response');
       return (uploadedOneTimeKeysCount != null &&
               response['signed_curve25519'] == uploadedOneTimeKeysCount) ||
           uploadedOneTimeKeysCount == null;
