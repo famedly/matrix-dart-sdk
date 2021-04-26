@@ -84,9 +84,7 @@ List<int> _bytesToInt(Uint8List bytes, int totalBits) {
   for (final byte in bytes) {
     for (final bit in [7, 6, 5, 4, 3, 2, 1, 0]) {
       numBits++;
-      if ((byte & (1 << bit)) > 0) {
-        current += 1 << (totalBits - numBits);
-      }
+      current |= ((byte >> bit) & 1) << (totalBits - numBits);
       if (numBits >= totalBits) {
         ret.add(current);
         current = 0;
