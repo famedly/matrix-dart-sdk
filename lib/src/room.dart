@@ -251,6 +251,18 @@ class Room {
           ? getState(EventTypes.RoomCanonicalAlias).content['alias']
           : '';
 
+  /// Sets the canonical alias. If the [canonicalAlias] is not yet an alias of
+  /// this room, it will create one.
+  Future<void> setCanonicalAlias(String canonicalAlias) async {
+    final aliases = await client.requestRoomAliases(id);
+    if (!aliases.contains(canonicalAlias)) {
+      await client.createRoomAlias(canonicalAlias, id);
+    }
+    await client.sendState(id, EventTypes.RoomCanonicalAlias, {
+      'alias': canonicalAlias,
+    });
+  }
+
   /// If this room is a direct chat, this is the matrix ID of the user.
   /// Returns null otherwise.
   String get directChatMatrixID {
@@ -1641,17 +1653,6 @@ class Room {
       content,
       txid: txid,
     );
-  }
-
-  /// Returns all aliases for this room.
-  List<String> get aliases {
-    final aliases = <String>[];
-    for (final aliasEvent in states[EventTypes.RoomAliases].values) {
-      if (aliasEvent.content['aliases'] is List) {
-        aliases.addAll(aliasEvent.content['aliases']);
-      }
-    }
-    return aliases;
   }
 
   /// A room may be public meaning anyone can join the room without any prior action. Alternatively,
