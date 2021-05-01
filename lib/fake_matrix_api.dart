@@ -1150,7 +1150,7 @@ class FakeMatrixApi extends MockClient {
                 'prev_batch': 'p1902',
                 'total_room_count_estimate': 115
               },
-      '/client/r0/room/!localpart%3Aexample.com/aliases': (var req) => {
+      '/client/r0/rooms/!localpart%3Aexample.com/aliases': (var req) => {
             'aliases': [
               '#somewhere:example.com',
               '#another:example.com',

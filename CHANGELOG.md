@@ -1,3 +1,6 @@
+## 0.2.4
+- fix: Request aliases
+
 ## 0.2.3
 - feat: Add room and event types for spaces
 

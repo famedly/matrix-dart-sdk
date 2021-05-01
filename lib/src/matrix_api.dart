@@ -903,7 +903,7 @@ class MatrixApi {
   Future<List<String>> requestRoomAliases(String roomId) async {
     final response = await request(
       RequestType.GET,
-      '/client/r0/room/${Uri.encodeComponent(roomId)}/aliases',
+      '/client/r0/rooms/${Uri.encodeComponent(roomId)}/aliases',
     );
     return List<String>.from(response['aliases']);
   }
