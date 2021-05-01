@@ -1,4 +1,4 @@
-## 0.2.4
+## 0.2.5
 - fix: Request aliases
 
 ## 0.2.3
