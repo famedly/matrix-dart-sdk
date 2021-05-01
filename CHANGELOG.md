@@ -1,3 +1,6 @@
+## 0.2.6
+- fix: Missing RoomCreationTypes
+
 ## 0.2.5
 - fix: Request aliases
 

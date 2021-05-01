@@ -56,6 +56,7 @@ export 'src/model/push_rule_set.dart';
 export 'src/model/pusher.dart';
 export 'src/model/request_token_response.dart';
 export 'src/model/room_alias_information.dart';
+export 'src/model/room_creation_types.dart';
 export 'src/model/room_keys_info.dart';
 export 'src/model/room_keys_keys.dart';
 export 'src/model/room_summary.dart';
