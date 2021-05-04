@@ -8,14 +8,14 @@ environment:
   sdk: ">=2.7.0 <3.0.0"
 
 dependencies:
-  http: ^0.13.0
+  http: ^0.13.3
   mime: ^1.0.0
   canonical_json: ^1.0.0
   markdown: ^4.0.0
   html_unescape: ^2.0.0
-  moor: ^4.0.0
+  moor: ^4.2.1
   random_string: ^2.1.0
-  crypto: ^3.0.0
+  crypto: ^3.0.1
   base58check: ^2.0.0
   olm: ^2.0.0
   isolate: ^2.0.3
@@ -23,12 +23,12 @@ dependencies:
   matrix_api_lite: ^0.2.6
 
 dev_dependencies:
-  test: ^1.15.7
+  test: ^1.17.3
   coverage: ">=0.15.0 <2.0.0"
-  moor_generator: ^4.0.0
-  build_runner: ^1.11.1
+  moor_generator: ^4.2.2
+  build_runner: ^2.0.2
   pedantic: ^1.11.0
-  dapackages: ^1.4.0
+  dapackages: ^1.6.0
   #flutter_test: {sdk: flutter}
 
 dependency_overrides:
