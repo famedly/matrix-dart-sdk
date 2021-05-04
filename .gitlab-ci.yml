@@ -2,6 +2,7 @@ stages:
   - coverage
   - builddocs
   - deploy
+  - license_checker
 
 workflow:
   rules:
@@ -188,3 +189,23 @@ update-dependencies:
     - pub get
     - git remote set-url --push origin git@gitlab.com:$CI_PROJECT_PATH
     - 'git diff --exit-code || (git checkout -B ${UPDATE_BRANCH} && git add . && git commit -m "chore: Update dependencies" && git push -f origin ${UPDATE_BRANCH} && ./scripts/open-mr.sh)'
+
+license_checker:
+  tags:
+    - linux
+  stage: license
+  only:
+    - schedules
+  image: debian:testing
+  dependencies: []
+  script:
+    - apt update
+    - apt install -y curl gnupg2 git sqlite3 libsqlite3-dev
+    - curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+    - curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list
+    - apt update
+    - apt install -y dart
+    - ln -s /usr/lib/dart/bin/pub /usr/bin/
+    - sed -i 's/libcrypto/libnocrypto/g' lib/src/utils/crypto/ffi.dart
+    - pub get global activate dart_license_checker
+    - pub run dart_license_checker --show-transitive-dependencies
