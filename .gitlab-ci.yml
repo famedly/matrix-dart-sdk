@@ -194,8 +194,8 @@ license_checker:
   tags:
     - linux
   stage: license
-  only:
-    - schedules
+  # only:
+  #   - schedules
   image: debian:testing
   dependencies: []
   script:
