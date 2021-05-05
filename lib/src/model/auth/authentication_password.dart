@@ -68,23 +68,7 @@ class AuthenticationPassword extends AuthenticationData {
     final data = super.toJson();
     if (user != null) data['user'] = user;
     data['password'] = password;
-    switch (identifier.type) {
-      case AuthenticationIdentifierTypes.userId:
-        data['identifier'] =
-            (identifier as AuthenticationUserIdentifier).toJson();
-        break;
-      case AuthenticationIdentifierTypes.phone:
-        data['identifier'] =
-            (identifier as AuthenticationPhoneIdentifier).toJson();
-        break;
-      case AuthenticationIdentifierTypes.thirdParty:
-        data['identifier'] =
-            (identifier as AuthenticationThirdPartyIdentifier).toJson();
-        break;
-      default:
-        data['identifier'] = identifier.toJson();
-        break;
-    }
+    data['identifier'] = identifier.toJson();
     return data;
   }
 }
