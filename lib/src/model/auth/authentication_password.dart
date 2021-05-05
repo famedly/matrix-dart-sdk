@@ -25,8 +25,6 @@ import 'authentication_user_identifier.dart';
 
 import 'authentication_data.dart';
 import 'authentication_identifier.dart';
-import 'authentication_phone_identifier.dart';
-import 'authentication_third_party_identifier.dart';
 import 'authentication_types.dart';
 
 class AuthenticationPassword extends AuthenticationData {
@@ -47,21 +45,8 @@ class AuthenticationPassword extends AuthenticationData {
   AuthenticationPassword.fromJson(Map<String, dynamic> json)
       : user = json['user'],
         password = json['password'],
-        identifier = AuthenticationIdentifier.fromJson(json['identifier']),
-        super.fromJson(json) {
-    switch (identifier.type) {
-      case AuthenticationIdentifierTypes.userId:
-        identifier = AuthenticationUserIdentifier.fromJson(json['identifier']);
-        break;
-      case AuthenticationIdentifierTypes.phone:
-        identifier = AuthenticationPhoneIdentifier.fromJson(json['identifier']);
-        break;
-      case AuthenticationIdentifierTypes.thirdParty:
-        identifier =
-            AuthenticationThirdPartyIdentifier.fromJson(json['identifier']);
-        break;
-    }
-  }
+        identifier = AuthenticationIdentifier.subFromJson(json['identifier']),
+        super.fromJson(json);
 
   @override
   Map<String, dynamic> toJson() {

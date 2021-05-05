@@ -21,6 +21,11 @@
 * SOFTWARE.
 */
 
+import 'authentication_types.dart';
+import 'authentication_user_identifier.dart';
+import 'authentication_phone_identifier.dart';
+import 'authentication_third_party_identifier.dart';
+
 class AuthenticationIdentifier {
   String type;
 
@@ -28,6 +33,19 @@ class AuthenticationIdentifier {
 
   AuthenticationIdentifier.fromJson(Map<String, dynamic> json)
       : type = json['type'];
+
+  factory AuthenticationIdentifier.subFromJson(Map<String, dynamic> json) {
+    switch (json['type']) {
+      case AuthenticationIdentifierTypes.userId:
+        return AuthenticationUserIdentifier.fromJson(json);
+      case AuthenticationIdentifierTypes.phone:
+        return AuthenticationPhoneIdentifier.fromJson(json);
+      case AuthenticationIdentifierTypes.thirdParty:
+        return AuthenticationThirdPartyIdentifier.fromJson(json);
+      default:
+        return AuthenticationIdentifier.fromJson(json);
+    }
+  }
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
