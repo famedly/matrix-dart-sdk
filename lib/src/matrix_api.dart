@@ -152,7 +152,7 @@ class MatrixApi {
     final url = homeserver
         .resolveUri(Uri(path: '_matrix$action', queryParameters: query));
 
-    var headers = <String, String>{};
+    final headers = <String, String>{};
     if (type == RequestType.PUT || type == RequestType.POST) {
       headers['Content-Type'] = contentType;
     }
@@ -1291,7 +1291,7 @@ class MatrixApi {
       {String contentType}) async {
     fileName = fileName.split('/').last;
     final length = file.length;
-    var headers = <String, String>{};
+    final headers = <String, String>{};
     headers['Authorization'] = 'Bearer $accessToken';
     headers['Content-Type'] =
         contentType ?? lookupMimeType(fileName, headerBytes: file);
@@ -1306,8 +1306,8 @@ class MatrixApi {
     streamedRequest.contentLength = length;
     streamedRequest.sink.add(file);
     streamedRequest.sink.close();
-    var streamedResponse = _testMode ? null : await streamedRequest.send();
-    Map<String, dynamic> jsonResponse = json.decode(
+    final streamedResponse = _testMode ? null : await streamedRequest.send();
+    final Map<String, dynamic> jsonResponse = json.decode(
       String.fromCharCodes(_testMode
           ? ((fileName == 'file.jpeg')
                   ? '{"content_uri": "mxc://example.com/AQwafuaFswefuhsfAFAgsw"}'
@@ -1325,7 +1325,7 @@ class MatrixApi {
   /// URL in a message and wants to render a preview for the user.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-media-r0-preview-url
   Future<OpenGraphData> requestOpenGraphDataForUrl(Uri url, {int ts}) async {
-    var action = homeserver
+    final action = homeserver
         .resolveUri(Uri(path: '_matrix/media/r0/preview_url', queryParameters: {
       'url': url.toString(),
       if (ts != null) 'ts': ts.toString(),
@@ -1338,7 +1338,7 @@ class MatrixApi {
   /// This endpoint allows clients to retrieve the configuration of the content repository, such as upload limitations.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-media-r0-config
   Future<int> requestMaxUploadSize() async {
-    var action = homeserver.resolve('_matrix/media/r0/config');
+    final action = homeserver.resolve('_matrix/media/r0/config');
     final response = await httpClient.get(action);
     final rawJson = json.decode(response.body.isEmpty ? '{}' : response.body);
     return rawJson['m.upload.size'];
@@ -1553,7 +1553,7 @@ class MatrixApi {
   /// values in the JSON body.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-pushers-set
   Future<void> setPusher(Pusher pusher, {bool append}) async {
-    var data = pusher.toJson();
+    final data = pusher.toJson();
     if (append != null) {
       data['append'] = append;
     }
