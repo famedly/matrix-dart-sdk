@@ -32,10 +32,9 @@ class AuthenticationThirdPartyIdentifier extends AuthenticationIdentifier {
       : super(type: AuthenticationIdentifierTypes.thirdParty);
 
   AuthenticationThirdPartyIdentifier.fromJson(Map<String, dynamic> json)
-      : super.fromJson(json) {
-    medium = json['medium'];
-    address = json['address'];
-  }
+      : medium = json['medium'],
+        address = json['address'],
+        super.fromJson(json);
 
   @override
   Map<String, dynamic> toJson() {

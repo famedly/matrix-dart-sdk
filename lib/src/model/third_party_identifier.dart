@@ -29,13 +29,12 @@ class ThirdPartyIdentifier {
   int validatedAt;
   int addedAt;
 
-  ThirdPartyIdentifier.fromJson(Map<String, dynamic> json) {
-    medium = ThirdPartyIdentifierMedium.values
-        .firstWhere((medium) => describeEnum(medium) == json['medium']);
-    address = json['address'];
-    validatedAt = json['validated_at'];
-    addedAt = json['added_at'];
-  }
+  ThirdPartyIdentifier.fromJson(Map<String, dynamic> json)
+      : medium = ThirdPartyIdentifierMedium.values
+            .firstWhere((medium) => describeEnum(medium) == json['medium']),
+        address = json['address'],
+        validatedAt = json['validated_at'],
+        addedAt = json['added_at'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

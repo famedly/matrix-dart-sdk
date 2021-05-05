@@ -30,17 +30,16 @@ class ServerCapabilities {
   MRoomVersions mRoomVersions;
   Map<String, dynamic> customCapabilities;
 
-  ServerCapabilities.fromJson(Map<String, dynamic> json) {
-    mChangePassword = json['m.change_password'] != null
-        ? MChangePassword.fromJson(json['m.change_password'])
-        : null;
-    mRoomVersions = json['m.room_versions'] != null
-        ? MRoomVersions.fromJson(json['m.room_versions'])
-        : null;
-    customCapabilities = json.copy()
-      ..remove('m.change_password')
-      ..remove('m.room_versions');
-  }
+  ServerCapabilities.fromJson(Map<String, dynamic> json)
+      : mChangePassword = json['m.change_password'] != null
+            ? MChangePassword.fromJson(json['m.change_password'])
+            : null,
+        mRoomVersions = json['m.room_versions'] != null
+            ? MRoomVersions.fromJson(json['m.room_versions'])
+            : null,
+        customCapabilities = json.copy()
+          ..remove('m.change_password')
+          ..remove('m.room_versions');
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

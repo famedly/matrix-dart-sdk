@@ -24,9 +24,8 @@
 class Tag {
   double order;
 
-  Tag.fromJson(Map<String, dynamic> json) {
-    order = double.tryParse(json['order'].toString());
-  }
+  Tag.fromJson(Map<String, dynamic> json)
+      : order = double.tryParse(json['order'].toString());
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

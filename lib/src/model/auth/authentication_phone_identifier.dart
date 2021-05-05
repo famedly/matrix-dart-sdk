@@ -32,10 +32,9 @@ class AuthenticationPhoneIdentifier extends AuthenticationIdentifier {
       : super(type: AuthenticationIdentifierTypes.phone);
 
   AuthenticationPhoneIdentifier.fromJson(Map<String, dynamic> json)
-      : super.fromJson(json) {
-    country = json['country'];
-    phone = json['phone'];
-  }
+      : country = json['country'],
+        phone = json['phone'],
+        super.fromJson(json);
 
   @override
   Map<String, dynamic> toJson() {

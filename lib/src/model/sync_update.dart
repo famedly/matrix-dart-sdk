@@ -41,39 +41,42 @@ class SyncUpdate {
 
   SyncUpdate();
 
-  SyncUpdate.fromJson(Map<String, dynamic> json) {
-    nextBatch = json['next_batch'];
-    rooms = json['rooms'] != null ? RoomsUpdate.fromJson(json['rooms']) : null;
-    presence = (json['presence'] != null && json['presence']['events'] != null)
-        ? (json['presence']['events'] as List)
-            .map((i) => Presence.fromJson(i))
-            .toList()
-        : null;
-    accountData =
-        (json['account_data'] != null && json['account_data']['events'] != null)
+  SyncUpdate.fromJson(Map<String, dynamic> json)
+      : nextBatch = json['next_batch'],
+        rooms =
+            json['rooms'] != null ? RoomsUpdate.fromJson(json['rooms']) : null,
+        presence =
+            (json['presence'] != null && json['presence']['events'] != null)
+                ? (json['presence']['events'] as List)
+                    .map((i) => Presence.fromJson(i))
+                    .toList()
+                : null,
+        accountData = (json['account_data'] != null &&
+                json['account_data']['events'] != null)
             ? (json['account_data']['events'] as List)
                 .map((i) => BasicEvent.fromJson(i))
                 .toList()
+            : null,
+        toDevice =
+            (json['to_device'] != null && json['to_device']['events'] != null)
+                ? (json['to_device']['events'] as List)
+                    .map((i) => BasicEventWithSender.fromJson(i))
+                    .toList()
+                : null,
+        deviceLists = json['device_lists'] != null
+            ? DeviceListsUpdate.fromJson(json['device_lists'])
+            : null,
+        deviceOneTimeKeysCount = json['device_one_time_keys_count'] != null
+            ? Map<String, int>.from(json['device_one_time_keys_count'])
+            : null,
+        deviceUnusedFallbackKeyTypes = (json[
+                        'device_unused_fallback_key_types'] ??
+                    json[
+                        'org.matrix.msc2732.device_unused_fallback_key_types']) !=
+                null
+            ? List<String>.from(json['device_unused_fallback_key_types'] ??
+                json['org.matrix.msc2732.device_unused_fallback_key_types'])
             : null;
-    toDevice =
-        (json['to_device'] != null && json['to_device']['events'] != null)
-            ? (json['to_device']['events'] as List)
-                .map((i) => BasicEventWithSender.fromJson(i))
-                .toList()
-            : null;
-    deviceLists = json['device_lists'] != null
-        ? DeviceListsUpdate.fromJson(json['device_lists'])
-        : null;
-    deviceOneTimeKeysCount = json['device_one_time_keys_count'] != null
-        ? Map<String, int>.from(json['device_one_time_keys_count'])
-        : null;
-    deviceUnusedFallbackKeyTypes = (json['device_unused_fallback_key_types'] ??
-                json['org.matrix.msc2732.device_unused_fallback_key_types']) !=
-            null
-        ? List<String>.from(json['device_unused_fallback_key_types'] ??
-            json['org.matrix.msc2732.device_unused_fallback_key_types'])
-        : null;
-  }
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

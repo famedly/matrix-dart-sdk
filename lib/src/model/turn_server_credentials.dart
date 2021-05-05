@@ -27,12 +27,11 @@ class TurnServerCredentials {
   List<String> uris;
   num ttl;
 
-  TurnServerCredentials.fromJson(Map<String, dynamic> json) {
-    username = json['username'];
-    password = json['password'];
-    uris = json['uris'].cast<String>();
-    ttl = json['ttl'];
-  }
+  TurnServerCredentials.fromJson(Map<String, dynamic> json)
+      : username = json['username'],
+        password = json['password'],
+        uris = json['uris'].cast<String>(),
+        ttl = json['ttl'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

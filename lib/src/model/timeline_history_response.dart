@@ -29,16 +29,19 @@ class TimelineHistoryResponse {
   List<MatrixEvent> chunk;
   List<MatrixEvent> state;
 
-  TimelineHistoryResponse.fromJson(Map<String, dynamic> json) {
-    start = json['start'];
-    end = json['end'];
-    chunk = json['chunk'] != null
-        ? (json['chunk'] as List).map((i) => MatrixEvent.fromJson(i)).toList()
-        : null;
-    state = json['state'] != null
-        ? (json['state'] as List).map((i) => MatrixEvent.fromJson(i)).toList()
-        : null;
-  }
+  TimelineHistoryResponse.fromJson(Map<String, dynamic> json)
+      : start = json['start'],
+        end = json['end'],
+        chunk = json['chunk'] != null
+            ? (json['chunk'] as List)
+                .map((i) => MatrixEvent.fromJson(i))
+                .toList()
+            : null,
+        state = json['state'] != null
+            ? (json['state'] as List)
+                .map((i) => MatrixEvent.fromJson(i))
+                .toList()
+            : null;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

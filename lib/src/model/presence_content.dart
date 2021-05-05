@@ -29,13 +29,12 @@ class PresenceContent {
   String statusMsg;
   bool currentlyActive;
 
-  PresenceContent.fromJson(Map<String, dynamic> json) {
-    presence = PresenceType.values
-        .firstWhere((p) => p.toString().split('.').last == json['presence']);
-    lastActiveAgo = json['last_active_ago'];
-    statusMsg = json['status_msg'];
-    currentlyActive = json['currently_active'];
-  }
+  PresenceContent.fromJson(Map<String, dynamic> json)
+      : presence = PresenceType.values.firstWhere(
+            (p) => p.toString().split('.').last == json['presence']),
+        lastActiveAgo = json['last_active_ago'],
+        statusMsg = json['status_msg'],
+        currentlyActive = json['currently_active'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

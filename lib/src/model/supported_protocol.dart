@@ -28,16 +28,15 @@ class SupportedProtocol {
   Map<String, ProtocolFieldType> fieldTypes;
   List<ProtocolInstance> instances;
 
-  SupportedProtocol.fromJson(Map<String, dynamic> json) {
-    userFields = json['user_fields'].cast<String>();
-    locationFields = json['location_fields'].cast<String>();
-    icon = json['icon'];
-    fieldTypes = (json['field_types'] as Map)
-        .map((k, v) => MapEntry(k, ProtocolFieldType.fromJson(v)));
-    instances = (json['instances'] as List)
-        .map((v) => ProtocolInstance.fromJson(v))
-        .toList();
-  }
+  SupportedProtocol.fromJson(Map<String, dynamic> json)
+      : userFields = json['user_fields'].cast<String>(),
+        locationFields = json['location_fields'].cast<String>(),
+        icon = json['icon'],
+        fieldTypes = (json['field_types'] as Map)
+            .map((k, v) => MapEntry(k, ProtocolFieldType.fromJson(v))),
+        instances = (json['instances'] as List)
+            .map((v) => ProtocolInstance.fromJson(v))
+            .toList();
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

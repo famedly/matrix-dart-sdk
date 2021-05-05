@@ -28,11 +28,10 @@ class ThirdPartyUser {
   String protocol;
   Map<String, dynamic> fields;
 
-  ThirdPartyUser.fromJson(Map<String, dynamic> json) {
-    userId = json['userid'];
-    protocol = json['protocol'];
-    fields = (json['fields'] as Map<String, dynamic>).copy();
-  }
+  ThirdPartyUser.fromJson(Map<String, dynamic> json)
+      : userId = json['userid'],
+        protocol = json['protocol'],
+        fields = (json['fields'] as Map<String, dynamic>).copy();
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

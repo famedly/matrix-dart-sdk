@@ -29,14 +29,13 @@ class LoginResponse {
   String deviceId;
   WellKnownInformation wellKnownInformation;
 
-  LoginResponse.fromJson(Map<String, dynamic> json) {
-    userId = json['user_id'];
-    accessToken = json['access_token'];
-    deviceId = json['device_id'];
-    if (json['well_known'] is Map) {
-      wellKnownInformation = WellKnownInformation.fromJson(json['well_known']);
-    }
-  }
+  LoginResponse.fromJson(Map<String, dynamic> json)
+      : userId = json['user_id'],
+        accessToken = json['access_token'],
+        deviceId = json['device_id'],
+        wellKnownInformation = (json['well_known'] is Map)
+            ? WellKnownInformation.fromJson(json['well_known'])
+            : null;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

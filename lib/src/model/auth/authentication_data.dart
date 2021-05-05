@@ -27,10 +27,9 @@ class AuthenticationData {
 
   AuthenticationData({this.type, this.session});
 
-  AuthenticationData.fromJson(Map<String, dynamic> json) {
-    type = json['type'];
-    session = json['session'];
-  }
+  AuthenticationData.fromJson(Map<String, dynamic> json)
+      : type = json['type'],
+        session = json['session'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

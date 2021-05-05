@@ -27,12 +27,11 @@ class NotificationsQueryResponse {
   String nextToken;
   List<Notification> notifications;
 
-  NotificationsQueryResponse.fromJson(Map<String, dynamic> json) {
-    nextToken = json['next_token'];
-    notifications = (json['notifications'] as List)
-        .map((v) => Notification.fromJson(v))
-        .toList();
-  }
+  NotificationsQueryResponse.fromJson(Map<String, dynamic> json)
+      : nextToken = json['next_token'],
+        notifications = (json['notifications'] as List)
+            .map((v) => Notification.fromJson(v))
+            .toList();
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

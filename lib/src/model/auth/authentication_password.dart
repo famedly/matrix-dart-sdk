@@ -45,10 +45,10 @@ class AuthenticationPassword extends AuthenticationData {
         );
 
   AuthenticationPassword.fromJson(Map<String, dynamic> json)
-      : super.fromJson(json) {
-    user = json['user'];
-    password = json['password'];
-    identifier = AuthenticationIdentifier.fromJson(json['identifier']);
+      : user = json['user'],
+        password = json['password'],
+        identifier = AuthenticationIdentifier.fromJson(json['identifier']),
+        super.fromJson(json) {
     switch (identifier.type) {
       case AuthenticationIdentifierTypes.userId:
         identifier = AuthenticationUserIdentifier.fromJson(json['identifier']);

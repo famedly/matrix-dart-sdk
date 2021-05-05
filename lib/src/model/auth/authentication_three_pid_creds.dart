@@ -72,12 +72,11 @@ class ThreepidCreds {
   ThreepidCreds(
       {this.sid, this.clientSecret, this.idServer, this.idAccessToken});
 
-  ThreepidCreds.fromJson(Map<String, dynamic> json) {
-    sid = json['sid'];
-    clientSecret = json['client_secret'];
-    idServer = json['id_server'];
-    idAccessToken = json['id_access_token'];
-  }
+  ThreepidCreds.fromJson(Map<String, dynamic> json)
+      : sid = json['sid'],
+        clientSecret = json['client_secret'],
+        idServer = json['id_server'],
+        idAccessToken = json['id_access_token'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

@@ -28,11 +28,10 @@ class ThirdPartyLocation {
   String protocol;
   Map<String, dynamic> fields;
 
-  ThirdPartyLocation.fromJson(Map<String, dynamic> json) {
-    alias = json['alias'];
-    protocol = json['protocol'];
-    fields = (json['fields'] as Map<String, dynamic>).copy();
-  }
+  ThirdPartyLocation.fromJson(Map<String, dynamic> json)
+      : alias = json['alias'],
+        protocol = json['protocol'],
+        fields = (json['fields'] as Map<String, dynamic>).copy();
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

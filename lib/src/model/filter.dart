@@ -38,22 +38,21 @@ class Filter {
     this.eventFields,
   });
 
-  Filter.fromJson(Map<String, dynamic> json) {
-    room = json['room'] != null ? RoomFilter.fromJson(json['room']) : null;
-    presence = json['presence'] != null
-        ? EventFilter.fromJson(json['presence'])
-        : null;
-    accountData = json['account_data'] != null
-        ? EventFilter.fromJson(json['account_data'])
-        : null;
-    eventFormat = json['event_format'] != null
-        ? EventFormat.values.firstWhere(
-            (e) => e.toString().split('.').last == json['event_format'])
-        : null;
-    eventFields = json['event_fields'] != null
-        ? json['event_fields'].cast<String>()
-        : null;
-  }
+  Filter.fromJson(Map<String, dynamic> json)
+      : room = json['room'] != null ? RoomFilter.fromJson(json['room']) : null,
+        presence = json['presence'] != null
+            ? EventFilter.fromJson(json['presence'])
+            : null,
+        accountData = json['account_data'] != null
+            ? EventFilter.fromJson(json['account_data'])
+            : null,
+        eventFormat = json['event_format'] != null
+            ? EventFormat.values.firstWhere(
+                (e) => e.toString().split('.').last == json['event_format'])
+            : null,
+        eventFields = json['event_fields'] != null
+            ? json['event_fields'].cast<String>()
+            : null;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

@@ -28,18 +28,23 @@ class WellKnownInformation {
   MHomeserver mIdentityServer;
   Map<String, dynamic> content;
 
-  WellKnownInformation.fromJson(Map<String, dynamic> json) {
-    content = json;
-    final mHomeserverMap = json.tryGetMap<String, dynamic>('m.homeserver');
-    if (mHomeserverMap != null) {
-      mHomeserver = MHomeserver.fromJson(mHomeserverMap);
-    }
-    final mIdentityServerMap =
-        json.tryGetMap<String, dynamic>('m.identity_server');
-    if (mIdentityServerMap != null) {
-      mIdentityServer = MHomeserver.fromJson(mIdentityServerMap);
-    }
-  }
+  factory WellKnownInformation.fromJson(Map<String, dynamic> json) =>
+      WellKnownInformation._fromJson(
+          json,
+          json.tryGetMap<String, dynamic>('m.homeserver'),
+          json.tryGetMap<String, dynamic>('m.identity_server'));
+
+  WellKnownInformation._fromJson(
+      Map<String, dynamic> json,
+      Map<String, dynamic> mHomeserverMap,
+      Map<String, dynamic> mIdentityServerMap)
+      : content = json,
+        mHomeserver = mHomeserverMap != null
+            ? MHomeserver.fromJson(mHomeserverMap)
+            : null,
+        mIdentityServer = mIdentityServerMap != null
+            ? MHomeserver.fromJson(mIdentityServerMap)
+            : null;
 
   Map<String, dynamic> toJson() {
     final data = content;

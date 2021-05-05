@@ -32,10 +32,10 @@ class BasicEvent {
     this.content,
   });
 
-  BasicEvent.fromJson(Map<String, dynamic> json) {
-    type = json['type'];
-    content = (json['content'] as Map<String, dynamic>).copy();
-  }
+  BasicEvent.fromJson(Map<String, dynamic> json)
+      : type = json['type'],
+        content = (json['content'] as Map<String, dynamic>).copy();
+
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     data['type'] = type;

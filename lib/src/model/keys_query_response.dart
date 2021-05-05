@@ -31,48 +31,45 @@ class KeysQueryResponse {
   Map<String, MatrixCrossSigningKey> selfSigningKeys;
   Map<String, MatrixCrossSigningKey> userSigningKeys;
 
-  KeysQueryResponse.fromJson(Map<String, dynamic> json) {
-    failures = (json['failures'] as Map<String, dynamic>)?.copy();
-    deviceKeys = json['device_keys'] != null
-        ? (json['device_keys'] as Map).map(
-            (k, v) => MapEntry(
-              k,
-              (v as Map).map(
+  KeysQueryResponse.fromJson(Map<String, dynamic> json)
+      : failures = (json['failures'] as Map<String, dynamic>)?.copy(),
+        deviceKeys = json['device_keys'] != null
+            ? (json['device_keys'] as Map).map(
                 (k, v) => MapEntry(
                   k,
-                  MatrixDeviceKeys.fromJson(v),
+                  (v as Map).map(
+                    (k, v) => MapEntry(
+                      k,
+                      MatrixDeviceKeys.fromJson(v),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          )
-        : null;
-    masterKeys = json['master_keys'] != null
-        ? (json['master_keys'] as Map).map(
-            (k, v) => MapEntry(
-              k,
-              MatrixCrossSigningKey.fromJson(v),
-            ),
-          )
-        : null;
-
-    selfSigningKeys = json['self_signing_keys'] != null
-        ? (json['self_signing_keys'] as Map).map(
-            (k, v) => MapEntry(
-              k,
-              MatrixCrossSigningKey.fromJson(v),
-            ),
-          )
-        : null;
-
-    userSigningKeys = json['user_signing_keys'] != null
-        ? (json['user_signing_keys'] as Map).map(
-            (k, v) => MapEntry(
-              k,
-              MatrixCrossSigningKey.fromJson(v),
-            ),
-          )
-        : null;
-  }
+              )
+            : null,
+        masterKeys = json['master_keys'] != null
+            ? (json['master_keys'] as Map).map(
+                (k, v) => MapEntry(
+                  k,
+                  MatrixCrossSigningKey.fromJson(v),
+                ),
+              )
+            : null,
+        selfSigningKeys = json['self_signing_keys'] != null
+            ? (json['self_signing_keys'] as Map).map(
+                (k, v) => MapEntry(
+                  k,
+                  MatrixCrossSigningKey.fromJson(v),
+                ),
+              )
+            : null,
+        userSigningKeys = json['user_signing_keys'] != null
+            ? (json['user_signing_keys'] as Map).map(
+                (k, v) => MapEntry(
+                  k,
+                  MatrixCrossSigningKey.fromJson(v),
+                ),
+              )
+            : null;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

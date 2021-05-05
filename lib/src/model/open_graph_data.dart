@@ -30,15 +30,14 @@ class OpenGraphData {
   int ogImageWidth;
   int matrixImageSize;
 
-  OpenGraphData.fromJson(Map<String, dynamic> json) {
-    ogTitle = json['og:title'];
-    ogDescription = json['og:description'];
-    ogImage = json['og:image'];
-    ogImageType = json['og:image:type'];
-    ogImageHeight = json['og:image:height'];
-    ogImageWidth = json['og:image:width'];
-    matrixImageSize = json['matrix:image:size'];
-  }
+  OpenGraphData.fromJson(Map<String, dynamic> json)
+      : ogTitle = json['og:title'],
+        ogDescription = json['og:description'],
+        ogImage = json['og:image'],
+        ogImageType = json['og:image:type'],
+        ogImageHeight = json['og:image:height'],
+        ogImageWidth = json['og:image:width'],
+        matrixImageSize = json['matrix:image:size'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

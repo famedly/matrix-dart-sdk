@@ -34,15 +34,15 @@ class MatrixEvent extends StrippedStateEvent {
 
   MatrixEvent();
 
-  MatrixEvent.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
-    eventId = json['event_id'];
-    roomId = json['room_id'];
-    originServerTs =
-        DateTime.fromMillisecondsSinceEpoch(json['origin_server_ts']);
-    unsigned = (json['unsigned'] as Map<String, dynamic>)?.copy();
-    prevContent = (json['prev_content'] as Map<String, dynamic>)?.copy();
-    redacts = json['redacts'];
-  }
+  MatrixEvent.fromJson(Map<String, dynamic> json)
+      : eventId = json['event_id'],
+        roomId = json['room_id'],
+        originServerTs =
+            DateTime.fromMillisecondsSinceEpoch(json['origin_server_ts']),
+        unsigned = (json['unsigned'] as Map<String, dynamic>)?.copy(),
+        prevContent = (json['prev_content'] as Map<String, dynamic>)?.copy(),
+        redacts = json['redacts'],
+        super.fromJson(json);
 
   @override
   Map<String, dynamic> toJson() {

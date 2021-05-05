@@ -25,10 +25,9 @@ class RoomAliasInformation {
   String roomId;
   List<String> servers;
 
-  RoomAliasInformation.fromJson(Map<String, dynamic> json) {
-    roomId = json['room_id'];
-    servers = json['servers'].cast<String>();
-  }
+  RoomAliasInformation.fromJson(Map<String, dynamic> json)
+      : roomId = json['room_id'],
+        servers = json['servers'].cast<String>();
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

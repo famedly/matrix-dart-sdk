@@ -27,12 +27,11 @@ class OneTimeKeysClaimResponse {
   Map<String, dynamic> failures;
   Map<String, Map<String, dynamic>> oneTimeKeys;
 
-  OneTimeKeysClaimResponse.fromJson(Map<String, dynamic> json) {
-    failures = (json['failures'] as Map<String, dynamic>)?.copy() ?? {};
-    // We still need a Map<...>.from(...) to ensure all second-level entries are also maps
-    oneTimeKeys = Map<String, Map<String, dynamic>>.from(
-        (json['one_time_keys'] as Map<String, dynamic>).copy());
-  }
+  OneTimeKeysClaimResponse.fromJson(Map<String, dynamic> json)
+      : failures = (json['failures'] as Map<String, dynamic>)?.copy() ?? {},
+        // We still need a Map<...>.from(...) to ensure all second-level entries are also maps
+        oneTimeKeys = Map<String, Map<String, dynamic>>.from(
+            (json['one_time_keys'] as Map<String, dynamic>).copy());
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

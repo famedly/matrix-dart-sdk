@@ -25,10 +25,10 @@ class SupportedVersions {
   List<String> versions;
   Map<String, bool> unstableFeatures;
 
-  SupportedVersions.fromJson(Map<String, dynamic> json) {
-    versions = json['versions'].cast<String>();
-    unstableFeatures = Map<String, bool>.from(json['unstable_features'] ?? {});
-  }
+  SupportedVersions.fromJson(Map<String, dynamic> json)
+      : versions = json['versions'].cast<String>(),
+        unstableFeatures =
+            Map<String, bool>.from(json['unstable_features'] ?? {});
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

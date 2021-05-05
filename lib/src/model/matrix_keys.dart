@@ -36,17 +36,16 @@ class MatrixSignableKey {
   // This object is used for signing so we need the raw json too
   Map<String, dynamic> _json;
 
-  MatrixSignableKey.fromJson(Map<String, dynamic> json) {
-    _json = json;
-    userId = json['user_id'];
-    keys = Map<String, String>.from(json['keys']);
-    // we need to manually copy to ensure that our map is Map<String, Map<String, String>>
-    signatures = json['signatures'] is Map
-        ? Map<String, Map<String, String>>.from((json['signatures'] as Map)
-            .map((k, v) => MapEntry(k, Map<String, String>.from(v))))
-        : null;
-    unsigned = (json['unsigned'] as Map<String, dynamic>)?.copy();
-  }
+  MatrixSignableKey.fromJson(Map<String, dynamic> json)
+      : _json = json,
+        userId = json['user_id'],
+        keys = Map<String, String>.from(json['keys']),
+        // we need to manually copy to ensure that our map is Map<String, Map<String, String>>
+        signatures = json['signatures'] is Map
+            ? Map<String, Map<String, String>>.from((json['signatures'] as Map)
+                .map((k, v) => MapEntry(k, Map<String, String>.from(v))))
+            : null,
+        unsigned = (json['unsigned'] as Map<String, dynamic>)?.copy();
 
   Map<String, dynamic> toJson() {
     final data = _json ?? <String, dynamic>{};

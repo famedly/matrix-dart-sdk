@@ -27,12 +27,12 @@ class Device {
   String lastSeenIp;
   DateTime lastSeenTs;
 
-  Device.fromJson(Map<String, dynamic> json) {
-    deviceId = json['device_id'];
-    displayName = json['display_name'];
-    lastSeenIp = json['last_seen_ip'];
-    lastSeenTs = DateTime.fromMillisecondsSinceEpoch(json['last_seen_ts'] ?? 0);
-  }
+  Device.fromJson(Map<String, dynamic> json)
+      : deviceId = json['device_id'],
+        displayName = json['display_name'],
+        lastSeenIp = json['last_seen_ip'],
+        lastSeenTs =
+            DateTime.fromMillisecondsSinceEpoch(json['last_seen_ts'] ?? 0);
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

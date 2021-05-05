@@ -26,9 +26,8 @@ class AuthenticationIdentifier {
 
   AuthenticationIdentifier({this.type});
 
-  AuthenticationIdentifier.fromJson(Map<String, dynamic> json) {
-    type = json['type'];
-  }
+  AuthenticationIdentifier.fromJson(Map<String, dynamic> json)
+      : type = json['type'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

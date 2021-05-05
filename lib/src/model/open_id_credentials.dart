@@ -27,12 +27,11 @@ class OpenIdCredentials {
   String matrixServerName;
   double expiresIn;
 
-  OpenIdCredentials.fromJson(Map<String, dynamic> json) {
-    accessToken = json['access_token'];
-    tokenType = json['token_type'];
-    matrixServerName = json['matrix_server_name'];
-    expiresIn = json['expires_in'];
-  }
+  OpenIdCredentials.fromJson(Map<String, dynamic> json)
+      : accessToken = json['access_token'],
+        tokenType = json['token_type'],
+        matrixServerName = json['matrix_server_name'],
+        expiresIn = json['expires_in'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

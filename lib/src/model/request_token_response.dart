@@ -25,10 +25,9 @@ class RequestTokenResponse {
   String sid;
   String submitUrl;
 
-  RequestTokenResponse.fromJson(Map<String, dynamic> json) {
-    sid = json['sid'];
-    submitUrl = json['submit_url'];
-  }
+  RequestTokenResponse.fromJson(Map<String, dynamic> json)
+      : sid = json['sid'],
+        submitUrl = json['submit_url'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

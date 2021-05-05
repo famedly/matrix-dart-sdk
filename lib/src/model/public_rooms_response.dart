@@ -27,12 +27,12 @@ class PublicRoomsResponse {
   String prevBatch;
   int totalRoomCountEstimate;
 
-  PublicRoomsResponse.fromJson(Map<String, dynamic> json) {
-    chunk = (json['chunk'] as List).map((v) => PublicRoom.fromJson(v)).toList();
-    nextBatch = json['next_batch'];
-    prevBatch = json['prev_batch'];
-    totalRoomCountEstimate = json['total_room_count_estimate'];
-  }
+  PublicRoomsResponse.fromJson(Map<String, dynamic> json)
+      : chunk =
+            (json['chunk'] as List).map((v) => PublicRoom.fromJson(v)).toList(),
+        nextBatch = json['next_batch'],
+        prevBatch = json['prev_batch'],
+        totalRoomCountEstimate = json['total_room_count_estimate'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -61,17 +61,16 @@ class PublicRoom {
   bool worldReadable;
   String canonicalAlias;
 
-  PublicRoom.fromJson(Map<String, dynamic> json) {
-    aliases = json['aliases']?.cast<String>();
-    avatarUrl = json['avatar_url'];
-    guestCanJoin = json['guest_can_join'];
-    canonicalAlias = json['canonical_alias'];
-    name = json['name'];
-    numJoinedMembers = json['num_joined_members'];
-    roomId = json['room_id'];
-    topic = json['topic'];
-    worldReadable = json['world_readable'];
-  }
+  PublicRoom.fromJson(Map<String, dynamic> json)
+      : aliases = json['aliases']?.cast<String>(),
+        avatarUrl = json['avatar_url'],
+        guestCanJoin = json['guest_can_join'],
+        canonicalAlias = json['canonical_alias'],
+        name = json['name'],
+        numJoinedMembers = json['num_joined_members'],
+        roomId = json['room_id'],
+        topic = json['topic'],
+        worldReadable = json['world_readable'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

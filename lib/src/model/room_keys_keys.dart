@@ -33,12 +33,11 @@ class RoomKeysSingleKey {
       this.isVerified,
       this.sessionData});
 
-  RoomKeysSingleKey.fromJson(Map<String, dynamic> json) {
-    firstMessageIndex = json['first_message_index'];
-    forwardedCount = json['forwarded_count'];
-    isVerified = json['is_verified'];
-    sessionData = json['session_data'];
-  }
+  RoomKeysSingleKey.fromJson(Map<String, dynamic> json)
+      : firstMessageIndex = json['first_message_index'],
+        forwardedCount = json['forwarded_count'],
+        isVerified = json['is_verified'],
+        sessionData = json['session_data'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -57,10 +56,9 @@ class RoomKeysRoom {
     sessions ??= <String, RoomKeysSingleKey>{};
   }
 
-  RoomKeysRoom.fromJson(Map<String, dynamic> json) {
-    sessions = (json['sessions'] as Map)
-        .map((k, v) => MapEntry(k, RoomKeysSingleKey.fromJson(v)));
-  }
+  RoomKeysRoom.fromJson(Map<String, dynamic> json)
+      : sessions = (json['sessions'] as Map)
+            .map((k, v) => MapEntry(k, RoomKeysSingleKey.fromJson(v)));
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -76,10 +74,9 @@ class RoomKeys {
     rooms ??= <String, RoomKeysRoom>{};
   }
 
-  RoomKeys.fromJson(Map<String, dynamic> json) {
-    rooms = (json['rooms'] as Map)
-        .map((k, v) => MapEntry(k, RoomKeysRoom.fromJson(v)));
-  }
+  RoomKeys.fromJson(Map<String, dynamic> json)
+      : rooms = (json['rooms'] as Map)
+            .map((k, v) => MapEntry(k, RoomKeysRoom.fromJson(v)));
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -92,10 +89,9 @@ class RoomKeysUpdateResponse {
   String etag;
   int count;
 
-  RoomKeysUpdateResponse.fromJson(Map<String, dynamic> json) {
-    etag = json['etag']; // synapse replies an int but docs say string?
-    count = json['count'];
-  }
+  RoomKeysUpdateResponse.fromJson(Map<String, dynamic> json)
+      : etag = json['etag'], // synapse replies an int but docs say string?
+        count = json['count'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

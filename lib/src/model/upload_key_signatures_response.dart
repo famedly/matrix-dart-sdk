@@ -26,19 +26,18 @@ import 'matrix_exception.dart';
 class UploadKeySignaturesResponse {
   Map<String, Map<String, MatrixException>> failures;
 
-  UploadKeySignaturesResponse.fromJson(Map<String, dynamic> json) {
-    failures = json['failures'] != null
-        ? (json['failures'] as Map).map(
-            (k, v) => MapEntry(
-              k,
-              (v as Map).map((k, v) => MapEntry(
-                    k,
-                    MatrixException.fromJson(v),
-                  )),
-            ),
-          )
-        : null;
-  }
+  UploadKeySignaturesResponse.fromJson(Map<String, dynamic> json)
+      : failures = json['failures'] != null
+            ? (json['failures'] as Map).map(
+                (k, v) => MapEntry(
+                  k,
+                  (v as Map).map((k, v) => MapEntry(
+                        k,
+                        MatrixException.fromJson(v),
+                      )),
+                ),
+              )
+            : null;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

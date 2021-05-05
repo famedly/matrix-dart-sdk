@@ -52,15 +52,14 @@ class RoomKeysVersionResponse {
   String etag;
   String version;
 
-  RoomKeysVersionResponse.fromJson(Map<String, dynamic> json) {
-    algorithm =
-        RoomKeysAlgorithmTypeExtension.fromAlgorithmString(json['algorithm']);
-    authData = json['auth_data'];
-    count = json['count'];
-    etag =
-        json['etag'].toString(); // synapse replies an int but docs say string?
-    version = json['version'];
-  }
+  RoomKeysVersionResponse.fromJson(Map<String, dynamic> json)
+      : algorithm = RoomKeysAlgorithmTypeExtension.fromAlgorithmString(
+            json['algorithm']),
+        authData = json['auth_data'],
+        count = json['count'],
+        etag = json['etag']
+            .toString(), // synapse replies an int but docs say string?
+        version = json['version'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

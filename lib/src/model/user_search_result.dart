@@ -27,11 +27,10 @@ class UserSearchResult {
   List<Profile> results;
   bool limited;
 
-  UserSearchResult.fromJson(Map<String, dynamic> json) {
-    results =
-        (json['results'] as List).map((v) => Profile.fromJson(v)).toList();
-    limited = json['limited'];
-  }
+  UserSearchResult.fromJson(Map<String, dynamic> json)
+      : results =
+            (json['results'] as List).map((v) => Profile.fromJson(v)).toList(),
+        limited = json['limited'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

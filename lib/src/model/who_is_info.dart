@@ -25,13 +25,12 @@ class WhoIsInfo {
   String userId;
   Map<String, DeviceInfo> devices;
 
-  WhoIsInfo.fromJson(Map<String, dynamic> json) {
-    userId = json['user_id'];
-    devices = json['devices'] != null
-        ? (json['devices'] as Map)
-            .map((k, v) => MapEntry(k, DeviceInfo.fromJson(v)))
-        : null;
-  }
+  WhoIsInfo.fromJson(Map<String, dynamic> json)
+      : userId = json['user_id'],
+        devices = json['devices'] != null
+            ? (json['devices'] as Map)
+                .map((k, v) => MapEntry(k, DeviceInfo.fromJson(v)))
+            : null;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

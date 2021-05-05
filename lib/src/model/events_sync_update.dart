@@ -28,13 +28,14 @@ class EventsSyncUpdate {
   String end;
   List<MatrixEvent> chunk;
 
-  EventsSyncUpdate.fromJson(Map<String, dynamic> json) {
-    start = json['start'];
-    end = json['end'];
-    chunk = json['chunk'] != null
-        ? (json['chunk'] as List).map((i) => MatrixEvent.fromJson(i)).toList()
-        : null;
-  }
+  EventsSyncUpdate.fromJson(Map<String, dynamic> json)
+      : start = json['start'],
+        end = json['end'],
+        chunk = json['chunk'] != null
+            ? (json['chunk'] as List)
+                .map((i) => MatrixEvent.fromJson(i))
+                .toList()
+            : null;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

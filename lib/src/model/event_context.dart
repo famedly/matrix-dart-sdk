@@ -31,25 +31,26 @@ class EventContext {
   String start;
   List<MatrixEvent> state;
 
-  EventContext.fromJson(Map<String, dynamic> json) {
-    end = json['end'];
-    if (json['events_after'] != null) {
-      eventsAfter = (json['events_after'] as List)
-          .map((v) => MatrixEvent.fromJson(v))
-          .toList();
-    }
-    event = json['event'] != null ? MatrixEvent.fromJson(json['event']) : null;
-    if (json['events_before'] != null) {
-      eventsBefore = (json['events_before'] as List)
-          .map((v) => MatrixEvent.fromJson(v))
-          .toList();
-    }
-    start = json['start'];
-    if (json['state'] != null) {
-      state =
-          (json['state'] as List).map((v) => MatrixEvent.fromJson(v)).toList();
-    }
-  }
+  EventContext.fromJson(Map<String, dynamic> json)
+      : end = json['end'],
+        eventsAfter = (json['events_after'] != null)
+            ? (json['events_after'] as List)
+                .map((v) => MatrixEvent.fromJson(v))
+                .toList()
+            : null,
+        event =
+            json['event'] != null ? MatrixEvent.fromJson(json['event']) : null,
+        eventsBefore = (json['events_before'] != null)
+            ? (json['events_before'] as List)
+                .map((v) => MatrixEvent.fromJson(v))
+                .toList()
+            : null,
+        start = json['start'],
+        state = (json['state'] != null)
+            ? (json['state'] as List)
+                .map((v) => MatrixEvent.fromJson(v))
+                .toList()
+            : null;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
