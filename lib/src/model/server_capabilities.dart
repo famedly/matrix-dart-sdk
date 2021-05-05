@@ -37,9 +37,9 @@ class ServerCapabilities {
     mRoomVersions = json['m.room_versions'] != null
         ? MRoomVersions.fromJson(json['m.room_versions'])
         : null;
-    customCapabilities = json.copy();
-    customCapabilities.remove('m.change_password');
-    customCapabilities.remove('m.room_versions');
+    customCapabilities = json.copy()
+      ..remove('m.change_password')
+      ..remove('m.room_versions');
   }
 
   Map<String, dynamic> toJson() {
