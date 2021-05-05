@@ -34,24 +34,20 @@ class EventContext {
   EventContext.fromJson(Map<String, dynamic> json) {
     end = json['end'];
     if (json['events_after'] != null) {
-      eventsAfter = <MatrixEvent>[];
-      json['events_after'].forEach((v) {
-        eventsAfter.add(MatrixEvent.fromJson(v));
-      });
+      eventsAfter = (json['events_after'] as List)
+          .map((v) => MatrixEvent.fromJson(v))
+          .toList();
     }
     event = json['event'] != null ? MatrixEvent.fromJson(json['event']) : null;
     if (json['events_before'] != null) {
-      eventsBefore = <MatrixEvent>[];
-      json['events_before'].forEach((v) {
-        eventsBefore.add(MatrixEvent.fromJson(v));
-      });
+      eventsBefore = (json['events_before'] as List)
+          .map((v) => MatrixEvent.fromJson(v))
+          .toList();
     }
     start = json['start'];
     if (json['state'] != null) {
-      state = <MatrixEvent>[];
-      json['state'].forEach((v) {
-        state.add(MatrixEvent.fromJson(v));
-      });
+      state =
+          (json['state'] as List).map((v) => MatrixEvent.fromJson(v)).toList();
     }
   }
 

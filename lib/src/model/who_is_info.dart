@@ -48,10 +48,8 @@ class DeviceInfo {
 
   DeviceInfo.fromJson(Map<String, dynamic> json) {
     if (json['sessions'] != null) {
-      sessions = <Sessions>[];
-      json['sessions'].forEach((v) {
-        sessions.add(Sessions.fromJson(v));
-      });
+      sessions =
+          (json['sessions'] as List).map((v) => Sessions.fromJson(v)).toList();
     }
   }
 
@@ -69,10 +67,9 @@ class Sessions {
 
   Sessions.fromJson(Map<String, dynamic> json) {
     if (json['connections'] != null) {
-      connections = <Connections>[];
-      json['connections'].forEach((v) {
-        connections.add(Connections.fromJson(v));
-      });
+      connections = (json['connections'] as List)
+          .map((v) => Connections.fromJson(v))
+          .toList();
     }
   }
 

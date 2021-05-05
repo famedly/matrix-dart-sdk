@@ -27,11 +27,7 @@ extension MapCopyExtension on Map<String, dynamic> {
       return value.copy();
     }
     if (value is List) {
-      final ret = [];
-      for (final val in value) {
-        ret.add(_copyValue(val));
-      }
-      return ret;
+      return value.map(_copyValue).toList();
     }
     return value;
   }

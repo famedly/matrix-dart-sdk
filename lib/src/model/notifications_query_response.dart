@@ -29,10 +29,9 @@ class NotificationsQueryResponse {
 
   NotificationsQueryResponse.fromJson(Map<String, dynamic> json) {
     nextToken = json['next_token'];
-    notifications = <Notification>[];
-    json['notifications'].forEach((v) {
-      notifications.add(Notification.fromJson(v));
-    });
+    notifications = (json['notifications'] as List)
+        .map((v) => Notification.fromJson(v))
+        .toList();
   }
 
   Map<String, dynamic> toJson() {

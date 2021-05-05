@@ -28,10 +28,7 @@ class PublicRoomsResponse {
   int totalRoomCountEstimate;
 
   PublicRoomsResponse.fromJson(Map<String, dynamic> json) {
-    chunk = <PublicRoom>[];
-    json['chunk'].forEach((v) {
-      chunk.add(PublicRoom.fromJson(v));
-    });
+    chunk = (json['chunk'] as List).map((v) => PublicRoom.fromJson(v)).toList();
     nextBatch = json['next_batch'];
     prevBatch = json['prev_batch'];
     totalRoomCountEstimate = json['total_room_count_estimate'];

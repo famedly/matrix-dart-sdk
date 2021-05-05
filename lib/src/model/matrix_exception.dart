@@ -88,13 +88,11 @@ class MatrixException implements Exception {
   /// doesn't need additional authentication, then this is null.
   List<AuthenticationFlow> get authenticationFlows {
     if (!raw.containsKey('flows') || !(raw['flows'] is List)) return null;
-    var flows = <AuthenticationFlow>[];
-    for (Map<String, dynamic> flow in raw['flows']) {
-      if (flow['stages'] is List) {
-        flows.add(AuthenticationFlow(List<String>.from(flow['stages'])));
-      }
-    }
-    return flows;
+    return (raw['flows'] as List)
+        .map((flow) => flow['stages'])
+        .whereType<List>()
+        .map((stages) => AuthenticationFlow(List<String>.from(stages)))
+        .toList();
   }
 
   /// This section contains any information that the client will need to know in order to use a given type

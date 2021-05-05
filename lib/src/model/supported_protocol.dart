@@ -34,10 +34,9 @@ class SupportedProtocol {
     icon = json['icon'];
     fieldTypes = (json['field_types'] as Map)
         .map((k, v) => MapEntry(k, ProtocolFieldType.fromJson(v)));
-    instances = <ProtocolInstance>[];
-    json['instances'].forEach((v) {
-      instances.add(ProtocolInstance.fromJson(v));
-    });
+    instances = (json['instances'] as List)
+        .map((v) => ProtocolInstance.fromJson(v))
+        .toList();
   }
 
   Map<String, dynamic> toJson() {

@@ -26,10 +26,7 @@ class LoginTypes {
 
   LoginTypes.fromJson(Map<String, dynamic> json) {
     if (json['flows'] != null) {
-      flows = <Flows>[];
-      json['flows'].forEach((v) {
-        flows.add(Flows.fromJson(v));
-      });
+      flows = (json['flows'] as List).map((v) => Flows.fromJson(v)).toList();
     }
   }
 
