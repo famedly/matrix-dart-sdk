@@ -163,25 +163,25 @@ class MatrixApi {
     http.Response resp;
     var jsonResp = <String, dynamic>{};
     try {
-      switch (describeEnum(type)) {
-        case 'GET':
+      switch (type) {
+        case RequestType.GET:
           resp = await httpClient.get(url, headers: headers).timeout(
                 Duration(seconds: timeout),
               );
           break;
-        case 'POST':
+        case RequestType.POST:
           resp =
               await httpClient.post(url, body: json, headers: headers).timeout(
                     Duration(seconds: timeout),
                   );
           break;
-        case 'PUT':
+        case RequestType.PUT:
           resp =
               await httpClient.put(url, body: json, headers: headers).timeout(
                     Duration(seconds: timeout),
                   );
           break;
-        case 'DELETE':
+        case RequestType.DELETE:
           resp = await httpClient.delete(url, headers: headers).timeout(
                 Duration(seconds: timeout),
               );
