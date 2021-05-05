@@ -34,12 +34,7 @@ class MatrixEvent extends StrippedStateEvent {
 
   MatrixEvent();
 
-  MatrixEvent.fromJson(Map<String, dynamic> json) {
-    final strippedStateEvent = StrippedStateEvent.fromJson(json);
-    content = strippedStateEvent.content;
-    type = strippedStateEvent.type;
-    senderId = strippedStateEvent.senderId;
-    stateKey = strippedStateEvent.stateKey;
+  MatrixEvent.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     eventId = json['event_id'];
     roomId = json['room_id'];
     originServerTs =

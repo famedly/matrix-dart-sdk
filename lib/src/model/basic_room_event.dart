@@ -35,10 +35,7 @@ class BasicRoomEvent extends BasicEvent {
           type: type,
         );
 
-  BasicRoomEvent.fromJson(Map<String, dynamic> json) {
-    final basicEvent = BasicEvent.fromJson(json);
-    content = basicEvent.content;
-    type = basicEvent.type;
+  BasicRoomEvent.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     roomId = json['room_id'];
   }
 

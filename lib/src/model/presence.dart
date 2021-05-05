@@ -27,11 +27,7 @@ import 'presence_content.dart';
 class Presence extends BasicEventWithSender {
   PresenceContent presence;
 
-  Presence.fromJson(Map<String, dynamic> json) {
-    final basicEvent = BasicEventWithSender.fromJson(json);
-    type = basicEvent.type;
-    content = basicEvent.content;
-    senderId = basicEvent.senderId;
+  Presence.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     presence = PresenceContent.fromJson(content);
   }
 }

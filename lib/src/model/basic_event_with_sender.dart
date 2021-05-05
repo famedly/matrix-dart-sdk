@@ -28,10 +28,8 @@ class BasicEventWithSender extends BasicEvent {
 
   BasicEventWithSender();
 
-  BasicEventWithSender.fromJson(Map<String, dynamic> json) {
-    final basicEvent = BasicEvent.fromJson(json);
-    type = basicEvent.type;
-    content = basicEvent.content;
+  BasicEventWithSender.fromJson(Map<String, dynamic> json)
+      : super.fromJson(json) {
     senderId = json['sender'];
   }
 

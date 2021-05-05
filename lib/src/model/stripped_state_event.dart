@@ -27,11 +27,8 @@ class StrippedStateEvent extends BasicEventWithSender {
   String stateKey;
 
   StrippedStateEvent();
-  StrippedStateEvent.fromJson(Map<String, dynamic> json) {
-    final basicEvent = BasicEventWithSender.fromJson(json);
-    content = basicEvent.content;
-    type = basicEvent.type;
-    senderId = basicEvent.senderId;
+  StrippedStateEvent.fromJson(Map<String, dynamic> json)
+      : super.fromJson(json) {
     stateKey = json['state_key'];
   }
 

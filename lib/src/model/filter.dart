@@ -190,14 +190,7 @@ class StateFilter extends EventFilter {
           notSenders: notSenders,
         );
 
-  StateFilter.fromJson(Map<String, dynamic> json) {
-    final eventFilter = EventFilter.fromJson(json);
-    limit = eventFilter.limit;
-    senders = eventFilter.senders;
-    types = eventFilter.types;
-    notRooms = eventFilter.notRooms;
-    notSenders = eventFilter.notSenders;
-
+  StateFilter.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     notTypes = json['not_types']?.cast<String>();
     lazyLoadMembers = json['lazy_load_members'];
     includeRedundantMembers = json['include_redundant_members'];
