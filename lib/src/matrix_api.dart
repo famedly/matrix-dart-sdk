@@ -219,7 +219,7 @@ class MatrixApi {
 
   /// Gets the versions of the specification supported by the server.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#get-matrix-client-versions
-  Future<SupportedVersions> requestSupportedVersions() async {
+  Future<SupportedVersions> getVersions() async {
     final response = await request(
       RequestType.GET,
       '/client/versions',
@@ -229,14 +229,14 @@ class MatrixApi {
 
   /// Gets discovery information about the domain. The file may include additional keys.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#get-well-known-matrix-client
-  Future<WellKnownInformation> requestWellKnownInformation() async {
+  Future<WellKnownInformation> getWellknown() async {
     final response =
         await httpClient.get(homeserver.resolve('.well-known/matrix/client'));
     final rawJson = json.decode(response.body);
     return WellKnownInformation.fromJson(rawJson);
   }
 
-  Future<LoginTypes> requestLoginTypes() async {
+  Future<LoginTypes> getLoginFlows() async {
     final response = await request(
       RequestType.GET,
       '/client/r0/login',
@@ -473,7 +473,7 @@ class MatrixApi {
     );
   }
 
-  Future<bool> usernameAvailable(String username) async {
+  Future<bool> checkUsernameAvailability(String username) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/register/available',
@@ -487,7 +487,7 @@ class MatrixApi {
   /// Gets a list of the third party identifiers that the homeserver has
   /// associated with the user's account.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#get-matrix-client-r0-register-available
-  Future<List<ThirdPartyIdentifier>> requestThirdPartyIdentifiers() async {
+  Future<List<ThirdPartyIdentifier>> getAccount3PIDs() async {
     final response = await request(
       RequestType.GET,
       '/client/r0/account/3pid',
@@ -501,7 +501,7 @@ class MatrixApi {
   /// should use 3PIDs added through this endpoint for password resets
   /// instead of relying on the identity server.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#post-matrix-client-r0-account-3pid-add
-  Future<void> addThirdPartyIdentifier(
+  Future<void> add3PID(
     String clientSecret,
     String sid, {
     AuthenticationData auth,
@@ -516,7 +516,7 @@ class MatrixApi {
 
   /// Binds a 3PID to the user's account through the specified identity server.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#post-matrix-client-r0-account-3pid-bind
-  Future<void> bindThirdPartyIdentifier(
+  Future<void> bind3PID(
     String clientSecret,
     String sid,
     String idServer,
@@ -533,7 +533,7 @@ class MatrixApi {
 
   /// Removes a third party identifier from the user's account. This might not cause an unbind of the identifier from the identity server.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#post-matrix-client-r0-account-3pid-delete
-  Future<IdServerUnbindResult> deleteThirdPartyIdentifier(
+  Future<IdServerUnbindResult> delete3pidFromAccount(
     String address,
     ThirdPartyIdentifierMedium medium, {
     String idServer,
@@ -552,7 +552,7 @@ class MatrixApi {
 
   /// Removes a user's third party identifier from the provided identity server without removing it from the homeserver.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#post-matrix-client-r0-account-3pid-unbind
-  Future<IdServerUnbindResult> unbindThirdPartyIdentifier(
+  Future<IdServerUnbindResult> unbind3pidFromAccount(
     String address,
     ThirdPartyIdentifierMedium medium,
     String idServer,
@@ -619,7 +619,7 @@ class MatrixApi {
 
   /// Gets information about the owner of a given access token.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#get-matrix-client-r0-account-whoami
-  Future<String> whoAmI() async {
+  Future<String> getTokenOwner() async {
     final response = await request(
       RequestType.GET,
       '/client/r0/account/whoami',
@@ -629,7 +629,7 @@ class MatrixApi {
 
   /// Gets information about the server's supported feature set and other relevant capabilities.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#get-matrix-client-r0-capabilities
-  Future<ServerCapabilities> requestServerCapabilities() async {
+  Future<ServerCapabilities> getCapabilities() async {
     final response = await request(
       RequestType.GET,
       '/client/r0/capabilities',
@@ -640,7 +640,7 @@ class MatrixApi {
   /// Uploads a new filter definition to the homeserver. Returns a filter ID that may be used
   /// in future requests to restrict which events are returned to the client.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#post-matrix-client-r0-user-userid-filter
-  Future<String> uploadFilter(
+  Future<String> defineFilter(
     String userId,
     Filter filter,
   ) async {
@@ -654,7 +654,7 @@ class MatrixApi {
 
   /// Download a filter
   /// https://matrix.org/docs/spec/client_server/r0.6.0#post-matrix-client-r0-user-userid-filter
-  Future<Filter> downloadFilter(String userId, String filterId) async {
+  Future<Filter> getFilter(String userId, String filterId) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/user/${Uri.encodeComponent(userId)}/filter/${Uri.encodeComponent(filterId)}',
@@ -690,7 +690,7 @@ class MatrixApi {
   /// Get a single event based on roomId/eventId. You must have permission to
   /// retrieve this event e.g. by being a member in the room for this event.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#get-matrix-client-r0-rooms-roomid-event-eventid
-  Future<MatrixEvent> requestEvent(String roomId, String eventId) async {
+  Future<MatrixEvent> getOneRoomEvent(String roomId, String eventId) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/rooms/${Uri.encodeComponent(roomId)}/event/${Uri.encodeComponent(eventId)}',
@@ -719,7 +719,7 @@ class MatrixApi {
 
   /// Get the state events for the current state of a room.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#get-matrix-client-r0-rooms-roomid-state
-  Future<List<MatrixEvent>> requestStates(String roomId) async {
+  Future<List<MatrixEvent>> getRoomState(String roomId) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/rooms/${Uri.encodeComponent(roomId)}/state',
@@ -731,7 +731,7 @@ class MatrixApi {
 
   /// Get the list of members for this room.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#get-matrix-client-r0-rooms-roomid-members
-  Future<List<MatrixEvent>> requestMembers(
+  Future<List<MatrixEvent>> getMembersByRoom(
     String roomId, {
     String at,
     Membership membership,
@@ -754,7 +754,7 @@ class MatrixApi {
 
   /// This API returns a map of MXIDs to member info objects for members of the room.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#get-matrix-client-r0-rooms-roomid-joined-members
-  Future<Map<String, Profile>> requestJoinedMembers(String roomId) async {
+  Future<Map<String, Profile>> getJoinedMembersByRoom(String roomId) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/rooms/${Uri.encodeComponent(roomId)}/joined_members',
@@ -767,7 +767,7 @@ class MatrixApi {
   /// This API returns a list of message and state events for a room. It uses pagination query
   /// parameters to paginate history in the room.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#get-matrix-client-r0-rooms-roomid-messages
-  Future<TimelineHistoryResponse> requestMessages(
+  Future<TimelineHistoryResponse> getRoomEvents(
     String roomId,
     String from,
     Direction dir, {
@@ -789,7 +789,7 @@ class MatrixApi {
 
   /// State events can be sent using this endpoint.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#put-matrix-client-r0-rooms-roomid-state-eventtype-statekey
-  Future<String> sendState(
+  Future<String> setRoomStateWithKey(
     String roomId,
     String eventType,
     Map<String, dynamic> content, [
@@ -820,7 +820,7 @@ class MatrixApi {
   /// Strips all information out of an event which isn't critical to the integrity of
   /// the server-side representation of the room.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#put-matrix-client-r0-rooms-roomid-redact-eventid-txnid
-  Future<String> redact(
+  Future<String> redactEvent(
     String roomId,
     String eventId,
     String txnId, {
@@ -869,7 +869,7 @@ class MatrixApi {
 
   /// Create a new mapping from room alias to room ID.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-directory-room-roomalias
-  Future<void> createRoomAlias(String alias, String roomId) async {
+  Future<void> setRoomAlias(String alias, String roomId) async {
     await request(
       RequestType.PUT,
       '/client/r0/directory/room/${Uri.encodeComponent(alias)}',
@@ -880,7 +880,7 @@ class MatrixApi {
 
   /// Requests that the server resolve a room alias to a room ID.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-directory-room-roomalias
-  Future<RoomAliasInformation> requestRoomAliasInformation(String alias) async {
+  Future<RoomAliasInformation> getRoomIdByAlias(String alias) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/directory/room/${Uri.encodeComponent(alias)}',
@@ -890,7 +890,7 @@ class MatrixApi {
 
   /// Remove a mapping of room alias to room ID.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#delete-matrix-client-r0-directory-room-roomalias
-  Future<void> removeRoomAlias(String alias) async {
+  Future<void> deleteRoomAlias(String alias) async {
     await request(
       RequestType.DELETE,
       '/client/r0/directory/room/${Uri.encodeComponent(alias)}',
@@ -900,7 +900,7 @@ class MatrixApi {
 
   /// Get a list of aliases maintained by the local server for the given room.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-rooms-roomid-aliases
-  Future<List<String>> requestRoomAliases(String roomId) async {
+  Future<List<String>> getLocalAliases(String roomId) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/rooms/${Uri.encodeComponent(roomId)}/aliases',
@@ -910,7 +910,7 @@ class MatrixApi {
 
   /// This API returns a list of the user's current rooms.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-joined-rooms
-  Future<List<String>> requestJoinedRooms() async {
+  Future<List<String>> getJoinedRooms() async {
     final response = await request(
       RequestType.GET,
       '/client/r0/joined_rooms',
@@ -933,7 +933,7 @@ class MatrixApi {
 
   /// This API starts a user participating in a particular room, if that user is allowed to participate in that room.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-rooms-roomid-invite
-  Future<String> joinRoom(
+  Future<String> joinRoomById(
     String roomId, {
     String thirdPidSignedSender,
     String thirdPidSignedmxid,
@@ -958,7 +958,7 @@ class MatrixApi {
 
   /// This API starts a user participating in a particular room, if that user is allowed to participate in that room.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-join-roomidoralias
-  Future<String> joinRoomOrAlias(
+  Future<String> joinRoom(
     String roomIdOrAlias, {
     List<String> servers,
     String thirdPidSignedSender,
@@ -1006,8 +1006,7 @@ class MatrixApi {
   /// Kick a user from the room.
   /// The caller must have the required power level in order to perform this operation.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-rooms-roomid-kick
-  Future<void> kickFromRoom(String roomId, String userId,
-      {String reason}) async {
+  Future<void> kick(String roomId, String userId, {String reason}) async {
     await request(RequestType.POST,
         '/client/r0/rooms/${Uri.encodeComponent(roomId)}/kick',
         data: {
@@ -1019,8 +1018,7 @@ class MatrixApi {
 
   /// Ban a user in the room. If the user is currently in the room, also kick them.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-rooms-roomid-ban
-  Future<void> banFromRoom(String roomId, String userId,
-      {String reason}) async {
+  Future<void> ban(String roomId, String userId, {String reason}) async {
     await request(
         RequestType.POST, '/client/r0/rooms/${Uri.encodeComponent(roomId)}/ban',
         data: {
@@ -1033,7 +1031,7 @@ class MatrixApi {
   /// Unban a user from the room. This allows them to be invited to the room, and join if they
   /// would otherwise be allowed to join according to its join rules.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-rooms-roomid-unban
-  Future<void> unbanInRoom(String roomId, String userId) async {
+  Future<void> unban(String roomId, String userId) async {
     await request(RequestType.POST,
         '/client/r0/rooms/${Uri.encodeComponent(roomId)}/unban',
         data: {
@@ -1044,7 +1042,7 @@ class MatrixApi {
 
   /// Gets the visibility of a given room on the server's public room directory.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-directory-list-room-roomid
-  Future<Visibility> requestRoomVisibility(String roomId) async {
+  Future<Visibility> getRoomVisibilityOnDirectory(String roomId) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/directory/list/room/${Uri.encodeComponent(roomId)}',
@@ -1055,7 +1053,8 @@ class MatrixApi {
 
   /// Sets the visibility of a given room in the server's public room directory.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-directory-list-room-roomid
-  Future<void> setRoomVisibility(String roomId, Visibility visibility) async {
+  Future<void> setRoomVisibilityOnDirectory(
+      String roomId, Visibility visibility) async {
     await request(
       RequestType.PUT,
       '/client/r0/directory/list/room/${Uri.encodeComponent(roomId)}',
@@ -1068,7 +1067,7 @@ class MatrixApi {
 
   /// Lists the public rooms on the server.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-publicrooms
-  Future<PublicRoomsResponse> requestPublicRooms({
+  Future<PublicRoomsResponse> getPublicRooms({
     int limit,
     String since,
     String server,
@@ -1087,7 +1086,7 @@ class MatrixApi {
 
   /// Lists the public rooms on the server, with optional filter.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-publicrooms
-  Future<PublicRoomsResponse> searchPublicRooms({
+  Future<PublicRoomsResponse> queryPublicRooms({
     String genericSearchTerm,
     int limit,
     String since,
@@ -1122,7 +1121,7 @@ class MatrixApi {
   /// room with and those who reside in public rooms (known to the homeserver). The search MUST
   /// consider local users to the homeserver, and SHOULD query remote users as part of the search.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-user-directory-search
-  Future<UserSearchResult> searchUser(
+  Future<UserSearchResult> searchUserDirectory(
     String searchTerm, {
     int limit,
   }) async {
@@ -1140,7 +1139,7 @@ class MatrixApi {
   /// This API sets the given user's display name. You must have permission to
   /// set this user's display name, e.g. you need to have their access_token.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-profile-userid-displayname
-  Future<void> setDisplayname(String userId, String displayname) async {
+  Future<void> setDisplayName(String userId, String displayname) async {
     await request(
       RequestType.PUT,
       '/client/r0/profile/${Uri.encodeComponent(userId)}/displayname',
@@ -1154,7 +1153,7 @@ class MatrixApi {
   /// Get the user's display name. This API may be used to fetch the user's own
   /// displayname or to query the name of other users; either locally or on remote homeservers.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-profile-userid-displayname
-  Future<String> requestDisplayname(String userId) async {
+  Future<String> getDisplayName(String userId) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/profile/${Uri.encodeComponent(userId)}/displayname',
@@ -1179,7 +1178,7 @@ class MatrixApi {
   /// Get the user's avatar URL. This API may be used to fetch the user's own avatar URL or to
   /// query the URL of other users; either locally or on remote homeservers.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-profile-userid-avatar-url
-  Future<Uri> requestAvatarUrl(String userId) async {
+  Future<Uri> getAvatarUrl(String userId) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/profile/${Uri.encodeComponent(userId)}/avatar_url',
@@ -1190,7 +1189,7 @@ class MatrixApi {
   /// Get the combined profile information for this user. This API may be used to fetch the user's
   /// own profile information or other users; either locally or on remote homeservers.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-profile-userid-avatar-url
-  Future<Profile> requestProfile(String userId) async {
+  Future<Profile> getUserProfile(String userId) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/profile/${Uri.encodeComponent(userId)}',
@@ -1200,7 +1199,7 @@ class MatrixApi {
 
   /// This API provides credentials for the client to use when initiating calls.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-voip-turnserver
-  Future<TurnServerCredentials> requestTurnServerCredentials() async {
+  Future<TurnServerCredentials> getTurnServer() async {
     final response = await request(
       RequestType.GET,
       '/client/r0/voip/turnServer',
@@ -1212,7 +1211,7 @@ class MatrixApi {
   /// where N is the value specified in the timeout key. Alternatively, if typing is false,
   /// it tells the server that the user has stopped typing.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-rooms-roomid-typing-userid
-  Future<void> sendTypingNotification(
+  Future<void> setTyping(
     String userId,
     String roomId,
     bool typing, {
@@ -1230,7 +1229,7 @@ class MatrixApi {
   /// This API updates the marker for the given receipt type to the event ID specified.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-rooms-roomid-receipt-receipttype-eventid
   ///
-  Future<void> sendReceiptMarker(String roomId, String eventId) async {
+  Future<void> postReceipt(String roomId, String eventId) async {
     await request(
       RequestType.POST,
       '/client/r0/rooms/${Uri.encodeComponent(roomId)}/receipt/m.read/${Uri.encodeComponent(eventId)}',
@@ -1240,7 +1239,7 @@ class MatrixApi {
 
   /// Sets the position of the read marker for a given room, and optionally the read receipt's location.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-rooms-roomid-read-markers
-  Future<void> sendReadMarker(String roomId, String eventId,
+  Future<void> setReadMarker(String roomId, String eventId,
       {String readReceiptLocationEventId}) async {
     await request(
       RequestType.POST,
@@ -1258,7 +1257,7 @@ class MatrixApi {
   /// the activity time is updated to reflect that activity; the client does not need
   /// to specify the last_active_ago field. You cannot set the presence state of another user.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-presence-userid-status
-  Future<void> sendPresence(
+  Future<void> setPresence(
     String userId,
     PresenceType presenceType, {
     String statusMsg,
@@ -1276,7 +1275,7 @@ class MatrixApi {
 
   /// Get the given user's presence state.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-presence-userid-status
-  Future<PresenceContent> requestPresence(String userId) async {
+  Future<PresenceContent> getPresence(String userId) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/presence/${Uri.encodeComponent(userId)}/status',
@@ -1287,7 +1286,7 @@ class MatrixApi {
   /// Uploads a file with the name [fileName] as base64 encoded to the server
   /// and returns the mxc url as a string.
   /// https://matrix.org/docs/spec/client_server/r0.6.0#post-matrix-media-r0-upload
-  Future<String> upload(Uint8List file, String fileName,
+  Future<String> uploadContent(Uint8List file, String fileName,
       {String contentType}) async {
     fileName = fileName.split('/').last;
     final length = file.length;
@@ -1324,7 +1323,7 @@ class MatrixApi {
   /// Get information about a URL for the client. Typically this is called when a client sees a
   /// URL in a message and wants to render a preview for the user.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-media-r0-preview-url
-  Future<OpenGraphData> requestOpenGraphDataForUrl(Uri url, {int ts}) async {
+  Future<OpenGraphData> getUrlPreview(Uri url, {int ts}) async {
     final action = homeserver
         .resolveUri(Uri(path: '_matrix/media/r0/preview_url', queryParameters: {
       'url': url.toString(),
@@ -1337,7 +1336,7 @@ class MatrixApi {
 
   /// This endpoint allows clients to retrieve the configuration of the content repository, such as upload limitations.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-media-r0-config
-  Future<int> requestMaxUploadSize() async {
+  Future<int> getConfig() async {
     final action = homeserver.resolve('_matrix/media/r0/config');
     final response = await httpClient.get(action);
     final rawJson = json.decode(response.body.isEmpty ? '{}' : response.body);
@@ -1363,7 +1362,7 @@ class MatrixApi {
 
   /// Gets information about all devices for the current user.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-devices
-  Future<List<Device>> requestDevices() async {
+  Future<List<Device>> getDevices() async {
     final response = await request(
       RequestType.GET,
       '/client/r0/devices',
@@ -1375,7 +1374,7 @@ class MatrixApi {
 
   /// Gets information on a single device, by device id.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-devices-deviceid
-  Future<Device> requestDevice(String deviceId) async {
+  Future<Device> getDevice(String deviceId) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/devices/${Uri.encodeComponent(deviceId)}',
@@ -1385,7 +1384,7 @@ class MatrixApi {
 
   /// Updates the metadata on the given device.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-devices-deviceid
-  Future<void> setDeviceMetadata(String deviceId, {String displayName}) async {
+  Future<void> updateDevice(String deviceId, {String displayName}) async {
     await request(
         RequestType.PUT, '/client/r0/devices/${Uri.encodeComponent(deviceId)}',
         data: {
@@ -1418,7 +1417,7 @@ class MatrixApi {
 
   /// Publishes end-to-end encryption keys for the device.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-keys-query
-  Future<Map<String, int>> uploadDeviceKeys(
+  Future<Map<String, int>> uploadKeys(
       {MatrixDeviceKeys deviceKeys,
       Map<String, dynamic> oneTimeKeys,
       Map<String, dynamic> fallbackKeys}) async {
@@ -1439,7 +1438,7 @@ class MatrixApi {
 
   /// Returns the current devices and identity keys for the given users.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-keys-query
-  Future<KeysQueryResponse> requestDeviceKeys(
+  Future<KeysQueryResponse> queryKeys(
     Map<String, dynamic> deviceKeys, {
     int timeout,
     String token,
@@ -1458,7 +1457,7 @@ class MatrixApi {
 
   /// Claims one-time keys for use in pre-key messages.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-keys-claim
-  Future<OneTimeKeysClaimResponse> requestOneTimeKeys(
+  Future<OneTimeKeysClaimResponse> claimKeys(
     Map<String, Map<String, String>> oneTimeKeys, {
     int timeout,
   }) async {
@@ -1475,8 +1474,7 @@ class MatrixApi {
 
   /// Gets a list of users who have updated their device identity keys since a previous sync token.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-keys-upload
-  Future<DeviceListsUpdate> requestDeviceListsUpdate(
-      String from, String to) async {
+  Future<DeviceListsUpdate> getKeysChanges(String from, String to) async {
     final response =
         await request(RequestType.GET, '/client/r0/keys/changes', query: {
       'from': from,
@@ -1538,7 +1536,7 @@ class MatrixApi {
 
   /// Gets all currently active pushers for the authenticated user.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-pushers
-  Future<List<Pusher>> requestPushers() async {
+  Future<List<Pusher>> getPushers() async {
     final response = await request(
       RequestType.GET,
       '/client/r0/pushers',
@@ -1552,7 +1550,7 @@ class MatrixApi {
   /// for this user ID. The behaviour of this endpoint varies depending on the
   /// values in the JSON body.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-pushers-set
-  Future<void> setPusher(Pusher pusher, {bool append}) async {
+  Future<void> postPusher(Pusher pusher, {bool append}) async {
     final data = pusher.toJson();
     if (append != null) {
       data['append'] = append;
@@ -1568,7 +1566,7 @@ class MatrixApi {
   /// This API is used to paginate through the list of events that the user has
   /// been, or would have been notified about.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-notifications
-  Future<NotificationsQueryResponse> requestNotifications({
+  Future<NotificationsQueryResponse> getNotifications({
     String from,
     int limit,
     String only,
@@ -1589,7 +1587,7 @@ class MatrixApi {
   /// on the rulesets by suffixing a scope to this path e.g. /pushrules/global/.
   /// This will return a subset of this data under the specified key e.g. the global key.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-pushrules
-  Future<PushRuleSet> requestPushRules() async {
+  Future<PushRuleSet> getPushRules() async {
     final response = await request(
       RequestType.GET,
       '/client/r0/pushrules',
@@ -1599,7 +1597,7 @@ class MatrixApi {
 
   /// Retrieve a single specified push rule.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-pushrules-scope-kind-ruleid
-  Future<PushRule> requestPushRule(
+  Future<PushRule> getPushRule(
     String scope,
     PushRuleKind kind,
     String ruleId,
@@ -1655,7 +1653,7 @@ class MatrixApi {
 
   /// This endpoint gets whether the specified push rule is enabled.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-pushrules-scope-kind-ruleid-enabled
-  Future<bool> requestPushRuleEnabled(
+  Future<bool> isPushRuleEnabled(
     String scope,
     PushRuleKind kind,
     String ruleId,
@@ -1669,7 +1667,7 @@ class MatrixApi {
 
   /// This endpoint allows clients to enable or disable the specified push rule.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-pushrules-scope-kind-ruleid-enabled
-  Future<void> enablePushRule(
+  Future<void> setPushRuleEnabled(
     String scope,
     PushRuleKind kind,
     String ruleId,
@@ -1685,7 +1683,7 @@ class MatrixApi {
 
   /// This endpoint get the actions for the specified push rule.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-pushrules-scope-kind-ruleid-actions
-  Future<List<PushRuleAction>> requestPushRuleActions(
+  Future<List<PushRuleAction>> getPushRuleActions(
     String scope,
     PushRuleKind kind,
     String ruleId,
@@ -1720,7 +1718,7 @@ class MatrixApi {
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-search
   /// Please note: The specification is not 100% clear what it is expecting and sending here.
   /// So we stick with pure json until we have more information.
-  Future<Map<String, dynamic>> globalSearch(Map<String, dynamic> query) async {
+  Future<Map<String, dynamic>> search(Map<String, dynamic> query) async {
     return await request(
       RequestType.POST,
       '/client/r0/search',
@@ -1731,7 +1729,7 @@ class MatrixApi {
   /// This will listen for new events related to a particular room and return them to the
   /// caller. This will block until an event is received, or until the timeout is reached.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-events
-  Future<EventsSyncUpdate> requestEvents({
+  Future<EventsSyncUpdate> getEvents({
     String from,
     int timeout,
     String roomId,
@@ -1747,7 +1745,7 @@ class MatrixApi {
 
   /// List the tags set by a user on a room.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-user-userid-rooms-roomid-tags
-  Future<Map<String, Tag>> requestRoomTags(String userId, String roomId) async {
+  Future<Map<String, Tag>> getRoomTags(String userId, String roomId) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags',
@@ -1759,7 +1757,7 @@ class MatrixApi {
 
   /// Add a tag to the room.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-user-userid-rooms-roomid-tags-tag
-  Future<void> addRoomTag(
+  Future<void> setRoomTag(
     String userId,
     String roomId,
     String tag, {
@@ -1775,7 +1773,7 @@ class MatrixApi {
 
   /// Remove a tag from the room.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-user-userid-rooms-roomid-tags-tag
-  Future<void> removeRoomTag(String userId, String roomId, String tag) async {
+  Future<void> deleteRoomTag(String userId, String roomId, String tag) async {
     await request(
       RequestType.DELETE,
       '/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags/${Uri.encodeComponent(tag)}',
@@ -1801,7 +1799,7 @@ class MatrixApi {
 
   /// Get some account_data for the client. This config is only visible to the user that set the account_data.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-user-userid-account-data-type
-  Future<Map<String, dynamic>> requestAccountData(
+  Future<Map<String, dynamic>> getAccountData(
     String userId,
     String type,
   ) async {
@@ -1814,7 +1812,7 @@ class MatrixApi {
   /// Set some account_data for the client on a given room. This config is only visible to the user that set
   /// the account_data. The config will be synced to clients in the per-room account_data.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-user-userid-rooms-roomid-account-data-type
-  Future<void> setRoomAccountData(
+  Future<void> setAccountDataPerRoom(
     String userId,
     String roomId,
     String type,
@@ -1830,7 +1828,7 @@ class MatrixApi {
 
   /// Get some account_data for the client on a given room. This config is only visible to the user that set the account_data.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-user-userid-rooms-roomid-account-data-type
-  Future<Map<String, dynamic>> requestRoomAccountData(
+  Future<Map<String, dynamic>> getAccountDataPerRoom(
     String userId,
     String roomId,
     String type,
@@ -1843,7 +1841,7 @@ class MatrixApi {
 
   /// Gets information about a particular user.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-admin-whois-userid
-  Future<WhoIsInfo> requestWhoIsInfo(String userId) async {
+  Future<WhoIsInfo> getWhoIs(String userId) async {
     final response = await request(
       RequestType.GET,
       '/client/r0/admin/whois/${Uri.encodeComponent(userId)}',
@@ -1854,7 +1852,7 @@ class MatrixApi {
   /// This API returns a number of events that happened just before and after the specified event.
   /// This allows clients to get the context surrounding an event.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-rooms-roomid-context-eventid
-  Future<EventContext> requestEventContext(
+  Future<EventContext> getEventContext(
     String roomId,
     String eventId, {
     int limit,
@@ -1871,7 +1869,7 @@ class MatrixApi {
 
   /// Reports an event as inappropriate to the server, which may then notify the appropriate people.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-rooms-roomid-report-eventid
-  Future<void> reportEvent(
+  Future<void> reportContent(
     String roomId,
     String eventId,
     String reason,
@@ -1961,7 +1959,7 @@ class MatrixApi {
         .toList();
   }
 
-  Future<OpenIdCredentials> requestOpenIdCredentials(String userId) async {
+  Future<OpenIdCredentials> requestOpenIdToken(String userId) async {
     final response = await request(
       RequestType.POST,
       '/client/r0/user/${Uri.encodeComponent(userId)}/openid/request_token',

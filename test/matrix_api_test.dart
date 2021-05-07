@@ -122,7 +122,7 @@ void main() {
     });
     test('getSupportedVersions', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
-      final supportedVersions = await matrixApi.requestSupportedVersions();
+      final supportedVersions = await matrixApi.getVersions();
       expect(supportedVersions.versions.contains('r0.5.0'), true);
       expect(supportedVersions.unstableFeatures['m.lazy_load_members'], true);
       expect(FakeMatrixApi.api['GET']['/client/versions']({}),
@@ -131,8 +131,7 @@ void main() {
     });
     test('getWellKnownInformation', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
-      final wellKnownInformation =
-          await matrixApi.requestWellKnownInformation();
+      final wellKnownInformation = await matrixApi.getWellknown();
       expect(wellKnownInformation.mHomeserver.baseUrl,
           'https://fakeserver.notexisting');
       expect(wellKnownInformation.toJson(), {
@@ -147,7 +146,7 @@ void main() {
     });
     test('getLoginTypes', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
-      final loginTypes = await matrixApi.requestLoginTypes();
+      final loginTypes = await matrixApi.getLoginFlows();
       expect(loginTypes.flows.first.type, 'm.login.password');
       expect(FakeMatrixApi.api['GET']['/client/r0/login']({}),
           loginTypes.toJson());
@@ -273,14 +272,15 @@ void main() {
     });
     test('usernameAvailable', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
-      final loginResponse = await matrixApi.usernameAvailable('testuser');
+      final loginResponse =
+          await matrixApi.checkUsernameAvailability('testuser');
       expect(loginResponse, true);
       matrixApi.homeserver = null;
     });
     test('getThirdPartyIdentifiers', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
-      final response = await matrixApi.requestThirdPartyIdentifiers();
+      final response = await matrixApi.getAccount3PIDs();
       expect(FakeMatrixApi.api['GET']['/client/r0/account/3pid']({}),
           {'threepids': response.map((t) => t.toJson()).toList()});
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -288,14 +288,14 @@ void main() {
     test('addThirdPartyIdentifier', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
-      await matrixApi.addThirdPartyIdentifier('1234', '1234',
+      await matrixApi.add3PID('1234', '1234',
           auth: AuthenticationData.fromJson({'type': 'm.login.dummy'}));
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
     test('bindThirdPartyIdentifier', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
-      await matrixApi.bindThirdPartyIdentifier(
+      await matrixApi.bind3PID(
         '1234',
         '1234',
         'https://example.com',
@@ -306,7 +306,7 @@ void main() {
     test('deleteThirdPartyIdentifier', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
-      final response = await matrixApi.deleteThirdPartyIdentifier(
+      final response = await matrixApi.delete3pidFromAccount(
         'alice@example.com',
         ThirdPartyIdentifierMedium.email,
         idServer: 'https://example.com',
@@ -317,7 +317,7 @@ void main() {
     test('unbindThirdPartyIdentifier', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
-      final response = await matrixApi.unbindThirdPartyIdentifier(
+      final response = await matrixApi.unbind3pidFromAccount(
         'alice@example.com',
         ThirdPartyIdentifierMedium.email,
         'https://example.com',
@@ -355,14 +355,14 @@ void main() {
     test('requestMsisdnValidationToken', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
-      final response = await matrixApi.whoAmI();
+      final response = await matrixApi.getTokenOwner();
       expect(response, 'alice@example.com');
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
     test('getServerCapabilities', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
-      final response = await matrixApi.requestServerCapabilities();
+      final response = await matrixApi.getCapabilities();
       expect(FakeMatrixApi.api['GET']['/client/r0/capabilities']({}),
           {'capabilities': response.toJson()});
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -371,7 +371,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
       final response =
-          await matrixApi.uploadFilter('alice@example.com', Filter());
+          await matrixApi.defineFilter('alice@example.com', Filter());
       expect(response, '1234');
       final filter = Filter(
         room: RoomFilter(
@@ -442,7 +442,7 @@ void main() {
           'not_senders': ['@alice:example.com']
         },
       });
-      await matrixApi.uploadFilter(
+      await matrixApi.defineFilter(
         'alice@example.com',
         filter,
       );
@@ -481,7 +481,7 @@ void main() {
     test('downloadFilter', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
-      await matrixApi.downloadFilter('alice@example.com', '1234');
+      await matrixApi.getFilter('alice@example.com', '1234');
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
     test('sync', () async {
@@ -506,7 +506,7 @@ void main() {
       matrixApi.accessToken = '1234';
 
       final event =
-          await matrixApi.requestEvent('!localpart:server.abc', '1234');
+          await matrixApi.getOneRoomEvent('!localpart:server.abc', '1234');
       expect(event.eventId, '143273582443PhrSn:example.org');
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -525,7 +525,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final states = await matrixApi.requestStates('!localpart:server.abc');
+      final states = await matrixApi.getRoomState('!localpart:server.abc');
       expect(states.length, 4);
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -534,7 +534,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final states = await matrixApi.requestMembers(
+      final states = await matrixApi.getMembersByRoom(
         '!localpart:server.abc',
         at: '1234',
         membership: Membership.join,
@@ -548,7 +548,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final states = await matrixApi.requestJoinedMembers(
+      final states = await matrixApi.getJoinedMembersByRoom(
         '!localpart:server.abc',
       );
       expect(states.length, 1);
@@ -563,7 +563,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final timelineHistoryResponse = await matrixApi.requestMessages(
+      final timelineHistoryResponse = await matrixApi.getRoomEvents(
         '!localpart:server.abc',
         '1234',
         Direction.b,
@@ -584,7 +584,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final eventId = await matrixApi.sendState(
+      final eventId = await matrixApi.setRoomStateWithKey(
           '!localpart:server.abc', 'm.room.avatar', {'url': 'mxc://1234'});
 
       expect(eventId, 'YUwRidLecu:example.com');
@@ -610,7 +610,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final eventId = await matrixApi.redact(
+      final eventId = await matrixApi.redactEvent(
         '!localpart:server.abc',
         '1234',
         '1234',
@@ -648,7 +648,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.createRoomAlias(
+      await matrixApi.setRoomAlias(
         '#testalias:example.com',
         '!1234:example.com',
       );
@@ -659,7 +659,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final roomAliasInformation = await matrixApi.requestRoomAliasInformation(
+      final roomAliasInformation = await matrixApi.getRoomIdByAlias(
         '#testalias:example.com',
       );
 
@@ -674,7 +674,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.removeRoomAlias('#testalias:example.com');
+      await matrixApi.deleteRoomAlias('#testalias:example.com');
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -682,7 +682,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final list = await matrixApi.requestRoomAliases('!localpart:example.com');
+      final list = await matrixApi.getLocalAliases('!localpart:example.com');
       expect(list.length, 3);
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -691,7 +691,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final list = await matrixApi.requestJoinedRooms();
+      final list = await matrixApi.getJoinedRooms();
       expect(list.length, 1);
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -710,7 +710,7 @@ void main() {
       matrixApi.accessToken = '1234';
 
       final roomId = '!localpart:example.com';
-      final response = await matrixApi.joinRoom(
+      final response = await matrixApi.joinRoomById(
         roomId,
         thirdPidSignedSender: '@bob:example.com',
         thirdPidSignedmxid: '@alice:example.com',
@@ -728,7 +728,7 @@ void main() {
       matrixApi.accessToken = '1234';
 
       final roomId = '!localpart:example.com';
-      final response = await matrixApi.joinRoomOrAlias(
+      final response = await matrixApi.joinRoom(
         roomId,
         servers: ['example.com', 'example.abc'],
         thirdPidSignedSender: '@bob:example.com',
@@ -762,7 +762,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.kickFromRoom(
+      await matrixApi.kick(
         '!localpart:example.com',
         '@bob:example.com',
         reason: 'test',
@@ -774,7 +774,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.banFromRoom(
+      await matrixApi.ban(
         '!localpart:example.com',
         '@bob:example.com',
         reason: 'test',
@@ -786,7 +786,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.unbanInRoom(
+      await matrixApi.unban(
         '!localpart:example.com',
         '@bob:example.com',
       );
@@ -797,8 +797,8 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final visibility =
-          await matrixApi.requestRoomVisibility('!localpart:example.com');
+      final visibility = await matrixApi
+          .getRoomVisibilityOnDirectory('!localpart:example.com');
       expect(visibility, Visibility.public);
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -807,7 +807,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.setRoomVisibility(
+      await matrixApi.setRoomVisibilityOnDirectory(
           '!localpart:example.com', Visibility.private);
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -816,7 +816,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestPublicRooms(
+      final response = await matrixApi.getPublicRooms(
         limit: 10,
         since: '1234',
         server: 'example.com',
@@ -833,7 +833,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.searchPublicRooms(
+      final response = await matrixApi.queryPublicRooms(
         limit: 10,
         since: '1234',
         server: 'example.com',
@@ -853,7 +853,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.searchUser(
+      final response = await matrixApi.searchUserDirectory(
         'test',
         limit: 10,
       );
@@ -867,7 +867,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.setDisplayname('@alice:example.com', 'Alice M');
+      await matrixApi.setDisplayName('@alice:example.com', 'Alice M');
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -875,7 +875,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.requestDisplayname('@alice:example.com');
+      await matrixApi.getDisplayName('@alice:example.com');
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -894,7 +894,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestAvatarUrl('@alice:example.com');
+      final response = await matrixApi.getAvatarUrl('@alice:example.com');
       expect(response, Uri.parse('mxc://test'));
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -903,7 +903,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestProfile('@alice:example.com');
+      final response = await matrixApi.getUserProfile('@alice:example.com');
       expect(
           FakeMatrixApi.api['GET']
               ['/client/r0/profile/%40alice%3Aexample.com']({}),
@@ -915,7 +915,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestTurnServerCredentials();
+      final response = await matrixApi.getTurnServer();
       expect(FakeMatrixApi.api['GET']['/client/r0/voip/turnServer']({}),
           response.toJson());
 
@@ -925,7 +925,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.sendTypingNotification(
+      await matrixApi.setTyping(
         '@alice:example.com',
         '!localpart:example.com',
         true,
@@ -938,7 +938,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.sendReceiptMarker(
+      await matrixApi.postReceipt(
         '!localpart:example.com',
         '\$1234:example.com',
       );
@@ -949,7 +949,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.sendReadMarker(
+      await matrixApi.setReadMarker(
         '!localpart:example.com',
         '\$1234:example.com',
         readReceiptLocationEventId: '\$1234:example.com',
@@ -961,7 +961,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.sendPresence(
+      await matrixApi.setPresence(
         '@alice:example.com',
         PresenceType.offline,
         statusMsg: 'test',
@@ -973,7 +973,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestPresence(
+      final response = await matrixApi.getPresence(
         '@alice:example.com',
       );
       expect(
@@ -985,11 +985,11 @@ void main() {
     });
     test('upload', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
-      final response = await matrixApi.upload(Uint8List(0), 'file.jpeg');
+      final response = await matrixApi.uploadContent(Uint8List(0), 'file.jpeg');
       expect(response, 'mxc://example.com/AQwafuaFswefuhsfAFAgsw');
       var throwsException = false;
       try {
-        await matrixApi.upload(Uint8List(0), 'file.jpg');
+        await matrixApi.uploadContent(Uint8List(0), 'file.jpg');
       } on MatrixException catch (_) {
         throwsException = true;
       }
@@ -1000,7 +1000,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final openGraphData = await matrixApi.requestOpenGraphDataForUrl(
+      final openGraphData = await matrixApi.getUrlPreview(
         Uri.parse('https://matrix.org'),
         ts: 10,
       );
@@ -1015,7 +1015,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestMaxUploadSize();
+      final response = await matrixApi.getConfig();
       expect(response, 50000000);
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -1036,7 +1036,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final devices = await matrixApi.requestDevices();
+      final devices = await matrixApi.getDevices();
       expect(FakeMatrixApi.api['GET']['/client/r0/devices']({})['devices'],
           devices.map((i) => i.toJson()).toList());
 
@@ -1046,7 +1046,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.requestDevice('QBUAZIFURK');
+      await matrixApi.getDevice('QBUAZIFURK');
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -1054,7 +1054,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.setDeviceMetadata('QBUAZIFURK', displayName: 'test');
+      await matrixApi.updateDevice('QBUAZIFURK', displayName: 'test');
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -1080,7 +1080,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.uploadDeviceKeys(
+      await matrixApi.uploadKeys(
         deviceKeys: MatrixDeviceKeys(
           '@alice:example.com',
           'ABCD',
@@ -1097,7 +1097,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestDeviceKeys(
+      final response = await matrixApi.queryKeys(
         {
           '@alice:example.com': [],
         },
@@ -1119,7 +1119,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestOneTimeKeys(
+      final response = await matrixApi.claimKeys(
         {
           '@alice:example.com': {'JLAFKJWSCS': 'signed_curve25519'}
         },
@@ -1139,7 +1139,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.requestDeviceListsUpdate('1234', '1234');
+      await matrixApi.getKeysChanges('1234', '1234');
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -1230,7 +1230,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestPushers();
+      final response = await matrixApi.getPushers();
       expect(
         FakeMatrixApi.api['GET']['/client/r0/pushers']({}),
         {'pushers': response.map((i) => i.toJson()).toList()},
@@ -1242,7 +1242,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.setPusher(
+      await matrixApi.postPusher(
         Pusher(
           '1234',
           'app.id',
@@ -1263,7 +1263,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestNotifications(
+      final response = await matrixApi.getNotifications(
         from: '1234',
         limit: 10,
         only: '1234',
@@ -1280,7 +1280,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestPushRules();
+      final response = await matrixApi.getPushRules();
       expect(
         FakeMatrixApi.api['GET']['/client/r0/pushrules']({}),
         {'global': response.toJson()},
@@ -1292,8 +1292,8 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestPushRule(
-          'global', PushRuleKind.content, 'nocake');
+      final response =
+          await matrixApi.getPushRule('global', PushRuleKind.content, 'nocake');
       expect(
         FakeMatrixApi.api['GET']
             ['/client/r0/pushrules/global/content/nocake']({}),
@@ -1338,7 +1338,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final enabled = await matrixApi.requestPushRuleEnabled(
+      final enabled = await matrixApi.isPushRuleEnabled(
           'global', PushRuleKind.content, 'nocake');
       expect(enabled, true);
 
@@ -1348,7 +1348,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.enablePushRule(
+      await matrixApi.setPushRuleEnabled(
         'global',
         PushRuleKind.content,
         'nocake',
@@ -1361,7 +1361,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final actions = await matrixApi.requestPushRuleActions(
+      final actions = await matrixApi.getPushRuleActions(
           'global', PushRuleKind.content, 'nocake');
       expect(actions.first, PushRuleAction.notify);
 
@@ -1384,7 +1384,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.globalSearch({});
+      await matrixApi.search({});
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -1392,8 +1392,8 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestEvents(
-          from: '1234', roomId: '!1234', timeout: 10);
+      final response =
+          await matrixApi.getEvents(from: '1234', roomId: '!1234', timeout: 10);
       expect(
         FakeMatrixApi.api['GET']
             ['/client/r0/events?from=1234&timeout=10&roomId=%211234']({}),
@@ -1406,7 +1406,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestRoomTags(
+      final response = await matrixApi.getRoomTags(
           '@alice:example.com', '!localpart:example.com');
       expect(
         FakeMatrixApi.api['GET'][
@@ -1420,7 +1420,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.addRoomTag(
+      await matrixApi.setRoomTag(
         '@alice:example.com',
         '!localpart:example.com',
         'testtag',
@@ -1433,7 +1433,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.removeRoomTag(
+      await matrixApi.deleteRoomTag(
         '@alice:example.com',
         '!localpart:example.com',
         'testtag',
@@ -1457,7 +1457,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.requestAccountData(
+      await matrixApi.getAccountData(
         '@alice:example.com',
         'test.account.data',
       );
@@ -1468,7 +1468,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.setRoomAccountData(
+      await matrixApi.setAccountDataPerRoom(
         '@alice:example.com',
         '1234',
         'test.account.data',
@@ -1481,7 +1481,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.requestRoomAccountData(
+      await matrixApi.getAccountDataPerRoom(
         '@alice:example.com',
         '1234',
         'test.account.data',
@@ -1493,7 +1493,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestWhoIsInfo('@alice:example.com');
+      final response = await matrixApi.getWhoIs('@alice:example.com');
       expect(
         FakeMatrixApi.api['GET']
             ['/client/r0/admin/whois/%40alice%3Aexample.com']({}),
@@ -1506,7 +1506,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestEventContext('1234', '1234',
+      final response = await matrixApi.getEventContext('1234', '1234',
           limit: 10, filter: '{}');
       expect(
         FakeMatrixApi.api['GET']
@@ -1520,7 +1520,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.reportEvent(
+      await matrixApi.reportContent(
         '1234',
         '1234',
         'test',
@@ -1607,7 +1607,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await matrixApi.requestOpenIdCredentials('1234');
+      final response = await matrixApi.requestOpenIdToken('1234');
       expect(
         FakeMatrixApi.api['POST']
             ['/client/r0/user/1234/openid/request_token']({}),
