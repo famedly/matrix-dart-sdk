@@ -124,7 +124,7 @@ extension CommandsClientExtension on Client {
       return await args.room.sendReaction(args.inReplyTo.eventId, args.msg);
     });
     addCommand('join', (CommandArgs args) async {
-      await args.room.client.joinRoomOrAlias(args.msg);
+      await args.room.client.joinRoom(args.msg);
       return null;
     });
     addCommand('leave', (CommandArgs args) async {
@@ -169,7 +169,7 @@ extension CommandsClientExtension on Client {
           .content
           .copy();
       currentEventJson['displayname'] = args.msg;
-      return await args.room.client.sendState(
+      return await args.room.client.setRoomStateWithKey(
         args.room.id,
         EventTypes.RoomMember,
         currentEventJson,
@@ -182,7 +182,7 @@ extension CommandsClientExtension on Client {
           .content
           .copy();
       currentEventJson['avatar_url'] = args.msg;
-      return await args.room.client.sendState(
+      return await args.room.client.setRoomStateWithKey(
         args.room.id,
         EventTypes.RoomMember,
         currentEventJson,

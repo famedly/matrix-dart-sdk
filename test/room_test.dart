@@ -223,7 +223,7 @@ void main() {
     });
 
     test('sendReadMarker', () async {
-      await room.sendReadMarker('§1234:fakeServer.notExisting');
+      await room.setReadMarker('§1234:fakeServer.notExisting');
     });
 
     test('requestParticipants', () async {

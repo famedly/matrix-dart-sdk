@@ -235,7 +235,7 @@ class OlmManager {
       if (updateDatabase) {
         await client.database?.updateClientKeys(pickledOlmAccount, client.id);
       }
-      final response = await client.uploadDeviceKeys(
+      final response = await client.uploadKeys(
         deviceKeys: uploadDeviceKeys
             ? MatrixDeviceKeys.fromJson(keysContent['device_keys'])
             : null,
@@ -526,8 +526,7 @@ class OlmManager {
       requestingKeysFrom[device.userId][device.deviceId] = 'signed_curve25519';
     }
 
-    final response =
-        await client.requestOneTimeKeys(requestingKeysFrom, timeout: 10000);
+    final response = await client.claimKeys(requestingKeysFrom, timeout: 10000);
 
     for (final userKeysEntry in response.oneTimeKeys.entries) {
       final userId = userKeysEntry.key;

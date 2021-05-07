@@ -254,11 +254,11 @@ class Room {
   /// Sets the canonical alias. If the [canonicalAlias] is not yet an alias of
   /// this room, it will create one.
   Future<void> setCanonicalAlias(String canonicalAlias) async {
-    final aliases = await client.requestRoomAliases(id);
+    final aliases = await client.getLocalAliases(id);
     if (!aliases.contains(canonicalAlias)) {
-      await client.createRoomAlias(canonicalAlias, id);
+      await client.setRoomAlias(canonicalAlias, id);
     }
-    await client.sendState(id, EventTypes.RoomCanonicalAlias, {
+    await client.setRoomStateWithKey(id, EventTypes.RoomCanonicalAlias, {
       'alias': canonicalAlias,
     });
   }
@@ -419,21 +419,21 @@ class Room {
 
   /// Call the Matrix API to change the name of this room. Returns the event ID of the
   /// new m.room.name event.
-  Future<String> setName(String newName) => client.sendState(
+  Future<String> setName(String newName) => client.setRoomStateWithKey(
         id,
         EventTypes.RoomName,
         {'name': newName},
       );
 
   /// Call the Matrix API to change the topic of this room.
-  Future<String> setDescription(String newName) => client.sendState(
+  Future<String> setDescription(String newName) => client.setRoomStateWithKey(
         id,
         EventTypes.RoomTopic,
         {'topic': newName},
       );
 
   /// Add a tag to the room.
-  Future<void> addTag(String tag, {double order}) => client.addRoomTag(
+  Future<void> addTag(String tag, {double order}) => client.setRoomTag(
         client.userID,
         id,
         tag,
@@ -441,7 +441,7 @@ class Room {
       );
 
   /// Removes a tag from the room.
-  Future<void> removeTag(String tag) => client.removeRoomTag(
+  Future<void> removeTag(String tag) => client.deleteRoomTag(
         client.userID,
         id,
         tag,
@@ -482,14 +482,14 @@ class Room {
               ..roomId = id
               ..type = EventType.markedUnread
           ])))));
-    await client.setRoomAccountData(
+    await client.setAccountDataPerRoom(
       client.userID,
       id,
       EventType.markedUnread,
       content,
     );
     if (unread == false && lastEvent != null) {
-      await sendReadMarker(
+      await setReadMarker(
         lastEvent.eventId,
         readReceiptLocationEventId: lastEvent.eventId,
       );
@@ -505,7 +505,7 @@ class Room {
 
   /// Call the Matrix API to change the pinned events of this room.
   Future<String> setPinnedEvents(List<String> pinnedEventIds) =>
-      client.sendState(
+      client.setRoomStateWithKey(
         id,
         EventTypes.RoomPinnedEvents,
         {'pinned': pinnedEventIds},
@@ -674,13 +674,13 @@ class Room {
         uploadThumbnail = encryptedThumbnail.toMatrixFile();
       }
     }
-    final uploadResp = await client.upload(
+    final uploadResp = await client.uploadContent(
       uploadFile.bytes,
       uploadFile.name,
       contentType: uploadFile.mimeType,
     );
     final thumbnailUploadResp = uploadThumbnail != null
-        ? await client.upload(
+        ? await client.uploadContent(
             uploadThumbnail.bytes,
             uploadThumbnail.name,
             contentType: uploadThumbnail.mimeType,
@@ -881,7 +881,7 @@ class Room {
   /// automatically be set.
   Future<void> join({bool leaveIfNotFound = true}) async {
     try {
-      await client.joinRoom(id);
+      await client.joinRoomById(id);
       final invitation = getState(EventTypes.RoomMember, client.userID);
       if (invitation != null &&
           invitation.content['is_direct'] is bool &&
@@ -929,13 +929,13 @@ class Room {
   }
 
   /// Call the Matrix API to kick a user from this room.
-  Future<void> kick(String userID) => client.kickFromRoom(id, userID);
+  Future<void> kick(String userID) => client.kick(id, userID);
 
   /// Call the Matrix API to ban a user from this room.
-  Future<void> ban(String userID) => client.banFromRoom(id, userID);
+  Future<void> ban(String userID) => client.ban(id, userID);
 
   /// Call the Matrix API to unban a banned user from this room.
-  Future<void> unban(String userID) => client.unbanInRoom(id, userID);
+  Future<void> unban(String userID) => client.unban(id, userID);
 
   /// Set the power level of the user with the [userID] to the value [power].
   /// Returns the event ID of the new state event. If there is no known
@@ -947,7 +947,7 @@ class Room {
     if (powerMap['users'] == null) powerMap['users'] = {};
     powerMap['users'][userID] = power;
 
-    return await client.sendState(
+    return await client.setRoomStateWithKey(
       id,
       EventTypes.RoomPowerLevels,
       powerMap,
@@ -962,7 +962,7 @@ class Room {
   /// the historical events will be published in the onEvent stream.
   Future<void> requestHistory(
       {int historyCount = defaultHistoryCount, onHistoryReceived}) async {
-    final resp = await client.requestMessages(
+    final resp = await client.getRoomEvents(
       id,
       prev_batch,
       Direction.b,
@@ -1030,7 +1030,7 @@ class Room {
       return;
     } // Nothing to do here
 
-    await client.setRoomAccountData(
+    await client.setAccountDataPerRoom(
       client.userID,
       id,
       'm.direct',
@@ -1041,13 +1041,13 @@ class Room {
 
   /// Sets the position of the read marker for a given room, and optionally the
   /// read receipt's location.
-  Future<void> sendReadMarker(String eventId,
+  Future<void> setReadMarker(String eventId,
       {String readReceiptLocationEventId}) async {
     if (readReceiptLocationEventId != null) {
       notificationCount = 0;
       await client.database?.resetNotificationCount(client.id, id);
     }
-    await client.sendReadMarker(
+    await client.setReadMarker(
       id,
       eventId,
       readReceiptLocationEventId: readReceiptLocationEventId,
@@ -1057,10 +1057,10 @@ class Room {
 
   /// This API updates the marker for the given receipt type to the event ID
   /// specified.
-  Future<void> sendReceiptMarker(String eventId) async {
+  Future<void> postReceipt(String eventId) async {
     notificationCount = 0;
     await client.database?.resetNotificationCount(client.id, id);
-    await client.sendReceiptMarker(
+    await client.postReceipt(
       id,
       eventId,
     );
@@ -1072,7 +1072,7 @@ class Room {
   Future<void> sendReadReceipt(String eventID) async {
     notificationCount = 0;
     await client.database?.resetNotificationCount(client.id, id);
-    await client.sendReadMarker(
+    await client.setReadMarker(
       id,
       eventID,
       readReceiptLocationEventId: eventID,
@@ -1199,7 +1199,7 @@ class Room {
     if (_requestedParticipants || participantListComplete) {
       return getParticipants();
     }
-    final matrixEvents = await client.requestMembers(id);
+    final matrixEvents = await client.getMembersByRoom(id);
     final users =
         matrixEvents.map((e) => Event.fromMatrixEvent(e, this).asUser).toList();
     for (final user in users) {
@@ -1294,7 +1294,7 @@ class Room {
     }
     if (resp == null && requestProfile) {
       try {
-        final profile = await client.requestProfile(mxID);
+        final profile = await client.getUserProfile(mxID);
         resp = {
           'displayname': profile.displayname,
           'avatar_url': profile.avatarUrl.toString(),
@@ -1340,7 +1340,7 @@ class Room {
   /// Searches for the event on the server. Returns null if not found.
   Future<Event> getEventById(String eventID) async {
     try {
-      final matrixEvent = await client.requestEvent(id, eventID);
+      final matrixEvent = await client.getOneRoomEvent(id, eventID);
       final event = Event.fromMatrixEvent(matrixEvent, this);
       if (event.type == EventTypes.Encrypted && client.encryptionEnabled) {
         // attempt decryption
@@ -1388,8 +1388,8 @@ class Room {
   /// Uploads a new user avatar for this room. Returns the event ID of the new
   /// m.room.avatar event.
   Future<String> setAvatar(MatrixFile file) async {
-    final uploadResp = await client.upload(file.bytes, file.name);
-    return await client.sendState(
+    final uploadResp = await client.uploadContent(file.bytes, file.name);
+    return await client.setRoomStateWithKey(
       id,
       EventTypes.RoomAvatar,
       {'url': uploadResp},
@@ -1538,7 +1538,7 @@ class Room {
     }
     final data = <String, dynamic>{};
     if (reason != null) data['reason'] = reason;
-    return await client.redact(
+    return await client.redactEvent(
       id,
       eventId,
       messageID,
@@ -1549,12 +1549,12 @@ class Room {
   /// This tells the server that the user is typing for the next N milliseconds
   /// where N is the value specified in the timeout key. Alternatively, if typing is false,
   /// it tells the server that the user has stopped typing.
-  Future<void> sendTypingNotification(bool isTyping, {int timeout}) => client
-      .sendTypingNotification(client.userID, id, isTyping, timeout: timeout);
+  Future<void> setTyping(bool isTyping, {int timeout}) =>
+      client.setTyping(client.userID, id, isTyping, timeout: timeout);
 
   @Deprecated('Use sendTypingNotification instead')
   Future<void> sendTypingInfo(bool isTyping, {int timeout}) =>
-      sendTypingNotification(isTyping, timeout: timeout);
+      setTyping(isTyping, timeout: timeout);
 
   /// This is sent by the caller when they wish to establish a call.
   /// [callId] is a unique identifier for the call.
@@ -1669,7 +1669,7 @@ class Room {
 
   /// Changes the join rules. You should check first if the user is able to change it.
   Future<void> setJoinRules(JoinRules joinRules) async {
-    await client.sendState(
+    await client.setRoomStateWithKey(
       id,
       EventTypes.RoomJoinRules,
       {
@@ -1691,7 +1691,7 @@ class Room {
 
   /// Changes the guest access. You should check first if the user is able to change it.
   Future<void> setGuestAccess(GuestAccess guestAccess) async {
-    await client.sendState(
+    await client.setRoomStateWithKey(
       id,
       EventTypes.GuestAccess,
       {
@@ -1714,7 +1714,7 @@ class Room {
 
   /// Changes the history visibility. You should check first if the user is able to change it.
   Future<void> setHistoryVisibility(HistoryVisibility historyVisibility) async {
-    await client.sendState(
+    await client.setRoomStateWithKey(
       id,
       EventTypes.HistoryVisibility,
       {
@@ -1739,7 +1739,7 @@ class Room {
   Future<void> enableEncryption({int algorithmIndex = 0}) async {
     if (encrypted) throw ('Encryption is already enabled!');
     final algorithm = Client.supportedGroupEncryptionAlgorithms[algorithmIndex];
-    await client.sendState(
+    await client.setRoomStateWithKey(
       id,
       EventTypes.Encryption,
       {
@@ -1836,7 +1836,7 @@ class Room {
   }) async {
     if (!isSpace) throw Exception('Room is not a space!');
     via ??= [roomId.domain];
-    await client.sendState(
+    await client.setRoomStateWithKey(
         id,
         EventTypes.spaceChild,
         {
@@ -1845,7 +1845,7 @@ class Room {
           if (suggested != null) 'suggested': suggested,
         },
         roomId);
-    await client.sendState(
+    await client.setRoomStateWithKey(
         roomId,
         EventTypes.spaceParent,
         {

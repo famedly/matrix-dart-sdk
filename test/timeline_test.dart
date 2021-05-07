@@ -288,7 +288,7 @@ void main() {
       expect(timeline.events[1].eventId, '2143273582443PhrSn:example.org');
       expect(timeline.events[2].eventId, '1143273582443PhrSn:example.org');
       expect(room.prev_batch, 't47409-4357353_219380_26003_2265');
-      await timeline.events[2].redact(reason: 'test', txid: '1234');
+      await timeline.events[2].redactEvent(reason: 'test', txid: '1234');
     });
 
     test('Clear cache on limited timeline', () async {

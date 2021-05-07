@@ -92,7 +92,7 @@ void main() {
           checkWellKnown: false);
       expect(matrix.homeserver.toString(), 'https://fakeserver.notexisting');
 
-      final available = await matrix.usernameAvailable('testuser');
+      final available = await matrix.checkUsernameAvailability('testuser');
       expect(available, true);
 
       final loginStateFuture = matrix.onLoginStateChanged.stream.first;
@@ -589,7 +589,7 @@ void main() {
     });
     test('upload', () async {
       final client = await getClient();
-      final response = await client.upload(Uint8List(0), 'file.jpeg');
+      final response = await client.uploadContent(Uint8List(0), 'file.jpeg');
       expect(response, 'mxc://example.com/AQwafuaFswefuhsfAFAgsw');
       expect(await client.database.getFile(response) != null, true);
       await client.dispose(closeDatabase: true);

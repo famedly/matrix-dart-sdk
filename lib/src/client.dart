@@ -329,7 +329,7 @@ class Client extends MatrixApi {
       WellKnownInformation wellKnown;
       if (checkWellKnown) {
         try {
-          wellKnown = await requestWellKnownInformation();
+          wellKnown = await getWellknown();
           homeserverUrl = wellKnown.mHomeserver.baseUrl.trim();
           // strip a trailing slash
           if (homeserverUrl.endsWith('/')) {
@@ -343,14 +343,14 @@ class Client extends MatrixApi {
       }
 
       // Check if server supports at least one supported version
-      final versions = await requestSupportedVersions();
+      final versions = await getVersions();
       if (!versions.versions
           .any((version) => supportedVersions.contains(version))) {
         throw BadServerVersionsException(
             versions.versions.toSet(), supportedVersions);
       }
 
-      final loginTypes = await requestLoginTypes();
+      final loginTypes = await getLoginFlows();
       if (!loginTypes.flows.any((f) => supportedLoginTypes.contains(f.type))) {
         throw BadServerLoginTypesException(
             loginTypes.flows.map((f) => f.type).toSet(), supportedLoginTypes);
@@ -596,7 +596,7 @@ class Client extends MatrixApi {
     if (cache && _profileCache.containsKey(userId)) {
       return _profileCache[userId];
     }
-    final profile = await requestProfile(userId);
+    final profile = await getUserProfile(userId);
     _profileCache[userId] = profile;
     return profile;
   }
@@ -646,9 +646,10 @@ class Client extends MatrixApi {
   /// Uploads a file and automatically caches it in the database, if it is small enough
   /// and returns the mxc url as a string.
   @override
-  Future<String> upload(Uint8List file, String fileName,
+  Future<String> uploadContent(Uint8List file, String fileName,
       {String contentType}) async {
-    final mxc = await super.upload(file, fileName, contentType: contentType);
+    final mxc =
+        await super.uploadContent(file, fileName, contentType: contentType);
     final storeable = database != null && file.length <= database.maxFileSize;
     if (storeable) {
       await database.storeFile(
@@ -659,14 +660,13 @@ class Client extends MatrixApi {
 
   /// Sends a typing notification and initiates a megolm session, if needed
   @override
-  Future<void> sendTypingNotification(
+  Future<void> setTyping(
     String userId,
     String roomId,
     bool typing, {
     int timeout,
   }) async {
-    await super
-        .sendTypingNotification(userId, roomId, typing, timeout: timeout);
+    await super.setTyping(userId, roomId, typing, timeout: timeout);
     final room = getRoomById(roomId);
     if (typing && room != null && encryptionEnabled && room.encrypted) {
       unawaited(encryption.keyManager.prepareOutboundGroupSession(roomId));
@@ -675,7 +675,7 @@ class Client extends MatrixApi {
 
   /// Uploads a new user avatar for this user.
   Future<void> setAvatar(MatrixFile file) async {
-    final uploadResp = await upload(file.bytes, file.name);
+    final uploadResp = await uploadContent(file.bytes, file.name);
     await setAvatarUrl(userID, Uri.parse(uploadResp));
     return;
   }
@@ -990,7 +990,7 @@ class Client extends MatrixApi {
 
   Future<void> _checkSyncFilter() async {
     if (syncFilterId == null) {
-      syncFilterId = await uploadFilter(userID, syncFilter);
+      syncFilterId = await defineFilter(userID, syncFilter);
       await database?.storeSyncFilterId(syncFilterId, id);
     }
     return;
@@ -1563,7 +1563,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
 
       if (outdatedLists.isNotEmpty) {
         // Request the missing device key lists from the server.
-        final response = await requestDeviceKeys(outdatedLists, timeout: 10000);
+        final response = await queryKeys(outdatedLists, timeout: 10000);
         if (!isLogged()) return;
 
         for (final rawDeviceKeyListEntry in response.deviceKeys.entries) {
@@ -1905,7 +1905,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
   }
 
   Future<void> setMuteAllPushNotifications(bool muted) async {
-    await enablePushRule(
+    await setPushRuleEnabled(
       'global',
       PushRuleKind.override,
       '.m.rule.master',

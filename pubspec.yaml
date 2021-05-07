@@ -20,7 +20,7 @@ dependencies:
   olm: ^2.0.0
   isolate: ^2.0.3
   logger: ^1.0.0
-  matrix_api_lite: ^0.2.6
+  matrix_api_lite: 0.3.0
 
 dev_dependencies:
   test: ^1.15.7
