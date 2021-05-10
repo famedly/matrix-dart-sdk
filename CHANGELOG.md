@@ -1,3 +1,6 @@
+## 0.3.0
+- feat: operation names from OpenAPI spec
+
 ## 0.2.6
 - fix: Missing RoomCreationTypes
 
