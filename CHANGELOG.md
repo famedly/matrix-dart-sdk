@@ -1,3 +1,6 @@
+## 0.3.1
+- change: Remove logger package
+
 ## 0.3.0
 - feat: operation names from OpenAPI spec
 
