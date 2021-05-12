@@ -22,7 +22,6 @@
 */
 
 import 'dart:typed_data';
-import 'package:logger/logger.dart';
 import 'package:matrix_api_lite/fake_matrix_api.dart';
 import 'package:matrix_api_lite/matrix_api_lite.dart';
 import 'package:test/test.dart';
@@ -37,11 +36,11 @@ void main() {
       Logs().w('Test log');
       Logs().e('Test log');
       Logs().wtf('Test log');
-      Logs().v('Test log', Exception('Test'));
+      Logs().v('Test log', Exception('There has been a verbose'));
       Logs().d('Test log', Exception('Test'));
-      Logs().w('Test log', Exception('Test'));
-      Logs().e('Test log', Exception('Test'));
-      Logs().wtf('Test log', Exception('Test'));
+      Logs().w('Test log', Exception('Very bad error'));
+      Logs().e('Test log', Exception('Test'), StackTrace.current);
+      Logs().wtf('Test log', Exception('Test'), StackTrace.current);
     });
     Logs().level = Level.error;
     final matrixApi = MatrixApi(

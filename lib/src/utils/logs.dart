@@ -21,50 +21,123 @@
 * SOFTWARE.
 */
 
-import 'package:logger/logger.dart';
+enum Level {
+  wtf,
+  error,
+  warning,
+  info,
+  debug,
+  verbose,
+}
 
-class Logs extends Logger {
+class Logs {
   static final Logs _singleton = Logs._internal();
 
   factory Logs() {
     return _singleton;
   }
 
-  set level(Level newLevel) => Logger.level = newLevel;
+  Level level = Level.info;
 
-  final List<OutputEvent> outputEvents = [];
+  final List<LogEvent> outputEvents = [];
 
-  Logs._internal()
-      : super(
-          printer: _MatrixSdkPrinter(),
-          filter: _MatrixSdkFilter(),
-          output: _CacheOutput(),
-        );
-}
+  Logs._internal();
 
-class _MatrixSdkFilter extends LogFilter {
-  @override
-  bool shouldLog(LogEvent event) => event.level.index >= Logger.level.index;
-}
-
-class _CacheOutput extends ConsoleOutput {
-  @override
-  void output(OutputEvent event) {
-    Logs().outputEvents.add(event);
-    super.output(event);
-  }
-}
-
-class _MatrixSdkPrinter extends PrettyPrinter {
-  _MatrixSdkPrinter() : super(methodCount: 0, lineLength: 100);
-
-  @override
-  List<String> log(LogEvent event) {
-    if (event.error == null && event.stackTrace == null) {
-      return [
-        '${PrettyPrinter.levelColors[event.level]}${PrettyPrinter.levelEmojis[event.level]} ${event.message.toString()}'
-      ];
+  void addLogEvent(LogEvent logEvent) {
+    logEvent.printOut();
+    if (logEvent.level.index >= level.index) {
+      outputEvents.add(logEvent);
     }
-    return super.log(event);
+  }
+
+  void wtf(String title, [Object exception, StackTrace stackTrace]) =>
+      addLogEvent(
+        LogEvent(
+          title,
+          exception: exception,
+          stackTrace: stackTrace,
+          level: Level.wtf,
+        ),
+      );
+
+  void e(String title, [Object exception, StackTrace stackTrace]) =>
+      addLogEvent(
+        LogEvent(
+          title,
+          exception: exception,
+          stackTrace: stackTrace,
+          level: Level.error,
+        ),
+      );
+
+  void w(String title, [Object exception, StackTrace stackTrace]) =>
+      addLogEvent(
+        LogEvent(
+          title,
+          exception: exception,
+          stackTrace: stackTrace,
+          level: Level.warning,
+        ),
+      );
+
+  void i(String title, [Object exception, StackTrace stackTrace]) =>
+      addLogEvent(
+        LogEvent(
+          title,
+          exception: exception,
+          stackTrace: stackTrace,
+          level: Level.info,
+        ),
+      );
+
+  void d(String title, [Object exception, StackTrace stackTrace]) =>
+      addLogEvent(
+        LogEvent(
+          title,
+          exception: exception,
+          stackTrace: stackTrace,
+          level: Level.debug,
+        ),
+      );
+
+  void v(String title, [Object exception, StackTrace stackTrace]) =>
+      addLogEvent(
+        LogEvent(
+          title,
+          exception: exception,
+          stackTrace: stackTrace,
+          level: Level.verbose,
+        ),
+      );
+}
+
+// ignore: avoid_print
+class LogEvent {
+  final String title;
+  final Object exception;
+  final StackTrace stackTrace;
+  final Level level;
+
+  LogEvent(
+    this.title, {
+    this.exception,
+    this.stackTrace,
+    this.level = Level.debug,
+  });
+
+  void printOut() {
+    var logsStr =
+        '# [${level.toString().split('.').last.toUpperCase()}] $title';
+    if (exception != null) {
+      logsStr += ' - ' + exception.toString();
+    }
+    // ignore: avoid_print
+    print(logsStr);
+    if (stackTrace != null) {
+      // ignore: avoid_print
+      print('## Stacktrace:');
+      // ignore: avoid_print
+      print(stackTrace.toString());
+    }
   }
 }
