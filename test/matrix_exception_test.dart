@@ -17,7 +17,7 @@
  */
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:http/http.dart';
-import 'package:logger/logger.dart';
+
 import 'package:test/test.dart';
 
 void main() {

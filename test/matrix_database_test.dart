@@ -18,7 +18,7 @@
  */
 
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:logger/logger.dart';
+
 import 'package:test/test.dart';
 import 'fake_database.dart';
 

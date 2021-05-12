@@ -19,7 +19,7 @@
 import 'dart:typed_data';
 
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:logger/logger.dart';
+
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 

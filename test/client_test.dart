@@ -25,7 +25,6 @@ import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/utils/event_update.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
-import 'package:logger/logger.dart';
 import 'package:famedlysdk/src/utils/room_update.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';

@@ -19,7 +19,7 @@
 import 'package:famedlysdk/famedlysdk.dart';
 import 'package:famedlysdk/src/event.dart';
 import 'package:famedlysdk/src/user.dart';
-import 'package:logger/logger.dart';
+
 import 'package:test/test.dart';
 
 import 'fake_matrix_api.dart';

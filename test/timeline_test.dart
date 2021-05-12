@@ -17,7 +17,7 @@
  */
 
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:logger/logger.dart';
+
 import 'package:test/test.dart';
 import 'package:famedlysdk/src/client.dart';
 import 'package:famedlysdk/src/room.dart';

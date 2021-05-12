@@ -27,7 +27,7 @@ import 'package:famedlysdk/src/event.dart';
 import 'package:famedlysdk/src/room.dart';
 import 'package:famedlysdk/src/user.dart';
 import 'package:famedlysdk/src/utils/matrix_file.dart';
-import 'package:logger/logger.dart';
+
 import 'package:test/test.dart';
 
 import 'fake_client.dart';

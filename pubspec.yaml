@@ -19,8 +19,7 @@ dependencies:
   base58check: ^2.0.0
   olm: ^2.0.0
   isolate: ^2.0.3
-  logger: ^1.0.0
-  matrix_api_lite: 0.3.0
+  matrix_api_lite: ^0.3.1
 
 dev_dependencies:
   test: ^1.15.7
@@ -30,6 +29,3 @@ dev_dependencies:
   pedantic: ^1.11.0
   dapackages: ^1.4.0
   #flutter_test: {sdk: flutter}
-
-dependency_overrides:
-  args: ^2.0.0

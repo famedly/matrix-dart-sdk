@@ -18,7 +18,6 @@
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:famedlysdk/famedlysdk.dart';
-import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 
 void main() {
