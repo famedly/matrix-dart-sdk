@@ -4,8 +4,11 @@ Matrix SDK for the famedly talk app written in dart.
 
 ## Native libraries
 
-For E2EE, libolm must be provided (see https://pub.dev/packages/olm#using-dart-olm).
+For E2EE, libolm must be provided.
+
 Additionally, OpenSSL (libcrypto) must be provided on native platforms for E2EE.
+
+For flutter apps you can easily import it with the [flutter_olm](https://pub.dev/packages/flutter_olm) and the [flutter_openssl_crypto](https://pub.dev/packages/flutter_openssl_crypto) packages.
 
 ## API
 
@@ -22,18 +25,16 @@ The API is documented here: [famedly.gitlab.io/famedlysdk/](https://famedly.gitl
 ```
 
 ```dart
-import 'package:flutter/material.dart';
 import 'package:famedlysdk/famedlysdk.dart';
 ```
 
 2. Create a new client:
 
 ```dart
-Client client = Client("HappyChat");
+final client = Client("HappyChat");
 ```
 
-Take a look here for an example store:
-[https://gitlab.com/ChristianPauly/fluffychat-flutter/snippets](https://gitlab.com/ChristianPauly/fluffychat-flutter/snippets)
+The SDK works better with a Moor database. Otherwise it has no persistence. [Take a look here for an example store](https://gitlab.com/famedly/fluffychat/-/tree/main/lib/utils/database).
 
 3. Connect to a Matrix Homeserver and listen to the streams:
 

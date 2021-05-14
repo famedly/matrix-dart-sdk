@@ -1,3 +1,3 @@
-## [0.0.1] - 09 June 2019
+## [0.1.0] - 14 May 2021
 
-Initial commit.
+First stable version
