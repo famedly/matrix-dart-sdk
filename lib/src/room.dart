@@ -1043,15 +1043,19 @@ class Room {
   /// read receipt's location.
   Future<void> setReadMarker(String eventId,
       {String readReceiptLocationEventId}) async {
-    if (readReceiptLocationEventId != null) {
-      notificationCount = 0;
-      await client.database?.resetNotificationCount(client.id, id);
+    try {
+      await client.setReadMarker(
+        id,
+        eventId,
+        readReceiptLocationEventId: readReceiptLocationEventId,
+      );
+    } on MatrixConnectionException catch (_) {
+      if (readReceiptLocationEventId != null) {
+        Logs().v('Can not set read marker. Delete it locally!');
+        notificationCount = 0;
+      }
+      rethrow;
     }
-    await client.setReadMarker(
-      id,
-      eventId,
-      readReceiptLocationEventId: readReceiptLocationEventId,
-    );
     return;
   }
 
