@@ -947,14 +947,22 @@ class Client extends MatrixApi {
   /// Resets all settings and stops the synchronisation.
   Future<void> clear() async {
     Logs().outputEvents.clear();
-    await database?.clear(id);
+    try {
+      await database?.clear(id);
+    } catch (e, s) {
+      Logs().e('Unable to clear database', e, s);
+    }
     _id = accessToken = syncFilterId =
         homeserver = _userID = _deviceID = _deviceName = prevBatch = null;
     _rooms = [];
     encryption?.dispose();
     encryption = null;
     if (databaseDestroyer != null) {
-      await database?.close();
+      try {
+        await database?.close();
+      } catch (e, s) {
+        Logs().e('Unable to close database', e, s);
+      }
       await databaseDestroyer(this);
       _database = null;
     }
