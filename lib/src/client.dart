@@ -2060,7 +2060,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
 }
 
 class SdkError {
-  Exception exception;
+  dynamic exception;
   StackTrace stackTrace;
 
   SdkError({this.exception, this.stackTrace});
