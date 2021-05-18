@@ -488,12 +488,6 @@ class Room {
       EventType.markedUnread,
       content,
     );
-    if (unread == false && lastEvent != null) {
-      await setReadMarker(
-        lastEvent.eventId,
-        readReceiptLocationEventId: lastEvent.eventId,
-      );
-    }
   }
 
   /// Returns true if this room has a m.favourite tag.
