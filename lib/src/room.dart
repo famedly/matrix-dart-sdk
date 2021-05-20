@@ -24,7 +24,6 @@ import 'package:html_unescape/html_unescape.dart';
 
 import '../famedlysdk.dart';
 import 'client.dart';
-import 'database/database.dart' show DbRoom;
 import 'event.dart';
 import 'timeline.dart';
 import 'user.dart';
@@ -1077,58 +1076,6 @@ class Room {
       readReceiptLocationEventId: eventID,
     );
     return;
-  }
-
-  /// Returns a Room from a json String which comes normally from the store. If the
-  /// state are also given, the method will await them.
-  static Future<Room> getRoomFromTableRow(
-    // either Map<String, dynamic> or DbRoom
-    DbRoom row,
-    Client matrix, {
-    dynamic states, // DbRoomState, as iterator and optionally as future
-    dynamic
-        roomAccountData, // DbRoomAccountData, as iterator and optionally as future
-  }) async {
-    final newRoom = Room(
-      id: row.roomId,
-      membership: Membership.values
-          .firstWhere((e) => e.toString() == 'Membership.' + row.membership),
-      notificationCount: row.notificationCount,
-      highlightCount: row.highlightCount,
-      // TODO: do proper things
-      notificationSettings: 'mention',
-      prev_batch: row.prevBatch,
-      mInvitedMemberCount: row.invitedMemberCount,
-      mJoinedMemberCount: row.joinedMemberCount,
-      mHeroes: row.heroes?.split(',') ?? [],
-      client: matrix,
-      roomAccountData: {},
-      newestSortOrder: row.newestSortOrder,
-      oldestSortOrder: row.oldestSortOrder,
-    );
-
-    if (states != null) {
-      for (final rawState in await states) {
-        final newState = Event.fromDb(rawState, newRoom);
-        newRoom.setState(newState);
-      }
-    }
-
-    final newRoomAccountData = <String, BasicRoomEvent>{};
-    if (roomAccountData != null) {
-      for (final singleAccountData in await roomAccountData) {
-        final content = Event.getMapFromPayload(singleAccountData.content);
-        final newData = BasicRoomEvent(
-          content: content,
-          type: singleAccountData.type,
-          roomId: singleAccountData.roomId,
-        );
-        newRoomAccountData[newData.type] = newData;
-      }
-    }
-    newRoom.roomAccountData = newRoomAccountData;
-
-    return newRoom;
   }
 
   /// Creates a timeline from the store. Returns a [Timeline] object.

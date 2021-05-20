@@ -20,7 +20,6 @@ import 'dart:typed_data';
 
 import 'package:famedlysdk/encryption/utils/olm_session.dart';
 import 'package:famedlysdk/encryption/utils/outbound_group_session.dart';
-import 'package:famedlysdk/encryption/utils/session_key.dart';
 import 'package:famedlysdk/encryption/utils/ssss_cache.dart';
 import 'package:famedlysdk/encryption/utils/stored_inbound_group_session.dart';
 import 'package:famedlysdk/src/utils/QueuedToDeviceEvent.dart';
@@ -29,24 +28,29 @@ import '../../famedlysdk.dart';
 
 abstract class DatabaseApi {
   int get maxFileSize => 1 * 1024 * 1024;
-  Future<dynamic> getClient(String name);
+  Future<Map<String, dynamic>> getClient(String name);
 
-  Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client);
-
-  Future<OutboundGroupSession> getOutboundGroupSession(
-    int clientId,
-    String roomId,
+  Future updateClient(
+    String homeserverUrl,
+    String token,
     String userId,
+    String deviceId,
+    String deviceName,
+    String prevBatch,
+    String olmAccount,
+    int clientId,
   );
 
-  Future<SessionKey> getInboundGroupSession(
-    int clientId,
-    String roomId,
-    String sessionId,
+  Future insertClient(
+    String name,
+    String homeserverUrl,
+    String token,
     String userId,
+    String deviceId,
+    String deviceName,
+    String prevBatch,
+    String olmAccount,
   );
-
-  Future<SSSSCache> getSSSSCache(int clientId, String type);
 
   Future<List<Room>> getRoomList(Client client);
 
@@ -77,14 +81,36 @@ abstract class DatabaseApi {
 
   Future<Uint8List> getFile(String mxcUri);
 
-  Future<int> updateInboundGroupSessionIndexes(
+  Future storeFile(String mxcUri, Uint8List bytes, int time);
+
+  Future storeSyncFilterId(String syncFilterId, int clientId);
+
+  Future storeAccountData(int clientId, String type, String content);
+
+  Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client);
+
+  Future<SSSSCache> getSSSSCache(int clientId, String type);
+
+  Future<OutboundGroupSession> getOutboundGroupSession(
+    int clientId,
+    String roomId,
+    String userId,
+  );
+
+  Future<StoredInboundGroupSession> getInboundGroupSession(
+    int clientId,
+    String roomId,
+    String sessionId,
+  );
+
+  Future updateInboundGroupSessionIndexes(
     String indexes,
     int clientId,
     String roomId,
     String sessionId,
   );
 
-  Future<int> storeInboundGroupSession(
+  Future storeInboundGroupSession(
     int clientId,
     String roomId,
     String sessionId,
@@ -96,50 +122,22 @@ abstract class DatabaseApi {
     String senderClaimedKey,
   );
 
-  Future<int> markInboundGroupSessionAsUploaded(
+  Future markInboundGroupSessionAsUploaded(
     int clientId,
     String roomId,
     String sessionId,
   );
 
-  Future<int> updateInboundGroupSessionAllowedAtIndex(
+  Future updateInboundGroupSessionAllowedAtIndex(
     String allowedAtIndex,
     int clientId,
     String roomId,
     String sessionId,
   );
 
-  Future<int> removeOutboundGroupSession(int clientId, String roomId);
+  Future removeOutboundGroupSession(int clientId, String roomId);
 
-  Future<int> storeFile(String mxcUri, Uint8List bytes, int time);
-
-  Future<int> updateClient(
-    String homeserverUrl,
-    String token,
-    String userId,
-    String deviceId,
-    String deviceName,
-    String prevBatch,
-    String olmAccount,
-    int clientId,
-  );
-
-  Future<int> insertClient(
-    String name,
-    String homeserverUrl,
-    String token,
-    String userId,
-    String deviceId,
-    String deviceName,
-    String prevBatch,
-    String olmAccount,
-  );
-
-  Future<int> storeSyncFilterId(String syncFilterId, int clientId);
-
-  Future<int> storeAccountData(int clientId, String type, String content);
-
-  Future<int> storeOutboundGroupSession(
+  Future storeOutboundGroupSession(
     int clientId,
     String roomId,
     String pickle,
@@ -148,9 +146,9 @@ abstract class DatabaseApi {
     int sentMessages,
   );
 
-  Future<int> updateClientKeys(String olmAccount, int clientId);
+  Future updateClientKeys(String olmAccount, int clientId);
 
-  Future<int> storeOlmSession(
+  Future storeOlmSession(
     int clientId,
     String identitiyKey,
     String sessionId,
@@ -158,23 +156,23 @@ abstract class DatabaseApi {
     int lastReceived,
   );
 
-  Future<int> setLastActiveUserDeviceKey(
+  Future setLastActiveUserDeviceKey(
     int lastActive,
     int clientId,
     String userId,
     String deviceId,
   );
 
-  Future<int> setLastSentMessageUserDeviceKey(
+  Future setLastSentMessageUserDeviceKey(
     String lastSentMessage,
     int clientId,
     String userId,
     String deviceId,
   );
 
-  Future<int> clearSSSSCache(int clientId);
+  Future clearSSSSCache(int clientId);
 
-  Future<int> storeSSSSCache(
+  Future storeSSSSCache(
     int clientId,
     String type,
     String keyId,
@@ -182,19 +180,19 @@ abstract class DatabaseApi {
     String content,
   );
 
-  Future<int> markInboundGroupSessionsAsNeedingUpload(int clientId);
+  Future markInboundGroupSessionsAsNeedingUpload(int clientId);
 
-  Future<int> storePrevBatch(String prevBatch, int clientId);
+  Future storePrevBatch(String prevBatch, int clientId);
 
-  Future<int> deleteOldFiles(int savedAt);
+  Future deleteOldFiles(int savedAt);
 
-  Future<int> storeUserDeviceKeysInfo(
+  Future storeUserDeviceKeysInfo(
     int clientId,
     String userId,
     bool outdated,
   );
 
-  Future<int> storeUserDeviceKey(
+  Future storeUserDeviceKey(
     int clientId,
     String userId,
     String deviceId,
@@ -204,19 +202,19 @@ abstract class DatabaseApi {
     int lastActive,
   );
 
-  Future<int> removeUserDeviceKey(
+  Future removeUserDeviceKey(
     int clientId,
     String userId,
     String deviceId,
   );
 
-  Future<int> removeUserCrossSigningKey(
+  Future removeUserCrossSigningKey(
     int clientId,
     String userId,
     String publicKey,
   );
 
-  Future<int> storeUserCrossSigningKey(
+  Future storeUserCrossSigningKey(
     int clientId,
     String userId,
     String publicKey,
@@ -225,47 +223,47 @@ abstract class DatabaseApi {
     bool blocked,
   );
 
-  Future<int> deleteFromToDeviceQueue(int clientId, int id);
+  Future deleteFromToDeviceQueue(int clientId, int id);
 
-  Future<int> removeEvent(int clientId, String eventId, String roomId);
+  Future removeEvent(int clientId, String eventId, String roomId);
 
-  Future<int> updateRoomSortOrder(
+  Future updateRoomSortOrder(
     double oldestSortOrder,
     double newestSortOrder,
     int clientId,
     String roomId,
   );
 
-  Future<int> setRoomPrevBatch(
+  Future setRoomPrevBatch(
     String prevBatch,
     int clientId,
     String roomId,
   );
 
-  Future<int> resetNotificationCount(int clientId, String roomId);
+  Future resetNotificationCount(int clientId, String roomId);
 
-  Future<int> setVerifiedUserCrossSigningKey(
+  Future setVerifiedUserCrossSigningKey(
     bool verified,
     int clientId,
     String userId,
     String publicKey,
   );
 
-  Future<int> setBlockedUserCrossSigningKey(
+  Future setBlockedUserCrossSigningKey(
     bool blocked,
     int clientId,
     String userId,
     String publicKey,
   );
 
-  Future<int> setVerifiedUserDeviceKey(
+  Future setVerifiedUserDeviceKey(
     bool verified,
     int clientId,
     String userId,
     String deviceId,
   );
 
-  Future<int> setBlockedUserDeviceKey(
+  Future setBlockedUserDeviceKey(
     bool blocked,
     int clientId,
     String userId,
@@ -294,7 +292,7 @@ abstract class DatabaseApi {
 
   /// Please do `jsonEncode(content)` in your code to stay compatible with
   /// auto generated methods here.
-  Future<int> insertIntoToDeviceQueue(
+  Future insertIntoToDeviceQueue(
     int clientId,
     String type,
     String txnId,

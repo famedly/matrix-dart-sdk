@@ -843,15 +843,15 @@ class Client extends MatrixApi {
       if (database != null) {
         final account = await database.getClient(clientName);
         if (account != null) {
-          _id = account.clientId;
-          homeserver = Uri.parse(account.homeserverUrl);
-          accessToken = account.token;
-          _userID = account.userId;
-          _deviceID = account.deviceId;
-          _deviceName = account.deviceName;
-          syncFilterId = account.syncFilterId;
-          prevBatch = account.prevBatch;
-          olmAccount = account.olmAccount;
+          _id = account['client_id'];
+          homeserver = Uri.parse(account['homeserver_url']);
+          accessToken = account['token'];
+          _userID = account['user_id'];
+          _deviceID = account['device_id'];
+          _deviceName = account['device_name'];
+          syncFilterId = account['sync_filter_id'];
+          prevBatch = account['prev_batch'];
+          olmAccount = account['olm_account'];
         }
       }
       if (newToken != null) {

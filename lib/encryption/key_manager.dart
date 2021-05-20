@@ -231,11 +231,12 @@ class KeyManager {
       }
       return sess; // nothing to do
     }
-    final sess = await client.database
-        ?.getInboundGroupSession(client.id, roomId, sessionId, client.userID);
-    if (sess == null) {
+    final session = await client.database
+        ?.getInboundGroupSession(client.id, roomId, sessionId);
+    if (session == null) {
       return null;
     }
+    final sess = SessionKey.fromDb(session, client.userID);
     if (!_inboundGroupSessions.containsKey(roomId)) {
       _inboundGroupSessions[roomId] = <String, SessionKey>{};
     }

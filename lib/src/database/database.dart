@@ -21,7 +21,6 @@ import 'dart:convert';
 
 import 'package:famedlysdk/encryption/utils/olm_session.dart';
 import 'package:famedlysdk/encryption/utils/outbound_group_session.dart';
-import 'package:famedlysdk/encryption/utils/session_key.dart';
 import 'package:famedlysdk/encryption/utils/ssss_cache.dart';
 import 'package:famedlysdk/encryption/utils/stored_inbound_group_session.dart';
 import 'package:famedlysdk/src/utils/QueuedToDeviceEvent.dart';
@@ -211,11 +210,11 @@ class Database extends _$Database implements DatabaseApi {
       );
 
   @override
-  Future<DbClient> getClient(String name) async {
+  Future<Map<String, dynamic>> getClient(String name) async {
     final res = await dbGetClient(name).get();
     if (res.isEmpty) return null;
     await markPendingEventsAsError(res.single.clientId);
-    return res.single;
+    return res.single.toJson();
   }
 
   @override
@@ -229,10 +228,16 @@ class Database extends _$Database implements DatabaseApi {
     final crossSigningKeys = await getAllUserCrossSigningKeys(client.id).get();
     final res = <String, sdk.DeviceKeysList>{};
     for (final entry in deviceKeys) {
-      res[entry.userId] = sdk.DeviceKeysList.fromDb(
-          entry,
-          deviceKeysKeys.where((k) => k.userId == entry.userId).toList(),
-          crossSigningKeys.where((k) => k.userId == entry.userId).toList(),
+      res[entry.userId] = sdk.DeviceKeysList.fromDbJson(
+          entry.toJson(),
+          deviceKeysKeys
+              .where((k) => k.userId == entry.userId)
+              .map((d) => d.toJson())
+              .toList(),
+          crossSigningKeys
+              .where((k) => k.userId == entry.userId)
+              .map((d) => d.toJson())
+              .toList(),
           client);
     }
     return res;
@@ -245,23 +250,21 @@ class Database extends _$Database implements DatabaseApi {
     if (res.isEmpty) {
       return null;
     }
-    return OutboundGroupSession.fromDb(res.single, userId);
+    return OutboundGroupSession.fromJson(res.single.toJson(), userId);
   }
 
   @override
-  Future<SessionKey> getInboundGroupSession(
+  Future<StoredInboundGroupSession> getInboundGroupSession(
     int clientId,
     String roomId,
     String sessionId,
-    String userId,
   ) async {
     final res =
         await dbGetInboundGroupSessionKey(clientId, roomId, sessionId).get();
     if (res.isEmpty) {
       return null;
     }
-    return SessionKey.fromDb(
-        StoredInboundGroupSession.fromJson(res.single.toJson()), userId);
+    return StoredInboundGroupSession.fromJson(res.single.toJson());
   }
 
   @override
@@ -290,7 +293,7 @@ class Database extends _$Database implements DatabaseApi {
     final roomList = <sdk.Room>[];
     final allMembersToPostload = <String, Set<String>>{};
     for (final r in res) {
-      final room = await sdk.Room.getRoomFromTableRow(
+      final room = await getRoomFromTableRow(
         r,
         client,
         states: resStates.where((rs) => rs.roomId == r.roomId),
@@ -366,7 +369,7 @@ class Database extends _$Database implements DatabaseApi {
         // now that we got all the entries from the database, set them as room states
         for (final dbMember in membersRes) {
           final room = roomList.firstWhere((r) => r.id == dbMember.roomId);
-          final event = sdk.Event.fromDb(dbMember, room);
+          final event = getEventFromDb(dbMember, room);
           room.setState(event);
         }
       }
@@ -605,7 +608,7 @@ class Database extends _$Database implements DatabaseApi {
     if (event.isEmpty) {
       return null;
     }
-    return sdk.Event.fromDb(event.single, room);
+    return getEventFromDb(event.single, room);
   }
 
   Future<bool> redactMessage(int clientId, sdk.EventUpdate eventUpdate) async {
@@ -614,7 +617,7 @@ class Database extends _$Database implements DatabaseApi {
         .get();
     var success = false;
     for (final dbEvent in events) {
-      final event = sdk.Event.fromDb(dbEvent, null);
+      final event = getEventFromDb(dbEvent, null);
       event.setRedactionEvent(sdk.Event.fromJson(eventUpdate.content, null));
       final changes1 = await updateEvent(
         json.encode(event.unsigned ?? ''),
@@ -698,19 +701,19 @@ class Database extends _$Database implements DatabaseApi {
     if (res.isEmpty) {
       return null;
     }
-    return sdk.Event.fromDb(res.single, room).asUser;
+    return getEventFromDb(res.single, room).asUser;
   }
 
   @override
   Future<List<sdk.User>> getUsers(int clientId, sdk.Room room) async {
     final res = await dbGetUsers(clientId, room.id).get();
-    return res.map((r) => sdk.Event.fromDb(r, room).asUser).toList();
+    return res.map((r) => getEventFromDb(r, room).asUser).toList();
   }
 
   @override
   Future<List<sdk.Event>> getEventList(int clientId, sdk.Room room) async {
     final res = await dbGetEventList(clientId, room.id).get();
-    return res.map((r) => sdk.Event.fromDb(r, room)).toList();
+    return res.map((r) => getEventFromDb(r, room)).toList();
   }
 
   @override
@@ -731,7 +734,7 @@ class Database extends _$Database implements DatabaseApi {
       room.id,
       events,
     ).get();
-    return entries.map((dbEvent) => sdk.Event.fromDb(dbEvent, room)).toList();
+    return entries.map((dbEvent) => getEventFromDb(dbEvent, room)).toList();
   }
 
   @override
@@ -741,7 +744,9 @@ class Database extends _$Database implements DatabaseApi {
     String userId,
   ) async {
     final rows = await dbGetOlmSessions(client_id, identity_key).get();
-    return rows.map((row) => OlmSession.fromDb(row, userId)).toList();
+    return rows
+        .map((row) => OlmSession.fromJson(row.toJson(), userId))
+        .toList();
   }
 
   @override
@@ -752,7 +757,9 @@ class Database extends _$Database implements DatabaseApi {
   ) async {
     final rows =
         await dbGetOlmSessionsForDevices(client_id, identity_keys).get();
-    return rows.map((row) => OlmSession.fromDb(row, userId)).toList();
+    return rows
+        .map((row) => OlmSession.fromJson(row.toJson(), userId))
+        .toList();
   }
 
   @override
@@ -785,4 +792,83 @@ class Database extends _$Database implements DatabaseApi {
         .map((row) => StoredInboundGroupSession.fromJson(row.toJson()))
         .toList();
   }
+}
+
+/// Get an event from either DbRoomState or DbEvent
+sdk.Event getEventFromDb(dynamic dbEntry, sdk.Room room) {
+  if (!(dbEntry is DbRoomState || dbEntry is DbEvent)) {
+    throw ('Unknown db type');
+  }
+  final content = sdk.Event.getMapFromPayload(dbEntry.content);
+  final unsigned = sdk.Event.getMapFromPayload(dbEntry.unsigned);
+  final prevContent = sdk.Event.getMapFromPayload(dbEntry.prevContent);
+  return sdk.Event(
+    status:
+        (dbEntry is DbEvent ? dbEntry.status : null) ?? sdk.Event.defaultStatus,
+    stateKey: dbEntry.stateKey,
+    prevContent: prevContent,
+    content: content,
+    type: dbEntry.type,
+    eventId: dbEntry.eventId,
+    roomId: dbEntry.roomId,
+    senderId: dbEntry.sender,
+    originServerTs: dbEntry.originServerTs != null
+        ? DateTime.fromMillisecondsSinceEpoch(dbEntry.originServerTs)
+        : DateTime.now(),
+    unsigned: unsigned,
+    room: room,
+    sortOrder: dbEntry.sortOrder ?? 0.0,
+  );
+}
+
+/// Returns a Room from a json String which comes normally from the store. If the
+/// state are also given, the method will await them.
+Future<Room> getRoomFromTableRow(
+  // either Map<String, dynamic> or DbRoom
+  DbRoom row,
+  Client matrix, {
+  dynamic states, // DbRoomState, as iterator and optionally as future
+  dynamic
+      roomAccountData, // DbRoomAccountData, as iterator and optionally as future
+}) async {
+  final newRoom = Room(
+    id: row.roomId,
+    membership: sdk.Membership.values
+        .firstWhere((e) => e.toString() == 'Membership.' + row.membership),
+    notificationCount: row.notificationCount,
+    highlightCount: row.highlightCount,
+    // TODO: do proper things
+    notificationSettings: 'mention',
+    prev_batch: row.prevBatch,
+    mInvitedMemberCount: row.invitedMemberCount,
+    mJoinedMemberCount: row.joinedMemberCount,
+    mHeroes: row.heroes?.split(',') ?? [],
+    client: matrix,
+    roomAccountData: {},
+    newestSortOrder: row.newestSortOrder,
+    oldestSortOrder: row.oldestSortOrder,
+  );
+
+  if (states != null) {
+    for (final rawState in await states) {
+      final newState = getEventFromDb(rawState, newRoom);
+      newRoom.setState(newState);
+    }
+  }
+
+  final newRoomAccountData = <String, sdk.BasicRoomEvent>{};
+  if (roomAccountData != null) {
+    for (final singleAccountData in await roomAccountData) {
+      final content = sdk.Event.getMapFromPayload(singleAccountData.content);
+      final newData = sdk.BasicRoomEvent(
+        content: content,
+        type: singleAccountData.type,
+        roomId: singleAccountData.roomId,
+      );
+      newRoomAccountData[newData.type] = newData;
+    }
+  }
+  newRoom.roomAccountData = newRoomAccountData;
+
+  return newRoom;
 }

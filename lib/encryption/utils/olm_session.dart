@@ -19,7 +19,6 @@
 import 'package:olm/olm.dart' as olm;
 
 import '../../famedlysdk.dart';
-import '../../src/database/database.dart' show DbOlmSessions;
 
 class OlmSession {
   String identityKey;
@@ -39,14 +38,14 @@ class OlmSession {
     this.lastReceived,
   });
 
-  OlmSession.fromDb(DbOlmSessions dbEntry, String key) : key = key {
+  OlmSession.fromJson(Map<String, dynamic> dbEntry, String key) : key = key {
     session = olm.Session();
     try {
-      session.unpickle(key, dbEntry.pickle);
-      identityKey = dbEntry.identityKey;
-      sessionId = dbEntry.sessionId;
+      session.unpickle(key, dbEntry['pickle']);
+      identityKey = dbEntry['identity_key'];
+      sessionId = dbEntry['session_id'];
       lastReceived =
-          DateTime.fromMillisecondsSinceEpoch(dbEntry.lastReceived ?? 0);
+          DateTime.fromMillisecondsSinceEpoch(dbEntry['last_received'] ?? 0);
       assert(sessionId == session.session_id());
     } catch (e, s) {
       Logs().e('[LibOlm] Could not unpickle olm session', e, s);

@@ -25,8 +25,6 @@ import 'package:olm/olm.dart' as olm;
 import '../../encryption.dart';
 
 import '../client.dart';
-import '../database/database.dart'
-    show DbUserDeviceKey, DbUserDeviceKeysKey, DbUserCrossSigningKey;
 import '../event.dart';
 import '../room.dart';
 import '../user.dart';
@@ -104,27 +102,27 @@ class DeviceKeysList {
     }
   }
 
-  DeviceKeysList.fromDb(
-      DbUserDeviceKey dbEntry,
-      List<DbUserDeviceKeysKey> childEntries,
-      List<DbUserCrossSigningKey> crossSigningEntries,
+  DeviceKeysList.fromDbJson(
+      Map<String, dynamic> dbEntry,
+      List<Map<String, dynamic>> childEntries,
+      List<Map<String, dynamic>> crossSigningEntries,
       Client cl) {
     client = cl;
-    userId = dbEntry.userId;
-    outdated = dbEntry.outdated;
+    userId = dbEntry['user_id'];
+    outdated = dbEntry['outdated'];
     deviceKeys = {};
     for (final childEntry in childEntries) {
       final entry = DeviceKeys.fromDb(childEntry, client);
       if (entry.isValid) {
-        deviceKeys[childEntry.deviceId] = entry;
+        deviceKeys[childEntry['device_id']] = entry;
       } else {
         outdated = true;
       }
     }
     for (final crossSigningEntry in crossSigningEntries) {
-      final entry = CrossSigningKey.fromDb(crossSigningEntry, client);
+      final entry = CrossSigningKey.fromDbJson(crossSigningEntry, client);
       if (entry.isValid) {
-        crossSigningKeys[crossSigningEntry.publicKey] = entry;
+        crossSigningKeys[crossSigningEntry['public_key']] = entry;
       } else {
         outdated = true;
       }
@@ -365,13 +363,13 @@ class CrossSigningKey extends SignableKey {
     usage = json['usage'].cast<String>();
   }
 
-  CrossSigningKey.fromDb(DbUserCrossSigningKey dbEntry, Client cl)
-      : super.fromJson(Event.getMapFromPayload(dbEntry.content), cl) {
+  CrossSigningKey.fromDbJson(Map<String, dynamic> dbEntry, Client cl)
+      : super.fromJson(Event.getMapFromPayload(dbEntry['content']), cl) {
     final json = toJson();
-    identifier = dbEntry.publicKey;
+    identifier = dbEntry['public_key'];
     usage = json['usage'].cast<String>();
-    _verified = dbEntry.verified;
-    blocked = dbEntry.blocked;
+    _verified = dbEntry['verified'];
+    blocked = dbEntry['blocked'];
   }
 
   CrossSigningKey.fromJson(Map<String, dynamic> json, Client cl)
@@ -441,14 +439,15 @@ class DeviceKeys extends SignableKey {
     lastActive = lastActiveTs ?? DateTime.now();
   }
 
-  DeviceKeys.fromDb(DbUserDeviceKeysKey dbEntry, Client cl)
-      : super.fromJson(Event.getMapFromPayload(dbEntry.content), cl) {
+  DeviceKeys.fromDb(Map<String, dynamic> dbEntry, Client cl)
+      : super.fromJson(Event.getMapFromPayload(dbEntry['content']), cl) {
     final json = toJson();
-    identifier = dbEntry.deviceId;
+    identifier = dbEntry['device_id'];
     algorithms = json['algorithms'].cast<String>();
-    _verified = dbEntry.verified;
-    blocked = dbEntry.blocked;
-    lastActive = DateTime.fromMillisecondsSinceEpoch(dbEntry.lastActive ?? 0);
+    _verified = dbEntry['verified'];
+    blocked = dbEntry['blocked'];
+    lastActive =
+        DateTime.fromMillisecondsSinceEpoch(dbEntry['last_active'] ?? 0);
   }
 
   DeviceKeys.fromJson(Map<String, dynamic> json, Client cl)

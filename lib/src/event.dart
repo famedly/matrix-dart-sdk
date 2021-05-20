@@ -22,7 +22,6 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../famedlysdk.dart';
-import 'database/database.dart' show DbRoomState, DbEvent;
 import 'room.dart';
 import 'utils/matrix_localizations.dart';
 import 'utils/receipt.dart';
@@ -175,32 +174,6 @@ class Event extends MatrixEvent {
       unsigned: unsigned,
       room: room,
       sortOrder: sortOrder ?? 0.0,
-    );
-  }
-
-  /// Get an event from either DbRoomState or DbEvent
-  factory Event.fromDb(dynamic dbEntry, Room room) {
-    if (!(dbEntry is DbRoomState || dbEntry is DbEvent)) {
-      throw ('Unknown db type');
-    }
-    final content = Event.getMapFromPayload(dbEntry.content);
-    final unsigned = Event.getMapFromPayload(dbEntry.unsigned);
-    final prevContent = Event.getMapFromPayload(dbEntry.prevContent);
-    return Event(
-      status: (dbEntry is DbEvent ? dbEntry.status : null) ?? defaultStatus,
-      stateKey: dbEntry.stateKey,
-      prevContent: prevContent,
-      content: content,
-      type: dbEntry.type,
-      eventId: dbEntry.eventId,
-      roomId: dbEntry.roomId,
-      senderId: dbEntry.sender,
-      originServerTs: dbEntry.originServerTs != null
-          ? DateTime.fromMillisecondsSinceEpoch(dbEntry.originServerTs)
-          : DateTime.now(),
-      unsigned: unsigned,
-      room: room,
-      sortOrder: dbEntry.sortOrder ?? 0.0,
     );
   }
 

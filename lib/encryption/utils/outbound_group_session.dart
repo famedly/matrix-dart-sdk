@@ -21,7 +21,6 @@ import 'dart:convert';
 import 'package:olm/olm.dart' as olm;
 
 import '../../famedlysdk.dart';
-import '../../src/database/database.dart' show DbOutboundGroupSession;
 
 class OutboundGroupSession {
   /// The devices is a map from user id to device id to if the device is blocked.
@@ -42,11 +41,11 @@ class OutboundGroupSession {
       this.sentMessages,
       this.key});
 
-  OutboundGroupSession.fromDb(DbOutboundGroupSession dbEntry, String key)
+  OutboundGroupSession.fromJson(Map<String, dynamic> dbEntry, String key)
       : key = key {
     try {
       devices = {};
-      for (final entry in json.decode(dbEntry.deviceIds).entries) {
+      for (final entry in json.decode(dbEntry['device_ids']).entries) {
         devices[entry.key] = Map<String, bool>.from(entry.value);
       }
     } catch (e) {
@@ -58,9 +57,10 @@ class OutboundGroupSession {
     }
     outboundGroupSession = olm.OutboundGroupSession();
     try {
-      outboundGroupSession.unpickle(key, dbEntry.pickle);
-      creationTime = DateTime.fromMillisecondsSinceEpoch(dbEntry.creationTime);
-      sentMessages = dbEntry.sentMessages;
+      outboundGroupSession.unpickle(key, dbEntry['pickle']);
+      creationTime =
+          DateTime.fromMillisecondsSinceEpoch(dbEntry['creation_time']);
+      sentMessages = dbEntry['sent_messages'];
     } catch (e, s) {
       dispose();
       Logs().e('[LibOlm] Unable to unpickle outboundGroupSession', e, s);
