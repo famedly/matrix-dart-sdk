@@ -16,10 +16,10 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:famedlysdk/encryption/utils/stored_inbound_group_session.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../../famedlysdk.dart';
-import '../../src/database/database.dart' show DbInboundGroupSession;
 
 class SessionKey {
   /// The raw json content of the key
@@ -76,7 +76,7 @@ class SessionKey {
     allowedAtIndex ??= <String, Map<String, int>>{};
   }
 
-  SessionKey.fromDb(DbInboundGroupSession dbEntry, String key) : key = key {
+  SessionKey.fromDb(StoredInboundGroupSession dbEntry, String key) : key = key {
     final parsedContent = Event.getMapFromPayload(dbEntry.content);
     final parsedIndexes = Event.getMapFromPayload(dbEntry.indexes);
     final parsedAllowedAtIndex =

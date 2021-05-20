@@ -6881,7 +6881,7 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  Selectable<DbInboundGroupSession> getInboundGroupSessionsToUpload() {
+  Selectable<DbInboundGroupSession> dbGetInboundGroupSessionsToUpload() {
     return customSelect(
         'SELECT * FROM inbound_group_sessions WHERE uploaded = false LIMIT 500',
         variables: [],
@@ -7021,7 +7021,7 @@ abstract class _$Database extends GeneratedDatabase {
     );
   }
 
-  Selectable<String> getLastSentMessageUserDeviceKey(
+  Selectable<String> dbGetLastSentMessageUserDeviceKey(
       int client_id, String user_id, String device_id) {
     return customSelect(
         'SELECT last_sent_message FROM user_device_keys_key WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id',

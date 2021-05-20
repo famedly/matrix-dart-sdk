@@ -130,12 +130,11 @@ class Room {
       return;
     }
     final allStates = await client.database
-        .getUnimportantRoomStatesForRoom(
-            client.id, id, client.importantStateEvents.toList())
-        .get();
+        .getUnimportantRoomEventStatesForRoom(
+            client.id, client.importantStateEvents.toList(), this);
+
     for (final state in allStates) {
-      final newState = Event.fromDb(state, this);
-      setState(newState);
+      setState(state);
     }
     partial = false;
   }

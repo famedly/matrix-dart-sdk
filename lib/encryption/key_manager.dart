@@ -18,13 +18,13 @@
 
 import 'dart:convert';
 
+import 'package:famedlysdk/encryption/utils/stored_inbound_group_session.dart';
 import 'package:olm/olm.dart' as olm;
 
 import './encryption.dart';
 import './utils/outbound_group_session.dart';
 import './utils/session_key.dart';
 import '../famedlysdk.dart';
-import '../src/database/database.dart';
 import '../src/utils/run_in_background.dart';
 import '../src/utils/run_in_root.dart';
 
@@ -231,15 +231,14 @@ class KeyManager {
       }
       return sess; // nothing to do
     }
-    final session = await client.database
-        ?.getDbInboundGroupSession(client.id, roomId, sessionId);
-    if (session == null) {
+    final sess = await client.database
+        ?.getInboundGroupSession(client.id, roomId, sessionId, client.userID);
+    if (sess == null) {
       return null;
     }
     if (!_inboundGroupSessions.containsKey(roomId)) {
       _inboundGroupSessions[roomId] = <String, SessionKey>{};
     }
-    final sess = SessionKey.fromDb(session, client.userID);
     if (!sess.isValid ||
         (sess.senderKey.isNotEmpty && sess.senderKey != senderKey)) {
       return null;
@@ -506,13 +505,12 @@ class KeyManager {
       return; // nothing to do
     }
     _loadedOutboundGroupSessions.add(roomId);
-    final session =
-        await client.database.getDbOutboundGroupSession(client.id, roomId);
-    if (session == null) {
-      return;
-    }
-    final sess = OutboundGroupSession.fromDb(session, client.userID);
-    if (!sess.isValid) {
+    final sess = await client.database.getOutboundGroupSession(
+      client.id,
+      roomId,
+      client.userID,
+    );
+    if (sess == null || !sess.isValid) {
       return;
     }
     _outboundGroupSessions[roomId] = sess;
@@ -693,7 +691,7 @@ class KeyManager {
         return; // we can't backup anyways
       }
       final dbSessions =
-          await client.database.getInboundGroupSessionsToUpload().get();
+          await client.database.getInboundGroupSessionsToUpload();
       if (dbSessions.isEmpty) {
         _haveKeysToUpload = false;
         return; // nothing to do
@@ -1060,7 +1058,7 @@ RoomKeys _generateUploadKeys(_GenerateUploadKeysArgs args) {
 class _DbInboundGroupSessionBundle {
   _DbInboundGroupSessionBundle({this.dbSession, this.verified});
 
-  DbInboundGroupSession dbSession;
+  StoredInboundGroupSession dbSession;
   bool verified;
 }
 

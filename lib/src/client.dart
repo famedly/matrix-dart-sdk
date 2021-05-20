@@ -28,7 +28,7 @@ import 'package:pedantic/pedantic.dart';
 
 import '../encryption.dart';
 import '../famedlysdk.dart';
-import 'database/database.dart' show Database;
+import 'database/database_api.dart';
 import 'event.dart';
 import 'room.dart';
 import 'user.dart';
@@ -56,11 +56,11 @@ class Client extends MatrixApi {
 
   int get id => _id;
 
-  final FutureOr<Database> Function(Client) databaseBuilder;
+  final FutureOr<DatabaseApi> Function(Client) databaseBuilder;
   final FutureOr<void> Function(Client) databaseDestroyer;
-  Database _database;
+  DatabaseApi _database;
 
-  Database get database => _database;
+  DatabaseApi get database => _database;
 
   bool enableE2eeRecovery;
 
@@ -919,7 +919,7 @@ class Client extends MatrixApi {
           );
         }
         _userDeviceKeys = await database.getUserDeviceKeys(this);
-        _rooms = await database.getRoomList(this, onlyLeft: false);
+        _rooms = await database.getRoomList(this);
         _sortRooms();
         accountData = await database.getAccountData(id);
         presences.clear();
@@ -1753,18 +1753,20 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     if (database == null || !_toDeviceQueueNeedsProcessing) {
       return;
     }
-    final entries = await database.getToDeviceQueue(id).get();
+    final entries = await database.getToDeviceEventQueue(id);
     if (entries.isEmpty) {
       _toDeviceQueueNeedsProcessing = false;
       return;
     }
     for (final entry in entries) {
-      // ohgod what is this...
-      final data = (json.decode(entry.content) as Map).map((k, v) =>
+      // Convert the Json Map to the correct format regarding
+      // https: //matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-sendtodevice-eventtype-txnid
+      final data = entry.content.map((k, v) =>
           MapEntry<String, Map<String, Map<String, dynamic>>>(
               k,
               (v as Map).map((k, v) => MapEntry<String, Map<String, dynamic>>(
                   k, Map<String, dynamic>.from(v)))));
+
       await super.sendToDevice(entry.type, entry.txnId, data);
       await database.deleteFromToDeviceQueue(id, entry.id);
     }

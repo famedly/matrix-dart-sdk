@@ -25,11 +25,11 @@ import 'package:base58check/base58.dart';
 import 'package:crypto/crypto.dart';
 
 import '../famedlysdk.dart';
-import '../src/database/database.dart';
 import '../src/utils/crypto/crypto.dart' as uc;
 import '../src/utils/run_in_background.dart';
 import '../src/utils/run_in_root.dart';
 import 'encryption.dart';
+import 'utils/ssss_cache.dart';
 
 const cacheTypes = <String>{
   EventTypes.CrossSigningSelfSigning,
@@ -56,7 +56,7 @@ class SSSS {
   final pendingShareRequests = <String, _ShareRequest>{};
   final _validators = <String, FutureOr<bool> Function(String)>{};
   final _cacheCallbacks = <String, FutureOr<void> Function(String)>{};
-  final Map<String, DbSSSSCache> _cache = <String, DbSSSSCache>{};
+  final Map<String, SSSSCache> _cache = <String, SSSSCache>{};
   SSSS(this.encryption);
 
   // for testing

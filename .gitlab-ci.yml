@@ -136,7 +136,6 @@ pages:
       - public
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-
 # Adds license-scanning job. Because Gitlab does not support pub.dev
 # we added https://github.com/oss-review-toolkit/ort
 

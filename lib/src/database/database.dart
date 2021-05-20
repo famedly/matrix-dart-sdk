@@ -19,12 +19,19 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:famedlysdk/encryption/utils/olm_session.dart';
+import 'package:famedlysdk/encryption/utils/outbound_group_session.dart';
+import 'package:famedlysdk/encryption/utils/session_key.dart';
+import 'package:famedlysdk/encryption/utils/ssss_cache.dart';
+import 'package:famedlysdk/encryption/utils/stored_inbound_group_session.dart';
+import 'package:famedlysdk/src/utils/QueuedToDeviceEvent.dart';
 import 'package:moor/moor.dart';
 
 import '../../famedlysdk.dart' as sdk;
 import 'package:matrix_api_lite/matrix_api_lite.dart' as api;
 import '../client.dart';
 import '../room.dart';
+import 'database_api.dart';
 
 part 'database.g.dart';
 
@@ -64,7 +71,7 @@ extension MigratorExtension on Migrator {
 @UseMoor(
   include: {'database.moor'},
 )
-class Database extends _$Database {
+class Database extends _$Database implements DatabaseApi {
   Database(QueryExecutor e) : super(e);
 
   Database.connect(DatabaseConnection connection) : super.connect(connection);
@@ -72,6 +79,7 @@ class Database extends _$Database {
   @override
   int get schemaVersion => 12;
 
+  @override
   int get maxFileSize => 1 * 1024 * 1024;
 
   /// Update errors are coming here.
@@ -202,6 +210,7 @@ class Database extends _$Database {
         },
       );
 
+  @override
   Future<DbClient> getClient(String name) async {
     final res = await dbGetClient(name).get();
     if (res.isEmpty) return null;
@@ -209,6 +218,7 @@ class Database extends _$Database {
     return res.single;
   }
 
+  @override
   Future<Map<String, sdk.DeviceKeysList>> getUserDeviceKeys(
       sdk.Client client) async {
     final deviceKeys = await getAllUserDeviceKeys(client.id).get();
@@ -228,45 +238,51 @@ class Database extends _$Database {
     return res;
   }
 
-  Future<DbOutboundGroupSession> getDbOutboundGroupSession(
-      int clientId, String roomId) async {
+  @override
+  Future<OutboundGroupSession> getOutboundGroupSession(
+      int clientId, String roomId, String userId) async {
     final res = await dbGetOutboundGroupSession(clientId, roomId).get();
     if (res.isEmpty) {
       return null;
     }
-    return res.single;
+    return OutboundGroupSession.fromDb(res.single, userId);
   }
 
-  Future<List<DbInboundGroupSession>> getDbInboundGroupSessions(
-      int clientId, String roomId) async {
-    return await dbGetInboundGroupSessionKeys(clientId, roomId).get();
-  }
-
-  Future<DbInboundGroupSession> getDbInboundGroupSession(
-      int clientId, String roomId, String sessionId) async {
+  @override
+  Future<SessionKey> getInboundGroupSession(
+    int clientId,
+    String roomId,
+    String sessionId,
+    String userId,
+  ) async {
     final res =
         await dbGetInboundGroupSessionKey(clientId, roomId, sessionId).get();
     if (res.isEmpty) {
       return null;
     }
-    return res.single;
+    return SessionKey.fromDb(
+        StoredInboundGroupSession.fromJson(res.single.toJson()), userId);
   }
 
-  Future<DbSSSSCache> getSSSSCache(int clientId, String type) async {
+  @override
+  Future<SSSSCache> getSSSSCache(int clientId, String type) async {
     final res = await dbGetSSSSCache(clientId, type).get();
     if (res.isEmpty) {
       return null;
     }
-    return res.single;
+    final dbCache = res.single;
+    return SSSSCache(
+      ciphertext: dbCache.ciphertext,
+      clientId: dbCache.clientId,
+      type: dbCache.type,
+      keyId: dbCache.keyId,
+      content: dbCache.content,
+    );
   }
 
-  Future<List<sdk.Room>> getRoomList(sdk.Client client,
-      {bool onlyLeft = false}) async {
-    final res = await (select(rooms)
-          ..where((t) => onlyLeft
-              ? t.membership.equals('leave')
-              : t.membership.equals('leave').not()))
-        .get();
+  @override
+  Future<List<sdk.Room>> getRoomList(sdk.Client client) async {
+    final res = await select(rooms).get();
     final resStates = await getImportantRoomStates(
             client.id, client.importantStateEvents.toList())
         .get();
@@ -358,6 +374,7 @@ class Database extends _$Database {
     return roomList;
   }
 
+  @override
   Future<Map<String, api.BasicEvent>> getAccountData(int clientId) async {
     final newAccountData = <String, api.BasicEvent>{};
     final rawAccountData = await getAllAccountData(clientId).get();
@@ -381,6 +398,7 @@ class Database extends _$Database {
   /// Stores a RoomUpdate object in the database. Must be called inside of
   /// [transaction].
   final Set<String> _ensuredRooms = {};
+  @override
   Future<void> storeRoomUpdate(int clientId, sdk.RoomUpdate roomUpdate,
       [sdk.Room oldRoom]) async {
     final setKey = '$clientId;${roomUpdate.id}';
@@ -446,6 +464,7 @@ class Database extends _$Database {
 
   /// Stores an EventUpdate object in the database. Must be called inside of
   /// [transaction].
+  @override
   Future<void> storeEventUpdate(
       int clientId, sdk.EventUpdate eventUpdate) async {
     if (eventUpdate.type == sdk.EventUpdateType.ephemeral) return;
@@ -579,6 +598,7 @@ class Database extends _$Database {
     }
   }
 
+  @override
   Future<sdk.Event> getEventById(
       int clientId, String eventId, sdk.Room room) async {
     final event = await getEvent(clientId, eventId, room.id).get();
@@ -617,6 +637,7 @@ class Database extends _$Database {
     return success;
   }
 
+  @override
   Future<void> forgetRoom(int clientId, String roomId) async {
     final setKey = '$clientId;$roomId';
     _ensuredRooms.remove(setKey);
@@ -634,6 +655,7 @@ class Database extends _$Database {
         .go();
   }
 
+  @override
   Future<void> clearCache(int clientId) async {
     await (delete(presences)..where((r) => r.clientId.equals(clientId))).go();
     await (delete(roomAccountData)..where((r) => r.clientId.equals(clientId)))
@@ -649,6 +671,7 @@ class Database extends _$Database {
     await storePrevBatch(null, clientId);
   }
 
+  @override
   Future<void> clear(int clientId) async {
     await clearCache(clientId);
     await (delete(inboundGroupSessions)
@@ -669,6 +692,7 @@ class Database extends _$Database {
         .go();
   }
 
+  @override
   Future<sdk.User> getUser(int clientId, String userId, sdk.Room room) async {
     final res = await dbGetUser(clientId, userId, room.id).get();
     if (res.isEmpty) {
@@ -677,19 +701,88 @@ class Database extends _$Database {
     return sdk.Event.fromDb(res.single, room).asUser;
   }
 
+  @override
   Future<List<sdk.User>> getUsers(int clientId, sdk.Room room) async {
     final res = await dbGetUsers(clientId, room.id).get();
     return res.map((r) => sdk.Event.fromDb(r, room).asUser).toList();
   }
 
+  @override
   Future<List<sdk.Event>> getEventList(int clientId, sdk.Room room) async {
     final res = await dbGetEventList(clientId, room.id).get();
     return res.map((r) => sdk.Event.fromDb(r, room)).toList();
   }
 
+  @override
   Future<Uint8List> getFile(String mxcUri) async {
     final res = await dbGetFile(mxcUri).get();
     if (res.isEmpty) return null;
     return res.single.bytes;
+  }
+
+  @override
+  Future<List<sdk.Event>> getUnimportantRoomEventStatesForRoom(
+    int client_id,
+    List<String> events,
+    Room room,
+  ) async {
+    final entries = await getUnimportantRoomStatesForRoom(
+      client_id,
+      room.id,
+      events,
+    ).get();
+    return entries.map((dbEvent) => sdk.Event.fromDb(dbEvent, room)).toList();
+  }
+
+  @override
+  Future<List<OlmSession>> getOlmSessions(
+    int client_id,
+    String identity_key,
+    String userId,
+  ) async {
+    final rows = await dbGetOlmSessions(client_id, identity_key).get();
+    return rows.map((row) => OlmSession.fromDb(row, userId)).toList();
+  }
+
+  @override
+  Future<List<OlmSession>> getOlmSessionsForDevices(
+    int client_id,
+    List<String> identity_keys,
+    String userId,
+  ) async {
+    final rows =
+        await dbGetOlmSessionsForDevices(client_id, identity_keys).get();
+    return rows.map((row) => OlmSession.fromDb(row, userId)).toList();
+  }
+
+  @override
+  Future<List<QueuedToDeviceEvent>> getToDeviceEventQueue(int client_id) async {
+    final rows = await getToDeviceQueue(client_id).get();
+    return rows
+        .map((row) => QueuedToDeviceEvent(
+              id: row.id,
+              type: row.type,
+              txnId: row.txnId,
+              content:
+                  (json.decode(row.content) as Map<String, dynamic>).copy(),
+            ))
+        .toList();
+  }
+
+  @override
+  Future<List<String>> getLastSentMessageUserDeviceKey(
+    int client_id,
+    String user_id,
+    String device_id,
+  ) =>
+      dbGetLastSentMessageUserDeviceKey(client_id, user_id, device_id).get();
+
+  @override
+  Future<List<StoredInboundGroupSession>>
+      getInboundGroupSessionsToUpload() async {
+    final rows = await dbGetInboundGroupSessionsToUpload().get();
+    return rows
+        .map((row) => StoredInboundGroupSession.fromJson(row.toJson()))
+        .toList();
   }
 }

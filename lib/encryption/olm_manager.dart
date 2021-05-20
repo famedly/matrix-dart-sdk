@@ -410,16 +410,9 @@ class OlmManager {
     if (client.database == null) {
       return [];
     }
-    final rows =
-        await client.database.dbGetOlmSessions(client.id, senderKey).get();
-    final res = <OlmSession>[];
-    for (final row in rows) {
-      final sess = OlmSession.fromDb(row, client.userID);
-      if (sess.isValid) {
-        res.add(sess);
-      }
-    }
-    return res;
+    final olmSessions = await client.database
+        .getOlmSessions(client.id, senderKey, client.userID);
+    return olmSessions.where((sess) => sess.isValid).toList();
   }
 
   Future<void> getOlmSessionsForDevicesFromDatabase(
@@ -427,15 +420,16 @@ class OlmManager {
     if (client.database == null) {
       return;
     }
-    final rows = await client.database
-        .dbGetOlmSessionsForDevices(client.id, senderKeys)
-        .get();
+    final rows = await client.database.getOlmSessionsForDevices(
+      client.id,
+      senderKeys,
+      client.userID,
+    );
     final res = <String, List<OlmSession>>{};
-    for (final row in rows) {
-      res[row.identityKey] ??= <OlmSession>[];
-      final sess = OlmSession.fromDb(row, client.userID);
+    for (final sess in rows) {
+      res[sess.identityKey] ??= <OlmSession>[];
       if (sess.isValid) {
-        res[row.identityKey].add(sess);
+        res[sess.identityKey].add(sess);
       }
     }
     for (final entry in res.entries) {
@@ -653,8 +647,7 @@ class OlmManager {
           '[OlmManager] Device ${device.userId}:${device.deviceId} generated a new olm session, replaying last sent message...');
       final lastSentMessageRes = await client.database
           .getLastSentMessageUserDeviceKey(
-              client.id, device.userId, device.deviceId)
-          .get();
+              client.id, device.userId, device.deviceId);
       if (lastSentMessageRes.isEmpty ||
           (lastSentMessageRes.first?.isEmpty ?? true)) {
         return;

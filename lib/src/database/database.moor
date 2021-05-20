@@ -208,7 +208,7 @@ getAllInboundGroupSessions: SELECT * FROM inbound_group_sessions WHERE client_id
 storeInboundGroupSession: INSERT OR REPLACE INTO inbound_group_sessions (client_id, room_id, session_id, pickle, content, indexes, allowed_at_index, sender_key, sender_claimed_keys) VALUES (:client_id, :room_id, :session_id, :pickle, :content, :indexes, :allowed_at_index, :sender_key, :sender_claimed_keys);
 updateInboundGroupSessionIndexes: UPDATE inbound_group_sessions SET indexes = :indexes WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id;
 updateInboundGroupSessionAllowedAtIndex: UPDATE inbound_group_sessions SET allowed_at_index = :allowed_at_index WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id;
-getInboundGroupSessionsToUpload: SELECT * FROM inbound_group_sessions WHERE uploaded = false LIMIT 500;
+dbGetInboundGroupSessionsToUpload: SELECT * FROM inbound_group_sessions WHERE uploaded = false LIMIT 500;
 markInboundGroupSessionAsUploaded: UPDATE inbound_group_sessions SET uploaded = true WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id;
 markInboundGroupSessionsAsNeedingUpload: UPDATE inbound_group_sessions SET uploaded = false WHERE client_id = :client_id;
 storeUserDeviceKeysInfo: INSERT OR REPLACE INTO user_device_keys (client_id, user_id, outdated) VALUES (:client_id, :user_id, :outdated);
@@ -218,7 +218,7 @@ storeUserDeviceKey: INSERT OR REPLACE INTO user_device_keys_key (client_id, user
 removeUserDeviceKey: DELETE FROM user_device_keys_key WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
 setLastActiveUserDeviceKey: UPDATE user_device_keys_key SET last_active = :last_active WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
 setLastSentMessageUserDeviceKey: UPDATE user_device_keys_key SET last_sent_message = :last_sent_message WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
-getLastSentMessageUserDeviceKey: SELECT last_sent_message FROM user_device_keys_key WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
+dbGetLastSentMessageUserDeviceKey: SELECT last_sent_message FROM user_device_keys_key WHERE client_id = :client_id AND user_id = :user_id AND device_id = :device_id;
 setVerifiedUserCrossSigningKey: UPDATE user_cross_signing_keys SET verified = :verified WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key;
 setBlockedUserCrossSigningKey: UPDATE user_cross_signing_keys SET blocked = :blocked WHERE client_id = :client_id AND user_id = :user_id AND public_key = :public_key;
 storeUserCrossSigningKey: INSERT OR REPLACE INTO user_cross_signing_keys (client_id, user_id, public_key, content, verified, blocked) VALUES (:client_id, :user_id, :public_key, :content, :verified, :blocked);

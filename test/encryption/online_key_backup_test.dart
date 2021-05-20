@@ -96,14 +96,12 @@ void main() {
       client.encryption.keyManager.setInboundGroupSession(
           roomId, sessionId, senderKey, sessionPayload,
           forwarded: true);
-      var dbSessions =
-          await client.database.getInboundGroupSessionsToUpload().get();
+      var dbSessions = await client.database.getInboundGroupSessionsToUpload();
       expect(dbSessions.isNotEmpty, true);
       await client.encryption.keyManager.backgroundTasks();
       final payload = FakeMatrixApi
           .calledEndpoints['/client/unstable/room_keys/keys?version=5'].first;
-      dbSessions =
-          await client.database.getInboundGroupSessionsToUpload().get();
+      dbSessions = await client.database.getInboundGroupSessionsToUpload();
       expect(dbSessions.isEmpty, true);
 
       final onlineKeys = RoomKeys.fromJson(json.decode(payload));
