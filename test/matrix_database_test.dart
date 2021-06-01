@@ -48,7 +48,7 @@ void main() {
         content: {
           'type': 'm.room.message',
           'origin_server_ts': 100,
-          'content': {'blah': 'blubb'},
+          'content': <String, dynamic>{'blah': 'blubb'},
           'event_id': '\$event-1',
           'sender': '@blah:blubb',
         },
@@ -65,7 +65,7 @@ void main() {
         content: {
           'type': 'm.room.message',
           'origin_server_ts': 100,
-          'content': {'blah': 'blubb'},
+          'content': <String, dynamic>{'blah': 'blubb'},
           'event_id': 'transaction-1',
           'sender': '@blah:blubb',
           'status': 0,
@@ -81,10 +81,10 @@ void main() {
         content: {
           'type': 'm.room.message',
           'origin_server_ts': 100,
-          'content': {'blah': 'blubb'},
+          'content': <String, dynamic>{'blah': 'blubb'},
           'event_id': '\$event-2',
           'sender': '@blah:blubb',
-          'unsigned': {
+          'unsigned': <String, dynamic>{
             'transaction_id': 'transaction-1',
           },
           'status': 1,
@@ -123,7 +123,7 @@ void main() {
           'event_id': '\$event-3',
           'sender': '@blah:blubb',
           'status': 1,
-          'unsigned': {
+          'unsigned': <String, dynamic>{
             'transaction_id': 'transaction-2',
           },
         },
@@ -163,7 +163,7 @@ void main() {
           'event_id': '\$event-4',
           'sender': '@blah:blubb',
           'status': 1,
-          'unsigned': {
+          'unsigned': <String, dynamic>{
             'transaction_id': 'transaction-3',
           },
         },

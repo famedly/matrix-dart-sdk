@@ -58,7 +58,7 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   });
   test('getToDeviceEventQueue', () async {
     final toDeviceQueue = await database.getToDeviceEventQueue(clientId);
-    expect(toDeviceQueue.single.type, 'm.test');
+    expect(toDeviceQueue.first.type, 'm.test');
   });
   test('deleteFromToDeviceQueue', () async {
     await database.deleteFromToDeviceQueue(clientId, toDeviceQueueIndex);
@@ -68,7 +68,7 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   test('storeFile', () async {
     await database.storeFile('mxc://test', Uint8List.fromList([0]), 0);
     final file = await database.getFile('mxc://test');
-    expect(file != null, true);
+    expect(file != null, database.supportsFileStoring);
   });
   test('getFile', () async {
     await database.getFile('mxc://test');
@@ -150,7 +150,7 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
     await database.getAccountData(clientId);
   });
   test('storeAccountData', () async {
-    await database.storeAccountData(clientId, 'm.test', '{}');
+    await database.storeAccountData(clientId, 'm.test', '{"foo":"bar"}');
     final events = await database.getAccountData(clientId);
     expect(events.values.single.type, 'm.test');
   });
@@ -215,7 +215,7 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   test('getInboundGroupSessionsToUpload', () async {
     await database.getInboundGroupSessionsToUpload();
   });
-  test('getInboundGroupSessionsToUpload', () async {
+  test('storeInboundGroupSession', () async {
     await database.storeInboundGroupSession(
       clientId,
       '!testroom:example.com',
