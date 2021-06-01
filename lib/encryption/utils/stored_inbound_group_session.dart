@@ -54,4 +54,17 @@ class StoredInboundGroupSession {
         senderKey: json['sender_key'],
         senderClaimedKeys: json['sender_claimed_keys'],
       );
+
+  Map<String, dynamic> toJson() => {
+        'client_id': clientId,
+        'room_id': roomId,
+        'session_id': sessionId,
+        'pickle': pickle,
+        'content': content,
+        'indexes': indexes,
+        'allowed_at_index': allowedAtIndex,
+        'uploaded': uploaded,
+        'sender_key': senderKey,
+        'sender_claimed_keys': senderClaimedKeys,
+      };
 }
