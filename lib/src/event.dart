@@ -173,7 +173,7 @@ class Event extends MatrixEvent {
           : DateTime.now(),
       unsigned: unsigned,
       room: room,
-      sortOrder: sortOrder ?? 0.0,
+      sortOrder: sortOrder ?? unsigned.tryGet<num>(sortOrderKey) ?? 0.0,
     );
   }
 

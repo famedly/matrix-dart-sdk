@@ -54,6 +54,8 @@ const Map<HistoryVisibility, String> _historyVisibilityMap = {
 const String messageSendingStatusKey =
     'com.famedly.famedlysdk.message_sending_status';
 
+const String sortOrderKey = 'com.famedly.famedlysdk.sort_order';
+
 /// Represents a Matrix room.
 class Room {
   /// The full qualified Matrix ID for the room in the format '!localid:server.abc'.
