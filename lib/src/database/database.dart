@@ -76,6 +76,9 @@ class Database extends _$Database implements DatabaseApi {
   Database.connect(DatabaseConnection connection) : super.connect(connection);
 
   @override
+  bool get supportsFileStoring => true;
+
+  @override
   int get schemaVersion => 12;
 
   @override

@@ -590,7 +590,8 @@ void main() {
       final client = await getClient();
       final response = await client.uploadContent(Uint8List(0), 'file.jpeg');
       expect(response, 'mxc://example.com/AQwafuaFswefuhsfAFAgsw');
-      expect(await client.database.getFile(response) != null, true);
+      expect(await client.database.getFile(response) != null,
+          client.database.supportsFileStoring);
       await client.dispose(closeDatabase: true);
     });
 
