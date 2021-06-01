@@ -71,15 +71,16 @@ class Room {
   /// A token that can be supplied to the from parameter of the rooms/{roomId}/messages endpoint.
   String prev_batch;
 
-  /// The users which can be used to generate a room name if the room does not have one.
-  /// Required if the room's m.room.name or m.room.canonical_alias state events are unset or empty.
-  List<String> mHeroes = [];
+  RoomSummary summary;
 
-  /// The number of users with membership of join, including the client's own user ID.
-  int mJoinedMemberCount;
+  @deprecated
+  List<String> get mHeroes => summary.mHeroes;
 
-  /// The number of users with membership of invite.
-  int mInvitedMemberCount;
+  @deprecated
+  int get mJoinedMemberCount => summary.mJoinedMemberCount;
+
+  @deprecated
+  int get mInvitedMemberCount => summary.mInvitedMemberCount;
 
   /// The room states are a key value store of the key (`type`,`state_key`) => State(event).
   /// In a lot of cases the `state_key` might be an empty string. You **should** use the
@@ -94,6 +95,33 @@ class Room {
 
   double _newestSortOrder;
   double _oldestSortOrder;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'membership': membership.toString().split('.').last,
+        'highlight_count': highlightCount,
+        'notification_count': notificationCount,
+        'prev_batch': prev_batch,
+        'summary': summary.toJson(),
+        'newest_sort_order': 0,
+        'oldest_sort_order': 0,
+      };
+
+  factory Room.fromJson(Map<String, dynamic> json, [Client client]) => Room(
+        client: client,
+        id: json['id'],
+        membership: Membership.values.singleWhere(
+          (m) => m.toString() == 'Membership.${json['membership']}',
+          orElse: () => Membership.join,
+        ),
+        notificationCount: json['notification_count'],
+        highlightCount: json['highlight_count'],
+        prev_batch: json['prev_batch'],
+        summary:
+            RoomSummary.fromJson(Map<String, dynamic>.from(json['summary'])),
+        newestSortOrder: json['newest_sort_order'].toDouble(),
+        oldestSortOrder: json['oldest_sort_order'].toDouble(),
+      );
 
   double get newSortOrder {
     var now = DateTime.now().millisecondsSinceEpoch.toDouble();
@@ -209,7 +237,7 @@ class Room {
     if ((name?.isEmpty ?? true) &&
         (canonicalAlias?.isEmpty ?? true) &&
         !isDirectChat &&
-        (mHeroes != null && mHeroes.isNotEmpty)) {
+        (summary.mHeroes != null && summary.mHeroes.isNotEmpty)) {
       return i18n.groupWith(displayname);
     }
     if (displayname?.isNotEmpty ?? false) {
@@ -230,10 +258,12 @@ class Room {
         getState(EventTypes.RoomAvatar).content['url'] is String) {
       return Uri.tryParse(getState(EventTypes.RoomAvatar).content['url']);
     }
-    if (mHeroes != null &&
-        mHeroes.length == 1 &&
-        getState(EventTypes.RoomMember, mHeroes.first) != null) {
-      return getState(EventTypes.RoomMember, mHeroes.first).asUser.avatarUrl;
+    if (summary.mHeroes != null &&
+        summary.mHeroes.length == 1 &&
+        getState(EventTypes.RoomMember, summary.mHeroes.first) != null) {
+      return getState(EventTypes.RoomMember, summary.mHeroes.first)
+          .asUser
+          .avatarUrl;
     }
     if (membership == Membership.invite &&
         getState(EventTypes.RoomMember, client.userID) != null) {
@@ -342,19 +372,22 @@ class Room {
     String prev_batch,
     this.client,
     this.notificationSettings,
-    this.mHeroes = const [],
-    int mInvitedMemberCount,
-    int mJoinedMemberCount,
-    this.roomAccountData = const {},
+    Map<String, BasicRoomEvent> roomAccountData,
     double newestSortOrder = 0.0,
     double oldestSortOrder = 0.0,
+    RoomSummary summary,
   })  : _newestSortOrder = newestSortOrder,
         _oldestSortOrder = oldestSortOrder,
         notificationCount = notificationCount ?? 0,
         highlightCount = highlightCount ?? 0,
         prev_batch = prev_batch ?? '',
-        mInvitedMemberCount = mInvitedMemberCount ?? 0,
-        mJoinedMemberCount = mJoinedMemberCount ?? 0;
+        roomAccountData = roomAccountData ?? <String, BasicRoomEvent>{},
+        summary = summary ??
+            RoomSummary.fromJson({
+              'm.joined_member_count': 0,
+              'm.invited_member_count': 0,
+              'm.heroes': [],
+            });
 
   /// The default count of how much events should be requested when requesting the
   /// history of this room.
@@ -370,10 +403,10 @@ class Room {
       return canonicalAlias.localpart;
     }
     var heroes = <String>[];
-    if (mHeroes != null &&
-        mHeroes.isNotEmpty &&
-        mHeroes.any((h) => h.isNotEmpty)) {
-      heroes = mHeroes;
+    if (summary.mHeroes != null &&
+        summary.mHeroes.isNotEmpty &&
+        summary.mHeroes.any((h) => h.isNotEmpty)) {
+      heroes = summary.mHeroes;
     } else {
       if (states[EventTypes.RoomMember] is Map<String, dynamic>) {
         for (final entry in states[EventTypes.RoomMember].entries) {
@@ -1163,7 +1196,7 @@ class Room {
     knownParticipants.removeWhere(
         (u) => ![Membership.join, Membership.invite].contains(u.membership));
     return knownParticipants.length ==
-        (mJoinedMemberCount ?? 0) + (mInvitedMemberCount ?? 0);
+        (summary.mJoinedMemberCount ?? 0) + (summary.mInvitedMemberCount ?? 0);
   }
 
   /// Returns the [User] object for the given [mxID] or requests it from

@@ -311,10 +311,11 @@ class Database extends _$Database implements DatabaseApi {
       // based on the heroes of the room
       if (room.getState(api.EventTypes.RoomName) == null &&
           room.getState(api.EventTypes.RoomCanonicalAlias) == null &&
-          room.mHeroes != null) {
+          room.summary.mHeroes != null) {
         // we don't have a name and no canonical alias, so we'll need to
         // post-load the heroes
-        membersToPostload.addAll(room.mHeroes.where((h) => h.isNotEmpty));
+        membersToPostload
+            .addAll(room.summary.mHeroes.where((h) => h.isNotEmpty));
       }
       // save it for loading later
       allMembersToPostload[room.id] = membersToPostload;
@@ -425,13 +426,13 @@ class Database extends _$Database implements DatabaseApi {
               oldRoom.membership.toString().split('.').last ||
           (roomUpdate.summary?.mJoinedMemberCount != null &&
               roomUpdate.summary.mJoinedMemberCount !=
-                  oldRoom.mInvitedMemberCount) ||
+                  oldRoom.summary.mInvitedMemberCount) ||
           (roomUpdate.summary?.mInvitedMemberCount != null &&
               roomUpdate.summary.mJoinedMemberCount !=
-                  oldRoom.mJoinedMemberCount) ||
+                  oldRoom.summary.mJoinedMemberCount) ||
           (roomUpdate.summary?.mHeroes != null &&
               roomUpdate.summary.mHeroes.join(',') !=
-                  oldRoom.mHeroes.join(','));
+                  oldRoom.summary.mHeroes.join(','));
     }
 
     if (doUpdate) {
@@ -840,9 +841,11 @@ Future<Room> getRoomFromTableRow(
     // TODO: do proper things
     notificationSettings: 'mention',
     prev_batch: row.prevBatch,
-    mInvitedMemberCount: row.invitedMemberCount,
-    mJoinedMemberCount: row.joinedMemberCount,
-    mHeroes: row.heroes?.split(',') ?? [],
+    summary: sdk.RoomSummary.fromJson({
+      'm.heroes': row.heroes?.split(',') ?? [],
+      'm.joined_member_count': row.joinedMemberCount,
+      'm.invited_member_count': row.invitedMemberCount,
+    }),
     client: matrix,
     roomAccountData: {},
     newestSortOrder: row.newestSortOrder,

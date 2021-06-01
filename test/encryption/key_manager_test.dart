@@ -169,13 +169,13 @@ void main() {
       final room = client.getRoomById(roomId);
       final member = room.getState('m.room.member', '@alice:example.com');
       member.content['membership'] = 'leave';
-      room.mJoinedMemberCount--;
+      room.summary.mJoinedMemberCount--;
       await client.encryption.keyManager.clearOrUseOutboundGroupSession(roomId);
       expect(
           client.encryption.keyManager.getOutboundGroupSession(roomId) != null,
           false);
       member.content['membership'] = 'join';
-      room.mJoinedMemberCount++;
+      room.summary.mJoinedMemberCount++;
 
       // do not rotate if new device is added
       sess =
@@ -213,11 +213,11 @@ void main() {
 
       // do not rotate if new user is added
       member.content['membership'] = 'leave';
-      room.mJoinedMemberCount--;
+      room.summary.mJoinedMemberCount--;
       sess =
           await client.encryption.keyManager.createOutboundGroupSession(roomId);
       member.content['membership'] = 'join';
-      room.mJoinedMemberCount++;
+      room.summary.mJoinedMemberCount++;
       await client.encryption.keyManager.clearOrUseOutboundGroupSession(roomId);
       expect(
           client.encryption.keyManager.getOutboundGroupSession(roomId) != null,

@@ -105,9 +105,9 @@ void main() {
       expect(room.membership, membership);
       expect(room.notificationCount, notificationCount);
       expect(room.highlightCount, highlightCount);
-      expect(room.mJoinedMemberCount, notificationCount);
-      expect(room.mInvitedMemberCount, notificationCount);
-      expect(room.mHeroes, heroes);
+      expect(room.summary.mJoinedMemberCount, notificationCount);
+      expect(room.summary.mInvitedMemberCount, notificationCount);
+      expect(room.summary.mHeroes, heroes);
       expect(room.displayname, 'Alice, Bob, Charley');
       expect(room.getState('m.room.join_rules').content['join_rule'], 'public');
       expect(room.roomAccountData['com.test.foo'].content['foo'], 'bar');

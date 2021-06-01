@@ -615,13 +615,13 @@ class Client extends MatrixApi {
         final id = entry.key;
         final room = entry.value;
         final leftRoom = Room(
-            id: id,
-            membership: Membership.leave,
-            client: this,
-            roomAccountData:
-                room.accountData?.asMap()?.map((k, v) => MapEntry(v.type, v)) ??
-                    <String, BasicRoomEvent>{},
-            mHeroes: []);
+          id: id,
+          membership: Membership.leave,
+          client: this,
+          roomAccountData:
+              room.accountData?.asMap()?.map((k, v) => MapEntry(v.type, v)) ??
+                  <String, BasicRoomEvent>{},
+        );
         if (room.timeline?.events != null) {
           for (final event in room.timeline.events) {
             leftRoom.setState(Event.fromMatrixEvent(
@@ -1394,9 +1394,7 @@ class Client extends MatrixApi {
         prev_batch: chatUpdate.prev_batch,
         highlightCount: chatUpdate.highlight_count,
         notificationCount: chatUpdate.notification_count,
-        mHeroes: chatUpdate.summary?.mHeroes,
-        mJoinedMemberCount: chatUpdate.summary?.mJoinedMemberCount,
-        mInvitedMemberCount: chatUpdate.summary?.mInvitedMemberCount,
+        summary: chatUpdate.summary,
         roomAccountData: {},
         client: this,
       );
@@ -1420,15 +1418,9 @@ class Client extends MatrixApi {
         rooms[j].prev_batch = chatUpdate.prev_batch;
       }
       if (chatUpdate.summary != null) {
-        if (chatUpdate.summary.mHeroes != null) {
-          rooms[j].mHeroes = chatUpdate.summary.mHeroes;
-        }
-        if (chatUpdate.summary.mJoinedMemberCount != null) {
-          rooms[j].mJoinedMemberCount = chatUpdate.summary.mJoinedMemberCount;
-        }
-        if (chatUpdate.summary.mInvitedMemberCount != null) {
-          rooms[j].mInvitedMemberCount = chatUpdate.summary.mInvitedMemberCount;
-        }
+        final roomSummaryJson = rooms[j].summary.toJson()
+          ..addAll(chatUpdate.summary.toJson());
+        rooms[j].summary = RoomSummary.fromJson(roomSummaryJson);
       }
       if (rooms[j].onUpdate != null) rooms[j].onUpdate.add(rooms[j].id);
       if (chatUpdate.limitedTimeline && requestHistoryOnLimitedTimeline) {
