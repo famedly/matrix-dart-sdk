@@ -15,6 +15,8 @@
  *   You should have received a copy of the GNU Affero General Public License
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import 'dart:convert';
+
 class QueuedToDeviceEvent {
   final int id;
   final String type;
@@ -28,7 +30,10 @@ class QueuedToDeviceEvent {
         id: json['id'],
         type: json['type'],
         txnId: json['txn_id'],
-        content: json['content'],
+        // Temporary fix to stay compatible to Moor AND a key value store
+        content: json['content'] is String
+            ? jsonDecode(json['content'])
+            : json['content'],
       );
 
   Map<String, dynamic> toJson() => {
