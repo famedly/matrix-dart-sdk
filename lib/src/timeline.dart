@@ -24,9 +24,6 @@ import 'room.dart';
 import 'utils/event_update.dart';
 import 'utils/room_update.dart';
 
-typedef onTimelineUpdateCallback = void Function();
-typedef onTimelineInsertCallback = void Function(int insertID);
-
 /// Represents the timeline of a room. The callback [onUpdate] will be triggered
 /// automatically. The initial
 /// event list will be retreived when created by the `room.getTimeline()` method.
@@ -37,8 +34,8 @@ class Timeline {
   /// Map of event ID to map of type to set of aggregated events
   final Map<String, Map<String, Set<Event>>> aggregatedEvents = {};
 
-  final onTimelineUpdateCallback onUpdate;
-  final onTimelineInsertCallback onInsert;
+  final void Function() onUpdate;
+  final void Function(int insertID) onInsert;
 
   StreamSubscription<EventUpdate> sub;
   StreamSubscription<RoomUpdate> roomSub;

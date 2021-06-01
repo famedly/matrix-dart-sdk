@@ -1115,8 +1115,7 @@ class Room {
 
   /// Creates a timeline from the store. Returns a [Timeline] object.
   Future<Timeline> getTimeline(
-      {onTimelineUpdateCallback onUpdate,
-      onTimelineInsertCallback onInsert}) async {
+      {void Function() onUpdate, void Function(int insertID) onInsert}) async {
     await postLoad();
     var events;
     if (client.database != null) {
