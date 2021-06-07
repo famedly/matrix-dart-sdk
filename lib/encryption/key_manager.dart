@@ -44,7 +44,8 @@ class KeyManager {
       final keyObj = olm.PkDecryption();
       try {
         final info = await getRoomKeysBackupInfo(false);
-        if (info.algorithm != RoomKeysAlgorithmType.v1Curve25519AesSha2) {
+        if (info.algorithm !=
+            BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2) {
           return false;
         }
         return keyObj.init_with_private_key(base64.decode(secret)) ==
@@ -523,9 +524,9 @@ class KeyManager {
     return (await encryption.ssss.getCached(megolmKey)) != null;
   }
 
-  RoomKeysVersionResponse _roomKeysVersionCache;
+  GetRoomKeysVersionCurrentResponse _roomKeysVersionCache;
   DateTime _roomKeysVersionCacheDate;
-  Future<RoomKeysVersionResponse> getRoomKeysBackupInfo(
+  Future<GetRoomKeysVersionCurrentResponse> getRoomKeysBackupInfo(
       [bool useCache = true]) async {
     if (_roomKeysVersionCache != null &&
         _roomKeysVersionCacheDate != null &&
@@ -535,7 +536,7 @@ class KeyManager {
             .isBefore(_roomKeysVersionCacheDate)) {
       return _roomKeysVersionCache;
     }
-    _roomKeysVersionCache = await client.getRoomKeysBackup();
+    _roomKeysVersionCache = await client.getRoomKeysVersionCurrent();
     _roomKeysVersionCacheDate = DateTime.now();
     return _roomKeysVersionCache;
   }
@@ -553,7 +554,7 @@ class KeyManager {
       backupPubKey = decryption.init_with_private_key(privateKey);
 
       if (backupPubKey == null ||
-          info.algorithm != RoomKeysAlgorithmType.v1Curve25519AesSha2 ||
+          info.algorithm != BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2 ||
           info.authData['public_key'] != backupPubKey) {
         return;
       }
@@ -706,7 +707,8 @@ class KeyManager {
         backupPubKey = decryption.init_with_private_key(privateKey);
 
         if (backupPubKey == null ||
-            info.algorithm != RoomKeysAlgorithmType.v1Curve25519AesSha2 ||
+            info.algorithm !=
+                BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2 ||
             info.authData['public_key'] != backupPubKey) {
           return;
         }
@@ -737,7 +739,7 @@ class KeyManager {
                 _generateUploadKeys, args);
         Logs().i('[Key Manager] Uploading ${dbSessions.length} room keys...');
         // upload the payload...
-        await client.storeRoomKeys(info.version, roomKeys);
+        await client.postRoomKeysKey(info.version, roomKeys);
         // and now finally mark all the keys as uploaded
         // no need to optimze this, as we only run it so seldomly and almost never with many keys at once
         for (final dbSession in dbSessions) {
@@ -1011,7 +1013,7 @@ RoomKeys _generateUploadKeys(_GenerateUploadKeysArgs args) {
   try {
     enc.set_recipient_key(args.pubkey);
     // first we generate the payload to upload all the session keys in this chunk
-    final roomKeys = RoomKeys();
+    final roomKeys = RoomKeys(rooms: {});
     for (final dbSession in args.dbSessions) {
       final sess = SessionKey.fromDb(dbSession.dbSession, args.userId);
       if (!sess.isValid) {
@@ -1019,7 +1021,7 @@ RoomKeys _generateUploadKeys(_GenerateUploadKeysArgs args) {
       }
       // create the room if it doesn't exist
       if (!roomKeys.rooms.containsKey(sess.roomId)) {
-        roomKeys.rooms[sess.roomId] = RoomKeysRoom();
+        roomKeys.rooms[sess.roomId] = RoomKeyBackup(sessions: {});
       }
       // generate the encrypted content
       final payload = <String, dynamic>{
@@ -1035,7 +1037,7 @@ RoomKeys _generateUploadKeys(_GenerateUploadKeysArgs args) {
       // fetch the device, if available...
       //final device = args.client.getUserDeviceKeysByCurve25519Key(sess.senderKey);
       // aaaand finally add the session key to our payload
-      roomKeys.rooms[sess.roomId].sessions[sess.sessionId] = RoomKeysSingleKey(
+      roomKeys.rooms[sess.roomId].sessions[sess.sessionId] = KeyBackupData(
         firstMessageIndex: sess.inboundGroupSession.first_known_index(),
         forwardedCount: sess.forwardingCurve25519KeyChain.length,
         isVerified: dbSession.verified, //device?.verified ?? false,

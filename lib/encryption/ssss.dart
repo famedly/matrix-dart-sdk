@@ -16,10 +16,10 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'dart:core';
-import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:async';
+import 'dart:convert';
+import 'dart:core';
+import 'dart:typed_data';
 
 import 'package:base58check/base58.dart';
 import 'package:crypto/crypto.dart';
@@ -51,11 +51,13 @@ const pbkdf2SaltLength = 64;
 /// https://matrix.org/docs/guides/implementing-more-advanced-e-2-ee-features-such-as-cross-signing#3-implementing-ssss
 class SSSS {
   final Encryption encryption;
+
   Client get client => encryption.client;
   final pendingShareRequests = <String, _ShareRequest>{};
   final _validators = <String, FutureOr<bool> Function(String)>{};
   final _cacheCallbacks = <String, FutureOr<void> Function(String)>{};
   final Map<String, SSSSCache> _cache = <String, SSSSCache>{};
+
   SSSS(this.encryption);
 
   // for testing
@@ -174,7 +176,7 @@ class SSSS {
     await client.setAccountData(
       client.userID,
       EventTypes.SecretStorageDefaultKey,
-      (SecretStorageDefaultKeyContent()..key = keyId).toJson(),
+      SecretStorageDefaultKeyContent(key: keyId).toJson(),
     );
   }
 
@@ -193,13 +195,12 @@ class SSSS {
     final content = SecretStorageKeyContent();
     if (passphrase != null) {
       // we need to derive the key off of the passphrase
-      content.passphrase = PassphraseInfo();
-      content.passphrase.algorithm = AlgorithmTypes.pbkdf2;
-      content.passphrase.salt = base64
-          .encode(uc.secureRandomBytes(pbkdf2SaltLength)); // generate salt
-      content.passphrase.iterations = pbkdf2DefaultIterations;
-      ;
-      content.passphrase.bits = ssssKeyLength * 8;
+      content.passphrase = PassphraseInfo(
+        iterations: pbkdf2DefaultIterations,
+        salt: base64.encode(uc.secureRandomBytes(pbkdf2SaltLength)),
+        algorithm: AlgorithmTypes.pbkdf2,
+        bits: ssssKeyLength * 8,
+      );
       privateKey = await client
           .runInBackground(
             _keyFromPassphrase,
@@ -431,6 +432,7 @@ class SSSS {
 
   DateTime _lastCacheRequest;
   bool _isPeriodicallyRequestingMissingCache = false;
+
   Future<void> periodicallyRequestMissingCache() async {
     if (_isPeriodicallyRequestingMissingCache ||
         (_lastCacheRequest != null &&
@@ -606,10 +608,13 @@ class OpenSSSS {
   final SSSS ssss;
   final String keyId;
   final SecretStorageKeyContent keyData;
+
   OpenSSSS({this.ssss, this.keyId, this.keyData});
+
   Uint8List privateKey;
 
   bool get isUnlocked => privateKey != null;
+
   bool get hasPassphrase => keyData.passphrase != null;
 
   String get recoveryKey =>
@@ -708,6 +713,7 @@ class OpenSSSS {
 class _KeyFromPassphraseArgs {
   final String passphrase;
   final PassphraseInfo info;
+
   _KeyFromPassphraseArgs({this.passphrase, this.info});
 }
 

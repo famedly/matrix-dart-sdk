@@ -21,8 +21,8 @@ import 'dart:convert';
 import 'dart:core';
 import 'dart:typed_data';
 
-import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:http/http.dart' as http;
+import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../encryption.dart';
@@ -43,6 +43,12 @@ import 'utils/multilock.dart';
 typedef RoomSorter = int Function(Room a, Room b);
 
 enum LoginState { logged, loggedOut }
+
+extension TrailingSlash on Uri {
+  Uri stripTrailingSlash() => path.endsWith('/')
+      ? replace(path: path.substring(0, path.length - 1))
+      : this;
+}
 
 /// Represents a Matrix client to communicate with a
 /// [Matrix](https://matrix.org) homeserver and is the entry point for this
@@ -158,12 +164,13 @@ class Client extends MatrixApi {
     this.compute,
     Filter syncFilter,
     @deprecated bool debug,
-  }) : syncFilter = syncFilter ??
+  })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
                 state: StateFilter(lazyLoadMembers: true),
               ),
-            ) {
+            ),
+        super(httpClient: httpClient) {
     supportedLoginTypes ??= {AuthenticationTypes.password};
     verificationMethods ??= <KeyVerificationMethod>{};
     importantStateEvents ??= {};
@@ -182,7 +189,6 @@ class Client extends MatrixApi {
       EventTypes.Encrypted,
       EventTypes.Sticker,
     ]);
-    this.httpClient = httpClient ?? http.Client();
 
     // register all the default commands
     registerDefaultCommands();
@@ -308,7 +314,7 @@ class Client extends MatrixApi {
   }
 
   /// Gets discovery information about the domain. The file may include additional keys.
-  Future<WellKnownInformation> getWellKnownInformationsByUserId(
+  Future<DiscoveryInformation> getDiscoveryInformationsByUserId(
     String MatrixIdOrDomain,
   ) async {
     try {
@@ -321,15 +327,14 @@ class Client extends MatrixApi {
         // No-OP
       }
       final rawJson = json.decode(respBody);
-      return WellKnownInformation.fromJson(rawJson);
+      return DiscoveryInformation.fromJson(rawJson);
     } catch (_) {
       // we got an error processing or fetching the well-known information, let's
       // provide a reasonable fallback.
-      return WellKnownInformation.fromJson(<String, dynamic>{
-        'm.homeserver': <String, dynamic>{
-          'base_url': Uri.https(MatrixIdOrDomain.domain, '').toString(),
-        },
-      });
+      return DiscoveryInformation(
+        mHomeserver: HomeserverInformation(
+            baseUrl: Uri.https(MatrixIdOrDomain.domain, '')),
+      );
     }
   }
 
@@ -347,35 +352,19 @@ class Client extends MatrixApi {
   /// login types. Throws an exception if the server is not compatible with the
   /// client and sets [homeserver] to [homeserverUrl] if it is. Supports the
   /// types `Uri` and `String`.
-  Future<WellKnownInformation> checkHomeserver(dynamic homeserverUrl,
+  Future<DiscoveryInformation> checkHomeserver(dynamic homeserverUrl,
       {bool checkWellKnown = true}) async {
     try {
-      if (homeserverUrl is Uri) {
-        homeserver = homeserverUrl;
-      } else {
-        // URLs allow to have whitespace surrounding them, see https://www.w3.org/TR/2011/WD-html5-20110525/urls.html
-        // As we want to strip a trailing slash, though, we have to trim the url ourself
-        // and thus can't let Uri.parse() deal with it.
-        homeserverUrl = homeserverUrl.trim();
-        // strip a trailing slash
-        if (homeserverUrl.endsWith('/')) {
-          homeserverUrl = homeserverUrl.substring(0, homeserverUrl.length - 1);
-        }
-        homeserver = Uri.parse(homeserverUrl);
-      }
+      homeserver =
+          (homeserverUrl is Uri) ? homeserverUrl : Uri.parse(homeserverUrl);
+      homeserver = homeserver.stripTrailingSlash();
 
       // Look up well known
-      WellKnownInformation wellKnown;
+      DiscoveryInformation wellKnown;
       if (checkWellKnown) {
         try {
           wellKnown = await getWellknown();
-          homeserverUrl = wellKnown.mHomeserver.baseUrl.trim();
-          // strip a trailing slash
-          if (homeserverUrl.endsWith('/')) {
-            homeserverUrl =
-                homeserverUrl.substring(0, homeserverUrl.length - 1);
-          }
-          homeserver = Uri.parse(homeserverUrl);
+          homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
         } catch (e) {
           Logs().v('Found no well known information', e);
         }
@@ -390,9 +379,9 @@ class Client extends MatrixApi {
       }
 
       final loginTypes = await getLoginFlows();
-      if (!loginTypes.flows.any((f) => supportedLoginTypes.contains(f.type))) {
+      if (!loginTypes.any((f) => supportedLoginTypes.contains(f.type))) {
         throw BadServerLoginTypesException(
-            loginTypes.flows.map((f) => f.type).toSet(), supportedLoginTypes);
+            loginTypes.map((f) => f.type).toSet(), supportedLoginTypes);
       }
 
       return wellKnown;
@@ -406,14 +395,14 @@ class Client extends MatrixApi {
   /// Returns the fully-qualified Matrix user ID (MXID) that has been registered.
   /// You have to call [checkHomeserver] first to set a homeserver.
   @override
-  Future<LoginResponse> register({
+  Future<RegisterResponse> register({
     String username,
     String password,
     String deviceId,
     String initialDeviceDisplayName,
     bool inhibitLogin,
     AuthenticationData auth,
-    String kind,
+    AccountKind kind,
   }) async {
     final response = await super.register(
       username: username,
@@ -447,8 +436,8 @@ class Client extends MatrixApi {
   /// Maybe you want to set [user] to the same String to stay compatible with
   /// older server versions.
   @override
-  Future<LoginResponse> login({
-    String type = AuthenticationTypes.password,
+  Future<LoginResponse> login(
+    LoginType type, {
     AuthenticationIdentifier identifier,
     String password,
     String token,
@@ -463,13 +452,12 @@ class Client extends MatrixApi {
       await checkHomeserver(user.domain);
     }
     final loginResp = await super.login(
-      type: type,
+      type,
       identifier: identifier,
       password: password,
       token: token,
       deviceId: deviceId,
       initialDeviceDisplayName: initialDeviceDisplayName,
-      auth: auth,
       // ignore: deprecated_member_use
       user: user,
       // ignore: deprecated_member_use
@@ -553,7 +541,7 @@ class Client extends MatrixApi {
     roomId = await createRoom(
       invite: [mxid],
       isDirect: true,
-      preset: CreateRoomPreset.trusted_private_chat,
+      preset: CreateRoomPreset.trustedPrivateChat,
     );
 
     if (roomId == null) return roomId;
@@ -576,7 +564,7 @@ class Client extends MatrixApi {
     Visibility visibility = Visibility.public,
     String spaceAliasName,
     List<String> invite,
-    List<Map<String, dynamic>> invite3pid,
+    List<Invite3pid> invite3pid,
     String roomVersion,
   }) =>
       createRoom(
@@ -607,7 +595,7 @@ class Client extends MatrixApi {
     return getProfileFromUserId(userID);
   }
 
-  final Map<String, Profile> _profileCache = {};
+  final Map<String, ProfileInformation> _profileCache = {};
 
   /// Get the combined profile information for this user.
   /// If [getFromRooms] is true then the profile will first be searched from the
@@ -629,15 +617,25 @@ class Client extends MatrixApi {
       if (room != null) {
         final user =
             room.getParticipants().firstWhere((User user) => user.id == userId);
-        return Profile(user.displayName, user.avatarUrl);
+        return Profile(
+            userId: userId,
+            displayName: user.displayName,
+            avatarUrl: user.avatarUrl);
       }
     }
     if (cache && _profileCache.containsKey(userId)) {
-      return _profileCache[userId];
+      final profile = _profileCache[userId];
+      return Profile(
+          userId: userId,
+          displayName: profile.displayname,
+          avatarUrl: profile.avatarUrl);
     }
     final profile = await getUserProfile(userId);
     _profileCache[userId] = profile;
-    return profile;
+    return Profile(
+        userId: userId,
+        displayName: profile.displayname,
+        avatarUrl: profile.avatarUrl);
   }
 
   Future<List<Room>> get archive async {
@@ -685,10 +683,10 @@ class Client extends MatrixApi {
   /// Uploads a file and automatically caches it in the database, if it is small enough
   /// and returns the mxc url as a string.
   @override
-  Future<String> uploadContent(Uint8List file, String fileName,
-      {String contentType}) async {
-    final mxc =
-        await super.uploadContent(file, fileName, contentType: contentType);
+  Future<String> uploadContent(Uint8List file,
+      {String filename, String contentType}) async {
+    final mxc = await super
+        .uploadContent(file, filename: filename, contentType: contentType);
     final storeable = database != null && file.length <= database.maxFileSize;
     if (storeable) {
       await database.storeFile(
@@ -715,7 +713,7 @@ class Client extends MatrixApi {
 
   /// Uploads a new user avatar for this user.
   Future<void> setAvatar(MatrixFile file) async {
-    final uploadResp = await uploadContent(file.bytes, file.name);
+    final uploadResp = await uploadContent(file.bytes, filename: file.name);
     await setAvatarUrl(userID, Uri.parse(uploadResp));
     return;
   }
@@ -2006,16 +2004,16 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
   /// Changes the password. You should either set oldPasswort or another authentication flow.
   @override
   Future<void> changePassword(String newPassword,
-      {String oldPassword, AuthenticationData auth}) async {
+      {String oldPassword, AuthenticationData auth, bool logoutDevices}) async {
     try {
       if (oldPassword != null) {
         auth = AuthenticationPassword(
-          user: userID,
           identifier: AuthenticationUserIdentifier(user: userID),
           password: oldPassword,
         );
       }
-      await super.changePassword(newPassword, auth: auth);
+      await super.changePassword(newPassword,
+          auth: auth, logoutDevices: logoutDevices);
     } on MatrixException catch (matrixException) {
       if (!matrixException.requireAdditionalAuthentication) {
         rethrow;
@@ -2031,11 +2029,11 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
       return changePassword(
         newPassword,
         auth: AuthenticationPassword(
-          user: userID,
           identifier: AuthenticationUserIdentifier(user: userID),
           password: oldPassword,
           session: matrixException.session,
         ),
+        logoutDevices: logoutDevices,
       );
     } catch (_) {
       rethrow;

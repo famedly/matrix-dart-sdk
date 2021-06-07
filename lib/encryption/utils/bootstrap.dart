@@ -563,8 +563,8 @@ class Bootstrap {
         keyObj.free();
       }
       Logs().v('Create the new backup version...');
-      await client.createRoomKeysBackup(
-        RoomKeysAlgorithmType.v1Curve25519AesSha2,
+      await client.postRoomKeysVersion(
+        BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2,
         <String, dynamic>{
           'public_key': pubKey,
         },

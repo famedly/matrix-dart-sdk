@@ -269,7 +269,7 @@ void main() {
       final matrix = Client('testclient', httpClient: FakeMatrixApi());
       await matrix.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
-      await matrix.login(
+      await matrix.login(LoginType.mLoginPassword,
           identifier: AuthenticationUserIdentifier(user: 'test'),
           password: '1234');
 
@@ -288,7 +288,7 @@ void main() {
       final matrix = Client('testclient', httpClient: FakeMatrixApi());
       await matrix.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
-      await matrix.login(
+      await matrix.login(LoginType.mLoginPassword,
           identifier: AuthenticationUserIdentifier(user: 'test'),
           password: '1234');
 

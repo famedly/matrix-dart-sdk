@@ -30,7 +30,7 @@ class SpaceChild {
       : assert(state.type == EventTypes.spaceChild),
         roomId = state.stateKey,
         via = state.content.tryGetList<String>('via'),
-        order = state.content.tryGet<String>('order', ''),
+        order = state.content.tryGet<String>('order') ?? '',
         suggested = state.content.tryGet<bool>('suggested');
 }
 

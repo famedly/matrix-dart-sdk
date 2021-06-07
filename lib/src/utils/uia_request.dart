@@ -44,6 +44,7 @@ class UiaRequest<T> {
   Map<String, dynamic> params = <String, dynamic>{};
 
   UiaRequestState get state => _state;
+
   set state(UiaRequestState newState) {
     if (_state == newState) return;
     _state = newState;
@@ -57,7 +58,8 @@ class UiaRequest<T> {
   Future<T> _run([AuthenticationData auth]) async {
     state = UiaRequestState.loading;
     try {
-      auth ??= AuthenticationData(session: session);
+      auth ??=
+          AuthenticationData(session: session, type: AuthenticationTypes.token);
       final res = await request(auth);
       state = UiaRequestState.done;
       result = res;

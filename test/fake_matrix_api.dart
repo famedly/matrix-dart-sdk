@@ -16,15 +16,14 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:matrix/matrix.dart' as sdk;
-import 'package:matrix/matrix.dart';
-
 import 'dart:convert';
 import 'dart:core';
 import 'dart:math';
 
 import 'package:http/http.dart';
 import 'package:http/testing.dart';
+import 'package:matrix/matrix.dart' as sdk;
+import 'package:matrix/matrix.dart';
 
 Map<String, dynamic> decodeJson(dynamic data) {
   if (data is String) {
@@ -122,11 +121,9 @@ class FakeMatrixApi extends MockClient {
               action.contains('/account_data/') &&
               !action.contains('/room/')) {
             final type = Uri.decodeComponent(action.split('/').last);
-            final syncUpdate = sdk.SyncUpdate()
+            final syncUpdate = sdk.SyncUpdate(nextBatch: '')
               ..accountData = [
-                sdk.BasicEvent()
-                  ..content = decodeJson(data)
-                  ..type = type
+                sdk.BasicEvent(content: decodeJson(data), type: type)
               ];
             if (client.database != null) {
               await client.database.transaction(() async {
@@ -2111,7 +2108,7 @@ class FakeMatrixApi extends MockClient {
             }
           }
           // and generate a fake sync
-          client.handleSync(sdk.SyncUpdate());
+          client.handleSync(sdk.SyncUpdate(nextBatch: ''));
         }
         return {};
       },

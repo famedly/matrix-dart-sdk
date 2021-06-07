@@ -648,8 +648,8 @@ void main() {
     });
 
     test('Test tag methods', () async {
-      await room.addTag(TagType.Favourite, order: 0.1);
-      await room.removeTag(TagType.Favourite);
+      await room.addTag(TagType.favourite, order: 0.1);
+      await room.removeTag(TagType.favourite);
       expect(room.isFavourite, false);
       room.roomAccountData['m.tag'] = BasicRoomEvent.fromJson({
         'content': {
@@ -661,7 +661,7 @@ void main() {
         'type': 'm.tag'
       });
       expect(room.tags.length, 1);
-      expect(room.tags[TagType.Favourite].order, 0.1);
+      expect(room.tags[TagType.favourite].order, 0.1);
       expect(room.isFavourite, true);
       await room.setFavourite(false);
     });

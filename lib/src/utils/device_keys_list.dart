@@ -23,7 +23,6 @@ import 'package:matrix/matrix.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../../encryption.dart';
-
 import '../client.dart';
 import '../event.dart';
 import '../room.dart';
@@ -132,11 +131,21 @@ class DeviceKeysList {
   DeviceKeysList(this.userId, this.client);
 }
 
+class SimpleSignableKey extends MatrixSignableKey {
+  @override
+  String identifier;
+
+  SimpleSignableKey.fromJson(Map<String, dynamic> json) : super.fromJson(json);
+}
+
 abstract class SignableKey extends MatrixSignableKey {
   Client client;
   Map<String, dynamic> validSignatures;
   bool _verified;
   bool blocked;
+
+  @override
+  String identifier;
 
   String get ed25519Key => keys['ed25519:$identifier'];
   bool get verified => (directVerified || crossVerified) && !blocked;
@@ -161,8 +170,8 @@ abstract class SignableKey extends MatrixSignableKey {
     blocked = false;
   }
 
-  MatrixSignableKey cloneForSigning() {
-    final newKey = MatrixSignableKey.fromJson(toJson().copy());
+  SimpleSignableKey cloneForSigning() {
+    final newKey = SimpleSignableKey.fromJson(toJson().copy());
     newKey.identifier = identifier;
     newKey.signatures ??= <String, Map<String, String>>{};
     newKey.signatures.clear();

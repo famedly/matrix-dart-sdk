@@ -23,9 +23,9 @@ import 'package:matrix/matrix.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../encryption/utils/json_signature_check_extension.dart';
+import '../src/utils/run_in_root.dart';
 import 'encryption.dart';
 import 'utils/olm_session.dart';
-import '../src/utils/run_in_root.dart';
 
 class OlmManager {
   final Encryption encryption;
@@ -264,7 +264,7 @@ class OlmManager {
     // and generate and upload more if not.
 
     // If the server did not send us a count, assume it is 0
-    final keyCount = countJson?.tryGet<int>('signed_curve25519', 0) ?? 0;
+    final keyCount = countJson?.tryGet<int>('signed_curve25519') ?? 0;
 
     // If the server does not support fallback keys, it will not tell us about them.
     // If the server supports them but has no key, upload a new one.
@@ -644,7 +644,7 @@ class OlmManager {
         return;
       }
       final device = client.getUserDeviceKeysByCurve25519Key(
-          event.encryptedContent.tryGet<String>('sender_key', ''));
+          event.encryptedContent.tryGet<String>('sender_key') ?? '');
       if (device == null) {
         return; // device not found
       }

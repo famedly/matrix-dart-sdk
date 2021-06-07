@@ -19,8 +19,8 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:matrix/src/utils/space_child.dart';
 import 'package:html_unescape/html_unescape.dart';
+import 'package:matrix/src/utils/space_child.dart';
 
 import '../matrix.dart';
 import 'client.dart';
@@ -288,7 +288,7 @@ class Room {
     if (!aliases.contains(canonicalAlias)) {
       await client.setRoomAlias(canonicalAlias, id);
     }
-    await client.setRoomStateWithKey(id, EventTypes.RoomCanonicalAlias, {
+    await client.setRoomStateWithKey(id, EventTypes.RoomCanonicalAlias, '', {
       'alias': canonicalAlias,
     });
   }
@@ -455,6 +455,7 @@ class Room {
   Future<String> setName(String newName) => client.setRoomStateWithKey(
         id,
         EventTypes.RoomName,
+        '',
         {'name': newName},
       );
 
@@ -462,6 +463,7 @@ class Room {
   Future<String> setDescription(String newName) => client.setRoomStateWithKey(
         id,
         EventTypes.RoomTopic,
+        '',
         {'topic': newName},
       );
 
@@ -506,14 +508,15 @@ class Room {
   /// this works if there is no connection to the homeserver.
   Future<void> setUnread(bool unread) async {
     final content = MarkedUnread(unread).toJson();
-    await _handleFakeSync(SyncUpdate()
+    await _handleFakeSync(SyncUpdate(nextBatch: '')
       ..rooms = (RoomsUpdate()
         ..join = (({}..[id] = (JoinedRoomUpdate()
           ..accountData = [
-            BasicRoomEvent()
-              ..content = content
-              ..roomId = id
-              ..type = EventType.markedUnread
+            BasicRoomEvent(
+              content: content,
+              roomId: id,
+              type: EventType.markedUnread,
+            )
           ])))));
     await client.setAccountDataPerRoom(
       client.userID,
@@ -524,23 +527,24 @@ class Room {
     if (unread == false && lastEvent != null) {
       await setReadMarker(
         lastEvent.eventId,
-        readReceiptLocationEventId: lastEvent.eventId,
+        mRead: lastEvent.eventId,
       );
     }
   }
 
   /// Returns true if this room has a m.favourite tag.
-  bool get isFavourite => tags[TagType.Favourite] != null;
+  bool get isFavourite => tags[TagType.favourite] != null;
 
   /// Sets the m.favourite tag for this room.
   Future<void> setFavourite(bool favourite) =>
-      favourite ? addTag(TagType.Favourite) : removeTag(TagType.Favourite);
+      favourite ? addTag(TagType.favourite) : removeTag(TagType.favourite);
 
   /// Call the Matrix API to change the pinned events of this room.
   Future<String> setPinnedEvents(List<String> pinnedEventIds) =>
       client.setRoomStateWithKey(
         id,
         EventTypes.RoomPinnedEvents,
+        '',
         {'pinned': pinnedEventIds},
       );
 
@@ -635,13 +639,13 @@ class Room {
     }
     final uploadResp = await client.uploadContent(
       uploadFile.bytes,
-      uploadFile.name,
+      filename: uploadFile.name,
       contentType: uploadFile.mimeType,
     );
     final thumbnailUploadResp = uploadThumbnail != null
         ? await client.uploadContent(
             uploadThumbnail.bytes,
-            uploadThumbnail.name,
+            filename: uploadThumbnail.name,
             contentType: uploadThumbnail.mimeType,
           )
         : null;
@@ -751,17 +755,16 @@ class Room {
               RegExp(r'<mx-reply>.*<\/mx-reply>',
                   caseSensitive: false, multiLine: false, dotAll: true),
               '');
-      final repliedHtml = content.tryGet<String>(
-          'formatted_body',
+      final repliedHtml = content.tryGet<String>('formatted_body') ??
           htmlEscape
-              .convert(content.tryGet<String>('body', ''))
-              .replaceAll('\n', '<br>'));
+              .convert(content.tryGet<String>('body') ?? '')
+              .replaceAll('\n', '<br>');
       content['formatted_body'] =
           '<mx-reply><blockquote><a href="https://matrix.to/#/${inReplyTo.room.id}/${inReplyTo.eventId}">In reply to</a> <a href="https://matrix.to/#/${inReplyTo.senderId}">${inReplyTo.senderId}</a><br>$replyHtml</blockquote></mx-reply>$repliedHtml';
       // We escape all @room-mentions here to prevent accidental room pings when an admin
       // replies to a message containing that!
       content['body'] =
-          '${replyText.replaceAll('@room', '@\u200broom')}\n\n${content.tryGet<String>('body', '')}';
+          '${replyText.replaceAll('@room', '@\u200broom')}\n\n${content.tryGet<String>('body') ?? ''}';
       content['m.relates_to'] = {
         'm.in_reply_to': {
           'event_id': inReplyTo.eventId,
@@ -783,21 +786,22 @@ class Room {
       }
     }
     final sentDate = DateTime.now();
-    final syncUpdate = SyncUpdate()
+    final syncUpdate = SyncUpdate(nextBatch: '')
       ..rooms = (RoomsUpdate()
         ..join = (<String, JoinedRoomUpdate>{}..[id] = (JoinedRoomUpdate()
           ..timeline = (TimelineUpdate()
             ..events = [
-              MatrixEvent()
-                ..content = content
-                ..type = type
-                ..eventId = messageID
-                ..senderId = client.userID
-                ..originServerTs = sentDate
-                ..unsigned = {
+              MatrixEvent(
+                content: content,
+                type: type,
+                eventId: messageID,
+                senderId: client.userID,
+                originServerTs: sentDate,
+                unsigned: {
                   messageSendingStatusKey: 0,
                   'transaction_id': messageID,
                 },
+              )
             ]))));
     await _handleFakeSync(syncUpdate);
 
@@ -868,7 +872,7 @@ class Room {
       if ([MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN]
           .contains(exception.error)) {
         await _handleFakeSync(
-          SyncUpdate()
+          SyncUpdate(nextBatch: '')
             ..rooms = (RoomsUpdate()
               ..leave = {
                 '$id': (LeftRoomUpdate()),
@@ -909,12 +913,13 @@ class Room {
     return await client.setRoomStateWithKey(
       id,
       EventTypes.RoomPowerLevels,
+      '',
       powerMap,
     );
   }
 
   /// Call the Matrix API to invite a user to this room.
-  Future<void> invite(String userID) => client.inviteToRoom(id, userID);
+  Future<void> invite(String userID) => client.inviteUser(id, userID);
 
   /// Request more previous events from the server. [historyCount] defines how much events should
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
@@ -936,7 +941,7 @@ class Room {
       if (!((resp.chunk?.isNotEmpty ?? false) && resp.end != null)) return;
 
       await client.handleSync(
-          SyncUpdate()
+          SyncUpdate(nextBatch: '')
             ..rooms = (RoomsUpdate()
               ..join = ({}..[id] = (JoinedRoomUpdate()
                 ..state = resp.state
@@ -1000,16 +1005,15 @@ class Room {
 
   /// Sets the position of the read marker for a given room, and optionally the
   /// read receipt's location.
-  Future<void> setReadMarker(String eventId,
-      {String readReceiptLocationEventId}) async {
-    if (readReceiptLocationEventId != null) {
+  Future<void> setReadMarker(String eventId, {String mRead}) async {
+    if (mRead != null) {
       notificationCount = 0;
       await client.database?.resetNotificationCount(client.id, id);
     }
     await client.setReadMarker(
       id,
       eventId,
-      readReceiptLocationEventId: readReceiptLocationEventId,
+      mRead: mRead,
     );
     return;
   }
@@ -1021,7 +1025,9 @@ class Room {
     await client.database?.resetNotificationCount(client.id, id);
     await client.postReceipt(
       id,
+      ReceiptType.mRead,
       eventId,
+      {},
     );
     return;
   }
@@ -1034,7 +1040,7 @@ class Room {
     await client.setReadMarker(
       id,
       eventID,
-      readReceiptLocationEventId: eventID,
+      mRead: eventID,
     );
     return;
   }
@@ -1294,10 +1300,12 @@ class Room {
   /// Uploads a new user avatar for this room. Returns the event ID of the new
   /// m.room.avatar event.
   Future<String> setAvatar(MatrixFile file) async {
-    final uploadResp = await client.uploadContent(file.bytes, file.name);
+    final uploadResp =
+        await client.uploadContent(file.bytes, filename: file.name);
     return await client.setRoomStateWithKey(
       id,
       EventTypes.RoomAvatar,
+      '',
       {'url': uploadResp},
     );
   }
@@ -1402,14 +1410,14 @@ class Room {
             'global',
             PushRuleKind.room,
             id,
-            [PushRuleAction.dont_notify],
+            [PushRuleAction.dontNotify],
           );
         } else if (pushRuleState == PushRuleState.notify) {
           await client.setPushRule(
             'global',
             PushRuleKind.room,
             id,
-            [PushRuleAction.dont_notify],
+            [PushRuleAction.dontNotify],
           );
         }
         break;
@@ -1422,9 +1430,9 @@ class Room {
           'global',
           PushRuleKind.override,
           id,
-          [PushRuleAction.dont_notify],
+          [PushRuleAction.dontNotify],
           conditions: [
-            PushConditions('event_match', key: 'room_id', pattern: id)
+            PushCondition(kind: 'event_match', key: 'room_id', pattern: id)
           ],
         );
     }
@@ -1578,6 +1586,7 @@ class Room {
     await client.setRoomStateWithKey(
       id,
       EventTypes.RoomJoinRules,
+      '',
       {
         'join_rule': joinRules.toString().replaceAll('JoinRules.', ''),
       },
@@ -1600,6 +1609,7 @@ class Room {
     await client.setRoomStateWithKey(
       id,
       EventTypes.GuestAccess,
+      '',
       {
         'guest_access': _guestAccessMap[guestAccess],
       },
@@ -1623,6 +1633,7 @@ class Room {
     await client.setRoomStateWithKey(
       id,
       EventTypes.HistoryVisibility,
+      '',
       {
         'history_visibility': _historyVisibilityMap[historyVisibility],
       },
@@ -1648,6 +1659,7 @@ class Room {
     await client.setRoomStateWithKey(
       id,
       EventTypes.Encryption,
+      '',
       {
         'algorithm': algorithm,
       },
@@ -1742,22 +1754,14 @@ class Room {
   }) async {
     if (!isSpace) throw Exception('Room is not a space!');
     via ??= [roomId.domain];
-    await client.setRoomStateWithKey(
-        id,
-        EventTypes.spaceChild,
-        {
-          'via': via,
-          if (order != null) 'order': order,
-          if (suggested != null) 'suggested': suggested,
-        },
-        roomId);
-    await client.setRoomStateWithKey(
-        roomId,
-        EventTypes.spaceParent,
-        {
-          'via': via,
-        },
-        id);
+    await client.setRoomStateWithKey(id, EventTypes.spaceChild, roomId, {
+      'via': via,
+      if (order != null) 'order': order,
+      if (suggested != null) 'suggested': suggested,
+    });
+    await client.setRoomStateWithKey(roomId, EventTypes.spaceParent, id, {
+      'via': via,
+    });
     return;
   }
 

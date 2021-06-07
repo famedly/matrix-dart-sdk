@@ -172,8 +172,8 @@ extension CommandsClientExtension on Client {
       return await args.room.client.setRoomStateWithKey(
         args.room.id,
         EventTypes.RoomMember,
-        currentEventJson,
         args.room.client.userID,
+        currentEventJson,
       );
     });
     addCommand('myroomavatar', (CommandArgs args) async {
@@ -185,8 +185,8 @@ extension CommandsClientExtension on Client {
       return await args.room.client.setRoomStateWithKey(
         args.room.id,
         EventTypes.RoomMember,
-        currentEventJson,
         args.room.client.userID,
+        currentEventJson,
       );
     });
   }

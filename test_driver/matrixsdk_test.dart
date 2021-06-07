@@ -22,7 +22,7 @@ void test() async {
     Logs().i('++++ Login Alice at ++++');
     testClientA = Client('TestClientA', databaseBuilder: getDatabase);
     await testClientA.checkHomeserver(TestUser.homeserver);
-    await testClientA.login(
+    await testClientA.login(LoginType.mLoginPassword,
         identifier: AuthenticationUserIdentifier(user: TestUser.username),
         password: TestUser.password);
     assert(testClientA.encryptionEnabled);
@@ -30,7 +30,7 @@ void test() async {
     Logs().i('++++ Login Bob ++++');
     testClientB = Client('TestClientB', databaseBuilder: getDatabase);
     await testClientB.checkHomeserver(TestUser.homeserver);
-    await testClientB.login(
+    await testClientB.login(LoginType.mLoginPassword,
         identifier: AuthenticationUserIdentifier(user: TestUser.username2),
         password: TestUser.password);
     assert(testClientB.encryptionEnabled);
@@ -220,7 +220,7 @@ void test() async {
     Logs().i('++++ Login Bob in another client ++++');
     var testClientC = Client('TestClientC', databaseBuilder: getDatabase);
     await testClientC.checkHomeserver(TestUser.homeserver);
-    await testClientC.login(
+    await testClientC.login(LoginType.mLoginPassword,
         identifier: AuthenticationUserIdentifier(user: TestUser.username2),
         password: TestUser.password);
     await Future.delayed(Duration(seconds: 3));
