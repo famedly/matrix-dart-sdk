@@ -44,9 +44,9 @@ coverage_without_olm:
   dependencies: []
   script:
     - apt update
-    - apt install -y curl gnupg2 git sqlite3 libsqlite3-dev
-    - curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
-    - curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list
+    - apt install -y curl gnupg2 git sqlite3 libsqlite3-dev wget
+    - sh -c 'wget -qO- https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -'
+    - sh -c 'wget -qO- https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list'
     - apt update
     - apt install -y dart
     - ln -s /usr/lib/dart/bin/pub /usr/bin/
@@ -85,20 +85,19 @@ code_analyze:
   tags:
     - docker
   stage: coverage
-  image: registry.gitlab.com/famedly/containers/flutter-dockerimages:stable
+  image: google/dart
   dependencies: []
   script:
-    - flutter format lib/ test/ test_driver/ --set-exit-if-changed
-    - flutter analyze
+    - dart pub get
+    - dart format lib/ test/ test_driver/ --set-exit-if-changed
+    - dart analyze
 
 build_api_doc:
   tags:
     - docker
   stage: builddocs
-  image: registry.gitlab.com/famedly/containers/flutter-dockerimages:stable
+  image: google/dart
   script:
-    - flutter pub global activate dartdoc
-    - export PATH="$PATH":"/opt/flutter/flutter/.pub-cache/bin"
     - dartdoc --exclude "dart:async,dart:collection,dart:convert,dart:core,dart:developer,dart:io,dart:isolate,dart:math,dart:typed_data,dart:ui"
   artifacts:
     paths:
