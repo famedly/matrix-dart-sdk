@@ -36,6 +36,16 @@ void main() {
       avatarUrl: 'mxc://bla',
       room: Room(id: '!localpart:server.abc', client: client),
     );
+    setUp(() async {
+      await client.checkHomeserver('https://fakeserver.notexisting',
+          checkWellKnown: false);
+      await client.login(
+          identifier: AuthenticationUserIdentifier(user: 'test'),
+          password: '1234');
+    });
+    tearDown(() async {
+      await client.logout();
+    });
     test('create', () async {
       expect(user1.powerLevel, 0);
       expect(user1.stateKey, '@alice:example.com');
@@ -86,36 +96,21 @@ void main() {
           user3.calcDisplayname(mxidLocalPartFallback: false), 'Unknown user');
     });
     test('kick', () async {
-      await client.checkHomeserver('https://fakeserver.notexisting',
-          checkWellKnown: false);
       await user1.kick();
     });
     test('ban', () async {
-      await client.checkHomeserver('https://fakeserver.notexisting',
-          checkWellKnown: false);
       await user1.ban();
     });
     test('unban', () async {
-      await client.checkHomeserver('https://fakeserver.notexisting',
-          checkWellKnown: false);
       await user1.unban();
     });
     test('setPower', () async {
-      await client.checkHomeserver('https://fakeserver.notexisting',
-          checkWellKnown: false);
       await user1.setPower(50);
     });
     test('startDirectChat', () async {
-      await client.checkHomeserver('https://fakeserver.notexisting',
-          checkWellKnown: false);
-      await client.login(
-          identifier: AuthenticationUserIdentifier(user: 'test'),
-          password: '1234');
       await user1.startDirectChat();
     });
     test('getPresence', () async {
-      await client.checkHomeserver('https://fakeserver.notexisting',
-          checkWellKnown: false);
       await client.handleSync(SyncUpdate.fromJson({
         'presence': {
           'events': [
@@ -130,18 +125,12 @@ void main() {
       expect(user1.presence.presence.presence, PresenceType.online);
     });
     test('canBan', () async {
-      await client.checkHomeserver('https://fakeserver.notexisting',
-          checkWellKnown: false);
       expect(user1.canBan, false);
     });
     test('canKick', () async {
-      await client.checkHomeserver('https://fakeserver.notexisting',
-          checkWellKnown: false);
       expect(user1.canKick, false);
     });
     test('canChangePowerLevel', () async {
-      await client.checkHomeserver('https://fakeserver.notexisting',
-          checkWellKnown: false);
       expect(user1.canChangePowerLevel, false);
     });
     test('dispose client', () async {
