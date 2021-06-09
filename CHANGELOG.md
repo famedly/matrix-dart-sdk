@@ -1,3 +1,6 @@
+## 0.3.2
+- fix: Logs should only printed if loglevel is high enough
+
 ## 0.3.1
 - change: Remove logger package
 
