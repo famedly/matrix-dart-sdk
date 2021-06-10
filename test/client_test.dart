@@ -634,5 +634,37 @@ void main() {
     test('dispose', () async {
       await matrix.dispose(closeDatabase: true);
     });
+
+    test('Database Migration', () async {
+      final database = await getDatabase(null);
+      final moorClient = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        databaseBuilder: (_) => database,
+      );
+      FakeMatrixApi.client = moorClient;
+      await moorClient.checkHomeserver('https://fakeServer.notExisting',
+          checkWellKnown: false);
+      await moorClient.init(
+        newToken: 'abcd',
+        newUserID: '@test:fakeServer.notExisting',
+        newHomeserver: moorClient.homeserver,
+        newDeviceName: 'Text Matrix Client',
+        newDeviceID: 'GHTYAJCE',
+        newOlmAccount: pickledOlmAccount,
+      );
+      await Future.delayed(Duration(milliseconds: 200));
+      await moorClient.dispose(closeDatabase: false);
+
+      final hiveClient = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        databaseBuilder: getDatabase,
+        legacyDatabaseBuilder: (_) => database,
+      );
+      await hiveClient.init();
+      await Future.delayed(Duration(milliseconds: 200));
+      expect(hiveClient.isLogged(), true);
+    });
   });
 }

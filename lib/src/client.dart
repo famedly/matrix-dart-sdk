@@ -57,7 +57,9 @@ class Client extends MatrixApi {
   int get id => _id;
 
   final FutureOr<DatabaseApi> Function(Client) databaseBuilder;
+  final FutureOr<DatabaseApi> Function(Client) legacyDatabaseBuilder;
   final FutureOr<void> Function(Client) databaseDestroyer;
+  final FutureOr<void> Function(Client) legacyDatabaseDestroyer;
   DatabaseApi _database;
 
   DatabaseApi get database => _database;
@@ -94,6 +96,7 @@ class Client extends MatrixApi {
   /// Create a client
   /// [clientName] = unique identifier of this client
   /// [databaseBuilder]: A function that creates the database instance, that will be used.
+  /// [legacyDatabaseBuilder]: Use this for your old database implementation to perform an automatic migration
   /// [databaseDestroyer]: A function that can be used to destroy a database instance, for example by deleting files from disk.
   /// [enableE2eeRecovery]: Enable additional logic to try to recover from bad e2ee sessions
   /// [verificationMethods]: A set of all the verification methods this client can handle. Includes:
@@ -128,6 +131,8 @@ class Client extends MatrixApi {
     this.clientName, {
     this.databaseBuilder,
     this.databaseDestroyer,
+    this.legacyDatabaseBuilder,
+    this.legacyDatabaseDestroyer,
     this.enableE2eeRecovery = false,
     this.verificationMethods,
     http.Client httpClient,
@@ -877,6 +882,52 @@ class Client extends MatrixApi {
         onLoginStateChanged.add(LoginState.loggedOut);
         Logs().i('User is not logged in.');
         _initLock = false;
+        if (legacyDatabaseBuilder != null) {
+          Logs().i('Check legacy database for migration data');
+          final legacyDatabase = await legacyDatabaseBuilder(this);
+          final migrateClient = await legacyDatabase.getClient(clientName);
+          if (migrateClient != null) {
+            Logs().i('Found data in the legacy database');
+            _id = migrateClient['client_id'];
+            await database.insertClient(
+              clientName,
+              migrateClient['homeserver_url'],
+              migrateClient['token'],
+              migrateClient['user_id'],
+              migrateClient['device_id'],
+              migrateClient['device_name'],
+              null,
+              migrateClient['olm_account'],
+            );
+            for (final type in cacheTypes) {
+              Logs().i('Migrate $type');
+              final ssssCache = await legacyDatabase.getSSSSCache(_id, type);
+              if (ssssCache != null) {
+                await database.storeSSSSCache(
+                  _id,
+                  type,
+                  ssssCache.keyId,
+                  ssssCache.ciphertext,
+                  ssssCache.content,
+                );
+              }
+            }
+
+            await legacyDatabase.clear(_id);
+            await legacyDatabaseDestroyer?.call(this);
+          }
+          await legacyDatabase.close();
+          if (migrateClient != null) {
+            return init(
+              newToken: migrateClient['token'],
+              newHomeserver: Uri.parse(migrateClient['homeserver_url']),
+              newUserID: migrateClient['user_id'],
+              newDeviceID: migrateClient['device_id'],
+              newDeviceName: migrateClient['device_name'],
+              newOlmAccount: migrateClient['olm_account'],
+            );
+          }
+        }
         return;
       }
       _initLock = false;
