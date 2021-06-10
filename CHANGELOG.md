@@ -1,3 +1,6 @@
+## 0.3.3
+- fix: Log filter in wrong direction
+
 ## 0.3.2
 - fix: Logs should only printed if loglevel is high enough
 

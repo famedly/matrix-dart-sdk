@@ -45,7 +45,7 @@ class Logs {
 
   void addLogEvent(LogEvent logEvent) {
     outputEvents.add(logEvent);
-    if (logEvent.level.index >= level.index) {
+    if (logEvent.level.index <= level.index) {
       logEvent.printOut();
     }
   }
