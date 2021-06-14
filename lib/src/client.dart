@@ -876,18 +876,12 @@ class Client extends MatrixApi {
       }
 
       if (accessToken == null || homeserver == null || _userID == null) {
-        // we aren't logged in
-        encryption?.dispose();
-        encryption = null;
-        onLoginStateChanged.add(LoginState.loggedOut);
-        Logs().i('User is not logged in.');
-        _initLock = false;
         if (legacyDatabaseBuilder != null) {
-          Logs().i('Check legacy database for migration data');
+          Logs().i('Check legacy database for migration data...');
           final legacyDatabase = await legacyDatabaseBuilder(this);
           final migrateClient = await legacyDatabase.getClient(clientName);
           if (migrateClient != null) {
-            Logs().i('Found data in the legacy database');
+            Logs().i('Found data in the legacy database!');
             _id = migrateClient['client_id'];
             await database.insertClient(
               clientName,
@@ -900,9 +894,9 @@ class Client extends MatrixApi {
               migrateClient['olm_account'],
             );
             for (final type in cacheTypes) {
-              Logs().i('Migrate $type');
               final ssssCache = await legacyDatabase.getSSSSCache(_id, type);
               if (ssssCache != null) {
+                Logs().d('Migrate $type');
                 await database.storeSSSSCache(
                   _id,
                   type,
@@ -918,16 +912,15 @@ class Client extends MatrixApi {
           }
           await legacyDatabase.close();
           if (migrateClient != null) {
-            return init(
-              newToken: migrateClient['token'],
-              newHomeserver: Uri.parse(migrateClient['homeserver_url']),
-              newUserID: migrateClient['user_id'],
-              newDeviceID: migrateClient['device_id'],
-              newDeviceName: migrateClient['device_name'],
-              newOlmAccount: migrateClient['olm_account'],
-            );
+            return init();
           }
         }
+        // we aren't logged in
+        encryption?.dispose();
+        encryption = null;
+        onLoginStateChanged.add(LoginState.loggedOut);
+        Logs().i('User is not logged in.');
+        _initLock = false;
         return;
       }
       _initLock = false;
