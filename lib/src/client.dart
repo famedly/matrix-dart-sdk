@@ -912,6 +912,7 @@ class Client extends MatrixApi {
           }
           await legacyDatabase.close();
           if (migrateClient != null) {
+            _initLock = false;
             return init();
           }
         }
@@ -992,10 +993,15 @@ class Client extends MatrixApi {
   Future<void> clear() async {
     Logs().outputEvents.clear();
     try {
+      await abortSync();
       await database?.clear(id);
+      _backgroundSync = true;
     } catch (e, s) {
       Logs().e('Unable to clear database', e, s);
+    } finally {
+      _database = null;
     }
+
     _id = accessToken = syncFilterId =
         homeserver = _userID = _deviceID = _deviceName = prevBatch = null;
     _rooms = [];
