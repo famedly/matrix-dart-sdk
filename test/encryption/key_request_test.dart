@@ -386,6 +386,9 @@ void main() {
               null,
           false);
 
+      // There is a non awaiting setInboundGroupSession call on the database
+      await Future.delayed(Duration(seconds: 1));
+
       await matrix.dispose(closeDatabase: true);
     });
   });

@@ -16,11 +16,35 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:io';
+import 'dart:math';
+
 import 'package:famedlysdk/famedlysdk.dart';
+import 'package:famedlysdk/src/database/hive_database.dart';
+import 'package:file/memory.dart';
+import 'package:hive/hive.dart';
 import 'package:moor/moor.dart';
 import 'package:moor/ffi.dart' as moor;
 
-Future<Database> getDatabase(Client _) async {
+Future<DatabaseApi> getDatabase(Client _) => getHiveDatabase(_);
+
+Future<Database> getMoorDatabase(Client _) async {
   moorRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   return Database(moor.VmDatabase.memory());
+}
+
+bool hiveInitialized = false;
+
+Future<FamedlySdkHiveDatabase> getHiveDatabase(Client c) async {
+  if (!hiveInitialized) {
+    final fileSystem = MemoryFileSystem();
+    final testHivePath =
+        '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
+    Directory(testHivePath).createSync(recursive: true);
+    Hive.init(testHivePath);
+    hiveInitialized = true;
+  }
+  final db = FamedlySdkHiveDatabase('unit_test.${c.hashCode}');
+  await db.open();
+  return db;
 }

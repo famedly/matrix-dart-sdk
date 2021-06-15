@@ -216,7 +216,7 @@ void main() {
           await client1.userDeviceKeys[client2.userID].startVerification();
       expect(req1.state, KeyVerificationState.askSSSS);
       await req1.openSSSS(recoveryKey: ssssKey);
-      await Future.delayed(Duration(milliseconds: 10));
+      await Future.delayed(Duration(seconds: 1));
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       await req1.cancel();

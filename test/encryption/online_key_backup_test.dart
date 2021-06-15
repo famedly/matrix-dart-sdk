@@ -96,6 +96,7 @@ void main() {
       client.encryption.keyManager.setInboundGroupSession(
           roomId, sessionId, senderKey, sessionPayload,
           forwarded: true);
+      await Future.delayed(Duration(milliseconds: 500));
       var dbSessions = await client.database.getInboundGroupSessionsToUpload();
       expect(dbSessions.isNotEmpty, true);
       await client.encryption.keyManager.backgroundTasks();

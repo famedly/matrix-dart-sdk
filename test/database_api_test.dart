@@ -27,7 +27,10 @@ import 'fake_database_native.dart';
 void main() {
   /// All Tests related to the ChatTime
   group('Moor Database Test', () {
-    testDatabase(getDatabase(null), 0);
+    testDatabase(getMoorDatabase(null), 0);
+  });
+  group('Hive Database Test', () {
+    testDatabase(getHiveDatabase(null), 0);
   });
 }
 

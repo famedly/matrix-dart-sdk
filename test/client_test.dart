@@ -540,7 +540,7 @@ void main() {
         newOlmAccount: pickledOlmAccount,
       );
 
-      await Future.delayed(Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 500));
 
       expect(client1.isLogged(), true);
       expect(client1.rooms.length, 2);
@@ -552,7 +552,7 @@ void main() {
       );
 
       await client2.init();
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(Duration(milliseconds: 500));
 
       expect(client2.isLogged(), true);
       expect(client2.accessToken, client1.accessToken);
