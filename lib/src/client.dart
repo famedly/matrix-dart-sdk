@@ -1615,7 +1615,7 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
           .removeWhere((String userId, v) => !trackedUserIds.contains(userId));
 
       // Check if there are outdated device key lists. Add it to the set.
-      final outdatedLists = <String, dynamic>{};
+      final outdatedLists = <String, List<String>>{};
       for (final userId in trackedUserIds) {
         if (!userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys[userId] = DeviceKeysList(userId, this);
