@@ -877,44 +877,8 @@ class Client extends MatrixApi {
 
       if (accessToken == null || homeserver == null || _userID == null) {
         if (legacyDatabaseBuilder != null) {
-          Logs().i('Check legacy database for migration data...');
-          final legacyDatabase = await legacyDatabaseBuilder(this);
-          final migrateClient = await legacyDatabase.getClient(clientName);
-          if (migrateClient != null) {
-            Logs().i('Found data in the legacy database!');
-            _id = migrateClient['client_id'];
-            await database.insertClient(
-              clientName,
-              migrateClient['homeserver_url'],
-              migrateClient['token'],
-              migrateClient['user_id'],
-              migrateClient['device_id'],
-              migrateClient['device_name'],
-              null,
-              migrateClient['olm_account'],
-            );
-            for (final type in cacheTypes) {
-              final ssssCache = await legacyDatabase.getSSSSCache(_id, type);
-              if (ssssCache != null) {
-                Logs().d('Migrate $type');
-                await database.storeSSSSCache(
-                  _id,
-                  type,
-                  ssssCache.keyId,
-                  ssssCache.ciphertext,
-                  ssssCache.content,
-                );
-              }
-            }
-
-            await legacyDatabase.clear(_id);
-            await legacyDatabaseDestroyer?.call(this);
-          }
-          await legacyDatabase.close();
-          if (migrateClient != null) {
-            _initLock = false;
-            return init();
-          }
+          await _migrateFromLegacyDatabase();
+          if (isLogged()) return;
         }
         // we aren't logged in
         encryption?.dispose();
@@ -2108,6 +2072,82 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
       Logs().w('Failed to close database: ', error, stacktrace);
     }
     return;
+  }
+
+  Future<void> _migrateFromLegacyDatabase() async {
+    Logs().i('Check legacy database for migration data...');
+    final legacyDatabase = await legacyDatabaseBuilder(this);
+    final migrateClient = await legacyDatabase.getClient(clientName);
+
+    if (migrateClient != null) {
+      Logs().i('Found data in the legacy database!');
+      _id = migrateClient['client_id'];
+      await database.insertClient(
+        clientName,
+        migrateClient['homeserver_url'],
+        migrateClient['token'],
+        migrateClient['user_id'],
+        migrateClient['device_id'],
+        migrateClient['device_name'],
+        null,
+        migrateClient['olm_account'],
+      );
+      Logs().d('Migrate SSSSCache...');
+      for (final type in cacheTypes) {
+        final ssssCache = await legacyDatabase.getSSSSCache(_id, type);
+        if (ssssCache != null) {
+          Logs().d('Migrate $type...');
+          await database.storeSSSSCache(
+            _id,
+            type,
+            ssssCache.keyId,
+            ssssCache.ciphertext,
+            ssssCache.content,
+          );
+        }
+      }
+      Logs().d('Migrate Device Keys...');
+      final userDeviceKeys = await legacyDatabase.getUserDeviceKeys(this);
+      for (final userId in userDeviceKeys.keys) {
+        Logs().d('Migrate Device Keys of user $userId...');
+        final deviceKeysList = userDeviceKeys[userId];
+        for (final crossSigningKey in deviceKeysList.crossSigningKeys.values) {
+          Logs().d(
+              'Migrate cross signing key with usage ${crossSigningKey.usage} and verified ${crossSigningKey.directVerified}...');
+          await database.storeUserCrossSigningKey(
+            _id,
+            userId,
+            crossSigningKey.publicKey,
+            jsonEncode(crossSigningKey.toJson()),
+            crossSigningKey.directVerified,
+            crossSigningKey.blocked,
+          );
+        }
+        for (final deviceKeys in deviceKeysList.deviceKeys.values) {
+          Logs().d('Migrate device keys for ${deviceKeys.deviceId}...');
+          await database.storeUserDeviceKey(
+            _id,
+            userId,
+            deviceKeys.deviceId,
+            jsonEncode(deviceKeys.toJson()),
+            deviceKeys.directVerified,
+            deviceKeys.blocked,
+            deviceKeys.lastActive.millisecondsSinceEpoch,
+          );
+        }
+        Logs().d('Migrate user device keys info...');
+        await database.storeUserDeviceKeysInfo(
+            _id, userId, deviceKeysList.outdated);
+      }
+
+      await legacyDatabase.clear(_id);
+      await legacyDatabaseDestroyer?.call(this);
+    }
+    await legacyDatabase.close();
+    _initLock = false;
+    if (migrateClient != null) {
+      return init();
+    }
   }
 }
 

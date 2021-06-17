@@ -933,8 +933,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         'user_id': userId,
         'public_key': publicKey,
         'content': content,
-        'verified': verified ?? false,
-        'blocked': blocked ?? false,
+        'verified': verified,
+        'blocked': blocked,
       },
     );
   }
@@ -946,8 +946,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       'user_id': userId,
       'device_id': deviceId,
       'content': content,
-      'verified': verified ?? false,
-      'blocked': blocked ?? false,
+      'verified': verified,
+      'blocked': blocked,
       'last_active': lastActive,
       'last_sent_message': '',
     });
