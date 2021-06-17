@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import '../../famedlysdk.dart';
+import '../../matrix.dart';
 
 enum UiaRequestState {
   /// The request is done

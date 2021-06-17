@@ -2,14 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:famedlysdk/encryption/utils/stored_inbound_group_session.dart';
-import 'package:famedlysdk/encryption/utils/ssss_cache.dart';
-import 'package:famedlysdk/encryption/utils/outbound_group_session.dart';
-import 'package:famedlysdk/encryption/utils/olm_session.dart';
+import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
+import 'package:matrix/encryption/utils/ssss_cache.dart';
+import 'package:matrix/encryption/utils/outbound_group_session.dart';
+import 'package:matrix/encryption/utils/olm_session.dart';
 import 'dart:typed_data';
 
-import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/utils/QueuedToDeviceEvent.dart';
+import 'package:matrix/matrix.dart';
+import 'package:matrix/src/utils/QueuedToDeviceEvent.dart';
 import 'package:hive/hive.dart';
 
 /// This is a basic database for the Matrix SDK using the hive store. You need

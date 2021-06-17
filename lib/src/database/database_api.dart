@@ -18,13 +18,13 @@
 
 import 'dart:typed_data';
 
-import 'package:famedlysdk/encryption/utils/olm_session.dart';
-import 'package:famedlysdk/encryption/utils/outbound_group_session.dart';
-import 'package:famedlysdk/encryption/utils/ssss_cache.dart';
-import 'package:famedlysdk/encryption/utils/stored_inbound_group_session.dart';
-import 'package:famedlysdk/src/utils/QueuedToDeviceEvent.dart';
+import 'package:matrix/encryption/utils/olm_session.dart';
+import 'package:matrix/encryption/utils/outbound_group_session.dart';
+import 'package:matrix/encryption/utils/ssss_cache.dart';
+import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
+import 'package:matrix/src/utils/QueuedToDeviceEvent.dart';
 
-import '../../famedlysdk.dart';
+import '../../matrix.dart';
 
 abstract class DatabaseApi {
   int get maxFileSize => 1 * 1024 * 1024;

@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/src/utils/markdown.dart';
+import 'package:matrix/src/utils/markdown.dart';
 import 'package:test/test.dart';
 
 void main() {

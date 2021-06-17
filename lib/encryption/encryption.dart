@@ -22,7 +22,7 @@ import 'dart:async';
 import 'package:pedantic/pedantic.dart';
 import 'package:olm/olm.dart' as olm;
 
-import '../famedlysdk.dart';
+import '../matrix.dart';
 import '../src/utils/run_in_root.dart';
 import 'cross_signing.dart';
 import 'key_manager.dart';

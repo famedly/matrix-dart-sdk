@@ -16,8 +16,8 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/famedlysdk.dart' as sdk;
-import 'package:famedlysdk/famedlysdk.dart';
+import 'package:matrix/matrix.dart' as sdk;
+import 'package:matrix/matrix.dart';
 
 import 'dart:convert';
 import 'dart:core';

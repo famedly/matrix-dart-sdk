@@ -1,4 +1,4 @@
-import 'package:famedlysdk/famedlysdk.dart';
+import 'package:matrix/matrix.dart';
 import '../test/fake_database.dart';
 import 'test_config.dart';
 import 'package:olm/olm.dart' as olm;

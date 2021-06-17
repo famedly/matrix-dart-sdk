@@ -19,9 +19,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/encryption.dart';
-import 'package:famedlysdk/src/event.dart';
+import 'package:matrix/matrix.dart';
+import 'package:matrix/encryption.dart';
+import 'package:matrix/src/event.dart';
 
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;

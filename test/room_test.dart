@@ -19,14 +19,14 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/client.dart';
-import 'package:famedlysdk/src/database/database.dart'
+import 'package:matrix/matrix.dart';
+import 'package:matrix/src/client.dart';
+import 'package:matrix/src/database/database.dart'
     show DbRoom, DbRoomAccountData, DbRoomState, getRoomFromTableRow;
-import 'package:famedlysdk/src/event.dart';
-import 'package:famedlysdk/src/room.dart';
-import 'package:famedlysdk/src/user.dart';
-import 'package:famedlysdk/src/utils/matrix_file.dart';
+import 'package:matrix/src/event.dart';
+import 'package:matrix/src/room.dart';
+import 'package:matrix/src/user.dart';
+import 'package:matrix/src/utils/matrix_file.dart';
 
 import 'package:test/test.dart';
 

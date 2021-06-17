@@ -19,8 +19,8 @@
 import 'dart:io';
 import 'dart:math';
 
-import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/database/hive_database.dart';
+import 'package:matrix/matrix.dart';
+import 'package:matrix/src/database/hive_database.dart';
 import 'package:file/memory.dart';
 import 'package:hive/hive.dart';
 import 'package:moor/moor.dart';

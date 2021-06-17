@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import '../../famedlysdk.dart';
+import '../../matrix.dart';
 
 class ToDeviceEvent extends BasicEventWithSender {
   Map<String, dynamic> encryptedContent;

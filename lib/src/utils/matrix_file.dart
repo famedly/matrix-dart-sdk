@@ -23,7 +23,7 @@ import 'dart:typed_data';
 import 'crypto/encrypted_file.dart';
 import 'package:mime/mime.dart';
 
-import '../../famedlysdk.dart';
+import '../../matrix.dart';
 
 class MatrixFile {
   Uint8List bytes;

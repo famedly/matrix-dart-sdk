@@ -18,7 +18,7 @@
 
 import 'dart:async';
 
-import '../../famedlysdk.dart';
+import '../../matrix.dart';
 
 extension CommandsClientExtension on Client {
   /// Add a command to the command handler. `command` is its name, and `callback` is the

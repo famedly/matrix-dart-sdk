@@ -24,7 +24,7 @@ import 'dart:async';
 import 'package:base58check/base58.dart';
 import 'package:crypto/crypto.dart';
 
-import '../famedlysdk.dart';
+import '../matrix.dart';
 import '../src/utils/crypto/crypto.dart' as uc;
 import '../src/utils/run_in_background.dart';
 import '../src/utils/run_in_root.dart';

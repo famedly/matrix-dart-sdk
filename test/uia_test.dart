@@ -18,7 +18,7 @@
 
 import 'dart:async';
 
-import 'package:famedlysdk/famedlysdk.dart';
+import 'package:matrix/matrix.dart';
 
 import 'package:test/test.dart';
 

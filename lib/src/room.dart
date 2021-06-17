@@ -19,10 +19,10 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:famedlysdk/src/utils/space_child.dart';
+import 'package:matrix/src/utils/space_child.dart';
 import 'package:html_unescape/html_unescape.dart';
 
-import '../famedlysdk.dart';
+import '../matrix.dart';
 import 'client.dart';
 import 'event.dart';
 import 'timeline.dart';

@@ -23,7 +23,7 @@ import 'package:canonical_json/canonical_json.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:pedantic/pedantic.dart';
 
-import '../../famedlysdk.dart';
+import '../../matrix.dart';
 import '../encryption.dart';
 
 /*

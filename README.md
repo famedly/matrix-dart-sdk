@@ -1,6 +1,6 @@
-# Famedly Matrix SDK
+# Matrix SDK
 
-Matrix SDK for the famedly talk app written in dart.
+Matrix (matrix.org) SDK written in dart.
 
 ## Native libraries
 
@@ -10,22 +10,16 @@ Additionally, OpenSSL (libcrypto) must be provided on native platforms for E2EE.
 
 For flutter apps you can easily import it with the [flutter_olm](https://pub.dev/packages/flutter_olm) and the [flutter_openssl_crypto](https://pub.dev/packages/flutter_openssl_crypto) packages.
 
-## API
-
-The API is documented here: [famedly.gitlab.io/famedlysdk/](https://famedly.gitlab.io/famedlysdk/)
-
 ## How to use this
 
 1. Import the sdk
 
 ```yaml
-  famedlysdk:
-    git:
-      url: https://gitlab.com/famedly/famedlysdk.git
+  matrix: 
 ```
 
 ```dart
-import 'package:famedlysdk/famedlysdk.dart';
+import 'package:matrix/matrix.dart';
 ```
 
 2. Create a new client:

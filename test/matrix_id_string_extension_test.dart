@@ -17,7 +17,7 @@
  */
 
 import 'package:test/test.dart';
-import 'package:famedlysdk/src/utils/matrix_id_string_extension.dart';
+import 'package:matrix/src/utils/matrix_id_string_extension.dart';
 
 void main() {
   /// All Tests related to the ChatTime

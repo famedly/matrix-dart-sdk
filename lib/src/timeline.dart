@@ -18,7 +18,7 @@
 
 import 'dart:async';
 
-import '../famedlysdk.dart';
+import '../matrix.dart';
 import 'event.dart';
 import 'room.dart';
 import 'utils/event_update.dart';

@@ -17,7 +17,7 @@
  */
 
 /// Matrix SDK written in pure Dart.
-library famedlysdk;
+library matrix;
 
 export 'package:matrix_api_lite/matrix_api_lite.dart';
 export 'src/utils/room_update.dart';

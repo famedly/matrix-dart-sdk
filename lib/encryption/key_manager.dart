@@ -18,13 +18,13 @@
 
 import 'dart:convert';
 
-import 'package:famedlysdk/encryption/utils/stored_inbound_group_session.dart';
+import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:olm/olm.dart' as olm;
 
 import './encryption.dart';
 import './utils/outbound_group_session.dart';
 import './utils/session_key.dart';
-import '../famedlysdk.dart';
+import '../matrix.dart';
 import '../src/utils/run_in_background.dart';
 import '../src/utils/run_in_root.dart';
 

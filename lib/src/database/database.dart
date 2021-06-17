@@ -19,14 +19,14 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:famedlysdk/encryption/utils/olm_session.dart';
-import 'package:famedlysdk/encryption/utils/outbound_group_session.dart';
-import 'package:famedlysdk/encryption/utils/ssss_cache.dart';
-import 'package:famedlysdk/encryption/utils/stored_inbound_group_session.dart';
-import 'package:famedlysdk/src/utils/QueuedToDeviceEvent.dart';
+import 'package:matrix/encryption/utils/olm_session.dart';
+import 'package:matrix/encryption/utils/outbound_group_session.dart';
+import 'package:matrix/encryption/utils/ssss_cache.dart';
+import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
+import 'package:matrix/src/utils/QueuedToDeviceEvent.dart';
 import 'package:moor/moor.dart';
 
-import '../../famedlysdk.dart' as sdk;
+import '../../matrix.dart' as sdk;
 import 'package:matrix_api_lite/matrix_api_lite.dart' as api;
 import '../client.dart';
 import '../room.dart';

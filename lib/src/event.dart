@@ -21,7 +21,7 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
-import '../famedlysdk.dart';
+import '../matrix.dart';
 import 'room.dart';
 import 'utils/matrix_localizations.dart';
 import 'utils/receipt.dart';

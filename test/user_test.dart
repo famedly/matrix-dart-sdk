@@ -16,9 +16,9 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/famedlysdk.dart';
-import 'package:famedlysdk/src/event.dart';
-import 'package:famedlysdk/src/user.dart';
+import 'package:matrix/matrix.dart';
+import 'package:matrix/src/event.dart';
+import 'package:matrix/src/user.dart';
 
 import 'package:test/test.dart';
 

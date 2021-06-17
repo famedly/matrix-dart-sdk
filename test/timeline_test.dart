@@ -16,14 +16,14 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/famedlysdk.dart';
+import 'package:matrix/matrix.dart';
 
 import 'package:test/test.dart';
-import 'package:famedlysdk/src/client.dart';
-import 'package:famedlysdk/src/room.dart';
-import 'package:famedlysdk/src/timeline.dart';
-import 'package:famedlysdk/src/utils/event_update.dart';
-import 'package:famedlysdk/src/utils/room_update.dart';
+import 'package:matrix/src/client.dart';
+import 'package:matrix/src/room.dart';
+import 'package:matrix/src/timeline.dart';
+import 'package:matrix/src/utils/event_update.dart';
+import 'package:matrix/src/utils/room_update.dart';
 import 'package:olm/olm.dart' as olm;
 import 'fake_client.dart';
 

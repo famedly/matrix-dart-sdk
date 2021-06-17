@@ -21,13 +21,13 @@ import 'dart:convert';
 import 'dart:core';
 import 'dart:typed_data';
 
-import 'package:famedlysdk/src/utils/run_in_root.dart';
+import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:http/http.dart' as http;
 import 'package:olm/olm.dart' as olm;
 import 'package:pedantic/pedantic.dart';
 
 import '../encryption.dart';
-import '../famedlysdk.dart';
+import '../matrix.dart';
 import 'database/database_api.dart';
 import 'event.dart';
 import 'room.dart';

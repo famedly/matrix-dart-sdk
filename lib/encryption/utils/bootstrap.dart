@@ -25,7 +25,7 @@ import 'package:olm/olm.dart' as olm;
 import '../encryption.dart';
 import '../ssss.dart';
 import '../key_manager.dart';
-import '../../famedlysdk.dart';
+import '../../matrix.dart';
 
 enum BootstrapState {
   /// Is loading.

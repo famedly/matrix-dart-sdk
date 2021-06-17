@@ -20,7 +20,7 @@ import 'dart:convert';
 
 import 'package:olm/olm.dart' as olm;
 
-import '../../famedlysdk.dart';
+import '../../matrix.dart';
 
 class OutboundGroupSession {
   /// The devices is a map from user id to device id to if the device is blocked.

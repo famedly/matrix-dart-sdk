@@ -16,10 +16,10 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/encryption/utils/stored_inbound_group_session.dart';
+import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:olm/olm.dart' as olm;
 
-import '../../famedlysdk.dart';
+import '../../matrix.dart';
 
 class SessionKey {
   /// The raw json content of the key

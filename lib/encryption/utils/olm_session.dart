@@ -18,7 +18,7 @@
 
 import 'package:olm/olm.dart' as olm;
 
-import '../../famedlysdk.dart';
+import '../../matrix.dart';
 
 class OlmSession {
   String identityKey;

@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import '../famedlysdk.dart';
+import '../matrix.dart';
 import 'encryption.dart';
 import 'utils/key_verification.dart';
 

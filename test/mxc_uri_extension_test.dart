@@ -16,11 +16,11 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:famedlysdk/famedlysdk.dart';
+import 'package:matrix/matrix.dart';
 
 import 'package:test/test.dart';
-import 'package:famedlysdk/src/client.dart';
-import 'package:famedlysdk/src/utils/uri_extension.dart';
+import 'package:matrix/src/client.dart';
+import 'package:matrix/src/utils/uri_extension.dart';
 
 import 'fake_matrix_api.dart';
 

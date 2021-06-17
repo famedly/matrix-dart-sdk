@@ -21,7 +21,7 @@ import 'dart:typed_data';
 
 import 'package:olm/olm.dart' as olm;
 
-import '../famedlysdk.dart';
+import '../matrix.dart';
 import 'encryption.dart';
 import 'ssss.dart';
 

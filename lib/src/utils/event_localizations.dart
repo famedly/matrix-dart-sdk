@@ -17,7 +17,7 @@
  */
 
 import '../../encryption.dart';
-import '../../famedlysdk.dart';
+import '../../matrix.dart';
 import '../event.dart';
 import '../room.dart';
 import 'matrix_localizations.dart';
