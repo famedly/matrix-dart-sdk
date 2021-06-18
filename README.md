@@ -15,7 +15,10 @@ For flutter apps you can easily import it with the [flutter_olm](https://pub.dev
 1. Import the sdk
 
 ```yaml
-  matrix: 
+  matrix: <latest-version>
+  # Optional:
+  flutter_olm: <latest-version>
+  flutter_openssl_crypto: <latest-version>
 ```
 
 ```dart
@@ -28,7 +31,19 @@ import 'package:matrix/matrix.dart';
 final client = Client("HappyChat");
 ```
 
-The SDK works better with a Moor database. Otherwise it has no persistence. [Take a look here for an example store](https://gitlab.com/famedly/fluffychat/-/tree/main/lib/utils/database).
+The SDK works better with a database. Otherwise it has no persistence. For this you need to provide a databaseBuilder like this:
+
+```dart
+final client = Client(
+  "HappyChat",
+  databaseBuilder: (Client client) async {
+    await Hive.init('/path/to/your/storage');
+    final db = FamedlySdkHiveDatabase(client.clientName);
+    await db.open();
+    return db;
+  },
+);
+```
 
 3. Connect to a Matrix Homeserver and listen to the streams:
 
@@ -45,13 +60,11 @@ client.onRoomUpdate.stream.listen((RoomUpdate eventUpdate){
   print("New room update!");
 });
 
-try {
-  await client.checkHomeserver("https://yourhomeserver.abc");
-  await client.login("username", "password");
-}
-catch(e) {
-  print('No luck...');
-}
+await client.checkHomeserver("https://yourhomeserver.abc");
+await client.login(
+  identifier: AuthenticationUserIdentifier(user: 'alice'),
+  password: '123456',
+);
 ```
 
 4. Send a message to a Room:
