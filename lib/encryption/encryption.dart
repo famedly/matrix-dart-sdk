@@ -19,7 +19,6 @@
 import 'dart:convert';
 import 'dart:async';
 
-import 'package:pedantic/pedantic.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../matrix.dart';
@@ -106,26 +105,31 @@ class Encryption {
         .contains(event.type)) {
       // "just" room key request things. We don't need these asap, so we handle
       // them in the background
-      unawaited(runInRoot(() => keyManager.handleToDeviceEvent(event)));
+      // ignore: unawaited_futures
+      runInRoot(() => keyManager.handleToDeviceEvent(event));
     }
     if (event.type == EventTypes.Dummy) {
       // the previous device just had to create a new olm session, due to olm session
       // corruption. We want to try to send it the last message we just sent it, if possible
-      unawaited(runInRoot(() => olmManager.handleToDeviceEvent(event)));
+      // ignore: unawaited_futures
+      runInRoot(() => olmManager.handleToDeviceEvent(event));
     }
     if (event.type.startsWith('m.key.verification.')) {
       // some key verification event. No need to handle it now, we can easily
       // do this in the background
-      unawaited(
-          runInRoot(() => keyVerificationManager.handleToDeviceEvent(event)));
+
+      // ignore: unawaited_futures
+      runInRoot(() => keyVerificationManager.handleToDeviceEvent(event));
     }
     if (event.type.startsWith('m.secret.')) {
       // some ssss thing. We can do this in the background
-      unawaited(runInRoot(() => ssss.handleToDeviceEvent(event)));
+      // ignore: unawaited_futures
+      runInRoot(() => ssss.handleToDeviceEvent(event));
     }
     if (event.sender == client.userID) {
       // maybe we need to re-try SSSS secrets
-      unawaited(runInRoot(() => ssss.periodicallyRequestMissingCache()));
+      // ignore: unawaited_futures
+      runInRoot(() => ssss.periodicallyRequestMissingCache());
     }
   }
 
@@ -139,14 +143,16 @@ class Encryption {
             update.content['content']['msgtype']
                 .startsWith('m.key.verification.'))) {
       // "just" key verification, no need to do this in sync
-      unawaited(
-          runInRoot(() => keyVerificationManager.handleEventUpdate(update)));
+
+      // ignore: unawaited_futures
+      runInRoot(() => keyVerificationManager.handleEventUpdate(update));
     }
     if (update.content['sender'] == client.userID &&
         (!update.content.containsKey('unsigned') ||
             !update.content['unsigned'].containsKey('transaction_id'))) {
       // maybe we need to re-try SSSS secrets
-      unawaited(runInRoot(() => ssss.periodicallyRequestMissingCache()));
+      // ignore: unawaited_futures
+      runInRoot(() => ssss.periodicallyRequestMissingCache());
     }
   }
 

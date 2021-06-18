@@ -21,7 +21,6 @@ import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:olm/olm.dart' as olm;
-import 'package:pedantic/pedantic.dart';
 
 import '../../matrix.dart';
 import '../encryption.dart';
@@ -457,8 +456,9 @@ class KeyVerification {
       // no need to request cache, we already have it
       return;
     }
-    unawaited(encryption.ssss
-        .maybeRequestAll(_verifiedDevices.whereType<DeviceKeys>().toList()));
+    // ignore: unawaited_futures
+    encryption.ssss
+        .maybeRequestAll(_verifiedDevices.whereType<DeviceKeys>().toList());
     if (requestInterval.length <= i) {
       return;
     }
@@ -500,7 +500,8 @@ class KeyVerification {
     if (verifiedMasterKey && userId == client.userID) {
       // it was our own master key, let's request the cross signing keys
       // we do it in the background, thus no await needed here
-      unawaited(maybeRequestSSSSSecrets());
+      // ignore: unawaited_futures
+      maybeRequestSSSSSecrets();
     }
     await send(EventTypes.KeyVerificationDone, {});
 
@@ -510,7 +511,8 @@ class KeyVerification {
       // these keys can be signed! Let's do so
       if (await encryption.crossSigning.isCached()) {
         // and now let's sign them all in the background
-        unawaited(encryption.crossSigning.sign(_verifiedDevices));
+        // ignore: unawaited_futures
+        encryption.crossSigning.sign(_verifiedDevices);
       } else if (!wasUnknownSession) {
         askingSSSS = true;
       }

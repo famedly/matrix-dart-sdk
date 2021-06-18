@@ -21,7 +21,6 @@ import 'dart:convert';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:matrix/matrix.dart';
 import 'package:olm/olm.dart' as olm;
-import 'package:pedantic/pedantic.dart';
 
 import '../encryption/utils/json_signature_check_extension.dart';
 import 'encryption.dart';
@@ -502,8 +501,8 @@ class OlmManager {
     } catch (_) {
       // okay, the thing errored while decrypting. It is safe to assume that the olm session is corrupt and we should generate a new one
       if (client.enableE2eeRecovery) {
-        unawaited(
-            runInRoot(() => restoreOlmSession(event.senderId, senderKey)));
+        // ignore: unawaited_futures
+        runInRoot(() => restoreOlmSession(event.senderId, senderKey));
       }
       rethrow;
     }

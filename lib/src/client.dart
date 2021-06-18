@@ -24,7 +24,6 @@ import 'dart:typed_data';
 import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:http/http.dart' as http;
 import 'package:olm/olm.dart' as olm;
-import 'package:pedantic/pedantic.dart';
 
 import '../encryption.dart';
 import '../matrix.dart';
@@ -677,7 +676,8 @@ class Client extends MatrixApi {
     await super.setTyping(userId, roomId, typing, timeout: timeout);
     final room = getRoomById(roomId);
     if (typing && room != null && encryptionEnabled && room.encrypted) {
-      unawaited(encryption.keyManager.prepareOutboundGroupSession(roomId));
+      // ignore: unawaited_futures
+      encryption.keyManager.prepareOutboundGroupSession(roomId);
     }
   }
 
@@ -1890,7 +1890,8 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
     }
     // now send out the background chunks
     if (i < deviceKeys.length) {
-      unawaited(() async {
+      // ignore: unawaited_futures
+      () async {
         for (; i < deviceKeys.length; i += chunkSize) {
           // wait 50ms to not freeze the UI
           await Future.delayed(Duration(milliseconds: 50));
@@ -1901,9 +1902,10 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
                   ? deviceKeys.length
                   : i + chunkSize);
           // and send
-          unawaited(sendToDeviceEncrypted(chunk, eventType, message));
+          // ignore: unawaited_futures
+          sendToDeviceEncrypted(chunk, eventType, message);
         }
-      }());
+      }();
     }
   }
 
