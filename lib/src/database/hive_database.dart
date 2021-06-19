@@ -224,7 +224,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       if (multiKey.parts.first != roomId) continue;
       await _roomAccountDataBox.delete(key);
     }
-    await _roomsBox.delete(roomId);
+    await _roomsBox.delete(roomId.toHiveKey);
   }
 
   @override
@@ -287,7 +287,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     String roomId,
     String sessionId,
   ) async {
-    final raw = await _inboundGroupSessionsBox.get(sessionId);
+    final raw = await _inboundGroupSessionsBox.get(sessionId.toHiveKey);
     if (raw == null) return null;
     return StoredInboundGroupSession.fromJson(convertToJson(raw));
   }
@@ -321,21 +321,22 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<void> storeOlmSession(int clientId, String identityKey,
       String sessionId, String pickle, int lastReceived) async {
-    final rawSessions = (await _olmSessionsBox.get(identityKey) as Map) ?? {};
+    final rawSessions =
+        (await _olmSessionsBox.get(identityKey.toHiveKey) as Map) ?? {};
     rawSessions[sessionId] = <String, dynamic>{
       'identity_key': identityKey,
       'pickle': pickle,
       'session_id': sessionId,
       'last_received': lastReceived,
     };
-    await _olmSessionsBox.put(identityKey, rawSessions);
+    await _olmSessionsBox.put(identityKey.toHiveKey, rawSessions);
     return;
   }
 
   @override
   Future<List<OlmSession>> getOlmSessions(
       int clientId, String identityKey, String userId) async {
-    final rawSessions = await _olmSessionsBox.get(identityKey) as Map;
+    final rawSessions = await _olmSessionsBox.get(identityKey.toHiveKey) as Map;
     if (rawSessions?.isEmpty ?? true) return <OlmSession>[];
     return rawSessions.values
         .map((json) => OlmSession.fromJson(convertToJson(json), userId))
@@ -353,7 +354,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<OutboundGroupSession> getOutboundGroupSession(
       int clientId, String roomId, String userId) async {
-    final raw = await _outboundGroupSessionsBox.get(roomId);
+    final raw = await _outboundGroupSessionsBox.get(roomId.toHiveKey);
     if (raw == null) return null;
     return OutboundGroupSession.fromJson(convertToJson(raw), userId);
   }
@@ -543,14 +544,14 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<void> markInboundGroupSessionAsUploaded(
       int clientId, String roomId, String sessionId) async {
-    final raw = await _inboundGroupSessionsBox.get(sessionId);
+    final raw = await _inboundGroupSessionsBox.get(sessionId.toHiveKey);
     if (raw == null) {
       Logs().w(
           'Tried to mark inbound group session as uploaded which was not found in the database!');
       return;
     }
     raw['uploaded'] = true;
-    await _inboundGroupSessionsBox.put(sessionId, raw);
+    await _inboundGroupSessionsBox.put(sessionId.toHiveKey, raw);
     return;
   }
 
@@ -582,7 +583,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
   @override
   Future<void> removeOutboundGroupSession(int clientId, String roomId) async {
-    await _outboundGroupSessionsBox.delete(roomId);
+    await _outboundGroupSessionsBox.delete(roomId.toHiveKey);
     return;
   }
 
@@ -603,10 +604,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
   @override
   Future<void> resetNotificationCount(int clientId, String roomId) async {
-    final raw = await _roomsBox.get(roomId);
+    final raw = await _roomsBox.get(roomId.toHiveKey);
     if (raw == null) return;
     raw['notification_count'] = raw['highlight_count'] = 0;
-    await _roomsBox.put(roomId, raw);
+    await _roomsBox.put(roomId.toHiveKey, raw);
     return;
   }
 
@@ -663,11 +664,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<void> setRoomPrevBatch(
       String prevBatch, int clientId, String roomId) async {
-    final raw = await _roomsBox.get(roomId);
+    final raw = await _roomsBox.get(roomId.toHiveKey);
     if (raw == null) return;
     final room = Room.fromJson(convertToJson(raw));
     room.prev_batch = prevBatch;
-    await _roomsBox.put(roomId, room.toJson());
+    await _roomsBox.put(roomId.toHiveKey, room.toJson());
     return;
   }
 
@@ -701,7 +702,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<void> storeAccountData(
       int clientId, String type, String content) async {
-    await _accountDataBox.put(type, convertToJson(jsonDecode(content)));
+    await _accountDataBox.put(
+        type.toHiveKey, convertToJson(jsonDecode(content)));
     return;
   }
 
@@ -816,7 +818,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       String senderKey,
       String senderClaimedKey) async {
     await _inboundGroupSessionsBox.put(
-        sessionId,
+        sessionId.toHiveKey,
         StoredInboundGroupSession(
           clientId: clientId,
           roomId: roomId,
@@ -840,7 +842,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       String deviceIds,
       int creationTime,
       int sentMessages) async {
-    await _outboundGroupSessionsBox.put(roomId, <String, dynamic>{
+    await _outboundGroupSessionsBox.put(roomId.toHiveKey, <String, dynamic>{
       'room_id': roomId,
       'pickle': pickle,
       'device_ids': deviceIds,
@@ -865,9 +867,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       return;
     }
     // Make sure room exists
-    if (!_roomsBox.containsKey(roomUpdate.id)) {
+    if (!_roomsBox.containsKey(roomUpdate.id.toHiveKey)) {
       await _roomsBox.put(
-          roomUpdate.id,
+          roomUpdate.id.toHiveKey,
           Room(
             id: roomUpdate.id,
             membership: roomUpdate.membership,
@@ -877,10 +879,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
             summary: roomUpdate.summary,
           ).toJson());
     } else {
-      final currentRawRoom = await _roomsBox.get(roomUpdate.id);
+      final currentRawRoom = await _roomsBox.get(roomUpdate.id.toHiveKey);
       final currentRoom = Room.fromJson(convertToJson(currentRawRoom));
       await _roomsBox.put(
-          roomUpdate.id,
+          roomUpdate.id.toHiveKey,
           Room(
             id: roomUpdate.id,
             membership: roomUpdate.membership ?? currentRoom.membership,
@@ -957,7 +959,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<void> storeUserDeviceKeysInfo(
       int clientId, String userId, bool outdated) async {
-    await _userDeviceKeysOutdatedBox.put(userId, outdated);
+    await _userDeviceKeysOutdatedBox.put(userId.toHiveKey, outdated);
     return;
   }
 
@@ -993,38 +995,38 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<void> updateInboundGroupSessionAllowedAtIndex(String allowedAtIndex,
       int clientId, String roomId, String sessionId) async {
-    final raw = await _inboundGroupSessionsBox.get(sessionId);
+    final raw = await _inboundGroupSessionsBox.get(sessionId.toHiveKey);
     if (raw == null) {
       Logs().w(
           'Tried to update inbound group session as uploaded which wasnt found in the database!');
       return;
     }
     raw['allowed_at_index'] = allowedAtIndex;
-    await _inboundGroupSessionsBox.put(sessionId, raw);
+    await _inboundGroupSessionsBox.put(sessionId.toHiveKey, raw);
     return;
   }
 
   @override
   Future<void> updateInboundGroupSessionIndexes(
       String indexes, int clientId, String roomId, String sessionId) async {
-    final raw = await _inboundGroupSessionsBox.get(sessionId);
+    final raw = await _inboundGroupSessionsBox.get(sessionId.toHiveKey);
     if (raw == null) {
       Logs().w(
           'Tried to update inbound group session indexes of a session which was not found in the database!');
       return;
     }
     raw['indexes'] = indexes;
-    await _inboundGroupSessionsBox.put(sessionId, raw);
+    await _inboundGroupSessionsBox.put(sessionId.toHiveKey, raw);
     return;
   }
 
   @override
   Future<void> updateRoomSortOrder(double oldestSortOrder,
       double newestSortOrder, int clientId, String roomId) async {
-    final raw = await _roomsBox.get(roomId);
+    final raw = await _roomsBox.get(roomId.toHiveKey);
     raw['oldest_sort_order'] = oldestSortOrder;
     raw['newest_sort_order'] = newestSortOrder;
-    await _roomsBox.put(roomId, raw);
+    await _roomsBox.put(roomId.toHiveKey, raw);
     return;
   }
 }
@@ -1054,8 +1056,14 @@ class MultiKey {
       : parts = multiKeyString.split('|');
 
   @override
-  String toString() => parts.join('|');
+  String toString() => parts.map((s) => s.toHiveKey).join('|');
 
   @override
   bool operator ==(other) => parts.toString() == other.toString();
+}
+
+extension HiveKeyExtension on String {
+  String get toHiveKey => isValidMatrixId
+      ? '$sigil${Uri.encodeComponent(localpart)}:${Uri.encodeComponent(domain)}'
+      : Uri.encodeComponent(this);
 }
