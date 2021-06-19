@@ -211,6 +211,10 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
         clientId, '\$event:example.com', Room(id: '!testroom:example.com'));
     expect(event, null);
   });
+  test('getAllInboundGroupSessions', () async {
+    final result = await database.getAllInboundGroupSessions(clientId);
+    expect(result.isEmpty, true);
+  });
   test('getInboundGroupSession', () async {
     await database.getInboundGroupSession(
         clientId, '!testroom:example.com', 'sessionId');

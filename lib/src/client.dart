@@ -2141,6 +2141,27 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
         await database.storeUserDeviceKeysInfo(
             _id, userId, deviceKeysList.outdated);
       }
+      Logs().d('Migrate inbound group sessions...');
+      try {
+        final sessions = await legacyDatabase.getAllInboundGroupSessions(_id);
+        for (var i = 0; i < sessions.length; i++) {
+          Logs().d('$i / ${sessions.length}');
+          final session = sessions[i];
+          await database.storeInboundGroupSession(
+            _id,
+            session.roomId,
+            session.sessionId,
+            session.pickle,
+            session.content,
+            session.indexes,
+            session.allowedAtIndex,
+            session.senderKey,
+            session.senderClaimedKeys,
+          );
+        }
+      } catch (e, s) {
+        Logs().e('Unable to migrate inbound group sessions!', e, s);
+      }
 
       await legacyDatabase.clear(_id);
       await legacyDatabaseDestroyer?.call(this);

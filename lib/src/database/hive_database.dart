@@ -1029,6 +1029,16 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     await _roomsBox.put(roomId.toHiveKey, raw);
     return;
   }
+
+  @override
+  Future<List<StoredInboundGroupSession>> getAllInboundGroupSessions(
+      int clientId) async {
+    final rawSessions = await Future.wait(_inboundGroupSessionsBox.keys
+        .map((key) => _inboundGroupSessionsBox.get(key)));
+    return rawSessions
+        .map((raw) => StoredInboundGroupSession.fromJson(convertToJson(raw)))
+        .toList();
+  }
 }
 
 Map<String, dynamic> convertToJson(Map map) {

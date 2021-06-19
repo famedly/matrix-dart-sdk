@@ -98,6 +98,10 @@ abstract class DatabaseApi {
     String userId,
   );
 
+  Future<List<StoredInboundGroupSession>> getAllInboundGroupSessions(
+    int clientId,
+  );
+
   Future<StoredInboundGroupSession> getInboundGroupSession(
     int clientId,
     String roomId,

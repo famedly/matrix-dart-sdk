@@ -257,6 +257,19 @@ class Database extends _$Database implements DatabaseApi {
   }
 
   @override
+  Future<List<StoredInboundGroupSession>> getAllInboundGroupSessions(
+    int clientId,
+  ) async {
+    final res = await dbGetAllInboundGroupSessions(clientId).get();
+    if (res.isEmpty) {
+      return [];
+    }
+    return res
+        .map((res) => StoredInboundGroupSession.fromJson(res.toJson()))
+        .toList();
+  }
+
+  @override
   Future<StoredInboundGroupSession> getInboundGroupSession(
     int clientId,
     String roomId,

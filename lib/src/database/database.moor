@@ -204,7 +204,7 @@ storeOutboundGroupSession: INSERT OR REPLACE INTO outbound_group_sessions (clien
 removeOutboundGroupSession: DELETE FROM outbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id;
 dbGetInboundGroupSessionKey: SELECT * FROM inbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id;
 dbGetInboundGroupSessionKeys: SELECT * FROM inbound_group_sessions WHERE client_id = :client_id AND room_id = :room_id;
-getAllInboundGroupSessions: SELECT * FROM inbound_group_sessions WHERE client_id = :client_id;
+dbGetAllInboundGroupSessions: SELECT * FROM inbound_group_sessions WHERE client_id = :client_id;
 storeInboundGroupSession: INSERT OR REPLACE INTO inbound_group_sessions (client_id, room_id, session_id, pickle, content, indexes, allowed_at_index, sender_key, sender_claimed_keys) VALUES (:client_id, :room_id, :session_id, :pickle, :content, :indexes, :allowed_at_index, :sender_key, :sender_claimed_keys);
 updateInboundGroupSessionIndexes: UPDATE inbound_group_sessions SET indexes = :indexes WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id;
 updateInboundGroupSessionAllowedAtIndex: UPDATE inbound_group_sessions SET allowed_at_index = :allowed_at_index WHERE client_id = :client_id AND room_id = :room_id AND session_id = :session_id;
