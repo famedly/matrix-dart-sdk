@@ -1,3 +1,7 @@
+## [0.1.2] - 19 Jun 2021
+- fix: Hive breaks if room IDs contain emojis (yes there are users with hacked synapses out there who needs this)
+- feat: Also migrate inbound group sessions
+
 ## [0.1.1] - 18 Jun 2021
 - refactor: Move pedantic to dev_dependencies
 - chore: Update readme
