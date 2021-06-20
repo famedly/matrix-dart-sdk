@@ -1,3 +1,6 @@
+## [0.1.3] - 19 Jun 2021
+- feat: Implement migration for hive schema versions
+
 ## [0.1.2] - 19 Jun 2021
 - fix: Hive breaks if room IDs contain emojis (yes there are users with hacked synapses out there who needs this)
 - feat: Also migrate inbound group sessions
