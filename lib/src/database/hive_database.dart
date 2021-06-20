@@ -18,6 +18,7 @@ import 'package:hive/hive.dart';
 ///
 /// This database does not support file caching!
 class FamedlySdkHiveDatabase extends DatabaseApi {
+  static const int version = 2;
   final String name;
   Box _clientBox;
   Box _accountDataBox;
@@ -163,7 +164,16 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       _eventsBoxName,
       encryptionCipher: encryptionCipher,
     );
+    final currentVersion = (await _clientBox.get('version') as int) ?? 0;
+    if (currentVersion != version) await _migrateFromVersion(currentVersion);
+
     return;
+  }
+
+  Future<void> _migrateFromVersion(int currentVersion) async {
+    Logs().i('Migrate Hive database from version $currentVersion to $version');
+    await clearCache(0);
+    await _clientBox.put('version', version);
   }
 
   @override
@@ -185,6 +195,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     await _timelineFragmentsBox.deleteAll(_timelineFragmentsBox.keys);
     await _outboundGroupSessionsBox.deleteAll(_outboundGroupSessionsBox.keys);
     await _presencesBox.deleteAll(_presencesBox.keys);
+    await _clientBox.delete('prev_batch');
   }
 
   @override
@@ -244,6 +255,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   Future<Map<String, dynamic>> getClient(String name) async {
     final map = <String, dynamic>{};
     for (final key in _clientBox.keys) {
+      if (key == 'version') continue;
       map[key] = await _clientBox.get(key);
     }
     if (map.isEmpty) return null;
