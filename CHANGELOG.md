@@ -1,3 +1,6 @@
+## [0.1.4] - 19 Jun 2021
+- change: Replace onSyncError Stream with onSyncStatus
+
 ## [0.1.3] - 19 Jun 2021
 - feat: Implement migration for hive schema versions
 
