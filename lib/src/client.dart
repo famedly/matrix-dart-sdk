@@ -34,6 +34,7 @@ import 'user.dart';
 import 'utils/commands_extension.dart';
 import 'utils/device_keys_list.dart';
 import 'utils/event_update.dart';
+import 'utils/http_timeout.dart';
 import 'utils/matrix_file.dart';
 import 'utils/room_update.dart';
 import 'utils/to_device_event.dart';
@@ -170,7 +171,9 @@ class Client extends MatrixApi {
                 state: StateFilter(lazyLoadMembers: true),
               ),
             ),
-        super(httpClient: httpClient) {
+        super(
+            httpClient:
+                VariableTimeoutHttpClient(httpClient ?? http.Client())) {
     supportedLoginTypes ??= {AuthenticationTypes.password};
     verificationMethods ??= <KeyVerificationMethod>{};
     importantStateEvents ??= {};
