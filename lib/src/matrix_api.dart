@@ -70,17 +70,10 @@ class MatrixApi extends Api {
     super.unexpectedResponse(response, responseBody);
   }
 
-  /// Matrix synchronisation is done with https long polling. This needs a
-  /// timeout which is usually 30 seconds.
-  int syncTimeoutSec;
-
-  int _timeoutFactor = 1;
-
   MatrixApi({
     Uri homeserver,
     String accessToken,
     http.Client httpClient,
-    this.syncTimeoutSec = 30,
   }) : super(
             httpClient: httpClient,
             baseUri: homeserver,
@@ -88,7 +81,7 @@ class MatrixApi extends Api {
 
   /// Used for all Matrix json requests using the [c2s API](https://matrix.org/docs/spec/client_server/r0.6.0.html).
   ///
-  /// Throws: TimeoutException, FormatException, MatrixException
+  /// Throws: FormatException, MatrixException
   ///
   /// You must first set [this.homeserver] and for some endpoints also
   /// [this.accessToken] before you can use this! For example to send a
@@ -108,14 +101,12 @@ class MatrixApi extends Api {
     RequestType type,
     String action, {
     dynamic data = '',
-    int timeout,
     String contentType = 'application/json',
     Map<String, dynamic> query,
   }) async {
     if (homeserver == null) {
       throw ('No homeserver specified.');
     }
-    timeout ??= (_timeoutFactor * syncTimeoutSec) + 5;
     dynamic json;
     (!(data is String)) ? json = jsonEncode(data) : json = data;
     if (data is List<int> || action.startsWith('/media/r0/upload')) json = data;
@@ -136,26 +127,16 @@ class MatrixApi extends Api {
     try {
       switch (type) {
         case RequestType.GET:
-          resp = await httpClient.get(url, headers: headers).timeout(
-                Duration(seconds: timeout),
-              );
+          resp = await httpClient.get(url, headers: headers);
           break;
         case RequestType.POST:
-          resp =
-              await httpClient.post(url, body: json, headers: headers).timeout(
-                    Duration(seconds: timeout),
-                  );
+          resp = await httpClient.post(url, body: json, headers: headers);
           break;
         case RequestType.PUT:
-          resp =
-              await httpClient.put(url, body: json, headers: headers).timeout(
-                    Duration(seconds: timeout),
-                  );
+          resp = await httpClient.put(url, body: json, headers: headers);
           break;
         case RequestType.DELETE:
-          resp = await httpClient.delete(url, headers: headers).timeout(
-                Duration(seconds: timeout),
-              );
+          resp = await httpClient.delete(url, headers: headers);
           break;
       }
       var respBody = resp.body;
@@ -173,11 +154,6 @@ class MatrixApi extends Api {
       }
       jsonResp = jsonDecode(jsonString)
           as Map<String, dynamic>; // May throw FormatException
-
-      _timeoutFactor = 1;
-    } on TimeoutException catch (e, s) {
-      _timeoutFactor *= 2;
-      throw MatrixConnectionException(e, s);
     } catch (e, s) {
       throw MatrixConnectionException(e, s);
     }
