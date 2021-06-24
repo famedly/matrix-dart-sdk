@@ -1,0 +1,3553 @@
+import '../model/auth/authentication_data.dart';
+import '../model/auth/authentication_types.dart';
+import '../model/auth/authentication_identifier.dart';
+import '../model/matrix_keys.dart';
+import '../model/sync_update.dart';
+import '../model/matrix_event.dart';
+
+import 'model.dart';
+import 'fixed_model.dart';
+import 'internal.dart';
+
+import 'package:http/http.dart';
+import 'dart:convert';
+import 'dart:typed_data';
+
+class Api {
+  Client httpClient;
+  Uri? baseUri;
+  String? bearerToken;
+  Api({Client? httpClient, this.baseUri, this.bearerToken})
+      : httpClient = httpClient ?? Client();
+  Never unexpectedResponse(BaseResponse response, Uint8List body) {
+    throw Exception('http error response');
+  }
+
+  /// Gets discovery information about the domain. The file may include
+  /// additional keys, which MUST follow the Java package naming convention,
+  /// e.g. `com.example.myapp.property`. This ensures property names are
+  /// suitably namespaced for each application and reduces the risk of
+  /// clashes.
+  ///
+  /// Note that this endpoint is not necessarily handled by the homeserver,
+  /// but by another webserver, to be used for discovering the homeserver URL.
+  Future<DiscoveryInformation> getWellknown() async {
+    final requestUri = Uri(path: '.well-known/matrix/client');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return DiscoveryInformation.fromJson(json);
+  }
+
+  /// Gets a list of the third party identifiers that the homeserver has
+  /// associated with the user's account.
+  ///
+  /// This is *not* the same as the list of third party identifiers bound to
+  /// the user's Matrix ID in identity servers.
+  ///
+  /// Identifiers in this list may be used by the homeserver as, for example,
+  /// identifiers that it will accept to reset the user's account password.
+  ///
+  /// returns `threepids`
+  Future<List<ThirdPartyIdentifier>?> getAccount3PIDs() async {
+    final requestUri = Uri(path: '_matrix/client/r0/account/3pid');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ((v) => v != null
+        ? (v as List).map((v) => ThirdPartyIdentifier.fromJson(v)).toList()
+        : null)(json['threepids']);
+  }
+
+  /// Adds contact information to the user's account.
+  ///
+  /// This endpoint is deprecated in favour of the more specific `/3pid/add`
+  /// and `/3pid/bind` endpoints.
+  ///
+  /// **Note:**
+  /// Previously this endpoint supported a `bind` parameter. This parameter
+  /// has been removed, making this endpoint behave as though it was `false`.
+  /// This results in this endpoint being an equivalent to `/3pid/bind` rather
+  /// than dual-purpose.
+  ///
+  /// [threePidCreds] The third party credentials to associate with the account.
+  @deprecated
+  Future<void> post3PIDs(ThreePidCredentials threePidCreds) async {
+    final requestUri = Uri(path: '_matrix/client/r0/account/3pid');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'three_pid_creds': threePidCreds.toJson(),
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return null;
+  }
+
+  /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api).
+  ///
+  /// Adds contact information to the user's account. Homeservers should use 3PIDs added
+  /// through this endpoint for password resets instead of relying on the identity server.
+  ///
+  /// Homeservers should prevent the caller from adding a 3PID to their account if it has
+  /// already been added to another user's account on the homeserver.
+  ///
+  /// [auth] Additional authentication information for the
+  /// user-interactive authentication API.
+  ///
+  /// [clientSecret] The client secret used in the session with the homeserver.
+  ///
+  /// [sid] The session identifier given by the homeserver.
+  Future<void> add3PID(String clientSecret, String sid,
+      {AuthenticationData? auth}) async {
+    final requestUri = Uri(path: '_matrix/client/r0/account/3pid/add');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (auth != null) 'auth': auth.toJson(),
+      'client_secret': clientSecret,
+      'sid': sid,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Binds a 3PID to the user's account through the specified identity server.
+  ///
+  /// Homeservers should not prevent this request from succeeding if another user
+  /// has bound the 3PID. Homeservers should simply proxy any errors received by
+  /// the identity server to the caller.
+  ///
+  /// Homeservers should track successful binds so they can be unbound later.
+  ///
+  /// [clientSecret] The client secret used in the session with the identity server.
+  ///
+  /// [idAccessToken] An access token previously registered with the identity server.
+  ///
+  /// [idServer] The identity server to use.
+  ///
+  /// [sid] The session identifier given by the identity server.
+  Future<void> bind3PID(String clientSecret, String idAccessToken,
+      String idServer, String sid) async {
+    final requestUri = Uri(path: '_matrix/client/r0/account/3pid/bind');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'client_secret': clientSecret,
+      'id_access_token': idAccessToken,
+      'id_server': idServer,
+      'sid': sid,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Removes a third party identifier from the user's account. This might not
+  /// cause an unbind of the identifier from the identity server.
+  ///
+  /// Unlike other endpoints, this endpoint does not take an `id_access_token`
+  /// parameter because the homeserver is expected to sign the request to the
+  /// identity server instead.
+  ///
+  /// [address] The third party address being removed.
+  ///
+  /// [idServer] The identity server to unbind from. If not provided, the homeserver
+  /// MUST use the `id_server` the identifier was added through. If the
+  /// homeserver does not know the original `id_server`, it MUST return
+  /// a `id_server_unbind_result` of `no-support`.
+  ///
+  /// [medium] The medium of the third party identifier being removed.
+  ///
+  /// returns `id_server_unbind_result`:
+  /// An indicator as to whether or not the homeserver was able to unbind
+  /// the 3PID from the identity server. `success` indicates that the
+  /// indentity server has unbound the identifier whereas `no-support`
+  /// indicates that the identity server refuses to support the request
+  /// or the homeserver was not able to determine an identity server to
+  /// unbind from.
+  Future<IdServerUnbindResult> delete3pidFromAccount(
+      String address, ThirdPartyIdentifierMedium medium,
+      {String? idServer}) async {
+    final requestUri = Uri(path: '_matrix/client/r0/account/3pid/delete');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'address': address,
+      if (idServer != null) 'id_server': idServer,
+      'medium': {
+        ThirdPartyIdentifierMedium.email: 'email',
+        ThirdPartyIdentifierMedium.msisdn: 'msisdn'
+      }[medium]!,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return {
+      'no-support': IdServerUnbindResult.noSupport,
+      'success': IdServerUnbindResult.success
+    }[json['id_server_unbind_result']]!;
+  }
+
+  /// Removes a user's third party identifier from the provided identity server
+  /// without removing it from the homeserver.
+  ///
+  /// Unlike other endpoints, this endpoint does not take an `id_access_token`
+  /// parameter because the homeserver is expected to sign the request to the
+  /// identity server instead.
+  ///
+  /// [address] The third party address being removed.
+  ///
+  /// [idServer] The identity server to unbind from. If not provided, the homeserver
+  /// MUST use the `id_server` the identifier was added through. If the
+  /// homeserver does not know the original `id_server`, it MUST return
+  /// a `id_server_unbind_result` of `no-support`.
+  ///
+  /// [medium] The medium of the third party identifier being removed.
+  ///
+  /// returns `id_server_unbind_result`:
+  /// An indicator as to whether or not the identity server was able to unbind
+  /// the 3PID. `success` indicates that the identity server has unbound the
+  /// identifier whereas `no-support` indicates that the identity server
+  /// refuses to support the request or the homeserver was not able to determine
+  /// an identity server to unbind from.
+  Future<IdServerUnbindResult> unbind3pidFromAccount(
+      String address, ThirdPartyIdentifierMedium medium,
+      {String? idServer}) async {
+    final requestUri = Uri(path: '_matrix/client/r0/account/3pid/unbind');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'address': address,
+      if (idServer != null) 'id_server': idServer,
+      'medium': {
+        ThirdPartyIdentifierMedium.email: 'email',
+        ThirdPartyIdentifierMedium.msisdn: 'msisdn'
+      }[medium]!,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return {
+      'no-support': IdServerUnbindResult.noSupport,
+      'success': IdServerUnbindResult.success
+    }[json['id_server_unbind_result']]!;
+  }
+
+  /// Deactivate the user's account, removing all ability for the user to
+  /// login again.
+  ///
+  /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api).
+  ///
+  /// An access token should be submitted to this endpoint if the client has
+  /// an active session.
+  ///
+  /// The homeserver may change the flows available depending on whether a
+  /// valid access token is provided.
+  ///
+  /// Unlike other endpoints, this endpoint does not take an `id_access_token`
+  /// parameter because the homeserver is expected to sign the request to the
+  /// identity server instead.
+  ///
+  /// [auth] Additional authentication information for the user-interactive authentication API.
+  ///
+  /// [idServer] The identity server to unbind all of the user's 3PIDs from.
+  /// If not provided, the homeserver MUST use the `id_server`
+  /// that was originally use to bind each identifier. If the
+  /// homeserver does not know which `id_server` that was,
+  /// it must return an `id_server_unbind_result` of
+  /// `no-support`.
+  ///
+  /// returns `id_server_unbind_result`:
+  /// An indicator as to whether or not the homeserver was able to unbind
+  /// the user's 3PIDs from the identity server(s). `success` indicates
+  /// that all identifiers have been unbound from the identity server while
+  /// `no-support` indicates that one or more identifiers failed to unbind
+  /// due to the identity server refusing the request or the homeserver
+  /// being unable to determine an identity server to unbind from. This
+  /// must be `success` if the homeserver has no identifiers to unbind
+  /// for the user.
+  Future<IdServerUnbindResult> deactivateAccount(
+      {AuthenticationData? auth, String? idServer}) async {
+    final requestUri = Uri(path: '_matrix/client/r0/account/deactivate');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (auth != null) 'auth': auth.toJson(),
+      if (idServer != null) 'id_server': idServer,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return {
+      'no-support': IdServerUnbindResult.noSupport,
+      'success': IdServerUnbindResult.success
+    }[json['id_server_unbind_result']]!;
+  }
+
+  /// Changes the password for an account on this homeserver.
+  ///
+  /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api) to
+  /// ensure the user changing the password is actually the owner of the
+  /// account.
+  ///
+  /// An access token should be submitted to this endpoint if the client has
+  /// an active session.
+  ///
+  /// The homeserver may change the flows available depending on whether a
+  /// valid access token is provided. The homeserver SHOULD NOT revoke the
+  /// access token provided in the request. Whether other access tokens for
+  /// the user are revoked depends on the request parameters.
+  ///
+  /// [auth] Additional authentication information for the user-interactive authentication API.
+  ///
+  /// [logoutDevices] Whether the user's other access tokens, and their associated devices, should be
+  /// revoked if the request succeeds. Defaults to true.
+  ///
+  /// When `false`, the server can still take advantage of the [soft logout method](https://spec.matrix.org/unstable/client-server-api/#soft-logout)
+  /// for the user's remaining devices.
+  ///
+  /// [newPassword] The new password for the account.
+  Future<void> changePassword(String newPassword,
+      {AuthenticationData? auth, bool? logoutDevices}) async {
+    final requestUri = Uri(path: '_matrix/client/r0/account/password');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (auth != null) 'auth': auth.toJson(),
+      if (logoutDevices != null) 'logout_devices': logoutDevices,
+      'new_password': newPassword,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Gets information about the owner of a given access token.
+  ///
+  /// Note that, as with the rest of the Client-Server API,
+  /// Application Services may masquerade as users within their
+  /// namespace by giving a `user_id` query parameter. In this
+  /// situation, the server should verify that the given `user_id`
+  /// is registered by the appservice, and return it in the response
+  /// body.
+  Future<TokenOwnerInfo> getTokenOwner() async {
+    final requestUri = Uri(path: '_matrix/client/r0/account/whoami');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return TokenOwnerInfo.fromJson(json);
+  }
+
+  /// Gets information about a particular user.
+  ///
+  /// This API may be restricted to only be called by the user being looked
+  /// up, or by a server admin. Server-local administrator privileges are not
+  /// specified in this document.
+  ///
+  /// [userId] The user to look up.
+  Future<WhoIsInfo> getWhoIs(String userId) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/admin/whois/${Uri.encodeComponent(userId)}');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return WhoIsInfo.fromJson(json);
+  }
+
+  /// Gets information about the server's supported feature set
+  /// and other relevant capabilities.
+  ///
+  /// returns `capabilities`:
+  /// The custom capabilities the server supports, using the
+  /// Java package naming convention.
+  Future<Capabilities> getCapabilities() async {
+    final requestUri = Uri(path: '_matrix/client/r0/capabilities');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return Capabilities.fromJson(json['capabilities']);
+  }
+
+  /// Create a new room with various configuration options.
+  ///
+  /// The server MUST apply the normal state resolution rules when creating
+  /// the new room, including checking power levels for each event. It MUST
+  /// apply the events implied by the request in the following order:
+  ///
+  /// 1. The `m.room.create` event itself. Must be the first event in the
+  ///    room.
+  ///
+  /// 2. An `m.room.member` event for the creator to join the room. This is
+  ///    needed so the remaining events can be sent.
+  ///
+  /// 3. A default `m.room.power_levels` event, giving the room creator
+  ///    (and not other members) permission to send state events. Overridden
+  ///    by the `power_level_content_override` parameter.
+  ///
+  /// 4. Events set by the `preset`. Currently these are the `m.room.join_rules`,
+  ///    `m.room.history_visibility`, and `m.room.guest_access` state events.
+  ///
+  /// 5. Events listed in `initial_state`, in the order that they are
+  ///    listed.
+  ///
+  /// 6. Events implied by `name` and `topic` (`m.room.name` and `m.room.topic`
+  ///    state events).
+  ///
+  /// 7. Invite events implied by `invite` and `invite_3pid` (`m.room.member` with
+  ///    `membership: invite` and `m.room.third_party_invite`).
+  ///
+  /// The available presets do the following with respect to room state:
+  ///
+  /// | Preset                 | `join_rules` | `history_visibility` | `guest_access` | Other |
+  /// |------------------------|--------------|----------------------|----------------|-------|
+  /// | `private_chat`         | `invite`     | `shared`             | `can_join`     |       |
+  /// | `trusted_private_chat` | `invite`     | `shared`             | `can_join`     | All invitees are given the same power level as the room creator. |
+  /// | `public_chat`          | `public`     | `shared`             | `forbidden`    |       |
+  ///
+  /// The server will create a `m.room.create` event in the room with the
+  /// requesting user as the creator, alongside other keys provided in the
+  /// `creation_content`.
+  ///
+  /// [creationContent] Extra keys, such as `m.federate`, to be added to the content
+  /// of the [`m.room.create`](client-server-api/#mroomcreate) event. The server will clobber the following
+  /// keys: `creator`, `room_version`. Future versions of the specification
+  /// may allow the server to clobber other keys.
+  ///
+  /// [initialState] A list of state events to set in the new room. This allows
+  /// the user to override the default state events set in the new
+  /// room. The expected format of the state events are an object
+  /// with type, state_key and content keys set.
+  ///
+  /// Takes precedence over events set by `preset`, but gets
+  /// overriden by `name` and `topic` keys.
+  ///
+  /// [invite] A list of user IDs to invite to the room. This will tell the
+  /// server to invite everyone in the list to the newly created room.
+  ///
+  /// [invite3pid] A list of objects representing third party IDs to invite into
+  /// the room.
+  ///
+  /// [isDirect] This flag makes the server set the `is_direct` flag on the
+  /// `m.room.member` events sent to the users in `invite` and
+  /// `invite_3pid`. See [Direct Messaging](https://spec.matrix.org/unstable/client-server-api/#direct-messaging) for more information.
+  ///
+  /// [name] If this is included, an `m.room.name` event will be sent
+  /// into the room to indicate the name of the room. See Room
+  /// Events for more information on `m.room.name`.
+  ///
+  /// [powerLevelContentOverride] The power level content to override in the default power level
+  /// event. This object is applied on top of the generated
+  /// [`m.room.power_levels`](client-server-api/#mroompower_levels)
+  /// event content prior to it being sent to the room. Defaults to
+  /// overriding nothing.
+  ///
+  /// [preset] Convenience parameter for setting various default state events
+  /// based on a preset.
+  ///
+  /// If unspecified, the server should use the `visibility` to determine
+  /// which preset to use. A visbility of `public` equates to a preset of
+  /// `public_chat` and `private` visibility equates to a preset of
+  /// `private_chat`.
+  ///
+  /// [roomAliasName] The desired room alias **local part**. If this is included, a
+  /// room alias will be created and mapped to the newly created
+  /// room. The alias will belong on the *same* homeserver which
+  /// created the room. For example, if this was set to "foo" and
+  /// sent to the homeserver "example.com" the complete room alias
+  /// would be `#foo:example.com`.
+  ///
+  /// The complete room alias will become the canonical alias for
+  /// the room.
+  ///
+  /// [roomVersion] The room version to set for the room. If not provided, the homeserver is
+  /// to use its configured default. If provided, the homeserver will return a
+  /// 400 error with the errcode `M_UNSUPPORTED_ROOM_VERSION` if it does not
+  /// support the room version.
+  ///
+  /// [topic] If this is included, an `m.room.topic` event will be sent
+  /// into the room to indicate the topic for the room. See Room
+  /// Events for more information on `m.room.topic`.
+  ///
+  /// [visibility] A `public` visibility indicates that the room will be shown
+  /// in the published room list. A `private` visibility will hide
+  /// the room from the published room list. Rooms default to
+  /// `private` visibility if this key is not included. NB: This
+  /// should not be confused with `join_rules` which also uses the
+  /// word `public`.
+  ///
+  /// returns `room_id`:
+  /// The created room's ID.
+  Future<String> createRoom(
+      {Map<String, dynamic>? creationContent,
+      List<StateEvent>? initialState,
+      List<String>? invite,
+      List<Invite3pid>? invite3pid,
+      bool? isDirect,
+      String? name,
+      Map<String, dynamic>? powerLevelContentOverride,
+      CreateRoomPreset? preset,
+      String? roomAliasName,
+      String? roomVersion,
+      String? topic,
+      Visibility? visibility}) async {
+    final requestUri = Uri(path: '_matrix/client/r0/createRoom');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (creationContent != null) 'creation_content': creationContent,
+      if (initialState != null)
+        'initial_state': initialState.map((v) => v.toJson()).toList(),
+      if (invite != null) 'invite': invite.map((v) => v).toList(),
+      if (invite3pid != null)
+        'invite_3pid': invite3pid.map((v) => v.toJson()).toList(),
+      if (isDirect != null) 'is_direct': isDirect,
+      if (name != null) 'name': name,
+      if (powerLevelContentOverride != null)
+        'power_level_content_override': powerLevelContentOverride,
+      if (preset != null)
+        'preset': {
+          CreateRoomPreset.privateChat: 'private_chat',
+          CreateRoomPreset.publicChat: 'public_chat',
+          CreateRoomPreset.trustedPrivateChat: 'trusted_private_chat'
+        }[preset]!,
+      if (roomAliasName != null) 'room_alias_name': roomAliasName,
+      if (roomVersion != null) 'room_version': roomVersion,
+      if (topic != null) 'topic': topic,
+      if (visibility != null)
+        'visibility': {
+          Visibility.public: 'public',
+          Visibility.private: 'private'
+        }[visibility]!,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['room_id'] as String;
+  }
+
+  /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api).
+  ///
+  /// Deletes the given devices, and invalidates any access token associated with them.
+  ///
+  /// [auth] Additional authentication information for the
+  /// user-interactive authentication API.
+  ///
+  /// [devices] The list of device IDs to delete.
+  Future<void> deleteDevices(List<String> devices,
+      {AuthenticationData? auth}) async {
+    final requestUri = Uri(path: '_matrix/client/r0/delete_devices');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (auth != null) 'auth': auth.toJson(),
+      'devices': devices.map((v) => v).toList(),
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Gets information about all devices for the current user.
+  ///
+  /// returns `devices`:
+  /// A list of all registered devices for this user.
+  Future<List<Device>?> getDevices() async {
+    final requestUri = Uri(path: '_matrix/client/r0/devices');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ((v) => v != null
+        ? (v as List).map((v) => Device.fromJson(v)).toList()
+        : null)(json['devices']);
+  }
+
+  /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api).
+  ///
+  /// Deletes the given device, and invalidates any access token associated with it.
+  ///
+  /// [deviceId] The device to delete.
+  ///
+  /// [auth] Additional authentication information for the
+  /// user-interactive authentication API.
+  Future<void> deleteDevice(String deviceId, {AuthenticationData? auth}) async {
+    final requestUri =
+        Uri(path: '_matrix/client/r0/devices/${Uri.encodeComponent(deviceId)}');
+    final request = Request('DELETE', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (auth != null) 'auth': auth.toJson(),
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Gets information on a single device, by device id.
+  ///
+  /// [deviceId] The device to retrieve.
+  Future<Device> getDevice(String deviceId) async {
+    final requestUri =
+        Uri(path: '_matrix/client/r0/devices/${Uri.encodeComponent(deviceId)}');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return Device.fromJson(json);
+  }
+
+  /// Updates the metadata on the given device.
+  ///
+  /// [deviceId] The device to update.
+  ///
+  /// [displayName] The new display name for this device. If not given, the
+  /// display name is unchanged.
+  Future<void> updateDevice(String deviceId, {String? displayName}) async {
+    final requestUri =
+        Uri(path: '_matrix/client/r0/devices/${Uri.encodeComponent(deviceId)}');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (displayName != null) 'display_name': displayName,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Updates the visibility of a given room on the application service's room
+  /// directory.
+  ///
+  /// This API is similar to the room directory visibility API used by clients
+  /// to update the homeserver's more general room directory.
+  ///
+  /// This API requires the use of an application service access token (`as_token`)
+  /// instead of a typical client's access_token. This API cannot be invoked by
+  /// users who are not identified as application services.
+  ///
+  /// [networkId] The protocol (network) ID to update the room list for. This would
+  /// have been provided by the application service as being listed as
+  /// a supported protocol.
+  ///
+  /// [roomId] The room ID to add to the directory.
+  ///
+  /// [visibility] Whether the room should be visible (public) in the directory
+  /// or not (private).
+  Future<Map<String, dynamic>> updateAppserviceRoomDirectoryVisibility(
+      String networkId, String roomId, Visibility visibility) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/directory/list/appservice/${Uri.encodeComponent(networkId)}/${Uri.encodeComponent(roomId)}');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'visibility': {
+        Visibility.public: 'public',
+        Visibility.private: 'private'
+      }[visibility]!,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json as Map<String, dynamic>;
+  }
+
+  /// Remove a mapping of room alias to room ID.
+  ///
+  /// Servers may choose to implement additional access control checks here, for instance that
+  /// room aliases can only be deleted by their creator or a server administrator.
+  ///
+  /// **Note:**
+  /// Servers may choose to update the `alt_aliases` for the `m.room.canonical_alias`
+  /// state event in the room when an alias is removed. Servers which choose to update the
+  /// canonical alias event are recommended to, in addition to their other relevant permission
+  /// checks, delete the alias and return a successful response even if the user does not
+  /// have permission to update the `m.room.canonical_alias` event.
+  ///
+  /// [roomAlias] The room alias to remove.
+  Future<void> deleteRoomAlias(String roomAlias) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/directory/room/${Uri.encodeComponent(roomAlias)}');
+    final request = Request('DELETE', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Requests that the server resolve a room alias to a room ID.
+  ///
+  /// The server will use the federation API to resolve the alias if the
+  /// domain part of the alias does not correspond to the server's own
+  /// domain.
+  ///
+  /// [roomAlias] The room alias.
+  Future<GetRoomIdByAliasResponse> getRoomIdByAlias(String roomAlias) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/directory/room/${Uri.encodeComponent(roomAlias)}');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetRoomIdByAliasResponse.fromJson(json);
+  }
+
+  /// setRoomAlias
+  ///
+  /// [roomAlias] The room alias to set.
+  ///
+  /// [roomId] The room ID to set.
+  Future<void> setRoomAlias(String roomAlias, String roomId) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/directory/room/${Uri.encodeComponent(roomAlias)}');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'room_id': roomId,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Get a single event based on `event_id`. You must have permission to
+  /// retrieve this event e.g. by being a member in the room for this event.
+  ///
+  /// This endpoint was deprecated in r0 of this specification. Clients
+  /// should instead call the
+  /// [/rooms/{roomId}/event/{eventId}](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0roomsroomideventeventid) API
+  /// or the [/rooms/{roomId}/context/{eventId](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0roomsroomidcontexteventid) API.
+  ///
+  /// [eventId] The event ID to get.
+  @deprecated
+  Future<MatrixEvent> getOneEvent(String eventId) async {
+    final requestUri =
+        Uri(path: '_matrix/client/r0/events/${Uri.encodeComponent(eventId)}');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return MatrixEvent.fromJson(json);
+  }
+
+  /// *Note that this API takes either a room ID or alias, unlike* `/room/{roomId}/join`.
+  ///
+  /// This API starts a user participating in a particular room, if that user
+  /// is allowed to participate in that room. After this call, the client is
+  /// allowed to see all current state events in the room, and all subsequent
+  /// events associated with the room until the user leaves the room.
+  ///
+  /// After a user has joined a room, the room will appear as an entry in the
+  /// response of the [`/initialSync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0initialsync)
+  /// and [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0sync) APIs.
+  ///
+  /// [roomIdOrAlias] The room identifier or alias to join.
+  ///
+  /// [serverName] The servers to attempt to join the room through. One of the servers
+  /// must be participating in the room.
+  ///
+  /// [reason] Optional reason to be included as the `reason` on the subsequent
+  /// membership event.
+  ///
+  /// [thirdPartySigned] If a `third_party_signed` was supplied, the homeserver must verify
+  /// that it matches a pending `m.room.third_party_invite` event in the
+  /// room, and perform key validity checking if required by the event.
+  ///
+  /// returns `room_id`:
+  /// The joined room ID.
+  Future<String> joinRoom(String roomIdOrAlias,
+      {List<String>? serverName,
+      String? reason,
+      ThirdPartySigned? thirdPartySigned}) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/join/${Uri.encodeComponent(roomIdOrAlias)}',
+        queryParameters: {
+          if (serverName != null)
+            'server_name': serverName.map((v) => v).toList(),
+        });
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (reason != null) 'reason': reason,
+      if (thirdPartySigned != null)
+        'third_party_signed': thirdPartySigned.toJson(),
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['room_id'] as String;
+  }
+
+  /// This API returns a list of the user's current rooms.
+  ///
+  /// returns `joined_rooms`:
+  /// The ID of each room in which the user has `joined` membership.
+  Future<List<String>> getJoinedRooms() async {
+    final requestUri = Uri(path: '_matrix/client/r0/joined_rooms');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return (json['joined_rooms'] as List).map((v) => v as String).toList();
+  }
+
+  /// Gets a list of users who have updated their device identity keys since a
+  /// previous sync token.
+  ///
+  /// The server should include in the results any users who:
+  ///
+  /// * currently share a room with the calling user (ie, both users have
+  ///   membership state `join`); *and*
+  /// * added new device identity keys or removed an existing device with
+  ///   identity keys, between `from` and `to`.
+  ///
+  /// [from] The desired start point of the list. Should be the `next_batch` field
+  /// from a response to an earlier call to [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0sync). Users who have not
+  /// uploaded new device identity keys since this point, nor deleted
+  /// existing devices with identity keys since then, will be excluded
+  /// from the results.
+  ///
+  /// [to] The desired end point of the list. Should be the `next_batch`
+  /// field from a recent call to [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0sync) - typically the most recent
+  /// such call. This may be used by the server as a hint to check its
+  /// caches are up to date.
+  Future<GetKeysChangesResponse> getKeysChanges(String from, String to) async {
+    final requestUri =
+        Uri(path: '_matrix/client/r0/keys/changes', queryParameters: {
+      'from': from,
+      'to': to,
+    });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetKeysChangesResponse.fromJson(json);
+  }
+
+  /// Claims one-time keys for use in pre-key messages.
+  ///
+  /// [oneTimeKeys] The keys to be claimed. A map from user ID, to a map from
+  /// device ID to algorithm name.
+  ///
+  /// [timeout] The time (in milliseconds) to wait when downloading keys from
+  /// remote servers. 10 seconds is the recommended default.
+  Future<ClaimKeysResponse> claimKeys(
+      Map<String, Map<String, String>> oneTimeKeys,
+      {int? timeout}) async {
+    final requestUri = Uri(path: '_matrix/client/r0/keys/claim');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'one_time_keys': oneTimeKeys
+          .map((k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v)))),
+      if (timeout != null) 'timeout': timeout,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ClaimKeysResponse.fromJson(json);
+  }
+
+  /// Returns the current devices and identity keys for the given users.
+  ///
+  /// [deviceKeys] The keys to be downloaded. A map from user ID, to a list of
+  /// device IDs, or to an empty list to indicate all devices for the
+  /// corresponding user.
+  ///
+  /// [timeout] The time (in milliseconds) to wait when downloading keys from
+  /// remote servers. 10 seconds is the recommended default.
+  ///
+  /// [token] If the client is fetching keys as a result of a device update received
+  /// in a sync request, this should be the 'since' token of that sync request,
+  /// or any later sync token. This allows the server to ensure its response
+  /// contains the keys advertised by the notification in that sync.
+  Future<QueryKeysResponse> queryKeys(Map<String, List<String>> deviceKeys,
+      {int? timeout, String? token}) async {
+    final requestUri = Uri(path: '_matrix/client/r0/keys/query');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'device_keys':
+          deviceKeys.map((k, v) => MapEntry(k, v.map((v) => v).toList())),
+      if (timeout != null) 'timeout': timeout,
+      if (token != null) 'token': token,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return QueryKeysResponse.fromJson(json);
+  }
+
+  /// *Note that this API takes either a room ID or alias, unlike other membership APIs.*
+  ///
+  /// This API "knocks" on the room to ask for permission to join, if the user
+  /// is allowed to knock on the room. Acceptance of the knock happens out of
+  /// band from this API, meaning that the client will have to watch for updates
+  /// regarding the acceptance/rejection of the knock.
+  ///
+  /// If the room history settings allow, the user will still be able to see
+  /// history of the room while being in the "knock" state. The user will have
+  /// to accept the invitation to join the room (acceptance of knock) to see
+  /// messages reliably. See the `/join` endpoints for more information about
+  /// history visibility to the user.
+  ///
+  /// The knock will appear as an entry in the response of the
+  /// [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0sync) API.
+  ///
+  /// [roomIdOrAlias] The room identifier or alias to knock upon.
+  ///
+  /// [serverName] The servers to attempt to knock on the room through. One of the servers
+  /// must be participating in the room.
+  ///
+  /// [reason] Optional reason to be included as the `reason` on the subsequent
+  /// membership event.
+  ///
+  /// returns `room_id`:
+  /// The knocked room ID.
+  Future<String> knockRoom(String roomIdOrAlias,
+      {List<String>? serverName, String? reason}) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/knock/${Uri.encodeComponent(roomIdOrAlias)}',
+        queryParameters: {
+          if (serverName != null)
+            'server_name': serverName.map((v) => v).toList(),
+        });
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (reason != null) 'reason': reason,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['room_id'] as String;
+  }
+
+  /// Gets the homeserver's supported login types to authenticate users. Clients
+  /// should pick one of these and supply it as the `type` when logging in.
+  ///
+  /// returns `flows`:
+  /// The homeserver's supported login types
+  Future<List<LoginFlow>?> getLoginFlows() async {
+    final requestUri = Uri(path: '_matrix/client/r0/login');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ((v) => v != null
+        ? (v as List).map((v) => LoginFlow.fromJson(v)).toList()
+        : null)(json['flows']);
+  }
+
+  /// Authenticates the user, and issues an access token they can
+  /// use to authorize themself in subsequent requests.
+  ///
+  /// If the client does not supply a `device_id`, the server must
+  /// auto-generate one.
+  ///
+  /// The returned access token must be associated with the `device_id`
+  /// supplied by the client or generated by the server. The server may
+  /// invalidate any access token previously associated with that device. See
+  /// [Relationship between access tokens and devices](https://spec.matrix.org/unstable/client-server-api/#relationship-between-access-tokens-and-devices).
+  ///
+  /// [address] Third party identifier for the user.  Deprecated in favour of `identifier`.
+  ///
+  /// [deviceId] ID of the client device. If this does not correspond to a
+  /// known client device, a new device will be created. The given
+  /// device ID must not be the same as a
+  /// [cross-signing](https://spec.matrix.org/unstable/client-server-api/#cross-signing) key ID.
+  /// The server will auto-generate a device_id
+  /// if this is not specified.
+  ///
+  /// [identifier] Identification information for a user
+  ///
+  /// [initialDeviceDisplayName] A display name to assign to the newly-created device. Ignored
+  /// if `device_id` corresponds to a known device.
+  ///
+  /// [medium] When logging in using a third party identifier, the medium of the identifier. Must be 'email'.  Deprecated in favour of `identifier`.
+  ///
+  /// [password] Required when `type` is `m.login.password`. The user's
+  /// password.
+  ///
+  /// [token] Required when `type` is `m.login.token`. Part of Token-based login.
+  ///
+  /// [type] The login type being used.
+  ///
+  /// [user] The fully qualified user ID or just local part of the user ID, to log in.  Deprecated in favour of `identifier`.
+  Future<LoginResponse> login(LoginType type,
+      {String? address,
+      String? deviceId,
+      AuthenticationIdentifier? identifier,
+      String? initialDeviceDisplayName,
+      String? medium,
+      String? password,
+      String? token,
+      String? user}) async {
+    final requestUri = Uri(path: '_matrix/client/r0/login');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (address != null) 'address': address,
+      if (deviceId != null) 'device_id': deviceId,
+      if (identifier != null) 'identifier': identifier.toJson(),
+      if (initialDeviceDisplayName != null)
+        'initial_device_display_name': initialDeviceDisplayName,
+      if (medium != null) 'medium': medium,
+      if (password != null) 'password': password,
+      if (token != null) 'token': token,
+      'type': {
+        LoginType.mLoginPassword: 'm.login.password',
+        LoginType.mLoginToken: 'm.login.token'
+      }[type]!,
+      if (user != null) 'user': user,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return LoginResponse.fromJson(json);
+  }
+
+  /// Invalidates an existing access token, so that it can no longer be used for
+  /// authorization. The device associated with the access token is also deleted.
+  /// [Device keys](https://spec.matrix.org/unstable/client-server-api/#device-keys) for the device are deleted alongside the device.
+  Future<void> logout() async {
+    final requestUri = Uri(path: '_matrix/client/r0/logout');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Invalidates all access tokens for a user, so that they can no longer be used for
+  /// authorization. This includes the access token that made this request. All devices
+  /// for the user are also deleted. [Device keys](https://spec.matrix.org/unstable/client-server-api/#device-keys) for the device are
+  /// deleted alongside the device.
+  ///
+  /// This endpoint does not use the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api) because
+  /// User-Interactive Authentication is designed to protect against attacks where the
+  /// someone gets hold of a single access token then takes over the account. This
+  /// endpoint invalidates all access tokens for the user, including the token used in
+  /// the request, and therefore the attacker is unable to take over the account in
+  /// this way.
+  Future<void> logoutAll() async {
+    final requestUri = Uri(path: '_matrix/client/r0/logout/all');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// This API is used to paginate through the list of events that the
+  /// user has been, or would have been notified about.
+  ///
+  /// [from] Pagination token given to retrieve the next set of events.
+  ///
+  /// [limit] Limit on the number of events to return in this request.
+  ///
+  /// [only] Allows basic filtering of events returned. Supply `highlight`
+  /// to return only events where the notification had the highlight
+  /// tweak set.
+  Future<GetNotificationsResponse> getNotifications(
+      {String? from, int? limit, String? only}) async {
+    final requestUri =
+        Uri(path: '_matrix/client/r0/notifications', queryParameters: {
+      if (from != null) 'from': from,
+      if (limit != null) 'limit': limit.toString(),
+      if (only != null) 'only': only,
+    });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetNotificationsResponse.fromJson(json);
+  }
+
+  /// Get the given user's presence state.
+  ///
+  /// [userId] The user whose presence state to get.
+  Future<GetPresenceResponse> getPresence(String userId) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/presence/${Uri.encodeComponent(userId)}/status');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetPresenceResponse.fromJson(json);
+  }
+
+  /// This API sets the given user's presence state. When setting the status,
+  /// the activity time is updated to reflect that activity; the client does
+  /// not need to specify the `last_active_ago` field. You cannot set the
+  /// presence state of another user.
+  ///
+  /// [userId] The user whose presence state to update.
+  ///
+  /// [presence] The new presence state.
+  ///
+  /// [statusMsg] The status message to attach to this state.
+  Future<void> setPresence(String userId, PresenceType presence,
+      {String? statusMsg}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/presence/${Uri.encodeComponent(userId)}/status');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'presence': {
+        PresenceType.online: 'online',
+        PresenceType.offline: 'offline',
+        PresenceType.unavailable: 'unavailable'
+      }[presence]!,
+      if (statusMsg != null) 'status_msg': statusMsg,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Get the combined profile information for this user. This API may be used
+  /// to fetch the user's own profile information or other users; either
+  /// locally or on remote homeservers. This API may return keys which are not
+  /// limited to `displayname` or `avatar_url`.
+  ///
+  /// [userId] The user whose profile information to get.
+  Future<ProfileInformation> getUserProfile(String userId) async {
+    final requestUri =
+        Uri(path: '_matrix/client/r0/profile/${Uri.encodeComponent(userId)}');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ProfileInformation.fromJson(json);
+  }
+
+  /// Get the user's avatar URL. This API may be used to fetch the user's
+  /// own avatar URL or to query the URL of other users; either locally or
+  /// on remote homeservers.
+  ///
+  /// [userId] The user whose avatar URL to get.
+  ///
+  /// returns `avatar_url`:
+  /// The user's avatar URL if they have set one, otherwise not present.
+  Future<Uri?> getAvatarUrl(String userId) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/profile/${Uri.encodeComponent(userId)}/avatar_url');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ((v) => v != null ? Uri.parse(v) : null)(json['avatar_url']);
+  }
+
+  /// This API sets the given user's avatar URL. You must have permission to
+  /// set this user's avatar URL, e.g. you need to have their `access_token`.
+  ///
+  /// [userId] The user whose avatar URL to set.
+  ///
+  /// [avatarUrl] The new avatar URL for this user.
+  Future<void> setAvatarUrl(String userId, Uri? avatarUrl) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/profile/${Uri.encodeComponent(userId)}/avatar_url');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (avatarUrl != null) 'avatar_url': avatarUrl.toString(),
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Get the user's display name. This API may be used to fetch the user's
+  /// own displayname or to query the name of other users; either locally or
+  /// on remote homeservers.
+  ///
+  /// [userId] The user whose display name to get.
+  ///
+  /// returns `displayname`:
+  /// The user's display name if they have set one, otherwise not present.
+  Future<String?> getDisplayName(String userId) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/profile/${Uri.encodeComponent(userId)}/displayname');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ((v) => v != null ? v as String : null)(json['displayname']);
+  }
+
+  /// This API sets the given user's display name. You must have permission to
+  /// set this user's display name, e.g. you need to have their `access_token`.
+  ///
+  /// [userId] The user whose display name to set.
+  ///
+  /// [displayname] The new display name for this user.
+  Future<void> setDisplayName(String userId, String? displayname) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/profile/${Uri.encodeComponent(userId)}/displayname');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (displayname != null) 'displayname': displayname,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Lists the public rooms on the server.
+  ///
+  /// This API returns paginated responses. The rooms are ordered by the number
+  /// of joined members, with the largest rooms first.
+  ///
+  /// [limit] Limit the number of results returned.
+  ///
+  /// [since] A pagination token from a previous request, allowing clients to
+  /// get the next (or previous) batch of rooms.
+  /// The direction of pagination is specified solely by which token
+  /// is supplied, rather than via an explicit flag.
+  ///
+  /// [server] The server to fetch the public room lists from. Defaults to the
+  /// local server.
+  Future<GetPublicRoomsResponse> getPublicRooms(
+      {int? limit, String? since, String? server}) async {
+    final requestUri =
+        Uri(path: '_matrix/client/r0/publicRooms', queryParameters: {
+      if (limit != null) 'limit': limit.toString(),
+      if (since != null) 'since': since,
+      if (server != null) 'server': server,
+    });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetPublicRoomsResponse.fromJson(json);
+  }
+
+  /// Lists the public rooms on the server, with optional filter.
+  ///
+  /// This API returns paginated responses. The rooms are ordered by the number
+  /// of joined members, with the largest rooms first.
+  ///
+  /// [server] The server to fetch the public room lists from. Defaults to the
+  /// local server.
+  ///
+  /// [filter] Filter to apply to the results.
+  ///
+  /// [includeAllNetworks] Whether or not to include all known networks/protocols from
+  /// application services on the homeserver. Defaults to false.
+  ///
+  /// [limit] Limit the number of results returned.
+  ///
+  /// [since] A pagination token from a previous request, allowing clients
+  /// to get the next (or previous) batch of rooms.  The direction
+  /// of pagination is specified solely by which token is supplied,
+  /// rather than via an explicit flag.
+  ///
+  /// [thirdPartyInstanceId] The specific third party network/protocol to request from the
+  /// homeserver. Can only be used if `include_all_networks` is false.
+  Future<QueryPublicRoomsResponse> queryPublicRooms(
+      {String? server,
+      PublicRoomQueryFilter? filter,
+      bool? includeAllNetworks,
+      int? limit,
+      String? since,
+      String? thirdPartyInstanceId}) async {
+    final requestUri =
+        Uri(path: '_matrix/client/r0/publicRooms', queryParameters: {
+      if (server != null) 'server': server,
+    });
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (filter != null) 'filter': filter.toJson(),
+      if (includeAllNetworks != null)
+        'include_all_networks': includeAllNetworks,
+      if (limit != null) 'limit': limit,
+      if (since != null) 'since': since,
+      if (thirdPartyInstanceId != null)
+        'third_party_instance_id': thirdPartyInstanceId,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return QueryPublicRoomsResponse.fromJson(json);
+  }
+
+  /// Gets all currently active pushers for the authenticated user.
+  ///
+  /// returns `pushers`:
+  /// An array containing the current pushers for the user
+  Future<List<Pusher>?> getPushers() async {
+    final requestUri = Uri(path: '_matrix/client/r0/pushers');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ((v) => v != null
+        ? (v as List).map((v) => Pusher.fromJson(v)).toList()
+        : null)(json['pushers']);
+  }
+
+  /// Retrieve all push rulesets for this user. Clients can "drill-down" on
+  /// the rulesets by suffixing a `scope` to this path e.g.
+  /// `/pushrules/global/`. This will return a subset of this data under the
+  /// specified key e.g. the `global` key.
+  ///
+  /// returns `global`:
+  /// The global ruleset.
+  Future<PushRuleSet> getPushRules() async {
+    final requestUri = Uri(path: '_matrix/client/r0/pushrules');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return PushRuleSet.fromJson(json['global']);
+  }
+
+  /// This endpoint removes the push rule defined in the path.
+  ///
+  /// [scope] `global` to specify global rules.
+  ///
+  /// [kind] The kind of rule
+  ///
+  ///
+  /// [ruleId] The identifier for the rule.
+  ///
+  Future<void> deletePushRule(
+      String scope, PushRuleKind kind, String ruleId) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent({
+      PushRuleKind.override: 'override',
+      PushRuleKind.underride: 'underride',
+      PushRuleKind.sender: 'sender',
+      PushRuleKind.room: 'room',
+      PushRuleKind.content: 'content'
+    }[kind]!)}/${Uri.encodeComponent(ruleId)}');
+    final request = Request('DELETE', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Retrieve a single specified push rule.
+  ///
+  /// [scope] `global` to specify global rules.
+  ///
+  /// [kind] The kind of rule
+  ///
+  ///
+  /// [ruleId] The identifier for the rule.
+  ///
+  Future<PushRule> getPushRule(
+      String scope, PushRuleKind kind, String ruleId) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent({
+      PushRuleKind.override: 'override',
+      PushRuleKind.underride: 'underride',
+      PushRuleKind.sender: 'sender',
+      PushRuleKind.room: 'room',
+      PushRuleKind.content: 'content'
+    }[kind]!)}/${Uri.encodeComponent(ruleId)}');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return PushRule.fromJson(json);
+  }
+
+  /// This endpoint allows the creation, modification and deletion of pushers
+  /// for this user ID. The behaviour of this endpoint varies depending on the
+  /// values in the JSON body.
+  ///
+  /// When creating push rules, they MUST be enabled by default.
+  ///
+  /// [scope] `global` to specify global rules.
+  ///
+  /// [kind] The kind of rule
+  ///
+  ///
+  /// [ruleId] The identifier for the rule.
+  ///
+  ///
+  /// [before] Use 'before' with a `rule_id` as its value to make the new rule the
+  /// next-most important rule with respect to the given user defined rule.
+  /// It is not possible to add a rule relative to a predefined server rule.
+  ///
+  /// [after] This makes the new rule the next-less important rule relative to the
+  /// given user defined rule. It is not possible to add a rule relative
+  /// to a predefined server rule.
+  ///
+  /// [actions] The action(s) to perform when the conditions for this rule are met.
+  ///
+  /// [conditions] The conditions that must hold true for an event in order for a
+  /// rule to be applied to an event. A rule with no conditions
+  /// always matches. Only applicable to `underride` and `override` rules.
+  ///
+  /// [pattern] Only applicable to `content` rules. The glob-style pattern to match against.
+  Future<void> setPushRule(
+      String scope, PushRuleKind kind, String ruleId, List<dynamic> actions,
+      {String? before,
+      String? after,
+      List<PushCondition>? conditions,
+      String? pattern}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent({
+          PushRuleKind.override: 'override',
+          PushRuleKind.underride: 'underride',
+          PushRuleKind.sender: 'sender',
+          PushRuleKind.room: 'room',
+          PushRuleKind.content: 'content'
+        }[kind]!)}/${Uri.encodeComponent(ruleId)}',
+        queryParameters: {
+          if (before != null) 'before': before,
+          if (after != null) 'after': after,
+        });
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'actions': actions.map((v) => v).toList(),
+      if (conditions != null)
+        'conditions': conditions.map((v) => v.toJson()).toList(),
+      if (pattern != null) 'pattern': pattern,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// This endpoint get the actions for the specified push rule.
+  ///
+  /// [scope] Either `global` or `device/<profile_tag>` to specify global
+  /// rules or device rules for the given `profile_tag`.
+  ///
+  /// [kind] The kind of rule
+  ///
+  ///
+  /// [ruleId] The identifier for the rule.
+  ///
+  ///
+  /// returns `actions`:
+  /// The action(s) to perform for this rule.
+  Future<List<dynamic>> getPushRuleActions(
+      String scope, PushRuleKind kind, String ruleId) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent({
+      PushRuleKind.override: 'override',
+      PushRuleKind.underride: 'underride',
+      PushRuleKind.sender: 'sender',
+      PushRuleKind.room: 'room',
+      PushRuleKind.content: 'content'
+    }[kind]!)}/${Uri.encodeComponent(ruleId)}/actions');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return (json['actions'] as List).map((v) => v as dynamic).toList();
+  }
+
+  /// This endpoint allows clients to change the actions of a push rule.
+  /// This can be used to change the actions of builtin rules.
+  ///
+  /// [scope] `global` to specify global rules.
+  ///
+  /// [kind] The kind of rule
+  ///
+  ///
+  /// [ruleId] The identifier for the rule.
+  ///
+  ///
+  /// [actions] The action(s) to perform for this rule.
+  Future<void> setPushRuleActions(String scope, PushRuleKind kind,
+      String ruleId, List<dynamic> actions) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent({
+      PushRuleKind.override: 'override',
+      PushRuleKind.underride: 'underride',
+      PushRuleKind.sender: 'sender',
+      PushRuleKind.room: 'room',
+      PushRuleKind.content: 'content'
+    }[kind]!)}/${Uri.encodeComponent(ruleId)}/actions');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'actions': actions.map((v) => v).toList(),
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// This endpoint gets whether the specified push rule is enabled.
+  ///
+  /// [scope] Either `global` or `device/<profile_tag>` to specify global
+  /// rules or device rules for the given `profile_tag`.
+  ///
+  /// [kind] The kind of rule
+  ///
+  ///
+  /// [ruleId] The identifier for the rule.
+  ///
+  ///
+  /// returns `enabled`:
+  /// Whether the push rule is enabled or not.
+  Future<bool> isPushRuleEnabled(
+      String scope, PushRuleKind kind, String ruleId) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent({
+      PushRuleKind.override: 'override',
+      PushRuleKind.underride: 'underride',
+      PushRuleKind.sender: 'sender',
+      PushRuleKind.room: 'room',
+      PushRuleKind.content: 'content'
+    }[kind]!)}/${Uri.encodeComponent(ruleId)}/enabled');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['enabled'] as bool;
+  }
+
+  /// This endpoint allows clients to enable or disable the specified push rule.
+  ///
+  /// [scope] `global` to specify global rules.
+  ///
+  /// [kind] The kind of rule
+  ///
+  ///
+  /// [ruleId] The identifier for the rule.
+  ///
+  ///
+  /// [enabled] Whether the push rule is enabled or not.
+  Future<void> setPushRuleEnabled(
+      String scope, PushRuleKind kind, String ruleId, bool enabled) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent({
+      PushRuleKind.override: 'override',
+      PushRuleKind.underride: 'underride',
+      PushRuleKind.sender: 'sender',
+      PushRuleKind.room: 'room',
+      PushRuleKind.content: 'content'
+    }[kind]!)}/${Uri.encodeComponent(ruleId)}/enabled');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'enabled': enabled,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api), except in
+  /// the cases where a guest account is being registered.
+  ///
+  /// Register for an account on this homeserver.
+  ///
+  /// There are two kinds of user account:
+  ///
+  /// - `user` accounts. These accounts may use the full API described in this specification.
+  ///
+  /// - `guest` accounts. These accounts may have limited permissions and may not be supported by all servers.
+  ///
+  /// If registration is successful, this endpoint will issue an access token
+  /// the client can use to authorize itself in subsequent requests.
+  ///
+  /// If the client does not supply a `device_id`, the server must
+  /// auto-generate one.
+  ///
+  /// The server SHOULD register an account with a User ID based on the
+  /// `username` provided, if any. Note that the grammar of Matrix User ID
+  /// localparts is restricted, so the server MUST either map the provided
+  /// `username` onto a `user_id` in a logical manner, or reject
+  /// `username`\s which do not comply to the grammar, with
+  /// `M_INVALID_USERNAME`.
+  ///
+  /// Matrix clients MUST NOT assume that localpart of the registered
+  /// `user_id` matches the provided `username`.
+  ///
+  /// The returned access token must be associated with the `device_id`
+  /// supplied by the client or generated by the server. The server may
+  /// invalidate any access token previously associated with that device. See
+  /// [Relationship between access tokens and devices](https://spec.matrix.org/unstable/client-server-api/#relationship-between-access-tokens-and-devices).
+  ///
+  /// When registering a guest account, all parameters in the request body
+  /// with the exception of `initial_device_display_name` MUST BE ignored
+  /// by the server. The server MUST pick a `device_id` for the account
+  /// regardless of input.
+  ///
+  /// Any user ID returned by this API must conform to the grammar given in the
+  /// [Matrix specification](https://spec.matrix.org/unstable/appendices/#user-identifiers).
+  ///
+  /// [kind] The kind of account to register. Defaults to `user`.
+  ///
+  /// [auth] Additional authentication information for the
+  /// user-interactive authentication API. Note that this
+  /// information is *not* used to define how the registered user
+  /// should be authenticated, but is instead used to
+  /// authenticate the `register` call itself.
+  ///
+  /// [deviceId] ID of the client device. If this does not correspond to a
+  /// known client device, a new device will be created. The server
+  /// will auto-generate a device_id if this is not specified.
+  ///
+  /// [inhibitLogin] If true, an `access_token` and `device_id` should not be
+  /// returned from this call, therefore preventing an automatic
+  /// login. Defaults to false.
+  ///
+  /// [initialDeviceDisplayName] A display name to assign to the newly-created device. Ignored
+  /// if `device_id` corresponds to a known device.
+  ///
+  /// [password] The desired password for the account.
+  ///
+  /// [username] The basis for the localpart of the desired Matrix ID. If omitted,
+  /// the homeserver MUST generate a Matrix ID local part.
+  Future<RegisterResponse> register(
+      {AccountKind? kind,
+      AuthenticationData? auth,
+      String? deviceId,
+      bool? inhibitLogin,
+      String? initialDeviceDisplayName,
+      String? password,
+      String? username}) async {
+    final requestUri =
+        Uri(path: '_matrix/client/r0/register', queryParameters: {
+      if (kind != null)
+        'kind': {AccountKind.guest: 'guest', AccountKind.user: 'user'}[kind]!,
+    });
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (auth != null) 'auth': auth.toJson(),
+      if (deviceId != null) 'device_id': deviceId,
+      if (inhibitLogin != null) 'inhibit_login': inhibitLogin,
+      if (initialDeviceDisplayName != null)
+        'initial_device_display_name': initialDeviceDisplayName,
+      if (password != null) 'password': password,
+      if (username != null) 'username': username,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return RegisterResponse.fromJson(json);
+  }
+
+  /// Checks to see if a username is available, and valid, for the server.
+  ///
+  /// The server should check to ensure that, at the time of the request, the
+  /// username requested is available for use. This includes verifying that an
+  /// application service has not claimed the username and that the username
+  /// fits the server's desired requirements (for example, a server could dictate
+  /// that it does not permit usernames with underscores).
+  ///
+  /// Matrix clients may wish to use this API prior to attempting registration,
+  /// however the clients must also be aware that using this API does not normally
+  /// reserve the username. This can mean that the username becomes unavailable
+  /// between checking its availability and attempting to register it.
+  ///
+  /// [username] The username to check the availability of.
+  ///
+  /// returns `available`:
+  /// A flag to indicate that the username is available. This should always
+  /// be `true` when the server replies with 200 OK.
+  Future<bool?> checkUsernameAvailability(String username) async {
+    final requestUri =
+        Uri(path: '_matrix/client/r0/register/available', queryParameters: {
+      'username': username,
+    });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ((v) => v != null ? v as bool : null)(json['available']);
+  }
+
+  /// Store several keys in the backup.
+  ///
+  /// [version] The backup in which to store the keys. Must be the current backup.
+  ///
+  /// [backupData] The backup data.
+  Future<PostRoomKeysKeyResponse> postRoomKeysKey(
+      String version, RoomKeys backupData) async {
+    final requestUri =
+        Uri(path: '_matrix/client/unstable/room_keys/keys', queryParameters: {
+      'version': version,
+    });
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode(backupData));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return PostRoomKeysKeyResponse.fromJson(json);
+  }
+
+  /// Store a key in the backup.
+  ///
+  /// [roomId] The ID of the room that the keys are for.
+  ///
+  /// [version] The backup in which to store the keys. Must be the current backup.
+  ///
+  /// [backupData] The backup data
+  Future<PostRoomKeysKeyRoomIdResponse> postRoomKeysKeyRoomId(
+      String roomId, String version, RoomKeyBackup backupData) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}',
+        queryParameters: {
+          'version': version,
+        });
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode(backupData));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return PostRoomKeysKeyRoomIdResponse.fromJson(json);
+  }
+
+  /// Store a key in the backup.
+  ///
+  /// [roomId] The ID of the room that the key is for.
+  ///
+  /// [sessionId] The ID of the megolm session that the key is for.
+  ///
+  /// [version] The backup in which to store the key. Must be the current backup.
+  ///
+  /// [data] The key data.
+  Future<PostRoomKeysKeyRoomIdSessionIdResponse> postRoomKeysKeyRoomIdSessionId(
+      String roomId,
+      String sessionId,
+      String version,
+      KeyBackupData data) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}',
+        queryParameters: {
+          'version': version,
+        });
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode(data));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return PostRoomKeysKeyRoomIdSessionIdResponse.fromJson(json);
+  }
+
+  /// Get information about the latest backup version.
+  Future<GetRoomKeysVersionCurrentResponse> getRoomKeysVersionCurrent() async {
+    final requestUri = Uri(path: '_matrix/client/unstable/room_keys/version');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetRoomKeysVersionCurrentResponse.fromJson(json);
+  }
+
+  /// Creates a new backup.
+  ///
+  /// [algorithm] The algorithm used for storing backups.
+  ///
+  /// [authData] Algorithm-dependent data. See the documentation for the backup
+  /// algorithms in [Server-side key backups](https://spec.matrix.org/unstable/client-server-api/#server-side-key-backups) for more information on the
+  /// expected format of the data.
+  ///
+  /// returns `version`:
+  /// The backup version. This is an opaque string.
+  Future<String> postRoomKeysVersion(
+      BackupAlgorithm algorithm, Map<String, dynamic> authData) async {
+    final requestUri = Uri(path: '_matrix/client/unstable/room_keys/version');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'algorithm': {
+        BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2:
+            'm.megolm_backup.v1.curve25519-aes-sha2'
+      }[algorithm]!,
+      'auth_data': authData,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['version'] as String;
+  }
+
+  /// Delete an existing key backup. Both the information about the backup,
+  /// as well as all key data related to the backup will be deleted.
+  ///
+  /// [version] The backup version to delete, as returned in the `version`
+  /// parameter in the response of
+  /// [`POST /_matrix/client/r0/room_keys/version`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientr0room_keysversion)
+  /// or [`GET /_matrix/client/r0/room_keys/version/{version}`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0room_keysversionversion).
+  Future<void> deleteRoomKeysVersion(String version) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/unstable/room_keys/version/${Uri.encodeComponent(version)}');
+    final request = Request('DELETE', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Get information about an existing backup.
+  ///
+  /// [version] The backup version to get, as returned in the `version` parameter
+  /// of the response in
+  /// [`POST /_matrix/client/r0/room_keys/version`](https://spec.matrix.org/unstable/client-server/#post_matrixclientr0room_keysversion)
+  /// or this endpoint.
+  Future<GetRoomKeysVersionResponse> getRoomKeysVersion(String version) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/unstable/room_keys/version/${Uri.encodeComponent(version)}');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetRoomKeysVersionResponse.fromJson(json);
+  }
+
+  /// Update information about an existing backup.  Only `auth_data` can be modified.
+  ///
+  /// [version] The backup version to update, as returned in the `version`
+  /// parameter in the response of
+  /// [`POST /_matrix/client/r0/room_keys/version`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientr0room_keysversion)
+  /// or [`GET /_matrix/client/r0/room_keys/version/{version}`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0room_keysversionversion).
+  ///
+  /// [algorithm] The algorithm used for storing backups.  Must be the same as
+  /// the algorithm currently used by the backup.
+  ///
+  /// [authData] Algorithm-dependent data. See the documentation for the backup
+  /// algorithms in [Server-side key backups](https://spec.matrix.org/unstable/client-server-api/#server-side-key-backups) for more information on the
+  /// expected format of the data.
+  Future<void> putRoomKeysVersion(String version, BackupAlgorithm algorithm,
+      Map<String, dynamic> authData) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/unstable/room_keys/version/${Uri.encodeComponent(version)}');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'algorithm': {
+        BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2:
+            'm.megolm_backup.v1.curve25519-aes-sha2'
+      }[algorithm]!,
+      'auth_data': authData,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Get a list of aliases maintained by the local server for the
+  /// given room.
+  ///
+  /// This endpoint can be called by users who are in the room (external
+  /// users receive an `M_FORBIDDEN` error response). If the room's
+  /// `m.room.history_visibility` maps to `world_readable`, any
+  /// user can call this endpoint.
+  ///
+  /// Servers may choose to implement additional access control checks here,
+  /// such as allowing server administrators to view aliases regardless of
+  /// membership.
+  ///
+  /// **Note:**
+  /// Clients are recommended not to display this list of aliases prominently
+  /// as they are not curated, unlike those listed in the `m.room.canonical_alias`
+  /// state event.
+  ///
+  /// [roomId] The room ID to find local aliases of.
+  ///
+  /// returns `aliases`:
+  /// The server's local aliases on the room. Can be empty.
+  Future<List<String>> getLocalAliases(String roomId) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/aliases');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return (json['aliases'] as List).map((v) => v as String).toList();
+  }
+
+  /// Ban a user in the room. If the user is currently in the room, also kick them.
+  ///
+  /// When a user is banned from a room, they may not join it or be invited to it until they are unbanned.
+  ///
+  /// The caller must have the required power level in order to perform this operation.
+  ///
+  /// [roomId] The room identifier (not alias) from which the user should be banned.
+  ///
+  /// [reason] The reason the user has been banned. This will be supplied as the `reason` on the target's updated [`m.room.member`](https://spec.matrix.org/unstable/client-server-api/#mroommember) event.
+  ///
+  /// [userId] The fully qualified user ID of the user being banned.
+  Future<void> ban(String roomId, String userId, {String? reason}) async {
+    final requestUri =
+        Uri(path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/ban');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (reason != null) 'reason': reason,
+      'user_id': userId,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// This API returns a number of events that happened just before and
+  /// after the specified event. This allows clients to get the context
+  /// surrounding an event.
+  ///
+  /// *Note*: This endpoint supports lazy-loading of room member events. See
+  /// [Lazy-loading room members](https://spec.matrix.org/unstable/client-server-api/#lazy-loading-room-members) for more information.
+  ///
+  /// [roomId] The room to get events from.
+  ///
+  /// [eventId] The event to get context around.
+  ///
+  /// [limit] The maximum number of events to return. Default: 10.
+  ///
+  /// [filter] A JSON `RoomEventFilter` to filter the returned events with. The
+  /// filter is only applied to `events_before`, `events_after`, and
+  /// `state`. It is not applied to the `event` itself. The filter may
+  /// be applied before or/and after the `limit` parameter - whichever the
+  /// homeserver prefers.
+  ///
+  /// See [Filtering](https://spec.matrix.org/unstable/client-server-api/#filtering) for more information.
+  Future<EventContext> getEventContext(String roomId, String eventId,
+      {int? limit, String? filter}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/context/${Uri.encodeComponent(eventId)}',
+        queryParameters: {
+          if (limit != null) 'limit': limit.toString(),
+          if (filter != null) 'filter': filter,
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return EventContext.fromJson(json);
+  }
+
+  /// Get a single event based on `roomId/eventId`. You must have permission to
+  /// retrieve this event e.g. by being a member in the room for this event.
+  ///
+  /// [roomId] The ID of the room the event is in.
+  ///
+  /// [eventId] The event ID to get.
+  Future<MatrixEvent> getOneRoomEvent(String roomId, String eventId) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/event/${Uri.encodeComponent(eventId)}');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return MatrixEvent.fromJson(json);
+  }
+
+  /// This API stops a user remembering about a particular room.
+  ///
+  /// In general, history is a first class citizen in Matrix. After this API
+  /// is called, however, a user will no longer be able to retrieve history
+  /// for this room. If all users on a homeserver forget a room, the room is
+  /// eligible for deletion from that homeserver.
+  ///
+  /// If the user is currently joined to the room, they must leave the room
+  /// before calling this API.
+  ///
+  /// [roomId] The room identifier to forget.
+  Future<void> forgetRoom(String roomId) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/forget');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// *Note that there are two forms of this API, which are documented separately.
+  /// This version of the API does not require that the inviter know the Matrix
+  /// identifier of the invitee, and instead relies on third party identifiers.
+  /// The homeserver uses an identity server to perform the mapping from
+  /// third party identifier to a Matrix identifier. The other is documented in the*
+  /// [joining rooms section](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientr0roomsroomidinvite).
+  ///
+  /// This API invites a user to participate in a particular room.
+  /// They do not start participating in the room until they actually join the
+  /// room.
+  ///
+  /// Only users currently in a particular room can invite other users to
+  /// join that room.
+  ///
+  /// If the identity server did know the Matrix user identifier for the
+  /// third party identifier, the homeserver will append a `m.room.member`
+  /// event to the room.
+  ///
+  /// If the identity server does not know a Matrix user identifier for the
+  /// passed third party identifier, the homeserver will issue an invitation
+  /// which can be accepted upon providing proof of ownership of the third
+  /// party identifier. This is achieved by the identity server generating a
+  /// token, which it gives to the inviting homeserver. The homeserver will
+  /// add an `m.room.third_party_invite` event into the graph for the room,
+  /// containing that token.
+  ///
+  /// When the invitee binds the invited third party identifier to a Matrix
+  /// user ID, the identity server will give the user a list of pending
+  /// invitations, each containing:
+  ///
+  /// - The room ID to which they were invited
+  ///
+  /// - The token given to the homeserver
+  ///
+  /// - A signature of the token, signed with the identity server's private key
+  ///
+  /// - The matrix user ID who invited them to the room
+  ///
+  /// If a token is requested from the identity server, the homeserver will
+  /// append a `m.room.third_party_invite` event to the room.
+  ///
+  /// [roomId] The room identifier (not alias) to which to invite the user.
+  ///
+  /// [address] The invitee's third party identifier.
+  ///
+  /// [idAccessToken] An access token previously registered with the identity server. Servers
+  /// can treat this as optional to distinguish between r0.5-compatible clients
+  /// and this specification version.
+  ///
+  /// [idServer] The hostname+port of the identity server which should be used for third party identifier lookups.
+  ///
+  /// [medium] The kind of address being passed in the address field, for example `email`.
+  Future<void> inviteBy3PID(String roomId, String address, String idAccessToken,
+      String idServer, String medium) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/invite');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'address': address,
+      'id_access_token': idAccessToken,
+      'id_server': idServer,
+      'medium': medium,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// *Note that there are two forms of this API, which are documented separately.
+  /// This version of the API requires that the inviter knows the Matrix
+  /// identifier of the invitee. The other is documented in the*
+  /// [third party invites section](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientr0roomsroomidinvite-1).
+  ///
+  /// This API invites a user to participate in a particular room.
+  /// They do not start participating in the room until they actually join the
+  /// room.
+  ///
+  /// Only users currently in a particular room can invite other users to
+  /// join that room.
+  ///
+  /// If the user was invited to the room, the homeserver will append a
+  /// `m.room.member` event to the room.
+  ///
+  /// [roomId] The room identifier (not alias) to which to invite the user.
+  ///
+  /// [reason] Optional reason to be included as the `reason` on the subsequent
+  /// membership event.
+  ///
+  /// [userId] The fully qualified user ID of the invitee.
+  Future<void> inviteUser(String roomId, String userId,
+      {String? reason}) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/invite');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (reason != null) 'reason': reason,
+      'user_id': userId,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// *Note that this API requires a room ID, not alias.*
+  /// `/join/{roomIdOrAlias}` *exists if you have a room alias.*
+  ///
+  /// This API starts a user participating in a particular room, if that user
+  /// is allowed to participate in that room. After this call, the client is
+  /// allowed to see all current state events in the room, and all subsequent
+  /// events associated with the room until the user leaves the room.
+  ///
+  /// After a user has joined a room, the room will appear as an entry in the
+  /// response of the [`/initialSync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0initialsync)
+  /// and [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0sync) APIs.
+  ///
+  /// [roomId] The room identifier (not alias) to join.
+  ///
+  /// [reason] Optional reason to be included as the `reason` on the subsequent
+  /// membership event.
+  ///
+  /// [thirdPartySigned] If supplied, the homeserver must verify that it matches a pending
+  /// `m.room.third_party_invite` event in the room, and perform
+  /// key validity checking if required by the event.
+  ///
+  /// returns `room_id`:
+  /// The joined room ID.
+  Future<String> joinRoomById(String roomId,
+      {String? reason, ThirdPartySigned? thirdPartySigned}) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/join');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (reason != null) 'reason': reason,
+      if (thirdPartySigned != null)
+        'third_party_signed': thirdPartySigned.toJson(),
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['room_id'] as String;
+  }
+
+  /// This API returns a map of MXIDs to member info objects for members of the room. The current user must be in the room for it to work, unless it is an Application Service in which case any of the AS's users must be in the room. This API is primarily for Application Services and should be faster to respond than `/members` as it can be implemented more efficiently on the server.
+  ///
+  /// [roomId] The room to get the members of.
+  ///
+  /// returns `joined`:
+  /// A map from user ID to a RoomMember object.
+  Future<Map<String, RoomMember>?> getJoinedMembersByRoom(String roomId) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/joined_members');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ((v) => v != null
+        ? (v as Map<String, dynamic>)
+            .map((k, v) => MapEntry(k, RoomMember.fromJson(v)))
+        : null)(json['joined']);
+  }
+
+  /// Kick a user from the room.
+  ///
+  /// The caller must have the required power level in order to perform this operation.
+  ///
+  /// Kicking a user adjusts the target member's membership state to be `leave` with an
+  /// optional `reason`. Like with other membership changes, a user can directly adjust
+  /// the target member's state by making a request to `/rooms/<room id>/state/m.room.member/<user id>`.
+  ///
+  /// [roomId] The room identifier (not alias) from which the user should be kicked.
+  ///
+  /// [reason] The reason the user has been kicked. This will be supplied as the
+  /// `reason` on the target's updated [`m.room.member`](https://spec.matrix.org/unstable/client-server-api/#mroommember) event.
+  ///
+  /// [userId] The fully qualified user ID of the user being kicked.
+  Future<void> kick(String roomId, String userId, {String? reason}) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/kick');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (reason != null) 'reason': reason,
+      'user_id': userId,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// This API stops a user participating in a particular room.
+  ///
+  /// If the user was already in the room, they will no longer be able to see
+  /// new events in the room. If the room requires an invite to join, they
+  /// will need to be re-invited before they can re-join.
+  ///
+  /// If the user was invited to the room, but had not joined, this call
+  /// serves to reject the invite.
+  ///
+  /// The user will still be allowed to retrieve history from the room which
+  /// they were previously allowed to see.
+  ///
+  /// [roomId] The room identifier to leave.
+  ///
+  /// [reason] Optional reason to be included as the `reason` on the subsequent
+  /// membership event.
+  Future<void> leaveRoom(String roomId, {String? reason}) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/leave');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (reason != null) 'reason': reason,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Get the list of members for this room.
+  ///
+  /// [roomId] The room to get the member events for.
+  ///
+  /// [at] The point in time (pagination token) to return members for in the room.
+  /// This token can be obtained from a `prev_batch` token returned for
+  /// each room by the sync API. Defaults to the current state of the room,
+  /// as determined by the server.
+  ///
+  /// [membership] The kind of membership to filter for. Defaults to no filtering if
+  /// unspecified. When specified alongside `not_membership`, the two
+  /// parameters create an 'or' condition: either the membership *is*
+  /// the same as `membership` **or** *is not* the same as `not_membership`.
+  ///
+  /// [notMembership] The kind of membership to exclude from the results. Defaults to no
+  /// filtering if unspecified.
+  ///
+  /// returns `chunk`
+  Future<List<MatrixEvent>?> getMembersByRoom(String roomId,
+      {String? at, Membership? membership, Membership? notMembership}) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/members',
+        queryParameters: {
+          if (at != null) 'at': at,
+          if (membership != null)
+            'membership': {
+              Membership.invite: 'invite',
+              Membership.join: 'join',
+              Membership.leave: 'leave',
+              Membership.ban: 'ban'
+            }[membership]!,
+          if (notMembership != null)
+            'not_membership': {
+              Membership.invite: 'invite',
+              Membership.join: 'join',
+              Membership.leave: 'leave',
+              Membership.ban: 'ban'
+            }[notMembership]!,
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ((v) => v != null
+        ? (v as List).map((v) => MatrixEvent.fromJson(v)).toList()
+        : null)(json['chunk']);
+  }
+
+  /// This API returns a list of message and state events for a room. It uses
+  /// pagination query parameters to paginate history in the room.
+  ///
+  /// *Note*: This endpoint supports lazy-loading of room member events. See
+  /// [Lazy-loading room members](https://spec.matrix.org/unstable/client-server-api/#lazy-loading-room-members) for more information.
+  ///
+  /// [roomId] The room to get events from.
+  ///
+  /// [from] The token to start returning events from. This token can be obtained
+  /// from a `prev_batch` token returned for each room by the sync API,
+  /// or from a `start` or `end` token returned by a previous request
+  /// to this endpoint.
+  ///
+  /// [to] The token to stop returning events at. This token can be obtained from
+  /// a `prev_batch` token returned for each room by the sync endpoint,
+  /// or from a `start` or `end` token returned by a previous request to
+  /// this endpoint.
+  ///
+  /// [dir] The direction to return events from.
+  ///
+  /// [limit] The maximum number of events to return. Default: 10.
+  ///
+  /// [filter] A JSON RoomEventFilter to filter returned events with.
+  Future<GetRoomEventsResponse> getRoomEvents(
+      String roomId, String from, Direction dir,
+      {String? to, int? limit, String? filter}) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/messages',
+        queryParameters: {
+          'from': from,
+          if (to != null) 'to': to,
+          'dir': {Direction.b: 'b', Direction.f: 'f'}[dir]!,
+          if (limit != null) 'limit': limit.toString(),
+          if (filter != null) 'filter': filter,
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetRoomEventsResponse.fromJson(json);
+  }
+
+  /// Sets the position of the read marker for a given room, and optionally
+  /// the read receipt's location.
+  ///
+  /// [roomId] The room ID to set the read marker in for the user.
+  ///
+  /// [mFullyRead] The event ID the read marker should be located at. The
+  /// event MUST belong to the room.
+  ///
+  /// [mRead] The event ID to set the read receipt location at. This is
+  /// equivalent to calling `/receipt/m.read/$elsewhere:example.org`
+  /// and is provided here to save that extra call.
+  Future<void> setReadMarker(String roomId, String mFullyRead,
+      {String? mRead}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/read_markers');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'm.fully_read': mFullyRead,
+      if (mRead != null) 'm.read': mRead,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// This API updates the marker for the given receipt type to the event ID
+  /// specified.
+  ///
+  /// [roomId] The room in which to send the event.
+  ///
+  /// [receiptType] The type of receipt to send.
+  ///
+  /// [eventId] The event ID to acknowledge up to.
+  ///
+  /// [receipt] Extra receipt information to attach to `content` if any. The
+  /// server will automatically set the `ts` field.
+  Future<void> postReceipt(String roomId, ReceiptType receiptType,
+      String eventId, Map<String, dynamic> receipt) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/receipt/${Uri.encodeComponent({
+      ReceiptType.mRead: 'm.read'
+    }[receiptType]!)}/${Uri.encodeComponent(eventId)}');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode(receipt));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Strips all information out of an event which isn't critical to the
+  /// integrity of the server-side representation of the room.
+  ///
+  /// This cannot be undone.
+  ///
+  /// Any user with a power level greater than or equal to the `m.room.redaction`
+  /// event power level may send redaction events in the room. If the user's power
+  /// level greater is also greater than or equal to the `redact` power level
+  /// of the room, the user may redact events sent by other users.
+  ///
+  /// Server administrators may redact events sent by users on their server.
+  ///
+  /// [roomId] The room from which to redact the event.
+  ///
+  /// [eventId] The ID of the event to redact
+  ///
+  /// [txnId] The transaction ID for this event. Clients should generate a
+  /// unique ID; it will be used by the server to ensure idempotency of requests.
+  ///
+  /// [reason] The reason for the event being redacted.
+  ///
+  /// returns `event_id`:
+  /// A unique identifier for the event.
+  Future<String?> redactEvent(String roomId, String eventId, String txnId,
+      {String? reason}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/redact/${Uri.encodeComponent(eventId)}/${Uri.encodeComponent(txnId)}');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (reason != null) 'reason': reason,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ((v) => v != null ? v as String : null)(json['event_id']);
+  }
+
+  /// Reports an event as inappropriate to the server, which may then notify
+  /// the appropriate people.
+  ///
+  /// [roomId] The room in which the event being reported is located.
+  ///
+  /// [eventId] The event to report.
+  ///
+  /// [reason] The reason the content is being reported. May be blank.
+  ///
+  /// [score] The score to rate this content as where -100 is most offensive
+  /// and 0 is inoffensive.
+  Future<void> reportContent(String roomId, String eventId,
+      {String? reason, int? score}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/report/${Uri.encodeComponent(eventId)}');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (reason != null) 'reason': reason,
+      if (score != null) 'score': score,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// This endpoint is used to send a message event to a room. Message events
+  /// allow access to historical events and pagination, making them suited
+  /// for "once-off" activity in a room.
+  ///
+  /// The body of the request should be the content object of the event; the
+  /// fields in this object will vary depending on the type of event. See
+  /// [Room Events](https://spec.matrix.org/unstable/client-server-api/#room-events) for the m. event specification.
+  ///
+  /// [roomId] The room to send the event to.
+  ///
+  /// [eventType] The type of event to send.
+  ///
+  /// [txnId] The transaction ID for this event. Clients should generate an
+  /// ID unique across requests with the same access token; it will be
+  /// used by the server to ensure idempotency of requests.
+  ///
+  /// returns `event_id`:
+  /// A unique identifier for the event.
+  Future<String> sendMessage(String roomId, String eventType, String txnId,
+      Map<String, dynamic> body) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/send/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(txnId)}');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode(body));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['event_id'] as String;
+  }
+
+  /// Get the state events for the current state of a room.
+  ///
+  /// [roomId] The room to look up the state for.
+  Future<List<MatrixEvent>> getRoomState(String roomId) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/state');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return (json as List).map((v) => MatrixEvent.fromJson(v)).toList();
+  }
+
+  /// Looks up the contents of a state event in a room. If the user is
+  /// joined to the room then the state is taken from the current
+  /// state of the room. If the user has left the room then the state is
+  /// taken from the state of the room when they left.
+  ///
+  /// [roomId] The room to look up the state in.
+  ///
+  /// [eventType] The type of state to look up.
+  ///
+  /// [stateKey] The key of the state to look up. Defaults to an empty string. When
+  /// an empty string, the trailing slash on this endpoint is optional.
+  Future<Map<String, dynamic>> getRoomStateWithKey(
+      String roomId, String eventType, String stateKey) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/state/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(stateKey)}');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json as Map<String, dynamic>;
+  }
+
+  /// State events can be sent using this endpoint.  These events will be
+  /// overwritten if `<room id>`, `<event type>` and `<state key>` all
+  /// match.
+  ///
+  /// Requests to this endpoint **cannot use transaction IDs**
+  /// like other `PUT` paths because they cannot be differentiated from the
+  /// `state_key`. Furthermore, `POST` is unsupported on state paths.
+  ///
+  /// The body of the request should be the content object of the event; the
+  /// fields in this object will vary depending on the type of event. See
+  /// [Room Events](https://spec.matrix.org/unstable/client-server-api/#room-events) for the `m.` event specification.
+  ///
+  /// If the event type being sent is `m.room.canonical_alias` servers
+  /// SHOULD ensure that any new aliases being listed in the event are valid
+  /// per their grammar/syntax and that they point to the room ID where the
+  /// state event is to be sent. Servers do not validate aliases which are
+  /// being removed or are already present in the state event.
+  ///
+  ///
+  /// [roomId] The room to set the state in
+  ///
+  /// [eventType] The type of event to send.
+  ///
+  /// [stateKey] The state_key for the state to send. Defaults to the empty string. When
+  /// an empty string, the trailing slash on this endpoint is optional.
+  ///
+  /// returns `event_id`:
+  /// A unique identifier for the event.
+  Future<String> setRoomStateWithKey(String roomId, String eventType,
+      String stateKey, Map<String, dynamic> body) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/state/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(stateKey)}');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode(body));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['event_id'] as String;
+  }
+
+  /// This tells the server that the user is typing for the next N
+  /// milliseconds where N is the value specified in the `timeout` key.
+  /// Alternatively, if `typing` is `false`, it tells the server that the
+  /// user has stopped typing.
+  ///
+  /// [userId] The user who has started to type.
+  ///
+  /// [roomId] The room in which the user is typing.
+  ///
+  /// [timeout] The length of time in milliseconds to mark this user as typing.
+  ///
+  /// [typing] Whether the user is typing or not. If `false`, the `timeout`
+  /// key can be omitted.
+  Future<void> setTyping(String userId, String roomId, bool typing,
+      {int? timeout}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/typing/${Uri.encodeComponent(userId)}');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (timeout != null) 'timeout': timeout,
+      'typing': typing,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Unban a user from the room. This allows them to be invited to the room,
+  /// and join if they would otherwise be allowed to join according to its join rules.
+  ///
+  /// The caller must have the required power level in order to perform this operation.
+  ///
+  /// [roomId] The room identifier (not alias) from which the user should be unbanned.
+  ///
+  /// [reason] Optional reason to be included as the `reason` on the subsequent
+  /// membership event.
+  ///
+  /// [userId] The fully qualified user ID of the user being unbanned.
+  Future<void> unban(String roomId, String userId, {String? reason}) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/unban');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (reason != null) 'reason': reason,
+      'user_id': userId,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Upgrades the given room to a particular room version.
+  ///
+  /// [roomId] The ID of the room to upgrade.
+  ///
+  /// [newVersion] The new version for the room.
+  ///
+  /// returns `replacement_room`:
+  /// The ID of the new room.
+  Future<String> upgradeRoom(String roomId, String newVersion) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/upgrade');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'new_version': newVersion,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['replacement_room'] as String;
+  }
+
+  /// Performs a full text search across different categories.
+  ///
+  /// [nextBatch] The point to return events from. If given, this should be a
+  /// `next_batch` result from a previous call to this endpoint.
+  ///
+  /// [searchCategories] Describes which categories to search in and their criteria.
+  Future<SearchResults> search(Categories searchCategories,
+      {String? nextBatch}) async {
+    final requestUri = Uri(path: '_matrix/client/r0/search', queryParameters: {
+      if (nextBatch != null) 'next_batch': nextBatch,
+    });
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'search_categories': searchCategories.toJson(),
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return SearchResults.fromJson(json);
+  }
+
+  /// This endpoint is used to send send-to-device events to a set of
+  /// client devices.
+  ///
+  /// [eventType] The type of event to send.
+  ///
+  /// [txnId] The transaction ID for this event. Clients should generate an
+  /// ID unique across requests with the same access token; it will be
+  /// used by the server to ensure idempotency of requests.
+  ///
+  /// [messages] The messages to send. A map from user ID, to a map from
+  /// device ID to message body. The device ID may also be `*`,
+  /// meaning all known devices for the user.
+  Future<void> sendToDevice(String eventType, String txnId,
+      Map<String, Map<String, Map<String, dynamic>>> messages) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/sendToDevice/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(txnId)}');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'messages':
+          messages.map((k, v) => MapEntry(k, v.map((k, v) => MapEntry(k, v)))),
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Synchronise the client's state with the latest state on the server.
+  /// Clients use this API when they first log in to get an initial snapshot
+  /// of the state on the server, and then continue to call this API to get
+  /// incremental deltas to the state, and to receive new messages.
+  ///
+  /// *Note*: This endpoint supports lazy-loading. See [Filtering](https://spec.matrix.org/unstable/client-server-api/#filtering)
+  /// for more information. Lazy-loading members is only supported on a `StateFilter`
+  /// for this endpoint. When lazy-loading is enabled, servers MUST include the
+  /// syncing user's own membership event when they join a room, or when the
+  /// full state of rooms is requested, to aid discovering the user's avatar &
+  /// displayname.
+  ///
+  /// Further, like other members, the user's own membership event is eligible
+  /// for being considered redundant by the server. When a sync is `limited`,
+  /// the server MUST return membership events for events in the gap
+  /// (between `since` and the start of the returned timeline), regardless
+  /// as to whether or not they are redundant. This ensures that joins/leaves
+  /// and profile changes which occur during the gap are not lost.
+  ///
+  /// Note that the default behaviour of `state` is to include all membership
+  /// events, alongside other state, when lazy-loading is not enabled.
+  ///
+  /// [filter] The ID of a filter created using the filter API or a filter JSON
+  /// object encoded as a string. The server will detect whether it is
+  /// an ID or a JSON object by whether the first character is a `"{"`
+  /// open brace. Passing the JSON inline is best suited to one off
+  /// requests. Creating a filter using the filter API is recommended for
+  /// clients that reuse the same filter multiple times, for example in
+  /// long poll requests.
+  ///
+  /// See [Filtering](https://spec.matrix.org/unstable/client-server-api/#filtering) for more information.
+  ///
+  /// [since] A point in time to continue a sync from.
+  ///
+  /// [fullState] Controls whether to include the full state for all rooms the user
+  /// is a member of.
+  ///
+  /// If this is set to `true`, then all state events will be returned,
+  /// even if `since` is non-empty. The timeline will still be limited
+  /// by the `since` parameter. In this case, the `timeout` parameter
+  /// will be ignored and the query will return immediately, possibly with
+  /// an empty timeline.
+  ///
+  /// If `false`, and `since` is non-empty, only state which has
+  /// changed since the point indicated by `since` will be returned.
+  ///
+  /// By default, this is `false`.
+  ///
+  /// [setPresence] Controls whether the client is automatically marked as online by
+  /// polling this API. If this parameter is omitted then the client is
+  /// automatically marked as online when it uses this API. Otherwise if
+  /// the parameter is set to "offline" then the client is not marked as
+  /// being online when it uses this API. When set to "unavailable", the
+  /// client is marked as being idle.
+  ///
+  /// [timeout] The maximum time to wait, in milliseconds, before returning this
+  /// request. If no events (or other data) become available before this
+  /// time elapses, the server will return a response with empty fields.
+  ///
+  /// By default, this is `0`, so the server will return immediately
+  /// even if the response is empty.
+  Future<SyncUpdate> sync(
+      {String? filter,
+      String? since,
+      bool? fullState,
+      PresenceType? setPresence,
+      int? timeout}) async {
+    final requestUri = Uri(path: '_matrix/client/r0/sync', queryParameters: {
+      if (filter != null) 'filter': filter,
+      if (since != null) 'since': since,
+      if (fullState != null) 'full_state': fullState.toString(),
+      if (setPresence != null)
+        'set_presence': {
+          PresenceType.online: 'online',
+          PresenceType.offline: 'offline',
+          PresenceType.unavailable: 'unavailable'
+        }[setPresence]!,
+      if (timeout != null) 'timeout': timeout.toString(),
+    });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return SyncUpdate.fromJson(json);
+  }
+
+  /// Get some account_data for the client. This config is only visible to the user
+  /// that set the account_data.
+  ///
+  /// [userId] The ID of the user to get account_data for. The access token must be
+  /// authorized to make requests for this user ID.
+  ///
+  /// [type] The event type of the account_data to get. Custom types should be
+  /// namespaced to avoid clashes.
+  Future<Map<String, dynamic>> getAccountData(
+      String userId, String type) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/account_data/${Uri.encodeComponent(type)}');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json as Map<String, dynamic>;
+  }
+
+  /// Set some account_data for the client. This config is only visible to the user
+  /// that set the account_data. The config will be synced to clients in the
+  /// top-level `account_data`.
+  ///
+  /// [userId] The ID of the user to set account_data for. The access token must be
+  /// authorized to make requests for this user ID.
+  ///
+  /// [type] The event type of the account_data to set. Custom types should be
+  /// namespaced to avoid clashes.
+  ///
+  /// [content] The content of the account_data
+  Future<void> setAccountData(
+      String userId, String type, Map<String, dynamic> content) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/account_data/${Uri.encodeComponent(type)}');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode(content));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Uploads a new filter definition to the homeserver.
+  /// Returns a filter ID that may be used in future requests to
+  /// restrict which events are returned to the client.
+  ///
+  /// [userId] The id of the user uploading the filter. The access token must be authorized to make requests for this user id.
+  ///
+  /// [filter] The filter to upload.
+  ///
+  /// returns `filter_id`:
+  /// The ID of the filter that was created. Cannot start
+  /// with a `{` as this character is used to determine
+  /// if the filter provided is inline JSON or a previously
+  /// declared filter by homeservers on some APIs.
+  Future<String> defineFilter(String userId, Filter filter) async {
+    final requestUri = Uri(
+        path: '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/filter');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode(filter));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['filter_id'] as String;
+  }
+
+  /// getFilter
+  ///
+  /// [userId] The user ID to download a filter for.
+  ///
+  /// [filterId] The filter ID to download.
+  Future<Filter> getFilter(String userId, String filterId) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/filter/${Uri.encodeComponent(filterId)}');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return Filter.fromJson(json);
+  }
+
+  /// Gets an OpenID token object that the requester may supply to another
+  /// service to verify their identity in Matrix. The generated token is only
+  /// valid for exchanging for user information from the federation API for
+  /// OpenID.
+  ///
+  /// The access token generated is only valid for the OpenID API. It cannot
+  /// be used to request another OpenID access token or call `/sync`, for
+  /// example.
+  ///
+  /// [userId] The user to request and OpenID token for. Should be the user who
+  /// is authenticated for the request.
+  ///
+  /// [body] An empty object. Reserved for future expansion.
+  Future<OpenIdCredentials> requestOpenIdToken(
+      String userId, Map<String, dynamic> body) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/openid/request_token');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode(body));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return OpenIdCredentials.fromJson(json);
+  }
+
+  /// Get some account_data for the client on a given room. This config is only
+  /// visible to the user that set the account_data.
+  ///
+  /// [userId] The ID of the user to set account_data for. The access token must be
+  /// authorized to make requests for this user ID.
+  ///
+  /// [roomId] The ID of the room to get account_data for.
+  ///
+  /// [type] The event type of the account_data to get. Custom types should be
+  /// namespaced to avoid clashes.
+  Future<Map<String, dynamic>> getAccountDataPerRoom(
+      String userId, String roomId, String type) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/account_data/${Uri.encodeComponent(type)}');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json as Map<String, dynamic>;
+  }
+
+  /// Set some account_data for the client on a given room. This config is only
+  /// visible to the user that set the account_data. The config will be synced to
+  /// clients in the per-room `account_data`.
+  ///
+  /// [userId] The ID of the user to set account_data for. The access token must be
+  /// authorized to make requests for this user ID.
+  ///
+  /// [roomId] The ID of the room to set account_data on.
+  ///
+  /// [type] The event type of the account_data to set. Custom types should be
+  /// namespaced to avoid clashes.
+  ///
+  /// [content] The content of the account_data
+  Future<void> setAccountDataPerRoom(String userId, String roomId, String type,
+      Map<String, dynamic> content) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/account_data/${Uri.encodeComponent(type)}');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode(content));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// List the tags set by a user on a room.
+  ///
+  /// [userId] The id of the user to get tags for. The access token must be
+  /// authorized to make requests for this user ID.
+  ///
+  /// [roomId] The ID of the room to get tags for.
+  ///
+  /// returns `tags`
+  Future<Map<String, Tag>?> getRoomTags(String userId, String roomId) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ((v) => v != null
+        ? (v as Map<String, dynamic>)
+            .map((k, v) => MapEntry(k, Tag.fromJson(v)))
+        : null)(json['tags']);
+  }
+
+  /// Remove a tag from the room.
+  ///
+  /// [userId] The id of the user to remove a tag for. The access token must be
+  /// authorized to make requests for this user ID.
+  ///
+  /// [roomId] The ID of the room to remove a tag from.
+  ///
+  /// [tag] The tag to remove.
+  Future<void> deleteRoomTag(String userId, String roomId, String tag) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags/${Uri.encodeComponent(tag)}');
+    final request = Request('DELETE', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Add a tag to the room.
+  ///
+  /// [userId] The id of the user to add a tag for. The access token must be
+  /// authorized to make requests for this user ID.
+  ///
+  /// [roomId] The ID of the room to add a tag to.
+  ///
+  /// [tag] The tag to add.
+  ///
+  /// [order] A number in a range `[0,1]` describing a relative
+  /// position of the room under the given tag.
+  Future<void> setRoomTag(String userId, String roomId, String tag,
+      {double? order,
+      Map<String, dynamic> additionalProperties = const {}}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags/${Uri.encodeComponent(tag)}');
+    final request = Request('PUT', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      ...additionalProperties,
+      if (order != null) 'order': order,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ignore(json);
+  }
+
+  /// Performs a search for users. The homeserver may
+  /// determine which subset of users are searched, however the homeserver
+  /// MUST at a minimum consider the users the requesting user shares a
+  /// room with and those who reside in public rooms (known to the homeserver).
+  /// The search MUST consider local users to the homeserver, and SHOULD
+  /// query remote users as part of the search.
+  ///
+  /// The search is performed case-insensitively on user IDs and display
+  /// names preferably using a collation determined based upon the
+  /// `Accept-Language` header provided in the request, if present.
+  ///
+  /// [limit] The maximum number of results to return. Defaults to 10.
+  ///
+  /// [searchTerm] The term to search for
+  Future<SearchUserDirectoryResponse> searchUserDirectory(String searchTerm,
+      {int? limit}) async {
+    final requestUri = Uri(path: '_matrix/client/r0/user_directory/search');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (limit != null) 'limit': limit,
+      'search_term': searchTerm,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return SearchUserDirectoryResponse.fromJson(json);
+  }
+
+  /// This API provides credentials for the client to use when initiating
+  /// calls.
+  Future<TurnServerCredentials> getTurnServer() async {
+    final requestUri = Uri(path: '_matrix/client/r0/voip/turnServer');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return TurnServerCredentials.fromJson(json);
+  }
+
+  /// Gets the versions of the specification supported by the server.
+  ///
+  /// Values will take the form `rX.Y.Z`.
+  ///
+  /// Only the latest `Z` value will be reported for each supported `X.Y` value.
+  /// i.e. if the server implements `r0.0.0`, `r0.0.1`, and `r1.2.0`, it will report `r0.0.1` and `r1.2.0`.
+  ///
+  /// The server may additionally advertise experimental features it supports
+  /// through `unstable_features`. These features should be namespaced and
+  /// may optionally include version information within their name if desired.
+  /// Features listed here are not for optionally toggling parts of the Matrix
+  /// specification and should only be used to advertise support for a feature
+  /// which has not yet landed in the spec. For example, a feature currently
+  /// undergoing the proposal process may appear here and eventually be taken
+  /// off this list once the feature lands in the spec and the server deems it
+  /// reasonable to do so. Servers may wish to keep advertising features here
+  /// after they've been released into the spec to give clients a chance to
+  /// upgrade appropriately. Additionally, clients should avoid using unstable
+  /// features in their stable releases.
+  Future<GetVersionsResponse> getVersions() async {
+    final requestUri = Uri(path: '_matrix/client/versions');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetVersionsResponse.fromJson(json);
+  }
+
+  /// This endpoint allows clients to retrieve the configuration of the content
+  /// repository, such as upload limitations.
+  /// Clients SHOULD use this as a guide when using content repository endpoints.
+  /// All values are intentionally left optional. Clients SHOULD follow
+  /// the advice given in the field description when the field is not available.
+  ///
+  /// **NOTE:** Both clients and server administrators should be aware that proxies
+  /// between the client and the server may affect the apparent behaviour of content
+  /// repository APIs, for example, proxies may enforce a lower upload size limit
+  /// than is advertised by the server on this endpoint.
+  Future<ServerConfig> getConfig() async {
+    final requestUri = Uri(path: '_matrix/media/r0/config');
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return ServerConfig.fromJson(json);
+  }
+
+  /// getContent
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authoritory component)
+  ///
+  ///
+  /// [mediaId] The media ID from the `mxc://` URI (the path component)
+  ///
+  ///
+  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if it is deemed
+  /// remote. This is to prevent routing loops where the server contacts itself. Defaults to
+  /// true if not provided.
+  ///
+  Future<FileResponse> getContent(String serverName, String mediaId,
+      {bool? allowRemote}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/media/r0/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}',
+        queryParameters: {
+          if (allowRemote != null) 'allow_remote': allowRemote.toString(),
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    return FileResponse(
+        contentType: response.headers['content-type'], data: responseBody);
+  }
+
+  /// This will download content from the content repository (same as
+  /// the previous endpoint) but replace the target file name with the one
+  /// provided by the caller.
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authoritory component)
+  ///
+  ///
+  /// [mediaId] The media ID from the `mxc://` URI (the path component)
+  ///
+  ///
+  /// [fileName] A filename to give in the `Content-Disposition` header.
+  ///
+  /// [allowRemote] Indicates to the server that it should not attempt to fetch the media if it is deemed
+  /// remote. This is to prevent routing loops where the server contacts itself. Defaults to
+  /// true if not provided.
+  ///
+  Future<FileResponse> getContentOverrideName(
+      String serverName, String mediaId, String fileName,
+      {bool? allowRemote}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/media/r0/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}/${Uri.encodeComponent(fileName)}',
+        queryParameters: {
+          if (allowRemote != null) 'allow_remote': allowRemote.toString(),
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    return FileResponse(
+        contentType: response.headers['content-type'], data: responseBody);
+  }
+
+  /// Get information about a URL for the client. Typically this is called when a
+  /// client sees a URL in a message and wants to render a preview for the user.
+  ///
+  /// **Note:**
+  /// Clients should consider avoiding this endpoint for URLs posted in encrypted
+  /// rooms. Encrypted rooms often contain more sensitive information the users
+  /// do not want to share with the homeserver, and this can mean that the URLs
+  /// being shared should also not be shared with the homeserver.
+  ///
+  /// [url] The URL to get a preview of.
+  ///
+  /// [ts] The preferred point in time to return a preview for. The server may
+  /// return a newer version if it does not have the requested version
+  /// available.
+  Future<GetUrlPreviewResponse> getUrlPreview(Uri url, {int? ts}) async {
+    final requestUri =
+        Uri(path: '_matrix/media/r0/preview_url', queryParameters: {
+      'url': url.toString(),
+      if (ts != null) 'ts': ts.toString(),
+    });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetUrlPreviewResponse.fromJson(json);
+  }
+
+  /// Download a thumbnail of content from the content repository.
+  /// See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails) section for more information.
+  ///
+  /// [serverName] The server name from the `mxc://` URI (the authoritory component)
+  ///
+  ///
+  /// [mediaId] The media ID from the `mxc://` URI (the path component)
+  ///
+  ///
+  /// [width] The *desired* width of the thumbnail. The actual thumbnail may be
+  /// larger than the size specified.
+  ///
+  /// [height] The *desired* height of the thumbnail. The actual thumbnail may be
+  /// larger than the size specified.
+  ///
+  /// [method] The desired resizing method. See the [Thumbnails](https://spec.matrix.org/unstable/client-server-api/#thumbnails)
+  /// section for more information.
+  ///
+  /// [allowRemote] Indicates to the server that it should not attempt to fetch
+  /// the media if it is deemed remote. This is to prevent routing loops
+  /// where the server contacts itself. Defaults to true if not provided.
+  Future<FileResponse> getContentThumbnail(
+      String serverName, String mediaId, int width, int height,
+      {Method? method, bool? allowRemote}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/media/r0/thumbnail/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}',
+        queryParameters: {
+          'width': width.toString(),
+          'height': height.toString(),
+          if (method != null)
+            'method': {Method.crop: 'crop', Method.scale: 'scale'}[method]!,
+          if (allowRemote != null) 'allow_remote': allowRemote.toString(),
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    return FileResponse(
+        contentType: response.headers['content-type'], data: responseBody);
+  }
+
+  /// uploadContent
+  ///
+  /// [contentType] The content type of the file being uploaded
+  ///
+  /// [filename] The name of the file being uploaded
+  ///
+  /// [content] The content to be uploaded.
+  ///
+  /// returns `content_uri`:
+  /// The [MXC URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the uploaded content.
+  Future<String> uploadContent(Uint8List content,
+      {String? contentType, String? filename}) async {
+    final requestUri = Uri(path: '_matrix/media/r0/upload', queryParameters: {
+      if (filename != null) 'filename': filename,
+    });
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    if (contentType != null) request.headers['content-type'] = contentType;
+    request.bodyBytes = content;
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['content_uri'] as String;
+  }
+}

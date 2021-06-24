@@ -1,3 +1,4 @@
+// @dart=2.9
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -753,12 +754,7 @@ class FakeMatrixApi extends MockClient {
             'error': 'Blabla',
           },
       '/media/r0/preview_url?url=https%3A%2F%2Fmatrix.org&ts=10': (var req) => {
-            'og:title': 'Matrix Blog Post',
-            'og:description': 'This is a really cool blog post from matrix.org',
             'og:image': 'mxc://example.com/ascERGshawAWawugaAcauga',
-            'og:image:type': 'image/png',
-            'og:image:height': 48,
-            'og:image:width': 48,
             'matrix:image:size': 102400
           },
       '/media/r0/config': (var req) => {'m.upload.size': 50000000},
@@ -910,7 +906,7 @@ class FakeMatrixApi extends MockClient {
               'com.example.custom.ratelimit': {'max_requests_per_hour': 600}
             }
           },
-      '/client/r0/rooms/1234/context/1234?filter=%7B%7D&limit=10': (var req) =>
+      '/client/r0/rooms/1234/context/1234?limit=10&filter=%7B%7D': (var req) =>
           {
             'end': 't29-57_2_0_2',
             'events_after': [
@@ -1271,7 +1267,7 @@ class FakeMatrixApi extends MockClient {
             'origin_server_ts': 1432735824653,
             'unsigned': {'age': 1234}
           },
-      '/client/r0/rooms/!localpart%3Aserver.abc/messages?from=1234&dir=b&to=1234&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
+      '/client/r0/rooms/!localpart%3Aserver.abc/messages?from=1234&to=1234&dir=b&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponse,
       '/client/r0/rooms/!localpart%3Aserver.abc/messages?from=&dir=b&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponse,
@@ -1989,7 +1985,7 @@ class FakeMatrixApi extends MockClient {
             'access_token': 'SomeT0kenHere',
             'token_type': 'Bearer',
             'matrix_server_name': 'example.com',
-            'expires_in': 3600.0
+            'expires_in': 3600
           },
       '/client/r0/user/@test:fakeServer.notExisting/openid/request_token':
           (var req) => {

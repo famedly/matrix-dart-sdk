@@ -1,3 +1,4 @@
+// @dart=2.9
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -63,24 +64,6 @@ class RoomKeysRoom {
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     data['sessions'] = sessions.map((k, v) => MapEntry(k, v.toJson()));
-    return data;
-  }
-}
-
-class RoomKeys {
-  Map<String, RoomKeysRoom> rooms;
-
-  RoomKeys({this.rooms}) {
-    rooms ??= <String, RoomKeysRoom>{};
-  }
-
-  RoomKeys.fromJson(Map<String, dynamic> json)
-      : rooms = (json['rooms'] as Map)
-            .map((k, v) => MapEntry(k, RoomKeysRoom.fromJson(v)));
-
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    data['rooms'] = rooms.map((k, v) => MapEntry(k, v.toJson()));
     return data;
   }
 }

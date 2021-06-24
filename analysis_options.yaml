@@ -12,3 +12,4 @@ analyzer:
     todo: ignore
   exclude:
     - example/matrix_api_lite_example.dart
+    - lib/src/generated/**.dart

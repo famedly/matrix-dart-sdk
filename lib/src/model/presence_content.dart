@@ -1,3 +1,4 @@
+// @dart=2.9
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -21,7 +22,7 @@
 * SOFTWARE.
 */
 
-enum PresenceType { online, offline, unavailable }
+import '../generated/model.dart';
 
 class PresenceContent {
   PresenceType presence;
