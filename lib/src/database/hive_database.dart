@@ -408,17 +408,21 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         room.setState(Event.fromJson(convertToJson(state), room));
       }
 
-      // Get the "important" room states. All other states will be loaded once
-      // `getUnimportantRoomStates()` is called.
-      for (final type in importantRoomStates) {
-        final state =
-            await _roomStateBox.get(MultiKey(room.id, type, '').toString());
-        if (state == null) continue;
-        room.setState(Event.fromJson(convertToJson(state), room));
-      }
-
       // Add to the list and continue.
       rooms[room.id] = room;
+    }
+
+    // Get the "important" room states. All other states will be loaded once
+    // `getUnimportantRoomStates()` is called.
+    for (final key in _roomStateBox.keys) {
+      final parts = MultiKey.fromString(key).parts;
+      final roomId = parts.first;
+      if (rooms.containsKey(roomId) && importantRoomStates.contains(parts[1])) {
+        final state = await _roomStateBox.get(key);
+        if (state == null) continue;
+        final room = rooms[roomId];
+        room.setState(Event.fromJson(convertToJson(state), room));
+      }
     }
 
     // Get the room account data
