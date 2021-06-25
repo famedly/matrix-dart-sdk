@@ -889,7 +889,6 @@ class Client extends MatrixApi {
         _initLock = false;
         return;
       }
-      _initLock = false;
 
       encryption?.dispose();
       try {
@@ -934,6 +933,7 @@ class Client extends MatrixApi {
         accountData = await database.getAccountData(id);
         presences.clear();
       }
+      _initLock = false;
 
       onLoginStateChanged.add(LoginState.logged);
       Logs().i(
@@ -1032,6 +1032,10 @@ class Client extends MatrixApi {
     _retryDelay = Future.delayed(Duration(seconds: syncErrorTimeoutSec));
     if (!isLogged() || _disposed || _aborted) return null;
     try {
+      if (_initLock) {
+        Logs().d('Running sync while init isn\'t done yet, dropping request');
+        return;
+      }
       var syncError;
       await _checkSyncFilter();
       final syncRequest = sync(
