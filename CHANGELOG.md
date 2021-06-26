@@ -1,3 +1,6 @@
+## [0.1.5] - 26 Jun 2021
+- fix: Don't run syncs while the client is being initialized
+
 ## [0.1.4] - 19 Jun 2021
 - change: Replace onSyncError Stream with onSyncStatus
 
