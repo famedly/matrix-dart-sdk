@@ -63,7 +63,7 @@ class MatrixApi extends Api {
   set accessToken(String? token) => bearerToken = token;
 
   @override
-  Null unexpectedResponse(http.BaseResponse response, Uint8List responseBody) {
+  Never unexpectedResponse(http.BaseResponse response, Uint8List responseBody) {
     if (response.statusCode >= 400 && response.statusCode < 500) {
       throw MatrixException.fromJson(json.decode(utf8.decode(responseBody)));
     }
