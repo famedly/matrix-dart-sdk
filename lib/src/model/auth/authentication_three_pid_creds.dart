@@ -67,14 +67,14 @@ class AuthenticationThreePidCreds extends AuthenticationData {
 class ThreepidCreds {
   String sid;
   String clientSecret;
-  String idServer;
-  String idAccessToken;
+  String? idServer;
+  String? idAccessToken;
 
   ThreepidCreds(
       {required this.sid,
       required this.clientSecret,
-      required this.idServer,
-      required this.idAccessToken});
+      this.idServer,
+      this.idAccessToken});
 
   ThreepidCreds.fromJson(Map<String, dynamic> json)
       : sid = json['sid'],
@@ -86,8 +86,8 @@ class ThreepidCreds {
     final data = <String, dynamic>{};
     data['sid'] = sid;
     data['client_secret'] = clientSecret;
-    data['id_server'] = idServer;
-    data['id_access_token'] = idAccessToken;
+    if (idServer != null) data['id_server'] = idServer;
+    if (idAccessToken != null) data['id_access_token'] = idAccessToken;
     return data;
   }
 }
