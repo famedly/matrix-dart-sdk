@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -24,7 +23,7 @@
 
 class AuthenticationData {
   String type;
-  String?/*?*//*?*/ session;
+  String? /*?*/ /*?*/ session;
 
   AuthenticationData({required this.type, this.session});
 
@@ -34,7 +33,7 @@ class AuthenticationData {
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
-    if (type != null) data['type'] = type;
+    data['type'] = type;
     if (session != null) data['session'] = session;
     return data;
   }

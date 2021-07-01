@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -22,8 +21,8 @@
 * SOFTWARE.
 */
 
-import '../basic_event.dart';
 import '../../utils/try_get_map_extension.dart';
+import '../basic_event.dart';
 
 extension TombstoneContentBasicEventExtension on BasicEvent {
   TombstoneContent get parsedTombstoneContent =>
@@ -35,8 +34,8 @@ class TombstoneContent {
   String replacementRoom;
 
   TombstoneContent.fromJson(Map<String, dynamic> json)
-      : body = json.tryGet<String>('body', ''),
-        replacementRoom = json.tryGet<String>('replacement_room', '');
+      : body = json.tryGet('body') ?? '',
+        replacementRoom = json.tryGet('replacement_room') ?? '';
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

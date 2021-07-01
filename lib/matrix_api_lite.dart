@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -24,17 +23,32 @@
 
 library matrix_api_lite;
 
-export 'src/matrix_api.dart';
-export 'src/values.dart';
 export 'src/generated/model.dart';
-export 'src/utils/logs.dart';
-export 'src/utils/map_copy_extension.dart';
-export 'src/utils/try_get_map_extension.dart';
+export 'src/matrix_api.dart';
 export 'src/model/algorithm_types.dart';
+export 'src/model/auth/authentication_data.dart';
+export 'src/model/auth/authentication_identifier.dart';
+export 'src/model/auth/authentication_password.dart';
+export 'src/model/auth/authentication_phone_identifier.dart';
+export 'src/model/auth/authentication_recaptcha.dart';
+export 'src/model/auth/authentication_third_party_identifier.dart';
+export 'src/model/auth/authentication_three_pid_creds.dart';
+export 'src/model/auth/authentication_token.dart';
+export 'src/model/auth/authentication_types.dart';
+export 'src/model/auth/authentication_user_identifier.dart';
 export 'src/model/basic_event.dart';
 export 'src/model/basic_event_with_sender.dart';
 export 'src/model/basic_room_event.dart';
 export 'src/model/event_types.dart';
+export 'src/model/events/forwarded_room_key_content.dart';
+export 'src/model/events/olm_plaintext_payload.dart';
+export 'src/model/events/room_encrypted_content.dart';
+export 'src/model/events/room_encryption_content.dart';
+export 'src/model/events/room_key_content.dart';
+export 'src/model/events/room_key_request_content.dart';
+export 'src/model/events/secret_storage_default_key_content.dart';
+export 'src/model/events/secret_storage_key_content.dart';
+export 'src/model/events/tombstone_content.dart';
 export 'src/model/events_sync_update.dart';
 export 'src/model/matrix_connection_exception.dart';
 export 'src/model/matrix_event.dart';
@@ -53,22 +67,7 @@ export 'src/model/sync_update.dart';
 export 'src/model/third_party_location.dart';
 export 'src/model/third_party_user.dart';
 export 'src/model/upload_key_signatures_response.dart';
-export 'src/model/auth/authentication_data.dart';
-export 'src/model/auth/authentication_identifier.dart';
-export 'src/model/auth/authentication_password.dart';
-export 'src/model/auth/authentication_phone_identifier.dart';
-export 'src/model/auth/authentication_recaptcha.dart';
-export 'src/model/auth/authentication_third_party_identifier.dart';
-export 'src/model/auth/authentication_three_pid_creds.dart';
-export 'src/model/auth/authentication_token.dart';
-export 'src/model/auth/authentication_types.dart';
-export 'src/model/auth/authentication_user_identifier.dart';
-export 'src/model/events/forwarded_room_key_content.dart';
-export 'src/model/events/olm_plaintext_payload.dart';
-export 'src/model/events/room_encrypted_content.dart';
-export 'src/model/events/room_encryption_content.dart';
-export 'src/model/events/room_key_content.dart';
-export 'src/model/events/room_key_request_content.dart';
-export 'src/model/events/secret_storage_default_key_content.dart';
-export 'src/model/events/secret_storage_key_content.dart';
-export 'src/model/events/tombstone_content.dart';
+export 'src/utils/logs.dart';
+export 'src/utils/map_copy_extension.dart';
+export 'src/utils/try_get_map_extension.dart';
+export 'src/values.dart';

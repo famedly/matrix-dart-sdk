@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -53,9 +52,7 @@ class RoomKeysSingleKey {
 class RoomKeysRoom {
   Map<String, RoomKeysSingleKey> sessions;
 
-  RoomKeysRoom({required this.sessions}) {
-    sessions ??= <String, RoomKeysSingleKey>{};
-  }
+  RoomKeysRoom({required this.sessions});
 
   RoomKeysRoom.fromJson(Map<String, dynamic> json)
       : sessions = (json['sessions'] as Map)

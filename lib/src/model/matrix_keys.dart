@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -24,15 +23,16 @@
 
 import '../utils/map_copy_extension.dart';
 
-class MatrixSignableKey {
+abstract class MatrixSignableKey {
   String userId;
-  String? identifier;
+
+  String? get identifier;
+
   Map<String, String> keys;
   Map<String, Map<String, String>>? signatures;
   Map<String, dynamic>? unsigned;
 
-  MatrixSignableKey(this.userId, this.identifier, this.keys, this.signatures,
-      {this.unsigned});
+  MatrixSignableKey(this.userId, this.keys, this.signatures, {this.unsigned});
 
   // This object is used for signing so we need the raw json too
   Map<String, dynamic>? _json;
@@ -65,6 +65,7 @@ class MatrixSignableKey {
 
 class MatrixCrossSigningKey extends MatrixSignableKey {
   List<String> usage;
+
   String? get publicKey => identifier;
 
   MatrixCrossSigningKey(
@@ -73,14 +74,15 @@ class MatrixCrossSigningKey extends MatrixSignableKey {
     Map<String, String> keys,
     Map<String, Map<String, String>> signatures, {
     Map<String, dynamic>? unsigned,
-  }) : super(userId, keys?.values?.first, keys, signatures, unsigned: unsigned);
+  }) : super(userId, keys, signatures, unsigned: unsigned);
+
+  @override
+  String? get identifier => keys.values.first;
 
   @override
   MatrixCrossSigningKey.fromJson(Map<String, dynamic> json)
-      : super.fromJson(json) {
-    usage = List<String>.from(json['usage']);
-    identifier = keys?.values?.first;
-  }
+      : usage = List<String>.from(json['usage']),
+        super.fromJson(json);
 
   @override
   Map<String, dynamic> toJson() {
@@ -91,25 +93,29 @@ class MatrixCrossSigningKey extends MatrixSignableKey {
 }
 
 class MatrixDeviceKeys extends MatrixSignableKey {
-  String get deviceId => identifier!;
+  String deviceId;
   List<String> algorithms;
+
   String? get deviceDisplayName =>
       unsigned != null ? unsigned!['device_display_name'] : null;
 
   MatrixDeviceKeys(
     String userId,
-    String deviceId,
+    this.deviceId,
     this.algorithms,
     Map<String, String> keys,
     Map<String, Map<String, String>> signatures, {
     Map<String, dynamic>? unsigned,
-  }) : super(userId, deviceId, keys, signatures, unsigned: unsigned);
+  }) : super(userId, keys, signatures, unsigned: unsigned);
 
   @override
-  MatrixDeviceKeys.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
-    identifier = json['device_id'];
-    algorithms = json['algorithms'].cast<String>();
-  }
+  String? get identifier => deviceId;
+
+  @override
+  MatrixDeviceKeys.fromJson(Map<String, dynamic> json)
+      : algorithms = json['algorithms'].cast<String>(),
+        deviceId = json['device_id'],
+        super.fromJson(json);
 
   @override
   Map<String, dynamic> toJson() {

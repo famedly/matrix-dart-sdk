@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -22,8 +21,8 @@
 * SOFTWARE.
 */
 
-import '../basic_event.dart';
 import '../../utils/try_get_map_extension.dart';
+import '../basic_event.dart';
 
 extension RoomKeyContentBasicEventExtension on BasicEvent {
   RoomKeyContent get parsedRoomKeyContent => RoomKeyContent.fromJson(content);
@@ -35,13 +34,17 @@ class RoomKeyContent {
   String sessionId;
   String sessionKey;
 
-  RoomKeyContent();
+  RoomKeyContent(
+      {required this.algorithm,
+      required this.roomId,
+      required this.sessionId,
+      required this.sessionKey});
 
   RoomKeyContent.fromJson(Map<String, dynamic> json)
-      : algorithm = json.tryGet<String>('algorithm', ''),
-        roomId = json.tryGet<String>('room_id', ''),
-        sessionId = json.tryGet<String>('session_id', ''),
-        sessionKey = json.tryGet<String>('session_key', '');
+      : algorithm = json.tryGet('algorithm') ?? '',
+        roomId = json.tryGet('room_id') ?? '',
+        sessionId = json.tryGet('session_id') ?? '',
+        sessionKey = json.tryGet('session_key') ?? '';
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

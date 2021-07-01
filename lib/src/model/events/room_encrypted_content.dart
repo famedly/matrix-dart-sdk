@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -24,8 +23,8 @@
 
 import 'package:matrix_api_lite/src/utils/logs.dart';
 
-import '../basic_event.dart';
 import '../../utils/try_get_map_extension.dart';
+import '../basic_event.dart';
 
 extension RoomEncryptedContentBasicEventExtension on BasicEvent {
   RoomEncryptedContent get parsedRoomEncryptedContent =>
@@ -41,18 +40,14 @@ class RoomEncryptedContent {
   Map<String, CiphertextInfo>? ciphertextOlm;
 
   RoomEncryptedContent.fromJson(Map<String, dynamic> json)
-      : algorithm = json.tryGet<String>('algorithm', ''),
-        senderKey = json.tryGet<String>('sender_key', ''),
-        deviceId = json.tryGet<String>('device_id'),
-        sessionId = json.tryGet<String>('session_id'),
-        ciphertextMegolm = json['ciphertext'] is String
-            ? json.tryGet<String>('ciphertext')
-            : null,
-        ciphertextOlm = json['ciphertext'] is Map<String, dynamic>
-            ? json
-                .tryGet<Map<String, dynamic>>('ciphertext')
-                ?.map((k, v) => MapEntry(k, CiphertextInfo.fromJson(v)))
-            : null;
+      : algorithm = json.tryGet('algorithm') ?? '',
+        senderKey = json.tryGet('sender_key') ?? '',
+        deviceId = json.tryGet('device_id'),
+        sessionId = json.tryGet('session_id'),
+        ciphertextMegolm = json.tryGet('ciphertext'),
+        ciphertextOlm = json
+            .tryGet<Map<String, dynamic>>('ciphertext')
+            ?.map((k, v) => MapEntry(k, CiphertextInfo.fromJson(v)));
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -68,7 +63,8 @@ class RoomEncryptedContent {
       data['ciphertext'] = ciphertextMegolm;
     }
     if (ciphertextOlm != null) {
-      data['ciphertext'] = ciphertextOlm!.map((k, v) => MapEntry(k, v.toJson()));
+      data['ciphertext'] =
+          ciphertextOlm!.map((k, v) => MapEntry(k, v.toJson()));
       if (ciphertextMegolm != null) {
         Logs().wtf(
             'ciphertextOlm and ciphertextMegolm are both set, which should never happen!');
@@ -83,17 +79,13 @@ class CiphertextInfo {
   int type;
 
   CiphertextInfo.fromJson(Map<String, dynamic> json)
-      : body = json.tryGet<String>('body'),
-        type = json.tryGet<int>('type');
+      : body = json['body'],
+        type = json['type'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
-    if (body != null) {
-      data['body'] = body;
-    }
-    if (type != null) {
-      data['type'] = type;
-    }
+    data['body'] = body;
+    data['type'] = type;
     return data;
   }
 }

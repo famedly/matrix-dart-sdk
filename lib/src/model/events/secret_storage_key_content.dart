@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -22,8 +21,8 @@
 * SOFTWARE.
 */
 
-import '../basic_event.dart';
 import '../../utils/try_get_map_extension.dart';
+import '../basic_event.dart';
 
 extension SecretStorageKeyContentBasicEventExtension on BasicEvent {
   SecretStorageKeyContent get parsedSecretStorageKeyContent =>
@@ -42,9 +41,9 @@ class SecretStorageKeyContent {
       : passphrase = json['passphrase'] is Map<String, dynamic>
             ? PassphraseInfo.fromJson(json['passphrase'])
             : null,
-        iv = json.tryGet<String?>('iv'),
-        mac = json.tryGet<String?>('mac'),
-        algorithm = json.tryGet<String?>('algorithm');
+        iv = json.tryGet('iv'),
+        mac = json.tryGet('mac'),
+        algorithm = json.tryGet('algorithm');
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -57,24 +56,30 @@ class SecretStorageKeyContent {
 }
 
 class PassphraseInfo {
-  String algorithm;
-  String salt;
-  int iterations;
+  //TODO: algorithm, salt, iterations are required by spec,
+  //TODO: we should require it here and make sure to catch it everywhere
+  String? algorithm;
+  String? salt;
+  int? iterations;
   int? bits;
 
-  PassphraseInfo();
+  PassphraseInfo(
+      {required this.algorithm,
+      required this.salt,
+      required this.iterations,
+      this.bits});
 
   PassphraseInfo.fromJson(Map<String, dynamic> json)
-      : algorithm = json.tryGet<String>('algorithm'),
-        salt = json.tryGet<String>('salt'),
-        iterations = json.tryGet<int>('iterations'),
+      : algorithm = json.tryGet('algorithm'),
+        salt = json.tryGet('salt'),
+        iterations = json.tryGet('iterations'),
         bits = json.tryGet<int>('bits');
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
-    if (algorithm != null) data['algorithm'] = algorithm;
-    if (salt != null) data['salt'] = salt;
-    if (iterations != null) data['iterations'] = iterations;
+    data['algorithm'] = algorithm;
+    data['salt'] = salt;
+    data['iterations'] = iterations;
     if (bits != null) data['bits'] = bits;
     return data;
   }

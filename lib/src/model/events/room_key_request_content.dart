@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -22,8 +21,8 @@
 * SOFTWARE.
 */
 
-import '../basic_event.dart';
 import '../../utils/try_get_map_extension.dart';
+import '../basic_event.dart';
 
 extension RoomKeyRequestContentBasicEventExtension on BasicEvent {
   RoomKeyRequestContent get parsedRoomKeyRequestContent =>
@@ -37,11 +36,11 @@ class RoomKeyRequestContent {
   String requestId;
 
   RoomKeyRequestContent.fromJson(Map<String, dynamic> json)
-      : body = RequestedKeyInfo.fromJson(
+      : body = ((x) => x != null ? RequestedKeyInfo.fromJson(x) : null)(
             json.tryGet<Map<String, dynamic>>('body')),
-        action = json.tryGet<String>('action', ''),
-        requestingDeviceId = json.tryGet<String>('requesting_device_id', ''),
-        requestId = json.tryGet<String>('request_id', '');
+        action = json.tryGet<String>('action') ?? '',
+        requestingDeviceId = json.tryGet<String>('requesting_device_id') ?? '',
+        requestId = json.tryGet<String>('request_id') ?? '';
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -59,17 +58,17 @@ class RequestedKeyInfo {
   String sessionId;
   String senderKey;
 
-  RequestedKeyInfo();
+  RequestedKeyInfo(
+      {required this.algorithm,
+      required this.roomId,
+      required this.sessionId,
+      required this.senderKey});
 
-  factory RequestedKeyInfo.fromJson(Map<String, dynamic> json) {
-    if (json == null) return null;
-    final requestKeyInfo = RequestedKeyInfo();
-    requestKeyInfo.algorithm = json.tryGet<String>('algorithm', '');
-    requestKeyInfo.roomId = json.tryGet<String>('room_id', '');
-    requestKeyInfo.sessionId = json.tryGet<String>('session_id', '');
-    requestKeyInfo.senderKey = json.tryGet<String>('sender_key', '');
-    return requestKeyInfo;
-  }
+  RequestedKeyInfo.fromJson(Map<String, dynamic> json)
+      : algorithm = json.tryGet('algorithm') ?? '',
+        roomId = json.tryGet('room_id') ?? '',
+        sessionId = json.tryGet('session_id') ?? '',
+        senderKey = json.tryGet('sender_key') ?? '';
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -22,18 +21,33 @@
 * SOFTWARE.
 */
 
-import 'stripped_state_event.dart';
 import '../utils/map_copy_extension.dart';
+import 'stripped_state_event.dart';
 
 class MatrixEvent extends StrippedStateEvent {
   String eventId;
   String? roomId;
-  late DateTime originServerTs;
+  DateTime originServerTs;
   Map<String, dynamic>? unsigned;
   Map<String, dynamic>? prevContent;
   String? redacts;
 
-  MatrixEvent();
+  MatrixEvent({
+    required String type,
+    required Map<String, dynamic> content,
+    required String senderId,
+    String? stateKey,
+    required this.eventId,
+    this.roomId,
+    required this.originServerTs,
+    this.unsigned,
+    this.prevContent,
+    this.redacts,
+  }) : super(
+            type: type,
+            content: content,
+            senderId: senderId,
+            stateKey: stateKey);
 
   MatrixEvent.fromJson(Map<String, dynamic> json)
       : eventId = json['event_id'],

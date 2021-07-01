@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -43,12 +42,12 @@ class OlmPlaintextPayload {
 
   factory OlmPlaintextPayload.fromJson(Map<String, dynamic> json) =>
       OlmPlaintextPayload(
-        sender: json.tryGet<String>('sender'),
-        type: json.tryGet<String>('type'),
-        content: json.tryGetMap<String, dynamic>('content'),
-        recipient: json.tryGet<String>('recipient'),
-        recipientKeys: json.tryGetMap<String, String>('recipient_keys'),
-        keys: json.tryGetMap<String, String>('keys'),
+        sender: json.tryGet('sender'),
+        type: json.tryGet('type'),
+        content: json.tryGetMap('content'),
+        recipient: json.tryGet('recipient'),
+        recipientKeys: json.tryGetMap('recipient_keys'),
+        keys: json.tryGetMap('keys'),
       );
 
   Map<String, dynamic> toJson() {

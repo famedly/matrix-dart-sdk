@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -25,6 +24,7 @@
 class MatrixConnectionException implements Exception {
   final dynamic original;
   final StackTrace stackTrace;
+
   MatrixConnectionException(this.original, this.stackTrace);
 
   @override

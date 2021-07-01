@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -22,10 +21,10 @@
 * SOFTWARE.
 */
 
-import 'authentication_types.dart';
-import 'authentication_user_identifier.dart';
 import 'authentication_phone_identifier.dart';
 import 'authentication_third_party_identifier.dart';
+import 'authentication_types.dart';
+import 'authentication_user_identifier.dart';
 
 class AuthenticationIdentifier {
   String type;

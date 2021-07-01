@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -27,7 +26,11 @@ import 'basic_event.dart';
 class BasicEventWithSender extends BasicEvent {
   String senderId;
 
-  BasicEventWithSender();
+  BasicEventWithSender(
+      {required String type,
+      required Map<String, dynamic> content,
+      required this.senderId})
+      : super(type: type, content: content);
 
   BasicEventWithSender.fromJson(Map<String, dynamic> json)
       : senderId = json['sender'],

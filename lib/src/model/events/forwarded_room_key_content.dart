@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -22,8 +21,8 @@
 * SOFTWARE.
 */
 
-import '../basic_event.dart';
 import '../../utils/try_get_map_extension.dart';
+import '../basic_event.dart';
 import 'room_key_content.dart';
 
 extension ForwardedRoomKeyContentBasicEventExtension on BasicEvent {
@@ -35,12 +34,13 @@ class ForwardedRoomKeyContent extends RoomKeyContent {
   String senderKey;
   String senderClaimedEd25519Key;
   List<String> forwardingCurve25519KeyChain;
+
   ForwardedRoomKeyContent.fromJson(Map<String, dynamic> json)
-      : senderKey = json.tryGet<String>('sender_key', ''),
+      : senderKey = json.tryGet('sender_key') ?? '',
         senderClaimedEd25519Key =
-            json.tryGet<String>('sender_claimed_ed25519_key', ''),
+            json.tryGet('sender_claimed_ed25519_key') ?? '',
         forwardingCurve25519KeyChain =
-            json.tryGetList<String>('forwarding_curve25519_key_chain', []),
+            json.tryGetList('forwarding_curve25519_key_chain') ?? [],
         super.fromJson(json);
 
   @override

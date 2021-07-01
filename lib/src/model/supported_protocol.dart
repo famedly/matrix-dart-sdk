@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -45,9 +44,7 @@ class SupportedProtocol {
     data['location_fields'] = locationFields;
     data['icon'] = icon;
     data['field_types'] = fieldTypes.map((k, v) => MapEntry(k, v.toJson()));
-
     data['instances'] = instances.map((v) => v.toJson()).toList();
-
     return data;
   }
 }
@@ -56,10 +53,9 @@ class ProtocolFieldType {
   String regexp;
   String placeholder;
 
-  ProtocolFieldType.fromJson(Map<String, dynamic> json) {
-    regexp = json['regexp'];
-    placeholder = json['placeholder'];
-  }
+  ProtocolFieldType.fromJson(Map<String, dynamic> json)
+      : regexp = json['regexp'],
+        placeholder = json['placeholder'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -75,12 +71,11 @@ class ProtocolInstance {
   String? icon;
   dynamic fields;
 
-  ProtocolInstance.fromJson(Map<String, dynamic> json) {
-    networkId = json['network_id'];
-    desc = json['desc'];
-    icon = json['icon'];
-    fields = json['fields'];
-  }
+  ProtocolInstance.fromJson(Map<String, dynamic> json)
+      : networkId = json['network_id'],
+        desc = json['desc'],
+        icon = json['icon'],
+        fields = json['fields'];
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

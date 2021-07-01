@@ -1,4 +1,3 @@
-
 /* MIT License
 *
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -40,7 +39,7 @@ class SyncUpdate {
   Map<String, int>? deviceOneTimeKeysCount;
   List<String>? deviceUnusedFallbackKeyTypes;
 
-  SyncUpdate();
+  SyncUpdate({required this.nextBatch});
 
   SyncUpdate.fromJson(Map<String, dynamic> json)
       : nextBatch = json['next_batch'],
@@ -136,6 +135,7 @@ class RoomsUpdate {
             .map((k, v) => MapEntry(k, LeftRoomUpdate.fromJson(v)))
         : null;
   }
+
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     if (join != null) {
@@ -224,6 +224,7 @@ class JoinedRoomUpdate extends SyncRoomUpdate {
 
 class InvitedRoomUpdate extends SyncRoomUpdate {
   List<StrippedStateEvent>? inviteState;
+
   InvitedRoomUpdate.fromJson(Map<String, dynamic> json) {
     inviteState =
         (json['invite_state'] != null && json['invite_state']['events'] != null)
@@ -232,6 +233,7 @@ class InvitedRoomUpdate extends SyncRoomUpdate {
                 .toList()
             : null;
   }
+
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     if (inviteState != null) {
@@ -266,6 +268,7 @@ class LeftRoomUpdate extends SyncRoomUpdate {
                 .toList()
             : null;
   }
+
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     if (state != null) {
@@ -318,10 +321,12 @@ class TimelineUpdate {
 class UnreadNotificationCounts {
   int? highlightCount;
   int? notificationCount;
+
   UnreadNotificationCounts.fromJson(Map<String, dynamic> json) {
     highlightCount = json['highlight_count'];
     notificationCount = json['notification_count'];
   }
+
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     if (highlightCount != null) {
@@ -337,10 +342,12 @@ class UnreadNotificationCounts {
 class DeviceListsUpdate {
   List<String>? changed;
   List<String>? left;
+
   DeviceListsUpdate.fromJson(Map<String, dynamic> json) {
     changed = List<String>.from(json['changed'] ?? []);
     left = List<String>.from(json['left'] ?? []);
   }
+
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     if (changed != null) {

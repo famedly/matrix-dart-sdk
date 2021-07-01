@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -22,9 +21,10 @@
 * SOFTWARE.
 */
 
+import 'dart:convert';
+
 import 'package:matrix_api_lite/matrix_api_lite.dart';
 import 'package:test/test.dart';
-import 'dart:convert';
 
 void main() {
   group('Event Content tests', () {

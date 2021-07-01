@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -62,7 +61,9 @@ class MatrixException implements Exception {
   /// The frozen request which triggered this Error
   http.Response? response;
 
-  MatrixException(Response this.response) : raw = json.decode(response.body);
+  MatrixException(http.Response this.response)
+      : raw = json.decode(response.body);
+
   MatrixException.fromJson(Map<String, dynamic> content) : raw = content;
 
   @override
@@ -87,7 +88,7 @@ class MatrixException implements Exception {
   /// For each endpoint, a server offers one or more 'flows' that the client can use
   /// to authenticate itself. Each flow comprises a series of stages. If this request
   /// doesn't need additional authentication, then this is null.
-  List<AuthenticationFlow>?/*?*/ get authenticationFlows {
+  List<AuthenticationFlow>? get authenticationFlows {
     if (!raw.containsKey('flows') || !(raw['flows'] is List)) return null;
     return (raw['flows'] as List)
         .map((flow) => flow['stages'])
@@ -110,5 +111,6 @@ class MatrixException implements Exception {
 /// to authenticate itself. Each flow comprises a series of stages
 class AuthenticationFlow {
   final List<String> stages;
+
   const AuthenticationFlow(this.stages);
 }

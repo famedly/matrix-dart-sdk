@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -31,7 +30,8 @@ import 'authentication_data.dart';
 class AuthenticationThreePidCreds extends AuthenticationData {
   late List<ThreepidCreds> threepidCreds;
 
-  AuthenticationThreePidCreds({String? session, required String type, required this.threepidCreds})
+  AuthenticationThreePidCreds(
+      {String? session, required String type, required this.threepidCreds})
       : super(
           type: type,
           session: session,
@@ -65,13 +65,16 @@ class AuthenticationThreePidCreds extends AuthenticationData {
 }
 
 class ThreepidCreds {
-  String/*!*/ sid;
+  String /*!*/ sid;
   String clientSecret;
   String idServer;
   String idAccessToken;
 
   ThreepidCreds(
-      {required this.sid, required this.clientSecret, required this.idServer, required this.idAccessToken});
+      {required this.sid,
+      required this.clientSecret,
+      required this.idServer,
+      required this.idAccessToken});
 
   ThreepidCreds.fromJson(Map<String, dynamic> json)
       : sid = json['sid'],

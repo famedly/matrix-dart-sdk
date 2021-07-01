@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -27,7 +26,13 @@ import 'basic_event_with_sender.dart';
 class StrippedStateEvent extends BasicEventWithSender {
   String? stateKey;
 
-  StrippedStateEvent();
+  StrippedStateEvent(
+      {required String type,
+      required Map<String, dynamic> content,
+      required String senderId,
+      this.stateKey})
+      : super(type: type, content: content, senderId: senderId);
+
   StrippedStateEvent.fromJson(Map<String, dynamic> json)
       : stateKey = json['state_key'],
         super.fromJson(json);

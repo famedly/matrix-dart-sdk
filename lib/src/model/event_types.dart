@@ -1,4 +1,3 @@
-
 /* MIT License
 *
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -68,6 +67,7 @@ abstract class EventTypes {
   static const String CrossSigningMasterKey = 'm.cross_signing.master';
   static const String MegolmBackup = 'm.megolm_backup.v1';
   static const String SecretStorageDefaultKey = 'm.secret_storage.default_key';
+
   static String secretStorageKey(String keyId) => 'm.secret_storage.key.$keyId';
 
   // Spaces

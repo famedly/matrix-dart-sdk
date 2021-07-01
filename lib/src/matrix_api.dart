@@ -1,4 +1,3 @@
-
 /* MIT License
 *
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -29,6 +28,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../matrix_api_lite.dart';
+import 'generated/api.dart';
 import 'model/auth/authentication_data.dart';
 import 'model/events_sync_update.dart';
 import 'model/matrix_connection_exception.dart';
@@ -40,8 +40,6 @@ import 'model/supported_protocol.dart';
 import 'model/third_party_location.dart';
 import 'model/third_party_user.dart';
 import 'model/upload_key_signatures_response.dart';
-
-import 'generated/api.dart';
 
 enum RequestType { GET, POST, PUT, DELETE }
 
@@ -55,11 +53,13 @@ String describeEnum(Object enumEntry) {
 class MatrixApi extends Api {
   /// The homeserver this client is communicating with.
   Uri? get homeserver => baseUri;
+
   set homeserver(Uri? uri) => baseUri = uri;
 
   /// This is the access token for the matrix client. When it is undefined, then
   /// the user needs to sign in first.
   String? get accessToken => bearerToken;
+
   set accessToken(String? token) => bearerToken = token;
 
   @override

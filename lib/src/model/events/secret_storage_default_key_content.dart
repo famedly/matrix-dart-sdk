@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -22,8 +21,8 @@
 * SOFTWARE.
 */
 
-import '../basic_event.dart';
 import '../../utils/try_get_map_extension.dart';
+import '../basic_event.dart';
 
 extension SecretStorageDefaultKeyContentBasicEventExtension on BasicEvent {
   SecretStorageDefaultKeyContent get parsedSecretStorageDefaultKeyContent =>
@@ -31,9 +30,10 @@ extension SecretStorageDefaultKeyContentBasicEventExtension on BasicEvent {
 }
 
 class SecretStorageDefaultKeyContent {
-  String key;
+  //TODO: Required by spec, we should require it here and make sure to catch it everywhere
+  String? key;
 
-  SecretStorageDefaultKeyContent();
+  SecretStorageDefaultKeyContent({required this.key});
 
   SecretStorageDefaultKeyContent.fromJson(Map<String, dynamic> json)
       : key = json.tryGet<String>('key');

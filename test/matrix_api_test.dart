@@ -1,18 +1,17 @@
-
 /* MIT License
-* 
+*
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
 * in the Software without restriction, including without limitation the rights
 * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 * copies of the Software, and to permit persons to whom the Software is
 * furnished to do so, subject to the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included in all
 * copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -23,6 +22,7 @@
 */
 
 import 'dart:typed_data';
+
 import 'package:matrix_api_lite/fake_matrix_api.dart';
 import 'package:matrix_api_lite/matrix_api_lite.dart';
 import 'package:test/test.dart';
@@ -60,8 +60,8 @@ void main() {
         'session': 'xxxxxxyz',
         'completed': ['example.type.foo']
       });
-      expect(
-          exception.authenticationFlows!.first.stages.first, 'example.type.foo');
+      expect(exception.authenticationFlows!.first.stages.first,
+          'example.type.foo');
       expect(exception.authenticationParams!['example.type.baz'],
           {'example_key': 'foobar'});
       expect(exception.session, 'xxxxxxyz');
@@ -111,10 +111,8 @@ void main() {
         expect((exception as MatrixException).errcode, 'M_FORBIDDEN');
         expect(exception.error, MatrixError.M_FORBIDDEN);
         expect(exception.errorMessage, 'Blabla');
-        expect(exception.requireAdditionalAuthentication,
-            false);
-        expect(
-            exception.toString(), 'M_FORBIDDEN: Blabla');
+        expect(exception.requireAdditionalAuthentication, false);
+        expect(exception.toString(), 'M_FORBIDDEN: Blabla');
         error = true;
       }
       expect(error, true);
@@ -146,10 +144,10 @@ void main() {
     });
     test('getLoginTypes', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
-      final loginTypes = await (matrixApi.getLoginFlows() as FutureOr<List<LoginFlow>>);
-      expect(loginTypes.first.type, 'm.login.password');
+      final loginTypes = await matrixApi.getLoginFlows();
+      expect(loginTypes?.first.type, 'm.login.password');
       expect(FakeMatrixApi.api['GET']!['/client/r0/login']({}),
-          {'flows': loginTypes.map((x) => x.toJson()).toList()});
+          {'flows': loginTypes?.map((x) => x.toJson()).toList()});
       matrixApi.homeserver = null;
     });
     test('login', () async {
@@ -194,8 +192,8 @@ void main() {
         idAccessToken: '1234',
       );
       expect(
-          FakeMatrixApi.api['POST']!
-              ['/client/r0/register/email/requestToken']({}),
+          FakeMatrixApi
+              .api['POST']!['/client/r0/register/email/requestToken']({}),
           response.toJson());
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -212,8 +210,8 @@ void main() {
         idAccessToken: '1234',
       );
       expect(
-          FakeMatrixApi.api['POST']!
-              ['/client/r0/register/email/requestToken']({}),
+          FakeMatrixApi
+              .api['POST']!['/client/r0/register/email/requestToken']({}),
           response.toJson());
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -281,9 +279,9 @@ void main() {
     test('getThirdPartyIdentifiers', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
-      final response = await (matrixApi.getAccount3PIDs() as FutureOr<List<ThirdPartyIdentifier>>);
+      final response = await matrixApi.getAccount3PIDs();
       expect(FakeMatrixApi.api['GET']!['/client/r0/account/3pid']({}),
-          {'threepids': response.map((t) => t.toJson()).toList()});
+          {'threepids': response?.map((t) => t.toJson()).toList()});
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
     test('addThirdPartyIdentifier', () async {
@@ -537,13 +535,13 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final states = await (matrixApi.getMembersByRoom(
+      final states = await matrixApi.getMembersByRoom(
         '!localpart:server.abc',
         at: '1234',
         membership: Membership.join,
         notMembership: Membership.leave,
-      ) as FutureOr<List<MatrixEvent>>);
-      expect(states.length, 1);
+      );
+      expect(states?.length, 1);
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -551,11 +549,11 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final states = await (matrixApi.getJoinedMembersByRoom(
+      final states = await matrixApi.getJoinedMembersByRoom(
         '!localpart:server.abc',
-      ) as FutureOr<Map<String, RoomMember>>);
-      expect(states.length, 1);
-      expect(states['@bar:example.com']!.toJson(), {
+      );
+      expect(states?.length, 1);
+      expect(states?['@bar:example.com']?.toJson(), {
         'display_name': 'Bar',
         'avatar_url': 'mxc://riot.ovh/printErCATzZijQsSDWorRaK'
       });
@@ -667,8 +665,8 @@ void main() {
       );
 
       expect(
-          FakeMatrixApi.api['GET']!
-              ['/client/r0/directory/room/%23testalias%3Aexample.com']({}),
+          FakeMatrixApi.api['GET']![
+              '/client/r0/directory/room/%23testalias%3Aexample.com']({}),
           roomAliasInformation.toJson());
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -851,8 +849,8 @@ void main() {
       );
 
       expect(
-          FakeMatrixApi.api['POST']!
-              ['/client/r0/publicRooms?server=example.com']({}),
+          FakeMatrixApi
+              .api['POST']!['/client/r0/publicRooms?server=example.com']({}),
           response.toJson());
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -913,8 +911,8 @@ void main() {
 
       final response = await matrixApi.getUserProfile('@alice:example.com');
       expect(
-          FakeMatrixApi.api['GET']!
-              ['/client/r0/profile/%40alice%3Aexample.com']({}),
+          FakeMatrixApi
+              .api['GET']!['/client/r0/profile/%40alice%3Aexample.com']({}),
           response.toJson());
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -1017,8 +1015,8 @@ void main() {
         ts: 10,
       );
       expect(
-          FakeMatrixApi.api['GET']!
-              ['/media/r0/preview_url?url=https%3A%2F%2Fmatrix.org&ts=10']({}),
+          FakeMatrixApi.api['GET']![
+              '/media/r0/preview_url?url=https%3A%2F%2Fmatrix.org&ts=10']({}),
           openGraphData.toJson());
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -1048,9 +1046,9 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final devices = await (matrixApi.getDevices() as FutureOr<List<Device>>);
+      final devices = await matrixApi.getDevices();
       expect(FakeMatrixApi.api['GET']!['/client/r0/devices']({})['devices'],
-          devices.map((i) => i.toJson()).toList());
+          devices?.map((i) => i.toJson()).toList());
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -1117,12 +1115,12 @@ void main() {
         token: '1234',
       );
       expect(
-          response
-              .deviceKeys!['@alice:example.com']!['JLAFKJWSCS']!.deviceDisplayName,
+          response.deviceKeys!['@alice:example.com']!['JLAFKJWSCS']!
+              .deviceDisplayName,
           'Alices mobile phone');
       expect(
-          FakeMatrixApi.api['POST']!
-              ['/client/r0/keys/query']({'device_keys': {}}),
+          FakeMatrixApi
+              .api['POST']!['/client/r0/keys/query']({'device_keys': {}}),
           response.toJson());
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -1242,10 +1240,10 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await (matrixApi.getPushers() as FutureOr<List<Pusher>>);
+      final response = await matrixApi.getPushers();
       expect(
         FakeMatrixApi.api['GET']!['/client/r0/pushers']({}),
-        {'pushers': response.map((i) => i.toJson()).toList()},
+        {'pushers': response?.map((i) => i.toJson()).toList()},
       );
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -1281,8 +1279,8 @@ void main() {
         only: '1234',
       );
       expect(
-        FakeMatrixApi.api['GET']!
-            ['/client/r0/notifications?from=1234&limit=10&only=1234']({}),
+        FakeMatrixApi.api['GET']![
+            '/client/r0/notifications?from=1234&limit=10&only=1234']({}),
         response.toJson(),
       );
 
@@ -1307,8 +1305,8 @@ void main() {
       final response =
           await matrixApi.getPushRule('global', PushRuleKind.content, 'nocake');
       expect(
-        FakeMatrixApi.api['GET']!
-            ['/client/r0/pushrules/global/content/nocake']({}),
+        FakeMatrixApi
+            .api['GET']!['/client/r0/pushrules/global/content/nocake']({}),
         response.toJson(),
       );
 
@@ -1407,8 +1405,8 @@ void main() {
       final response =
           await matrixApi.getEvents(from: '1234', roomId: '!1234', timeout: 10);
       expect(
-        FakeMatrixApi.api['GET']!
-            ['/client/r0/events?from=1234&timeout=10&roomId=%211234']({}),
+        FakeMatrixApi.api['GET']![
+            '/client/r0/events?from=1234&timeout=10&roomId=%211234']({}),
         response.toJson(),
       );
 
@@ -1418,12 +1416,12 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      final response = await (matrixApi.getRoomTags(
-          '@alice:example.com', '!localpart:example.com') as FutureOr<Map<String, Tag>>);
+      final response = await matrixApi.getRoomTags(
+          '@alice:example.com', '!localpart:example.com');
       expect(
         FakeMatrixApi.api['GET']![
             '/client/r0/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags']({}),
-        {'tags': response.map((k, v) => MapEntry(k, v.toJson()))},
+        {'tags': response?.map((k, v) => MapEntry(k, v.toJson()))},
       );
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -1507,8 +1505,8 @@ void main() {
 
       final response = await matrixApi.getWhoIs('@alice:example.com');
       expect(
-        FakeMatrixApi.api['GET']!
-            ['/client/r0/admin/whois/%40alice%3Aexample.com']({}),
+        FakeMatrixApi
+            .api['GET']!['/client/r0/admin/whois/%40alice%3Aexample.com']({}),
         response.toJson(),
       );
 
@@ -1521,8 +1519,8 @@ void main() {
       final response = await matrixApi.getEventContext('1234', '1234',
           limit: 10, filter: '{}');
       expect(
-        FakeMatrixApi.api['GET']!
-            ['/client/r0/rooms/1234/context/1234?limit=10&filter=%7B%7D']({}),
+        FakeMatrixApi.api['GET']![
+            '/client/r0/rooms/1234/context/1234?limit=10&filter=%7B%7D']({}),
         response.toJson(),
       );
 
@@ -1596,8 +1594,8 @@ void main() {
       final response =
           await matrixApi.requestThirdPartyLocationsByAlias('1234');
       expect(
-        FakeMatrixApi.api['GET']!
-            ['/client/r0/thirdparty/location?alias=1234']({}),
+        FakeMatrixApi
+            .api['GET']!['/client/r0/thirdparty/location?alias=1234']({}),
         response.map((i) => i.toJson()).toList(),
       );
 
@@ -1621,8 +1619,8 @@ void main() {
 
       final response = await matrixApi.requestOpenIdToken('1234', {});
       expect(
-        FakeMatrixApi.api['POST']!
-            ['/client/r0/user/1234/openid/request_token']({}),
+        FakeMatrixApi
+            .api['POST']!['/client/r0/user/1234/openid/request_token']({}),
         response.toJson(),
       );
 
@@ -1647,8 +1645,8 @@ void main() {
       };
       final ret = await matrixApi.postRoomKeysVersion(algorithm, authData);
       expect(
-          FakeMatrixApi.api['POST']!
-              ['/client/unstable/room_keys/version']({})['version'],
+          FakeMatrixApi.api['POST']!['/client/unstable/room_keys/version'](
+              {})['version'],
           ret);
     });
     test('getRoomKeysVersionCurrent', () async {
@@ -1656,7 +1654,8 @@ void main() {
       matrixApi.accessToken = '1234';
 
       final ret = await matrixApi.getRoomKeysVersionCurrent();
-      expect(FakeMatrixApi.api['GET']!['/client/unstable/room_keys/version']({}),
+      expect(
+          FakeMatrixApi.api['GET']!['/client/unstable/room_keys/version']({}),
           ret.toJson());
     });
     test('putRoomKeysVersion', () async {
@@ -1801,8 +1800,8 @@ void main() {
       });
       final ret = await matrixApi.postRoomKeysKey('5', session);
       expect(
-          FakeMatrixApi.api['PUT']!
-              ['/client/unstable/room_keys/keys?version=5']({}),
+          FakeMatrixApi
+              .api['PUT']!['/client/unstable/room_keys/keys?version=5']({}),
           ret.toJson());
     });
     test('getRoomKeys', () async {
@@ -1811,8 +1810,8 @@ void main() {
 
       final ret = await matrixApi.getRoomKeys('5');
       expect(
-          FakeMatrixApi.api['GET']!
-              ['/client/unstable/room_keys/keys?version=5']({}),
+          FakeMatrixApi
+              .api['GET']!['/client/unstable/room_keys/keys?version=5']({}),
           ret.toJson());
     });
     test('deleteRoomKeys', () async {
@@ -1821,8 +1820,8 @@ void main() {
 
       final ret = await matrixApi.deleteRoomKeys('5');
       expect(
-          FakeMatrixApi.api['DELETE']!
-              ['/client/unstable/room_keys/keys?version=5']({}),
+          FakeMatrixApi
+              .api['DELETE']!['/client/unstable/room_keys/keys?version=5']({}),
           ret.toJson());
     });
     test('AuthenticationData', () {

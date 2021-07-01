@@ -1,4 +1,3 @@
-
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -22,11 +21,10 @@
 * SOFTWARE.
 */
 
-import 'authentication_user_identifier.dart';
-
 import 'authentication_data.dart';
 import 'authentication_identifier.dart';
 import 'authentication_types.dart';
+import 'authentication_user_identifier.dart';
 
 class AuthenticationPassword extends AuthenticationData {
   String? user;
@@ -37,7 +35,10 @@ class AuthenticationPassword extends AuthenticationData {
   AuthenticationIdentifier identifier;
 
   AuthenticationPassword(
-      {String? session, required this.password, this.user, required this.identifier})
+      {String? session,
+      required this.password,
+      this.user,
+      required this.identifier})
       : super(
           type: AuthenticationTypes.password,
           session: session,
