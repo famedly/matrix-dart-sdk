@@ -1979,7 +1979,9 @@ class FakeMatrixApi extends MockClient {
           {'user_id': '@testuser:example.com'},
       '/client/r0/register?kind=guest': (var req) =>
           {'user_id': '@testuser:example.com'},
-      '/client/r0/rooms/1234/upgrade': (var req) => {},
+      '/client/r0/rooms/1234/upgrade': (var req) => {
+            'replacement_room': '!1234:fakeServer.notExisting',
+          },
       '/client/r0/user/1234/openid/request_token': (var req) => {
             'access_token': 'SomeT0kenHere',
             'token_type': 'Bearer',

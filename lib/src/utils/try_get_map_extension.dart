@@ -28,7 +28,18 @@ extension TryGetMapExtension on Map<String, dynamic> {
     final value = this[key];
     if (value != null && !(value is T)) {
       Logs().w(
-          'Expected "${T.runtimeType}" in event content for the Key "$key" but got "${value.runtimeType}".');
+          'Expected "${T.runtimeType}" in event content for the Key "$key" but got "${value.runtimeType}".',
+          StackTrace.current);
+      return null;
+    }
+    return value;
+  }
+
+  /// Same as tryGet but without logging any warnings.
+  /// This is helpful if you have a field that can mean multiple things on purpose.
+  T? silentTryGet<T extends Object>(String key) {
+    final value = this[key];
+    if (value != null && !(value is T)) {
       return null;
     }
     return value;
@@ -38,7 +49,8 @@ extension TryGetMapExtension on Map<String, dynamic> {
     final value = this[key];
     if (value != null && !(value is List)) {
       Logs().w(
-          'Expected "List<${T.runtimeType}>" in event content for the key "$key" but got "${value.runtimeType}".');
+          'Expected "List<${T.runtimeType}>" in event content for the key "$key" but got "${value.runtimeType}".',
+          StackTrace.current);
       return null;
     }
     try {

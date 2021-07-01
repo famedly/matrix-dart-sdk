@@ -23,7 +23,7 @@
 
 class AuthenticationData {
   String type;
-  String? /*?*/ /*?*/ session;
+  String? session;
 
   AuthenticationData({required this.type, this.session});
 

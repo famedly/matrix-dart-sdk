@@ -1072,8 +1072,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi.deleteDevice('QBUAZIFURK',
-          auth: AuthenticationData.fromJson({}));
+      await matrixApi.deleteDevice('QBUAZIFURK');
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
@@ -1081,8 +1080,7 @@ void main() {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
 
-      await matrixApi
-          .deleteDevices(['QBUAZIFURK'], auth: AuthenticationData.fromJson({}));
+      await matrixApi.deleteDevices(['QBUAZIFURK']);
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
