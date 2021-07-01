@@ -31,6 +31,14 @@ extension RoomEncryptedContentBasicEventExtension on BasicEvent {
       RoomEncryptedContent.fromJson(content);
 }
 
+/// Convert Nullable iterable of MapEntries to Map
+extension ToMap<T1, T2> on Iterable<MapEntry<T1, T2>>? {
+  Map<T1, T2>? toMap() {
+    final that = this;
+    return that != null ? Map.fromEntries(that) : null;
+  }
+}
+
 class RoomEncryptedContent {
   String algorithm;
   String senderKey;
@@ -45,9 +53,19 @@ class RoomEncryptedContent {
         deviceId = json.tryGet('device_id'),
         sessionId = json.tryGet('session_id'),
         ciphertextMegolm = json.tryGet('ciphertext'),
+        // filter out invalid/incomplete CiphertextInfos
         ciphertextOlm = json
             .tryGet<Map<String, dynamic>>('ciphertext')
-            ?.map((k, v) => MapEntry(k, CiphertextInfo.fromJson(v)));
+            ?.entries
+            .map((e) {
+              try {
+                return MapEntry(e.key, CiphertextInfo.fromJson(e.value));
+              } catch (_) {
+                return null;
+              }
+            })
+            .whereType<MapEntry<String, CiphertextInfo>>()
+            .toMap();
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
