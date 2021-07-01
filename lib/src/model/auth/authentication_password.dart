@@ -27,7 +27,6 @@ import 'authentication_types.dart';
 import 'authentication_user_identifier.dart';
 
 class AuthenticationPassword extends AuthenticationData {
-  String? user;
   String password;
 
   /// You may want to cast this as [AuthenticationUserIdentifier] or other
@@ -35,25 +34,20 @@ class AuthenticationPassword extends AuthenticationData {
   AuthenticationIdentifier identifier;
 
   AuthenticationPassword(
-      {String? session,
-      required this.password,
-      this.user,
-      required this.identifier})
+      {String? session, required this.password, required this.identifier})
       : super(
           type: AuthenticationTypes.password,
           session: session,
         );
 
   AuthenticationPassword.fromJson(Map<String, dynamic> json)
-      : user = json['user'],
-        password = json['password'],
+      : password = json['password'],
         identifier = AuthenticationIdentifier.subFromJson(json['identifier']),
         super.fromJson(json);
 
   @override
   Map<String, dynamic> toJson() {
     final data = super.toJson();
-    if (user != null) data['user'] = user;
     data['password'] = password;
     data['identifier'] = identifier.toJson();
     return data;

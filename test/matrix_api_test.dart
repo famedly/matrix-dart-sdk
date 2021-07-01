@@ -1905,7 +1905,6 @@ void main() {
           AuthenticationPassword(
             session: '1',
             password: 'a',
-            user: 'a',
             identifier: AuthenticationUserIdentifier(user: 'a'),
           ).toJson(),
           json);
@@ -1919,7 +1918,6 @@ void main() {
           AuthenticationPassword(
             session: '1',
             password: 'a',
-            user: 'a',
             identifier:
                 AuthenticationThirdPartyIdentifier(medium: 'a', address: 'a'),
           ).toJson(),
@@ -1934,7 +1932,6 @@ void main() {
           AuthenticationPassword(
             session: '1',
             password: 'a',
-            user: 'a',
             identifier: AuthenticationPhoneIdentifier(country: 'a', phone: 'a'),
           ).toJson(),
           json);

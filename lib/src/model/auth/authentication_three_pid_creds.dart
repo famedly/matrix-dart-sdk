@@ -65,7 +65,7 @@ class AuthenticationThreePidCreds extends AuthenticationData {
 }
 
 class ThreepidCreds {
-+  String sid;
+  String sid;
   String clientSecret;
   String idServer;
   String idAccessToken;
