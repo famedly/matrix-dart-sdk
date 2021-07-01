@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -28,7 +28,7 @@ import 'authentication_types.dart';
 class AuthenticationRecaptcha extends AuthenticationData {
   String response;
 
-  AuthenticationRecaptcha({String session, this.response})
+  AuthenticationRecaptcha({required String session, required this.response})
       : super(
           type: AuthenticationTypes.recaptcha,
           session: session,

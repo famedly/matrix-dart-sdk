@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -31,10 +31,10 @@ extension SecretStorageKeyContentBasicEventExtension on BasicEvent {
 }
 
 class SecretStorageKeyContent {
-  PassphraseInfo passphrase;
-  String iv;
-  String mac;
-  String algorithm;
+  PassphraseInfo? passphrase;
+  String? iv;
+  String? mac;
+  String? algorithm;
 
   SecretStorageKeyContent();
 
@@ -42,13 +42,13 @@ class SecretStorageKeyContent {
       : passphrase = json['passphrase'] is Map<String, dynamic>
             ? PassphraseInfo.fromJson(json['passphrase'])
             : null,
-        iv = json.tryGet<String>('iv'),
-        mac = json.tryGet<String>('mac'),
-        algorithm = json.tryGet<String>('algorithm');
+        iv = json.tryGet<String?>('iv'),
+        mac = json.tryGet<String?>('mac'),
+        algorithm = json.tryGet<String?>('algorithm');
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
-    if (passphrase != null) data['passphrase'] = passphrase.toJson();
+    if (passphrase != null) data['passphrase'] = passphrase!.toJson();
     if (iv != null) data['iv'] = iv;
     if (mac != null) data['mac'] = mac;
     if (algorithm != null) data['algorithm'] = algorithm;
@@ -60,7 +60,7 @@ class PassphraseInfo {
   String algorithm;
   String salt;
   int iterations;
-  int bits;
+  int? bits;
 
   PassphraseInfo();
 

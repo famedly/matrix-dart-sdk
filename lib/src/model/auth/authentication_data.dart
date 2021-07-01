@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -24,9 +24,9 @@
 
 class AuthenticationData {
   String type;
-  String session;
+  String?/*?*//*?*/ session;
 
-  AuthenticationData({this.type, this.session});
+  AuthenticationData({required this.type, this.session});
 
   AuthenticationData.fromJson(Map<String, dynamic> json)
       : type = json['type'],

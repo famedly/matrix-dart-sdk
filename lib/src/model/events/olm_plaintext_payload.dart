@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -25,12 +25,12 @@
 import '../../utils/try_get_map_extension.dart';
 
 class OlmPlaintextPayload {
-  String type;
-  Map<String, dynamic> content;
-  String sender;
-  String recipient;
-  Map<String, String> recipientKeys;
-  Map<String, String> keys;
+  String? type;
+  Map<String, dynamic>? content;
+  String? sender;
+  String? recipient;
+  Map<String, String>? recipientKeys;
+  Map<String, String>? keys;
 
   OlmPlaintextPayload({
     this.type,

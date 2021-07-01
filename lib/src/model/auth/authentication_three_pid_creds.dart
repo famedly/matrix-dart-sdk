@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -29,9 +29,9 @@ import 'authentication_data.dart';
 /// Or phone number based identity:
 /// https://matrix.org/docs/spec/client_server/r0.6.1#phone-number-msisdn-based-identity-homeserver
 class AuthenticationThreePidCreds extends AuthenticationData {
-  List<ThreepidCreds> threepidCreds;
+  late List<ThreepidCreds> threepidCreds;
 
-  AuthenticationThreePidCreds({String session, String type, this.threepidCreds})
+  AuthenticationThreePidCreds({String? session, required String type, required this.threepidCreds})
       : super(
           type: type,
           session: session,
@@ -65,13 +65,13 @@ class AuthenticationThreePidCreds extends AuthenticationData {
 }
 
 class ThreepidCreds {
-  String sid;
+  String/*!*/ sid;
   String clientSecret;
   String idServer;
   String idAccessToken;
 
   ThreepidCreds(
-      {this.sid, this.clientSecret, this.idServer, this.idAccessToken});
+      {required this.sid, required this.clientSecret, required this.idServer, required this.idAccessToken});
 
   ThreepidCreds.fromJson(Map<String, dynamic> json)
       : sid = json['sid'],

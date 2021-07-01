@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -83,9 +83,9 @@ class FakeMatrixApi extends MockClient {
           if (!calledEndpoints.containsKey(action)) {
             calledEndpoints[action] = <dynamic>[];
           }
-          calledEndpoints[action].add(data);
-          if (api.containsKey(method) && api[method].containsKey(action)) {
-            res = api[method][action](data);
+          calledEndpoints[action]!.add(data);
+          if (api.containsKey(method) && api[method]!.containsKey(action)) {
+            res = api[method]![action](data);
             if (res is Map && res.containsKey('errcode')) {
               statusCode = 405;
             }

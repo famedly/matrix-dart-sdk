@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -29,8 +29,8 @@ class BasicEvent {
   Map<String, dynamic> content;
 
   BasicEvent({
-    this.type,
-    this.content,
+    required this.type,
+    required this.content,
   });
 
   BasicEvent.fromJson(Map<String, dynamic> json)

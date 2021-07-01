@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -72,7 +72,7 @@ class ProtocolFieldType {
 class ProtocolInstance {
   String networkId;
   String desc;
-  String icon;
+  String? icon;
   dynamic fields;
 
   ProtocolInstance.fromJson(Map<String, dynamic> json) {

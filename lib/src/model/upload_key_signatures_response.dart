@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -25,7 +25,7 @@
 import 'matrix_exception.dart';
 
 class UploadKeySignaturesResponse {
-  Map<String, Map<String, MatrixException>> failures;
+  Map<String, Map<String, MatrixException>>? failures;
 
   UploadKeySignaturesResponse.fromJson(Map<String, dynamic> json)
       : failures = json['failures'] != null
@@ -43,7 +43,7 @@ class UploadKeySignaturesResponse {
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     if (failures != null) {
-      data['failures'] = failures.map(
+      data['failures'] = failures!.map(
         (k, v) => MapEntry(
           k,
           v.map(

@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -35,10 +35,10 @@ extension RoomEncryptedContentBasicEventExtension on BasicEvent {
 class RoomEncryptedContent {
   String algorithm;
   String senderKey;
-  String deviceId;
-  String sessionId;
-  String ciphertextMegolm;
-  Map<String, CiphertextInfo> ciphertextOlm;
+  String? deviceId;
+  String? sessionId;
+  String? ciphertextMegolm;
+  Map<String, CiphertextInfo>? ciphertextOlm;
 
   RoomEncryptedContent.fromJson(Map<String, dynamic> json)
       : algorithm = json.tryGet<String>('algorithm', ''),
@@ -68,7 +68,7 @@ class RoomEncryptedContent {
       data['ciphertext'] = ciphertextMegolm;
     }
     if (ciphertextOlm != null) {
-      data['ciphertext'] = ciphertextOlm.map((k, v) => MapEntry(k, v.toJson()));
+      data['ciphertext'] = ciphertextOlm!.map((k, v) => MapEntry(k, v.toJson()));
       if (ciphertextMegolm != null) {
         Logs().wtf(
             'ciphertextOlm and ciphertextMegolm are both set, which should never happen!');

@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -23,9 +23,9 @@
 */
 
 class RoomSummary {
-  List<String> mHeroes;
-  int mJoinedMemberCount;
-  int mInvitedMemberCount;
+  List<String>? mHeroes;
+  int? mJoinedMemberCount;
+  int? mInvitedMemberCount;
   RoomSummary.fromJson(Map<String, dynamic> json)
       : mHeroes = json['m.heroes'] != null
             ? List<String>.from(json['m.heroes'])

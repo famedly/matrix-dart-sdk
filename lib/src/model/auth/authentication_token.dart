@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -27,9 +27,9 @@ import 'authentication_types.dart';
 
 class AuthenticationToken extends AuthenticationData {
   String token;
-  String txnId;
+  String? txnId;
 
-  AuthenticationToken({String session, this.token, this.txnId})
+  AuthenticationToken({String? session, required this.token, this.txnId})
       : super(
           type: AuthenticationTypes.token,
           session: session,

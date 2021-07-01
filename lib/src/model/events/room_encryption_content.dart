@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -32,13 +32,13 @@ extension RoomEncryptionContentBasicEventExtension on BasicEvent {
 
 class RoomEncryptionContent {
   String algorithm;
-  int rotationPeriodMs;
-  int rotationPeriodMsgs;
+  int? rotationPeriodMs;
+  int? rotationPeriodMsgs;
 
   RoomEncryptionContent.fromJson(Map<String, dynamic> json)
       : algorithm = json.tryGet<String>('algorithm', ''),
-        rotationPeriodMs = json.tryGet<int>('rotation_period_ms'),
-        rotationPeriodMsgs = json.tryGet<int>('rotation_period_msgs');
+        rotationPeriodMs = json.tryGet<int?>('rotation_period_ms'),
+        rotationPeriodMsgs = json.tryGet<int?>('rotation_period_msgs');
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

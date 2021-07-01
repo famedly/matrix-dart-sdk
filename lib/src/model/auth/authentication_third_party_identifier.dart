@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -29,7 +29,7 @@ class AuthenticationThirdPartyIdentifier extends AuthenticationIdentifier {
   String medium;
   String address;
 
-  AuthenticationThirdPartyIdentifier({this.medium, this.address})
+  AuthenticationThirdPartyIdentifier({required this.medium, required this.address})
       : super(type: AuthenticationIdentifierTypes.thirdParty);
 
   AuthenticationThirdPartyIdentifier.fromJson(Map<String, dynamic> json)

@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -29,7 +29,7 @@ import 'authentication_identifier.dart';
 import 'authentication_types.dart';
 
 class AuthenticationPassword extends AuthenticationData {
-  String user;
+  String? user;
   String password;
 
   /// You may want to cast this as [AuthenticationUserIdentifier] or other
@@ -37,7 +37,7 @@ class AuthenticationPassword extends AuthenticationData {
   AuthenticationIdentifier identifier;
 
   AuthenticationPassword(
-      {String session, this.password, this.user, this.identifier})
+      {String? session, required this.password, this.user, required this.identifier})
       : super(
           type: AuthenticationTypes.password,
           session: session,

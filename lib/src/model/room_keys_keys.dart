@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -29,10 +29,10 @@ class RoomKeysSingleKey {
   Map<String, dynamic> sessionData;
 
   RoomKeysSingleKey(
-      {this.firstMessageIndex,
-      this.forwardedCount,
-      this.isVerified,
-      this.sessionData});
+      {required this.firstMessageIndex,
+      required this.forwardedCount,
+      required this.isVerified,
+      required this.sessionData});
 
   RoomKeysSingleKey.fromJson(Map<String, dynamic> json)
       : firstMessageIndex = json['first_message_index'],
@@ -53,7 +53,7 @@ class RoomKeysSingleKey {
 class RoomKeysRoom {
   Map<String, RoomKeysSingleKey> sessions;
 
-  RoomKeysRoom({this.sessions}) {
+  RoomKeysRoom({required this.sessions}) {
     sessions ??= <String, RoomKeysSingleKey>{};
   }
 

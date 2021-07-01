@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -31,7 +31,7 @@ extension RoomKeyRequestContentBasicEventExtension on BasicEvent {
 }
 
 class RoomKeyRequestContent {
-  RequestedKeyInfo body;
+  RequestedKeyInfo? body;
   String action;
   String requestingDeviceId;
   String requestId;
@@ -45,7 +45,7 @@ class RoomKeyRequestContent {
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
-    if (body != null) data['body'] = body.toJson();
+    if (body != null) data['body'] = body!.toJson();
     data['action'] = action;
     data['requesting_device_id'] = requestingDeviceId;
     data['request_id'] = requestId;

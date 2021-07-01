@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -29,7 +29,7 @@ import 'dart:convert';
 void main() {
   group('Event Content tests', () {
     test('Room Encryption Content', () {
-      var json = <String, dynamic>{
+      Map<String, dynamic>? json = <String, dynamic>{
         'content': {
           'algorithm': 'm.megolm.v1.aes-sha2',
           'rotation_period_ms': 604800000,
@@ -44,11 +44,11 @@ void main() {
         'unsigned': {'age': 1234}
       };
       json = jsonDecode(jsonEncode(json));
-      expect(MatrixEvent.fromJson(json).parsedRoomEncryptionContent.toJson(),
+      expect(MatrixEvent.fromJson(json!).parsedRoomEncryptionContent.toJson(),
           json['content']);
     });
     test('Room Encrypted Content', () {
-      var json = <String, dynamic>{
+      Map<String, dynamic>? json = <String, dynamic>{
         'content': {
           'algorithm': 'm.megolm.v1.aes-sha2',
           'ciphertext': 'AwgAEnACgAkLmt6qF84IK++J7UDH2Za1YVchHyprqTqsg...',
@@ -64,7 +64,7 @@ void main() {
         'unsigned': {'age': 1234}
       };
       json = jsonDecode(jsonEncode(json));
-      expect(MatrixEvent.fromJson(json).parsedRoomEncryptedContent.toJson(),
+      expect(MatrixEvent.fromJson(json!).parsedRoomEncryptedContent.toJson(),
           json['content']);
       json = <String, dynamic>{
         'content': {
@@ -85,11 +85,11 @@ void main() {
         'unsigned': {'age': 1234}
       };
       json = jsonDecode(jsonEncode(json));
-      expect(MatrixEvent.fromJson(json).parsedRoomEncryptedContent.toJson(),
+      expect(MatrixEvent.fromJson(json!).parsedRoomEncryptedContent.toJson(),
           json['content']);
     });
     test('Room Key Content', () {
-      var json = <String, dynamic>{
+      Map<String, dynamic>? json = <String, dynamic>{
         'content': {
           'algorithm': 'm.megolm.v1.aes-sha2',
           'room_id': '!Cuyf34gef24t:localhost',
@@ -99,11 +99,11 @@ void main() {
         'type': 'm.room_key'
       };
       json = jsonDecode(jsonEncode(json));
-      expect(BasicEvent.fromJson(json).parsedRoomKeyContent.toJson(),
+      expect(BasicEvent.fromJson(json!).parsedRoomKeyContent.toJson(),
           json['content']);
     });
     test('Room Key Request Content', () {
-      var json = <String, dynamic>{
+      Map<String, dynamic>? json = <String, dynamic>{
         'content': {
           'action': 'request_cancellation',
           'request_id': '1495474790150.19',
@@ -112,7 +112,7 @@ void main() {
         'type': 'm.room_key_request'
       };
       json = jsonDecode(jsonEncode(json));
-      expect(BasicEvent.fromJson(json).parsedRoomKeyRequestContent.toJson(),
+      expect(BasicEvent.fromJson(json!).parsedRoomKeyRequestContent.toJson(),
           json['content']);
       json = <String, dynamic>{
         'content': {
@@ -129,11 +129,11 @@ void main() {
         'type': 'm.room_key_request'
       };
       json = jsonDecode(jsonEncode(json));
-      expect(BasicEvent.fromJson(json).parsedRoomKeyRequestContent.toJson(),
+      expect(BasicEvent.fromJson(json!).parsedRoomKeyRequestContent.toJson(),
           json['content']);
     });
     test('Forwarded Room Key Content', () {
-      var json = <String, dynamic>{
+      Map<String, dynamic>? json = <String, dynamic>{
         'content': {
           'algorithm': 'm.megolm.v1.aes-sha2',
           'forwarding_curve25519_key_chain': [
@@ -149,11 +149,11 @@ void main() {
         'type': 'm.forwarded_room_key'
       };
       json = jsonDecode(jsonEncode(json));
-      expect(BasicEvent.fromJson(json).parsedForwardedRoomKeyContent.toJson(),
+      expect(BasicEvent.fromJson(json!).parsedForwardedRoomKeyContent.toJson(),
           json['content']);
     });
     test('OLM Plaintext Payload', () {
-      var json = <String, dynamic>{
+      Map<String, dynamic>? json = <String, dynamic>{
         'type': '<type of the plaintext event>',
         'content': <String, dynamic>{
           'msgtype': 'm.text',
@@ -165,7 +165,7 @@ void main() {
         'keys': {'ed25519': '<sender_ed25519_key>'}
       };
       json = jsonDecode(jsonEncode(json));
-      expect(OlmPlaintextPayload.fromJson(json).toJson(), json);
+      expect(OlmPlaintextPayload.fromJson(json!).toJson(), json);
     });
   });
 }

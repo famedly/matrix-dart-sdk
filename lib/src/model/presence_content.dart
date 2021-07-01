@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -26,9 +26,9 @@ import '../generated/model.dart';
 
 class PresenceContent {
   PresenceType presence;
-  int lastActiveAgo;
-  String statusMsg;
-  bool currentlyActive;
+  int? lastActiveAgo;
+  String? statusMsg;
+  bool? currentlyActive;
 
   PresenceContent.fromJson(Map<String, dynamic> json)
       : presence = PresenceType.values.firstWhere(

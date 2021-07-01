@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 *
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -32,13 +32,13 @@ import 'stripped_state_event.dart';
 
 class SyncUpdate {
   String nextBatch;
-  RoomsUpdate rooms;
-  List<Presence> presence;
-  List<BasicEvent> accountData;
-  List<BasicEventWithSender> toDevice;
-  DeviceListsUpdate deviceLists;
-  Map<String, int> deviceOneTimeKeysCount;
-  List<String> deviceUnusedFallbackKeyTypes;
+  RoomsUpdate? rooms;
+  List<Presence>? presence;
+  List<BasicEvent>? accountData;
+  List<BasicEventWithSender>? toDevice;
+  DeviceListsUpdate? deviceLists;
+  Map<String, int>? deviceOneTimeKeysCount;
+  List<String>? deviceUnusedFallbackKeyTypes;
 
   SyncUpdate();
 
@@ -83,25 +83,25 @@ class SyncUpdate {
     final data = <String, dynamic>{};
     data['next_batch'] = nextBatch;
     if (rooms != null) {
-      data['rooms'] = rooms.toJson();
+      data['rooms'] = rooms!.toJson();
     }
     if (presence != null) {
       data['presence'] = {
-        'events': presence.map((i) => i.toJson()).toList(),
+        'events': presence!.map((i) => i.toJson()).toList(),
       };
     }
     if (accountData != null) {
       data['account_data'] = {
-        'events': accountData.map((i) => i.toJson()).toList(),
+        'events': accountData!.map((i) => i.toJson()).toList(),
       };
     }
     if (toDevice != null) {
       data['to_device'] = {
-        'events': toDevice.map((i) => i.toJson()).toList(),
+        'events': toDevice!.map((i) => i.toJson()).toList(),
       };
     }
     if (deviceLists != null) {
-      data['device_lists'] = deviceLists.toJson();
+      data['device_lists'] = deviceLists!.toJson();
     }
     if (deviceOneTimeKeysCount != null) {
       data['device_one_time_keys_count'] = deviceOneTimeKeysCount;
@@ -116,9 +116,9 @@ class SyncUpdate {
 }
 
 class RoomsUpdate {
-  Map<String, JoinedRoomUpdate> join;
-  Map<String, InvitedRoomUpdate> invite;
-  Map<String, LeftRoomUpdate> leave;
+  Map<String, JoinedRoomUpdate>? join;
+  Map<String, InvitedRoomUpdate>? invite;
+  Map<String, LeftRoomUpdate>? leave;
 
   RoomsUpdate();
 
@@ -139,13 +139,13 @@ class RoomsUpdate {
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     if (join != null) {
-      data['join'] = join.map((k, v) => MapEntry(k, v.toJson()));
+      data['join'] = join!.map((k, v) => MapEntry(k, v.toJson()));
     }
     if (invite != null) {
-      data['invite'] = invite.map((k, v) => MapEntry(k, v.toJson()));
+      data['invite'] = invite!.map((k, v) => MapEntry(k, v.toJson()));
     }
     if (leave != null) {
-      data['leave'] = leave.map((k, v) => MapEntry(k, v.toJson()));
+      data['leave'] = leave!.map((k, v) => MapEntry(k, v.toJson()));
     }
     return data;
   }
@@ -154,12 +154,12 @@ class RoomsUpdate {
 abstract class SyncRoomUpdate {}
 
 class JoinedRoomUpdate extends SyncRoomUpdate {
-  RoomSummary summary;
-  List<MatrixEvent> state;
-  TimelineUpdate timeline;
-  List<BasicRoomEvent> ephemeral;
-  List<BasicRoomEvent> accountData;
-  UnreadNotificationCounts unreadNotifications;
+  RoomSummary? summary;
+  List<MatrixEvent>? state;
+  TimelineUpdate? timeline;
+  List<BasicRoomEvent>? ephemeral;
+  List<BasicRoomEvent>? accountData;
+  UnreadNotificationCounts? unreadNotifications;
 
   JoinedRoomUpdate();
 
@@ -195,35 +195,35 @@ class JoinedRoomUpdate extends SyncRoomUpdate {
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     if (summary != null) {
-      data['summary'] = summary.toJson();
+      data['summary'] = summary!.toJson();
     }
     if (state != null) {
       data['state'] = {
-        'events': state.map((i) => i.toJson()).toList(),
+        'events': state!.map((i) => i.toJson()).toList(),
       };
     }
     if (timeline != null) {
-      data['timeline'] = timeline.toJson();
+      data['timeline'] = timeline!.toJson();
     }
     if (ephemeral != null) {
       data['ephemeral'] = {
-        'events': ephemeral.map((i) => i.toJson()).toList(),
+        'events': ephemeral!.map((i) => i.toJson()).toList(),
       };
     }
     if (accountData != null) {
       data['account_data'] = {
-        'events': accountData.map((i) => i.toJson()).toList(),
+        'events': accountData!.map((i) => i.toJson()).toList(),
       };
     }
     if (unreadNotifications != null) {
-      data['unread_notifications'] = unreadNotifications.toJson();
+      data['unread_notifications'] = unreadNotifications!.toJson();
     }
     return data;
   }
 }
 
 class InvitedRoomUpdate extends SyncRoomUpdate {
-  List<StrippedStateEvent> inviteState;
+  List<StrippedStateEvent>? inviteState;
   InvitedRoomUpdate.fromJson(Map<String, dynamic> json) {
     inviteState =
         (json['invite_state'] != null && json['invite_state']['events'] != null)
@@ -236,7 +236,7 @@ class InvitedRoomUpdate extends SyncRoomUpdate {
     final data = <String, dynamic>{};
     if (inviteState != null) {
       data['invite_state'] = {
-        'events': inviteState.map((i) => i.toJson()).toList(),
+        'events': inviteState!.map((i) => i.toJson()).toList(),
       };
     }
     return data;
@@ -244,9 +244,9 @@ class InvitedRoomUpdate extends SyncRoomUpdate {
 }
 
 class LeftRoomUpdate extends SyncRoomUpdate {
-  List<MatrixEvent> state;
-  TimelineUpdate timeline;
-  List<BasicRoomEvent> accountData;
+  List<MatrixEvent>? state;
+  TimelineUpdate? timeline;
+  List<BasicRoomEvent>? accountData;
 
   LeftRoomUpdate();
 
@@ -270,15 +270,15 @@ class LeftRoomUpdate extends SyncRoomUpdate {
     final data = <String, dynamic>{};
     if (state != null) {
       data['state'] = {
-        'events': state.map((i) => i.toJson()).toList(),
+        'events': state!.map((i) => i.toJson()).toList(),
       };
     }
     if (timeline != null) {
-      data['timeline'] = timeline.toJson();
+      data['timeline'] = timeline!.toJson();
     }
     if (accountData != null) {
       data['account_data'] = {
-        'events': accountData.map((i) => i.toJson()).toList(),
+        'events': accountData!.map((i) => i.toJson()).toList(),
       };
     }
     return data;
@@ -286,9 +286,9 @@ class LeftRoomUpdate extends SyncRoomUpdate {
 }
 
 class TimelineUpdate {
-  List<MatrixEvent> events;
-  bool limited;
-  String prevBatch;
+  List<MatrixEvent>? events;
+  bool? limited;
+  String? prevBatch;
 
   TimelineUpdate();
 
@@ -303,7 +303,7 @@ class TimelineUpdate {
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     if (events != null) {
-      data['events'] = events.map((i) => i.toJson()).toList();
+      data['events'] = events!.map((i) => i.toJson()).toList();
     }
     if (limited != null) {
       data['limited'] = limited;
@@ -316,8 +316,8 @@ class TimelineUpdate {
 }
 
 class UnreadNotificationCounts {
-  int highlightCount;
-  int notificationCount;
+  int? highlightCount;
+  int? notificationCount;
   UnreadNotificationCounts.fromJson(Map<String, dynamic> json) {
     highlightCount = json['highlight_count'];
     notificationCount = json['notification_count'];
@@ -335,8 +335,8 @@ class UnreadNotificationCounts {
 }
 
 class DeviceListsUpdate {
-  List<String> changed;
-  List<String> left;
+  List<String>? changed;
+  List<String>? left;
   DeviceListsUpdate.fromJson(Map<String, dynamic> json) {
     changed = List<String>.from(json['changed'] ?? []);
     left = List<String>.from(json['left'] ?? []);

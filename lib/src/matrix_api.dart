@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 *
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -54,13 +54,13 @@ String describeEnum(Object enumEntry) {
 
 class MatrixApi extends Api {
   /// The homeserver this client is communicating with.
-  Uri get homeserver => baseUri;
-  set homeserver(Uri uri) => baseUri = uri;
+  Uri? get homeserver => baseUri;
+  set homeserver(Uri? uri) => baseUri = uri;
 
   /// This is the access token for the matrix client. When it is undefined, then
   /// the user needs to sign in first.
-  String get accessToken => bearerToken;
-  set accessToken(String token) => bearerToken = token;
+  String? get accessToken => bearerToken;
+  set accessToken(String? token) => bearerToken = token;
 
   @override
   Null unexpectedResponse(http.BaseResponse response, Uint8List responseBody) {
@@ -71,9 +71,9 @@ class MatrixApi extends Api {
   }
 
   MatrixApi({
-    Uri homeserver,
-    String accessToken,
-    http.Client httpClient,
+    Uri? homeserver,
+    String? accessToken,
+    http.Client? httpClient,
   }) : super(
             httpClient: httpClient,
             baseUri: homeserver,
@@ -102,7 +102,7 @@ class MatrixApi extends Api {
     String action, {
     dynamic data = '',
     String contentType = 'application/json',
-    Map<String, dynamic> query,
+    Map<String, dynamic>? query,
   }) async {
     if (homeserver == null) {
       throw ('No homeserver specified.');
@@ -111,7 +111,7 @@ class MatrixApi extends Api {
     (!(data is String)) ? json = jsonEncode(data) : json = data;
     if (data is List<int> || action.startsWith('/media/r0/upload')) json = data;
 
-    final url = homeserver
+    final url = homeserver!
         .resolveUri(Uri(path: '_matrix$action', queryParameters: query));
 
     final headers = <String, String>{};
@@ -122,8 +122,8 @@ class MatrixApi extends Api {
       headers['Authorization'] = 'Bearer $accessToken';
     }
 
-    http.Response resp;
-    var jsonResp = <String, dynamic>{};
+    late http.Response resp;
+    Map<String, dynamic>? jsonResp = <String, dynamic>{};
     try {
       switch (type) {
         case RequestType.GET:
@@ -153,7 +153,7 @@ class MatrixApi extends Api {
         jsonString = '\{"chunk":$jsonString\}';
       }
       jsonResp = jsonDecode(jsonString)
-          as Map<String, dynamic>; // May throw FormatException
+          as Map<String, dynamic>?; // May throw FormatException
     } catch (e, s) {
       throw MatrixConnectionException(e, s);
     }
@@ -161,7 +161,7 @@ class MatrixApi extends Api {
       throw MatrixException(resp);
     }
 
-    return jsonResp;
+    return jsonResp!;
   }
 
   /// The homeserver must check that the given email address is not already associated
@@ -173,9 +173,9 @@ class MatrixApi extends Api {
     String email,
     String clientSecret,
     int sendAttempt, {
-    String nextLink,
-    String idServer,
-    String idAccessToken,
+    String? nextLink,
+    String? idServer,
+    String? idAccessToken,
   }) async {
     final response = await request(
         RequestType.POST, '/client/r0/register/email/requestToken',
@@ -199,9 +199,9 @@ class MatrixApi extends Api {
     String phoneNumber,
     String clientSecret,
     int sendAttempt, {
-    String nextLink,
-    String idServer,
-    String idAccessToken,
+    String? nextLink,
+    String? idServer,
+    String? idAccessToken,
   }) async {
     final response = await request(
         RequestType.POST, '/client/r0/register/msisdn/requestToken',
@@ -225,9 +225,9 @@ class MatrixApi extends Api {
     String email,
     String clientSecret,
     int sendAttempt, {
-    String nextLink,
-    String idServer,
-    String idAccessToken,
+    String? nextLink,
+    String? idServer,
+    String? idAccessToken,
   }) async {
     final response = await request(
         RequestType.POST, '/client/r0/account/password/email/requestToken',
@@ -251,9 +251,9 @@ class MatrixApi extends Api {
     String phoneNumber,
     String clientSecret,
     int sendAttempt, {
-    String nextLink,
-    String idServer,
-    String idAccessToken,
+    String? nextLink,
+    String? idServer,
+    String? idAccessToken,
   }) async {
     final response = await request(
         RequestType.POST, '/client/r0/account/password/msisdn/requestToken',
@@ -275,9 +275,9 @@ class MatrixApi extends Api {
     String email,
     String clientSecret,
     int sendAttempt, {
-    String nextLink,
-    String idServer,
-    String idAccessToken,
+    String? nextLink,
+    String? idServer,
+    String? idAccessToken,
   }) async {
     final response = await request(
         RequestType.POST, '/client/r0/account/3pid/email/requestToken',
@@ -299,9 +299,9 @@ class MatrixApi extends Api {
     String phoneNumber,
     String clientSecret,
     int sendAttempt, {
-    String nextLink,
-    String idServer,
-    String idAccessToken,
+    String? nextLink,
+    String? idServer,
+    String? idAccessToken,
   }) async {
     final response = await request(
         RequestType.POST, '/client/r0/account/3pid/msisdn/requestToken',
@@ -323,7 +323,7 @@ class MatrixApi extends Api {
   /// https://matrix.org/docs/spec/client_server/r0.6.0#get-matrix-client-r0-rooms-roomid-state-eventtype-statekey
   Future<Map<String, dynamic>> requestStateContent(
       String roomId, String eventType,
-      [String stateKey]) async {
+      [String? stateKey]) async {
     var url =
         '/client/r0/rooms/${Uri.encodeComponent(roomId)}/state/${Uri.encodeComponent(eventType)}/';
     if (stateKey != null) {
@@ -364,9 +364,9 @@ class MatrixApi extends Api {
   /// Publishes end-to-end encryption keys for the device.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-keys-query
   Future<Map<String, int>> uploadKeys(
-      {MatrixDeviceKeys deviceKeys,
-      Map<String, dynamic> oneTimeKeys,
-      Map<String, dynamic> fallbackKeys}) async {
+      {MatrixDeviceKeys? deviceKeys,
+      Map<String, dynamic>? oneTimeKeys,
+      Map<String, dynamic>? fallbackKeys}) async {
     final response = await request(
       RequestType.POST,
       '/client/r0/keys/upload',
@@ -385,10 +385,10 @@ class MatrixApi extends Api {
   /// Uploads your own cross-signing keys.
   /// https://github.com/matrix-org/matrix-doc/pull/2536
   Future<void> uploadDeviceSigningKeys({
-    MatrixCrossSigningKey masterKey,
-    MatrixCrossSigningKey selfSigningKey,
-    MatrixCrossSigningKey userSigningKey,
-    AuthenticationData auth,
+    MatrixCrossSigningKey? masterKey,
+    MatrixCrossSigningKey? selfSigningKey,
+    MatrixCrossSigningKey? userSigningKey,
+    AuthenticationData? auth,
   }) async {
     await request(
       RequestType.POST,
@@ -410,7 +410,7 @@ class MatrixApi extends Api {
     for (final key in keys) {
       if (key.identifier == null ||
           key.signatures == null ||
-          key.signatures.isEmpty) {
+          key.signatures!.isEmpty) {
         continue;
       }
       if (!payload.containsKey(key.userId)) {
@@ -437,7 +437,7 @@ class MatrixApi extends Api {
   /// for this user ID. The behaviour of this endpoint varies depending on the
   /// values in the JSON body.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-pushers-set
-  Future<void> postPusher(Pusher pusher, {bool append}) async {
+  Future<void> postPusher(Pusher pusher, {bool? append}) async {
     final data = pusher.toJson();
     if (append != null) {
       data['append'] = append;
@@ -454,9 +454,9 @@ class MatrixApi extends Api {
   /// caller. This will block until an event is received, or until the timeout is reached.
   /// https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-events
   Future<EventsSyncUpdate> getEvents({
-    String from,
-    int timeout,
-    String roomId,
+    String? from,
+    int? timeout,
+    String? roomId,
   }) async {
     final response =
         await request(RequestType.GET, '/client/r0/events', query: {

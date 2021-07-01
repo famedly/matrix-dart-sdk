@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -26,16 +26,16 @@ import '../utils/map_copy_extension.dart';
 
 class MatrixSignableKey {
   String userId;
-  String identifier;
+  String? identifier;
   Map<String, String> keys;
-  Map<String, Map<String, String>> signatures;
-  Map<String, dynamic> unsigned;
+  Map<String, Map<String, String>>? signatures;
+  Map<String, dynamic>? unsigned;
 
   MatrixSignableKey(this.userId, this.identifier, this.keys, this.signatures,
       {this.unsigned});
 
   // This object is used for signing so we need the raw json too
-  Map<String, dynamic> _json;
+  Map<String, dynamic>? _json;
 
   MatrixSignableKey.fromJson(Map<String, dynamic> json)
       : _json = json,
@@ -46,7 +46,7 @@ class MatrixSignableKey {
             ? Map<String, Map<String, String>>.from((json['signatures'] as Map)
                 .map((k, v) => MapEntry(k, Map<String, String>.from(v))))
             : null,
-        unsigned = (json['unsigned'] as Map<String, dynamic>)?.copy();
+        unsigned = (json['unsigned'] as Map<String, dynamic>?)?.copy();
 
   Map<String, dynamic> toJson() {
     final data = _json ?? <String, dynamic>{};
@@ -65,14 +65,14 @@ class MatrixSignableKey {
 
 class MatrixCrossSigningKey extends MatrixSignableKey {
   List<String> usage;
-  String get publicKey => identifier;
+  String? get publicKey => identifier;
 
   MatrixCrossSigningKey(
     String userId,
     this.usage,
     Map<String, String> keys,
     Map<String, Map<String, String>> signatures, {
-    Map<String, dynamic> unsigned,
+    Map<String, dynamic>? unsigned,
   }) : super(userId, keys?.values?.first, keys, signatures, unsigned: unsigned);
 
   @override
@@ -91,10 +91,10 @@ class MatrixCrossSigningKey extends MatrixSignableKey {
 }
 
 class MatrixDeviceKeys extends MatrixSignableKey {
-  String get deviceId => identifier;
+  String get deviceId => identifier!;
   List<String> algorithms;
-  String get deviceDisplayName =>
-      unsigned != null ? unsigned['device_display_name'] : null;
+  String? get deviceDisplayName =>
+      unsigned != null ? unsigned!['device_display_name'] : null;
 
   MatrixDeviceKeys(
     String userId,
@@ -102,7 +102,7 @@ class MatrixDeviceKeys extends MatrixSignableKey {
     this.algorithms,
     Map<String, String> keys,
     Map<String, Map<String, String>> signatures, {
-    Map<String, dynamic> unsigned,
+    Map<String, dynamic>? unsigned,
   }) : super(userId, deviceId, keys, signatures, unsigned: unsigned);
 
   @override

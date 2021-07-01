@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -51,7 +51,7 @@ class Logs {
     }
   }
 
-  void wtf(String title, [Object exception, StackTrace stackTrace]) =>
+  void wtf(String title, [Object? exception, StackTrace? stackTrace]) =>
       addLogEvent(
         LogEvent(
           title,
@@ -61,7 +61,7 @@ class Logs {
         ),
       );
 
-  void e(String title, [Object exception, StackTrace stackTrace]) =>
+  void e(String title, [Object? exception, StackTrace? stackTrace]) =>
       addLogEvent(
         LogEvent(
           title,
@@ -71,7 +71,7 @@ class Logs {
         ),
       );
 
-  void w(String title, [Object exception, StackTrace stackTrace]) =>
+  void w(String title, [Object? exception, StackTrace? stackTrace]) =>
       addLogEvent(
         LogEvent(
           title,
@@ -81,7 +81,7 @@ class Logs {
         ),
       );
 
-  void i(String title, [Object exception, StackTrace stackTrace]) =>
+  void i(String title, [Object? exception, StackTrace? stackTrace]) =>
       addLogEvent(
         LogEvent(
           title,
@@ -91,7 +91,7 @@ class Logs {
         ),
       );
 
-  void d(String title, [Object exception, StackTrace stackTrace]) =>
+  void d(String title, [Object? exception, StackTrace? stackTrace]) =>
       addLogEvent(
         LogEvent(
           title,
@@ -101,7 +101,7 @@ class Logs {
         ),
       );
 
-  void v(String title, [Object exception, StackTrace stackTrace]) =>
+  void v(String title, [Object? exception, StackTrace? stackTrace]) =>
       addLogEvent(
         LogEvent(
           title,
@@ -115,8 +115,8 @@ class Logs {
 // ignore: avoid_print
 class LogEvent {
   final String title;
-  final Object exception;
-  final StackTrace stackTrace;
+  final Object? exception;
+  final StackTrace? stackTrace;
   final Level level;
 
   LogEvent(

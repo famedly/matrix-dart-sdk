@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -28,7 +28,7 @@ import 'authentication_types.dart';
 class AuthenticationUserIdentifier extends AuthenticationIdentifier {
   String user;
 
-  AuthenticationUserIdentifier({this.user})
+  AuthenticationUserIdentifier({required this.user})
       : super(type: AuthenticationIdentifierTypes.userId);
 
   AuthenticationUserIdentifier.fromJson(Map<String, dynamic> json)

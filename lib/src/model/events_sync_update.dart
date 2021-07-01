@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -25,9 +25,9 @@
 import 'matrix_event.dart';
 
 class EventsSyncUpdate {
-  String start;
-  String end;
-  List<MatrixEvent> chunk;
+  String? start;
+  String? end;
+  List<MatrixEvent>? chunk;
 
   EventsSyncUpdate.fromJson(Map<String, dynamic> json)
       : start = json['start'],
@@ -47,7 +47,7 @@ class EventsSyncUpdate {
       data['end'] = end;
     }
     if (chunk != null) {
-      data['chunk'] = chunk.map((i) => i.toJson()).toList();
+      data['chunk'] = chunk!.map((i) => i.toJson()).toList();
     }
     return data;
   }

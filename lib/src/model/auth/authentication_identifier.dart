@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -30,7 +30,7 @@ import 'authentication_third_party_identifier.dart';
 class AuthenticationIdentifier {
   String type;
 
-  AuthenticationIdentifier({this.type});
+  AuthenticationIdentifier({required this.type});
 
   AuthenticationIdentifier.fromJson(Map<String, dynamic> json)
       : type = json['type'];

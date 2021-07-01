@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -25,12 +25,12 @@
 import 'basic_event.dart';
 
 class BasicRoomEvent extends BasicEvent {
-  String roomId;
+  String? roomId;
 
   BasicRoomEvent({
     this.roomId,
-    Map<String, dynamic> content,
-    String type,
+    required Map<String, dynamic> content,
+    required String type,
   }) : super(
           content: content,
           type: type,

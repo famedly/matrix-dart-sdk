@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -29,7 +29,7 @@ class AuthenticationPhoneIdentifier extends AuthenticationIdentifier {
   String country;
   String phone;
 
-  AuthenticationPhoneIdentifier({this.country, this.phone})
+  AuthenticationPhoneIdentifier({required this.country, required this.phone})
       : super(type: AuthenticationIdentifierTypes.phone);
 
   AuthenticationPhoneIdentifier.fromJson(Map<String, dynamic> json)

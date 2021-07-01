@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -24,7 +24,7 @@
 
 class RequestTokenResponse {
   String sid;
-  String submitUrl;
+  String? submitUrl;
 
   RequestTokenResponse.fromJson(Map<String, dynamic> json)
       : sid = json['sid'],

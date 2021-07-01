@@ -1,4 +1,4 @@
-// @dart=2.9
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -25,7 +25,7 @@
 import 'basic_event_with_sender.dart';
 
 class StrippedStateEvent extends BasicEventWithSender {
-  String stateKey;
+  String? stateKey;
 
   StrippedStateEvent();
   StrippedStateEvent.fromJson(Map<String, dynamic> json)
