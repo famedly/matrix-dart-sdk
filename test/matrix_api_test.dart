@@ -1898,7 +1898,6 @@ void main() {
         'identifier': {'type': 'm.id.user', 'user': 'a'},
         'password': 'a',
         'session': '1',
-        'user': 'a',
       };
       expect(AuthenticationPassword.fromJson(json).toJson(), json);
       expect(
