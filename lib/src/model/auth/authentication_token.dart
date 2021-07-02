@@ -26,6 +26,8 @@ import 'authentication_types.dart';
 
 class AuthenticationToken extends AuthenticationData {
   String token;
+
+  /// removed in the unstable version of the spec
   String? txnId;
 
   AuthenticationToken({String? session, required this.token, this.txnId})
