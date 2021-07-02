@@ -73,7 +73,7 @@ class PassphraseInfo {
       : algorithm = json.tryGet('algorithm'),
         salt = json.tryGet('salt'),
         iterations = json.tryGet('iterations'),
-        bits = json.tryGet<int>('bits');
+        bits = json.tryGet('bits');
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
