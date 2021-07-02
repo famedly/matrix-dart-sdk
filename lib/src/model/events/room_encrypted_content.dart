@@ -47,8 +47,8 @@ class RoomEncryptedContent {
   RoomEncryptedContent.fromJson(Map<String, dynamic> json)
       : algorithm = json.tryGet('algorithm') ?? '',
         senderKey = json.tryGet('sender_key') ?? '',
-        deviceId = json.tryGet('device_id'),
-        sessionId = json.tryGet('session_id'),
+        deviceId = json.tryGet<String?>('device_id'),
+        sessionId = json.tryGet<String?>('session_id'),
         ciphertextMegolm = json.silentTryGet('ciphertext'),
         // filter out invalid/incomplete CiphertextInfos
         ciphertextOlm = json

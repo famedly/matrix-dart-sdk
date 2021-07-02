@@ -21,15 +21,16 @@
 * SOFTWARE.
 */
 
+import 'dart:core';
+
 import 'logs.dart';
 
 extension TryGetMapExtension on Map<String, dynamic> {
-  T? tryGet<T extends Object>(String key) {
-    final value = this[key];
-    if (value != null && !(value is T)) {
+  T? tryGet<T extends Object?>(String key) {
+    final Object? value = this[key];
+    if (value is! T) {
       Logs().w(
-          'Expected "${T.runtimeType}" in event content for the Key "$key" but got "${value.runtimeType}".',
-          StackTrace.current);
+          'Expected "$T" in event content for the Key "$key" but got "${value.runtimeType}".');
       return null;
     }
     return value;
@@ -37,43 +38,45 @@ extension TryGetMapExtension on Map<String, dynamic> {
 
   /// Same as tryGet but without logging any warnings.
   /// This is helpful if you have a field that can mean multiple things on purpose.
-  T? silentTryGet<T extends Object>(String key) {
-    final value = this[key];
-    if (value != null && !(value is T)) {
+  T? silentTryGet<T extends Object?>(String key) {
+    final Object? value = this[key];
+    if (value is! T) {
       return null;
     }
     return value;
   }
 
   List<T>? tryGetList<T>(String key) {
-    final value = this[key];
-    if (value != null && !(value is List)) {
+    final Object? value = this[key];
+    if (value is! List) {
       Logs().w(
-          'Expected "List<${T.runtimeType}>" in event content for the key "$key" but got "${value.runtimeType}".',
+          'Expected "List<$T>" in event content for the key "$key" but got "${value.runtimeType}".',
           StackTrace.current);
       return null;
     }
     try {
-      return (value as List).cast<T>();
+      // copy entries to ensure type check failures here and not an access
+      return value.cast<T>().toList();
     } catch (_) {
-      Logs().w(
-          'Unable to create "List<${T.runtimeType}>" in event content for the key "$key"');
+      Logs()
+          .w('Unable to create "List<$T>" in event content for the key "$key"');
       return null;
     }
   }
 
   Map<A, B>? tryGetMap<A, B>(String key) {
-    final value = this[key];
-    if (value != null && !(value is Map)) {
+    final Object? value = this[key];
+    if (value is! Map) {
       Logs().w(
-          'Expected "Map<${A.runtimeType},${B.runtimeType}>" in event content for the key "$key" but got "${value.runtimeType}".');
+          'Expected "Map<$A,$B>" in event content for the key "$key" but got "${value.runtimeType}".');
       return null;
     }
     try {
-      return (value as Map).cast<A, B>();
+      // copy map to ensure type check failures here and not an access
+      return Map.from(value.cast<A, B>());
     } catch (_) {
       Logs().w(
-          'Unable to create "Map<${A.runtimeType},${B.runtimeType}>" in event content for the key "$key"');
+          'Unable to create "Map<$A,$B>" in event content for the key "$key"');
       return null;
     }
   }
