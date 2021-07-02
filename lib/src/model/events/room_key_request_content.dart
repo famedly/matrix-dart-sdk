@@ -37,7 +37,7 @@ class RoomKeyRequestContent {
 
   RoomKeyRequestContent.fromJson(Map<String, dynamic> json)
       : body = ((x) => x != null ? RequestedKeyInfo.fromJson(x) : null)(
-            json.tryGet('body')),
+            json.tryGet('body', TryGet.optional)),
         action = json.tryGet('action') ?? '',
         requestingDeviceId = json.tryGet('requesting_device_id') ?? '',
         requestId = json.tryGet('request_id') ?? '';

@@ -25,33 +25,54 @@ import 'dart:core';
 
 import 'logs.dart';
 
-extension TryGetMapExtension on Map<String, dynamic> {
-  T? tryGet<T extends Object?>(String key) {
-    final Object? value = this[key];
-    if (value is! T) {
-      Logs().w(
-          'Expected "$T" in event content for the Key "$key" but got "${value.runtimeType}".');
-      return null;
-    }
-    return value;
-  }
+abstract class TryGet {
+  void call(String key, Type expected, Type actual);
 
-  /// Same as tryGet but without logging any warnings.
+  static const TryGet required = _RequiredLog();
+  static const TryGet optional = _OptionalLog();
+
   /// This is helpful if you have a field that can mean multiple things on purpose.
-  T? silentTryGet<T extends Object?>(String key) {
+  static const TryGet silent = _SilentLog();
+}
+
+class _RequiredLog implements TryGet {
+  const _RequiredLog();
+  @override
+  void call(String key, Type expected, Type actual) => Logs().w(
+      'Expected "$expected" in event content for the Key "$key" but got "$actual".');
+}
+
+class _OptionalLog implements TryGet {
+  const _OptionalLog();
+  @override
+  void call(String key, Type expected, Type actual) {
+    if (actual != Null) {
+      Logs().w(
+          'Expected "$expected" in event content for the Key "$key" but got "$actual".');
+    }
+  }
+}
+
+class _SilentLog implements TryGet {
+  const _SilentLog();
+  @override
+  void call(String key, Type expected, Type actual) {}
+}
+
+extension TryGetMapExtension on Map<String, dynamic> {
+  T? tryGet<T extends Object>(String key, [TryGet log = TryGet.required]) {
     final Object? value = this[key];
     if (value is! T) {
+      log(key, T, value.runtimeType);
       return null;
     }
     return value;
   }
 
-  List<T>? tryGetList<T>(String key) {
+  List<T>? tryGetList<T>(String key, [TryGet log = TryGet.required]) {
     final Object? value = this[key];
     if (value is! List) {
-      Logs().w(
-          'Expected "List<$T>" in event content for the key "$key" but got "${value.runtimeType}".',
-          StackTrace.current);
+      log(key, T, value.runtimeType);
       return null;
     }
     try {
@@ -64,11 +85,10 @@ extension TryGetMapExtension on Map<String, dynamic> {
     }
   }
 
-  Map<A, B>? tryGetMap<A, B>(String key) {
+  Map<A, B>? tryGetMap<A, B>(String key, [TryGet log = TryGet.required]) {
     final Object? value = this[key];
     if (value is! Map) {
-      Logs().w(
-          'Expected "Map<$A,$B>" in event content for the key "$key" but got "${value.runtimeType}".');
+      log(key, <A, B>{}.runtimeType, value.runtimeType);
       return null;
     }
     try {
