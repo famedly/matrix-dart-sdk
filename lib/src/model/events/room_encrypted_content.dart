@@ -32,11 +32,8 @@ extension RoomEncryptedContentBasicEventExtension on BasicEvent {
 }
 
 /// Convert Nullable iterable of MapEntries to Map
-extension ToMap<T1, T2> on Iterable<MapEntry<T1, T2>>? {
-  Map<T1, T2>? toMap() {
-    final that = this;
-    return that != null ? Map.fromEntries(that) : null;
-  }
+extension ToMap<T1, T2> on Iterable<MapEntry<T1, T2>> {
+  Map<T1, T2> toMap() => Map.fromEntries(this);
 }
 
 class RoomEncryptedContent {
