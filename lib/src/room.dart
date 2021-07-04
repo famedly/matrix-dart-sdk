@@ -545,88 +545,9 @@ class Room {
       );
 
   /// return all current emote packs for this room
-  Map<String, Map<String, String>> get emotePacks {
-    final packs = <String, Map<String, String>>{};
-    final normalizeEmotePackName = (String name) {
-      name = name.replaceAll(' ', '-');
-      name = name.replaceAll(RegExp(r'[^\w-]'), '');
-      return name.toLowerCase();
-    };
-    final allMxcs = <String>{}; // for easy dedupint
-    final addEmotePack = (String packName, Map<String, dynamic> content,
-        [String packNameOverride]) {
-      if (!(content['emoticons'] is Map) && !(content['short'] is Map)) {
-        return;
-      }
-      if (content['pack'] is Map && content['pack']['short'] is String) {
-        packName = content['pack']['short'];
-      }
-      if (packNameOverride != null && packNameOverride.isNotEmpty) {
-        packName = packNameOverride;
-      }
-      packName = normalizeEmotePackName(packName);
-      if (!packs.containsKey(packName)) {
-        packs[packName] = <String, String>{};
-      }
-      if (content['emoticons'] is Map) {
-        content['emoticons'].forEach((key, value) {
-          if (key is String &&
-              value is Map &&
-              value['url'] is String &&
-              value['url'].startsWith('mxc://')) {
-            if (allMxcs.add(value['url'])) {
-              packs[packName][key] = value['url'];
-            }
-          }
-        });
-      } else {
-        content['short'].forEach((key, value) {
-          if (key is String && value is String && value.startsWith('mxc://')) {
-            if (allMxcs.add(value)) {
-              packs[packName][key] = value;
-            }
-          }
-        });
-      }
-    };
-    // first add all the user emotes
-    final userEmotes = client.accountData['im.ponies.user_emotes'];
-    if (userEmotes != null) {
-      addEmotePack('user', userEmotes.content);
-    }
-    // next add all the external emote rooms
-    final emoteRooms = client.accountData['im.ponies.emote_rooms'];
-    if (emoteRooms != null && emoteRooms.content['rooms'] is Map) {
-      for (final roomEntry in emoteRooms.content['rooms'].entries) {
-        final roomId = roomEntry.key;
-        final room = client.getRoomById(roomId);
-        if (room != null && roomEntry.value is Map) {
-          for (final stateKeyEntry in roomEntry.value.entries) {
-            final stateKey = stateKeyEntry.key;
-            final event = room.getState('im.ponies.room_emotes', stateKey);
-            if (event != null && stateKeyEntry.value is Map) {
-              addEmotePack(
-                  (room.canonicalAlias?.isEmpty ?? true)
-                      ? room.id
-                      : room.canonicalAlias,
-                  event.content,
-                  stateKeyEntry.value['name']);
-            }
-          }
-        }
-      }
-    }
-    // finally add all the room emotes
-    final allRoomEmotes = states['im.ponies.room_emotes'];
-    if (allRoomEmotes != null) {
-      for (final entry in allRoomEmotes.entries) {
-        final stateKey = entry.key;
-        final event = entry.value;
-        addEmotePack(stateKey.isEmpty ? 'room' : stateKey, event.content);
-      }
-    }
-    return packs;
-  }
+  @deprecated
+  Map<String, Map<String, String>> get emotePacks =>
+      getImagePacksFlat(ImagePackUsage.emoticon);
 
   /// Sends a normal text message to this room. Returns the event ID generated
   /// by the server for this message.
@@ -635,7 +556,7 @@ class Room {
       Event inReplyTo,
       String editEventId,
       bool parseMarkdown = true,
-      Map<String, Map<String, String>> emotePacks,
+      @deprecated Map<String, Map<String, String>> emotePacks,
       bool parseCommands = true,
       String msgtype = MessageTypes.Text}) {
     if (parseCommands) {
@@ -651,7 +572,8 @@ class Room {
         for (final user in getParticipants()) user.mention: user.id
       };
       final html = markdown(event['body'],
-          emotePacks: emotePacks ?? this.emotePacks, mentionMap: mentionMap);
+          emotePacks: getImagePacksFlat(ImagePackUsage.emoticon),
+          mentionMap: mentionMap);
       // if the decoded html is the same as the body, there is no need in sending a formatted message
       if (HtmlUnescape().convert(html.replaceAll(RegExp(r'<br />\n?'), '\n')) !=
           event['body']) {

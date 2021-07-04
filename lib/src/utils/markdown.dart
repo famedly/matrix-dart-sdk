@@ -63,7 +63,7 @@ class EmoteSyntax extends InlineSyntax {
   @override
   bool onMatch(InlineParser parser, Match match) {
     final pack = match[1] ?? '';
-    final emote = ':${match[2]}:';
+    final emote = match[2];
     String mxc;
     if (pack.isEmpty) {
       // search all packs
@@ -84,8 +84,8 @@ class EmoteSyntax extends InlineSyntax {
     final element = Element.empty('img');
     element.attributes['data-mx-emoticon'] = '';
     element.attributes['src'] = htmlAttrEscape.convert(mxc);
-    element.attributes['alt'] = htmlAttrEscape.convert(emote);
-    element.attributes['title'] = htmlAttrEscape.convert(emote);
+    element.attributes['alt'] = htmlAttrEscape.convert(':$emote:');
+    element.attributes['title'] = htmlAttrEscape.convert(':$emote:');
     element.attributes['height'] = '32';
     element.attributes['vertical-align'] = 'middle';
     parser.addNode(element);

@@ -22,6 +22,7 @@ library matrix;
 export 'package:matrix_api_lite/matrix_api_lite.dart';
 export 'src/utils/room_update.dart';
 export 'src/utils/event_update.dart';
+export 'src/utils/image_pack_extension.dart';
 export 'src/utils/device_keys_list.dart';
 export 'src/utils/matrix_file.dart';
 export 'src/utils/matrix_id_string_extension.dart';

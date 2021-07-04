@@ -23,13 +23,13 @@ void main() {
   group('markdown', () {
     final emotePacks = {
       'room': {
-        ':fox:': 'mxc://roomfox',
-        ':bunny:': 'mxc://roombunny',
+        'fox': 'mxc://roomfox',
+        'bunny': 'mxc://roombunny',
       },
       'user': {
-        ':fox:': 'mxc://userfox',
-        ':bunny:': 'mxc://userbunny',
-        ':raccoon:': 'mxc://raccoon',
+        'fox': 'mxc://userfox',
+        'bunny': 'mxc://userbunny',
+        'raccoon': 'mxc://raccoon',
       },
     };
     final mentionMap = {
