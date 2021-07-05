@@ -1053,15 +1053,25 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 }
 
+dynamic _castValue(dynamic value) {
+  if (value is Map) {
+    return convertToJson(value);
+  }
+  if (value is List) {
+    return value.map(_castValue).toList();
+  }
+  return value;
+}
+
+/// Hive always gives back an `_InternalLinkedHasMap<dynamic, dynamic>`. This
+/// creates a deep copy of the json and makes sure that the format is always
+/// `Map<String, dynamic>`.
 Map<String, dynamic> convertToJson(Map map) {
-  final jsonMap = <String, dynamic>{
-    for (final entry in map.entries) ...{
-      if (entry.value is Map)
-        '${entry.key.toString()}': convertToJson(entry.value),
-      if (!(entry.value is Map)) '${entry.key.toString()}': entry.value,
-    }
-  };
-  return jsonMap;
+  final copy = Map<String, dynamic>.from(map);
+  for (final entry in copy.entries) {
+    copy[entry.key] = _castValue(entry.value);
+  }
+  return copy;
 }
 
 class MultiKey {
