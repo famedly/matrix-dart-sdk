@@ -346,7 +346,7 @@ void main() {
             'sender': '@alice:example.com',
             'status': 0,
             'event_id': 'will-fail',
-            'origin_server_ts': testTimeStamp
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
@@ -380,7 +380,7 @@ void main() {
             'sender': '@alice:example.com',
             'status': 0,
             'event_id': 'transaction',
-            'origin_server_ts': testTimeStamp
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
@@ -430,7 +430,7 @@ void main() {
             'content': {'msgtype': 'm.text', 'body': 'Testcase'},
             'sender': '@alice:example.com',
             'event_id': 'transaction',
-            'origin_server_ts': testTimeStamp,
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
             'unsigned': {
               messageSendingStatusKey: 0,
               'transaction_id': 'transaction',
@@ -488,7 +488,7 @@ void main() {
             'sender': '@alice:example.com',
             'status': 0,
             'event_id': 'transaction',
-            'origin_server_ts': testTimeStamp
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
@@ -537,7 +537,7 @@ void main() {
             'sender': '@alice:example.com',
             'status': 0,
             'event_id': 'transaction',
-            'origin_server_ts': testTimeStamp
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));

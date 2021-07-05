@@ -116,6 +116,28 @@ class Event extends MatrixEvent {
     }
     this.stateKey = stateKey;
     this.originServerTs = originServerTs;
+
+    // Mark event as failed to send if status is `sending` and event is older
+    // than the timeout. This should not happen with the deprecated Moor
+    // database!
+    if (status == 0 && room?.client?.database != null) {
+      // Age of this event in milliseconds
+      final age = DateTime.now().millisecondsSinceEpoch -
+          originServerTs.millisecondsSinceEpoch;
+
+      if (age > room.client.sendMessageTimeoutSeconds * 1000) {
+        // Update this event in database and open timelines
+        final json = toJson();
+        json['unsigned'] ??= <String, dynamic>{};
+        json['unsigned'][messageSendingStatusKey] = -1;
+        room.client.handleSync(SyncUpdate()
+          ..rooms = (RoomsUpdate()
+            ..join = (<String, JoinedRoomUpdate>{}..[room.id] =
+                (JoinedRoomUpdate()
+                  ..timeline = (TimelineUpdate()
+                    ..events = [MatrixEvent.fromJson(json)])))));
+      }
+    }
   }
 
   static Map<String, dynamic> getMapFromPayload(dynamic payload) {
