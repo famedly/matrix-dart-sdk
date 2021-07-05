@@ -28,6 +28,7 @@ import 'package:moor/ffi.dart' as moor;
 
 Future<DatabaseApi> getDatabase(Client _) => getHiveDatabase(_);
 
+@deprecated
 Future<Database> getMoorDatabase(Client _) async {
   moorRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   return Database(moor.VmDatabase.memory());

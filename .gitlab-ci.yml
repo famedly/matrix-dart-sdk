@@ -1,6 +1,5 @@
 stages:
-  - coverage
-  - builddocs
+  - test
   - deploy
 
 workflow:
@@ -9,10 +8,31 @@ workflow:
     - if: $CI_COMMIT_TAG
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
-coverage:
+code_analyze:
+  tags:
+    - docker
+  stage: test
+  image: google/dart
+  dependencies: []
+  script:
+    - dart pub get
+    - dart format lib/ test/ test_driver/ --set-exit-if-changed
+    - dart analyze
+
+unit_tests_without_olm:
+  tags:
+    - docker
+  stage: test
+  image: google/dart
+  dependencies: []
+  script:
+    - dart pub get
+    - dart test
+
+unit_tests:
   tags:
     - linux
-  stage: coverage
+  stage: test
   image: debian:testing
   dependencies: []
   script:
@@ -36,31 +56,10 @@ coverage:
     paths:
       - coverage/
 
-coverage_without_olm:
+e2ee_tests:
   tags:
     - linux
-  stage: coverage
-  image: debian:testing
-  dependencies: []
-  script:
-    - apt update
-    - apt install -y curl gnupg2 git sqlite3 libsqlite3-dev wget
-    - sh -c 'wget -qO- https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -'
-    - sh -c 'wget -qO- https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list'
-    - apt update
-    - apt install -y dart
-    - ln -s /usr/lib/dart/bin/pub /usr/bin/
-    # Need to check if famedlysdk works without OpenSSL.
-    # Cannot uninstall OpenSSL, because it may be used internally.
-    # Break famedlysdk's FFI to OpenSSL instead:
-    - sed -i 's/libcrypto/libnocrypto/g' lib/src/utils/crypto/ffi.dart
-    - pub get
-    - pub run test
-
-e2ee_test:
-  tags:
-    - linux
-  stage: coverage
+  stage: test
   image: debian:testing
   dependencies: []
   script:
@@ -81,71 +80,21 @@ e2ee_test:
   timeout: 16m
   resource_group: e2ee_test
 
-code_analyze:
+pages:
   tags:
-    - docker
-  stage: coverage
-  image: google/dart
-  dependencies: []
-  script:
-    - dart pub get
-    - dart format lib/ test/ test_driver/ --set-exit-if-changed
-    - dart analyze
-
-build_api_doc:
-  tags:
-    - docker
-  stage: builddocs
-  image: google/dart
-  script:
-    - dartdoc --exclude "dart:async,dart:collection,dart:convert,dart:core,dart:developer,dart:io,dart:isolate,dart:math,dart:typed_data,dart:ui"
-  artifacts:
-    paths:
-      - doc/api/
-
-build_doc:
-  tags:
-    - docker
-  stage: builddocs
+    - linux
+  stage: deploy
   image: registry.gitlab.com/larodar/mdbook-dtmo:latest
   script:
     - cd docs
     - mdbook-dtmo build -d public
     - mv public ../doc-public
-  artifacts:
-    paths:
-      - doc-public
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-
-pages:
-  tags:
-    - linux
-  stage: deploy
-  image: alpine:latest
-  script:
-    - mv doc/api/ ./home/api
+    - cd ..
     - mv doc-public ./home/doc
     - mv home public
-  dependencies:
-    - build_api_doc
-    - build_doc
+  dependencies: []
   artifacts:
     paths:
       - public
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-# Adds license-scanning job. Because Gitlab does not support pub.dev
-# we added https://github.com/oss-review-toolkit/ort
-
-#include:
-#  - template: Security/License-Scanning.gitlab-ci.yml
-
-#license_scanning:
-#  stage: coverage
-#  image:
-#    name: "registry.gitlab.com/gitlab-org/security-products/analyzers/ort/ort:latest"
-#  script:
-#    - /opt/ort/bin/ort analyze -i $CI_PROJECT_DIR -o $CI_PROJECT_DIR/ --allow-dynamic-versions
-#    - /opt/ort/bin/ort scan -i $CI_PROJECT_DIR/analyzer-result.yml -o $CI_PROJECT_DIR/ || true
-#    - /opt/ort/bin/ort report -f GitLabLicenseModel -i $CI_PROJECT_DIR/scan-result.yml -o $CI_PROJECT_DIR/
