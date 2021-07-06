@@ -192,6 +192,13 @@ class Client extends MatrixApi {
   String _deviceName;
 
   /// Returns the current login state.
+  LoginState get loginState => __loginState;
+  LoginState __loginState;
+  set _loginState(LoginState state) {
+    __loginState = state;
+    onLoginStateChanged.add(state);
+  }
+
   bool isLogged() => accessToken != null;
 
   /// A list of all rooms the user is participating or invited.
@@ -884,7 +891,7 @@ class Client extends MatrixApi {
         // we aren't logged in
         encryption?.dispose();
         encryption = null;
-        onLoginStateChanged.add(LoginState.loggedOut);
+        _loginState = LoginState.loggedOut;
         Logs().i('User is not logged in.');
         _initLock = false;
         return;
@@ -934,8 +941,7 @@ class Client extends MatrixApi {
         presences.clear();
       }
       _initLock = false;
-
-      onLoginStateChanged.add(LoginState.logged);
+      _loginState = LoginState.logged;
       Logs().i(
         'Successfully connected as ${userID.localpart} with ${homeserver.toString()}',
       );
@@ -981,7 +987,7 @@ class Client extends MatrixApi {
       await databaseDestroyer(this);
       _database = null;
     }
-    onLoginStateChanged.add(LoginState.loggedOut);
+    _loginState = LoginState.loggedOut;
   }
 
   bool _backgroundSync = true;
