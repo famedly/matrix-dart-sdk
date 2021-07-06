@@ -1,3 +1,9 @@
+## [0.1.6] - 06 Jul 2021
+- feat: Make it possible to get the current loginState
+- fix: Broken nested accountData content maps
+- fix: Mark unsent events as failed
+- fix: Pin moor to 4.3.2 to fix the CI errors
+
 ## [0.1.5] - 26 Jun 2021
 - fix: Don't run syncs while the client is being initialized
 
