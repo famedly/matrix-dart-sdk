@@ -164,8 +164,14 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       _eventsBoxName,
       encryptionCipher: encryptionCipher,
     );
-    final currentVersion = (await _clientBox.get('version') as int) ?? 0;
-    if (currentVersion != version) await _migrateFromVersion(currentVersion);
+
+    // Check version and check if we need a migration
+    final currentVersion = (await _clientBox.get('version') as int);
+    if (currentVersion == null) {
+      await _clientBox.put('version', version);
+    } else if (currentVersion != version) {
+      await _migrateFromVersion(currentVersion);
+    }
 
     return;
   }
