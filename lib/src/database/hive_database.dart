@@ -18,16 +18,19 @@ import 'package:hive/hive.dart';
 ///
 /// This database does not support file caching!
 class FamedlySdkHiveDatabase extends DatabaseApi {
-  static const int version = 2;
+  static const int version = 3;
   final String name;
   Box _clientBox;
   Box _accountDataBox;
   Box _roomsBox;
   Box _toDeviceQueueBox;
 
-  /// Key is a tuple as MultiKey(roomId, type, stateKey) where stateKey can be
+  /// Key is a tuple as MultiKey(roomId, type) where stateKey can be
   /// an empty string.
   LazyBox _roomStateBox;
+
+  /// Key is a tuple as MultiKey(roomId, userId)
+  LazyBox _roomMembersBox;
 
   /// Key is a tuple as MultiKey(roomId, type)
   LazyBox _roomAccountDataBox;
@@ -58,6 +61,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   String get _roomsBoxName => '$name.box.rooms';
   String get _toDeviceQueueBoxName => '$name.box.to_device_queue';
   String get _roomStateBoxName => '$name.box.room_states';
+  String get _roomMembersBoxName => '$name.box.room_members';
   String get _roomAccountDataBoxName => '$name.box.room_account_data';
   String get _inboundGroupSessionsBoxName => '$name.box.inbound_group_session';
   String get _outboundGroupSessionsBoxName =>
@@ -85,6 +89,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         action(_accountDataBox),
         action(_roomsBox),
         action(_roomStateBox),
+        action(_roomMembersBox),
         action(_toDeviceQueueBox),
         action(_roomAccountDataBox),
         action(_inboundGroupSessionsBox),
@@ -114,6 +119,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     );
     _roomStateBox = await Hive.openLazyBox(
       _roomStateBoxName,
+      encryptionCipher: encryptionCipher,
+    );
+    _roomMembersBox = await Hive.openLazyBox(
+      _roomMembersBoxName,
       encryptionCipher: encryptionCipher,
     );
     _toDeviceQueueBox = await Hive.openBox(
@@ -197,6 +206,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     await _roomsBox.deleteAll(_roomsBox.keys);
     await _accountDataBox.deleteAll(_accountDataBox.keys);
     await _roomStateBox.deleteAll(_roomStateBox.keys);
+    await _roomMembersBox.deleteAll(_roomMembersBox.keys);
     await _eventsBox.deleteAll(_eventsBox.keys);
     await _timelineFragmentsBox.deleteAll(_timelineFragmentsBox.keys);
     await _outboundGroupSessionsBox.deleteAll(_outboundGroupSessionsBox.keys);
@@ -235,6 +245,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       final multiKey = MultiKey.fromString(key);
       if (multiKey.parts.first != roomId) continue;
       await _roomStateBox.delete(key);
+    }
+    for (final key in _roomMembersBox.keys) {
+      final multiKey = MultiKey.fromString(key);
+      if (multiKey.parts.first != roomId) continue;
+      await _roomMembersBox.delete(key);
     }
     for (final key in _roomAccountDataBox.keys) {
       final multiKey = MultiKey.fromString(key);
@@ -405,8 +420,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       }
       // Load members
       for (final userId in membersToPostload) {
-        final state = await _roomStateBox
-            .get(MultiKey(room.id, EventTypes.RoomMember, userId).toString());
+        final state =
+            await _roomMembersBox.get(MultiKey(room.id, userId).toString());
         if (state == null) {
           Logs().w('Unable to post load member $userId');
           continue;
@@ -417,10 +432,15 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       // Get the "important" room states. All other states will be loaded once
       // `getUnimportantRoomStates()` is called.
       for (final type in importantRoomStates) {
-        final state =
-            await _roomStateBox.get(MultiKey(room.id, type, '').toString());
-        if (state == null) continue;
-        room.setState(Event.fromJson(convertToJson(state), room));
+        final Map states =
+            await _roomStateBox.get(MultiKey(room.id, type).toString());
+        if (states == null) continue;
+        final stateEvents = states.values
+            .map((raw) => Event.fromJson(convertToJson(raw), room))
+            .toList();
+        for (final state in stateEvents) {
+          room.setState(state);
+        }
       }
 
       // Add to the list and continue.
@@ -467,18 +487,20 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       final tuple = MultiKey.fromString(key);
       return tuple.parts.first == room.id && !events.contains(tuple.parts[1]);
     });
-    return await Future.wait(
-      keys.map(
-        (key) async =>
-            Event.fromJson(convertToJson(await _roomStateBox.get(key)), room),
-      ),
-    );
+
+    final unimportantEvents = <Event>[];
+    for (final key in keys) {
+      final Map states = await _roomStateBox.get(key);
+      unimportantEvents.addAll(
+          states.values.map((raw) => Event.fromJson(convertToJson(raw), room)));
+    }
+    return unimportantEvents;
   }
 
   @override
   Future<User> getUser(int clientId, String userId, Room room) async {
-    final state = await _roomStateBox
-        .get(MultiKey(room.id, EventTypes.RoomMember, userId).toString());
+    final state =
+        await _roomMembersBox.get(MultiKey(room.id, userId).toString());
     if (state == null) return null;
     return Event.fromJson(convertToJson(state), room).asUser;
   }
@@ -518,11 +540,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<List<User>> getUsers(int clientId, Room room) async {
     final users = <User>[];
-    for (final key in _roomStateBox.keys) {
+    for (final key in _roomMembersBox.keys) {
       final statesKey = MultiKey.fromString(key);
-      if (statesKey.parts[0] != room.id ||
-          statesKey.parts[1] != EventTypes.RoomMember) continue;
-      final state = await _roomStateBox.get(key);
+      if (statesKey.parts[0] != room.id) continue;
+      final state = await _roomMembersBox.get(key);
       users.add(Event.fromJson(convertToJson(state), room).asUser);
     }
     return users;
@@ -798,13 +819,22 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     // Store a common state event
     if ({EventUpdateType.timeline, EventUpdateType.state}
         .contains(eventUpdate.type)) {
-      await _roomStateBox.put(
-          MultiKey(
-            eventUpdate.roomID,
-            eventUpdate.content['type'],
-            eventUpdate.content['state_key'] ?? '',
-          ).toString(),
-          eventUpdate.content);
+      if (eventUpdate.content['type'] == EventTypes.RoomMember) {
+        await _roomMembersBox.put(
+            MultiKey(
+              eventUpdate.roomID,
+              eventUpdate.content['state_key'],
+            ).toString(),
+            eventUpdate.content);
+      } else {
+        final key = MultiKey(
+          eventUpdate.roomID,
+          eventUpdate.content['type'],
+        ).toString();
+        final Map stateMap = await _roomStateBox.get(key) ?? {};
+        stateMap[eventUpdate.content['state_key']] = eventUpdate.content;
+        await _roomStateBox.put(key, stateMap);
+      }
     }
 
     // Store a room account data event
