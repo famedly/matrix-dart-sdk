@@ -12,7 +12,7 @@ dependencies:
   canonical_json: ^1.0.0
   markdown: ^4.0.0
   html_unescape: ^2.0.0
-  moor: 4.3.2
+  moor: ">=4.0.0 <=4.3.2"
   random_string: ^2.1.0
   crypto: ^3.0.0
   base58check: ^2.0.0
