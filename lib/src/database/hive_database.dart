@@ -208,7 +208,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
   @override
   Future<void> deleteFromToDeviceQueue(int clientId, int id) async {
-    await _toDeviceQueueBox.deleteAt(id);
+    await _toDeviceQueueBox.delete(id);
     return;
   }
 
