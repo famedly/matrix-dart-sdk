@@ -15,9 +15,6 @@
  *   You should have received a copy of the GNU Affero General Public License
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-import 'package:matrix/matrix.dart';
-import 'package:isolate/isolate.dart';
 import 'dart:async';
 
 Future<T> runInBackground<T, U>(
@@ -26,24 +23,5 @@ Future<T> runInBackground<T, U>(
   Duration timeout,
   dynamic Function() onTimeout,
 }) async {
-  IsolateRunner isolate;
-  try {
-    isolate = await IsolateRunner.spawn();
-  } on UnsupportedError {
-    // web does not support isolates (yet), so we fall back to calling the method directly
-    return await function(arg);
-  }
-  final sub = isolate.errors
-      .listen((error) => Logs().e('Error caught in isolate', error));
-  try {
-    return await isolate.run(
-      function,
-      arg,
-      timeout: timeout,
-      onTimeout: onTimeout,
-    );
-  } finally {
-    await sub.cancel();
-    await isolate.close();
-  }
+  return await function(arg);
 }
