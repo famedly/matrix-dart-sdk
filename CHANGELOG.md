@@ -1,3 +1,9 @@
+## [0.1.7] - 10 Jul 2021
+- change: Hive database schema (will trigger a database migration)
+- fix: Dont migrate database from version null
+- fix: Adjust emoji ranges to have less false positives
+- fix: Sending of the to_device key
+
 ## [0.1.6] - 06 Jul 2021
 - feat: Make it possible to get the current loginState
 - fix: Broken nested accountData content maps
