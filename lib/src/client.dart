@@ -296,16 +296,26 @@ class Client extends MatrixApi {
   Future<WellKnownInformation> getWellKnownInformationsByUserId(
     String MatrixIdOrDomain,
   ) async {
-    final response = await http
-        .get(Uri.https(MatrixIdOrDomain.domain, '/.well-known/matrix/client'));
-    var respBody = response.body;
     try {
-      respBody = utf8.decode(response.bodyBytes);
+      final response = await http.get(
+          Uri.https(MatrixIdOrDomain.domain, '/.well-known/matrix/client'));
+      var respBody = response.body;
+      try {
+        respBody = utf8.decode(response.bodyBytes);
+      } catch (_) {
+        // No-OP
+      }
+      final rawJson = json.decode(respBody);
+      return WellKnownInformation.fromJson(rawJson);
     } catch (_) {
-      // No-OP
+      // we got an error processing or fetching the well-known information, let's
+      // provide a reasonable fallback.
+      return WellKnownInformation.fromJson(<String, dynamic>{
+        'm.homeserver': <String, dynamic>{
+          'base_url': Uri.https(MatrixIdOrDomain.domain, '').toString(),
+        },
+      });
     }
-    final rawJson = json.decode(respBody);
-    return WellKnownInformation.fromJson(rawJson);
   }
 
   @Deprecated('Use [checkHomeserver] instead.')
