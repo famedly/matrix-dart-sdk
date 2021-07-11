@@ -46,6 +46,7 @@ extension MxcUriExtension on Uri {
       scheme: matrix.homeserver.scheme,
       host: matrix.homeserver.host,
       path: '/_matrix/media/r0/thumbnail/$host$path',
+      port: matrix.homeserver.port,
       queryParameters: {
         if (width != null) 'width': width.round().toString(),
         if (height != null) 'height': height.round().toString(),
