@@ -24,10 +24,10 @@ import 'package:matrix/encryption/utils/outbound_group_session.dart';
 import 'package:matrix/encryption/utils/ssss_cache.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/src/utils/QueuedToDeviceEvent.dart';
+import 'package:matrix_api_lite/matrix_api_lite.dart' as api;
 import 'package:moor/moor.dart';
 
 import '../../matrix.dart' as sdk;
-import 'package:matrix_api_lite/matrix_api_lite.dart' as api;
 import '../client.dart';
 import '../room.dart';
 import 'database_api.dart';
@@ -418,6 +418,7 @@ class Database extends _$Database implements DatabaseApi {
   /// Stores a RoomUpdate object in the database. Must be called inside of
   /// [transaction].
   final Set<String> _ensuredRooms = {};
+
   @override
   Future<void> storeRoomUpdate(int clientId, sdk.RoomUpdate roomUpdate,
       [sdk.Room oldRoom]) async {
@@ -820,8 +821,10 @@ sdk.Event getEventFromDb(dynamic dbEntry, sdk.Room room) {
   final unsigned = sdk.Event.getMapFromPayload(dbEntry.unsigned);
   final prevContent = sdk.Event.getMapFromPayload(dbEntry.prevContent);
   return sdk.Event(
-    status:
-        (dbEntry is DbEvent ? dbEntry.status : null) ?? sdk.Event.defaultStatus,
+    status: (dbEntry is DbEvent
+            ? sdk.EventStatusExt.fromNumber[dbEntry.status]
+            : null) ??
+        sdk.Event.defaultStatus,
     stateKey: dbEntry.stateKey,
     prevContent: prevContent,
     content: content,

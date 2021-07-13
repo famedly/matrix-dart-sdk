@@ -34,6 +34,31 @@ abstract class RelationshipTypes {
   static const String reaction = 'm.annotation';
 }
 
+/// Represents status of the event.
+enum EventStatus { removed, error, sending, sent, timeline, roomState }
+
+extension EventStatusExt on EventStatus {
+  /// Converts status [int] to [EventStatus].
+  static const Map<int, EventStatus> fromNumber = {
+    -2: EventStatus.removed,
+    -1: EventStatus.error,
+    0: EventStatus.sending,
+    1: EventStatus.sent,
+    2: EventStatus.timeline,
+    3: EventStatus.roomState,
+  };
+
+  /// Converts [EventStatus] to status [int] number.
+  static const Map<EventStatus, int> toNumber = {
+    EventStatus.removed: -2,
+    EventStatus.error: -1,
+    EventStatus.sending: 0,
+    EventStatus.sent: 1,
+    EventStatus.timeline: 2,
+    EventStatus.roomState: 3,
+  };
+}
+
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
 class Event extends MatrixEvent {
   User get sender => room.getUserByMXIDSync(senderId ?? '@unknown');
@@ -51,21 +76,9 @@ class Event extends MatrixEvent {
   final Room room;
 
   /// The status of this event.
-  /// -1=ERROR
-  ///  0=SENDING
-  ///  1=SENT
-  ///  2=TIMELINE
-  ///  3=ROOM_STATE
-  int status;
+  EventStatus status;
 
-  static const int defaultStatus = 2;
-  static const Map<String, int> statusType = {
-    'error': -1,
-    'sending': 0,
-    'sent': 1,
-    'timeline': 2,
-    'roomState': 3,
-  };
+  static const EventStatus defaultStatus = EventStatus.timeline;
 
   /// Optional. The event that redacted this event, if any. Otherwise null.
   Event get redactedBecause =>
@@ -98,7 +111,7 @@ class Event extends MatrixEvent {
     this.roomId = roomId ?? room?.id;
     this.senderId = senderId;
     this.unsigned = unsigned;
-    // synapse unfortunatley isn't following the spec and tosses the prev_content
+    // synapse unfortunately isn't following the spec and tosses the prev_content
     // into the unsigned block.
     // Currently we are facing a very strange bug in web which is impossible to debug.
     // It may be because of this line so we put this in try-catch until we can fix it.
@@ -119,7 +132,7 @@ class Event extends MatrixEvent {
     // Mark event as failed to send if status is `sending` and event is older
     // than the timeout. This should not happen with the deprecated Moor
     // database!
-    if (status == 0 && room?.client?.database != null) {
+    if (status == EventStatus.sending && room?.client?.database != null) {
       // Age of this event in milliseconds
       final age = DateTime.now().millisecondsSinceEpoch -
           originServerTs.millisecondsSinceEpoch;
@@ -155,7 +168,7 @@ class Event extends MatrixEvent {
     MatrixEvent matrixEvent,
     Room room, {
     double sortOrder,
-    int status,
+    EventStatus status,
   }) =>
       Event(
         status: status,
@@ -179,8 +192,8 @@ class Event extends MatrixEvent {
     final unsigned = Event.getMapFromPayload(jsonPayload['unsigned']);
     final prevContent = Event.getMapFromPayload(jsonPayload['prev_content']);
     return Event(
-      status: jsonPayload['status'] ??
-          unsigned[messageSendingStatusKey] ??
+      status: EventStatusExt.fromNumber[jsonPayload['status']] ??
+          EventStatusExt.fromNumber[unsigned[messageSendingStatusKey]] ??
           defaultStatus,
       stateKey: jsonPayload['state_key'],
       prevContent: prevContent,
@@ -299,7 +312,7 @@ class Event extends MatrixEvent {
   /// Removes this event if the status is < 1. This event will just be removed
   /// from the database and the timelines. Returns false if not removed.
   Future<bool> remove() async {
-    if (status < 1) {
+    if (status == EventStatus.sending || status == EventStatus.error) {
       await room.client.database?.removeEvent(room.client.id, eventId, room.id);
 
       room.client.onEvent.add(EventUpdate(
@@ -316,9 +329,9 @@ class Event extends MatrixEvent {
     return false;
   }
 
-  /// Try to send this event again. Only works with events of status -1.
+  /// Try to send this event again. Only works with events of status error.
   Future<String> sendAgain({String txid}) async {
-    if (status != -1) return null;
+    if (status != EventStatus.error) return null;
     // we do not remove the event here. It will automatically be updated
     // in the `sendEvent` method to transition -1 -> 0 -> 1 -> 2
     final newEventId = await room.sendEvent(

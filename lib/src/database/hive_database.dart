@@ -787,7 +787,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
       final status = newStatus == -1 || prevEvent?.status == null
           ? newStatus
-          : max(prevEvent.status, newStatus);
+          : max(EventStatusExt.toNumber[prevEvent.status], newStatus);
 
       // Add the status and the sort order to the content so it get stored
       eventUpdate.content['unsigned'] ??= <String, dynamic>{};

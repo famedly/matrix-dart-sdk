@@ -79,7 +79,7 @@ void main() {
 
       expect(event.eventId, id);
       expect(event.senderId, senderID);
-      expect(event.status, 2);
+      expect(event.status, EventStatus.timeline);
       expect(event.text, body);
       expect(event.formattedText, formatted_body);
       expect(event.body, body);
@@ -89,7 +89,7 @@ void main() {
       final state = Event.fromJson(jsonObj, null);
       expect(state.eventId, id);
       expect(state.stateKey, '');
-      expect(state.status, 2);
+      expect(state.status, EventStatus.timeline);
     });
     test('Test all EventTypes', () async {
       Event event;
@@ -259,7 +259,7 @@ void main() {
       final event = Event.fromJson(
           jsonObj, Room(id: '1234', client: Client('testclient')));
       final removed1 = await event.remove();
-      event.status = 0;
+      event.status = EventStatus.sending;
       final removed2 = await event.remove();
       expect(removed1, false);
       expect(removed2, true);
@@ -276,7 +276,7 @@ void main() {
       final event = Event.fromJson(
           jsonObj, Room(id: '!1234:example.com', client: matrix));
       final resp1 = await event.sendAgain();
-      event.status = -1;
+      event.status = EventStatus.error;
       final resp2 = await event.sendAgain(txid: '1234');
       expect(resp1, null);
       expect(resp2.startsWith('\$event'), true);

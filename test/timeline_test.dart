@@ -160,7 +160,7 @@ void main() {
       expect(insertList.length, timeline.events.length);
       final eventId = timeline.events[0].eventId;
       expect(eventId.startsWith('\$event'), true);
-      expect(timeline.events[0].status, 1);
+      expect(timeline.events[0].status, EventStatus.sent);
 
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
@@ -182,7 +182,7 @@ void main() {
       expect(insertList, [0, 0, 0]);
       expect(insertList.length, timeline.events.length);
       expect(timeline.events[0].eventId, eventId);
-      expect(timeline.events[0].status, 2);
+      expect(timeline.events[0].status, EventStatus.timeline);
     });
 
     test('Send message with error', () async {
@@ -213,9 +213,9 @@ void main() {
       expect(updateCount, 13);
       expect(insertList, [0, 0, 0, 0, 0, 0, 0]);
       expect(insertList.length, timeline.events.length);
-      expect(timeline.events[0].status, -1);
-      expect(timeline.events[1].status, -1);
-      expect(timeline.events[2].status, -1);
+      expect(timeline.events[0].status, EventStatus.error);
+      expect(timeline.events[1].status, EventStatus.error);
+      expect(timeline.events[2].status, EventStatus.error);
     });
 
     test('Remove message', () async {
@@ -227,7 +227,7 @@ void main() {
 
       expect(insertList, [0, 0, 0, 0, 0, 0, 0]);
       expect(timeline.events.length, 6);
-      expect(timeline.events[0].status, -1);
+      expect(timeline.events[0].status, EventStatus.error);
     });
 
     test('getEventById', () async {
@@ -263,7 +263,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, -1);
+      expect(timeline.events[0].status, EventStatus.error);
       await timeline.events[0].sendAgain();
 
       await Future.delayed(Duration(milliseconds: 50));
@@ -272,7 +272,7 @@ void main() {
 
       expect(insertList, [0, 0, 0, 0, 0, 0, 0, 0]);
       expect(timeline.events.length, 1);
-      expect(timeline.events[0].status, 1);
+      expect(timeline.events[0].status, EventStatus.sent);
     });
 
     test('Request history', () async {
@@ -331,8 +331,8 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, -1);
-      expect(timeline.events[1].status, 2);
+      expect(timeline.events[0].status, EventStatus.error);
+      expect(timeline.events[1].status, EventStatus.timeline);
     });
 
     test('sending event to failed update', () async {
@@ -350,7 +350,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, 0);
+      expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
@@ -365,7 +365,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, -1);
+      expect(timeline.events[0].status, EventStatus.error);
       expect(timeline.events.length, 1);
     });
     test('sending an event and the http request finishes first, 0 -> 1 -> 2',
@@ -384,7 +384,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, 0);
+      expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
@@ -400,7 +400,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, 1);
+      expect(timeline.events[0].status, EventStatus.sent);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
@@ -416,7 +416,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, 2);
+      expect(timeline.events[0].status, EventStatus.timeline);
       expect(timeline.events.length, 1);
     });
     test('sending an event where the sync reply arrives first, 0 -> 2 -> 1',
@@ -438,7 +438,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, 0);
+      expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
@@ -456,7 +456,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, 2);
+      expect(timeline.events[0].status, EventStatus.timeline);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
@@ -474,7 +474,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, 2);
+      expect(timeline.events[0].status, EventStatus.timeline);
       expect(timeline.events.length, 1);
     });
     test('sending an event 0 -> -1 -> 2', () async {
@@ -492,7 +492,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, 0);
+      expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
@@ -507,7 +507,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, -1);
+      expect(timeline.events[0].status, EventStatus.error);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
@@ -523,7 +523,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, 2);
+      expect(timeline.events[0].status, EventStatus.timeline);
       expect(timeline.events.length, 1);
     });
     test('sending an event 0 -> 2 -> -1', () async {
@@ -541,7 +541,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, 0);
+      expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
@@ -557,7 +557,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, 2);
+      expect(timeline.events[0].status, EventStatus.timeline);
       expect(timeline.events.length, 1);
       client.onEvent.add(EventUpdate(
           type: EventUpdateType.timeline,
@@ -572,7 +572,7 @@ void main() {
           },
           sortOrder: room.newSortOrder));
       await Future.delayed(Duration(milliseconds: 50));
-      expect(timeline.events[0].status, 2);
+      expect(timeline.events[0].status, EventStatus.timeline);
       expect(timeline.events.length, 1);
     });
     test('logout', () async {

@@ -259,11 +259,11 @@ class Timeline {
           eventUpdate.type != EventUpdateType.history) {
         return;
       }
-      final status = eventUpdate.content['status'] ??
+      final status = EventStatusExt.fromNumber[eventUpdate.content['status'] ??
           (eventUpdate.content['unsigned'] is Map<String, dynamic>
               ? eventUpdate.content['unsigned'][messageSendingStatusKey]
               : null) ??
-          2;
+          2];
       // Redaction events are handled as modification for existing events.
       if (eventUpdate.content['type'] == EventTypes.Redaction) {
         final eventId = _findEvent(event_id: eventUpdate.content['redacts']);
@@ -272,7 +272,7 @@ class Timeline {
           events[eventId].setRedactionEvent(
               Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder));
         }
-      } else if (status == -2) {
+      } else if (status == EventStatus.removed) {
         final i = _findEvent(event_id: eventUpdate.content['event_id']);
         if (i < events.length) {
           removeAggregatedEvent(events[i]);
@@ -295,7 +295,10 @@ class Timeline {
                   ? events[i].sortOrder
                   : eventUpdate.sortOrder);
           // do we preserve the status? we should allow 0 -> -1 updates and status increases
-          if (status < oldStatus && !(status == -1 && oldStatus == 0)) {
+          if (EventStatusExt.toNumber[status] <
+                  EventStatusExt.toNumber[oldStatus] &&
+              !(status == EventStatus.error &&
+                  oldStatus == EventStatus.sending)) {
             events[i].status = oldStatus;
           }
           addAggregatedEvent(events[i]);
@@ -328,10 +331,10 @@ class Timeline {
     if (_sortLock || events.length < 2) return;
     _sortLock = true;
     events?.sort((a, b) {
-      if (b.status == -1 && a.status != -1) {
+      if (b.status == EventStatus.error && a.status != EventStatus.error) {
         return 1;
       }
-      if (a.status == -1 && b.status != -1) {
+      if (a.status == EventStatus.error && b.status != EventStatus.error) {
         return -1;
       }
       return b.sortOrder - a.sortOrder > 0 ? 1 : -1;

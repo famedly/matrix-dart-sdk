@@ -132,7 +132,7 @@ void main() {
       await database.storeEventUpdate(clientId, update);
       event = await database.getEventById(clientId, '\$event-3', room);
       expect(event.eventId, '\$event-3');
-      expect(event.status, 1);
+      expect(event.status, EventStatus.sent);
       event = await database.getEventById(clientId, 'transaction-2', room);
       expect(event, null);
 
@@ -172,7 +172,7 @@ void main() {
       await database.storeEventUpdate(clientId, update);
       event = await database.getEventById(clientId, '\$event-4', room);
       expect(event.eventId, '\$event-4');
-      expect(event.status, 2);
+      expect(event.status, EventStatus.timeline);
       event = await database.getEventById(clientId, 'transaction-3', room);
       expect(event, null);
     });
