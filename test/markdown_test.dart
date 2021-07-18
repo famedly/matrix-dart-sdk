@@ -32,6 +32,13 @@ void main() {
         ':raccoon:': 'mxc://raccoon',
       },
     };
+    final mentionMap = {
+      '@Bob': '@bob:example.org',
+      '@[Bob Ross]': '@bobross:example.org',
+      '@Fox#123': '@fox:example.org',
+      '@[Fast Fox]#123': '@fastfox:example.org',
+      '@[">]': '@blah:example.org',
+    };
     test('simple markdown', () {
       expect(markdown('hey *there* how are **you** doing?'),
           'hey <em>there</em> how are <strong>you</strong> doing?');
@@ -53,14 +60,16 @@ void main() {
       expect(markdown('foxies\ncute'), 'foxies<br />\ncute');
     });
     test('emotes', () {
-      expect(markdown(':fox:', emotePacks),
+      expect(markdown(':fox:', emotePacks: emotePacks),
           '<img data-mx-emoticon="" src="mxc://roomfox" alt=":fox:" title=":fox:" height="32" vertical-align="middle" />');
-      expect(markdown(':user~fox:', emotePacks),
+      expect(markdown(':user~fox:', emotePacks: emotePacks),
           '<img data-mx-emoticon="" src="mxc://userfox" alt=":fox:" title=":fox:" height="32" vertical-align="middle" />');
-      expect(markdown(':raccoon:', emotePacks),
+      expect(markdown(':raccoon:', emotePacks: emotePacks),
           '<img data-mx-emoticon="" src="mxc://raccoon" alt=":raccoon:" title=":raccoon:" height="32" vertical-align="middle" />');
-      expect(markdown(':invalid:', emotePacks), ':invalid:');
-      expect(markdown(':room~invalid:', emotePacks), ':room~invalid:');
+      expect(markdown(':invalid:', emotePacks: emotePacks), ':invalid:');
+      expect(markdown(':invalid:?!', emotePacks: emotePacks), ':invalid:?!');
+      expect(
+          markdown(':room~invalid:', emotePacks: emotePacks), ':room~invalid:');
     });
     test('pills', () {
       expect(markdown('Hey @sorunome:sorunome.de!'),
@@ -71,6 +80,26 @@ void main() {
           '<a href="https://matrix.to/#/!blah:example.org">!blah:example.org</a>');
       expect(markdown('https://matrix.to/#/#fox:sorunome.de'),
           'https://matrix.to/#/#fox:sorunome.de');
+      expect(markdown('Hey @sorunome:sorunome.de:1234!'),
+          'Hey <a href="https://matrix.to/#/@sorunome:sorunome.de:1234">@sorunome:sorunome.de:1234</a>!');
+      expect(markdown('Hey @sorunome:127.0.0.1!'),
+          'Hey <a href="https://matrix.to/#/@sorunome:127.0.0.1">@sorunome:127.0.0.1</a>!');
+      expect(markdown('Hey @sorunome:[::1]!'),
+          'Hey <a href="https://matrix.to/#/@sorunome:[::1]">@sorunome:[::1]</a>!');
+    });
+    test('mentions', () {
+      expect(markdown('Hey @Bob!', mentionMap: mentionMap),
+          'Hey <a href="https://matrix.to/#/@bob:example.org">@Bob</a>!');
+      expect(markdown('How is @[Bob Ross] doing?', mentionMap: mentionMap),
+          'How is <a href="https://matrix.to/#/@bobross:example.org">@[Bob Ross]</a> doing?');
+      expect(
+          markdown('Hey @invalid!', mentionMap: mentionMap), 'Hey @invalid!');
+      expect(markdown('Hey @Fox#123!', mentionMap: mentionMap),
+          'Hey <a href="https://matrix.to/#/@fox:example.org">@Fox#123</a>!');
+      expect(markdown('Hey @[Fast Fox]#123!', mentionMap: mentionMap),
+          'Hey <a href="https://matrix.to/#/@fastfox:example.org">@[Fast Fox]#123</a>!');
+      expect(markdown('Hey @[">]!', mentionMap: mentionMap),
+          'Hey <a href="https://matrix.to/#/@blah:example.org">@[&quot;&gt;]</a>!');
     });
     test('latex', () {
       expect(markdown('meep \$\\frac{2}{3}\$'),

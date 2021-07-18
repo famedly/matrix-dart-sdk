@@ -98,8 +98,9 @@ class InlineLatexSyntax extends TagSyntax {
 
   @override
   bool onMatch(InlineParser parser, Match match) {
-    final element = Element('span', [Element.text('code', match[1])]);
-    element.attributes['data-mx-maths'] = match[1];
+    final element =
+        Element('span', [Element.text('code', htmlEscape.convert(match[1]))]);
+    element.attributes['data-mx-maths'] = htmlAttrEscape.convert(match[1]);
     parser.addNode(element);
     return true;
   }
@@ -135,18 +136,19 @@ class BlockLatexSyntax extends BlockSyntax {
   Node parse(BlockParser parser) {
     final childLines = parseChildLines(parser);
     // we use .substring(2) as childLines will *always* contain the first two '$$'
-    final latex =
-        htmlEscape.convert(childLines.join('\n').trim().substring(2).trim());
+    final latex = childLines.join('\n').trim().substring(2).trim();
     final element = Element('div', [
-      Element('pre', [Element.text('code', latex)])
+      Element('pre', [Element.text('code', htmlEscape.convert(latex))])
     ]);
-    element.attributes['data-mx-maths'] = latex;
+    element.attributes['data-mx-maths'] = htmlAttrEscape.convert(latex);
     return element;
   }
 }
 
 class PillSyntax extends InlineSyntax {
-  PillSyntax() : super(r'([@#!][^\s:]*:[^\s]+\.\w+)');
+  PillSyntax()
+      : super(
+            r'([@#!][^\s:]*:(?:[^\s]+\.\w+|[\d\.]+|\[[a-fA-F0-9:]+\])(?::\d+)?)');
 
   @override
   bool onMatch(InlineParser parser, Match match) {
@@ -156,15 +158,38 @@ class PillSyntax extends InlineSyntax {
       return true;
     }
     final identifier = match[1];
-    final element = Element.text('a', identifier);
-    element.attributes['href'] = 'https://matrix.to/#/$identifier';
+    final element = Element.text('a', htmlEscape.convert(identifier));
+    element.attributes['href'] =
+        htmlAttrEscape.convert('https://matrix.to/#/$identifier');
     parser.addNode(element);
     return true;
   }
 }
 
-String markdown(String text, [Map<String, Map<String, String>> emotePacks]) {
-  emotePacks ??= <String, Map<String, String>>{};
+class MentionSyntax extends InlineSyntax {
+  final Map<String, String> mentionMap;
+  MentionSyntax(this.mentionMap) : super(r'(@(?:\[[^\]:]+\]|\w+)(?:#\w+)?)');
+
+  @override
+  bool onMatch(InlineParser parser, Match match) {
+    if ((match.start > 0 &&
+            !RegExp(r'[\s.!?:;\(]').hasMatch(match.input[match.start - 1])) ||
+        !mentionMap.containsKey(match[1])) {
+      parser.addNode(Text(match[0]));
+      return true;
+    }
+    final identifier = mentionMap[match[1]];
+    final element = Element.text('a', htmlEscape.convert(match[1]));
+    element.attributes['href'] =
+        htmlAttrEscape.convert('https://matrix.to/#/$identifier');
+    parser.addNode(element);
+    return true;
+  }
+}
+
+String markdown(String text,
+    {Map<String, Map<String, String>> emotePacks,
+    Map<String, String> mentionMap}) {
   var ret = markdownToHtml(
     text,
     extensionSet: ExtensionSet.commonMark,
@@ -175,8 +200,9 @@ String markdown(String text, [Map<String, Map<String, String>> emotePacks]) {
       StrikethroughSyntax(),
       LinebreakSyntax(),
       SpoilerSyntax(),
-      EmoteSyntax(emotePacks),
+      EmoteSyntax(emotePacks ?? <String, Map<String, String>>{}),
       PillSyntax(),
+      MentionSyntax(mentionMap ?? <String, String>{}),
       InlineLatexSyntax(),
     ],
   );

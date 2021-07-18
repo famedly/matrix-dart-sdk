@@ -29,13 +29,23 @@ void main() {
   group('User', () {
     Logs().level = Level.error;
     final client = Client('testclient', httpClient: FakeMatrixApi());
+    final room = Room(id: '!localpart:server.abc', client: client);
     final user1 = User(
       '@alice:example.com',
       membership: 'join',
       displayName: 'Alice M',
       avatarUrl: 'mxc://bla',
-      room: Room(id: '!localpart:server.abc', client: client),
+      room: room,
     );
+    final user2 = User(
+      '@bob:example.com',
+      membership: 'join',
+      displayName: 'Bob',
+      avatarUrl: 'mxc://bla',
+      room: room,
+    );
+    room.setState(user1);
+    room.setState(user2);
     setUp(() async {
       await client.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
@@ -132,6 +142,21 @@ void main() {
     });
     test('canChangePowerLevel', () async {
       expect(user1.canChangePowerLevel, false);
+    });
+    test('mention', () async {
+      expect(user1.mention, '@[Alice M]');
+      expect(user2.mention, '@Bob');
+      user1.content['displayname'] = '[Alice M]';
+      expect(user1.mention, '@alice:example.com');
+      user1.content['displayname'] = 'Alice:M';
+      expect(user1.mention, '@alice:example.com');
+      user1.content['displayname'] = 'Alice M';
+      user2.content['displayname'] = 'Alice M';
+      expect(user1.mention, '@[Alice M]#1745');
+      user1.content['displayname'] = 'Bob';
+      user2.content['displayname'] = 'Bob';
+      expect(user1.mention, '@Bob#1745');
+      user1.content['displayname'] = 'Alice M';
     });
     test('dispose client', () async {
       await client.dispose(closeDatabase: true);

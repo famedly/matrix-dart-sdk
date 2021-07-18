@@ -647,7 +647,11 @@ class Room {
       'body': message,
     };
     if (parseMarkdown) {
-      final html = markdown(event['body'], emotePacks ?? this.emotePacks);
+      final mentionMap = <String, String>{
+        for (final user in getParticipants()) user.mention: user.id
+      };
+      final html = markdown(event['body'],
+          emotePacks: emotePacks ?? this.emotePacks, mentionMap: mentionMap);
       // if the decoded html is the same as the body, there is no need in sending a formatted message
       if (HtmlUnescape().convert(html.replaceAll(RegExp(r'<br />\n?'), '\n')) !=
           event['body']) {

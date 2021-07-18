@@ -168,4 +168,50 @@ class User extends Event {
       other.id == id &&
       other.room == room &&
       other.membership == membership);
+
+  /// Get the mention text to use in a plain text body to mention this specific user
+  /// in this specific room
+  String get mention {
+    // if the displayname has [ or ] or : we can't build our more fancy stuff, so fall back to the id
+    // [] is used for the delimitors
+    // If we allowed : we could get collissions with the mxid fallbacks
+    if ((displayName?.isEmpty ?? true) ||
+        {'[', ']', ':'}.any((c) => displayName.contains(c))) {
+      return id;
+    }
+
+    var identifier = '@';
+    // if we have non-word characters we need to surround with []
+    if (!RegExp(r'^\w+$').hasMatch(displayName)) {
+      identifier += '[$displayName]';
+    } else {
+      identifier += displayName;
+    }
+
+    // get all the users with the same display name
+    final allUsersWithSameDisplayname = room.getParticipants();
+    allUsersWithSameDisplayname.removeWhere((user) =>
+        user.id == id ||
+        (user.displayName?.isEmpty ?? true) ||
+        user.displayName != displayName);
+    if (allUsersWithSameDisplayname.isEmpty) {
+      return identifier;
+    }
+    // ok, we have multiple users with the same display name....time to calculate a hash
+    final hashes = allUsersWithSameDisplayname.map((u) => _hash(u.id));
+    final ourHash = _hash(id);
+    // hash collission...just return our own mxid again
+    if (hashes.contains(ourHash)) {
+      return id;
+    }
+    return '$identifier#$ourHash';
+  }
+}
+
+String _hash(String s) {
+  var number = 0;
+  for (var i = 0; i < s.length; i++) {
+    number += s.codeUnitAt(i);
+  }
+  return (number % 10000).toString();
 }
