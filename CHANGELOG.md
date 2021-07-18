@@ -1,3 +1,10 @@
+## [0.1.8] - 18th Jul 2021
+- fix: Provide a reasonable well-known fallback
+- fix: Add locking to sending encrypted to_device messages to prevent potential race conditions
+- fix: preserve homeserver port when creating thumbnail URIs
+- feat: Add support for nicer mentions
+- feat: Add general image pack handling as per MSC2545
+
 ## [0.1.7] - 10 Jul 2021
 - change: Hive database schema (will trigger a database migration)
 - fix: Dont migrate database from version null
