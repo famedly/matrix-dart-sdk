@@ -23,17 +23,13 @@
 
 import 'package:matrix_api_lite/src/utils/logs.dart';
 
+import '../../utils/filter_map_extension.dart';
 import '../../utils/try_get_map_extension.dart';
 import '../basic_event.dart';
 
 extension RoomEncryptedContentBasicEventExtension on BasicEvent {
   RoomEncryptedContent get parsedRoomEncryptedContent =>
       RoomEncryptedContent.fromJson(content);
-}
-
-/// Convert Nullable iterable of MapEntries to Map
-extension ToMap<T1, T2> on Iterable<MapEntry<T1, T2>> {
-  Map<T1, T2> toMap() => Map.fromEntries(this);
 }
 
 class RoomEncryptedContent {
@@ -53,16 +49,7 @@ class RoomEncryptedContent {
         // filter out invalid/incomplete CiphertextInfos
         ciphertextOlm = json
             .tryGet<Map<String, dynamic>>('ciphertext', TryGet.silent)
-            ?.entries
-            .map((e) {
-              try {
-                return MapEntry(e.key, CiphertextInfo.fromJson(e.value));
-              } catch (_) {
-                return null;
-              }
-            })
-            .whereType<MapEntry<String, CiphertextInfo>>()
-            .toMap();
+            ?.catchMap((k, v) => MapEntry(k, CiphertextInfo.fromJson(v)));
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
