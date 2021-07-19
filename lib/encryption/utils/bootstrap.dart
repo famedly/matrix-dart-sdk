@@ -484,8 +484,10 @@ class Bootstrap {
       for (final entry in secretsToStore.entries) {
         futures.add(
           client.onSync.stream
-              .firstWhere((syncUpdate) => syncUpdate.accountData
-                  .any((accountData) => accountData.type == entry.key))
+              .firstWhere((syncUpdate) =>
+                  syncUpdate.accountData != null &&
+                  syncUpdate.accountData
+                      .any((accountData) => accountData.type == entry.key))
               .then((_) =>
                   Logs().v('New Key with type ${entry.key} was created')),
         );
