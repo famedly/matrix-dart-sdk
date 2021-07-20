@@ -956,7 +956,9 @@ class Client extends MatrixApi {
       Logs().i(
         'Successfully connected as ${userID.localpart} with ${homeserver.toString()}',
       );
-      return _sync();
+      // ignore: unawaited_futures
+      _sync();
+      return;
     } catch (e, s) {
       Logs().e('Initialization failed', e, s);
       await logout().catchError((_) => null);
