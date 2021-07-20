@@ -1,3 +1,6 @@
+## [0.1.9] - 20th Jul 2021
+- fix: Add missing null check which made bootstrap fail for newest Synapse release
+
 ## [0.1.8] - 18th Jul 2021
 - fix: Provide a reasonable well-known fallback
 - fix: Add locking to sending encrypted to_device messages to prevent potential race conditions
