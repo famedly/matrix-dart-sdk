@@ -25,7 +25,6 @@ import '../matrix.dart';
 import 'room.dart';
 import 'utils/matrix_localizations.dart';
 import 'utils/receipt.dart';
-import 'utils/run_in_background.dart';
 import 'utils/event_localizations.dart';
 import 'utils/crypto/encrypted_file.dart';
 
@@ -552,7 +551,7 @@ class Event extends MatrixEvent {
         k: fileMap['key']['k'],
         sha256: fileMap['hashes']['sha256'],
       );
-      uint8list = await runInBackground(decryptFile, encryptedFile);
+      uint8list = await room.client.runInBackground(decryptFile, encryptedFile);
     }
     return MatrixFile(bytes: uint8list, name: body);
   }

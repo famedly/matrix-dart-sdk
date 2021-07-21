@@ -93,6 +93,17 @@ class Client extends MatrixApi {
 
   String syncFilterId;
 
+  final Future<R> Function<Q, R>(FutureOr<R> Function(Q), Q,
+      {String debugLabel}) compute;
+
+  Future<T> runInBackground<T, U>(
+      FutureOr<T> Function(U arg) function, U arg) async {
+    if (compute != null) {
+      return await compute(function, arg);
+    }
+    return await function(arg);
+  }
+
   /// Create a client
   /// [clientName] = unique identifier of this client
   /// [databaseBuilder]: A function that creates the database instance, that will be used.
@@ -127,6 +138,8 @@ class Client extends MatrixApi {
   /// If your client supports more login types like login with token or SSO, then add this to
   /// [supportedLoginTypes]. Set a custom [syncFilter] if you like. By default the app
   /// will use lazy_load_members.
+  /// Set [compute] to the Flutter compute method to enable the SDK to run some
+  /// code in background.
   Client(
     this.clientName, {
     this.databaseBuilder,
@@ -142,6 +155,7 @@ class Client extends MatrixApi {
     this.sendMessageTimeoutSeconds = 60,
     this.requestHistoryOnLimitedTimeline = false,
     this.supportedLoginTypes,
+    this.compute,
     Filter syncFilter,
     @deprecated bool debug,
   }) : syncFilter = syncFilter ??

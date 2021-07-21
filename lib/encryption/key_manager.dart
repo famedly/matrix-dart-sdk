@@ -25,7 +25,6 @@ import './encryption.dart';
 import './utils/outbound_group_session.dart';
 import './utils/session_key.dart';
 import '../matrix.dart';
-import '../src/utils/run_in_background.dart';
 import '../src/utils/run_in_root.dart';
 
 const megolmKey = EventTypes.MegolmBackup;
@@ -734,7 +733,7 @@ class KeyManager {
           }
         }
         final roomKeys =
-            await runInBackground<RoomKeys, _GenerateUploadKeysArgs>(
+            await client.runInBackground<RoomKeys, _GenerateUploadKeysArgs>(
                 _generateUploadKeys, args);
         Logs().i('[Key Manager] Uploading ${dbSessions.length} room keys...');
         // upload the payload...

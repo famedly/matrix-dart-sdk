@@ -26,7 +26,6 @@ import 'package:crypto/crypto.dart';
 
 import '../matrix.dart';
 import '../src/utils/crypto/crypto.dart' as uc;
-import '../src/utils/run_in_background.dart';
 import '../src/utils/run_in_root.dart';
 import 'encryption.dart';
 import 'utils/ssss_cache.dart';
@@ -201,14 +200,15 @@ class SSSS {
       content.passphrase.iterations = pbkdf2DefaultIterations;
       ;
       content.passphrase.bits = ssssKeyLength * 8;
-      privateKey = await runInBackground(
-        _keyFromPassphrase,
-        _KeyFromPassphraseArgs(
-          passphrase: passphrase,
-          info: content.passphrase,
-        ),
-        timeout: Duration(seconds: 10),
-      );
+      privateKey = await client
+          .runInBackground(
+            _keyFromPassphrase,
+            _KeyFromPassphraseArgs(
+              passphrase: passphrase,
+              info: content.passphrase,
+            ),
+          )
+          .timeout(Duration(seconds: 10));
     } else {
       // we need to just generate a new key from scratch
       privateKey = Uint8List.fromList(uc.secureRandomBytes(ssssKeyLength));
@@ -636,14 +636,15 @@ class OpenSSSS {
         throw Exception(
             'Tried to unlock with passphrase while key does not have a passphrase');
       }
-      privateKey = await runInBackground(
-        _keyFromPassphrase,
-        _KeyFromPassphraseArgs(
-          passphrase: passphrase,
-          info: keyData.passphrase,
-        ),
-        timeout: Duration(seconds: 10),
-      );
+      privateKey = await ssss.client
+          .runInBackground(
+            _keyFromPassphrase,
+            _KeyFromPassphraseArgs(
+              passphrase: passphrase,
+              info: keyData.passphrase,
+            ),
+          )
+          .timeout(Duration(seconds: 10));
     } else if (recoveryKey != null) {
       privateKey = SSSS.decodeRecoveryKey(recoveryKey);
     } else {
