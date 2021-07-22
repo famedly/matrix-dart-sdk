@@ -1,17 +1,17 @@
 /* MIT License
-* 
+*
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
 * in the Software without restriction, including without limitation the rights
 * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 * copies of the Software, and to permit persons to whom the Software is
 * furnished to do so, subject to the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included in all
 * copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -166,6 +166,85 @@ void main() {
       };
       json = jsonDecode(jsonEncode(json));
       expect(OlmPlaintextPayload.fromJson(json!).toJson(), json);
+    });
+    test('Image Pack Content', () {
+      // basic parse / unparse
+      var json = <String, dynamic>{
+        'type': 'some type',
+        'content': {
+          'images': {
+            'emote': {
+              'url': 'mxc://example.org/beep',
+              'usage': ['emoticon'],
+              'org.custom': 'beep',
+            },
+            'sticker': {
+              'url': 'mxc://example.org/boop',
+              'usage': ['org.custom', 'sticker', 'org.other.custom'],
+            },
+          },
+          'pack': {
+            'display_name': 'Awesome Pack',
+            'org.custom': 'boop',
+          },
+          'org.custom': 'blah',
+        },
+      };
+      json = jsonDecode(jsonEncode(json));
+      expect(BasicEvent.fromJson(json).parsedImagePackContent.toJson(),
+          json['content']);
+
+      // emoticons migration
+      json = <String, dynamic>{
+        'type': 'some type',
+        'content': {
+          'emoticons': {
+            ':emote:': {
+              'url': 'mxc://example.org/beep',
+            },
+          },
+        },
+      };
+      json = jsonDecode(jsonEncode(json));
+      expect(
+          BasicEvent.fromJson(json)
+              .parsedImagePackContent
+              .images['emote']
+              ?.toJson(),
+          {
+            'url': 'mxc://example.org/beep',
+          });
+
+      json = <String, dynamic>{
+        'type': 'some type',
+        'content': {
+          'short': {
+            ':emote:': 'mxc://example.org/beep',
+          },
+        },
+      };
+      json = jsonDecode(jsonEncode(json));
+      expect(
+          BasicEvent.fromJson(json)
+              .parsedImagePackContent
+              .images['emote']
+              ?.toJson(),
+          {
+            'url': 'mxc://example.org/beep',
+          });
+
+      // invalid url for image
+      json = <String, dynamic>{
+        'type': 'some type',
+        'content': {
+          'images': {
+            'emote': {},
+          },
+        },
+      };
+      json = jsonDecode(jsonEncode(json));
+      expect(BasicEvent.fromJson(json).parsedImagePackContent.images['emote'],
+          null);
     });
   });
 }

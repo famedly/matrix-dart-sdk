@@ -41,6 +41,7 @@ export 'src/model/basic_event_with_sender.dart';
 export 'src/model/basic_room_event.dart';
 export 'src/model/event_types.dart';
 export 'src/model/events/forwarded_room_key_content.dart';
+export 'src/model/events/image_pack_content.dart';
 export 'src/model/events/olm_plaintext_payload.dart';
 export 'src/model/events/room_encrypted_content.dart';
 export 'src/model/events/room_encryption_content.dart';
