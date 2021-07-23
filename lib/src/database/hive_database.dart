@@ -778,11 +778,12 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
           : null;
 
       // calculate the status
-      final newStatus = eventUpdate.content.tryGet<int>('status') ??
-          eventUpdate.content
-              .tryGetMap<String, dynamic>('unsigned')
-              ?.tryGet<int>(messageSendingStatusKey) ??
-          2;
+      final newStatus =
+          eventUpdate.content.tryGet<int>('status', TryGet.optional) ??
+              eventUpdate.content
+                  .tryGetMap<String, dynamic>('unsigned', TryGet.optional)
+                  ?.tryGet<int>(messageSendingStatusKey, TryGet.optional) ??
+              2;
 
       final status = newStatus == -1 || prevEvent?.status == null
           ? newStatus
@@ -796,8 +797,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
       // In case this event has sent from this account we have a transaction ID
       final transactionId = eventUpdate.content
-          .tryGetMap<String, dynamic>('unsigned')
-          ?.tryGet<String>('transaction_id');
+          .tryGetMap<String, dynamic>('unsigned', TryGet.optional)
+          ?.tryGet<String>('transaction_id', TryGet.optional);
 
       await _eventsBox.put(MultiKey(eventUpdate.roomID, eventId).toString(),
           eventUpdate.content);
