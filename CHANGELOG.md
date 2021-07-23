@@ -1,10 +1,10 @@
 ## 0.4.0
 - refactor: Migrate to null safety
 - refactor: Use openAPI code generation to create most of the methods
-- feat: Add image pack event content models
-- refactor: FilterMap extension
-- fix: log levels for tryGet
 - refactor: remove timeouts in matrix_api_lite
+
+## 0.3.5
+- feat: Add image pack event content models
 
 ## 0.3.3
 - fix: Log filter in wrong direction
