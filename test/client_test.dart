@@ -614,8 +614,9 @@ void main() {
       expect(client2.deviceID, client1.deviceID);
       expect(client2.deviceName, client1.deviceName);
       if (client2.encryptionEnabled) {
-        expect(client2.encryption.pickledOlmAccount,
-            client1.encryption.pickledOlmAccount);
+        expect(client2.encryption.fingerprintKey,
+            client1.encryption.fingerprintKey);
+        expect(client2.encryption.identityKey, client1.encryption.identityKey);
         expect(client2.rooms[1].id, client1.rooms[1].id);
       }
 

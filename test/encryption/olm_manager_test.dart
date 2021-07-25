@@ -112,13 +112,14 @@ void main() {
           FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'),
           true);
 
+      // this will upload keys because we assume the key count is 0, if the server doesn't send one
       FakeMatrixApi.calledEndpoints.clear();
       client.encryption.olmManager
           .handleDeviceOneTimeKeysCount(null, ['signed_curve25519']);
       await Future.delayed(Duration(milliseconds: 50));
       expect(
           FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'),
-          false);
+          true);
     });
 
     test('restoreOlmSession', () async {

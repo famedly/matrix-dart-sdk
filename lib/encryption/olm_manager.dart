@@ -262,19 +262,25 @@ class OlmManager {
     final haveFallbackKeys = encryption.isMinOlmVersion(3, 2, 0);
     // Check if there are at least half of max_number_of_one_time_keys left on the server
     // and generate and upload more if not.
-    if ((countJson != null &&
-            ((countJson.containsKey('signed_curve25519') &&
-                    countJson['signed_curve25519'] <
-                        (_olmAccount.max_number_of_one_time_keys() / 2)) ||
-                !countJson.containsKey('signed_curve25519'))) ||
-        (haveFallbackKeys &&
-            unusedFallbackKeyTypes?.contains('signed_curve25519') == false)) {
+
+    // If the server did not send us a count, assume it is 0
+    final keyCount = countJson?.tryGet<int>('signed_curve25519', 0) ?? 0;
+
+    // If the server does not support fallback keys, it will not tell us about them.
+    // If the server supports them but has no key, upload a new one.
+    var unusedFallbackKey = true;
+    if (unusedFallbackKeyTypes?.contains('signed_curve25519') == false) {
+      unusedFallbackKey = false;
+    }
+
+    // Only upload keys if they are less than half of the max or we have no unused fallback key
+    if (keyCount < (_olmAccount.max_number_of_one_time_keys() / 2) ||
+        !unusedFallbackKey) {
       uploadKeys(
-        oldKeyCount:
-            countJson != null ? (countJson['signed_curve25519'] ?? 0) : null,
-        unusedFallbackKey: haveFallbackKeys
-            ? unusedFallbackKeyTypes?.contains('signed_curve25519')
+        oldKeyCount: keyCount < (_olmAccount.max_number_of_one_time_keys() / 2)
+            ? keyCount
             : null,
+        unusedFallbackKey: haveFallbackKeys ? unusedFallbackKey : null,
       );
     }
   }
