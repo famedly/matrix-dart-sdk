@@ -1,3 +1,6 @@
+## [0.1.11] - 26th Jul 2021
+- fix: Upload OTKs if the otk_count field is missing
+
 ## [0.1.10] - 21th Jul 2021
 Please note: This removes the isolate code from the SDK to make it compatible with dart web. If
 you still want the SDK to execute code in the background to not block the UI on key generation
