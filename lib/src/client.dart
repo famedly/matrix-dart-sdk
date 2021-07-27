@@ -646,7 +646,7 @@ class Client extends MatrixApi {
       filter: '{"room":{"include_leave":true,"timeline":{"limit":10}}}',
       timeout: 0,
     );
-    if (syncResp.rooms.leave is Map<String, dynamic>) {
+    if (syncResp.rooms?.leave != null) {
       for (final entry in syncResp.rooms.leave.entries) {
         final id = entry.key;
         final room = entry.value;
