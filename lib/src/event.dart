@@ -129,7 +129,7 @@ class Event extends MatrixEvent {
         final json = toJson();
         json['unsigned'] ??= <String, dynamic>{};
         json['unsigned'][messageSendingStatusKey] = -1;
-        room.client.handleSync(SyncUpdate()
+        room.client.handleSync(SyncUpdate(nextBatch: '')
           ..rooms = (RoomsUpdate()
             ..join = (<String, JoinedRoomUpdate>{}..[room.id] =
                 (JoinedRoomUpdate()
