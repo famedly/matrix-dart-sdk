@@ -1,3 +1,7 @@
+## [0.2.0] - 27th Jul 2021
+- Breaking API changes duo to use of code generated matrix API
+- fix: Missing null checks in syncUpdate handling
+
 ## [0.1.11] - 26th Jul 2021
 - fix: Upload OTKs if the otk_count field is missing
 
