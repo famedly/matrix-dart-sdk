@@ -233,6 +233,7 @@ class SSSS {
     final accountDataType = EventTypes.secretStorageKey(keyId);
     // noooow we set the account data
     final waitForAccountData = client.onSync.stream.firstWhere((syncUpdate) =>
+        syncUpdate.accountData != null &&
         syncUpdate.accountData
             .any((accountData) => accountData.type == accountDataType));
     await client.setAccountData(
