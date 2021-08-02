@@ -66,7 +66,7 @@ class KeyManager {
             lastEvent.content['can_request_session'] == true) {
           try {
             maybeAutoRequest(room.id, lastEvent.content['session_id'],
-                lastEvent.content['sener_key']);
+                lastEvent.content['sender_key']);
           } catch (_) {
             // dispose
           }
