@@ -1,6 +1,6 @@
 name: matrix
 description: Matrix Dart SDK
-version: 0.2.0
+version: 0.2.1
 homepage: https://famedly.com
 
 environment:
