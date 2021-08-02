@@ -1091,7 +1091,7 @@ class Client extends MatrixApi {
       }
       if (database != null) {
         _currentTransaction = database.transaction(() async {
-          await handleSync(syncResp);
+          await _handleSync(syncResp);
           if (prevBatch != syncResp.nextBatch) {
             await database.storePrevBatch(syncResp.nextBatch, id);
           }
@@ -1099,7 +1099,7 @@ class Client extends MatrixApi {
         await _currentTransaction;
         onSyncStatus.add(SyncStatusUpdate(SyncStatus.cleaningUp));
       } else {
-        await handleSync(syncResp);
+        await _handleSync(syncResp);
       }
       if (_disposed || _aborted) return;
       if (prevBatch == null) {
@@ -1145,6 +1145,12 @@ class Client extends MatrixApi {
 
   /// Use this method only for testing utilities!
   Future<void> handleSync(SyncUpdate sync, {bool sortAtTheEnd = false}) async {
+    // ensure we don't upload keys because someone forgot to set a key count
+    sync.deviceOneTimeKeysCount ??= {'signed_curve25519': 100};
+    await _handleSync(sync, sortAtTheEnd: sortAtTheEnd);
+  }
+
+  Future<void> _handleSync(SyncUpdate sync, {bool sortAtTheEnd = false}) async {
     if (sync.toDevice != null) {
       await _handleToDeviceEvents(sync.toDevice);
     }

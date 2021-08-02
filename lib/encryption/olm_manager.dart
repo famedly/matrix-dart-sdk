@@ -274,6 +274,14 @@ class OlmManager {
       unusedFallbackKey = false;
     }
 
+    // fixup accidental too many uploads. We delete only one of them so that the server has time to update the counts and because we will get rate limited anyway.
+    if (keyCount > _olmAccount.max_number_of_one_time_keys()) {
+      final requestingKeysFrom = {
+        client.userID: {client.deviceID: 'signed_curve25519'}
+      };
+      client.claimKeys(requestingKeysFrom, timeout: 10000);
+    }
+
     // Only upload keys if they are less than half of the max or we have no unused fallback key
     if (keyCount < (_olmAccount.max_number_of_one_time_keys() / 2) ||
         !unusedFallbackKey) {
