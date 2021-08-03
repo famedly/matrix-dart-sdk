@@ -1,3 +1,6 @@
+## [0.1.13] - 3rd Aug 2021
+- fix: Missing null checks in syncUpdate handling
+
 ## [0.1.12] - 3rd Aug 2021
 - fix: accidental OTK uploads on fakeSync calls
 
