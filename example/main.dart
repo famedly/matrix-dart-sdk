@@ -21,7 +21,7 @@ class FamedlySdkExampleApp extends StatelessWidget {
               if (snapshot.hasError) {
                 return Center(child: Text(snapshot.error.toString()));
               }
-              if (snapshot.data == LoginState.logged) {
+              if (snapshot.data == LoginState.loggedIn) {
                 return ChatListView();
               }
               return LoginView();

@@ -113,7 +113,7 @@ void main() {
       final firstSync = await firstSyncFuture;
       final sync = await syncFuture;
 
-      expect(loginState, LoginState.logged);
+      expect(loginState, LoginState.loggedIn);
       expect(firstSync, true);
       expect(matrix.encryptionEnabled, olmEnabled);
       if (olmEnabled) {

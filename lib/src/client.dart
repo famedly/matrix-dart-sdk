@@ -43,7 +43,7 @@ import 'utils/multilock.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
-enum LoginState { logged, loggedOut }
+enum LoginState { loggedIn, loggedOut }
 
 extension TrailingSlash on Uri {
   Uri stripTrailingSlash() => path.endsWith('/')
@@ -838,10 +838,10 @@ class Client extends MatrixApi {
   /// Before you can connect you need at least an [accessToken], a [homeserver],
   /// a [userID], a [deviceID], and a [deviceName].
   ///
-  /// Usually you don't need to call this method by yourself because [login()], [register()]
+  /// Usually you don't need to call this method yourself because [login()], [register()]
   /// and even the constructor calls it.
   ///
-  /// Sends [LoginState.logged] to [onLoginStateChanged].
+  /// Sends [LoginState.loggedIn] to [onLoginStateChanged].
   ///
   /// If one of [newToken], [newUserID], [newDeviceID], [newDeviceName] is set then
   /// all of them must be set! If you don't set them, this method will try to
@@ -967,7 +967,7 @@ class Client extends MatrixApi {
         presences.clear();
       }
       _initLock = false;
-      _loginState = LoginState.logged;
+      _loginState = LoginState.loggedIn;
       Logs().i(
         'Successfully connected as ${userID.localpart} with ${homeserver.toString()}',
       );
