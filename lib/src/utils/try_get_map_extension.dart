@@ -60,7 +60,7 @@ class _SilentLog implements TryGet {
 }
 
 extension TryGetMapExtension on Map<String, dynamic> {
-  T? tryGet<T extends Object>(String key, [TryGet log = TryGet.required]) {
+  T? tryGet<T extends Object>(String key, [TryGet log = TryGet.optional]) {
     final Object? value = this[key];
     if (value is! T) {
       log(key, T, value.runtimeType);
@@ -69,7 +69,7 @@ extension TryGetMapExtension on Map<String, dynamic> {
     return value;
   }
 
-  List<T>? tryGetList<T>(String key, [TryGet log = TryGet.required]) {
+  List<T>? tryGetList<T>(String key, [TryGet log = TryGet.optional]) {
     final Object? value = this[key];
     if (value is! List) {
       log(key, T, value.runtimeType);
@@ -85,7 +85,7 @@ extension TryGetMapExtension on Map<String, dynamic> {
     }
   }
 
-  Map<A, B>? tryGetMap<A, B>(String key, [TryGet log = TryGet.required]) {
+  Map<A, B>? tryGetMap<A, B>(String key, [TryGet log = TryGet.optional]) {
     final Object? value = this[key];
     if (value is! Map) {
       log(key, <A, B>{}.runtimeType, value.runtimeType);
