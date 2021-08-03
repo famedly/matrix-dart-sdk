@@ -77,22 +77,19 @@ class ImagePackContent {
       : _json = Map.fromEntries(json.entries.where(
             (e) => !['images', 'pack', 'emoticons', 'short'].contains(e.key))),
         pack = ImagePackPackContent.fromJson(
-            json.tryGetMap<String, dynamic>('pack', TryGet.optional) ?? {}),
-        images = json
-                .tryGetMap<String, dynamic>('images', TryGet.optional)
-                ?.catchMap(
-                    (k, v) => MapEntry(k, ImagePackImageContent.fromJson(v))) ??
+            json.tryGetMap<String, dynamic>('pack') ?? {}),
+        images = json.tryGetMap<String, dynamic>('images')?.catchMap(
+                (k, v) => MapEntry(k, ImagePackImageContent.fromJson(v))) ??
             // the "emoticons" key needs a small migration on the key, ":string:" --> "string"
-            json
-                .tryGetMap<String, dynamic>('emoticons', TryGet.optional)
-                ?.catchMap((k, v) => MapEntry(
+            json.tryGetMap<String, dynamic>('emoticons')?.catchMap((k, v) =>
+                MapEntry(
                     k.startsWith(':') && k.endsWith(':')
                         ? k.substring(1, k.length - 1)
                         : k,
                     ImagePackImageContent.fromJson(v))) ??
             // the "short" key was still just a map from shortcode to mxc uri
-            json.tryGetMap<String, String>('short', TryGet.optional)?.catchMap(
-                (k, v) => MapEntry(
+            json.tryGetMap<String, String>('short')?.catchMap((k, v) =>
+                MapEntry(
                     k.startsWith(':') && k.endsWith(':')
                         ? k.substring(1, k.length - 1)
                         : k,
@@ -122,10 +119,9 @@ class ImagePackImageContent {
       : _json = Map.fromEntries(json.entries
             .where((e) => !['url', 'body', 'info'].contains(e.key))),
         url = Uri.parse(json['url']),
-        body = json.tryGet('body', TryGet.optional),
-        info = json.tryGetMap<String, dynamic>('info', TryGet.optional),
-        usage = imagePackUsageFromJson(
-            json.tryGetList<String>('usage', TryGet.optional));
+        body = json.tryGet('body'),
+        info = json.tryGetMap<String, dynamic>('info'),
+        usage = imagePackUsageFromJson(json.tryGetList<String>('usage'));
 
   Map<String, dynamic> toJson() {
     return {
@@ -134,8 +130,7 @@ class ImagePackImageContent {
       if (body != null) 'body': body,
       if (info != null) 'info': info,
       if (usage != null)
-        'usage': imagePackUsageToJson(
-            usage, _json.tryGetList<String>('usage', TryGet.optional)),
+        'usage': imagePackUsageToJson(usage, _json.tryGetList<String>('usage')),
     };
   }
 }
@@ -156,13 +151,11 @@ class ImagePackPackContent {
   ImagePackPackContent.fromJson(Map<String, dynamic> json)
       : _json = Map.fromEntries(json.entries.where((e) =>
             !['display_name', 'avatar_url', 'attribution'].contains(e.key))),
-        displayName = json.tryGet('display_name', TryGet.optional),
+        displayName = json.tryGet('display_name'),
         // we default to an invalid uri
-        avatarUrl =
-            Uri.tryParse(json.tryGet('avatar_url', TryGet.optional) ?? '.::'),
-        usage = imagePackUsageFromJson(
-            json.tryGetList<String>('usage', TryGet.optional)),
-        attribution = json.tryGet('attribution', TryGet.optional);
+        avatarUrl = Uri.tryParse(json.tryGet('avatar_url') ?? '.::'),
+        usage = imagePackUsageFromJson(json.tryGetList<String>('usage')),
+        attribution = json.tryGet('attribution');
 
   Map<String, dynamic> toJson() {
     return {
@@ -170,8 +163,7 @@ class ImagePackPackContent {
       if (displayName != null) 'display_name': displayName,
       if (avatarUrl != null) 'avatar_url': avatarUrl.toString(),
       if (usage != null)
-        'usage': imagePackUsageToJson(
-            usage, _json.tryGetList<String>('usage', TryGet.optional)),
+        'usage': imagePackUsageToJson(usage, _json.tryGetList<String>('usage')),
       if (attribution != null) 'attribution': attribution,
     };
   }

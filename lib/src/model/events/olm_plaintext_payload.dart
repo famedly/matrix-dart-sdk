@@ -42,12 +42,12 @@ class OlmPlaintextPayload {
 
   factory OlmPlaintextPayload.fromJson(Map<String, dynamic> json) =>
       OlmPlaintextPayload(
-        sender: json.tryGet('sender'),
-        type: json.tryGet('type'),
-        content: json.tryGetMap('content'),
-        recipient: json.tryGet('recipient'),
-        recipientKeys: json.tryGetMap('recipient_keys'),
-        keys: json.tryGetMap('keys'),
+        sender: json.tryGet('sender', TryGet.required),
+        type: json.tryGet('type', TryGet.required),
+        content: json.tryGetMap('content', TryGet.required),
+        recipient: json.tryGet('recipient', TryGet.required),
+        recipientKeys: json.tryGetMap('recipient_keys', TryGet.required),
+        keys: json.tryGetMap('keys', TryGet.required),
       );
 
   Map<String, dynamic> toJson() {

@@ -41,10 +41,10 @@ class RoomEncryptedContent {
   Map<String, CiphertextInfo>? ciphertextOlm;
 
   RoomEncryptedContent.fromJson(Map<String, dynamic> json)
-      : algorithm = json.tryGet('algorithm') ?? '',
-        senderKey = json.tryGet('sender_key') ?? '',
-        deviceId = json.tryGet('device_id', TryGet.optional),
-        sessionId = json.tryGet('session_id', TryGet.optional),
+      : algorithm = json.tryGet('algorithm', TryGet.required) ?? '',
+        senderKey = json.tryGet('sender_key', TryGet.required) ?? '',
+        deviceId = json.tryGet('device_id'),
+        sessionId = json.tryGet('session_id'),
         ciphertextMegolm = json.tryGet('ciphertext', TryGet.silent),
         // filter out invalid/incomplete CiphertextInfos
         ciphertextOlm = json

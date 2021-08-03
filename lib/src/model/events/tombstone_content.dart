@@ -34,8 +34,9 @@ class TombstoneContent {
   String replacementRoom;
 
   TombstoneContent.fromJson(Map<String, dynamic> json)
-      : body = json.tryGet('body') ?? '',
-        replacementRoom = json.tryGet('replacement_room') ?? '';
+      : body = json.tryGet('body', TryGet.required) ?? '',
+        replacementRoom =
+            json.tryGet('replacement_room', TryGet.required) ?? '';
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

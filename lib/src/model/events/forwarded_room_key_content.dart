@@ -36,11 +36,12 @@ class ForwardedRoomKeyContent extends RoomKeyContent {
   List<String> forwardingCurve25519KeyChain;
 
   ForwardedRoomKeyContent.fromJson(Map<String, dynamic> json)
-      : senderKey = json.tryGet('sender_key') ?? '',
+      : senderKey = json.tryGet('sender_key', TryGet.required) ?? '',
         senderClaimedEd25519Key =
-            json.tryGet('sender_claimed_ed25519_key') ?? '',
-        forwardingCurve25519KeyChain =
-            json.tryGetList('forwarding_curve25519_key_chain') ?? [],
+            json.tryGet('sender_claimed_ed25519_key', TryGet.required) ?? '',
+        forwardingCurve25519KeyChain = json.tryGetList(
+                'forwarding_curve25519_key_chain', TryGet.required) ??
+            [],
         super.fromJson(json);
 
   @override
