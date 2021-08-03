@@ -1,3 +1,6 @@
+## [0.1.12] - 3rd Aug 2021
+- fix: accidental OTK uploads on fakeSync calls
+
 ## [0.1.11] - 26th Jul 2021
 - fix: Upload OTKs if the otk_count field is missing
 
