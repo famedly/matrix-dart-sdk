@@ -1,3 +1,7 @@
+## [0.2.1+1] - 5th Aug 2021
+
+- fix: prevent logging too many warnings for optional properties
+
 ## [0.2.1] - 2nd Aug 2021
 
 - fix: accidental OTK uploads on fakeSync calls
