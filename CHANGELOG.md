@@ -1,3 +1,7 @@
+## 0.4.1
+
+fix: change tryGet default loglevel to Optional
+
 ## 0.4.0
 - refactor: Migrate to null safety
 - refactor: Use openAPI code generation to create most of the methods
