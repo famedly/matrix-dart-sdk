@@ -264,8 +264,7 @@ class OlmManager {
     // and generate and upload more if not.
 
     // If the server did not send us a count, assume it is 0
-    final keyCount =
-        countJson?.tryGet<int>('signed_curve25519', TryGet.optional) ?? 0;
+    final keyCount = countJson?.tryGet<int>('signed_curve25519') ?? 0;
 
     // If the server does not support fallback keys, it will not tell us about them.
     // If the server supports them but has no key, upload a new one.
