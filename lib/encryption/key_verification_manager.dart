@@ -52,6 +52,8 @@ class KeyVerificationManager {
     _requests[request.transactionId] = request;
   }
 
+  KeyVerification getRequest(String requestId) => _requests[requestId];
+
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
     if (!event.type.startsWith('m.key.verification.') ||
         client.verificationMethods.isEmpty) {

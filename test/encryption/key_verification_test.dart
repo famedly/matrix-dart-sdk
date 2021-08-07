@@ -128,6 +128,11 @@ void main() {
       await sub.cancel();
       expect(req2 != null, true);
 
+      expect(
+          client2.encryption.keyVerificationManager
+              .getRequest(req2.transactionId),
+          req2);
+
       // send ready
       FakeMatrixApi.calledEndpoints.clear();
       await req2.acceptVerification();
