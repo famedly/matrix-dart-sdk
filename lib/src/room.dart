@@ -482,6 +482,18 @@ class Room {
         tag,
       );
 
+  // Tag is part of client-to-server-API, so it uses strict parsing.
+  // For roomAccountData, permissive parsing is more suitable,
+  // so it is implemented here.
+  static Tag _tryTagFromJson(Object o) {
+    if (o is Map<String, dynamic>) {
+      return Tag(
+          order: o.tryGet<num>('order').toDouble(),
+          additionalProperties: Map.from(o)..remove('order'));
+    }
+    return Tag();
+  }
+
   /// Returns all tags for this room.
   Map<String, Tag> get tags {
     if (roomAccountData['m.tag'] == null ||
@@ -489,7 +501,7 @@ class Room {
       return {};
     }
     final tags = (roomAccountData['m.tag'].content['tags'] as Map)
-        .map((k, v) => MapEntry<String, Tag>(k, Tag.fromJson(v)));
+        .map((k, v) => MapEntry<String, Tag>(k, _tryTagFromJson(v)));
     tags.removeWhere((k, v) => !TagType.isValid(k));
     return tags;
   }
