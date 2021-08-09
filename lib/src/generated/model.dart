@@ -1864,7 +1864,7 @@ class RoomMember {
 }
 
 @_NameSource('(generated, rule override generated)')
-enum Membership { ban, invite, join, leave }
+enum Membership { ban, invite, join, knock, leave }
 
 @_NameSource('rule override generated')
 enum Direction { b, f }

@@ -2474,6 +2474,7 @@ class Api {
             'membership': {
               Membership.invite: 'invite',
               Membership.join: 'join',
+              Membership.knock: 'knock',
               Membership.leave: 'leave',
               Membership.ban: 'ban'
             }[membership]!,
@@ -2481,6 +2482,7 @@ class Api {
             'not_membership': {
               Membership.invite: 'invite',
               Membership.join: 'join',
+              Membership.knock: 'knock',
               Membership.leave: 'leave',
               Membership.ban: 'ban'
             }[notMembership]!,
@@ -3534,7 +3536,7 @@ class Api {
   ///
   /// returns `content_uri`:
   /// The [MXC URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the uploaded content.
-  Future<String> uploadContent(Uint8List content,
+  Future<Uri> uploadContent(Uint8List content,
       {String? contentType, String? filename}) async {
     final requestUri = Uri(path: '_matrix/media/r0/upload', queryParameters: {
       if (filename != null) 'filename': filename,
@@ -3548,6 +3550,6 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return json['content_uri'] as String;
+    return Uri.parse(json['content_uri']);
   }
 }

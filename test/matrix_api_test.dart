@@ -996,7 +996,7 @@ void main() {
       matrixApi.accessToken = '1234';
       final response =
           await matrixApi.uploadContent(Uint8List(0), filename: 'file.jpeg');
-      expect(response, 'mxc://example.com/AQwafuaFswefuhsfAFAgsw');
+      expect(response, Uri.parse('mxc://example.com/AQwafuaFswefuhsfAFAgsw'));
       var throwsException = false;
       try {
         await matrixApi.uploadContent(Uint8List(0), filename: 'file.jpg');
