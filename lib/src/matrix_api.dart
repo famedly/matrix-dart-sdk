@@ -32,7 +32,6 @@ import 'generated/api.dart';
 import 'model/matrix_connection_exception.dart';
 import 'model/matrix_exception.dart';
 import 'model/matrix_keys.dart';
-import 'model/upload_key_signatures_response.dart';
 
 enum RequestType { GET, POST, PUT, DELETE }
 
@@ -169,37 +168,6 @@ class MatrixApi extends Api {
       },
     );
     return Map<String, int>.from(response['one_time_key_counts']);
-  }
-
-  /// Uploads new signatures of keys
-  /// https://github.com/matrix-org/matrix-doc/pull/2536
-  Future<UploadKeySignaturesResponse> uploadKeySignatures(
-      List<MatrixSignableKey> keys) async {
-    final payload = <String, dynamic>{};
-    for (final key in keys) {
-      if (key.identifier == null ||
-          key.signatures == null ||
-          key.signatures!.isEmpty) {
-        continue;
-      }
-      if (!payload.containsKey(key.userId)) {
-        payload[key.userId] = <String, dynamic>{};
-      }
-      if (payload[key.userId].containsKey(key.identifier)) {
-        // we need to merge signature objects
-        payload[key.userId][key.identifier]['signatures']
-            .addAll(key.signatures);
-      } else {
-        // we can just add signatures
-        payload[key.userId][key.identifier] = key.toJson();
-      }
-    }
-    final response = await request(
-      RequestType.POST,
-      '/client/r0/keys/signatures/upload',
-      data: payload,
-    );
-    return UploadKeySignaturesResponse.fromJson(response);
   }
 
   /// This endpoint allows the creation, modification and deletion of pushers

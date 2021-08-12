@@ -1187,53 +1187,6 @@ void main() {
           selfSigningKey: selfSigningKey,
           userSigningKey: userSigningKey);
     });
-    test('uploadKeySignatures', () async {
-      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
-      matrixApi.accessToken = '1234';
-
-      final key1 = MatrixDeviceKeys.fromJson({
-        'user_id': '@alice:example.com',
-        'device_id': 'JLAFKJWSCS',
-        'algorithms': [
-          AlgorithmTypes.olmV1Curve25519AesSha2,
-          AlgorithmTypes.megolmV1AesSha2
-        ],
-        'keys': {
-          'curve25519:JLAFKJWSCS':
-              '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',
-          'ed25519:JLAFKJWSCS': 'lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI'
-        },
-        'signatures': {
-          '@alice:example.com': {
-            'ed25519:JLAFKJWSCS':
-                'dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA'
-          }
-        },
-        'unsigned': {'device_display_name': 'Alices mobile phone'},
-      });
-      final key2 = MatrixDeviceKeys.fromJson({
-        'user_id': '@alice:example.com',
-        'device_id': 'JLAFKJWSCS',
-        'algorithms': [
-          AlgorithmTypes.olmV1Curve25519AesSha2,
-          AlgorithmTypes.megolmV1AesSha2
-        ],
-        'keys': {
-          'curve25519:JLAFKJWSCS':
-              '3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI',
-          'ed25519:JLAFKJWSCS': 'lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI'
-        },
-        'signatures': {
-          '@alice:example.com': {'ed25519:OTHERDEVICE': 'OTHERSIG'}
-        },
-        'unsigned': {'device_display_name': 'Alices mobile phone'},
-      });
-      final ret = await matrixApi.uploadKeySignatures([key1, key2]);
-      expect(
-        FakeMatrixApi.api['POST']!['/client/r0/keys/signatures/upload']({}),
-        ret.toJson(),
-      );
-    });
     test('requestPushers', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';

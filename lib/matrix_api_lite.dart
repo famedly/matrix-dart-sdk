@@ -61,7 +61,6 @@ export 'src/model/room_creation_types.dart';
 export 'src/model/room_summary.dart';
 export 'src/model/stripped_state_event.dart';
 export 'src/model/sync_update.dart';
-export 'src/model/upload_key_signatures_response.dart';
 export 'src/utils/logs.dart';
 export 'src/utils/map_copy_extension.dart';
 export 'src/utils/try_get_map_extension.dart';
