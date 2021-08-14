@@ -488,7 +488,7 @@ class Room {
   static Tag _tryTagFromJson(Object o) {
     if (o is Map<String, dynamic>) {
       return Tag(
-          order: o?.tryGet<num>('order')?.toDouble(),
+          order: o.tryGet<num>('order')?.toDouble(),
           additionalProperties: Map.from(o)..remove('order'));
     }
     return Tag();
