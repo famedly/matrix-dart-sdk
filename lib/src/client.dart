@@ -185,6 +185,9 @@ class Client extends MatrixApi {
       EventTypes.Encryption,
       EventTypes.RoomCanonicalAlias,
       EventTypes.RoomTombstone,
+      EventTypes.spaceChild,
+      EventTypes.spaceParent,
+      EventTypes.RoomCreate,
     ]);
     roomPreviewLastEvents ??= {};
     roomPreviewLastEvents.addAll([
