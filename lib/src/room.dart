@@ -628,6 +628,7 @@ class Room {
   /// the uploaded file. If [waitUntilSent] is true, the future will wait until
   /// the message event has received the server. Otherwise the future will only
   /// wait until the file has been uploaded.
+  /// Optionally specify [extraContent] to tack on to the event.
   Future<String> sendFileEvent(
     MatrixFile file, {
     String txid,
@@ -635,6 +636,7 @@ class Room {
     String editEventId,
     bool waitUntilSent = false,
     MatrixImageFile thumbnail,
+    Map<String, dynamic> extraContent,
   }) async {
     MatrixFile uploadFile = file; // ignore: omit_local_variable_types
     MatrixFile uploadThumbnail = thumbnail; // ignore: omit_local_variable_types
@@ -703,7 +705,8 @@ class Room {
             'hashes': {'sha256': encryptedThumbnail.sha256}
           },
         if (thumbnail != null) 'thumbnail_info': thumbnail.info,
-      }
+      },
+      if (extraContent != null) ...extraContent,
     };
     final sendResponse = sendEvent(
       content,
