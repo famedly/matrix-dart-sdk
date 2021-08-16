@@ -860,18 +860,20 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         final eventsInRoomStateBox = states?.values
             ?.map((raw) => Event.fromJson(convertToJson(raw), room))
             ?.toList();
-
-        for (final event in eventsInRoomStateBox) {
-          if (event.type == 'm.room.message') {
-            stateMap.values.first['content']['m.relates_to'] == null
-                ? await _roomStateBox.put(key, stateMap)
-                : {event.eventId, event.relationshipEventId}.contains(stateMap
-                        .values.first['content']['m.relates_to']['event_id'])
-                    ? await _roomStateBox.put(key, stateMap)
-                    : null;
-          } else {
-            await _roomStateBox.put(key, stateMap);
+        if (eventsInRoomStateBox != null) {
+          for (final event in eventsInRoomStateBox) {
+            if (event.type == 'm.room.message') {
+              stateMap.values.first['content']['m.relates_to'] == null
+                  ? await _roomStateBox.put(key, stateMap)
+                  : {event.eventId, event.relationshipEventId}.contains(stateMap
+                          .values.first['content']['m.relates_to']['event_id'])
+                      ? await _roomStateBox.put(key, stateMap)
+                      : null;
+            } else {
+              await _roomStateBox.put(key, stateMap);
+            }
           }
+          await _roomStateBox.put(key, stateMap);
         }
       }
     }
