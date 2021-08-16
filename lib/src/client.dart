@@ -802,6 +802,27 @@ class Client extends MatrixApi {
   /// Will be called on call answers.
   final StreamController<Event> onCallAnswer = StreamController.broadcast();
 
+  /// Will be called on call replaces.
+  final StreamController<Event> onCallReplaces = StreamController.broadcast();
+
+  /// Will be called on select answers.
+  final StreamController<Event> onCallSelectAnswer =
+      StreamController.broadcast();
+
+  /// Will be called on rejects.
+  final StreamController<Event> onCallReject = StreamController.broadcast();
+
+  /// Will be called on negotiates.
+  final StreamController<Event> onCallNegotiate = StreamController.broadcast();
+
+  /// Will be called on Asserted Identity received.
+  final StreamController<Event> onAssertedIdentityReceived =
+      StreamController.broadcast();
+
+  /// Will be called on SDPStream Metadata changed.
+  final StreamController<Event> onSDPStreamMetadataChangedReceived =
+      StreamController.broadcast();
+
   /// Will be called when another device is requesting session keys for a room.
   final StreamController<RoomKeyRequest> onRoomKeyRequest =
       StreamController.broadcast();
@@ -1419,6 +1440,26 @@ class Client extends MatrixApi {
           onCallAnswer.add(Event.fromJson(rawUnencryptedEvent, room));
         } else if (rawUnencryptedEvent['type'] == EventTypes.CallCandidates) {
           onCallCandidates.add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] == EventTypes.CallSelectAnswer) {
+          onCallSelectAnswer.add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] == EventTypes.CallReject) {
+          onCallReject.add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] == EventTypes.CallNegotiate) {
+          onCallNegotiate.add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] == EventTypes.CallReplaces) {
+          onCallReplaces.add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] ==
+                EventTypes.CallAssertedIdentity ||
+            rawUnencryptedEvent['type'] ==
+                EventTypes.CallAssertedIdentityPrefix) {
+          onAssertedIdentityReceived
+              .add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] ==
+                EventTypes.CallSDPStreamMetadataChanged ||
+            rawUnencryptedEvent['type'] ==
+                EventTypes.CallSDPStreamMetadataChangedPrefix) {
+          onSDPStreamMetadataChangedReceived
+              .add(Event.fromJson(rawUnencryptedEvent, room));
         }
       }
     }

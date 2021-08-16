@@ -2133,9 +2133,25 @@ class FakeMatrixApi extends MockClient {
           (var req) => {},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.answer/1234':
           (var req) => {},
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.select_answer/1234':
+          (var req) => {},
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.reject/1234':
+          (var req) => {},
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.negotiate/1234':
+          (var req) => {},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.candidates/1234':
           (var req) => {},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.hangup/1234':
+          (var req) => {},
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.replaces/1234':
+          (var req) => {},
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.asserted_identity/1234':
+          (var req) => {},
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.sdp_stream_metadata_changed/1234':
+          (var req) => {},
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/org.matrix.call.sdp_stream_metadata_changed/1234':
+          (var req) => {},
+      '/client/r0/rooms/!localpart%3Aserver.abc/send/org.matrix.call.asserted_identity/1234':
           (var req) => {},
       '/client/r0/rooms/!1234%3Aexample.com/redact/1143273582443PhrSn%3Aexample.org/1234':
           (var req) => {'event_id': '1234'},

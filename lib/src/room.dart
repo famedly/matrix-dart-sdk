@@ -35,6 +35,10 @@ import 'utils/marked_unread.dart';
 import 'utils/matrix_file.dart';
 import 'utils/matrix_localizations.dart';
 
+/// https://github.com/matrix-org/matrix-doc/pull/2746
+/// version 1
+const String voipProtoVersion = '1';
+
 enum PushRuleState { notify, mentionsOnly, dontNotify }
 enum JoinRules { public, knock, invite, private }
 enum GuestAccess { canJoin, forbidden }
@@ -51,6 +55,153 @@ const Map<HistoryVisibility, String> _historyVisibilityMap = {
   HistoryVisibility.shared: 'shared',
   HistoryVisibility.worldReadable: 'world_readable',
 };
+
+class CallReplacesTarget {
+  String id;
+  String display_name;
+  String avatar_url;
+
+  CallReplacesTarget();
+  factory CallReplacesTarget.fromJson(Map<String, dynamic> json) {
+    return CallReplacesTarget()
+      ..id = json['id'].toString()
+      ..display_name = json['display_name'].toString()
+      ..avatar_url = json['avatar_url'].toString();
+  }
+  Map<String, dynamic> toJson() {
+    return {
+      if (id != null) 'id': id,
+      if (display_name != null) 'display_name': display_name,
+      if (avatar_url != null) 'avatar_url': avatar_url,
+    };
+  }
+}
+
+/// MSC2747: VoIP call transfers
+/// https://github.com/matrix-org/matrix-doc/pull/2747
+class CallReplaces {
+  String replacement_id;
+  CallReplacesTarget target_user;
+  String create_call;
+  String await_call;
+  String target_room;
+
+  CallReplaces();
+  factory CallReplaces.fromJson(Map<String, dynamic> json) {
+    return CallReplaces()
+      ..replacement_id = json['replacement_id'].toString()
+      ..create_call = json['create_call'].toString()
+      ..await_call = json['await_call'].toString()
+      ..target_room = json['target_room'].toString()
+      ..target_user = CallReplacesTarget.fromJson(json['target_user']);
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (replacement_id != null) 'replacement_id': replacement_id,
+      if (target_user != null) 'target_user': target_user.toJson(),
+      if (create_call != null) 'create_call': create_call,
+      if (await_call != null) 'await_call': await_call,
+      if (target_room != null) 'target_room': target_room,
+    };
+  }
+}
+
+// TODO: Change to "sdp_stream_metadata" when MSC3077 is merged
+const String sdpStreamMetadataKey = 'org.matrix.msc3077.sdp_stream_metadata';
+
+/// https://github.com/matrix-org/matrix-doc/blob/dbkr/msc2747/proposals/2747-voip-call-transfer.md#capability-advertisment
+/// https://github.com/matrix-org/matrix-doc/blob/dbkr/msc2746/proposals/2746-reliable-voip.md#add-dtmf
+class CallCapabilities {
+  bool transferee;
+  bool dtmf;
+  CallCapabilities();
+  factory CallCapabilities.fromJson(Map<String, dynamic> json) {
+    return CallCapabilities()
+      ..dtmf = json['m.call.dtmf'] as bool ?? false
+      ..transferee = json['m.call.transferee'] as bool ?? false;
+  }
+  Map<String, dynamic> toJson() {
+    return {
+      if (transferee != null) 'm.call.transferee': transferee,
+      if (dtmf != null) 'm.call.dtmf': dtmf,
+    };
+  }
+}
+
+/// MSC3077: Support for multi-stream VoIP
+/// https://github.com/matrix-org/matrix-doc/pull/3077
+///
+/// MSC3291: Muting in VoIP calls
+/// https://github.com/SimonBrandner/matrix-doc/blob/msc/muting/proposals/3291-muting.md
+///
+/// This MSC proposes adding an sdp_stream_metadata field
+/// to the events containing a session description i.e.:
+/// m.call.invite, m.call.answer, m.call.negotiate
+///
+class SDPStreamPurpose {
+  // SDPStreamMetadataPurpose
+  String purpose;
+  bool audio_muted;
+  bool video_muted;
+
+  SDPStreamPurpose();
+  factory SDPStreamPurpose.fromJson(Map<String, dynamic> json) {
+    return SDPStreamPurpose()
+      ..audio_muted = json['audio_muted'] as bool ?? false
+      ..video_muted = json['video_muted'] as bool ?? false
+      ..purpose = json['purpose'] as String;
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'purpose': purpose,
+      if (audio_muted != null) 'audio_muted': audio_muted,
+      if (video_muted != null) 'video_muted': video_muted,
+    };
+  }
+}
+
+class SDPStreamMetadataPurpose {
+  static String Usermedia = 'm.usermedia';
+  static String Screenshare = 'm.screenshare';
+}
+
+class SDPStreamMetadata {
+  Map<String, SDPStreamPurpose> sdpStreamMetadatas;
+  SDPStreamMetadata(this.sdpStreamMetadatas);
+
+  factory SDPStreamMetadata.fromJson(Map<String, dynamic> json) {
+    return SDPStreamMetadata(json
+        .map((key, value) => MapEntry(key, SDPStreamPurpose.fromJson(value))));
+  }
+  Map<String, dynamic> toJson() {
+    return sdpStreamMetadatas
+        .map((key, value) => MapEntry(key, value.toJson()));
+  }
+}
+
+/// MSC3086: Asserted identity on VoIP calls
+/// https://github.com/matrix-org/matrix-doc/pull/3086
+class AssertedIdentity {
+  String id;
+  String displayName;
+  String avatarUrl;
+  AssertedIdentity();
+  factory AssertedIdentity.fromJson(Map<String, dynamic> json) {
+    return AssertedIdentity()
+      ..displayName = json['display_name'] as String
+      ..id = json['id'] as String
+      ..avatarUrl = json['avatar_url'] as String;
+  }
+  Map<String, dynamic> toJson() {
+    return {
+      if (displayName != null) 'display_name': displayName,
+      if (id != null) 'id': id,
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
+    };
+  }
+}
 
 const String messageSendingStatusKey =
     'com.famedly.famedlysdk.message_sending_status';
@@ -1494,23 +1645,115 @@ class Room {
 
   /// This is sent by the caller when they wish to establish a call.
   /// [callId] is a unique identifier for the call.
-  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 0.
+  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 1.
   /// [lifetime] is the time in milliseconds that the invite is valid for. Once the invite age exceeds this value,
   /// clients should discard it. They should also no longer show the call as awaiting an answer in the UI.
   /// [type] The type of session description. Must be 'offer'.
   /// [sdp] The SDP text of the session description.
-  Future<String> inviteToCall(String callId, int lifetime, String sdp,
-      {String type = 'offer', int version = 0, String txid}) async {
+  /// [invitee] The user ID of the person who is being invited. Invites without an invitee field are defined to be
+  /// intended for any member of the room other than the sender of the event.
+  /// [party_id] The party ID for call, Can be set to client.deviceId.
+  Future<String> inviteToCall(
+      String callId, int lifetime, String party_id, String invitee, String sdp,
+      {String type = 'offer',
+      String version = voipProtoVersion,
+      String txid,
+      CallCapabilities capabilities,
+      SDPStreamMetadata metadata}) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
 
     final content = {
       'call_id': callId,
+      'party_id': party_id,
+      'version': version,
       'lifetime': lifetime,
       'offer': {'sdp': sdp, 'type': type},
-      'version': version,
+      if (invitee != null) 'invitee': invitee,
+      if (capabilities != null) 'capabilities': capabilities.toJson(),
+      if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
     };
     return await _sendContent(
       EventTypes.CallInvite,
+      content,
+      txid: txid,
+    );
+  }
+
+  /// The calling party sends the party_id of the first selected answer.
+  ///
+  /// Usually after receiving the first answer sdp in the client.onCallAnswer event,
+  /// save the `party_id`, and then send `CallSelectAnswer` to others peers that the call has been picked up.
+  ///
+  /// [callId] is a unique identifier for the call.
+  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 1.
+  /// [party_id] The party ID for call, Can be set to client.deviceId.
+  /// [selected_party_id] The party ID for the selected answer.
+  Future<String> selectCallAnswer(
+      String callId, int lifetime, String party_id, String selected_party_id,
+      {String version = voipProtoVersion, String txid}) async {
+    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
+
+    final content = {
+      'call_id': callId,
+      'party_id': party_id,
+      'version': version,
+      'lifetime': lifetime,
+      'selected_party_id': selected_party_id,
+    };
+
+    return await _sendContent(
+      EventTypes.CallSelectAnswer,
+      content,
+      txid: txid,
+    );
+  }
+
+  /// Reject a call
+  /// [callId] is a unique identifier for the call.
+  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 1.
+  /// [party_id] The party ID for call, Can be set to client.deviceId.
+  Future<String> sendCallReject(String callId, int lifetime, String party_id,
+      {String version = voipProtoVersion, String txid}) async {
+    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
+
+    final content = {
+      'call_id': callId,
+      'party_id': party_id,
+      'version': version,
+      'lifetime': lifetime,
+    };
+
+    return await _sendContent(
+      EventTypes.CallReject,
+      content,
+      txid: txid,
+    );
+  }
+
+  /// When local audio/video tracks are added/deleted or hold/unhold,
+  /// need to createOffer and renegotiation.
+  /// [callId] is a unique identifier for the call.
+  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 1.
+  /// [party_id] The party ID for call, Can be set to client.deviceId.
+  Future<String> sendCallNegotiate(
+      String callId, int lifetime, String party_id, String sdp,
+      {String type = 'offer',
+      String version = voipProtoVersion,
+      String txid,
+      CallCapabilities capabilities,
+      SDPStreamMetadata metadata}) async {
+    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
+    final content = {
+      'call_id': callId,
+      'party_id': party_id,
+      'version': version,
+      'lifetime': lifetime,
+      'description': {'sdp': sdp, 'type': type},
+      if (capabilities != null) 'capabilities': capabilities.toJson(),
+      if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
+    };
+    return await _sendContent(
+      EventTypes.CallNegotiate,
       content,
       txid: txid,
     );
@@ -1521,7 +1764,9 @@ class Room {
   ///
   /// [callId] The ID of the call this event relates to.
   ///
-  /// [version] The version of the VoIP specification this messages adheres to. This specification is version 0.
+  /// [version] The version of the VoIP specification this messages adheres to. This specification is version 1.
+  ///
+  /// [party_id] The party ID for call, Can be set to client.deviceId.
   ///
   /// [candidates] Array of objects describing the candidates. Example:
   ///
@@ -1536,15 +1781,17 @@ class Room {
   /// ```
   Future<String> sendCallCandidates(
     String callId,
+    String party_id,
     List<Map<String, dynamic>> candidates, {
-    int version = 0,
+    String version = voipProtoVersion,
     String txid,
   }) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
     final content = {
       'call_id': callId,
-      'candidates': candidates,
+      'party_id': party_id,
       'version': version,
+      'candidates': candidates,
     };
     return await _sendContent(
       EventTypes.CallCandidates,
@@ -1555,16 +1802,24 @@ class Room {
 
   /// This event is sent by the callee when they wish to answer the call.
   /// [callId] is a unique identifier for the call.
-  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 0.
+  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 1.
   /// [type] The type of session description. Must be 'answer'.
   /// [sdp] The SDP text of the session description.
-  Future<String> answerCall(String callId, String sdp,
-      {String type = 'answer', int version = 0, String txid}) async {
+  /// [party_id] The party ID for call, Can be set to client.deviceId.
+  Future<String> answerCall(String callId, String sdp, String party_id,
+      {String type = 'answer',
+      String version = voipProtoVersion,
+      String txid,
+      CallCapabilities capabilities,
+      SDPStreamMetadata metadata}) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
     final content = {
       'call_id': callId,
-      'answer': {'sdp': sdp, 'type': type},
+      'party_id': party_id,
       'version': version,
+      'answer': {'sdp': sdp, 'type': type},
+      if (capabilities != null) 'capabilities': capabilities.toJson(),
+      if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
     };
     return await _sendContent(
       EventTypes.CallAnswer,
@@ -1575,17 +1830,97 @@ class Room {
 
   /// This event is sent by the callee when they wish to answer the call.
   /// [callId] The ID of the call this event relates to.
-  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 0.
-  Future<String> hangupCall(String callId,
-      {int version = 0, String txid}) async {
+  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 1.
+  /// [party_id] The party ID for call, Can be set to client.deviceId.
+  Future<String> hangupCall(String callId, String party_id, String hangupCause,
+      {String version = voipProtoVersion, String txid}) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
 
     final content = {
       'call_id': callId,
+      'party_id': party_id,
       'version': version,
+      if (hangupCause != null) 'reason': hangupCause,
     };
     return await _sendContent(
       EventTypes.CallHangup,
+      content,
+      txid: txid,
+    );
+  }
+
+  /// Send SdpStreamMetadata Changed event.
+  ///
+  /// This MSC also adds a new call event m.call.sdp_stream_metadata_changed,
+  /// which has the common VoIP fields as specified in
+  /// MSC2746 (version, call_id, party_id) and a sdp_stream_metadata object which
+  /// is the same thing as sdp_stream_metadata in m.call.negotiate, m.call.invite
+  /// and m.call.answer. The client sends this event the when sdp_stream_metadata
+  /// has changed but no negotiation is required
+  ///  (e.g. the user mutes their camera/microphone).
+  ///
+  /// [callId] The ID of the call this event relates to.
+  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 1.
+  /// [party_id] The party ID for call, Can be set to client.deviceId.
+  /// [metadata] The sdp_stream_metadata object.
+  Future<String> sendSDPStreamMetadataChanged(
+      String callId, String party_id, SDPStreamMetadata metadata,
+      {String version = voipProtoVersion, String txid}) async {
+    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
+    final content = {
+      'call_id': callId,
+      'party_id': party_id,
+      'version': version,
+      sdpStreamMetadataKey: metadata.toJson(),
+    };
+    return await _sendContent(
+      EventTypes.CallSDPStreamMetadataChangedPrefix,
+      content,
+      txid: txid,
+    );
+  }
+
+  /// CallReplacesEvent for Transfered calls
+  ///
+  /// [callId] The ID of the call this event relates to.
+  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 1.
+  /// [party_id] The party ID for call, Can be set to client.deviceId.
+  /// [callReplaces] transfer info
+  Future<String> sendCallReplaces(
+      String callId, String party_id, CallReplaces callReplaces,
+      {String version = voipProtoVersion, String txid}) async {
+    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
+    final content = {
+      'call_id': callId,
+      'party_id': party_id,
+      'version': version,
+      ...callReplaces.toJson(),
+    };
+    return await _sendContent(
+      EventTypes.CallReplaces,
+      content,
+      txid: txid,
+    );
+  }
+
+  /// send AssertedIdentity event
+  ///
+  /// [callId] The ID of the call this event relates to.
+  /// [version] is the version of the VoIP specification this message adheres to. This specification is version 1.
+  /// [party_id] The party ID for call, Can be set to client.deviceId.
+  /// [assertedIdentity] the asserted identity
+  Future<String> sendAssertedIdentity(
+      String callId, String party_id, AssertedIdentity assertedIdentity,
+      {String version = voipProtoVersion, String txid}) async {
+    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
+    final content = {
+      'call_id': callId,
+      'party_id': party_id,
+      'version': version,
+      'asserted_identity': assertedIdentity.toJson(),
+    };
+    return await _sendContent(
+      EventTypes.CallAssertedIdentity,
       content,
       txid: txid,
     );
