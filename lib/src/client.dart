@@ -1536,7 +1536,12 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
             ),
           );
         } else {
-          room.setState(stateEvent);
+          stateEvent.relationshipType != RelationshipTypes.edit
+              ? room.setState(stateEvent)
+              : {room.lastEvent.eventId, room.lastEvent.relationshipEventId}
+                      .contains(stateEvent.relationshipEventId)
+                  ? room.setState(stateEvent)
+                  : null;
         }
         break;
       case EventUpdateType.accountData:
