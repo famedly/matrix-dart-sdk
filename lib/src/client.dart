@@ -1536,12 +1536,11 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
             ),
           );
         } else {
-          stateEvent.relationshipType != RelationshipTypes.edit
-              ? room.setState(stateEvent)
-              : {room.lastEvent.eventId, room.lastEvent.relationshipEventId}
-                      .contains(stateEvent.relationshipEventId)
-                  ? room.setState(stateEvent)
-                  : null;
+          if (stateEvent.relationshipType != RelationshipTypes.edit
+              || {room.lastEvent.eventId,room.lastEvent.relationshipEventId}
+                      .contains(stateEvent.relationshipEventId)) {
+                  room.setState(stateEvent);
+          }
         }
         break;
       case EventUpdateType.accountData:
