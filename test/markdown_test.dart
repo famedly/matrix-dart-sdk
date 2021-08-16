@@ -49,6 +49,12 @@ void main() {
           'Snape killed <span data-mx-spoiler="">Dumbledoor</span>');
       expect(markdown('Snape killed ||Story|Dumbledoor||'),
           'Snape killed <span data-mx-spoiler="Story">Dumbledoor</span>');
+      expect(markdown('Snape killed ||Some dumb loser|Dumbledoor||'),
+          'Snape killed <span data-mx-spoiler="Some dumb loser">Dumbledoor</span>');
+      expect(markdown('Snape killed ||Some dumb loser|Dumbledoor **bold**||'),
+          'Snape killed <span data-mx-spoiler="Some dumb loser">Dumbledoor <strong>bold</strong></span>');
+      expect(markdown('Snape killed ||Dumbledoor **bold**||'),
+          'Snape killed <span data-mx-spoiler="">Dumbledoor <strong>bold</strong></span>');
     });
     test('multiple paragraphs', () {
       expect(markdown('Heya!\n\nBeep'), '<p>Heya!</p>\n<p>Beep</p>');

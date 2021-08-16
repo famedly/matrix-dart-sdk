@@ -37,21 +37,35 @@ class SpoilerSyntax extends TagSyntax {
   @override
   Node close(InlineParser parser, Delimiter opener, Delimiter closer,
       {List<Node> Function() getChildren}) {
-    var reason = '';
     final children = getChildren();
-    if (children.isNotEmpty) {
-      final te = children[0];
-      if (te is Text) {
-        final tx = te.text;
-        final ix = tx.indexOf('|');
+    final newChildren = <Node>[];
+    var searchingForReason = true;
+    var reason = '';
+    for (final child in children) {
+      // If we already found a reason, let's just use our child nodes as-is
+      if (!searchingForReason) {
+        newChildren.add(child);
+        continue;
+      }
+      if (child is Text) {
+        final ix = child.text.indexOf('|');
         if (ix > 0) {
-          reason = tx.substring(0, ix);
-          children[0] = Text(tx.substring(ix + 1));
+          reason += child.text.substring(0, ix);
+          newChildren.add(Text(child.text.substring(ix + 1)));
+          searchingForReason = false;
+        } else {
+          reason += child.text;
         }
+      } else {
+        // if we don't have a text node as reason we just want to cancel this whole thing
+        break;
       }
     }
-    final element = Element('span', children);
-    element.attributes['data-mx-spoiler'] = htmlAttrEscape.convert(reason);
+    // if we were still searching for a reason that means there was none - use the original children!
+    final element =
+        Element('span', searchingForReason ? children : newChildren);
+    element.attributes['data-mx-spoiler'] =
+        searchingForReason ? '' : htmlAttrEscape.convert(reason);
     return element;
   }
 }
