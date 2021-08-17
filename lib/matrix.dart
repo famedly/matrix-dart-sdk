@@ -39,6 +39,5 @@ export 'src/event.dart';
 export 'src/room.dart';
 export 'src/timeline.dart';
 export 'src/user.dart';
-export 'src/database/database.dart' show Database;
 export 'src/database/database_api.dart';
 export 'src/database/hive_database.dart';

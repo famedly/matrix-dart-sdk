@@ -21,8 +21,6 @@ import 'dart:typed_data';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/client.dart';
-import 'package:matrix/src/database/database.dart'
-    show DbRoom, DbRoomAccountData, DbRoomState, getRoomFromTableRow;
 import 'package:matrix/src/event.dart';
 import 'package:matrix/src/room.dart';
 import 'package:matrix/src/user.dart';
@@ -55,51 +53,40 @@ void main() {
         '@charley:example.org'
       ];
 
-      final dbRoom = DbRoom(
-        clientId: 1,
-        roomId: id,
-        membership: membership.toString().split('.').last,
+      room = Room(
+        client: matrix,
+        id: id,
+        membership: membership,
         highlightCount: highlightCount,
         notificationCount: notificationCount,
-        prevBatch: '',
-        joinedMemberCount: notificationCount,
-        invitedMemberCount: notificationCount,
+        prev_batch: '',
         newestSortOrder: 0.0,
         oldestSortOrder: 0.0,
-        heroes: heroes.join(','),
+        summary: RoomSummary.fromJson({
+          'm.joined_member_count': 2,
+          'm.invited_member_count': 2,
+          'm.heroes': heroes,
+        }),
+        roomAccountData: {
+          'com.test.foo': BasicRoomEvent(
+            type: 'com.test.foo',
+            roomId: id,
+            content: {'foo': 'bar'},
+          ),
+        },
       );
-
-      final states = [
-        DbRoomState(
-          clientId: 1,
-          eventId: '143273582443PhrSn:example.org',
-          roomId: id,
-          sortOrder: 0.0,
-          originServerTs: 1432735824653,
-          sender: '@example:example.org',
-          type: 'm.room.join_rules',
-          unsigned: '{"age": 1234}',
-          content: '{"join_rule": "public"}',
-          prevContent: '',
-          stateKey: '',
-        ),
-      ];
-
-      final roomAccountData = [
-        DbRoomAccountData(
-          clientId: 1,
-          type: 'com.test.foo',
-          roomId: id,
-          content: '{"foo": "bar"}',
-        ),
-      ];
-
-      room = await getRoomFromTableRow(
-        dbRoom,
-        matrix,
-        states: states,
-        roomAccountData: roomAccountData,
-      );
+      room.setState(Event(
+        room: room,
+        eventId: '143273582443PhrSn:example.org',
+        roomId: id,
+        sortOrder: 0.0,
+        originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
+        senderId: '@example:example.org',
+        type: 'm.room.join_rules',
+        unsigned: {'age': 1234},
+        content: {'join_rule': 'public'},
+        stateKey: '',
+      ));
 
       expect(room.id, id);
       expect(room.membership, membership);

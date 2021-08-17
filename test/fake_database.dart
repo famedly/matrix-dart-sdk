@@ -16,5 +16,28 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-export 'fake_database_native.dart'
-    if (dart.library.js) 'fake_database_web.dart';
+import 'dart:io';
+import 'dart:math';
+
+import 'package:matrix/matrix.dart';
+import 'package:matrix/src/database/hive_database.dart';
+import 'package:file/memory.dart';
+import 'package:hive/hive.dart';
+
+Future<DatabaseApi> getDatabase(Client _) => getHiveDatabase(_);
+
+bool hiveInitialized = false;
+
+Future<FamedlySdkHiveDatabase> getHiveDatabase(Client c) async {
+  if (!hiveInitialized) {
+    final fileSystem = MemoryFileSystem();
+    final testHivePath =
+        '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
+    Directory(testHivePath).createSync(recursive: true);
+    Hive.init(testHivePath);
+    hiveInitialized = true;
+  }
+  final db = FamedlySdkHiveDatabase('unit_test.${c.hashCode}');
+  await db.open();
+  return db;
+}
