@@ -563,8 +563,12 @@ class Event extends MatrixEvent {
   /// Returns a localized String representation of this event. For a
   /// room list you may find [withSenderNamePrefix] useful. Set [hideReply] to
   /// crop all lines starting with '>'.
-  String getLocalizedBody(MatrixLocalizations i18n,
-      {bool withSenderNamePrefix = false, bool hideReply = false}) {
+  String getLocalizedBody(
+    MatrixLocalizations i18n, {
+    bool withSenderNamePrefix = false,
+    bool hideReply = false,
+    bool hideEdit = false,
+  }) {
     if (redacted) {
       return i18n.removedBy(redactedBecause.sender.calcDisplayname());
     }
@@ -573,11 +577,14 @@ class Event extends MatrixEvent {
     if (callback != null) {
       localizedBody = callback(this, i18n);
     }
-
     // Hide reply fallback
     if (hideReply) {
       localizedBody = localizedBody.replaceFirst(
           RegExp(r'^>( \*)? <[^>]+>[^\n\r]+\r?\n(> [^\n]*\r?\n)*\r?\n'), '');
+    }
+    // Hide edit fallback
+    if (hideEdit && relationshipType == RelationshipTypes.edit) {
+      localizedBody = content['m.new_content']['body'] ?? localizedBody;
     }
 
     // Add the sender name prefix
