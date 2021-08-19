@@ -27,7 +27,7 @@ import 'package:matrix/encryption/utils/olm_session.dart';
 import 'dart:typed_data';
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/utils/QueuedToDeviceEvent.dart';
+import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:hive/hive.dart';
 
 /// This is a basic database for the Matrix SDK using the hive store. You need
