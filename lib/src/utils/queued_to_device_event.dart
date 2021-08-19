@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020 Famedly GmbH
@@ -24,7 +23,12 @@ class QueuedToDeviceEvent {
   final String txnId;
   final Map<String, dynamic> content;
 
-  QueuedToDeviceEvent({this.id, this.type, this.txnId, this.content});
+  QueuedToDeviceEvent({
+    required this.id,
+    required this.type,
+    required this.txnId,
+    required this.content,
+  });
 
   factory QueuedToDeviceEvent.fromJson(Map<String, dynamic> json) =>
       QueuedToDeviceEvent(
