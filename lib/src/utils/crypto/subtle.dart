@@ -1,4 +1,3 @@
-// @dart=2.9
 // Copyright (c) 2020 Famedly GmbH
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -16,21 +15,29 @@ class CryptoKey {}
 @JS()
 @anonymous
 class Pbkdf2Params {
-  external factory Pbkdf2Params(
-      {String name, String hash, Uint8List salt, int iterations});
-  String name;
-  String hash;
-  Uint8List salt;
-  int iterations;
+  external factory Pbkdf2Params({
+    String name,
+    String hash,
+    Uint8List salt,
+    int iterations,
+  });
+  String? name;
+  String? hash;
+  Uint8List? salt;
+  int? iterations;
 }
 
 @JS()
 @anonymous
 class AesCtrParams {
-  external factory AesCtrParams({String name, Uint8List counter, int length});
-  String name;
-  Uint8List counter;
-  int length;
+  external factory AesCtrParams({
+    String name,
+    Uint8List counter,
+    int length,
+  });
+  String? name;
+  Uint8List? counter;
+  int? length;
 }
 
 @JS('crypto.subtle.encrypt')
