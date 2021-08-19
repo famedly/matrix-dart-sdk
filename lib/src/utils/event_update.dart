@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -46,7 +45,12 @@ class EventUpdate {
   // the order where to stort this event
   final double sortOrder;
 
-  EventUpdate({this.roomID, this.type, this.content, this.sortOrder});
+  EventUpdate({
+    required this.roomID,
+    required this.type,
+    required this.content,
+    required this.sortOrder,
+  });
 
   Future<EventUpdate> decrypt(Room room, {bool store = false}) async {
     if (content['type'] != EventTypes.Encrypted ||
