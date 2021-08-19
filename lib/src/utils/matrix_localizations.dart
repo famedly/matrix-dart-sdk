@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020, 2021 Famedly GmbH
@@ -150,7 +149,6 @@ extension HistoryVisibilityDisplayString on HistoryVisibility {
       case HistoryVisibility.worldReadable:
         return i18n.visibleForEveryone;
     }
-    return null;
   }
 }
 
@@ -162,7 +160,6 @@ extension GuestAccessDisplayString on GuestAccess {
       case GuestAccess.forbidden:
         return i18n.guestsAreForbidden;
     }
-    return null;
   }
 }
 
