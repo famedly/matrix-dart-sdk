@@ -3,9 +3,7 @@
 
 import 'dart:typed_data';
 
-// ignore: import_of_legacy_library_into_null_safe
 import 'subtle.dart';
-// ignore: import_of_legacy_library_into_null_safe
 import 'subtle.dart' as subtle;
 
 abstract class Hash {
