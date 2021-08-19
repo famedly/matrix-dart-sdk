@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020, 2021 Famedly GmbH
@@ -21,7 +20,7 @@ import 'dart:async';
 
 import '../../matrix.dart';
 
-Future<T> runInRoot<T>(FutureOr<T> Function() fn) async {
+Future<T?> runInRoot<T>(FutureOr<T> Function() fn) async {
   return await Zone.root.run(() async {
     try {
       return await fn();
