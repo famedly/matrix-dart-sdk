@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020, 2021 Famedly GmbH
@@ -41,5 +40,5 @@ extension SyncUpdateFilters on SyncUpdate {
   }
 
   /// Returns if this sync update has presence updates
-  bool get hasPresenceUpdate => presence != null && presence.isNotEmpty;
+  bool get hasPresenceUpdate => presence?.isNotEmpty ?? false;
 }
