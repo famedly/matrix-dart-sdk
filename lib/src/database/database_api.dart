@@ -29,7 +29,7 @@ import '../../matrix.dart';
 abstract class DatabaseApi {
   int get maxFileSize => 1 * 1024 * 1024;
   bool get supportsFileStoring => false;
-  Future<Map<String, dynamic>> getClient(String name);
+  Future<Map<String, dynamic>?> getClient(String name);
 
   Future updateClient(
     String homeserverUrl,
@@ -66,7 +66,7 @@ abstract class DatabaseApi {
   /// [transaction].
   Future<void> storeEventUpdate(int clientId, EventUpdate eventUpdate);
 
-  Future<Event> getEventById(int clientId, String eventId, Room room);
+  Future<Event?> getEventById(int clientId, String eventId, Room room);
 
   Future<void> forgetRoom(int clientId, String roomId);
 
@@ -74,13 +74,13 @@ abstract class DatabaseApi {
 
   Future<void> clear(int clientId);
 
-  Future<User> getUser(int clientId, String userId, Room room);
+  Future<User?> getUser(int clientId, String userId, Room room);
 
   Future<List<User>> getUsers(int clientId, Room room);
 
   Future<List<Event>> getEventList(int clientId, Room room);
 
-  Future<Uint8List> getFile(Uri mxcUri);
+  Future<Uint8List?> getFile(String mxcUri);
 
   Future storeFile(Uri mxcUri, Uint8List bytes, int time);
 
@@ -90,9 +90,9 @@ abstract class DatabaseApi {
 
   Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client);
 
-  Future<SSSSCache> getSSSSCache(int clientId, String type);
+  Future<SSSSCache?> getSSSSCache(int clientId, String type);
 
-  Future<OutboundGroupSession> getOutboundGroupSession(
+  Future<OutboundGroupSession?> getOutboundGroupSession(
     int clientId,
     String roomId,
     String userId,
@@ -102,7 +102,7 @@ abstract class DatabaseApi {
     int clientId,
   );
 
-  Future<StoredInboundGroupSession> getInboundGroupSession(
+  Future<StoredInboundGroupSession?> getInboundGroupSession(
     int clientId,
     String roomId,
     String sessionId,
