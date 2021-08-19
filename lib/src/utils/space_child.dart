@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -23,9 +22,9 @@ import '../event.dart';
 
 class SpaceChild {
   final String roomId;
-  final List<String> via;
+  final List<String>? via;
   final String order;
-  final bool suggested;
+  final bool? suggested;
 
   SpaceChild.fromState(Event state)
       : assert(state.type == EventTypes.spaceChild),
@@ -37,8 +36,8 @@ class SpaceChild {
 
 class SpaceParent {
   final String roomId;
-  final List<String> via;
-  final bool canonical;
+  final List<String>? via;
+  final bool? canonical;
 
   SpaceParent.fromState(Event state)
       : assert(state.type == EventTypes.spaceParent),
