@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -17,28 +16,19 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:matrix_api_lite/src/utils/try_get_map_extension.dart';
+
 mixin EventType {
   static const String markedUnread = 'com.famedly.marked_unread';
 }
 
 class MarkedUnread {
-  bool unread;
+  final bool unread;
 
-  MarkedUnread(this.unread);
+  const MarkedUnread(this.unread);
 
-  MarkedUnread.fromJson(Map<String, dynamic> json) {
-    if (!(json['unread'] is bool)) {
-      unread = false;
-    } else {
-      unread = json['unread'];
-    }
-  }
+  MarkedUnread.fromJson(Map<String, dynamic> json)
+      : unread = json.tryGet<bool>('unread') ?? false;
 
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    if (unread != null) {
-      data['unread'] = unread;
-    }
-    return data;
-  }
+  Map<String, dynamic> toJson() => {'unread': unread};
 }
