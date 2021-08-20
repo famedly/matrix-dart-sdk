@@ -165,6 +165,43 @@ class ThreePidCredentials {
 @_NameSource('generated')
 enum IdServerUnbindResult { noSupport, success }
 
+@_NameSource('spec')
+class RequestTokenResponse {
+  RequestTokenResponse({
+    required this.sid,
+    this.submitUrl,
+  });
+
+  RequestTokenResponse.fromJson(Map<String, dynamic> json)
+      : sid = json['sid'] as String,
+        submitUrl =
+            ((v) => v != null ? Uri.parse(v) : null)(json['submit_url']);
+  Map<String, dynamic> toJson() {
+    final submitUrl = this.submitUrl;
+    return {
+      'sid': sid,
+      if (submitUrl != null) 'submit_url': submitUrl.toString(),
+    };
+  }
+
+  /// The session ID. Session IDs are opaque strings that must consist entirely
+  /// of the characters `[0-9a-zA-Z.=_-]`. Their length must not exceed 255
+  /// characters and they must not be empty.
+  String sid;
+
+  /// An optional field containing a URL where the client must submit the
+  /// validation token to, with identical parameters to the Identity Service
+  /// API's `POST /validate/email/submitToken` endpoint (without the requirement
+  /// for an access token). The homeserver must send this token to the user (if
+  /// applicable), who should then be prompted to provide it to the client.
+  ///
+  /// If this field is not present, the client can assume that verification
+  /// will happen without the client's involvement provided the homeserver
+  /// advertises this specification version in the `/versions` response
+  /// (ie: r0.5.0).
+  Uri? submitUrl;
+}
+
 @_NameSource('rule override generated')
 class TokenOwnerInfo {
   TokenOwnerInfo({
@@ -537,6 +574,43 @@ class GetRoomIdByAliasResponse {
 
   /// A list of servers that are aware of this room alias.
   List<String>? servers;
+}
+
+@_NameSource('rule override generated')
+class EventsSyncUpdate {
+  EventsSyncUpdate({
+    this.chunk,
+    this.end,
+    this.start,
+  });
+
+  EventsSyncUpdate.fromJson(Map<String, dynamic> json)
+      : chunk = ((v) => v != null
+            ? (v as List).map((v) => MatrixEvent.fromJson(v)).toList()
+            : null)(json['chunk']),
+        end = ((v) => v != null ? v as String : null)(json['end']),
+        start = ((v) => v != null ? v as String : null)(json['start']);
+  Map<String, dynamic> toJson() {
+    final chunk = this.chunk;
+    final end = this.end;
+    final start = this.start;
+    return {
+      if (chunk != null) 'chunk': chunk.map((v) => v.toJson()).toList(),
+      if (end != null) 'end': end,
+      if (start != null) 'start': start,
+    };
+  }
+
+  /// An array of events.
+  List<MatrixEvent>? chunk;
+
+  /// A token which correlates to the last value in `chunk`. This
+  /// token should be used in the next request to `/events`.
+  String? end;
+
+  /// A token which correlates to the first value in `chunk`. This
+  /// is usually the same token supplied to `from=`.
+  String? start;
 }
 
 /// A signature of an `m.third_party_invite` token to prove that this user
@@ -1522,6 +1596,29 @@ class RegisterResponse {
   String userId;
 }
 
+@_NameSource('spec')
+class RoomKeysUpdateResponse {
+  RoomKeysUpdateResponse({
+    required this.count,
+    required this.etag,
+  });
+
+  RoomKeysUpdateResponse.fromJson(Map<String, dynamic> json)
+      : count = json['count'] as int,
+        etag = json['etag'] as String;
+  Map<String, dynamic> toJson() => {
+        'count': count,
+        'etag': etag,
+      };
+
+  /// The number of keys stored in the backup
+  int count;
+
+  /// The new etag value representing stored keys in the backup.
+  /// See `GET /room_keys/version/{version}` for more details.
+  String etag;
+}
+
 /// The key data
 @_NameSource('spec')
 class KeyBackupData {
@@ -1593,75 +1690,6 @@ class RoomKeys {
 
   /// A map of room IDs to room key backup data.
   Map<String, RoomKeyBackup> rooms;
-}
-
-@_NameSource('generated')
-class PostRoomKeysKeyResponse {
-  PostRoomKeysKeyResponse({
-    required this.count,
-    required this.etag,
-  });
-
-  PostRoomKeysKeyResponse.fromJson(Map<String, dynamic> json)
-      : count = json['count'] as int,
-        etag = json['etag'] as String;
-  Map<String, dynamic> toJson() => {
-        'count': count,
-        'etag': etag,
-      };
-
-  /// The number of keys stored in the backup
-  int count;
-
-  /// The new etag value representing stored keys in the backup.
-  /// See `GET /room_keys/version/{version}` for more details.
-  String etag;
-}
-
-@_NameSource('generated')
-class PostRoomKeysKeyRoomIdResponse {
-  PostRoomKeysKeyRoomIdResponse({
-    required this.count,
-    required this.etag,
-  });
-
-  PostRoomKeysKeyRoomIdResponse.fromJson(Map<String, dynamic> json)
-      : count = json['count'] as int,
-        etag = json['etag'] as String;
-  Map<String, dynamic> toJson() => {
-        'count': count,
-        'etag': etag,
-      };
-
-  /// The number of keys stored in the backup
-  int count;
-
-  /// The new etag value representing stored keys in the backup.
-  /// See `GET /room_keys/version/{version}` for more details.
-  String etag;
-}
-
-@_NameSource('generated')
-class PostRoomKeysKeyRoomIdSessionIdResponse {
-  PostRoomKeysKeyRoomIdSessionIdResponse({
-    required this.count,
-    required this.etag,
-  });
-
-  PostRoomKeysKeyRoomIdSessionIdResponse.fromJson(Map<String, dynamic> json)
-      : count = json['count'] as int,
-        etag = json['etag'] as String;
-  Map<String, dynamic> toJson() => {
-        'count': count,
-        'etag': etag,
-      };
-
-  /// The number of keys stored in the backup
-  int count;
-
-  /// The new etag value representing stored keys in the backup.
-  /// See `GET /room_keys/version/{version}` for more details.
-  String etag;
 }
 
 @_NameSource('rule override generated')
@@ -2633,6 +2661,182 @@ class SearchResults {
 
   /// Describes which categories to search in and their criteria.
   ResultCategories searchCategories;
+}
+
+@_NameSource('spec')
+class Location {
+  Location({
+    required this.alias,
+    required this.fields,
+    required this.protocol,
+  });
+
+  Location.fromJson(Map<String, dynamic> json)
+      : alias = json['alias'] as String,
+        fields = json['fields'] as Map<String, dynamic>,
+        protocol = json['protocol'] as String;
+  Map<String, dynamic> toJson() => {
+        'alias': alias,
+        'fields': fields,
+        'protocol': protocol,
+      };
+
+  /// An alias for a matrix room.
+  String alias;
+
+  /// Information used to identify this third party location.
+  Map<String, dynamic> fields;
+
+  /// The protocol ID that the third party location is a part of.
+  String protocol;
+}
+
+/// Definition of valid values for a field.
+@_NameSource('spec')
+class FieldType {
+  FieldType({
+    required this.placeholder,
+    required this.regexp,
+  });
+
+  FieldType.fromJson(Map<String, dynamic> json)
+      : placeholder = json['placeholder'] as String,
+        regexp = json['regexp'] as String;
+  Map<String, dynamic> toJson() => {
+        'placeholder': placeholder,
+        'regexp': regexp,
+      };
+
+  /// An placeholder serving as a valid example of the field value.
+  String placeholder;
+
+  /// A regular expression for validation of a field's value. This may be relatively
+  /// coarse to verify the value as the application service providing this protocol
+  /// may apply additional validation or filtering.
+  String regexp;
+}
+
+@_NameSource('spec')
+class ProtocolInstance {
+  ProtocolInstance({
+    required this.desc,
+    required this.fields,
+    this.icon,
+    required this.networkId,
+  });
+
+  ProtocolInstance.fromJson(Map<String, dynamic> json)
+      : desc = json['desc'] as String,
+        fields = json['fields'] as Map<String, dynamic>,
+        icon = ((v) => v != null ? v as String : null)(json['icon']),
+        networkId = json['network_id'] as String;
+  Map<String, dynamic> toJson() {
+    final icon = this.icon;
+    return {
+      'desc': desc,
+      'fields': fields,
+      if (icon != null) 'icon': icon,
+      'network_id': networkId,
+    };
+  }
+
+  /// A human-readable description for the protocol, such as the name.
+  String desc;
+
+  /// Preset values for `fields` the client may use to search by.
+  Map<String, dynamic> fields;
+
+  /// An optional content URI representing the protocol. Overrides the one provided
+  /// at the higher level Protocol object.
+  String? icon;
+
+  /// A unique identifier across all instances.
+  String networkId;
+}
+
+@_NameSource('spec')
+class Protocol {
+  Protocol({
+    required this.fieldTypes,
+    required this.icon,
+    required this.instances,
+    required this.locationFields,
+    required this.userFields,
+  });
+
+  Protocol.fromJson(Map<String, dynamic> json)
+      : fieldTypes = (json['field_types'] as Map<String, dynamic>)
+            .map((k, v) => MapEntry(k, FieldType.fromJson(v))),
+        icon = json['icon'] as String,
+        instances = (json['instances'] as List)
+            .map((v) => ProtocolInstance.fromJson(v))
+            .toList(),
+        locationFields =
+            (json['location_fields'] as List).map((v) => v as String).toList(),
+        userFields =
+            (json['user_fields'] as List).map((v) => v as String).toList();
+  Map<String, dynamic> toJson() => {
+        'field_types': fieldTypes.map((k, v) => MapEntry(k, v.toJson())),
+        'icon': icon,
+        'instances': instances.map((v) => v.toJson()).toList(),
+        'location_fields': locationFields.map((v) => v).toList(),
+        'user_fields': userFields.map((v) => v).toList(),
+      };
+
+  /// The type definitions for the fields defined in the `user_fields` and
+  /// `location_fields`. Each entry in those arrays MUST have an entry here. The
+  /// `string` key for this object is field name itself.
+  ///
+  /// May be an empty object if no fields are defined.
+  Map<String, FieldType> fieldTypes;
+
+  /// A content URI representing an icon for the third party protocol.
+  String icon;
+
+  /// A list of objects representing independent instances of configuration.
+  /// For example, multiple networks on IRC if multiple are provided by the
+  /// same application service.
+  List<ProtocolInstance> instances;
+
+  /// Fields which may be used to identify a third party location. These should be
+  /// ordered to suggest the way that entities may be grouped, where higher
+  /// groupings are ordered first. For example, the name of a network should be
+  /// searched before the name of a channel.
+  List<String> locationFields;
+
+  /// Fields which may be used to identify a third party user. These should be
+  /// ordered to suggest the way that entities may be grouped, where higher
+  /// groupings are ordered first. For example, the name of a network should be
+  /// searched before the nickname of a user.
+  List<String> userFields;
+}
+
+@_NameSource('rule override spec')
+class ThirdPartyUser {
+  ThirdPartyUser({
+    required this.fields,
+    required this.protocol,
+    required this.userid,
+  });
+
+  ThirdPartyUser.fromJson(Map<String, dynamic> json)
+      : fields = json['fields'] as Map<String, dynamic>,
+        protocol = json['protocol'] as String,
+        userid = json['userid'] as String;
+  Map<String, dynamic> toJson() => {
+        'fields': fields,
+        'protocol': protocol,
+        'userid': userid,
+      };
+
+  /// Information used to identify this third party location.
+  Map<String, dynamic> fields;
+
+  /// The protocol ID that the third party location is a part of.
+  String protocol;
+
+  /// A Matrix User ID represting a third party user.
+  String userid;
 }
 
 @_NameSource('generated')

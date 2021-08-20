@@ -776,7 +776,7 @@ class FakeMatrixApi extends MockClient {
                   'u.Customers': {}
                 }
               },
-      '/client/r0/events?from=1234&timeout=10&roomId=%211234': (var req) => {
+      '/client/r0/events?from=1234&timeout=10&room_id=%211234': (var req) => {
             'start': 's3456_9_0',
             'end': 's3457_9_0',
             'chunk': [
