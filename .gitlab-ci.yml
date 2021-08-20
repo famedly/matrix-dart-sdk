@@ -40,22 +40,11 @@ coverage_without_olm:
   tags:
     - linux
   stage: coverage
-  image: debian:testing
+  image: google/dart
   dependencies: []
   script:
-    - apt update
-    - apt install -y curl gnupg2 git sqlite3 libsqlite3-dev wget
-    - sh -c 'wget -qO- https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -'
-    - sh -c 'wget -qO- https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list'
-    - apt update
-    - apt install -y dart
-    - ln -s /usr/lib/dart/bin/pub /usr/bin/
-    # Need to check if famedlysdk works without OpenSSL.
-    # Cannot uninstall OpenSSL, because it may be used internally.
-    # Break famedlysdk's FFI to OpenSSL instead:
-    - sed -i 's/libcrypto/libnocrypto/g' lib/src/utils/crypto/ffi.dart
-    - pub get
-    - pub run test
+    - dart pub get
+    - dart pub run test
 
 e2ee_test:
   tags:
@@ -122,17 +111,3 @@ pages:
       - public
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-# Adds license-scanning job. Because Gitlab does not support pub.dev
-# we added https://github.com/oss-review-toolkit/ort
-
-#include:
-#  - template: Security/License-Scanning.gitlab-ci.yml
-
-#license_scanning:
-#  stage: coverage
-#  image:
-#    name: "registry.gitlab.com/gitlab-org/security-products/analyzers/ort/ort:latest"
-#  script:
-#    - /opt/ort/bin/ort analyze -i $CI_PROJECT_DIR -o $CI_PROJECT_DIR/ --allow-dynamic-versions
-#    - /opt/ort/bin/ort scan -i $CI_PROJECT_DIR/analyzer-result.yml -o $CI_PROJECT_DIR/ || true
-#    - /opt/ort/bin/ort report -f GitLabLicenseModel -i $CI_PROJECT_DIR/scan-result.yml -o $CI_PROJECT_DIR/
