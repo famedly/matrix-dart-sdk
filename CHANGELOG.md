@@ -1,6 +1,8 @@
-## 0.4.1
+## 0.4.2
+- feat: Add more call event for improve voip.
 
-fix: change tryGet default loglevel to Optional
+## 0.4.1
+- fix: change tryGet default loglevel to Optional
 
 ## 0.4.0
 - refactor: Migrate to null safety
