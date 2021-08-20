@@ -1,3 +1,26 @@
+## [0.3.0] - 2nd Aug 2021
+- remove: deprecated moor database (breaking change)
+- feat(events): add plain-text body representation from HTML
+- feat: get new_content in getLocalizedBody
+- feat: Add a way to get a verification request by its transaction id
+    A client might find the need to get the verification request object by
+    its transaction id, to be able to e.g. display for in-room verification
+    an "accept verification request" button easily.
+- fix: Correctly parse the reason of a spoiler
+    Previously only the first child node of a spoiler was considered to
+    determine if there should be a spoiler reason. This was, unfortunately,
+    incorrect, as soon as e.g. the reason had more than one space. This is
+    fixed by properly iterating all child nodes to search for the reason.
+- fix: Add space states to important events
+    We need the space state events in the important events to be able to
+    differentiate rooms and spaces in the room list.
+- feat: Allow specifying extraContent for Room.sendFileEvent, in case clients want to specify some custom stuff
+- fix: toDouble was called on null when you had a pinned room
+- fix: Typo in key backup requests
+    This may lead to messages not decrypting after interactive verification,
+    which would make the user manually press the request keys button.
+- refactor: rename LoginState.logged to loggedIn
+
 ## [0.2.1] - 2nd Aug 2021
 
 - fix: accidental OTK uploads on fakeSync calls
