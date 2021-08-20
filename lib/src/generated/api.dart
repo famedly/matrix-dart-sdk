@@ -182,7 +182,7 @@ class Api {
   /// returns `id_server_unbind_result`:
   /// An indicator as to whether or not the homeserver was able to unbind
   /// the 3PID from the identity server. `success` indicates that the
-  /// indentity server has unbound the identifier whereas `no-support`
+  /// identity server has unbound the identifier whereas `no-support`
   /// indicates that the identity server refuses to support the request
   /// or the homeserver was not able to determine an identity server to
   /// unbind from.
@@ -430,16 +430,18 @@ class Api {
   ///    (and not other members) permission to send state events. Overridden
   ///    by the `power_level_content_override` parameter.
   ///
-  /// 4. Events set by the `preset`. Currently these are the `m.room.join_rules`,
+  /// 4. An `m.room.canonical_alias` event if `room_alias_name` is given.
+  ///
+  /// 5. Events set by the `preset`. Currently these are the `m.room.join_rules`,
   ///    `m.room.history_visibility`, and `m.room.guest_access` state events.
   ///
-  /// 5. Events listed in `initial_state`, in the order that they are
+  /// 6. Events listed in `initial_state`, in the order that they are
   ///    listed.
   ///
-  /// 6. Events implied by `name` and `topic` (`m.room.name` and `m.room.topic`
+  /// 7. Events implied by `name` and `topic` (`m.room.name` and `m.room.topic`
   ///    state events).
   ///
-  /// 7. Invite events implied by `invite` and `invite_3pid` (`m.room.member` with
+  /// 8. Invite events implied by `invite` and `invite_3pid` (`m.room.member` with
   ///    `membership: invite` and `m.room.third_party_invite`).
   ///
   /// The available presets do the following with respect to room state:
@@ -503,7 +505,8 @@ class Api {
   /// would be `#foo:example.com`.
   ///
   /// The complete room alias will become the canonical alias for
-  /// the room.
+  /// the room and an `m.room.canonical_alias` event will be sent
+  /// into the room.
   ///
   /// [roomVersion] The room version to set for the room. If not provided, the homeserver is
   /// to use its configured default. If provided, the homeserver will return a

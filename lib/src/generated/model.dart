@@ -2873,7 +2873,7 @@ class Filter {
   RoomFilter? room;
 }
 
-@_NameSource('rule override generated')
+@_NameSource('spec')
 class OpenIdCredentials {
   OpenIdCredentials({
     required this.accessToken,
