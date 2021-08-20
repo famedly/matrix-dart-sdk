@@ -1,4 +1,7 @@
-## [0.3.0] - 2nd Aug 2021
+## [0.3.1] - 20nd Aug 2021
+- hotfix: Opt-out null safety for crypto files because of an error in web
+
+## [0.3.0] - 20nd Aug 2021
 - remove: deprecated moor database (breaking change)
 - feat(events): add plain-text body representation from HTML
 - feat: get new_content in getLocalizedBody
