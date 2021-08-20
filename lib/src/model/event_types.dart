@@ -46,6 +46,17 @@ abstract class EventTypes {
   static const String CallAnswer = 'm.call.answer';
   static const String CallCandidates = 'm.call.candidates';
   static const String CallHangup = 'm.call.hangup';
+  static const String CallSelectAnswer = 'm.call.select_answer';
+  static const String CallReject = 'm.call.reject';
+  static const String CallNegotiate = 'm.call.negotiate';
+  static const String CallSDPStreamMetadataChanged =
+      'm.call.sdp_stream_metadata_changed';
+  static const String CallSDPStreamMetadataChangedPrefix =
+      'org.matrix.call.sdp_stream_metadata_changed';
+  static const String CallReplaces = 'm.call.replaces';
+  static const String CallAssertedIdentity = 'm.call.asserted_identity';
+  static const String CallAssertedIdentityPrefix =
+      'org.matrix.call.asserted_identity';
   static const String Unknown = 'm.unknown';
 
   // To device event types
