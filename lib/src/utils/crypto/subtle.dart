@@ -1,4 +1,3 @@
-// @dart=2.9
 // Copyright (c) 2020 Famedly GmbH
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -16,21 +15,35 @@ class CryptoKey {}
 @JS()
 @anonymous
 class Pbkdf2Params {
-  external factory Pbkdf2Params(
-      {String name, String hash, Uint8List salt, int iterations});
-  String name;
-  String hash;
-  Uint8List salt;
-  int iterations;
+  external factory Pbkdf2Params({
+    required String name,
+    required String hash,
+    required Uint8List salt,
+    required int iterations,
+  });
+
+  // These values have to be set in the constructor, but Dart JS requires
+  // default values anyway.
+  String name = '';
+  String hash = '';
+  Uint8List salt = Uint8List(0);
+  int iterations = 0;
 }
 
 @JS()
 @anonymous
 class AesCtrParams {
-  external factory AesCtrParams({String name, Uint8List counter, int length});
-  String name;
-  Uint8List counter;
-  int length;
+  external factory AesCtrParams({
+    required String name,
+    required Uint8List counter,
+    required int length,
+  });
+
+  // These values have to be set in the constructor, but Dart JS requires
+  // default values anyway.
+  String name = '';
+  Uint8List counter = Uint8List(0);
+  int length = 0;
 }
 
 @JS('crypto.subtle.encrypt')

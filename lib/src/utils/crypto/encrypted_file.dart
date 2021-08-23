@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -23,10 +22,10 @@ import 'crypto.dart';
 
 class EncryptedFile {
   EncryptedFile({
-    this.data,
-    this.k,
-    this.iv,
-    this.sha256,
+    required this.data,
+    required this.k,
+    required this.iv,
+    required this.sha256,
   });
   Uint8List data;
   String k;
@@ -47,7 +46,7 @@ Future<EncryptedFile> encryptFile(Uint8List input) async {
   );
 }
 
-Future<Uint8List> decryptFile(EncryptedFile input) async {
+Future<Uint8List?> decryptFile(EncryptedFile input) async {
   if (base64.encode(await sha256(input.data)) !=
       base64.normalize(input.sha256)) {
     return null;
