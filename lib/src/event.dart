@@ -401,16 +401,16 @@ class Event extends MatrixEvent {
           : '');
 
   /// Gets the underyling mxc url of an attachment of a file event, or null if not present
-  String get attachmentMxcUrl =>
-      isAttachmentEncrypted ? content['file']['url'] : content['url'];
+  Uri get attachmentMxcUrl => Uri.parse(
+      isAttachmentEncrypted ? content['file']['url'] : content['url']);
 
   /// Gets the underyling mxc url of a thumbnail of a file event, or null if not present
-  String get thumbnailMxcUrl => isThumbnailEncrypted
+  Uri get thumbnailMxcUrl => Uri.parse(isThumbnailEncrypted
       ? infoMap['thumbnail_file']['url']
-      : infoMap['thumbnail_url'];
+      : infoMap['thumbnail_url']);
 
   /// Gets the mxc url of an attachemnt/thumbnail of a file event, taking sizes into account, or null if not present
-  String attachmentOrThumbnailMxcUrl({bool getThumbnail = false}) {
+  Uri attachmentOrThumbnailMxcUrl({bool getThumbnail = false}) {
     if (getThumbnail &&
         infoMap['size'] is int &&
         thumbnailInfoMap['size'] is int &&
@@ -479,8 +479,8 @@ class Event extends MatrixEvent {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
     final mxcUrl = attachmentOrThumbnailMxcUrl(getThumbnail: getThumbnail);
-    if (!(mxcUrl is String)) {
-      throw ("This event hasn't any attachment or thumbnail.");
+    if (mxcUrl == null) {
+      throw "This event hasn't any attachment or thumbnail.";
     }
     getThumbnail = mxcUrl != attachmentMxcUrl;
     // Is this file storeable?
@@ -507,8 +507,8 @@ class Event extends MatrixEvent {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
     final mxcUrl = attachmentOrThumbnailMxcUrl(getThumbnail: getThumbnail);
-    if (!(mxcUrl is String)) {
-      throw ("This event hasn't any attachment or thumbnail.");
+    if (mxcUrl == null) {
+      throw "This event hasn't any attachment or thumbnail.";
     }
     getThumbnail = mxcUrl != attachmentMxcUrl;
     final isEncrypted =
@@ -517,7 +517,6 @@ class Event extends MatrixEvent {
     if (isEncrypted && !room.client.encryptionEnabled) {
       throw ('Encryption is not enabled in your Client.');
     }
-    final mxContent = Uri.parse(mxcUrl);
 
     Uint8List uint8list;
 
@@ -528,7 +527,7 @@ class Event extends MatrixEvent {
         thisInfoMap['size'] <= room.client.database.maxFileSize;
 
     if (storeable) {
-      uint8list = await room.client.database.getFile(mxContent.toString());
+      uint8list = await room.client.database.getFile(mxcUrl);
     }
 
     // Download the file
@@ -536,13 +535,12 @@ class Event extends MatrixEvent {
       downloadCallback ??= (Uri url) async {
         return (await http.get(url)).bodyBytes;
       };
-      uint8list =
-          await downloadCallback(mxContent.getDownloadLink(room.client));
+      uint8list = await downloadCallback(mxcUrl.getDownloadLink(room.client));
       storeable = storeable &&
           uint8list.lengthInBytes < room.client.database.maxFileSize;
       if (storeable) {
-        await room.client.database.storeFile(mxContent.toString(), uint8list,
-            DateTime.now().millisecondsSinceEpoch);
+        await room.client.database.storeFile(
+            mxcUrl, uint8list, DateTime.now().millisecondsSinceEpoch);
       }
     }
 

@@ -688,9 +688,9 @@ class Client extends MatrixApi {
   }
 
   /// Uploads a file and automatically caches it in the database, if it is small enough
-  /// and returns the mxc url as a string.
+  /// and returns the mxc url.
   @override
-  Future<String> uploadContent(Uint8List file,
+  Future<Uri> uploadContent(Uint8List file,
       {String filename, String contentType}) async {
     final mxc = await super
         .uploadContent(file, filename: filename, contentType: contentType);
@@ -721,7 +721,7 @@ class Client extends MatrixApi {
   /// Uploads a new user avatar for this user.
   Future<void> setAvatar(MatrixFile file) async {
     final uploadResp = await uploadContent(file.bytes, filename: file.name);
-    await setAvatarUrl(userID, Uri.parse(uploadResp));
+    await setAvatarUrl(userID, uploadResp);
     return;
   }
 
