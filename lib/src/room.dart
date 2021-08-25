@@ -959,12 +959,22 @@ class Room {
       await client.handleSync(
           SyncUpdate(nextBatch: '')
             ..rooms = (RoomsUpdate()
-              ..join = ({}..[id] = (JoinedRoomUpdate()
-                ..state = resp.state
-                ..timeline = (TimelineUpdate()
-                  ..limited = false
-                  ..events = resp.chunk
-                  ..prevBatch = resp.end)))),
+              ..join = membership == Membership.join
+                  ? ({}..[id] = ((JoinedRoomUpdate()
+                    ..state = resp.state
+                    ..timeline = (TimelineUpdate()
+                      ..limited = false
+                      ..events = resp.chunk
+                      ..prevBatch = resp.end))))
+                  : null
+              ..leave = membership != Membership.join
+                  ? ({}..[id] = ((LeftRoomUpdate()
+                    ..state = resp.state
+                    ..timeline = (TimelineUpdate()
+                      ..limited = false
+                      ..events = resp.chunk
+                      ..prevBatch = resp.end))))
+                  : null),
           sortAtTheEnd: true);
     };
 
