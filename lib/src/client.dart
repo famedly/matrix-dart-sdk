@@ -276,7 +276,7 @@ class Client extends MatrixApi {
   }
 
   /// Searches in the local cache for the given room and returns null if not
-  /// found. If you have loaded the [archive] before, it can also return
+  /// found. If you have loaded the [loadArchive()] before, it can also return
   /// archived rooms.
   Room getRoomById(String id) {
     for (final room in <Room>[...rooms, ..._archivedRooms]) {
@@ -651,7 +651,10 @@ class Client extends MatrixApi {
 
   final List<Room> _archivedRooms = [];
 
-  Future<List<Room>> get archive async {
+  @Deprecated('Use [loadArchive()] instead.')
+  Future<List<Room>> get archive => loadArchive();
+
+  Future<List<Room>> loadArchive() async {
     _archivedRooms.clear();
     final syncResp = await sync(
       filter: '{"room":{"include_leave":true,"timeline":{"limit":10}}}',

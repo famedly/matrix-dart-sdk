@@ -351,7 +351,7 @@ void main() {
     });
 
     test('get archive', () async {
-      final archive = await matrix.archive;
+      final archive = await matrix.loadArchive();
 
       await Future.delayed(Duration(milliseconds: 50));
       expect(archive.length, 2);
