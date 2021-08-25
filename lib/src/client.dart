@@ -1305,7 +1305,8 @@ class Client extends MatrixApi {
           await _handleRoomEvents(
               id,
               room.timeline.events.map((i) => i.toJson()).toList(),
-              EventUpdateType.timeline);
+              EventUpdateType.timeline,
+              sortAtTheEnd: sortAtTheEnd);
           handledEvents = true;
         }
         if (room.accountData?.isNotEmpty ?? false) {
