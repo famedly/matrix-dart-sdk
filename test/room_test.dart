@@ -211,20 +211,20 @@ void main() {
       expect(room.lastEvent.body, 'cdc');
       room.setState(
         Event(
-            senderId: '@test:example.com',
-            type: 'm.room.encrypted',
-            roomId: room.id,
-            room: room,
-            eventId: '3',
-            originServerTs: DateTime.now(),
-            content: {
-              'm.new_content': {'msgtype': 'm.text', 'body': 'test ok'},
-              'm.relates_to': {'rel_type': 'm.replace', 'event_id': '1'},
-              'msgtype': 'm.text',
-              'body': '* test ok',
-            },
-            stateKey: '',
-            ),
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          roomId: room.id,
+          room: room,
+          eventId: '3',
+          originServerTs: DateTime.now(),
+          content: {
+            'm.new_content': {'msgtype': 'm.text', 'body': 'test ok'},
+            'm.relates_to': {'rel_type': 'm.replace', 'event_id': '1'},
+            'msgtype': 'm.text',
+            'body': '* test ok',
+          },
+          stateKey: '',
+        ),
       );
       expect(room.lastEvent.body, 'cdc'); // because we edited the "cd" message
       room.setState(
@@ -280,20 +280,20 @@ void main() {
       expect(room.lastEvent.body, 'B');
       room.setState(
         Event(
-            senderId: '@test:example.com',
-            type: 'm.room.encrypted',
-            roomId: room.id,
-            room: room,
-            eventId: '7',
-            originServerTs: DateTime.now(),
-            content: {
-              'msgtype': 'm.text',
-              'body': 'edited A',
-              'm.new_content': {'msgtype': 'm.text', 'body': 'edited A'},
-              'm.relates_to': {'rel_type': 'm.replace', 'event_id': '5'},
-            },
-            stateKey: '',
-            ),
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          roomId: room.id,
+          room: room,
+          eventId: '7',
+          originServerTs: DateTime.now(),
+          content: {
+            'msgtype': 'm.text',
+            'body': 'edited A',
+            'm.new_content': {'msgtype': 'm.text', 'body': 'edited A'},
+            'm.relates_to': {'rel_type': 'm.replace', 'event_id': '5'},
+          },
+          stateKey: '',
+        ),
       );
       expect(room.lastEvent.body, 'B');
     });
