@@ -1090,8 +1090,9 @@ void main() {
       var buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
       expect(buffer.bytes, FILE_BUFF);
-      expect(event.attachmentOrThumbnailMxcUrl(), 'mxc://example.org/file');
-      expect(event.attachmentOrThumbnailMxcUrl(getThumbnail: true),
+      expect(event.attachmentOrThumbnailMxcUrl().toString(),
+          'mxc://example.org/file');
+      expect(event.attachmentOrThumbnailMxcUrl(getThumbnail: true).toString(),
           'mxc://example.org/file');
 
       event = Event.fromJson({
@@ -1118,10 +1119,11 @@ void main() {
       expect(event.isThumbnailEncrypted, false);
       expect(event.attachmentMimetype, 'application/octet-stream');
       expect(event.thumbnailMimetype, 'thumbnail/mimetype');
-      expect(event.attachmentMxcUrl, 'mxc://example.org/file');
-      expect(event.thumbnailMxcUrl, 'mxc://example.org/thumb');
-      expect(event.attachmentOrThumbnailMxcUrl(), 'mxc://example.org/file');
-      expect(event.attachmentOrThumbnailMxcUrl(getThumbnail: true),
+      expect(event.attachmentMxcUrl.toString(), 'mxc://example.org/file');
+      expect(event.thumbnailMxcUrl.toString(), 'mxc://example.org/thumb');
+      expect(event.attachmentOrThumbnailMxcUrl().toString(),
+          'mxc://example.org/file');
+      expect(event.attachmentOrThumbnailMxcUrl(getThumbnail: true).toString(),
           'mxc://example.org/thumb');
       expect(event.getAttachmentUrl().toString(),
           'https://fakeserver.notexisting/_matrix/media/r0/download/example.org/file');
@@ -1238,8 +1240,8 @@ void main() {
       expect(event.isThumbnailEncrypted, true);
       expect(event.attachmentMimetype, 'text/plain');
       expect(event.thumbnailMimetype, 'text/plain');
-      expect(event.attachmentMxcUrl, 'mxc://example.com/file');
-      expect(event.thumbnailMxcUrl, 'mxc://example.com/thumb');
+      expect(event.attachmentMxcUrl.toString(), 'mxc://example.com/file');
+      expect(event.thumbnailMxcUrl.toString(), 'mxc://example.com/thumb');
       buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
       expect(buffer.bytes, FILE_BUFF_DEC);

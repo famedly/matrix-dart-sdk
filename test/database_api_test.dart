@@ -67,16 +67,17 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
     expect(toDeviceQueue.isEmpty, true);
   });
   test('storeFile', () async {
-    await database.storeFile('mxc://test', Uint8List.fromList([0]), 0);
-    final file = await database.getFile('mxc://test');
+    await database.storeFile(
+        Uri.parse('mxc://test'), Uint8List.fromList([0]), 0);
+    final file = await database.getFile(Uri.parse('mxc://test'));
     expect(file != null, database.supportsFileStoring);
   });
   test('getFile', () async {
-    await database.getFile('mxc://test');
+    await database.getFile(Uri.parse('mxc://test'));
   });
   test('deleteOldFiles', () async {
     await database.deleteOldFiles(1);
-    final file = await database.getFile('mxc://test');
+    final file = await database.getFile(Uri.parse('mxc://test'));
     expect(file == null, true);
   });
   test('storeRoomUpdate', () async {

@@ -275,10 +275,14 @@ class Client extends MatrixApi {
     return null;
   }
 
+  /// Searches in the local cache for the given room and returns null if not
+  /// found. If you have loaded the [loadArchive()] before, it can also return
+  /// archived rooms.
   Room getRoomById(String id) {
-    for (final room in rooms) {
+    for (final room in <Room>[...rooms, ..._archivedRooms]) {
       if (room.id == id) return room;
     }
+
     return null;
   }
 
@@ -645,8 +649,13 @@ class Client extends MatrixApi {
         avatarUrl: profile.avatarUrl);
   }
 
-  Future<List<Room>> get archive async {
-    final archiveList = <Room>[];
+  final List<Room> _archivedRooms = [];
+
+  @Deprecated('Use [loadArchive()] instead.')
+  Future<List<Room>> get archive => loadArchive();
+
+  Future<List<Room>> loadArchive() async {
+    _archivedRooms.clear();
     final syncResp = await sync(
       filter: '{"room":{"include_leave":true,"timeline":{"limit":10}}}',
       timeout: 0,
@@ -681,16 +690,16 @@ class Client extends MatrixApi {
             ));
           }
         }
-        archiveList.add(leftRoom);
+        _archivedRooms.add(leftRoom);
       }
     }
-    return archiveList;
+    return _archivedRooms;
   }
 
   /// Uploads a file and automatically caches it in the database, if it is small enough
-  /// and returns the mxc url as a string.
+  /// and returns the mxc url.
   @override
-  Future<String> uploadContent(Uint8List file,
+  Future<Uri> uploadContent(Uint8List file,
       {String filename, String contentType}) async {
     final mxc = await super
         .uploadContent(file, filename: filename, contentType: contentType);
@@ -721,7 +730,7 @@ class Client extends MatrixApi {
   /// Uploads a new user avatar for this user.
   Future<void> setAvatar(MatrixFile file) async {
     final uploadResp = await uploadContent(file.bytes, filename: file.name);
-    await setAvatarUrl(userID, Uri.parse(uploadResp));
+    await setAvatarUrl(userID, uploadResp);
     return;
   }
 
@@ -1296,7 +1305,8 @@ class Client extends MatrixApi {
           await _handleRoomEvents(
               id,
               room.timeline.events.map((i) => i.toJson()).toList(),
-              EventUpdateType.timeline);
+              EventUpdateType.timeline,
+              sortAtTheEnd: sortAtTheEnd);
           handledEvents = true;
         }
         if (room.accountData?.isNotEmpty ?? false) {

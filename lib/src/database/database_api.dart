@@ -81,9 +81,9 @@ abstract class DatabaseApi {
 
   Future<List<Event>> getEventList(int clientId, Room room);
 
-  Future<Uint8List> getFile(String mxcUri);
+  Future<Uint8List> getFile(Uri mxcUri);
 
-  Future storeFile(String mxcUri, Uint8List bytes, int time);
+  Future storeFile(Uri mxcUri, Uint8List bytes, int time);
 
   Future storeSyncFilterId(String syncFilterId, int clientId);
 
