@@ -1,3 +1,8 @@
+## [0.3.2] - 20nd Aug 2021
+- feat: cache archived rooms to access them with `getRoomById`
+- fix: requestHistory() for archived rooms
+- refactor: Change name of archive getter to function
+
 ## [0.3.1] - 20nd Aug 2021
 - hotfix: Opt-out null safety for crypto files because of an error in web
 
