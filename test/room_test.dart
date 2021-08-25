@@ -173,43 +173,130 @@ void main() {
             room: room,
             eventId: '12345',
             originServerTs: DateTime.now(),
-            content: {'msgtype': 'm.text', 'body': 'test'},
-            stateKey: ''),
+            content: {'msgtype': 'm.text', 'body': 'abc'},
+            stateKey: '',
+            sortOrder: 0),
       );
       expect(room.lastEvent.eventId, '12345');
-      expect(room.lastEvent.body, 'test');
+      expect(room.lastEvent.body, 'abc');
       expect(room.timeCreated, room.lastEvent.originServerTs);
     });
 
-    test('multiple last event with same sort order', () {
+    test('lastEvent is set properly', () {
       room.setState(
         Event(
             senderId: '@test:example.com',
             type: 'm.room.encrypted',
             roomId: room.id,
             room: room,
-            eventId: '12345',
+            eventId: '1',
             originServerTs: DateTime.now(),
-            content: {'msgtype': 'm.text', 'body': 'test'},
+            content: {'msgtype': 'm.text', 'body': 'cd'},
             stateKey: '',
-            sortOrder: 42.0),
+            sortOrder: 1),
       );
-      expect(room.lastEvent.type, 'm.room.encrypted');
+      expect(room.lastEvent.body, 'cd');
       room.setState(
         Event(
             senderId: '@test:example.com',
-            type: 'm.room.messge',
+            type: 'm.room.encrypted',
             roomId: room.id,
             room: room,
-            eventId: '12345',
+            eventId: '2',
             originServerTs: DateTime.now(),
-            content: {'msgtype': 'm.text', 'body': 'test'},
+            content: {'msgtype': 'm.text', 'body': 'cdc'},
             stateKey: '',
-            sortOrder: 42.0),
+            sortOrder: 2),
       );
-      expect(room.lastEvent.type, 'm.room.encrypted');
+      expect(room.lastEvent.body, 'cdc');
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.encrypted',
+            roomId: room.id,
+            room: room,
+            eventId: '3',
+            originServerTs: DateTime.now(),
+            content: {
+              'm.new_content': {'msgtype': 'm.text', 'body': 'test ok'},
+              'm.relates_to': {'rel_type': 'm.replace', 'event_id': '1'},
+              'msgtype': 'm.text',
+              'body': '* test ok',
+            },
+            stateKey: '',
+            ),
+      );
+      expect(room.lastEvent.body, 'cdc'); // because we edited the "cd" message
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.encrypted',
+            roomId: room.id,
+            room: room,
+            eventId: '4',
+            originServerTs: DateTime.now(),
+            content: {
+              'msgtype': 'm.text',
+              'body': 'edited cdc',
+              'm.new_content': {'msgtype': 'm.text', 'body': 'edited cdc'},
+              'm.relates_to': {'rel_type': 'm.replace', 'event_id': '2'},
+            },
+            stateKey: '',
+            sortOrder: 4),
+      );
+      expect(room.lastEvent.body, 'edited cdc');
     });
+    test('lastEvent when reply parent edited', () async {
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.encrypted',
+            roomId: room.id,
+            room: room,
+            eventId: '5',
+            originServerTs: DateTime.now(),
+            content: {'msgtype': 'm.text', 'body': 'A'},
+            stateKey: '',
+            sortOrder: 5),
+      );
+      expect(room.lastEvent.body, 'A');
 
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.encrypted',
+            roomId: room.id,
+            room: room,
+            eventId: '6',
+            originServerTs: DateTime.now(),
+            content: {
+              'msgtype': 'm.text',
+              'body': 'B',
+              'm.relates_to': {'rel_type': 'm.in_reply_to', 'event_id': '5'}
+            },
+            stateKey: '',
+            sortOrder: 6),
+      );
+      expect(room.lastEvent.body, 'B');
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.encrypted',
+            roomId: room.id,
+            room: room,
+            eventId: '7',
+            originServerTs: DateTime.now(),
+            content: {
+              'msgtype': 'm.text',
+              'body': 'edited A',
+              'm.new_content': {'msgtype': 'm.text', 'body': 'edited A'},
+              'm.relates_to': {'rel_type': 'm.replace', 'event_id': '5'},
+            },
+            stateKey: '',
+            ),
+      );
+      expect(room.lastEvent.body, 'B');
+    });
     test('sendReadMarker', () async {
       await room.setReadMarker('§1234:fakeServer.notExisting');
     });
