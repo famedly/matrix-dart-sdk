@@ -1,3 +1,7 @@
+## [0.3.3] - 20nd Aug 2021
+- fix: room.lastEvent order now respects edits
+- feat: use m.new_content in lastEvent (so no more * fallback)
+
 ## [0.3.2] - 20nd Aug 2021
 - feat: cache archived rooms to access them with `getRoomById`
 - fix: requestHistory() for archived rooms
