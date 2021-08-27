@@ -589,7 +589,9 @@ class Event extends MatrixEvent {
           RegExp(r'^>( \*)? <[^>]+>[^\n\r]+\r?\n(> [^\n]*\r?\n)*\r?\n'), '');
     }
     // Hide edit fallback
-    if (hideEdit && relationshipType == RelationshipTypes.edit) {
+    if (hideEdit &&
+        relationshipType == RelationshipTypes.edit &&
+        content.containsKey('m.new_content')) {
       localizedBody = content['m.new_content']['body'] ?? localizedBody;
     }
 
