@@ -568,31 +568,52 @@ class Event extends MatrixEvent {
 
   /// Returns a localized String representation of this event. For a
   /// room list you may find [withSenderNamePrefix] useful. Set [hideReply] to
-  /// crop all lines starting with '>'.
+  /// crop all lines starting with '>'. With [plaintextBody] it'll use the
+  /// plaintextBody instead of the normal body.
   String getLocalizedBody(
     MatrixLocalizations i18n, {
     bool withSenderNamePrefix = false,
     bool hideReply = false,
     bool hideEdit = false,
+    bool plaintextBody = false,
   }) {
     if (redacted) {
       return i18n.removedBy(redactedBecause.sender.calcDisplayname());
     }
+    var body = plaintextBody ? this.plaintextBody : this.body;
+
+    // we need to know if the message is an html message to be able to determine
+    // if we need to strip the reply fallback.
+    var htmlMessage = content['format'] != 'org.matrix.custom.html';
+    // If we have an edit, we want to operate on the new content
+    if (hideEdit &&
+        relationshipType == RelationshipTypes.edit &&
+        content.tryGet<Map<String, dynamic>>('m.new_content') != null) {
+      if (plaintextBody &&
+          content['m.new_content']['format'] == 'org.matrix.custom.html') {
+        htmlMessage = true;
+        body = HtmlToText.convert(
+            (content['m.new_content'] as Map<String, dynamic>)
+                    .tryGet<String>('formatted_body') ??
+                formattedText);
+      } else {
+        htmlMessage = false;
+        body = (content['m.new_content'] as Map<String, dynamic>)
+                .tryGet<String>('body') ??
+            body;
+      }
+    }
+    // Hide reply fallback
+    // Be sure that the plaintextBody already stripped teh reply fallback,
+    // if the message is formatted
+    if (hideReply && (!plaintextBody || htmlMessage)) {
+      body = body.replaceFirst(
+          RegExp(r'^>( \*)? <[^>]+>[^\n\r]+\r?\n(> [^\n]*\r?\n)*\r?\n'), '');
+    }
     final callback = EventLocalizations.localizationsMap[type];
     var localizedBody = i18n.unknownEvent(type);
     if (callback != null) {
-      localizedBody = callback(this, i18n);
-    }
-    // Hide reply fallback
-    if (hideReply) {
-      localizedBody = localizedBody.replaceFirst(
-          RegExp(r'^>( \*)? <[^>]+>[^\n\r]+\r?\n(> [^\n]*\r?\n)*\r?\n'), '');
-    }
-    // Hide edit fallback
-    if (hideEdit &&
-        relationshipType == RelationshipTypes.edit &&
-        content.containsKey('m.new_content')) {
-      localizedBody = content['m.new_content']['body'] ?? localizedBody;
+      localizedBody = callback(this, i18n, body);
     }
 
     // Add the sender name prefix

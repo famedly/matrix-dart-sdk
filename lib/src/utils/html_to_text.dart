@@ -25,8 +25,19 @@ class HtmlToText {
   /// Convert an HTML string to a pseudo-markdown plain text representation, with
   /// `data-mx-spoiler` spans redacted
   static String convert(String html) {
+    // riot-web is notorious for creating bad reply fallback events from invalid messages which, if
+    // not handled properly, can lead to impersonation. As such, we strip the entire `<mx-reply>` tags
+    // here already, to prevent that from happening.
+    // We do *not* do this in an AST and just with simple regex here, as riot-web tends to create
+    // miss-matching tags, and this way we actually correctly identify what we want to strip and, well,
+    // strip it.
+    final renderHtml = html.replaceAll(
+        RegExp('<mx-reply>.*<\/mx-reply>',
+            caseSensitive: false, multiLine: false, dotAll: true),
+        '');
+
     final opts = _ConvertOpts();
-    var reply = _walkNode(opts, parseFragment(html));
+    var reply = _walkNode(opts, parseFragment(renderHtml));
     reply = reply.replaceAll(RegExp(r'\s*$', multiLine: false), '');
     return reply;
   }
@@ -105,19 +116,19 @@ class HtmlToText {
     opts.listDepth++;
     final entries = _listChildNodes(opts, node, {'li'});
     opts.listDepth--;
-    var entry = 0;
+    var entry = 1;
     if (node.attributes['start'] is String &&
         RegExp(r'^[0-9]+$', multiLine: false)
             .hasMatch(node.attributes['start'])) {
       entry = int.parse(node.attributes['start']);
     }
 
-    return entries.map((s) {
-      entry++;
-      return ('    ' * opts.listDepth) +
-          '$entry. ' +
-          s.replaceAll('\n', '\n' + ('    ' * opts.listDepth) + '  ');
-    }).join('\n');
+    return entries
+        .map((s) =>
+            ('    ' * opts.listDepth) +
+            '${entry++}. ' +
+            s.replaceAll('\n', '\n' + ('    ' * opts.listDepth) + '  '))
+        .join('\n');
   }
 
   static const _listBulletPoints = <String>['●', '○', '■', '‣'];

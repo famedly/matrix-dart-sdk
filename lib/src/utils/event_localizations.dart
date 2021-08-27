@@ -24,8 +24,13 @@ import '../room.dart';
 import 'matrix_localizations.dart';
 
 abstract class EventLocalizations {
+  // As we need to create the localized body off of a different set of parameters, we
+  // might create it with `event.plaintextBody`, maybe with `event.body`, maybe with the
+  // reply fallback stripped, and maybe with the new body in `event.content['m.new_content']`.
+  // Thus, it seems easier to offload that logic into `Event.getLocalizedBody()` and pass the
+  // `body` variable around here.
   static String _localizedBodyNormalMessage(
-      Event event, MatrixLocalizations i18n) {
+      Event event, MatrixLocalizations i18n, String body) {
     switch (event.messageType) {
       case MessageTypes.Image:
         return i18n.sentAPicture(event.sender.calcDisplayname());
@@ -40,7 +45,7 @@ abstract class EventLocalizations {
       case MessageTypes.Sticker:
         return i18n.sentASticker(event.sender.calcDisplayname());
       case MessageTypes.Emote:
-        return '* ${event.body}';
+        return '* $body';
       case MessageTypes.BadEncrypted:
         String errorText;
         switch (event.body) {
@@ -57,7 +62,7 @@ abstract class EventLocalizations {
             errorText = i18n.noPermission + '.';
             break;
           default:
-            errorText = event.body;
+            errorText = body;
             break;
         }
         return i18n.couldNotDecryptMessage(errorText);
@@ -65,27 +70,27 @@ abstract class EventLocalizations {
       case MessageTypes.Notice:
       case MessageTypes.None:
       default:
-        return event.body;
+        return body;
     }
   }
 
   // This map holds how to localize event types, and thus which event types exist.
   // If an event exists but it does not have a localized body, set its callback to null
   static final Map<String,
-          String Function(Event event, MatrixLocalizations i18n)>
+          String Function(Event event, MatrixLocalizations i18n, String body)>
       localizationsMap = {
-    EventTypes.Sticker: (event, i18n) =>
+    EventTypes.Sticker: (event, i18n, body) =>
         i18n.sentASticker(event.sender.calcDisplayname()),
-    EventTypes.Redaction: (event, i18n) =>
+    EventTypes.Redaction: (event, i18n, body) =>
         i18n.redactedAnEvent(event.sender.calcDisplayname()),
-    EventTypes.RoomAliases: (event, i18n) =>
+    EventTypes.RoomAliases: (event, i18n, body) =>
         i18n.changedTheRoomAliases(event.sender.calcDisplayname()),
-    EventTypes.RoomCanonicalAlias: (event, i18n) =>
+    EventTypes.RoomCanonicalAlias: (event, i18n, body) =>
         i18n.changedTheRoomInvitationLink(event.sender.calcDisplayname()),
-    EventTypes.RoomCreate: (event, i18n) =>
+    EventTypes.RoomCreate: (event, i18n, body) =>
         i18n.createdTheChat(event.sender.calcDisplayname()),
-    EventTypes.RoomTombstone: (event, i18n) => i18n.roomHasBeenUpgraded,
-    EventTypes.RoomJoinRules: (event, i18n) {
+    EventTypes.RoomTombstone: (event, i18n, body) => i18n.roomHasBeenUpgraded,
+    EventTypes.RoomJoinRules: (event, i18n, body) {
       final joinRules = JoinRules.values.firstWhere(
           (r) =>
               r.toString().replaceAll('JoinRules.', '') ==
@@ -98,7 +103,7 @@ abstract class EventLocalizations {
             event.sender.calcDisplayname(), joinRules.getLocalizedString(i18n));
       }
     },
-    EventTypes.RoomMember: (event, i18n) {
+    EventTypes.RoomMember: (event, i18n, body) {
       var text = 'Failed to parse member event';
       final targetName = event.stateKeyUser.calcDisplayname();
       // Has the membership changed?
@@ -162,15 +167,16 @@ abstract class EventLocalizations {
       }
       return text;
     },
-    EventTypes.RoomPowerLevels: (event, i18n) =>
+    EventTypes.RoomPowerLevels: (event, i18n, body) =>
         i18n.changedTheChatPermissions(event.sender.calcDisplayname()),
-    EventTypes.RoomName: (event, i18n) => i18n.changedTheChatNameTo(
+    EventTypes.RoomName: (event, i18n, body) => i18n.changedTheChatNameTo(
         event.sender.calcDisplayname(), event.content['name']),
-    EventTypes.RoomTopic: (event, i18n) => i18n.changedTheChatDescriptionTo(
-        event.sender.calcDisplayname(), event.content['topic']),
-    EventTypes.RoomAvatar: (event, i18n) =>
+    EventTypes.RoomTopic: (event, i18n, body) =>
+        i18n.changedTheChatDescriptionTo(
+            event.sender.calcDisplayname(), event.content['topic']),
+    EventTypes.RoomAvatar: (event, i18n, body) =>
         i18n.changedTheChatAvatar(event.sender.calcDisplayname()),
-    EventTypes.GuestAccess: (event, i18n) {
+    EventTypes.GuestAccess: (event, i18n, body) {
       final guestAccess = GuestAccess.values.firstWhere(
           (r) =>
               r.toString().replaceAll('GuestAccess.', '') ==
@@ -183,7 +189,7 @@ abstract class EventLocalizations {
             guestAccess.getLocalizedString(i18n));
       }
     },
-    EventTypes.HistoryVisibility: (event, i18n) {
+    EventTypes.HistoryVisibility: (event, i18n, body) {
       final historyVisibility = HistoryVisibility.values.firstWhere(
           (r) =>
               r.toString().replaceAll('HistoryVisibility.', '') ==
@@ -197,7 +203,7 @@ abstract class EventLocalizations {
             historyVisibility.getLocalizedString(i18n));
       }
     },
-    EventTypes.Encryption: (event, i18n) {
+    EventTypes.Encryption: (event, i18n, body) {
       var localizedBody =
           i18n.activatedEndToEndEncryption(event.sender.calcDisplayname());
       if (!event.room.client.encryptionEnabled) {
@@ -205,18 +211,18 @@ abstract class EventLocalizations {
       }
       return localizedBody;
     },
-    EventTypes.CallAnswer: (event, i18n) =>
+    EventTypes.CallAnswer: (event, i18n, body) =>
         i18n.answeredTheCall(event.sender.calcDisplayname()),
-    EventTypes.CallHangup: (event, i18n) =>
+    EventTypes.CallHangup: (event, i18n, body) =>
         i18n.endedTheCall(event.sender.calcDisplayname()),
-    EventTypes.CallInvite: (event, i18n) =>
+    EventTypes.CallInvite: (event, i18n, body) =>
         i18n.startedACall(event.sender.calcDisplayname()),
-    EventTypes.CallCandidates: (event, i18n) =>
+    EventTypes.CallCandidates: (event, i18n, body) =>
         i18n.sentCallInformations(event.sender.calcDisplayname()),
-    EventTypes.Encrypted: (event, i18n) =>
-        _localizedBodyNormalMessage(event, i18n),
-    EventTypes.Message: (event, i18n) =>
-        _localizedBodyNormalMessage(event, i18n),
+    EventTypes.Encrypted: (event, i18n, body) =>
+        _localizedBodyNormalMessage(event, i18n, body),
+    EventTypes.Message: (event, i18n, body) =>
+        _localizedBodyNormalMessage(event, i18n, body),
     EventTypes.Reaction: null,
   };
 }

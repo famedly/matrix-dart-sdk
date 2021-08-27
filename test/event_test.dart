@@ -895,6 +895,81 @@ void main() {
       expect(event.isEventTypeKnown, false);
     });
 
+    test('getLocalizedBody, parameters', () {
+      final matrix = Client('testclient', httpClient: FakeMatrixApi());
+      final room = Room(id: '!1234:example.com', client: matrix);
+      var event = Event.fromJson({
+        'content': {
+          'body': 'This is an example text message',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '<b>This is an example text message</b>',
+          'msgtype': 'm.text'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.message',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(
+          event.getLocalizedBody(FakeMatrixLocalizations(),
+              plaintextBody: true),
+          '**This is an example text message**');
+
+      event = Event.fromJson({
+        'content': {
+          'body': '* This is an example text message',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '* <b>This is an example text message</b>',
+          'msgtype': 'm.text',
+          'm.relates_to': <String, dynamic>{
+            'rel_type': 'm.replace',
+            'event_id': '\$some_event',
+          },
+          'm.new_content': <String, dynamic>{
+            'body': 'This is an example text message',
+            'format': 'org.matrix.custom.html',
+            'formatted_body': '<b>This is an example text message</b>',
+            'msgtype': 'm.text'
+          },
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.message',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations(), hideEdit: true),
+          'This is an example text message');
+      expect(
+          event.getLocalizedBody(FakeMatrixLocalizations(),
+              hideEdit: true, plaintextBody: true),
+          '**This is an example text message**');
+
+      event = Event.fromJson({
+        'content': {
+          'body': '> <@user:example.org> beep\n\nhmm, fox',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '<mx-reply>beep</mx-reply>hmm, <em>fox</em>',
+          'msgtype': 'm.text'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.message',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(event.getLocalizedBody(FakeMatrixLocalizations(), hideReply: true),
+          'hmm, fox');
+      expect(
+          event.getLocalizedBody(FakeMatrixLocalizations(),
+              hideReply: true, plaintextBody: true),
+          'hmm, *fox*');
+    });
+
     test('aggregations', () {
       final event = Event.fromJson({
         'content': {

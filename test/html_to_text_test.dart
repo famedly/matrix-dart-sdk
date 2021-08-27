@@ -70,6 +70,7 @@ void main() {
         '<ul><li>hey<ul><li>a</li><li>b</li></ul></li><li>foxies</li></ul>':
             '● hey\n      ○ a\n      ○ b\n● foxies',
         '<ol><li>a</li><li>b</li></ol>': '1. a\n2. b',
+        '<ol start="42"><li>a</li><li>b</li></ol>': '42. a\n43. b',
         '<ol><li>a<ol><li>aa</li><li>bb</li></ol></li><li>b</li></ol>':
             '1. a\n      1. aa\n      2. bb\n2. b',
         '<ol><li>a<ul><li>aa</li><li>bb</li></ul></li><li>b</li></ol>':
@@ -90,6 +91,7 @@ void main() {
         '<h6>fox</h6>': '###### fox',
         '<span>fox</span>': 'fox',
         '<p>fox</p>\n<p>floof</p>': 'fox\n\nfloof',
+        '<mx-reply>beep</mx-reply><p>fox</p>\n<p>floof</p>': 'fox\n\nfloof',
       };
       for (final entry in testMap.entries) {
         expect(HtmlToText.convert(entry.key), entry.value);
