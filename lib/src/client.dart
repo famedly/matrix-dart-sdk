@@ -1663,74 +1663,77 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
         final response = await queryKeys(outdatedLists, timeout: 10000);
         if (!isLogged()) return;
 
-        for (final rawDeviceKeyListEntry in response.deviceKeys.entries) {
-          final userId = rawDeviceKeyListEntry.key;
-          if (!userDeviceKeys.containsKey(userId)) {
-            _userDeviceKeys[userId] = DeviceKeysList(userId, this);
-          }
-          final oldKeys =
-              Map<String, DeviceKeys>.from(_userDeviceKeys[userId].deviceKeys);
-          _userDeviceKeys[userId].deviceKeys = {};
-          for (final rawDeviceKeyEntry in rawDeviceKeyListEntry.value.entries) {
-            final deviceId = rawDeviceKeyEntry.key;
+        if (response.deviceKeys != null) {
+          for (final rawDeviceKeyListEntry in response.deviceKeys.entries) {
+            final userId = rawDeviceKeyListEntry.key;
+            if (!userDeviceKeys.containsKey(userId)) {
+              _userDeviceKeys[userId] = DeviceKeysList(userId, this);
+            }
+            final oldKeys = Map<String, DeviceKeys>.from(
+                _userDeviceKeys[userId].deviceKeys);
+            _userDeviceKeys[userId].deviceKeys = {};
+            for (final rawDeviceKeyEntry
+                in rawDeviceKeyListEntry.value.entries) {
+              final deviceId = rawDeviceKeyEntry.key;
 
-            // Set the new device key for this device
-            final entry = DeviceKeys.fromMatrixDeviceKeys(
-                rawDeviceKeyEntry.value, this, oldKeys[deviceId]?.lastActive);
-            if (entry.isValid) {
-              // is this a new key or the same one as an old one?
-              // better store an update - the signatures might have changed!
-              if (!oldKeys.containsKey(deviceId) ||
-                  oldKeys[deviceId].ed25519Key == entry.ed25519Key) {
-                if (oldKeys.containsKey(deviceId)) {
-                  // be sure to save the verified status
-                  entry.setDirectVerified(oldKeys[deviceId].directVerified);
-                  entry.blocked = oldKeys[deviceId].blocked;
-                  entry.validSignatures = oldKeys[deviceId].validSignatures;
+              // Set the new device key for this device
+              final entry = DeviceKeys.fromMatrixDeviceKeys(
+                  rawDeviceKeyEntry.value, this, oldKeys[deviceId]?.lastActive);
+              if (entry.isValid) {
+                // is this a new key or the same one as an old one?
+                // better store an update - the signatures might have changed!
+                if (!oldKeys.containsKey(deviceId) ||
+                    oldKeys[deviceId].ed25519Key == entry.ed25519Key) {
+                  if (oldKeys.containsKey(deviceId)) {
+                    // be sure to save the verified status
+                    entry.setDirectVerified(oldKeys[deviceId].directVerified);
+                    entry.blocked = oldKeys[deviceId].blocked;
+                    entry.validSignatures = oldKeys[deviceId].validSignatures;
+                  }
+                  _userDeviceKeys[userId].deviceKeys[deviceId] = entry;
+                  if (deviceId == deviceID &&
+                      entry.ed25519Key == fingerprintKey) {
+                    // Always trust the own device
+                    entry.setDirectVerified(true);
+                  }
+                  if (database != null) {
+                    dbActions.add(() => database.storeUserDeviceKey(
+                          id,
+                          userId,
+                          deviceId,
+                          json.encode(entry.toJson()),
+                          entry.directVerified,
+                          entry.blocked,
+                          entry.lastActive.millisecondsSinceEpoch,
+                        ));
+                  }
+                } else if (oldKeys.containsKey(deviceId)) {
+                  // This shouldn't ever happen. The same device ID has gotten
+                  // a new public key. So we ignore the update. TODO: ask krille
+                  // if we should instead use the new key with unknown verified / blocked status
+                  _userDeviceKeys[userId].deviceKeys[deviceId] =
+                      oldKeys[deviceId];
                 }
-                _userDeviceKeys[userId].deviceKeys[deviceId] = entry;
-                if (deviceId == deviceID &&
-                    entry.ed25519Key == fingerprintKey) {
-                  // Always trust the own device
-                  entry.setDirectVerified(true);
-                }
-                if (database != null) {
-                  dbActions.add(() => database.storeUserDeviceKey(
-                        id,
-                        userId,
-                        deviceId,
-                        json.encode(entry.toJson()),
-                        entry.directVerified,
-                        entry.blocked,
-                        entry.lastActive.millisecondsSinceEpoch,
-                      ));
-                }
-              } else if (oldKeys.containsKey(deviceId)) {
-                // This shouldn't ever happen. The same device ID has gotten
-                // a new public key. So we ignore the update. TODO: ask krille
-                // if we should instead use the new key with unknown verified / blocked status
-                _userDeviceKeys[userId].deviceKeys[deviceId] =
-                    oldKeys[deviceId];
-              }
-            } else {
-              Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
-            }
-          }
-          // delete old/unused entries
-          if (database != null) {
-            for (final oldDeviceKeyEntry in oldKeys.entries) {
-              final deviceId = oldDeviceKeyEntry.key;
-              if (!_userDeviceKeys[userId].deviceKeys.containsKey(deviceId)) {
-                // we need to remove an old key
-                dbActions.add(
-                    () => database.removeUserDeviceKey(id, userId, deviceId));
+              } else {
+                Logs().w('Invalid device ${entry.userId}:${entry.deviceId}');
               }
             }
-          }
-          _userDeviceKeys[userId].outdated = false;
-          if (database != null) {
-            dbActions
-                .add(() => database.storeUserDeviceKeysInfo(id, userId, false));
+            // delete old/unused entries
+            if (database != null) {
+              for (final oldDeviceKeyEntry in oldKeys.entries) {
+                final deviceId = oldDeviceKeyEntry.key;
+                if (!_userDeviceKeys[userId].deviceKeys.containsKey(deviceId)) {
+                  // we need to remove an old key
+                  dbActions.add(
+                      () => database.removeUserDeviceKey(id, userId, deviceId));
+                }
+              }
+            }
+            _userDeviceKeys[userId].outdated = false;
+            if (database != null) {
+              dbActions.add(
+                  () => database.storeUserDeviceKeysInfo(id, userId, false));
+            }
           }
         }
         // next we parse and persist the cross signing keys
