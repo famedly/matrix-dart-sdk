@@ -1,4 +1,7 @@
-## [0.3.3] - 20nd Aug 2021
+## [0.3.3] - 27nd Aug 2021
+- fix: missing null check in `hideEdit` and `device_keys` in the reply of `/keys/query`
+
+## [0.3.3] - 26nd Aug 2021
 - fix: room.lastEvent order now respects edits
 - feat: use m.new_content in lastEvent (so no more * fallback)
 
