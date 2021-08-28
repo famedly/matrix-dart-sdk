@@ -1,3 +1,6 @@
+## [0.3.5] - 28nd Aug 2021
+- hotfix: Send unencrypted thumbnails
+
 ## [0.3.4] - 28nd Aug 2021
 - fix: String.parseIdentifierIntoParts not working with unicode matrix.to links
     Some clients do not uri-encode the identifier for matrix.to links, so we must

@@ -689,7 +689,7 @@ class Room {
       'info': {
         ...file.info,
         if (thumbnail != null && encryptedThumbnail == null)
-          'thumbnail_url': thumbnailUploadResp,
+          'thumbnail_url': thumbnailUploadResp.toString(),
         if (thumbnail != null && encryptedThumbnail != null)
           'thumbnail_file': {
             'url': thumbnailUploadResp.toString(),
