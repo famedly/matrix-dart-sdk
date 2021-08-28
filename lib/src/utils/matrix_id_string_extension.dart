@@ -74,10 +74,20 @@ extension MatrixIdExtension on String {
           if (index == -1) {
             continue;
           }
-          final parameter =
-              Uri.decodeQueryComponent(parameterStr.substring(0, index));
-          final value =
-              Uri.decodeQueryComponent(parameterStr.substring(index + 1));
+          var parameter = parameterStr.substring(0, index);
+          try {
+            parameter = Uri.decodeQueryComponent(parameter);
+          } catch (_) {
+            // do nothing: the parameter wasn't url-encoded, and we already have the
+            // plaintext version in the `parameter` variable
+          }
+          var value = parameterStr.substring(index + 1);
+          try {
+            value = Uri.decodeQueryComponent(value);
+          } catch (_) {
+            // do nothing: the value wasn't url-encoded, and we already have the
+            // plaintext version in the `value` variable
+          }
           if (parameter == 'via') {
             via.add(value);
           }
@@ -132,7 +142,14 @@ extension MatrixIdExtension on String {
     if (toLowerCase().startsWith(matrixToPrefix)) {
       // as we decode a component we may only call it on the url part *before* the "query" part
       final parts = substring(matrixToPrefix.length).split('?');
-      s = Uri.decodeComponent(parts.removeAt(0)) + '?' + parts.join('?');
+      var ident = parts.removeAt(0);
+      try {
+        ident = Uri.decodeComponent(ident);
+      } catch (_) {
+        // do nothing: the identifier wasn't url-encoded, and we already have the
+        // plaintext version in the `ident` variable
+      }
+      s = ident + '?' + parts.join('?');
     }
     final match = RegExp(r'^([#!@+][^:]*:[^\/?]*)(?:\/(\$[^?]*))?(?:\?(.*))?$')
         .firstMatch(s);

@@ -75,6 +75,10 @@ void main() {
       expect(res.primaryIdentifier, '#alias:beep');
       expect(res.secondaryIdentifier, null);
       expect(res.queryString, null);
+      res = 'https://matrix.to/#/#🦊:beep'.parseIdentifierIntoParts();
+      expect(res.primaryIdentifier, '#🦊:beep');
+      expect(res.secondaryIdentifier, null);
+      expect(res.queryString, null);
       res = 'https://matrix.to/#/%23alias%3abeep'.parseIdentifierIntoParts();
       expect(res.primaryIdentifier, '#alias:beep');
       expect(res.secondaryIdentifier, null);
