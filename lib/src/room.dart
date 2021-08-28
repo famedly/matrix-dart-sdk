@@ -34,23 +34,12 @@ import 'utils/markdown.dart';
 import 'utils/marked_unread.dart';
 import 'utils/matrix_file.dart';
 import 'utils/matrix_localizations.dart';
+import 'utils/enum_helper.dart';
 
 enum PushRuleState { notify, mentionsOnly, dontNotify }
 enum JoinRules { public, knock, invite, private }
 enum GuestAccess { canJoin, forbidden }
 enum HistoryVisibility { invited, joined, shared, worldReadable }
-
-const Map<GuestAccess, String> _guestAccessMap = {
-  GuestAccess.canJoin: 'can_join',
-  GuestAccess.forbidden: 'forbidden',
-};
-
-const Map<HistoryVisibility, String> _historyVisibilityMap = {
-  HistoryVisibility.invited: 'invited',
-  HistoryVisibility.joined: 'joined',
-  HistoryVisibility.shared: 'shared',
-  HistoryVisibility.worldReadable: 'world_readable',
-};
 
 const String messageSendingStatusKey =
     'com.famedly.famedlysdk.message_sending_status';
@@ -1625,10 +1614,12 @@ class Room {
 
   /// This event controls whether guest users are allowed to join rooms. If this event
   /// is absent, servers should act as if it is present and has the guest_access value "forbidden".
-  GuestAccess get guestAccess => getState(EventTypes.GuestAccess) != null
-      ? _guestAccessMap.map((k, v) => MapEntry(v, k))[
-          getState(EventTypes.GuestAccess).content['guest_access']]
-      : GuestAccess.forbidden;
+  GuestAccess get guestAccess =>
+      EnumHelper(GuestAccess.values).fromString(getState(EventTypes.GuestAccess)
+              ?.content
+              ?.tryGet<String>('guest_access') ??
+          'forbidden') ??
+      GuestAccess.forbidden;
 
   /// Changes the guest access. You should check first if the user is able to change it.
   Future<void> setGuestAccess(GuestAccess guestAccess) async {
@@ -1637,7 +1628,7 @@ class Room {
       EventTypes.GuestAccess,
       '',
       {
-        'guest_access': _guestAccessMap[guestAccess],
+        'guest_access': EnumHelper.valToString(guestAccess),
       },
     );
     return;
@@ -1648,11 +1639,11 @@ class Room {
 
   /// This event controls whether a user can see the events that happened in a room from before they joined.
   HistoryVisibility get historyVisibility =>
-      getState(EventTypes.HistoryVisibility) != null
-          ? _historyVisibilityMap.map((k, v) => MapEntry(v, k))[
-              getState(EventTypes.HistoryVisibility)
-                  .content['history_visibility']]
-          : null;
+      EnumHelper(HistoryVisibility.values).fromString(
+          getState(EventTypes.HistoryVisibility)
+                  ?.content
+                  ?.tryGet<String>('history_visibility') ??
+              '');
 
   /// Changes the history visibility. You should check first if the user is able to change it.
   Future<void> setHistoryVisibility(HistoryVisibility historyVisibility) async {
@@ -1661,7 +1652,7 @@ class Room {
       EventTypes.HistoryVisibility,
       '',
       {
-        'history_visibility': _historyVisibilityMap[historyVisibility],
+        'history_visibility': EnumHelper.valToString(historyVisibility),
       },
     );
     return;

@@ -22,6 +22,7 @@ import '../../matrix.dart';
 import '../event.dart';
 import '../room.dart';
 import 'matrix_localizations.dart';
+import 'enum_helper.dart';
 
 abstract class EventLocalizations {
   // As we need to create the localized body off of a different set of parameters, we
@@ -91,11 +92,8 @@ abstract class EventLocalizations {
         i18n.createdTheChat(event.sender.calcDisplayname()),
     EventTypes.RoomTombstone: (event, i18n, body) => i18n.roomHasBeenUpgraded,
     EventTypes.RoomJoinRules: (event, i18n, body) {
-      final joinRules = JoinRules.values.firstWhere(
-          (r) =>
-              r.toString().replaceAll('JoinRules.', '') ==
-              event.content['join_rule'],
-          orElse: () => null);
+      final joinRules =
+          EnumHelper(JoinRules.values).fromString(event.content['join_rule']);
       if (joinRules == null) {
         return i18n.changedTheJoinRules(event.sender.calcDisplayname());
       } else {
@@ -190,11 +188,8 @@ abstract class EventLocalizations {
       }
     },
     EventTypes.HistoryVisibility: (event, i18n, body) {
-      final historyVisibility = HistoryVisibility.values.firstWhere(
-          (r) =>
-              r.toString().replaceAll('HistoryVisibility.', '') ==
-              event.content['history_visibility'],
-          orElse: () => null);
+      final historyVisibility = EnumHelper(HistoryVisibility.values)
+          .fromString(event.content['history_visibility']);
       if (historyVisibility == null) {
         return i18n.changedTheHistoryVisibility(event.sender.calcDisplayname());
       } else {

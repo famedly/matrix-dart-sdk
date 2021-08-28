@@ -20,6 +20,7 @@
 import 'dart:core';
 
 import '../client.dart';
+import 'enum_helper.dart';
 
 extension MxcUriExtension on Uri {
   /// Returns a download Link to this content.
@@ -51,7 +52,7 @@ extension MxcUriExtension on Uri {
       queryParameters: {
         if (width != null) 'width': width.round().toString(),
         if (height != null) 'height': height.round().toString(),
-        if (method != null) 'method': method.toString().split('.').last,
+        if (method != null) 'method': EnumHelper.valToString(method),
         if (animated != null) 'animated': animated.toString(),
       },
     );
