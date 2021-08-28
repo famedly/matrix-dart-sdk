@@ -1,3 +1,12 @@
+## [0.3.4] - 28nd Aug 2021
+- fix: String.parseIdentifierIntoParts not working with unicode matrix.to links
+    Some clients do not uri-encode the identifier for matrix.to links, so we must
+    handle if we can't uri-decode them
+- fix: missing null check in hideEdit condition
+- fix: missing null check
+    It seems `device_keys` in the reply of `/keys/query` is not required. While synapse always
+    sent it, conduit did not, which resulted in an error.
+
 ## [0.3.3] - 20nd Aug 2021
 - fix: room.lastEvent order now respects edits
 - feat: use m.new_content in lastEvent (so no more * fallback)
