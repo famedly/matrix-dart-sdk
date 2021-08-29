@@ -372,7 +372,7 @@ class Room {
     this.membership = Membership.join,
     int notificationCount,
     int highlightCount,
-    String prev_batch,
+    this.prev_batch,
     this.client,
     this.notificationSettings,
     Map<String, BasicRoomEvent> roomAccountData,
@@ -383,7 +383,6 @@ class Room {
         _oldestSortOrder = oldestSortOrder,
         notificationCount = notificationCount ?? 0,
         highlightCount = highlightCount ?? 0,
-        prev_batch = prev_batch ?? '',
         roomAccountData = roomAccountData ?? <String, BasicRoomEvent>{},
         summary = summary ??
             RoomSummary.fromJson({
@@ -945,6 +944,9 @@ class Room {
   /// the historical events will be published in the onEvent stream.
   Future<void> requestHistory(
       {int historyCount = defaultHistoryCount, onHistoryReceived}) async {
+    if (prev_batch == null) {
+      throw 'Tried to request history without a prev_batch token';
+    }
     final resp = await client.getRoomEvents(
       id,
       prev_batch,
@@ -1105,7 +1107,6 @@ class Room {
       onInsert: onInsert,
     );
     if (client.database == null) {
-      prev_batch = '';
       await requestHistory(historyCount: 10);
     }
     return timeline;

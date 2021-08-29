@@ -66,7 +66,7 @@ class RoomUpdate {
                   update.unreadNotifications?.notificationCount ?? 0,
               highlight_count: update.unreadNotifications?.highlightCount ?? 0,
               limitedTimeline: update.timeline?.limited ?? false,
-              prev_batch: update.timeline?.prevBatch ?? '',
+              prev_batch: update.timeline?.prevBatch,
               summary: update.summary,
             )
           : update is InvitedRoomUpdate
@@ -76,7 +76,7 @@ class RoomUpdate {
                   notification_count: 0,
                   highlight_count: 0,
                   limitedTimeline: false,
-                  prev_batch: '',
+                  prev_batch: null,
                   summary: null,
                 )
               : update is LeftRoomUpdate
@@ -86,7 +86,7 @@ class RoomUpdate {
                       notification_count: 0,
                       highlight_count: 0,
                       limitedTimeline: update.timeline?.limited ?? false,
-                      prev_batch: update.timeline?.prevBatch ?? '',
+                      prev_batch: update.timeline?.prevBatch,
                       summary: null,
                     )
                   : null;

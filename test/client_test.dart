@@ -233,7 +233,7 @@ void main() {
 
       expect(roomUpdateList[1].id == '!696r7674:example.com', true);
       expect(roomUpdateList[1].membership == Membership.invite, true);
-      expect(roomUpdateList[1].prev_batch == '', true);
+      expect(roomUpdateList[1].prev_batch == null, true);
       expect(roomUpdateList[1].limitedTimeline == false, true);
       expect(roomUpdateList[1].notification_count == 0, true);
       expect(roomUpdateList[1].highlight_count == 0, true);
