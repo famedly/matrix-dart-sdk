@@ -1244,94 +1244,108 @@ class Client extends MatrixApi {
     }
   }
 
+  final _roomSyncLock = MultiLock<String>();
+
   Future<void> _handleRooms(
       Map<String, SyncRoomUpdate> rooms, Membership membership,
       {bool sortAtTheEnd = false}) async {
     var handledRooms = 0;
     for (final entry in rooms.entries) {
-      onSyncStatus.add(SyncStatusUpdate(
-        SyncStatus.processing,
-        progress: ++handledRooms / rooms.length,
-      ));
       final id = entry.key;
-      final room = entry.value;
+      // we want to make sure we only ever process a single room udpate at a time to ensure
+      // that there are no race conditions with e.g. processing a history update for a room
+      // while processing a sync at the same time.
+      await _roomSyncLock.lock({id});
+      try {
+        onSyncStatus.add(SyncStatusUpdate(
+          SyncStatus.processing,
+          progress: ++handledRooms / rooms.length,
+        ));
+        final room = entry.value;
 
-      final update = RoomUpdate.fromSyncRoomUpdate(room, id);
-      if (database != null) {
-        // TODO: This method seems to be rather slow for some updates
-        // Perhaps don't dynamically build that one query?
-        await database.storeRoomUpdate(this.id, update, getRoomById(id));
-      }
-      _updateRoomsByRoomUpdate(update);
-      final roomObj = getRoomById(id);
-      if (update.limitedTimeline && roomObj != null) {
-        roomObj.resetSortOrder();
-      }
-      onRoomUpdate.add(update);
+        final update = RoomUpdate.fromSyncRoomUpdate(room, id);
+        if (database != null) {
+          // TODO: This method seems to be rather slow for some updates
+          // Perhaps don't dynamically build that one query?
+          await database.storeRoomUpdate(this.id, update, getRoomById(id));
+        }
+        _updateRoomsByRoomUpdate(update);
+        final roomObj = getRoomById(id);
+        if (update.limitedTimeline && roomObj != null) {
+          roomObj.resetSortOrder();
+        }
+        onRoomUpdate.add(update);
 
-      var handledEvents = false;
+        var handledEvents = false;
 
-      /// Handle now all room events and save them in the database
-      if (room is JoinedRoomUpdate) {
-        if (room.state?.isNotEmpty ?? false) {
-          // TODO: This method seems to be comperatively slow for some updates
-          await _handleRoomEvents(id,
-              room.state.map((i) => i.toJson()).toList(), EventUpdateType.state,
-              sortAtTheEnd: sortAtTheEnd);
-          handledEvents = true;
+        /// Handle now all room events and save them in the database
+        if (room is JoinedRoomUpdate) {
+          if (room.state?.isNotEmpty ?? false) {
+            // TODO: This method seems to be comperatively slow for some updates
+            await _handleRoomEvents(
+                id,
+                room.state.map((i) => i.toJson()).toList(),
+                EventUpdateType.state,
+                sortAtTheEnd: sortAtTheEnd);
+            handledEvents = true;
+          }
+          if (room.timeline?.events?.isNotEmpty ?? false) {
+            await _handleRoomEvents(
+                id,
+                room.timeline.events.map((i) => i.toJson()).toList(),
+                sortAtTheEnd
+                    ? EventUpdateType.history
+                    : EventUpdateType.timeline,
+                sortAtTheEnd: sortAtTheEnd);
+            handledEvents = true;
+          }
+          if (room.ephemeral?.isNotEmpty ?? false) {
+            // TODO: This method seems to be comperatively slow for some updates
+            await _handleEphemerals(
+                id, room.ephemeral.map((i) => i.toJson()).toList());
+          }
+          if (room.accountData?.isNotEmpty ?? false) {
+            await _handleRoomEvents(
+                id,
+                room.accountData.map((i) => i.toJson()).toList(),
+                EventUpdateType.accountData);
+          }
         }
-        if (room.timeline?.events?.isNotEmpty ?? false) {
+        if (room is LeftRoomUpdate) {
+          if (room.timeline?.events?.isNotEmpty ?? false) {
+            await _handleRoomEvents(
+                id,
+                room.timeline.events.map((i) => i.toJson()).toList(),
+                EventUpdateType.timeline,
+                sortAtTheEnd: sortAtTheEnd);
+            handledEvents = true;
+          }
+          if (room.accountData?.isNotEmpty ?? false) {
+            await _handleRoomEvents(
+                id,
+                room.accountData.map((i) => i.toJson()).toList(),
+                EventUpdateType.accountData);
+          }
+          if (room.state?.isNotEmpty ?? false) {
+            await _handleRoomEvents(
+                id,
+                room.state.map((i) => i.toJson()).toList(),
+                EventUpdateType.state);
+            handledEvents = true;
+          }
+        }
+        if (room is InvitedRoomUpdate &&
+            (room.inviteState?.isNotEmpty ?? false)) {
           await _handleRoomEvents(
               id,
-              room.timeline.events.map((i) => i.toJson()).toList(),
-              sortAtTheEnd ? EventUpdateType.history : EventUpdateType.timeline,
-              sortAtTheEnd: sortAtTheEnd);
-          handledEvents = true;
+              room.inviteState.map((i) => i.toJson()).toList(),
+              EventUpdateType.inviteState);
         }
-        if (room.ephemeral?.isNotEmpty ?? false) {
-          // TODO: This method seems to be comperatively slow for some updates
-          await _handleEphemerals(
-              id, room.ephemeral.map((i) => i.toJson()).toList());
+        if (handledEvents && database != null && roomObj != null) {
+          await roomObj.updateSortOrder();
         }
-        if (room.accountData?.isNotEmpty ?? false) {
-          await _handleRoomEvents(
-              id,
-              room.accountData.map((i) => i.toJson()).toList(),
-              EventUpdateType.accountData);
-        }
-      }
-      if (room is LeftRoomUpdate) {
-        if (room.timeline?.events?.isNotEmpty ?? false) {
-          await _handleRoomEvents(
-              id,
-              room.timeline.events.map((i) => i.toJson()).toList(),
-              EventUpdateType.timeline,
-              sortAtTheEnd: sortAtTheEnd);
-          handledEvents = true;
-        }
-        if (room.accountData?.isNotEmpty ?? false) {
-          await _handleRoomEvents(
-              id,
-              room.accountData.map((i) => i.toJson()).toList(),
-              EventUpdateType.accountData);
-        }
-        if (room.state?.isNotEmpty ?? false) {
-          await _handleRoomEvents(
-              id,
-              room.state.map((i) => i.toJson()).toList(),
-              EventUpdateType.state);
-          handledEvents = true;
-        }
-      }
-      if (room is InvitedRoomUpdate &&
-          (room.inviteState?.isNotEmpty ?? false)) {
-        await _handleRoomEvents(
-            id,
-            room.inviteState.map((i) => i.toJson()).toList(),
-            EventUpdateType.inviteState);
-      }
-      if (handledEvents && database != null && roomObj != null) {
-        await roomObj.updateSortOrder();
+      } finally {
+        _roomSyncLock.unlock({id});
       }
     }
   }
