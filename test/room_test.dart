@@ -947,6 +947,12 @@ void main() {
       await room.removeSpaceChild('!1234:example.invalid');*/
     });
 
+    test('getMention', () async {
+      expect(room.getMention('@invalid'), null);
+      expect(room.getMention('@[Alice Margatroid]'), '@alice:example.org');
+      expect(room.getMention('@[Alice Margatroid]#1754'), '@alice:example.org');
+    });
+
     test('logout', () async {
       await matrix.logout();
     });

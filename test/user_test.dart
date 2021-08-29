@@ -159,6 +159,10 @@ void main() {
       expect(user1.mention, '@Bob#1745');
       user1.content['displayname'] = 'Alice M';
     });
+    test('mentionFragments', () async {
+      expect(user1.mentionFragments, {'@[Alice M]', '@[Alice M]#1745'});
+      expect(user2.mentionFragments, {'@Bob', '@Bob#1542'});
+    });
     test('dispose client', () async {
       await client.dispose(closeDatabase: true);
     });

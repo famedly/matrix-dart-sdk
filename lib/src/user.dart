@@ -207,6 +207,23 @@ class User extends Event {
     }
     return '$identifier#$ourHash';
   }
+
+  /// Get the mention fragments for this user.
+  Set<String> get mentionFragments {
+    if ((displayName?.isEmpty ?? true) ||
+        {'[', ']', ':'}.any((c) => displayName.contains(c))) {
+      return {};
+    }
+    var identifier = '@';
+    // if we have non-word characters we need to surround with []
+    if (!RegExp(r'^\w+$').hasMatch(displayName)) {
+      identifier += '[$displayName]';
+    } else {
+      identifier += displayName;
+    }
+    final hash = _hash(id);
+    return {identifier, '$identifier#$hash'};
+  }
 }
 
 String _hash(String s) {

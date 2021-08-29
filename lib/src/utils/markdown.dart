@@ -72,11 +72,13 @@ class SpoilerSyntax extends TagSyntax {
 }
 
 class EmoteSyntax extends InlineSyntax {
-  final Map<String, Map<String, String>> emotePacks;
-  EmoteSyntax(this.emotePacks) : super(r':(?:([-\w]+)~)?([-\w]+):');
+  final Map<String, Map<String, String>> Function() getEmotePacks;
+  Map<String, Map<String, String>> emotePacks;
+  EmoteSyntax(this.getEmotePacks) : super(r':(?:([-\w]+)~)?([-\w]+):');
 
   @override
   bool onMatch(InlineParser parser, Match match) {
+    emotePacks ??= getEmotePacks?.call() ?? <String, Map<String, String>>{};
     final pack = match[1] ?? '';
     final emote = match[2];
     String mxc;
@@ -182,29 +184,31 @@ class PillSyntax extends InlineSyntax {
 }
 
 class MentionSyntax extends InlineSyntax {
-  final Map<String, String> mentionMap;
-  MentionSyntax(this.mentionMap) : super(r'(@(?:\[[^\]:]+\]|\w+)(?:#\w+)?)');
+  final String Function(String) getMention;
+  MentionSyntax(this.getMention) : super(r'(@(?:\[[^\]:]+\]|\w+)(?:#\w+)?)');
 
   @override
   bool onMatch(InlineParser parser, Match match) {
+    final mention = getMention?.call(match[1]);
     if ((match.start > 0 &&
             !RegExp(r'[\s.!?:;\(]').hasMatch(match.input[match.start - 1])) ||
-        !mentionMap.containsKey(match[1])) {
+        mention == null) {
       parser.addNode(Text(match[0]));
       return true;
     }
-    final identifier = mentionMap[match[1]];
     final element = Element.text('a', htmlEscape.convert(match[1]));
     element.attributes['href'] =
-        htmlAttrEscape.convert('https://matrix.to/#/$identifier');
+        htmlAttrEscape.convert('https://matrix.to/#/$mention');
     parser.addNode(element);
     return true;
   }
 }
 
-String markdown(String text,
-    {Map<String, Map<String, String>> emotePacks,
-    Map<String, String> mentionMap}) {
+String markdown(
+  String text, {
+  Map<String, Map<String, String>> Function() getEmotePacks,
+  String Function(String) getMention,
+}) {
   var ret = markdownToHtml(
     text,
     extensionSet: ExtensionSet.commonMark,
@@ -215,9 +219,9 @@ String markdown(String text,
       StrikethroughSyntax(),
       LinebreakSyntax(),
       SpoilerSyntax(),
-      EmoteSyntax(emotePacks ?? <String, Map<String, String>>{}),
+      EmoteSyntax(getEmotePacks),
       PillSyntax(),
-      MentionSyntax(mentionMap ?? <String, String>{}),
+      MentionSyntax(getMention),
       InlineLatexSyntax(),
     ],
   );

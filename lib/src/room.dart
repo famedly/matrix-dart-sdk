@@ -566,6 +566,12 @@ class Room {
   Map<String, Map<String, String>> get emotePacks =>
       getImagePacksFlat(ImagePackUsage.emoticon);
 
+  /// returns the resolved mxid for a mention string, or null if none found
+  String getMention(String mention) => getParticipants()
+      .firstWhere((u) => u.mentionFragments.contains(mention),
+          orElse: () => null)
+      ?.id;
+
   /// Sends a normal text message to this room. Returns the event ID generated
   /// by the server for this message.
   Future<String> sendTextEvent(String message,
@@ -585,12 +591,9 @@ class Room {
       'body': message,
     };
     if (parseMarkdown) {
-      final mentionMap = <String, String>{
-        for (final user in getParticipants()) user.mention: user.id
-      };
       final html = markdown(event['body'],
-          emotePacks: getImagePacksFlat(ImagePackUsage.emoticon),
-          mentionMap: mentionMap);
+          getEmotePacks: () => getImagePacksFlat(ImagePackUsage.emoticon),
+          getMention: getMention);
       // if the decoded html is the same as the body, there is no need in sending a formatted message
       if (HtmlUnescape().convert(html.replaceAll(RegExp(r'<br />\n?'), '\n')) !=
           event['body']) {
