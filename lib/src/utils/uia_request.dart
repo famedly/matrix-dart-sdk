@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020, 2021 Famedly GmbH
@@ -35,12 +34,12 @@ enum UiaRequestState {
 
 /// Wrapper to handle User interactive authentication requests
 class UiaRequest<T> {
-  void Function(UiaRequestState state) onUpdate;
-  final Future<T> Function(AuthenticationData auth) request;
-  String session;
+  void Function(UiaRequestState state)? onUpdate;
+  final Future<T> Function(AuthenticationData? auth) request;
+  String? session;
   UiaRequestState _state = UiaRequestState.loading;
-  T result;
-  Exception error;
+  T? result;
+  Exception? error;
   Set<String> nextStages = <String>{};
   Map<String, dynamic> params = <String, dynamic>{};
 
@@ -52,11 +51,11 @@ class UiaRequest<T> {
     onUpdate?.call(newState);
   }
 
-  UiaRequest({this.onUpdate, this.request}) {
+  UiaRequest({this.onUpdate, required this.request}) {
     _run();
   }
 
-  Future<T> _run([AuthenticationData auth]) async {
+  Future<T?> _run([AuthenticationData? auth]) async {
     state = UiaRequestState.loading;
     try {
       final res = await request(auth);
@@ -68,7 +67,7 @@ class UiaRequest<T> {
         rethrow;
       }
       session ??= err.session;
-      final completed = err.completedAuthenticationFlows ?? <String>[];
+      final completed = err.completedAuthenticationFlows;
       final flows = err.authenticationFlows ?? <AuthenticationFlow>[];
       params = err.authenticationParams ?? <String, dynamic>{};
       nextStages = getNextStages(flows, completed);
@@ -87,10 +86,10 @@ class UiaRequest<T> {
     }
   }
 
-  Future<T> completeStage(AuthenticationData auth) => _run(auth);
+  Future<T?> completeStage(AuthenticationData auth) => _run(auth);
 
   /// Cancel this uia request for example if the app can not handle this stage.
-  void cancel([Exception err]) {
+  void cancel([Exception? err]) {
     error = err ?? Exception('Request has been canceled');
     state = UiaRequestState.fail;
   }
@@ -101,17 +100,15 @@ class UiaRequest<T> {
     for (final flow in flows) {
       final stages = flow.stages;
       final nextStage = stages[completed.length];
-      if (nextStage != null) {
-        var stagesValid = true;
-        for (var i = 0; i < completed.length; i++) {
-          if (stages[i] != completed[i]) {
-            stagesValid = false;
-            break;
-          }
+      var stagesValid = true;
+      for (var i = 0; i < completed.length; i++) {
+        if (stages[i] != completed[i]) {
+          stagesValid = false;
+          break;
         }
-        if (stagesValid) {
-          nextStages.add(nextStage);
-        }
+      }
+      if (stagesValid) {
+        nextStages.add(nextStage);
       }
     }
     return nextStages;

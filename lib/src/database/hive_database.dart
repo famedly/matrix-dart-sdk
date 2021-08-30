@@ -328,7 +328,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<Uint8List?> getFile(String mxcUri) async {
+  Future<Uint8List?> getFile(Uri mxcUri) async {
     return null;
   }
 

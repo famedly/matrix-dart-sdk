@@ -22,7 +22,7 @@ import 'package:matrix/encryption/utils/olm_session.dart';
 import 'package:matrix/encryption/utils/outbound_group_session.dart';
 import 'package:matrix/encryption/utils/ssss_cache.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
-import 'package:matrix/src/utils/QueuedToDeviceEvent.dart';
+import 'package:matrix/src/utils/queued_to_device_event.dart';
 
 import '../../matrix.dart';
 
@@ -80,7 +80,7 @@ abstract class DatabaseApi {
 
   Future<List<Event>> getEventList(int clientId, Room room);
 
-  Future<Uint8List?> getFile(String mxcUri);
+  Future<Uint8List?> getFile(Uri mxcUri);
 
   Future storeFile(Uri mxcUri, Uint8List bytes, int time);
 
