@@ -22,10 +22,10 @@
 */
 
 class AuthenticationData {
-  String type;
+  String? type;
   String? session;
 
-  AuthenticationData({required this.type, this.session});
+  AuthenticationData({this.type, this.session});
 
   AuthenticationData.fromJson(Map<String, dynamic> json)
       : type = json['type'],
@@ -33,7 +33,7 @@ class AuthenticationData {
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
-    data['type'] = type;
+    if (type != null) data['type'] = type;
     if (session != null) data['session'] = session;
     return data;
   }
