@@ -1,3 +1,6 @@
+## [0.3.6] - 30nd Aug 2021
+- hotfix: uiaRequests send broken auth object at first try
+
 ## [0.3.5] - 28nd Aug 2021
 - hotfix: Send unencrypted thumbnails
 

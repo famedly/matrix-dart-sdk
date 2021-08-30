@@ -32,14 +32,16 @@ void main() {
       var finished = false;
       final request = UiaRequest(
         request: (auth) async {
-          if (auth.session != null && auth.session != 'foxies') {
+          if (auth != null &&
+              auth.session != null &&
+              auth.session != 'foxies') {
             throw MatrixException.fromJson(<String, dynamic>{});
           }
-          if (auth.type == 'stage1') {
+          if (auth != null && auth.type == 'stage1') {
             if (completed.isEmpty) {
               completed.add('stage1');
             }
-          } else if (auth.type == 'stage2') {
+          } else if (auth != null && auth.type == 'stage2') {
             if (completed.length == 1 && completed[0] == 'stage1') {
               // okay, we are done!
               return 'FOXIES ARE FLOOOOOFY!!!!!';

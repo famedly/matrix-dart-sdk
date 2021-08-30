@@ -59,14 +59,12 @@ class UiaRequest<T> {
   Future<T> _run([AuthenticationData auth]) async {
     state = UiaRequestState.loading;
     try {
-      auth ??=
-          AuthenticationData(session: session, type: AuthenticationTypes.token);
       final res = await request(auth);
       state = UiaRequestState.done;
       result = res;
       return res;
     } on MatrixException catch (err) {
-      if (!(err.session is String)) {
+      if (err.session == null) {
         rethrow;
       }
       session ??= err.session;
