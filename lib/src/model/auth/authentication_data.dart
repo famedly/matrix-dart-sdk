@@ -22,6 +22,8 @@
 */
 
 class AuthenticationData {
+  // Should be non-nullable according to the spec but this leads to this problem
+  // https://github.com/matrix-org/matrix-doc/issues/3370
   String? type;
   String? session;
 
