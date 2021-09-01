@@ -387,7 +387,7 @@ class Room {
 
   /// The default count of how much events should be requested when requesting the
   /// history of this room.
-  static const int defaultHistoryCount = 100;
+  static const int defaultHistoryCount = 30;
 
   /// Calculates the displayname. First checks if there is a name, then checks for a canonical alias and
   /// then generates a name from the heroes.
@@ -931,7 +931,8 @@ class Room {
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
   /// the historical events will be published in the onEvent stream.
   Future<void> requestHistory(
-      {int historyCount = defaultHistoryCount, onHistoryReceived}) async {
+      {int historyCount = defaultHistoryCount,
+      void Function() onHistoryReceived}) async {
     if (prev_batch == null) {
       throw 'Tried to request history without a prev_batch token';
     }
@@ -1069,7 +1070,11 @@ class Room {
     await postLoad();
     var events;
     if (client.database != null) {
-      events = await client.database.getEventList(client.id, this);
+      events = await client.database.getEventList(
+        client.id,
+        this,
+        limit: defaultHistoryCount,
+      );
     } else {
       events = <Event>[];
     }

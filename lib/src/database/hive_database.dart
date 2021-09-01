@@ -308,26 +308,48 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     return Event.fromJson(convertToJson(raw), room);
   }
 
-  @override
-  Future<List<Event>> getEventList(int clientId, Room room) async {
-    final List timelineEventIds =
-        (await _timelineFragmentsBox.get(MultiKey(room.id, '').toString()) ??
-            []);
-    final List sendingEventIds = (await _timelineFragmentsBox
-            .get(MultiKey(room.id, 'SENDING').toString()) ??
-        []);
-    final eventIds = sendingEventIds + timelineEventIds;
-    final events = await Future.wait(eventIds
-        .map(
-          (eventId) async => Event.fromJson(
-            convertToJson(
-              await _eventsBox.get(MultiKey(room.id, eventId).toString()),
+  /// Loads a whole list of events at once from the store for a specific room
+  Future<List<Event>> _getEventsByIds(List<String> eventIds, Room room) =>
+      Future.wait(eventIds
+          .map(
+            (eventId) async => Event.fromJson(
+              convertToJson(
+                await _eventsBox.get(MultiKey(room.id, eventId).toString()),
+              ),
+              room,
             ),
-            room,
-          ),
-        )
-        .toList());
-    return events;
+          )
+          .toList());
+
+  @override
+  Future<List<Event>> getEventList(
+    int clientId,
+    Room room, {
+    int start = 0,
+    int? limit,
+  }) async {
+    // Get the synced event IDs from the store
+    final timelineKey = MultiKey(room.id, '').toString();
+    final timelineEventIds =
+        (await _timelineFragmentsBox.get(timelineKey) as List? ?? []);
+
+    // Get the local stored SENDING events from the store
+    late final List sendingEventIds;
+    if (start != 0) {
+      sendingEventIds = [];
+    } else {
+      final sendingTimelineKey = MultiKey(room.id, 'SENDING').toString();
+      sendingEventIds =
+          (await _timelineFragmentsBox.get(sendingTimelineKey) as List? ?? []);
+    }
+
+    // Combine those two lists while respecting the start and limit parameters.
+    final end = min(
+        timelineEventIds.length, start + (limit ?? timelineEventIds.length));
+    final eventIds =
+        sendingEventIds + timelineEventIds.getRange(start, end).toList();
+
+    return await _getEventsByIds(eventIds.cast<String>(), room);
   }
 
   @override

@@ -78,7 +78,12 @@ abstract class DatabaseApi {
 
   Future<List<User>> getUsers(int clientId, Room room);
 
-  Future<List<Event>> getEventList(int clientId, Room room);
+  Future<List<Event>> getEventList(
+    int clientId,
+    Room room, {
+    int start = 0,
+    int limit,
+  });
 
   Future<Uint8List?> getFile(Uri mxcUri);
 

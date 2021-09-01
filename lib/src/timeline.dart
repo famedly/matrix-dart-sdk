@@ -64,7 +64,6 @@ class Timeline {
   // This ensures that the entire history fetching only triggers `onUpdate` only *once*,
   // even if /sync's complete while history is being proccessed.
   bool _collectHistoryUpdates = false;
-  final Set<EventUpdate> _historyUpdates = <EventUpdate>{};
 
   bool get canRequestHistory {
     if (events.isEmpty) return true;
@@ -73,32 +72,36 @@ class Timeline {
 
   Future<void> requestHistory(
       {int historyCount = Room.defaultHistoryCount}) async {
-    if (!isRequestingHistory) {
-      isRequestingHistory = true;
-      await room.requestHistory(
-        historyCount: historyCount,
-        onHistoryReceived: () {
-          _collectHistoryUpdates = true;
-        },
-      );
-      try {
-        await Future.delayed(const Duration(seconds: 2));
-        _proccessHistoryUpdates();
-      } finally {
-        _collectHistoryUpdates = false;
-        isRequestingHistory = false;
-      }
+    if (isRequestingHistory) {
+      return;
     }
-  }
+    isRequestingHistory = true;
+    onUpdate?.call();
 
-  void _proccessHistoryUpdates() async {
-    _collectHistoryUpdates = false;
-    for (final update in _historyUpdates) {
-      _handleEventUpdate(await update.decrypt(room, store: true),
-          update: false);
+    try {
+      // Look up for events in hive first
+      final eventsFromStore = await room.client.database?.getEventList(
+        room.client.id,
+        room,
+        start: events.length,
+        limit: Room.defaultHistoryCount,
+      );
+      if (eventsFromStore.isNotEmpty) {
+        events.addAll(eventsFromStore);
+      } else {
+        Logs().v('No more events found in the store. Request from server...');
+        await room.requestHistory(
+          historyCount: historyCount,
+          onHistoryReceived: () {
+            _collectHistoryUpdates = true;
+          },
+        );
+      }
+    } finally {
+      _collectHistoryUpdates = false;
+      isRequestingHistory = false;
+      onUpdate?.call();
     }
-    _historyUpdates.clear();
-    if (onUpdate != null) onUpdate();
   }
 
   Timeline({this.room, List<Event> events, this.onUpdate, this.onInsert})
@@ -247,12 +250,6 @@ class Timeline {
     try {
       if (eventUpdate.roomID != room.id) return;
 
-      if (eventUpdate.type == EventUpdateType.history &&
-          _collectHistoryUpdates) {
-        _historyUpdates.add(eventUpdate);
-        return;
-      }
-
       if (eventUpdate.type != EventUpdateType.timeline &&
           eventUpdate.type != EventUpdateType.history) {
         return;
@@ -318,7 +315,7 @@ class Timeline {
           if (onInsert != null) onInsert(0);
         }
       }
-      if (update) {
+      if (update && !_collectHistoryUpdates) {
         if (onUpdate != null) onUpdate();
       }
     } catch (e, s) {

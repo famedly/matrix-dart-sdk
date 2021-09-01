@@ -1337,7 +1337,7 @@ class FakeMatrixApi extends MockClient {
           (var req) => messagesResponse,
       '/client/r0/rooms/!localpart%3Aserver.abc/messages?from=&dir=b&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponse,
-      '/client/r0/rooms/!1234%3Aexample.com/messages?from=1234&dir=b&limit=100&filter=%7B%22lazy_load_members%22%3Atrue%7D':
+      '/client/r0/rooms/!1234%3Aexample.com/messages?from=1234&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponse,
       '/client/versions': (var req) => {
             'versions': [
