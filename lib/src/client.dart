@@ -160,6 +160,7 @@ class Client extends MatrixApi {
     this.importantStateEvents,
     this.roomPreviewLastEvents,
     this.pinUnreadRooms = false,
+    this.pinInvitedRooms = true,
     this.sendMessageTimeoutSeconds = 60,
     this.requestHistoryOnLimitedTimeline = false,
     this.supportedLoginTypes,
@@ -1575,6 +1576,9 @@ sort order of ${prevState.sortOrder}. This should never happen...''');
 
   /// If `true` then unread rooms are pinned at the top of the room list.
   bool pinUnreadRooms;
+
+  /// If `true` then unread rooms are pinned at the top of the room list.
+  bool pinInvitedRooms;
 
   /// The compare function how the rooms should be sorted internally. By default
   /// rooms are sorted by timestamp of the last m.room.message event or the last

@@ -545,7 +545,9 @@ class Room {
   }
 
   /// Returns true if this room has a m.favourite tag.
-  bool get isFavourite => tags[TagType.favourite] != null;
+  bool get isFavourite =>
+      tags[TagType.favourite] != null ||
+      (client.pinInvitedRooms && membership == Membership.invite);
 
   /// Sets the m.favourite tag for this room.
   Future<void> setFavourite(bool favourite) =>
