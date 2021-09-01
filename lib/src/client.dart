@@ -1492,7 +1492,8 @@ class Client extends MatrixApi {
         (rooms[j].membership != chatUpdate.membership ||
             rooms[j].notificationCount != chatUpdate.notification_count ||
             rooms[j].highlightCount != chatUpdate.highlight_count ||
-            chatUpdate.summary != null)) {
+            chatUpdate.summary != null ||
+            chatUpdate.prev_batch != null)) {
       rooms[j].membership = chatUpdate.membership;
       rooms[j].notificationCount = chatUpdate.notification_count;
       rooms[j].highlightCount = chatUpdate.highlight_count;
