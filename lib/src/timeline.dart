@@ -95,10 +95,9 @@ class Timeline {
     _collectHistoryUpdates = false;
     for (final update in _historyUpdates) {
       _handleEventUpdate(await update.decrypt(room, store: true),
-          sortAndUpdate: false);
+          update: false);
     }
     _historyUpdates.clear();
-    _sort();
     if (onUpdate != null) onUpdate();
   }
 
@@ -122,7 +121,6 @@ class Timeline {
     for (final e in events) {
       addAggregatedEvent(e);
     }
-    _sort();
   }
 
   /// Don't forget to call this before you dismiss this object!
@@ -245,8 +243,7 @@ class Timeline {
     }
   }
 
-  void _handleEventUpdate(EventUpdate eventUpdate,
-      {bool sortAndUpdate = true}) {
+  void _handleEventUpdate(EventUpdate eventUpdate, {bool update = true}) {
     try {
       if (eventUpdate.roomID != room.id) return;
 
@@ -270,8 +267,10 @@ class Timeline {
         final eventId = _findEvent(event_id: eventUpdate.content['redacts']);
         if (eventId < events.length) {
           removeAggregatedEvent(events[eventId]);
-          events[eventId].setRedactionEvent(
-              Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder));
+          events[eventId].setRedactionEvent(Event.fromJson(
+            eventUpdate.content,
+            room,
+          ));
         }
       } else if (status == -2) {
         final i = _findEvent(event_id: eventUpdate.content['event_id']);
@@ -290,53 +289,49 @@ class Timeline {
           // if the old status is larger than the new one, we also want to preserve the old status
           final oldStatus = events[i].status;
           events[i] = Event.fromJson(
-              eventUpdate.content,
-              room,
-              eventUpdate.type == EventUpdateType.history
-                  ? events[i].sortOrder
-                  : eventUpdate.sortOrder);
+            eventUpdate.content,
+            room,
+          );
           // do we preserve the status? we should allow 0 -> -1 updates and status increases
           if (status < oldStatus && !(status == -1 && oldStatus == 0)) {
             events[i].status = oldStatus;
           }
           addAggregatedEvent(events[i]);
         } else {
-          final newEvent =
-              Event.fromJson(eventUpdate.content, room, eventUpdate.sortOrder);
+          final newEvent = Event.fromJson(
+            eventUpdate.content,
+            room,
+          );
 
           if (eventUpdate.type == EventUpdateType.history &&
               events.indexWhere(
                       (e) => e.eventId == eventUpdate.content['event_id']) !=
                   -1) return;
-
-          events.insert(0, newEvent);
+          if (eventUpdate.type == EventUpdateType.history) {
+            events.add(newEvent);
+          } else if (status == -1) {
+            events.insert(events.firstIndexWhereNotError, newEvent);
+          } else {
+            events.insert(events.firstIndexWhereNotError, newEvent);
+          }
           addAggregatedEvent(newEvent);
           if (onInsert != null) onInsert(0);
         }
       }
-      if (sortAndUpdate) {
-        _sort();
+      if (update) {
         if (onUpdate != null) onUpdate();
       }
     } catch (e, s) {
       Logs().w('Handle event update failed', e, s);
     }
   }
+}
 
-  bool _sortLock = false;
-
-  void _sort() {
-    if (_sortLock || events.length < 2) return;
-    _sortLock = true;
-    events?.sort((a, b) {
-      if (b.status == -1 && a.status != -1) {
-        return 1;
-      }
-      if (a.status == -1 && b.status != -1) {
-        return -1;
-      }
-      return b.sortOrder - a.sortOrder > 0 ? 1 : -1;
-    });
-    _sortLock = false;
+extension on List<Event> {
+  int get firstIndexWhereNotError {
+    if (isEmpty) return 0;
+    final index = indexWhere((e) => e.status != -1);
+    if (index == -1) return length;
+    return index;
   }
 }

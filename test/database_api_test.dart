@@ -192,7 +192,6 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
       EventUpdate(
         roomID: '!testroom:example.com',
         type: EventUpdateType.timeline,
-        sortOrder: DateTime.now().millisecondsSinceEpoch.toDouble(),
         content: {
           'type': EventTypes.Message,
           'content': {

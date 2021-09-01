@@ -273,7 +273,6 @@ class Encryption {
       stateKey: event.stateKey,
       prevContent: event.prevContent,
       status: event.status,
-      sortOrder: event.sortOrder,
     );
   }
 
@@ -307,7 +306,6 @@ class Encryption {
             content: event.toJson(),
             roomID: event.roomId,
             type: updateType,
-            sortOrder: event.sortOrder,
           ),
         );
       }

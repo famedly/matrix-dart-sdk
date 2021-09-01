@@ -53,7 +53,6 @@ void main() {
           'event_id': '\$event-1',
           'sender': '@blah:blubb',
         },
-        sortOrder: 0.0,
       );
       await database.storeEventUpdate(clientId, update);
       var event = await database.getEventById(clientId, '\$event-1', room);
@@ -71,7 +70,6 @@ void main() {
           'sender': '@blah:blubb',
           'status': 0,
         },
-        sortOrder: 0.0,
       );
       await database.storeEventUpdate(clientId, update);
       event = await database.getEventById(clientId, 'transaction-1', room);
@@ -90,7 +88,6 @@ void main() {
           },
           'status': 1,
         },
-        sortOrder: 0.0,
       );
       await database.storeEventUpdate(clientId, update);
       event = await database.getEventById(clientId, 'transaction-1', room);
@@ -109,7 +106,6 @@ void main() {
           'sender': '@blah:blubb',
           'status': 0,
         },
-        sortOrder: 0.0,
       );
       await database.storeEventUpdate(clientId, update);
       event = await database.getEventById(clientId, '\$event-3', room);
@@ -128,7 +124,6 @@ void main() {
             'transaction_id': 'transaction-2',
           },
         },
-        sortOrder: 0.0,
       );
       await database.storeEventUpdate(clientId, update);
       event = await database.getEventById(clientId, '\$event-3', room);
@@ -149,7 +144,6 @@ void main() {
           'sender': '@blah:blubb',
           'status': 2,
         },
-        sortOrder: 0.0,
       );
       await database.storeEventUpdate(clientId, update);
       event = await database.getEventById(clientId, '\$event-4', room);
@@ -168,7 +162,6 @@ void main() {
             'transaction_id': 'transaction-3',
           },
         },
-        sortOrder: 0.0,
       );
       await database.storeEventUpdate(clientId, update);
       event = await database.getEventById(clientId, '\$event-4', room);

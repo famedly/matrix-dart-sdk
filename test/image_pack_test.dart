@@ -26,7 +26,6 @@ void main() {
     Client client;
     Room room;
     Room room2;
-    var sortOrder = 0.0;
 
     test('setupClient', () async {
       client = await getClient();
@@ -70,7 +69,6 @@ void main() {
         },
         room: room,
         stateKey: '',
-        sortOrder: sortOrder++,
       ));
       final packs = room.getImagePacks();
       expect(packs.length, 1);
@@ -97,7 +95,6 @@ void main() {
         },
         room: room,
         stateKey: '',
-        sortOrder: sortOrder++,
       ));
       packsFlat = room.getImagePacksFlat(ImagePackUsage.emoticon);
       expect(packsFlat, {
@@ -120,7 +117,6 @@ void main() {
         },
         room: room,
         stateKey: '',
-        sortOrder: sortOrder++,
       ));
       packsFlat = room.getImagePacksFlat(ImagePackUsage.emoticon);
       expect(packsFlat, {
@@ -141,7 +137,6 @@ void main() {
         },
         room: room,
         stateKey: 'fox',
-        sortOrder: sortOrder++,
       ));
       packsFlat = room.getImagePacksFlat(ImagePackUsage.emoticon);
       expect(packsFlat, {
@@ -182,7 +177,6 @@ void main() {
         },
         room: room2,
         stateKey: '',
-        sortOrder: sortOrder++,
       ));
       client.accountData['im.ponies.emote_rooms'] = BasicEvent.fromJson({
         'type': 'im.ponies.emote_rooms',
@@ -213,7 +207,6 @@ void main() {
         },
         room: room2,
         stateKey: 'fox',
-        sortOrder: sortOrder++,
       ));
       client.accountData['im.ponies.emote_rooms'] = BasicEvent.fromJson({
         'type': 'im.ponies.emote_rooms',

@@ -1045,7 +1045,6 @@ void main() {
         'event_id': '\$source',
         'sender': '@alice:example.org',
       }, null);
-      event.sortOrder = 0;
       final edit1 = Event.fromJson({
         'type': EventTypes.Message,
         'content': {
@@ -1063,7 +1062,6 @@ void main() {
         'event_id': '\$edit1',
         'sender': '@alice:example.org',
       }, null);
-      edit1.sortOrder = 1;
       final edit2 = Event.fromJson({
         'type': EventTypes.Message,
         'content': {
@@ -1081,7 +1079,6 @@ void main() {
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
       }, null);
-      edit2.sortOrder = 2;
       final edit3 = Event.fromJson({
         'type': EventTypes.Message,
         'content': {
@@ -1099,7 +1096,6 @@ void main() {
         'event_id': '\$edit3',
         'sender': '@bob:example.org',
       }, null);
-      edit3.sortOrder = 3;
       final room = Room(client: client);
       // no edits
       var displayEvent =

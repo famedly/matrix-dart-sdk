@@ -359,7 +359,6 @@ void main() {
             'session_id': sessionId,
           },
           stateKey: '',
-          sortOrder: 42.0,
         ),
       );
       expect(room.lastEvent.type, 'm.room.encrypted');

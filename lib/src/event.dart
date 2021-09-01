@@ -79,21 +79,19 @@ class Event extends MatrixEvent {
 
   User get stateKeyUser => room.getUserByMXIDSync(stateKey);
 
-  double sortOrder;
-
-  Event(
-      {this.status = defaultStatus,
-      Map<String, dynamic> content,
-      String type,
-      String eventId,
-      String roomId,
-      String senderId,
-      DateTime originServerTs,
-      Map<String, dynamic> unsigned,
-      Map<String, dynamic> prevContent,
-      String stateKey,
-      this.room,
-      this.sortOrder = 0.0}) {
+  Event({
+    this.status = defaultStatus,
+    Map<String, dynamic> content,
+    String type,
+    String eventId,
+    String roomId,
+    String senderId,
+    DateTime originServerTs,
+    Map<String, dynamic> unsigned,
+    Map<String, dynamic> prevContent,
+    String stateKey,
+    this.room,
+  }) {
     this.content = content;
     this.type = type;
     this.eventId = eventId;
@@ -156,7 +154,6 @@ class Event extends MatrixEvent {
   factory Event.fromMatrixEvent(
     MatrixEvent matrixEvent,
     Room room, {
-    double sortOrder,
     int status,
   }) =>
       Event(
@@ -171,12 +168,13 @@ class Event extends MatrixEvent {
         prevContent: matrixEvent.prevContent,
         stateKey: matrixEvent.stateKey,
         room: room,
-        sortOrder: sortOrder,
       );
 
   /// Get a State event from a table row or from the event stream.
-  factory Event.fromJson(Map<String, dynamic> jsonPayload, Room room,
-      [double sortOrder]) {
+  factory Event.fromJson(
+    Map<String, dynamic> jsonPayload,
+    Room room,
+  ) {
     final content = Event.getMapFromPayload(jsonPayload['content']);
     final unsigned = Event.getMapFromPayload(jsonPayload['unsigned']);
     final prevContent = Event.getMapFromPayload(jsonPayload['prev_content']);
@@ -196,7 +194,6 @@ class Event extends MatrixEvent {
           : DateTime.now(),
       unsigned: unsigned,
       room: room,
-      sortOrder: sortOrder ?? unsigned.tryGet<num>(sortOrderKey) ?? 0.0,
     );
   }
 
@@ -311,14 +308,14 @@ class Event extends MatrixEvent {
       await room.client.database?.removeEvent(room.client.id, eventId, room.id);
 
       room.client.onEvent.add(EventUpdate(
-          roomID: room.id,
-          type: EventUpdateType.timeline,
-          content: {
-            'event_id': eventId,
-            'status': -2,
-            'content': {'body': 'Removed...'}
-          },
-          sortOrder: sortOrder));
+        roomID: room.id,
+        type: EventUpdateType.timeline,
+        content: {
+          'event_id': eventId,
+          'status': -2,
+          'content': {'body': 'Removed...'}
+        },
+      ));
       return true;
     }
     return false;
@@ -702,7 +699,11 @@ class Event extends MatrixEvent {
       // we need to check again if it isn't empty, as we potentially removed all
       // aggregated edits
       if (allEditEvents.isNotEmpty) {
-        allEditEvents.sort((a, b) => a.sortOrder - b.sortOrder > 0 ? 1 : -1);
+        allEditEvents.sort((a, b) => a.originServerTs.millisecondsSinceEpoch -
+                    b.originServerTs.millisecondsSinceEpoch >
+                0
+            ? 1
+            : -1);
         final rawEvent = allEditEvents.last.toJson();
         // update the content of the new event to render
         if (rawEvent['content']['m.new_content'] is Map) {

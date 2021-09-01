@@ -36,7 +36,7 @@ import 'package:hive/hive.dart';
 ///
 /// This database does not support file caching!
 class FamedlySdkHiveDatabase extends DatabaseApi {
-  static const int version = 3;
+  static const int version = 4;
   final String name;
   late Box _clientBox;
   late Box _accountDataBox;
@@ -310,9 +310,13 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
   @override
   Future<List<Event>> getEventList(int clientId, Room room) async {
-    final List eventIds =
+    final List timelineEventIds =
         (await _timelineFragmentsBox.get(MultiKey(room.id, '').toString()) ??
             []);
+    final List sendingEventIds = (await _timelineFragmentsBox
+            .get(MultiKey(room.id, 'SENDING').toString()) ??
+        []);
+    final eventIds = sendingEventIds + timelineEventIds;
     final events = await Future.wait(eventIds
         .map(
           (eventId) async => Event.fromJson(
@@ -323,7 +327,6 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
           ),
         )
         .toList());
-    events.sort((a, b) => b.sortOrder.compareTo(a.sortOrder));
     return events;
   }
 
@@ -812,7 +815,6 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       eventUpdate.content['unsigned'] ??= <String, dynamic>{};
       eventUpdate.content['unsigned'][messageSendingStatusKey] =
           eventUpdate.content['status'] = status;
-      eventUpdate.content['unsigned'][sortOrderKey] = eventUpdate.sortOrder;
 
       // In case this event has sent from this account we have a transaction ID
       final transactionId = eventUpdate.content
@@ -823,11 +825,26 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
           eventUpdate.content);
 
       // Update timeline fragments
-      final key = MultiKey(eventUpdate.roomID, '').toString();
+      final key =
+          MultiKey(eventUpdate.roomID, status == 2 ? '' : 'SENDING').toString();
       final List eventIds = (await _timelineFragmentsBox.get(key) ?? []);
-      if (!eventIds.any((id) => id == eventId)) {
-        eventIds.add(eventId);
+      if (!eventIds.contains(eventId)) {
+        if (eventUpdate.type == EventUpdateType.history) {
+          eventIds.add(eventId);
+        } else {
+          eventIds.insert(0, eventId);
+        }
         await _timelineFragmentsBox.put(key, eventIds);
+      }
+
+      // If event comes from server timeline, remove sending events with this ID
+      if (status == 2) {
+        final key = MultiKey(eventUpdate.roomID, 'SENDING').toString();
+        final List eventIds = (await _timelineFragmentsBox.get(key) ?? []);
+        final i = eventIds.indexWhere((id) => id == eventId);
+        if (i != -1) {
+          await _timelineFragmentsBox.put(key, eventIds..removeAt(i));
+        }
       }
 
       // Is there a transaction id? Then delete the event with this id.
@@ -979,10 +996,6 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
             prev_batch: roomUpdate.prev_batch ?? currentRoom.prev_batch,
             summary: RoomSummary.fromJson(currentRoom.summary.toJson()
               ..addAll(roomUpdate.summary?.toJson() ?? {})),
-            newestSortOrder:
-                roomUpdate.limitedTimeline ? 0.0 : currentRoom.newSortOrder,
-            oldestSortOrder:
-                roomUpdate.limitedTimeline ? 0.0 : currentRoom.oldSortOrder,
           ).toJson());
     }
 

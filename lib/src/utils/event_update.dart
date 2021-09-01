@@ -42,14 +42,10 @@ class EventUpdate {
   // The json payload of the content of this event.
   final Map<String, dynamic> content;
 
-  // the order where to stort this event
-  final double sortOrder;
-
   EventUpdate({
     required this.roomID,
     required this.type,
     required this.content,
-    required this.sortOrder,
   });
 
   Future<EventUpdate> decrypt(Room room, {bool store = false}) async {
@@ -59,13 +55,12 @@ class EventUpdate {
     }
     try {
       final decrpytedEvent = await room.client.encryption.decryptRoomEvent(
-          room.id, Event.fromJson(content, room, sortOrder),
+          room.id, Event.fromJson(content, room),
           store: store, updateType: type);
       return EventUpdate(
         roomID: roomID,
         type: type,
         content: decrpytedEvent.toJson(),
-        sortOrder: sortOrder,
       );
     } catch (e, s) {
       Logs().e('[LibOlm] Could not decrypt megolm event', e, s);

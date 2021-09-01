@@ -56,7 +56,6 @@ EventUpdate getLastSentEvent(KeyVerification req) {
     },
     type: EventUpdateType.timeline,
     roomID: req.room.id,
-    sortOrder: DateTime.now().millisecondsSinceEpoch.toDouble(),
   );
 }
 
@@ -462,7 +461,6 @@ void main() {
         },
         type: EventUpdateType.timeline,
         roomID: req2.room.id,
-        sortOrder: DateTime.now().millisecondsSinceEpoch.toDouble(),
       ));
       expect(req2.state, KeyVerificationState.error);
 

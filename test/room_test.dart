@@ -80,7 +80,6 @@ void main() {
         room: room,
         eventId: '143273582443PhrSn:example.org',
         roomId: id,
-        sortOrder: 0.0,
         originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
         senderId: '@example:example.org',
         type: 'm.room.join_rules',
@@ -167,15 +166,15 @@ void main() {
       expect(room.pinnedEventIds.first, '1234');
       room.setState(
         Event(
-            senderId: '@test:example.com',
-            type: 'm.room.message',
-            roomId: room.id,
-            room: room,
-            eventId: '12345',
-            originServerTs: DateTime.now(),
-            content: {'msgtype': 'm.text', 'body': 'abc'},
-            stateKey: '',
-            sortOrder: 0),
+          senderId: '@test:example.com',
+          type: 'm.room.message',
+          roomId: room.id,
+          room: room,
+          eventId: '12345',
+          originServerTs: DateTime.now(),
+          content: {'msgtype': 'm.text', 'body': 'abc'},
+          stateKey: '',
+        ),
       );
       expect(room.lastEvent.eventId, '12345');
       expect(room.lastEvent.body, 'abc');
@@ -185,28 +184,28 @@ void main() {
     test('lastEvent is set properly', () {
       room.setState(
         Event(
-            senderId: '@test:example.com',
-            type: 'm.room.encrypted',
-            roomId: room.id,
-            room: room,
-            eventId: '1',
-            originServerTs: DateTime.now(),
-            content: {'msgtype': 'm.text', 'body': 'cd'},
-            stateKey: '',
-            sortOrder: 1),
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          roomId: room.id,
+          room: room,
+          eventId: '1',
+          originServerTs: DateTime.now(),
+          content: {'msgtype': 'm.text', 'body': 'cd'},
+          stateKey: '',
+        ),
       );
       expect(room.lastEvent.body, 'cd');
       room.setState(
         Event(
-            senderId: '@test:example.com',
-            type: 'm.room.encrypted',
-            roomId: room.id,
-            room: room,
-            eventId: '2',
-            originServerTs: DateTime.now(),
-            content: {'msgtype': 'm.text', 'body': 'cdc'},
-            stateKey: '',
-            sortOrder: 2),
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          roomId: room.id,
+          room: room,
+          eventId: '2',
+          originServerTs: DateTime.now(),
+          content: {'msgtype': 'm.text', 'body': 'cdc'},
+          stateKey: '',
+        ),
       );
       expect(room.lastEvent.body, 'cdc');
       room.setState(
@@ -229,53 +228,53 @@ void main() {
       expect(room.lastEvent.body, 'cdc'); // because we edited the "cd" message
       room.setState(
         Event(
-            senderId: '@test:example.com',
-            type: 'm.room.encrypted',
-            roomId: room.id,
-            room: room,
-            eventId: '4',
-            originServerTs: DateTime.now(),
-            content: {
-              'msgtype': 'm.text',
-              'body': 'edited cdc',
-              'm.new_content': {'msgtype': 'm.text', 'body': 'edited cdc'},
-              'm.relates_to': {'rel_type': 'm.replace', 'event_id': '2'},
-            },
-            stateKey: '',
-            sortOrder: 4),
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          roomId: room.id,
+          room: room,
+          eventId: '4',
+          originServerTs: DateTime.now(),
+          content: {
+            'msgtype': 'm.text',
+            'body': 'edited cdc',
+            'm.new_content': {'msgtype': 'm.text', 'body': 'edited cdc'},
+            'm.relates_to': {'rel_type': 'm.replace', 'event_id': '2'},
+          },
+          stateKey: '',
+        ),
       );
       expect(room.lastEvent.body, 'edited cdc');
     });
     test('lastEvent when reply parent edited', () async {
       room.setState(
         Event(
-            senderId: '@test:example.com',
-            type: 'm.room.encrypted',
-            roomId: room.id,
-            room: room,
-            eventId: '5',
-            originServerTs: DateTime.now(),
-            content: {'msgtype': 'm.text', 'body': 'A'},
-            stateKey: '',
-            sortOrder: 5),
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          roomId: room.id,
+          room: room,
+          eventId: '5',
+          originServerTs: DateTime.now(),
+          content: {'msgtype': 'm.text', 'body': 'A'},
+          stateKey: '',
+        ),
       );
       expect(room.lastEvent.body, 'A');
 
       room.setState(
         Event(
-            senderId: '@test:example.com',
-            type: 'm.room.encrypted',
-            roomId: room.id,
-            room: room,
-            eventId: '6',
-            originServerTs: DateTime.now(),
-            content: {
-              'msgtype': 'm.text',
-              'body': 'B',
-              'm.relates_to': {'rel_type': 'm.in_reply_to', 'event_id': '5'}
-            },
-            stateKey: '',
-            sortOrder: 6),
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          roomId: room.id,
+          room: room,
+          eventId: '6',
+          originServerTs: DateTime.now(),
+          content: {
+            'msgtype': 'm.text',
+            'body': 'B',
+            'm.relates_to': {'rel_type': 'm.in_reply_to', 'event_id': '5'}
+          },
+          stateKey: '',
+        ),
       );
       expect(room.lastEvent.body, 'B');
       room.setState(
@@ -398,7 +397,6 @@ void main() {
             'users_default': 0
           },
           stateKey: '',
-          sortOrder: 1,
         ),
       );
       expect(room.ownPowerLevel, 0);
@@ -756,16 +754,19 @@ void main() {
     test('joinRules', () async {
       expect(room.canChangeJoinRules, false);
       expect(room.joinRules, JoinRules.public);
-      room.setState(Event.fromJson({
-        'content': {'join_rule': 'invite'},
-        'event_id': '\$143273582443PhrSn:example.org',
-        'origin_server_ts': 1432735824653,
-        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-        'sender': '@example:example.org',
-        'state_key': '',
-        'type': 'm.room.join_rules',
-        'unsigned': {'age': 1234}
-      }, room, 1432735824653.0));
+      room.setState(Event.fromJson(
+        {
+          'content': {'join_rule': 'invite'},
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'state_key': '',
+          'type': 'm.room.join_rules',
+          'unsigned': {'age': 1234}
+        },
+        room,
+      ));
       expect(room.joinRules, JoinRules.invite);
       await room.setJoinRules(JoinRules.invite);
     });
@@ -773,16 +774,19 @@ void main() {
     test('guestAccess', () async {
       expect(room.canChangeGuestAccess, false);
       expect(room.guestAccess, GuestAccess.forbidden);
-      room.setState(Event.fromJson({
-        'content': {'guest_access': 'can_join'},
-        'event_id': '\$143273582443PhrSn:example.org',
-        'origin_server_ts': 1432735824653,
-        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-        'sender': '@example:example.org',
-        'state_key': '',
-        'type': 'm.room.guest_access',
-        'unsigned': {'age': 1234}
-      }, room, 1432735824653.0));
+      room.setState(Event.fromJson(
+        {
+          'content': {'guest_access': 'can_join'},
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'state_key': '',
+          'type': 'm.room.guest_access',
+          'unsigned': {'age': 1234}
+        },
+        room,
+      ));
       expect(room.guestAccess, GuestAccess.canJoin);
       await room.setGuestAccess(GuestAccess.canJoin);
     });
@@ -790,145 +794,175 @@ void main() {
     test('historyVisibility', () async {
       expect(room.canChangeHistoryVisibility, false);
       expect(room.historyVisibility, null);
-      room.setState(Event.fromJson({
-        'content': {'history_visibility': 'shared'},
-        'event_id': '\$143273582443PhrSn:example.org',
-        'origin_server_ts': 1432735824653,
-        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-        'sender': '@example:example.org',
-        'state_key': '',
-        'type': 'm.room.history_visibility',
-        'unsigned': {'age': 1234}
-      }, room, 1432735824653.0));
+      room.setState(Event.fromJson(
+        {
+          'content': {'history_visibility': 'shared'},
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'state_key': '',
+          'type': 'm.room.history_visibility',
+          'unsigned': {'age': 1234}
+        },
+        room,
+      ));
       expect(room.historyVisibility, HistoryVisibility.shared);
       await room.setHistoryVisibility(HistoryVisibility.joined);
     });
 
     test('setState', () async {
       // not set non-state-events
-      room.setState(Event.fromJson({
-        'content': {'history_visibility': 'shared'},
-        'event_id': '\$143273582443PhrSn:example.org',
-        'origin_server_ts': 1432735824653,
-        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-        'sender': '@example:example.org',
-        'type': 'm.custom',
-        'unsigned': {'age': 1234}
-      }, room, 1432735824653.0));
+      room.setState(Event.fromJson(
+        {
+          'content': {'history_visibility': 'shared'},
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'type': 'm.custom',
+          'unsigned': {'age': 1234}
+        },
+        room,
+      ));
       expect(room.getState('m.custom') != null, false);
 
       // set state events
-      room.setState(Event.fromJson({
-        'content': {'history_visibility': 'shared'},
-        'event_id': '\$143273582443PhrSn:example.org',
-        'origin_server_ts': 1432735824653,
-        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-        'sender': '@example:example.org',
-        'state_key': '',
-        'type': 'm.custom',
-        'unsigned': {'age': 1234}
-      }, room, 1432735824653.0));
+      room.setState(Event.fromJson(
+        {
+          'content': {'history_visibility': 'shared'},
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'state_key': '',
+          'type': 'm.custom',
+          'unsigned': {'age': 1234}
+        },
+        room,
+      ));
       expect(room.getState('m.custom') != null, true);
 
       // sets messages as state events
-      room.setState(Event.fromJson({
-        'content': {'history_visibility': 'shared'},
-        'event_id': '\$143273582443PhrSn:example.org',
-        'origin_server_ts': 1432735824653,
-        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-        'sender': '@example:example.org',
-        'type': 'm.room.message',
-        'unsigned': {'age': 1234}
-      }, room, 1432735824653.0));
+      room.setState(Event.fromJson(
+        {
+          'content': {'history_visibility': 'shared'},
+          'event_id': '\$143273582443PhrSn:example.org',
+          'origin_server_ts': 1432735824653,
+          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+          'sender': '@example:example.org',
+          'type': 'm.room.message',
+          'unsigned': {'age': 1234}
+        },
+        room,
+      ));
       expect(room.getState('m.room.message') != null, true);
     });
 
     test('Spaces', () async {
       expect(room.isSpace, false);
       room.states['m.room.create'] = {
-        '': Event.fromJson({
-          'content': {'type': 'm.space'},
-          'event_id': '\$143273582443PhrSn:example.org',
-          'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-          'sender': '@example:example.org',
-          'type': 'm.room.create',
-          'unsigned': {'age': 1234},
-          'state_key': '',
-        }, room, 1432735824653.0),
+        '': Event.fromJson(
+          {
+            'content': {'type': 'm.space'},
+            'event_id': '\$143273582443PhrSn:example.org',
+            'origin_server_ts': 1432735824653,
+            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+            'sender': '@example:example.org',
+            'type': 'm.room.create',
+            'unsigned': {'age': 1234},
+            'state_key': '',
+          },
+          room,
+        ),
       };
       expect(room.isSpace, true);
 
       expect(room.spaceParents.isEmpty, true);
       room.states[EventTypes.spaceParent] = {
-        '!1234:example.invalid': Event.fromJson({
-          'content': {
-            'via': ['example.invalid']
+        '!1234:example.invalid': Event.fromJson(
+          {
+            'content': {
+              'via': ['example.invalid']
+            },
+            'event_id': '\$143273582443PhrSn:example.org',
+            'origin_server_ts': 1432735824653,
+            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+            'sender': '@example:example.org',
+            'type': EventTypes.spaceParent,
+            'unsigned': {'age': 1234},
+            'state_key': '!1234:example.invalid',
           },
-          'event_id': '\$143273582443PhrSn:example.org',
-          'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-          'sender': '@example:example.org',
-          'type': EventTypes.spaceParent,
-          'unsigned': {'age': 1234},
-          'state_key': '!1234:example.invalid',
-        }, room, 1432735824653.0),
+          room,
+        ),
       };
       expect(room.spaceParents.length, 1);
 
       expect(room.spaceChildren.isEmpty, true);
       room.states[EventTypes.spaceChild] = {
-        '!b:example.invalid': Event.fromJson({
-          'content': {
-            'via': ['example.invalid'],
-            'order': 'b',
+        '!b:example.invalid': Event.fromJson(
+          {
+            'content': {
+              'via': ['example.invalid'],
+              'order': 'b',
+            },
+            'event_id': '\$143273582443PhrSn:example.org',
+            'origin_server_ts': 1432735824653,
+            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+            'sender': '@example:example.org',
+            'type': EventTypes.spaceChild,
+            'unsigned': {'age': 1234},
+            'state_key': '!b:example.invalid',
           },
-          'event_id': '\$143273582443PhrSn:example.org',
-          'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-          'sender': '@example:example.org',
-          'type': EventTypes.spaceChild,
-          'unsigned': {'age': 1234},
-          'state_key': '!b:example.invalid',
-        }, room, 1432735824653.0),
-        '!c:example.invalid': Event.fromJson({
-          'content': {
-            'via': ['example.invalid'],
-            'order': 'c',
+          room,
+        ),
+        '!c:example.invalid': Event.fromJson(
+          {
+            'content': {
+              'via': ['example.invalid'],
+              'order': 'c',
+            },
+            'event_id': '\$143273582443PhrSn:example.org',
+            'origin_server_ts': 1432735824653,
+            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+            'sender': '@example:example.org',
+            'type': EventTypes.spaceChild,
+            'unsigned': {'age': 1234},
+            'state_key': '!c:example.invalid',
           },
-          'event_id': '\$143273582443PhrSn:example.org',
-          'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-          'sender': '@example:example.org',
-          'type': EventTypes.spaceChild,
-          'unsigned': {'age': 1234},
-          'state_key': '!c:example.invalid',
-        }, room, 1432735824653.0),
-        '!noorder:example.invalid': Event.fromJson({
-          'content': {
-            'via': ['example.invalid'],
+          room,
+        ),
+        '!noorder:example.invalid': Event.fromJson(
+          {
+            'content': {
+              'via': ['example.invalid'],
+            },
+            'event_id': '\$143273582443PhrSn:example.org',
+            'origin_server_ts': 1432735824653,
+            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+            'sender': '@example:example.org',
+            'type': EventTypes.spaceChild,
+            'unsigned': {'age': 1234},
+            'state_key': '!noorder:example.invalid',
           },
-          'event_id': '\$143273582443PhrSn:example.org',
-          'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-          'sender': '@example:example.org',
-          'type': EventTypes.spaceChild,
-          'unsigned': {'age': 1234},
-          'state_key': '!noorder:example.invalid',
-        }, room, 1432735824653.0),
-        '!a:example.invalid': Event.fromJson({
-          'content': {
-            'via': ['example.invalid'],
-            'order': 'a',
+          room,
+        ),
+        '!a:example.invalid': Event.fromJson(
+          {
+            'content': {
+              'via': ['example.invalid'],
+              'order': 'a',
+            },
+            'event_id': '\$143273582443PhrSn:example.org',
+            'origin_server_ts': 1432735824653,
+            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+            'sender': '@example:example.org',
+            'type': EventTypes.spaceChild,
+            'unsigned': {'age': 1234},
+            'state_key': '!a:example.invalid',
           },
-          'event_id': '\$143273582443PhrSn:example.org',
-          'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-          'sender': '@example:example.org',
-          'type': EventTypes.spaceChild,
-          'unsigned': {'age': 1234},
-          'state_key': '!a:example.invalid',
-        }, room, 1432735824653.0),
+          room,
+        ),
       };
       expect(room.spaceChildren.length, 4);
 
