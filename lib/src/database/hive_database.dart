@@ -282,8 +282,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     final accountData = <String, BasicEvent>{};
     for (final key in _accountDataBox.keys) {
       final raw = await _accountDataBox.get(key);
-      accountData[key] = BasicEvent(
-        type: key,
+      accountData[key.toString().fromHiveKey] = BasicEvent(
+        type: key.toString().fromHiveKey,
         content: convertToJson(raw),
       );
     }
@@ -1159,7 +1159,7 @@ class MultiKey {
   const MultiKey.byParts(this.parts);
 
   MultiKey.fromString(String multiKeyString)
-      : parts = multiKeyString.split('|');
+      : parts = multiKeyString.split('|').map((s) => s.fromHiveKey).toList();
 
   @override
   String toString() => parts.map((s) => s.toHiveKey).join('|');
@@ -1172,4 +1172,8 @@ extension HiveKeyExtension on String {
   String get toHiveKey => isValidMatrixId
       ? '$sigil${Uri.encodeComponent(localpart)}:${Uri.encodeComponent(domain)}'
       : Uri.encodeComponent(this);
+}
+
+extension FromHiveKeyExtension on String {
+  String get fromHiveKey => Uri.decodeComponent(this);
 }

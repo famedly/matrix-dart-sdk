@@ -155,6 +155,10 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
     await database.storeAccountData(clientId, 'm.test', '{"foo":"bar"}');
     final events = await database.getAccountData(clientId);
     expect(events.values.single.type, 'm.test');
+
+    await database.storeAccountData(clientId, 'm.abc+de', '{"foo":"bar"}');
+    final events2 = await database.getAccountData(clientId);
+    expect(events2.values.any((element) => element.type == 'm.abc+de'), true);
   });
   test('storeEventUpdate', () async {
     await database.storeEventUpdate(
