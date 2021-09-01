@@ -240,7 +240,7 @@ class Room {
     if ((name?.isEmpty ?? true) &&
         (canonicalAlias?.isEmpty ?? true) &&
         !isDirectChat &&
-        (summary.mHeroes != null && summary.mHeroes.isNotEmpty)) {
+        effectiveHeroes.isNotEmpty) {
       return i18n.groupWith(displayname);
     }
     if (displayname?.isNotEmpty ?? false) {
@@ -255,18 +255,46 @@ class Room {
       ? getState(EventTypes.RoomTopic).content['topic']
       : '';
 
+  /// Get the effective m.heroes for this room. If it is empty, we calculate
+  /// it ourselves based on the room state. Automatically strips empty and our
+  /// own entries.
+  List<String> get effectiveHeroes {
+    final heroes = <String>[];
+    if (summary.mHeroes != null &&
+        summary.mHeroes.isNotEmpty &&
+        summary.mHeroes.any((h) => h.isNotEmpty)) {
+      heroes.addAll(summary.mHeroes);
+    } else {
+      if (states[EventTypes.RoomMember] is Map<String, dynamic>) {
+        var entries = 0;
+        for (final testMembership in [Membership.join, Membership.invite]) {
+          for (final state in states[EventTypes.RoomMember].values) {
+            if (state.type == EventTypes.RoomMember &&
+                state.stateKey != client?.userID &&
+                state.asUser.membership == testMembership) {
+              heroes.add(state.stateKey);
+              entries++;
+              if (entries >= 5) break;
+            }
+          }
+          if (entries >= 5) break;
+        }
+      }
+    }
+    heroes.removeWhere((h) => h.isEmpty || h == client?.userID);
+    return heroes;
+  }
+
   /// The avatar of the room if set by a participant.
   Uri get avatar {
     if (getState(EventTypes.RoomAvatar) != null &&
         getState(EventTypes.RoomAvatar).content['url'] is String) {
       return Uri.tryParse(getState(EventTypes.RoomAvatar).content['url']);
     }
-    if (summary.mHeroes != null &&
-        summary.mHeroes.length == 1 &&
-        getState(EventTypes.RoomMember, summary.mHeroes.first) != null) {
-      return getState(EventTypes.RoomMember, summary.mHeroes.first)
-          .asUser
-          .avatarUrl;
+    final heroes = effectiveHeroes;
+    if (heroes.length == 1 &&
+        getState(EventTypes.RoomMember, heroes.first) != null) {
+      return getState(EventTypes.RoomMember, heroes.first).asUser.avatarUrl;
     }
     if (membership == Membership.invite &&
         getState(EventTypes.RoomMember, client.userID) != null) {
@@ -404,20 +432,7 @@ class Room {
         canonicalAlias.length > 3) {
       return canonicalAlias.localpart;
     }
-    var heroes = <String>[];
-    if (summary.mHeroes != null &&
-        summary.mHeroes.isNotEmpty &&
-        summary.mHeroes.any((h) => h.isNotEmpty)) {
-      heroes = summary.mHeroes;
-    } else {
-      if (states[EventTypes.RoomMember] is Map<String, dynamic>) {
-        for (final entry in states[EventTypes.RoomMember].entries) {
-          final state = entry.value;
-          if (state.type == EventTypes.RoomMember &&
-              state.stateKey != client?.userID) heroes.add(state.stateKey);
-        }
-      }
-    }
+    final heroes = effectiveHeroes;
     if (heroes.isNotEmpty) {
       return heroes
           .where((hero) => hero.isNotEmpty)

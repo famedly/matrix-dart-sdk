@@ -89,6 +89,21 @@ void main() {
         stateKey: '',
       ));
 
+      for (final h in heroes) {
+        room.setState(Event(
+          room: room,
+          eventId: '143273582443PhrSn:example.org',
+          roomId: id,
+          sortOrder: 0.0,
+          originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
+          senderId: h,
+          type: 'm.room.member',
+          unsigned: {'age': 1234},
+          content: {'membership': 'join'},
+          stateKey: h,
+        ));
+      }
+
       expect(room.id, id);
       expect(room.membership, membership);
       expect(room.notificationCount, notificationCount);
@@ -96,6 +111,12 @@ void main() {
       expect(room.summary.mJoinedMemberCount, notificationCount);
       expect(room.summary.mInvitedMemberCount, notificationCount);
       expect(room.summary.mHeroes, heroes);
+      expect(room.effectiveHeroes, heroes);
+      final heroesBackup = List<String>.from(room.summary.mHeroes);
+      room.summary.mHeroes.clear();
+      expect(room.effectiveHeroes,
+          ['@alice:matrix.org', '@bob:example.com', '@charley:example.org']);
+      room.summary.mHeroes.addAll(heroesBackup);
       expect(room.displayname, 'Alice, Bob, Charley');
       expect(room.getState('m.room.join_rules').content['join_rule'], 'public');
       expect(room.roomAccountData['com.test.foo'].content['foo'], 'bar');
