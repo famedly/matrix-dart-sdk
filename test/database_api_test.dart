@@ -18,6 +18,7 @@
  */
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:async';
 
 import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
@@ -48,6 +49,31 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   int toDeviceQueueIndex;
   test('Open', () async {
     database = await futureDatabase;
+  });
+  test('transaction', () async {
+    print('Starting test...');
+    var counter = 0;
+    await database.transaction(() async {
+      expect(counter++, 0);
+      await database.transaction(() async {
+        expect(counter++, 1);
+        await Future.delayed(Duration(milliseconds: 50));
+        expect(counter++, 2);
+      });
+      expect(counter++, 3);
+    });
+
+    // we can't use Zone.root.run inside of tests so we abuse timers instead
+    Timer(Duration(milliseconds: 50), () async {
+      await database.transaction(() async {
+        expect(counter++, 6);
+      });
+    });
+    await database.transaction(() async {
+      expect(counter++, 4);
+      await Future.delayed(Duration(milliseconds: 100));
+      expect(counter++, 5);
+    });
   });
   test('insertIntoToDeviceQueue', () async {
     toDeviceQueueIndex = await database.insertIntoToDeviceQueue(
