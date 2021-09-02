@@ -268,6 +268,12 @@ class Room {
           .asUser
           .avatarUrl;
     }
+    if (isDirectChat) {
+      final user = directChatMatrixID;
+      if (user != null) {
+        return getUserByMXIDSync(user).avatarUrl;
+      }
+    }
     if (membership == Membership.invite &&
         getState(EventTypes.RoomMember, client.userID) != null) {
       return getState(EventTypes.RoomMember, client.userID).sender.avatarUrl;
@@ -404,25 +410,17 @@ class Room {
         canonicalAlias.length > 3) {
       return canonicalAlias.localpart;
     }
-    var heroes = <String>[];
-    if (summary.mHeroes != null &&
-        summary.mHeroes.isNotEmpty &&
-        summary.mHeroes.any((h) => h.isNotEmpty)) {
-      heroes = summary.mHeroes;
-    } else {
-      if (states[EventTypes.RoomMember] is Map<String, dynamic>) {
-        for (final entry in states[EventTypes.RoomMember].entries) {
-          final state = entry.value;
-          if (state.type == EventTypes.RoomMember &&
-              state.stateKey != client?.userID) heroes.add(state.stateKey);
-        }
-      }
-    }
-    if (heroes.isNotEmpty) {
-      return heroes
+    if (summary.mHeroes != null && summary.mHeroes.isNotEmpty) {
+      return summary.mHeroes
           .where((hero) => hero.isNotEmpty)
           .map((hero) => getUserByMXIDSync(hero).calcDisplayname())
           .join(', ');
+    }
+    if (isDirectChat) {
+      final user = directChatMatrixID;
+      if (user != null) {
+        return getUserByMXIDSync(user).displayName;
+      }
     }
     if (membership == Membership.invite &&
         getState(EventTypes.RoomMember, client.userID) != null) {
