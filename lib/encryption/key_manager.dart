@@ -157,6 +157,9 @@ class KeyManager {
       json.encode(senderClaimedKeys),
     )
         ?.then((_) {
+      if (!client.isLogged() || client.encryption == null) {
+        return;
+      }
       if (uploaded) {
         client.database
             .markInboundGroupSessionAsUploaded(client.id, roomId, sessionId);
