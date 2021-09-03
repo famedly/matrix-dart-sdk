@@ -144,6 +144,9 @@ class KeyManager {
       _inboundGroupSessions[roomId] = <String, SessionKey>{};
     }
     _inboundGroupSessions[roomId][sessionId] = newSession;
+    if (!client.isLogged() || client.encryption == null) {
+      return;
+    }
     client.database
         ?.storeInboundGroupSession(
       client.id,
