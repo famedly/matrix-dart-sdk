@@ -1,3 +1,16 @@
+## [0.4.0] - 3nd Sep 2021
+- fix: Check if database got disposed in keyManager
+- fix: Implement dummy transactions for hive
+- fix: room account data key/type returned encoded
+- fix: Missing null check
+- fix: uiaRequests send broken auth object at first try
+- fix: Requesting history being funky
+- fix: Don't lag when sending messages in big rooms
+- feat: Do not load all timeline events from store at once
+- feat: Pin invited rooms
+- refactor: Replace all logic regarding sortOrder
+- refactor: Workarounds for missing mHeroes in rooms
+
 ## [0.3.6] - 30nd Aug 2021
 - hotfix: uiaRequests send broken auth object at first try
 
