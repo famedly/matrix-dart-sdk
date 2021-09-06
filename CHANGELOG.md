@@ -1,3 +1,6 @@
+## [0.4.1] - 6nd Sep 2021
+- fix: Make bytes in EncryptedFile nullable
+
 ## [0.4.0] - 3nd Sep 2021
 - fix: Check if database got disposed in keyManager
 - fix: Implement dummy transactions for hive
