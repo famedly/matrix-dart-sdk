@@ -22,12 +22,12 @@ import 'crypto.dart';
 
 class EncryptedFile {
   EncryptedFile({
-    this.data,
+    required this.data,
     required this.k,
     required this.iv,
     required this.sha256,
   });
-  Uint8List? data;
+  Uint8List data;
   String k;
   String iv;
   String sha256;
