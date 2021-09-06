@@ -1,3 +1,6 @@
+## [0.4.2] - 6nd Sep 2021
+- revert: Make bytes in EncryptedFile nullable
+
 ## [0.4.1] - 6nd Sep 2021
 - fix: Make bytes in EncryptedFile nullable
 
