@@ -51,7 +51,6 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
     database = await futureDatabase;
   });
   test('transaction', () async {
-    print('Starting test...');
     var counter = 0;
     await database.transaction(() async {
       expect(counter++, 0);
