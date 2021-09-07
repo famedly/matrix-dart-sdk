@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -35,10 +34,10 @@ extension MxcUriExtension on Uri {
   /// If `animated` (default false) is set to true, an animated thumbnail is requested
   /// as per MSC2705. Thumbnails only animate if the media repository supports that.
   Uri getThumbnail(Client matrix,
-      {num width,
-      num height,
-      ThumbnailMethod method = ThumbnailMethod.crop,
-      bool animated = false}) {
+      {num? width,
+      num? height,
+      ThumbnailMethod? method = ThumbnailMethod.crop,
+      bool? animated = false}) {
     if (!isScheme('mxc')) return this;
     if (matrix.homeserver == null) {
       return Uri();
