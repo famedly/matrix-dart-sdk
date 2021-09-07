@@ -27,7 +27,6 @@ import '../../encryption.dart';
 import '../client.dart';
 import '../event.dart';
 import '../room.dart';
-import '../user.dart';
 
 enum UserVerifiedStatus { verified, unknown, unknownDevice }
 
@@ -79,8 +78,7 @@ class DeviceKeysList {
   Future<KeyVerification> startVerification() async {
     if (userId != client.userID) {
       // in-room verification with someone else
-      final roomId =
-          await User(userId, room: Room(client: client)).startDirectChat();
+      final roomId = await client.startDirectChat(userId);
       if (roomId == null) {
         throw Exception('Unable to start new room');
       }
