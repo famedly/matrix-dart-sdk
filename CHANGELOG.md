@@ -1,3 +1,6 @@
+## [0.4.3] - 8nd Sep 2021
+- fix: Do not handle sending event updates which are already synced
+
 ## [0.4.2] - 6nd Sep 2021
 - revert: Make bytes in EncryptedFile nullable
 
