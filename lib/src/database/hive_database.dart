@@ -828,6 +828,12 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
               ?.tryGet<int>(messageSendingStatusKey) ??
           2;
 
+      // Is this the response to a sending event which is already synced? Then
+      // there is nothing to do here.
+      if (newStatus != 2 && prevEvent?.status == 2) {
+        return;
+      }
+
       final status =
           newStatus == -1 || prevEvent == null || prevEvent.status == null
               ? newStatus
