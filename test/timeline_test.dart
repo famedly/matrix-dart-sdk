@@ -24,7 +24,6 @@ import 'package:matrix/src/client.dart';
 import 'package:matrix/src/room.dart';
 import 'package:matrix/src/timeline.dart';
 import 'package:matrix/src/utils/event_update.dart';
-import 'package:matrix/src/utils/room_update.dart';
 import 'package:olm/olm.dart' as olm;
 import 'fake_client.dart';
 
@@ -293,14 +292,18 @@ void main() {
     });
 
     test('Clear cache on limited timeline', () async {
-      client.onRoomUpdate.add(RoomUpdate(
-        id: roomID,
-        membership: Membership.join,
-        notification_count: 0,
-        highlight_count: 0,
-        limitedTimeline: true,
-        prev_batch: 'blah',
-      ));
+      client.onSync.add(SyncUpdate(nextBatch: '1234')
+        ..rooms = (RoomsUpdate()
+          ..join = {
+            roomID: (JoinedRoomUpdate()
+              ..timeline = (TimelineUpdate()
+                ..limited = true
+                ..prevBatch = 'blah')
+              ..unreadNotifications = UnreadNotificationCounts.fromJson({
+                'highlight_count': 0,
+                'notification_count': 0,
+              }))
+          }));
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events.isEmpty, true);
     });

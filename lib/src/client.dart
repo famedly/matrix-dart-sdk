@@ -37,7 +37,6 @@ import 'utils/device_keys_list.dart';
 import 'utils/event_update.dart';
 import 'utils/http_timeout.dart';
 import 'utils/matrix_file.dart';
-import 'utils/room_update.dart';
 import 'utils/to_device_event.dart';
 import 'utils/uia_request.dart';
 import 'utils/multilock.dart';
@@ -758,11 +757,6 @@ class Client extends MatrixApi {
   /// onRoomEvent( "m.room.message", "!chat_id:server.com", "timeline", {sender: "@bob:server.com", body: "Hello world"} )
   final StreamController<EventUpdate> onEvent = StreamController.broadcast();
 
-  /// Outside of the events there are updates for the global chat states which
-  /// are handled by this signal:
-  final StreamController<RoomUpdate> onRoomUpdate =
-      StreamController.broadcast();
-
   /// The onToDeviceEvent is called when there comes a new to device event. It is
   /// already decrypted if necessary.
   final StreamController<ToDeviceEvent> onToDeviceEvent =
@@ -1255,14 +1249,12 @@ class Client extends MatrixApi {
       final id = entry.key;
       final room = entry.value;
 
-      final update = RoomUpdate.fromSyncRoomUpdate(room, id);
       if (database != null) {
         // TODO: This method seems to be rather slow for some updates
         // Perhaps don't dynamically build that one query?
-        await database.storeRoomUpdate(this.id, update, getRoomById(id));
+        await database.storeRoomUpdate(this.id, id, room, getRoomById(id));
       }
-      _updateRoomsByRoomUpdate(update);
-      onRoomUpdate.add(update);
+      _updateRoomsByRoomUpdate(id, room);
 
       /// Handle now all room events and save them in the database
       if (room is JoinedRoomUpdate) {
@@ -1432,49 +1424,58 @@ class Client extends MatrixApi {
     }
   }
 
-  void _updateRoomsByRoomUpdate(RoomUpdate chatUpdate) {
+  void _updateRoomsByRoomUpdate(String roomId, SyncRoomUpdate chatUpdate) {
     // Update the chat list item.
     // Search the room in the rooms
     num j = 0;
     for (j = 0; j < rooms.length; j++) {
-      if (rooms[j].id == chatUpdate.id) break;
+      if (rooms[j].id == roomId) break;
     }
-    final found = (j < rooms.length && rooms[j].id == chatUpdate.id);
-    final isLeftRoom = chatUpdate.membership == Membership.leave;
+    final found = (j < rooms.length && rooms[j].id == roomId);
+    final membership = chatUpdate is LeftRoomUpdate
+        ? Membership.leave
+        : chatUpdate is InvitedRoomUpdate
+            ? Membership.invite
+            : Membership.join;
 
     // Does the chat already exist in the list rooms?
-    if (!found && !isLeftRoom) {
-      final position = chatUpdate.membership == Membership.invite ? 0 : j;
+    if (!found && membership != Membership.leave) {
+      final position = membership == Membership.invite ? 0 : j;
       // Add the new chat to the list
-      final newRoom = Room(
-        id: chatUpdate.id,
-        membership: chatUpdate.membership,
-        prev_batch: chatUpdate.prev_batch,
-        highlightCount: chatUpdate.highlight_count,
-        notificationCount: chatUpdate.notification_count,
-        summary: chatUpdate.summary,
-        roomAccountData: {},
-        client: this,
-      );
+      final newRoom = chatUpdate is JoinedRoomUpdate
+          ? Room(
+              id: roomId,
+              membership: membership,
+              prev_batch: chatUpdate.timeline?.prevBatch,
+              highlightCount: chatUpdate.unreadNotifications?.highlightCount,
+              notificationCount:
+                  chatUpdate.unreadNotifications?.notificationCount,
+              summary: chatUpdate.summary,
+              client: this,
+            )
+          : Room(id: roomId, membership: membership, client: this);
       rooms.insert(position, newRoom);
     }
     // If the membership is "leave" then remove the item and stop here
-    else if (found && isLeftRoom) {
+    else if (found && membership == Membership.leave) {
       rooms.removeAt(j);
     }
     // Update notification, highlight count and/or additional informations
     else if (found &&
-        chatUpdate.membership != Membership.leave &&
-        (rooms[j].membership != chatUpdate.membership ||
-            rooms[j].notificationCount != chatUpdate.notification_count ||
-            rooms[j].highlightCount != chatUpdate.highlight_count ||
+        chatUpdate is JoinedRoomUpdate &&
+        (rooms[j].membership != membership ||
+            rooms[j].notificationCount !=
+                (chatUpdate.unreadNotifications?.notificationCount ?? 0) ||
+            rooms[j].highlightCount !=
+                (chatUpdate.unreadNotifications?.highlightCount ?? 0) ||
             chatUpdate.summary != null ||
-            chatUpdate.prev_batch != null)) {
-      rooms[j].membership = chatUpdate.membership;
-      rooms[j].notificationCount = chatUpdate.notification_count;
-      rooms[j].highlightCount = chatUpdate.highlight_count;
-      if (chatUpdate.prev_batch != null) {
-        rooms[j].prev_batch = chatUpdate.prev_batch;
+            chatUpdate.timeline?.prevBatch != null)) {
+      rooms[j].membership = membership;
+      rooms[j].notificationCount =
+          chatUpdate.unreadNotifications?.notificationCount;
+      rooms[j].highlightCount = chatUpdate.unreadNotifications?.highlightCount;
+      if (chatUpdate.timeline?.prevBatch != null) {
+        rooms[j].prev_batch = chatUpdate.timeline?.prevBatch;
       }
       if (chatUpdate.summary != null) {
         final roomSummaryJson = rooms[j].summary.toJson()
@@ -1482,7 +1483,8 @@ class Client extends MatrixApi {
         rooms[j].summary = RoomSummary.fromJson(roomSummaryJson);
       }
       if (rooms[j].onUpdate != null) rooms[j].onUpdate.add(rooms[j].id);
-      if (chatUpdate.limitedTimeline && requestHistoryOnLimitedTimeline) {
+      if ((chatUpdate?.timeline?.limited ?? false) &&
+          requestHistoryOnLimitedTimeline) {
         Logs().v('Limited timeline for ${rooms[j].id} request history now');
         runInRoot(rooms[j].requestHistory);
       }

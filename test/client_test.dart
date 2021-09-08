@@ -26,7 +26,6 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/client.dart';
 import 'package:matrix/src/utils/event_update.dart';
 import 'package:matrix/src/utils/matrix_file.dart';
-import 'package:matrix/src/utils/room_update.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 import 'package:canonical_json/canonical_json.dart';
@@ -38,7 +37,6 @@ import 'fake_matrix_api.dart';
 void main() {
   Client matrix;
 
-  Future<List<RoomUpdate>> roomUpdateListFuture;
   Future<List<EventUpdate>> eventUpdateListFuture;
   Future<List<ToDeviceEvent>> toDeviceUpdateListFuture;
 
@@ -56,7 +54,6 @@ void main() {
 
     matrix = Client('testclient', httpClient: FakeMatrixApi());
 
-    roomUpdateListFuture = matrix.onRoomUpdate.stream.toList();
     eventUpdateListFuture = matrix.onEvent.stream.toList();
     toDeviceUpdateListFuture = matrix.onToDeviceEvent.stream.toList();
 
@@ -217,28 +214,6 @@ void main() {
       expect(loginState, LoginState.loggedOut);
     });
 
-    test('Room Update Test', () async {
-      await matrix.onRoomUpdate.close();
-
-      final roomUpdateList = await roomUpdateListFuture;
-
-      expect(roomUpdateList.length, 4);
-
-      expect(roomUpdateList[0].id == '!726s6s6q:example.com', true);
-      expect(roomUpdateList[0].membership == Membership.join, true);
-      expect(roomUpdateList[0].prev_batch == 't34-23535_0_0', true);
-      expect(roomUpdateList[0].limitedTimeline == true, true);
-      expect(roomUpdateList[0].notification_count == 2, true);
-      expect(roomUpdateList[0].highlight_count == 2, true);
-
-      expect(roomUpdateList[1].id == '!696r7674:example.com', true);
-      expect(roomUpdateList[1].membership == Membership.invite, true);
-      expect(roomUpdateList[1].prev_batch == null, true);
-      expect(roomUpdateList[1].limitedTimeline == false, true);
-      expect(roomUpdateList[1].notification_count == 0, true);
-      expect(roomUpdateList[1].highlight_count == 0, true);
-    });
-
     test('Event Update Test', () async {
       await matrix.onEvent.close();
 
@@ -318,7 +293,6 @@ void main() {
     test('Login', () async {
       matrix = Client('testclient', httpClient: FakeMatrixApi());
 
-      roomUpdateListFuture = matrix.onRoomUpdate.stream.toList();
       eventUpdateListFuture = matrix.onEvent.stream.toList();
 
       await matrix.checkHomeserver('https://fakeserver.notexisting',

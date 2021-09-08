@@ -59,7 +59,8 @@ abstract class DatabaseApi {
 
   /// Stores a RoomUpdate object in the database. Must be called inside of
   /// [transaction].
-  Future<void> storeRoomUpdate(int clientId, RoomUpdate roomUpdate,
+  Future<void> storeRoomUpdate(
+      int clientId, String roomId, SyncRoomUpdate roomUpdate,
       [Room oldRoom]);
 
   /// Stores an EventUpdate object in the database. Must be called inside of

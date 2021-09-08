@@ -106,15 +106,13 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
     expect(file == null, true);
   });
   test('storeRoomUpdate', () async {
-    await database.storeRoomUpdate(
-        clientId,
-        RoomUpdate(
-          id: '!testroom',
-          highlight_count: 0,
-          notification_count: 0,
-          limitedTimeline: false,
-          membership: Membership.join,
-        ));
+    final roomUpdate = JoinedRoomUpdate.fromJson({
+      'highlight_count': 0,
+      'notification_count': 0,
+      'limited_timeline': false,
+      'membership': Membership.join,
+    });
+    await database.storeRoomUpdate(clientId, '!testroom', roomUpdate);
     final rooms = await database.getRoomList(Client('testclient'));
     expect(rooms.single.id, '!testroom');
   });

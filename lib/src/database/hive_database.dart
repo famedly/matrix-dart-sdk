@@ -990,38 +990,55 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> storeRoomUpdate(int clientId, RoomUpdate roomUpdate,
+  Future<void> storeRoomUpdate(
+      int clientId, String roomId, SyncRoomUpdate roomUpdate,
       [dynamic _]) async {
     // Leave room if membership is leave
-    if ({Membership.leave, Membership.ban}.contains(roomUpdate.membership)) {
-      await forgetRoom(clientId, roomUpdate.id);
+    if (roomUpdate is LeftRoomUpdate) {
+      await forgetRoom(clientId, roomId);
       return;
     }
+    final membership = roomUpdate is LeftRoomUpdate
+        ? Membership.leave
+        : roomUpdate is InvitedRoomUpdate
+            ? Membership.invite
+            : Membership.join;
     // Make sure room exists
-    if (!_roomsBox.containsKey(roomUpdate.id.toHiveKey)) {
+    if (!_roomsBox.containsKey(roomId.toHiveKey)) {
       await _roomsBox.put(
-          roomUpdate.id.toHiveKey,
-          Room(
-            id: roomUpdate.id,
-            membership: roomUpdate.membership,
-            highlightCount: roomUpdate.highlight_count?.toInt(),
-            notificationCount: roomUpdate.notification_count?.toInt(),
-            prev_batch: roomUpdate.prev_batch,
-            summary: roomUpdate.summary,
-          ).toJson());
-    } else {
-      final currentRawRoom = await _roomsBox.get(roomUpdate.id.toHiveKey);
+          roomId.toHiveKey,
+          roomUpdate is JoinedRoomUpdate
+              ? Room(
+                  id: roomId,
+                  membership: membership,
+                  highlightCount:
+                      roomUpdate.unreadNotifications?.highlightCount?.toInt(),
+                  notificationCount: roomUpdate
+                      .unreadNotifications?.notificationCount
+                      ?.toInt(),
+                  prev_batch: roomUpdate.timeline?.prevBatch,
+                  summary: roomUpdate.summary,
+                ).toJson()
+              : Room(
+                  id: roomId,
+                  membership: membership,
+                ).toJson());
+    } else if (roomUpdate is JoinedRoomUpdate) {
+      final currentRawRoom = await _roomsBox.get(roomId.toHiveKey);
       final currentRoom = Room.fromJson(convertToJson(currentRawRoom));
       await _roomsBox.put(
-          roomUpdate.id.toHiveKey,
+          roomId.toHiveKey,
           Room(
-            id: roomUpdate.id,
-            membership: roomUpdate.membership ?? currentRoom.membership,
-            highlightCount: roomUpdate.highlight_count?.toInt() ??
-                currentRoom.highlightCount,
-            notificationCount: roomUpdate.notification_count?.toInt() ??
-                currentRoom.notificationCount,
-            prev_batch: roomUpdate.prev_batch ?? currentRoom.prev_batch,
+            id: roomId,
+            membership: membership,
+            highlightCount:
+                roomUpdate.unreadNotifications?.highlightCount?.toInt() ??
+                    currentRoom.highlightCount,
+            notificationCount:
+                roomUpdate.unreadNotifications?.notificationCount?.toInt() ??
+                    currentRoom.notificationCount,
+            prev_batch:
+                roomUpdate.timeline?.prevBatch ?? currentRoom.prev_batch,
             summary: RoomSummary.fromJson(currentRoom.summary.toJson()
               ..addAll(roomUpdate.summary?.toJson() ?? {})),
           ).toJson());
@@ -1029,9 +1046,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
     // Is the timeline limited? Then all previous messages should be
     // removed from the database!
-    if (roomUpdate.limitedTimeline) {
-      await _timelineFragmentsBox
-          .delete(MultiKey(roomUpdate.id, '').toString());
+    if (roomUpdate is JoinedRoomUpdate &&
+        roomUpdate.timeline?.limited == true) {
+      await _timelineFragmentsBox.delete(MultiKey(roomId, '').toString());
     }
   }
 

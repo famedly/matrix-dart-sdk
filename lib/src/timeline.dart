@@ -23,7 +23,6 @@ import '../matrix.dart';
 import 'event.dart';
 import 'room.dart';
 import 'utils/event_update.dart';
-import 'utils/room_update.dart';
 
 /// Represents the timeline of a room. The callback [onUpdate] will be triggered
 /// automatically. The initial
@@ -39,7 +38,7 @@ class Timeline {
   final void Function(int insertID) onInsert;
 
   StreamSubscription<EventUpdate> sub;
-  StreamSubscription<RoomUpdate> roomSub;
+  StreamSubscription<SyncUpdate> roomSub;
   StreamSubscription<String> sessionIdReceivedSub;
   bool isRequestingHistory = false;
 
@@ -107,13 +106,13 @@ class Timeline {
   Timeline({this.room, List<Event> events, this.onUpdate, this.onInsert})
       : events = events ?? [] {
     sub ??= room.client.onEvent.stream.listen(_handleEventUpdate);
-    // if the timeline is limited we want to clear our events cache
-    // as r.limitedTimeline can be "null" sometimes, we need to check for == true
-    // as after receiving a limited timeline room update new events are expected
-    // to be received via the onEvent stream, it is unneeded to call sortAndUpdate
-    roomSub ??= room.client.onRoomUpdate.stream
-        .where((r) => r.id == room.id && r.limitedTimeline == true)
-        .listen((r) {
+    // If the timeline is limited we want to clear our events cache
+    roomSub ??= room.client.onSync.stream
+        .where((sync) =>
+            sync.rooms?.join != null &&
+            sync.rooms.join.containsKey(room.id) &&
+            sync.rooms.join[room.id]?.timeline?.limited == true)
+        .listen((_) {
       events.clear();
       aggregatedEvents.clear();
     });
