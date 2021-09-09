@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -40,21 +39,21 @@ class Encryption {
 
   /// Returns the base64 encoded keys to store them in a store.
   /// This String should **never** leave the device!
-  String get pickledOlmAccount => olmManager.pickledOlmAccount;
+  String? get pickledOlmAccount => olmManager.pickledOlmAccount;
 
-  String get fingerprintKey => olmManager.fingerprintKey;
-  String get identityKey => olmManager.identityKey;
+  String? get fingerprintKey => olmManager.fingerprintKey;
+  String? get identityKey => olmManager.identityKey;
 
-  KeyManager keyManager;
-  OlmManager olmManager;
-  KeyVerificationManager keyVerificationManager;
-  CrossSigning crossSigning;
-  SSSS ssss;
+  late KeyManager keyManager;
+  late OlmManager olmManager;
+  late KeyVerificationManager keyVerificationManager;
+  late CrossSigning crossSigning;
+  late SSSS ssss;
 
   Encryption({
-    this.client,
-    this.debug,
-    this.enableE2eeRecovery,
+    required this.client,
+    this.debug = false,
+    required this.enableE2eeRecovery,
   }) {
     ssss = SSSS(this);
     keyManager = KeyManager(this);
@@ -81,7 +80,7 @@ class Encryption {
     }
   }
 
-  Bootstrap bootstrap({void Function() onUpdate}) => Bootstrap(
+  Bootstrap bootstrap({void Function()? onUpdate}) => Bootstrap(
         encryption: this,
         onUpdate: onUpdate,
       );
@@ -190,18 +189,24 @@ class Encryption {
       }
       final sessionId = content.sessionId;
       final senderKey = content.senderKey;
+      if (sessionId == null) {
+        throw DecryptException(DecryptException.unknownSession);
+      }
+
       final inboundGroupSession =
           keyManager.getInboundGroupSession(roomId, sessionId, senderKey);
-      if (inboundGroupSession == null) {
+      if (!(inboundGroupSession?.isValid ?? false)) {
         canRequestSession = true;
         throw DecryptException(DecryptException.unknownSession);
       }
+
       // decrypt errors here may mean we have a bad session key - others might have a better one
       canRequestSession = true;
 
-      final decryptResult = inboundGroupSession.inboundGroupSession
-          .decrypt(content.ciphertextMegolm);
+      final decryptResult = inboundGroupSession!.inboundGroupSession!
+          .decrypt(content.ciphertextMegolm!);
       canRequestSession = false;
+
       // we can't have the key be an int, else json-serializing will fail, thus we need it to be a string
       final messageIndexKey = 'key-' + decryptResult.message_index.toString();
       final messageIndexValue = event.eventId +
@@ -214,6 +219,7 @@ class Encryption {
         Logs().e('[Decrypt] Could not decrypt due to a corrupted session.');
         throw DecryptException(DecryptException.channelCorrupted);
       }
+
       inboundGroupSession.indexes[messageIndexKey] = messageIndexValue;
       if (!haveIndex) {
         // now we persist the udpated indexes into the database.
@@ -282,9 +288,11 @@ class Encryption {
     }
     try {
       if (client.database != null &&
-          keyManager.getInboundGroupSession(roomId, event.content['session_id'],
-                  event.content['sender_key']) ==
-              null) {
+          !(keyManager
+                  .getInboundGroupSession(roomId, event.content['session_id'],
+                      event.content['sender_key'])
+                  ?.isValid ??
+              false)) {
         await keyManager.loadInboundGroupSession(
             roomId, event.content['session_id'], event.content['sender_key']);
       }
@@ -325,21 +333,21 @@ class Encryption {
     if (room.encryptionAlgorithm != AlgorithmTypes.megolmV1AesSha2) {
       throw ('Unknown encryption algorithm');
     }
-    if (keyManager.getOutboundGroupSession(roomId) == null) {
+    if (keyManager.getOutboundGroupSession(roomId)?.isValid != true) {
       await keyManager.loadOutboundGroupSession(roomId);
     }
     await keyManager.clearOrUseOutboundGroupSession(roomId);
-    if (keyManager.getOutboundGroupSession(roomId) == null) {
+    if (keyManager.getOutboundGroupSession(roomId)?.isValid != true) {
       await keyManager.createOutboundGroupSession(roomId);
     }
     final sess = keyManager.getOutboundGroupSession(roomId);
-    if (sess == null) {
+    if (sess?.isValid != true) {
       throw ('Unable to create new outbound group session');
     }
     // we clone the payload as we do not want to remove 'm.relates_to' from the
     // original payload passed into this function
     payload = payload.copy();
-    final Map<String, dynamic> mRelatesTo = payload.remove('m.relates_to');
+    final Map<String, dynamic>? mRelatesTo = payload.remove('m.relates_to');
     final payloadContent = {
       'content': payload,
       'type': type,
@@ -348,7 +356,7 @@ class Encryption {
     final encryptedPayload = <String, dynamic>{
       'algorithm': AlgorithmTypes.megolmV1AesSha2,
       'ciphertext':
-          sess.outboundGroupSession.encrypt(json.encode(payloadContent)),
+          sess!.outboundGroupSession.encrypt(json.encode(payloadContent)),
       'device_id': client.deviceID,
       'sender_key': identityKey,
       'session_id': sess.outboundGroupSession.session_id(),
@@ -369,7 +377,7 @@ class Encryption {
     // check if we can set our own master key as verified, if it isn't yet
     if (client.database != null &&
         client.userDeviceKeys.containsKey(client.userID)) {
-      final masterKey = client.userDeviceKeys[client.userID].masterKey;
+      final masterKey = client.userDeviceKeys[client.userID]!.masterKey;
       if (masterKey != null &&
           !masterKey.directVerified &&
           masterKey
@@ -405,7 +413,7 @@ class Encryption {
 
 class DecryptException implements Exception {
   String cause;
-  String libolmMessage;
+  String? libolmMessage;
   DecryptException(this.cause, [this.libolmMessage]);
 
   @override

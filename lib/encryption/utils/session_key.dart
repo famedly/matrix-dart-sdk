@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -24,7 +23,7 @@ import '../../matrix.dart';
 
 class SessionKey {
   /// The raw json content of the key
-  Map<String, dynamic> content;
+  Map<String, dynamic> content = <String, dynamic>{};
 
   /// Map of stringified-index to event id, so that we can detect replay attacks
   Map<String, String> indexes;
@@ -34,7 +33,7 @@ class SessionKey {
   Map<String, Map<String, int>> allowedAtIndex;
 
   /// Underlying olm [InboundGroupSession] object
-  olm.InboundGroupSession inboundGroupSession;
+  olm.InboundGroupSession? inboundGroupSession;
 
   /// Key for libolm pickle / unpickle
   final String key;
@@ -47,10 +46,10 @@ class SessionKey {
       <String>[];
 
   /// Claimed keys of the original sender
-  Map<String, String> senderClaimedKeys;
+  late Map<String, String> senderClaimedKeys;
 
   /// Sender curve25519 key
-  String senderKey;
+  late String senderKey;
 
   /// Is this session valid?
   bool get isValid => inboundGroupSession != null;
@@ -62,66 +61,35 @@ class SessionKey {
   String sessionId;
 
   SessionKey(
-      {this.content,
-      this.inboundGroupSession,
-      this.key,
-      this.indexes,
-      this.allowedAtIndex,
-      this.roomId,
-      this.sessionId,
-      String senderKey,
-      Map<String, String> senderClaimedKeys}) {
-    _setSenderKey(senderKey);
-    _setSenderClaimedKeys(senderClaimedKeys);
-    indexes ??= <String, String>{};
-    allowedAtIndex ??= <String, Map<String, int>>{};
-  }
+      {required this.content,
+      required this.inboundGroupSession,
+      required this.key,
+      Map<String, String>? indexes,
+      Map<String, Map<String, int>>? allowedAtIndex,
+      required this.roomId,
+      required this.sessionId,
+      required this.senderKey,
+      required this.senderClaimedKeys})
+      : indexes = indexes ?? <String, String>{},
+        allowedAtIndex = allowedAtIndex ?? <String, Map<String, int>>{};
 
-  SessionKey.fromDb(StoredInboundGroupSession dbEntry, String key) : key = key {
-    final parsedContent = Event.getMapFromPayload(dbEntry.content);
-    final parsedIndexes = Event.getMapFromPayload(dbEntry.indexes);
-    final parsedAllowedAtIndex =
-        Event.getMapFromPayload(dbEntry.allowedAtIndex);
-    final parsedSenderClaimedKeys =
-        Event.getMapFromPayload(dbEntry.senderClaimedKeys);
-    content = parsedContent;
+  SessionKey.fromDb(StoredInboundGroupSession dbEntry, String key)
+      : key = key,
+        content = Event.getMapFromPayload(dbEntry.content),
+        indexes =
+            Map<String, String>.from(Event.getMapFromPayload(dbEntry.indexes)),
+        allowedAtIndex = Map<String, Map<String, int>>.from(
+            Event.getMapFromPayload(dbEntry.allowedAtIndex)
+                .map((k, v) => MapEntry(k, Map<String, int>.from(v)))),
+        roomId = dbEntry.roomId,
+        sessionId = dbEntry.sessionId,
+        senderKey = dbEntry.senderKey,
+        inboundGroupSession = olm.InboundGroupSession() {
+    final parsedSenderClaimedKeys = Map<String, String>.from(
+        Event.getMapFromPayload(dbEntry.senderClaimedKeys));
     // we need to try...catch as the map used to be <String, int> and that will throw an error.
-    try {
-      indexes = parsedIndexes != null
-          ? Map<String, String>.from(parsedIndexes)
-          : <String, String>{};
-    } catch (e) {
-      indexes = <String, String>{};
-    }
-    try {
-      allowedAtIndex = parsedAllowedAtIndex != null
-          ? Map<String, Map<String, int>>.from(parsedAllowedAtIndex
-              .map((k, v) => MapEntry(k, Map<String, int>.from(v))))
-          : <String, Map<String, int>>{};
-    } catch (e) {
-      allowedAtIndex = <String, Map<String, int>>{};
-    }
-    roomId = dbEntry.roomId;
-    sessionId = dbEntry.sessionId;
-    _setSenderKey(dbEntry.senderKey);
-    _setSenderClaimedKeys(Map<String, String>.from(parsedSenderClaimedKeys));
-
-    inboundGroupSession = olm.InboundGroupSession();
-    try {
-      inboundGroupSession.unpickle(key, dbEntry.pickle);
-    } catch (e, s) {
-      dispose();
-      Logs().e('[LibOlm] Unable to unpickle inboundGroupSession', e, s);
-    }
-  }
-
-  void _setSenderKey(String key) {
-    senderKey = key ?? content['sender_key'] ?? '';
-  }
-
-  void _setSenderClaimedKeys(Map<String, String> keys) {
-    senderClaimedKeys = (keys != null && keys.isNotEmpty)
-        ? keys
+    senderClaimedKeys = (parsedSenderClaimedKeys.isNotEmpty)
+        ? parsedSenderClaimedKeys
         : (content['sender_claimed_keys'] is Map
             ? Map<String, String>.from(content['sender_claimed_keys'])
             : (content['sender_claimed_ed25519_key'] is String
@@ -129,6 +97,13 @@ class SessionKey {
                     'ed25519': content['sender_claimed_ed25519_key']
                   }
                 : <String, String>{}));
+
+    try {
+      inboundGroupSession!.unpickle(key, dbEntry.pickle);
+    } catch (e, s) {
+      dispose();
+      Logs().e('[LibOlm] Unable to unpickle inboundGroupSession', e, s);
+    }
   }
 
   void dispose() {

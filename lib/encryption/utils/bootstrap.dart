@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020, 2021 Famedly GmbH
@@ -73,14 +72,14 @@ enum BootstrapState {
 class Bootstrap {
   final Encryption encryption;
   Client get client => encryption.client;
-  void Function() onUpdate;
+  void Function()? onUpdate;
   BootstrapState get state => _state;
   BootstrapState _state = BootstrapState.loading;
-  Map<String, OpenSSSS> oldSsssKeys;
-  OpenSSSS newSsssKey;
-  Map<String, String> secretMap;
+  Map<String, OpenSSSS>? oldSsssKeys;
+  OpenSSSS? newSsssKey;
+  Map<String, String>? secretMap;
 
-  Bootstrap({this.encryption, this.onUpdate}) {
+  Bootstrap({required this.encryption, this.onUpdate}) {
     if (analyzeSecrets().isNotEmpty) {
       state = BootstrapState.askWipeSsss;
     } else {
@@ -89,12 +88,12 @@ class Bootstrap {
   }
 
   // cache the secret analyzing so that we don't drop stuff a different client sets during bootstrapping
-  Map<String, Set<String>> _secretsCache;
+  Map<String, Set<String>>? _secretsCache;
   Map<String, Set<String>> analyzeSecrets() {
     if (_secretsCache != null) {
       // deep-copy so that we can do modifications
       final newSecrets = <String, Set<String>>{};
-      for (final s in _secretsCache.entries) {
+      for (final s in _secretsCache!.entries) {
         newSecrets[s.key] = Set<String>.from(s.value);
       }
       return newSecrets;
@@ -149,9 +148,10 @@ class Bootstrap {
     for (final keys in secrets.values) {
       for (final key in keys) {
         if (!usage.containsKey(key)) {
-          usage[key] = 0;
+          usage[key] = 1;
+        } else {
+          usage[key] = usage[key]! + 1;
         }
-        usage[key]++;
       }
     }
     final entriesList = usage.entries.toList();
@@ -192,7 +192,7 @@ class Bootstrap {
     if (wipe) {
       state = BootstrapState.askNewSsss;
     } else if (encryption.ssss.defaultKeyId != null &&
-        encryption.ssss.isKeyValid(encryption.ssss.defaultKeyId)) {
+        encryption.ssss.isKeyValid(encryption.ssss.defaultKeyId!)) {
       state = BootstrapState.askUseExistingSsss;
     } else if (badSecrets().isNotEmpty) {
       state = BootstrapState.askBadSsss;
@@ -238,7 +238,7 @@ class Bootstrap {
     oldSsssKeys = <String, OpenSSSS>{};
     try {
       for (final key in keys) {
-        oldSsssKeys[key] = encryption.ssss.open(key);
+        oldSsssKeys![key] = encryption.ssss.open(key);
       }
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error construction ssss key', e, s);
@@ -255,7 +255,7 @@ class Bootstrap {
     state = BootstrapState.askNewSsss;
   }
 
-  Future<void> newSsss([String passphrase]) async {
+  Future<void> newSsss([String? passphrase]) async {
     if (state != BootstrapState.askNewSsss) {
       throw BootstrapBadStateException('Wrong State');
     }
@@ -275,7 +275,7 @@ class Bootstrap {
           return s;
         };
         secretMap = <String, String>{};
-        for (final entry in oldSsssKeys.entries) {
+        for (final entry in oldSsssKeys!.entries) {
           final key = entry.value;
           final keyId = entry.key;
           if (!key.isUnlocked) {
@@ -283,26 +283,26 @@ class Bootstrap {
           }
           for (final s in removeKey(keyId)) {
             Logs().v('Get stored key of type $s...');
-            secretMap[s] = await key.getStored(s);
+            secretMap![s] = await key.getStored(s);
             Logs().v('Store new secret with this key...');
-            await newSsssKey.store(s, secretMap[s], add: true);
+            await newSsssKey!.store(s, secretMap![s]!, add: true);
           }
         }
         // alright, we re-encrypted all the secrets. We delete the dead weight only *after* we set our key to the default key
       }
       final updatedAccountData = client.onSync.stream.firstWhere((syncUpdate) =>
           syncUpdate.accountData != null &&
-          syncUpdate.accountData.any((accountData) =>
+          syncUpdate.accountData!.any((accountData) =>
               accountData.type == EventTypes.SecretStorageDefaultKey));
-      await encryption.ssss.setDefaultKeyId(newSsssKey.keyId);
+      await encryption.ssss.setDefaultKeyId(newSsssKey!.keyId);
       await updatedAccountData;
       if (oldSsssKeys != null) {
-        for (final entry in secretMap.entries) {
+        for (final entry in secretMap!.entries) {
           Logs().v('Validate and stripe other keys ${entry.key}...');
-          await newSsssKey.validateAndStripOtherKeys(entry.key, entry.value);
+          await newSsssKey!.validateAndStripOtherKeys(entry.key, entry.value);
         }
         Logs().v('And make super sure we have everything cached...');
-        await newSsssKey.maybeCacheAll();
+        await newSsssKey!.maybeCacheAll();
       }
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error trying to migrate old secrets', e, s);
@@ -315,14 +315,14 @@ class Bootstrap {
   }
 
   Future<void> openExistingSsss() async {
-    if (state != BootstrapState.openExistingSsss) {
+    if (state != BootstrapState.openExistingSsss || newSsssKey == null) {
       throw BootstrapBadStateException();
     }
-    if (!newSsssKey.isUnlocked) {
+    if (!newSsssKey!.isUnlocked) {
       throw BootstrapBadStateException('Key not unlocked');
     }
     Logs().v('Maybe cache all...');
-    await newSsssKey.maybeCacheAll();
+    await newSsssKey!.maybeCacheAll();
     checkCrossSigning();
   }
 
@@ -362,10 +362,10 @@ class Bootstrap {
     try {
       Uint8List masterSigningKey;
       final secretsToStore = <String, String>{};
-      MatrixCrossSigningKey masterKey;
-      MatrixCrossSigningKey selfSigningKey;
-      MatrixCrossSigningKey userSigningKey;
-      String masterPub;
+      MatrixCrossSigningKey? masterKey;
+      MatrixCrossSigningKey? selfSigningKey;
+      MatrixCrossSigningKey? userSigningKey;
+      String? masterPub;
       if (setupMasterKey) {
         final master = olm.PkSigning();
         try {
@@ -387,8 +387,9 @@ class Bootstrap {
       } else {
         Logs().v('Get stored key...');
         masterSigningKey = base64.decode(
-            await newSsssKey.getStored(EventTypes.CrossSigningMasterKey) ?? '');
-        if (masterSigningKey == null || masterSigningKey.isEmpty) {
+            await newSsssKey?.getStored(EventTypes.CrossSigningMasterKey) ??
+                '');
+        if (masterSigningKey.isEmpty) {
           // no master signing key :(
           throw BootstrapBadStateException('No master key');
         }
@@ -477,9 +478,11 @@ class Bootstrap {
           client.onSync.stream
               .firstWhere((syncUpdate) =>
                   client.userDeviceKeys.containsKey(client.userID) &&
-                  client.userDeviceKeys[client.userID].masterKey != null &&
-                  client.userDeviceKeys[client.userID].masterKey.ed25519Key ==
-                      masterKey.publicKey)
+                  client.userDeviceKeys[client.userID]!.masterKey != null &&
+                  client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key !=
+                      null &&
+                  client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key ==
+                      masterKey!.publicKey)
               .then((_) => Logs().v('New Master Key was created')),
         );
       }
@@ -488,32 +491,32 @@ class Bootstrap {
           client.onSync.stream
               .firstWhere((syncUpdate) =>
                   syncUpdate.accountData != null &&
-                  syncUpdate.accountData
+                  syncUpdate.accountData!
                       .any((accountData) => accountData.type == entry.key))
               .then((_) =>
                   Logs().v('New Key with type ${entry.key} was created')),
         );
         Logs().v('Store new SSSS key ${entry.key}...');
-        await newSsssKey.store(entry.key, entry.value);
+        await newSsssKey?.store(entry.key, entry.value);
       }
       Logs().v(
           'Wait for MasterKey and ${secretsToStore.entries.length} keys to be created');
       await Future.wait<void>(futures);
       final keysToSign = <SignableKey>[];
       if (masterKey != null) {
-        if (client.userDeviceKeys[client.userID].masterKey.ed25519Key !=
+        if (client.userDeviceKeys[client.userID]?.masterKey?.ed25519Key !=
             masterKey.publicKey) {
           throw BootstrapBadStateException(
               'ERROR: New master key does not match up!');
         }
         Logs().v('Set own master key to verified...');
-        await client.userDeviceKeys[client.userID].masterKey
+        await client.userDeviceKeys[client.userID]!.masterKey!
             .setVerified(true, false);
-        keysToSign.add(client.userDeviceKeys[client.userID].masterKey);
+        keysToSign.add(client.userDeviceKeys[client.userID]!.masterKey!);
       }
       if (selfSigningKey != null) {
         keysToSign.add(
-            client.userDeviceKeys[client.userID].deviceKeys[client.deviceID]);
+            client.userDeviceKeys[client.userID]!.deviceKeys[client.deviceID]!);
       }
       Logs().v('Sign ourself...');
       await encryption.crossSigning.sign(keysToSign);
@@ -572,7 +575,7 @@ class Bootstrap {
         },
       );
       Logs().v('Store the secret...');
-      await newSsssKey.store(megolmKey, base64.encode(privKey));
+      await newSsssKey?.store(megolmKey, base64.encode(privKey));
       Logs().v(
           'And finally set all megolm keys as needing to be uploaded again...');
       await client.database?.markInboundGroupSessionsAsNeedingUpload();
@@ -593,7 +596,7 @@ class Bootstrap {
       _state = newState;
     }
     if (onUpdate != null) {
-      onUpdate();
+      onUpdate!();
     }
   }
 }

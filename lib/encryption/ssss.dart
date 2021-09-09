@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020, 2021 Famedly GmbH
@@ -24,6 +23,7 @@ import 'dart:typed_data';
 
 import 'package:base58check/base58.dart';
 import 'package:crypto/crypto.dart';
+import 'package:collection/collection.dart';
 
 import '../matrix.dart';
 import '../src/utils/crypto/crypto.dart' as uc;
@@ -76,11 +76,13 @@ class SSSS {
     b[0] = 2;
     final hmacKey =
         Hmac(sha256, prk.bytes).convert(aesKey.bytes + utf8.encode(name) + b);
-    return _DerivedKeys(aesKey: aesKey.bytes, hmacKey: hmacKey.bytes);
+    return _DerivedKeys(
+        aesKey: Uint8List.fromList(aesKey.bytes),
+        hmacKey: Uint8List.fromList(hmacKey.bytes));
   }
 
   static Future<_Encrypted> encryptAes(String data, Uint8List key, String name,
-      [String ivStr]) async {
+      [String? ivStr]) async {
     Uint8List iv;
     if (ivStr != null) {
       iv = base64.decode(ivStr);
@@ -121,7 +123,7 @@ class SSSS {
   static Uint8List decodeRecoveryKey(String recoveryKey) {
     final result = base58.decode(recoveryKey.replaceAll(' ', ''));
 
-    final parity = result.fold(0, (a, b) => a ^ b);
+    final parity = result.fold(0, (a, b) => (a as int) ^ b);
     if (parity != 0) {
       throw Exception('Incorrect parity');
     }
@@ -142,7 +144,7 @@ class SSSS {
 
   static String encodeRecoveryKey(Uint8List recoveryKey) {
     final keyToEncode = <int>[...olmRecoveryKeyPrefix, ...recoveryKey];
-    final parity = keyToEncode.fold(0, (a, b) => a ^ b);
+    final parity = keyToEncode.fold(0, (a, b) => (a as int) ^ b);
     keyToEncode.add(parity);
     // base58-encode and add a space every four chars
     return base58
@@ -156,8 +158,18 @@ class SSSS {
     if (info.algorithm != AlgorithmTypes.pbkdf2) {
       throw Exception('Unknown algorithm');
     }
-    return await uc.pbkdf2(utf8.encode(passphrase), utf8.encode(info.salt),
-        uc.sha512, info.iterations, info.bits ?? 256);
+    if (info.iterations == null) {
+      throw Exception('Passphrase info without iterations');
+    }
+    if (info.salt == null) {
+      throw Exception('Passphrase info without salt');
+    }
+    return await uc.pbkdf2(
+        Uint8List.fromList(utf8.encode(passphrase)),
+        Uint8List.fromList(utf8.encode(info.salt!)),
+        uc.sha512,
+        info.iterations!,
+        info.bits ?? 256);
   }
 
   void setValidator(String type, FutureOr<bool> Function(String) validator) {
@@ -168,10 +180,10 @@ class SSSS {
     _cacheCallbacks[type] = callback;
   }
 
-  String get defaultKeyId => client
+  String? get defaultKeyId => client
       .accountData[EventTypes.SecretStorageDefaultKey]
       ?.parsedSecretStorageDefaultKeyContent
-      ?.key;
+      .key;
 
   Future<void> setDefaultKeyId(String keyId) async {
     await client.setAccountData(
@@ -181,7 +193,7 @@ class SSSS {
     );
   }
 
-  SecretStorageKeyContent getKey(String keyId) {
+  SecretStorageKeyContent? getKey(String keyId) {
     return client.accountData[EventTypes.secretStorageKey(keyId)]
         ?.parsedSecretStorageKeyContent;
   }
@@ -191,7 +203,7 @@ class SSSS {
 
   /// Creates a new secret storage key, optional encrypts it with [passphrase]
   /// and stores it in the user's `accountData`.
-  Future<OpenSSSS> createKey([String passphrase]) async {
+  Future<OpenSSSS> createKey([String? passphrase]) async {
     Uint8List privateKey;
     final content = SecretStorageKeyContent();
     if (passphrase != null) {
@@ -207,7 +219,7 @@ class SSSS {
             _keyFromPassphrase,
             _KeyFromPassphraseArgs(
               passphrase: passphrase,
-              info: content.passphrase,
+              info: content.passphrase!,
             ),
           )
           .timeout(Duration(seconds: 10));
@@ -235,7 +247,7 @@ class SSSS {
     // noooow we set the account data
     final waitForAccountData = client.onSync.stream.firstWhere((syncUpdate) =>
         syncUpdate.accountData != null &&
-        syncUpdate.accountData
+        syncUpdate.accountData!
             .any((accountData) => accountData.type == accountDataType));
     await client.setAccountData(
         client.userID, accountDataType, content.toJson());
@@ -250,7 +262,7 @@ class SSSS {
     if (info.algorithm == AlgorithmTypes.secretStorageV1AesHmcSha2) {
       if ((info.mac is String) && (info.iv is String)) {
         final encrypted = await encryptAes(zeroStr, key, '', info.iv);
-        return info.mac.replaceAll(RegExp(r'=+$'), '') ==
+        return info.mac!.replaceAll(RegExp(r'=+$'), '') ==
             encrypted.mac.replaceAll(RegExp(r'=+$'), '');
       } else {
         // no real information about the key, assume it is valid
@@ -263,9 +275,9 @@ class SSSS {
 
   bool isSecret(String type) =>
       client.accountData[type] != null &&
-      client.accountData[type].content['encrypted'] is Map;
+      client.accountData[type]!.content['encrypted'] is Map;
 
-  Future<String> getCached(String type) async {
+  Future<String?> getCached(String type) async {
     if (client.database == null) {
       return null;
     }
@@ -276,11 +288,12 @@ class SSSS {
     }
     final isValid = (dbEntry) =>
         keys.contains(dbEntry.keyId) &&
-        client.accountData[type].content['encrypted'][dbEntry.keyId]
+        dbEntry.ciphertext != null &&
+        client.accountData[type]?.content['encrypted'][dbEntry.keyId]
                 ['ciphertext'] ==
             dbEntry.ciphertext;
     if (_cache.containsKey(type) && isValid(_cache[type])) {
-      return _cache[type].content;
+      return _cache[type]?.content;
     }
     final ret = await client.database.getSSSSCache(type);
     if (ret == null) {
@@ -313,7 +326,7 @@ class SSSS {
       await client.database
           .storeSSSSCache(type, keyId, enc['ciphertext'], decrypted);
       if (_cacheCallbacks.containsKey(type) && await getCached(type) == null) {
-        _cacheCallbacks[type](decrypted);
+        _cacheCallbacks[type]!(decrypted);
       }
     }
     return decrypted;
@@ -321,12 +334,10 @@ class SSSS {
 
   Future<void> store(String type, String secret, String keyId, Uint8List key,
       {bool add = false}) async {
-    final triggerCacheCallback =
-        _cacheCallbacks.containsKey(type) && await getCached(type) == null;
     final encrypted = await encryptAes(secret, key, type);
-    Map<String, dynamic> content;
+    Map<String, dynamic>? content;
     if (add && client.accountData[type] != null) {
-      content = client.accountData[type].content.copy();
+      content = client.accountData[type]!.content.copy();
       if (!(content['encrypted'] is Map)) {
         content['encrypted'] = <String, dynamic>{};
       }
@@ -345,8 +356,8 @@ class SSSS {
       // cache the thing
       await client.database
           .storeSSSSCache(type, keyId, encrypted.ciphertext, secret);
-      if (triggerCacheCallback) {
-        _cacheCallbacks[type](secret);
+      if (_cacheCallbacks.containsKey(type) && await getCached(type) == null) {
+        _cacheCallbacks[type]!(secret);
       }
     }
   }
@@ -357,7 +368,11 @@ class SSSS {
       throw Exception('Secrets do not match up!');
     }
     // now remove all other keys
-    final content = client.accountData[type].content.copy();
+    final content = client.accountData[type]?.content.copy();
+    if (content == null) {
+      throw Exception('Key has no content!');
+    }
+
     final otherKeys =
         Set<String>.from(content['encrypted'].keys.where((k) => k != keyId));
     content['encrypted'].removeWhere((k, v) => otherKeys.contains(k));
@@ -387,7 +402,7 @@ class SSSS {
     }
   }
 
-  Future<void> maybeRequestAll([List<DeviceKeys> devices]) async {
+  Future<void> maybeRequestAll([List<DeviceKeys>? devices]) async {
     for (final type in cacheTypes) {
       if (keyIdsFromType(type) != null) {
         final secret = await getCached(type);
@@ -398,7 +413,7 @@ class SSSS {
     }
   }
 
-  Future<void> request(String type, [List<DeviceKeys> devices]) async {
+  Future<void> request(String type, [List<DeviceKeys>? devices]) async {
     // only send to own, verified devices
     Logs().i('[SSSS] Requesting type $type...');
     if (devices == null || devices.isEmpty) {
@@ -406,7 +421,8 @@ class SSSS {
         Logs().w('[SSSS] User does not have any devices');
         return;
       }
-      devices = client.userDeviceKeys[client.userID].deviceKeys.values.toList();
+      devices =
+          client.userDeviceKeys[client.userID]!.deviceKeys.values.toList();
     }
     devices.removeWhere((DeviceKeys d) =>
         d.userId != client.userID ||
@@ -432,7 +448,7 @@ class SSSS {
     });
   }
 
-  DateTime _lastCacheRequest;
+  DateTime? _lastCacheRequest;
   bool _isPeriodicallyRequestingMissingCache = false;
 
   Future<void> periodicallyRequestMissingCache() async {
@@ -440,7 +456,7 @@ class SSSS {
         (_lastCacheRequest != null &&
             DateTime.now()
                 .subtract(Duration(minutes: 15))
-                .isBefore(_lastCacheRequest)) ||
+                .isBefore(_lastCacheRequest!)) ||
         client.isUnknownSession) {
       // we are already requesting right now or we attempted to within the last 15 min
       return;
@@ -467,7 +483,7 @@ class SSSS {
         Logs().i('[SSSS] it is actually a cancelation');
         return; // not actually requesting, so ignore
       }
-      final device = client.userDeviceKeys[client.userID]
+      final device = client.userDeviceKeys[client.userID]!
           .deviceKeys[event.content['requesting_device_id']];
       if (device == null || !device.verified || device.blocked) {
         Logs().i('[SSSS] Unknown / unverified devices, ignoring');
@@ -499,13 +515,11 @@ class SSSS {
         Logs().i('[SSSS] Not by us or unknown request');
         return; // we have no idea what we just received
       }
-      final request = pendingShareRequests[event.content['request_id']];
+      final request = pendingShareRequests[event.content['request_id']]!;
       // alright, as we received a known request id, let's check if the sender is valid
-      final device = request.devices.firstWhere(
-          (d) =>
-              d.userId == event.sender &&
-              d.curve25519Key == event.encryptedContent['sender_key'],
-          orElse: () => null);
+      final device = request.devices.firstWhereOrNull((d) =>
+          d.userId == event.sender &&
+          d.curve25519Key == event.encryptedContent['sender_key']);
       if (device == null) {
         Logs().i('[SSSS] Someone else replied?');
         return; // someone replied whom we didn't send the share request to
@@ -517,7 +531,7 @@ class SSSS {
       }
       // let's validate if the secret is, well, valid
       if (_validators.containsKey(request.type) &&
-          !(await _validators[request.type](secret))) {
+          !(await _validators[request.type]!(secret))) {
         Logs().i('[SSSS] The received secret was invalid');
         return; // didn't pass the validator
       }
@@ -530,19 +544,19 @@ class SSSS {
       if (client.database != null) {
         final keyId = keyIdFromType(request.type);
         if (keyId != null) {
-          final ciphertext = client.accountData[request.type]
+          final ciphertext = client.accountData[request.type]!
               .content['encrypted'][keyId]['ciphertext'];
           await client.database
               .storeSSSSCache(request.type, keyId, ciphertext, secret);
           if (_cacheCallbacks.containsKey(request.type)) {
-            _cacheCallbacks[request.type](secret);
+            _cacheCallbacks[request.type]!(secret);
           }
         }
       }
     }
   }
 
-  Set<String> keyIdsFromType(String type) {
+  Set<String>? keyIdsFromType(String type) {
     final data = client.accountData[type];
     if (data == null) {
       return null;
@@ -553,7 +567,7 @@ class SSSS {
     return null;
   }
 
-  String keyIdFromType(String type) {
+  String? keyIdFromType(String type) {
     final keys = keyIdsFromType(type);
     if (keys == null || keys.isEmpty) {
       return null;
@@ -564,15 +578,12 @@ class SSSS {
     return keys.first;
   }
 
-  OpenSSSS open([String identifier]) {
+  OpenSSSS open([String? identifier]) {
     identifier ??= defaultKeyId;
     if (identifier == null) {
       throw Exception('Dont know what to open');
     }
     final keyToOpen = keyIdFromType(identifier) ?? identifier;
-    if (keyToOpen == null) {
-      throw Exception('No key found to open');
-    }
     final key = getKey(keyToOpen);
     if (key == null) {
       throw Exception('Unknown key to open');
@@ -587,7 +598,8 @@ class _ShareRequest {
   final List<DeviceKeys> devices;
   final DateTime start;
 
-  _ShareRequest({this.requestId, this.type, this.devices})
+  _ShareRequest(
+      {required this.requestId, required this.type, required this.devices})
       : start = DateTime.now();
 }
 
@@ -596,14 +608,14 @@ class _Encrypted {
   final String ciphertext;
   final String mac;
 
-  _Encrypted({this.iv, this.ciphertext, this.mac});
+  _Encrypted({required this.iv, required this.ciphertext, required this.mac});
 }
 
 class _DerivedKeys {
   final Uint8List aesKey;
   final Uint8List hmacKey;
 
-  _DerivedKeys({this.aesKey, this.hmacKey});
+  _DerivedKeys({required this.aesKey, required this.hmacKey});
 }
 
 class OpenSSSS {
@@ -611,21 +623,21 @@ class OpenSSSS {
   final String keyId;
   final SecretStorageKeyContent keyData;
 
-  OpenSSSS({this.ssss, this.keyId, this.keyData});
+  OpenSSSS({required this.ssss, required this.keyId, required this.keyData});
 
-  Uint8List privateKey;
+  Uint8List? privateKey;
 
   bool get isUnlocked => privateKey != null;
 
   bool get hasPassphrase => keyData.passphrase != null;
 
-  String get recoveryKey =>
-      isUnlocked ? SSSS.encodeRecoveryKey(privateKey) : null;
+  String? get recoveryKey =>
+      isUnlocked ? SSSS.encodeRecoveryKey(privateKey!) : null;
 
   Future<void> unlock(
-      {String passphrase,
-      String recoveryKey,
-      String keyOrPassphrase,
+      {String? passphrase,
+      String? recoveryKey,
+      String? keyOrPassphrase,
       bool postUnlock = true}) async {
     if (keyOrPassphrase != null) {
       try {
@@ -648,7 +660,7 @@ class OpenSSSS {
             _keyFromPassphrase,
             _KeyFromPassphraseArgs(
               passphrase: passphrase,
-              info: keyData.passphrase,
+              info: keyData.passphrase!,
             ),
           )
           .timeout(Duration(seconds: 10));
@@ -658,7 +670,7 @@ class OpenSSSS {
       throw Exception('Nothing specified');
     }
     // verify the validity of the key
-    if (!await ssss.checkKey(privateKey, keyData)) {
+    if (!await ssss.checkKey(privateKey!, keyData)) {
       privateKey = null;
       throw Exception('Inalid key');
     }
@@ -675,19 +687,31 @@ class OpenSSSS {
   }
 
   Future<String> getStored(String type) async {
-    return await ssss.getStored(type, keyId, privateKey);
+    if (privateKey == null) {
+      throw Exception('SSSS not unlocked');
+    }
+    return await ssss.getStored(type, keyId, privateKey!);
   }
 
   Future<void> store(String type, String secret, {bool add = false}) async {
-    await ssss.store(type, secret, keyId, privateKey, add: add);
+    if (privateKey == null) {
+      throw Exception('SSSS not unlocked');
+    }
+    await ssss.store(type, secret, keyId, privateKey!, add: add);
   }
 
   Future<void> validateAndStripOtherKeys(String type, String secret) async {
-    await ssss.validateAndStripOtherKeys(type, secret, keyId, privateKey);
+    if (privateKey == null) {
+      throw Exception('SSSS not unlocked');
+    }
+    await ssss.validateAndStripOtherKeys(type, secret, keyId, privateKey!);
   }
 
   Future<void> maybeCacheAll() async {
-    await ssss.maybeCacheAll(keyId, privateKey);
+    if (privateKey == null) {
+      throw Exception('SSSS not unlocked');
+    }
+    await ssss.maybeCacheAll(keyId, privateKey!);
   }
 
   Future<void> _postUnlock() async {
@@ -701,8 +725,9 @@ class OpenSSSS {
                 ?.contains(keyId) ??
             false) &&
         (ssss.client.isUnknownSession ||
-            !ssss.client.userDeviceKeys[ssss.client.userID].masterKey
-                .directVerified)) {
+            ssss.client.userDeviceKeys[ssss.client.userID]!.masterKey
+                    ?.directVerified !=
+                true)) {
       try {
         await ssss.encryption.crossSigning.selfSign(openSsss: this);
       } catch (e, s) {
@@ -716,7 +741,7 @@ class _KeyFromPassphraseArgs {
   final String passphrase;
   final PassphraseInfo info;
 
-  _KeyFromPassphraseArgs({this.passphrase, this.info});
+  _KeyFromPassphraseArgs({required this.passphrase, required this.info});
 }
 
 Future<Uint8List> _keyFromPassphrase(_KeyFromPassphraseArgs args) async {

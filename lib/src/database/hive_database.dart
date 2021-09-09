@@ -231,10 +231,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
             convertToJson(raw),
             Client(''),
           );
-          await addSeenDeviceId(deviceKeys.userId, deviceKeys.deviceId,
-              deviceKeys.curve25519Key + deviceKeys.ed25519Key);
-          await addSeenPublicKey(deviceKeys.ed25519Key, deviceKeys.deviceId);
-          await addSeenPublicKey(deviceKeys.curve25519Key, deviceKeys.deviceId);
+          await addSeenDeviceId(deviceKeys.userId, deviceKeys.deviceId!,
+              deviceKeys.curve25519Key! + deviceKeys.ed25519Key!);
+          await addSeenPublicKey(deviceKeys.ed25519Key!, deviceKeys.deviceId!);
+          await addSeenPublicKey(
+              deviceKeys.curve25519Key!, deviceKeys.deviceId!);
         } catch (e) {
           Logs().w('Can not migrate device $key', e);
         }

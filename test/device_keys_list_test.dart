@@ -31,7 +31,27 @@ void main() {
   /// All Tests related to device keys
   group('Device keys', () {
     Logs().level = Level.error;
+
+    var olmEnabled = true;
+
+    Client client;
+
+    test('setupClient', () async {
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().i('[LibOlm] Enabled: $olmEnabled');
+      if (!olmEnabled) return;
+
+      client = await getClient();
+    });
+
     test('fromJson', () async {
+      if (!olmEnabled) return;
       var rawJson = <String, dynamic>{
         'user_id': '@alice:example.com',
         'device_id': 'JLAFKJWSCS',
@@ -53,7 +73,8 @@ void main() {
         'unsigned': {'device_display_name': "Alice's mobile phone"},
       };
 
-      final key = DeviceKeys.fromJson(rawJson, null);
+      final key = DeviceKeys.fromJson(rawJson, client);
+      // NOTE(Nico): this actually doesn't do anything, because the device signature is invalid...
       await key.setVerified(false, false);
       await key.setBlocked(true);
       expect(json.encode(key.toJson()), json.encode(rawJson));
@@ -69,27 +90,9 @@ void main() {
         },
         'signatures': {},
       };
-      final crossKey = CrossSigningKey.fromJson(rawJson, null);
+      final crossKey = CrossSigningKey.fromJson(rawJson, client);
       expect(json.encode(crossKey.toJson()), json.encode(rawJson));
       expect(crossKey.usage.first, 'master');
-    });
-
-    var olmEnabled = true;
-
-    Client client;
-
-    test('setupClient', () async {
-      try {
-        await olm.init();
-        olm.get_library_version();
-      } catch (e) {
-        olmEnabled = false;
-        Logs().w('[LibOlm] Failed to load LibOlm', e);
-      }
-      Logs().i('[LibOlm] Enabled: $olmEnabled');
-      if (!olmEnabled) return;
-
-      client = await getClient();
     });
 
     test('reject devices without self-signature', () async {
