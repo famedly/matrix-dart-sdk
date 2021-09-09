@@ -1,3 +1,7 @@
+## 0.4.3
+- fix: Make type in AuthenticationData nullable
+- refactor: remove uploadKeySignatures (use uploadCrossSigningSignatures)
+
 ## 0.4.2
 - feat: Add more call event for improve voip.
 
