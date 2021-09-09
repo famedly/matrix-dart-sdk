@@ -2,6 +2,8 @@ name: matrix_api_lite
 description: Dead simple data model for the matrix.org client-server API.
 version: 0.4.3
 homepage: https://famedly.com
+repository: https://gitlab.com/famedly/company/frontend/libraries/matrix_api_lite/
+issues: https://gitlab.com/famedly/company/frontend/libraries/matrix_api_lite/-/issues
 
 environment:
   sdk: ">=2.12.0 <3.0.0"
