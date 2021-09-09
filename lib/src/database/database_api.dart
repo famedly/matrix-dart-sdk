@@ -318,6 +318,16 @@ abstract class DatabaseApi {
 
   Future<List<StoredInboundGroupSession>> getInboundGroupSessionsToUpload();
 
+  Future<void> addSeenDeviceId(
+      int clientId, String userId, String deviceId, String publicKeys);
+
+  Future<void> addSeenPublicKey(
+      int clientId, String publicKey, String deviceId);
+
+  Future<String?> deviceIdSeen(int clientId, userId, deviceId);
+
+  Future<String?> publicKeySeen(int clientId, String publicKey);
+
   Future<dynamic> close();
 
   Future<T> transaction<T>(Future<T> Function() action);

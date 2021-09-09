@@ -26,6 +26,7 @@ import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../fake_client.dart';
+import '../fake_database.dart';
 import '../fake_matrix_api.dart';
 
 class MockSSSS extends SSSS {
@@ -84,9 +85,11 @@ void main() {
       if (!olmEnabled) return;
 
       client1 = await getClient();
-      client2 = Client('othertestclient',
-          httpClient: FakeMatrixApi(),
-          databaseBuilder: (_) => client1.database);
+      client2 = Client(
+        'othertestclient',
+        httpClient: FakeMatrixApi(),
+        databaseBuilder: getDatabase,
+      );
       await client2.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
       await client2.init(

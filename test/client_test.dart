@@ -52,7 +52,11 @@ void main() {
 
     /// Check if all Elements get created
 
-    matrix = Client('testclient', httpClient: FakeMatrixApi());
+    matrix = Client(
+      'testclient',
+      httpClient: FakeMatrixApi(),
+      databaseBuilder: getDatabase,
+    );
 
     eventUpdateListFuture = matrix.onEvent.stream.toList();
     toDeviceUpdateListFuture = matrix.onToDeviceEvent.stream.toList();
@@ -291,7 +295,11 @@ void main() {
     });
 
     test('Login', () async {
-      matrix = Client('testclient', httpClient: FakeMatrixApi());
+      matrix = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        databaseBuilder: getDatabase,
+      );
 
       eventUpdateListFuture = matrix.onEvent.stream.toList();
 

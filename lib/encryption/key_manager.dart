@@ -370,10 +370,12 @@ class KeyManager {
             for (final device in devicesToReceive) {
               inboundSess.allowedAtIndex[device.userId] ??= <String, int>{};
               if (!inboundSess.allowedAtIndex[device.userId]
-                      .containsKey(device.deviceId) ||
-                  inboundSess.allowedAtIndex[device.userId][device.deviceId] >
+                      .containsKey(device.curve25519Key) ||
+                  inboundSess.allowedAtIndex[device.userId]
+                          [device.curve25519Key] >
                       sess.outboundGroupSession.message_index()) {
-                inboundSess.allowedAtIndex[device.userId][device.deviceId] =
+                inboundSess.allowedAtIndex[device.userId]
+                        [device.curve25519Key] =
                     sess.outboundGroupSession.message_index();
               }
             }
@@ -471,7 +473,7 @@ class KeyManager {
     final allowedAtIndex = <String, Map<String, int>>{};
     for (final device in deviceKeys) {
       allowedAtIndex[device.userId] ??= <String, int>{};
-      allowedAtIndex[device.userId][device.deviceId] =
+      allowedAtIndex[device.userId][device.curve25519Key] =
           outboundGroupSession.message_index();
     }
     setInboundGroupSession(
@@ -832,7 +834,8 @@ class KeyManager {
           // if we know the user may see the message, then we can just forward the key.
           // we do not need to check if the device is verified, just if it is not blocked,
           // as that is the logic we already initially try to send out the room keys.
-          final index = session.allowedAtIndex[device.userId][device.deviceId];
+          final index =
+              session.allowedAtIndex[device.userId][device.curve25519Key];
           Logs().i(
               '[KeyManager] Valid foreign request, forwarding key at index $index...');
           await roomKeyRequest.forwardKey(index);

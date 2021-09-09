@@ -119,7 +119,7 @@ void main() {
 
     test('dispose client', () async {
       if (!olmEnabled) return;
-      await client.dispose(closeDatabase: true);
+      await client.dispose(closeDatabase: false);
     });
   });
 }

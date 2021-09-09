@@ -25,6 +25,7 @@ import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../fake_client.dart';
+import '../fake_matrix_api.dart';
 
 void main() {
   group('Key Manager', () {
@@ -113,8 +114,14 @@ void main() {
       var inbound = client.encryption.keyManager.getInboundGroupSession(
           roomId, sess.outboundGroupSession.session_id(), client.identityKey);
       expect(inbound != null, true);
-      expect(inbound.allowedAtIndex['@alice:example.com']['JLAFKJWSCS'], 0);
-      expect(inbound.allowedAtIndex['@alice:example.com']['OTHERDEVICE'], 0);
+      expect(
+          inbound.allowedAtIndex['@alice:example.com']
+              ['L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8'],
+          0);
+      expect(
+          inbound.allowedAtIndex['@alice:example.com']
+              ['wMIDhiQl5jEXQrTB03ePOSQfR8sA/KMrW0CIfFfXKEE'],
+          0);
 
       // rotate after too many messages
       sess.sentMessages = 300;
@@ -208,9 +215,18 @@ void main() {
           true);
       inbound = client.encryption.keyManager.getInboundGroupSession(
           roomId, sess.outboundGroupSession.session_id(), client.identityKey);
-      expect(inbound.allowedAtIndex['@alice:example.com']['JLAFKJWSCS'], 0);
-      expect(inbound.allowedAtIndex['@alice:example.com']['OTHERDEVICE'], 0);
-      expect(inbound.allowedAtIndex['@alice:example.com']['NEWDEVICE'], 1);
+      expect(
+          inbound.allowedAtIndex['@alice:example.com']
+              ['L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8'],
+          0);
+      expect(
+          inbound.allowedAtIndex['@alice:example.com']
+              ['wMIDhiQl5jEXQrTB03ePOSQfR8sA/KMrW0CIfFfXKEE'],
+          0);
+      expect(
+          inbound.allowedAtIndex['@alice:example.com']
+              ['bnKQp6pPW0l9cGoIgHpBoK5OUi4h0gylJ7upc4asFV8'],
+          1);
 
       // do not rotate if new user is added
       member.content['membership'] = 'leave';
@@ -500,9 +516,56 @@ void main() {
       session.free();
     });
 
+    test('Reused deviceID attack', () async {
+      if (!olmEnabled) return;
+      Logs().level = Level.warning;
+      client ??= await getClient();
+
+      // Ensure the device came from sync
+      expect(
+          client.userDeviceKeys['@alice:example.com']
+                  .deviceKeys['JLAFKJWSCS'] !=
+              null,
+          true);
+
+      // Alice removes her device
+      client.userDeviceKeys['@alice:example.com'].deviceKeys
+          .remove('JLAFKJWSCS');
+
+      // Alice adds her device with same device ID but different keys
+      final oldResp = FakeMatrixApi.api['POST']['/client/r0/keys/query'](null);
+      FakeMatrixApi.api['POST']['/client/r0/keys/query'] = (_) {
+        oldResp['device_keys']['@alice:example.com']['JLAFKJWSCS'] = {
+          'user_id': '@alice:example.com',
+          'device_id': 'JLAFKJWSCS',
+          'algorithms': [
+            'm.olm.v1.curve25519-aes-sha2',
+            'm.megolm.v1.aes-sha2'
+          ],
+          'keys': {
+            'curve25519:JLAFKJWSCS':
+                'WbwrNyD7nvtmcLQ0TTuVPFGJq6JznfjrVsjIpmBqvDw',
+            'ed25519:JLAFKJWSCS': 'vl0d54pTVRcvBgUzoQFa8e6TldHWG9O8bh0iuIvgd/I'
+          },
+          'signatures': {
+            '@alice:example.com': {
+              'ed25519:JLAFKJWSCS':
+                  's/L86jLa8BTroL8GsBeqO0gRLC3ZrSA7Gch6UoLI2SefC1+1ycmnP9UGbLPh3qBJOmlhczMpBLZwelg87qNNDA'
+            }
+          }
+        };
+        return oldResp;
+      };
+      client.userDeviceKeys['@alice:example.com'].outdated = true;
+      await client.updateUserDeviceKeys();
+      expect(
+          client.userDeviceKeys['@alice:example.com'].deviceKeys['JLAFKJWSCS'],
+          null);
+    });
+
     test('dispose client', () async {
       if (!olmEnabled) return;
-      await client.dispose(closeDatabase: true);
+      await client.dispose(closeDatabase: false);
     });
   });
 }

@@ -36,7 +36,7 @@ import 'package:hive/hive.dart';
 ///
 /// This database does not support file caching!
 class FamedlySdkHiveDatabase extends DatabaseApi {
-  static const int version = 4;
+  static const int version = 5;
   final String name;
   late Box _clientBox;
   late Box _accountDataBox;
@@ -74,6 +74,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   /// Key is a tuple as MultiKey(roomId, eventId)
   late LazyBox _eventsBox;
 
+  /// Key is a tuple as MultiKey(userId, deviceId)
+  late LazyBox _seenDeviceIdsBox;
+
+  late LazyBox _seenDeviceKeysBox;
+
   String get _clientBoxName => '$name.box.client';
   String get _accountDataBoxName => '$name.box.account_data';
   String get _roomsBoxName => '$name.box.rooms';
@@ -93,6 +98,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   String get _presencesBoxName => '$name.box.presences';
   String get _timelineFragmentsBoxName => '$name.box.timeline_fragments';
   String get _eventsBoxName => '$name.box.events';
+  String get _seenDeviceIdsBoxName => '$name.box.seen_device_ids';
+  String get _seenDeviceKeysBoxName => '$name.box.seen_device_keys';
 
   final HiveCipher? encryptionCipher;
 
@@ -120,6 +127,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         action(_presencesBox),
         action(_timelineFragmentsBox),
         action(_eventsBox),
+        action(_seenDeviceIdsBox),
+        action(_seenDeviceKeysBox),
       ]);
 
   Future<void> open() async {
@@ -191,6 +200,14 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       _eventsBoxName,
       encryptionCipher: encryptionCipher,
     );
+    _seenDeviceIdsBox = await Hive.openLazyBox(
+      _seenDeviceIdsBoxName,
+      encryptionCipher: encryptionCipher,
+    );
+    _seenDeviceKeysBox = await Hive.openLazyBox(
+      _seenDeviceKeysBoxName,
+      encryptionCipher: encryptionCipher,
+    );
 
     // Check version and check if we need a migration
     final currentVersion = (await _clientBox.get('version') as int?);
@@ -205,6 +222,25 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
   Future<void> _migrateFromVersion(int currentVersion) async {
     Logs().i('Migrate Hive database from version $currentVersion to $version');
+    if (version == 5) {
+      for (final key in _userDeviceKeysBox.keys) {
+        try {
+          final raw = await _userDeviceKeysBox.get(key) as Map;
+          if (!raw.containsKey('keys')) continue;
+          final deviceKeys = DeviceKeys.fromJson(
+            convertToJson(raw),
+            Client(''),
+          );
+          await addSeenDeviceId(0, deviceKeys.userId, deviceKeys.deviceId,
+              deviceKeys.curve25519Key + deviceKeys.ed25519Key);
+          await addSeenPublicKey(0, deviceKeys.ed25519Key, deviceKeys.deviceId);
+          await addSeenPublicKey(
+              0, deviceKeys.curve25519Key, deviceKeys.deviceId);
+        } catch (e) {
+          Logs().w('Can not migrate device $key', e);
+        }
+      }
+    }
     await clearCache(0);
     await _clientBox.put('version', version);
   }
@@ -1231,6 +1267,39 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     return rawSessions
         .map((raw) => StoredInboundGroupSession.fromJson(convertToJson(raw)))
         .toList();
+  }
+
+  @override
+  Future<void> addSeenDeviceId(
+    int clientId,
+    String userId,
+    String deviceId,
+    String publicKeysHash,
+  ) =>
+      _seenDeviceIdsBox.put(
+          MultiKey(userId, deviceId).toString(), publicKeysHash);
+
+  @override
+  Future<void> addSeenPublicKey(
+    int clientId,
+    String publicKey,
+    String deviceId,
+  ) =>
+      _seenDeviceKeysBox.put(publicKey.toHiveKey, deviceId);
+
+  @override
+  Future<String?> deviceIdSeen(int clientId, userId, deviceId) async {
+    final raw =
+        await _seenDeviceIdsBox.get(MultiKey(userId, deviceId).toString());
+    if (raw == null) return null;
+    return raw as String;
+  }
+
+  @override
+  Future<String?> publicKeySeen(int clientId, String publicKey) async {
+    final raw = await _seenDeviceKeysBox.get(publicKey.toHiveKey);
+    if (raw == null) return null;
+    return raw as String;
   }
 }
 
