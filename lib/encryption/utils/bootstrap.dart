@@ -463,7 +463,7 @@ class Bootstrap {
       state = BootstrapState.loading;
       Logs().v('Upload device signing keys.');
       await client.uiaRequestBackground(
-          (AuthenticationData auth) => client.uploadDeviceSigningKeys(
+          (AuthenticationData auth) => client.uploadCrossSigningKeys(
                 masterKey: masterKey,
                 selfSigningKey: selfSigningKey,
                 userSigningKey: userSigningKey,

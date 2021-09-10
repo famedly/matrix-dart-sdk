@@ -1364,7 +1364,7 @@ class Room {
     try {
       Logs().v(
           'Request missing user $mxID in room $displayname from the server...');
-      resp = await client.requestStateContent(
+      resp = await client.getRoomStateWithKey(
         id,
         EventTypes.RoomMember,
         mxID,

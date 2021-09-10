@@ -608,7 +608,7 @@ class KeyManager {
   Future<void> loadSingleKey(String roomId, String sessionId) async {
     final info = await getRoomKeysBackupInfo();
     final ret =
-        await client.getRoomKeysSingleKey(roomId, sessionId, info.version);
+        await client.getRoomKeysBySessionId(roomId, sessionId, info.version);
     final keys = RoomKeys.fromJson({
       'rooms': {
         roomId: {
@@ -746,7 +746,7 @@ class KeyManager {
                 _generateUploadKeys, args);
         Logs().i('[Key Manager] Uploading ${dbSessions.length} room keys...');
         // upload the payload...
-        await client.postRoomKeysKey(info.version, roomKeys);
+        await client.putRoomKeys(info.version, roomKeys);
         // and now finally mark all the keys as uploaded
         // no need to optimze this, as we only run it so seldomly and almost never with many keys at once
         for (final dbSession in dbSessions) {

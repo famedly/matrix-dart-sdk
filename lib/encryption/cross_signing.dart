@@ -177,7 +177,27 @@ class CrossSigning {
     }
     if (signedKeys.isNotEmpty) {
       // post our new keys!
-      await client.uploadKeySignatures(signedKeys);
+      final payload = <String, Map<String, Map<String, dynamic>>>{};
+      for (final key in signedKeys) {
+        if (key.identifier == null ||
+            key.signatures == null ||
+            key.signatures.isEmpty) {
+          continue;
+        }
+        if (!payload.containsKey(key.userId)) {
+          payload[key.userId] = <String, Map<String, dynamic>>{};
+        }
+        if (payload[key.userId].containsKey(key.identifier)) {
+          // we need to merge signature objects
+          payload[key.userId][key.identifier]['signatures']
+              .addAll(key.signatures);
+        } else {
+          // we can just add signatures
+          payload[key.userId][key.identifier] = key.toJson();
+        }
+      }
+
+      await client.uploadCrossSigningSignatures(payload);
     }
   }
 
