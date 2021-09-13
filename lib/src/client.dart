@@ -306,8 +306,8 @@ class Client extends MatrixApi {
                 null,
                 (prev, r) => prev == null
                     ? r
-                    : (prev.lastEvent.originServerTs <
-                            r.lastEvent.originServerTs
+                    : (prev.lastEvent.originServerTs.millisecondsSinceEpoch <
+                            r.lastEvent.originServerTs.millisecondsSinceEpoch
                         ? r
                         : prev))
             .id;
