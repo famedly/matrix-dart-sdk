@@ -1,3 +1,10 @@
+## [0.5.0] - 13nd Sep 2021
+- hotfix: Key sharing security vulnerability! -> Please upgrade as soon as possible to this version
+- feat: MSC2746: Improved Signalling for 1:1 VoIP
+- fix: Get direct chat from user ID method crashes on more than one DM rooms with one account
+- fix: compilation against newer matrix_api_lite
+- refactor: Remove onRoomUpdate stream
+
 ## [0.4.3] - 8nd Sep 2021
 - fix: Do not handle sending event updates which are already synced
 
