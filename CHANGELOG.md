@@ -1,3 +1,6 @@
+## [0.5.1] - 13nd Sep 2021
+- fix: Room.notificationCount set to null sometimes
+
 ## [0.5.0] - 13nd Sep 2021
 - hotfix: Key sharing security vulnerability! -> Please upgrade as soon as possible to this version
 - feat: MSC2746: Improved Signalling for 1:1 VoIP
