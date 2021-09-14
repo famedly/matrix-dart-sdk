@@ -1,3 +1,7 @@
+## [0.5.2] - 14nd Sep 2021
+- fix: Delete box if it can not be cleared when calling database.clear() -> This should fix some box corruption problems
+- fix: Do not set old events as state events -> This should fix the room list sort ordering bug
+
 ## [0.5.1] - 13nd Sep 2021
 - fix: Room.notificationCount set to null sometimes
 
