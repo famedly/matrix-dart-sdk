@@ -336,6 +336,15 @@ class Room {
       return;
     }
 
+    // Do not set old events as state events
+    final prevEvent = getState(state.type, state.stateKey);
+    if (prevEvent != null &&
+        prevEvent.eventId != state.eventId &&
+        client.database != null &&
+        client.database.eventIsKnown(client.id, state.eventId, state.roomId)) {
+      return;
+    }
+
     states[state.type] ??= {};
     states[state.type][state.stateKey ?? ''] = state;
   }
