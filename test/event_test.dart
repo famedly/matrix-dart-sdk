@@ -20,12 +20,11 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:matrix/matrix.dart';
 import 'package:matrix/encryption.dart';
+import 'package:matrix/matrix.dart';
 import 'package:matrix/src/event.dart';
-
-import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
+import 'package:test/test.dart';
 
 import 'fake_client.dart';
 import 'fake_matrix_api.dart';
@@ -1483,6 +1482,70 @@ void main() {
       }, null);
       expect(event.onlyEmotes, true);
       expect(event.numberEmotes, 1);
+      event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'msgtype': 'm.text',
+          'body': '''> <@alice:example.org> 😒😒
+
+          ❤❤❤''',
+          'format': 'org.matrix.custom.html',
+          'formatted_body':
+              '\<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>😒😒</blockquote></mx-reply>❤❤❤'
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.onlyEmotes, true);
+      expect(event.numberEmotes, 3);
+      event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'msgtype': 'm.text',
+          'body': '''> <@alice:example.org> A 😒
+
+          ❤❤''',
+          'format': 'org.matrix.custom.html',
+          'formatted_body':
+              '\<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>A 😒</blockquote></mx-reply>❤❤'
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.onlyEmotes, true);
+      expect(event.numberEmotes, 2);
+      event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'msgtype': 'm.text',
+          'body': '''> <@alice:example.org> 😒😒😒
+
+          ❤A❤''',
+          'format': 'org.matrix.custom.html',
+          'formatted_body':
+              '\<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>😒😒😒</blockquote></mx-reply>❤A❤'
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.onlyEmotes, false);
+      expect(event.numberEmotes, 2);
+      event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'msgtype': 'm.text',
+          'body': '''> <@alice:example.org> A😒
+
+          ❤A❤''',
+          'format': 'org.matrix.custom.html',
+          'formatted_body':
+              '\<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>A😒</blockquote></mx-reply>❤A❤'
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, null);
+      expect(event.onlyEmotes, false);
+      expect(event.numberEmotes, 2);
     });
   });
 }

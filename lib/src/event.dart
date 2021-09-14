@@ -748,15 +748,33 @@ class Event extends MatrixEvent {
       multiLine: false);
 
   /// Returns if a given event only has emotes, emojis or whitespace as content.
+  /// If the body contains a reply then it is stripped.
   /// This is useful to determine if stand-alone emotes should be displayed bigger.
-  bool get onlyEmotes => isRichMessage
-      ? _onlyEmojiEmoteRegex.hasMatch(formattedText)
-      : _onlyEmojiRegex.hasMatch(text);
+  bool get onlyEmotes {
+    if (isRichMessage) {
+      final formattedTextStripped = formattedText.replaceAll(
+          RegExp('<mx-reply>.*<\/mx-reply>',
+              caseSensitive: false, multiLine: false, dotAll: true),
+          '');
+      return _onlyEmojiEmoteRegex.hasMatch(formattedTextStripped);
+    } else {
+      return _onlyEmojiRegex.hasMatch(plaintextBody);
+    }
+  }
 
-  /// Gets the number of emotes in a given message. This is useful to determine if
-  /// emotes should be displayed bigger. WARNING: This does **not** test if there are
-  /// only emotes. Use `event.onlyEmotes` for that!
-  int get numberEmotes => isRichMessage
-      ? _countEmojiEmoteRegex.allMatches(formattedText).length
-      : _countEmojiRegex.allMatches(text).length;
+  /// Gets the number of emotes in a given message. This is useful to determine
+  /// if the emotes should be displayed bigger.
+  /// If the body contains a reply then it is stripped.
+  /// WARNING: This does **not** test if there are only emotes. Use `event.onlyEmotes` for that!
+  int get numberEmotes {
+    if (isRichMessage) {
+      final formattedTextStripped = formattedText.replaceAll(
+          RegExp('<mx-reply>.*<\/mx-reply>',
+              caseSensitive: false, multiLine: false, dotAll: true),
+          '');
+      return _countEmojiEmoteRegex.allMatches(formattedTextStripped).length;
+    } else {
+      return _countEmojiRegex.allMatches(plaintextBody).length;
+    }
+  }
 }
