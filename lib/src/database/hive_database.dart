@@ -249,8 +249,13 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   Future<void> clear(int clientId) async {
     Logs().i('Clear and close hive database...');
     await _actionOnAllBoxes((box) async {
-      await box.deleteAll(box.keys);
-      await box.close();
+      try {
+        await box.deleteAll(box.keys);
+        await box.close();
+      } catch (e) {
+        Logs().v('Unable to clear box ${box.name}', e);
+        await box.deleteFromDisk();
+      }
     });
     return;
   }
