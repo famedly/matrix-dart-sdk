@@ -190,6 +190,11 @@ extension CommandsClientExtension on Client {
         currentEventJson,
       );
     });
+    addCommand('discardsession', (CommandArgs args) async {
+      await encryption?.keyManager
+          ?.clearOrUseOutboundGroupSession(args.room.id, wipe: true);
+      return '';
+    });
   }
 }
 

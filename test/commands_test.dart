@@ -20,6 +20,7 @@
 import 'dart:convert';
 
 import 'package:test/test.dart';
+import 'package:olm/olm.dart' as olm;
 import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
 import 'fake_matrix_api.dart';
@@ -28,6 +29,7 @@ void main() {
   group('Commands', () {
     Client client;
     Room room;
+    var olmEnabled = true;
 
     final getLastMessagePayload =
         ([String type = 'm.room.message', String stateKey]) {
@@ -40,6 +42,12 @@ void main() {
     };
 
     test('setupClient', () async {
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+      }
       client = await getClient();
       room = Room(id: '!1234:fakeServer.notExisting', client: client);
       room.setState(Event(
@@ -247,6 +255,21 @@ void main() {
         'avatar_url': 'mxc://beep/boop',
         'membership': 'join',
       });
+    });
+
+    test('discardsession', () async {
+      if (olmEnabled) {
+        await client.encryption.keyManager.createOutboundGroupSession(room.id);
+        expect(
+            client.encryption.keyManager.getOutboundGroupSession(room.id) !=
+                null,
+            true);
+        await room.sendTextEvent('/discardsession');
+        expect(
+            client.encryption.keyManager.getOutboundGroupSession(room.id) !=
+                null,
+            false);
+      }
     });
 
     test('dispose client', () async {
