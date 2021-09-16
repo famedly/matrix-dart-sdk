@@ -829,7 +829,7 @@ class KeyManager {
         } else if (device.encryptToDevice &&
             session.allowedAtIndex
                     .tryGet<Map<String, dynamic>>(device.userId)
-                    ?.tryGet(device.deviceId) !=
+                    ?.tryGet(device.curve25519Key) !=
                 null) {
           // if we know the user may see the message, then we can just forward the key.
           // we do not need to check if the device is verified, just if it is not blocked,

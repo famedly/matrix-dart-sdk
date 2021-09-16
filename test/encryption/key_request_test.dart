@@ -122,7 +122,8 @@ void main() {
       // test a successful foreign share
       FakeMatrixApi.calledEndpoints.clear();
       session.allowedAtIndex['@test:fakeServer.notExisting'] = <String, int>{
-        'OTHERDEVICE': 0,
+        matrix.userDeviceKeys['@test:fakeServer.notExisting']
+            .deviceKeys['OTHERDEVICE'].curve25519Key: 0,
       };
       event = ToDeviceEvent(
           sender: '@test:fakeServer.notExisting',
