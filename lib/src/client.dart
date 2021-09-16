@@ -1963,6 +1963,7 @@ class Client extends MatrixApi {
     // then only send it to verified devices
     if (deviceKeys.isNotEmpty) {
       deviceKeys.removeWhere((DeviceKeys deviceKeys) =>
+          deviceKeys == null ||
           deviceKeys.blocked ||
           (deviceKeys.userId == userID && deviceKeys.deviceId == deviceID) ||
           (onlyVerified && !deviceKeys.verified));
