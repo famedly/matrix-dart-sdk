@@ -1,3 +1,10 @@
+## [0.5.3] - 19nd Sep 2021
+- feat: Add /discardsession command
+- fix: Auto-reply key requests
+- fix: Room previews not showing replies
+- fix: missing content-type when changing avatar
+- fix: only/number emotes in a reply
+
 ## [0.5.2] - 14nd Sep 2021
 - fix: Delete box if it can not be cleared when calling database.clear() -> This should fix some box corruption problems
 - fix: Do not set old events as state events -> This should fix the room list sort ordering bug
