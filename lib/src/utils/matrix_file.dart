@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020, 2021 Famedly GmbH
@@ -37,11 +36,11 @@ class MatrixFile {
     return await encryptFile(bytes);
   }
 
-  MatrixFile({this.bytes, this.name, this.mimeType}) {
-    mimeType ??=
-        lookupMimeType(name, headerBytes: bytes) ?? 'application/octet-stream';
-    name = name.split('/').last.toLowerCase();
-  }
+  MatrixFile({required this.bytes, required String name, String? mimeType})
+      : mimeType = mimeType ??
+            lookupMimeType(name, headerBytes: bytes) ??
+            'application/octet-stream',
+        name = name.split('/').last.toLowerCase() {}
 
   int get size => bytes.length;
 
@@ -65,14 +64,14 @@ class MatrixFile {
 }
 
 class MatrixImageFile extends MatrixFile {
-  int width;
-  int height;
-  String blurhash;
+  int? width;
+  int? height;
+  String? blurhash;
 
   MatrixImageFile(
-      {Uint8List bytes,
-      String name,
-      String mimeType,
+      {required Uint8List bytes,
+      required String name,
+      String? mimeType,
       this.width,
       this.height,
       this.blurhash})
@@ -89,14 +88,14 @@ class MatrixImageFile extends MatrixFile {
 }
 
 class MatrixVideoFile extends MatrixFile {
-  int width;
-  int height;
-  int duration;
+  int? width;
+  int? height;
+  int? duration;
 
   MatrixVideoFile(
-      {Uint8List bytes,
-      String name,
-      String mimeType,
+      {required Uint8List bytes,
+      required String name,
+      String? mimeType,
       this.width,
       this.height,
       this.duration})
@@ -113,10 +112,13 @@ class MatrixVideoFile extends MatrixFile {
 }
 
 class MatrixAudioFile extends MatrixFile {
-  int duration;
+  int? duration;
 
   MatrixAudioFile(
-      {Uint8List bytes, String name, String mimeType, this.duration})
+      {required Uint8List bytes,
+      required String name,
+      String? mimeType,
+      this.duration})
       : super(bytes: bytes, name: name, mimeType: mimeType);
   @override
   String get msgType => 'm.audio';
