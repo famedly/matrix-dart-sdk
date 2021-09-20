@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2021 Famedly GmbH
@@ -27,7 +26,7 @@ import '../../matrix.dart';
 /// In contrast, streamTotalTimeout fails if the stream isn't completed
 /// until timeoutFuture.
 Stream<T> streamTotalTimeout<T>(
-    Stream<T> stream, Future<Null> timeoutFuture) async* {
+    Stream<T> stream, Future<Never> timeoutFuture) async* {
   final si = StreamIterator(stream);
   while (await Future.any([si.moveNext(), timeoutFuture])) {
     yield si.current;
@@ -58,7 +57,7 @@ abstract class TimeoutHttpClient extends http.BaseClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    final timeoutFuture = Completer<Null>().future.timeout(timeout);
+    final timeoutFuture = Completer<Never>().future.timeout(timeout);
     final response = await Future.any([inner.send(request), timeoutFuture]);
     return replaceStream(
         response, streamTotalTimeout(response.stream, timeoutFuture));
@@ -91,7 +90,7 @@ class VariableTimeoutHttpClient extends TimeoutHttpClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request,
-      {Duration timeout}) async {
+      {Duration? timeout}) async {
     try {
       final response = await super.send(request);
       return replaceStream(response, (() async* {
