@@ -89,8 +89,7 @@ class VariableTimeoutHttpClient extends TimeoutHttpClient {
       : super(inner);
 
   @override
-  Future<http.StreamedResponse> send(http.BaseRequest request,
-      {Duration? timeout}) async {
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
     try {
       final response = await super.send(request);
       return replaceStream(response, (() async* {
