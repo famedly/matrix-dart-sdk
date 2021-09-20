@@ -1,3 +1,6 @@
+## [0.5.4] - 20nd Sep 2021
+- feat: Add waitForFirstSync parameter to init method
+
 ## [0.5.3] - 19nd Sep 2021
 - feat: Add /discardsession command
 - fix: Auto-reply key requests
