@@ -884,6 +884,7 @@ class Client extends MatrixApi {
     String newDeviceName,
     String newDeviceID,
     String newOlmAccount,
+    bool waitForFirstSync = true,
   }) async {
     if ((newToken != null ||
             newUserID != null ||
@@ -1002,7 +1003,12 @@ class Client extends MatrixApi {
       Logs().i(
         'Successfully connected as ${userID.localpart} with ${homeserver.toString()}',
       );
-      return _sync();
+
+      final syncFuture = _sync();
+      if (waitForFirstSync) {
+        await syncFuture;
+      }
+      return;
     } catch (e, s) {
       Logs().e('Initialization failed', e, s);
       await logout().catchError((_) => null);
