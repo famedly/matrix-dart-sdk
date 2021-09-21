@@ -234,6 +234,30 @@ void main() {
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
           false);
+
+      // don't replay if the last event is m.dummy itself
+      FakeMatrixApi.calledEndpoints.clear();
+      await client.database.setLastSentMessageUserDeviceKey(
+          json.encode({
+            'type': 'm.dummy',
+            'content': {},
+          }),
+          client.id,
+          userId,
+          deviceId);
+      event = ToDeviceEvent(
+        sender: userId,
+        type: 'm.dummy',
+        content: {},
+        encryptedContent: {
+          'sender_key': senderKey,
+        },
+      );
+      await client.encryption.olmManager.handleToDeviceEvent(event);
+      expect(
+          FakeMatrixApi.calledEndpoints.keys.any(
+              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+          false);
     });
 
     test('dispose client', () async {

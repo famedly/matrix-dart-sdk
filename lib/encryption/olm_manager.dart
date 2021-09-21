@@ -667,9 +667,14 @@ class OlmManager {
         return;
       }
       final lastSentMessage = json.decode(lastSentMessageRes.first);
-      // okay, time to send the message!
-      await client.sendToDeviceEncrypted(
-          [device], lastSentMessage['type'], lastSentMessage['content']);
+      // We do *not* want to re-play m.dummy events, as they hold no value except of saying
+      // what olm session is the most recent one. In fact, if we *do* replay them, then
+      // we can easily land in an infinite ping-pong trap!
+      if (lastSentMessage['type'] != EventTypes.Dummy) {
+        // okay, time to send the message!
+        await client.sendToDeviceEncrypted(
+            [device], lastSentMessage['type'], lastSentMessage['content']);
+      }
     }
   }
 
