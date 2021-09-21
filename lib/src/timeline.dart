@@ -115,6 +115,7 @@ class Timeline {
         .listen((_) {
       events.clear();
       aggregatedEvents.clear();
+      requestHistory();
     });
     sessionIdReceivedSub ??=
         room.onSessionKeyReceived.stream.listen(_sessionKeyReceived);
