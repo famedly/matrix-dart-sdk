@@ -944,14 +944,22 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         final Map stateMap = await _roomStateBox.get(key) ?? {};
         // store state events and new messages, that either are not an edit or an edit of the lastest message
         // An edit is an event, that has an edit relation to the latest event. In some cases for the second edit, we need to compare if both have an edit relation to the same event instead.
-        if (!eventUpdate.content['content'].containsKey('m.relates_to')) {
+        if (eventUpdate.content
+                .tryGetMap<String, dynamic>('content')
+                ?.tryGetMap<String, dynamic>('m.relates_to') ==
+            null) {
           stateMap[eventUpdate.content['state_key']] = eventUpdate.content;
           await _roomStateBox.put(key, stateMap);
         } else {
-          final String editedEventRelationshipEventId =
-              eventUpdate.content['content']['m.relates_to']['event_id'];
+          final editedEventRelationshipEventId = eventUpdate.content
+              .tryGetMap<String, dynamic>('content')
+              ?.tryGetMap<String, dynamic>('m.relates_to')
+              ?.tryGet<String>('event_id');
           if (eventUpdate.content['type'] != EventTypes.Message ||
-              eventUpdate.content['content']['m.relates_to']['rel_type'] !=
+              eventUpdate.content
+                      .tryGetMap<String, dynamic>('content')
+                      ?.tryGetMap<String, dynamic>('m.relates_to')
+                      ?.tryGet<String>('rel_type') !=
                   RelationshipTypes.edit ||
               editedEventRelationshipEventId == stateMap['']?.eventId ||
               ((stateMap['']?.relationshipType == RelationshipTypes.edit &&
