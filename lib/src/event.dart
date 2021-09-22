@@ -38,7 +38,7 @@ abstract class RelationshipTypes {
 
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
 class Event extends MatrixEvent {
-  User get sender => room.getUserByMXIDSync(senderId ?? '@unknown');
+  User get sender => room.getUserByMXIDSync(senderId ?? '@unknown:unknown');
 
   @Deprecated('Use [originServerTs] instead')
   DateTime get time => originServerTs;
