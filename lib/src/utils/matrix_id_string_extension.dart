@@ -66,36 +66,11 @@ extension MatrixIdExtension on String {
 
     final via = <String>{};
     String action;
-    final parseQueryString = (qs) {
-      if (qs != null) {
-        // as there might be multiple "via" tags we can't just use Uri.splitQueryString, we need to do our own thing
-        for (final parameterStr in qs.split('&')) {
-          final index = parameterStr.indexOf('=');
-          if (index == -1) {
-            continue;
-          }
-          var parameter = parameterStr.substring(0, index);
-          try {
-            parameter = Uri.decodeQueryComponent(parameter);
-          } catch (_) {
-            // do nothing: the parameter wasn't url-encoded, and we already have the
-            // plaintext version in the `parameter` variable
-          }
-          var value = parameterStr.substring(index + 1);
-          try {
-            value = Uri.decodeQueryComponent(value);
-          } catch (_) {
-            // do nothing: the value wasn't url-encoded, and we already have the
-            // plaintext version in the `value` variable
-          }
-          if (parameter == 'via') {
-            via.add(value);
-          }
-          if (parameter == 'action') {
-            action = value;
-          }
-        }
-      }
+    final parseQueryString = (String qs) {
+      if (qs == null) return;
+      final uri = Uri(query: qs);
+      via = (uri.queryParametersAll['via'] ?? []).toSet();
+      action = uri.queryParameters['action'];
     };
 
     // check if we have a "matrix:" uri
