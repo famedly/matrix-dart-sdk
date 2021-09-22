@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2021 Famedly GmbH
@@ -25,14 +24,14 @@ extension CommandsClientExtension on Client {
   /// Add a command to the command handler. `command` is its name, and `callback` is the
   /// callback to invoke
   void addCommand(
-      String command, FutureOr<String> Function(CommandArgs) callback) {
+      String command, FutureOr<String?> Function(CommandArgs) callback) {
     commands[command.toLowerCase()] = callback;
   }
 
   /// Parse and execute a string, `msg` is the input. Optionally `inReplyTo` is the event being
   /// replied to and `editEventId` is the eventId of the event being replied to
-  Future<String> parseAndRunCommand(Room room, String msg,
-      {Event inReplyTo, String editEventId, String txid}) async {
+  Future<String?> parseAndRunCommand(Room room, String msg,
+      {Event? inReplyTo, String? editEventId, String? txid}) async {
     final args = CommandArgs(
       inReplyTo: inReplyTo,
       editEventId: editEventId,
@@ -41,9 +40,10 @@ extension CommandsClientExtension on Client {
       txid: txid,
     );
     if (!msg.startsWith('/')) {
-      if (commands.containsKey('send')) {
+      final sendCommand = commands['send'];
+      if (sendCommand != null) {
         args.msg = msg;
-        return await commands['send'](args);
+        return await sendCommand(args);
       }
       return null;
     }
@@ -57,13 +57,17 @@ extension CommandsClientExtension on Client {
     } else {
       command = msg.toLowerCase();
     }
-    if (commands.containsKey(command)) {
-      return await commands[command](args);
+    final commandOp = commands[command];
+    if (commandOp != null) {
+      return await commandOp(args);
     }
     if (msg.startsWith('/') && commands.containsKey('send')) {
       // re-set to include the "command"
-      args.msg = msg;
-      return await commands['send'](args);
+      final sendCommand = commands['send'];
+      if (sendCommand != null) {
+        args.msg = msg;
+        return await sendCommand(args);
+      }
     }
     return null;
   }
@@ -119,10 +123,11 @@ extension CommandsClientExtension on Client {
       );
     });
     addCommand('react', (CommandArgs args) async {
-      if (args.inReplyTo == null) {
+      final inReplyTo = args.inReplyTo;
+      if (inReplyTo == null) {
         return null;
       }
-      return await args.room.sendReaction(args.inReplyTo.eventId, args.msg);
+      return await args.room.sendReaction(inReplyTo.eventId, args.msg);
     });
     addCommand('join', (CommandArgs args) async {
       await args.room.client.joinRoom(args.msg);
@@ -137,12 +142,12 @@ extension CommandsClientExtension on Client {
       if (parts.isEmpty) {
         return null;
       }
-      var pl = 50;
+      int? pl;
       if (parts.length >= 2) {
         pl = int.tryParse(parts[1]);
       }
       final mxid = parts.first;
-      return await args.room.setPower(mxid, pl);
+      return await args.room.setPower(mxid, pl ?? 50);
     });
     addCommand('kick', (CommandArgs args) async {
       final parts = args.msg.split(' ');
@@ -200,10 +205,14 @@ extension CommandsClientExtension on Client {
 
 class CommandArgs {
   String msg;
-  String editEventId;
-  Event inReplyTo;
+  String? editEventId;
+  Event? inReplyTo;
   Room room;
-  String txid;
+  String? txid;
   CommandArgs(
-      {this.msg, this.editEventId, this.inReplyTo, this.room, this.txid});
+      {required this.msg,
+      this.editEventId,
+      this.inReplyTo,
+      required this.room,
+      this.txid});
 }
