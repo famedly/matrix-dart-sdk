@@ -1,3 +1,6 @@
+## [0.5.5] - 20nd Sep 2021
+ fix: Autodetect mime type on file upload
+
 ## [0.5.4] - 20nd Sep 2021
 - feat: Add waitForFirstSync parameter to init method
 
