@@ -64,15 +64,6 @@ extension MatrixIdExtension on String {
   MatrixIdentifierStringExtensionResults parseIdentifierIntoParts() {
     const matrixUriPrefix = 'matrix:';
 
-    final via = <String>{};
-    String action;
-    final parseQueryString = (String qs) {
-      if (qs == null) return;
-      final uri = Uri(query: qs);
-      via = (uri.queryParametersAll['via'] ?? []).toSet();
-      action = uri.queryParameters['action'];
-    };
-
     // check if we have a "matrix:" uri
     if (toLowerCase().startsWith(matrixUriPrefix)) {
       final uri = Uri.tryParse(this);
@@ -100,14 +91,12 @@ extension MatrixIdExtension on String {
       if (identifiers.isEmpty) {
         return null;
       }
-      final queryString = uri.query.isNotEmpty ? uri.query : null;
-      parseQueryString(queryString);
       return MatrixIdentifierStringExtensionResults(
         primaryIdentifier: identifiers.first,
         secondaryIdentifier: identifiers.length > 1 ? identifiers[1] : null,
-        queryString: queryString,
-        via: via,
-        action: action,
+        queryString: uri.query.isNotEmpty ? uri.query : null,
+        via: (uri.queryParametersAll['via'] ?? []).toSet(),
+        action: uri.queryParameters['action'],
       );
     }
 
@@ -133,15 +122,13 @@ extension MatrixIdExtension on String {
         !(match.group(2)?.isValidMatrixId ?? true)) {
       return null;
     }
-    final queryString =
-        match.group(3)?.isNotEmpty ?? false ? match.group(3) : null;
-    parseQueryString(queryString);
+    final uri = Uri(query: match.group(3));
     return MatrixIdentifierStringExtensionResults(
       primaryIdentifier: match.group(1),
       secondaryIdentifier: match.group(2),
-      queryString: queryString,
-      via: via,
-      action: action,
+      queryString: uri.query.isNotEmpty ? uri.query : null,
+      via: (uri.queryParametersAll['via'] ?? []).toSet(),
+      action: uri.queryParameters['action'],
     );
   }
 }
