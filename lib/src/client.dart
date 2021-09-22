@@ -24,6 +24,7 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:matrix/src/utils/run_in_root.dart';
+import 'package:mime/mime.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../encryption.dart';
@@ -699,6 +700,7 @@ class Client extends MatrixApi {
   @override
   Future<Uri> uploadContent(Uint8List file,
       {String filename, String contentType}) async {
+    contentType ??= lookupMimeType(filename ?? '', headerBytes: file);
     final mxc = await super
         .uploadContent(file, filename: filename, contentType: contentType);
     final storeable = database != null && file.length <= database.maxFileSize;
