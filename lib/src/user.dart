@@ -73,9 +73,8 @@ class User extends Event {
 
   /// The displayname of the user if the user has set one.
   String get displayName =>
-      content != null && content.containsKey('displayname')
-          ? content['displayname']
-          : (prevContent != null ? prevContent['displayname'] : null);
+      content?.tryGet<String>('displayname') ??
+      prevContent?.tryGet<String>('displayname');
 
   /// Returns the power level of this user.
   int get powerLevel => room?.getPowerLevelByUserId(id);
