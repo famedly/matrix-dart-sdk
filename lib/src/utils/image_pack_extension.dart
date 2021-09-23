@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020, 2021 Famedly GmbH
@@ -24,10 +23,10 @@ import '../room.dart';
 
 extension ImagePackRoomExtension on Room {
   /// Get all the active image packs for the specified [usage], mapped by their slug
-  Map<String, ImagePackContent> getImagePacks([ImagePackUsage usage]) {
+  Map<String, ImagePackContent> getImagePacks([ImagePackUsage? usage]) {
     final allMxcs = <Uri>{}; // used for easy deduplication
     final packs = <String, ImagePackContent>{};
-    final addImagePack = (BasicEvent event, {Room room, String slug}) {
+    final addImagePack = (BasicEvent? event, {Room? room, String? slug}) {
       if (event == null) return;
       final imagePack = event.parsedImagePackContent;
       final finalSlug = slugify(slug ?? 'pack');
@@ -42,17 +41,16 @@ extension ImagePackRoomExtension on Room {
             !imageUsage.contains(usage)) {
           continue;
         }
-        if (!packs.containsKey(finalSlug)) {
-          packs[finalSlug] = ImagePackContent.fromJson(<String, dynamic>{});
-          packs[finalSlug].pack.displayName = imagePack.pack.displayName ??
-              room?.displayname ??
-              finalSlug ??
-              '';
-          packs[finalSlug].pack.avatarUrl =
-              imagePack.pack.avatarUrl ?? room?.avatar;
-          packs[finalSlug].pack.attribution = imagePack.pack.attribution;
-        }
-        packs[finalSlug].images[entry.key] = image;
+        packs
+            .putIfAbsent(
+                finalSlug,
+                () => ImagePackContent.fromJson({})
+                  ..pack.displayName = imagePack.pack.displayName ??
+                      room?.displayname ??
+                      finalSlug
+                  ..pack.avatarUrl = imagePack.pack.avatarUrl ?? room?.avatar
+                  ..pack.attribution = imagePack.pack.attribution)
+            .images[entry.key] = image;
         allMxcs.add(image.url);
       }
     };
@@ -89,7 +87,7 @@ extension ImagePackRoomExtension on Room {
 
   /// Get a flat view of all the image packs of a specified [usage], that is a map of all
   /// slugs to a map of the image code to their mxc url
-  Map<String, Map<String, String>> getImagePacksFlat([ImagePackUsage usage]) =>
+  Map<String, Map<String, String>> getImagePacksFlat([ImagePackUsage? usage]) =>
       getImagePacks(usage).map((k, v) =>
           MapEntry(k, v.images.map((k, v) => MapEntry(k, v.url.toString()))));
 }

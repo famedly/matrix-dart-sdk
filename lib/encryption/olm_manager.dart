@@ -653,11 +653,12 @@ class OlmManager {
     if (event.type == EventTypes.Dummy) {
       // We receive dan encrypted m.dummy. This means that the other end was not able to
       // decrypt our last message. So, we re-send it.
-      if (event.encryptedContent == null || client.database == null) {
+      final encryptedContent = event.encryptedContent;
+      if (encryptedContent == null || client.database == null) {
         return;
       }
       final device = client.getUserDeviceKeysByCurve25519Key(
-          event.encryptedContent.tryGet<String>('sender_key') ?? '');
+          encryptedContent.tryGet<String>('sender_key') ?? '');
       if (device == null) {
         return; // device not found
       }

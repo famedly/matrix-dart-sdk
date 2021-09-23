@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020, 2021 Famedly GmbH
@@ -20,36 +19,31 @@
 import '../../matrix.dart';
 
 class ToDeviceEvent extends BasicEventWithSender {
-  Map<String, dynamic> encryptedContent;
+  Map<String, dynamic>? encryptedContent;
 
   String get sender => senderId;
   set sender(String sender) => senderId = sender;
 
   ToDeviceEvent({
-    String sender,
-    String type,
-    Map<String, dynamic> content,
+    required String sender,
+    required String type,
+    required Map<String, dynamic> content,
     this.encryptedContent,
-  }) {
-    senderId = sender;
-    this.type = type;
-    this.content = content;
-  }
+  }) : super(senderId: sender, type: type, content: content);
 
-  ToDeviceEvent.fromJson(Map<String, dynamic> json) {
+  factory ToDeviceEvent.fromJson(Map<String, dynamic> json) {
     final event = BasicEventWithSender.fromJson(json);
-    senderId = event.senderId;
-    type = event.type;
-    content = event.content;
+    return ToDeviceEvent(
+        sender: event.senderId, type: event.type, content: event.content);
   }
 }
 
 class ToDeviceEventDecryptionError extends ToDeviceEvent {
   Exception exception;
-  StackTrace stackTrace;
+  StackTrace? stackTrace;
   ToDeviceEventDecryptionError({
-    ToDeviceEvent toDeviceEvent,
-    this.exception,
+    required ToDeviceEvent toDeviceEvent,
+    required this.exception,
     this.stackTrace,
   }) : super(
           sender: toDeviceEvent.senderId,

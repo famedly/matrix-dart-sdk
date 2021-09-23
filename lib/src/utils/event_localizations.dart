@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -16,6 +15,8 @@
  *   You should have received a copy of the GNU Affero General Public License
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+import 'package:collection/collection.dart';
 
 import '../../encryption.dart';
 import '../../matrix.dart';
@@ -77,7 +78,7 @@ abstract class EventLocalizations {
   // This map holds how to localize event types, and thus which event types exist.
   // If an event exists but it does not have a localized body, set its callback to null
   static final Map<String,
-          String Function(Event event, MatrixLocalizations i18n, String body)>
+          String Function(Event event, MatrixLocalizations i18n, String body)?>
       localizationsMap = {
     EventTypes.Sticker: (event, i18n, body) =>
         i18n.sentASticker(event.sender.calcDisplayname()),
@@ -91,11 +92,9 @@ abstract class EventLocalizations {
         i18n.createdTheChat(event.sender.calcDisplayname()),
     EventTypes.RoomTombstone: (event, i18n, body) => i18n.roomHasBeenUpgraded,
     EventTypes.RoomJoinRules: (event, i18n, body) {
-      final joinRules = JoinRules.values.firstWhere(
-          (r) =>
-              r.toString().replaceAll('JoinRules.', '') ==
-              event.content['join_rule'],
-          orElse: () => null);
+      final joinRules = JoinRules.values.firstWhereOrNull((r) =>
+          r.toString().replaceAll('JoinRules.', '') ==
+          event.content['join_rule']);
       if (joinRules == null) {
         return i18n.changedTheJoinRules(event.sender.calcDisplayname());
       } else {
@@ -177,11 +176,9 @@ abstract class EventLocalizations {
     EventTypes.RoomAvatar: (event, i18n, body) =>
         i18n.changedTheChatAvatar(event.sender.calcDisplayname()),
     EventTypes.GuestAccess: (event, i18n, body) {
-      final guestAccess = GuestAccess.values.firstWhere(
-          (r) =>
-              r.toString().replaceAll('GuestAccess.', '') ==
-              event.content['guest_access'],
-          orElse: () => null);
+      final guestAccess = GuestAccess.values.firstWhereOrNull((r) =>
+          r.toString().replaceAll('GuestAccess.', '') ==
+          event.content['guest_access']);
       if (guestAccess == null) {
         return i18n.changedTheGuestAccessRules(event.sender.calcDisplayname());
       } else {
@@ -190,11 +187,9 @@ abstract class EventLocalizations {
       }
     },
     EventTypes.HistoryVisibility: (event, i18n, body) {
-      final historyVisibility = HistoryVisibility.values.firstWhere(
-          (r) =>
-              r.toString().replaceAll('HistoryVisibility.', '') ==
-              event.content['history_visibility'],
-          orElse: () => null);
+      final historyVisibility = HistoryVisibility.values.firstWhereOrNull((r) =>
+          r.toString().replaceAll('HistoryVisibility.', '') ==
+          event.content['history_visibility']);
       if (historyVisibility == null) {
         return i18n.changedTheHistoryVisibility(event.sender.calcDisplayname());
       } else {

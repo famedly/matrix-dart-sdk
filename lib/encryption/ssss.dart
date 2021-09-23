@@ -509,9 +509,10 @@ class SSSS {
     } else if (event.type == EventTypes.SecretSend) {
       // receiving a secret we asked for
       Logs().i('[SSSS] Received shared secret...');
+      final encryptedContent = event.encryptedContent;
       if (event.sender != client.userID ||
           !pendingShareRequests.containsKey(event.content['request_id']) ||
-          event.encryptedContent == null) {
+          encryptedContent == null) {
         Logs().i('[SSSS] Not by us or unknown request');
         return; // we have no idea what we just received
       }
@@ -519,7 +520,7 @@ class SSSS {
       // alright, as we received a known request id, let's check if the sender is valid
       final device = request.devices.firstWhereOrNull((d) =>
           d.userId == event.sender &&
-          d.curve25519Key == event.encryptedContent['sender_key']);
+          d.curve25519Key == encryptedContent['sender_key']);
       if (device == null) {
         Logs().i('[SSSS] Someone else replied?');
         return; // someone replied whom we didn't send the share request to

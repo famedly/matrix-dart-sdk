@@ -864,7 +864,8 @@ class KeyManager {
       }
     } else if (event.type == EventTypes.ForwardedRoomKey) {
       // we *received* an incoming key request
-      if (event.encryptedContent == null) {
+      final encryptedContent = event.encryptedContent;
+      if (encryptedContent == null) {
         return; // event wasn't encrypted, this is a security risk
       }
       final request = outgoingShareRequests.values.firstWhereOrNull((r) =>
@@ -876,7 +877,7 @@ class KeyManager {
       }
       final device = request.devices.firstWhereOrNull((d) =>
           d.userId == event.sender &&
-          d.curve25519Key == event.encryptedContent['sender_key']);
+          d.curve25519Key == encryptedContent['sender_key']);
       if (device == null) {
         return; // someone we didn't send our request to replied....better ignore this
       }
@@ -885,7 +886,7 @@ class KeyManager {
         event.content['forwarding_curve25519_key_chain'] = <String>[];
       }
       event.content['forwarding_curve25519_key_chain']
-          .add(event.encryptedContent['sender_key']);
+          .add(encryptedContent['sender_key']);
       // TODO: verify that the keys work to decrypt a message
       // alright, all checks out, let's go ahead and store this session
       setInboundGroupSession(
@@ -920,7 +921,8 @@ class KeyManager {
     } else if (event.type == EventTypes.RoomKey) {
       Logs().v(
           '[KeyManager] Received room key with session ${event.content['session_id']}');
-      if (event.encryptedContent == null) {
+      final encryptedContent = event.encryptedContent;
+      if (encryptedContent == null) {
         Logs().v('[KeyManager] not encrypted, ignoring...');
         return; // the event wasn't encrypted, this is a security risk;
       }
@@ -932,8 +934,8 @@ class KeyManager {
         event.content['sender_claimed_ed25519_key'] = sender_ed25519;
       }
       Logs().v('[KeyManager] Keeping room key');
-      setInboundGroupSession(roomId, sessionId,
-          event.encryptedContent['sender_key'], event.content,
+      setInboundGroupSession(
+          roomId, sessionId, encryptedContent['sender_key'], event.content,
           forwarded: false);
     }
   }
@@ -972,11 +974,11 @@ class RoomKeyRequest extends ToDeviceEvent {
   KeyManager keyManager;
   KeyManagerKeyShareRequest request;
   RoomKeyRequest.fromToDeviceEvent(
-      ToDeviceEvent toDeviceEvent, this.keyManager, this.request) {
-    sender = toDeviceEvent.sender;
-    content = toDeviceEvent.content;
-    type = toDeviceEvent.type;
-  }
+      ToDeviceEvent toDeviceEvent, this.keyManager, this.request)
+      : super(
+            sender: toDeviceEvent.sender,
+            content: toDeviceEvent.content,
+            type: toDeviceEvent.type);
 
   Room get room => request.room;
 

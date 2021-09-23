@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2021 Famedly GmbH
@@ -16,6 +15,8 @@
  *   You should have received a copy of the GNU Affero General Public License
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+import 'package:collection/collection.dart';
 
 import 'package:html/parser.dart';
 import 'package:html/dom.dart';
@@ -71,9 +72,9 @@ class HtmlToText {
     }
     final language =
         RegExp(r'language-(\w+)', multiLine: false, caseSensitive: false)
-            .firstMatch(match.group(1));
+            .firstMatch(match.group(1)!);
     if (language != null) {
-      text = language.group(1) + text;
+      text = language.group(1)! + text;
     }
     return text;
   }
@@ -116,17 +117,16 @@ class HtmlToText {
     opts.listDepth++;
     final entries = _listChildNodes(opts, node, {'li'});
     opts.listDepth--;
-    var entry = 1;
-    if (node.attributes['start'] is String &&
-        RegExp(r'^[0-9]+$', multiLine: false)
-            .hasMatch(node.attributes['start'])) {
-      entry = int.parse(node.attributes['start']);
-    }
+    final startStr = node.attributes['start'];
+    final start = (startStr is String &&
+            RegExp(r'^[0-9]+$', multiLine: false).hasMatch(startStr))
+        ? int.parse(startStr)
+        : 1;
 
     return entries
-        .map((s) =>
+        .mapIndexed((index, s) =>
             ('    ' * opts.listDepth) +
-            '${entry++}. ' +
+            '${start + index}. ' +
             s.replaceAll('\n', '\n' + ('    ' * opts.listDepth) + '  '))
         .join('\n');
   }
@@ -134,14 +134,14 @@ class HtmlToText {
   static const _listBulletPoints = <String>['●', '○', '■', '‣'];
 
   static List<String> _listChildNodes(_ConvertOpts opts, Element node,
-      [Iterable<String> types]) {
+      [Iterable<String>? types]) {
     final replies = <String>[];
     for (final child in node.nodes) {
       if (types != null &&
           types.isNotEmpty &&
           ((child is Text) ||
               ((child is Element) &&
-                  !types.contains(child.localName.toLowerCase())))) {
+                  !types.contains(child.localName!.toLowerCase())))) {
         continue;
       }
       replies.add(_walkNode(opts, child));
@@ -166,7 +166,7 @@ class HtmlToText {
     var reply = '';
     var lastTag = '';
     for (final child in node.nodes) {
-      final thisTag = child is Element ? child.localName.toLowerCase() : '';
+      final thisTag = child is Element ? child.localName!.toLowerCase() : '';
       if (thisTag == 'p' && lastTag == 'p') {
         reply += '\n\n';
       } else if (_blockTags.contains(thisTag) &&
@@ -187,7 +187,7 @@ class HtmlToText {
       // ignore \n between single nodes
       return node.text == '\n' ? '' : node.text;
     } else if (node is Element) {
-      final tag = node.localName.toLowerCase();
+      final tag = node.localName!.toLowerCase();
       switch (tag) {
         case 'em':
         case 'i':
