@@ -91,14 +91,13 @@ extension MatrixIdExtension on String {
                       (m) => Uri.encodeComponent(m.group(0))))
               .replaceAll('#', '%23'));
     } else {
-      final match =
-          RegExp(r'^([#!@+][^:]*:[^\/?]*)(?:\/(\$[^?]*))?(?:\?(.*))?$')
-              .firstMatch(this);
-      if (match == null) return null;
       return Uri(
-          pathSegments:
-              [match.group(1), match.group(2)].where((x) => x != null),
-          query: match.group(3));
+          pathSegments: RegExp(r'/((?:[#!@+][^:]*:)?[^/?]*)(?:\?.*$)?')
+              .allMatches('/$this')
+              .map((m) => m.group(1)),
+          query: RegExp(r'(?:/(?:[#!@+][^:]*:)?[^/?]*)*\?(.*$)')
+              .firstMatch('/$this')
+              ?.group(1));
     }
   }
 
