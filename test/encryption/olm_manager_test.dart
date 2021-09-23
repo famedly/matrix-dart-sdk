@@ -166,7 +166,6 @@ void main() {
               'floof': 'foxhole',
             },
           }),
-          client.id,
           userId,
           deviceId);
       var event = ToDeviceEvent(
@@ -194,7 +193,6 @@ void main() {
               'floof': 'foxhole',
             },
           }),
-          client.id,
           userId,
           deviceId);
       event = ToDeviceEvent(
@@ -218,7 +216,6 @@ void main() {
               'floof': 'foxhole',
             },
           }),
-          client.id,
           userId,
           deviceId);
       event = ToDeviceEvent(
@@ -242,7 +239,6 @@ void main() {
             'type': 'm.dummy',
             'content': {},
           }),
-          client.id,
           userId,
           deviceId);
       event = ToDeviceEvent(

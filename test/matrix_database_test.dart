@@ -26,20 +26,21 @@ import 'fake_database.dart';
 void main() {
   group('Databse', () {
     Logs().level = Level.error;
-    var clientId = -1;
     final room = Room(id: '!room:blubb');
     test('setupDatabase', () async {
       final database = await getDatabase(null);
-      clientId = await database.insertClient(
-          'testclient',
-          'https://example.org',
-          'blubb',
-          '@test:example.org',
-          null,
-          null,
-          null,
-          null);
+      await database.insertClient(
+        'testclient',
+        'https://example.org',
+        'blubb',
+        '@test:example.org',
+        null,
+        null,
+        null,
+        null,
+      );
     });
+
     test('storeEventUpdate', () async {
       final database = await getDatabase(null);
       // store a simple update
@@ -54,8 +55,8 @@ void main() {
           'sender': '@blah:blubb',
         },
       );
-      await database.storeEventUpdate(clientId, update);
-      var event = await database.getEventById(clientId, '\$event-1', room);
+      await database.storeEventUpdate(update);
+      var event = await database.getEventById('\$event-1', room);
       expect(event.eventId, '\$event-1');
 
       // insert a transaction id
@@ -71,8 +72,8 @@ void main() {
           'status': 0,
         },
       );
-      await database.storeEventUpdate(clientId, update);
-      event = await database.getEventById(clientId, 'transaction-1', room);
+      await database.storeEventUpdate(update);
+      event = await database.getEventById('transaction-1', room);
       expect(event.eventId, 'transaction-1');
       update = EventUpdate(
         type: EventUpdateType.timeline,
@@ -89,10 +90,10 @@ void main() {
           'status': 1,
         },
       );
-      await database.storeEventUpdate(clientId, update);
-      event = await database.getEventById(clientId, 'transaction-1', room);
+      await database.storeEventUpdate(update);
+      event = await database.getEventById('transaction-1', room);
       expect(event, null);
-      event = await database.getEventById(clientId, '\$event-2', room);
+      event = await database.getEventById('\$event-2', room);
 
       // insert a transaction id if the event id for it already exists
       update = EventUpdate(
@@ -107,8 +108,8 @@ void main() {
           'status': 0,
         },
       );
-      await database.storeEventUpdate(clientId, update);
-      event = await database.getEventById(clientId, '\$event-3', room);
+      await database.storeEventUpdate(update);
+      event = await database.getEventById('\$event-3', room);
       expect(event.eventId, '\$event-3');
       update = EventUpdate(
         type: EventUpdateType.timeline,
@@ -125,11 +126,11 @@ void main() {
           },
         },
       );
-      await database.storeEventUpdate(clientId, update);
-      event = await database.getEventById(clientId, '\$event-3', room);
+      await database.storeEventUpdate(update);
+      event = await database.getEventById('\$event-3', room);
       expect(event.eventId, '\$event-3');
       expect(event.status, 1);
-      event = await database.getEventById(clientId, 'transaction-2', room);
+      event = await database.getEventById('transaction-2', room);
       expect(event, null);
 
       // insert transaction id and not update status
@@ -145,8 +146,8 @@ void main() {
           'status': 2,
         },
       );
-      await database.storeEventUpdate(clientId, update);
-      event = await database.getEventById(clientId, '\$event-4', room);
+      await database.storeEventUpdate(update);
+      event = await database.getEventById('\$event-4', room);
       expect(event.eventId, '\$event-4');
       update = EventUpdate(
         type: EventUpdateType.timeline,
@@ -163,11 +164,11 @@ void main() {
           },
         },
       );
-      await database.storeEventUpdate(clientId, update);
-      event = await database.getEventById(clientId, '\$event-4', room);
+      await database.storeEventUpdate(update);
+      event = await database.getEventById('\$event-4', room);
       expect(event.eventId, '\$event-4');
       expect(event.status, 2);
-      event = await database.getEventById(clientId, 'transaction-3', room);
+      event = await database.getEventById('transaction-3', room);
       expect(event, null);
     });
   });

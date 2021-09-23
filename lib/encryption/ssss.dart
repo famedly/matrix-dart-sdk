@@ -63,7 +63,7 @@ class SSSS {
 
   // for testing
   Future<void> clearCache() async {
-    await client.database?.clearSSSSCache(client.id);
+    await client.database?.clearSSSSCache();
     _cache.clear();
   }
 
@@ -282,7 +282,7 @@ class SSSS {
     if (_cache.containsKey(type) && isValid(_cache[type])) {
       return _cache[type].content;
     }
-    final ret = await client.database.getSSSSCache(client.id, type);
+    final ret = await client.database.getSSSSCache(type);
     if (ret == null) {
       return null;
     }
@@ -311,7 +311,7 @@ class SSSS {
     if (cacheTypes.contains(type) && client.database != null) {
       // cache the thing
       await client.database
-          .storeSSSSCache(client.id, type, keyId, enc['ciphertext'], decrypted);
+          .storeSSSSCache(type, keyId, enc['ciphertext'], decrypted);
       if (_cacheCallbacks.containsKey(type) && await getCached(type) == null) {
         _cacheCallbacks[type](decrypted);
       }
@@ -344,7 +344,7 @@ class SSSS {
     if (cacheTypes.contains(type) && client.database != null) {
       // cache the thing
       await client.database
-          .storeSSSSCache(client.id, type, keyId, encrypted.ciphertext, secret);
+          .storeSSSSCache(type, keyId, encrypted.ciphertext, secret);
       if (triggerCacheCallback) {
         _cacheCallbacks[type](secret);
       }
@@ -369,8 +369,8 @@ class SSSS {
     await client.setAccountData(client.userID, type, content);
     if (cacheTypes.contains(type) && client.database != null) {
       // cache the thing
-      await client.database.storeSSSSCache(client.id, type, keyId,
-          content['encrypted'][keyId]['ciphertext'], secret);
+      await client.database.storeSSSSCache(
+          type, keyId, content['encrypted'][keyId]['ciphertext'], secret);
     }
   }
 
@@ -532,8 +532,8 @@ class SSSS {
         if (keyId != null) {
           final ciphertext = client.accountData[request.type]
               .content['encrypted'][keyId]['ciphertext'];
-          await client.database.storeSSSSCache(
-              client.id, request.type, keyId, ciphertext, secret);
+          await client.database
+              .storeSSSSCache(request.type, keyId, ciphertext, secret);
           if (_cacheCallbacks.containsKey(request.type)) {
             _cacheCallbacks[request.type](secret);
           }

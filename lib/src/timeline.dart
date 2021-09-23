@@ -80,7 +80,6 @@ class Timeline {
     try {
       // Look up for events in hive first
       final eventsFromStore = await room.client.database?.getEventList(
-        room.client.id,
         room,
         start: events.length,
         limit: Room.defaultHistoryCount,

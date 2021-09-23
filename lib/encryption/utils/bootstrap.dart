@@ -575,7 +575,7 @@ class Bootstrap {
       await newSsssKey.store(megolmKey, base64.encode(privKey));
       Logs().v(
           'And finally set all megolm keys as needing to be uploaded again...');
-      await client.database?.markInboundGroupSessionsAsNeedingUpload(client.id);
+      await client.database?.markInboundGroupSessionsAsNeedingUpload();
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error setting up online key backup', e, s);
       state = BootstrapState.error;

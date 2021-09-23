@@ -980,7 +980,6 @@ class Client extends MatrixApi {
             _deviceName,
             prevBatch,
             encryption?.pickledOlmAccount,
-            id,
           );
         } else {
           _id = await database.insertClient(
@@ -997,7 +996,7 @@ class Client extends MatrixApi {
         _userDeviceKeys = await database.getUserDeviceKeys(this);
         _rooms = await database.getRoomList(this);
         _sortRooms();
-        accountData = await database.getAccountData(id);
+        accountData = await database.getAccountData();
         presences.clear();
       }
       _initLock = false;
@@ -1030,7 +1029,7 @@ class Client extends MatrixApi {
     Logs().outputEvents.clear();
     try {
       await abortSync();
-      await database?.clear(id);
+      await database?.clear();
       _backgroundSync = true;
     } catch (e, s) {
       Logs().e('Unable to clear database', e, s);
@@ -1093,7 +1092,7 @@ class Client extends MatrixApi {
   Future<void> _checkSyncFilter() async {
     if (syncFilterId == null) {
       syncFilterId = await defineFilter(userID, syncFilter);
-      await database?.storeSyncFilterId(syncFilterId, id);
+      await database?.storeSyncFilterId(syncFilterId);
     }
     return;
   }
@@ -1132,7 +1131,7 @@ class Client extends MatrixApi {
         _currentTransaction = database.transaction(() async {
           await _handleSync(syncResp);
           if (prevBatch != syncResp.nextBatch) {
-            await database.storePrevBatch(syncResp.nextBatch, id);
+            await database.storePrevBatch(syncResp.nextBatch);
           }
         });
         await _currentTransaction;
@@ -1218,7 +1217,6 @@ class Client extends MatrixApi {
       for (final newAccountData in sync.accountData) {
         if (database != null) {
           await database.storeAccountData(
-            id,
             newAccountData.type,
             jsonEncode(newAccountData.content),
           );
@@ -1243,7 +1241,7 @@ class Client extends MatrixApi {
         if (_userDeviceKeys.containsKey(userId)) {
           _userDeviceKeys[userId].outdated = true;
           if (database != null) {
-            await database.storeUserDeviceKeysInfo(id, userId, true);
+            await database.storeUserDeviceKeysInfo(userId, true);
           }
         }
       }
@@ -1285,7 +1283,7 @@ class Client extends MatrixApi {
       if (database != null) {
         // TODO: This method seems to be rather slow for some updates
         // Perhaps don't dynamically build that one query?
-        await database.storeRoomUpdate(this.id, id, room, getRoomById(id));
+        await database.storeRoomUpdate(id, room, getRoomById(id));
       }
       _updateRoomsByRoomUpdate(id, room);
 
@@ -1427,13 +1425,13 @@ class Client extends MatrixApi {
           database != null &&
           room.getState(EventTypes.RoomMember, event['sender']) == null) {
         // In order to correctly render room list previews we need to fetch the member from the database
-        final user = await database.getUser(id, event['sender'], room);
+        final user = await database.getUser(event['sender'], room);
         if (user != null) {
           room.setState(user);
         }
       }
       if (type != EventUpdateType.ephemeral && database != null) {
-        await database.storeEventUpdate(id, update);
+        await database.storeEventUpdate(update);
       }
       _updateRoomsByEventUpdate(update);
       if (encryptionEnabled) {
@@ -1708,7 +1706,7 @@ class Client extends MatrixApi {
                 // Check if deviceId or deviceKeys are known
                 if (!oldKeys.containsKey(deviceId)) {
                   final oldPublicKeys =
-                      await database.deviceIdSeen(id, userId, deviceId);
+                      await database.deviceIdSeen(userId, deviceId);
                   if (oldPublicKeys != null &&
                       oldPublicKeys != entry.curve25519Key + entry.ed25519Key) {
                     Logs().w(
@@ -1716,25 +1714,24 @@ class Client extends MatrixApi {
                     continue;
                   }
                   final oldDeviceId =
-                      await database.publicKeySeen(id, entry.ed25519Key);
+                      await database.publicKeySeen(entry.ed25519Key);
                   if (oldDeviceId != null && oldDeviceId != deviceId) {
                     Logs().w(
                         'Already seen ED25519 has been added again. This might be an attack!');
                     continue;
                   }
                   final oldDeviceId2 =
-                      await database.publicKeySeen(id, entry.curve25519Key);
+                      await database.publicKeySeen(entry.curve25519Key);
                   if (oldDeviceId2 != null && oldDeviceId2 != deviceId) {
                     Logs().w(
                         'Already seen Curve25519 has been added again. This might be an attack!');
                     continue;
                   }
-                  await database.addSeenDeviceId(id, userId, deviceId,
-                      entry.curve25519Key + entry.ed25519Key);
+                  await database.addSeenDeviceId(
+                      userId, deviceId, entry.curve25519Key + entry.ed25519Key);
+                  await database.addSeenPublicKey(entry.ed25519Key, deviceId);
                   await database.addSeenPublicKey(
-                      id, entry.ed25519Key, deviceId);
-                  await database.addSeenPublicKey(
-                      id, entry.curve25519Key, deviceId);
+                      entry.curve25519Key, deviceId);
                 }
 
                 // is this a new key or the same one as an old one?
@@ -1756,7 +1753,6 @@ class Client extends MatrixApi {
                     entry.setDirectVerified(true);
                   }
                   dbActions.add(() => database.storeUserDeviceKey(
-                        id,
                         userId,
                         deviceId,
                         json.encode(entry.toJson()),
@@ -1780,14 +1776,14 @@ class Client extends MatrixApi {
               final deviceId = oldDeviceKeyEntry.key;
               if (!_userDeviceKeys[userId].deviceKeys.containsKey(deviceId)) {
                 // we need to remove an old key
-                dbActions.add(
-                    () => database.removeUserDeviceKey(id, userId, deviceId));
+                dbActions
+                    .add(() => database.removeUserDeviceKey(userId, deviceId));
               }
             }
             _userDeviceKeys[userId].outdated = false;
             if (database != null) {
-              dbActions.add(
-                  () => database.storeUserDeviceKeysInfo(id, userId, false));
+              dbActions
+                  .add(() => database.storeUserDeviceKeysInfo(userId, false));
             }
           }
         }
@@ -1819,8 +1815,8 @@ class Client extends MatrixApi {
               } else if (database != null) {
                 // There is a previous cross-signing key with  this usage, that we no
                 // longer need/use. Clear it from the database.
-                dbActions.add(() => database.removeUserCrossSigningKey(
-                    id, userId, oldEntry.key));
+                dbActions.add(() =>
+                    database.removeUserCrossSigningKey(userId, oldEntry.key));
               }
             }
             final entry = CrossSigningKey.fromMatrixCrossSigningKey(
@@ -1845,7 +1841,6 @@ class Client extends MatrixApi {
               }
               if (database != null) {
                 dbActions.add(() => database.storeUserCrossSigningKey(
-                      id,
                       userId,
                       publicKey,
                       json.encode(entry.toJson()),
@@ -1856,8 +1851,8 @@ class Client extends MatrixApi {
             }
             _userDeviceKeys[userId].outdated = false;
             if (database != null) {
-              dbActions.add(
-                  () => database.storeUserDeviceKeysInfo(id, userId, false));
+              dbActions
+                  .add(() => database.storeUserDeviceKeysInfo(userId, false));
             }
           }
         }
@@ -1892,7 +1887,7 @@ class Client extends MatrixApi {
     if (database == null || !_toDeviceQueueNeedsProcessing) {
       return;
     }
-    final entries = await database.getToDeviceEventQueue(id);
+    final entries = await database.getToDeviceEventQueue();
     if (entries.isEmpty) {
       _toDeviceQueueNeedsProcessing = false;
       return;
@@ -1907,7 +1902,7 @@ class Client extends MatrixApi {
                   k, Map<String, dynamic>.from(v)))));
 
       await super.sendToDevice(entry.type, entry.txnId, data);
-      await database.deleteFromToDeviceQueue(id, entry.id);
+      await database.deleteFromToDeviceQueue(entry.id);
     }
   }
 
@@ -1931,7 +1926,7 @@ class Client extends MatrixApi {
       if (database != null) {
         _toDeviceQueueNeedsProcessing = true;
         await database.insertIntoToDeviceQueue(
-            id, eventType, txnId, json.encode(messages));
+            eventType, txnId, json.encode(messages));
       }
       rethrow;
     }
@@ -2140,7 +2135,7 @@ class Client extends MatrixApi {
     await abortSync();
     prevBatch = null;
     rooms.clear();
-    await database?.clearCache(id);
+    await database?.clearCache();
     encryption?.keyManager?.clearOutboundGroupSessions();
     onCacheCleared.add(true);
     // Restart the syncloop
@@ -2246,11 +2241,10 @@ class Client extends MatrixApi {
       );
       Logs().d('Migrate SSSSCache...');
       for (final type in cacheTypes) {
-        final ssssCache = await legacyDatabase.getSSSSCache(_id, type);
+        final ssssCache = await legacyDatabase.getSSSSCache(type);
         if (ssssCache != null) {
           Logs().d('Migrate $type...');
           await database.storeSSSSCache(
-            _id,
             type,
             ssssCache.keyId,
             ssssCache.ciphertext,
@@ -2267,7 +2261,6 @@ class Client extends MatrixApi {
           Logs().d(
               'Migrate cross signing key with usage ${crossSigningKey.usage} and verified ${crossSigningKey.directVerified}...');
           await database.storeUserCrossSigningKey(
-            _id,
             userId,
             crossSigningKey.publicKey,
             jsonEncode(crossSigningKey.toJson()),
@@ -2278,7 +2271,6 @@ class Client extends MatrixApi {
         for (final deviceKeys in deviceKeysList.deviceKeys.values) {
           Logs().d('Migrate device keys for ${deviceKeys.deviceId}...');
           await database.storeUserDeviceKey(
-            _id,
             userId,
             deviceKeys.deviceId,
             jsonEncode(deviceKeys.toJson()),
@@ -2288,17 +2280,15 @@ class Client extends MatrixApi {
           );
         }
         Logs().d('Migrate user device keys info...');
-        await database.storeUserDeviceKeysInfo(
-            _id, userId, deviceKeysList.outdated);
+        await database.storeUserDeviceKeysInfo(userId, deviceKeysList.outdated);
       }
       Logs().d('Migrate inbound group sessions...');
       try {
-        final sessions = await legacyDatabase.getAllInboundGroupSessions(_id);
+        final sessions = await legacyDatabase.getAllInboundGroupSessions();
         for (var i = 0; i < sessions.length; i++) {
           Logs().d('$i / ${sessions.length}');
           final session = sessions[i];
           await database.storeInboundGroupSession(
-            _id,
             session.roomId,
             session.sessionId,
             session.pickle,
@@ -2313,7 +2303,7 @@ class Client extends MatrixApi {
         Logs().e('Unable to migrate inbound group sessions!', e, s);
       }
 
-      await legacyDatabase.clear(_id);
+      await legacyDatabase.clear();
       await legacyDatabaseDestroyer?.call(this);
     }
     await legacyDatabase.close();

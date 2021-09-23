@@ -149,7 +149,6 @@ class KeyManager {
     }
     client.database
         ?.storeInboundGroupSession(
-      client.id,
       roomId,
       sessionId,
       inboundGroupSession.pickle(client.userID),
@@ -164,8 +163,7 @@ class KeyManager {
         return;
       }
       if (uploaded) {
-        client.database
-            .markInboundGroupSessionAsUploaded(client.id, roomId, sessionId);
+        client.database.markInboundGroupSessionAsUploaded(roomId, sessionId);
       } else {
         _haveKeysToUpload = true;
       }
@@ -238,8 +236,8 @@ class KeyManager {
       }
       return sess; // nothing to do
     }
-    final session = await client.database
-        ?.getInboundGroupSession(client.id, roomId, sessionId);
+    final session =
+        await client.database?.getInboundGroupSession(roomId, sessionId);
     if (session == null) {
       return null;
     }
@@ -382,7 +380,6 @@ class KeyManager {
             if (client.database != null) {
               await client.database.updateInboundGroupSessionAllowedAtIndex(
                   json.encode(inboundSess.allowedAtIndex),
-                  client.id,
                   room.id,
                   sess.outboundGroupSession.session_id());
             }
@@ -401,7 +398,7 @@ class KeyManager {
     }
     sess.dispose();
     _outboundGroupSessions.remove(roomId);
-    await client.database?.removeOutboundGroupSession(client.id, roomId);
+    await client.database?.removeOutboundGroupSession(roomId);
     return true;
   }
 
@@ -412,7 +409,6 @@ class KeyManager {
       return;
     }
     await client.database?.storeOutboundGroupSession(
-        client.id,
         roomId,
         sess.outboundGroupSession.pickle(client.userID),
         json.encode(sess.devices),
@@ -516,7 +512,6 @@ class KeyManager {
     }
     _loadedOutboundGroupSessions.add(roomId);
     final sess = await client.database.getOutboundGroupSession(
-      client.id,
       roomId,
       client.userID,
     );
@@ -753,7 +748,7 @@ class KeyManager {
         // no need to optimze this, as we only run it so seldomly and almost never with many keys at once
         for (final dbSession in dbSessions) {
           await client.database.markInboundGroupSessionAsUploaded(
-              client.id, dbSession.roomId, dbSession.sessionId);
+              dbSession.roomId, dbSession.sessionId);
         }
       } finally {
         decryption.free();

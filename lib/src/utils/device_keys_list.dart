@@ -358,15 +358,15 @@ class CrossSigningKey extends SignableKey {
   @override
   Future<void> setVerified(bool newVerified, [bool sign = true]) async {
     await super.setVerified(newVerified, sign);
-    return client.database?.setVerifiedUserCrossSigningKey(
-        newVerified, client.id, userId, publicKey);
+    return client.database
+        ?.setVerifiedUserCrossSigningKey(newVerified, userId, publicKey);
   }
 
   @override
   Future<void> setBlocked(bool newBlocked) {
     blocked = newBlocked;
-    return client.database?.setBlockedUserCrossSigningKey(
-        newBlocked, client.id, userId, publicKey);
+    return client.database
+        ?.setBlockedUserCrossSigningKey(newBlocked, userId, publicKey);
   }
 
   CrossSigningKey.fromMatrixCrossSigningKey(MatrixCrossSigningKey k, Client cl)
@@ -433,14 +433,14 @@ class DeviceKeys extends SignableKey {
   Future<void> setVerified(bool newVerified, [bool sign = true]) async {
     await super.setVerified(newVerified, sign);
     return client?.database
-        ?.setVerifiedUserDeviceKey(newVerified, client.id, userId, deviceId);
+        ?.setVerifiedUserDeviceKey(newVerified, userId, deviceId);
   }
 
   @override
   Future<void> setBlocked(bool newBlocked) {
     blocked = newBlocked;
     return client?.database
-        ?.setBlockedUserDeviceKey(newBlocked, client.id, userId, deviceId);
+        ?.setBlockedUserDeviceKey(newBlocked, userId, deviceId);
   }
 
   DeviceKeys.fromMatrixDeviceKeys(MatrixDeviceKeys k, Client cl,

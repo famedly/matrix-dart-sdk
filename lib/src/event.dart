@@ -305,7 +305,7 @@ class Event extends MatrixEvent {
   /// from the database and the timelines. Returns false if not removed.
   Future<bool> remove() async {
     if (status < 1) {
-      await room.client.database?.removeEvent(room.client.id, eventId, room.id);
+      await room.client.database?.removeEvent(eventId, room.id);
 
       room.client.onEvent.add(EventUpdate(
         roomID: room.id,

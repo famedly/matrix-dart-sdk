@@ -29,7 +29,9 @@ import 'fake_database.dart';
 void main() {
   /// All Tests related to the ChatTime
   group('Hive Database Test', () {
-    testDatabase(getHiveDatabase(null), 0);
+    testDatabase(
+      getHiveDatabase(null),
+    );
   });
 }
 
@@ -44,7 +46,9 @@ Future<bool> olmEnabled() async {
   return olmEnabled;
 }
 
-void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
+void testDatabase(
+  Future<DatabaseApi> futureDatabase,
+) {
   DatabaseApi database;
   int toDeviceQueueIndex;
   test('Open', () async {
@@ -76,19 +80,18 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   });
   test('insertIntoToDeviceQueue', () async {
     toDeviceQueueIndex = await database.insertIntoToDeviceQueue(
-      clientId,
       'm.test',
       'txnId',
       '{"foo":"bar"}',
     );
   });
   test('getToDeviceEventQueue', () async {
-    final toDeviceQueue = await database.getToDeviceEventQueue(clientId);
+    final toDeviceQueue = await database.getToDeviceEventQueue();
     expect(toDeviceQueue.first.type, 'm.test');
   });
   test('deleteFromToDeviceQueue', () async {
-    await database.deleteFromToDeviceQueue(clientId, toDeviceQueueIndex);
-    final toDeviceQueue = await database.getToDeviceEventQueue(clientId);
+    await database.deleteFromToDeviceQueue(toDeviceQueueIndex);
+    final toDeviceQueue = await database.getToDeviceEventQueue();
     expect(toDeviceQueue.isEmpty, true);
   });
   test('storeFile', () async {
@@ -112,7 +115,7 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
       'limited_timeline': false,
       'membership': Membership.join,
     });
-    await database.storeRoomUpdate(clientId, '!testroom', roomUpdate);
+    await database.storeRoomUpdate('!testroom', roomUpdate);
     final rooms = await database.getRoomList(Client('testclient'));
     expect(rooms.single.id, '!testroom');
   });
@@ -121,12 +124,12 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
     expect(list.single.id, '!testroom');
   });
   test('setRoomPrevBatch', () async {
-    await database.setRoomPrevBatch('1234', clientId, '!testroom');
+    await database.setRoomPrevBatch('1234', '!testroom');
     final rooms = await database.getRoomList(Client('testclient'));
     expect(rooms.single.prev_batch, '1234');
   });
   test('forgetRoom', () async {
-    await database.forgetRoom(clientId, '!testroom');
+    await database.forgetRoom('!testroom');
     final rooms = await database.getRoomList(Client('testclient'));
     expect(rooms.isEmpty, true);
   });
@@ -134,7 +137,7 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
     await database.getClient('name');
   });
   test('insertClient', () async {
-    clientId = await database.insertClient(
+    await database.insertClient(
       'name',
       'homeserverUrl',
       'token',
@@ -144,6 +147,7 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
       'prevBatch',
       'olmAccount',
     );
+
     final client = await database.getClient('name');
     expect(client['token'], 'token');
   });
@@ -156,36 +160,38 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
       'deviceName',
       'prevBatch',
       'olmAccount',
-      clientId,
     );
     final client = await database.getClient('name');
     expect(client['token'], 'token_different');
   });
   test('updateClientKeys', () async {
-    await database.updateClientKeys('olmAccount2', clientId);
+    await database.updateClientKeys(
+      'olmAccount2',
+    );
     final client = await database.getClient('name');
     expect(client['olm_account'], 'olmAccount2');
   });
   test('storeSyncFilterId', () async {
-    await database.storeSyncFilterId('1234', clientId);
+    await database.storeSyncFilterId(
+      '1234',
+    );
     final client = await database.getClient('name');
     expect(client['sync_filter_id'], '1234');
   });
   test('getAccountData', () async {
-    await database.getAccountData(clientId);
+    await database.getAccountData();
   });
   test('storeAccountData', () async {
-    await database.storeAccountData(clientId, 'm.test', '{"foo":"bar"}');
-    final events = await database.getAccountData(clientId);
+    await database.storeAccountData('m.test', '{"foo":"bar"}');
+    final events = await database.getAccountData();
     expect(events.values.single.type, 'm.test');
 
-    await database.storeAccountData(clientId, 'm.abc+de', '{"foo":"bar"}');
-    final events2 = await database.getAccountData(clientId);
+    await database.storeAccountData('m.abc+de', '{"foo":"bar"}');
+    final events2 = await database.getAccountData();
     expect(events2.values.any((element) => element.type == 'm.abc+de'), true);
   });
   test('storeEventUpdate', () async {
     await database.storeEventUpdate(
-      clientId,
       EventUpdate(
         roomID: '!testroom:example.com',
         type: EventUpdateType.timeline,
@@ -211,45 +217,41 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   });
   test('getEventById', () async {
     final event = await database.getEventById(
-        clientId, '\$event:example.com', Room(id: '!testroom:example.com'));
+        '\$event:example.com', Room(id: '!testroom:example.com'));
     expect(event.type, EventTypes.Message);
   });
   test('getEventList', () async {
-    final events = await database.getEventList(
-        clientId, Room(id: '!testroom:example.com'));
+    final events =
+        await database.getEventList(Room(id: '!testroom:example.com'));
     expect(events.single.type, EventTypes.Message);
   });
   test('getUser', () async {
     final user = await database.getUser(
-        clientId, '@bob:example.org', Room(id: '!testroom:example.com'));
+        '@bob:example.org', Room(id: '!testroom:example.com'));
     expect(user, null);
   });
   test('getUsers', () async {
-    final users =
-        await database.getUsers(clientId, Room(id: '!testroom:example.com'));
+    final users = await database.getUsers(Room(id: '!testroom:example.com'));
     expect(users.isEmpty, true);
   });
   test('removeEvent', () async {
-    await database.removeEvent(
-        clientId, '\$event:example.com', '!testroom:example.com');
+    await database.removeEvent('\$event:example.com', '!testroom:example.com');
     final event = await database.getEventById(
-        clientId, '\$event:example.com', Room(id: '!testroom:example.com'));
+        '\$event:example.com', Room(id: '!testroom:example.com'));
     expect(event, null);
   });
   test('getAllInboundGroupSessions', () async {
-    final result = await database.getAllInboundGroupSessions(clientId);
+    final result = await database.getAllInboundGroupSessions();
     expect(result.isEmpty, true);
   });
   test('getInboundGroupSession', () async {
-    await database.getInboundGroupSession(
-        clientId, '!testroom:example.com', 'sessionId');
+    await database.getInboundGroupSession('!testroom:example.com', 'sessionId');
   });
   test('getInboundGroupSessionsToUpload', () async {
     await database.getInboundGroupSessionsToUpload();
   });
   test('storeInboundGroupSession', () async {
     await database.storeInboundGroupSession(
-      clientId,
       '!testroom:example.com',
       'sessionId',
       'pickle',
@@ -260,7 +262,6 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
       '{}',
     );
     final session = await database.getInboundGroupSession(
-      clientId,
       '!testroom:example.com',
       'sessionId',
     );
@@ -268,15 +269,14 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   });
   test('markInboundGroupSessionAsUploaded', () async {
     await database.markInboundGroupSessionAsUploaded(
-        clientId, '!testroom:example.com', 'sessionId');
+        '!testroom:example.com', 'sessionId');
   });
   test('markInboundGroupSessionsAsNeedingUpload', () async {
-    await database.markInboundGroupSessionsAsNeedingUpload(clientId);
+    await database.markInboundGroupSessionsAsNeedingUpload();
   });
   test('updateInboundGroupSessionAllowedAtIndex', () async {
     await database.updateInboundGroupSessionAllowedAtIndex(
       '{}',
-      clientId,
       '!testroom:example.com',
       'sessionId',
     );
@@ -284,19 +284,17 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   test('updateInboundGroupSessionIndexes', () async {
     await database.updateInboundGroupSessionIndexes(
       '{}',
-      clientId,
       '!testroom:example.com',
       'sessionId',
     );
   });
   test('getSSSSCache', () async {
-    final cache = await database.getSSSSCache(clientId, 'type');
+    final cache = await database.getSSSSCache('type');
     expect(cache, null);
   });
   test('storeSSSSCache', () async {
-    await database.storeSSSSCache(
-        clientId, 'type', 'keyId', 'ciphertext', '{}');
-    final cache = await database.getSSSSCache(clientId, 'type');
+    await database.storeSSSSCache('type', 'keyId', 'ciphertext', '{}');
+    final cache = await database.getSSSSCache('type');
     expect(cache.type, 'type');
     expect(cache.keyId, 'keyId');
     expect(cache.ciphertext, 'ciphertext');
@@ -304,7 +302,6 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   });
   test('getOlmSessions', () async {
     final olm = await database.getOlmSessions(
-      clientId,
       'identityKey',
       'userId',
     );
@@ -312,7 +309,6 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   });
   test('getOlmSessionsForDevices', () async {
     final olm = await database.getOlmSessionsForDevices(
-      clientId,
       ['identityKeys'],
       'userId',
     );
@@ -321,14 +317,12 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   test('storeOlmSession', () async {
     if (!(await olmEnabled())) return;
     await database.storeOlmSession(
-      clientId,
       'identityKey',
       'sessionId',
       'pickle',
       0,
     );
     final olm = await database.getOlmSessions(
-      clientId,
       'identityKey',
       'userId',
     );
@@ -336,7 +330,6 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   });
   test('getOutboundGroupSession', () async {
     final session = await database.getOutboundGroupSession(
-      clientId,
       '!testroom:example.com',
       '@alice:example.com',
     );
@@ -345,7 +338,6 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   test('storeOutboundGroupSession', () async {
     if (!(await olmEnabled())) return;
     await database.storeOutboundGroupSession(
-      clientId,
       '!testroom:example.com',
       'pickle',
       '{}',
@@ -353,7 +345,6 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
       0,
     );
     final session = await database.getOutboundGroupSession(
-      clientId,
       '!testroom:example.com',
       '@alice:example.com',
     );
@@ -361,7 +352,6 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   });
   test('getLastSentMessageUserDeviceKey', () async {
     final list = await database.getLastSentMessageUserDeviceKey(
-      clientId,
       'userId',
       'deviceId',
     );
@@ -369,7 +359,6 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   });
   test('getUnimportantRoomEventStatesForRoom', () async {
     final events = await database.getUnimportantRoomEventStatesForRoom(
-      clientId,
       ['events'],
       Room(id: '!mep'),
     );
@@ -380,7 +369,6 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   });
   test('storeUserCrossSigningKey', () async {
     await database.storeUserCrossSigningKey(
-      clientId,
       '@alice:example.com',
       'publicKey',
       '{}',
@@ -391,7 +379,6 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   test('setVerifiedUserCrossSigningKey', () async {
     await database.setVerifiedUserCrossSigningKey(
       true,
-      clientId,
       '@alice:example.com',
       'publicKey',
     );
@@ -399,28 +386,24 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   test('setBlockedUserCrossSigningKey', () async {
     await database.setBlockedUserCrossSigningKey(
       true,
-      clientId,
       '@alice:example.com',
       'publicKey',
     );
   });
   test('removeUserCrossSigningKey', () async {
     await database.removeUserCrossSigningKey(
-      clientId,
       '@alice:example.com',
       'publicKey',
     );
   });
   test('storeUserDeviceKeysInfo', () async {
     await database.storeUserDeviceKeysInfo(
-      clientId,
       '@alice:example.com',
       true,
     );
   });
   test('storeUserDeviceKey', () async {
     await database.storeUserDeviceKey(
-      clientId,
       '@alice:example.com',
       'deviceId',
       '{}',
@@ -432,7 +415,6 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   test('setVerifiedUserDeviceKey', () async {
     await database.setVerifiedUserDeviceKey(
       true,
-      clientId,
       '@alice:example.com',
       'deviceId',
     );
@@ -440,7 +422,6 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
   test('setBlockedUserDeviceKey', () async {
     await database.setBlockedUserDeviceKey(
       true,
-      clientId,
       '@alice:example.com',
       'deviceId',
     );
@@ -448,13 +429,13 @@ void testDatabase(Future<DatabaseApi> futureDatabase, int clientId) {
 
   // Clearing up from here
   test('clearSSSSCache', () async {
-    await database.clearSSSSCache(clientId);
+    await database.clearSSSSCache();
   });
   test('clearCache', () async {
-    await database.clearCache(clientId);
+    await database.clearCache();
   });
   test('clear', () async {
-    await database.clear(clientId);
+    await database.clear();
   });
   test('Close', () async {
     await database.close();

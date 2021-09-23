@@ -220,10 +220,7 @@ class Encryption {
         // line *could* throw an error. As that is a future, though, and we call
         // it un-awaited here, nothing happens, which is exactly the result we want
         client.database?.updateInboundGroupSessionIndexes(
-            json.encode(inboundGroupSession.indexes),
-            client.id,
-            roomId,
-            sessionId);
+            json.encode(inboundGroupSession.indexes), roomId, sessionId);
       }
       decryptedPayload = json.decode(decryptResult.plaintext);
     } catch (exception) {
@@ -301,7 +298,6 @@ class Encryption {
           event.room?.setState(event);
         }
         await client.database?.storeEventUpdate(
-          client.id,
           EventUpdate(
             content: event.toJson(),
             roomID: event.roomId,

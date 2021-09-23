@@ -286,7 +286,7 @@ class Room {
     }
     final allStates = await client.database
         .getUnimportantRoomEventStatesForRoom(
-            client.id, client.importantStateEvents.toList(), this);
+            client.importantStateEvents.toList(), this);
 
     for (final state in allStates) {
       setState(state);
@@ -342,7 +342,7 @@ class Room {
     if (prevEvent != null &&
         prevEvent.eventId != state.eventId &&
         client.database != null &&
-        client.database.eventIsKnown(client.id, state.eventId, state.roomId)) {
+        client.database.eventIsKnown(state.eventId, state.roomId)) {
       return;
     }
 
@@ -1053,7 +1053,7 @@ class Room {
 
   /// Call the Matrix API to forget this room if you already left it.
   Future<void> forget() async {
-    await client.database?.forgetRoom(client.id, id);
+    await client.database?.forgetRoom(id);
     await client.forgetRoom(id);
     return;
   }
@@ -1135,7 +1135,7 @@ class Room {
 
     if (client.database != null) {
       await client.database.transaction(() async {
-        await client.database.setRoomPrevBatch(resp.end, client.id, id);
+        await client.database.setRoomPrevBatch(resp.end, id);
         await loadFn();
       });
     } else {
@@ -1188,7 +1188,7 @@ class Room {
   Future<void> setReadMarker(String eventId, {String mRead}) async {
     if (mRead != null) {
       notificationCount = 0;
-      await client.database?.resetNotificationCount(client.id, id);
+      await client.database?.resetNotificationCount(id);
     }
     await client.setReadMarker(
       id,
@@ -1202,7 +1202,7 @@ class Room {
   /// specified.
   Future<void> postReceipt(String eventId) async {
     notificationCount = 0;
-    await client.database?.resetNotificationCount(client.id, id);
+    await client.database?.resetNotificationCount(id);
     await client.postReceipt(
       id,
       ReceiptType.mRead,
@@ -1216,7 +1216,7 @@ class Room {
   @Deprecated('Use sendReadMarker instead')
   Future<void> sendReadReceipt(String eventID) async {
     notificationCount = 0;
-    await client.database?.resetNotificationCount(client.id, id);
+    await client.database?.resetNotificationCount(id);
     await client.setReadMarker(
       id,
       eventID,
@@ -1232,7 +1232,6 @@ class Room {
     var events;
     if (client.database != null) {
       events = await client.database.getEventList(
-        client.id,
         this,
         limit: defaultHistoryCount,
       );
@@ -1286,7 +1285,7 @@ class Room {
   Future<List<User>> requestParticipants() async {
     if (!participantListComplete && partial && client.database != null) {
       // we aren't fully loaded, maybe the users are in the database
-      final users = await client.database.getUsers(client.id, this);
+      final users = await client.database.getUsers(this);
       for (final user in users) {
         setState(user);
       }
@@ -1362,7 +1361,7 @@ class Room {
     }
     if (client.database != null) {
       // it may be in the database
-      final user = await client.database.getUser(client.id, mxID, this);
+      final user = await client.database.getUser(mxID, this);
       if (user != null) {
         setState(user);
         onUpdate.add(id);
@@ -1419,7 +1418,6 @@ class Room {
         'state_key': mxID,
       };
       await client.database.storeEventUpdate(
-        client.id,
         EventUpdate(
           content: content,
           roomID: id,
