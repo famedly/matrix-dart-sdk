@@ -40,7 +40,7 @@ class MatrixFile {
       : mimeType = mimeType ??
             lookupMimeType(name, headerBytes: bytes) ??
             'application/octet-stream',
-        name = name.split('/').last.toLowerCase() {}
+        name = name.split('/').last.toLowerCase();
 
   int get size => bytes.length;
 
