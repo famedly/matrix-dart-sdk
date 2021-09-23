@@ -1350,7 +1350,7 @@ class MultiKey {
 
 extension HiveKeyExtension on String {
   String get toHiveKey => isValidMatrixId
-      ? '$sigil${Uri.encodeComponent(localpart)}:${Uri.encodeComponent(domain)}'
+      ? '$sigil${Uri.encodeComponent(localpart!)}:${Uri.encodeComponent(domain!)}'
       : Uri.encodeComponent(this);
 }
 

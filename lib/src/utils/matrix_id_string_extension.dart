@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020, 2021 Famedly GmbH
@@ -32,7 +31,7 @@ extension MatrixIdExtension on String {
   }
 
   bool get isValidMatrixId {
-    if (isEmpty ?? true) return false;
+    if (isEmpty) return false;
     if (length > maxLength) return false;
     if (!validSigils.contains(substring(0, 1))) {
       return false;
@@ -50,17 +49,17 @@ extension MatrixIdExtension on String {
     return true;
   }
 
-  String get sigil => isValidMatrixId ? substring(0, 1) : null;
+  String? get sigil => isValidMatrixId ? substring(0, 1) : null;
 
-  String get localpart => isValidMatrixId ? _getParts().first : null;
+  String? get localpart => isValidMatrixId ? _getParts().first : null;
 
-  String get domain => isValidMatrixId ? _getParts().last : null;
+  String? get domain => isValidMatrixId ? _getParts().last : null;
 
-  bool equals(String other) => toLowerCase() == other?.toLowerCase();
+  bool equals(String? other) => toLowerCase() == other?.toLowerCase();
 
   /// Parse a matrix identifier string into a Uri. Primary and secondary identifiers
   /// are stored in pathSegments. The query string is stored as such.
-  Uri _parseIdentifierIntoUri() {
+  Uri? _parseIdentifierIntoUri() {
     const matrixUriPrefix = 'matrix:';
     const matrixToPrefix = 'https://matrix.to/#/';
     if (toLowerCase().startsWith(matrixUriPrefix)) {
@@ -86,25 +85,24 @@ extension MatrixIdExtension on String {
           substring(matrixToPrefix.length - 1)
               .replaceAllMapped(
                   RegExp(r'(?<=/)[#!@+][^:]*:|(\?.*$)'),
-                  (m) => m.group(0).replaceAllMapped(
+                  (m) => m[0]!.replaceAllMapped(
                       RegExp(m.group(1) != null ? '' : '[/?]'),
-                      (m) => Uri.encodeComponent(m.group(0))))
+                      (m) => Uri.encodeComponent(m.group(0)!)))
               .replaceAll('#', '%23'));
     } else {
       return Uri(
           pathSegments: RegExp(r'/((?:[#!@+][^:]*:)?[^/?]*)(?:\?.*$)?')
               .allMatches('/$this')
-              .map((m) => m.group(1)),
+              .map((m) => m[1]!),
           query: RegExp(r'(?:/(?:[#!@+][^:]*:)?[^/?]*)*\?(.*$)')
-              .firstMatch('/$this')
-              ?.group(1));
+              .firstMatch('/$this')?[1]);
     }
   }
 
   /// Separate a matrix identifier string into a primary indentifier, a secondary identifier,
   /// a query string and already parsed `via` parameters. A matrix identifier string
   /// can be an mxid, a matrix.to-url or a matrix-uri.
-  MatrixIdentifierStringExtensionResults parseIdentifierIntoParts() {
+  MatrixIdentifierStringExtensionResults? parseIdentifierIntoParts() {
     final uri = _parseIdentifierIntoUri();
     if (uri == null) return null;
     final primary = uri.pathSegments.isNotEmpty ? uri.pathSegments[0] : null;
@@ -124,15 +122,15 @@ extension MatrixIdExtension on String {
 
 class MatrixIdentifierStringExtensionResults {
   final String primaryIdentifier;
-  final String secondaryIdentifier;
-  final String queryString;
+  final String? secondaryIdentifier;
+  final String? queryString;
   final Set<String> via;
-  final String action;
+  final String? action;
 
   MatrixIdentifierStringExtensionResults(
-      {this.primaryIdentifier,
+      {required this.primaryIdentifier,
       this.secondaryIdentifier,
       this.queryString,
-      this.via,
+      this.via = const {},
       this.action});
 }
