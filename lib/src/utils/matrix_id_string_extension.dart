@@ -58,18 +58,14 @@ extension MatrixIdExtension on String {
 
   bool equals(String other) => toLowerCase() == other?.toLowerCase();
 
-  /// Separate a matrix identifier string into a primary indentifier, a secondary identifier,
-  /// a query string and already parsed `via` parameters. A matrix identifier string
-  /// can be an mxid, a matrix.to-url or a matrix-uri.
-  MatrixIdentifierStringExtensionResults parseIdentifierIntoParts() {
+  /// Parse a matrix identifier string into a Uri. Primary and secondary identifiers
+  /// are stored in pathSegments. The query string is stored as such.
+  Uri _parseIdentifierIntoUri() {
     const matrixUriPrefix = 'matrix:';
-
-    // check if we have a "matrix:" uri
+    const matrixToPrefix = 'https://matrix.to/#/';
     if (toLowerCase().startsWith(matrixUriPrefix)) {
       final uri = Uri.tryParse(this);
-      if (uri == null) {
-        return null;
-      }
+      if (uri == null) return null;
       final pathSegments = uri.pathSegments;
       final identifiers = <String>[];
       for (var i = 0; i < pathSegments.length - 1; i += 2) {
@@ -82,50 +78,44 @@ extension MatrixIdExtension on String {
         if (thisSigil == null) {
           break;
         }
-        final identifier = thisSigil + pathSegments[i + 1];
-        if (!identifier.isValidMatrixId) {
-          return null;
-        }
-        identifiers.add(identifier);
+        identifiers.add(thisSigil + pathSegments[i + 1]);
       }
-      if (identifiers.isEmpty) {
-        return null;
-      }
-      return MatrixIdentifierStringExtensionResults(
-        primaryIdentifier: identifiers.first,
-        secondaryIdentifier: identifiers.length > 1 ? identifiers[1] : null,
-        queryString: uri.query.isNotEmpty ? uri.query : null,
-        via: (uri.queryParametersAll['via'] ?? []).toSet(),
-        action: uri.queryParameters['action'],
-      );
+      return uri.replace(pathSegments: identifiers);
+    } else if (toLowerCase().startsWith(matrixToPrefix)) {
+      return Uri.tryParse('//' +
+          substring(matrixToPrefix.length - 1)
+              .replaceAllMapped(
+                  RegExp(r'(?<=/)[#!@+][^:]*:|(\?.*$)'),
+                  (m) => m.group(0).replaceAllMapped(
+                      RegExp(m.group(1) != null ? '' : '[/?]'),
+                      (m) => Uri.encodeComponent(m.group(0))))
+              .replaceAll('#', '%23'));
+    } else {
+      final match =
+          RegExp(r'^([#!@+][^:]*:[^\/?]*)(?:\/(\$[^?]*))?(?:\?(.*))?$')
+              .firstMatch(this);
+      if (match == null) return null;
+      return Uri(
+          pathSegments:
+              [match.group(1), match.group(2)].where((x) => x != null),
+          query: match.group(3));
     }
+  }
 
-    const matrixToPrefix = 'https://matrix.to/#/';
-    // matrix identifiers and matrix.to URLs are parsed similarly, so we do them here
-    var s = this;
-    if (toLowerCase().startsWith(matrixToPrefix)) {
-      // as we decode a component we may only call it on the url part *before* the "query" part
-      final parts = substring(matrixToPrefix.length).split('?');
-      var ident = parts.removeAt(0);
-      try {
-        ident = Uri.decodeComponent(ident);
-      } catch (_) {
-        // do nothing: the identifier wasn't url-encoded, and we already have the
-        // plaintext version in the `ident` variable
-      }
-      s = ident + '?' + parts.join('?');
-    }
-    final match = RegExp(r'^([#!@+][^:]*:[^\/?]*)(?:\/(\$[^?]*))?(?:\?(.*))?$')
-        .firstMatch(s);
-    if (match == null ||
-        !match.group(1).isValidMatrixId ||
-        !(match.group(2)?.isValidMatrixId ?? true)) {
-      return null;
-    }
-    final uri = Uri(query: match.group(3));
+  /// Separate a matrix identifier string into a primary indentifier, a secondary identifier,
+  /// a query string and already parsed `via` parameters. A matrix identifier string
+  /// can be an mxid, a matrix.to-url or a matrix-uri.
+  MatrixIdentifierStringExtensionResults parseIdentifierIntoParts() {
+    final uri = _parseIdentifierIntoUri();
+    if (uri == null) return null;
+    final primary = uri.pathSegments.isNotEmpty ? uri.pathSegments[0] : null;
+    if (primary == null || !primary.isValidMatrixId) return null;
+    final secondary = uri.pathSegments.length > 1 ? uri.pathSegments[1] : null;
+    if (secondary != null && !secondary.isValidMatrixId) return null;
+
     return MatrixIdentifierStringExtensionResults(
-      primaryIdentifier: match.group(1),
-      secondaryIdentifier: match.group(2),
+      primaryIdentifier: primary,
+      secondaryIdentifier: secondary,
       queryString: uri.query.isNotEmpty ? uri.query : null,
       via: (uri.queryParametersAll['via'] ?? []).toSet(),
       action: uri.queryParameters['action'],
