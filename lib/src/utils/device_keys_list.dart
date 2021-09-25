@@ -37,15 +37,7 @@ class DeviceKeysList {
   Map<String, DeviceKeys> deviceKeys = {};
   Map<String, CrossSigningKey> crossSigningKeys = {};
 
-  SignableKey? getKey(String id) {
-    if (deviceKeys.containsKey(id)) {
-      return deviceKeys[id];
-    }
-    if (crossSigningKeys.containsKey(id)) {
-      return crossSigningKeys[id];
-    }
-    return null;
-  }
+  SignableKey? getKey(String id) => deviceKeys[id] ?? crossSigningKeys[id];
 
   CrossSigningKey? getCrossSigningKey(String type) =>
       crossSigningKeys.values.firstWhereOrNull((k) => k.usage.contains(type));
@@ -176,8 +168,7 @@ abstract class SignableKey extends MatrixSignableKey {
   SimpleSignableKey cloneForSigning() {
     final newKey = SimpleSignableKey.fromJson(toJson().copy());
     newKey.identifier = identifier;
-    newKey.signatures ??= <String, Map<String, String>>{};
-    newKey.signatures!.clear();
+    (newKey.signatures ??= {}).clear();
     return newKey;
   }
 
@@ -426,8 +417,7 @@ class DeviceKeys extends SignableKey {
   late DateTime lastActive;
 
   String? get curve25519Key => keys['curve25519:$deviceId'];
-  String? get deviceDisplayName =>
-      unsigned != null ? unsigned!['device_display_name'] : null;
+  String? get deviceDisplayName => unsigned?['device_display_name'];
 
   bool? _validSelfSignature;
   bool get selfSigned =>
