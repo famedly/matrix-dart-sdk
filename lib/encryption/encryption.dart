@@ -135,7 +135,8 @@ class Encryption {
   }
 
   Future<void> handleEventUpdate(EventUpdate update) async {
-    if (update.type == EventUpdateType.ephemeral) {
+    if (update.type == EventUpdateType.ephemeral ||
+        update.type == EventUpdateType.history) {
       return;
     }
     if (update.content['type'].startsWith('m.key.verification.') ||
