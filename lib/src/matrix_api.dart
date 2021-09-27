@@ -186,4 +186,17 @@ class MatrixApi extends Api {
     );
     return;
   }
+
+  /// This API provides credentials for the client to use when initiating
+  /// calls.
+  @override
+  Future<TurnServerCredentials> getTurnServer() async {
+    final json = await request(RequestType.GET, '/client/r0/voip/turnServer');
+
+    // fix invalid responses from synapse
+    // https://github.com/matrix-org/synapse/pull/10922
+    json['ttl'] = json['ttl'].toInt();
+
+    return TurnServerCredentials.fromJson(json);
+  }
 }
