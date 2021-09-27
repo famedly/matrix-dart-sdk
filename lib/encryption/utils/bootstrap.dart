@@ -148,7 +148,7 @@ class Bootstrap {
     final usage = <String, int>{};
     for (final keys in secrets.values) {
       for (final key in keys) {
-        usage.update(key, (i) => i++, ifAbsent: () => 1);
+        usage.update(key, (i) => i + 1, ifAbsent: () => 1);
       }
     }
     final entriesList = usage.entries.toList();
