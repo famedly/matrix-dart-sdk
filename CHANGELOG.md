@@ -1,3 +1,6 @@
+## 0.4.4
+- chore: workaround for invalid getTurnServer responses from synapse
+
 ## 0.4.3
 - fix: Make type in AuthenticationData nullable
 - refactor: remove uploadKeySignatures (use uploadCrossSigningSignatures)
