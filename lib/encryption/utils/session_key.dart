@@ -49,7 +49,7 @@ class SessionKey {
   late Map<String, String> senderClaimedKeys;
 
   /// Sender curve25519 key
-  late String senderKey;
+  String senderKey;
 
   /// Is this session valid?
   bool get isValid => inboundGroupSession != null;

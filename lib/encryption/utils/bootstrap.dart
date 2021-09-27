@@ -90,10 +90,11 @@ class Bootstrap {
   // cache the secret analyzing so that we don't drop stuff a different client sets during bootstrapping
   Map<String, Set<String>>? _secretsCache;
   Map<String, Set<String>> analyzeSecrets() {
-    if (_secretsCache != null) {
+    final secretsCache = _secretsCache;
+    if (secretsCache != null) {
       // deep-copy so that we can do modifications
       final newSecrets = <String, Set<String>>{};
-      for (final s in _secretsCache!.entries) {
+      for (final s in secretsCache.entries) {
         newSecrets[s.key] = Set<String>.from(s.value);
       }
       return newSecrets;
@@ -147,11 +148,7 @@ class Bootstrap {
     final usage = <String, int>{};
     for (final keys in secrets.values) {
       for (final key in keys) {
-        if (!usage.containsKey(key)) {
-          usage[key] = 1;
-        } else {
-          usage[key] = usage[key]! + 1;
-        }
+        usage.update(key, (i) => i++, ifAbsent: () => 1);
       }
     }
     final entriesList = usage.entries.toList();
@@ -315,14 +312,15 @@ class Bootstrap {
   }
 
   Future<void> openExistingSsss() async {
-    if (state != BootstrapState.openExistingSsss || newSsssKey == null) {
+    final newSsssKey_ = newSsssKey;
+    if (state != BootstrapState.openExistingSsss || newSsssKey_ == null) {
       throw BootstrapBadStateException();
     }
-    if (!newSsssKey!.isUnlocked) {
+    if (!newSsssKey_.isUnlocked) {
       throw BootstrapBadStateException('Key not unlocked');
     }
     Logs().v('Maybe cache all...');
-    await newSsssKey!.maybeCacheAll();
+    await newSsssKey_.maybeCacheAll();
     checkCrossSigning();
   }
 
@@ -477,12 +475,9 @@ class Bootstrap {
         futures.add(
           client.onSync.stream
               .firstWhere((syncUpdate) =>
-                  client.userDeviceKeys.containsKey(client.userID) &&
-                  client.userDeviceKeys[client.userID]!.masterKey != null &&
-                  client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key !=
-                      null &&
-                  client.userDeviceKeys[client.userID]!.masterKey!.ed25519Key ==
-                      masterKey!.publicKey)
+                  masterKey?.publicKey != null &&
+                  client.userDeviceKeys[client.userID]?.masterKey?.ed25519Key ==
+                      masterKey?.publicKey)
               .then((_) => Logs().v('New Master Key was created')),
         );
       }
@@ -595,8 +590,10 @@ class Bootstrap {
     if (state != BootstrapState.error) {
       _state = newState;
     }
-    if (onUpdate != null) {
-      onUpdate!();
+
+    final onUpdate_ = onUpdate;
+    if (onUpdate_ != null) {
+      onUpdate_();
     }
   }
 }

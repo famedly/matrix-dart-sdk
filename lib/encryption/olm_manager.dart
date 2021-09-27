@@ -411,12 +411,10 @@ class OlmManager {
       }
     }
     final Map<String, dynamic> plainContent = json.decode(plaintext);
-    if (plainContent.containsKey('sender') &&
-        plainContent['sender'] != event.sender) {
+    if (plainContent['sender'] != event.sender) {
       throw DecryptException(DecryptException.senderDoesntMatch);
     }
-    if (plainContent.containsKey('recipient') &&
-        plainContent['recipient'] != client.userID) {
+    if (plainContent['recipient'] != client.userID) {
       throw DecryptException(DecryptException.recipientDoesntMatch);
     }
     if (plainContent['recipient_keys'] is Map &&
@@ -637,19 +635,16 @@ class OlmManager {
     }
     final deviceKeysWithoutSession = List<DeviceKeys>.from(deviceKeys);
     deviceKeysWithoutSession.removeWhere((DeviceKeys deviceKeys) =>
-        olmSessions.containsKey(deviceKeys.curve25519Key) &&
-        olmSessions[deviceKeys.curve25519Key]!.isNotEmpty);
+        olmSessions[deviceKeys.curve25519Key]?.isNotEmpty ?? false);
     if (deviceKeysWithoutSession.isNotEmpty) {
       await startOutgoingOlmSessions(deviceKeysWithoutSession);
     }
     for (final device in deviceKeys) {
-      if (!data.containsKey(device.userId)) {
-        data[device.userId] = {};
-      }
+      final userData = data[device.userId] ??= {};
       try {
-        data[device.userId]![device.deviceId!] =
-            await encryptToDeviceMessagePayload(device, type, payload,
-                getFromDb: false);
+        userData[device.deviceId!] = await encryptToDeviceMessagePayload(
+            device, type, payload,
+            getFromDb: false);
       } catch (e, s) {
         Logs().w('[LibOlm] Error encrypting to-device event', e, s);
         continue;

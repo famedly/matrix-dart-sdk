@@ -249,14 +249,9 @@ abstract class SignableKey extends MatrixSignableKey {
         if (otherUserId == userId && keyId == identifier) {
           continue;
         }
-        SignableKey? key;
-        if (client.userDeviceKeys[otherUserId]!.deviceKeys.containsKey(keyId)) {
-          key = client.userDeviceKeys[otherUserId]!.deviceKeys[keyId];
-        } else if (client.userDeviceKeys[otherUserId]!.crossSigningKeys
-            .containsKey(keyId)) {
-          key = client.userDeviceKeys[otherUserId]!.crossSigningKeys[keyId];
-        }
 
+        final key = client.userDeviceKeys[otherUserId]?.deviceKeys[keyId] ??
+            client.userDeviceKeys[otherUserId]?.crossSigningKeys[keyId];
         if (key == null) {
           continue;
         }
@@ -272,25 +267,22 @@ abstract class SignableKey extends MatrixSignableKey {
         }
         var haveValidSignature = false;
         var gotSignatureFromCache = false;
-        if (validSignatures != null &&
-            validSignatures!.containsKey(otherUserId) &&
-            validSignatures![otherUserId].containsKey(fullKeyId)) {
-          if (validSignatures![otherUserId][fullKeyId] == true) {
-            haveValidSignature = true;
-            gotSignatureFromCache = true;
-          } else if (validSignatures![otherUserId][fullKeyId] == false) {
-            haveValidSignature = false;
-            gotSignatureFromCache = true;
-          }
+        if (validSignatures?[otherUserId][fullKeyId] == true) {
+          haveValidSignature = true;
+          gotSignatureFromCache = true;
+        } else if (validSignatures?[otherUserId][fullKeyId] == false) {
+          haveValidSignature = false;
+          gotSignatureFromCache = true;
         }
+
         if (!gotSignatureFromCache && key.ed25519Key != null) {
           // validate the signature manually
           haveValidSignature = _verifySignature(key.ed25519Key!, signature);
-          validSignatures ??= <String, dynamic>{};
-          if (!validSignatures!.containsKey(otherUserId)) {
-            validSignatures![otherUserId] = <String, dynamic>{};
+          final validSignatures = this.validSignatures ??= <String, dynamic>{};
+          if (!validSignatures.containsKey(otherUserId)) {
+            validSignatures[otherUserId] = <String, dynamic>{};
           }
-          validSignatures![otherUserId][fullKeyId] = haveValidSignature;
+          validSignatures[otherUserId][fullKeyId] = haveValidSignature;
         }
         if (!haveValidSignature) {
           // no valid signature, this key is useless

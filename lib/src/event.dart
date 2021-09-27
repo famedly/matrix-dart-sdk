@@ -98,10 +98,10 @@ class Event extends MatrixEvent {
     this.roomId = roomId ?? room?.id;
     this.senderId = senderId;
     this.unsigned = unsigned;
-    // synapse unfortunatley isn't following the spec and tosses the prev_content
-    // into the unsigned block.
-    // Currently we are facing a very strange bug in web which is impossible to debug.
-    // It may be because of this line so we put this in try-catch until we can fix it.
+// synapse unfortunatley isn't following the spec and tosses the prev_content
+// into the unsigned block.
+// Currently we are facing a very strange bug in web which is impossible to debug.
+// It may be because of this line so we put this in try-catch until we can fix it.
     try {
       this.prevContent = (prevContent != null && prevContent.isNotEmpty)
           ? prevContent
@@ -111,21 +111,21 @@ class Event extends MatrixEvent {
               ? unsigned['prev_content']
               : null;
     } catch (_) {
-      // A strange bug in dart web makes this crash
+// A strange bug in dart web makes this crash
     }
     this.stateKey = stateKey;
     this.originServerTs = originServerTs;
 
-    // Mark event as failed to send if status is `sending` and event is older
-    // than the timeout. This should not happen with the deprecated Moor
-    // database!
+// Mark event as failed to send if status is `sending` and event is older
+// than the timeout. This should not happen with the deprecated Moor
+// database!
     if (status == 0 && room?.client?.database != null) {
-      // Age of this event in milliseconds
+// Age of this event in milliseconds
       final age = DateTime.now().millisecondsSinceEpoch -
           originServerTs.millisecondsSinceEpoch;
 
       if (age > room.client.sendMessageTimeoutSeconds * 1000) {
-        // Update this event in database and open timelines
+// Update this event in database and open timelines
         final json = toJson();
         json['unsigned'] ??= <String, dynamic>{};
         json['unsigned'][messageSendingStatusKey] = -1;
@@ -324,8 +324,8 @@ class Event extends MatrixEvent {
   /// Try to send this event again. Only works with events of status -1.
   Future<String> sendAgain({String txid}) async {
     if (status != -1) return null;
-    // we do not remove the event here. It will automatically be updated
-    // in the `sendEvent` method to transition -1 -> 0 -> 1 -> 2
+// we do not remove the event here. It will automatically be updated
+// in the `sendEvent` method to transition -1 -> 0 -> 1 -> 2
     final newEventId = await room.sendEvent(
       content,
       txid: txid ?? unsigned['transaction_id'] ?? eventId,
@@ -420,7 +420,7 @@ class Event extends MatrixEvent {
     return getThumbnail ? thumbnailMxcUrl : attachmentMxcUrl;
   }
 
-  // size determined from an approximate 800x800 jpeg thumbnail with method=scale
+// size determined from an approximate 800x800 jpeg thumbnail with method=scale
   static const _minNoThumbSize = 80 * 1024;
 
   /// Gets the attachment https URL to display in the timeline, taking into account if the original image is tiny.
@@ -449,14 +449,14 @@ class Event extends MatrixEvent {
     final thisInfoMap = useThumbnailMxcUrl ? thumbnailInfoMap : infoMap;
     final thisMxcUrl =
         useThumbnailMxcUrl ? infoMap['thumbnail_url'] : content['url'];
-    // if we have as method scale, we can return safely the original image, should it be small enough
+// if we have as method scale, we can return safely the original image, should it be small enough
     if (getThumbnail &&
         method == ThumbnailMethod.scale &&
         thisInfoMap['size'] is int &&
         thisInfoMap['size'] < minNoThumbSize) {
       getThumbnail = false;
     }
-    // now generate the actual URLs
+// now generate the actual URLs
     if (getThumbnail) {
       return Uri.parse(thisMxcUrl).getThumbnail(
         room.client,
@@ -480,7 +480,7 @@ class Event extends MatrixEvent {
       throw "This event hasn't any attachment or thumbnail.";
     }
     getThumbnail = mxcUrl != attachmentMxcUrl;
-    // Is this file storeable?
+// Is this file storeable?
     final thisInfoMap = getThumbnail ? thumbnailInfoMap : infoMap;
     final storeable = room.client.database != null &&
         thisInfoMap['size'] is int &&
@@ -517,7 +517,7 @@ class Event extends MatrixEvent {
 
     Uint8List uint8list;
 
-    // Is this file storeable?
+// Is this file storeable?
     final thisInfoMap = getThumbnail ? thumbnailInfoMap : infoMap;
     var storeable = room.client.database != null &&
         thisInfoMap['size'] is int &&
@@ -527,7 +527,7 @@ class Event extends MatrixEvent {
       uint8list = await room.client.database.getFile(mxcUrl);
     }
 
-    // Download the file
+// Download the file
     if (uint8list == null) {
       downloadCallback ??= (Uri url) async {
         return (await http.get(url)).bodyBytes;
@@ -541,7 +541,7 @@ class Event extends MatrixEvent {
       }
     }
 
-    // Decrypt the file
+// Decrypt the file
     if (isEncrypted) {
       final fileMap =
           getThumbnail ? infoMap['thumbnail_file'] : content['file'];
@@ -579,10 +579,10 @@ class Event extends MatrixEvent {
     }
     var body = plaintextBody ? this.plaintextBody : this.body;
 
-    // we need to know if the message is an html message to be able to determine
-    // if we need to strip the reply fallback.
+// we need to know if the message is an html message to be able to determine
+// if we need to strip the reply fallback.
     var htmlMessage = content['format'] != 'org.matrix.custom.html';
-    // If we have an edit, we want to operate on the new content
+// If we have an edit, we want to operate on the new content
     if (hideEdit &&
         relationshipType == RelationshipTypes.edit &&
         content.tryGet<Map<String, dynamic>>('m.new_content') != null) {
@@ -600,9 +600,9 @@ class Event extends MatrixEvent {
             body;
       }
     }
-    // Hide reply fallback
-    // Be sure that the plaintextBody already stripped teh reply fallback,
-    // if the message is formatted
+// Hide reply fallback
+// Be sure that the plaintextBody already stripped teh reply fallback,
+// if the message is formatted
     if (hideReply && (!plaintextBody || htmlMessage)) {
       body = body.replaceFirst(
           RegExp(r'^>( \*)? <[^>]+>[^\n\r]+\r?\n(> [^\n]*\r?\n)*\r?\n'), '');
@@ -613,7 +613,7 @@ class Event extends MatrixEvent {
       localizedBody = callback(this, i18n, body);
     }
 
-    // Add the sender name prefix
+// Add the sender name prefix
     if (withSenderNamePrefix &&
         type == EventTypes.Message &&
         textOnlyMessageTypes.contains(messageType)) {
@@ -691,13 +691,13 @@ class Event extends MatrixEvent {
       return this;
     }
     if (hasAggregatedEvents(timeline, RelationshipTypes.edit)) {
-      // alright, we have an edit
+// alright, we have an edit
       final allEditEvents = aggregatedEvents(timeline, RelationshipTypes.edit)
           // we only allow edits made by the original author themself
           .where((e) => e.senderId == senderId && e.type == EventTypes.Message)
           .toList();
-      // we need to check again if it isn't empty, as we potentially removed all
-      // aggregated edits
+// we need to check again if it isn't empty, as we potentially removed all
+// aggregated edits
       if (allEditEvents.isNotEmpty) {
         allEditEvents.sort((a, b) => a.originServerTs.millisecondsSinceEpoch -
                     b.originServerTs.millisecondsSinceEpoch >
@@ -705,7 +705,7 @@ class Event extends MatrixEvent {
             ? 1
             : -1);
         final rawEvent = allEditEvents.last.toJson();
-        // update the content of the new event to render
+// update the content of the new event to render
         if (rawEvent['content']['m.new_content'] is Map) {
           rawEvent['content'] = rawEvent['content']['m.new_content'];
         }
@@ -720,16 +720,16 @@ class Event extends MatrixEvent {
       content['format'] == 'org.matrix.custom.html' &&
       content['formatted_body'] is String;
 
-  // regexes to fetch the number of emotes, including emoji, and if the message consists of only those
-  // to match an emoji we can use the following regex:
-  // (?:\x{00a9}|\x{00ae}|[\x{2600}-\x{27bf}]|[\x{2b00}-\x{2bff}]|\x{d83c}[\x{d000}-\x{dfff}]|\x{d83d}[\x{d000}-\x{dfff}]|\x{d83e}[\x{d000}-\x{dfff}])[\x{fe00}-\x{fe0f}]?
-  // we need to replace \x{0000} with \u0000, the comment is left in the other format to be able to paste into regex101.com
-  // to see if there is a custom emote, we use the following regex: <img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>
-  // now we combind the two to have four regexes:
-  // 1. are there only emoji, or whitespace
-  // 2. are there only emoji, emotes, or whitespace
-  // 3. count number of emoji
-  // 4- count number of emoji or emotes
+// regexes to fetch the number of emotes, including emoji, and if the message consists of only those
+// to match an emoji we can use the following regex:
+// (?:\x{00a9}|\x{00ae}|[\x{2600}-\x{27bf}]|[\x{2b00}-\x{2bff}]|\x{d83c}[\x{d000}-\x{dfff}]|\x{d83d}[\x{d000}-\x{dfff}]|\x{d83e}[\x{d000}-\x{dfff}])[\x{fe00}-\x{fe0f}]?
+// we need to replace \x{0000} with \u0000, the comment is left in the other format to be able to paste into regex101.com
+// to see if there is a custom emote, we use the following regex: <img[^>]+data-mx-(?:emote|emoticon)(?==|>|\s)[^>]*>
+// now we combind the two to have four regexes:
+// 1. are there only emoji, or whitespace
+// 2. are there only emoji, emotes, or whitespace
+// 3. count number of emoji
+// 4- count number of emoji or emotes
   static final RegExp _onlyEmojiRegex = RegExp(
       r'^((?:\u00a9|\u00ae|[\u2600-\u27bf]|[\u2b00-\u2bff]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])[\ufe00-\ufe0f]?|\s)*$',
       caseSensitive: false,

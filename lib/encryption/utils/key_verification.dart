@@ -227,10 +227,9 @@ class KeyVerification {
           if (deviceId == '*') {
             _deviceId = payload['from_device']; // gotta set the real device id
             // and broadcast the cancel to the other devices
-            final devices = client.userDeviceKeys.containsKey(userId)
-                ? List<DeviceKeys>.from(
-                    client.userDeviceKeys[userId]!.deviceKeys.values)
-                : List<DeviceKeys>.from([]);
+            final devices = List<DeviceKeys>.from(
+                client.userDeviceKeys[userId]?.deviceKeys.values ??
+                    Iterable.empty());
             devices.removeWhere(
                 (d) => {deviceId, client.deviceID}.contains(d.deviceId));
             final cancelPayload = <String, dynamic>{
@@ -472,7 +471,8 @@ class KeyVerification {
       Future<bool> Function(String, SignableKey) verifier) async {
     _verifiedDevices = <SignableKey>[];
 
-    if (!client.userDeviceKeys.containsKey(userId)) {
+    final userDeviceKey = client.userDeviceKeys[userId];
+    if (userDeviceKey == null) {
       await cancel('m.key_mismatch');
       return;
     }
@@ -480,7 +480,7 @@ class KeyVerification {
       final keyId = entry.key;
       final verifyDeviceId = keyId.substring('ed25519:'.length);
       final keyInfo = entry.value;
-      final key = client.userDeviceKeys[userId]!.getKey(verifyDeviceId);
+      final key = userDeviceKey.getKey(verifyDeviceId);
       if (key != null) {
         if (!(await verifier(keyInfo, key))) {
           await cancel('m.key_mismatch');
@@ -619,8 +619,10 @@ class KeyVerification {
     if (state != KeyVerificationState.error) {
       state = newState;
     }
+
+    final onUpdate = this.onUpdate;
     if (onUpdate != null) {
-      onUpdate!();
+      onUpdate();
     }
   }
 }
@@ -808,8 +810,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   }
 
   Future<void> _sendAccept() async {
-    sas = olm.SAS();
-    commitment = _makeCommitment(sas!.get_pubkey(), startCanonicalJson);
+    final sas = this.sas ??= olm.SAS();
+    commitment = _makeCommitment(sas.get_pubkey(), startCanonicalJson);
     await request.send(EventTypes.KeyVerificationAccept, {
       'method': type,
       'key_agreement_protocol': keyAgreementProtocol,
@@ -906,9 +908,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
         _calculateMac(encryption.fingerprintKey!, baseInfo + deviceKeyId);
     keyList.add(deviceKeyId);
 
-    final masterKey = client.userDeviceKeys.containsKey(client.userID)
-        ? client.userDeviceKeys[client.userID]!.masterKey
-        : null;
+    final masterKey = client.userDeviceKeys[client.userID]?.masterKey;
     if (masterKey != null && masterKey.verified) {
       // we have our own master key verified, let's send it!
       final masterKeyId = 'ed25519:${masterKey.publicKey}';

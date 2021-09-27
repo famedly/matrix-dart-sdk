@@ -149,8 +149,7 @@ class Encryption {
       runInRoot(() => keyVerificationManager.handleEventUpdate(update));
     }
     if (update.content['sender'] == client.userID &&
-        (!update.content.containsKey('unsigned') ||
-            !update.content['unsigned'].containsKey('transaction_id'))) {
+        update.content['unsigned']?['transaction_id'] == null) {
       // maybe we need to re-try SSSS secrets
       // ignore: unawaited_futures
       runInRoot(() => ssss.periodicallyRequestMissingCache());
@@ -375,15 +374,13 @@ class Encryption {
 
   Future<void> autovalidateMasterOwnKey() async {
     // check if we can set our own master key as verified, if it isn't yet
+    final masterKey = client.userDeviceKeys[client.userID]?.masterKey;
     if (client.database != null &&
-        client.userDeviceKeys.containsKey(client.userID)) {
-      final masterKey = client.userDeviceKeys[client.userID]!.masterKey;
-      if (masterKey != null &&
-          !masterKey.directVerified &&
-          masterKey
-              .hasValidSignatureChain(onlyValidateUserIds: {client.userID})) {
-        await masterKey.setVerified(true);
-      }
+        masterKey != null &&
+        !masterKey.directVerified &&
+        masterKey
+            .hasValidSignatureChain(onlyValidateUserIds: {client.userID})) {
+      await masterKey.setVerified(true);
     }
   }
 
