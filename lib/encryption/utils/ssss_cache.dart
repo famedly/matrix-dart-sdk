@@ -17,17 +17,14 @@
  */
 
 class SSSSCache {
-  final int? clientId;
   final String? type;
   final String? keyId;
   final String? ciphertext;
   final String? content;
 
-  const SSSSCache(
-      {this.clientId, this.type, this.keyId, this.ciphertext, this.content});
+  const SSSSCache({this.type, this.keyId, this.ciphertext, this.content});
 
   factory SSSSCache.fromJson(Map<String, dynamic> json) => SSSSCache(
-        clientId: json['client_id'],
         type: json['type'],
         keyId: json['key_id'],
         ciphertext: json['ciphertext'],
@@ -35,7 +32,6 @@ class SSSSCache {
       );
 
   Map<String, dynamic> toJson() => {
-        'client_id': clientId,
         'type': type,
         'key_id': keyId,
         'ciphertext': ciphertext,

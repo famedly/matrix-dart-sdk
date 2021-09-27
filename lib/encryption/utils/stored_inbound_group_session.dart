@@ -18,7 +18,6 @@
  */
 
 class StoredInboundGroupSession {
-  final int clientId;
   final String roomId;
   final String sessionId;
   final String pickle;
@@ -30,7 +29,6 @@ class StoredInboundGroupSession {
   final String senderClaimedKeys;
 
   StoredInboundGroupSession({
-    this.clientId,
     this.roomId,
     this.sessionId,
     this.pickle,
@@ -44,7 +42,6 @@ class StoredInboundGroupSession {
 
   factory StoredInboundGroupSession.fromJson(Map<String, dynamic> json) =>
       StoredInboundGroupSession(
-        clientId: json['client_id'],
         roomId: json['room_id'],
         sessionId: json['session_id'],
         pickle: json['pickle'],
@@ -57,7 +54,6 @@ class StoredInboundGroupSession {
       );
 
   Map<String, dynamic> toJson() => {
-        'client_id': clientId,
         'room_id': roomId,
         'session_id': sessionId,
         'pickle': pickle,
