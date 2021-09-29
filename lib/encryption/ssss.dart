@@ -123,7 +123,7 @@ class SSSS {
   static Uint8List decodeRecoveryKey(String recoveryKey) {
     final result = base58.decode(recoveryKey.replaceAll(' ', ''));
 
-    final parity = result.fold(0, (a, b) => (a as int) ^ b);
+    final parity = result.fold<int>(0, (a, b) => a ^ b);
     if (parity != 0) {
       throw Exception('Incorrect parity');
     }
@@ -144,7 +144,7 @@ class SSSS {
 
   static String encodeRecoveryKey(Uint8List recoveryKey) {
     final keyToEncode = <int>[...olmRecoveryKeyPrefix, ...recoveryKey];
-    final parity = keyToEncode.fold(0, (a, b) => (a as int) ^ b);
+    final parity = keyToEncode.fold<int>(0, (a, b) => a ^ b);
     keyToEncode.add(parity);
     // base58-encode and add a space every four chars
     return base58
