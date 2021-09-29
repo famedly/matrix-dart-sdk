@@ -183,7 +183,7 @@ abstract class SignableKey extends MatrixSignableKey {
     return String.fromCharCodes(canonicalJson.encode(data));
   }
 
-  bool _verifySignature(String /*!*/ pubKey, String /*!*/ signature,
+  bool _verifySignature(String pubKey, String signature,
       {bool isSignatureWithoutLibolmValid = false}) {
     olm.Utility olmutil;
     try {
@@ -321,7 +321,7 @@ abstract class SignableKey extends MatrixSignableKey {
     }
   }
 
-  Future<void> /*!*/ setBlocked(bool newBlocked);
+  Future<void> setBlocked(bool newBlocked);
 
   @override
   Map<String, dynamic> toJson() {
@@ -416,7 +416,7 @@ class DeviceKeys extends SignableKey {
       _validSelfSignature ??
       (_validSelfSignature = (deviceId != null &&
               signatures
-                      ?.tryGet<Map<String, dynamic>>(userId)
+                      ?.tryGetMap<String, dynamic>(userId)
                       ?.tryGet<String>('ed25519:$deviceId') ==
                   null
           ? false

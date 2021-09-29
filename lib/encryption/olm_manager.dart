@@ -50,7 +50,7 @@ class OlmManager {
   Map<String, List<OlmSession>> get olmSessions => _olmSessions;
   final Map<String, List<OlmSession>> _olmSessions = {};
 
-  // NOTE(Nico): Do we really want to create a new account on passing null instead of signing the user out?
+  // NOTE(Nico): On initial login we pass null to create a new account
   Future<void> init(String? olmAccount) async {
     if (olmAccount == null) {
       try {

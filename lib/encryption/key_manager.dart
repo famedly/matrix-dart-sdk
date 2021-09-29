@@ -990,16 +990,12 @@ class RoomKeyRequest extends ToDeviceEvent {
     final room = this.room;
     final session = await keyManager.loadInboundGroupSession(
         room.id, request.sessionId, request.senderKey);
-    if (session == null) {
-      Logs().v("[KeyManager] Not forwarding key we don't have");
-      return;
-    }
-    if (session.inboundGroupSession == null) {
+    if (session?.inboundGroupSession == null) {
       Logs().v("[KeyManager] Not forwarding key we don't have");
       return;
     }
 
-    final message = session.content.copy();
+    final message = session!.content.copy();
     message['forwarding_curve25519_key_chain'] =
         List<String>.from(session.forwardingCurve25519KeyChain);
 

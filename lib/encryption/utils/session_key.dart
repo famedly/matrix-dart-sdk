@@ -17,6 +17,7 @@
  */
 
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
+import 'package:matrix_api_lite/src/utils/filter_map_extension.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../../matrix.dart';
@@ -76,22 +77,23 @@ class SessionKey {
   SessionKey.fromDb(StoredInboundGroupSession dbEntry, String key)
       : key = key,
         content = Event.getMapFromPayload(dbEntry.content),
-        indexes =
-            Map<String, String>.from(Event.getMapFromPayload(dbEntry.indexes)),
-        allowedAtIndex = Map<String, Map<String, int>>.from(
-            Event.getMapFromPayload(dbEntry.allowedAtIndex)
-                .map((k, v) => MapEntry(k, Map<String, int>.from(v)))),
+        indexes = Event.getMapFromPayload(dbEntry.indexes)
+            .catchMap((k, v) => MapEntry(k, v as String)),
+        allowedAtIndex = Event.getMapFromPayload(dbEntry.allowedAtIndex)
+            .catchMap((k, v) => MapEntry(k, Map<String, int>.from(v))),
         roomId = dbEntry.roomId,
         sessionId = dbEntry.sessionId,
         senderKey = dbEntry.senderKey,
         inboundGroupSession = olm.InboundGroupSession() {
-    final parsedSenderClaimedKeys = Map<String, String>.from(
-        Event.getMapFromPayload(dbEntry.senderClaimedKeys));
+    final parsedSenderClaimedKeys =
+        Event.getMapFromPayload(dbEntry.senderClaimedKeys)
+            .catchMap((k, v) => MapEntry(k, v as String));
     // we need to try...catch as the map used to be <String, int> and that will throw an error.
     senderClaimedKeys = (parsedSenderClaimedKeys.isNotEmpty)
         ? parsedSenderClaimedKeys
         : (content['sender_claimed_keys'] is Map
-            ? Map<String, String>.from(content['sender_claimed_keys'])
+            ? content['sender_claimed_keys']
+                .catchMap((k, v) => MapEntry(k, v as String))
             : (content['sender_claimed_ed25519_key'] is String
                 ? <String, String>{
                     'ed25519': content['sender_claimed_ed25519_key']

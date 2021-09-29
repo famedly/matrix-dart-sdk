@@ -810,7 +810,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   }
 
   Future<void> _sendAccept() async {
-    final sas = this.sas ??= olm.SAS();
+    final sas = this.sas = olm.SAS();
     commitment = _makeCommitment(sas.get_pubkey(), startCanonicalJson);
     await request.send(EventTypes.KeyVerificationAccept, {
       'method': type,
