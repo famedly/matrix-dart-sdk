@@ -261,7 +261,7 @@ class KeyVerification {
           transactionId ??= eventId ?? payload['transaction_id'];
           if (method != null) {
             // the other side sent us a start, even though we already sent one
-            if (payload['method'] == method?.type) {
+            if (payload['method'] == method!.type) {
               // same method. Determine priority
               final ourEntry = '${client.userID}|${client.deviceID}';
               final entries = [ourEntry, '$userId|$deviceId'];
@@ -274,7 +274,7 @@ class KeyVerification {
                 startedVerification = false; // it is now as if they started
                 thisLastStep = lastStep =
                     EventTypes.KeyVerificationRequest; // we fake the last step
-                method?.dispose(); // in case anything got created already
+                method!.dispose(); // in case anything got created already
               }
             } else {
               // methods don't match up, let's cancel this
