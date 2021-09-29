@@ -895,8 +895,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
       // Update timeline fragments
       final key =
-          MultiKey(eventUpdate.roomID, status == 2 ? '' : 'SENDING').toString();
+          MultiKey(eventUpdate.roomID, status >= 1 ? '' : 'SENDING').toString();
       final List eventIds = (await _timelineFragmentsBox.get(key) ?? []);
+
       if (!eventIds.contains(eventId)) {
         if (eventUpdate.type == EventUpdateType.history) {
           eventIds.add(eventId);
@@ -904,10 +905,16 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
           eventIds.insert(0, eventId);
         }
         await _timelineFragmentsBox.put(key, eventIds);
+      } else if (status == 2 &&
+          prevEvent?.status == 1 &&
+          eventUpdate.type != EventUpdateType.history) {
+        // Status changes from 1 -> 2? Make sure event is correctly sorted.
+        eventIds.remove(eventId);
+        eventIds.insert(0, eventId);
       }
 
       // If event comes from server timeline, remove sending events with this ID
-      if (status == 2) {
+      if (status >= 1) {
         final key = MultiKey(eventUpdate.roomID, 'SENDING').toString();
         final List eventIds = (await _timelineFragmentsBox.get(key) ?? []);
         final i = eventIds.indexWhere((id) => id == eventId);
