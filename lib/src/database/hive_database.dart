@@ -389,8 +389,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     // Combine those two lists while respecting the start and limit parameters.
     final end = min(
         timelineEventIds.length, start + (limit ?? timelineEventIds.length));
-    final eventIds =
-        sendingEventIds + timelineEventIds.getRange(start, end).toList();
+    final eventIds = sendingEventIds +
+        (start < timelineEventIds.length
+            ? timelineEventIds.getRange(start, end).toList()
+            : []);
 
     return await _getEventsByIds(eventIds.cast<String>(), room);
   }
