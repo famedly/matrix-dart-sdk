@@ -620,10 +620,7 @@ class KeyVerification {
       state = newState;
     }
 
-    final onUpdate = this.onUpdate;
-    if (onUpdate != null) {
-      onUpdate();
-    }
+    onUpdate?.call();
   }
 }
 

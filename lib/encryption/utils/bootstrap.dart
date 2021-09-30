@@ -591,10 +591,7 @@ class Bootstrap {
       _state = newState;
     }
 
-    final onUpdate_ = onUpdate;
-    if (onUpdate_ != null) {
-      onUpdate_();
-    }
+    onUpdate?.call();
   }
 }
 
