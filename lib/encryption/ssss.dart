@@ -687,31 +687,35 @@ class OpenSSSS {
   }
 
   Future<String> getStored(String type) async {
+    final privateKey = this.privateKey;
     if (privateKey == null) {
       throw Exception('SSSS not unlocked');
     }
-    return await ssss.getStored(type, keyId, privateKey!);
+    return await ssss.getStored(type, keyId, privateKey);
   }
 
   Future<void> store(String type, String secret, {bool add = false}) async {
+    final privateKey = this.privateKey;
     if (privateKey == null) {
       throw Exception('SSSS not unlocked');
     }
-    await ssss.store(type, secret, keyId, privateKey!, add: add);
+    await ssss.store(type, secret, keyId, privateKey, add: add);
   }
 
   Future<void> validateAndStripOtherKeys(String type, String secret) async {
+    final privateKey = this.privateKey;
     if (privateKey == null) {
       throw Exception('SSSS not unlocked');
     }
-    await ssss.validateAndStripOtherKeys(type, secret, keyId, privateKey!);
+    await ssss.validateAndStripOtherKeys(type, secret, keyId, privateKey);
   }
 
   Future<void> maybeCacheAll() async {
+    final privateKey = this.privateKey;
     if (privateKey == null) {
       throw Exception('SSSS not unlocked');
     }
-    await ssss.maybeCacheAll(keyId, privateKey!);
+    await ssss.maybeCacheAll(keyId, privateKey);
   }
 
   Future<void> _postUnlock() async {

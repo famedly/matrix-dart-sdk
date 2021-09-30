@@ -232,10 +232,10 @@ class Bootstrap {
 
   void migrateOldSsss() {
     final keys = allNeededKeys();
-    oldSsssKeys = <String, OpenSSSS>{};
+    final oldSsssKeys = this.oldSsssKeys = {};
     try {
       for (final key in keys) {
-        oldSsssKeys![key] = encryption.ssss.open(key);
+        oldSsssKeys[key] = encryption.ssss.open(key);
       }
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error construction ssss key', e, s);
@@ -312,15 +312,15 @@ class Bootstrap {
   }
 
   Future<void> openExistingSsss() async {
-    final newSsssKey_ = newSsssKey;
-    if (state != BootstrapState.openExistingSsss || newSsssKey_ == null) {
+    final newSsssKey = this.newSsssKey;
+    if (state != BootstrapState.openExistingSsss || newSsssKey == null) {
       throw BootstrapBadStateException();
     }
-    if (!newSsssKey_.isUnlocked) {
+    if (!newSsssKey.isUnlocked) {
       throw BootstrapBadStateException('Key not unlocked');
     }
     Logs().v('Maybe cache all...');
-    await newSsssKey_.maybeCacheAll();
+    await newSsssKey.maybeCacheAll();
     checkCrossSigning();
   }
 

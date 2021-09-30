@@ -252,8 +252,9 @@ class KeyVerification {
           // as such, we better set it *before* we send our start
           lastStep = type;
           // TODO: Pick method?
-          method = _makeVerificationMethod(possibleMethods.first, this);
-          await method!.sendStart();
+          final method = this.method =
+              _makeVerificationMethod(possibleMethods.first, this);
+          await method.sendStart();
           setState(KeyVerificationState.waitingAccept);
           break;
         case EventTypes.KeyVerificationStart:
@@ -320,8 +321,9 @@ class KeyVerification {
           setState(KeyVerificationState.error);
           break;
         default:
+          final method = this.method;
           if (method != null) {
-            await method!.handlePayload(type, payload);
+            await method.handlePayload(type, payload);
           } else {
             await cancel('m.invalid_message');
           }
