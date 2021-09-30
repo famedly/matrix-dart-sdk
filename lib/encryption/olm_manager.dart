@@ -234,9 +234,7 @@ class OlmManager {
       // in case the app gets killed during upload or the upload fails due to bad network
       // we can still re-try later
       if (updateDatabase) {
-        await client.database?.updateClientKeys(
-          pickledOlmAccount!,
-        );
+        await client.database?.updateClientKeys(pickledOlmAccount!);
       }
       final response = await client.uploadKeys(
         deviceKeys: uploadDeviceKeys
@@ -393,9 +391,7 @@ class OlmManager {
       try {
         newSession.create_inbound_from(_olmAccount!, senderKey, body);
         _olmAccount!.remove_one_time_keys(newSession);
-        client.database?.updateClientKeys(
-          pickledOlmAccount!,
-        );
+        client.database?.updateClientKeys(pickledOlmAccount!);
         plaintext = newSession.decrypt(type, body);
         runInRoot(() => storeOlmSession(OlmSession(
               key: client.userID,
