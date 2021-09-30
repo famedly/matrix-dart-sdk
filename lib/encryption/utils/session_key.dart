@@ -78,7 +78,7 @@ class SessionKey {
       : key = key,
         content = Event.getMapFromPayload(dbEntry.content),
         indexes = Event.getMapFromPayload(dbEntry.indexes)
-            .catchMap((k, v) => MapEntry(k, v as String)),
+            .catchMap((k, v) => MapEntry<String, String>(k, v)),
         allowedAtIndex = Event.getMapFromPayload(dbEntry.allowedAtIndex)
             .catchMap((k, v) => MapEntry(k, Map<String, int>.from(v))),
         roomId = dbEntry.roomId,
@@ -87,13 +87,13 @@ class SessionKey {
         inboundGroupSession = olm.InboundGroupSession() {
     final parsedSenderClaimedKeys =
         Event.getMapFromPayload(dbEntry.senderClaimedKeys)
-            .catchMap((k, v) => MapEntry(k, v as String));
+            .catchMap((k, v) => MapEntry<String, String>(k, v));
     // we need to try...catch as the map used to be <String, int> and that will throw an error.
     senderClaimedKeys = (parsedSenderClaimedKeys.isNotEmpty)
         ? parsedSenderClaimedKeys
         : (content['sender_claimed_keys'] is Map
             ? content['sender_claimed_keys']
-                .catchMap((k, v) => MapEntry(k, v as String))
+                .catchMap((k, v) => MapEntry<String, String>(k, v))
             : (content['sender_claimed_ed25519_key'] is String
                 ? <String, String>{
                     'ed25519': content['sender_claimed_ed25519_key']
