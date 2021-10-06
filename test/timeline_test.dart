@@ -292,7 +292,7 @@ void main() {
     });
 
     test('Clear cache on limited timeline', () async {
-      client.onSync.add(SyncUpdate(nextBatch: '1234')
+      client.onSyncReceived.add(SyncUpdate(nextBatch: '1234')
         ..rooms = (RoomsUpdate()
           ..join = {
             roomID: (JoinedRoomUpdate()

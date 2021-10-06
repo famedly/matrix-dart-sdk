@@ -782,7 +782,13 @@ class Client extends MatrixApi {
   /// This is called once, when the first sync has been processed.
   final StreamController<bool> onFirstSync = StreamController.broadcast();
 
-  /// When a new sync response is coming in, this gives the complete payload.
+  /// When a new sync response is coming in and is not yet processed by the
+  /// sync-loop, this gives the complete payload.
+  final StreamController<SyncUpdate> onSyncReceived =
+      StreamController.broadcast();
+
+  /// When a new sync response is coming in after is has been processed by the
+  /// sync-loop, this gives the complete payload.
   final StreamController<SyncUpdate> onSync = StreamController.broadcast();
 
   /// This gives the current status of the synchronization
@@ -1189,6 +1195,7 @@ class Client extends MatrixApi {
   }
 
   Future<void> _handleSync(SyncUpdate sync, {bool sortAtTheEnd = false}) async {
+    onSyncReceived.add(sync);
     if (sync.toDevice != null) {
       await _handleToDeviceEvents(sync.toDevice);
     }

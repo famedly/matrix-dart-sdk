@@ -106,7 +106,7 @@ class Timeline {
       : events = events ?? [] {
     sub ??= room.client.onEvent.stream.listen(_handleEventUpdate);
     // If the timeline is limited we want to clear our events cache
-    roomSub ??= room.client.onSync.stream
+    roomSub ??= room.client.onSyncReceived.stream
         .where((sync) =>
             sync.rooms?.join != null &&
             sync.rooms.join.containsKey(room.id) &&
