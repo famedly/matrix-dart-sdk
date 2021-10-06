@@ -29,6 +29,7 @@ import 'dart:typed_data';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:hive/hive.dart';
+import 'package:matrix/src/utils/run_benchmarked.dart';
 
 /// This is a basic database for the Matrix SDK using the hive store. You need
 /// to make sure that you perform `Hive.init()` or `Hive.flutterInit()` before
@@ -319,28 +320,31 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<Map<String, BasicEvent>> getAccountData() async {
-    final accountData = <String, BasicEvent>{};
-    for (final key in _accountDataBox.keys) {
-      final raw = await _accountDataBox.get(key);
-      accountData[key.toString().fromHiveKey] = BasicEvent(
-        type: key.toString().fromHiveKey,
-        content: convertToJson(raw),
-      );
-    }
-    return accountData;
-  }
+  Future<Map<String, BasicEvent>> getAccountData() =>
+      runBenchmarked<Map<String, BasicEvent>>('Get all account data from Hive',
+          () async {
+        final accountData = <String, BasicEvent>{};
+        for (final key in _accountDataBox.keys) {
+          final raw = await _accountDataBox.get(key);
+          accountData[key.toString().fromHiveKey] = BasicEvent(
+            type: key.toString().fromHiveKey,
+            content: convertToJson(raw),
+          );
+        }
+        return accountData;
+      }, _accountDataBox.keys.length);
 
   @override
-  Future<Map<String, dynamic>?> getClient(String name) async {
-    final map = <String, dynamic>{};
-    for (final key in _clientBox.keys) {
-      if (key == 'version') continue;
-      map[key] = await _clientBox.get(key);
-    }
-    if (map.isEmpty) return null;
-    return map;
-  }
+  Future<Map<String, dynamic>?> getClient(String name) =>
+      runBenchmarked('Get Client from Hive', () async {
+        final map = <String, dynamic>{};
+        for (final key in _clientBox.keys) {
+          if (key == 'version') continue;
+          map[key] = await _clientBox.get(key);
+        }
+        if (map.isEmpty) return null;
+        return map;
+      });
 
   @override
   Future<Event?> getEventById(String eventId, Room room) async {
@@ -482,77 +486,80 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<List<Room>> getRoomList(Client client) async {
-    final rooms = <String, Room>{};
-    final importantRoomStates = client.importantStateEvents;
-    for (final key in _roomsBox.keys) {
-      // Get the room
-      final raw = await _roomsBox.get(key);
-      final room = Room.fromJson(convertToJson(raw), client);
+  Future<List<Room>> getRoomList(Client client) =>
+      runBenchmarked<List<Room>>('Get room list from hive', () async {
+        final rooms = <String, Room>{};
+        final importantRoomStates = client.importantStateEvents;
+        for (final key in _roomsBox.keys) {
+          // Get the room
+          final raw = await _roomsBox.get(key);
+          final room = Room.fromJson(convertToJson(raw), client);
 
-      // let's see if we need any m.room.member events
-      // We always need the member event for ourself
-      final membersToPostload = <String>{client.userID};
-      // If the room is a direct chat, those IDs should be there too
-      if (room.isDirectChat) membersToPostload.add(room.directChatMatrixID);
-      // the lastEvent message preview might have an author we need to fetch, if it is a group chat
-      if (room.getState(EventTypes.Message) != null && !room.isDirectChat) {
-        membersToPostload.add(room.getState(EventTypes.Message).senderId);
-      }
-      // if the room has no name and no canonical alias, its name is calculated
-      // based on the heroes of the room
-      if (room.getState(EventTypes.RoomName) == null &&
-          room.getState(EventTypes.RoomCanonicalAlias) == null) {
-        // we don't have a name and no canonical alias, so we'll need to
-        // post-load the heroes
-        membersToPostload.addAll(room.summary?.mHeroes ?? []);
-      }
-      // Load members
-      for (final userId in membersToPostload) {
-        final state =
-            await _roomMembersBox.get(MultiKey(room.id, userId).toString());
-        if (state == null) {
-          Logs().w('Unable to post load member $userId');
-          continue;
+          // let's see if we need any m.room.member events
+          // We always need the member event for ourself
+          final membersToPostload = <String>{client.userID};
+          // If the room is a direct chat, those IDs should be there too
+          if (room.isDirectChat) membersToPostload.add(room.directChatMatrixID);
+          // the lastEvent message preview might have an author we need to fetch, if it is a group chat
+          if (room.getState(EventTypes.Message) != null && !room.isDirectChat) {
+            membersToPostload.add(room.getState(EventTypes.Message).senderId);
+          }
+          // if the room has no name and no canonical alias, its name is calculated
+          // based on the heroes of the room
+          if (room.getState(EventTypes.RoomName) == null &&
+              room.getState(EventTypes.RoomCanonicalAlias) == null) {
+            // we don't have a name and no canonical alias, so we'll need to
+            // post-load the heroes
+            membersToPostload.addAll(room.summary?.mHeroes ?? []);
+          }
+          // Load members
+          for (final userId in membersToPostload) {
+            final state =
+                await _roomMembersBox.get(MultiKey(room.id, userId).toString());
+            if (state == null) {
+              Logs().w('Unable to post load member $userId');
+              continue;
+            }
+            room.setState(Event.fromJson(convertToJson(state), room));
+          }
+
+          // Get the "important" room states. All other states will be loaded once
+          // `getUnimportantRoomStates()` is called.
+          for (final type in importantRoomStates) {
+            final states = await _roomStateBox
+                .get(MultiKey(room.id, type).toString()) as Map?;
+            if (states == null) continue;
+            final stateEvents = states.values
+                .map((raw) => Event.fromJson(convertToJson(raw), room))
+                .toList();
+            for (final state in stateEvents) {
+              room.setState(state);
+            }
+          }
+
+          // Add to the list and continue.
+          rooms[room.id] = room;
         }
-        room.setState(Event.fromJson(convertToJson(state), room));
-      }
 
-      // Get the "important" room states. All other states will be loaded once
-      // `getUnimportantRoomStates()` is called.
-      for (final type in importantRoomStates) {
-        final states =
-            await _roomStateBox.get(MultiKey(room.id, type).toString()) as Map?;
-        if (states == null) continue;
-        final stateEvents = states.values
-            .map((raw) => Event.fromJson(convertToJson(raw), room))
-            .toList();
-        for (final state in stateEvents) {
-          room.setState(state);
+        // Get the room account data
+        for (final key in _roomAccountDataBox.keys) {
+          final roomId = MultiKey.fromString(key).parts.first;
+          if (rooms.containsKey(roomId)) {
+            final raw = await _roomAccountDataBox.get(key);
+            final basicRoomEvent = BasicRoomEvent.fromJson(
+              convertToJson(raw),
+            );
+            rooms[roomId]!.roomAccountData[basicRoomEvent.type] =
+                basicRoomEvent;
+          } else {
+            Logs().w(
+                'Found account data for unknown room $roomId. Delete now...');
+            await _roomAccountDataBox.delete(key);
+          }
         }
-      }
 
-      // Add to the list and continue.
-      rooms[room.id] = room;
-    }
-
-    // Get the room account data
-    for (final key in _roomAccountDataBox.keys) {
-      final roomId = MultiKey.fromString(key).parts.first;
-      if (rooms.containsKey(roomId)) {
-        final raw = await _roomAccountDataBox.get(key);
-        final basicRoomEvent = BasicRoomEvent.fromJson(
-          convertToJson(raw),
-        );
-        rooms[roomId]!.roomAccountData[basicRoomEvent.type] = basicRoomEvent;
-      } else {
-        Logs().w('Found account data for unknown room $roomId. Delete now...');
-        await _roomAccountDataBox.delete(key);
-      }
-    }
-
-    return rooms.values.toList();
-  }
+        return rooms.values.toList();
+      }, _roomsBox.keys.length);
 
   @override
   Future<SSSSCache?> getSSSSCache(String type) async {
@@ -595,36 +602,38 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client) async {
-    final deviceKeysOutdated = _userDeviceKeysOutdatedBox.keys;
-    if (deviceKeysOutdated.isEmpty) {
-      return {};
-    }
-    final res = <String, DeviceKeysList>{};
-    for (final userId in deviceKeysOutdated) {
-      final deviceKeysBoxKeys = _userDeviceKeysBox.keys.where((tuple) {
-        final tupleKey = MultiKey.fromString(tuple);
-        return tupleKey.parts.first == userId;
-      });
-      final crossSigningKeysBoxKeys =
-          _userCrossSigningKeysBox.keys.where((tuple) {
-        final tupleKey = MultiKey.fromString(tuple);
-        return tupleKey.parts.first == userId;
-      });
-      res[userId] = DeviceKeysList.fromDbJson(
-          {
-            'client_id': client.id,
-            'user_id': userId,
-            'outdated': await _userDeviceKeysOutdatedBox.get(userId),
-          },
-          await Future.wait(deviceKeysBoxKeys.map(
-              (key) async => convertToJson(await _userDeviceKeysBox.get(key)))),
-          await Future.wait(crossSigningKeysBoxKeys.map((key) async =>
-              convertToJson(await _userCrossSigningKeysBox.get(key)))),
-          client);
-    }
-    return res;
-  }
+  Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client) =>
+      runBenchmarked<Map<String, DeviceKeysList>>(
+          'Get all user device keys from Hive', () async {
+        final deviceKeysOutdated = _userDeviceKeysOutdatedBox.keys;
+        if (deviceKeysOutdated.isEmpty) {
+          return {};
+        }
+        final res = <String, DeviceKeysList>{};
+        for (final userId in deviceKeysOutdated) {
+          final deviceKeysBoxKeys = _userDeviceKeysBox.keys.where((tuple) {
+            final tupleKey = MultiKey.fromString(tuple);
+            return tupleKey.parts.first == userId;
+          });
+          final crossSigningKeysBoxKeys =
+              _userCrossSigningKeysBox.keys.where((tuple) {
+            final tupleKey = MultiKey.fromString(tuple);
+            return tupleKey.parts.first == userId;
+          });
+          res[userId] = DeviceKeysList.fromDbJson(
+              {
+                'client_id': client.id,
+                'user_id': userId,
+                'outdated': await _userDeviceKeysOutdatedBox.get(userId),
+              },
+              await Future.wait(deviceKeysBoxKeys.map((key) async =>
+                  convertToJson(await _userDeviceKeysBox.get(key)))),
+              await Future.wait(crossSigningKeysBoxKeys.map((key) async =>
+                  convertToJson(await _userCrossSigningKeysBox.get(key)))),
+              client);
+        }
+        return res;
+      }, _userDeviceKeysBox.keys.length);
 
   @override
   Future<List<User>> getUsers(Room room) async {
