@@ -31,13 +31,13 @@ class User extends Event {
     String avatarUrl,
     Room room,
   }) {
-    final content = <String, String>{};
-    if (membership != null) content['membership'] = membership;
-    if (displayName != null) content['displayname'] = displayName;
-    if (avatarUrl != null) content['avatar_url'] = avatarUrl;
     return User.fromState(
       stateKey: id,
-      content: content,
+      content: {
+        if (membership != null) 'membership': membership,
+        if (displayName != null) 'displayname': displayName,
+        if (avatarUrl != null) 'avatar_url': avatarUrl,
+      },
       typeKey: EventTypes.RoomMember,
       roomId: room?.id,
       room: room,
@@ -112,9 +112,11 @@ class User extends Event {
   }) {
     formatLocalpart ??= room?.client?.formatLocalpart ?? true;
     mxidLocalPartFallback ??= room?.client?.mxidLocalPartFallback ?? true;
-    if (displayName?.isNotEmpty ?? false) {
+    final displayName = this.displayName;
+    if (displayName != null && displayName.isNotEmpty) {
       return displayName;
     }
+    final stateKey = this.stateKey;
     if (stateKey != null && mxidLocalPartFallback) {
       if (!formatLocalpart) {
         return stateKey.localpart;
@@ -175,18 +177,18 @@ class User extends Event {
     // if the displayname has [ or ] or : we can't build our more fancy stuff, so fall back to the id
     // [] is used for the delimitors
     // If we allowed : we could get collissions with the mxid fallbacks
-    if ((displayName?.isEmpty ?? true) ||
-        {'[', ']', ':'}.any((c) => displayName.contains(c))) {
+    final displayName = this.displayName;
+    if (displayName == null ||
+        displayName.isEmpty ||
+        {'[', ']', ':'}.any(displayName.contains)) {
       return id;
     }
 
-    var identifier = '@';
-    // if we have non-word characters we need to surround with []
-    if (!RegExp(r'^\w+$').hasMatch(displayName)) {
-      identifier += '[$displayName]';
-    } else {
-      identifier += displayName;
-    }
+    final identifier = '@' +
+        // if we have non-word characters we need to surround with []
+        (RegExp(r'^\w+$').hasMatch(displayName)
+            ? displayName
+            : '[$displayName]');
 
     // get all the users with the same display name
     final allUsersWithSameDisplayname = room.getParticipants();
@@ -209,26 +211,22 @@ class User extends Event {
 
   /// Get the mention fragments for this user.
   Set<String> get mentionFragments {
-    if ((displayName?.isEmpty ?? true) ||
-        {'[', ']', ':'}.any((c) => displayName.contains(c))) {
+    final displayName = this.displayName;
+    if (displayName == null ||
+        displayName.isEmpty ||
+        {'[', ']', ':'}.any(displayName.contains)) {
       return {};
     }
-    var identifier = '@';
-    // if we have non-word characters we need to surround with []
-    if (!RegExp(r'^\w+$').hasMatch(displayName)) {
-      identifier += '[$displayName]';
-    } else {
-      identifier += displayName;
-    }
+    final identifier = '@' +
+        // if we have non-word characters we need to surround with []
+        (RegExp(r'^\w+$').hasMatch(displayName)
+            ? displayName
+            : '[$displayName]');
+
     final hash = _hash(id);
     return {identifier, '$identifier#$hash'};
   }
 }
 
-String _hash(String s) {
-  var number = 0;
-  for (var i = 0; i < s.length; i++) {
-    number += s.codeUnitAt(i);
-  }
-  return (number % 10000).toString();
-}
+String _hash(String s) =>
+    (s.codeUnits.fold<int>(0, (a, b) => a + b) % 10000).toString();
