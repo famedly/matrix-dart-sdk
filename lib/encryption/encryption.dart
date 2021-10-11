@@ -355,10 +355,10 @@ class Encryption {
     final encryptedPayload = <String, dynamic>{
       'algorithm': AlgorithmTypes.megolmV1AesSha2,
       'ciphertext':
-          sess!.outboundGroupSession.encrypt(json.encode(payloadContent)),
+          sess!.outboundGroupSession!.encrypt(json.encode(payloadContent)),
       'device_id': client.deviceID,
       'sender_key': identityKey,
-      'session_id': sess.outboundGroupSession.session_id(),
+      'session_id': sess.outboundGroupSession!.session_id(),
       if (mRelatesTo != null) 'm.relates_to': mRelatesTo,
     };
     await keyManager.storeOutboundGroupSession(roomId, sess);

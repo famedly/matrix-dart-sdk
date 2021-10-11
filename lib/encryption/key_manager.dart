@@ -281,7 +281,7 @@ class KeyManager {
       {bool wipe = false, bool use = true}) async {
     final room = client.getRoomById(roomId);
     final sess = getOutboundGroupSession(roomId);
-    if (room == null || sess == null) {
+    if (room == null || sess == null || sess.outboundGroupSession == null) {
       return true;
     }
 
@@ -292,7 +292,7 @@ class KeyManager {
       final maxMessages = encryptionContent?.rotationPeriodMsgs ?? 100;
       final maxAge = encryptionContent?.rotationPeriodMs ??
           604800000; // default of one week
-      if (sess.sentMessages >= maxMessages ||
+      if ((sess.sentMessages ?? maxMessages) >= maxMessages ||
           sess.creationTime
               .add(Duration(milliseconds: maxAge))
               .isBefore(DateTime.now())) {
@@ -301,7 +301,7 @@ class KeyManager {
     }
 
     final inboundSess = await loadInboundGroupSession(room.id,
-        sess.outboundGroupSession.session_id(), encryption.identityKey!);
+        sess.outboundGroupSession!.session_id(), encryption.identityKey!);
     if (inboundSess == null) {
       wipe = true;
     }
@@ -371,13 +371,12 @@ class KeyManager {
           return false;
         }
         // okay, we use the outbound group session!
-        sess.sentMessages++;
         sess.devices = newDeviceKeyIds;
         final rawSession = <String, dynamic>{
           'algorithm': AlgorithmTypes.megolmV1AesSha2,
           'room_id': room.id,
-          'session_id': sess.outboundGroupSession.session_id(),
-          'session_key': sess.outboundGroupSession.session_key(),
+          'session_id': sess.outboundGroupSession!.session_id(),
+          'session_key': sess.outboundGroupSession!.session_key(),
         };
         try {
           devicesToReceive.removeWhere((k) => !k.encryptToDevice);
@@ -389,17 +388,17 @@ class KeyManager {
                       .containsKey(device.curve25519Key) ||
                   inboundSess.allowedAtIndex[device.userId]![
                           device.curve25519Key]! >
-                      sess.outboundGroupSession.message_index()) {
+                      sess.outboundGroupSession!.message_index()) {
                 inboundSess
                         .allowedAtIndex[device.userId]![device.curve25519Key!] =
-                    sess.outboundGroupSession.message_index();
+                    sess.outboundGroupSession!.message_index();
               }
             }
             if (client.database != null) {
               await client.database.updateInboundGroupSessionAllowedAtIndex(
                   json.encode(inboundSess!.allowedAtIndex),
                   room.id,
-                  sess.outboundGroupSession.session_id());
+                  sess.outboundGroupSession!.session_id());
             }
             // send out the key
             await client.sendToDeviceEncryptedChunked(
@@ -425,10 +424,9 @@ class KeyManager {
       String roomId, OutboundGroupSession sess) async {
     await client.database?.storeOutboundGroupSession(
         roomId,
-        sess.outboundGroupSession.pickle(client.userID),
+        sess.outboundGroupSession!.pickle(client.userID),
         json.encode(sess.devices),
-        sess.creationTime.millisecondsSinceEpoch,
-        sess.sentMessages);
+        sess.creationTime.millisecondsSinceEpoch);
   }
 
   final Map<String, Future<OutboundGroupSession>>
@@ -500,7 +498,6 @@ class KeyManager {
       devices: deviceKeyIds,
       creationTime: DateTime.now(),
       outboundGroupSession: outboundGroupSession,
-      sentMessages: 0,
       key: client.userID,
     );
     try {

@@ -145,7 +145,8 @@ class OlmManager {
     bool updateDatabase = true,
     bool? unusedFallbackKey = false,
   }) async {
-    if (!enabled) {
+    final _olmAccount = this._olmAccount;
+    if (_olmAccount == null) {
       return true;
     }
 
@@ -161,22 +162,22 @@ class OlmManager {
         // check if we have OTKs that still need uploading. If we do, we don't try to generate new ones,
         // instead we try to upload the old ones first
         final oldOTKsNeedingUpload = json
-            .decode(_olmAccount!.one_time_keys())['curve25519']
+            .decode(_olmAccount.one_time_keys())['curve25519']
             .entries
             .length as int;
         // generate one-time keys
         // we generate 2/3rds of max, so that other keys people may still have can
         // still be used
         final oneTimeKeysCount =
-            (_olmAccount!.max_number_of_one_time_keys() * 2 / 3).floor() -
+            (_olmAccount.max_number_of_one_time_keys() * 2 / 3).floor() -
                 oldKeyCount -
                 oldOTKsNeedingUpload;
         if (oneTimeKeysCount > 0) {
-          _olmAccount!.generate_one_time_keys(oneTimeKeysCount);
+          _olmAccount.generate_one_time_keys(oneTimeKeysCount);
         }
         uploadedOneTimeKeysCount = oneTimeKeysCount + oldOTKsNeedingUpload;
         final Map<String, dynamic> oneTimeKeys =
-            json.decode(_olmAccount!.one_time_keys());
+            json.decode(_olmAccount.one_time_keys());
 
         // now sign all the one-time keys
         for (final entry in oneTimeKeys['curve25519'].entries) {
@@ -191,8 +192,8 @@ class OlmManager {
       final signedFallbackKeys = <String, dynamic>{};
       if (encryption.isMinOlmVersion(3, 2, 0) && unusedFallbackKey == false) {
         // we don't have an unused fallback key uploaded....so let's change that!
-        _olmAccount!.generate_fallback_key();
-        final fallbackKey = json.decode(_olmAccount!.fallback_key());
+        _olmAccount.generate_fallback_key();
+        final fallbackKey = json.decode(_olmAccount.fallback_key());
         // now sign all the fallback keys
         for (final entry in fallbackKey['curve25519'].entries) {
           final key = entry.key;
@@ -219,7 +220,7 @@ class OlmManager {
       };
       if (uploadDeviceKeys) {
         final Map<String, dynamic> keys =
-            json.decode(_olmAccount!.identity_keys());
+            json.decode(_olmAccount.identity_keys());
         for (final entry in keys.entries) {
           final algorithm = entry.key;
           final value = entry.value;
@@ -244,7 +245,7 @@ class OlmManager {
         fallbackKeys: signedFallbackKeys,
       );
       // mark the OTKs as published and save that to datbase
-      _olmAccount!.mark_keys_as_published();
+      _olmAccount.mark_keys_as_published();
       if (updateDatabase) {
         await client.database?.updateClientKeys(pickledOlmAccount!);
       }
@@ -553,14 +554,16 @@ class OlmManager {
             client.userDeviceKeys[userId]!.deviceKeys[deviceId]!.curve25519Key;
         for (final Map<String, dynamic> deviceKey
             in deviceKeysEntry.value.values) {
-          if (!deviceKey.checkJsonSignature(fingerprintKey, userId, deviceId)) {
+          if (fingerprintKey == null ||
+              identityKey == null ||
+              !deviceKey.checkJsonSignature(fingerprintKey, userId, deviceId)) {
             continue;
           }
           Logs().v('[OlmManager] Starting session with $userId:$deviceId');
           final session = olm.Session();
           try {
             session.create_outbound(
-                _olmAccount!, identityKey!, deviceKey['key']);
+                _olmAccount!, identityKey, deviceKey['key']);
             await storeOlmSession(OlmSession(
               key: client.userID,
               identityKey: identityKey,
@@ -666,8 +669,7 @@ class OlmManager {
           '[OlmManager] Device ${device.userId}:${device.deviceId} generated a new olm session, replaying last sent message...');
       final lastSentMessageRes = await client.database
           .getLastSentMessageUserDeviceKey(device.userId, device.deviceId!);
-      if (lastSentMessageRes.isEmpty ||
-          (lastSentMessageRes.first?.isEmpty ?? true)) {
+      if (lastSentMessageRes.isEmpty || (lastSentMessageRes.first.isEmpty)) {
         return;
       }
       final lastSentMessage = json.decode(lastSentMessageRes.first);

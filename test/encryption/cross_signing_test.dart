@@ -99,7 +99,7 @@ void main() {
       ]);
       final body = json.decode(FakeMatrixApi
           .calledEndpoints['/client/r0/keys/signatures/upload'].first);
-      expect(body['@test:fakeServer.notExisting'].containsKey('OTHERDEVICE'),
+      expect(body['@test:fakeServer.notExisting']?.containsKey('OTHERDEVICE'),
           true);
       expect(
           body['@test:fakeServer.notExisting'].containsKey(

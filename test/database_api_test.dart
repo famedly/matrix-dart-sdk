@@ -342,7 +342,6 @@ void testDatabase(
       'pickle',
       '{}',
       0,
-      0,
     );
     final session = await database.getOutboundGroupSession(
       '!testroom:example.com',

@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -28,24 +27,23 @@ class OutboundGroupSession {
   /// This way we can easily know if a new user is added, leaves, a new devices is added, and,
   /// very importantly, if we block a device. These are all important for determining if/when
   /// an outbound session needs to be rotated.
-  Map<String, Map<String, bool>> devices;
-  DateTime creationTime;
-  olm.OutboundGroupSession outboundGroupSession;
-  int sentMessages;
+  Map<String, Map<String, bool>> devices = {};
+  // Default to a date, that would get this session rotated in any case to make handling easier
+  DateTime creationTime = DateTime.fromMillisecondsSinceEpoch(0);
+  olm.OutboundGroupSession? outboundGroupSession;
+  int? get sentMessages => outboundGroupSession?.message_index();
   bool get isValid => outboundGroupSession != null;
   final String key;
 
   OutboundGroupSession(
-      {this.devices,
-      this.creationTime,
-      this.outboundGroupSession,
-      this.sentMessages,
-      this.key});
+      {required this.devices,
+      required this.creationTime,
+      required this.outboundGroupSession,
+      required this.key});
 
   OutboundGroupSession.fromJson(Map<String, dynamic> dbEntry, String key)
       : key = key {
     try {
-      devices = {};
       for (final entry in json.decode(dbEntry['device_ids']).entries) {
         devices[entry.key] = Map<String, bool>.from(entry.value);
       }
@@ -58,10 +56,9 @@ class OutboundGroupSession {
     }
     outboundGroupSession = olm.OutboundGroupSession();
     try {
-      outboundGroupSession.unpickle(key, dbEntry['pickle']);
+      outboundGroupSession!.unpickle(key, dbEntry['pickle']);
       creationTime =
           DateTime.fromMillisecondsSinceEpoch(dbEntry['creation_time']);
-      sentMessages = dbEntry['sent_messages'];
     } catch (e, s) {
       dispose();
       Logs().e('[LibOlm] Unable to unpickle outboundGroupSession', e, s);

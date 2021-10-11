@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2021 Famedly GmbH
@@ -29,15 +28,15 @@ class StoredInboundGroupSession {
   final String senderClaimedKeys;
 
   StoredInboundGroupSession({
-    this.roomId,
-    this.sessionId,
-    this.pickle,
-    this.content,
-    this.indexes,
-    this.allowedAtIndex,
-    this.uploaded,
-    this.senderKey,
-    this.senderClaimedKeys,
+    required this.roomId,
+    required this.sessionId,
+    required this.pickle,
+    required this.content,
+    required this.indexes,
+    required this.allowedAtIndex,
+    required this.uploaded,
+    required this.senderKey,
+    required this.senderClaimedKeys,
   });
 
   factory StoredInboundGroupSession.fromJson(Map<String, dynamic> json) =>

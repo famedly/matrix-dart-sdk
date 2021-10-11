@@ -124,7 +124,9 @@ void main() {
           0);
 
       // rotate after too many messages
-      sess.sentMessages = 300;
+      Iterable.generate(300).forEach((_) {
+        sess.outboundGroupSession.encrypt('some string');
+      });
       await client.encryption.keyManager.clearOrUseOutboundGroupSession(roomId);
       expect(
           client.encryption.keyManager.getOutboundGroupSession(roomId) != null,

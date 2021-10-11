@@ -143,7 +143,7 @@ class KeyVerification {
     method?.dispose();
   }
 
-  static String getTransactionId(Map<String, dynamic> payload) {
+  static String? getTransactionId(Map<String, dynamic> payload) {
     return payload['transaction_id'] ??
         (payload['m.relates_to'] is Map
             ? payload['m.relates_to']['event_id']

@@ -1028,14 +1028,13 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> storeOutboundGroupSession(String roomId, String pickle,
-      String deviceIds, int creationTime, int sentMessages) async {
+  Future<void> storeOutboundGroupSession(
+      String roomId, String pickle, String deviceIds, int creationTime) async {
     await _outboundGroupSessionsBox.put(roomId.toHiveKey, <String, dynamic>{
       'room_id': roomId,
       'pickle': pickle,
       'device_ids': deviceIds,
       'creation_time': creationTime,
-      'sent_messages': sentMessages,
     });
     return;
   }

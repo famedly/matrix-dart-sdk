@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020, 2021 Famedly GmbH
@@ -50,10 +49,10 @@ class KeyVerificationManager {
     if (request.transactionId == null) {
       return;
     }
-    _requests[request.transactionId] = request;
+    _requests[request.transactionId!] = request;
   }
 
-  KeyVerification getRequest(String requestId) => _requests[requestId];
+  KeyVerification? getRequest(String requestId) => _requests[requestId];
 
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
     if (!event.type.startsWith('m.key.verification.') ||
@@ -65,10 +64,11 @@ class KeyVerificationManager {
     if (transactionId == null) {
       return; // TODO: send cancel with unknown transaction id
     }
-    if (_requests.containsKey(transactionId)) {
+    final request = _requests[transactionId];
+    if (request != null) {
       // make sure that new requests can't come from ourself
       if (!{EventTypes.KeyVerificationRequest}.contains(event.type)) {
-        await _requests[transactionId].handlePayload(event.type, event.content);
+        await request.handlePayload(event.type, event.content);
       }
     } else {
       if (!{EventTypes.KeyVerificationRequest, EventTypes.KeyVerificationStart}
@@ -105,8 +105,8 @@ class KeyVerificationManager {
     final transactionId =
         KeyVerification.getTransactionId(event['content']) ?? event['event_id'];
 
-    if (_requests.containsKey(transactionId)) {
-      final req = _requests[transactionId];
+    final req = _requests[transactionId];
+    if (req != null) {
       final otherDeviceId = event['content']['from_device'];
       if (event['sender'] != client.userID) {
         await req.handlePayload(type, event['content'], event['event_id']);

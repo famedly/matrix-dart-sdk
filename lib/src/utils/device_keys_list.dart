@@ -299,7 +299,7 @@ abstract class SignableKey extends MatrixSignableKey {
         // or else we just recurse into that key and chack if it works out
         final haveChain = key.hasValidSignatureChain(
             verifiedOnly: verifiedOnly,
-            visited: visited,
+            visited: visited_,
             onlyValidateUserIds: onlyValidateUserIds);
         if (haveChain) {
           return true;

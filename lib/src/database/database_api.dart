@@ -146,7 +146,6 @@ abstract class DatabaseApi {
     String pickle,
     String deviceIds,
     int creationTime,
-    int sentMessages,
   );
 
   Future updateClientKeys(
