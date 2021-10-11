@@ -82,6 +82,22 @@ code_analyze:
     - dart format lib/ test/ test_driver/ --set-exit-if-changed
     - dart analyze
 
+code_quality:
+  tags:
+    - docker
+  stage: coverage
+  image: google/dart
+  before_script:
+    - dart pub global activate dart_code_metrics
+  script:
+    - dart pub global run dart_code_metrics:metrics lib -r gitlab > code-quality-report.json
+  artifacts:
+    reports:
+      codequality: code-quality-report.json
+    # also create an actual artifact for inspection purposes
+    paths:
+      - code-quality-report.json
+
 build_doc:
   tags:
     - docker
