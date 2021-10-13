@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -34,12 +33,12 @@ class Timeline {
   /// Map of event ID to map of type to set of aggregated events
   final Map<String, Map<String, Set<Event>>> aggregatedEvents = {};
 
-  final void Function() onUpdate;
-  final void Function(int insertID) onInsert;
+  final void Function()? onUpdate;
+  final void Function(int insertID)? onInsert;
 
-  StreamSubscription<EventUpdate> sub;
-  StreamSubscription<SyncUpdate> roomSub;
-  StreamSubscription<String> sessionIdReceivedSub;
+  StreamSubscription<EventUpdate>? sub;
+  StreamSubscription<SyncUpdate>? roomSub;
+  StreamSubscription<String>? sessionIdReceivedSub;
   bool isRequestingHistory = false;
 
   final Map<String, Event> _eventCache = {};
@@ -47,7 +46,7 @@ class Timeline {
   /// Searches for the event in this timeline. If not
   /// found, requests from the server. Requested events
   /// are cached.
-  Future<Event> getEventById(String id) async {
+  Future<Event?> getEventById(String id) async {
     for (final event in events) {
       if (event.eventId == id) return event;
     }
@@ -84,7 +83,7 @@ class Timeline {
         start: events.length,
         limit: Room.defaultHistoryCount,
       );
-      if (eventsFromStore.isNotEmpty) {
+      if (eventsFromStore != null && eventsFromStore.isNotEmpty) {
         events.addAll(eventsFromStore);
       } else {
         Logs().v('No more events found in the store. Request from server...');
@@ -102,24 +101,22 @@ class Timeline {
     }
   }
 
-  Timeline({this.room, List<Event> events, this.onUpdate, this.onInsert})
+  Timeline(
+      {required this.room, List<Event>? events, this.onUpdate, this.onInsert})
       : events = events ?? [] {
-    sub ??= room.client.onEvent.stream.listen(_handleEventUpdate);
+    sub = room.client.onEvent.stream.listen(_handleEventUpdate);
     // If the timeline is limited we want to clear our events cache
-    roomSub ??= room.client.onSync.stream
-        .where((sync) =>
-            sync.rooms?.join != null &&
-            sync.rooms.join.containsKey(room.id) &&
-            sync.rooms.join[room.id]?.timeline?.limited == true)
+    roomSub = room.client.onSync.stream
+        .where((sync) => sync.rooms?.join?[room.id]?.timeline?.limited == true)
         .listen((_) {
-      events.clear();
+      this.events.clear();
       aggregatedEvents.clear();
     });
-    sessionIdReceivedSub ??=
+    sessionIdReceivedSub =
         room.onSessionKeyReceived.stream.listen(_sessionKeyReceived);
 
     // we want to populate our aggregated events
-    for (final e in events) {
+    for (final e in this.events) {
       addAggregatedEvent(e);
     }
   }
@@ -154,7 +151,7 @@ class Timeline {
     } else {
       await decryptFn();
     }
-    if (decryptAtLeastOneEvent) onUpdate();
+    if (decryptAtLeastOneEvent) onUpdate?.call();
   }
 
   /// Request the keys for undecryptable events of this timeline
@@ -173,7 +170,7 @@ class Timeline {
     }
   }
 
-  int _findEvent({String event_id, String unsigned_txid}) {
+  int _findEvent({String? event_id, String? unsigned_txid}) {
     // we want to find any existing event where either the passed event_id or the passed unsigned_txid
     // matches either the event_id or transaction_id of the existing event.
     // For that we create two sets, searchNeedle, what we search, and searchHaystack, where we check if there is a match.
@@ -218,18 +215,12 @@ class Timeline {
     if (!aggregatedEvents.containsKey(event.relationshipEventId)) {
       aggregatedEvents[event.relationshipEventId] = <String, Set<Event>>{};
     }
-    if (!aggregatedEvents[event.relationshipEventId]
-        .containsKey(event.relationshipType)) {
-      aggregatedEvents[event.relationshipEventId]
-          [event.relationshipType] = <Event>{};
-    }
+    final events = (aggregatedEvents[event.relationshipEventId] ??=
+        <String, Set<Event>>{})[event.relationshipType] ??= <Event>{};
     // remove a potential old event
-    _removeEventFromSet(
-        aggregatedEvents[event.relationshipEventId][event.relationshipType],
-        event);
+    _removeEventFromSet(events, event);
     // add the new one
-    aggregatedEvents[event.relationshipEventId][event.relationshipType]
-        .add(event);
+    events.add(event);
   }
 
   void removeAggregatedEvent(Event event) {
@@ -304,17 +295,16 @@ class Timeline {
                   -1) return;
           if (eventUpdate.type == EventUpdateType.history) {
             events.add(newEvent);
-          } else if (status == -1) {
-            events.insert(events.firstIndexWhereNotError, newEvent);
           } else {
             events.insert(events.firstIndexWhereNotError, newEvent);
           }
+
           addAggregatedEvent(newEvent);
-          if (onInsert != null) onInsert(0);
+          onInsert?.call(0);
         }
       }
       if (update && !_collectHistoryUpdates) {
-        if (onUpdate != null) onUpdate();
+        onUpdate?.call();
       }
     } catch (e, s) {
       Logs().w('Handle event update failed', e, s);
