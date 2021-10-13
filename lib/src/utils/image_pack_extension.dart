@@ -79,7 +79,9 @@ extension ImagePackRoomExtension on Room {
       for (final entry in allRoomEmotes.entries) {
         addImagePack(entry.value,
             room: this,
-            slug: entry.value.stateKey.isEmpty ? 'room' : entry.value.stateKey);
+            slug: (entry.value.stateKey?.isNotEmpty == true)
+                ? entry.value.stateKey
+                : 'room');
       }
     }
     return packs;

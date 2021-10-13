@@ -190,9 +190,10 @@ class Timeline {
       if (events[i].eventId != null) {
         searchHaystack.add(events[i].eventId);
       }
-      if (events[i].unsigned != null &&
-          events[i].unsigned['transaction_id'] != null) {
-        searchHaystack.add(events[i].unsigned['transaction_id']);
+
+      final txnid = events[i].unsigned?['transaction_id'];
+      if (txnid != null) {
+        searchHaystack.add(txnid);
       }
       if (searchNeedle.intersection(searchHaystack).isNotEmpty) {
         break;
@@ -205,19 +206,18 @@ class Timeline {
     eventSet.removeWhere((e) =>
         e.matchesEventOrTransactionId(event.eventId) ||
         (event.unsigned != null &&
-            e.matchesEventOrTransactionId(event.unsigned['transaction_id'])));
+            e.matchesEventOrTransactionId(event.unsigned?['transaction_id'])));
   }
 
   void addAggregatedEvent(Event event) {
     // we want to add an event to the aggregation tree
-    if (event.relationshipType == null || event.relationshipEventId == null) {
+    final relationshipType = event.relationshipType;
+    final relationshipEventId = event.relationshipEventId;
+    if (relationshipType == null || relationshipEventId == null) {
       return; // nothing to do
     }
-    if (!aggregatedEvents.containsKey(event.relationshipEventId)) {
-      aggregatedEvents[event.relationshipEventId] = <String, Set<Event>>{};
-    }
-    final events = (aggregatedEvents[event.relationshipEventId] ??=
-        <String, Set<Event>>{})[event.relationshipType] ??= <Event>{};
+    final events = (aggregatedEvents[relationshipEventId] ??=
+        <String, Set<Event>>{})[relationshipType] ??= <Event>{};
     // remove a potential old event
     _removeEventFromSet(events, event);
     // add the new one
@@ -227,7 +227,7 @@ class Timeline {
   void removeAggregatedEvent(Event event) {
     aggregatedEvents.remove(event.eventId);
     if (event.unsigned != null) {
-      aggregatedEvents.remove(event.unsigned['transaction_id']);
+      aggregatedEvents.remove(event.unsigned?['transaction_id']);
     }
     for (final types in aggregatedEvents.values) {
       for (final events in types.values) {

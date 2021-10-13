@@ -55,12 +55,18 @@ void main() {
         content: {},
         room: room,
         stateKey: '',
+        eventId: '\$fakeeventid',
+        originServerTs: DateTime.now(),
+        senderId: '\@fakeuser:fakeServer.notExisting',
       ));
       room.setState(Event(
         type: 'm.room.member',
         content: {'membership': 'join'},
         room: room,
         stateKey: client.userID,
+        eventId: '\$fakeeventid',
+        originServerTs: DateTime.now(),
+        senderId: '\@fakeuser:fakeServer.notExisting',
       ));
     });
 
@@ -135,7 +141,18 @@ void main() {
     test('react', () async {
       FakeMatrixApi.calledEndpoints.clear();
       await room.sendTextEvent('/react 🦊',
-          inReplyTo: Event(eventId: '\$event'));
+          inReplyTo: Event(
+            eventId: '\$event',
+            type: 'm.room.message',
+            content: {
+              'msgtype': 'm.text',
+              'body': '<b>yay</b>',
+              'format': 'org.matrix.custom.html',
+              'formatted_body': '<b>yay</b>',
+            },
+            originServerTs: DateTime.now(),
+            senderId: client.userID,
+          ));
       final sent = getLastMessagePayload('m.reaction');
       expect(sent, {
         'm.relates_to': {

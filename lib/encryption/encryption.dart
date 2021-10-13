@@ -308,7 +308,7 @@ class Encryption {
         await client.database?.storeEventUpdate(
           EventUpdate(
             content: event.toJson(),
-            roomID: event.roomId,
+            roomID: roomId,
             type: updateType,
           ),
         );

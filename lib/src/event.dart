@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -39,7 +38,13 @@ abstract class RelationshipTypes {
 
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
 class Event extends MatrixEvent {
-  User get sender => room.getUserByMXIDSync(senderId ?? '@unknown:unknown');
+  User get sender =>
+      room?.getUserByMXIDSync(senderId) ??
+      User.fromState(
+        stateKey: senderId,
+        typeKey: EventTypes.RoomMember,
+        originServerTs: DateTime.now(),
+      );
 
   @Deprecated('Use [originServerTs] instead')
   DateTime get time => originServerTs;
@@ -48,10 +53,10 @@ class Event extends MatrixEvent {
   String get typeKey => type;
 
   @Deprecated('Use [sender.calcDisplayname()] instead')
-  String get senderName => sender.calcDisplayname();
+  String? get senderName => sender.calcDisplayname();
 
   /// The room this event belongs to. May be null.
-  final Room room;
+  final Room? room;
 
   /// The status of this event.
   EventStatus status;
@@ -59,33 +64,39 @@ class Event extends MatrixEvent {
   static const EventStatus defaultStatus = EventStatus.synced;
 
   /// Optional. The event that redacted this event, if any. Otherwise null.
-  Event get redactedBecause =>
-      unsigned != null && unsigned['redacted_because'] is Map
-          ? Event.fromJson(unsigned['redacted_because'], room)
-          : null;
+  Event? get redactedBecause {
+    final redacted_because = unsigned?['redacted_because'];
+    final room = this.room;
+    return (redacted_because is Map<String, dynamic>)
+        ? Event.fromJson(redacted_because, room)
+        : null;
+  }
 
   bool get redacted => redactedBecause != null;
 
-  User get stateKeyUser => room.getUserByMXIDSync(stateKey);
+  User? get stateKeyUser => room?.getUserByMXIDSync(stateKey);
 
   Event({
     this.status = defaultStatus,
-    Map<String, dynamic> content,
-    String type,
-    String eventId,
-    String roomId,
-    String senderId,
-    DateTime originServerTs,
-    Map<String, dynamic> unsigned,
-    Map<String, dynamic> prevContent,
-    String stateKey,
+    required Map<String, dynamic> content,
+    required String type,
+    required String eventId,
+    String? roomId,
+    required String senderId,
+    required DateTime originServerTs,
+    Map<String, dynamic>? unsigned,
+    Map<String, dynamic>? prevContent,
+    String? stateKey,
     this.room,
-  }) {
-    this.content = content;
-    this.type = type;
+  }) : super(
+          content: content,
+          type: type,
+          eventId: eventId,
+          senderId: senderId,
+          originServerTs: originServerTs,
+          roomId: roomId ?? room?.id,
+        ) {
     this.eventId = eventId;
-    this.roomId = roomId ?? room?.id;
-    this.senderId = senderId;
     this.unsigned = unsigned;
     // synapse unfortunately isn't following the spec and tosses the prev_content
     // into the unsigned block.
@@ -103,7 +114,6 @@ class Event extends MatrixEvent {
       // A strange bug in dart web makes this crash
     }
     this.stateKey = stateKey;
-    this.originServerTs = originServerTs;
 
     // Mark event as failed to send if status is `sending` and event is older
     // than the timeout. This should not happen with the deprecated Moor
@@ -113,7 +123,8 @@ class Event extends MatrixEvent {
       final age = DateTime.now().millisecondsSinceEpoch -
           originServerTs.millisecondsSinceEpoch;
 
-      if (age > room.client.sendMessageTimeoutSeconds * 1000) {
+      final room = this.room;
+      if (room != null && age > room.client.sendMessageTimeoutSeconds * 1000) {
         // Update this event in database and open timelines
         final json = toJson();
         json['unsigned'] ??= <String, dynamic>{};
@@ -143,7 +154,7 @@ class Event extends MatrixEvent {
   factory Event.fromMatrixEvent(
     MatrixEvent matrixEvent,
     Room room, {
-    EventStatus status,
+    EventStatus status = defaultStatus,
   }) =>
       Event(
         status: status,
@@ -162,7 +173,7 @@ class Event extends MatrixEvent {
   /// Get a State event from a table row or from the event stream.
   factory Event.fromJson(
     Map<String, dynamic> jsonPayload,
-    Room room,
+    Room? room,
   ) {
     final content = Event.getMapFromPayload(jsonPayload['content']);
     final unsigned = Event.getMapFromPayload(jsonPayload['unsigned']);
@@ -190,7 +201,7 @@ class Event extends MatrixEvent {
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     if (stateKey != null) data['state_key'] = stateKey;
-    if (prevContent != null && prevContent.isNotEmpty) {
+    if (prevContent?.isNotEmpty == true) {
       data['prev_content'] = prevContent;
     }
     data['content'] = content;
@@ -199,14 +210,15 @@ class Event extends MatrixEvent {
     data['room_id'] = roomId;
     data['sender'] = senderId;
     data['origin_server_ts'] = originServerTs.millisecondsSinceEpoch;
-    if (unsigned != null && unsigned.isNotEmpty) {
+    if (unsigned?.isNotEmpty == true) {
       data['unsigned'] = unsigned;
     }
     return data;
   }
 
   User get asUser => User.fromState(
-      stateKey: stateKey,
+      // state key should always be set for member events
+      stateKey: stateKey!,
       prevContent: prevContent,
       content: content,
       typeKey: type,
@@ -282,8 +294,10 @@ class Event extends MatrixEvent {
 
   /// Returns a list of [Receipt] instances for this event.
   List<Receipt> get receipts {
-    if (!(room.roomAccountData.containsKey('m.receipt'))) return [];
-    return room.roomAccountData['m.receipt'].content.entries
+    final room = this.room;
+    final receipt = room?.roomAccountData['m.receipt'];
+    if (receipt == null || room == null) return [];
+    return receipt.content.entries
         .where((entry) => entry.value['event_id'] == eventId)
         .map((entry) => Receipt(room.getUserByMXIDSync(entry.key),
             DateTime.fromMillisecondsSinceEpoch(entry.value['ts'])))
@@ -294,6 +308,11 @@ class Event extends MatrixEvent {
   /// This event will just be removed from the database and the timelines.
   /// Returns [false] if not removed.
   Future<bool> remove() async {
+    final room = this.room;
+    if (room == null) {
+      return false;
+    }
+
     if (!status.isSent) {
       await room.client.database?.removeEvent(eventId, room.id);
 
@@ -311,29 +330,33 @@ class Event extends MatrixEvent {
     return false;
   }
 
-  /// Try to send this event again. Only works with events of `EventStatus.isError`.
-  Future<String> sendAgain({String txid}) async {
+  /// Try to send this event again. Only works with events of status -1.
+  Future<String?> sendAgain({String? txid}) async {
     if (!status.isError) return null;
     // we do not remove the event here. It will automatically be updated
     // in the `sendEvent` method to transition -1 -> 0 -> 1 -> 2
-    final newEventId = await room.sendEvent(
+    final newEventId = await room?.sendEvent(
       content,
-      txid: txid ?? unsigned['transaction_id'] ?? eventId,
+      txid: txid ?? unsigned?['transaction_id'] ?? eventId,
     );
     return newEventId;
   }
 
   /// Whether the client is allowed to redact this event.
-  bool get canRedact => senderId == room.client.userID || room.canRedact;
+  bool get canRedact =>
+      senderId == room?.client.userID || (room?.canRedact ?? false);
 
   /// Redacts this event. Throws `ErrorResponse` on error.
-  Future<dynamic> redactEvent({String reason, String txid}) =>
-      room.redactEvent(eventId, reason: reason, txid: txid);
+  Future<String?> redactEvent({String? reason, String? txid}) async =>
+      await room?.redactEvent(eventId, reason: reason, txid: txid);
 
   /// Searches for the reply event in the given timeline.
-  Future<Event> getReplyEvent(Timeline timeline) async {
+  Future<Event?> getReplyEvent(Timeline timeline) async {
     if (relationshipType != RelationshipTypes.reply) return null;
-    return await timeline.getEventById(relationshipEventId);
+    final relationshipEventId = this.relationshipEventId;
+    return relationshipEventId == null
+        ? null
+        : await timeline.getEventById(relationshipEventId);
   }
 
   /// If this event is encrypted and the decryption was not successful because
@@ -346,7 +369,7 @@ class Event extends MatrixEvent {
         content['can_request_session'] != true) {
       throw ('Session key not requestable');
     }
-    await room.requestSessionKey(content['session_id'], content['sender_key']);
+    await room?.requestSessionKey(content['session_id'], content['sender_key']);
     return;
   }
 
@@ -420,7 +443,7 @@ class Event extends MatrixEvent {
   /// [minNoThumbSize] is the minimum size that an original image may be to not fetch its thumbnail, defaults to 80k
   /// [useThumbnailMxcUrl] says weather to use the mxc url of the thumbnail, rather than the original attachment.
   ///  [animated] says weather the thumbnail is animated
-  Uri getAttachmentUrl(
+  Uri? getAttachmentUrl(
       {bool getThumbnail = false,
       bool useThumbnailMxcUrl = false,
       double width = 800.0,
@@ -428,6 +451,10 @@ class Event extends MatrixEvent {
       ThumbnailMethod method = ThumbnailMethod.scale,
       int minNoThumbSize = _minNoThumbSize,
       bool animated = false}) {
+    final client = room?.client;
+    if (client == null) {
+      return null;
+    }
     if (![EventTypes.Message, EventTypes.Sticker].contains(type) ||
         !hasAttachment ||
         isAttachmentEncrypted) {
@@ -449,14 +476,14 @@ class Event extends MatrixEvent {
     // now generate the actual URLs
     if (getThumbnail) {
       return Uri.parse(thisMxcUrl).getThumbnail(
-        room.client,
+        client,
         width: width,
         height: height,
         method: method,
         animated: animated,
       );
     } else {
-      return Uri.parse(thisMxcUrl).getDownloadLink(room.client);
+      return Uri.parse(thisMxcUrl).getDownloadLink(client);
     }
   }
 
@@ -472,13 +499,17 @@ class Event extends MatrixEvent {
     getThumbnail = mxcUrl != attachmentMxcUrl;
     // Is this file storeable?
     final thisInfoMap = getThumbnail ? thumbnailInfoMap : infoMap;
-    final storeable = room.client.database != null &&
-        thisInfoMap['size'] is int &&
-        thisInfoMap['size'] <= room.client.database.maxFileSize;
+    final database = room?.client.database;
+    if (database == null) {
+      return false;
+    }
 
-    Uint8List uint8list;
+    final storeable = thisInfoMap['size'] is int &&
+        thisInfoMap['size'] <= database.maxFileSize;
+
+    Uint8List? uint8list;
     if (storeable) {
-      uint8list = await room.client.database.getFile(mxcUrl);
+      uint8list = await database.getFile(mxcUrl);
     }
     return uint8list != null;
   }
@@ -489,9 +520,14 @@ class Event extends MatrixEvent {
   /// true to download the thumbnail instead.
   Future<MatrixFile> downloadAndDecryptAttachment(
       {bool getThumbnail = false,
-      Future<Uint8List> Function(Uri) downloadCallback}) async {
+      Future<Uint8List> Function(Uri)? downloadCallback}) async {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
+    }
+    final client = room?.client;
+    final database = room?.client.database;
+    if (client == null) {
+      throw 'This event has no valid client.';
     }
     final mxcUrl = attachmentOrThumbnailMxcUrl(getThumbnail: getThumbnail);
     if (mxcUrl == null) {
@@ -500,33 +536,30 @@ class Event extends MatrixEvent {
     getThumbnail = mxcUrl != attachmentMxcUrl;
     final isEncrypted =
         getThumbnail ? isThumbnailEncrypted : isAttachmentEncrypted;
-
-    if (isEncrypted && !room.client.encryptionEnabled) {
+    if (isEncrypted && !client.encryptionEnabled) {
       throw ('Encryption is not enabled in your Client.');
     }
 
-    Uint8List uint8list;
-
     // Is this file storeable?
     final thisInfoMap = getThumbnail ? thumbnailInfoMap : infoMap;
-    var storeable = room.client.database != null &&
+    var storeable = database != null &&
         thisInfoMap['size'] is int &&
-        thisInfoMap['size'] <= room.client.database.maxFileSize;
+        thisInfoMap['size'] <= database.maxFileSize;
 
+    Uint8List? uint8list;
     if (storeable) {
-      uint8list = await room.client.database.getFile(mxcUrl);
+      uint8list = await client.database.getFile(mxcUrl);
     }
 
     // Download the file
     if (uint8list == null) {
-      downloadCallback ??= (Uri url) async {
-        return (await http.get(url)).bodyBytes;
-      };
-      uint8list = await downloadCallback(mxcUrl.getDownloadLink(room.client));
-      storeable = storeable &&
-          uint8list.lengthInBytes < room.client.database.maxFileSize;
+      downloadCallback ??= (Uri url) async => (await http.get(url)).bodyBytes;
+      uint8list = await downloadCallback(mxcUrl.getDownloadLink(client));
+      storeable = database != null &&
+          storeable &&
+          uint8list.lengthInBytes < database.maxFileSize;
       if (storeable) {
-        await room.client.database.storeFile(
+        await database.storeFile(
             mxcUrl, uint8list, DateTime.now().millisecondsSinceEpoch);
       }
     }
@@ -544,7 +577,7 @@ class Event extends MatrixEvent {
         k: fileMap['key']['k'],
         sha256: fileMap['hashes']['sha256'],
       );
-      uint8list = await room.client.runInBackground(decryptFile, encryptedFile);
+      uint8list = await client.runInBackground(decryptFile, encryptedFile);
     }
     return MatrixFile(bytes: uint8list, name: body);
   }
@@ -565,7 +598,7 @@ class Event extends MatrixEvent {
     bool plaintextBody = false,
   }) {
     if (redacted) {
-      return i18n.removedBy(redactedBecause.sender.calcDisplayname());
+      return i18n.removedBy(redactedBecause?.sender?.calcDisplayname() ?? '');
     }
     var body = plaintextBody ? this.plaintextBody : this.body;
 
@@ -607,8 +640,9 @@ class Event extends MatrixEvent {
     if (withSenderNamePrefix &&
         type == EventTypes.Message &&
         textOnlyMessageTypes.contains(messageType)) {
-      final senderNameOrYou =
-          senderId == room.client.userID ? i18n.you : sender.calcDisplayname();
+      final senderNameOrYou = senderId == room?.client.userID
+          ? i18n.you
+          : (sender?.calcDisplayname() ?? '');
       localizedBody = '$senderNameOrYou: $localizedBody';
     }
 
@@ -623,18 +657,18 @@ class Event extends MatrixEvent {
   };
 
   /// returns if this event matches the passed event or transaction id
-  bool matchesEventOrTransactionId(String search) {
+  bool matchesEventOrTransactionId(String? search) {
     if (search == null) {
       return false;
     }
     if (eventId == search) {
       return true;
     }
-    return unsigned != null && unsigned['transaction_id'] == search;
+    return unsigned?['transaction_id'] == search;
   }
 
   /// Get the relationship type of an event. `null` if there is none
-  String get relationshipType {
+  String? get relationshipType {
     if (content?.tryGet<Map<String, dynamic>>('m.relates_to') == null) {
       return null;
     }
@@ -643,11 +677,11 @@ class Event extends MatrixEvent {
     }
     return content
         .tryGet<Map<String, dynamic>>('m.relates_to')
-        .tryGet<String>('rel_type');
+        ?.tryGet<String>('rel_type');
   }
 
   /// Get the event ID that this relationship will reference. `null` if there is none
-  String get relationshipEventId {
+  String? get relationshipEventId {
     if (content == null || !(content['m.relates_to'] is Map)) {
       return null;
     }
@@ -664,15 +698,12 @@ class Event extends MatrixEvent {
   /// Get whether this event has aggregated events from a certain [type]
   /// To be able to do that you need to pass a [timeline]
   bool hasAggregatedEvents(Timeline timeline, String type) =>
-      timeline.aggregatedEvents.containsKey(eventId) &&
-      timeline.aggregatedEvents[eventId].containsKey(type);
+      timeline.aggregatedEvents[eventId]?.containsKey(type) == true;
 
   /// Get all the aggregated event objects for a given [type]. To be able to do this
   /// you have to pass a [timeline]
   Set<Event> aggregatedEvents(Timeline timeline, String type) =>
-      hasAggregatedEvents(timeline, type)
-          ? timeline.aggregatedEvents[eventId][type]
-          : <Event>{};
+      timeline.aggregatedEvents[eventId]?[type] ?? <Event>{};
 
   /// Fetches the event to be rendered, taking into account all the edits and the like.
   /// It needs a [timeline] for that.

@@ -107,6 +107,7 @@ void main() {
             room: room,
             eventId: '123',
             content: {'alias': '#testalias:example.com'},
+            originServerTs: DateTime.now(),
             stateKey: ''),
       );
       expect(room.displayname, 'testalias');
@@ -120,6 +121,7 @@ void main() {
             room: room,
             eventId: '123',
             content: {'name': 'testname'},
+            originServerTs: DateTime.now(),
             stateKey: ''),
       );
       expect(room.displayname, 'testname');
@@ -133,6 +135,7 @@ void main() {
             room: room,
             eventId: '123',
             content: {'topic': 'testtopic'},
+            originServerTs: DateTime.now(),
             stateKey: ''),
       );
       expect(room.topic, 'testtopic');
@@ -146,6 +149,7 @@ void main() {
             room: room,
             eventId: '123',
             content: {'url': 'mxc://testurl'},
+            originServerTs: DateTime.now(),
             stateKey: ''),
       );
       expect(room.avatar.toString(), 'mxc://testurl');
@@ -161,6 +165,7 @@ void main() {
             content: {
               'pinned': ['1234']
             },
+            originServerTs: DateTime.now(),
             stateKey: ''),
       );
       expect(room.pinnedEventIds.first, '1234');
@@ -358,6 +363,7 @@ void main() {
               'users': {'@test:fakeServer.notExisting': 100},
               'users_default': 10
             },
+            originServerTs: DateTime.now(),
             stateKey: ''),
       );
       expect(room.ownPowerLevel, 100);
@@ -396,6 +402,7 @@ void main() {
             'users': {},
             'users_default': 0
           },
+          originServerTs: DateTime.now(),
           stateKey: '',
         ),
       );

@@ -49,9 +49,9 @@ class User extends Event {
       required String stateKey,
       dynamic content,
       required String typeKey,
-      String? eventId,
+      String eventId = 'fakevent',
       String? roomId,
-      String? senderId,
+      String senderId = 'fakesender',
       required DateTime originServerTs,
       dynamic unsigned,
       Room? room})
@@ -68,7 +68,7 @@ class User extends Event {
             room: room);
 
   /// The full qualified Matrix ID in the format @username:server.abc.
-  String get id => stateKey;
+  String get id => stateKey ?? '\@unknown:unknown';
 
   /// The displayname of the user if the user has set one.
   String? get displayName =>
@@ -91,13 +91,16 @@ class User extends Event {
       }, orElse: () => Membership.join);
 
   /// The avatar if the user has one.
-  Uri? get avatarUrl => content != null && content.containsKey('avatar_url')
-      ? (content['avatar_url'] is String
-          ? Uri.tryParse(content['avatar_url'])
-          : null)
-      : (prevContent != null && prevContent['avatar_url'] is String
-          ? Uri.tryParse(prevContent['avatar_url'])
-          : null);
+  Uri? get avatarUrl {
+    final prevContent = this.prevContent;
+    return content.containsKey('avatar_url')
+        ? (content['avatar_url'] is String
+            ? Uri.tryParse(content['avatar_url'])
+            : null)
+        : (prevContent != null && prevContent['avatar_url'] is String
+            ? Uri.tryParse(prevContent['avatar_url'])
+            : null);
+  }
 
   /// Returns the displayname or the local part of the Matrix ID if the user
   /// has no displayname. If [formatLocalpart] is true, then the localpart will
@@ -132,37 +135,40 @@ class User extends Event {
   }
 
   /// Call the Matrix API to kick this user from this room.
-  Future<void> kick() => room.kick(id);
+  Future<void> kick() async => await room?.kick(id);
 
   /// Call the Matrix API to ban this user from this room.
-  Future<void> ban() => room.ban(id);
+  Future<void> ban() async => await room?.ban(id);
 
   /// Call the Matrix API to unban this banned user from this room.
-  Future<void> unban() => room.unban(id);
+  Future<void> unban() async => await room?.unban(id);
 
   /// Call the Matrix API to change the power level of this user.
-  Future<void> setPower(int power) => room.setPower(id, power);
+  Future<void> setPower(int power) async => await room?.setPower(id, power);
 
   /// Returns an existing direct chat ID with this user or creates a new one.
   /// Returns null on error.
-  Future<String?> startDirectChat() => room.client.startDirectChat(id);
+  Future<String?> startDirectChat() async => room?.client.startDirectChat(id);
 
   /// The newest presence of this user if there is any and null if not.
-  Presence? get presence => room.client.presences[id];
+  Presence? get presence => room?.client.presences[id];
 
   /// Whether the client is able to ban/unban this user.
-  bool get canBan => room.canBan && powerLevel < room.ownPowerLevel;
+  bool get canBan =>
+      (room?.canBan ?? false) &&
+      powerLevel < (room?.ownPowerLevel ?? powerLevel);
 
   /// Whether the client is able to kick this user.
   bool get canKick =>
       [Membership.join, Membership.invite].contains(membership) &&
-      room.canKick &&
-      powerLevel < room.ownPowerLevel;
+      (room?.canKick ?? false) &&
+      powerLevel < (room?.ownPowerLevel ?? powerLevel);
 
   /// Whether the client is allowed to change the power level of this user.
   /// Please be aware that you can only set the power level to at least your own!
   bool get canChangePowerLevel =>
-      room.canChangePowerLevel && powerLevel < room.ownPowerLevel;
+      (room?.canChangePowerLevel ?? false) &&
+      powerLevel < (room?.ownPowerLevel ?? powerLevel);
 
   @override
   bool operator ==(dynamic other) => (other is User &&
@@ -190,7 +196,7 @@ class User extends Event {
             : '[$displayName]');
 
     // get all the users with the same display name
-    final allUsersWithSameDisplayname = room.getParticipants();
+    final allUsersWithSameDisplayname = room?.getParticipants() ?? [];
     allUsersWithSameDisplayname.removeWhere((user) =>
         user.id == id ||
         (user.displayName?.isEmpty ?? true) ||
