@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -26,10 +25,10 @@ import 'room.dart';
 class User extends Event {
   factory User(
     String id, {
-    String membership,
-    String displayName,
-    String avatarUrl,
-    Room room,
+    String? membership,
+    String? displayName,
+    String? avatarUrl,
+    Room? room,
   }) {
     return User.fromState(
       stateKey: id,
@@ -47,15 +46,15 @@ class User extends Event {
 
   User.fromState(
       {dynamic prevContent,
-      String stateKey,
+      required String stateKey,
       dynamic content,
-      String typeKey,
-      String eventId,
-      String roomId,
-      String senderId,
-      DateTime originServerTs,
+      required String typeKey,
+      String? eventId,
+      String? roomId,
+      String? senderId,
+      required DateTime originServerTs,
       dynamic unsigned,
-      Room room})
+      Room? room})
       : super(
             stateKey: stateKey,
             prevContent: prevContent,
@@ -72,12 +71,12 @@ class User extends Event {
   String get id => stateKey;
 
   /// The displayname of the user if the user has set one.
-  String get displayName =>
+  String? get displayName =>
       content?.tryGet<String>('displayname') ??
       prevContent?.tryGet<String>('displayname');
 
   /// Returns the power level of this user.
-  int get powerLevel => room?.getPowerLevelByUserId(id);
+  int get powerLevel => room?.getPowerLevelByUserId(id) ?? 0;
 
   /// The membership status of the user. One of:
   /// join
@@ -92,7 +91,7 @@ class User extends Event {
       }, orElse: () => Membership.join);
 
   /// The avatar if the user has one.
-  Uri get avatarUrl => content != null && content.containsKey('avatar_url')
+  Uri? get avatarUrl => content != null && content.containsKey('avatar_url')
       ? (content['avatar_url'] is String
           ? Uri.tryParse(content['avatar_url'])
           : null)
@@ -107,8 +106,8 @@ class User extends Event {
   /// If [mxidLocalPartFallback] is true, then the local part of the mxid will be shown
   /// if there is no other displayname available. If not then this will return "Unknown user".
   String calcDisplayname({
-    bool formatLocalpart,
-    bool mxidLocalPartFallback,
+    bool? formatLocalpart,
+    bool? mxidLocalPartFallback,
   }) {
     formatLocalpart ??= room?.client?.formatLocalpart ?? true;
     mxidLocalPartFallback ??= room?.client?.mxidLocalPartFallback ?? true;
@@ -119,9 +118,9 @@ class User extends Event {
     final stateKey = this.stateKey;
     if (stateKey != null && mxidLocalPartFallback) {
       if (!formatLocalpart) {
-        return stateKey.localpart;
+        return stateKey.localpart ?? '';
       }
-      final words = stateKey.localpart.replaceAll('_', ' ').split(' ');
+      final words = stateKey.localpart?.replaceAll('_', ' ').split(' ') ?? [];
       for (var i = 0; i < words.length; i++) {
         if (words[i].isNotEmpty) {
           words[i] = words[i][0].toUpperCase() + words[i].substring(1);
@@ -146,10 +145,10 @@ class User extends Event {
 
   /// Returns an existing direct chat ID with this user or creates a new one.
   /// Returns null on error.
-  Future<String> startDirectChat() => room.client.startDirectChat(id);
+  Future<String?> startDirectChat() => room.client.startDirectChat(id);
 
   /// The newest presence of this user if there is any and null if not.
-  Presence get presence => room.client.presences[id];
+  Presence? get presence => room.client.presences[id];
 
   /// Whether the client is able to ban/unban this user.
   bool get canBan => room.canBan && powerLevel < room.ownPowerLevel;
@@ -228,5 +227,6 @@ class User extends Event {
   }
 }
 
+const _maximumHashLength = 10000;
 String _hash(String s) =>
-    (s.codeUnits.fold<int>(0, (a, b) => a + b) % 10000).toString();
+    (s.codeUnits.fold<int>(0, (a, b) => a + b) % _maximumHashLength).toString();
