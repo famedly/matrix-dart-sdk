@@ -10,9 +10,6 @@ import 'dart:js_util';
 import 'dart:typed_data';
 
 @JS()
-class CryptoKey {}
-
-@JS()
 @anonymous
 class Pbkdf2Params {
   external factory Pbkdf2Params({
@@ -41,16 +38,16 @@ class AesCtrParams {
 }
 
 @JS('crypto.subtle.encrypt')
-external dynamic _encrypt(dynamic algorithm, CryptoKey key, Uint8List data);
+external dynamic _encrypt(dynamic algorithm, dynamic key, Uint8List data);
 
-Future<ByteBuffer> encrypt(dynamic algorithm, CryptoKey key, Uint8List data) {
+Future<ByteBuffer> encrypt(dynamic algorithm, dynamic key, Uint8List data) {
   return promiseToFuture(_encrypt(algorithm, key, data));
 }
 
 @JS('crypto.subtle.decrypt')
-external dynamic _decrypt(dynamic algorithm, CryptoKey key, Uint8List data);
+external dynamic _decrypt(dynamic algorithm, dynamic key, Uint8List data);
 
-Future<ByteBuffer> decrypt(dynamic algorithm, CryptoKey key, Uint8List data) {
+Future<ByteBuffer> decrypt(dynamic algorithm, dynamic key, Uint8List data) {
   return promiseToFuture(_decrypt(algorithm, key, data));
 }
 
@@ -58,34 +55,33 @@ Future<ByteBuffer> decrypt(dynamic algorithm, CryptoKey key, Uint8List data) {
 external dynamic _importKey(String format, dynamic keyData, dynamic algorithm,
     bool extractable, List<String> keyUsages);
 
-Future<CryptoKey> importKey(String format, dynamic keyData, dynamic algorithm,
+Future<dynamic> importKey(String format, dynamic keyData, dynamic algorithm,
     bool extractable, List<String> keyUsages) {
   return promiseToFuture(
       _importKey(format, keyData, algorithm, extractable, keyUsages));
 }
 
 @JS('crypto.subtle.exportKey')
-external dynamic _exportKey(String algorithm, CryptoKey key);
+external dynamic _exportKey(String algorithm, dynamic key);
 
-Future<dynamic> exportKey(String algorithm, CryptoKey key) {
+Future<dynamic> exportKey(String algorithm, dynamic key) {
   return promiseToFuture(_exportKey(algorithm, key));
 }
 
 @JS('crypto.subtle.deriveKey')
-external dynamic _deriveKey(dynamic algorithm, CryptoKey baseKey,
+external dynamic _deriveKey(dynamic algorithm, dynamic baseKey,
     dynamic derivedKeyAlgorithm, bool extractable, List<String> keyUsages);
 
-Future<ByteBuffer> deriveKey(dynamic algorithm, CryptoKey baseKey,
+Future<ByteBuffer> deriveKey(dynamic algorithm, dynamic baseKey,
     dynamic derivedKeyAlgorithm, bool extractable, List<String> keyUsages) {
   return promiseToFuture(_deriveKey(
       algorithm, baseKey, derivedKeyAlgorithm, extractable, keyUsages));
 }
 
 @JS('crypto.subtle.deriveBits')
-external dynamic _deriveBits(dynamic algorithm, CryptoKey baseKey, int length);
+external dynamic _deriveBits(dynamic algorithm, dynamic baseKey, int length);
 
-Future<ByteBuffer> deriveBits(
-    dynamic algorithm, CryptoKey baseKey, int length) {
+Future<ByteBuffer> deriveBits(dynamic algorithm, dynamic baseKey, int length) {
   return promiseToFuture(_deriveBits(algorithm, baseKey, length));
 }
 
