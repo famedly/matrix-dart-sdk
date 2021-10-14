@@ -23,6 +23,7 @@ import 'dart:typed_data';
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/event.dart';
+import 'package:matrix/src/event_status.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
@@ -53,7 +54,7 @@ void main() {
       'origin_server_ts': timestamp,
       'type': type,
       'room_id': '1234',
-      'status': 2,
+      'status': EventStatus.synced.intValue,
       'content': contentJson,
     };
     final client = Client('testclient', httpClient: FakeMatrixApi());
@@ -79,7 +80,7 @@ void main() {
 
       expect(event.eventId, id);
       expect(event.senderId, senderID);
-      expect(event.status, 2);
+      expect(event.status, EventStatus.synced);
       expect(event.text, body);
       expect(event.formattedText, formatted_body);
       expect(event.body, body);
@@ -89,7 +90,7 @@ void main() {
       final state = Event.fromJson(jsonObj, null);
       expect(state.eventId, id);
       expect(state.stateKey, '');
-      expect(state.status, 2);
+      expect(state.status, EventStatus.synced);
     });
     test('Test all EventTypes', () async {
       Event event;
@@ -259,7 +260,7 @@ void main() {
       final event = Event.fromJson(
           jsonObj, Room(id: '1234', client: Client('testclient')));
       final removed1 = await event.remove();
-      event.status = 0;
+      event.status = EventStatus.sending;
       final removed2 = await event.remove();
       expect(removed1, false);
       expect(removed2, true);
@@ -276,7 +277,7 @@ void main() {
       final event = Event.fromJson(
           jsonObj, Room(id: '!1234:example.com', client: matrix));
       final resp1 = await event.sendAgain();
-      event.status = -1;
+      event.status = EventStatus.error;
       final resp2 = await event.sendAgain(txid: '1234');
       expect(resp1, null);
       expect(resp2.startsWith('\$event'), true);
@@ -308,7 +309,7 @@ void main() {
         'origin_server_ts': timestamp,
         'type': 'm.room.encrypted',
         'room_id': '1234',
-        'status': 2,
+        'status': EventStatus.synced.intValue,
         'content': json.encode({
           'msgtype': 'm.bad.encrypted',
           'body': DecryptException.unknownSession,

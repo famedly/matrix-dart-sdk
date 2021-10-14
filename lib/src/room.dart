@@ -26,6 +26,7 @@ import 'package:matrix/src/utils/space_child.dart';
 import '../matrix.dart';
 import 'client.dart';
 import 'event.dart';
+import 'event_status.dart';
 import 'timeline.dart';
 import 'user.dart';
 import 'voip_content.dart';
@@ -819,7 +820,7 @@ class Room {
                 senderId: client.userID,
                 originServerTs: sentDate,
                 unsigned: {
-                  messageSendingStatusKey: 0,
+                  messageSendingStatusKey: EventStatus.sending.intValue,
                   'transaction_id': messageID,
                 },
               )
@@ -846,14 +847,14 @@ class Room {
         } else {
           Logs().w('[Client] Problem while sending message', e, s);
           syncUpdate.rooms.join.values.first.timeline.events.first
-              .unsigned[messageSendingStatusKey] = -1;
+              .unsigned[messageSendingStatusKey] = EventStatus.error.intValue;
           await _handleFakeSync(syncUpdate);
           return null;
         }
       }
     }
     syncUpdate.rooms.join.values.first.timeline.events.first
-        .unsigned[messageSendingStatusKey] = 1;
+        .unsigned[messageSendingStatusKey] = EventStatus.sent.intValue;
     syncUpdate.rooms.join.values.first.timeline.events.first.eventId = res;
     await _handleFakeSync(syncUpdate);
 

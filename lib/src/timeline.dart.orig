@@ -297,6 +297,11 @@ class Timeline {
                   -1) return;
           if (eventUpdate.type == EventUpdateType.history) {
             events.add(newEvent);
+<<<<<<< HEAD
+=======
+          } else if (status.isError) {
+            events.insert(events.firstIndexWhereNotError, newEvent);
+>>>>>>> 8fe85aca09b947ce7417672ce57ebfce80f3133c
           } else {
             events.insert(events.firstIndexWhereNotError, newEvent);
           }

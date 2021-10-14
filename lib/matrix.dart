@@ -36,6 +36,7 @@ export 'src/utils/commands_extension.dart';
 export 'src/utils/http_timeout.dart';
 export 'src/client.dart';
 export 'src/event.dart';
+export 'src/event_status.dart';
 export 'src/room.dart';
 export 'src/voip_content.dart';
 export 'src/timeline.dart';

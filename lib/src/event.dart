@@ -23,12 +23,13 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../matrix.dart';
+import 'event_status.dart';
 import 'room.dart';
+import 'utils/crypto/encrypted_file.dart';
+import 'utils/event_localizations.dart';
+import 'utils/html_to_text.dart';
 import 'utils/matrix_localizations.dart';
 import 'utils/receipt.dart';
-import 'utils/event_localizations.dart';
-import 'utils/crypto/encrypted_file.dart';
-import 'utils/html_to_text.dart';
 
 abstract class RelationshipTypes {
   static const String reply = 'm.in_reply_to';
@@ -53,21 +54,9 @@ class Event extends MatrixEvent {
   final Room room;
 
   /// The status of this event.
-  /// -1=ERROR
-  ///  0=SENDING
-  ///  1=SENT
-  ///  2=TIMELINE
-  ///  3=ROOM_STATE
-  int status;
+  EventStatus status;
 
-  static const int defaultStatus = 2;
-  static const Map<String, int> statusType = {
-    'error': -1,
-    'sending': 0,
-    'sent': 1,
-    'timeline': 2,
-    'roomState': 3,
-  };
+  static const EventStatus defaultStatus = EventStatus.synced;
 
   /// Optional. The event that redacted this event, if any. Otherwise null.
   Event get redactedBecause =>
@@ -98,7 +87,7 @@ class Event extends MatrixEvent {
     this.roomId = roomId ?? room?.id;
     this.senderId = senderId;
     this.unsigned = unsigned;
-    // synapse unfortunatley isn't following the spec and tosses the prev_content
+    // synapse unfortunately isn't following the spec and tosses the prev_content
     // into the unsigned block.
     // Currently we are facing a very strange bug in web which is impossible to debug.
     // It may be because of this line so we put this in try-catch until we can fix it.
@@ -119,7 +108,7 @@ class Event extends MatrixEvent {
     // Mark event as failed to send if status is `sending` and event is older
     // than the timeout. This should not happen with the deprecated Moor
     // database!
-    if (status == 0 && room?.client?.database != null) {
+    if (status.isSending && room?.client?.database != null) {
       // Age of this event in milliseconds
       final age = DateTime.now().millisecondsSinceEpoch -
           originServerTs.millisecondsSinceEpoch;
@@ -128,7 +117,7 @@ class Event extends MatrixEvent {
         // Update this event in database and open timelines
         final json = toJson();
         json['unsigned'] ??= <String, dynamic>{};
-        json['unsigned'][messageSendingStatusKey] = -1;
+        json['unsigned'][messageSendingStatusKey] = EventStatus.error.intValue;
         room.client.handleSync(SyncUpdate(nextBatch: '')
           ..rooms = (RoomsUpdate()
             ..join = (<String, JoinedRoomUpdate>{}..[room.id] =
@@ -154,7 +143,7 @@ class Event extends MatrixEvent {
   factory Event.fromMatrixEvent(
     MatrixEvent matrixEvent,
     Room room, {
-    int status,
+    EventStatus status,
   }) =>
       Event(
         status: status,
@@ -179,9 +168,9 @@ class Event extends MatrixEvent {
     final unsigned = Event.getMapFromPayload(jsonPayload['unsigned']);
     final prevContent = Event.getMapFromPayload(jsonPayload['prev_content']);
     return Event(
-      status: jsonPayload['status'] ??
+      status: eventStatusFromInt(jsonPayload['status'] ??
           unsigned[messageSendingStatusKey] ??
-          defaultStatus,
+          defaultStatus.intValue),
       stateKey: jsonPayload['state_key'],
       prevContent: prevContent,
       content: content,
@@ -301,10 +290,11 @@ class Event extends MatrixEvent {
         .toList();
   }
 
-  /// Removes this event if the status is < 1. This event will just be removed
-  /// from the database and the timelines. Returns false if not removed.
+  /// Removes this event if the status is [sending], [error] or [removed].
+  /// This event will just be removed from the database and the timelines.
+  /// Returns [false] if not removed.
   Future<bool> remove() async {
-    if (status < 1) {
+    if (!status.isSent) {
       await room.client.database?.removeEvent(eventId, room.id);
 
       room.client.onEvent.add(EventUpdate(
@@ -312,7 +302,7 @@ class Event extends MatrixEvent {
         type: EventUpdateType.timeline,
         content: {
           'event_id': eventId,
-          'status': -2,
+          'status': EventStatus.removed.intValue,
           'content': {'body': 'Removed...'}
         },
       ));
@@ -321,9 +311,9 @@ class Event extends MatrixEvent {
     return false;
   }
 
-  /// Try to send this event again. Only works with events of status -1.
+  /// Try to send this event again. Only works with events of `EventStatus.isError`.
   Future<String> sendAgain({String txid}) async {
-    if (status != -1) return null;
+    if (!status.isError) return null;
     // we do not remove the event here. It will automatically be updated
     // in the `sendEvent` method to transition -1 -> 0 -> 1 -> 2
     final newEventId = await room.sendEvent(
@@ -382,7 +372,7 @@ class Event extends MatrixEvent {
   /// Returns if a file events thumbnail is encrypted
   bool get isThumbnailEncrypted => infoMap['thumbnail_file'] is Map;
 
-  /// Gets the mimetipe of the attachment of a file event, or a blank string if not present
+  /// Gets the mimetype of the attachment of a file event, or a blank string if not present
   String get attachmentMimetype => infoMap['mimetype'] is String
       ? infoMap['mimetype'].toLowerCase()
       : (content['file'] is Map && content['file']['mimetype'] is String
@@ -397,16 +387,16 @@ class Event extends MatrixEvent {
           ? infoMap['thumbnail_file']['mimetype']
           : '');
 
-  /// Gets the underyling mxc url of an attachment of a file event, or null if not present
+  /// Gets the underlying mxc url of an attachment of a file event, or null if not present
   Uri get attachmentMxcUrl => Uri.parse(
       isAttachmentEncrypted ? content['file']['url'] : content['url']);
 
-  /// Gets the underyling mxc url of a thumbnail of a file event, or null if not present
+  /// Gets the underlying mxc url of a thumbnail of a file event, or null if not present
   Uri get thumbnailMxcUrl => Uri.parse(isThumbnailEncrypted
       ? infoMap['thumbnail_file']['url']
       : infoMap['thumbnail_url']);
 
-  /// Gets the mxc url of an attachemnt/thumbnail of a file event, taking sizes into account, or null if not present
+  /// Gets the mxc url of an attachment/thumbnail of a file event, taking sizes into account, or null if not present
   Uri attachmentOrThumbnailMxcUrl({bool getThumbnail = false}) {
     if (getThumbnail &&
         infoMap['size'] is int &&
@@ -493,7 +483,7 @@ class Event extends MatrixEvent {
     return uint8list != null;
   }
 
-  /// Downloads (and decryptes if necessary) the attachment of this
+  /// Downloads (and decrypts if necessary) the attachment of this
   /// event and returns it as a [MatrixFile]. If this event doesn't
   /// contain an attachment, this throws an error. Set [getThumbnail] to
   /// true to download the thumbnail instead.
@@ -671,7 +661,7 @@ class Event extends MatrixEvent {
     return null;
   }
 
-  /// Get wether this event has aggregated events from a certain [type]
+  /// Get whether this event has aggregated events from a certain [type]
   /// To be able to do that you need to pass a [timeline]
   bool hasAggregatedEvents(Timeline timeline, String type) =>
       timeline.aggregatedEvents.containsKey(eventId) &&

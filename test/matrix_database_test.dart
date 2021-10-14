@@ -19,6 +19,7 @@
  */
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/event_status.dart';
 
 import 'package:test/test.dart';
 import 'fake_database.dart';
@@ -69,7 +70,7 @@ void main() {
           'content': <String, dynamic>{'blah': 'blubb'},
           'event_id': 'transaction-1',
           'sender': '@blah:blubb',
-          'status': 0,
+          'status': EventStatus.sending.intValue,
         },
       );
       await database.storeEventUpdate(update);
@@ -87,7 +88,7 @@ void main() {
           'unsigned': <String, dynamic>{
             'transaction_id': 'transaction-1',
           },
-          'status': 1,
+          'status': EventStatus.sent.intValue,
         },
       );
       await database.storeEventUpdate(update);
@@ -105,7 +106,7 @@ void main() {
           'content': {'blah': 'blubb'},
           'event_id': '\$event-3',
           'sender': '@blah:blubb',
-          'status': 0,
+          'status': EventStatus.sending.intValue,
         },
       );
       await database.storeEventUpdate(update);
@@ -120,7 +121,7 @@ void main() {
           'content': {'blah': 'blubb'},
           'event_id': '\$event-3',
           'sender': '@blah:blubb',
-          'status': 1,
+          'status': EventStatus.sent.intValue,
           'unsigned': <String, dynamic>{
             'transaction_id': 'transaction-2',
           },
@@ -129,7 +130,7 @@ void main() {
       await database.storeEventUpdate(update);
       event = await database.getEventById('\$event-3', room);
       expect(event.eventId, '\$event-3');
-      expect(event.status, 1);
+      expect(event.status, EventStatus.sent);
       event = await database.getEventById('transaction-2', room);
       expect(event, null);
 
@@ -143,7 +144,7 @@ void main() {
           'content': {'blah': 'blubb'},
           'event_id': '\$event-4',
           'sender': '@blah:blubb',
-          'status': 2,
+          'status': EventStatus.synced.intValue,
         },
       );
       await database.storeEventUpdate(update);
@@ -158,7 +159,7 @@ void main() {
           'content': {'blah': 'blubb'},
           'event_id': '\$event-4',
           'sender': '@blah:blubb',
-          'status': 1,
+          'status': EventStatus.sent.intValue,
           'unsigned': <String, dynamic>{
             'transaction_id': 'transaction-3',
           },
@@ -167,7 +168,7 @@ void main() {
       await database.storeEventUpdate(update);
       event = await database.getEventById('\$event-4', room);
       expect(event.eventId, '\$event-4');
-      expect(event.status, 2);
+      expect(event.status, EventStatus.synced);
       event = await database.getEventById('transaction-3', room);
       expect(event, null);
     });
