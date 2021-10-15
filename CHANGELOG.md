@@ -1,3 +1,17 @@
+## [0.6.0] - 15nd Oct 2021
+- feat: Calc benchmarks for hive operations on init
+- refactor: Change event status to enum
+- refactor: Migrate more files to null safety
+- fix: Type error when using CryptoKey in dart web
+- fix: events with unknown users having invalid mxids This caused issues down the line where the sender id was assumed to be a valid matrix identifier
+- fix: Sent events are sorted in SENDING timeline
+- fix: use explicit type in fold instead of cast
+- fix: apply review feedback
+- fix: missing range check When requesting history the `start` parameter could become larger than the loaded events from the database were, resulting in an error when attempting to request history.
+- fix: New verification requests on requesting history
+- refactor: remove unused clientId
+- fix: Add type checkings for User.displayName
+
 ## [0.5.5] - 20nd Sep 2021
  fix: Autodetect mime type on file upload
 
