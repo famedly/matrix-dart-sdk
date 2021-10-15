@@ -518,7 +518,7 @@ class Event extends MatrixEvent {
   /// event and returns it as a [MatrixFile]. If this event doesn't
   /// contain an attachment, this throws an error. Set [getThumbnail] to
   /// true to download the thumbnail instead.
-  Future<MatrixFile> downloadAndDecryptAttachment(
+  Future<MatrixFile?> downloadAndDecryptAttachment(
       {bool getThumbnail = false,
       Future<Uint8List> Function(Uri)? downloadCallback}) async {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
@@ -548,7 +548,7 @@ class Event extends MatrixEvent {
 
     Uint8List? uint8list;
     if (storeable) {
-      uint8list = await client.database.getFile(mxcUrl);
+      uint8list = await client.database?.getFile(mxcUrl);
     }
 
     // Download the file
@@ -577,9 +577,10 @@ class Event extends MatrixEvent {
         k: fileMap['key']['k'],
         sha256: fileMap['hashes']['sha256'],
       );
-      uint8list = await client.runInBackground(decryptFile, encryptedFile);
+      uint8list = await client.runInBackground<Uint8List?, EncryptedFile>(
+          decryptFile, encryptedFile);
     }
-    return MatrixFile(bytes: uint8list, name: body);
+    return uint8list != null ? MatrixFile(bytes: uint8list, name: body) : null;
   }
 
   /// Returns if this is a known event type.

@@ -95,6 +95,8 @@ class KeyManager {
   }) {
     final senderClaimedKeys_ = senderClaimedKeys ?? <String, String>{};
     final allowedAtIndex_ = allowedAtIndex ?? <String, Map<String, int>>{};
+    final userId = client.userID;
+    if (userId == null) return;
 
     if (!senderClaimedKeys_.containsKey('ed25519')) {
       final device = client.getUserDeviceKeysByCurve25519Key(senderKey);
@@ -126,7 +128,7 @@ class KeyManager {
       indexes: {},
       roomId: roomId,
       sessionId: sessionId,
-      key: client.userID,
+      key: userId,
       senderKey: senderKey,
       senderClaimedKeys: senderClaimedKeys_,
       allowedAtIndex: allowedAtIndex_,
@@ -157,7 +159,7 @@ class KeyManager {
         ?.storeInboundGroupSession(
       roomId,
       sessionId,
-      inboundGroupSession.pickle(client.userID),
+      inboundGroupSession.pickle(userId),
       json.encode(content),
       json.encode({}),
       json.encode(allowedAtIndex_),
@@ -169,7 +171,7 @@ class KeyManager {
         return;
       }
       if (uploaded) {
-        client.database.markInboundGroupSessionAsUploaded(roomId, sessionId);
+        client.database?.markInboundGroupSessionAsUploaded(roomId, sessionId);
       } else {
         _haveKeysToUpload = true;
       }
@@ -239,10 +241,10 @@ class KeyManager {
     }
     final session =
         await client.database?.getInboundGroupSession(roomId, sessionId);
-    if (session == null) {
-      return null;
-    }
-    final dbSess = SessionKey.fromDb(session, client.userID);
+    if (session == null) return null;
+    final userID = client.userID;
+    if (userID == null) return null;
+    final dbSess = SessionKey.fromDb(session, userID);
     final roomInboundGroupSessions =
         _inboundGroupSessions[roomId] ??= <String, SessionKey>{};
     if (!dbSess.isValid ||
@@ -394,12 +396,10 @@ class KeyManager {
                     sess.outboundGroupSession!.message_index();
               }
             }
-            if (client.database != null) {
-              await client.database.updateInboundGroupSessionAllowedAtIndex(
-                  json.encode(inboundSess!.allowedAtIndex),
-                  room.id,
-                  sess.outboundGroupSession!.session_id());
-            }
+            await client.database?.updateInboundGroupSessionAllowedAtIndex(
+                json.encode(inboundSess!.allowedAtIndex),
+                room.id,
+                sess.outboundGroupSession!.session_id());
             // send out the key
             await client.sendToDeviceEncryptedChunked(
                 devicesToReceive, EventTypes.RoomKey, rawSession);
@@ -422,9 +422,11 @@ class KeyManager {
   /// Store an outbound group session in the database
   Future<void> storeOutboundGroupSession(
       String roomId, OutboundGroupSession sess) async {
+    final userID = client.userID;
+    if (userID == null) return;
     await client.database?.storeOutboundGroupSession(
         roomId,
-        sess.outboundGroupSession!.pickle(client.userID),
+        sess.outboundGroupSession!.pickle(userID),
         json.encode(sess.devices),
         sess.creationTime.millisecondsSinceEpoch);
   }
@@ -464,6 +466,12 @@ class KeyManager {
       throw Exception(
           'Tried to create a megolm session in a non-existing room ($roomId)!');
     }
+    final userID = client.userID;
+    if (userID == null) {
+      throw Exception(
+          'Tried to create a megolm session without being logged in!');
+    }
+
     final deviceKeys = await room.getUserDeviceKeys();
     final deviceKeyIds = _getDeviceKeyIdMap(deviceKeys);
     deviceKeys.removeWhere((k) => !k.encryptToDevice);
@@ -498,7 +506,7 @@ class KeyManager {
       devices: deviceKeyIds,
       creationTime: DateTime.now(),
       outboundGroupSession: outboundGroupSession,
-      key: client.userID,
+      key: userID,
     );
     try {
       await client.sendToDeviceEncryptedChunked(
@@ -523,15 +531,18 @@ class KeyManager {
 
   /// Load an outbound group session from database
   Future<void> loadOutboundGroupSession(String roomId) async {
+    final database = client.database;
+    final userID = client.userID;
     if (_loadedOutboundGroupSessions.contains(roomId) ||
         _outboundGroupSessions.containsKey(roomId) ||
-        client.database == null) {
+        database == null ||
+        userID == null) {
       return; // nothing to do
     }
     _loadedOutboundGroupSessions.add(roomId);
-    final sess = await client.database.getOutboundGroupSession(
+    final sess = await database.getOutboundGroupSession(
       roomId,
-      client.userID,
+      userID,
     );
     if (sess == null || !sess.isValid) {
       return;
@@ -699,7 +710,9 @@ class KeyManager {
   bool _isUploadingKeys = false;
   bool _haveKeysToUpload = true;
   Future<void> backgroundTasks() async {
-    if (_isUploadingKeys || client.database == null) {
+    final database = client.database;
+    final userID = client.userID;
+    if (_isUploadingKeys || database == null || userID == null) {
       return;
     }
     _isUploadingKeys = true;
@@ -707,8 +720,7 @@ class KeyManager {
       if (!_haveKeysToUpload || !(await isCached())) {
         return; // we can't backup anyways
       }
-      final dbSessions =
-          await client.database.getInboundGroupSessionsToUpload();
+      final dbSessions = await database.getInboundGroupSessionsToUpload();
       if (dbSessions.isEmpty) {
         _haveKeysToUpload = false;
         return; // nothing to do
@@ -730,7 +742,7 @@ class KeyManager {
         final args = _GenerateUploadKeysArgs(
           pubkey: backupPubKey,
           dbSessions: <_DbInboundGroupSessionBundle>[],
-          userId: client.userID,
+          userId: userID,
         );
         // we need to calculate verified beforehand, as else we pass a closure to an isolate
         // with 500 keys they do, however, noticably block the UI, which is why we give brief async suspentions in here
@@ -741,7 +753,7 @@ class KeyManager {
               client.getUserDeviceKeysByCurve25519Key(dbSession.senderKey);
           args.dbSessions.add(_DbInboundGroupSessionBundle(
             dbSession: dbSession,
-            verified: device.verified,
+            verified: device?.verified ?? false,
           ));
           i++;
           if (i > 10) {
@@ -758,7 +770,7 @@ class KeyManager {
         // and now finally mark all the keys as uploaded
         // no need to optimze this, as we only run it so seldomly and almost never with many keys at once
         for (final dbSession in dbSessions) {
-          await client.database.markInboundGroupSessionAsUploaded(
+          await database.markInboundGroupSessionAsUploaded(
               dbSession.roomId, dbSession.sessionId);
         }
       } finally {

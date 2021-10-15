@@ -132,15 +132,16 @@ class Timeline {
   void _sessionKeyReceived(String sessionId) async {
     var decryptAtLeastOneEvent = false;
     final decryptFn = () async {
-      if (!room.client.encryptionEnabled) {
+      final encryption = room.client.encryption;
+      if (!room.client.encryptionEnabled || encryption == null) {
         return;
       }
       for (var i = 0; i < events.length; i++) {
         if (events[i].type == EventTypes.Encrypted &&
             events[i].messageType == MessageTypes.BadEncrypted &&
             events[i].content['session_id'] == sessionId) {
-          events[i] = await room.client.encryption
-              .decryptRoomEvent(room.id, events[i], store: true);
+          events[i] = await encryption.decryptRoomEvent(room.id, events[i],
+              store: true);
           if (events[i].type != EventTypes.Encrypted) {
             decryptAtLeastOneEvent = true;
           }
@@ -148,7 +149,7 @@ class Timeline {
       }
     };
     if (room.client.database != null) {
-      await room.client.database.transaction(decryptFn);
+      await room.client.database?.transaction(decryptFn);
     } else {
       await decryptFn();
     }
@@ -162,7 +163,7 @@ class Timeline {
           event.messageType == MessageTypes.BadEncrypted &&
           event.content['can_request_session'] == true) {
         try {
-          room.client.encryption.keyManager.maybeAutoRequest(room.id,
+          room.client.encryption?.keyManager.maybeAutoRequest(room.id,
               event.content['session_id'], event.content['sender_key']);
         } catch (_) {
           // dispose

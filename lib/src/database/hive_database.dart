@@ -507,6 +507,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   Future<List<Room>> getRoomList(Client client) =>
       runBenchmarked<List<Room>>('Get room list from hive', () async {
         final rooms = <String, Room>{};
+        final userID = client.userID;
         final importantRoomStates = client.importantStateEvents;
         for (final key in _roomsBox.keys) {
           // Get the room
@@ -515,7 +516,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
           // let's see if we need any m.room.member events
           // We always need the member event for ourself
-          final membersToPostload = <String>{client.userID};
+          final membersToPostload = <String>{if (userID != null) userID};
           // If the room is a direct chat, those IDs should be there too
           if (room.isDirectChat) membersToPostload.add(room.directChatMatrixID);
           // the lastEvent message preview might have an author we need to fetch, if it is a group chat
@@ -671,10 +672,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       String homeserverUrl,
       String token,
       String userId,
-      String deviceId,
-      String deviceName,
-      String prevBatch,
-      String olmAccount) async {
+      String? deviceId,
+      String? deviceName,
+      String? prevBatch,
+      String? olmAccount) async {
     await _clientBox.put('homeserver_url', homeserverUrl);
     await _clientBox.put('token', token);
     await _clientBox.put('user_id', userId);
@@ -1076,8 +1077,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> storeRoomUpdate(String roomId, SyncRoomUpdate roomUpdate,
-      [dynamic _]) async {
+  Future<void> storeRoomUpdate(String roomId, SyncRoomUpdate roomUpdate) async {
     // Leave room if membership is leave
     if (roomUpdate is LeftRoomUpdate) {
       await forgetRoom(roomId);
@@ -1250,10 +1250,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     String homeserverUrl,
     String token,
     String userId,
-    String deviceId,
-    String deviceName,
-    String prevBatch,
-    String olmAccount,
+    String? deviceId,
+    String? deviceName,
+    String? prevBatch,
+    String? olmAccount,
   ) async {
     await _clientBox.put('homeserver_url', homeserverUrl);
     await _clientBox.put('token', token);

@@ -56,7 +56,7 @@ class KeyVerificationManager {
 
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
     if (!event.type.startsWith('m.key.verification.') ||
-        client.verificationMethods.isEmpty) {
+        client.verificationMethods.isEmpty != false) {
       return;
     }
     // we have key verification going on!
@@ -95,7 +95,7 @@ class KeyVerificationManager {
         : event['content']['msgtype'];
     if (type == null ||
         !type.startsWith('m.key.verification.') ||
-        client.verificationMethods.isEmpty) {
+        client.verificationMethods.isEmpty != false) {
       return;
     }
     if (type == EventTypes.KeyVerificationRequest) {

@@ -62,7 +62,8 @@ class Encryption {
     crossSigning = CrossSigning(this);
   }
 
-  Future<void> init(String olmAccount) async {
+  // initial login passes null to init a new olm account
+  Future<void> init(String? olmAccount) async {
     await olmManager.init(olmAccount);
     _backgroundTasksRunning = true;
     _backgroundTasks(); // start the background tasks
@@ -86,7 +87,7 @@ class Encryption {
       );
 
   void handleDeviceOneTimeKeysCount(
-      Map<String, int> countJson, List<String> unusedFallbackKeyTypes) {
+      Map<String, int>? countJson, List<String>? unusedFallbackKeyTypes) {
     runInRoot(() => olmManager.handleDeviceOneTimeKeysCount(
         countJson, unusedFallbackKeyTypes));
   }
@@ -374,12 +375,13 @@ class Encryption {
 
   Future<void> autovalidateMasterOwnKey() async {
     // check if we can set our own master key as verified, if it isn't yet
-    final masterKey = client.userDeviceKeys[client.userID]?.masterKey;
+    final userId = client.userID;
+    final masterKey = client.userDeviceKeys[userId]?.masterKey;
     if (client.database != null &&
         masterKey != null &&
+        userId != null &&
         !masterKey.directVerified &&
-        masterKey
-            .hasValidSignatureChain(onlyValidateUserIds: {client.userID})) {
+        masterKey.hasValidSignatureChain(onlyValidateUserIds: {userId})) {
       await masterKey.setVerified(true);
     }
   }

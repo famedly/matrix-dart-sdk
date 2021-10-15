@@ -596,6 +596,7 @@ void main() {
       expect(client2.homeserver, client1.homeserver);
       expect(client2.deviceID, client1.deviceID);
       expect(client2.deviceName, client1.deviceName);
+      expect(client2.rooms.length, 2);
       if (client2.encryptionEnabled) {
         expect(client2.encryption.fingerprintKey,
             client1.encryption.fingerprintKey);

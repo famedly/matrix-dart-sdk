@@ -178,7 +178,7 @@ extension CommandsClientExtension on Client {
       return await args.room.client.setRoomStateWithKey(
         args.room.id,
         EventTypes.RoomMember,
-        args.room.client.userID,
+        args.room.client.userID!,
         currentEventJson,
       );
     });
@@ -191,7 +191,7 @@ extension CommandsClientExtension on Client {
       return await args.room.client.setRoomStateWithKey(
         args.room.id,
         EventTypes.RoomMember,
-        args.room.client.userID,
+        args.room.client.userID!,
         currentEventJson,
       );
     });

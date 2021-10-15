@@ -68,17 +68,21 @@ class DeviceKeysList {
   }
 
   Future<KeyVerification> startVerification() async {
+    final encryption = client.encryption;
+    if (encryption == null) {
+      throw Exception('Encryption not enabled');
+    }
     if (userId != client.userID) {
       // in-room verification with someone else
       final roomId = await client.startDirectChat(userId);
-      if (roomId ==
-          null /* can be null as long as startDirectChat is not migrated */) {
+      if (roomId == null) {
         throw Exception('Unable to start new room');
       }
+
       final room =
           client.getRoomById(roomId) ?? Room(id: roomId, client: client);
-      final request = KeyVerification(
-          encryption: client.encryption, room: room, userId: userId);
+      final request =
+          KeyVerification(encryption: encryption, room: room, userId: userId);
       await request.start();
       // no need to add to the request client object. As we are doing a room
       // verification request that'll happen automatically once we know the transaction id
@@ -86,9 +90,9 @@ class DeviceKeysList {
     } else {
       // broadcast self-verification
       final request = KeyVerification(
-          encryption: client.encryption, userId: userId, deviceId: '*');
+          encryption: encryption, userId: userId, deviceId: '*');
       await request.start();
-      client.encryption.keyVerificationManager.addRequest(request);
+      encryption.keyVerificationManager.addRequest(request);
       return request;
     }
   }
@@ -314,13 +318,15 @@ abstract class SignableKey extends MatrixSignableKey {
 
   Future<void> setVerified(bool newVerified, [bool sign = true]) async {
     _verified = newVerified;
+    final encryption = client.encryption;
     if (newVerified &&
         sign &&
+        encryption != null &&
         client.encryptionEnabled &&
-        client.encryption.crossSigning.signable([this])) {
+        encryption.crossSigning.signable([this])) {
       // sign the key!
       // ignore: unawaited_futures
-      client.encryption.crossSigning.sign([this]);
+      encryption.crossSigning.sign([this]);
     }
   }
 
@@ -493,11 +499,16 @@ class DeviceKeys extends SignableKey {
     if (!isValid) {
       throw Exception('setVerification called on invalid key');
     }
+    final encryption = client.encryption;
+    if (encryption == null) {
+      throw Exception('setVerification called with disabled encryption');
+    }
+
     final request = KeyVerification(
-        encryption: client.encryption, userId: userId, deviceId: deviceId!);
+        encryption: encryption, userId: userId, deviceId: deviceId!);
 
     request.start();
-    client.encryption.keyVerificationManager.addRequest(request);
+    encryption.keyVerificationManager.addRequest(request);
     return request;
   }
 }

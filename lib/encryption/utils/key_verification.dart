@@ -152,8 +152,10 @@ class KeyVerification {
 
   List<String> get knownVerificationMethods {
     final methods = <String>[];
-    if (client.verificationMethods.contains(KeyVerificationMethod.numbers) ||
-        client.verificationMethods.contains(KeyVerificationMethod.emoji)) {
+    if (client.verificationMethods?.contains(KeyVerificationMethod.numbers) ==
+            true ||
+        client.verificationMethods?.contains(KeyVerificationMethod.emoji) ==
+            true) {
       methods.add('m.sas.v1');
     }
     return methods;
@@ -673,11 +675,13 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   List<String> get knownAuthentificationTypes {
     final types = <String>[];
     if (request.client.verificationMethods
-        .contains(KeyVerificationMethod.emoji)) {
+            ?.contains(KeyVerificationMethod.emoji) ==
+        true) {
       types.add('emoji');
     }
     if (request.client.verificationMethods
-        .contains(KeyVerificationMethod.numbers)) {
+            ?.contains(KeyVerificationMethod.numbers) ==
+        true) {
       types.add('decimal');
     }
     return types;
@@ -876,7 +880,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
               : theirInfo + ourInfo) +
           request.transactionId!;
     } else if (keyAgreementProtocol == 'curve25519') {
-      final ourInfo = client.userID + client.deviceID;
+      final ourInfo = client.userID! + client.deviceID!;
       final theirInfo = request.userId + request.deviceId!;
       sasInfo = 'MATRIX_KEY_VERIFICATION_SAS' +
           (request.startedVerification
@@ -891,8 +895,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
 
   Future<void> _sendMac() async {
     final baseInfo = 'MATRIX_KEY_VERIFICATION_MAC' +
-        client.userID +
-        client.deviceID +
+        client.userID! +
+        client.deviceID! +
         request.userId +
         request.deviceId! +
         request.transactionId!;
@@ -929,8 +933,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     final baseInfo = 'MATRIX_KEY_VERIFICATION_MAC' +
         request.userId +
         request.deviceId! +
-        client.userID +
-        client.deviceID +
+        client.userID! +
+        client.deviceID! +
         request.transactionId!;
 
     final keyList = payload['mac'].keys.toList();
