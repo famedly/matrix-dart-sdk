@@ -267,10 +267,13 @@ abstract class SignableKey extends MatrixSignableKey {
         }
         var haveValidSignature = false;
         var gotSignatureFromCache = false;
-        if (validSignatures?[otherUserId][fullKeyId] == true) {
+        final fullKeyIdBool = validSignatures
+            ?.tryGetMap<String, dynamic>(otherUserId)
+            ?.tryGet<bool>(fullKeyId);
+        if (fullKeyIdBool == true) {
           haveValidSignature = true;
           gotSignatureFromCache = true;
-        } else if (validSignatures?[otherUserId][fullKeyId] == false) {
+        } else if (fullKeyIdBool == false) {
           haveValidSignature = false;
           gotSignatureFromCache = true;
         }
