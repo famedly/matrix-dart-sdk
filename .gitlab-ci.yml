@@ -98,37 +98,6 @@ code_quality:
     paths:
       - code-quality-report.json
 
-build_doc:
-  tags:
-    - docker
-  stage: builddocs
-  image: registry.gitlab.com/larodar/mdbook-dtmo:latest
-  script:
-    - cd docs
-    - mdbook-dtmo build -d public
-    - mv public ../doc-public
-  artifacts:
-    paths:
-      - doc-public
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-
-pages:
-  tags:
-    - linux
-  stage: deploy
-  image: alpine:latest
-  script:
-    - mv doc-public ./home/doc
-    - mv home public
-  dependencies:
-    - build_doc
-  artifacts:
-    paths:
-      - public
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-
 dry-run:
   stage: publish
   image: google/dart
