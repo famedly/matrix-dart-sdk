@@ -1,3 +1,6 @@
+## [0.6.1] - 18nd Oct 2021
+- fix: Missing null check in a nested json map
+
 ## [0.6.0] - 15nd Oct 2021
 - feat: Calc benchmarks for hive operations on init
 - refactor: Change event status to enum
