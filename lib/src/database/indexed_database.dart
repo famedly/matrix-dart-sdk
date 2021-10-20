@@ -21,12 +21,12 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:hive/hive.dart';
+import 'package:idb_shim/idb_shim.dart' hide Event;
 import 'package:matrix/encryption/utils/olm_session.dart';
 import 'package:matrix/encryption/utils/outbound_group_session.dart';
 import 'package:matrix/encryption/utils/ssss_cache.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
-import 'package:matrix/matrix.dart' hide Box;
+import 'package:matrix/matrix.dart';
 import 'package:matrix/src/event_status.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
@@ -36,9 +36,11 @@ import 'package:matrix/src/utils/run_benchmarked.dart';
 /// you use this.
 ///
 /// This database does not support file caching!
-class FamedlySdkHiveDatabase extends DatabaseApi {
-  static const int version = 5;
+class FamedlySdkIndexedDatabase extends DatabaseApi {
+  static const int version = 1;
   final String name;
+  final IdbFactory _idbFactory;
+  late final Database _database;
   late Box _clientBox;
   late Box _accountDataBox;
   late Box _roomsBox;
@@ -46,39 +48,39 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
   /// Key is a tuple as MultiKey(roomId, type) where stateKey can be
   /// an empty string.
-  late LazyBox _roomStateBox;
+  late Box _roomStateBox;
 
   /// Key is a tuple as MultiKey(roomId, userId)
-  late LazyBox _roomMembersBox;
+  late Box _roomMembersBox;
 
   /// Key is a tuple as MultiKey(roomId, type)
-  late LazyBox _roomAccountDataBox;
-  late LazyBox _inboundGroupSessionsBox;
-  late LazyBox _outboundGroupSessionsBox;
-  late LazyBox _olmSessionsBox;
+  late Box _roomAccountDataBox;
+  late Box _inboundGroupSessionsBox;
+  late Box _outboundGroupSessionsBox;
+  late Box _olmSessionsBox;
 
   /// Key is a tuple as MultiKey(userId, deviceId)
-  late LazyBox _userDeviceKeysBox;
+  late Box _userDeviceKeysBox;
 
   /// Key is the user ID as a String
-  late LazyBox _userDeviceKeysOutdatedBox;
+  late Box _userDeviceKeysOutdatedBox;
 
   /// Key is a tuple as MultiKey(userId, publicKey)
-  late LazyBox _userCrossSigningKeysBox;
-  late LazyBox _ssssCacheBox;
-  late LazyBox _presencesBox;
+  late Box _userCrossSigningKeysBox;
+  late Box _ssssCacheBox;
+  late Box _presencesBox;
 
   /// Key is a tuple as Multikey(roomId, fragmentId) while the default
   /// fragmentId is an empty String
-  late LazyBox _timelineFragmentsBox;
+  late Box _timelineFragmentsBox;
 
   /// Key is a tuple as MultiKey(roomId, eventId)
-  late LazyBox _eventsBox;
+  late Box _eventsBox;
 
   /// Key is a tuple as MultiKey(userId, deviceId)
-  late LazyBox _seenDeviceIdsBox;
+  late Box _seenDeviceIdsBox;
 
-  late LazyBox _seenDeviceKeysBox;
+  late Box _seenDeviceKeysBox;
 
   String get _clientBoxName => '$name.box.client';
 
@@ -120,14 +122,13 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
   String get _seenDeviceKeysBoxName => '$name.box.seen_device_keys';
 
-  final HiveCipher? encryptionCipher;
-
-  FamedlySdkHiveDatabase(this.name, {this.encryptionCipher});
+  FamedlySdkIndexedDatabase(this.name, IdbFactory factory)
+      : _idbFactory = factory;
 
   @override
   int get maxFileSize => 0;
 
-  Future<void> _actionOnAllBoxes(Future<void> Function(BoxBase box) action) =>
+  Future<void> _actionOnAllBoxes(Future<void> Function(Box box) action) =>
       Future.wait([
         action(_clientBox),
         action(_accountDataBox),
@@ -150,82 +151,103 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         action(_seenDeviceKeysBox),
       ]);
 
+  Future<Box> _openBox(String name) async {
+    final txn = _database.transaction(name, 'readwrite');
+    final store = txn.objectStore(name);
+    final keys = (await store.getAllKeys()).cast<String>();
+    return Box(name, keys, _database);
+  }
+
   Future<void> open() async {
-    _clientBox = await Hive.openBox(
+    final boxNames = [
       _clientBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _accountDataBox = await Hive.openBox(
       _accountDataBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _roomsBox = await Hive.openBox(
       _roomsBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _roomStateBox = await Hive.openLazyBox(
       _roomStateBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _roomMembersBox = await Hive.openLazyBox(
       _roomMembersBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _toDeviceQueueBox = await Hive.openBox(
       _toDeviceQueueBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _roomAccountDataBox = await Hive.openLazyBox(
       _roomAccountDataBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _inboundGroupSessionsBox = await Hive.openLazyBox(
       _inboundGroupSessionsBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _outboundGroupSessionsBox = await Hive.openLazyBox(
       _outboundGroupSessionsBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _olmSessionsBox = await Hive.openLazyBox(
       _olmSessionsBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _userDeviceKeysBox = await Hive.openLazyBox(
       _userDeviceKeysBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _userDeviceKeysOutdatedBox = await Hive.openLazyBox(
       _userDeviceKeysOutdatedBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _userCrossSigningKeysBox = await Hive.openLazyBox(
       _userCrossSigningKeysBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _ssssCacheBox = await Hive.openLazyBox(
       _ssssCacheBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _presencesBox = await Hive.openLazyBox(
       _presencesBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _timelineFragmentsBox = await Hive.openLazyBox(
       _timelineFragmentsBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _eventsBox = await Hive.openLazyBox(
       _eventsBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _seenDeviceIdsBox = await Hive.openLazyBox(
       _seenDeviceIdsBoxName,
-      encryptionCipher: encryptionCipher,
-    );
-    _seenDeviceKeysBox = await Hive.openLazyBox(
       _seenDeviceKeysBoxName,
-      encryptionCipher: encryptionCipher,
+    ];
+    _database = await _idbFactory.open(
+      name,
+      version: 1,
+      onUpgradeNeeded: (VersionChangeEvent event) {
+        if (boxNames == null) return;
+        final db = event.database;
+        for (final name in boxNames) {
+          db.createObjectStore(name, autoIncrement: true);
+        }
+        return;
+      },
+    );
+    _clientBox = await _openBox(
+      _clientBoxName,
+    );
+    _accountDataBox = await _openBox(
+      _accountDataBoxName,
+    );
+    _roomsBox = await _openBox(
+      _roomsBoxName,
+    );
+    _roomStateBox = await _openBox(
+      _roomStateBoxName,
+    );
+    _roomMembersBox = await _openBox(
+      _roomMembersBoxName,
+    );
+    _toDeviceQueueBox = await _openBox(
+      _toDeviceQueueBoxName,
+    );
+    _roomAccountDataBox = await _openBox(
+      _roomAccountDataBoxName,
+    );
+    _inboundGroupSessionsBox = await _openBox(
+      _inboundGroupSessionsBoxName,
+    );
+    _outboundGroupSessionsBox = await _openBox(
+      _outboundGroupSessionsBoxName,
+    );
+    _olmSessionsBox = await _openBox(
+      _olmSessionsBoxName,
+    );
+    _userDeviceKeysBox = await _openBox(
+      _userDeviceKeysBoxName,
+    );
+    _userDeviceKeysOutdatedBox = await _openBox(
+      _userDeviceKeysOutdatedBoxName,
+    );
+    _userCrossSigningKeysBox = await _openBox(
+      _userCrossSigningKeysBoxName,
+    );
+    _ssssCacheBox = await _openBox(
+      _ssssCacheBoxName,
+    );
+    _presencesBox = await _openBox(
+      _presencesBoxName,
+    );
+    _timelineFragmentsBox = await _openBox(
+      _timelineFragmentsBoxName,
+    );
+    _eventsBox = await _openBox(
+      _eventsBoxName,
+    );
+    _seenDeviceIdsBox = await _openBox(
+      _seenDeviceIdsBoxName,
+    );
+    _seenDeviceKeysBox = await _openBox(
+      _seenDeviceKeysBoxName,
     );
 
     // Check version and check if we need a migration
@@ -266,43 +288,42 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
   @override
   Future<void> clear() async {
-    Logs().i('Clear and close hive database...');
+    Logs().i('Clear and close indexed database...');
     await _actionOnAllBoxes((box) async {
       try {
-        await box.deleteAll(box.keys);
-        await box.close();
+        await box.deleteAll();
       } catch (e) {
         Logs().v('Unable to clear box ${box.name}', e);
-        await box.deleteFromDisk();
       }
     });
+    _database.close();
     return;
   }
 
   @override
   Future<void> clearCache() async {
-    await _roomsBox.deleteAll(_roomsBox.keys);
-    await _accountDataBox.deleteAll(_accountDataBox.keys);
-    await _roomStateBox.deleteAll(_roomStateBox.keys);
-    await _roomMembersBox.deleteAll(_roomMembersBox.keys);
-    await _eventsBox.deleteAll(_eventsBox.keys);
-    await _timelineFragmentsBox.deleteAll(_timelineFragmentsBox.keys);
-    await _outboundGroupSessionsBox.deleteAll(_outboundGroupSessionsBox.keys);
-    await _presencesBox.deleteAll(_presencesBox.keys);
+    await _roomsBox.deleteAll();
+    await _accountDataBox.deleteAll();
+    await _roomStateBox.deleteAll();
+    await _roomMembersBox.deleteAll();
+    await _eventsBox.deleteAll();
+    await _timelineFragmentsBox.deleteAll();
+    await _outboundGroupSessionsBox.deleteAll();
+    await _presencesBox.deleteAll();
     await _clientBox.delete('prev_batch');
   }
 
   @override
   Future<void> clearSSSSCache() async {
-    await _ssssCacheBox.deleteAll(_ssssCacheBox.keys);
+    await _ssssCacheBox.deleteAll();
   }
 
   @override
-  Future<void> close() => _actionOnAllBoxes((box) => box.close());
+  Future<void> close() async => _database.close();
 
   @override
   Future<void> deleteFromToDeviceQueue(int id) async {
-    await _toDeviceQueueBox.delete(id);
+    await _toDeviceQueueBox.delete(id.toString());
     return;
   }
 
@@ -505,13 +526,24 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
   @override
   Future<List<Room>> getRoomList(Client client) =>
-      runBenchmarked<List<Room>>('Get room list from hive', () async {
+      runBenchmarked<List<Room>>('Get room list from indexed database',
+          () async {
+        final transaction = _database.transaction([
+          _roomsBoxName,
+          _roomMembersBoxName,
+          _roomStateBoxName,
+          _roomAccountDataBoxName,
+        ], 'readonly');
         final rooms = <String, Room>{};
         final importantRoomStates = client.importantStateEvents;
-        for (final key in _roomsBox.keys) {
-          // Get the room
-          final raw = await _roomsBox.get(key);
+        final rawRooms = await _roomsBox.getAll(transaction);
+        rawRooms.forEach((raw) {
           final room = Room.fromJson(convertToJson(raw), client);
+          rooms[room.id] = room;
+        });
+        for (final key in rooms.keys) {
+          // Get the room
+          final room = rooms[key]!;
 
           // let's see if we need any m.room.member events
           // We always need the member event for ourself
@@ -532,8 +564,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
           }
           // Load members
           for (final userId in membersToPostload) {
-            final state =
-                await _roomMembersBox.get(MultiKey(room.id, userId).toString());
+            final state = await _roomMembersBox.get(
+                MultiKey(room.id, userId).toString(), transaction);
             if (state == null) {
               Logs().w('Unable to post load member $userId');
               continue;
@@ -544,8 +576,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
           // Get the "important" room states. All other states will be loaded once
           // `getUnimportantRoomStates()` is called.
           for (final type in importantRoomStates) {
-            final states = await _roomStateBox
-                .get(MultiKey(room.id, type).toString()) as Map?;
+            final states = await _roomStateBox.get(
+              MultiKey(room.id, type).toString(),
+              transaction,
+            ) as Map?;
             if (states == null) continue;
             final stateEvents = states.values
                 .map((raw) => Event.fromJson(convertToJson(raw), room))
@@ -563,7 +597,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         for (final key in _roomAccountDataBox.keys) {
           final roomId = MultiKey.fromString(key).parts.first;
           if (rooms.containsKey(roomId)) {
-            final raw = await _roomAccountDataBox.get(key);
+            final raw = await _roomAccountDataBox.get(key, transaction);
             final basicRoomEvent = BasicRoomEvent.fromJson(
               convertToJson(raw),
             );
@@ -575,7 +609,6 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
             await _roomAccountDataBox.delete(key);
           }
         }
-
         return rooms.values.toList();
       }, _roomsBox.keys.length);
 
@@ -587,12 +620,12 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<List<QueuedToDeviceEvent>> getToDeviceEventQueue() async =>
-      await Future.wait(_toDeviceQueueBox.keys.map((i) async {
-        final raw = await _toDeviceQueueBox.get(i);
-        raw['id'] = i;
-        return QueuedToDeviceEvent.fromJson(convertToJson(raw));
-      }).toList());
+  Future<List<QueuedToDeviceEvent>> getToDeviceEventQueue() async {
+    final raws = await _toDeviceQueueBox.getAll();
+    var counter = 0;
+    raws.forEach((raw) => convertToJson(raw)['id'] = ++counter);
+    return raws.map((json) => QueuedToDeviceEvent.fromJson(json)).toList();
+  }
 
   @override
   Future<List<Event>> getUnimportantRoomEventStatesForRoom(
@@ -623,6 +656,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client) =>
       runBenchmarked<Map<String, DeviceKeysList>>(
           'Get all user device keys from Hive', () async {
+        final transaction = _database.transaction([
+          _userDeviceKeysOutdatedBoxName,
+          _userCrossSigningKeysBoxName,
+        ], 'readonly');
         final deviceKeysOutdated = _userDeviceKeysOutdatedBox.keys;
         if (deviceKeysOutdated.isEmpty) {
           return {};
@@ -645,9 +682,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
                 'outdated': await _userDeviceKeysOutdatedBox.get(userId),
               },
               await Future.wait(deviceKeysBoxKeys.map((key) async =>
-                  convertToJson(await _userDeviceKeysBox.get(key)))),
+                  convertToJson(
+                      await _userDeviceKeysBox.get(key, transaction)))),
               await Future.wait(crossSigningKeysBoxKeys.map((key) async =>
-                  convertToJson(await _userCrossSigningKeysBox.get(key)))),
+                  convertToJson(
+                      await _userCrossSigningKeysBox.get(key, transaction)))),
               client);
         }
         return res;
@@ -682,7 +721,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     await _clientBox.put('device_name', deviceName);
     await _clientBox.put('prev_batch', prevBatch);
     await _clientBox.put('olm_account', olmAccount);
-    await _clientBox.put('sync_filter_id', null);
+    await _clientBox.delete('sync_filter_id');
     return;
   }
 
@@ -699,7 +738,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<void> markInboundGroupSessionAsUploaded(
       String roomId, String sessionId) async {
-    final raw = await _inboundGroupSessionsBox.get(sessionId.toHiveKey);
+    final raw =
+        Map.from(await _inboundGroupSessionsBox.get(sessionId.toHiveKey));
     if (raw == null) {
       Logs().w(
           'Tried to mark inbound group session as uploaded which was not found in the database!');
@@ -712,8 +752,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
   @override
   Future<void> markInboundGroupSessionsAsNeedingUpload() async {
-    for (final sessionId in _inboundGroupSessionsBox.keys) {
-      final raw = await _inboundGroupSessionsBox.get(sessionId);
+    final keys = List.from(_inboundGroupSessionsBox.keys);
+    for (final sessionId in keys) {
+      final raw = Map.from(await _inboundGroupSessionsBox.get(sessionId));
       raw['uploaded'] = false;
       await _inboundGroupSessionsBox.put(sessionId, raw);
     }
@@ -723,10 +764,12 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<void> removeEvent(String eventId, String roomId) async {
     await _eventsBox.delete(MultiKey(roomId, eventId).toString());
-    for (final key in _timelineFragmentsBox.keys) {
+    final keys = List.from(_timelineFragmentsBox.keys);
+    for (final key in keys) {
       final multiKey = MultiKey.fromString(key);
       if (multiKey.parts.first != roomId) continue;
-      final List eventIds = await _timelineFragmentsBox.get(key) ?? [];
+      final eventIds =
+          List<String>.from(await _timelineFragmentsBox.get(key) ?? []);
       final prevLength = eventIds.length;
       eventIds.removeWhere((id) => id == eventId);
       if (eventIds.length < prevLength) {
@@ -768,8 +811,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<void> setBlockedUserCrossSigningKey(
       bool blocked, String userId, String publicKey) async {
-    final raw = await _userCrossSigningKeysBox
-        .get(MultiKey(userId, publicKey).toString());
+    final raw = Map.from(await _userCrossSigningKeysBox
+        .get(MultiKey(userId, publicKey).toString()));
     raw['blocked'] = blocked;
     await _userCrossSigningKeysBox.put(
       MultiKey(userId, publicKey).toString(),
@@ -781,8 +824,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<void> setBlockedUserDeviceKey(
       bool blocked, String userId, String deviceId) async {
-    final raw =
-        await _userDeviceKeysBox.get(MultiKey(userId, deviceId).toString());
+    final raw = Map.from(
+        await _userDeviceKeysBox.get(MultiKey(userId, deviceId).toString()));
     raw['blocked'] = blocked;
     await _userDeviceKeysBox.put(
       MultiKey(userId, deviceId).toString(),
@@ -828,9 +871,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<void> setVerifiedUserCrossSigningKey(
       bool verified, String userId, String publicKey) async {
-    final raw = (await _userCrossSigningKeysBox
+    final raw = Map.from((await _userCrossSigningKeysBox
             .get(MultiKey(userId, publicKey).toString()) as Map?) ??
-        {};
+        {});
     raw['verified'] = verified;
     await _userCrossSigningKeysBox.put(
       MultiKey(userId, publicKey).toString(),
@@ -842,8 +885,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<void> setVerifiedUserDeviceKey(
       bool verified, String userId, String deviceId) async {
-    final raw =
-        await _userDeviceKeysBox.get(MultiKey(userId, deviceId).toString());
+    final raw = Map.from(
+        await _userDeviceKeysBox.get(MultiKey(userId, deviceId).toString()));
     raw['verified'] = verified;
     await _userDeviceKeysBox.put(
       MultiKey(userId, deviceId).toString(),
@@ -1276,7 +1319,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<void> updateInboundGroupSessionAllowedAtIndex(
       String allowedAtIndex, String roomId, String sessionId) async {
-    final raw = await _inboundGroupSessionsBox.get(sessionId.toHiveKey);
+    final raw =
+        Map.from(await _inboundGroupSessionsBox.get(sessionId.toHiveKey));
     if (raw == null) {
       Logs().w(
           'Tried to update inbound group session as uploaded which wasnt found in the database!');
@@ -1290,7 +1334,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   @override
   Future<void> updateInboundGroupSessionIndexes(
       String indexes, String roomId, String sessionId) async {
-    final raw = await _inboundGroupSessionsBox.get(sessionId.toHiveKey);
+    final raw =
+        Map.from(await _inboundGroupSessionsBox.get(sessionId.toHiveKey));
     if (raw == null) {
       Logs().w(
           'Tried to update inbound group session indexes of a session which was not found in the database!');
@@ -1395,12 +1440,63 @@ class MultiKey {
   bool operator ==(other) => parts.toString() == other.toString();
 }
 
-extension HiveKeyExtension on String {
-  String get toHiveKey => isValidMatrixId
-      ? '$sigil${Uri.encodeComponent(localpart!)}:${Uri.encodeComponent(domain!)}'
-      : Uri.encodeComponent(this);
-}
+class Box {
+  final String name;
+  final Database _database;
 
-extension FromHiveKeyExtension on String {
-  String get fromHiveKey => Uri.decodeComponent(this);
+  Box(this.name, List<String> keys, Database database)
+      : _keys = keys,
+        _database = database;
+
+  List<String> _keys;
+  List<String> get keys => _keys;
+
+  Future<List<dynamic>> getAll([Transaction? txn]) async {
+    txn ??= _database.transaction(name, 'readonly');
+    final store = txn.objectStore(name);
+    final value = await store.getAll();
+    return value;
+  }
+
+  Future<dynamic> get(String key, [Transaction? txn]) async {
+    txn ??= _database.transaction(name, 'readonly');
+    final store = txn.objectStore(name);
+    final value = await store.getObject(key);
+    return value;
+  }
+
+  Future<int> add(dynamic value, [Transaction? txn]) async {
+    txn ??= _database.transaction(name, 'readwrite');
+    final store = txn.objectStore(name);
+    final index = DateTime.now().millisecondsSinceEpoch;
+    await store.put(value, index.toString());
+    _keys.add(index.toString());
+    return index;
+  }
+
+  Future<void> put(String key, Object value, [Transaction? txn]) async {
+    txn ??= _database.transaction(name, 'readwrite');
+    final store = txn.objectStore(name);
+    await store.put(value, key);
+    _keys.add(key);
+    return;
+  }
+
+  Future<void> delete(String key, [Transaction? txn]) async {
+    txn ??= _database.transaction(name, 'readwrite');
+    final store = txn.objectStore(name);
+    await store.delete(key);
+    _keys.remove(key);
+    return;
+  }
+
+  Future<void> deleteAll([Transaction? txn]) async {
+    txn ??= _database.transaction(name, 'readwrite');
+    final store = txn.objectStore(name);
+    await store.clear();
+    _keys = [];
+    return;
+  }
+
+  bool containsKey(String key) => keys.contains(key);
 }

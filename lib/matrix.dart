@@ -43,3 +43,4 @@ export 'src/timeline.dart';
 export 'src/user.dart';
 export 'src/database/database_api.dart';
 export 'src/database/hive_database.dart';
+export 'src/database/indexed_database.dart' hide convertToJson, MultiKey;

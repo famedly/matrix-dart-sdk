@@ -30,7 +30,7 @@ void main() {
   /// All Tests related to the ChatTime
   group('Hive Database Test', () {
     testDatabase(
-      getHiveDatabase(null),
+      getIndexedDatabase(null),
     );
   });
 }

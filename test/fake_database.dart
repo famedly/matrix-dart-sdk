@@ -20,7 +20,9 @@
 import 'dart:io';
 import 'dart:math';
 
+import 'package:idb_shim/idb_client_memory.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/database/indexed_database.dart';
 import 'package:matrix/src/database/hive_database.dart';
 import 'package:file/memory.dart';
 import 'package:hive/hive.dart';
@@ -28,6 +30,12 @@ import 'package:hive/hive.dart';
 Future<DatabaseApi> getDatabase(Client _) => getHiveDatabase(_);
 
 bool hiveInitialized = false;
+
+Future<FamedlySdkIndexedDatabase> getIndexedDatabase(Client c) async {
+  final db = FamedlySdkIndexedDatabase('unit_test', idbFactoryMemory);
+  await db.open();
+  return db;
+}
 
 Future<FamedlySdkHiveDatabase> getHiveDatabase(Client c) async {
   if (!hiveInitialized) {
