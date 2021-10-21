@@ -73,5 +73,18 @@ void main() {
               .toString(),
           'https://fakeserver.notexisting:1337/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale&animated=true');
     });
+    test('other remote port', () async {
+      final client = Client('testclient', httpClient: FakeMatrixApi());
+      await client.checkHomeserver('https://fakeserver.notexisting',
+          checkWellKnown: false);
+      final mxc = 'mxc://exampleserver.abc:1234/abcdefghijklmn';
+      final content = Uri.parse(mxc);
+      expect(content.isScheme('mxc'), true);
+
+      expect(content.getDownloadLink(client).toString(),
+          '${client.homeserver.toString()}/_matrix/media/r0/download/exampleserver.abc:1234/abcdefghijklmn');
+      expect(content.getThumbnail(client, width: 50, height: 50).toString(),
+          '${client.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc:1234/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
+    });
   });
 }
