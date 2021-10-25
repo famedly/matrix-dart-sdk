@@ -1430,10 +1430,10 @@ class Client extends MatrixApi {
           room.setState(user);
         }
       }
+      _updateRoomsByEventUpdate(update);
       if (type != EventUpdateType.ephemeral && database != null) {
         await database.storeEventUpdate(update);
       }
-      _updateRoomsByEventUpdate(update);
       if (encryptionEnabled) {
         await encryption.handleEventUpdate(update);
       }
