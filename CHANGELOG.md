@@ -1,3 +1,7 @@
+## [0.6.2] - 25nd Oct 2021
+- fix: Unnecessary null check
+- fix: Auto update room states
+
 ## [0.6.1] - 18nd Oct 2021
 - fix: Missing null check in a nested json map
 

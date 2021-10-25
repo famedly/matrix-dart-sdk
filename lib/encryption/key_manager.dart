@@ -741,7 +741,7 @@ class KeyManager {
               client.getUserDeviceKeysByCurve25519Key(dbSession.senderKey);
           args.dbSessions.add(_DbInboundGroupSessionBundle(
             dbSession: dbSession,
-            verified: device.verified ?? false,
+            verified: device.verified,
           ));
           i++;
           if (i > 10) {
