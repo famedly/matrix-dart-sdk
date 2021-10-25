@@ -30,7 +30,6 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/event_status.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
-import 'package:matrix/src/utils/run_benchmarked.dart';
 
 /// This is a basic database for the Matrix SDK using the hive store. You need
 /// to make sure that you perform `Hive.init()` or `Hive.flutterInit()` before
