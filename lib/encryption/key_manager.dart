@@ -63,7 +63,8 @@ class KeyManager {
       _requestedSessionIds.clear();
       for (final room in client.rooms) {
         final lastEvent = room.lastEvent;
-        if (lastEvent.type == EventTypes.Encrypted &&
+        if (lastEvent != null &&
+            lastEvent.type == EventTypes.Encrypted &&
             lastEvent.content['can_request_session'] == true) {
           try {
             maybeAutoRequest(room.id, lastEvent.content['session_id'],

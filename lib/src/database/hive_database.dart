@@ -518,10 +518,12 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
           // We always need the member event for ourself
           final membersToPostload = <String>{if (userID != null) userID};
           // If the room is a direct chat, those IDs should be there too
-          if (room.isDirectChat) membersToPostload.add(room.directChatMatrixID);
+          if (room.isDirectChat)
+            membersToPostload.add(room.directChatMatrixID!);
           // the lastEvent message preview might have an author we need to fetch, if it is a group chat
-          if (room.getState(EventTypes.Message) != null && !room.isDirectChat) {
-            membersToPostload.add(room.getState(EventTypes.Message).senderId);
+          final lastEvent = room.getState(EventTypes.Message);
+          if (lastEvent != null && !room.isDirectChat) {
+            membersToPostload.add(lastEvent.senderId);
           }
           // if the room has no name and no canonical alias, its name is calculated
           // based on the heroes of the room
@@ -529,7 +531,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
               room.getState(EventTypes.RoomCanonicalAlias) == null) {
             // we don't have a name and no canonical alias, so we'll need to
             // post-load the heroes
-            membersToPostload.addAll(room.summary?.mHeroes ?? []);
+            membersToPostload.addAll(room.summary.mHeroes ?? []);
           }
           // Load members
           for (final userId in membersToPostload) {
@@ -817,10 +819,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> setRoomPrevBatch(String prevBatch, String roomId) async {
+  Future<void> setRoomPrevBatch(
+      String prevBatch, String roomId, Client client) async {
     final raw = await _roomsBox.get(roomId.toHiveKey);
     if (raw == null) return;
-    final room = Room.fromJson(convertToJson(raw));
+    final room = Room.fromJson(convertToJson(raw), client);
     room.prev_batch = prevBatch;
     await _roomsBox.put(roomId.toHiveKey, room.toJson());
     return;
@@ -861,13 +864,13 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> storeEventUpdate(EventUpdate eventUpdate) async {
+  Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client) async {
     // Ephemerals should not be stored
     if (eventUpdate.type == EventUpdateType.ephemeral) return;
 
     // In case of this is a redaction event
     if (eventUpdate.content['type'] == EventTypes.Redaction) {
-      final tmpRoom = Room(id: eventUpdate.roomID);
+      final tmpRoom = Room(id: eventUpdate.roomID, client: client);
       final event = await getEventById(eventUpdate.content['redacts'], tmpRoom);
       if (event != null) {
         event.setRedactionEvent(Event.fromJson(eventUpdate.content, tmpRoom));
@@ -1077,7 +1080,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> storeRoomUpdate(String roomId, SyncRoomUpdate roomUpdate) async {
+  Future<void> storeRoomUpdate(
+      String roomId, SyncRoomUpdate roomUpdate, Client client) async {
     // Leave room if membership is leave
     if (roomUpdate is LeftRoomUpdate) {
       await forgetRoom(roomId);
@@ -1094,26 +1098,31 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
           roomId.toHiveKey,
           roomUpdate is JoinedRoomUpdate
               ? Room(
+                  client: client,
                   id: roomId,
                   membership: membership,
                   highlightCount:
-                      roomUpdate.unreadNotifications?.highlightCount?.toInt(),
+                      roomUpdate.unreadNotifications?.highlightCount?.toInt() ??
+                          0,
                   notificationCount: roomUpdate
-                      .unreadNotifications?.notificationCount
-                      ?.toInt(),
+                          .unreadNotifications?.notificationCount
+                          ?.toInt() ??
+                      0,
                   prev_batch: roomUpdate.timeline?.prevBatch,
                   summary: roomUpdate.summary,
                 ).toJson()
               : Room(
+                  client: client,
                   id: roomId,
                   membership: membership,
                 ).toJson());
     } else if (roomUpdate is JoinedRoomUpdate) {
       final currentRawRoom = await _roomsBox.get(roomId.toHiveKey);
-      final currentRoom = Room.fromJson(convertToJson(currentRawRoom));
+      final currentRoom = Room.fromJson(convertToJson(currentRawRoom), client);
       await _roomsBox.put(
           roomId.toHiveKey,
           Room(
+            client: client,
             id: roomId,
             membership: membership,
             highlightCount:

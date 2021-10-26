@@ -74,7 +74,7 @@ class Event extends MatrixEvent {
 
   bool get redacted => redactedBecause != null;
 
-  User? get stateKeyUser => room?.getUserByMXIDSync(stateKey);
+  User? get stateKeyUser => room?.getUserByMXIDSync(stateKey!);
 
   Event({
     this.status = defaultStatus,

@@ -115,8 +115,9 @@ void testDatabase(
       'limited_timeline': false,
       'membership': Membership.join,
     });
-    await database.storeRoomUpdate('!testroom', roomUpdate);
-    final rooms = await database.getRoomList(Client('testclient'));
+    final client = Client('testclient');
+    await database.storeRoomUpdate('!testroom', roomUpdate, client);
+    final rooms = await database.getRoomList(client);
     expect(rooms.single.id, '!testroom');
   });
   test('getRoomList', () async {
@@ -124,8 +125,9 @@ void testDatabase(
     expect(list.single.id, '!testroom');
   });
   test('setRoomPrevBatch', () async {
-    await database.setRoomPrevBatch('1234', '!testroom');
-    final rooms = await database.getRoomList(Client('testclient'));
+    final client = Client('testclient');
+    await database.setRoomPrevBatch('1234', '!testroom', client);
+    final rooms = await database.getRoomList(client);
     expect(rooms.single.prev_batch, '1234');
   });
   test('forgetRoom', () async {
@@ -192,28 +194,28 @@ void testDatabase(
   });
   test('storeEventUpdate', () async {
     await database.storeEventUpdate(
-      EventUpdate(
-        roomID: '!testroom:example.com',
-        type: EventUpdateType.timeline,
-        content: {
-          'type': EventTypes.Message,
-          'content': {
-            'body': '* edit 3',
-            'msgtype': 'm.text',
-            'm.new_content': {
-              'body': 'edit 3',
+        EventUpdate(
+          roomID: '!testroom:example.com',
+          type: EventUpdateType.timeline,
+          content: {
+            'type': EventTypes.Message,
+            'content': {
+              'body': '* edit 3',
               'msgtype': 'm.text',
+              'm.new_content': {
+                'body': 'edit 3',
+                'msgtype': 'm.text',
+              },
+              'm.relates_to': {
+                'event_id': '\$source',
+                'rel_type': RelationshipTypes.edit,
+              },
             },
-            'm.relates_to': {
-              'event_id': '\$source',
-              'rel_type': RelationshipTypes.edit,
-            },
+            'event_id': '\$event:example.com',
+            'sender': '@bob:example.org',
           },
-          'event_id': '\$event:example.com',
-          'sender': '@bob:example.org',
-        },
-      ),
-    );
+        ),
+        Client('testclient'));
   });
   test('getEventById', () async {
     final event = await database.getEventById(

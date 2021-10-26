@@ -171,9 +171,10 @@ extension CommandsClientExtension on Client {
     });
     addCommand('myroomnick', (CommandArgs args) async {
       final currentEventJson = args.room
-          .getState(EventTypes.RoomMember, args.room.client.userID)
-          .content
-          .copy();
+              .getState(EventTypes.RoomMember, args.room.client.userID!)
+              ?.content
+              .copy() ??
+          {};
       currentEventJson['displayname'] = args.msg;
       return await args.room.client.setRoomStateWithKey(
         args.room.id,
@@ -184,9 +185,10 @@ extension CommandsClientExtension on Client {
     });
     addCommand('myroomavatar', (CommandArgs args) async {
       final currentEventJson = args.room
-          .getState(EventTypes.RoomMember, args.room.client.userID)
-          .content
-          .copy();
+              .getState(EventTypes.RoomMember, args.room.client.userID!)
+              ?.content
+              .copy() ??
+          {};
       currentEventJson['avatar_url'] = args.msg;
       return await args.room.client.setRoomStateWithKey(
         args.room.id,

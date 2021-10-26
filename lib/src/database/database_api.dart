@@ -58,11 +58,12 @@ abstract class DatabaseApi {
 
   /// Stores a RoomUpdate object in the database. Must be called inside of
   /// [transaction].
-  Future<void> storeRoomUpdate(String roomId, SyncRoomUpdate roomUpdate);
+  Future<void> storeRoomUpdate(
+      String roomId, SyncRoomUpdate roomUpdate, Client client);
 
   /// Stores an EventUpdate object in the database. Must be called inside of
   /// [transaction].
-  Future<void> storeEventUpdate(EventUpdate eventUpdate);
+  Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client);
 
   Future<Event?> getEventById(String eventId, Room room);
 
@@ -232,6 +233,7 @@ abstract class DatabaseApi {
   Future setRoomPrevBatch(
     String prevBatch,
     String roomId,
+    Client client,
   );
 
   Future resetNotificationCount(String roomId);

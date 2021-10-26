@@ -312,6 +312,7 @@ class Encryption {
             roomID: roomId,
             type: updateType,
           ),
+          client,
         );
       }
       return event;

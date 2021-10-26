@@ -43,7 +43,8 @@ void main() {
     });
 
     test('storeEventUpdate', () async {
-      final database = await getDatabase(null);
+      final client = Client('testclient');
+      final database = await getDatabase(client);
       // store a simple update
       var update = EventUpdate(
         type: EventUpdateType.timeline,
@@ -56,7 +57,7 @@ void main() {
           'sender': '@blah:blubb',
         },
       );
-      await database.storeEventUpdate(update);
+      await database.storeEventUpdate(update, client);
       var event = await database.getEventById('\$event-1', room);
       expect(event.eventId, '\$event-1');
 
@@ -73,7 +74,7 @@ void main() {
           'status': EventStatus.sending.intValue,
         },
       );
-      await database.storeEventUpdate(update);
+      await database.storeEventUpdate(update, client);
       event = await database.getEventById('transaction-1', room);
       expect(event.eventId, 'transaction-1');
       update = EventUpdate(
@@ -91,7 +92,7 @@ void main() {
           'status': EventStatus.sent.intValue,
         },
       );
-      await database.storeEventUpdate(update);
+      await database.storeEventUpdate(update, client);
       event = await database.getEventById('transaction-1', room);
       expect(event, null);
       event = await database.getEventById('\$event-2', room);
@@ -109,7 +110,7 @@ void main() {
           'status': EventStatus.sending.intValue,
         },
       );
-      await database.storeEventUpdate(update);
+      await database.storeEventUpdate(update, client);
       event = await database.getEventById('\$event-3', room);
       expect(event.eventId, '\$event-3');
       update = EventUpdate(
@@ -127,7 +128,7 @@ void main() {
           },
         },
       );
-      await database.storeEventUpdate(update);
+      await database.storeEventUpdate(update, client);
       event = await database.getEventById('\$event-3', room);
       expect(event.eventId, '\$event-3');
       expect(event.status, EventStatus.sent);
@@ -147,7 +148,7 @@ void main() {
           'status': EventStatus.synced.intValue,
         },
       );
-      await database.storeEventUpdate(update);
+      await database.storeEventUpdate(update, client);
       event = await database.getEventById('\$event-4', room);
       expect(event.eventId, '\$event-4');
       update = EventUpdate(
@@ -165,7 +166,7 @@ void main() {
           },
         },
       );
-      await database.storeEventUpdate(update);
+      await database.storeEventUpdate(update, client);
       event = await database.getEventById('\$event-4', room);
       expect(event.eventId, '\$event-4');
       expect(event.status, EventStatus.synced);

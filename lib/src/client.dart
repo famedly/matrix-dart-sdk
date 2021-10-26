@@ -316,8 +316,8 @@ class Client extends MatrixApi {
     }
     for (final room in rooms) {
       if (room.membership == Membership.invite &&
-          room.getState(EventTypes.RoomMember, userID)?.senderId == userId &&
-          room.getState(EventTypes.RoomMember, userID).content['is_direct'] ==
+          room.getState(EventTypes.RoomMember, userID!)?.senderId == userId &&
+          room.getState(EventTypes.RoomMember, userID!)?.content['is_direct'] ==
               true) {
         return room.id;
       }
@@ -613,7 +613,7 @@ class Client extends MatrixApi {
     if (rooms.isNotEmpty) {
       final profileSet = <Profile>{};
       for (final room in rooms) {
-        final user = room.getUserByMXIDSync(userID);
+        final user = room.getUserByMXIDSync(userID!);
         profileSet.add(Profile.fromJson(user.content));
       }
       if (profileSet.length == 1) return profileSet.first;
@@ -1297,7 +1297,7 @@ class Client extends MatrixApi {
       final id = entry.key;
       final room = entry.value;
 
-      await database?.storeRoomUpdate(id, room);
+      await database?.storeRoomUpdate(id, room, this);
       _updateRoomsByRoomUpdate(id, room);
 
       /// Handle now all room events and save them in the database
@@ -1377,7 +1377,7 @@ class Client extends MatrixApi {
       // there.
       if (event['type'] == 'm.receipt') {
         var room = getRoomById(id);
-        room ??= Room(id: id);
+        room ??= Room(id: id, client: this);
 
         final receiptStateContent =
             room.roomAccountData['m.receipt']?.content ?? {};
@@ -1455,7 +1455,7 @@ class Client extends MatrixApi {
       }
       _updateRoomsByEventUpdate(update);
       if (type != EventUpdateType.ephemeral) {
-        await database?.storeEventUpdate(update);
+        await database?.storeEventUpdate(update, this);
       }
       if (encryptionEnabled) {
         await encryption?.handleEventUpdate(update);
@@ -1521,9 +1521,10 @@ class Client extends MatrixApi {
               id: roomId,
               membership: membership,
               prev_batch: chatUpdate.timeline?.prevBatch,
-              highlightCount: chatUpdate.unreadNotifications?.highlightCount,
+              highlightCount:
+                  chatUpdate.unreadNotifications?.highlightCount ?? 0,
               notificationCount:
-                  chatUpdate.unreadNotifications?.notificationCount,
+                  chatUpdate.unreadNotifications?.notificationCount ?? 0,
               summary: chatUpdate.summary,
               client: this,
             )
@@ -1593,10 +1594,10 @@ class Client extends MatrixApi {
         } else {
           if (stateEvent.type != EventTypes.Message ||
               stateEvent.relationshipType != RelationshipTypes.edit ||
-              stateEvent.relationshipEventId == room.lastEvent.eventId ||
-              ((room.lastEvent.relationshipType == RelationshipTypes.edit &&
+              stateEvent.relationshipEventId == room.lastEvent?.eventId ||
+              ((room.lastEvent?.relationshipType == RelationshipTypes.edit &&
                   stateEvent.relationshipEventId ==
-                      room.lastEvent.relationshipEventId))) {
+                      room.lastEvent?.relationshipEventId))) {
             room.setState(stateEvent);
           }
         }
