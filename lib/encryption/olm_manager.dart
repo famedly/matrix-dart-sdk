@@ -237,6 +237,8 @@ class OlmManager {
       if (updateDatabase) {
         await client.database?.updateClientKeys(pickledOlmAccount!);
       }
+      // Workaround: Make sure we stop if we got logged out in the meantime.
+      if (!client.isLogged()) return true;
       final response = await client.uploadKeys(
         deviceKeys: uploadDeviceKeys
             ? MatrixDeviceKeys.fromJson(keysContent['device_keys'])
