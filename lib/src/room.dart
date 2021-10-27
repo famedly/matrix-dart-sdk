@@ -568,7 +568,7 @@ class Room {
   /// Sends a normal text message to this room. Returns the event ID generated
   /// by the server for this message.
   Future<String?> sendTextEvent(String message,
-      {required String? txid,
+      {String? txid,
       Event? inReplyTo,
       String? editEventId,
       bool parseMarkdown = true,

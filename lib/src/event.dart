@@ -186,7 +186,7 @@ class Event extends MatrixEvent {
       prevContent: prevContent,
       content: content,
       type: jsonPayload['type'],
-      eventId: jsonPayload['event_id'],
+      eventId: jsonPayload['event_id'] ?? '',
       roomId: jsonPayload['room_id'],
       senderId: jsonPayload['sender'],
       originServerTs: jsonPayload.containsKey('origin_server_ts')

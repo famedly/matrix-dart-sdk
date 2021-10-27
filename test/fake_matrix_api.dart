@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020 Famedly GmbH
@@ -39,7 +38,7 @@ Map<String, dynamic> decodeJson(dynamic data) {
 class FakeMatrixApi extends MockClient {
   static final calledEndpoints = <String, List<dynamic>>{};
   static int eventCounter = 0;
-  static sdk.Client client;
+  static sdk.Client? client;
   static bool failToDevice = false;
 
   FakeMatrixApi()
@@ -85,9 +84,10 @@ class FakeMatrixApi extends MockClient {
           if (!calledEndpoints.containsKey(action)) {
             calledEndpoints[action] = <dynamic>[];
           }
-          calledEndpoints[action].add(data);
-          if (api.containsKey(method) && api[method].containsKey(action)) {
-            res = api[method][action](data);
+          calledEndpoints[action]?.add(data);
+          final act = api[method]?[action];
+          if (act != null) {
+            res = act(data);
             if (res is Map && res.containsKey('errcode')) {
               if (res['errcode'] == 'M_NOT_FOUND') {
                 statusCode = 404;
@@ -126,12 +126,12 @@ class FakeMatrixApi extends MockClient {
               ..accountData = [
                 sdk.BasicEvent(content: decodeJson(data), type: type)
               ];
-            if (client.database != null) {
-              await client.database.transaction(() async {
-                await client.handleSync(syncUpdate);
+            if (client?.database != null) {
+              await client?.database?.transaction(() async {
+                await client?.handleSync(syncUpdate);
               });
             } else {
-              await client.handleSync(syncUpdate);
+              await client?.handleSync(syncUpdate);
             }
             res = {};
           } else {
@@ -2101,15 +2101,15 @@ class FakeMatrixApi extends MockClient {
           }) {
             if (jsonBody[keyType] != null) {
               final key =
-                  sdk.CrossSigningKey.fromJson(jsonBody[keyType], client);
-              client.userDeviceKeys[client.userID].crossSigningKeys
+                  sdk.CrossSigningKey.fromJson(jsonBody[keyType], client!);
+              client!.userDeviceKeys[client!.userID!]?.crossSigningKeys
                   .removeWhere((k, v) => v.usage.contains(key.usage.first));
-              client.userDeviceKeys[client.userID]
-                  .crossSigningKeys[key.publicKey] = key;
+              client!.userDeviceKeys[client!.userID!]
+                  ?.crossSigningKeys[key.publicKey!] = key;
             }
           }
           // and generate a fake sync
-          client.handleSync(sdk.SyncUpdate(nextBatch: ''));
+          client!.handleSync(sdk.SyncUpdate(nextBatch: ''));
         }
         return {};
       },
