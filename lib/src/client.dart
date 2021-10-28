@@ -431,10 +431,7 @@ class Client extends MatrixApi {
     final deviceId_ = response.deviceId;
     final userId = response.userId;
     final homeserver = this.homeserver;
-    if (accessToken == null ||
-        deviceId_ == null ||
-        userId == null ||
-        homeserver == null) {
+    if (accessToken == null || deviceId_ == null || homeserver == null) {
       throw Exception(
           'Registered but token, device ID, user ID or homeserver is null.');
     }
@@ -569,8 +566,6 @@ class Client extends MatrixApi {
       isDirect: true,
       preset: CreateRoomPreset.trustedPrivateChat,
     );
-
-    if (roomId == null) return roomId;
 
     await Room(id: roomId, client: this).addToDirectChat(mxid);
 
@@ -1501,11 +1496,8 @@ class Client extends MatrixApi {
   void _updateRoomsByRoomUpdate(String roomId, SyncRoomUpdate chatUpdate) {
     // Update the chat list item.
     // Search the room in the rooms
-    var j = 0;
-    for (j = 0; j < rooms.length; j++) {
-      if (rooms[j].id == roomId) break;
-    }
-    final found = (j < rooms.length && rooms[j].id == roomId);
+    final roomIndex = rooms.indexWhere((r) => r.id == roomId);
+    final found = roomIndex != -1;
     final membership = chatUpdate is LeftRoomUpdate
         ? Membership.leave
         : chatUpdate is InvitedRoomUpdate
@@ -1514,7 +1506,7 @@ class Client extends MatrixApi {
 
     // Does the chat already exist in the list rooms?
     if (!found && membership != Membership.leave) {
-      final position = membership == Membership.invite ? 0 : j;
+      final position = membership == Membership.invite ? 0 : rooms.length;
       // Add the new chat to the list
       final newRoom = chatUpdate is JoinedRoomUpdate
           ? Room(
@@ -1533,38 +1525,39 @@ class Client extends MatrixApi {
     }
     // If the membership is "leave" then remove the item and stop here
     else if (found && membership == Membership.leave) {
-      rooms.removeAt(j);
+      rooms.removeAt(roomIndex);
     }
     // Update notification, highlight count and/or additional informations
     else if (found &&
         chatUpdate is JoinedRoomUpdate &&
-        (rooms[j].membership != membership ||
-            rooms[j].notificationCount !=
+        (rooms[roomIndex].membership != membership ||
+            rooms[roomIndex].notificationCount !=
                 (chatUpdate.unreadNotifications?.notificationCount ?? 0) ||
-            rooms[j].highlightCount !=
+            rooms[roomIndex].highlightCount !=
                 (chatUpdate.unreadNotifications?.highlightCount ?? 0) ||
             chatUpdate.summary != null ||
             chatUpdate.timeline?.prevBatch != null)) {
-      rooms[j].membership = membership;
-      rooms[j].notificationCount =
+      rooms[roomIndex].membership = membership;
+      rooms[roomIndex].notificationCount =
           chatUpdate.unreadNotifications?.notificationCount ?? 0;
-      rooms[j].highlightCount =
+      rooms[roomIndex].highlightCount =
           chatUpdate.unreadNotifications?.highlightCount ?? 0;
       if (chatUpdate.timeline?.prevBatch != null) {
-        rooms[j].prev_batch = chatUpdate.timeline?.prevBatch;
+        rooms[roomIndex].prev_batch = chatUpdate.timeline?.prevBatch;
       }
 
       final summary = chatUpdate.summary;
       if (summary != null) {
-        final roomSummaryJson = rooms[j].summary.toJson()
+        final roomSummaryJson = rooms[roomIndex].summary.toJson()
           ..addAll(summary.toJson());
-        rooms[j].summary = RoomSummary.fromJson(roomSummaryJson);
+        rooms[roomIndex].summary = RoomSummary.fromJson(roomSummaryJson);
       }
-      if (rooms[j].onUpdate != null) rooms[j].onUpdate.add(rooms[j].id);
+      rooms[roomIndex].onUpdate.add(rooms[roomIndex].id);
       if ((chatUpdate.timeline?.limited ?? false) &&
           requestHistoryOnLimitedTimeline) {
-        Logs().v('Limited timeline for ${rooms[j].id} request history now');
-        runInRoot(rooms[j].requestHistory);
+        Logs().v(
+            'Limited timeline for ${rooms[roomIndex].id} request history now');
+        runInRoot(rooms[roomIndex].requestHistory);
       }
     }
   }
@@ -1637,7 +1630,7 @@ class Client extends MatrixApi {
   void _sortRooms() {
     if (prevBatch == null || _sortLock || rooms.length < 2) return;
     _sortLock = true;
-    rooms?.sort(sortRoomsBy);
+    rooms.sort(sortRoomsBy);
     _sortLock = false;
   }
 
@@ -1808,10 +1801,8 @@ class Client extends MatrixApi {
               }
             }
             userKeys.outdated = false;
-            if (database != null) {
-              dbActions
-                  .add(() => database.storeUserDeviceKeysInfo(userId, false));
-            }
+            dbActions
+                .add(() => database.storeUserDeviceKeysInfo(userId, false));
           }
         }
         // next we parse and persist the cross signing keys
@@ -1837,7 +1828,7 @@ class Client extends MatrixApi {
             for (final oldEntry in oldKeys.entries) {
               if (!oldEntry.value.usage.contains(keyType)) {
                 userKeys.crossSigningKeys[oldEntry.key] = oldEntry.value;
-              } else if (database != null) {
+              } else {
                 // There is a previous cross-signing key with  this usage, that we no
                 // longer need/use. Clear it from the database.
                 dbActions.add(() =>
@@ -1863,21 +1854,17 @@ class Client extends MatrixApi {
                 // if we should instead use the new key with unknown verified / blocked status
                 userKeys.crossSigningKeys[publicKey] = oldKey;
               }
-              if (database != null) {
-                dbActions.add(() => database.storeUserCrossSigningKey(
-                      userId,
-                      publicKey,
-                      json.encode(entry.toJson()),
-                      entry.directVerified,
-                      entry.blocked,
-                    ));
-              }
+              dbActions.add(() => database.storeUserCrossSigningKey(
+                    userId,
+                    publicKey,
+                    json.encode(entry.toJson()),
+                    entry.directVerified,
+                    entry.blocked,
+                  ));
             }
             _userDeviceKeys[userId]?.outdated = false;
-            if (database != null) {
-              dbActions
-                  .add(() => database.storeUserDeviceKeysInfo(userId, false));
-            }
+            dbActions
+                .add(() => database.storeUserDeviceKeysInfo(userId, false));
           }
         }
 
@@ -1992,7 +1979,6 @@ class Client extends MatrixApi {
     // then only send it to verified devices
     if (deviceKeys.isNotEmpty) {
       deviceKeys.removeWhere((DeviceKeys deviceKeys) =>
-          deviceKeys == null ||
           deviceKeys.blocked ||
           (deviceKeys.userId == userID && deviceKeys.deviceId == deviceID) ||
           (onlyVerified && !deviceKeys.verified));

@@ -75,9 +75,6 @@ class DeviceKeysList {
     if (userId != client.userID) {
       // in-room verification with someone else
       final roomId = await client.startDirectChat(userId);
-      if (roomId == null) {
-        throw Exception('Unable to start new room');
-      }
 
       final room =
           client.getRoomById(roomId) ?? Room(id: roomId, client: client);

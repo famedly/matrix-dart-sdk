@@ -118,7 +118,7 @@ class Event extends MatrixEvent {
     // Mark event as failed to send if status is `sending` and event is older
     // than the timeout. This should not happen with the deprecated Moor
     // database!
-    if (status.isSending && room?.client?.database != null) {
+    if (status.isSending && room?.client.database != null) {
       // Age of this event in milliseconds
       final age = DateTime.now().millisecondsSinceEpoch -
           originServerTs.millisecondsSinceEpoch;
@@ -411,16 +411,21 @@ class Event extends MatrixEvent {
           : '');
 
   /// Gets the underlying mxc url of an attachment of a file event, or null if not present
-  Uri get attachmentMxcUrl => Uri.parse(
-      isAttachmentEncrypted ? content['file']['url'] : content['url']);
+  Uri? get attachmentMxcUrl {
+    final url = isAttachmentEncrypted ? content['file']['url'] : content['url'];
+    return url is String ? Uri.tryParse(url) : null;
+  }
 
   /// Gets the underlying mxc url of a thumbnail of a file event, or null if not present
-  Uri get thumbnailMxcUrl => Uri.parse(isThumbnailEncrypted
-      ? infoMap['thumbnail_file']['url']
-      : infoMap['thumbnail_url']);
+  Uri? get thumbnailMxcUrl {
+    final url = isThumbnailEncrypted
+        ? infoMap['thumbnail_file']['url']
+        : infoMap['thumbnail_url'];
+    return url is String ? Uri.tryParse(url) : null;
+  }
 
   /// Gets the mxc url of an attachment/thumbnail of a file event, taking sizes into account, or null if not present
-  Uri attachmentOrThumbnailMxcUrl({bool getThumbnail = false}) {
+  Uri? attachmentOrThumbnailMxcUrl({bool getThumbnail = false}) {
     if (getThumbnail &&
         infoMap['size'] is int &&
         thumbnailInfoMap['size'] is int &&
@@ -599,7 +604,7 @@ class Event extends MatrixEvent {
     bool plaintextBody = false,
   }) {
     if (redacted) {
-      return i18n.removedBy(redactedBecause?.sender?.calcDisplayname() ?? '');
+      return i18n.removedBy(redactedBecause?.sender.calcDisplayname() ?? '');
     }
     var body = plaintextBody ? this.plaintextBody : this.body;
 
@@ -643,7 +648,7 @@ class Event extends MatrixEvent {
         textOnlyMessageTypes.contains(messageType)) {
       final senderNameOrYou = senderId == room?.client.userID
           ? i18n.you
-          : (sender?.calcDisplayname() ?? '');
+          : (sender.calcDisplayname());
       localizedBody = '$senderNameOrYou: $localizedBody';
     }
 
@@ -670,7 +675,7 @@ class Event extends MatrixEvent {
 
   /// Get the relationship type of an event. `null` if there is none
   String? get relationshipType {
-    if (content?.tryGet<Map<String, dynamic>>('m.relates_to') == null) {
+    if (content.tryGet<Map<String, dynamic>>('m.relates_to') == null) {
       return null;
     }
     if (content['m.relates_to'].containsKey('m.in_reply_to')) {
@@ -683,7 +688,7 @@ class Event extends MatrixEvent {
 
   /// Get the event ID that this relationship will reference. `null` if there is none
   String? get relationshipEventId {
-    if (content == null || !(content['m.relates_to'] is Map)) {
+    if (!(content['m.relates_to'] is Map)) {
       return null;
     }
     if (content['m.relates_to'].containsKey('event_id')) {

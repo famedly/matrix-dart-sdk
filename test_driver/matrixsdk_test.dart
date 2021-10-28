@@ -55,7 +55,7 @@ void test() async {
     Logs().i('++++ (Alice) Leave all rooms ++++');
     while (testClientA.rooms.isNotEmpty) {
       final room = testClientA.rooms.first;
-      if (room.canonicalAlias?.isNotEmpty ?? false) {
+      if (room.canonicalAlias.isNotEmpty) {
         break;
       }
       try {
@@ -95,7 +95,6 @@ void test() async {
     await testClientA.createRoom(invite: [TestUser.username2]);
     await Future.delayed(Duration(seconds: 1));
     final room = testClientA.rooms.first;
-    assert(room != null);
     final roomId = room.id;
 
     Logs().i('++++ (Bob) Join room ++++');
@@ -220,7 +219,7 @@ void test() async {
         .client.encryption!.keyManager
         .getOutboundGroupSession(inviteRoom.id)!;
 
-    assert(inviteRoomOutboundGroupSession != null);
+    assert(inviteRoomOutboundGroupSession.isValid);
     /*assert(inviteRoom.client.encryption.keyManager.getInboundGroupSession(
           inviteRoom.id,
           inviteRoomOutboundGroupSession.outboundGroupSession.session_id(),
@@ -237,7 +236,7 @@ void test() async {
         "++++ (Alice) Received decrypted message: '${room.lastEvent!.body}' ++++");
 
     Logs().i('++++ Login Bob in another client ++++');
-    var testClientC = Client('TestClientC', databaseBuilder: getDatabase);
+    final testClientC = Client('TestClientC', databaseBuilder: getDatabase);
     await testClientC.checkHomeserver(TestUser.homeserver);
     await testClientC.login(LoginType.mLoginPassword,
         identifier: AuthenticationUserIdentifier(user: TestUser.username2),

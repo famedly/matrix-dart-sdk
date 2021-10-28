@@ -90,9 +90,11 @@ class CrossSigning {
     final masterPrivateKey =
         base64.decode(await handle.getStored(EventTypes.CrossSigningMasterKey));
     final keyObj = olm.PkSigning();
-    String masterPubkey;
+    String? masterPubkey;
     try {
       masterPubkey = keyObj.init_with_seed(masterPrivateKey);
+    } catch (e) {
+      masterPubkey = null;
     } finally {
       keyObj.free();
     }
@@ -131,9 +133,6 @@ class CrossSigning {
 
     final addSignature =
         (SignableKey key, SignableKey signedWith, String signature) {
-      if (key == null || signedWith == null || signature == null) {
-        return;
-      }
       final signedKey = key.cloneForSigning();
       ((signedKey.signatures ??=
               <String, Map<String, String>>{})[signedWith.userId] ??=

@@ -86,7 +86,7 @@ void main() {
       try {
         await matrix.checkHomeserver('https://fakeserver.wrongaddress');
       } catch (exception) {
-        expect(exception != null, true);
+        expect(exception.toString().isNotEmpty, true);
       }
       await matrix.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
@@ -311,7 +311,7 @@ void main() {
           identifier: AuthenticationUserIdentifier(user: 'test'),
           password: '1234');
 
-      expect(loginResp != null, true);
+      expect(loginResp.userId != null, true);
     });
 
     test('setAvatar', () async {

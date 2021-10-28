@@ -130,7 +130,6 @@ void main() {
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       await Future.delayed(Duration(milliseconds: 10));
       await sub.cancel();
-      expect(req2 != null, true);
 
       expect(
           client2.encryption!.keyVerificationManager
@@ -254,7 +253,6 @@ void main() {
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       await Future.delayed(Duration(milliseconds: 10));
       await sub.cancel();
-      expect(req2 != null, true);
 
       // send ready
       FakeMatrixApi.calledEndpoints.clear();
@@ -389,7 +387,6 @@ void main() {
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       await Future.delayed(Duration(milliseconds: 10));
       await sub.cancel();
-      expect(req2 != null, true);
 
       // send ready
       FakeMatrixApi.calledEndpoints.clear();
@@ -451,7 +448,6 @@ void main() {
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
       await Future.delayed(Duration(milliseconds: 10));
       await sub.cancel();
-      expect(req2 != null, true);
 
       await client2.encryption!.keyVerificationManager
           .handleEventUpdate(EventUpdate(

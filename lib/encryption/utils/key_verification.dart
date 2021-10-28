@@ -152,9 +152,9 @@ class KeyVerification {
 
   List<String> get knownVerificationMethods {
     final methods = <String>[];
-    if (client.verificationMethods?.contains(KeyVerificationMethod.numbers) ==
+    if (client.verificationMethods.contains(KeyVerificationMethod.numbers) ==
             true ||
-        client.verificationMethods?.contains(KeyVerificationMethod.emoji) ==
+        client.verificationMethods.contains(KeyVerificationMethod.emoji) ==
             true) {
       methods.add('m.sas.v1');
     }
@@ -358,10 +358,8 @@ class KeyVerification {
       if (_nextAction == 'request') {
         sendStart();
       } else if (_nextAction == 'done') {
-        if (_verifiedDevices != null) {
-          // and now let's sign them all in the background
-          encryption.crossSigning.sign(_verifiedDevices);
-        }
+        // and now let's sign them all in the background
+        encryption.crossSigning.sign(_verifiedDevices);
         setState(KeyVerificationState.done);
       }
     };
@@ -532,8 +530,7 @@ class KeyVerification {
   }
 
   Future<bool> verifyActivity() async {
-    if (lastActivity != null &&
-        lastActivity.add(Duration(minutes: 10)).isAfter(DateTime.now())) {
+    if (lastActivity.add(Duration(minutes: 10)).isAfter(DateTime.now())) {
       lastActivity = DateTime.now();
       return true;
     }
@@ -675,12 +672,12 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   List<String> get knownAuthentificationTypes {
     final types = <String>[];
     if (request.client.verificationMethods
-            ?.contains(KeyVerificationMethod.emoji) ==
+            .contains(KeyVerificationMethod.emoji) ==
         true) {
       types.add('emoji');
     }
     if (request.client.verificationMethods
-            ?.contains(KeyVerificationMethod.numbers) ==
+            .contains(KeyVerificationMethod.numbers) ==
         true) {
       types.add('decimal');
     }

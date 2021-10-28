@@ -409,7 +409,7 @@ void main() {
           client.encryption!.keyManager
               .getInboundGroupSession(roomId, sessionId, senderKey)
               ?.forwardingCurve25519KeyChain
-              ?.length,
+              .length,
           1);
 
       // not set one with a higher first known index
@@ -435,7 +435,7 @@ void main() {
           client.encryption!.keyManager
               .getInboundGroupSession(roomId, sessionId, senderKey)
               ?.forwardingCurve25519KeyChain
-              ?.length,
+              .length,
           1);
 
       // set one with a lower first known index
@@ -461,7 +461,7 @@ void main() {
           client.encryption!.keyManager
               .getInboundGroupSession(roomId, sessionId, senderKey)
               ?.forwardingCurve25519KeyChain
-              ?.length,
+              .length,
           1);
 
       // not set one with a longer forwarding chain
@@ -487,7 +487,7 @@ void main() {
           client.encryption!.keyManager
               .getInboundGroupSession(roomId, sessionId, senderKey)
               ?.forwardingCurve25519KeyChain
-              ?.length,
+              .length,
           1);
 
       // set one with a shorter forwarding chain
@@ -513,7 +513,7 @@ void main() {
           client.encryption!.keyManager
               .getInboundGroupSession(roomId, sessionId, senderKey)
               ?.forwardingCurve25519KeyChain
-              ?.length,
+              .length,
           0);
 
       // test that it decrypted the last event

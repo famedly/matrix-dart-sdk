@@ -239,13 +239,13 @@ class Room {
   /// Empty chats will become the localized version of 'Empty Chat'.
   /// This method requires a localization class which implements [MatrixLocalizations]
   String getLocalizedDisplayname(MatrixLocalizations i18n) {
-    if ((name?.isEmpty ?? true) &&
-        (canonicalAlias?.isEmpty ?? true) &&
+    if (name.isEmpty &&
+        canonicalAlias.isEmpty &&
         !isDirectChat &&
         (summary.mHeroes != null && summary.mHeroes?.isNotEmpty == true)) {
       return i18n.groupWith(displayname);
     }
-    if (displayname?.isNotEmpty ?? false) {
+    if (displayname.isNotEmpty) {
       return displayname;
     }
     return i18n.emptyChat;
@@ -356,9 +356,8 @@ class Room {
       states.forEach((final String key, final entry) {
         final state = entry[''];
         if (state == null) return;
-        if (state.originServerTs != null &&
-            state.originServerTs.millisecondsSinceEpoch >
-                lastTime.millisecondsSinceEpoch) {
+        if (state.originServerTs.millisecondsSinceEpoch >
+            lastTime.millisecondsSinceEpoch) {
           lastTime = state.originServerTs;
           lastEvent = state;
         }
@@ -405,9 +404,9 @@ class Room {
   /// Calculates the displayname. First checks if there is a name, then checks for a canonical alias and
   /// then generates a name from the heroes.
   String get displayname {
-    if (name != null && name.isNotEmpty) return name;
+    if (name.isNotEmpty) return name;
 
-    final canonicalAlias = this.canonicalAlias?.localpart;
+    final canonicalAlias = this.canonicalAlias.localpart;
     if (canonicalAlias != null && canonicalAlias.isNotEmpty) {
       return canonicalAlias;
     }
@@ -529,7 +528,7 @@ class Room {
       content,
     );
     final lastEvent = this.lastEvent;
-    if (unread == false && lastEvent != null) {
+    if (!unread && lastEvent != null) {
       await setReadMarker(
         lastEvent.eventId,
         mRead: lastEvent.eventId,
@@ -1188,16 +1187,6 @@ class Room {
     bool ignoreErrors = false,
     bool requestProfile = true,
   }) async {
-    // TODO: Why is this bug happening at all?
-    if (mxID == null) {
-      // Show a warning but first generate a stacktrace.
-      try {
-        throw Exception();
-      } catch (e, s) {
-        Logs().w('requestUser has been called with a null mxID', e, s);
-      }
-      return null;
-    }
     final stateUser = getState(EventTypes.RoomMember, mxID);
     if (stateUser != null) {
       return stateUser.asUser;
@@ -1500,7 +1489,7 @@ class Room {
   /// intended for any member of the room other than the sender of the event.
   /// [party_id] The party ID for call, Can be set to client.deviceId.
   Future<String?> inviteToCall(
-      String callId, int lifetime, String party_id, String invitee, String sdp,
+      String callId, int lifetime, String party_id, String? invitee, String sdp,
       {String type = 'offer',
       String version = voipProtoVersion,
       String? txid,
@@ -1678,7 +1667,8 @@ class Room {
   /// [callId] The ID of the call this event relates to.
   /// [version] is the version of the VoIP specification this message adheres to. This specification is version 1.
   /// [party_id] The party ID for call, Can be set to client.deviceId.
-  Future<String?> hangupCall(String callId, String party_id, String hangupCause,
+  Future<String?> hangupCall(
+      String callId, String party_id, String? hangupCause,
       {String version = voipProtoVersion, String? txid}) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
 
@@ -1855,7 +1845,7 @@ class Room {
   /// Returns the encryption algorithm. Currently only `m.megolm.v1.aes-sha2` is supported.
   /// Returns null if there is no encryption algorithm.
   String? get encryptionAlgorithm =>
-      getState(EventTypes.Encryption)?.parsedRoomEncryptionContent?.algorithm;
+      getState(EventTypes.Encryption)?.parsedRoomEncryptionContent.algorithm;
 
   /// Checks if this room is encrypted.
   bool get encrypted => encryptionAlgorithm != null;
@@ -1920,7 +1910,7 @@ class Room {
   /// Checks if the `m.room.create` state has a `type` key with the value
   /// `m.space`.
   bool get isSpace =>
-      getState(EventTypes.RoomCreate)?.content?.tryGet<String>('type') ==
+      getState(EventTypes.RoomCreate)?.content.tryGet<String>('type') ==
       RoomCreationTypes.mSpace; // TODO: Magic string!
 
   /// The parents of this room. Currently this SDK doesn't yet set the canonical
@@ -1930,9 +1920,9 @@ class Room {
   List<SpaceParent> get spaceParents =>
       states[EventTypes.spaceParent]
           ?.values
-          ?.map((state) => SpaceParent.fromState(state))
-          ?.where((child) => child.via?.isNotEmpty ?? false)
-          ?.toList() ??
+          .map((state) => SpaceParent.fromState(state))
+          .where((child) => child.via?.isNotEmpty ?? false)
+          .toList() ??
       [];
 
   /// List all children of this space. Children without a `via` domain will be
@@ -1943,9 +1933,9 @@ class Room {
       ? throw Exception('Room is not a space!')
       : (states[EventTypes.spaceChild]
               ?.values
-              ?.map((state) => SpaceChild.fromState(state))
-              ?.where((child) => child.via?.isNotEmpty ?? false)
-              ?.toList() ??
+              .map((state) => SpaceChild.fromState(state))
+              .where((child) => child.via?.isNotEmpty ?? false)
+              .toList() ??
           [])
     ..sort((a, b) => a.order.isEmpty || b.order.isEmpty
         ? b.order.compareTo(a.order)

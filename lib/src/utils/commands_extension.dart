@@ -199,7 +199,7 @@ extension CommandsClientExtension on Client {
     });
     addCommand('discardsession', (CommandArgs args) async {
       await encryption?.keyManager
-          ?.clearOrUseOutboundGroupSession(args.room.id, wipe: true);
+          .clearOrUseOutboundGroupSession(args.room.id, wipe: true);
       return '';
     });
   }

@@ -42,7 +42,7 @@ void main() {
       }
       if (olmEnabled) {
         final encryptedFile = await file.encrypt();
-        expect(encryptedFile != null, true);
+        expect(encryptedFile.data.isNotEmpty, true);
       }
     });
   });

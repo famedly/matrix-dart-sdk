@@ -84,8 +84,8 @@ class CallCapabilities {
         transferee: json['m.call.transferee'] as bool? ?? false,
       );
   Map<String, dynamic> toJson() => {
-        if (transferee != null) 'm.call.transferee': transferee,
-        if (dtmf != null) 'm.call.dtmf': dtmf,
+        'm.call.transferee': transferee,
+        'm.call.dtmf': dtmf,
       };
 }
 
@@ -118,8 +118,8 @@ class SDPStreamPurpose {
 
   Map<String, dynamic> toJson() => {
         'purpose': purpose,
-        if (audio_muted != null) 'audio_muted': audio_muted,
-        if (video_muted != null) 'video_muted': video_muted,
+        'audio_muted': audio_muted,
+        'video_muted': video_muted,
       };
 }
 

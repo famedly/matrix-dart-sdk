@@ -72,7 +72,7 @@ class User extends Event {
 
   /// The displayname of the user if the user has set one.
   String? get displayName =>
-      content?.tryGet<String>('displayname') ??
+      content.tryGet<String>('displayname') ??
       prevContent?.tryGet<String>('displayname');
 
   /// Returns the power level of this user.
@@ -112,8 +112,8 @@ class User extends Event {
     bool? formatLocalpart,
     bool? mxidLocalPartFallback,
   }) {
-    formatLocalpart ??= room?.client?.formatLocalpart ?? true;
-    mxidLocalPartFallback ??= room?.client?.mxidLocalPartFallback ?? true;
+    formatLocalpart ??= room?.client.formatLocalpart ?? true;
+    mxidLocalPartFallback ??= room?.client.mxidLocalPartFallback ?? true;
     final displayName = this.displayName;
     if (displayName != null && displayName.isNotEmpty) {
       return displayName;

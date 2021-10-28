@@ -187,10 +187,7 @@ class Timeline {
     }
     int i;
     for (i = 0; i < events.length; i++) {
-      final searchHaystack = <String>{};
-      if (events[i].eventId != null) {
-        searchHaystack.add(events[i].eventId);
-      }
+      final searchHaystack = <String>{events[i].eventId};
 
       final txnid = events[i].unsigned?['transaction_id'];
       if (txnid != null) {

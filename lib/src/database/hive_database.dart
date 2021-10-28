@@ -518,8 +518,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
           // We always need the member event for ourself
           final membersToPostload = <String>{if (userID != null) userID};
           // If the room is a direct chat, those IDs should be there too
-          if (room.isDirectChat)
+          if (room.isDirectChat) {
             membersToPostload.add(room.directChatMatrixID!);
+          }
           // the lastEvent message preview might have an author we need to fetch, if it is a group chat
           final lastEvent = room.getState(EventTypes.Message);
           if (lastEvent != null && !room.isDirectChat) {
@@ -910,13 +911,12 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         return;
       }
 
-      final status =
-          newStatus.isError || prevEvent == null || prevEvent.status != null
-              ? newStatus
-              : latestEventStatus(
-                  prevEvent.status,
-                  newStatus,
-                );
+      final status = newStatus.isError || prevEvent == null
+          ? newStatus
+          : latestEventStatus(
+              prevEvent.status,
+              newStatus,
+            );
 
       // Add the status and the sort order to the content so it get stored
       eventUpdate.content['unsigned'] ??= <String, dynamic>{};
