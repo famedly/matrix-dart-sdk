@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020 Famedly GmbH
@@ -58,8 +57,8 @@ void main() {
       if (!olmEnabled) return;
 
       final matrix = await getClient();
-      final requestRoom = matrix.getRoomById('!726s6s6q:example.com');
-      await matrix.encryption.keyManager.request(
+      final requestRoom = matrix.getRoomById('!726s6s6q:example.com')!;
+      await matrix.encryption!.keyManager.request(
           requestRoom, 'sessionId', validSenderKey,
           tryOnlineBackup: false);
       var foundEvent = false;
@@ -89,12 +88,12 @@ void main() {
       matrix.setUserId('@alice:example.com'); // we need to pretend to be alice
       FakeMatrixApi.calledEndpoints.clear();
       await matrix
-          .userDeviceKeys['@alice:example.com'].deviceKeys['OTHERDEVICE']
+          .userDeviceKeys['@alice:example.com']!.deviceKeys['OTHERDEVICE']!
           .setBlocked(false);
       await matrix
-          .userDeviceKeys['@alice:example.com'].deviceKeys['OTHERDEVICE']
+          .userDeviceKeys['@alice:example.com']!.deviceKeys['OTHERDEVICE']!
           .setVerified(true);
-      final session = await matrix.encryption.keyManager
+      final session = await matrix.encryption!.keyManager
           .loadInboundGroupSession(
               '!726s6s6q:example.com', validSessionId, validSenderKey);
       // test a successful share
@@ -112,7 +111,7 @@ void main() {
             'request_id': 'request_1',
             'requesting_device_id': 'OTHERDEVICE',
           });
-      await matrix.encryption.keyManager.handleToDeviceEvent(event);
+      await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       Logs().i(FakeMatrixApi.calledEndpoints.keys.toString());
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
@@ -121,9 +120,9 @@ void main() {
 
       // test a successful foreign share
       FakeMatrixApi.calledEndpoints.clear();
-      session.allowedAtIndex['@test:fakeServer.notExisting'] = <String, int>{
-        matrix.userDeviceKeys['@test:fakeServer.notExisting']
-            .deviceKeys['OTHERDEVICE'].curve25519Key: 0,
+      session!.allowedAtIndex['@test:fakeServer.notExisting'] = <String, int>{
+        matrix.userDeviceKeys['@test:fakeServer.notExisting']!
+            .deviceKeys['OTHERDEVICE']!.curve25519Key!: 0,
       };
       event = ToDeviceEvent(
           sender: '@test:fakeServer.notExisting',
@@ -139,7 +138,7 @@ void main() {
             'request_id': 'request_a1',
             'requesting_device_id': 'OTHERDEVICE',
           });
-      await matrix.encryption.keyManager.handleToDeviceEvent(event);
+      await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       Logs().i(FakeMatrixApi.calledEndpoints.keys.toString());
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
@@ -165,7 +164,7 @@ void main() {
             'request_id': 'request_a2',
             'requesting_device_id': 'OTHERDEVICE',
           });
-      await matrix.encryption.keyManager.handleToDeviceEvent(event);
+      await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       Logs().i(FakeMatrixApi.calledEndpoints.keys.toString());
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
@@ -182,7 +181,7 @@ void main() {
             'request_id': 'request_2',
             'requesting_device_id': 'OTHERDEVICE',
           });
-      await matrix.encryption.keyManager.handleToDeviceEvent(event);
+      await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
@@ -204,7 +203,7 @@ void main() {
             'request_id': 'request_3',
             'requesting_device_id': 'JLAFKJWSCS',
           });
-      await matrix.encryption.keyManager.handleToDeviceEvent(event);
+      await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
@@ -226,7 +225,7 @@ void main() {
             'request_id': 'request_4',
             'requesting_device_id': 'blubb',
           });
-      await matrix.encryption.keyManager.handleToDeviceEvent(event);
+      await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
@@ -248,7 +247,7 @@ void main() {
             'request_id': 'request_5',
             'requesting_device_id': 'OTHERDEVICE',
           });
-      await matrix.encryption.keyManager.handleToDeviceEvent(event);
+      await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
@@ -270,7 +269,7 @@ void main() {
             'request_id': 'request_6',
             'requesting_device_id': 'OTHERDEVICE',
           });
-      await matrix.encryption.keyManager.handleToDeviceEvent(event);
+      await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
@@ -282,17 +281,17 @@ void main() {
     test('Receive shared keys', () async {
       if (!olmEnabled) return;
       final matrix = await getClient();
-      final requestRoom = matrix.getRoomById('!726s6s6q:example.com');
-      await matrix.encryption.keyManager.request(
+      final requestRoom = matrix.getRoomById('!726s6s6q:example.com')!;
+      await matrix.encryption!.keyManager.request(
           requestRoom, validSessionId, validSenderKey,
           tryOnlineBackup: false);
 
-      final session = await matrix.encryption.keyManager
+      final session = (await matrix.encryption!.keyManager
           .loadInboundGroupSession(
-              requestRoom.id, validSessionId, validSenderKey);
-      final sessionKey = session.inboundGroupSession
-          .export_session(session.inboundGroupSession.first_known_index());
-      matrix.encryption.keyManager.clearInboundGroupSessions();
+              requestRoom.id, validSessionId, validSenderKey))!;
+      final sessionKey = session.inboundGroupSession!
+          .export_session(session.inboundGroupSession!.first_known_index());
+      matrix.encryption!.keyManager.clearInboundGroupSessions();
       var event = ToDeviceEvent(
           sender: '@alice:example.com',
           type: 'm.forwarded_room_key',
@@ -303,13 +302,15 @@ void main() {
             'session_key': sessionKey,
             'sender_key': validSenderKey,
             'forwarding_curve25519_key_chain': [],
+            'sender_claimed_ed25519_key':
+                'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
           },
           encryptedContent: {
             'sender_key': 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
           });
-      await matrix.encryption.keyManager.handleToDeviceEvent(event);
+      await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          matrix.encryption.keyManager.getInboundGroupSession(
+          matrix.encryption!.keyManager.getInboundGroupSession(
                   requestRoom.id, validSessionId, validSenderKey) !=
               null,
           true);
@@ -317,7 +318,7 @@ void main() {
       // now test a few invalid scenarios
 
       // request not found
-      matrix.encryption.keyManager.clearInboundGroupSessions();
+      matrix.encryption!.keyManager.clearInboundGroupSessions();
       event = ToDeviceEvent(
           sender: '@alice:example.com',
           type: 'm.forwarded_room_key',
@@ -328,22 +329,24 @@ void main() {
             'session_key': sessionKey,
             'sender_key': validSenderKey,
             'forwarding_curve25519_key_chain': [],
+            'sender_claimed_ed25519_key':
+                'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
           },
           encryptedContent: {
             'sender_key': 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
           });
-      await matrix.encryption.keyManager.handleToDeviceEvent(event);
+      await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          matrix.encryption.keyManager.getInboundGroupSession(
+          matrix.encryption!.keyManager.getInboundGroupSession(
                   requestRoom.id, validSessionId, validSenderKey) !=
               null,
           false);
 
       // unknown device
-      await matrix.encryption.keyManager.request(
+      await matrix.encryption!.keyManager.request(
           requestRoom, validSessionId, validSenderKey,
           tryOnlineBackup: false);
-      matrix.encryption.keyManager.clearInboundGroupSessions();
+      matrix.encryption!.keyManager.clearInboundGroupSessions();
       event = ToDeviceEvent(
           sender: '@alice:example.com',
           type: 'm.forwarded_room_key',
@@ -354,22 +357,24 @@ void main() {
             'session_key': sessionKey,
             'sender_key': validSenderKey,
             'forwarding_curve25519_key_chain': [],
+            'sender_claimed_ed25519_key':
+                'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
           },
           encryptedContent: {
             'sender_key': 'invalid',
           });
-      await matrix.encryption.keyManager.handleToDeviceEvent(event);
+      await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          matrix.encryption.keyManager.getInboundGroupSession(
+          matrix.encryption!.keyManager.getInboundGroupSession(
                   requestRoom.id, validSessionId, validSenderKey) !=
               null,
           false);
 
       // no encrypted content
-      await matrix.encryption.keyManager.request(
+      await matrix.encryption!.keyManager.request(
           requestRoom, validSessionId, validSenderKey,
           tryOnlineBackup: false);
-      matrix.encryption.keyManager.clearInboundGroupSessions();
+      matrix.encryption!.keyManager.clearInboundGroupSessions();
       event = ToDeviceEvent(
           sender: '@alice:example.com',
           type: 'm.forwarded_room_key',
@@ -380,10 +385,12 @@ void main() {
             'session_key': sessionKey,
             'sender_key': validSenderKey,
             'forwarding_curve25519_key_chain': [],
+            'sender_claimed_ed25519_key':
+                'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
           });
-      await matrix.encryption.keyManager.handleToDeviceEvent(event);
+      await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          matrix.encryption.keyManager.getInboundGroupSession(
+          matrix.encryption!.keyManager.getInboundGroupSession(
                   requestRoom.id, validSessionId, validSenderKey) !=
               null,
           false);

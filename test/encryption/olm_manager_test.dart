@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020, 2021 Famedly GmbH
@@ -32,7 +31,7 @@ void main() {
     Logs().level = Level.error;
     var olmEnabled = true;
 
-    Client client;
+    late Client client;
 
     test('setupClient', () async {
       try {
@@ -53,37 +52,37 @@ void main() {
       final payload = <String, dynamic>{
         'fox': 'floof',
       };
-      final signedPayload = client.encryption.olmManager.signJson(payload);
+      final signedPayload = client.encryption!.olmManager.signJson(payload);
       expect(
           signedPayload.checkJsonSignature(
-              client.fingerprintKey, client.userID, client.deviceID),
+              client.fingerprintKey, client.userID!, client.deviceID!),
           true);
     });
 
     test('uploadKeys', () async {
       if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
-      final res =
-          await client.encryption.olmManager.uploadKeys(uploadDeviceKeys: true);
+      final res = await client.encryption!.olmManager
+          .uploadKeys(uploadDeviceKeys: true);
       expect(res, true);
       var sent = json.decode(
-          FakeMatrixApi.calledEndpoints['/client/r0/keys/upload'].first);
+          FakeMatrixApi.calledEndpoints['/client/r0/keys/upload']!.first);
       expect(sent['device_keys'] != null, true);
       expect(sent['one_time_keys'] != null, true);
       expect(sent['one_time_keys'].keys.length, 66);
       expect(sent['fallback_keys'] != null, true);
       expect(sent['fallback_keys'].keys.length, 1);
       FakeMatrixApi.calledEndpoints.clear();
-      await client.encryption.olmManager.uploadKeys();
+      await client.encryption!.olmManager.uploadKeys();
       sent = json.decode(
-          FakeMatrixApi.calledEndpoints['/client/r0/keys/upload'].first);
+          FakeMatrixApi.calledEndpoints['/client/r0/keys/upload']!.first);
       expect(sent['device_keys'] != null, false);
       expect(sent['fallback_keys'].keys.length, 1);
       FakeMatrixApi.calledEndpoints.clear();
-      await client.encryption.olmManager
+      await client.encryption!.olmManager
           .uploadKeys(oldKeyCount: 20, unusedFallbackKey: true);
       sent = json.decode(
-          FakeMatrixApi.calledEndpoints['/client/r0/keys/upload'].first);
+          FakeMatrixApi.calledEndpoints['/client/r0/keys/upload']!.first);
       expect(sent['one_time_keys'].keys.length, 46);
       expect(sent['fallback_keys'].keys.length, 0);
     });
@@ -91,7 +90,7 @@ void main() {
     test('handleDeviceOneTimeKeysCount', () async {
       if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
-      client.encryption.olmManager
+      client.encryption!.olmManager
           .handleDeviceOneTimeKeysCount({'signed_curve25519': 20}, null);
       await Future.delayed(Duration(milliseconds: 50));
       expect(
@@ -99,7 +98,7 @@ void main() {
           true);
 
       FakeMatrixApi.calledEndpoints.clear();
-      client.encryption.olmManager
+      client.encryption!.olmManager
           .handleDeviceOneTimeKeysCount({'signed_curve25519': 70}, null);
       await Future.delayed(Duration(milliseconds: 50));
       expect(
@@ -107,7 +106,7 @@ void main() {
           false);
 
       FakeMatrixApi.calledEndpoints.clear();
-      client.encryption.olmManager.handleDeviceOneTimeKeysCount(null, []);
+      client.encryption!.olmManager.handleDeviceOneTimeKeysCount(null, []);
       await Future.delayed(Duration(milliseconds: 50));
       expect(
           FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'),
@@ -115,7 +114,7 @@ void main() {
 
       // this will upload keys because we assume the key count is 0, if the server doesn't send one
       FakeMatrixApi.calledEndpoints.clear();
-      client.encryption.olmManager
+      client.encryption!.olmManager
           .handleDeviceOneTimeKeysCount(null, ['signed_curve25519']);
       await Future.delayed(Duration(milliseconds: 50));
       expect(
@@ -125,30 +124,31 @@ void main() {
 
     test('restoreOlmSession', () async {
       if (!olmEnabled) return;
-      client.encryption.olmManager.olmSessions.clear();
-      await client.encryption.olmManager
-          .restoreOlmSession(client.userID, client.identityKey);
-      expect(client.encryption.olmManager.olmSessions.length, 1);
+      client.encryption!.olmManager.olmSessions.clear();
+      await client.encryption!.olmManager
+          .restoreOlmSession(client.userID!, client.identityKey);
+      expect(client.encryption!.olmManager.olmSessions.length, 1);
 
-      client.encryption.olmManager.olmSessions.clear();
-      await client.encryption.olmManager
-          .restoreOlmSession(client.userID, 'invalid');
-      expect(client.encryption.olmManager.olmSessions.length, 0);
+      client.encryption!.olmManager.olmSessions.clear();
+      await client.encryption!.olmManager
+          .restoreOlmSession(client.userID!, 'invalid');
+      expect(client.encryption!.olmManager.olmSessions.length, 0);
 
-      client.encryption.olmManager.olmSessions.clear();
-      await client.encryption.olmManager
+      client.encryption!.olmManager.olmSessions.clear();
+      await client.encryption!.olmManager
           .restoreOlmSession('invalid', client.identityKey);
-      expect(client.encryption.olmManager.olmSessions.length, 0);
+      expect(client.encryption!.olmManager.olmSessions.length, 0);
     });
 
     test('startOutgoingOlmSessions', () async {
       if (!olmEnabled) return;
       // start an olm session.....with ourself!
-      client.encryption.olmManager.olmSessions.clear();
-      await client.encryption.olmManager.startOutgoingOlmSessions(
-          [client.userDeviceKeys[client.userID].deviceKeys[client.deviceID]]);
+      client.encryption!.olmManager.olmSessions.clear();
+      await client.encryption!.olmManager.startOutgoingOlmSessions([
+        client.userDeviceKeys[client.userID!]!.deviceKeys[client.deviceID]!
+      ]);
       expect(
-          client.encryption.olmManager.olmSessions
+          client.encryption!.olmManager.olmSessions
               .containsKey(client.identityKey),
           true);
     });
@@ -159,7 +159,7 @@ void main() {
       final deviceId = 'JLAFKJWSCS';
       final senderKey = 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8';
       FakeMatrixApi.calledEndpoints.clear();
-      await client.database.setLastSentMessageUserDeviceKey(
+      await client.database!.setLastSentMessageUserDeviceKey(
           json.encode({
             'type': 'm.foxies',
             'content': {
@@ -176,7 +176,7 @@ void main() {
           'sender_key': senderKey,
         },
       );
-      await client.encryption.olmManager.handleToDeviceEvent(event);
+      await client.encryption!.olmManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
@@ -186,7 +186,7 @@ void main() {
 
       // not encrypted
       FakeMatrixApi.calledEndpoints.clear();
-      await client.database.setLastSentMessageUserDeviceKey(
+      await client.database!.setLastSentMessageUserDeviceKey(
           json.encode({
             'type': 'm.foxies',
             'content': {
@@ -201,7 +201,7 @@ void main() {
         content: {},
         encryptedContent: null,
       );
-      await client.encryption.olmManager.handleToDeviceEvent(event);
+      await client.encryption!.olmManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
@@ -209,7 +209,7 @@ void main() {
 
       // device not found
       FakeMatrixApi.calledEndpoints.clear();
-      await client.database.setLastSentMessageUserDeviceKey(
+      await client.database!.setLastSentMessageUserDeviceKey(
           json.encode({
             'type': 'm.foxies',
             'content': {
@@ -226,7 +226,7 @@ void main() {
           'sender_key': 'invalid',
         },
       );
-      await client.encryption.olmManager.handleToDeviceEvent(event);
+      await client.encryption!.olmManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
@@ -234,7 +234,7 @@ void main() {
 
       // don't replay if the last event is m.dummy itself
       FakeMatrixApi.calledEndpoints.clear();
-      await client.database.setLastSentMessageUserDeviceKey(
+      await client.database!.setLastSentMessageUserDeviceKey(
           json.encode({
             'type': 'm.dummy',
             'content': {},
@@ -249,7 +249,7 @@ void main() {
           'sender_key': senderKey,
         },
       );
-      await client.encryption.olmManager.handleToDeviceEvent(event);
+      await client.encryption!.olmManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),

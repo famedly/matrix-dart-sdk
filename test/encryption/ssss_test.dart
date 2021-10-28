@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020 Famedly GmbH
@@ -42,7 +41,7 @@ class MockSSSS extends SSSS {
 
   bool requestedSecrets = false;
   @override
-  Future<void> maybeRequestAll([List<DeviceKeys> devices]) async {
+  Future<void> maybeRequestAll([List<DeviceKeys>? devices]) async {
     requestedSecrets = true;
     final handle = open();
     await handle.unlock(recoveryKey: ssssKey);
@@ -55,7 +54,7 @@ void main() {
     Logs().level = Level.error;
     var olmEnabled = true;
 
-    Client client;
+    late Client client;
 
     test('setupClient', () async {
       try {
@@ -73,7 +72,7 @@ void main() {
 
     test('basic things', () async {
       if (!olmEnabled) return;
-      expect(client.encryption.ssss.defaultKeyId,
+      expect(client.encryption!.ssss.defaultKeyId,
           '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3');
     });
 
@@ -88,7 +87,7 @@ void main() {
 
     test('store', () async {
       if (!olmEnabled) return;
-      final handle = client.encryption.ssss.open();
+      final handle = client.encryption!.ssss.open();
       var failed = false;
       try {
         await handle.unlock(passphrase: 'invalid');
@@ -114,7 +113,7 @@ void main() {
       // account_data for this test
       final content = FakeMatrixApi
           .calledEndpoints[
-              '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/best%20animal']
+              '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/best%20animal']!
           .first;
       client.accountData['best animal'] = BasicEvent.fromJson({
         'type': 'best animal',
@@ -130,77 +129,78 @@ void main() {
       final decoded = SSSS.decodeRecoveryKey(encoded);
       expect(key, decoded);
 
-      final handle = client.encryption.ssss.open();
+      final handle = client.encryption!.ssss.open();
       await handle.unlock(recoveryKey: ssssKey);
       expect(handle.recoveryKey, ssssKey);
     });
 
     test('cache', () async {
       if (!olmEnabled) return;
-      await client.encryption.ssss.clearCache();
+      await client.encryption!.ssss.clearCache();
       final handle =
-          client.encryption.ssss.open(EventTypes.CrossSigningSelfSigning);
+          client.encryption!.ssss.open(EventTypes.CrossSigningSelfSigning);
       await handle.unlock(recoveryKey: ssssKey, postUnlock: false);
       expect(
-          (await client.encryption.ssss
+          (await client.encryption!.ssss
                   .getCached(EventTypes.CrossSigningSelfSigning)) !=
               null,
           false);
       expect(
-          (await client.encryption.ssss
+          (await client.encryption!.ssss
                   .getCached(EventTypes.CrossSigningUserSigning)) !=
               null,
           false);
       await handle.getStored(EventTypes.CrossSigningSelfSigning);
       expect(
-          (await client.encryption.ssss
+          (await client.encryption!.ssss
                   .getCached(EventTypes.CrossSigningSelfSigning)) !=
               null,
           true);
       await handle.maybeCacheAll();
       expect(
-          (await client.encryption.ssss
+          (await client.encryption!.ssss
                   .getCached(EventTypes.CrossSigningUserSigning)) !=
               null,
           true);
       expect(
-          (await client.encryption.ssss.getCached(EventTypes.MegolmBackup)) !=
+          (await client.encryption!.ssss.getCached(EventTypes.MegolmBackup)) !=
               null,
           true);
     });
 
     test('postUnlock', () async {
       if (!olmEnabled) return;
-      await client.encryption.ssss.clearCache();
-      client.userDeviceKeys[client.userID].masterKey.setDirectVerified(false);
+      await client.encryption!.ssss.clearCache();
+      client.userDeviceKeys[client.userID!]!.masterKey!
+          .setDirectVerified(false);
       final handle =
-          client.encryption.ssss.open(EventTypes.CrossSigningSelfSigning);
+          client.encryption!.ssss.open(EventTypes.CrossSigningSelfSigning);
       await handle.unlock(recoveryKey: ssssKey);
       expect(
-          (await client.encryption.ssss
+          (await client.encryption!.ssss
                   .getCached(EventTypes.CrossSigningSelfSigning)) !=
               null,
           true);
       expect(
-          (await client.encryption.ssss
+          (await client.encryption!.ssss
                   .getCached(EventTypes.CrossSigningUserSigning)) !=
               null,
           true);
       expect(
-          (await client.encryption.ssss.getCached(EventTypes.MegolmBackup)) !=
+          (await client.encryption!.ssss.getCached(EventTypes.MegolmBackup)) !=
               null,
           true);
-      expect(
-          client.userDeviceKeys[client.userID].masterKey.directVerified, true);
+      expect(client.userDeviceKeys[client.userID!]!.masterKey!.directVerified,
+          true);
     });
 
     test('make share requests', () async {
       if (!olmEnabled) return;
       final key =
-          client.userDeviceKeys[client.userID].deviceKeys['OTHERDEVICE'];
+          client.userDeviceKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
       key.setDirectVerified(true);
       FakeMatrixApi.calledEndpoints.clear();
-      await client.encryption.ssss.request('some.type', [key]);
+      await client.encryption!.ssss.request('some.type', [key]);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
@@ -210,7 +210,7 @@ void main() {
     test('answer to share requests', () async {
       if (!olmEnabled) return;
       var event = ToDeviceEvent(
-        sender: client.userID,
+        sender: client.userID!,
         type: 'm.secret.request',
         content: {
           'action': 'request',
@@ -220,7 +220,7 @@ void main() {
         },
       );
       FakeMatrixApi.calledEndpoints.clear();
-      await client.encryption.ssss.handleToDeviceEvent(event);
+      await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
@@ -240,7 +240,7 @@ void main() {
         },
       );
       FakeMatrixApi.calledEndpoints.clear();
-      await client.encryption.ssss.handleToDeviceEvent(event);
+      await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
@@ -248,7 +248,7 @@ void main() {
 
       // secret not cached
       event = ToDeviceEvent(
-        sender: client.userID,
+        sender: client.userID!,
         type: 'm.secret.request',
         content: {
           'action': 'request',
@@ -258,7 +258,7 @@ void main() {
         },
       );
       FakeMatrixApi.calledEndpoints.clear();
-      await client.encryption.ssss.handleToDeviceEvent(event);
+      await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
@@ -266,7 +266,7 @@ void main() {
 
       // is a cancelation
       event = ToDeviceEvent(
-        sender: client.userID,
+        sender: client.userID!,
         type: 'm.secret.request',
         content: {
           'action': 'request_cancellation',
@@ -276,7 +276,7 @@ void main() {
         },
       );
       FakeMatrixApi.calledEndpoints.clear();
-      await client.encryption.ssss.handleToDeviceEvent(event);
+      await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
@@ -284,11 +284,12 @@ void main() {
 
       // device not verified
       final key =
-          client.userDeviceKeys[client.userID].deviceKeys['OTHERDEVICE'];
+          client.userDeviceKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
       key.setDirectVerified(false);
-      client.userDeviceKeys[client.userID].masterKey.setDirectVerified(false);
+      client.userDeviceKeys[client.userID!]!.masterKey!
+          .setDirectVerified(false);
       event = ToDeviceEvent(
-        sender: client.userID,
+        sender: client.userID!,
         type: 'm.secret.request',
         content: {
           'action': 'request',
@@ -298,7 +299,7 @@ void main() {
         },
       );
       FakeMatrixApi.calledEndpoints.clear();
-      await client.encryption.ssss.handleToDeviceEvent(event);
+      await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
               (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
@@ -309,28 +310,28 @@ void main() {
     test('receive share requests', () async {
       if (!olmEnabled) return;
       final key =
-          client.userDeviceKeys[client.userID].deviceKeys['OTHERDEVICE'];
+          client.userDeviceKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
       key.setDirectVerified(true);
       final handle =
-          client.encryption.ssss.open(EventTypes.CrossSigningSelfSigning);
+          client.encryption!.ssss.open(EventTypes.CrossSigningSelfSigning);
       await handle.unlock(recoveryKey: ssssKey);
 
-      await client.encryption.ssss.clearCache();
-      client.encryption.ssss.pendingShareRequests.clear();
-      await client.encryption.ssss.request('best animal', [key]);
+      await client.encryption!.ssss.clearCache();
+      client.encryption!.ssss.pendingShareRequests.clear();
+      await client.encryption!.ssss.request('best animal', [key]);
       var event = ToDeviceEvent(
-        sender: client.userID,
+        sender: client.userID!,
         type: 'm.secret.send',
         content: {
-          'request_id': client.encryption.ssss.pendingShareRequests.keys.first,
+          'request_id': client.encryption!.ssss.pendingShareRequests.keys.first,
           'secret': 'foxies!',
         },
         encryptedContent: {
           'sender_key': key.curve25519Key,
         },
       );
-      await client.encryption.ssss.handleToDeviceEvent(event);
-      expect(await client.encryption.ssss.getCached('best animal'), 'foxies!');
+      await client.encryption!.ssss.handleToDeviceEvent(event);
+      expect(await client.encryption!.ssss.getCached('best animal'), 'foxies!');
 
       // test the different validators
       for (final type in [
@@ -339,48 +340,48 @@ void main() {
         EventTypes.MegolmBackup
       ]) {
         final secret = await handle.getStored(type);
-        await client.encryption.ssss.clearCache();
-        client.encryption.ssss.pendingShareRequests.clear();
-        await client.encryption.ssss.request(type, [key]);
+        await client.encryption!.ssss.clearCache();
+        client.encryption!.ssss.pendingShareRequests.clear();
+        await client.encryption!.ssss.request(type, [key]);
         event = ToDeviceEvent(
-          sender: client.userID,
+          sender: client.userID!,
           type: 'm.secret.send',
           content: {
             'request_id':
-                client.encryption.ssss.pendingShareRequests.keys.first,
+                client.encryption!.ssss.pendingShareRequests.keys.first,
             'secret': secret,
           },
           encryptedContent: {
             'sender_key': key.curve25519Key,
           },
         );
-        await client.encryption.ssss.handleToDeviceEvent(event);
-        expect(await client.encryption.ssss.getCached(type), secret);
+        await client.encryption!.ssss.handleToDeviceEvent(event);
+        expect(await client.encryption!.ssss.getCached(type), secret);
       }
 
       // test different fail scenarios
 
       // not encrypted
-      await client.encryption.ssss.clearCache();
-      client.encryption.ssss.pendingShareRequests.clear();
-      await client.encryption.ssss.request('best animal', [key]);
+      await client.encryption!.ssss.clearCache();
+      client.encryption!.ssss.pendingShareRequests.clear();
+      await client.encryption!.ssss.request('best animal', [key]);
       event = ToDeviceEvent(
-        sender: client.userID,
+        sender: client.userID!,
         type: 'm.secret.send',
         content: {
-          'request_id': client.encryption.ssss.pendingShareRequests.keys.first,
+          'request_id': client.encryption!.ssss.pendingShareRequests.keys.first,
           'secret': 'foxies!',
         },
       );
-      await client.encryption.ssss.handleToDeviceEvent(event);
-      expect(await client.encryption.ssss.getCached('best animal'), null);
+      await client.encryption!.ssss.handleToDeviceEvent(event);
+      expect(await client.encryption!.ssss.getCached('best animal'), null);
 
       // unknown request id
-      await client.encryption.ssss.clearCache();
-      client.encryption.ssss.pendingShareRequests.clear();
-      await client.encryption.ssss.request('best animal', [key]);
+      await client.encryption!.ssss.clearCache();
+      client.encryption!.ssss.pendingShareRequests.clear();
+      await client.encryption!.ssss.request('best animal', [key]);
       event = ToDeviceEvent(
-        sender: client.userID,
+        sender: client.userID!,
         type: 'm.secret.send',
         content: {
           'request_id': 'invalid',
@@ -390,103 +391,103 @@ void main() {
           'sender_key': key.curve25519Key,
         },
       );
-      await client.encryption.ssss.handleToDeviceEvent(event);
-      expect(await client.encryption.ssss.getCached('best animal'), null);
+      await client.encryption!.ssss.handleToDeviceEvent(event);
+      expect(await client.encryption!.ssss.getCached('best animal'), null);
 
       // not from a device we sent the request to
-      await client.encryption.ssss.clearCache();
-      client.encryption.ssss.pendingShareRequests.clear();
-      await client.encryption.ssss.request('best animal', [key]);
+      await client.encryption!.ssss.clearCache();
+      client.encryption!.ssss.pendingShareRequests.clear();
+      await client.encryption!.ssss.request('best animal', [key]);
       event = ToDeviceEvent(
-        sender: client.userID,
+        sender: client.userID!,
         type: 'm.secret.send',
         content: {
-          'request_id': client.encryption.ssss.pendingShareRequests.keys.first,
+          'request_id': client.encryption!.ssss.pendingShareRequests.keys.first,
           'secret': 'foxies!',
         },
         encryptedContent: {
           'sender_key': 'invalid',
         },
       );
-      await client.encryption.ssss.handleToDeviceEvent(event);
-      expect(await client.encryption.ssss.getCached('best animal'), null);
+      await client.encryption!.ssss.handleToDeviceEvent(event);
+      expect(await client.encryption!.ssss.getCached('best animal'), null);
 
       // secret not a string
-      await client.encryption.ssss.clearCache();
-      client.encryption.ssss.pendingShareRequests.clear();
-      await client.encryption.ssss.request('best animal', [key]);
+      await client.encryption!.ssss.clearCache();
+      client.encryption!.ssss.pendingShareRequests.clear();
+      await client.encryption!.ssss.request('best animal', [key]);
       event = ToDeviceEvent(
-        sender: client.userID,
+        sender: client.userID!,
         type: 'm.secret.send',
         content: {
-          'request_id': client.encryption.ssss.pendingShareRequests.keys.first,
+          'request_id': client.encryption!.ssss.pendingShareRequests.keys.first,
           'secret': 42,
         },
         encryptedContent: {
           'sender_key': key.curve25519Key,
         },
       );
-      await client.encryption.ssss.handleToDeviceEvent(event);
-      expect(await client.encryption.ssss.getCached('best animal'), null);
+      await client.encryption!.ssss.handleToDeviceEvent(event);
+      expect(await client.encryption!.ssss.getCached('best animal'), null);
 
       // validator doesn't check out
-      await client.encryption.ssss.clearCache();
-      client.encryption.ssss.pendingShareRequests.clear();
-      await client.encryption.ssss.request(EventTypes.MegolmBackup, [key]);
+      await client.encryption!.ssss.clearCache();
+      client.encryption!.ssss.pendingShareRequests.clear();
+      await client.encryption!.ssss.request(EventTypes.MegolmBackup, [key]);
       event = ToDeviceEvent(
-        sender: client.userID,
+        sender: client.userID!,
         type: 'm.secret.send',
         content: {
-          'request_id': client.encryption.ssss.pendingShareRequests.keys.first,
+          'request_id': client.encryption!.ssss.pendingShareRequests.keys.first,
           'secret': 'foxies!',
         },
         encryptedContent: {
           'sender_key': key.curve25519Key,
         },
       );
-      await client.encryption.ssss.handleToDeviceEvent(event);
-      expect(await client.encryption.ssss.getCached(EventTypes.MegolmBackup),
+      await client.encryption!.ssss.handleToDeviceEvent(event);
+      expect(await client.encryption!.ssss.getCached(EventTypes.MegolmBackup),
           null);
     });
 
     test('request all', () async {
       if (!olmEnabled) return;
       final key =
-          client.userDeviceKeys[client.userID].deviceKeys['OTHERDEVICE'];
+          client.userDeviceKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
       key.setDirectVerified(true);
-      await client.encryption.ssss.clearCache();
-      client.encryption.ssss.pendingShareRequests.clear();
-      await client.encryption.ssss.maybeRequestAll([key]);
-      expect(client.encryption.ssss.pendingShareRequests.length, 3);
+      await client.encryption!.ssss.clearCache();
+      client.encryption!.ssss.pendingShareRequests.clear();
+      await client.encryption!.ssss.maybeRequestAll([key]);
+      expect(client.encryption!.ssss.pendingShareRequests.length, 3);
     });
 
     test('periodicallyRequestMissingCache', () async {
       if (!olmEnabled) return;
-      client.userDeviceKeys[client.userID].masterKey.setDirectVerified(true);
-      client.encryption.ssss = MockSSSS(client.encryption);
-      (client.encryption.ssss as MockSSSS).requestedSecrets = false;
-      await client.encryption.ssss.periodicallyRequestMissingCache();
-      expect((client.encryption.ssss as MockSSSS).requestedSecrets, true);
+      client.userDeviceKeys[client.userID!]!.masterKey!.setDirectVerified(true);
+      client.encryption!.ssss = MockSSSS(client.encryption!);
+      (client.encryption!.ssss as MockSSSS).requestedSecrets = false;
+      await client.encryption!.ssss.periodicallyRequestMissingCache();
+      expect((client.encryption!.ssss as MockSSSS).requestedSecrets, true);
       // it should only retry once every 15 min
-      (client.encryption.ssss as MockSSSS).requestedSecrets = false;
-      await client.encryption.ssss.periodicallyRequestMissingCache();
-      expect((client.encryption.ssss as MockSSSS).requestedSecrets, false);
+      (client.encryption!.ssss as MockSSSS).requestedSecrets = false;
+      await client.encryption!.ssss.periodicallyRequestMissingCache();
+      expect((client.encryption!.ssss as MockSSSS).requestedSecrets, false);
     });
 
     test('createKey', () async {
       if (!olmEnabled) return;
       // with passphrase
-      var newKey = await client.encryption.ssss.createKey('test');
-      expect(client.encryption.ssss.isKeyValid(newKey.keyId), true);
-      var testKey = client.encryption.ssss.open(newKey.keyId);
+      var newKey = await client.encryption!.ssss.createKey('test');
+      expect(client.encryption!.ssss.isKeyValid(newKey.keyId), true);
+      var testKey = client.encryption!.ssss.open(newKey.keyId);
       await testKey.unlock(passphrase: 'test');
-      await testKey.setPrivateKey(newKey.privateKey);
+      await testKey.setPrivateKey(newKey.privateKey!);
 
       // without passphrase
-      newKey = await client.encryption.ssss.createKey();
-      expect(client.encryption.ssss.isKeyValid(newKey.keyId), true);
-      testKey = client.encryption.ssss.open(newKey.keyId);
-      await testKey.setPrivateKey(newKey.privateKey);
+      newKey = await client.encryption!.ssss.createKey();
+      expect(client.encryption!.ssss.isKeyValid(newKey.keyId), true);
+      testKey = client.encryption!.ssss.open(newKey.keyId);
+      await testKey.setPrivateKey(newKey.privateKey!);
     });
 
     test('dispose client', () async {

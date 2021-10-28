@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020 Famedly GmbH
@@ -32,7 +31,7 @@ void main() {
     Logs().level = Level.error;
     var olmEnabled = true;
 
-    Client client;
+    late Client client;
 
     final roomId = '!726s6s6q:example.com';
     final sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
@@ -54,21 +53,21 @@ void main() {
 
     test('basic things', () async {
       if (!olmEnabled) return;
-      expect(client.encryption.keyManager.enabled, true);
-      expect(await client.encryption.keyManager.isCached(), false);
-      final handle = client.encryption.ssss.open();
+      expect(client.encryption!.keyManager.enabled, true);
+      expect(await client.encryption!.keyManager.isCached(), false);
+      final handle = client.encryption!.ssss.open();
       await handle.unlock(recoveryKey: ssssKey);
       await handle.maybeCacheAll();
-      expect(await client.encryption.keyManager.isCached(), true);
+      expect(await client.encryption!.keyManager.isCached(), true);
     });
 
     test('load key', () async {
       if (!olmEnabled) return;
-      client.encryption.keyManager.clearInboundGroupSessions();
-      await client.encryption.keyManager
-          .request(client.getRoomById(roomId), sessionId, senderKey);
+      client.encryption!.keyManager.clearInboundGroupSessions();
+      await client.encryption!.keyManager
+          .request(client.getRoomById(roomId)!, sessionId, senderKey);
       expect(
-          client.encryption.keyManager
+          client.encryption!.keyManager
                   .getInboundGroupSession(roomId, sessionId, senderKey) !=
               null,
           true);
@@ -94,25 +93,25 @@ void main() {
         'sender_claimed_ed25519_key': client.fingerprintKey,
       };
       FakeMatrixApi.calledEndpoints.clear();
-      client.encryption.keyManager.setInboundGroupSession(
+      client.encryption!.keyManager.setInboundGroupSession(
           roomId, sessionId, senderKey, sessionPayload,
           forwarded: true);
       await Future.delayed(Duration(milliseconds: 500));
-      var dbSessions = await client.database.getInboundGroupSessionsToUpload();
+      var dbSessions = await client.database!.getInboundGroupSessionsToUpload();
       expect(dbSessions.isNotEmpty, true);
-      await client.encryption.keyManager.backgroundTasks();
+      await client.encryption!.keyManager.backgroundTasks();
       final payload = FakeMatrixApi
-          .calledEndpoints['/client/unstable/room_keys/keys?version=5'].first;
-      dbSessions = await client.database.getInboundGroupSessionsToUpload();
+          .calledEndpoints['/client/unstable/room_keys/keys?version=5']!.first;
+      dbSessions = await client.database!.getInboundGroupSessionsToUpload();
       expect(dbSessions.isEmpty, true);
 
       final onlineKeys = RoomKeys.fromJson(json.decode(payload));
-      client.encryption.keyManager.clearInboundGroupSessions();
-      var ret = client.encryption.keyManager
+      client.encryption!.keyManager.clearInboundGroupSessions();
+      var ret = client.encryption!.keyManager
           .getInboundGroupSession(roomId, sessionId, senderKey);
       expect(ret, null);
-      await client.encryption.keyManager.loadFromResponse(onlineKeys);
-      ret = client.encryption.keyManager
+      await client.encryption!.keyManager.loadFromResponse(onlineKeys);
+      ret = client.encryption!.keyManager
           .getInboundGroupSession(roomId, sessionId, senderKey);
       expect(ret != null, true);
     });
