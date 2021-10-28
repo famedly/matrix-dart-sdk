@@ -68,7 +68,7 @@ class User extends Event {
             room: room);
 
   /// The full qualified Matrix ID in the format @username:server.abc.
-  String get id => stateKey ?? '\@unknown:unknown';
+  String get id => stateKey ?? '@unknown:unknown';
 
   /// The displayname of the user if the user has set one.
   String? get displayName =>
