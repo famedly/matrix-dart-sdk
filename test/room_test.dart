@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020 Famedly GmbH
@@ -33,8 +32,8 @@ import 'fake_client.dart';
 import 'fake_matrix_api.dart';
 
 void main() {
-  Client matrix;
-  Room room;
+  late Client matrix;
+  late Room room;
 
   /// All Tests related to the Event
   group('Room', () {
@@ -96,8 +95,9 @@ void main() {
       expect(room.summary.mInvitedMemberCount, notificationCount);
       expect(room.summary.mHeroes, heroes);
       expect(room.displayname, 'Alice, Bob, Charley');
-      expect(room.getState('m.room.join_rules').content['join_rule'], 'public');
-      expect(room.roomAccountData['com.test.foo'].content['foo'], 'bar');
+      expect(
+          room.getState('m.room.join_rules')?.content['join_rule'], 'public');
+      expect(room.roomAccountData['com.test.foo']?.content['foo'], 'bar');
 
       room.setState(
         Event(
@@ -181,9 +181,9 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.lastEvent.eventId, '12345');
-      expect(room.lastEvent.body, 'abc');
-      expect(room.timeCreated, room.lastEvent.originServerTs);
+      expect(room.lastEvent?.eventId, '12345');
+      expect(room.lastEvent?.body, 'abc');
+      expect(room.timeCreated, room.lastEvent?.originServerTs);
     });
 
     test('lastEvent is set properly', () {
@@ -199,7 +199,7 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.lastEvent.body, 'cd');
+      expect(room.lastEvent?.body, 'cd');
       room.setState(
         Event(
           senderId: '@test:example.com',
@@ -212,7 +212,7 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.lastEvent.body, 'cdc');
+      expect(room.lastEvent?.body, 'cdc');
       room.setState(
         Event(
           senderId: '@test:example.com',
@@ -230,7 +230,7 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.lastEvent.body, 'cdc'); // because we edited the "cd" message
+      expect(room.lastEvent?.body, 'cdc'); // because we edited the "cd" message
       room.setState(
         Event(
           senderId: '@test:example.com',
@@ -248,7 +248,7 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.lastEvent.body, 'edited cdc');
+      expect(room.lastEvent?.body, 'edited cdc');
     });
     test('lastEvent when reply parent edited', () async {
       room.setState(
@@ -263,7 +263,7 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.lastEvent.body, 'A');
+      expect(room.lastEvent?.body, 'A');
 
       room.setState(
         Event(
@@ -281,7 +281,7 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.lastEvent.body, 'B');
+      expect(room.lastEvent?.body, 'B');
       room.setState(
         Event(
           senderId: '@test:example.com',
@@ -299,7 +299,7 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.lastEvent.body, 'B');
+      expect(room.lastEvent?.body, 'B');
     });
     test('sendReadMarker', () async {
       await room.setReadMarker('§1234:fakeServer.notExisting');
@@ -313,12 +313,12 @@ void main() {
       expect(user.displayName, 'Alice Margatroid');
       expect(user.membership, Membership.join);
       expect(user.avatarUrl.toString(), 'mxc://example.org/SEsfnsuifSDFSSEF');
-      expect(user.room.id, '!localpart:server.abc');
+      expect(user.room?.id, '!localpart:server.abc');
     });
 
     test('getEventByID', () async {
       final event = await room.getEventById('1234');
-      expect(event.eventId, '143273582443PhrSn:example.org');
+      expect(event?.eventId, '143273582443PhrSn:example.org');
     });
 
     test('setName', () async {
@@ -367,7 +367,7 @@ void main() {
             stateKey: ''),
       );
       expect(room.ownPowerLevel, 100);
-      expect(room.getPowerLevelByUserId(matrix.userID), room.ownPowerLevel);
+      expect(room.getPowerLevelByUserId(matrix.userID!), room.ownPowerLevel);
       expect(room.getPowerLevelByUserId('@nouser:example.com'), 10);
       expect(room.ownPowerLevel, 100);
       expect(room.canBan, true);
@@ -381,7 +381,7 @@ void main() {
       expect(room.canSendEvent('m.room.power_levels'), true);
       expect(room.canSendEvent('m.room.member'), true);
       expect(room.powerLevels,
-          room.getState('m.room.power_levels').content['users']);
+          room.getState('m.room.power_levels')?.content['users']);
 
       room.setState(
         Event(
@@ -454,12 +454,12 @@ void main() {
     });
 
     test('getUserByMXID', () async {
-      User user;
+      User? user;
       try {
         user = await room.requestUser('@getme:example.com');
       } catch (_) {}
-      expect(user.stateKey, '@getme:example.com');
-      expect(user.calcDisplayname(), 'Getme');
+      expect(user?.stateKey, '@getme:example.com');
+      expect(user?.calcDisplayname(), 'Getme');
     });
 
     test('setAvatar', () async {
@@ -472,14 +472,14 @@ void main() {
       final dynamic resp = await room.sendEvent(
           {'msgtype': 'm.text', 'body': 'hello world'},
           txid: 'testtxid');
-      expect(resp.startsWith('\$event'), true);
+      expect(resp?.startsWith('\$event'), true);
     });
 
     test('sendEvent', () async {
       FakeMatrixApi.calledEndpoints.clear();
       final dynamic resp =
           await room.sendTextEvent('Hello world', txid: 'testtxid');
-      expect(resp.startsWith('\$event'), true);
+      expect(resp?.startsWith('\$event'), true);
       final entry = FakeMatrixApi.calledEndpoints.entries
           .firstWhere((p) => p.key.contains('/send/m.room.message/'));
       final content = json.decode(entry.value.first);
@@ -493,7 +493,7 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       final dynamic resp = await room.sendTextEvent('Hello world',
           txid: 'testtxid', editEventId: '\$otherEvent');
-      expect(resp.startsWith('\$event'), true);
+      expect(resp?.startsWith('\$event'), true);
       final entry = FakeMatrixApi.calledEndpoints.entries
           .firstWhere((p) => p.key.contains('/send/m.room.message/'));
       final content = json.decode(entry.value.first);
@@ -524,7 +524,7 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       var resp = await room.sendTextEvent('Hello world',
           txid: 'testtxid', inReplyTo: event);
-      expect(resp.startsWith('\$event'), true);
+      expect(resp?.startsWith('\$event'), true);
       var entry = FakeMatrixApi.calledEndpoints.entries
           .firstWhere((p) => p.key.contains('/send/m.room.message/'));
       var content = json.decode(entry.value.first);
@@ -553,7 +553,7 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       resp = await room.sendTextEvent('Hello world\nfox',
           txid: 'testtxid', inReplyTo: event);
-      expect(resp.startsWith('\$event'), true);
+      expect(resp?.startsWith('\$event'), true);
       entry = FakeMatrixApi.calledEndpoints.entries
           .firstWhere((p) => p.key.contains('/send/m.room.message/'));
       content = json.decode(entry.value.first);
@@ -585,7 +585,7 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       resp = await room.sendTextEvent('Hello world',
           txid: 'testtxid', inReplyTo: event);
-      expect(resp.startsWith('\$event'), true);
+      expect(resp?.startsWith('\$event'), true);
       entry = FakeMatrixApi.calledEndpoints.entries
           .firstWhere((p) => p.key.contains('/send/m.room.message/'));
       content = json.decode(entry.value.first);
@@ -614,7 +614,7 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       resp = await room.sendTextEvent('Hello world',
           txid: 'testtxid', inReplyTo: event);
-      expect(resp.startsWith('\$event'), true);
+      expect(resp?.startsWith('\$event'), true);
       entry = FakeMatrixApi.calledEndpoints.entries
           .firstWhere((p) => p.key.contains('/send/m.room.message/'));
       content = json.decode(entry.value.first);
@@ -636,7 +636,7 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       final dynamic resp =
           await room.sendReaction('\$otherEvent', '🦊', txid: 'testtxid');
-      expect(resp.startsWith('\$event'), true);
+      expect(resp?.startsWith('\$event'), true);
       final entry = FakeMatrixApi.calledEndpoints.entries
           .firstWhere((p) => p.key.contains('/send/m.reaction/'));
       final content = json.decode(entry.value.first);
@@ -656,7 +656,7 @@ void main() {
       final geoUri = 'geo:0.0,0.0';
       final dynamic resp =
           await room.sendLocation(body, geoUri, txid: 'testtxid');
-      expect(resp.startsWith('\$event'), true);
+      expect(resp?.startsWith('\$event'), true);
 
       final entry = FakeMatrixApi.calledEndpoints.entries
           .firstWhere((p) => p.key.contains('/send/m.room.message/'));
@@ -684,8 +684,8 @@ void main() {
 
     test('pushRuleState', () async {
       expect(room.pushRuleState, PushRuleState.mentionsOnly);
-      matrix.accountData['m.push_rules'].content['global']['override']
-          .add(matrix.accountData['m.push_rules'].content['global']['room'][0]);
+      matrix.accountData['m.push_rules']?.content['global']['override'].add(
+          matrix.accountData['m.push_rules']?.content['global']['room'][0]);
       expect(room.pushRuleState, PushRuleState.dontNotify);
     });
 
@@ -756,7 +756,7 @@ void main() {
         'type': 'm.tag'
       });
       expect(room.tags.length, 1);
-      expect(room.tags[TagType.favourite].order, 0.1);
+      expect(room.tags[TagType.favourite]?.order, 0.1);
       expect(room.isFavourite, true);
       await room.setFavourite(false);
     });

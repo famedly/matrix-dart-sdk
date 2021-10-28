@@ -2124,35 +2124,35 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/pushrules/global/content/nocake/enabled': (var req) => {},
       '/client/r0/pushrules/global/content/nocake/actions': (var req) => {},
       '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.history_visibility':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.join_rules':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.guest_access':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.invite/1234':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.answer/1234':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.select_answer/1234':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.reject/1234':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.negotiate/1234':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.candidates/1234':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.hangup/1234':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.replaces/1234':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.asserted_identity/1234':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.sdp_stream_metadata_changed/1234':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/org.matrix.call.sdp_stream_metadata_changed/1234':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!localpart%3Aserver.abc/send/org.matrix.call.asserted_identity/1234':
-          (var req) => {},
+          (var req) => {'event_id': '1234'},
       '/client/r0/rooms/!1234%3Aexample.com/redact/1143273582443PhrSn%3Aexample.org/1234':
           (var req) => {'event_id': '1234'},
       '/client/r0/pushrules/global/room/!localpart%3Aserver.abc': (var req) =>

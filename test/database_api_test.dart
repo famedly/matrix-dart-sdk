@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020 Famedly GmbH
@@ -49,8 +48,8 @@ Future<bool> olmEnabled() async {
 void testDatabase(
   Future<DatabaseApi> futureDatabase,
 ) {
-  DatabaseApi database;
-  int toDeviceQueueIndex;
+  late DatabaseApi database;
+  late int toDeviceQueueIndex;
   test('Open', () async {
     database = await futureDatabase;
   });
@@ -151,7 +150,7 @@ void testDatabase(
     );
 
     final client = await database.getClient('name');
-    expect(client['token'], 'token');
+    expect(client?['token'], 'token');
   });
   test('updateClient', () async {
     await database.updateClient(
@@ -164,21 +163,21 @@ void testDatabase(
       'olmAccount',
     );
     final client = await database.getClient('name');
-    expect(client['token'], 'token_different');
+    expect(client?['token'], 'token_different');
   });
   test('updateClientKeys', () async {
     await database.updateClientKeys(
       'olmAccount2',
     );
     final client = await database.getClient('name');
-    expect(client['olm_account'], 'olmAccount2');
+    expect(client?['olm_account'], 'olmAccount2');
   });
   test('storeSyncFilterId', () async {
     await database.storeSyncFilterId(
       '1234',
     );
     final client = await database.getClient('name');
-    expect(client['sync_filter_id'], '1234');
+    expect(client?['sync_filter_id'], '1234');
   });
   test('getAccountData', () async {
     await database.getAccountData();
@@ -218,28 +217,29 @@ void testDatabase(
         Client('testclient'));
   });
   test('getEventById', () async {
-    final event = await database.getEventById(
-        '\$event:example.com', Room(id: '!testroom:example.com'));
-    expect(event.type, EventTypes.Message);
+    final event = await database.getEventById('\$event:example.com',
+        Room(id: '!testroom:example.com', client: Client('testclient')));
+    expect(event?.type, EventTypes.Message);
   });
   test('getEventList', () async {
-    final events =
-        await database.getEventList(Room(id: '!testroom:example.com'));
+    final events = await database.getEventList(
+        Room(id: '!testroom:example.com', client: Client('testclient')));
     expect(events.single.type, EventTypes.Message);
   });
   test('getUser', () async {
-    final user = await database.getUser(
-        '@bob:example.org', Room(id: '!testroom:example.com'));
+    final user = await database.getUser('@bob:example.org',
+        Room(id: '!testroom:example.com', client: Client('testclient')));
     expect(user, null);
   });
   test('getUsers', () async {
-    final users = await database.getUsers(Room(id: '!testroom:example.com'));
+    final users = await database.getUsers(
+        Room(id: '!testroom:example.com', client: Client('testclient')));
     expect(users.isEmpty, true);
   });
   test('removeEvent', () async {
     await database.removeEvent('\$event:example.com', '!testroom:example.com');
-    final event = await database.getEventById(
-        '\$event:example.com', Room(id: '!testroom:example.com'));
+    final event = await database.getEventById('\$event:example.com',
+        Room(id: '!testroom:example.com', client: Client('testclient')));
     expect(event, null);
   });
   test('getAllInboundGroupSessions', () async {
@@ -267,7 +267,7 @@ void testDatabase(
       '!testroom:example.com',
       'sessionId',
     );
-    expect(jsonDecode(session.content)['foo'], 'bar');
+    expect(jsonDecode(session!.content)['foo'], 'bar');
   });
   test('markInboundGroupSessionAsUploaded', () async {
     await database.markInboundGroupSessionAsUploaded(
@@ -296,7 +296,7 @@ void testDatabase(
   });
   test('storeSSSSCache', () async {
     await database.storeSSSSCache('type', 'keyId', 'ciphertext', '{}');
-    final cache = await database.getSSSSCache('type');
+    final cache = (await database.getSSSSCache('type'))!;
     expect(cache.type, 'type');
     expect(cache.keyId, 'keyId');
     expect(cache.ciphertext, 'ciphertext');
@@ -349,7 +349,7 @@ void testDatabase(
       '!testroom:example.com',
       '@alice:example.com',
     );
-    expect(session.devices.isEmpty, true);
+    expect(session?.devices.isEmpty, true);
   });
   test('getLastSentMessageUserDeviceKey', () async {
     final list = await database.getLastSentMessageUserDeviceKey(
@@ -361,7 +361,7 @@ void testDatabase(
   test('getUnimportantRoomEventStatesForRoom', () async {
     final events = await database.getUnimportantRoomEventStatesForRoom(
       ['events'],
-      Room(id: '!mep'),
+      Room(id: '!mep', client: Client('testclient')),
     );
     expect(events.isEmpty, true);
   });
