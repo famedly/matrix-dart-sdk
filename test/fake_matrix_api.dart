@@ -1350,7 +1350,10 @@ class FakeMatrixApi extends MockClient {
               'r0.4.0',
               'r0.5.0'
             ],
-            'unstable_features': {'m.lazy_load_members': true},
+            'unstable_features': {
+              'm.lazy_load_members': true,
+              'com.famedly.msc3013': true
+            },
           },
       '/client/r0/login': (var req) => {
             'flows': [

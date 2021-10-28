@@ -1217,6 +1217,17 @@ class FluffyBoxDatabase extends DatabaseApi {
   }
 
   @override
+  Future<void> storePushPrivateKey(
+    String? pushPrivateKey,
+  ) async {
+    if (pushPrivateKey == null) {
+      await _clientBox.delete('push_private_key');
+    } else {
+      await _clientBox.put('push_private_key', pushPrivateKey);
+    }
+  }
+
+  @override
   Future<void> storeUserCrossSigningKey(String userId, String publicKey,
       String content, bool verified, bool blocked) async {
     await _userCrossSigningKeysBox.put(

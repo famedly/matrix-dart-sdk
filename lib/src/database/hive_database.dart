@@ -684,14 +684,15 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
   @override
   Future<void> insertClient(
-      String name,
-      String homeserverUrl,
-      String token,
-      String userId,
-      String? deviceId,
-      String? deviceName,
-      String? prevBatch,
-      String? olmAccount) async {
+    String name,
+    String homeserverUrl,
+    String token,
+    String userId,
+    String? deviceId,
+    String? deviceName,
+    String? prevBatch,
+    String? olmAccount,
+  ) async {
     await _clientBox.put('homeserver_url', homeserverUrl);
     await _clientBox.put('token', token);
     await _clientBox.put('user_id', userId);
@@ -1183,6 +1184,13 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     String syncFilterId,
   ) async {
     await _clientBox.put('sync_filter_id', syncFilterId);
+  }
+
+  @override
+  Future<void> storePushPrivateKey(
+    String? pushPrivateKey,
+  ) async {
+    await _clientBox.put('push_private_key', pushPrivateKey);
   }
 
   @override

@@ -1027,6 +1027,7 @@ class Client extends MatrixApi {
       String? olmAccount;
       String? accessToken;
       String? _userID;
+      String? pushPrivateKey;
       final account = await this.database?.getClient(clientName);
       if (account != null) {
         _id = account['client_id'];
@@ -1038,6 +1039,7 @@ class Client extends MatrixApi {
         syncFilterId = account['sync_filter_id'];
         prevBatch = account['prev_batch'];
         olmAccount = account['olm_account'];
+        pushPrivateKey = account['push_private_key'];
       }
       if (newToken != null) {
         accessToken = this.accessToken = newToken;
@@ -1079,7 +1081,10 @@ class Client extends MatrixApi {
         encryption?.dispose();
         encryption = null;
       }
-      await encryption?.init(olmAccount);
+      await encryption?.init(
+        olmAccount: olmAccount,
+        pushPrivateKey: pushPrivateKey,
+      );
 
       final database = this.database;
       if (database != null) {

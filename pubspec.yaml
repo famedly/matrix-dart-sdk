@@ -16,7 +16,7 @@ dependencies:
   crypto: ^3.0.0
   base58check: ^2.0.0
   olm: ^2.0.0
-  matrix_api_lite: ^0.5.1
+  matrix_api_lite: ^0.5.3
   hive: ^2.0.4
   ffi: ^1.0.0
   js: ^0.6.3
@@ -26,6 +26,7 @@ dependencies:
   webrtc_interface: ^1.0.1
   sdp_transform: ^0.3.2
   fluffybox: ^0.4.1
+  cryptography: ^2.0.2
 
 dev_dependencies:
   dart_code_metrics: ^4.4.0

@@ -91,6 +91,10 @@ abstract class DatabaseApi {
     String syncFilterId,
   );
 
+  Future storePushPrivateKey(
+    String? pushPrivateKey,
+  );
+
   Future storeAccountData(String type, String content);
 
   Future<Map<String, DeviceKeysList>> getUserDeviceKeys(Client client);

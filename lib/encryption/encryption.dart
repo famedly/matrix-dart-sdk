@@ -27,6 +27,7 @@ import 'cross_signing.dart';
 import 'key_manager.dart';
 import 'key_verification_manager.dart';
 import 'olm_manager.dart';
+import 'push_helper.dart';
 import 'ssss.dart';
 import 'utils/bootstrap.dart';
 
@@ -48,6 +49,7 @@ class Encryption {
   late KeyVerificationManager keyVerificationManager;
   late CrossSigning crossSigning;
   late SSSS ssss;
+  late PushHelper pushHelper;
 
   Encryption({
     required this.client,
@@ -58,11 +60,13 @@ class Encryption {
     olmManager = OlmManager(this);
     keyVerificationManager = KeyVerificationManager(this);
     crossSigning = CrossSigning(this);
+    pushHelper = PushHelper(this);
   }
 
   // initial login passes null to init a new olm account
-  Future<void> init(String? olmAccount) async {
+  Future<void> init({String? olmAccount, String? pushPrivateKey}) async {
     await olmManager.init(olmAccount);
+    await pushHelper.init(pushPrivateKey);
     _backgroundTasksRunning = true;
     _backgroundTasks(); // start the background tasks
   }
