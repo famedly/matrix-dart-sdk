@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2021 Famedly GmbH
@@ -23,9 +22,9 @@ import 'fake_client.dart';
 
 void main() {
   group('Image Pack', () {
-    Client client;
-    Room room;
-    Room room2;
+    late Client client;
+    late Room room;
+    late Room room2;
 
     test('setupClient', () async {
       client = await getClient();
@@ -36,7 +35,7 @@ void main() {
         content: {},
         room: room,
         stateKey: '',
-        senderId: client.userID,
+        senderId: client.userID!,
         eventId: '\$fakeid1:fakeServer.notExisting',
         originServerTs: DateTime.now(),
       ));
@@ -54,7 +53,7 @@ void main() {
         content: {},
         room: room,
         stateKey: '',
-        senderId: client.userID,
+        senderId: client.userID!,
         eventId: '\$fakeid3:fakeServer.notExisting',
         originServerTs: DateTime.now(),
       ));
@@ -87,8 +86,8 @@ void main() {
       ));
       final packs = room.getImagePacks();
       expect(packs.length, 1);
-      expect(packs['room'].images.length, 1);
-      expect(packs['room'].images['room_plain'].url.toString(),
+      expect(packs['room']?.images.length, 1);
+      expect(packs['room']?.images['room_plain']?.url.toString(),
           'mxc://room_plain');
       var packsFlat = room.getImagePacksFlat();
       expect(packsFlat, {

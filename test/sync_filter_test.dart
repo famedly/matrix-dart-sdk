@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020 Famedly GmbH
@@ -119,6 +118,7 @@ const updates = {
       'events': [
         {
           'type': 'beep',
+          'sender': '@example:localhost',
           'content': {
             'blah': 'blubb',
           },

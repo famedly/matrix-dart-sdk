@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020 Famedly GmbH
@@ -123,6 +122,7 @@ void main() {
     });
     test('getPresence', () async {
       await client.handleSync(SyncUpdate.fromJson({
+        'next_batch': 'fake',
         'presence': {
           'events': [
             {
@@ -133,7 +133,7 @@ void main() {
           ]
         }
       }));
-      expect(user1.presence.presence.presence, PresenceType.online);
+      expect(user1.presence?.presence.presence, PresenceType.online);
     });
     test('canBan', () async {
       expect(user1.canBan, false);
