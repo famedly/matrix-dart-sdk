@@ -356,10 +356,8 @@ class KeyVerification {
       if (_nextAction == 'request') {
         sendStart();
       } else if (_nextAction == 'done') {
-        if (_verifiedDevices != null) {
-          // and now let's sign them all in the background
-          encryption.crossSigning.sign(_verifiedDevices);
-        }
+        // and now let's sign them all in the background
+        encryption.crossSigning.sign(_verifiedDevices);
         setState(KeyVerificationState.done);
       }
     };
@@ -530,8 +528,7 @@ class KeyVerification {
   }
 
   Future<bool> verifyActivity() async {
-    if (lastActivity != null &&
-        lastActivity.add(Duration(minutes: 10)).isAfter(DateTime.now())) {
+    if (lastActivity.add(Duration(minutes: 10)).isAfter(DateTime.now())) {
       lastActivity = DateTime.now();
       return true;
     }
@@ -876,7 +873,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
               : theirInfo + ourInfo) +
           request.transactionId!;
     } else if (keyAgreementProtocol == 'curve25519') {
-      final ourInfo = client.userID + client.deviceID;
+      final ourInfo = client.userID! + client.deviceID!;
       final theirInfo = request.userId + request.deviceId!;
       sasInfo = 'MATRIX_KEY_VERIFICATION_SAS' +
           (request.startedVerification
@@ -891,8 +888,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
 
   Future<void> _sendMac() async {
     final baseInfo = 'MATRIX_KEY_VERIFICATION_MAC' +
-        client.userID +
-        client.deviceID +
+        client.userID! +
+        client.deviceID! +
         request.userId +
         request.deviceId! +
         request.transactionId!;
@@ -929,8 +926,8 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
     final baseInfo = 'MATRIX_KEY_VERIFICATION_MAC' +
         request.userId +
         request.deviceId! +
-        client.userID +
-        client.deviceID +
+        client.userID! +
+        client.deviceID! +
         request.transactionId!;
 
     final keyList = payload['mac'].keys.toList();

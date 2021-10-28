@@ -35,10 +35,10 @@ abstract class DatabaseApi {
     String homeserverUrl,
     String token,
     String userId,
-    String deviceId,
-    String deviceName,
-    String prevBatch,
-    String olmAccount,
+    String? deviceId,
+    String? deviceName,
+    String? prevBatch,
+    String? olmAccount,
   );
 
   Future insertClient(
@@ -46,10 +46,10 @@ abstract class DatabaseApi {
     String homeserverUrl,
     String token,
     String userId,
-    String deviceId,
-    String deviceName,
-    String prevBatch,
-    String olmAccount,
+    String? deviceId,
+    String? deviceName,
+    String? prevBatch,
+    String? olmAccount,
   );
 
   Future<List<Room>> getRoomList(Client client);
@@ -58,12 +58,12 @@ abstract class DatabaseApi {
 
   /// Stores a RoomUpdate object in the database. Must be called inside of
   /// [transaction].
-  Future<void> storeRoomUpdate(String roomId, SyncRoomUpdate roomUpdate,
-      [Room oldRoom]);
+  Future<void> storeRoomUpdate(
+      String roomId, SyncRoomUpdate roomUpdate, Client client);
 
   /// Stores an EventUpdate object in the database. Must be called inside of
   /// [transaction].
-  Future<void> storeEventUpdate(EventUpdate eventUpdate);
+  Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client);
 
   Future<Event?> getEventById(String eventId, Room room);
 
@@ -233,6 +233,7 @@ abstract class DatabaseApi {
   Future setRoomPrevBatch(
     String prevBatch,
     String roomId,
+    Client client,
   );
 
   Future resetNotificationCount(String roomId);

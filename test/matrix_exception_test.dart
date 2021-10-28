@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020 Famedly GmbH
@@ -34,11 +33,11 @@ void main() {
       );
       expect(matrixException.errcode, 'M_FORBIDDEN');
       final flows = matrixException.authenticationFlows;
-      expect(flows.length, 1);
-      expect(flows.first.stages.length, 1);
-      expect(flows.first.stages.first, 'example.type.foo');
+      expect(flows?.length, 1);
+      expect(flows?.first.stages.length, 1);
+      expect(flows?.first.stages.first, 'example.type.foo');
       expect(
-        matrixException.authenticationParams['example.type.baz'],
+        matrixException.authenticationParams?['example.type.baz'],
         {'example_key': 'foobar'},
       );
       expect(matrixException.completedAuthenticationFlows.length, 1);

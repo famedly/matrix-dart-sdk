@@ -24,7 +24,9 @@ extension MxcUriExtension on Uri {
   /// Returns a download Link to this content.
   Uri getDownloadLink(Client matrix) => isScheme('mxc')
       ? matrix.homeserver != null
-          ? matrix.homeserver.resolve('_matrix/media/r0/download/$host$path')
+          ? matrix.homeserver
+                  ?.resolve('_matrix/media/r0/download/$host$path') ??
+              Uri()
           : Uri()
       : this;
 
@@ -39,14 +41,15 @@ extension MxcUriExtension on Uri {
       ThumbnailMethod? method = ThumbnailMethod.crop,
       bool? animated = false}) {
     if (!isScheme('mxc')) return this;
-    if (matrix.homeserver == null) {
+    final homeserver = matrix.homeserver;
+    if (homeserver == null) {
       return Uri();
     }
     return Uri(
-      scheme: matrix.homeserver.scheme,
-      host: matrix.homeserver.host,
+      scheme: homeserver.scheme,
+      host: homeserver.host,
       path: '/_matrix/media/r0/thumbnail/$host$path',
-      port: matrix.homeserver.port,
+      port: homeserver.port,
       queryParameters: {
         if (width != null) 'width': width.round().toString(),
         if (height != null) 'height': height.round().toString(),

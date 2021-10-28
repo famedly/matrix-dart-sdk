@@ -187,7 +187,7 @@ class SSSS {
 
   Future<void> setDefaultKeyId(String keyId) async {
     await client.setAccountData(
-      client.userID,
+      client.userID!,
       EventTypes.SecretStorageDefaultKey,
       SecretStorageDefaultKeyContent(key: keyId).toJson(),
     );
@@ -250,7 +250,7 @@ class SSSS {
         syncUpdate.accountData!
             .any((accountData) => accountData.type == accountDataType));
     await client.setAccountData(
-        client.userID, accountDataType, content.toJson());
+        client.userID!, accountDataType, content.toJson());
     await waitForAccountData;
 
     final key = open(keyId);
@@ -295,7 +295,7 @@ class SSSS {
     if (_cache.containsKey(type) && isValid(_cache[type])) {
       return _cache[type]?.content;
     }
-    final ret = await client.database.getSSSSCache(type);
+    final ret = await client.database?.getSSSSCache(type);
     if (ret == null) {
       return null;
     }
@@ -321,10 +321,10 @@ class SSSS {
     final encryptInfo = _Encrypted(
         iv: enc['iv'], ciphertext: enc['ciphertext'], mac: enc['mac']);
     final decrypted = await decryptAes(encryptInfo, key, type);
-    if (cacheTypes.contains(type) && client.database != null) {
+    final db = client.database;
+    if (cacheTypes.contains(type) && db != null) {
       // cache the thing
-      await client.database
-          .storeSSSSCache(type, keyId, enc['ciphertext'], decrypted);
+      await db.storeSSSSCache(type, keyId, enc['ciphertext'], decrypted);
       if (_cacheCallbacks.containsKey(type) && await getCached(type) == null) {
         _cacheCallbacks[type]!(decrypted);
       }
@@ -351,11 +351,11 @@ class SSSS {
       'mac': encrypted.mac,
     };
     // store the thing in your account data
-    await client.setAccountData(client.userID, type, content);
-    if (cacheTypes.contains(type) && client.database != null) {
+    await client.setAccountData(client.userID!, type, content);
+    final db = client.database;
+    if (cacheTypes.contains(type) && db != null) {
       // cache the thing
-      await client.database
-          .storeSSSSCache(type, keyId, encrypted.ciphertext, secret);
+      await db.storeSSSSCache(type, keyId, encrypted.ciphertext, secret);
       if (_cacheCallbacks.containsKey(type) && await getCached(type) == null) {
         _cacheCallbacks[type]!(secret);
       }
@@ -381,10 +381,10 @@ class SSSS {
       throw Exception('Secrets do not match up!');
     }
     // store the thing in your account data
-    await client.setAccountData(client.userID, type, content);
-    if (cacheTypes.contains(type) && client.database != null) {
+    await client.setAccountData(client.userID!, type, content);
+    if (cacheTypes.contains(type)) {
       // cache the thing
-      await client.database.storeSSSSCache(
+      await client.database?.storeSSSSCache(
           type, keyId, content['encrypted'][keyId]['ciphertext'], secret);
     }
   }
@@ -542,13 +542,13 @@ class SSSS {
         return; // our request is more than 15min in the past...better not trust it anymore
       }
       Logs().i('[SSSS] Secret for type ${request.type} is ok, storing it');
-      if (client.database != null) {
+      final db = client.database;
+      if (db != null) {
         final keyId = keyIdFromType(request.type);
         if (keyId != null) {
           final ciphertext = client.accountData[request.type]!
               .content['encrypted'][keyId]['ciphertext'];
-          await client.database
-              .storeSSSSCache(request.type, keyId, ciphertext, secret);
+          await db.storeSSSSCache(request.type, keyId, ciphertext, secret);
           if (_cacheCallbacks.containsKey(request.type)) {
             _cacheCallbacks[request.type]!(secret);
           }

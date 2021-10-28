@@ -21,7 +21,7 @@ import 'package:matrix_api_lite/matrix_api_lite.dart';
 import '../event.dart';
 
 class SpaceChild {
-  final String roomId;
+  final String? roomId;
   final List<String>? via;
   final String order;
   final bool? suggested;
@@ -35,7 +35,7 @@ class SpaceChild {
 }
 
 class SpaceParent {
-  final String roomId;
+  final String? roomId;
   final List<String>? via;
   final bool? canonical;
 

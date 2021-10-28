@@ -104,12 +104,11 @@ abstract class EventLocalizations {
     },
     EventTypes.RoomMember: (event, i18n, body) {
       var text = 'Failed to parse member event';
-      final targetName = event.stateKeyUser.calcDisplayname();
+      final targetName = event.stateKeyUser?.calcDisplayname() ?? '';
       // Has the membership changed?
       final newMembership = event.content['membership'] ?? '';
-      final oldMembership = event.prevContent != null
-          ? event.prevContent['membership'] ?? ''
-          : '';
+      final oldMembership = event.prevContent?['membership'] ?? '';
+
       if (newMembership != oldMembership) {
         if (oldMembership == 'invite' && newMembership == 'join') {
           text = i18n.acceptedTheInvitation(targetName);
@@ -146,22 +145,19 @@ abstract class EventLocalizations {
         }
       } else if (newMembership == 'join') {
         final newAvatar = event.content['avatar_url'] ?? '';
-        final oldAvatar = event.prevContent != null
-            ? event.prevContent['avatar_url'] ?? ''
-            : '';
+        final oldAvatar = event.prevContent?['avatar_url'] ?? '';
 
         final newDisplayname = event.content['displayname'] ?? '';
-        final oldDisplayname = event.prevContent != null
-            ? event.prevContent['displayname'] ?? ''
-            : '';
+        final oldDisplayname = event.prevContent?['displayname'] ?? '';
+        final stateKey = event.stateKey;
 
         // Has the user avatar changed?
         if (newAvatar != oldAvatar) {
           text = i18n.changedTheProfileAvatar(targetName);
         }
-        // Has the user avatar changed?
-        else if (newDisplayname != oldDisplayname) {
-          text = i18n.changedTheDisplaynameTo(event.stateKey, newDisplayname);
+        // Has the user displayname changed?
+        else if (newDisplayname != oldDisplayname && stateKey != null) {
+          text = i18n.changedTheDisplaynameTo(stateKey, newDisplayname);
         }
       }
       return text;
@@ -201,7 +197,7 @@ abstract class EventLocalizations {
     EventTypes.Encryption: (event, i18n, body) {
       var localizedBody =
           i18n.activatedEndToEndEncryption(event.sender.calcDisplayname());
-      if (!event.room.client.encryptionEnabled) {
+      if (event.room?.client.encryptionEnabled == false) {
         localizedBody += '. ' + i18n.needPantalaimonWarning;
       }
       return localizedBody;

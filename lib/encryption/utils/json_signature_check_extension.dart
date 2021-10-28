@@ -24,8 +24,10 @@ import '../../matrix.dart';
 extension JsonSignatureCheckExtension on Map<String, dynamic> {
   /// Checks the signature of a signed json object.
   bool checkJsonSignature(String key, String userId, String deviceId) {
-    final Map<String, dynamic> signatures = this['signatures'];
-    if (signatures == null || !signatures.containsKey(userId)) return false;
+    final signatures = this['signatures'];
+    if (signatures == null ||
+        !(signatures is Map<String, dynamic>) ||
+        !signatures.containsKey(userId)) return false;
     remove('unsigned');
     remove('signatures');
     if (!signatures[userId].containsKey('ed25519:$deviceId')) return false;

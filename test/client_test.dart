@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020 Famedly GmbH
@@ -35,7 +34,7 @@ import 'fake_database.dart';
 import 'fake_matrix_api.dart';
 
 void main() {
-  Client matrix;
+  late Client matrix;
 
   Future<List<EventUpdate>> eventUpdateListFuture;
   Future<List<ToDeviceEvent>> toDeviceUpdateListFuture;
@@ -87,7 +86,7 @@ void main() {
       try {
         await matrix.checkHomeserver('https://fakeserver.wrongaddress');
       } catch (exception) {
-        expect(exception != null, true);
+        expect(exception.toString().isNotEmpty, true);
       }
       await matrix.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
@@ -128,7 +127,7 @@ void main() {
       expect(matrix.getDirectChatFromUserId('@bob:example.com'),
           '!726s6s6q:example.com');
       expect(matrix.rooms[1].directChatMatrixID, '@bob:example.com');
-      expect(matrix.directChats, matrix.accountData['m.direct'].content);
+      expect(matrix.directChats, matrix.accountData['m.direct']?.content);
       expect(matrix.presences.length, 1);
       expect(matrix.rooms[1].ephemerals.length, 2);
       expect(matrix.rooms[1].typingUsers.length, 1);
@@ -139,29 +138,30 @@ void main() {
           Client.supportedGroupEncryptionAlgorithms.first);
       expect(
           matrix.rooms[1].roomAccountData['m.receipt']
-              .content['@alice:example.com']['ts'],
+              ?.content['@alice:example.com']['ts'],
           1436451550453);
       expect(
           matrix.rooms[1].roomAccountData['m.receipt']
-              .content['@alice:example.com']['event_id'],
+              ?.content['@alice:example.com']['event_id'],
           '7365636s6r6432:example.com');
       expect(matrix.rooms.length, 2);
       expect(matrix.rooms[1].canonicalAlias,
-          "#famedlyContactDiscovery:${matrix.userID.split(":")[1]}");
-      expect(matrix.presences['@alice:example.com'].presence.presence,
+          "#famedlyContactDiscovery:${matrix.userID!.split(":")[1]}");
+      expect(matrix.presences['@alice:example.com']?.presence.presence,
           PresenceType.online);
       expect(presenceCounter, 1);
       expect(accountDataCounter, 9);
       await Future.delayed(Duration(milliseconds: 50));
       expect(matrix.userDeviceKeys.length, 4);
-      expect(matrix.userDeviceKeys['@alice:example.com'].outdated, false);
-      expect(matrix.userDeviceKeys['@alice:example.com'].deviceKeys.length, 2);
+      expect(matrix.userDeviceKeys['@alice:example.com']?.outdated, false);
+      expect(matrix.userDeviceKeys['@alice:example.com']?.deviceKeys.length, 2);
       expect(
-          matrix.userDeviceKeys['@alice:example.com'].deviceKeys['JLAFKJWSCS']
-              .verified,
+          matrix.userDeviceKeys['@alice:example.com']?.deviceKeys['JLAFKJWSCS']
+              ?.verified,
           false);
 
       await matrix.handleSync(SyncUpdate.fromJson({
+        'next_batch': 'fakesync',
         'device_lists': {
           'changed': [
             '@alice:example.com',
@@ -173,9 +173,10 @@ void main() {
       }));
       await Future.delayed(Duration(milliseconds: 50));
       expect(matrix.userDeviceKeys.length, 3);
-      expect(matrix.userDeviceKeys['@alice:example.com'].outdated, true);
+      expect(matrix.userDeviceKeys['@alice:example.com']?.outdated, true);
 
       await matrix.handleSync(SyncUpdate.fromJson({
+        'next_batch': 'fakesync',
         'rooms': {
           'join': {
             '!726s6s6q:example.com': {
@@ -199,7 +200,7 @@ void main() {
 
       expect(
           matrix.getRoomByAlias(
-              "#famedlyContactDiscovery:${matrix.userID.split(":")[1]}"),
+              "#famedlyContactDiscovery:${matrix.userID!.split(":")[1]}"),
           null);
     });
 
@@ -310,7 +311,7 @@ void main() {
           identifier: AuthenticationUserIdentifier(user: 'test'),
           password: '1234');
 
-      expect(loginResp != null, true);
+      expect(loginResp.userId != null, true);
     });
 
     test('setAvatar', () async {
@@ -340,7 +341,7 @@ void main() {
       expect(archive[0].id, '!5345234234:example.com');
       expect(archive[0].membership, Membership.leave);
       expect(archive[0].name, 'The room name');
-      expect(archive[0].lastEvent.body, 'This is an example text message');
+      expect(archive[0].lastEvent?.body, 'This is an example text message');
       expect(archive[0].roomAccountData.length, 1);
       expect(archive[1].id, '!5345234235:example.com');
       expect(archive[1].membership, Membership.leave);
@@ -364,7 +365,7 @@ void main() {
       }
       FakeMatrixApi.calledEndpoints.clear();
       await matrix.sendToDeviceEncrypted(
-          matrix.userDeviceKeys['@alice:example.com'].deviceKeys.values
+          matrix.userDeviceKeys['@alice:example.com']!.deviceKeys.values
               .toList(),
           'm.message',
           {
@@ -382,7 +383,7 @@ void main() {
       }
       FakeMatrixApi.calledEndpoints.clear();
       await matrix.sendToDeviceEncryptedChunked(
-          matrix.userDeviceKeys['@alice:example.com'].deviceKeys.values
+          matrix.userDeviceKeys['@alice:example.com']!.deviceKeys.values
               .toList(),
           'm.message',
           {
@@ -483,11 +484,11 @@ void main() {
       expect(
           json.decode(FakeMatrixApi
                   .calledEndpoints['/client/r0/sendToDevice/foxies/floof_txnid']
-              [0])['messages'],
+              ?[0])['messages'],
           foxContent);
       expect(
           json.decode(FakeMatrixApi.calledEndpoints[
-              '/client/r0/sendToDevice/raccoon/raccoon_txnid'][0])['messages'],
+              '/client/r0/sendToDevice/raccoon/raccoon_txnid']?[0])['messages'],
           raccoonContent);
       FakeMatrixApi.calledEndpoints.clear();
       await client.sendToDevice('bunny', 'bunny_txnid', bunnyContent);
@@ -502,7 +503,7 @@ void main() {
       expect(
           json.decode(FakeMatrixApi
                   .calledEndpoints['/client/r0/sendToDevice/bunny/bunny_txnid']
-              [0])['messages'],
+              ?[0])['messages'],
           bunnyContent);
       await client.dispose(closeDatabase: true);
     });
@@ -546,16 +547,16 @@ void main() {
       expect(
           json.decode(FakeMatrixApi
                   .calledEndpoints['/client/r0/sendToDevice/foxies/floof_txnid']
-              [0])['messages'],
+              ?[0])['messages'],
           foxContent);
       expect(
           json.decode(FakeMatrixApi.calledEndpoints[
-              '/client/r0/sendToDevice/raccoon/raccoon_txnid'][0])['messages'],
+              '/client/r0/sendToDevice/raccoon/raccoon_txnid']?[0])['messages'],
           raccoonContent);
       expect(
           json.decode(FakeMatrixApi
                   .calledEndpoints['/client/r0/sendToDevice/bunny/bunny_txnid']
-              [0])['messages'],
+              ?[0])['messages'],
           bunnyContent);
       await client.dispose(closeDatabase: true);
     });
@@ -596,10 +597,12 @@ void main() {
       expect(client2.homeserver, client1.homeserver);
       expect(client2.deviceID, client1.deviceID);
       expect(client2.deviceName, client1.deviceName);
+      expect(client2.rooms.length, 2);
       if (client2.encryptionEnabled) {
-        expect(client2.encryption.fingerprintKey,
-            client1.encryption.fingerprintKey);
-        expect(client2.encryption.identityKey, client1.encryption.identityKey);
+        expect(client2.encryption?.fingerprintKey,
+            client1.encryption?.fingerprintKey);
+        expect(
+            client2.encryption?.identityKey, client1.encryption?.identityKey);
         expect(client2.rooms[1].id, client1.rooms[1].id);
       }
 
@@ -628,16 +631,18 @@ void main() {
       final response =
           await client.uploadContent(Uint8List(0), filename: 'file.jpeg');
       expect(response.toString(), 'mxc://example.com/AQwafuaFswefuhsfAFAgsw');
-      expect(await client.database.getFile(response) != null,
-          client.database.supportsFileStoring);
+      expect(await client.database?.getFile(response) != null,
+          client.database?.supportsFileStoring);
       await client.dispose(closeDatabase: true);
     });
 
     test('object equality', () async {
       final time1 = DateTime.fromMillisecondsSinceEpoch(1);
       final time2 = DateTime.fromMillisecondsSinceEpoch(0);
-      final user1 = User('@user1:example.org', room: Room(id: '!room1'));
-      final user2 = User('@user2:example.org', room: Room(id: '!room1'));
+      final user1 =
+          User('@user1:example.org', room: Room(id: '!room1', client: matrix));
+      final user2 =
+          User('@user2:example.org', room: Room(id: '!room1', client: matrix));
       // receipts
       expect(Receipt(user1, time1) == Receipt(user1, time1), true);
       expect(Receipt(user1, time1) == Receipt(user1, time2), false);
@@ -648,19 +653,29 @@ void main() {
       expect(user1 == user1, true);
       expect(user1 == user2, false);
       expect(
-          user1 == User('@user1:example.org', room: Room(id: '!room2')), false);
+          user1 ==
+              User('@user1:example.org',
+                  room: Room(id: '!room2', client: matrix)),
+          false);
       expect(
           user1 ==
               User('@user1:example.org',
-                  room: Room(id: '!room1'), membership: 'leave'),
+                  room: Room(id: '!room1', client: matrix),
+                  membership: 'leave'),
           false);
       // ignore: unrelated_type_equality_checks
       expect(user1 == 'beep', false);
       // rooms
-      expect(Room(id: '!room1') == Room(id: '!room1'), true);
-      expect(Room(id: '!room1') == Room(id: '!room2'), false);
+      expect(
+          Room(id: '!room1', client: matrix) ==
+              Room(id: '!room1', client: matrix),
+          true);
+      expect(
+          Room(id: '!room1', client: matrix) ==
+              Room(id: '!room2', client: matrix),
+          false);
       // ignore: unrelated_type_equality_checks
-      expect(Room(id: '!room1') == 'beep', false);
+      expect(Room(id: '!room1', client: matrix) == 'beep', false);
     });
 
     test('clearCache', () async {

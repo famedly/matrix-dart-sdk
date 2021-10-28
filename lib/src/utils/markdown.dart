@@ -183,7 +183,7 @@ class PillSyntax extends InlineSyntax {
 }
 
 class MentionSyntax extends InlineSyntax {
-  final String Function(String)? getMention;
+  final String? Function(String)? getMention;
   MentionSyntax(this.getMention) : super(r'(@(?:\[[^\]:]+\]|\w+)(?:#\w+)?)');
 
   @override
@@ -206,7 +206,7 @@ class MentionSyntax extends InlineSyntax {
 String markdown(
   String text, {
   Map<String, Map<String, String>> Function()? getEmotePacks,
-  String Function(String)? getMention,
+  String? Function(String)? getMention,
 }) {
   var ret = markdownToHtml(
     text,

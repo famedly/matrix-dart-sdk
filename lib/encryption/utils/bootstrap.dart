@@ -357,6 +357,7 @@ class Bootstrap {
       checkOnlineKeyBackup();
       return;
     }
+    final userID = client.userID!;
     try {
       Uint8List masterSigningKey;
       final secretsToStore = <String, String>{};
@@ -370,7 +371,7 @@ class Bootstrap {
           masterSigningKey = master.generate_seed();
           masterPub = master.init_with_seed(masterSigningKey);
           final json = <String, dynamic>{
-            'user_id': client.userID,
+            'user_id': userID,
             'usage': ['master'],
             'keys': <String, dynamic>{
               'ed25519:$masterPub': masterPub,
@@ -414,7 +415,7 @@ class Bootstrap {
           final selfSigningPriv = selfSigning.generate_seed();
           final selfSigningPub = selfSigning.init_with_seed(selfSigningPriv);
           final json = <String, dynamic>{
-            'user_id': client.userID,
+            'user_id': userID,
             'usage': ['self_signing'],
             'keys': <String, dynamic>{
               'ed25519:$selfSigningPub': selfSigningPub,
@@ -422,7 +423,7 @@ class Bootstrap {
           };
           final signature = _sign(json);
           json['signatures'] = <String, dynamic>{
-            client.userID: <String, dynamic>{
+            userID: <String, dynamic>{
               'ed25519:$masterPub': signature,
             },
           };
@@ -439,7 +440,7 @@ class Bootstrap {
           final userSigningPriv = userSigning.generate_seed();
           final userSigningPub = userSigning.init_with_seed(userSigningPriv);
           final json = <String, dynamic>{
-            'user_id': client.userID,
+            'user_id': userID,
             'usage': ['user_signing'],
             'keys': <String, dynamic>{
               'ed25519:$userSigningPub': userSigningPub,
@@ -447,7 +448,7 @@ class Bootstrap {
           };
           final signature = _sign(json);
           json['signatures'] = <String, dynamic>{
-            client.userID: <String, dynamic>{
+            userID: <String, dynamic>{
               'ed25519:$masterPub': signature,
             },
           };
@@ -462,7 +463,7 @@ class Bootstrap {
       state = BootstrapState.loading;
       Logs().v('Upload device signing keys.');
       await client.uiaRequestBackground(
-          (AuthenticationData auth) => client.uploadCrossSigningKeys(
+          (AuthenticationData? auth) => client.uploadCrossSigningKeys(
                 masterKey: masterKey,
                 selfSigningKey: selfSigningKey,
                 userSigningKey: userSigningKey,

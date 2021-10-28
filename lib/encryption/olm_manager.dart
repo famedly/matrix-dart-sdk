@@ -36,7 +36,7 @@ class OlmManager {
   /// Returns the base64 encoded keys to store them in a store.
   /// This String should **never** leave the device!
   String? get pickledOlmAccount =>
-      enabled ? _olmAccount!.pickle(client.userID) : null;
+      enabled ? _olmAccount!.pickle(client.userID!) : null;
   String? get fingerprintKey =>
       enabled ? json.decode(_olmAccount!.identity_keys())['ed25519'] : null;
   String? get identityKey =>
@@ -57,8 +57,7 @@ class OlmManager {
         await olm.init();
         _olmAccount = olm.Account();
         _olmAccount!.create();
-        if (await uploadKeys(uploadDeviceKeys: true, updateDatabase: false) ==
-            false) {
+        if (!await uploadKeys(uploadDeviceKeys: true, updateDatabase: false)) {
           throw ('Upload key failed');
         }
       } catch (_) {
@@ -70,7 +69,7 @@ class OlmManager {
       try {
         await olm.init();
         _olmAccount = olm.Account();
-        _olmAccount!.unpickle(client.userID, olmAccount);
+        _olmAccount!.unpickle(client.userID!, olmAccount);
       } catch (_) {
         _olmAccount?.free();
         _olmAccount = null;
@@ -279,7 +278,7 @@ class OlmManager {
     // fixup accidental too many uploads. We delete only one of them so that the server has time to update the counts and because we will get rate limited anyway.
     if (keyCount > _olmAccount!.max_number_of_one_time_keys()) {
       final requestingKeysFrom = {
-        client.userID: {client.deviceID: 'signed_curve25519'}
+        client.userID!: {client.deviceID!: 'signed_curve25519'}
       };
       client.claimKeys(requestingKeysFrom, timeout: 10000);
     }
@@ -311,10 +310,7 @@ class OlmManager {
       // update an existing session
       _olmSessions[session.identityKey]![ix] = session;
     }
-    if (client.database == null) {
-      return;
-    }
-    await client.database.storeOlmSession(
+    await client.database?.storeOlmSession(
         session.identityKey,
         session.sessionId!,
         session.pickledSession!,
@@ -362,7 +358,7 @@ class OlmManager {
         if (session.session == null) {
           continue;
         }
-        if (type == 0 && session.session!.matches_inbound(body) == true) {
+        if (type == 0 && session.session!.matches_inbound(body)) {
           try {
             plaintext = session.session!.decrypt(type, body);
           } catch (e) {
@@ -395,7 +391,7 @@ class OlmManager {
         client.database?.updateClientKeys(pickledOlmAccount!);
         plaintext = newSession.decrypt(type, body);
         runInRoot(() => storeOlmSession(OlmSession(
-              key: client.userID,
+              key: client.userID!,
               identityKey: senderKey,
               sessionId: newSession.session_id(),
               session: newSession,
@@ -428,25 +424,19 @@ class OlmManager {
   }
 
   Future<List<OlmSession>> getOlmSessionsFromDatabase(String senderKey) async {
-    if (client.database == null) {
-      return [];
-    }
     final olmSessions =
-        await client.database.getOlmSessions(senderKey, client.userID);
-    return olmSessions.where((sess) => sess.isValid).toList();
+        await client.database?.getOlmSessions(senderKey, client.userID!);
+    return olmSessions?.where((sess) => sess.isValid).toList() ?? [];
   }
 
   Future<void> getOlmSessionsForDevicesFromDatabase(
       List<String> senderKeys) async {
-    if (client.database == null) {
-      return;
-    }
-    final rows = await client.database.getOlmSessionsForDevices(
+    final rows = await client.database?.getOlmSessionsForDevices(
       senderKeys,
-      client.userID,
+      client.userID!,
     );
     final res = <String, List<OlmSession>>{};
-    for (final sess in rows) {
+    for (final sess in rows ?? []) {
       res[sess.identityKey] ??= <OlmSession>[];
       if (sess.isValid) {
         res[sess.identityKey]!.add(sess);
@@ -565,7 +555,7 @@ class OlmManager {
             session.create_outbound(
                 _olmAccount!, identityKey, deviceKey['key']);
             await storeOlmSession(OlmSession(
-              key: client.userID,
+              key: client.userID!,
               identityKey: identityKey,
               sessionId: session.session_id(),
               session: session,
@@ -602,7 +592,7 @@ class OlmManager {
     await storeOlmSession(sess.first);
     if (client.database != null) {
       // ignore: unawaited_futures
-      runInRoot(() => client.database.setLastSentMessageUserDeviceKey(
+      runInRoot(() => client.database?.setLastSentMessageUserDeviceKey(
           json.encode({
             'type': type,
             'content': payload,
@@ -668,8 +658,10 @@ class OlmManager {
       Logs().v(
           '[OlmManager] Device ${device.userId}:${device.deviceId} generated a new olm session, replaying last sent message...');
       final lastSentMessageRes = await client.database
-          .getLastSentMessageUserDeviceKey(device.userId, device.deviceId!);
-      if (lastSentMessageRes.isEmpty || (lastSentMessageRes.first.isEmpty)) {
+          ?.getLastSentMessageUserDeviceKey(device.userId, device.deviceId!);
+      if (lastSentMessageRes == null ||
+          lastSentMessageRes.isEmpty ||
+          lastSentMessageRes.first.isEmpty) {
         return;
       }
       final lastSentMessage = json.decode(lastSentMessageRes.first);

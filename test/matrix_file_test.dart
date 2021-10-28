@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020 Famedly GmbH
@@ -43,7 +42,7 @@ void main() {
       }
       if (olmEnabled) {
         final encryptedFile = await file.encrypt();
-        expect(encryptedFile != null, true);
+        expect(encryptedFile.data.isNotEmpty, true);
       }
     });
   });

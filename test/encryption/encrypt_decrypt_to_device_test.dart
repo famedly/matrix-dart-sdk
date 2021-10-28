@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020 Famedly GmbH
@@ -35,11 +34,11 @@ void main() {
     Logs().level = Level.error;
     var olmEnabled = true;
 
-    Client client;
+    late Client client;
     final otherClient = Client('othertestclient',
         httpClient: FakeMatrixApi(), databaseBuilder: getDatabase);
-    DeviceKeys device;
-    Map<String, dynamic> payload;
+    late DeviceKeys device;
+    late Map<String, dynamic> payload;
 
     test('setupClient', () async {
       try {
@@ -83,7 +82,7 @@ void main() {
 
     test('encryptToDeviceMessage', () async {
       if (!olmEnabled) return;
-      payload = await otherClient.encryption
+      payload = await otherClient.encryption!
           .encryptToDeviceMessage([device], 'm.to_device', {'hello': 'foxies'});
     });
 
@@ -95,15 +94,15 @@ void main() {
         content: payload[client.userID][client.deviceID],
       );
       final decryptedEvent =
-          await client.encryption.decryptToDeviceEvent(encryptedEvent);
+          await client.encryption!.decryptToDeviceEvent(encryptedEvent);
       expect(decryptedEvent.type, 'm.to_device');
       expect(decryptedEvent.content['hello'], 'foxies');
     });
 
     test('decryptToDeviceEvent nocache', () async {
       if (!olmEnabled) return;
-      client.encryption.olmManager.olmSessions.clear();
-      payload = await otherClient.encryption.encryptToDeviceMessage(
+      client.encryption!.olmManager.olmSessions.clear();
+      payload = await otherClient.encryption!.encryptToDeviceMessage(
           [device], 'm.to_device', {'hello': 'superfoxies'});
       final encryptedEvent = ToDeviceEvent(
         sender: '@othertest:fakeServer.notExisting',
@@ -111,7 +110,7 @@ void main() {
         content: payload[client.userID][client.deviceID],
       );
       final decryptedEvent =
-          await client.encryption.decryptToDeviceEvent(encryptedEvent);
+          await client.encryption!.decryptToDeviceEvent(encryptedEvent);
       expect(decryptedEvent.type, 'm.to_device');
       expect(decryptedEvent.content['hello'], 'superfoxies');
     });

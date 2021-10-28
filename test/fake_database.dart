@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020 Famedly GmbH
@@ -25,11 +24,11 @@ import 'package:matrix/src/database/hive_database.dart';
 import 'package:file/memory.dart';
 import 'package:hive/hive.dart';
 
-Future<DatabaseApi> getDatabase(Client _) => getHiveDatabase(_);
+Future<DatabaseApi> getDatabase(Client? _) => getHiveDatabase(_);
 
 bool hiveInitialized = false;
 
-Future<FamedlySdkHiveDatabase> getHiveDatabase(Client c) async {
+Future<FamedlySdkHiveDatabase> getHiveDatabase(Client? c) async {
   if (!hiveInitialized) {
     final fileSystem = MemoryFileSystem();
     final testHivePath =
@@ -38,7 +37,7 @@ Future<FamedlySdkHiveDatabase> getHiveDatabase(Client c) async {
     Hive.init(testHivePath);
     hiveInitialized = true;
   }
-  final db = FamedlySdkHiveDatabase('unit_test.${c.hashCode}');
+  final db = FamedlySdkHiveDatabase('unit_test.${c?.hashCode}');
   await db.open();
   return db;
 }

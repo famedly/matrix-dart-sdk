@@ -49,12 +49,14 @@ class EventUpdate {
   });
 
   Future<EventUpdate> decrypt(Room room, {bool store = false}) async {
+    final encryption = room.client.encryption;
     if (content['type'] != EventTypes.Encrypted ||
-        !room.client.encryptionEnabled) {
+        !room.client.encryptionEnabled ||
+        encryption == null) {
       return this;
     }
     try {
-      final decrpytedEvent = await room.client.encryption.decryptRoomEvent(
+      final decrpytedEvent = await encryption.decryptRoomEvent(
           room.id, Event.fromJson(content, room),
           store: store, updateType: type);
       return EventUpdate(

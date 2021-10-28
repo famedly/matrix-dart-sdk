@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020 Famedly GmbH
@@ -29,7 +28,7 @@ import 'package:test/test.dart';
 
 import 'fake_client.dart';
 import 'fake_matrix_api.dart';
-import 'fake_matrix_localizations.dart';
+import 'matrix_default_localizations.dart';
 
 void main() {
   /// All Tests related to the Event
@@ -249,10 +248,10 @@ void main() {
         final event = Event.fromJson(redactJsonObj, room);
         event.setRedactionEvent(redactedBecause);
         expect(event.redacted, true);
-        expect(event.redactedBecause.toJson(), redactedBecause.toJson());
+        expect(event.redactedBecause?.toJson(), redactedBecause.toJson());
         expect(event.content.isEmpty, true);
         redactionEventJson.remove('redacts');
-        expect(event.unsigned['redacted_because'], redactionEventJson);
+        expect(event.unsigned?['redacted_because'], redactionEventJson);
       }
     });
 
@@ -280,7 +279,7 @@ void main() {
       event.status = EventStatus.error;
       final resp2 = await event.sendAgain(txid: '1234');
       expect(resp1, null);
-      expect(resp2.startsWith('\$event'), true);
+      expect(resp2?.startsWith('\$event'), true);
 
       await matrix.dispose(closeDatabase: true);
     });
@@ -295,7 +294,7 @@ void main() {
 
       final event = Event.fromJson(
           jsonObj, Room(id: '!1234:example.com', client: matrix));
-      String exception;
+      String? exception;
       try {
         await event.requestKey();
       } catch (e) {
@@ -330,7 +329,7 @@ void main() {
       jsonObj['state_key'] = '@alice:example.com';
       final event = Event.fromJson(
           jsonObj, Room(id: '!localpart:server.abc', client: client));
-      expect(event.stateKeyUser.id, '@alice:example.com');
+      expect(event.stateKeyUser?.id, '@alice:example.com');
     });
     test('canRedact', () async {
       expect(event.canRedact, true);
@@ -364,7 +363,8 @@ void main() {
           }
         }
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Removed by Example');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -392,7 +392,8 @@ void main() {
         'type': 'm.sticker',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example sent a sticker');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -405,7 +406,8 @@ void main() {
         'type': 'm.room.redaction',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example redacted an event');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -420,7 +422,8 @@ void main() {
         'type': 'm.room.aliases',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example changed the room aliases');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -435,7 +438,8 @@ void main() {
         'type': 'm.room.aliases',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example changed the room aliases');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -448,7 +452,8 @@ void main() {
         'type': 'm.room.canonical_alias',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example changed the room invitation link');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -469,7 +474,8 @@ void main() {
         'type': 'm.room.create',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example created the chat');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -485,7 +491,8 @@ void main() {
         'type': 'm.room.tombstone',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Room has been upgraded');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -498,7 +505,8 @@ void main() {
         'type': 'm.room.join_rules',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example changed the join rules to Anyone can join');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -515,7 +523,8 @@ void main() {
         'type': 'm.room.member',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Alice joined the chat');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -527,7 +536,8 @@ void main() {
         'state_key': '@alice:example.org',
         'type': 'm.room.member'
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example has invited Alice');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -542,7 +552,8 @@ void main() {
           'prev_content': {'membership': 'join'},
         }
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example kicked Alice');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -557,7 +568,8 @@ void main() {
           'prev_content': {'membership': 'join'},
         }
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example banned Alice');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -572,7 +584,8 @@ void main() {
           'prev_content': {'membership': 'invite'},
         }
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Alice accepted the invitation');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -587,7 +600,8 @@ void main() {
           'prev_content': {'membership': 'join'},
         }
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example has invited Alice');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -602,7 +616,8 @@ void main() {
           'prev_content': {'membership': 'invite'},
         }
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example has withdrawn the invitation for Alice');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -617,7 +632,8 @@ void main() {
           'prev_content': {'membership': 'invite'},
         }
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Alice rejected the invitation');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -641,7 +657,8 @@ void main() {
         'type': 'm.room.power_levels',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example changed the chat permissions');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -654,7 +671,8 @@ void main() {
         'type': 'm.room.name',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example changed the chat name to The room name');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -667,7 +685,8 @@ void main() {
         'type': 'm.room.topic',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example changed the chat description to A room topic');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -683,7 +702,8 @@ void main() {
         'type': 'm.room.avatar',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example changed the chat avatar');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -696,7 +716,8 @@ void main() {
         'type': 'm.room.history_visibility',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example changed the history visibility to Visible for all participants');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -713,8 +734,8 @@ void main() {
         'type': 'm.room.encryption',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()),
-          'Example activatedEndToEndEncryption. needPantalaimonWarning');
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example activated end to end encryption. Need pantalaimon');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -731,7 +752,7 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()),
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
           'This is an example text message');
       expect(event.isEventTypeKnown, true);
 
@@ -749,7 +770,7 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()),
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
           '* thinks this is an example emote');
       expect(event.isEventTypeKnown, true);
 
@@ -767,7 +788,7 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()),
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
           'This is an example notice');
       expect(event.isEventTypeKnown, true);
 
@@ -785,7 +806,8 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example sent a picture');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -803,7 +825,8 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example sent a file');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -824,7 +847,8 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example sent an audio');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -849,7 +873,8 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example shared the location');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -879,7 +904,8 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Example sent a video');
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({
@@ -891,7 +917,8 @@ void main() {
         'type': 'unknown.event.type',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations()), null);
+      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+          'Unknown event unknown.event.type');
       expect(event.isEventTypeKnown, false);
     });
 
@@ -913,7 +940,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(
-          event.getLocalizedBody(FakeMatrixLocalizations(),
+          event.getLocalizedBody(MatrixDefaultLocalizations(),
               plaintextBody: true),
           '**This is an example text message**');
 
@@ -941,10 +968,11 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations(), hideEdit: true),
+      expect(
+          event.getLocalizedBody(MatrixDefaultLocalizations(), hideEdit: true),
           'This is an example text message');
       expect(
-          event.getLocalizedBody(FakeMatrixLocalizations(),
+          event.getLocalizedBody(MatrixDefaultLocalizations(),
               hideEdit: true, plaintextBody: true),
           '**This is an example text message**');
 
@@ -962,10 +990,11 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(FakeMatrixLocalizations(), hideReply: true),
+      expect(
+          event.getLocalizedBody(MatrixDefaultLocalizations(), hideReply: true),
           'hmm, fox');
       expect(
-          event.getLocalizedBody(FakeMatrixLocalizations(),
+          event.getLocalizedBody(MatrixDefaultLocalizations(),
               hideReply: true, plaintextBody: true),
           'hmm, *fox*');
     });
@@ -976,6 +1005,8 @@ void main() {
           'body': 'blah',
           'msgtype': 'm.text',
         },
+        'type': 'm.room.message',
+        'sender': '@example:example.org',
         'event_id': '\$source',
       }, null);
       final edit1 = Event.fromJson({
@@ -987,6 +1018,8 @@ void main() {
             'rel_type': RelationshipTypes.edit,
           },
         },
+        'type': 'm.room.message',
+        'sender': '@example:example.org',
         'event_id': '\$edit1',
       }, null);
       final edit2 = Event.fromJson({
@@ -998,9 +1031,11 @@ void main() {
             'rel_type': RelationshipTypes.edit,
           },
         },
+        'type': 'm.room.message',
+        'sender': '@example:example.org',
         'event_id': '\$edit2',
       }, null);
-      final room = Room(client: client);
+      final room = Room(client: client, id: '!id:fakeserver.nonexisting');
       final timeline =
           Timeline(events: <Event>[event, edit1, edit2], room: room);
       expect(event.hasAggregatedEvents(timeline, RelationshipTypes.edit), true);
@@ -1096,7 +1131,7 @@ void main() {
         'event_id': '\$edit3',
         'sender': '@bob:example.org',
       }, null);
-      final room = Room(client: client);
+      final room = Room(id: '!localpart:server.abc', client: client);
       // no edits
       var displayEvent =
           event.getDisplayEvent(Timeline(events: <Event>[event], room: room));
@@ -1127,8 +1162,9 @@ void main() {
         'sender': '@alice:example.org',
         'unsigned': {
           'redacted_because': {
-            'evnet_id': '\$redact',
+            'event_id': '\$redact',
             'sender': '@alice:example.org',
+            'type': 'm.room.redaction',
           },
         },
       }, null);
@@ -1143,7 +1179,7 @@ void main() {
         return {
           '/_matrix/media/r0/download/example.org/file': FILE_BUFF,
           '/_matrix/media/r0/download/example.org/thumb': THUMBNAIL_BUFF,
-        }[uri.path];
+        }[uri.path]!;
       };
       await client.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
@@ -1160,7 +1196,7 @@ void main() {
       }, room);
       var buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
-      expect(buffer.bytes, FILE_BUFF);
+      expect(buffer?.bytes, FILE_BUFF);
       expect(event.attachmentOrThumbnailMxcUrl().toString(),
           'mxc://example.org/file');
       expect(event.attachmentOrThumbnailMxcUrl(getThumbnail: true).toString(),
@@ -1215,11 +1251,11 @@ void main() {
 
       buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
-      expect(buffer.bytes, FILE_BUFF);
+      expect(buffer?.bytes, FILE_BUFF);
 
       buffer = await event.downloadAndDecryptAttachment(
           getThumbnail: true, downloadCallback: downloadCallback);
-      expect(buffer.bytes, THUMBNAIL_BUFF);
+      expect(buffer?.bytes, THUMBNAIL_BUFF);
     });
     test('encrypted attachments', () async {
       if (!olmEnabled) return;
@@ -1234,7 +1270,7 @@ void main() {
         return {
           '/_matrix/media/r0/download/example.com/file': FILE_BUFF_ENC,
           '/_matrix/media/r0/download/example.com/thumb': THUMB_BUFF_ENC,
-        }[uri.path];
+        }[uri.path]!;
       };
       final room = Room(id: '!localpart:server.abc', client: await getClient());
       var event = Event.fromJson({
@@ -1262,7 +1298,7 @@ void main() {
       }, room);
       var buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
-      expect(buffer.bytes, FILE_BUFF_DEC);
+      expect(buffer?.bytes, FILE_BUFF_DEC);
 
       event = Event.fromJson({
         'type': EventTypes.Message,
@@ -1315,11 +1351,11 @@ void main() {
       expect(event.thumbnailMxcUrl.toString(), 'mxc://example.com/thumb');
       buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
-      expect(buffer.bytes, FILE_BUFF_DEC);
+      expect(buffer?.bytes, FILE_BUFF_DEC);
 
       buffer = await event.downloadAndDecryptAttachment(
           getThumbnail: true, downloadCallback: downloadCallback);
-      expect(buffer.bytes, THUMB_BUFF_DEC);
+      expect(buffer?.bytes, THUMB_BUFF_DEC);
 
       await room.client.dispose(closeDatabase: true);
     });
@@ -1330,7 +1366,7 @@ void main() {
         serverHits++;
         return {
           '/_matrix/media/r0/download/example.org/newfile': FILE_BUFF,
-        }[uri.path];
+        }[uri.path]!;
       };
       await client.checkHomeserver('https://fakeserver.notexisting',
           checkWellKnown: false);
@@ -1352,14 +1388,14 @@ void main() {
       var buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
       expect(await event.isAttachmentInLocalStore(),
-          event.room.client.database.supportsFileStoring);
-      expect(buffer.bytes, FILE_BUFF);
+          event.room?.client.database?.supportsFileStoring);
+      expect(buffer?.bytes, FILE_BUFF);
       expect(serverHits, 1);
       buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
-      expect(buffer.bytes, FILE_BUFF);
+      expect(buffer?.bytes, FILE_BUFF);
       expect(
-          serverHits, event.room.client.database.supportsFileStoring ? 1 : 2);
+          serverHits, event.room!.client.database!.supportsFileStoring ? 1 : 2);
 
       await room.client.dispose(closeDatabase: true);
     });

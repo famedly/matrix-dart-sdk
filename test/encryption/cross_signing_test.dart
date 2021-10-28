@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020 Famedly GmbH
@@ -32,7 +31,7 @@ void main() {
     Logs().level = Level.error;
     var olmEnabled = true;
 
-    Client client;
+    late Client client;
 
     test('setupClient', () async {
       try {
@@ -50,41 +49,43 @@ void main() {
 
     test('basic things', () async {
       if (!olmEnabled) return;
-      expect(client.encryption.crossSigning.enabled, true);
+      expect(client.encryption?.crossSigning.enabled, true);
     });
 
     test('selfSign', () async {
       if (!olmEnabled) return;
-      final key = client.userDeviceKeys[client.userID].masterKey;
+      final key = client.userDeviceKeys[client.userID]!.masterKey!;
       key.setDirectVerified(false);
       FakeMatrixApi.calledEndpoints.clear();
-      await client.encryption.crossSigning.selfSign(recoveryKey: ssssKey);
+      await client.encryption!.crossSigning.selfSign(recoveryKey: ssssKey);
       expect(key.directVerified, true);
       expect(
           FakeMatrixApi.calledEndpoints
               .containsKey('/client/r0/keys/signatures/upload'),
           true);
-      expect(await client.encryption.crossSigning.isCached(), true);
+      expect(await client.encryption!.crossSigning.isCached(), true);
     });
 
     test('signable', () async {
       if (!olmEnabled) return;
       expect(
-          client.encryption.crossSigning
-              .signable([client.userDeviceKeys[client.userID].masterKey]),
+          client.encryption!.crossSigning
+              .signable([client.userDeviceKeys[client.userID!]!.masterKey!]),
           true);
       expect(
-          client.encryption.crossSigning.signable([
-            client.userDeviceKeys[client.userID].deviceKeys[client.deviceID]
+          client.encryption!.crossSigning.signable([
+            client.userDeviceKeys[client.userID!]!.deviceKeys[client.deviceID!]!
           ]),
           false);
       expect(
-          client.encryption.crossSigning.signable(
-              [client.userDeviceKeys[client.userID].deviceKeys['OTHERDEVICE']]),
+          client.encryption!.crossSigning.signable([
+            client.userDeviceKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!
+          ]),
           true);
       expect(
-          client.encryption.crossSigning.signable([
-            client.userDeviceKeys['@alice:example.com'].deviceKeys['JLAFKJWSCS']
+          client.encryption!.crossSigning.signable([
+            client
+                .userDeviceKeys['@alice:example.com']!.deviceKeys['JLAFKJWSCS']!
           ]),
           false);
     });
@@ -92,24 +93,24 @@ void main() {
     test('sign', () async {
       if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
-      await client.encryption.crossSigning.sign([
-        client.userDeviceKeys[client.userID].masterKey,
-        client.userDeviceKeys[client.userID].deviceKeys['OTHERDEVICE'],
-        client.userDeviceKeys['@othertest:fakeServer.notExisting'].masterKey
+      await client.encryption!.crossSigning.sign([
+        client.userDeviceKeys[client.userID!]!.masterKey!,
+        client.userDeviceKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!,
+        client.userDeviceKeys['@othertest:fakeServer.notExisting']!.masterKey!
       ]);
       final body = json.decode(FakeMatrixApi
-          .calledEndpoints['/client/r0/keys/signatures/upload'].first);
+          .calledEndpoints['/client/r0/keys/signatures/upload']!.first);
       expect(body['@test:fakeServer.notExisting']?.containsKey('OTHERDEVICE'),
           true);
       expect(
           body['@test:fakeServer.notExisting'].containsKey(
-              client.userDeviceKeys[client.userID].masterKey.publicKey),
+              client.userDeviceKeys[client.userID]!.masterKey!.publicKey),
           true);
       expect(
           body['@othertest:fakeServer.notExisting'].containsKey(client
               .userDeviceKeys['@othertest:fakeServer.notExisting']
-              .masterKey
-              .publicKey),
+              ?.masterKey
+              ?.publicKey),
           true);
     });
 
