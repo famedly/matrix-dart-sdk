@@ -464,7 +464,7 @@ class Client extends MatrixApi {
     @Deprecated('Deprecated in favour of identifier.') String? medium,
     @Deprecated('Deprecated in favour of identifier.') String? address,
   }) async {
-    if (homeserver == null && user != null && user.isValidMatrixId == true) {
+    if (homeserver == null && user != null && user.isValidMatrixId) {
       await checkHomeserver(user.domain);
     }
     final response = await super.login(

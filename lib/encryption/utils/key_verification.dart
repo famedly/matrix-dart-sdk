@@ -152,10 +152,8 @@ class KeyVerification {
 
   List<String> get knownVerificationMethods {
     final methods = <String>[];
-    if (client.verificationMethods.contains(KeyVerificationMethod.numbers) ==
-            true ||
-        client.verificationMethods.contains(KeyVerificationMethod.emoji) ==
-            true) {
+    if (client.verificationMethods.contains(KeyVerificationMethod.numbers) ||
+        client.verificationMethods.contains(KeyVerificationMethod.emoji)) {
       methods.add('m.sas.v1');
     }
     return methods;
@@ -672,13 +670,11 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
   List<String> get knownAuthentificationTypes {
     final types = <String>[];
     if (request.client.verificationMethods
-            .contains(KeyVerificationMethod.emoji) ==
-        true) {
+        .contains(KeyVerificationMethod.emoji)) {
       types.add('emoji');
     }
     if (request.client.verificationMethods
-            .contains(KeyVerificationMethod.numbers) ==
-        true) {
+        .contains(KeyVerificationMethod.numbers)) {
       types.add('decimal');
     }
     return types;

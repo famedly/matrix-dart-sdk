@@ -57,8 +57,7 @@ class OlmManager {
         await olm.init();
         _olmAccount = olm.Account();
         _olmAccount!.create();
-        if (await uploadKeys(uploadDeviceKeys: true, updateDatabase: false) ==
-            false) {
+        if (!await uploadKeys(uploadDeviceKeys: true, updateDatabase: false)) {
           throw ('Upload key failed');
         }
       } catch (_) {
@@ -359,7 +358,7 @@ class OlmManager {
         if (session.session == null) {
           continue;
         }
-        if (type == 0 && session.session!.matches_inbound(body) == true) {
+        if (type == 0 && session.session!.matches_inbound(body)) {
           try {
             plaintext = session.session!.decrypt(type, body);
           } catch (e) {
