@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2019, 2020 Famedly GmbH
@@ -37,9 +36,9 @@ void main() {
     final insertList = <int>[];
     var olmEnabled = true;
 
-    Client client;
-    Room room;
-    Timeline timeline;
+    late Client client;
+    late Room room;
+    late Timeline timeline;
     test('create stuff', () async {
       try {
         await olm.init();
@@ -233,18 +232,18 @@ void main() {
 
     test('getEventById', () async {
       var event = await timeline.getEventById('abc');
-      expect(event.content, {'msgtype': 'm.text', 'body': 'Testcase'});
+      expect(event?.content, {'msgtype': 'm.text', 'body': 'Testcase'});
 
       event = await timeline.getEventById('not_found');
       expect(event, null);
 
       event = await timeline.getEventById('unencrypted_event');
-      expect(event.body, 'This is an example text message');
+      expect(event?.body, 'This is an example text message');
 
       if (olmEnabled) {
         event = await timeline.getEventById('encrypted_event');
         // the event is invalid but should have traces of attempting to decrypt
-        expect(event.messageType, MessageTypes.BadEncrypted);
+        expect(event?.messageType, MessageTypes.BadEncrypted);
       }
     });
 

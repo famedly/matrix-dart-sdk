@@ -1,4 +1,3 @@
-// @dart=2.9
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2020 Famedly GmbH
@@ -27,7 +26,7 @@ import 'fake_database.dart';
 void main() {
   group('Databse', () {
     Logs().level = Level.error;
-    final room = Room(id: '!room:blubb');
+    final room = Room(id: '!room:blubb', client: Client('testclient'));
     test('setupDatabase', () async {
       final database = await getDatabase(null);
       await database.insertClient(
@@ -59,7 +58,7 @@ void main() {
       );
       await database.storeEventUpdate(update, client);
       var event = await database.getEventById('\$event-1', room);
-      expect(event.eventId, '\$event-1');
+      expect(event?.eventId, '\$event-1');
 
       // insert a transaction id
       update = EventUpdate(
@@ -76,7 +75,7 @@ void main() {
       );
       await database.storeEventUpdate(update, client);
       event = await database.getEventById('transaction-1', room);
-      expect(event.eventId, 'transaction-1');
+      expect(event?.eventId, 'transaction-1');
       update = EventUpdate(
         type: EventUpdateType.timeline,
         roomID: room.id,
@@ -112,7 +111,7 @@ void main() {
       );
       await database.storeEventUpdate(update, client);
       event = await database.getEventById('\$event-3', room);
-      expect(event.eventId, '\$event-3');
+      expect(event?.eventId, '\$event-3');
       update = EventUpdate(
         type: EventUpdateType.timeline,
         roomID: room.id,
@@ -130,8 +129,8 @@ void main() {
       );
       await database.storeEventUpdate(update, client);
       event = await database.getEventById('\$event-3', room);
-      expect(event.eventId, '\$event-3');
-      expect(event.status, EventStatus.sent);
+      expect(event?.eventId, '\$event-3');
+      expect(event?.status, EventStatus.sent);
       event = await database.getEventById('transaction-2', room);
       expect(event, null);
 
@@ -150,7 +149,7 @@ void main() {
       );
       await database.storeEventUpdate(update, client);
       event = await database.getEventById('\$event-4', room);
-      expect(event.eventId, '\$event-4');
+      expect(event?.eventId, '\$event-4');
       update = EventUpdate(
         type: EventUpdateType.timeline,
         roomID: room.id,
@@ -168,8 +167,8 @@ void main() {
       );
       await database.storeEventUpdate(update, client);
       event = await database.getEventById('\$event-4', room);
-      expect(event.eventId, '\$event-4');
-      expect(event.status, EventStatus.synced);
+      expect(event?.eventId, '\$event-4');
+      expect(event?.status, EventStatus.synced);
       event = await database.getEventById('transaction-3', room);
       expect(event, null);
     });
