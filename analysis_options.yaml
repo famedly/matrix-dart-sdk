@@ -11,7 +11,6 @@ linter:
 analyzer:
   errors:
     todo: ignore
-    import_of_legacy_library_into_null_safe: ignore
   exclude:
     - example/main.dart
     # needed until crypto packages upgrade
