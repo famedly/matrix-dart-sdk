@@ -970,8 +970,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     }
 
     // Store a common state event
-    if ({EventUpdateType.timeline, EventUpdateType.state}
-        .contains(eventUpdate.type)) {
+    if ({
+      EventUpdateType.timeline,
+      EventUpdateType.state,
+      EventUpdateType.inviteState
+    }.contains(eventUpdate.type)) {
       if (eventUpdate.content['type'] == EventTypes.RoomMember) {
         await _roomMembersBox.put(
             MultiKey(
