@@ -555,16 +555,26 @@ class Client extends MatrixApi {
 
   /// Returns an existing direct room ID with this user or creates a new one.
   /// Returns null on error.
-  Future<String> startDirectChat(String mxid) async {
+  Future<String> startDirectChat(String mxid, {bool encrypted = true}) async {
     // Try to find an existing direct chat
     var roomId = getDirectChatFromUserId(mxid);
     if (roomId != null) return roomId;
-
+    final algorithm = Client.supportedGroupEncryptionAlgorithms[0];
     // Start a new direct chat
     roomId = await createRoom(
       invite: [mxid],
       isDirect: true,
       preset: CreateRoomPreset.trustedPrivateChat,
+      initialState: encrypted && encryptionEnabled
+          ? [
+              StateEvent(
+                content: {
+                  'algorithm': algorithm,
+                },
+                type: EventTypes.Encryption,
+              )
+            ]
+          : [],
     );
 
     await Room(id: roomId, client: this).addToDirectChat(mxid);
