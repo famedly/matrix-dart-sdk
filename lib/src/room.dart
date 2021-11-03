@@ -19,9 +19,9 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:matrix/src/utils/space_child.dart';
-import 'package:collection/collection.dart';
 
 import '../matrix.dart';
 import 'client.dart';
@@ -29,13 +29,13 @@ import 'event.dart';
 import 'event_status.dart';
 import 'timeline.dart';
 import 'user.dart';
-import 'voip_content.dart';
 import 'utils/crypto/encrypted_file.dart';
 import 'utils/event_update.dart';
 import 'utils/markdown.dart';
 import 'utils/marked_unread.dart';
 import 'utils/matrix_file.dart';
 import 'utils/matrix_localizations.dart';
+import 'voip_content.dart';
 
 /// https://github.com/matrix-org/matrix-doc/pull/2746
 /// version 1
@@ -1107,9 +1107,17 @@ class Room {
   }
 
   /// Returns all participants for this room. With lazy loading this
-  /// list may not be complete. User [requestParticipants] in this
+  /// list may not be complete. Use [requestParticipants] in this
   /// case.
-  List<User> getParticipants() {
+  /// List `membershipFilter` defines with what membership do you want the
+  /// participants, default set to
+  /// [[Membership.join, Membership.invite, Membership.knock]]
+  List<User> getParticipants(
+      [List<Membership> membershipFilter = const [
+        Membership.join,
+        Membership.invite,
+        Membership.knock,
+      ]]) {
     final userList = <User>[];
     final members = states[EventTypes.RoomMember];
     if (members != null && members is Map<String, dynamic>) {
@@ -1118,6 +1126,7 @@ class Room {
         if (state.type == EventTypes.RoomMember) userList.add(state.asUser);
       }
     }
+    userList.removeWhere((u) => !membershipFilter.contains(u.membership));
     return userList;
   }
 
@@ -1125,7 +1134,15 @@ class Room {
 
   /// Request the full list of participants from the server. The local list
   /// from the store is not complete if the client uses lazy loading.
-  Future<List<User>> requestParticipants() async {
+  /// List `membershipFilter` defines with what membership do you want the
+  /// participants, default set to
+  /// [[Membership.join, Membership.invite, Membership.knock]]
+  Future<List<User>> requestParticipants(
+      [List<Membership> membershipFilter = const [
+        Membership.join,
+        Membership.invite,
+        Membership.knock,
+      ]]) async {
     if (!participantListComplete && partial) {
       // we aren't fully loaded, maybe the users are in the database
       final users = await client.database?.getUsers(this) ?? [];
@@ -1145,8 +1162,7 @@ class Room {
       setState(user); // at *least* cache this in-memory
     }
     _requestedParticipants = true;
-    users.removeWhere(
-        (u) => [Membership.leave, Membership.ban].contains(u.membership));
+    users.removeWhere((u) => !membershipFilter.contains(u.membership));
     return users;
   }
 
