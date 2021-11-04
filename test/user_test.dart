@@ -85,7 +85,7 @@ void main() {
         'state_key': id
       };
 
-      final user = Event.fromJson(jsonObj, null).asUser;
+      final user = Event.fromJson(jsonObj, room).asUser;
 
       expect(user.id, id);
       expect(user.membership, membership);
@@ -95,9 +95,9 @@ void main() {
     });
 
     test('calcDisplayname', () async {
-      final user1 = User('@alice:example.com');
-      final user2 = User('@SuperAlice:example.com');
-      final user3 = User('@alice_mep:example.com');
+      final user1 = User('@alice:example.com', room: room);
+      final user2 = User('@SuperAlice:example.com', room: room);
+      final user3 = User('@alice_mep:example.com', room: room);
       expect(user1.calcDisplayname(), 'Alice');
       expect(user2.calcDisplayname(), 'SuperAlice');
       expect(user3.calcDisplayname(), 'Alice Mep');

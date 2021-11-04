@@ -368,7 +368,6 @@ void main() {
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
-          roomId: room.id,
           room: room,
           eventId: '12345',
           originServerTs: DateTime.now(),

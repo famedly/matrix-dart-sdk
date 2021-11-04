@@ -886,13 +886,18 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         .contains(eventUpdate.type)) {
       final eventId = eventUpdate.content['event_id'];
       // Is this ID already in the store?
-      final prevEvent = _eventsBox
-              .containsKey(MultiKey(eventUpdate.roomID, eventId).toString())
-          ? Event.fromJson(
-              convertToJson(await _eventsBox
-                  .get(MultiKey(eventUpdate.roomID, eventId).toString())),
-              null)
-          : null;
+      final Map? prevEvent = await _eventsBox
+          .get(MultiKey(eventUpdate.roomID, eventId).toString());
+      final prevStatus = prevEvent == null
+          ? null
+          : () {
+              final json = convertToJson(prevEvent);
+              final statusInt = json.tryGet<int>('status') ??
+                  json
+                      .tryGetMap<String, dynamic>('unsigned')
+                      ?.tryGet<int>(messageSendingStatusKey);
+              return statusInt == null ? null : eventStatusFromInt(statusInt);
+            }();
 
       // calculate the status
       final newStatus = eventStatusFromInt(
@@ -905,16 +910,14 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
       // Is this the response to a sending event which is already synced? Then
       // there is nothing to do here.
-      if (!newStatus.isSynced &&
-          prevEvent != null &&
-          prevEvent.status.isSynced) {
+      if (!newStatus.isSynced && prevStatus != null && prevStatus.isSynced) {
         return;
       }
 
       final status = newStatus.isError || prevEvent == null
           ? newStatus
           : latestEventStatus(
-              prevEvent.status,
+              prevStatus!,
               newStatus,
             );
 
@@ -945,8 +948,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         }
         await _timelineFragmentsBox.put(key, eventIds);
       } else if (status.isSynced &&
-          prevEvent != null &&
-          prevEvent.status.isSent &&
+          prevStatus != null &&
+          prevStatus.isSent &&
           eventUpdate.type != EventUpdateType.history) {
         // Status changes from 1 -> 2? Make sure event is correctly sorted.
         eventIds.remove(eventId);
