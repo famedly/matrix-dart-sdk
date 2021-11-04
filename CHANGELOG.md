@@ -1,3 +1,11 @@
+## [0.7.0-nullsafety.1] - 04nd Nov 2021
+Prerelease of the null safety version of the SDK.
+- feat: choose memberships returned by requestParticipants()
+- refactor: Make SDK null safe
+- fix: add room invite update to roomStateBox, so invites don't show empty room when app is restarted
+- fix: Do not upload keys after logout
+- fix: obay explicitly set ports in mxc URLs
+
 ## [0.6.2] - 25nd Oct 2021
 - fix: Unnecessary null check
 - fix: Auto update room states
