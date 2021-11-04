@@ -1,3 +1,6 @@
+## 0.5.0
+- fix: threepidCreds should be threepid_creds and an object
+
 ## 0.4.4
 - chore: workaround for invalid getTurnServer responses from synapse
 
