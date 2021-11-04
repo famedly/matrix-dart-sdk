@@ -28,7 +28,7 @@ import 'authentication_data.dart';
 /// Or phone number based identity:
 /// https://matrix.org/docs/spec/client_server/r0.6.1#phone-number-msisdn-based-identity-homeserver
 class AuthenticationThreePidCreds extends AuthenticationData {
-  late List<ThreepidCreds> threepidCreds;
+  late ThreepidCreds threepidCreds;
 
   AuthenticationThreePidCreds(
       {String? session, required String type, required this.threepidCreds})
@@ -39,27 +39,16 @@ class AuthenticationThreePidCreds extends AuthenticationData {
 
   AuthenticationThreePidCreds.fromJson(Map<String, dynamic> json)
       : super.fromJson(json) {
-    if (json['threepidCreds'] != null) {
-      threepidCreds = (json['threepidCreds'] as List)
-          .map((item) => ThreepidCreds.fromJson(item))
-          .toList();
-    }
-
-    // This is so extremly stupid... kill it with fire!
-    if (json['threepid_creds'] != null) {
-      threepidCreds = (json['threepid_creds'] as List)
-          .map((item) => ThreepidCreds.fromJson(item))
-          .toList();
+    final creds = json['threepid_creds'];
+    if (creds is Map<String, dynamic>) {
+      threepidCreds = ThreepidCreds.fromJson(creds);
     }
   }
 
   @override
   Map<String, dynamic> toJson() {
     final data = super.toJson();
-    data['threepidCreds'] = threepidCreds.map((t) => t.toJson()).toList();
-    // Help me! I'm prisoned in a developer factory against my will,
-    // where we are forced to work with json like this!!
-    data['threepid_creds'] = threepidCreds.map((t) => t.toJson()).toList();
+    data['threepid_creds'] = threepidCreds.toJson();
     return data;
   }
 }

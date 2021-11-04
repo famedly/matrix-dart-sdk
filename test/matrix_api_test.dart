@@ -1807,37 +1807,26 @@ void main() {
     test('AuthenticationThreePidCreds', () {
       final json = {
         'type': 'm.login.email.identity',
-        'threepidCreds': [
-          {
-            'sid': '1',
-            'client_secret': 'a',
-            'id_server': 'matrix.org',
-            'id_access_token': 'a',
-          },
-        ],
-        'threepid_creds': [
-          {
-            'sid': '1',
-            'client_secret': 'a',
-            'id_server': 'matrix.org',
-            'id_access_token': 'a',
-          },
-        ],
+        'threepid_creds': {
+          'sid': '1',
+          'client_secret': 'a',
+          'id_server': 'matrix.org',
+          'id_access_token': 'a',
+        },
         'session': '1',
       };
       expect(AuthenticationThreePidCreds.fromJson(json).toJson(), json);
       expect(
           AuthenticationThreePidCreds(
-              session: '1',
-              type: AuthenticationTypes.emailIdentity,
-              threepidCreds: [
-                ThreepidCreds(
-                  sid: '1',
-                  clientSecret: 'a',
-                  idServer: 'matrix.org',
-                  idAccessToken: 'a',
-                ),
-              ]).toJson(),
+            session: '1',
+            type: AuthenticationTypes.emailIdentity,
+            threepidCreds: ThreepidCreds(
+              sid: '1',
+              clientSecret: 'a',
+              idServer: 'matrix.org',
+              idAccessToken: 'a',
+            ),
+          ).toJson(),
           json);
     });
     test('AuthenticationIdentifier', () {
