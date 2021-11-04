@@ -1196,7 +1196,7 @@ void main() {
       }, room);
       var buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
-      expect(buffer?.bytes, FILE_BUFF);
+      expect(buffer.bytes, FILE_BUFF);
       expect(event.attachmentOrThumbnailMxcUrl().toString(),
           'mxc://example.org/file');
       expect(event.attachmentOrThumbnailMxcUrl(getThumbnail: true).toString(),
@@ -1251,11 +1251,11 @@ void main() {
 
       buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
-      expect(buffer?.bytes, FILE_BUFF);
+      expect(buffer.bytes, FILE_BUFF);
 
       buffer = await event.downloadAndDecryptAttachment(
           getThumbnail: true, downloadCallback: downloadCallback);
-      expect(buffer?.bytes, THUMBNAIL_BUFF);
+      expect(buffer.bytes, THUMBNAIL_BUFF);
     });
     test('encrypted attachments', () async {
       if (!olmEnabled) return;
@@ -1298,7 +1298,7 @@ void main() {
       }, room);
       var buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
-      expect(buffer?.bytes, FILE_BUFF_DEC);
+      expect(buffer.bytes, FILE_BUFF_DEC);
 
       event = Event.fromJson({
         'type': EventTypes.Message,
@@ -1351,11 +1351,11 @@ void main() {
       expect(event.thumbnailMxcUrl.toString(), 'mxc://example.com/thumb');
       buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
-      expect(buffer?.bytes, FILE_BUFF_DEC);
+      expect(buffer.bytes, FILE_BUFF_DEC);
 
       buffer = await event.downloadAndDecryptAttachment(
           getThumbnail: true, downloadCallback: downloadCallback);
-      expect(buffer?.bytes, THUMB_BUFF_DEC);
+      expect(buffer.bytes, THUMB_BUFF_DEC);
 
       await room.client.dispose(closeDatabase: true);
     });
@@ -1389,11 +1389,11 @@ void main() {
           downloadCallback: downloadCallback);
       expect(await event.isAttachmentInLocalStore(),
           event.room?.client.database?.supportsFileStoring);
-      expect(buffer?.bytes, FILE_BUFF);
+      expect(buffer.bytes, FILE_BUFF);
       expect(serverHits, 1);
       buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
-      expect(buffer?.bytes, FILE_BUFF);
+      expect(buffer.bytes, FILE_BUFF);
       expect(
           serverHits, event.room!.client.database!.supportsFileStoring ? 1 : 2);
 
