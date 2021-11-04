@@ -17,7 +17,7 @@ analyzer:
     - lib/src/database/database.g.dart
   plugins:
     # Show code metrics in IDE
-    - dart_code_metrics
+    # - dart_code_metrics
 
 dart_code_metrics:
   metrics:
