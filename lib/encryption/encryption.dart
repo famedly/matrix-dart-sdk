@@ -270,7 +270,6 @@ class Encryption {
       type: decryptedPayload['type'],
       senderId: event.senderId,
       eventId: event.eventId,
-      roomId: event.roomId,
       room: event.room,
       originServerTs: event.originServerTs,
       unsigned: event.unsigned,
@@ -304,7 +303,7 @@ class Encryption {
       }
       if (event.type != EventTypes.Encrypted && store) {
         if (updateType != EventUpdateType.history) {
-          event.room?.setState(event);
+          event.room.setState(event);
         }
         await client.database?.storeEventUpdate(
           EventUpdate(

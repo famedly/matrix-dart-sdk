@@ -70,7 +70,6 @@ void main() {
         roomAccountData: {
           'com.test.foo': BasicRoomEvent(
             type: 'com.test.foo',
-            roomId: id,
             content: {'foo': 'bar'},
           ),
         },
@@ -78,7 +77,6 @@ void main() {
       room.setState(Event(
         room: room,
         eventId: '143273582443PhrSn:example.org',
-        roomId: id,
         originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
         senderId: '@example:example.org',
         type: 'm.room.join_rules',
@@ -103,7 +101,6 @@ void main() {
         Event(
             senderId: '@test:example.com',
             type: 'm.room.canonical_alias',
-            roomId: room.id,
             room: room,
             eventId: '123',
             content: {'alias': '#testalias:example.com'},
@@ -117,7 +114,6 @@ void main() {
         Event(
             senderId: '@test:example.com',
             type: 'm.room.name',
-            roomId: room.id,
             room: room,
             eventId: '123',
             content: {'name': 'testname'},
@@ -131,7 +127,6 @@ void main() {
         Event(
             senderId: '@test:example.com',
             type: 'm.room.topic',
-            roomId: room.id,
             room: room,
             eventId: '123',
             content: {'topic': 'testtopic'},
@@ -145,7 +140,6 @@ void main() {
         Event(
             senderId: '@test:example.com',
             type: 'm.room.avatar',
-            roomId: room.id,
             room: room,
             eventId: '123',
             content: {'url': 'mxc://testurl'},
@@ -159,7 +153,6 @@ void main() {
         Event(
             senderId: '@test:example.com',
             type: 'm.room.pinned_events',
-            roomId: room.id,
             room: room,
             eventId: '123',
             content: {
@@ -173,7 +166,6 @@ void main() {
         Event(
           senderId: '@test:example.com',
           type: 'm.room.message',
-          roomId: room.id,
           room: room,
           eventId: '12345',
           originServerTs: DateTime.now(),
@@ -191,7 +183,6 @@ void main() {
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
-          roomId: room.id,
           room: room,
           eventId: '1',
           originServerTs: DateTime.now(),
@@ -204,7 +195,6 @@ void main() {
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
-          roomId: room.id,
           room: room,
           eventId: '2',
           originServerTs: DateTime.now(),
@@ -217,7 +207,6 @@ void main() {
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
-          roomId: room.id,
           room: room,
           eventId: '3',
           originServerTs: DateTime.now(),
@@ -235,7 +224,6 @@ void main() {
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
-          roomId: room.id,
           room: room,
           eventId: '4',
           originServerTs: DateTime.now(),
@@ -255,7 +243,6 @@ void main() {
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
-          roomId: room.id,
           room: room,
           eventId: '5',
           originServerTs: DateTime.now(),
@@ -269,7 +256,6 @@ void main() {
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
-          roomId: room.id,
           room: room,
           eventId: '6',
           originServerTs: DateTime.now(),
@@ -286,7 +272,6 @@ void main() {
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
-          roomId: room.id,
           room: room,
           eventId: '7',
           originServerTs: DateTime.now(),
@@ -313,7 +298,7 @@ void main() {
       expect(user.displayName, 'Alice Margatroid');
       expect(user.membership, Membership.join);
       expect(user.avatarUrl.toString(), 'mxc://example.org/SEsfnsuifSDFSSEF');
-      expect(user.room?.id, '!localpart:server.abc');
+      expect(user.room.id, '!localpart:server.abc');
     });
 
     test('getEventByID', () async {
@@ -348,7 +333,6 @@ void main() {
         Event(
             senderId: '@test:example.com',
             type: 'm.room.power_levels',
-            roomId: room.id,
             room: room,
             eventId: '123',
             content: {
@@ -387,7 +371,6 @@ void main() {
         Event(
           senderId: '@test:example.com',
           type: 'm.room.power_levels',
-          roomId: room.id,
           room: room,
           eventId: '123abc',
           content: {
@@ -433,7 +416,6 @@ void main() {
       room.setState(Event(
           senderId: '@alice:test.abc',
           type: 'm.room.member',
-          roomId: room.id,
           room: room,
           eventId: '12345',
           originServerTs: DateTime.now(),
@@ -720,7 +702,6 @@ void main() {
         Event(
             senderId: '@alice:test.abc',
             type: 'm.room.encryption',
-            roomId: room.id,
             room: room,
             eventId: '12345',
             originServerTs: DateTime.now(),

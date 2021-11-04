@@ -28,7 +28,7 @@ class User extends Event {
     String? membership,
     String? displayName,
     String? avatarUrl,
-    Room? room,
+    required Room room,
   }) {
     return User.fromState(
       stateKey: id,
@@ -38,34 +38,34 @@ class User extends Event {
         if (avatarUrl != null) 'avatar_url': avatarUrl,
       },
       typeKey: EventTypes.RoomMember,
-      roomId: room?.id,
+      roomId: room.id,
       room: room,
       originServerTs: DateTime.now(),
     );
   }
 
-  User.fromState(
-      {dynamic prevContent,
-      required String stateKey,
-      dynamic content,
-      required String typeKey,
-      String eventId = 'fakevent',
-      String? roomId,
-      String senderId = 'fakesender',
-      required DateTime originServerTs,
-      dynamic unsigned,
-      Room? room})
-      : super(
-            stateKey: stateKey,
-            prevContent: prevContent,
-            content: content,
-            type: typeKey,
-            eventId: eventId,
-            roomId: roomId,
-            senderId: senderId,
-            originServerTs: originServerTs,
-            unsigned: unsigned,
-            room: room);
+  User.fromState({
+    dynamic prevContent,
+    required String stateKey,
+    dynamic content,
+    required String typeKey,
+    String eventId = 'fakevent',
+    String? roomId,
+    String senderId = 'fakesender',
+    required DateTime originServerTs,
+    dynamic unsigned,
+    required Room room,
+  }) : super(
+          stateKey: stateKey,
+          prevContent: prevContent,
+          content: content,
+          type: typeKey,
+          eventId: eventId,
+          senderId: senderId,
+          originServerTs: originServerTs,
+          unsigned: unsigned,
+          room: room,
+        );
 
   /// The full qualified Matrix ID in the format @username:server.abc.
   String get id => stateKey ?? '@unknown:unknown';
@@ -76,7 +76,7 @@ class User extends Event {
       prevContent?.tryGet<String>('displayname');
 
   /// Returns the power level of this user.
-  int get powerLevel => room?.getPowerLevelByUserId(id) ?? 0;
+  int get powerLevel => room.getPowerLevelByUserId(id);
 
   /// The membership status of the user. One of:
   /// join
@@ -112,8 +112,8 @@ class User extends Event {
     bool? formatLocalpart,
     bool? mxidLocalPartFallback,
   }) {
-    formatLocalpart ??= room?.client.formatLocalpart ?? true;
-    mxidLocalPartFallback ??= room?.client.mxidLocalPartFallback ?? true;
+    formatLocalpart ??= room.client.formatLocalpart;
+    mxidLocalPartFallback ??= room.client.mxidLocalPartFallback;
     final displayName = this.displayName;
     if (displayName != null && displayName.isNotEmpty) {
       return displayName;
@@ -135,40 +135,37 @@ class User extends Event {
   }
 
   /// Call the Matrix API to kick this user from this room.
-  Future<void> kick() async => await room?.kick(id);
+  Future<void> kick() async => await room.kick(id);
 
   /// Call the Matrix API to ban this user from this room.
-  Future<void> ban() async => await room?.ban(id);
+  Future<void> ban() async => await room.ban(id);
 
   /// Call the Matrix API to unban this banned user from this room.
-  Future<void> unban() async => await room?.unban(id);
+  Future<void> unban() async => await room.unban(id);
 
   /// Call the Matrix API to change the power level of this user.
-  Future<void> setPower(int power) async => await room?.setPower(id, power);
+  Future<void> setPower(int power) async => await room.setPower(id, power);
 
   /// Returns an existing direct chat ID with this user or creates a new one.
   /// Returns null on error.
-  Future<String?> startDirectChat() async => room?.client.startDirectChat(id);
+  Future<String> startDirectChat() async => room.client.startDirectChat(id);
 
   /// The newest presence of this user if there is any and null if not.
-  Presence? get presence => room?.client.presences[id];
+  Presence? get presence => room.client.presences[id];
 
   /// Whether the client is able to ban/unban this user.
-  bool get canBan =>
-      (room?.canBan ?? false) &&
-      powerLevel < (room?.ownPowerLevel ?? powerLevel);
+  bool get canBan => room.canBan && powerLevel < room.ownPowerLevel;
 
   /// Whether the client is able to kick this user.
   bool get canKick =>
       [Membership.join, Membership.invite].contains(membership) &&
-      (room?.canKick ?? false) &&
-      powerLevel < (room?.ownPowerLevel ?? powerLevel);
+      room.canKick &&
+      powerLevel < room.ownPowerLevel;
 
   /// Whether the client is allowed to change the power level of this user.
   /// Please be aware that you can only set the power level to at least your own!
   bool get canChangePowerLevel =>
-      (room?.canChangePowerLevel ?? false) &&
-      powerLevel < (room?.ownPowerLevel ?? powerLevel);
+      room.canChangePowerLevel && powerLevel < room.ownPowerLevel;
 
   @override
   bool operator ==(dynamic other) => (other is User &&
@@ -196,7 +193,7 @@ class User extends Event {
             : '[$displayName]');
 
     // get all the users with the same display name
-    final allUsersWithSameDisplayname = room?.getParticipants() ?? [];
+    final allUsersWithSameDisplayname = room.getParticipants();
     allUsersWithSameDisplayname.removeWhere((user) =>
         user.id == id ||
         (user.displayName?.isEmpty ?? true) ||

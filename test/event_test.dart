@@ -52,13 +52,14 @@ void main() {
       'sender': senderID,
       'origin_server_ts': timestamp,
       'type': type,
-      'room_id': '1234',
+      'room_id': '!testroom:example.abc',
       'status': EventStatus.synced.intValue,
       'content': contentJson,
     };
     final client = Client('testclient', httpClient: FakeMatrixApi());
+    final room = Room(id: '!testroom:example.abc', client: client);
     final event = Event.fromJson(
-        jsonObj, Room(id: '!localpart:server.abc', client: client));
+        jsonObj, Room(id: '!testroom:example.abc', client: client));
 
     test('setup', () async {
       try {
@@ -86,7 +87,7 @@ void main() {
       expect(event.type, EventTypes.Message);
       expect(event.relationshipType, RelationshipTypes.reply);
       jsonObj['state_key'] = '';
-      final state = Event.fromJson(jsonObj, null);
+      final state = Event.fromJson(jsonObj, room);
       expect(state.eventId, id);
       expect(state.stateKey, '');
       expect(state.status, EventStatus.synced);
@@ -95,47 +96,47 @@ void main() {
       Event event;
 
       jsonObj['type'] = 'm.room.avatar';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.type, EventTypes.RoomAvatar);
 
       jsonObj['type'] = 'm.room.name';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.type, EventTypes.RoomName);
 
       jsonObj['type'] = 'm.room.topic';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.type, EventTypes.RoomTopic);
 
       jsonObj['type'] = 'm.room.aliases';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.type, EventTypes.RoomAliases);
 
       jsonObj['type'] = 'm.room.canonical_alias';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.type, EventTypes.RoomCanonicalAlias);
 
       jsonObj['type'] = 'm.room.create';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.type, EventTypes.RoomCreate);
 
       jsonObj['type'] = 'm.room.join_rules';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.type, EventTypes.RoomJoinRules);
 
       jsonObj['type'] = 'm.room.member';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.type, EventTypes.RoomMember);
 
       jsonObj['type'] = 'm.room.power_levels';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.type, EventTypes.RoomPowerLevels);
 
       jsonObj['type'] = 'm.room.guest_access';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.type, EventTypes.GuestAccess);
 
       jsonObj['type'] = 'm.room.history_visibility';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.type, EventTypes.HistoryVisibility);
 
       jsonObj['type'] = 'm.room.message';
@@ -143,36 +144,36 @@ void main() {
 
       jsonObj['content'].remove('m.relates_to');
       jsonObj['content']['msgtype'] = 'm.notice';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.messageType, MessageTypes.Notice);
 
       jsonObj['content']['msgtype'] = 'm.emote';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.messageType, MessageTypes.Emote);
 
       jsonObj['content']['msgtype'] = 'm.image';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.messageType, MessageTypes.Image);
 
       jsonObj['content']['msgtype'] = 'm.video';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.messageType, MessageTypes.Video);
 
       jsonObj['content']['msgtype'] = 'm.audio';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.messageType, MessageTypes.Audio);
 
       jsonObj['content']['msgtype'] = 'm.file';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.messageType, MessageTypes.File);
 
       jsonObj['content']['msgtype'] = 'm.location';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.messageType, MessageTypes.Location);
 
       jsonObj['type'] = 'm.sticker';
       jsonObj['content']['msgtype'] = null;
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.messageType, MessageTypes.Sticker);
 
       jsonObj['type'] = 'm.room.message';
@@ -181,7 +182,7 @@ void main() {
       jsonObj['content']['m.relates_to']['m.in_reply_to'] = {
         'event_id': '1234',
       };
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.messageType, MessageTypes.Text);
       expect(event.relationshipType, RelationshipTypes.reply);
       expect(event.relationshipEventId, '1234');
@@ -194,7 +195,7 @@ void main() {
         'msgtype': 'm.text',
         'text': 'beep',
       };
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.relationshipType, null);
       expect(event.relationshipEventId, null);
 
@@ -202,12 +203,12 @@ void main() {
         'rel_type': 'm.replace',
         'event_id': 'abc',
       };
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.relationshipType, RelationshipTypes.edit);
       expect(event.relationshipEventId, 'abc');
 
       jsonObj['content']['m.relates_to']['rel_type'] = 'm.annotation';
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.relationshipType, RelationshipTypes.reaction);
       expect(event.relationshipEventId, 'abc');
 
@@ -216,7 +217,7 @@ void main() {
           'event_id': 'def',
         },
       };
-      event = Event.fromJson(jsonObj, null);
+      event = Event.fromJson(jsonObj, room);
       expect(event.relationshipType, RelationshipTypes.reply);
       expect(event.relationshipEventId, 'def');
     });
@@ -1000,6 +1001,7 @@ void main() {
     });
 
     test('aggregations', () {
+      final room = Room(id: '!1234', client: client);
       final event = Event.fromJson({
         'content': {
           'body': 'blah',
@@ -1008,7 +1010,7 @@ void main() {
         'type': 'm.room.message',
         'sender': '@example:example.org',
         'event_id': '\$source',
-      }, null);
+      }, room);
       final edit1 = Event.fromJson({
         'content': {
           'body': 'blah',
@@ -1021,7 +1023,7 @@ void main() {
         'type': 'm.room.message',
         'sender': '@example:example.org',
         'event_id': '\$edit1',
-      }, null);
+      }, room);
       final edit2 = Event.fromJson({
         'content': {
           'body': 'blah',
@@ -1034,8 +1036,7 @@ void main() {
         'type': 'm.room.message',
         'sender': '@example:example.org',
         'event_id': '\$edit2',
-      }, null);
-      final room = Room(client: client, id: '!id:fakeserver.nonexisting');
+      }, room);
       final timeline =
           Timeline(events: <Event>[event, edit1, edit2], room: room);
       expect(event.hasAggregatedEvents(timeline, RelationshipTypes.edit), true);
@@ -1067,10 +1068,11 @@ void main() {
         },
         'event_id': '\$source',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.plaintextBody, '**blah**');
     });
     test('getDisplayEvent', () {
+      final room = Room(id: '!1234', client: client);
       var event = Event.fromJson({
         'type': EventTypes.Message,
         'content': {
@@ -1079,7 +1081,7 @@ void main() {
         },
         'event_id': '\$source',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       final edit1 = Event.fromJson({
         'type': EventTypes.Message,
         'content': {
@@ -1096,7 +1098,7 @@ void main() {
         },
         'event_id': '\$edit1',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       final edit2 = Event.fromJson({
         'type': EventTypes.Message,
         'content': {
@@ -1113,7 +1115,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       final edit3 = Event.fromJson({
         'type': EventTypes.Message,
         'content': {
@@ -1130,8 +1132,7 @@ void main() {
         },
         'event_id': '\$edit3',
         'sender': '@bob:example.org',
-      }, null);
-      final room = Room(id: '!localpart:server.abc', client: client);
+      }, room);
       // no edits
       var displayEvent =
           event.getDisplayEvent(Timeline(events: <Event>[event], room: room));
@@ -1167,7 +1168,7 @@ void main() {
             'type': 'm.room.redaction',
           },
         },
-      }, null);
+      }, room);
       displayEvent = event.getDisplayEvent(
           Timeline(events: <Event>[event, edit1, edit2, edit3], room: room));
       expect(displayEvent.body, 'Redacted');
@@ -1388,14 +1389,14 @@ void main() {
       var buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
       expect(await event.isAttachmentInLocalStore(),
-          event.room?.client.database?.supportsFileStoring);
+          event.room.client.database?.supportsFileStoring);
       expect(buffer.bytes, FILE_BUFF);
       expect(serverHits, 1);
       buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
       expect(buffer.bytes, FILE_BUFF);
       expect(
-          serverHits, event.room!.client.database!.supportsFileStoring ? 1 : 2);
+          serverHits, event.room.client.database!.supportsFileStoring ? 1 : 2);
 
       await room.client.dispose(closeDatabase: true);
     });
@@ -1408,7 +1409,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.onlyEmotes, false);
       expect(event.numberEmotes, 0);
       event = Event.fromJson({
@@ -1419,7 +1420,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.onlyEmotes, false);
       expect(event.numberEmotes, 0);
       event = Event.fromJson({
@@ -1430,7 +1431,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.onlyEmotes, false);
       expect(event.numberEmotes, 1);
       event = Event.fromJson({
@@ -1441,7 +1442,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.onlyEmotes, true);
       expect(event.numberEmotes, 1);
       event = Event.fromJson({
@@ -1452,7 +1453,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.onlyEmotes, true);
       expect(event.numberEmotes, 5);
       event = Event.fromJson({
@@ -1465,7 +1466,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.onlyEmotes, false);
       expect(event.numberEmotes, 0);
       event = Event.fromJson({
@@ -1478,7 +1479,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.onlyEmotes, true);
       expect(event.numberEmotes, 1);
       event = Event.fromJson({
@@ -1491,7 +1492,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.onlyEmotes, true);
       expect(event.numberEmotes, 1);
       event = Event.fromJson({
@@ -1504,7 +1505,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.onlyEmotes, true);
       expect(event.numberEmotes, 2);
       // with variant selector
@@ -1516,7 +1517,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.onlyEmotes, true);
       expect(event.numberEmotes, 1);
       event = Event.fromJson({
@@ -1532,7 +1533,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.onlyEmotes, true);
       expect(event.numberEmotes, 3);
       event = Event.fromJson({
@@ -1548,7 +1549,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.onlyEmotes, true);
       expect(event.numberEmotes, 2);
       event = Event.fromJson({
@@ -1564,7 +1565,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.onlyEmotes, false);
       expect(event.numberEmotes, 2);
       event = Event.fromJson({
@@ -1580,7 +1581,7 @@ void main() {
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
-      }, null);
+      }, room);
       expect(event.onlyEmotes, false);
       expect(event.numberEmotes, 2);
     });

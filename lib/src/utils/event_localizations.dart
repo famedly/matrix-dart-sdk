@@ -197,7 +197,7 @@ abstract class EventLocalizations {
     EventTypes.Encryption: (event, i18n, body) {
       var localizedBody =
           i18n.activatedEndToEndEncryption(event.sender.calcDisplayname());
-      if (event.room?.client.encryptionEnabled == false) {
+      if (event.room.client.encryptionEnabled == false) {
         localizedBody += '. ' + i18n.needPantalaimonWarning;
       }
       return localizedBody;

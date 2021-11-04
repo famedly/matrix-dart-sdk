@@ -67,7 +67,6 @@ void main() {
       final encryptedEvent = Event(
         type: EventTypes.Encrypted,
         content: payload,
-        roomId: roomId,
         room: room,
         originServerTs: now,
         eventId: '\$event',
@@ -86,7 +85,6 @@ void main() {
       final encryptedEvent = Event(
         type: EventTypes.Encrypted,
         content: payload,
-        roomId: roomId,
         room: room,
         originServerTs: now,
         eventId: '\$event',

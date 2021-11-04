@@ -151,6 +151,7 @@ void main() {
             },
             originServerTs: DateTime.now(),
             senderId: client.userID!,
+            room: room,
           ));
       final sent = getLastMessagePayload('m.reaction');
       expect(sent, {
