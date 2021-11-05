@@ -1,3 +1,7 @@
+## [0.7.0-nullsafety.2] - 04nd Nov 2021
+- refactor: Make room in Event class not nullable
+- refactor: download method should not return null
+
 ## [0.7.0-nullsafety.1] - 04nd Nov 2021
 Prerelease of the null safety version of the SDK.
 - feat: choose memberships returned by requestParticipants()
