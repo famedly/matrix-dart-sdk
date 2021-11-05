@@ -118,7 +118,7 @@ void main() {
       await user1.setPower(50);
     });
     test('startDirectChat', () async {
-      await user1.startDirectChat();
+      await user1.startDirectChat(waitForSync: false);
     });
     test('getPresence', () async {
       await client.handleSync(SyncUpdate.fromJson({

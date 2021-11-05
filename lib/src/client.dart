@@ -556,22 +556,98 @@ class Client extends MatrixApi {
   }
 
   /// Returns an existing direct room ID with this user or creates a new one.
-  /// Returns null on error.
-  Future<String> startDirectChat(String mxid) async {
+  /// By default encryption will be enabled if the client supports encryption
+  /// and the other user has uploaded any encryption keys.
+  Future<String> startDirectChat(
+    String mxid, {
+    bool? enableEncryption,
+    List<StateEvent>? initialState,
+    bool waitForSync = true,
+  }) async {
     // Try to find an existing direct chat
-    var roomId = getDirectChatFromUserId(mxid);
-    if (roomId != null) return roomId;
+    final directChatRoomId = getDirectChatFromUserId(mxid);
+    if (directChatRoomId != null) return directChatRoomId;
+
+    enableEncryption ??= await userOwnsEncryptionKeys(mxid);
+    if (enableEncryption) {
+      initialState ??= [];
+      initialState.add(StateEvent(
+        content: {
+          'algorithm': supportedGroupEncryptionAlgorithms.first,
+        },
+        type: EventTypes.Encryption,
+      ));
+    }
 
     // Start a new direct chat
-    roomId = await createRoom(
+    final roomId = await createRoom(
       invite: [mxid],
       isDirect: true,
       preset: CreateRoomPreset.trustedPrivateChat,
+      initialState: initialState,
     );
+
+    if (waitForSync) {
+      if (getRoomById(roomId) == null) {
+        // Wait for room actually appears in sync
+        await onSync.stream.firstWhere(
+            (sync) => sync.rooms?.join?.containsKey(roomId) ?? false);
+      }
+    }
 
     await Room(id: roomId, client: this).addToDirectChat(mxid);
 
     return roomId;
+  }
+
+  /// Simplified method to create a new group chat. By default it is a private
+  /// chat. The encryption is enabled if this client supports encryption and
+  /// the preset is not a public chat.
+  Future<String> createGroupChat({
+    String? groupName,
+    bool? enableEncryption,
+    List<String>? invite,
+    CreateRoomPreset preset = CreateRoomPreset.privateChat,
+    List<StateEvent>? initialState,
+    bool waitForSync = true,
+  }) async {
+    enableEncryption ??=
+        encryptionEnabled && preset != CreateRoomPreset.publicChat;
+    if (enableEncryption) {
+      initialState ??= [];
+      initialState.add(StateEvent(
+        content: {
+          'algorithm': supportedGroupEncryptionAlgorithms.first,
+        },
+        type: EventTypes.Encryption,
+      ));
+    }
+    final roomId = await createRoom(
+      invite: invite,
+      preset: preset,
+      name: groupName,
+      initialState: initialState,
+    );
+
+    if (waitForSync) {
+      if (getRoomById(roomId) == null) {
+        // Wait for room actually appears in sync
+        await onSync.stream.firstWhere(
+            (sync) => sync.rooms?.join?.containsKey(roomId) ?? false);
+      }
+    }
+    return roomId;
+  }
+
+  /// Checks if the given user has encryption keys. May query keys from the
+  /// server to answer this.
+  Future<bool> userOwnsEncryptionKeys(String userId) async {
+    if (userId == userID) return encryptionEnabled;
+    if (_userDeviceKeys.containsKey(userId)) {
+      return true;
+    }
+    final keys = await queryKeys({userId: []});
+    return keys.deviceKeys?.isNotEmpty ?? false;
   }
 
   /// Creates a new space and returns the Room ID. The parameters are mostly
