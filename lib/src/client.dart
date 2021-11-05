@@ -609,9 +609,13 @@ class Client extends MatrixApi {
       final profileSet = <Profile>{};
       for (final room in rooms) {
         final user = room.getUserByMXIDSync(userID!);
-        profileSet.add(Profile.fromJson(user.content));
+        profileSet.add(Profile(
+          avatarUrl: user.avatarUrl,
+          displayName: user.displayName,
+          userId: user.id,
+        ));
       }
-      if (profileSet.length == 1) return profileSet.first;
+      if (profileSet.length == 1) return profileSet.single;
     }
     return getProfileFromUserId(userID!);
   }

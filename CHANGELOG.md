@@ -1,3 +1,6 @@
+## [0.7.0-nullsafety.3] - 05nd Nov 2021
+- fix: Null error in get own profile
+
 ## [0.7.0-nullsafety.2] - 04nd Nov 2021
 - refactor: Make room in Event class not nullable
 - refactor: download method should not return null
