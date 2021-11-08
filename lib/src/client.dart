@@ -571,12 +571,14 @@ class Client extends MatrixApi {
     enableEncryption ??= await userOwnsEncryptionKeys(mxid);
     if (enableEncryption) {
       initialState ??= [];
-      initialState.add(StateEvent(
-        content: {
-          'algorithm': supportedGroupEncryptionAlgorithms.first,
-        },
-        type: EventTypes.Encryption,
-      ));
+      if (!initialState.any((s) => s.type == EventTypes.Encryption)) {
+        initialState.add(StateEvent(
+          content: {
+            'algorithm': supportedGroupEncryptionAlgorithms.first,
+          },
+          type: EventTypes.Encryption,
+        ));
+      }
     }
 
     // Start a new direct chat
@@ -587,12 +589,10 @@ class Client extends MatrixApi {
       initialState: initialState,
     );
 
-    if (waitForSync) {
-      if (getRoomById(roomId) == null) {
-        // Wait for room actually appears in sync
-        await onSync.stream.firstWhere(
-            (sync) => sync.rooms?.join?.containsKey(roomId) ?? false);
-      }
+    if (waitForSync && getRoomById(roomId) == null) {
+      // Wait for room actually appears in sync
+      await onSync.stream
+          .firstWhere((sync) => sync.rooms?.join?.containsKey(roomId) ?? false);
     }
 
     await Room(id: roomId, client: this).addToDirectChat(mxid);
@@ -615,12 +615,14 @@ class Client extends MatrixApi {
         encryptionEnabled && preset != CreateRoomPreset.publicChat;
     if (enableEncryption) {
       initialState ??= [];
-      initialState.add(StateEvent(
-        content: {
-          'algorithm': supportedGroupEncryptionAlgorithms.first,
-        },
-        type: EventTypes.Encryption,
-      ));
+      if (!initialState.any((s) => s.type == EventTypes.Encryption)) {
+        initialState.add(StateEvent(
+          content: {
+            'algorithm': supportedGroupEncryptionAlgorithms.first,
+          },
+          type: EventTypes.Encryption,
+        ));
+      }
     }
     final roomId = await createRoom(
       invite: invite,

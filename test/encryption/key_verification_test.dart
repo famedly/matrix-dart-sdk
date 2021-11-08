@@ -119,7 +119,9 @@ void main() {
       client1.userDeviceKeys[client1.userID]!.masterKey!
           .setDirectVerified(false);
       final req1 =
-          await client1.userDeviceKeys[client2.userID]!.startVerification();
+          await client1.userDeviceKeys[client2.userID]!.startVerification(
+        newDirectChatEnableEncryption: false,
+      );
       var evt = getLastSentEvent(req1);
       expect(req1.state, KeyVerificationState.waitingAccept);
 
@@ -221,8 +223,8 @@ void main() {
       client1.userDeviceKeys[client1.userID]!.masterKey!
           .setDirectVerified(true);
       await client1.encryption!.ssss.clearCache();
-      final req1 =
-          await client1.userDeviceKeys[client2.userID]!.startVerification();
+      final req1 = await client1.userDeviceKeys[client2.userID]!
+          .startVerification(newDirectChatEnableEncryption: false);
       expect(req1.state, KeyVerificationState.askSSSS);
       await req1.openSSSS(recoveryKey: ssssKey);
       await Future.delayed(Duration(seconds: 1));
@@ -241,8 +243,8 @@ void main() {
       // the other one has to have their master key verified to trigger asking for ssss
       client2.userDeviceKeys[client2.userID]!.masterKey!
           .setDirectVerified(true);
-      final req1 =
-          await client1.userDeviceKeys[client2.userID]!.startVerification();
+      final req1 = await client1.userDeviceKeys[client2.userID]!
+          .startVerification(newDirectChatEnableEncryption: false);
       var evt = getLastSentEvent(req1);
       expect(req1.state, KeyVerificationState.waitingAccept);
 
@@ -345,8 +347,8 @@ void main() {
       // make sure our master key is *not* verified to not triger SSSS for now
       client1.userDeviceKeys[client1.userID]!.masterKey!
           .setDirectVerified(false);
-      final req1 =
-          await client1.userDeviceKeys[client2.userID]!.startVerification();
+      final req1 = await client1.userDeviceKeys[client2.userID]!
+          .startVerification(newDirectChatEnableEncryption: false);
       var evt = getLastSentEvent(req1);
       expect(req1.state, KeyVerificationState.waitingAccept);
 
@@ -375,8 +377,8 @@ void main() {
       // make sure our master key is *not* verified to not triger SSSS for now
       client1.userDeviceKeys[client1.userID]!.masterKey!
           .setDirectVerified(false);
-      final req1 =
-          await client1.userDeviceKeys[client2.userID]!.startVerification();
+      final req1 = await client1.userDeviceKeys[client2.userID]!
+          .startVerification(newDirectChatEnableEncryption: false);
       var evt = getLastSentEvent(req1);
       expect(req1.state, KeyVerificationState.waitingAccept);
 
@@ -436,8 +438,8 @@ void main() {
       // make sure our master key is *not* verified to not triger SSSS for now
       client1.userDeviceKeys[client1.userID]!.masterKey!
           .setDirectVerified(false);
-      final req1 =
-          await client1.userDeviceKeys[client2.userID]!.startVerification();
+      final req1 = await client1.userDeviceKeys[client2.userID]!
+          .startVerification(newDirectChatEnableEncryption: false);
       final evt = getLastSentEvent(req1);
       expect(req1.state, KeyVerificationState.waitingAccept);
 

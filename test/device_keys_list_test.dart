@@ -252,7 +252,7 @@ void main() {
       expect(req?.room != null, false);
 
       req = await client.userDeviceKeys['@alice:example.com']
-          ?.startVerification();
+          ?.startVerification(newDirectChatEnableEncryption: false);
       expect(req != null, true);
       expect(req?.room != null, true);
     });

@@ -67,14 +67,25 @@ class DeviceKeysList {
     }
   }
 
-  Future<KeyVerification> startVerification() async {
+  /// Starts a verification with this device. This might need to create a new
+  /// direct chat to send the verification request over this room. For this you
+  /// can set parameters here.
+  Future<KeyVerification> startVerification({
+    bool? newDirectChatEnableEncryption,
+    List<StateEvent>? newDirectChatInitialState,
+  }) async {
     final encryption = client.encryption;
     if (encryption == null) {
       throw Exception('Encryption not enabled');
     }
     if (userId != client.userID) {
       // in-room verification with someone else
-      final roomId = await client.startDirectChat(userId);
+      final roomId = await client.startDirectChat(
+        userId,
+        enableEncryption: newDirectChatEnableEncryption,
+        initialState: newDirectChatInitialState,
+        waitForSync: false,
+      );
 
       final room =
           client.getRoomById(roomId) ?? Room(id: roomId, client: client);
