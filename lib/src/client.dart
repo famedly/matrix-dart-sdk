@@ -23,6 +23,7 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:matrix/src/utils/run_in_root.dart';
+import 'package:matrix/src/utils/sync_update_item_count.dart';
 import 'package:mime/mime.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:collection/collection.dart' show IterableExtension;
@@ -38,6 +39,7 @@ import 'utils/device_keys_list.dart';
 import 'utils/event_update.dart';
 import 'utils/http_timeout.dart';
 import 'utils/matrix_file.dart';
+import 'utils/run_benchmarked.dart';
 import 'utils/to_device_event.dart';
 import 'utils/uia_request.dart';
 import 'utils/multilock.dart';
@@ -920,8 +922,12 @@ class Client extends MatrixApi {
         throw Exception('User is already logged in! Call [logout()] first!');
       }
 
+      final databaseBuilder = this.databaseBuilder;
       if (databaseBuilder != null) {
-        _database ??= await databaseBuilder?.call(this);
+        _database ??= await runBenchmarked<DatabaseApi>(
+          'Build database',
+          () async => await databaseBuilder(this),
+        );
       }
 
       String? olmAccount;
@@ -1154,7 +1160,11 @@ class Client extends MatrixApi {
             await database.storePrevBatch(syncResp.nextBatch);
           }
         });
-        await _currentTransaction;
+        await runBenchmarked(
+          'Process sync',
+          () async => await _currentTransaction,
+          syncResp.itemCount,
+        );
         onSyncStatus.add(SyncStatusUpdate(SyncStatus.cleaningUp));
       } else {
         await _handleSync(syncResp);

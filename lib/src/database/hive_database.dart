@@ -393,32 +393,34 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     Room room, {
     int start = 0,
     int? limit,
-  }) async {
-    // Get the synced event IDs from the store
-    final timelineKey = MultiKey(room.id, '').toString();
-    final timelineEventIds =
-        (await _timelineFragmentsBox.get(timelineKey) as List? ?? []);
+  }) =>
+      runBenchmarked<List<Event>>('Get event list', () async {
+        // Get the synced event IDs from the store
+        final timelineKey = MultiKey(room.id, '').toString();
+        final timelineEventIds =
+            (await _timelineFragmentsBox.get(timelineKey) as List? ?? []);
 
-    // Get the local stored SENDING events from the store
-    late final List sendingEventIds;
-    if (start != 0) {
-      sendingEventIds = [];
-    } else {
-      final sendingTimelineKey = MultiKey(room.id, 'SENDING').toString();
-      sendingEventIds =
-          (await _timelineFragmentsBox.get(sendingTimelineKey) as List? ?? []);
-    }
+        // Get the local stored SENDING events from the store
+        late final List sendingEventIds;
+        if (start != 0) {
+          sendingEventIds = [];
+        } else {
+          final sendingTimelineKey = MultiKey(room.id, 'SENDING').toString();
+          sendingEventIds =
+              (await _timelineFragmentsBox.get(sendingTimelineKey) as List? ??
+                  []);
+        }
 
-    // Combine those two lists while respecting the start and limit parameters.
-    final end = min(
-        timelineEventIds.length, start + (limit ?? timelineEventIds.length));
-    final eventIds = sendingEventIds +
-        (start < timelineEventIds.length
-            ? timelineEventIds.getRange(start, end).toList()
-            : []);
+        // Combine those two lists while respecting the start and limit parameters.
+        final end = min(timelineEventIds.length,
+            start + (limit ?? timelineEventIds.length));
+        final eventIds = sendingEventIds +
+            (start < timelineEventIds.length
+                ? timelineEventIds.getRange(start, end).toList()
+                : []);
 
-    return await _getEventsByIds(eventIds.cast<String>(), room);
-  }
+        return await _getEventsByIds(eventIds.cast<String>(), room);
+      });
 
   @override
   Future<Uint8List?> getFile(Uri mxcUri) async {
