@@ -1879,6 +1879,7 @@ class Room {
 
   /// Returns all known device keys for all participants in this room.
   Future<List<DeviceKeys>> getUserDeviceKeys() async {
+    await client.userDeviceKeysLoading;
     final deviceKeys = <DeviceKeys>[];
     final users = await requestParticipants();
     for (final user in users) {

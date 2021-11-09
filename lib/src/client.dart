@@ -893,6 +893,10 @@ class Client extends MatrixApi {
   /// If one of [newToken], [newUserID], [newDeviceID], [newDeviceName] is set then
   /// all of them must be set! If you don't set them, this method will try to
   /// get them from the database.
+  ///
+  /// Set [waitForFirstSync] and [waitUntilLoadCompletedLoaded] to false to speed this
+  /// up. You can then wait for `roomsLoading`, `accountDataLoading` and
+  /// `userDeviceKeysLoading` where it is necessary.
   Future<void> init({
     String? newToken,
     Uri? newHomeserver,
@@ -901,6 +905,7 @@ class Client extends MatrixApi {
     String? newDeviceID,
     String? newOlmAccount,
     bool waitForFirstSync = true,
+    bool waitUntilLoadCompletedLoaded = true,
   }) async {
     if ((newToken != null ||
             newUserID != null ||
@@ -1012,11 +1017,22 @@ class Client extends MatrixApi {
             encryption?.pickledOlmAccount,
           );
         }
-        _userDeviceKeys = await database.getUserDeviceKeys(this);
-        _rooms = await database.getRoomList(this);
+        userDeviceKeysLoading = database
+            .getUserDeviceKeys(this)
+            .then((keys) => _userDeviceKeys = keys);
+        roomsLoading = database.getRoomList(this).then((rooms) {
+          _rooms = rooms;
+          _sortRooms();
+        });
         _sortRooms();
-        accountData = await database.getAccountData();
+        accountDataLoading =
+            database.getAccountData().then((data) => accountData = data);
         presences.clear();
+        if (waitUntilLoadCompletedLoaded) {
+          await userDeviceKeysLoading;
+          await roomsLoading;
+          await accountDataLoading;
+        }
       }
       _initLock = false;
       _loginState = LoginState.loggedIn;
@@ -1154,6 +1170,9 @@ class Client extends MatrixApi {
 
       final database = this.database;
       if (database != null) {
+        await userDeviceKeysLoading;
+        await roomsLoading;
+        await accountDataLoading;
         _currentTransaction = database.transaction(() async {
           await _handleSync(syncResp);
           if (prevBatch != syncResp.nextBatch) {
@@ -1647,6 +1666,10 @@ class Client extends MatrixApi {
     rooms.sort(sortRoomsBy);
     _sortLock = false;
   }
+
+  Future? userDeviceKeysLoading;
+  Future? roomsLoading;
+  Future? accountDataLoading;
 
   /// A map of known device keys per user.
   Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
