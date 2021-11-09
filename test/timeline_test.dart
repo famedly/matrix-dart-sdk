@@ -386,6 +386,24 @@ void main() {
       expect(timeline.events[0].status, EventStatus.error);
       expect(timeline.events.length, 1);
     });
+    test('setReadMarker', () async {
+      client.onEvent.add(EventUpdate(
+        type: EventUpdateType.timeline,
+        roomID: roomID,
+        content: {
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.synced.intValue,
+          'event_id': 'will-work',
+          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+        },
+      ));
+      await Future.delayed(Duration(milliseconds: 50));
+      room.notificationCount = 1;
+      await timeline.setReadMarker();
+      expect(room.notificationCount, 0);
+    });
     test('sending an event and the http request finishes first, 0 -> 1 -> 2',
         () async {
       timeline.events.clear();

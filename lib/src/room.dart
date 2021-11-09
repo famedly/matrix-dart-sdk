@@ -506,10 +506,14 @@ class Room {
   /// Returns true if this room is unread
   bool get isUnread => notificationCount > 0 || markedUnread;
 
-  /// Sets an unread flag manually for this room. Similar to the setUnreadMarker
-  /// this changes the local account data model before syncing it to make sure
-  /// this works if there is no connection to the homeserver.
-  Future<void> setUnread(bool unread) async {
+  @Deprecated('Use [markUnread] instead')
+  Future<void> setUnread(bool unread) => markUnread(unread);
+
+  /// Sets an unread flag manually for this room. This changes the local account
+  /// data model before syncing it to make sure
+  /// this works if there is no connection to the homeserver. This does **not**
+  /// set a read marker!
+  Future<void> markUnread(bool unread) async {
     final content = MarkedUnread(unread).toJson();
     await _handleFakeSync(SyncUpdate(nextBatch: '')
       ..rooms = (RoomsUpdate()
@@ -527,13 +531,6 @@ class Room {
       EventType.markedUnread,
       content,
     );
-    final lastEvent = this.lastEvent;
-    if (!unread && lastEvent != null) {
-      await setReadMarker(
-        lastEvent.eventId,
-        mRead: lastEvent.eventId,
-      );
-    }
   }
 
   /// Returns true if this room has a m.favourite tag.

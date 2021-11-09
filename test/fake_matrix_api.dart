@@ -1779,6 +1779,7 @@ class FakeMatrixApi extends MockClient {
       '/client/r0/rooms/!localpart%3Aexample.com/receipt/m.read/%241234%3Aexample.com':
           (var req) => {},
       '/client/r0/rooms/!localpart%3Aexample.com/read_markers': (var req) => {},
+      '/client/r0/rooms/!1234%3Aexample.com/read_markers': (var req) => {},
       '/client/r0/user/${Uri.encodeComponent('@othertest:fakeServer.notExisting')}/filter':
           (var req) => {'filter_id': '1234'},
       '/client/r0/user/${Uri.encodeComponent('@test:fakeServer.notExisting')}/filter':
