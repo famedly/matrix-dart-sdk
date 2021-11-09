@@ -560,6 +560,12 @@ void main() {
           bunnyContent);
       await client.dispose(closeDatabase: true);
     });
+    test('startDirectChat', () async {
+      await matrix.startDirectChat('@alice:example.com', waitForSync: false);
+    });
+    test('createGroupChat', () async {
+      await matrix.createGroupChat(groupName: 'Testgroup', waitForSync: false);
+    });
     test('Test the fake store api', () async {
       final database = await getDatabase(null);
       final client1 = Client(

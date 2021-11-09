@@ -148,7 +148,17 @@ class User extends Event {
 
   /// Returns an existing direct chat ID with this user or creates a new one.
   /// Returns null on error.
-  Future<String> startDirectChat() async => room.client.startDirectChat(id);
+  Future<String> startDirectChat({
+    bool? enableEncryption,
+    List<StateEvent>? initialState,
+    bool waitForSync = true,
+  }) async =>
+      room.client.startDirectChat(
+        id,
+        enableEncryption: enableEncryption,
+        initialState: initialState,
+        waitForSync: waitForSync,
+      );
 
   /// The newest presence of this user if there is any and null if not.
   Presence? get presence => room.client.presences[id];
