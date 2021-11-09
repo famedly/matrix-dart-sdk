@@ -1,3 +1,10 @@
+## [0.7.0-nullsafety.4] - 09nd Nov 2021
+- feat: More advanced create chat methods (encryption is now enabled by default)
+- feat: Make waiting on init db optional
+- feat: Add more benchmarks for sync, timeline, init
+- feat: Add onInsert, onRemove and onUpdate cb to timeline
+- refactor: Move setreadmarker functionality to timeline
+
 ## [0.7.0-nullsafety.3] - 05nd Nov 2021
 - fix: Null error in get own profile
 
