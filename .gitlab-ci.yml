@@ -101,7 +101,6 @@ code_quality:
 dry-run:
   stage: publish
   image: google/dart
-  allow_failure: true
   script:
     - rm -rf ./docs
     - dart pub get
