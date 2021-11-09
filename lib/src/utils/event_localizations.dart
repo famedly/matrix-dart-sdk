@@ -144,11 +144,13 @@ abstract class EventLocalizations {
           text = i18n.joinedTheChat(targetName);
         }
       } else if (newMembership == 'join') {
-        final newAvatar = event.content['avatar_url'] ?? '';
-        final oldAvatar = event.prevContent?['avatar_url'] ?? '';
+        final newAvatar = event.content.tryGet<String>('avatar_url') ?? '';
+        final oldAvatar = event.prevContent?.tryGet<String>('avatar_url') ?? '';
 
-        final newDisplayname = event.content['displayname'] ?? '';
-        final oldDisplayname = event.prevContent?['displayname'] ?? '';
+        final newDisplayname =
+            event.content.tryGet<String>('displayname') ?? '';
+        final oldDisplayname =
+            event.prevContent?.tryGet<String>('displayname') ?? '';
         final stateKey = event.stateKey;
 
         // Has the user avatar changed?

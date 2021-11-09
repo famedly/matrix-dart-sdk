@@ -370,6 +370,46 @@ void main() {
 
       event = Event.fromJson({
         'content': {
+          'avatar_url':
+              'mxc://pixelthefox.net/bmGuC44Eeb3BomfkZTP02DVnGaRp4dek',
+          'displayname': [
+            [
+              [[]]
+            ]
+          ],
+          'membership': 'join'
+        },
+        'origin_server_ts': 1636487843183,
+        'room_id': '!watercooler-v9:maunium.net',
+        'sender': '@nyaaori:pixelthefox.net',
+        'state_key': '@nyaaori:pixelthefox.net',
+        'type': 'm.room.member',
+        'unsigned': {
+          'prev_content': {
+            'avatar_url':
+                'mxc://pixelthefox.net/bmGuC44Eeb3BomfkZTP02DVnGaRp4dek',
+            'displayname': 1,
+            'membership': 'join'
+          },
+          'prev_sender': '@nyaaori:pixelthefox.net',
+          'replaces_state': '\$kcqn2k6kXQKOM45t_p8OA03PQRR3KB2N_PN4HUq1GiY'
+        },
+        'event_id': '\$21DJjleMGcviLoT4L9wvxawMlOXSQ9yW6R8mrhlbhfU',
+        'user_id': '@nyaaori:pixelthefox.net',
+        'replaces_state': '\$kcqn2k6kXQKOM45t_p8OA03PQRR3KB2N_PN4HUq1GiY',
+        'prev_content': {
+          'avatar_url':
+              'mxc://pixelthefox.net/bmGuC44Eeb3BomfkZTP02DVnGaRp4dek',
+          'displayname': 1,
+          'membership': 'join'
+        }
+      }, room);
+      expect(
+          event.getLocalizedBody(MatrixDefaultLocalizations()) is String, true);
+      expect(event.isEventTypeKnown, true);
+
+      event = Event.fromJson({
+        'content': {
           'body': 'Landing',
           'info': {
             'h': 200,
