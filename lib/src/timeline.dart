@@ -35,7 +35,9 @@ class Timeline {
   final Map<String, Map<String, Set<Event>>> aggregatedEvents = {};
 
   final void Function()? onUpdate;
-  final void Function(int insertID)? onInsert;
+  final void Function(int index)? onChange;
+  final void Function(int index)? onInsert;
+  final void Function(int index)? onRemove;
 
   StreamSubscription<EventUpdate>? sub;
   StreamSubscription<SyncUpdate>? roomSub;
@@ -86,6 +88,11 @@ class Timeline {
       );
       if (eventsFromStore != null && eventsFromStore.isNotEmpty) {
         events.addAll(eventsFromStore);
+        final startIndex = events.length - eventsFromStore.length;
+        final endIndex = events.length;
+        for (var i = startIndex; i < endIndex; i++) {
+          onInsert?.call(i);
+        }
       } else {
         Logs().v('No more events found in the store. Request from server...');
         await room.requestHistory(
@@ -102,9 +109,14 @@ class Timeline {
     }
   }
 
-  Timeline(
-      {required this.room, List<Event>? events, this.onUpdate, this.onInsert})
-      : events = events ?? [] {
+  Timeline({
+    required this.room,
+    List<Event>? events,
+    this.onUpdate,
+    this.onChange,
+    this.onInsert,
+    this.onRemove,
+  }) : events = events ?? [] {
     sub = room.client.onEvent.stream.listen(_handleEventUpdate);
     // If the timeline is limited we want to clear our events cache
     roomSub = room.client.onSync.stream
@@ -142,6 +154,7 @@ class Timeline {
             events[i].content['session_id'] == sessionId) {
           events[i] = await encryption.decryptRoomEvent(room.id, events[i],
               store: true);
+          onChange?.call(i);
           if (events[i].type != EventTypes.Encrypted) {
             decryptAtLeastOneEvent = true;
           }
@@ -249,19 +262,21 @@ class Timeline {
           EventStatus.synced.intValue);
       // Redaction events are handled as modification for existing events.
       if (eventUpdate.content['type'] == EventTypes.Redaction) {
-        final eventId = _findEvent(event_id: eventUpdate.content['redacts']);
-        if (eventId < events.length) {
-          removeAggregatedEvent(events[eventId]);
-          events[eventId].setRedactionEvent(Event.fromJson(
+        final index = _findEvent(event_id: eventUpdate.content['redacts']);
+        if (index < events.length) {
+          removeAggregatedEvent(events[index]);
+          events[index].setRedactionEvent(Event.fromJson(
             eventUpdate.content,
             room,
           ));
+          onChange?.call(index);
         }
       } else if (status.isRemoved) {
         final i = _findEvent(event_id: eventUpdate.content['event_id']);
         if (i < events.length) {
           removeAggregatedEvent(events[i]);
           events.removeAt(i);
+          onRemove?.call(i);
         }
       } else {
         final i = _findEvent(
@@ -283,6 +298,7 @@ class Timeline {
             events[i].status = oldStatus;
           }
           addAggregatedEvent(events[i]);
+          onChange?.call(i);
         } else {
           final newEvent = Event.fromJson(
             eventUpdate.content,
@@ -293,14 +309,16 @@ class Timeline {
               events.indexWhere(
                       (e) => e.eventId == eventUpdate.content['event_id']) !=
                   -1) return;
+          var index = events.length;
           if (eventUpdate.type == EventUpdateType.history) {
             events.add(newEvent);
           } else {
-            events.insert(events.firstIndexWhereNotError, newEvent);
+            index = events.firstIndexWhereNotError;
+            events.insert(index, newEvent);
           }
 
           addAggregatedEvent(newEvent);
-          onInsert?.call(0);
+          onInsert?.call(index);
         }
       }
       if (update && !_collectHistoryUpdates) {
