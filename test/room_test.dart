@@ -743,15 +743,15 @@ void main() {
     });
 
     test('Test marked unread room', () async {
-      await room.setUnread(true);
-      await room.setUnread(false);
-      expect(room.isUnread, false);
+      await room.markUnread(true);
+      await room.markUnread(false);
+      expect(room.markedUnread, false);
       room.roomAccountData['com.famedly.marked_unread'] =
           BasicRoomEvent.fromJson({
         'content': {'unread': true},
         'type': 'com.famedly.marked_unread'
       });
-      expect(room.isUnread, true);
+      expect(room.markedUnread, true);
     });
 
     test('joinRules', () async {

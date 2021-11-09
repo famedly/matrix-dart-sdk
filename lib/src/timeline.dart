@@ -18,6 +18,8 @@
 
 import 'dart:async';
 
+import 'package:collection/src/iterable_extensions.dart';
+
 import '../matrix.dart';
 import 'event.dart';
 import 'event_status.dart';
@@ -170,6 +172,14 @@ class Timeline {
         }
       }
     }
+  }
+
+  /// Set the read marker to the last synced event in this timeline.
+  Future<void> setReadMarker([String? eventId]) async {
+    eventId ??=
+        events.firstWhereOrNull((event) => event.status.isSynced)?.eventId;
+    if (eventId == null) return;
+    return room.setReadMarker(eventId, mRead: eventId);
   }
 
   int _findEvent({String? event_id, String? unsigned_txid}) {
