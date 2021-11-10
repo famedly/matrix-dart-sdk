@@ -916,10 +916,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         return;
       }
 
-      final status = newStatus.isError || prevEvent == null
+      final status = newStatus.isError || prevStatus == null
           ? newStatus
           : latestEventStatus(
-              prevStatus!,
+              prevStatus,
               newStatus,
             );
 
