@@ -272,7 +272,7 @@ class CallSession {
   CallState state = CallState.kFledgling;
   bool get isOutgoing => direction == Direction.kOutgoing;
   bool get isRinging => state == CallState.kRinging;
-  late RTCPeerConnection pc;
+  RTCPeerConnection? pc;
   List<RTCIceCandidate> remoteCandidates = <RTCIceCandidate>[];
   List<RTCIceCandidate> localCandidates = <RTCIceCandidate>[];
   late AssertedIdentity remoteAssertedIdentity;
@@ -287,7 +287,7 @@ class CallSession {
   bool ignoreOffer = false;
   String facingMode = 'user';
   late Client client;
-  late String remotePartyId;
+  String? remotePartyId;
   late User remoteUser;
   late CallParty hangupParty;
   late String hangupReason;
@@ -341,7 +341,7 @@ class CallSession {
       _updateRemoteSDPStreamMetadata(metadata);
     }
 
-    await pc.setRemoteDescription(offer);
+    await pc!.setRemoteDescription(offer);
 
     setCallState(CallState.kRinging);
 
@@ -369,8 +369,8 @@ class CallSession {
 
     if (direction == Direction.kOutgoing) {
       setCallState(CallState.kConnecting);
-      await pc.setRemoteDescription(answer);
-      remoteCandidates.forEach((candidate) => pc.addCandidate(candidate));
+      await pc!.setRemoteDescription(answer);
+      remoteCandidates.forEach((candidate) => pc!.addCandidate(candidate));
     }
   }
 
@@ -382,7 +382,7 @@ class CallSession {
     // https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Perfect_negotiation
     final offerCollision = ((description.type == 'offer') &&
         (makingOffer ||
-            pc.signalingState != RTCSignalingState.RTCSignalingStateStable));
+            pc!.signalingState != RTCSignalingState.RTCSignalingStateStable));
 
     ignoreOffer = !polite && offerCollision;
     if (ignoreOffer) {
@@ -397,13 +397,13 @@ class CallSession {
     }
 
     try {
-      await pc.setRemoteDescription(description);
+      await pc!.setRemoteDescription(description);
       if (description.type == 'offer') {
-        final answer = await pc.createAnswer();
+        final answer = await pc!.createAnswer();
         await room.sendCallNegotiate(
             callId, lifetimeMs, localPartyId, answer.sdp!,
             type: answer.type!);
-        await pc.setLocalDescription(answer);
+        await pc!.setLocalDescription(answer);
       }
     } catch (e) {
       _getLocalOfferFailed(e);
@@ -457,7 +457,7 @@ class CallSession {
 
       if (pc != null && inviteOrAnswerSent && remotePartyId != null) {
         try {
-          await pc.addCandidate(candidate);
+          await pc!.addCandidate(candidate);
         } catch (e) {
           Logs().e('[VOIP] onCandidatesReceived => ${e.toString()}');
         }
@@ -467,7 +467,7 @@ class CallSession {
     });
 
     if (pc != null &&
-        pc.iceConnectionState ==
+        pc!.iceConnectionState ==
             RTCIceConnectionState.RTCIceConnectionStateDisconnected) {
       _restartIce();
     }
@@ -511,7 +511,7 @@ class CallSession {
       }
     } else {
       for (final sender in screensharingSenders) {
-        await pc.removeTrack(sender);
+        await pc!.removeTrack(sender);
       }
       for (final track in localScreenSharingStream!.stream!.getTracks()) {
         await track.stop();
@@ -548,12 +548,12 @@ class CallSession {
       if (purpose == SDPStreamMetadataPurpose.Screenshare) {
         screensharingSenders.clear();
         stream.getTracks().forEach((track) async {
-          screensharingSenders.add(await pc.addTrack(track, stream));
+          screensharingSenders.add(await pc!.addTrack(track, stream));
         });
       } else if (purpose == SDPStreamMetadataPurpose.Usermedia) {
         usermediaSenders.clear();
         stream.getTracks().forEach((track) async {
-          usermediaSenders.add(await pc.addTrack(track, stream));
+          usermediaSenders.add(await pc!.addTrack(track, stream));
         });
       }
       emit(CallEvent.kFeedsChanged, streams);
@@ -629,7 +629,7 @@ class CallSession {
   void setRemoteOnHold(bool onHold) async {
     if (isRemoteOnHold == onHold) return;
     remoteOnHold = onHold;
-    final transceivers = await pc.getTransceivers();
+    final transceivers = await pc!.getTransceivers();
     for (final transceiver in transceivers) {
       await transceiver.setDirection(onHold
           ? TransceiverDirection.SendOnly
@@ -646,7 +646,7 @@ class CallSession {
     var callOnHold = true;
     // We consider a call to be on hold only if *all* the tracks are on hold
     // (is this the right thing to do?)
-    final transceivers = await pc.getTransceivers();
+    final transceivers = await pc!.getTransceivers();
     for (final transceiver in transceivers) {
       final currentDirection = await transceiver.getCurrentDirection();
       Logs()
@@ -684,8 +684,8 @@ class CallSession {
     if (direction == Direction.kIncoming) {
       setCallState(CallState.kCreateAnswer);
 
-      final answer = await pc.createAnswer({});
-      remoteCandidates.forEach((candidate) => pc.addCandidate(candidate));
+      final answer = await pc!.createAnswer({});
+      remoteCandidates.forEach((candidate) => pc!.addCandidate(candidate));
 
       final callCapabilities = CallCapabilities()
         ..dtmf = false
@@ -703,7 +703,7 @@ class CallSession {
           capabilities: callCapabilities,
           metadata: metadata);
       Logs().v('[VOIP] answer res => $res');
-      await pc.setLocalDescription(answer);
+      await pc!.setLocalDescription(answer);
       setCallState(CallState.kConnecting);
       inviteOrAnswerSent = true;
       _answeredByUs = true;
@@ -740,7 +740,7 @@ class CallSession {
   }
 
   void sendDTMF(String tones) async {
-    final senders = await pc.getSenders();
+    final senders = await pc!.getSenders();
     for (final sender in senders) {
       if (sender.track != null && sender.track!.kind == 'audio') {
         await sender.dtmfSender.insertDTMF(tones);
@@ -773,7 +773,7 @@ class CallSession {
     }
   }
 
-  void onRejectReceived(String reason) {
+  void onRejectReceived(String? reason) {
     Logs().v('[VOIP] Reject received for call ID ' + callId);
     // No need to check party_id for reject because if we'd received either
     // an answer or reject, we wouldn't be in state InviteSent
@@ -797,7 +797,7 @@ class CallSession {
     }
 
     try {
-      await pc.setLocalDescription(offer);
+      await pc!.setLocalDescription(offer);
     } catch (err) {
       Logs().d('Error setting local description! ${err.toString()}');
       terminate(CallParty.kLocal, CallErrorCode.SetLocalDescription, true);
@@ -836,7 +836,7 @@ class CallSession {
     Logs().i('Negotiation is needed!');
     makingOffer = true;
     try {
-      final offer = await pc.createOffer({});
+      final offer = await pc!.createOffer({});
       await _gotLocalOffer(offer);
     } catch (e) {
       _getLocalOfferFailed(e);
@@ -850,13 +850,13 @@ class CallSession {
     try {
       pc = await _createPeerConnection();
 
-      pc.onRenegotiationNeeded = onNegotiationNeeded;
+      pc!.onRenegotiationNeeded = onNegotiationNeeded;
 
-      pc.onIceCandidate = (RTCIceCandidate candidate) async {
+      pc!.onIceCandidate = (RTCIceCandidate candidate) async {
         //Logs().v('[VOIP] onIceCandidate => ${candidate.toMap().toString()}');
         localCandidates.add(candidate);
       };
-      pc.onIceGatheringState = (RTCIceGatheringState state) async {
+      pc!.onIceGatheringState = (RTCIceGatheringState state) async {
         Logs().v('[VOIP] IceGatheringState => ${state.toString()}');
         if (state == RTCIceGatheringState.RTCIceGatheringStateGathering) {
           Timer(Duration(milliseconds: 3000), () async {
@@ -873,7 +873,7 @@ class CallSession {
           }
         }
       };
-      pc.onIceConnectionState = (RTCIceConnectionState state) {
+      pc!.onIceConnectionState = (RTCIceConnectionState state) {
         Logs().v('[VOIP] RTCIceConnectionState => ${state.toString()}');
         if (state == RTCIceConnectionState.RTCIceConnectionStateConnected) {
           localCandidates.clear();
@@ -899,8 +899,8 @@ class CallSession {
     });
     streams.clear();
     if (pc != null) {
-      await pc.close();
-      await pc.dispose();
+      await pc!.close();
+      await pc!.dispose();
     }
   }
 
@@ -945,8 +945,8 @@ class CallSession {
     // Needs restart ice on session.pc and renegotiation.
     iceGatheringFinished = false;
     final desc =
-        await pc.createOffer(_getOfferAnswerConstraints(iceRestart: true));
-    await pc.setLocalDescription(desc);
+        await pc!.createOffer(_getOfferAnswerConstraints(iceRestart: true));
+    await pc!.setLocalDescription(desc);
     localCandidates.clear();
   }
 
@@ -1101,7 +1101,7 @@ class CallSession {
     terminate(CallParty.kLocal, CallErrorCode.NoUserMedia, false);
   }
 
-  void onSelectAnswerReceived(String selectedPartyId) {
+  void onSelectAnswerReceived(String? selectedPartyId) {
     if (direction != Direction.kIncoming) {
       Logs().w('Got select_answer for an outbound call: ignoring');
       return;
@@ -1325,7 +1325,7 @@ class VoIP with WidgetsBindingObserver {
 
       /// Send select_answer event.
       await event.room.selectCallAnswer(
-          callId, lifetimeMs, localPartyId!, call.remotePartyId);
+          callId, lifetimeMs, localPartyId!, call.remotePartyId!);
     } else {
       Logs().v('[VOIP] onCallAnswer: Session [$callId] not found!');
     }
