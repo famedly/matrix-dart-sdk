@@ -515,16 +515,24 @@ class Room {
   /// set a read marker!
   Future<void> markUnread(bool unread) async {
     final content = MarkedUnread(unread).toJson();
-    await _handleFakeSync(SyncUpdate(nextBatch: '')
-      ..rooms = (RoomsUpdate()
-        ..join = (({}..[id] = (JoinedRoomUpdate()
-          ..accountData = [
-            BasicRoomEvent(
-              content: content,
-              roomId: id,
-              type: EventType.markedUnread,
+    await _handleFakeSync(
+      SyncUpdate(
+        nextBatch: '',
+        rooms: RoomsUpdate(
+          join: {
+            id: JoinedRoomUpdate(
+              accountData: [
+                BasicRoomEvent(
+                  content: content,
+                  roomId: id,
+                  type: EventType.markedUnread,
+                ),
+              ],
             )
-          ])))));
+          },
+        ),
+      ),
+    );
     await client.setAccountDataPerRoom(
       client.userID!,
       id,
@@ -793,23 +801,30 @@ class Room {
       }
     }
     final sentDate = DateTime.now();
-    final syncUpdate = SyncUpdate(nextBatch: '')
-      ..rooms = (RoomsUpdate()
-        ..join = (<String, JoinedRoomUpdate>{}..[id] = (JoinedRoomUpdate()
-          ..timeline = (TimelineUpdate()
-            ..events = [
-              MatrixEvent(
-                content: content,
-                type: type,
-                eventId: messageID,
-                senderId: client.userID!,
-                originServerTs: sentDate,
-                unsigned: {
-                  messageSendingStatusKey: EventStatus.sending.intValue,
-                  'transaction_id': messageID,
-                },
-              )
-            ]))));
+    final syncUpdate = SyncUpdate(
+      nextBatch: '',
+      rooms: RoomsUpdate(
+        join: {
+          id: JoinedRoomUpdate(
+            timeline: TimelineUpdate(
+              events: [
+                MatrixEvent(
+                  content: content,
+                  type: type,
+                  eventId: messageID,
+                  senderId: client.userID!,
+                  originServerTs: sentDate,
+                  unsigned: {
+                    messageSendingStatusKey: EventStatus.sending.intValue,
+                    'transaction_id': messageID,
+                  },
+                ),
+              ],
+            ),
+          ),
+        },
+      ),
+    );
     await _handleFakeSync(syncUpdate);
 
     // Send the text and on success, store and display a *sent* event.
@@ -879,11 +894,14 @@ class Room {
       if ([MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN]
           .contains(exception.error)) {
         await _handleFakeSync(
-          SyncUpdate(nextBatch: '')
-            ..rooms = (RoomsUpdate()
-              ..leave = {
-                '$id': (LeftRoomUpdate()),
-              }),
+          SyncUpdate(
+            nextBatch: '',
+            rooms: RoomsUpdate(
+              leave: {
+                id: LeftRoomUpdate(),
+              },
+            ),
+          ),
         );
       }
       rethrow;
@@ -953,24 +971,34 @@ class Room {
       if (!((resp.chunk?.isNotEmpty ?? false) && resp.end != null)) return;
 
       await client.handleSync(
-          SyncUpdate(nextBatch: '')
-            ..rooms = (RoomsUpdate()
-              ..join = membership == Membership.join
-                  ? ({}..[id] = ((JoinedRoomUpdate()
-                    ..state = resp.state
-                    ..timeline = (TimelineUpdate()
-                      ..limited = false
-                      ..events = resp.chunk
-                      ..prevBatch = resp.end))))
-                  : null
-              ..leave = membership != Membership.join
-                  ? ({}..[id] = ((LeftRoomUpdate()
-                    ..state = resp.state
-                    ..timeline = (TimelineUpdate()
-                      ..limited = false
-                      ..events = resp.chunk
-                      ..prevBatch = resp.end))))
-                  : null),
+          SyncUpdate(
+            nextBatch: '',
+            rooms: RoomsUpdate(
+                join: membership == Membership.join
+                    ? {
+                        id: JoinedRoomUpdate(
+                          state: resp.state,
+                          timeline: TimelineUpdate(
+                            limited: false,
+                            events: resp.chunk,
+                            prevBatch: resp.end,
+                          ),
+                        )
+                      }
+                    : null,
+                leave: membership != Membership.join
+                    ? {
+                        id: LeftRoomUpdate(
+                          state: resp.state,
+                          timeline: TimelineUpdate(
+                            limited: false,
+                            events: resp.chunk,
+                            prevBatch: resp.end,
+                          ),
+                        ),
+                      }
+                    : null),
+          ),
           sortAtTheEnd: true);
     };
 

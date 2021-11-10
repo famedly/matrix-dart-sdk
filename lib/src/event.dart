@@ -122,12 +122,20 @@ class Event extends MatrixEvent {
         final json = toJson();
         json['unsigned'] ??= <String, dynamic>{};
         json['unsigned'][messageSendingStatusKey] = EventStatus.error.intValue;
-        room.client.handleSync(SyncUpdate(nextBatch: '')
-          ..rooms = (RoomsUpdate()
-            ..join = (<String, JoinedRoomUpdate>{}..[room.id] =
-                (JoinedRoomUpdate()
-                  ..timeline = (TimelineUpdate()
-                    ..events = [MatrixEvent.fromJson(json)])))));
+        room.client.handleSync(
+          SyncUpdate(
+            nextBatch: '',
+            rooms: RoomsUpdate(
+              join: {
+                room.id: JoinedRoomUpdate(
+                  timeline: TimelineUpdate(
+                    events: [MatrixEvent.fromJson(json)],
+                  ),
+                )
+              },
+            ),
+          ),
+        );
       }
     }
   }
