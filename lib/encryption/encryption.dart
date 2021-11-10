@@ -285,21 +285,34 @@ class Encryption {
     if (event.type != EventTypes.Encrypted) {
       return event;
     }
+    final content = event.parsedRoomEncryptedContent;
+    final sessionId = content.sessionId;
     try {
       if (client.database != null &&
+          sessionId != null &&
           !(keyManager
-                  .getInboundGroupSession(roomId, event.content['session_id'],
-                      event.content['sender_key'])
+                  .getInboundGroupSession(
+                    roomId,
+                    sessionId,
+                    content.senderKey,
+                  )
                   ?.isValid ??
               false)) {
         await keyManager.loadInboundGroupSession(
-            roomId, event.content['session_id'], event.content['sender_key']);
+          roomId,
+          sessionId,
+          content.senderKey,
+        );
       }
       event = decryptRoomEventSync(roomId, event);
       if (event.type == EventTypes.Encrypted &&
-          event.content['can_request_session'] == true) {
+          event.content['can_request_session'] == true &&
+          sessionId != null) {
         keyManager.maybeAutoRequest(
-            roomId, event.content['session_id'], event.content['sender_key']);
+          roomId,
+          sessionId,
+          content.senderKey,
+        );
       }
       if (event.type != EventTypes.Encrypted && store) {
         if (updateType != EventUpdateType.history) {
