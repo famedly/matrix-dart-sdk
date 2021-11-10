@@ -182,10 +182,12 @@ class Room {
 
     // We ignore events editing events older than the current-latest here so
     // i.e. newly sent edits for older events don't show up in room preview
+    final lastEvent = this.lastEvent;
     if (isMessageEvent &&
         state.relationshipEventId != null &&
         state.relationshipType == RelationshipTypes.edit &&
-        state.relationshipEventId != lastEvent?.eventId) {
+        lastEvent != null &&
+        !lastEvent.matchesEventOrTransactionId(state.relationshipEventId)) {
       return;
     }
 
