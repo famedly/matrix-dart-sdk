@@ -122,10 +122,12 @@ class FakeMatrixApi extends MockClient {
               action.contains('/account_data/') &&
               !action.contains('/room/')) {
             final type = Uri.decodeComponent(action.split('/').last);
-            final syncUpdate = sdk.SyncUpdate(nextBatch: '')
-              ..accountData = [
+            final syncUpdate = sdk.SyncUpdate(
+              nextBatch: '',
+              accountData: [
                 sdk.BasicEvent(content: decodeJson(data), type: type)
-              ];
+              ],
+            );
             if (client?.database != null) {
               await client?.database?.transaction(() async {
                 await client?.handleSync(syncUpdate);

@@ -306,18 +306,25 @@ void main() {
     });
 
     test('Clear cache on limited timeline', () async {
-      client.onSync.add(SyncUpdate(nextBatch: '1234')
-        ..rooms = (RoomsUpdate()
-          ..join = {
-            roomID: (JoinedRoomUpdate()
-              ..timeline = (TimelineUpdate()
-                ..limited = true
-                ..prevBatch = 'blah')
-              ..unreadNotifications = UnreadNotificationCounts.fromJson({
-                'highlight_count': 0,
-                'notification_count': 0,
-              }))
-          }));
+      client.onSync.add(
+        SyncUpdate(
+          nextBatch: '1234',
+          rooms: RoomsUpdate(
+            join: {
+              roomID: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  limited: true,
+                  prevBatch: 'blah',
+                ),
+                unreadNotifications: UnreadNotificationCounts(
+                  highlightCount: 0,
+                  notificationCount: 0,
+                ),
+              ),
+            },
+          ),
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events.isEmpty, true);
     });
