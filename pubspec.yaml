@@ -23,6 +23,8 @@ dependencies:
   slugify: ^2.0.0
   html: ^0.15.0
   collection: ^1.15.0
+  sdp_transform: ^0.3.2
+  flutter_webrtc: ^0.7.1
 
 dev_dependencies:
   dart_code_metrics: ^4.4.0
