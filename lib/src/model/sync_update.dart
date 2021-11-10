@@ -128,7 +128,11 @@ class RoomsUpdate {
   Map<String, InvitedRoomUpdate>? invite;
   Map<String, LeftRoomUpdate>? leave;
 
-  RoomsUpdate({this.join, this.invite, this.leave});
+  RoomsUpdate({
+    this.join,
+    this.invite,
+    this.leave,
+  });
 
   RoomsUpdate.fromJson(Map<String, dynamic> json) {
     join = json['join'] != null

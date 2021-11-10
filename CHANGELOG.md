@@ -1,3 +1,6 @@
+## 0.5.1
+- feat: Add constructors to SyncUpdate classes
+
 ## 0.5.0
 - fix: threepidCreds should be threepid_creds and an object
 
