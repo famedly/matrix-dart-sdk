@@ -1,3 +1,10 @@
+## [0.7.0-nullsafety.5] - 10nd Nov 2021
+- fix: Edits as lastEvent do not update
+- fix: JSON parsing in decryptRoomEvent method
+- fix: Wrong null check in hive database
+- fix: crash on invalid displaynames
+- chore: Update matrix_api_lite
+
 ## [0.7.0-nullsafety.4] - 09nd Nov 2021
 - feat: More advanced create chat methods (encryption is now enabled by default)
 - feat: Make waiting on init db optional
