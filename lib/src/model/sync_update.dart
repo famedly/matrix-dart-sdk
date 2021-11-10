@@ -39,7 +39,16 @@ class SyncUpdate {
   Map<String, int>? deviceOneTimeKeysCount;
   List<String>? deviceUnusedFallbackKeyTypes;
 
-  SyncUpdate({required this.nextBatch});
+  SyncUpdate({
+    required this.nextBatch,
+    this.rooms,
+    this.presence,
+    this.accountData,
+    this.toDevice,
+    this.deviceLists,
+    this.deviceOneTimeKeysCount,
+    this.deviceUnusedFallbackKeyTypes,
+  });
 
   SyncUpdate.fromJson(Map<String, dynamic> json)
       : nextBatch = json['next_batch'],
@@ -119,7 +128,7 @@ class RoomsUpdate {
   Map<String, InvitedRoomUpdate>? invite;
   Map<String, LeftRoomUpdate>? leave;
 
-  RoomsUpdate();
+  RoomsUpdate({this.join, this.invite, this.leave});
 
   RoomsUpdate.fromJson(Map<String, dynamic> json) {
     join = json['join'] != null
@@ -161,7 +170,14 @@ class JoinedRoomUpdate extends SyncRoomUpdate {
   List<BasicRoomEvent>? accountData;
   UnreadNotificationCounts? unreadNotifications;
 
-  JoinedRoomUpdate();
+  JoinedRoomUpdate({
+    this.summary,
+    this.state,
+    this.timeline,
+    this.ephemeral,
+    this.accountData,
+    this.unreadNotifications,
+  });
 
   JoinedRoomUpdate.fromJson(Map<String, dynamic> json) {
     summary =
@@ -225,6 +241,8 @@ class JoinedRoomUpdate extends SyncRoomUpdate {
 class InvitedRoomUpdate extends SyncRoomUpdate {
   List<StrippedStateEvent>? inviteState;
 
+  InvitedRoomUpdate({this.inviteState});
+
   InvitedRoomUpdate.fromJson(Map<String, dynamic> json) {
     inviteState =
         (json['invite_state'] != null && json['invite_state']['events'] != null)
@@ -250,7 +268,11 @@ class LeftRoomUpdate extends SyncRoomUpdate {
   TimelineUpdate? timeline;
   List<BasicRoomEvent>? accountData;
 
-  LeftRoomUpdate();
+  LeftRoomUpdate({
+    this.state,
+    this.timeline,
+    this.accountData,
+  });
 
   LeftRoomUpdate.fromJson(Map<String, dynamic> json) {
     state = (json['state'] != null && json['state']['events'] != null)
@@ -293,7 +315,11 @@ class TimelineUpdate {
   bool? limited;
   String? prevBatch;
 
-  TimelineUpdate();
+  TimelineUpdate({
+    this.events,
+    this.limited,
+    this.prevBatch,
+  });
 
   TimelineUpdate.fromJson(Map<String, dynamic> json) {
     events = json['events'] != null
@@ -322,6 +348,11 @@ class UnreadNotificationCounts {
   int? highlightCount;
   int? notificationCount;
 
+  UnreadNotificationCounts({
+    this.notificationCount,
+    this.highlightCount,
+  });
+
   UnreadNotificationCounts.fromJson(Map<String, dynamic> json) {
     highlightCount = json['highlight_count'];
     notificationCount = json['notification_count'];
@@ -342,6 +373,11 @@ class UnreadNotificationCounts {
 class DeviceListsUpdate {
   List<String>? changed;
   List<String>? left;
+
+  DeviceListsUpdate({
+    this.changed,
+    this.left,
+  });
 
   DeviceListsUpdate.fromJson(Map<String, dynamic> json) {
     changed = List<String>.from(json['changed'] ?? []);
