@@ -23,10 +23,17 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/database/hive_database.dart';
 import 'package:file/memory.dart';
 import 'package:hive/hive.dart';
+import 'package:matrix/src/database/sembast_database.dart';
 
 Future<DatabaseApi> getDatabase(Client? _) => getHiveDatabase(_);
 
 bool hiveInitialized = false;
+
+Future<MatrixSembastDatabase> getSembastDatabase(Client? c) async {
+  final db = MatrixSembastDatabase('unit_test.${c?.hashCode}');
+  await db.open();
+  return db;
+}
 
 Future<FamedlySdkHiveDatabase> getHiveDatabase(Client? c) async {
   if (!hiveInitialized) {
