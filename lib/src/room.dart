@@ -187,7 +187,8 @@ class Room {
         state.relationshipEventId != null &&
         state.relationshipType == RelationshipTypes.edit &&
         lastEvent != null &&
-        !lastEvent.matchesEventOrTransactionId(state.relationshipEventId)) {
+        !state.matchesEventOrTransactionId(lastEvent.eventId) &&
+        lastEvent.eventId != state.relationshipEventId) {
       return;
     }
 
