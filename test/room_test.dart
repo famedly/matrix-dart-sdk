@@ -234,9 +234,35 @@ void main() {
             'm.relates_to': {'rel_type': 'm.replace', 'event_id': '2'},
           },
           stateKey: '',
+          status: EventStatus.sending,
         ),
       );
       expect(room.lastEvent?.body, 'edited cdc');
+      expect(room.lastEvent?.status, EventStatus.sending);
+      expect(room.lastEvent?.eventId, '4');
+
+      // Status update on edits working?
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          room: room,
+          eventId: '5',
+          unsigned: {'transaction_id': '4'},
+          originServerTs: DateTime.now(),
+          content: {
+            'msgtype': 'm.text',
+            'body': 'edited cdc',
+            'm.new_content': {'msgtype': 'm.text', 'body': 'edited cdc'},
+            'm.relates_to': {'rel_type': 'm.replace', 'event_id': '2'},
+          },
+          stateKey: '',
+          status: EventStatus.sent,
+        ),
+      );
+      expect(room.lastEvent?.eventId, '5');
+      expect(room.lastEvent?.body, 'edited cdc');
+      expect(room.lastEvent?.status, EventStatus.sent);
     });
     test('lastEvent when reply parent edited', () async {
       room.setState(
