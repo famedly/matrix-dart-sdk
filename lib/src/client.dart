@@ -568,7 +568,8 @@ class Client extends MatrixApi {
     final directChatRoomId = getDirectChatFromUserId(mxid);
     if (directChatRoomId != null) return directChatRoomId;
 
-    enableEncryption ??= await userOwnsEncryptionKeys(mxid);
+    enableEncryption ??=
+        encryptionEnabled && await userOwnsEncryptionKeys(mxid);
     if (enableEncryption) {
       initialState ??= [];
       if (!initialState.any((s) => s.type == EventTypes.Encryption)) {
@@ -609,6 +610,7 @@ class Client extends MatrixApi {
     List<String>? invite,
     CreateRoomPreset preset = CreateRoomPreset.privateChat,
     List<StateEvent>? initialState,
+    Visibility? visibility,
     bool waitForSync = true,
   }) async {
     enableEncryption ??=
@@ -629,6 +631,7 @@ class Client extends MatrixApi {
       preset: preset,
       name: groupName,
       initialState: initialState,
+      visibility: visibility,
     );
 
     if (waitForSync) {
