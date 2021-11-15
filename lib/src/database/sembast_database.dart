@@ -424,7 +424,7 @@ class MatrixSembastDatabase extends DatabaseApi {
     final sessions = (await Future.wait(keys.map((sessionId) async =>
             await _inboundGroupSessionsBox.record(sessionId).get(txn))))
         .where((rawSession) => rawSession!['uploaded'] == false)
-        .take(500)
+        .take(50)
         .map(
           (json) => StoredInboundGroupSession.fromJson(
             cloneMap(json!),

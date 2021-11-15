@@ -746,7 +746,7 @@ class KeyManager {
           userId: userID,
         );
         // we need to calculate verified beforehand, as else we pass a closure to an isolate
-        // with 500 keys they do, however, noticably block the UI, which is why we give brief async suspentions in here
+        // with 50 keys they do, however, noticably block the UI, which is why we give brief async suspentions in here
         // so that the event loop can progress
         var i = 0;
         for (final dbSession in dbSessions) {

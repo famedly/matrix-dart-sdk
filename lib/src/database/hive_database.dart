@@ -440,7 +440,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
             (sessionId) async =>
                 await _inboundGroupSessionsBox.get(sessionId))))
         .where((rawSession) => rawSession['uploaded'] == false)
-        .take(500)
+        .take(50)
         .map(
           (json) => StoredInboundGroupSession.fromJson(
             convertToJson(json),
