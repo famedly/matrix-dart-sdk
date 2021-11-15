@@ -1,16 +1,10 @@
 import 'dart:async';
 import 'dart:core';
-import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
-
-import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'voip_abstract.dart';
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 
 import '../matrix.dart';
-
-bool get kIsMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
 /// The default life time for call events, in millisecond.
 const lifetimeMs = 10 * 1000;
