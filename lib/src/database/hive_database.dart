@@ -371,10 +371,6 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     return Event.fromJson(convertToJson(raw), room);
   }
 
-  @override
-  bool eventIsKnown(String eventId, String roomId) =>
-      _eventsBox.keys.contains(MultiKey(roomId, eventId).toString());
-
   /// Loads a whole list of events at once from the store for a specific room
   Future<List<Event>> _getEventsByIds(List<String> eventIds, Room room) =>
       Future.wait(eventIds

@@ -203,7 +203,8 @@ class Room {
     final prevEvent = getState(state.type, stateKey);
     if (prevEvent != null &&
         prevEvent.eventId != state.eventId &&
-        client.database?.eventIsKnown(state.eventId, roomId) == true) {
+        prevEvent.originServerTs.millisecondsSinceEpoch >
+            state.originServerTs.millisecondsSinceEpoch) {
       return;
     }
 

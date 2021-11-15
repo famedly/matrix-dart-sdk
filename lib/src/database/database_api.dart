@@ -67,8 +67,6 @@ abstract class DatabaseApi {
 
   Future<Event?> getEventById(String eventId, Room room);
 
-  bool eventIsKnown(String eventId, String roomId);
-
   Future<void> forgetRoom(String roomId);
 
   Future<void> clearCache();
