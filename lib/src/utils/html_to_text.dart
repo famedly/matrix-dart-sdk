@@ -50,11 +50,13 @@ class HtmlToText {
             .firstMatch(text);
     if (match == null) {
       text = HtmlUnescape().convert(text);
-      if (text[0] != '\n') {
-        text = '\n$text';
-      }
-      if (text[text.length - 1] != '\n') {
-        text += '\n';
+      if (text.isNotEmpty) {
+        if (text[0] != '\n') {
+          text = '\n$text';
+        }
+        if (text[text.length - 1] != '\n') {
+          text += '\n';
+        }
       }
       return text;
     }
@@ -64,11 +66,13 @@ class HtmlToText {
     text = text.replaceAll(
         RegExp(r'</code>$', multiLine: false, caseSensitive: false), '');
     text = HtmlUnescape().convert(text);
-    if (text[0] != '\n') {
-      text = '\n$text';
-    }
-    if (text[text.length - 1] != '\n') {
-      text += '\n';
+    if (text.isNotEmpty) {
+      if (text[0] != '\n') {
+        text = '\n$text';
+      }
+      if (text[text.length - 1] != '\n') {
+        text += '\n';
+      }
     }
     final language =
         RegExp(r'language-(\w+)', multiLine: false, caseSensitive: false)
