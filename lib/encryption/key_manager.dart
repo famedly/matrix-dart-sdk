@@ -719,11 +719,13 @@ class KeyManager {
     _isUploadingKeys = true;
     try {
       if (!_haveKeysToUpload || !(await isCached())) {
+        _isUploadingKeys = false;
         return; // we can't backup anyways
       }
       final dbSessions = await database.getInboundGroupSessionsToUpload();
       if (dbSessions.isEmpty) {
         _haveKeysToUpload = false;
+        _isUploadingKeys = false;
         return; // nothing to do
       }
       final privateKey =
@@ -738,6 +740,7 @@ class KeyManager {
         if (info.algorithm !=
                 BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2 ||
             info.authData['public_key'] != backupPubKey) {
+          _isUploadingKeys = false;
           return;
         }
         final args = _GenerateUploadKeysArgs(
