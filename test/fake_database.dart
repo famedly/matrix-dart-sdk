@@ -23,11 +23,25 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/database/hive_database.dart';
 import 'package:file/memory.dart';
 import 'package:hive/hive.dart';
+import 'package:matrix/src/database/fluffybox_database.dart';
 import 'package:matrix/src/database/sembast_database.dart';
 
-Future<DatabaseApi> getDatabase(Client? _) => getHiveDatabase(_);
+import 'package:sqflite_common/sqlite_api.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+Future<DatabaseApi> getDatabase(Client? _) => getFluffyBoxDatabase(_);
 
 bool hiveInitialized = false;
+
+Future<FluffyBoxDatabase> getFluffyBoxDatabase(Client? c) async {
+  final db = FluffyBoxDatabase(
+    'unit_test.${c?.hashCode}',
+    openSqlDatabase: () =>
+        databaseFactoryFfi.openDatabase(inMemoryDatabasePath),
+  );
+  await db.open();
+  return db;
+}
 
 Future<MatrixSembastDatabase> getSembastDatabase(Client? c) async {
   final db = MatrixSembastDatabase('unit_test.${c?.hashCode}');

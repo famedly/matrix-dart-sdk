@@ -24,7 +24,7 @@ coverage:
     - sed -i 's/#\([^ ]\)/\1/g' pubspec.yaml
     - flutter doctor
     - apt update
-    - apt install -y lcov libolm3 sqlite3 libsqlite3-dev
+    - apt install -y lcov libolm3 sqlite3 libsqlite3-dev libsqlite3-0
     - ln -s /usr/lib/dart/bin/pub /usr/bin/
     - useradd -m test
     - chown -R 'test:' '.'

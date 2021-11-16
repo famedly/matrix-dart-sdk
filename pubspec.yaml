@@ -24,6 +24,8 @@ dependencies:
   html: ^0.15.0
   collection: ^1.15.0
   sembast: ^3.1.1
+  sqflite_common_ffi: ^2.1.0
+  fluffybox: ^0.1.0
 
 dev_dependencies:
   dart_code_metrics: ^4.4.0

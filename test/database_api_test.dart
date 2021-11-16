@@ -27,14 +27,9 @@ import 'fake_database.dart';
 
 void main() {
   /// All Tests related to the ChatTime
-  group('Sembast Database Test', () {
+  group('FluffyBox Database Test', () {
     testDatabase(
-      getSembastDatabase(null),
-    );
-  });
-  group('Hive Database Test', () {
-    testDatabase(
-      getHiveDatabase(null),
+      getFluffyBoxDatabase(null),
     );
   });
 }
