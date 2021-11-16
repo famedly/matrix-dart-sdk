@@ -1,3 +1,11 @@
+## [0.7.0-nullsafety.6] - 16nd Nov 2021
+- feat: Implement sembast store
+- fix: HtmlToText crashes with an empty code block
+- fix: use originServerTs to check if state event is old
+- fix: Dont enable e2ee in new direct chats without encryption support
+- fix: Change eventstatus of edits in prevEvent
+- chore: Trim formatted username fallback
+
 ## [0.7.0-nullsafety.5] - 10nd Nov 2021
 - fix: Edits as lastEvent do not update
 - fix: JSON parsing in decryptRoomEvent method
