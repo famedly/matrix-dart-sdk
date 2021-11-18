@@ -14,25 +14,14 @@ coverage:
   tags:
     - linux
   stage: coverage
-  image: debian:testing
+  image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable:2.5.1
   dependencies: []
   script:
     - apt update
-    - apt install -y curl gnupg2 git unzip
-    - git clone https://github.com/flutter/flutter.git -b stable
-    - export PATH="$PATH:`pwd`/flutter/bin"
-    - sed -i 's/#\([^ ]\)/\1/g' pubspec.yaml
-    - flutter doctor
-    - apt update
     - apt install -y lcov libolm3 sqlite3 libsqlite3-dev libsqlite3-0
-    - ln -s /usr/lib/dart/bin/pub /usr/bin/
-    - useradd -m test
-    - chown -R 'test:' '.'
-    - chmod +x ./scripts/prepare.sh
-    - chmod +x ./scripts/test.sh
     - rm -r example
-    - ./scripts/prepare.sh test
-    - ./scripts/test.sh test
+    - flutter test --coverage
+    - genhtml -o coverage coverage/lcov.info || true
   artifacts:
     paths:
       - coverage/
@@ -41,11 +30,14 @@ coverage_without_olm:
   tags:
     - linux
   stage: coverage
-  image: google/dart
+  image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable:2.5.1
   dependencies: []
   script:
-    - dart pub get
-    - dart pub run test
+    - apt update
+    - apt install -y lcov sqlite3 libsqlite3-dev libsqlite3-0
+    - rm -r example
+    - flutter test --coverage
+    - genhtml -o coverage coverage/lcov.info || true
 
 e2ee_test:
   tags:
