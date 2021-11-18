@@ -24,7 +24,6 @@ export 'package:matrix_api_lite/matrix_api_lite.dart';
 export 'src/client.dart';
 export 'src/database/database_api.dart';
 export 'src/database/hive_database.dart';
-export 'src/database/sembast_database.dart';
 export 'src/event.dart';
 export 'src/event_status.dart';
 export 'src/room.dart';
