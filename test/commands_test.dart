@@ -274,6 +274,28 @@ void main() {
       });
     });
 
+    test('dm', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent('/dm @alice:example.com --no-encryption');
+      expect(
+          json.decode(
+              FakeMatrixApi.calledEndpoints['/client/r0/createRoom']?.first),
+          {
+            'invite': ['@alice:example.com'],
+            'is_direct': true,
+            'preset': 'trusted_private_chat'
+          });
+    });
+
+    test('create', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent('/create @alice:example.com --no-encryption');
+      expect(
+          json.decode(
+              FakeMatrixApi.calledEndpoints['/client/r0/createRoom']?.first),
+          {'preset': 'private_chat'});
+    });
+
     test('discardsession', () async {
       if (olmEnabled) {
         await client.encryption?.keyManager.createOutboundGroupSession(room.id);
