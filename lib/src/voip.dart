@@ -49,7 +49,7 @@ class RTCVideoRenderer extends VideoRenderer {
   int get videoWidth => throw UnimplementedError();
 
   @override
-  Future<void> dispose()  => throw UnimplementedError();
+  Future<void> dispose() => throw UnimplementedError();
 }
 
 /// The default life time for call events, in millisecond.
@@ -1199,7 +1199,7 @@ class VoIP {
         wb!.addObserver(this);
         didChangeAppLifecycleState(wb.lifecycleState!);
       }
-    */  
+    */
   }
 
   Future<void> onCallInvite(Event event) async {
