@@ -1,10 +1,56 @@
 import 'dart:async';
 import 'dart:core';
 
-import 'voip_abstract.dart';
+import 'package:webrtc_interface/webrtc_interface.dart';
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 
 import '../matrix.dart';
+
+MediaDevices mediaDevices = Null as MediaDevices;
+RTCFactory factory = Null as RTCFactory;
+
+class RTCVideoRenderer extends VideoRenderer {
+  RTCVideoRenderer() : super() {
+    muted = true;
+  }
+
+  @override
+  late bool muted;
+
+  @override
+  MediaStream? srcObject;
+
+  @override
+  Future<bool> audioOutput(String deviceId) {
+    // TODO: implement audioOutput
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> initialize() {
+    // TODO: implement initialize
+    throw UnimplementedError();
+  }
+
+  @override
+  // TODO: implement renderVideo
+  bool get renderVideo => throw UnimplementedError();
+
+  @override
+  // TODO: implement textureId
+  int? get textureId => throw UnimplementedError();
+
+  @override
+  // TODO: implement videoHeight
+  int get videoHeight => throw UnimplementedError();
+
+  @override
+  // TODO: implement videoWidth
+  int get videoWidth => throw UnimplementedError();
+
+  @override
+  Future<void> dispose()  => throw UnimplementedError();
+}
 
 /// The default life time for call events, in millisecond.
 const lifetimeMs = 10 * 1000;
@@ -393,7 +439,7 @@ class CallSession {
     try {
       await pc!.setRemoteDescription(description);
       if (description.type == 'offer') {
-        final answer = await pc!.createAnswer();
+        final answer = await pc!.createAnswer({});
         await room.sendCallNegotiate(
             callId, lifetimeMs, localPartyId, answer.sdp!,
             type: answer.type!);
@@ -555,7 +601,8 @@ class CallSession {
 
     if (purpose == SDPStreamMetadataPurpose.Usermedia) {
       speakerOn = type == CallType.kVideo;
-      if (!kIsWeb && !voip.background) {
+      //TODO: Confirm that the platform is not Web.
+      if (/*!kIsWeb && */ !voip.background) {
         final audioTrack = stream.getAudioTracks()[0];
         audioTrack.enableSpeakerphone(speakerOn);
       }
@@ -658,13 +705,16 @@ class CallSession {
     speakerOn = !speakerOn;
   }
 
+  //TODO: move to the app.
   Future<void> switchCamera() async {
     if (localUserMediaStream != null) {
+      /*
       await Helper.switchCamera(
           localUserMediaStream!.stream!.getVideoTracks()[0]);
       if (kIsMobile) {
         facingMode == 'user' ? facingMode = 'environment' : facingMode = 'user';
       }
+      */
     }
   }
 
@@ -960,7 +1010,7 @@ class CallSession {
           : false,
     };
     try {
-      return await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      return await mediaDevices.getUserMedia(mediaConstraints);
     } catch (e) {
       _getUserMediaFailed(e);
     }
@@ -973,7 +1023,7 @@ class CallSession {
       'video': true,
     };
     try {
-      return await navigator.mediaDevices.getDisplayMedia(mediaConstraints);
+      return await mediaDevices.getDisplayMedia(mediaConstraints);
     } catch (e) {
       _getUserMediaFailed(e);
     }
@@ -985,7 +1035,7 @@ class CallSession {
       'iceServers': opts.iceServers,
       'sdpSemantics': 'unified-plan'
     };
-    final pc = await createPeerConnection(configuration);
+    final pc = await factory.createPeerConnection(configuration);
     pc.onTrack = (RTCTrackEvent event) {
       if (event.streams.isNotEmpty) {
         final stream = event.streams[0];
@@ -1115,46 +1165,15 @@ class CallSession {
   }
 }
 
-class VoIP with WidgetsBindingObserver {
+class VoIP {
   TurnServerCredentials? _turnServerCredentials;
   Map<String, CallSession> calls = <String, CallSession>{};
   String? currentCID;
-  //ConnectivityResult _currentConnectivity;
-  Function(CallSession session)? onIncomingCall;
-  OverlayEntry? overlayEntry;
+  Function(CallSession session)? onNewCall;
+  Function(CallSession session)? onCallEnded;
   String? get localPartyId => client.deviceID;
   bool background = false;
   Client client;
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    Logs().v('AppLifecycleState = $state');
-    background = !(state != AppLifecycleState.detached &&
-        state != AppLifecycleState.paused);
-  }
-
-  void addCallingOverlay(
-      BuildContext context, String callId, CallSession call) {
-    if (overlayEntry != null) {
-      Logs().w('[VOIP] addCallingOverlay: The call session already exists?');
-      overlayEntry?.remove();
-    }
-    /* TODO:
-    final overlay = Overlay.of(context);
-    overlayEntry = OverlayEntry(
-      builder: (_) => Calling(
-          context: famedly.context,
-          client: client,
-          callId: callId,
-          call: call,
-          onClear: () {
-            overlayEntry?.remove();
-            overlayEntry = null;
-          }),
-    );
-    overlay.insert(overlayEntry);
-    */
-  }
 
   VoIP(this.client) : super() {
     client.onCallInvite.stream.listen(onCallInvite);
@@ -1168,19 +1187,19 @@ class VoIP with WidgetsBindingObserver {
     client.onSDPStreamMetadataChangedReceived.stream
         .listen(onSDPStreamMetadataChangedReceived);
     client.onAssertedIdentityReceived.stream.listen(onAssertedIdentityReceived);
-    /*
-    Connectivity().onConnectivityChanged.listen(_handleNetworkChanged);
-    Connectivity()
-        .checkConnectivity()
-        .then((result) => _currentConnectivity = result)
-        .catchError((e) => _currentConnectivity = ConnectivityResult.none);
-    */
 
-    if (!kIsWeb) {
-      final wb = WidgetsBinding.instance;
-      wb!.addObserver(this);
-      didChangeAppLifecycleState(wb.lifecycleState!);
-    }
+    /* TODO: implement this in the fanedly-app.
+      Connectivity().onConnectivityChanged.listen(_handleNetworkChanged);
+      Connectivity()
+          .checkConnectivity()
+          .then((result) => _currentConnectivity = result)
+          .catchError((e) => _currentConnectivity = ConnectivityResult.none);
+      if (!kIsWeb) {
+        final wb = WidgetsBinding.instance;
+        wb!.addObserver(this);
+        didChangeAppLifecycleState(wb.lifecycleState!);
+      }
+    */  
   }
 
   Future<void> onCallInvite(Event event) async {
@@ -1254,8 +1273,7 @@ class VoIP with WidgetsBindingObserver {
         .then((_) {
       // Popup CallingPage for incoming call.
       if (!background) {
-        //TODO:
-        //addCallingOverlay(famedly.context, callId, newCall);
+        onNewCall?.call(newCall);
       }
     });
     currentCID = callId;
@@ -1264,8 +1282,7 @@ class VoIP with WidgetsBindingObserver {
       /// Forced to enable signaling synchronization until the end of the call.
       client.backgroundSync = true;
 
-      /// Handle incoming call for callkeep plugin.
-      onIncomingCall?.call(newCall);
+      ///TODO: notify the callkeep that the call is incoming.
     }
     // Play ringtone
     playRingtone();
@@ -1352,9 +1369,7 @@ class VoIP with WidgetsBindingObserver {
       // hangup in any case, either if the other party hung up or we did on another device
       call.terminate(CallParty.kRemote,
           event.content['reason'] ?? CallErrorCode.UserHangup, true);
-
-      overlayEntry?.remove();
-      overlayEntry = null;
+      onCallEnded?.call(call);
     } else {
       Logs().v('[VOIP] onCallHangup: Session [$callId] not found!');
     }
@@ -1534,8 +1549,7 @@ class VoIP with WidgetsBindingObserver {
     currentCID = callId;
     await newCall.initOutboundCall(type).then((_) {
       if (!background) {
-        //TODO:
-        //addCallingOverlay(famdly.context, callId, newCall);
+        onNewCall?.call(newCall);
       }
     });
     currentCID = callId;
