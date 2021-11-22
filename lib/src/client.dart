@@ -775,6 +775,7 @@ class Client extends MatrixApi {
             leftRoom,
           ));
         });
+        leftRoom.prev_batch = room.timeline?.prevBatch;
         room.state?.forEach((event) {
           leftRoom.setState(Event.fromMatrixEvent(
             event,
