@@ -821,13 +821,16 @@ class Client extends MatrixApi {
     }
   }
 
-  /// Uploads a new user avatar for this user.
-  Future<void> setAvatar(MatrixFile file) async {
-    final uploadResp = await uploadContent(
-      file.bytes,
-      filename: file.name,
-      contentType: file.mimeType,
-    );
+  /// Uploads a new user avatar for this user. Leave file null to remove the
+  /// current avatar.
+  Future<void> setAvatar(MatrixFile? file) async {
+    final uploadResp = file == null
+        ? null
+        : await uploadContent(
+            file.bytes,
+            filename: file.name,
+            contentType: file.mimeType,
+          );
     await setAvatarUrl(userID!, uploadResp);
     return;
   }
