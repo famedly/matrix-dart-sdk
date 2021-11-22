@@ -1126,7 +1126,7 @@ class VoIP {
   Function(CallSession session)? onCallEnded;
   String? get localPartyId => client.deviceID;
   bool background = false;
-  Client client;
+  final Client client;
   final RTCFactory factory;
 
   VoIP(this.client, this.factory) : super() {
