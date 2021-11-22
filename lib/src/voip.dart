@@ -6,52 +6,6 @@ import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 
 import '../matrix.dart';
 
-MediaDevices mediaDevices = Null as MediaDevices;
-RTCFactory factory = Null as RTCFactory;
-
-class RTCVideoRenderer extends VideoRenderer {
-  RTCVideoRenderer() : super() {
-    muted = true;
-  }
-
-  @override
-  late bool muted;
-
-  @override
-  MediaStream? srcObject;
-
-  @override
-  Future<bool> audioOutput(String deviceId) {
-    // TODO: implement audioOutput
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> initialize() {
-    // TODO: implement initialize
-    throw UnimplementedError();
-  }
-
-  @override
-  // TODO: implement renderVideo
-  bool get renderVideo => throw UnimplementedError();
-
-  @override
-  // TODO: implement textureId
-  int? get textureId => throw UnimplementedError();
-
-  @override
-  // TODO: implement videoHeight
-  int get videoHeight => throw UnimplementedError();
-
-  @override
-  // TODO: implement videoWidth
-  int get videoWidth => throw UnimplementedError();
-
-  @override
-  Future<void> dispose() => throw UnimplementedError();
-}
-
 /// The default life time for call events, in millisecond.
 const lifetimeMs = 10 * 1000;
 
@@ -72,13 +26,14 @@ class WrappedMediaStream {
 
   /// for debug
   String get title => '$displayName:$purpose:a[$audioMuted]:v[$videoMuted]';
-  RTCVideoRenderer? renderer;
+  final VideoRenderer renderer;
   bool stopped = false;
   void Function(bool audioMuted, bool videoMuted)? onMuteStateChanged;
   void Function(MediaStream stream)? onNewStream;
 
   WrappedMediaStream(
       {this.stream,
+      required this.renderer,
       required this.room,
       required this.userId,
       required this.purpose,
@@ -88,23 +43,17 @@ class WrappedMediaStream {
 
   /// Initialize the video renderer
   Future<void> initialize() async {
-    if (renderer == null) {
-      renderer = RTCVideoRenderer();
-      await renderer?.initialize();
-    }
-    renderer?.srcObject = stream;
-    renderer?.onResize = () {
+    await renderer.initialize();
+    renderer.srcObject = stream;
+    renderer.onResize = () {
       Logs().i(
           'onResize [${stream!.id.substring(0, 8)}] ${renderer?.videoWidth} x ${renderer?.videoHeight}');
     };
   }
 
   Future<void> dispose() async {
-    if (renderer != null) {
-      renderer?.srcObject = null;
-      await renderer?.dispose();
-      renderer = null;
-    }
+    renderer.srcObject = null;
+    await renderer.dispose();
 
     if (isLocal() && stream != null) {
       await stream?.dispose();
@@ -135,7 +84,7 @@ class WrappedMediaStream {
 
   void setNewStream(MediaStream newStream) {
     stream = newStream;
-    renderer?.srcObject = stream;
+    renderer.srcObject = stream;
     if (onNewStream != null) {
       onNewStream?.call(stream!);
     }
@@ -571,6 +520,7 @@ class CallSession {
       existingStream.setNewStream(stream);
     } else {
       final newStream = WrappedMediaStream(
+        renderer: voip.factory.videoRenderer(),
         userId: client.userID!,
         room: opts.room,
         stream: stream,
@@ -631,6 +581,7 @@ class CallSession {
       existingStream.setNewStream(stream);
     } else {
       final newStream = WrappedMediaStream(
+        renderer: voip.factory.videoRenderer(),
         userId: remoteUser.id,
         room: opts.room,
         stream: stream,
@@ -1010,7 +961,8 @@ class CallSession {
           : false,
     };
     try {
-      return await mediaDevices.getUserMedia(mediaConstraints);
+      return await voip.factory.navigator.mediaDevices
+          .getUserMedia(mediaConstraints);
     } catch (e) {
       _getUserMediaFailed(e);
     }
@@ -1023,7 +975,8 @@ class CallSession {
       'video': true,
     };
     try {
-      return await mediaDevices.getDisplayMedia(mediaConstraints);
+      return await voip.factory.navigator.mediaDevices
+          .getDisplayMedia(mediaConstraints);
     } catch (e) {
       _getUserMediaFailed(e);
     }
@@ -1035,7 +988,7 @@ class CallSession {
       'iceServers': opts.iceServers,
       'sdpSemantics': 'unified-plan'
     };
-    final pc = await factory.createPeerConnection(configuration);
+    final pc = await voip.factory.createPeerConnection(configuration);
     pc.onTrack = (RTCTrackEvent event) {
       if (event.streams.isNotEmpty) {
         final stream = event.streams[0];
@@ -1174,8 +1127,9 @@ class VoIP {
   String? get localPartyId => client.deviceID;
   bool background = false;
   Client client;
+  final RTCFactory factory;
 
-  VoIP(this.client) : super() {
+  VoIP(this.client, this.factory) : super() {
     client.onCallInvite.stream.listen(onCallInvite);
     client.onCallAnswer.stream.listen(onCallAnswer);
     client.onCallCandidates.stream.listen(onCallCandidates);
