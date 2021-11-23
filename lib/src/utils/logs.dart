@@ -21,6 +21,8 @@
 * SOFTWARE.
 */
 
+import 'print_logs_native.dart' if (dart.library.html) 'print_logs_web.dart';
+
 enum Level {
   wtf,
   error,
@@ -124,20 +126,4 @@ class LogEvent {
     this.stackTrace,
     this.level = Level.debug,
   });
-
-  void printOut() {
-    var logsStr =
-        '# [${level.toString().split('.').last.toUpperCase()}] $title';
-    if (exception != null) {
-      logsStr += ' - ' + exception.toString();
-    }
-    // ignore: avoid_print
-    print(logsStr);
-    if (stackTrace != null) {
-      // ignore: avoid_print
-      print('## Stacktrace:');
-      // ignore: avoid_print
-      print(stackTrace.toString());
-    }
-  }
 }
