@@ -182,7 +182,7 @@ class KeyManager {
       // attempt to decrypt the last event
       final event = room.getState(EventTypes.Encrypted);
       if (event != null && event.content['session_id'] == sessionId) {
-        encryption.decryptRoomEvent(roomId, event, store: true);
+        room.setState(encryption.decryptRoomEventSync(roomId, event));
       }
       // and finally broadcast the new session
       room.onSessionKeyReceived.add(sessionId);
