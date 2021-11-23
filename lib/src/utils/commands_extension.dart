@@ -215,6 +215,10 @@ extension CommandsClientExtension on Client {
           .clearOrUseOutboundGroupSession(args.room.id, wipe: true);
       return '';
     });
+    addCommand('clearcache', (CommandArgs args) async {
+      await clearCache();
+      return '';
+    });
   }
 }
 
