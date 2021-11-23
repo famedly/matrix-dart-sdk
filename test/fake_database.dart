@@ -23,10 +23,24 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/database/hive_database.dart';
 import 'package:file/memory.dart';
 import 'package:hive/hive.dart';
+import 'package:matrix/src/database/fluffybox_database.dart';
 
 Future<DatabaseApi> getDatabase(Client? _) => getHiveDatabase(_);
 
 bool hiveInitialized = false;
+
+Future<FluffyBoxDatabase> getFluffyBoxDatabase(Client? c) async {
+  final fileSystem = MemoryFileSystem();
+  final testHivePath =
+      '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
+  Directory(testHivePath).createSync(recursive: true);
+  final db = FluffyBoxDatabase(
+    'unit_test.${c?.hashCode}',
+    testHivePath,
+  );
+  await db.open();
+  return db;
+}
 
 Future<FamedlySdkHiveDatabase> getHiveDatabase(Client? c) async {
   if (!hiveInitialized) {
