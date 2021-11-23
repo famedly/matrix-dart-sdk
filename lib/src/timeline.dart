@@ -120,13 +120,12 @@ class Timeline {
     this.onRemove,
   }) : events = events ?? [] {
     sub = room.client.onEvent.stream.listen(_handleEventUpdate);
+
     // If the timeline is limited we want to clear our events cache
     roomSub = room.client.onSync.stream
         .where((sync) => sync.rooms?.join?[room.id]?.timeline?.limited == true)
-        .listen((_) {
-      this.events.clear();
-      aggregatedEvents.clear();
-    });
+        .listen(_removeEventsNotInThisSync);
+
     sessionIdReceivedSub =
         room.onSessionKeyReceived.stream.listen(_sessionKeyReceived);
 
@@ -134,6 +133,13 @@ class Timeline {
     for (final e in this.events) {
       addAggregatedEvent(e);
     }
+  }
+
+  /// Removes all entries from [events] which are not in this SyncUpdate.
+  void _removeEventsNotInThisSync(SyncUpdate sync) {
+    final newSyncEvents = sync.rooms?.join?[room.id]?.timeline?.events ?? [];
+    final keepEventIds = newSyncEvents.map((e) => e.eventId);
+    events.removeWhere((e) => !keepEventIds.contains(e.eventId));
   }
 
   /// Don't forget to call this before you dismiss this object!
