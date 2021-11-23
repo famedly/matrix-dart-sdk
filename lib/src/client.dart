@@ -1813,7 +1813,13 @@ class Client extends MatrixApi {
         final deviceKeysList =
             _userDeviceKeys[userId] ??= DeviceKeysList(userId, this);
         final failure = _keyQueryFailures[userId.domain];
-        if (deviceKeysList.outdated &&
+
+        // deviceKeysList.outdated is not nullable but we have seen this error
+        // in production: `Failed assertion: boolean expression must not be null`
+        // So this could either be a null safety bug in Dart or a result of
+        // using unsound null safety. The extra equal check `!= false` should
+        // save us here.
+        if (deviceKeysList.outdated != false &&
             (failure == null ||
                 DateTime.now()
                     .subtract(Duration(minutes: 5))
