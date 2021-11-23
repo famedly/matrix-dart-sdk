@@ -311,6 +311,11 @@ void main() {
       }
     });
 
+    test('create', () async {
+      await room.sendTextEvent('/clearcache');
+      expect(room.client.prevBatch, null);
+    });
+
     test('dispose client', () async {
       await client.dispose(closeDatabase: true);
     });
