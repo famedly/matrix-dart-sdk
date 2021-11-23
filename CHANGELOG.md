@@ -1,3 +1,14 @@
+## [0.7.0-nullsafety.7] - 23nd Nov 2021
+feat: Add commands to create chats
+feat: Add clear cache command
+feat: Implement new FluffyBox database API implementation
+fix: Workaround for a null exception for a non nullable boolean while user device key updating
+fix: Limited timeline clears too many events
+fix: Ability to remove avatar from room and account
+fix: Request history in archived rooms
+fix: Decrypt last event of a room
+refactor: Remove Sembast database implementation
+
 ## [0.7.0-nullsafety.6] - 16nd Nov 2021
 - feat: Implement sembast store
 - fix: HtmlToText crashes with an empty code block
