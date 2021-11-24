@@ -39,7 +39,7 @@ class _RequiredLog implements TryGet {
   const _RequiredLog();
   @override
   void call(String key, Type expected, Type actual) => Logs().w(
-      'Expected "$expected" in event content for the Key "$key" but got "$actual".');
+      'Expected required "$expected" in event content for the Key "$key" but got "$actual" at ${StackTrace.current.firstLine}');
 }
 
 class _OptionalLog implements TryGet {
@@ -48,7 +48,7 @@ class _OptionalLog implements TryGet {
   void call(String key, Type expected, Type actual) {
     if (actual != Null) {
       Logs().w(
-          'Expected "$expected" in event content for the Key "$key" but got "$actual".');
+          'Expected optional "$expected" in event content for the Key "$key" but got "$actual" at ${StackTrace.current.firstLine}');
     }
   }
 }
@@ -79,8 +79,8 @@ extension TryGetMapExtension on Map<String, dynamic> {
       // copy entries to ensure type check failures here and not an access
       return value.cast<T>().toList();
     } catch (_) {
-      Logs()
-          .w('Unable to create "List<$T>" in event content for the key "$key"');
+      Logs().v(
+          'Unable to create "List<$T>" in event content for the key "$key" at ${StackTrace.current.firstLine}');
       return null;
     }
   }
@@ -95,9 +95,20 @@ extension TryGetMapExtension on Map<String, dynamic> {
       // copy map to ensure type check failures here and not an access
       return Map.from(value.cast<A, B>());
     } catch (_) {
-      Logs().w(
-          'Unable to create "Map<$A,$B>" in event content for the key "$key"');
+      Logs().v(
+          'Unable to create "Map<$A,$B>" in event content for the key "$key" at ${StackTrace.current.firstLine}');
       return null;
     }
+  }
+}
+
+extension on StackTrace {
+  String get firstLine {
+    final lines = toString().split('\n');
+    return lines.length >= 3
+        ? lines[2].replaceFirst('#2      ', '')
+        : lines.isNotEmpty
+            ? lines.first
+            : '(unknown position)';
   }
 }
