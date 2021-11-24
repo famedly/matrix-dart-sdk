@@ -1,3 +1,6 @@
+## [0.7.0-nullsafety.8] - 23nd Nov 2021
+- chore: Update FluffyBox
+
 ## [0.7.0-nullsafety.7] - 23nd Nov 2021
 feat: Add commands to create chats
 feat: Add clear cache command
