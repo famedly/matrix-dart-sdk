@@ -1312,49 +1312,79 @@ class PusherData {
 }
 
 @_NameSource('spec')
-class Pusher {
-  Pusher({
-    required this.appDisplayName,
+class PusherId {
+  PusherId({
     required this.appId,
+    required this.pushkey,
+  });
+
+  PusherId.fromJson(Map<String, dynamic> json)
+      : appId = json['app_id'] as String,
+        pushkey = json['pushkey'] as String;
+  Map<String, dynamic> toJson() => {
+        'app_id': appId,
+        'pushkey': pushkey,
+      };
+
+  /// This is a reverse-DNS style identifier for the application.
+  /// Max length, 64 chars.
+  String appId;
+
+  /// This is a unique identifier for this pusher. See `/set` for
+  /// more detail.
+  /// Max length, 512 bytes.
+  String pushkey;
+}
+
+@_NameSource('spec')
+class Pusher implements PusherId {
+  Pusher({
+    required this.appId,
+    required this.pushkey,
+    required this.appDisplayName,
     required this.data,
     required this.deviceDisplayName,
     required this.kind,
     required this.lang,
     this.profileTag,
-    required this.pushkey,
   });
 
   Pusher.fromJson(Map<String, dynamic> json)
-      : appDisplayName = json['app_display_name'] as String,
-        appId = json['app_id'] as String,
+      : appId = json['app_id'] as String,
+        pushkey = json['pushkey'] as String,
+        appDisplayName = json['app_display_name'] as String,
         data = PusherData.fromJson(json['data']),
         deviceDisplayName = json['device_display_name'] as String,
         kind = json['kind'] as String,
         lang = json['lang'] as String,
         profileTag =
-            ((v) => v != null ? v as String : null)(json['profile_tag']),
-        pushkey = json['pushkey'] as String;
+            ((v) => v != null ? v as String : null)(json['profile_tag']);
   Map<String, dynamic> toJson() {
     final profileTag = this.profileTag;
     return {
-      'app_display_name': appDisplayName,
       'app_id': appId,
+      'pushkey': pushkey,
+      'app_display_name': appDisplayName,
       'data': data.toJson(),
       'device_display_name': deviceDisplayName,
       'kind': kind,
       'lang': lang,
       if (profileTag != null) 'profile_tag': profileTag,
-      'pushkey': pushkey,
     };
   }
-
-  /// A string that will allow the user to identify what application
-  /// owns this pusher.
-  String appDisplayName;
 
   /// This is a reverse-DNS style identifier for the application.
   /// Max length, 64 chars.
   String appId;
+
+  /// This is a unique identifier for this pusher. See `/set` for
+  /// more detail.
+  /// Max length, 512 bytes.
+  String pushkey;
+
+  /// A string that will allow the user to identify what application
+  /// owns this pusher.
+  String appDisplayName;
 
   /// A dictionary of information for the pusher implementation
   /// itself.
@@ -1375,11 +1405,6 @@ class Pusher {
   /// This string determines which set of device specific rules this
   /// pusher executes.
   String? profileTag;
-
-  /// This is a unique identifier for this pusher. See `/set` for
-  /// more detail.
-  /// Max length, 512 bytes.
-  String pushkey;
 }
 
 @_NameSource('spec')

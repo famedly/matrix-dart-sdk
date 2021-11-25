@@ -173,12 +173,29 @@ class MatrixApi extends Api {
   /// This endpoint allows the creation, modification and deletion of pushers
   /// for this user ID. The behaviour of this endpoint varies depending on the
   /// values in the JSON body.
+  ///
+  /// See [deletePusher] to issue requests with `kind: null`.
+  ///
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-pushers-set
   Future<void> postPusher(Pusher pusher, {bool? append}) async {
     final data = pusher.toJson();
     if (append != null) {
       data['append'] = append;
     }
+    await request(
+      RequestType.POST,
+      '/client/r0/pushers/set',
+      data: data,
+    );
+    return;
+  }
+
+  /// Variant of postPusher operation that deletes pushers by setting `kind: null`.
+  ///
+  /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-pushers-set
+  Future<void> deletePusher(PusherId pusher) async {
+    final data = PusherData.fromJson(pusher.toJson()).toJson();
+    data['kind'] = null;
     await request(
       RequestType.POST,
       '/client/r0/pushers/set',
