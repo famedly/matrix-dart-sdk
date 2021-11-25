@@ -824,13 +824,17 @@ class Client extends MatrixApi {
   /// Uploads a new user avatar for this user. Leave file null to remove the
   /// current avatar.
   Future<void> setAvatar(MatrixFile? file) async {
-    final uploadResp = file == null
-        ? null
-        : await uploadContent(
-            file.bytes,
-            filename: file.name,
-            contentType: file.mimeType,
-          );
+    if (file == null) {
+      // We send an empty String to remove the avatar. Sending Null **should**
+      // work but it doesn't with Synapse. See:
+      // https://gitlab.com/famedly/company/frontend/famedlysdk/-/issues/254
+      return setAvatarUrl(userID!, Uri.parse(''));
+    }
+    final uploadResp = await uploadContent(
+      file.bytes,
+      filename: file.name,
+      contentType: file.mimeType,
+    );
     await setAvatarUrl(userID!, uploadResp);
     return;
   }
