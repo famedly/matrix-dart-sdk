@@ -1,16 +1,20 @@
-## [0.7.0-nullsafety.8] - 23nd Nov 2021
+## [0.7.0-nullsafety.9] - 25nd Nov 2021
+- fix: Limited timeline clean up on web
+- fix: Remove account avatar
+
+## [0.7.0-nullsafety.8] - 24nd Nov 2021
 - chore: Update FluffyBox
 
 ## [0.7.0-nullsafety.7] - 23nd Nov 2021
-feat: Add commands to create chats
-feat: Add clear cache command
-feat: Implement new FluffyBox database API implementation
-fix: Workaround for a null exception for a non nullable boolean while user device key updating
-fix: Limited timeline clears too many events
-fix: Ability to remove avatar from room and account
-fix: Request history in archived rooms
-fix: Decrypt last event of a room
-refactor: Remove Sembast database implementation
+- feat: Add commands to create chats
+- feat: Add clear cache command
+- feat: Implement new FluffyBox database API implementation
+- fix: Workaround for a null exception for a non nullable boolean while user device key updating
+- fix: Limited timeline clears too many events
+- fix: Ability to remove avatar from room and account
+- fix: Request history in archived rooms
+- fix: Decrypt last event of a room
+- refactor: Remove Sembast database implementation
 
 ## [0.7.0-nullsafety.6] - 16nd Nov 2021
 - feat: Implement sembast store
