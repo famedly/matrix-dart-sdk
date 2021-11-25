@@ -33,7 +33,6 @@ import 'utils/bootstrap.dart';
 class Encryption {
   final Client client;
   final bool debug;
-  final bool enableE2eeRecovery;
 
   bool get enabled => olmManager.enabled;
 
@@ -53,7 +52,6 @@ class Encryption {
   Encryption({
     required this.client,
     this.debug = false,
-    required this.enableE2eeRecovery,
   }) {
     ssss = SSSS(this);
     keyManager = KeyManager(this);
@@ -232,8 +230,7 @@ class Encryption {
       decryptedPayload = json.decode(decryptResult.plaintext);
     } catch (exception) {
       // alright, if this was actually by our own outbound group session, we might as well clear it
-      if (client.enableE2eeRecovery &&
-          exception.toString() != DecryptException.unknownSession &&
+      if (exception.toString() != DecryptException.unknownSession &&
           (keyManager
                       .getOutboundGroupSession(roomId)
                       ?.outboundGroupSession

@@ -219,8 +219,7 @@ class KeyManager {
   void maybeAutoRequest(String roomId, String sessionId, String senderKey) {
     final room = client.getRoomById(roomId);
     final requestIdent = '$roomId|$sessionId|$senderKey';
-    if (client.enableE2eeRecovery &&
-        room != null &&
+    if (room != null &&
         !_requestedSessionIds.contains(requestIdent) &&
         !client.isUnknownSession) {
       // do e2ee recovery

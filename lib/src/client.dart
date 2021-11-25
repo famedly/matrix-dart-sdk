@@ -74,8 +74,6 @@ class Client extends MatrixApi {
 
   DatabaseApi? get database => _database;
 
-  bool enableE2eeRecovery;
-
   @deprecated
   MatrixApi get api => this;
 
@@ -120,7 +118,6 @@ class Client extends MatrixApi {
   /// [databaseBuilder]: A function that creates the database instance, that will be used.
   /// [legacyDatabaseBuilder]: Use this for your old database implementation to perform an automatic migration
   /// [databaseDestroyer]: A function that can be used to destroy a database instance, for example by deleting files from disk.
-  /// [enableE2eeRecovery]: Enable additional logic to try to recover from bad e2ee sessions
   /// [verificationMethods]: A set of all the verification methods this client can handle. Includes:
   ///    KeyVerificationMethod.numbers: Compare numbers. Most basic, should be supported
   ///    KeyVerificationMethod.emoji: Compare emojis
@@ -157,7 +154,8 @@ class Client extends MatrixApi {
     this.databaseDestroyer,
     this.legacyDatabaseBuilder,
     this.legacyDatabaseDestroyer,
-    this.enableE2eeRecovery = false,
+    @Deprecated('This is now always enabled by default.')
+        bool? enableE2eeRecovery,
     Set<KeyVerificationMethod>? verificationMethods,
     http.Client? httpClient,
     Set<String>? importantStateEvents,
@@ -1074,8 +1072,7 @@ class Client extends MatrixApi {
         // make sure to throw an exception if libolm doesn't exist
         await olm.init();
         olm.get_library_version();
-        encryption =
-            Encryption(client: this, enableE2eeRecovery: enableE2eeRecovery);
+        encryption = Encryption(client: this);
       } catch (_) {
         encryption?.dispose();
         encryption = null;
