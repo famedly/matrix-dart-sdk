@@ -732,14 +732,13 @@ class Room {
     String? txid,
   }) async {
     txid ??= client.generateUniqueTransactionId();
-    final mustEncrypt = encrypted && client.encryptionEnabled;
-    final sendMessageContent = mustEncrypt
+    final sendMessageContent = encrypted
         ? await client.encryption!
             .encryptGroupMessagePayload(id, content, type: type)
         : content;
     return await client.sendMessage(
       id,
-      mustEncrypt ? EventTypes.Encrypted : type,
+      encrypted ? EventTypes.Encrypted : type,
       txid,
       sendMessageContent,
     );
