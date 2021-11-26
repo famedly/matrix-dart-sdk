@@ -514,10 +514,10 @@ class OlmManager {
       return _decryptToDeviceEvent(event);
     } catch (_) {
       // okay, the thing errored while decrypting. It is safe to assume that the olm session is corrupt and we should generate a new one
-      if (client.enableE2eeRecovery) {
-        // ignore: unawaited_futures
-        runInRoot(() => restoreOlmSession(event.senderId, senderKey));
-      }
+
+      // ignore: unawaited_futures
+      runInRoot(() => restoreOlmSession(event.senderId, senderKey));
+
       rethrow;
     }
   }
