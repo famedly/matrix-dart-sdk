@@ -2398,6 +2398,24 @@ class Client extends MatrixApi {
           );
         }
       }
+      Logs().d('Migrate OLM sessions...');
+      try {
+        final olmSessions = await legacyDatabase.getAllOlmSessions();
+        for (final identityKey in olmSessions.keys) {
+          final sessions = olmSessions[identityKey]!;
+          for (final sessionId in sessions.keys) {
+            final session = sessions[sessionId]!;
+            await database.storeOlmSession(
+              identityKey,
+              session['session_id'] as String,
+              session['pickle'] as String,
+              session['last_received'] as int,
+            );
+          }
+        }
+      } catch (e, s) {
+        Logs().e('Unable to migrate OLM sessions!', e, s);
+      }
       Logs().d('Migrate Device Keys...');
       final userDeviceKeys = await legacyDatabase.getUserDeviceKeys(this);
       for (final userId in userDeviceKeys.keys) {

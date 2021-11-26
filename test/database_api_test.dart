@@ -313,6 +313,42 @@ void testDatabase(
     );
     expect(olm.isEmpty, true);
   });
+  test('getAllOlmSessions', () async {
+    var sessions = await database.getAllOlmSessions();
+    expect(sessions.isEmpty, true);
+    await database.storeOlmSession(
+      'identityKey',
+      'sessionId',
+      'pickle',
+      0,
+    );
+    await database.storeOlmSession(
+      'identityKey',
+      'sessionId2',
+      'pickle',
+      0,
+    );
+    sessions = await database.getAllOlmSessions();
+    expect(
+      sessions,
+      {
+        'identityKey': {
+          'sessionId': {
+            'identity_key': 'identityKey',
+            'pickle': 'pickle',
+            'session_id': 'sessionId',
+            'last_received': 0
+          },
+          'sessionId2': {
+            'identity_key': 'identityKey',
+            'pickle': 'pickle',
+            'session_id': 'sessionId2',
+            'last_received': 0
+          }
+        }
+      },
+    );
+  });
   test('getOlmSessionsForDevices', () async {
     final olm = await database.getOlmSessionsForDevices(
       ['identityKeys'],

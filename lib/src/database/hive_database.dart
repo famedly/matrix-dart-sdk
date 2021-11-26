@@ -486,6 +486,21 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
+  Future<Map<String, Map>> getAllOlmSessions() async {
+    final backup = Map.fromEntries(
+      await Future.wait(
+        _olmSessionsBox.keys.map(
+          (key) async => MapEntry(
+            key,
+            await _olmSessionsBox.get(key),
+          ),
+        ),
+      ),
+    );
+    return backup.cast<String, Map>();
+  }
+
+  @override
   Future<List<OlmSession>> getOlmSessionsForDevices(
       List<String> identityKey, String userId) async {
     final sessions = await Future.wait(

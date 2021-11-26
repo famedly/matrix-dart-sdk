@@ -270,6 +270,8 @@ abstract class DatabaseApi {
     String userId,
   );
 
+  Future<Map<String, Map>> getAllOlmSessions();
+
   Future<List<OlmSession>> getOlmSessionsForDevices(
     List<String> identityKeys,
     String userId,
