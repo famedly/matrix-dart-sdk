@@ -1,3 +1,7 @@
+## 0.5.2
+- feat: Colored logs on native and web
+- chore: Make some tryGet errors verbose and display line
+
 ## 0.5.1
 - feat: Add constructors to SyncUpdate classes
 
