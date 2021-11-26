@@ -440,6 +440,10 @@ class FluffyBoxDatabase extends DatabaseApi {
   }
 
   @override
+  Future<Map<String, Map>> getAllOlmSessions() =>
+      _olmSessionsBox.getAllValues();
+
+  @override
   Future<List<OlmSession>> getOlmSessionsForDevices(
       List<String> identityKey, String userId) async {
     final sessions = await Future.wait(
