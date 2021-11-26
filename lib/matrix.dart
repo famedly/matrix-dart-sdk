@@ -26,6 +26,8 @@ export 'src/database/database_api.dart';
 export 'src/database/hive_database.dart';
 export 'src/event.dart';
 export 'src/event_status.dart';
+export 'src/voip.dart';
+export 'src/voip_content.dart';
 export 'src/room.dart';
 export 'src/timeline.dart';
 export 'src/user.dart';

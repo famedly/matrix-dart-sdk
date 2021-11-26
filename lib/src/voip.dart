@@ -26,14 +26,12 @@ class WrappedMediaStream {
 
   /// for debug
   String get title => '$displayName:$purpose:a[$audioMuted]:v[$videoMuted]';
-  final VideoRenderer renderer;
   bool stopped = false;
   void Function(bool audioMuted, bool videoMuted)? onMuteStateChanged;
   void Function(MediaStream stream)? onNewStream;
 
   WrappedMediaStream(
       {this.stream,
-      required this.renderer,
       required this.room,
       required this.userId,
       required this.purpose,
@@ -41,20 +39,7 @@ class WrappedMediaStream {
       required this.audioMuted,
       required this.videoMuted});
 
-  /// Initialize the video renderer
-  Future<void> initialize() async {
-    await renderer.initialize();
-    renderer.srcObject = stream;
-    renderer.onResize = () {
-      Logs().i(
-          'onResize [${stream!.id.substring(0, 8)}] ${renderer?.videoWidth} x ${renderer?.videoHeight}');
-    };
-  }
-
   Future<void> dispose() async {
-    renderer.srcObject = null;
-    await renderer.dispose();
-
     if (isLocal() && stream != null) {
       await stream?.dispose();
       stream = null;
@@ -84,7 +69,6 @@ class WrappedMediaStream {
 
   void setNewStream(MediaStream newStream) {
     stream = newStream;
-    renderer.srcObject = stream;
     if (onNewStream != null) {
       onNewStream?.call(stream!);
     }
@@ -232,7 +216,7 @@ enum CallEvent {
 
 enum CallType { kVoice, kVideo }
 
-enum Direction { kIncoming, kOutgoing }
+enum CallDirection { kIncoming, kOutgoing }
 
 enum CallParty { kLocal, kRemote }
 
@@ -240,7 +224,7 @@ enum CallParty { kLocal, kRemote }
 class CallOptions {
   late String callId;
   late CallType type;
-  late Direction dir;
+  late CallDirection dir;
   late String localPartyId;
   late VoIP voip;
   late Room room;
@@ -257,9 +241,9 @@ class CallSession {
   String get callId => opts.callId;
   String get localPartyId => opts.localPartyId;
   String? get displayName => room.displayname;
-  Direction get direction => opts.dir;
+  CallDirection get direction => opts.dir;
   CallState state = CallState.kFledgling;
-  bool get isOutgoing => direction == Direction.kOutgoing;
+  bool get isOutgoing => direction == CallDirection.kOutgoing;
   bool get isRinging => state == CallState.kRinging;
   RTCPeerConnection? pc;
   List<RTCIceCandidate> remoteCandidates = <RTCIceCandidate>[];
@@ -356,7 +340,7 @@ class CallSession {
       _updateRemoteSDPStreamMetadata(metadata);
     }
 
-    if (direction == Direction.kOutgoing) {
+    if (direction == CallDirection.kOutgoing) {
       setCallState(CallState.kConnecting);
       await pc!.setRemoteDescription(answer);
       remoteCandidates.forEach((candidate) => pc!.addCandidate(candidate));
@@ -365,7 +349,7 @@ class CallSession {
 
   void onNegotiateReceived(
       SDPStreamMetadata? metadata, RTCSessionDescription description) async {
-    final polite = direction == Direction.kIncoming;
+    final polite = direction == CallDirection.kIncoming;
 
     // Here we follow the perfect negotiation logic from
     // https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Perfect_negotiation
@@ -520,7 +504,6 @@ class CallSession {
       existingStream.setNewStream(stream);
     } else {
       final newStream = WrappedMediaStream(
-        renderer: voip.factory.videoRenderer(),
         userId: client.userID!,
         room: opts.room,
         stream: stream,
@@ -529,7 +512,6 @@ class CallSession {
         audioMuted: stream.getAudioTracks().isEmpty,
         videoMuted: stream.getVideoTracks().isEmpty,
       );
-      await newStream.initialize();
       streams[stream.id] = newStream;
       emit(CallEvent.kFeedsChanged, streams);
     }
@@ -581,7 +563,6 @@ class CallSession {
       existingStream.setNewStream(stream);
     } else {
       final newStream = WrappedMediaStream(
-        renderer: voip.factory.videoRenderer(),
         userId: remoteUser.id,
         room: opts.room,
         stream: stream,
@@ -590,7 +571,6 @@ class CallSession {
         audioMuted: audioMuted,
         videoMuted: videoMuted,
       );
-      await newStream.initialize();
       streams[stream.id] = newStream;
     }
     emit(CallEvent.kFeedsChanged, streams);
@@ -676,7 +656,7 @@ class CallSession {
     // stop play ringtone
     voip.stopRingTone();
 
-    if (direction == Direction.kIncoming) {
+    if (direction == CallDirection.kIncoming) {
       setCallState(CallState.kCreateAnswer);
 
       final answer = await pc!.createAnswer({});
@@ -773,7 +753,7 @@ class CallSession {
     // No need to check party_id for reject because if we'd received either
     // an answer or reject, we wouldn't be in state InviteSent
     final shouldTerminate =
-        (state == CallState.kFledgling && direction == Direction.kIncoming) ||
+        (state == CallState.kFledgling && direction == CallDirection.kIncoming) ||
             CallState.kInviteSent == state ||
             CallState.kRinging == state;
 
@@ -1099,7 +1079,7 @@ class CallSession {
   }
 
   void onSelectAnswerReceived(String? selectedPartyId) {
-    if (direction != Direction.kIncoming) {
+    if (direction != CallDirection.kIncoming) {
       Logs().w('Got select_answer for an outbound call: ignoring');
       return;
     }
@@ -1209,7 +1189,7 @@ class VoIP {
     final opts = CallOptions()
       ..voip = this
       ..callId = callId
-      ..dir = Direction.kIncoming
+      ..dir = CallDirection.kIncoming
       ..type = callType
       ..room = event.room
       ..localPartyId = localPartyId!
@@ -1493,7 +1473,7 @@ class VoIP {
     final opts = CallOptions()
       ..callId = callId
       ..type = type
-      ..dir = Direction.kOutgoing
+      ..dir = CallDirection.kOutgoing
       ..room = room
       ..voip = this
       ..localPartyId = localPartyId!
