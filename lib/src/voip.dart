@@ -6,6 +6,11 @@ import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 
 import '../matrix.dart';
 
+abstract class WebRTCDelegate {
+  RTCFactory get rtcFactory;
+  VideoRenderer createRenderer();
+}
+
 /// The default life time for call events, in millisecond.
 const lifetimeMs = 10 * 1000;
 
@@ -23,6 +28,7 @@ class WrappedMediaStream {
   bool audioMuted;
   bool videoMuted;
   final Client client;
+  VideoRenderer renderer;
 
   /// for debug
   String get title => '$displayName:$purpose:a[$audioMuted]:v[$videoMuted]';
@@ -32,6 +38,7 @@ class WrappedMediaStream {
 
   WrappedMediaStream(
       {this.stream,
+      required this.renderer,
       required this.room,
       required this.userId,
       required this.purpose,
@@ -39,7 +46,18 @@ class WrappedMediaStream {
       required this.audioMuted,
       required this.videoMuted});
 
+  /// Initialize the video renderer
+  Future<void> initialize() async {
+    await renderer.initialize();
+    renderer.srcObject = stream;
+    renderer.onResize = () {
+      Logs().i(
+          'onResize [${stream!.id.substring(0, 8)}] ${renderer?.videoWidth} x ${renderer?.videoHeight}');
+    };
+  }
+
   Future<void> dispose() async {
+    renderer.srcObject = null;
     if (isLocal() && stream != null) {
       await stream?.dispose();
       stream = null;
@@ -69,6 +87,7 @@ class WrappedMediaStream {
 
   void setNewStream(MediaStream newStream) {
     stream = newStream;
+    renderer.srcObject = stream;
     if (onNewStream != null) {
       onNewStream?.call(stream!);
     }
@@ -504,6 +523,7 @@ class CallSession {
       existingStream.setNewStream(stream);
     } else {
       final newStream = WrappedMediaStream(
+        renderer: voip.delegate.createRenderer(),
         userId: client.userID!,
         room: opts.room,
         stream: stream,
@@ -563,6 +583,7 @@ class CallSession {
       existingStream.setNewStream(stream);
     } else {
       final newStream = WrappedMediaStream(
+        renderer: voip.delegate.createRenderer(),
         userId: remoteUser.id,
         room: opts.room,
         stream: stream,
@@ -752,10 +773,10 @@ class CallSession {
     Logs().v('[VOIP] Reject received for call ID ' + callId);
     // No need to check party_id for reject because if we'd received either
     // an answer or reject, we wouldn't be in state InviteSent
-    final shouldTerminate =
-        (state == CallState.kFledgling && direction == CallDirection.kIncoming) ||
-            CallState.kInviteSent == state ||
-            CallState.kRinging == state;
+    final shouldTerminate = (state == CallState.kFledgling &&
+            direction == CallDirection.kIncoming) ||
+        CallState.kInviteSent == state ||
+        CallState.kRinging == state;
 
     if (shouldTerminate) {
       terminate(CallParty.kRemote, reason ?? CallErrorCode.UserHangup, true);
@@ -1107,9 +1128,10 @@ class VoIP {
   String? get localPartyId => client.deviceID;
   bool background = false;
   final Client client;
-  final RTCFactory factory;
+  RTCFactory get factory => delegate.rtcFactory;
+  final WebRTCDelegate delegate;
 
-  VoIP(this.client, this.factory) : super() {
+  VoIP(this.client, this.delegate) : super() {
     client.onCallInvite.stream.listen(onCallInvite);
     client.onCallAnswer.stream.listen(onCallAnswer);
     client.onCallCandidates.stream.listen(onCallCandidates);
