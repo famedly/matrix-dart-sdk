@@ -8,7 +8,13 @@ import '../matrix.dart';
 
 abstract class WebRTCDelegate {
   RTCFactory get rtcFactory;
+  bool get isBackgroud;
+  bool get isWeb;
   VideoRenderer createRenderer();
+  void playRingtone();
+  void stopRingtone();
+  Function(CallSession session)? onNewCall;
+  Function(CallSession session)? onCallEnded;
 }
 
 /// The default life time for call events, in millisecond.
@@ -553,8 +559,7 @@ class CallSession {
 
     if (purpose == SDPStreamMetadataPurpose.Usermedia) {
       speakerOn = type == CallType.kVideo;
-      //TODO: Confirm that the platform is not Web.
-      if (/*!kIsWeb && */ !voip.background) {
+      if (voip.delegate.isWeb && !voip.delegate.isBackgroud) {
         final audioTrack = stream.getAudioTracks()[0];
         audioTrack.enableSpeakerphone(speakerOn);
       }
@@ -653,29 +658,12 @@ class CallSession {
     return callOnHold;
   }
 
-  void setSpeakerOn() {
-    speakerOn = !speakerOn;
-  }
-
-  //TODO: move to the app.
-  Future<void> switchCamera() async {
-    if (localUserMediaStream != null) {
-      /*
-      await Helper.switchCamera(
-          localUserMediaStream!.stream!.getVideoTracks()[0]);
-      if (kIsMobile) {
-        facingMode == 'user' ? facingMode = 'environment' : facingMode = 'user';
-      }
-      */
-    }
-  }
-
   void answer() async {
     if (inviteOrAnswerSent) {
       return;
     }
     // stop play ringtone
-    voip.stopRingTone();
+    voip.delegate.stopRingtone();
 
     if (direction == CallDirection.kIncoming) {
       setCallState(CallState.kCreateAnswer);
@@ -722,7 +710,7 @@ class CallSession {
 
   void hangup([String? reason, bool suppressEvent = true]) async {
     // stop play ringtone
-    voip.stopRingTone();
+    voip.delegate.stopRingtone();
 
     terminate(
         CallParty.kLocal, reason ?? CallErrorCode.UserHangup, !suppressEvent);
@@ -1123,10 +1111,7 @@ class VoIP {
   TurnServerCredentials? _turnServerCredentials;
   Map<String, CallSession> calls = <String, CallSession>{};
   String? currentCID;
-  Function(CallSession session)? onNewCall;
-  Function(CallSession session)? onCallEnded;
   String? get localPartyId => client.deviceID;
-  bool background = false;
   final Client client;
   RTCFactory get factory => delegate.rtcFactory;
   final WebRTCDelegate delegate;
@@ -1228,38 +1213,20 @@ class VoIP {
         .initWithInvite(callType, offer, sdpStreamMetadata, lifetime)
         .then((_) {
       // Popup CallingPage for incoming call.
-      if (!background) {
-        onNewCall?.call(newCall);
+      if (!delegate.isBackgroud) {
+        delegate.onNewCall?.call(newCall);
       }
     });
     currentCID = callId;
 
-    if (background) {
+    if (delegate.isBackgroud) {
       /// Forced to enable signaling synchronization until the end of the call.
       client.backgroundSync = true;
 
       ///TODO: notify the callkeep that the call is incoming.
     }
     // Play ringtone
-    playRingtone();
-  }
-
-  void playRingtone() async {
-    if (!background) {
-      try {
-        // TODO: callback the event to the user.
-        // await UserMediaManager().startRinginTone();
-      } catch (_) {}
-    }
-  }
-
-  void stopRingTone() async {
-    if (!background) {
-      try {
-        // TODO:
-        // await UserMediaManager().stopRingingTone();
-      } catch (_) {}
-    }
+    delegate.playRingtone();
   }
 
   void onCallAnswer(Event event) async {
@@ -1272,7 +1239,7 @@ class VoIP {
       if (event.senderId == client.userID) {
         // Ignore messages to yourself.
         if (!call._answeredByUs) {
-          stopRingTone();
+          delegate.stopRingtone();
         }
         return;
       }
@@ -1315,8 +1282,8 @@ class VoIP {
 
   void onCallHangup(Event event) async {
     // stop play ringtone, if this is an incoming call
-    if (!background) {
-      stopRingTone();
+    if (!delegate.isBackgroud) {
+      delegate.stopRingtone();
     }
     Logs().v('[VOIP] onCallHangup => ${event.content.toString()}');
     final String callId = event.content['call_id'];
@@ -1325,7 +1292,7 @@ class VoIP {
       // hangup in any case, either if the other party hung up or we did on another device
       call.terminate(CallParty.kRemote,
           event.content['reason'] ?? CallErrorCode.UserHangup, true);
-      onCallEnded?.call(call);
+      delegate.onCallEnded?.call(call);
     } else {
       Logs().v('[VOIP] onCallHangup: Session [$callId] not found!');
     }
@@ -1504,8 +1471,8 @@ class VoIP {
     final newCall = createNewCall(opts);
     currentCID = callId;
     await newCall.initOutboundCall(type).then((_) {
-      if (!background) {
-        onNewCall?.call(newCall);
+      if (!delegate.isBackgroud) {
+        delegate.onNewCall?.call(newCall);
       }
     });
     currentCID = callId;
