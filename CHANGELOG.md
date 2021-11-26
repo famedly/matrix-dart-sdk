@@ -1,3 +1,7 @@
+## [0.7.0-nullsafety.10] - 26nd Nov 2021
+- feat: Migrate olm sessions on database migration
+- chore: Enable E2EE recovery by default
+
 ## [0.7.0-nullsafety.9] - 25nd Nov 2021
 - fix: Limited timeline clean up on web
 - fix: Remove account avatar
