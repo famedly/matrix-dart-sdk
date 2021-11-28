@@ -650,7 +650,7 @@ class Client extends MatrixApi {
       return true;
     }
     final keys = await queryKeys({userId: []});
-    return keys.deviceKeys?.isNotEmpty ?? false;
+    return keys.deviceKeys?[userId]?.isNotEmpty ?? false;
   }
 
   /// Creates a new space and returns the Room ID. The parameters are mostly
