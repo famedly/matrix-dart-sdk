@@ -6,15 +6,20 @@ import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 
 import '../matrix.dart';
 
+/// Delegate WebRTC basic functionality.
 abstract class WebRTCDelegate {
-  RTCFactory get rtcFactory;
-  bool get isBackgroud;
-  bool get isWeb;
+  MediaDevices get mediaDevices;
+  Future<RTCPeerConnection> createPeerConnection(
+      Map<String, dynamic> configuration,
+      [Map<String, dynamic> constraints]);
   VideoRenderer createRenderer();
   void playRingtone();
   void stopRingtone();
-  Function(CallSession session)? onNewCall;
-  Function(CallSession session)? onCallEnded;
+  void handleNewCall(CallSession session);
+  void handleCallEnded(CallSession session);
+
+  bool get isBackgroud;
+  bool get isWeb;
 }
 
 /// The default life time for call events, in millisecond.
@@ -58,7 +63,7 @@ class WrappedMediaStream {
     renderer.srcObject = stream;
     renderer.onResize = () {
       Logs().i(
-          'onResize [${stream!.id.substring(0, 8)}] ${renderer?.videoWidth} x ${renderer?.videoHeight}');
+          'onResize [${stream!.id.substring(0, 8)}] ${renderer.videoWidth} x ${renderer.videoHeight}');
     };
   }
 
@@ -467,7 +472,7 @@ class CallSession {
     if (pc != null &&
         pc!.iceConnectionState ==
             RTCIceConnectionState.RTCIceConnectionStateDisconnected) {
-      _restartIce();
+      restartIce();
     }
   }
 
@@ -924,7 +929,7 @@ class CallSession {
     return metadata;
   }
 
-  void _restartIce() async {
+  void restartIce() async {
     Logs().v('[VOIP] iceRestart.');
     // Needs restart ice on session.pc and renegotiation.
     iceGatheringFinished = false;
@@ -950,8 +955,7 @@ class CallSession {
           : false,
     };
     try {
-      return await voip.factory.navigator.mediaDevices
-          .getUserMedia(mediaConstraints);
+      return await voip.delegate.mediaDevices.getUserMedia(mediaConstraints);
     } catch (e) {
       _getUserMediaFailed(e);
     }
@@ -964,8 +968,7 @@ class CallSession {
       'video': true,
     };
     try {
-      return await voip.factory.navigator.mediaDevices
-          .getDisplayMedia(mediaConstraints);
+      return await voip.delegate.mediaDevices.getDisplayMedia(mediaConstraints);
     } catch (e) {
       _getUserMediaFailed(e);
     }
@@ -977,7 +980,7 @@ class CallSession {
       'iceServers': opts.iceServers,
       'sdpSemantics': 'unified-plan'
     };
-    final pc = await voip.factory.createPeerConnection(configuration);
+    final pc = await voip.delegate.createPeerConnection(configuration);
     pc.onTrack = (RTCTrackEvent event) {
       if (event.streams.isNotEmpty) {
         final stream = event.streams[0];
@@ -1113,7 +1116,6 @@ class VoIP {
   String? currentCID;
   String? get localPartyId => client.deviceID;
   final Client client;
-  RTCFactory get factory => delegate.rtcFactory;
   final WebRTCDelegate delegate;
 
   VoIP(this.client, this.delegate) : super() {
@@ -1128,19 +1130,6 @@ class VoIP {
     client.onSDPStreamMetadataChangedReceived.stream
         .listen(onSDPStreamMetadataChangedReceived);
     client.onAssertedIdentityReceived.stream.listen(onAssertedIdentityReceived);
-
-    /* TODO: implement this in the fanedly-app.
-      Connectivity().onConnectivityChanged.listen(_handleNetworkChanged);
-      Connectivity()
-          .checkConnectivity()
-          .then((result) => _currentConnectivity = result)
-          .catchError((e) => _currentConnectivity = ConnectivityResult.none);
-      if (!kIsWeb) {
-        final wb = WidgetsBinding.instance;
-        wb!.addObserver(this);
-        didChangeAppLifecycleState(wb.lifecycleState!);
-      }
-    */
   }
 
   Future<void> onCallInvite(Event event) async {
@@ -1214,7 +1203,7 @@ class VoIP {
         .then((_) {
       // Popup CallingPage for incoming call.
       if (!delegate.isBackgroud) {
-        delegate.onNewCall?.call(newCall);
+        delegate.handleNewCall(newCall);
       }
     });
     currentCID = callId;
@@ -1292,7 +1281,7 @@ class VoIP {
       // hangup in any case, either if the other party hung up or we did on another device
       call.terminate(CallParty.kRemote,
           event.content['reason'] ?? CallErrorCode.UserHangup, true);
-      delegate.onCallEnded?.call(call);
+      delegate.handleCallEnded(call);
     } else {
       Logs().v('[VOIP] onCallHangup: Session [$callId] not found!');
     }
@@ -1441,16 +1430,6 @@ class VoIP {
       }
     ];
   }
-  /*
-  void _handleNetworkChanged(ConnectivityResult result) async {
-    // Got a new connectivity status!
-    if (_currentConnectivity != result) {
-      calls.forEach((_, sess) {
-        sess._restartIce();
-      });
-    }
-    _currentConnectivity = result;
-  }*/
 
   Future<CallSession> inviteToCall(String roomId, CallType type) async {
     final room = client.getRoomById(roomId);
@@ -1472,7 +1451,7 @@ class VoIP {
     currentCID = callId;
     await newCall.initOutboundCall(type).then((_) {
       if (!delegate.isBackgroud) {
-        delegate.onNewCall?.call(newCall);
+        delegate.handleNewCall(newCall);
       }
     });
     currentCID = callId;
