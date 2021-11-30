@@ -11,7 +11,7 @@ abstract class WebRTCDelegate {
   MediaDevices get mediaDevices;
   Future<RTCPeerConnection> createPeerConnection(
       Map<String, dynamic> configuration,
-      [Map<String, dynamic> constraints]);
+      [Map<String, dynamic> constraints = const {}]);
   VideoRenderer createRenderer();
   void playRingtone();
   void stopRingtone();
@@ -40,6 +40,7 @@ class WrappedMediaStream {
   bool videoMuted;
   final Client client;
   VideoRenderer renderer;
+  final bool isWeb;
 
   /// for debug
   String get title => '$displayName:$purpose:a[$audioMuted]:v[$videoMuted]';
@@ -55,7 +56,8 @@ class WrappedMediaStream {
       required this.purpose,
       required this.client,
       required this.audioMuted,
-      required this.videoMuted});
+      required this.videoMuted,
+      required this.isWeb});
 
   /// Initialize the video renderer
   Future<void> initialize() async {
@@ -70,6 +72,11 @@ class WrappedMediaStream {
   Future<void> dispose() async {
     renderer.srcObject = null;
     if (isLocal() && stream != null) {
+      if (isWeb) {
+        stream!.getTracks().forEach((element) {
+          element.stop();
+        });
+      }
       await stream?.dispose();
       stream = null;
     }
@@ -289,7 +296,7 @@ class CallSession {
   bool makingOffer = false;
   bool ignoreOffer = false;
   String facingMode = 'user';
-  late Client client;
+  Client get client => opts.room.client;
   String? remotePartyId;
   late User remoteUser;
   late CallParty hangupParty;
@@ -298,25 +305,48 @@ class CallSession {
   SDPStreamMetadata? remoteSDPStreamMetadata;
   List<RTCRtpSender> usermediaSenders = [];
   List<RTCRtpSender> screensharingSenders = [];
-  Map<String, WrappedMediaStream> streams = <String, WrappedMediaStream>{};
+  List<WrappedMediaStream> streams = <WrappedMediaStream>[];
   List<WrappedMediaStream> get getLocalStreams =>
-      streams.values.where((element) => element.isLocal()).toList();
+      streams.where((element) => element.isLocal()).toList();
   List<WrappedMediaStream> get getRemoteStreams =>
-      streams.values.where((element) => !element.isLocal()).toList();
-  WrappedMediaStream? get localUserMediaStream => getLocalStreams.firstWhere(
-      (element) => element.purpose == SDPStreamMetadataPurpose.Usermedia,
-      orElse: () => Null as WrappedMediaStream);
-  WrappedMediaStream? get localScreenSharingStream =>
-      getLocalStreams.firstWhere(
-          (element) => element.purpose == SDPStreamMetadataPurpose.Screenshare,
-          orElse: () => Null as WrappedMediaStream);
-  WrappedMediaStream? get remoteUserMediaStream => getRemoteStreams.firstWhere(
-      (element) => element.purpose == SDPStreamMetadataPurpose.Usermedia,
-      orElse: () => Null as WrappedMediaStream);
-  WrappedMediaStream? get remoteScreenSharingStream =>
-      getRemoteStreams.firstWhere(
-          (element) => element.purpose == SDPStreamMetadataPurpose.Screenshare,
-          orElse: () => Null as WrappedMediaStream);
+      streams.where((element) => !element.isLocal()).toList();
+
+  WrappedMediaStream? get localUserMediaStream {
+    final stream = getLocalStreams.where(
+        (element) => element.purpose == SDPStreamMetadataPurpose.Usermedia);
+    if (stream.isNotEmpty) {
+      return stream.first;
+    }
+    return null;
+  }
+
+  WrappedMediaStream? get localScreenSharingStream {
+    final stream = getLocalStreams.where(
+        (element) => element.purpose == SDPStreamMetadataPurpose.Screenshare);
+    if (stream.isNotEmpty) {
+      return stream.first;
+    }
+    return null;
+  }
+
+  WrappedMediaStream? get remoteUserMediaStream {
+    final stream = getRemoteStreams.where(
+        (element) => element.purpose == SDPStreamMetadataPurpose.Usermedia);
+    if (stream.isNotEmpty) {
+      return stream.first;
+    }
+    return null;
+  }
+
+  WrappedMediaStream? get remoteScreenSharingStream {
+    final stream = getRemoteStreams.where(
+        (element) => element.purpose == SDPStreamMetadataPurpose.Screenshare);
+    if (stream.isNotEmpty) {
+      return stream.first;
+    }
+    return null;
+  }
+
   final _callStateController =
       StreamController<CallState>.broadcast(sync: true);
   Stream<CallState> get onCallStateChanged => _callStateController.stream;
@@ -520,6 +550,7 @@ class CallSession {
         await track.stop();
       }
       localScreenSharingStream!.stopped = true;
+      _removeStream(localScreenSharingStream!.stream!);
       emit(CallEvent.kFeedsChanged, streams);
       return false;
     }
@@ -527,11 +558,10 @@ class CallSession {
 
   void _addLocalStream(MediaStream stream, String purpose,
       {bool addToPeerConnection = true}) async {
-    final WrappedMediaStream? existingStream = getLocalStreams.firstWhere(
-        (element) => element.purpose == purpose,
-        orElse: () => Null as WrappedMediaStream);
-    if (existingStream != null) {
-      existingStream.setNewStream(stream);
+    final existingStream =
+        getLocalStreams.where((element) => element.purpose == purpose);
+    if (existingStream.isNotEmpty) {
+      existingStream.first.setNewStream(stream);
     } else {
       final newStream = WrappedMediaStream(
         renderer: voip.delegate.createRenderer(),
@@ -542,8 +572,10 @@ class CallSession {
         client: client,
         audioMuted: stream.getAudioTracks().isEmpty,
         videoMuted: stream.getVideoTracks().isEmpty,
+        isWeb: voip.delegate.isWeb,
       );
-      streams[stream.id] = newStream;
+      await newStream.initialize();
+      streams.add(newStream);
       emit(CallEvent.kFeedsChanged, streams);
     }
 
@@ -564,7 +596,7 @@ class CallSession {
 
     if (purpose == SDPStreamMetadataPurpose.Usermedia) {
       speakerOn = type == CallType.kVideo;
-      if (voip.delegate.isWeb && !voip.delegate.isBackgroud) {
+      if (!voip.delegate.isWeb && !voip.delegate.isBackgroud) {
         final audioTrack = stream.getAudioTracks()[0];
         audioTrack.enableSpeakerphone(speakerOn);
       }
@@ -586,11 +618,10 @@ class CallSession {
 
     // Try to find a feed with the same purpose as the new stream,
     // if we find it replace the old stream with the new one
-    final WrappedMediaStream? existingStream = getRemoteStreams.firstWhere(
-        (element) => element.purpose == purpose,
-        orElse: () => Null as WrappedMediaStream);
-    if (existingStream != null) {
-      existingStream.setNewStream(stream);
+    final existingStream =
+        getRemoteStreams.where((element) => element.purpose == purpose);
+    if (existingStream.isNotEmpty) {
+      existingStream.first.setNewStream(stream);
     } else {
       final newStream = WrappedMediaStream(
         renderer: voip.delegate.createRenderer(),
@@ -601,8 +632,10 @@ class CallSession {
         client: client,
         audioMuted: audioMuted,
         videoMuted: videoMuted,
+        isWeb: voip.delegate.isWeb,
       );
-      streams[stream.id] = newStream;
+      await newStream.initialize();
+      streams.add(newStream);
     }
     emit(CallEvent.kFeedsChanged, streams);
     Logs().i('Pushed remote stream (id="${stream.id}", purpose=$purpose)');
@@ -756,7 +789,8 @@ class CallSession {
     setCallState(CallState.kEnded);
     voip.currentCID = null;
     voip.calls.remove(callId);
-
+    cleanUp();
+    voip.delegate.handleCallEnded(this);
     if (shouldEmit) {
       emit(CallEvent.kHangup, this);
     }
@@ -883,7 +917,7 @@ class CallSession {
   }
 
   void cleanUp() async {
-    streams.forEach((id, stream) {
+    streams.forEach((stream) {
       stream.dispose();
     });
     streams.clear();
@@ -992,25 +1026,30 @@ class CallSession {
 
   void tryRemoveStopedStreams() {
     final removedStreams = <String, WrappedMediaStream>{};
-    streams.forEach((id, stream) {
+    streams.forEach((stream) {
       if (stream.stopped) {
-        removedStreams[id] = stream;
+        removedStreams[stream.stream!.id] = stream;
       }
     });
-    streams.removeWhere((id, stream) => removedStreams.containsKey(id));
+    streams
+        .removeWhere((stream) => removedStreams.containsKey(stream.stream!.id));
     removedStreams.forEach((id, element) {
-      _removeStream(id);
+      _removeStream(element.stream!);
     });
   }
 
-  Future<void> _removeStream(String streamId) async {
-    Logs().v('Removing feed with stream id $streamId');
-    final removedStream = streams.remove(streamId);
-    if (removedStream == null) {
-      Logs().v('Didn\'t find the feed with stream id $streamId to delete');
+  Future<void> _removeStream(MediaStream stream) async {
+    Logs().v('Removing feed with stream id ${stream.id}');
+
+    final it = streams.where((element) => element.stream!.id == stream.id);
+    if (it.isEmpty) {
+      Logs().v('Didn\'t find the feed with stream id ${stream.id} to delete');
       return;
     }
-    await removedStream.dispose();
+    final wpstream = it.first;
+    streams.removeWhere((element) => element.stream!.id == stream.id);
+    emit(CallEvent.kFeedsChanged, streams);
+    await wpstream.dispose();
   }
 
   Map<String, dynamic> _getOfferAnswerConstraints({bool iceRestart = false}) {
@@ -1281,7 +1320,6 @@ class VoIP {
       // hangup in any case, either if the other party hung up or we did on another device
       call.terminate(CallParty.kRemote,
           event.content['reason'] ?? CallErrorCode.UserHangup, true);
-      delegate.handleCallEnded(call);
     } else {
       Logs().v('[VOIP] onCallHangup: Session [$callId] not found!');
     }
