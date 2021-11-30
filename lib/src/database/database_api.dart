@@ -67,8 +67,6 @@ abstract class DatabaseApi {
 
   Future<Event?> getEventById(String eventId, Room room);
 
-  bool eventIsKnown(String eventId, String roomId);
-
   Future<void> forgetRoom(String roomId);
 
   Future<void> clearCache();
@@ -271,6 +269,8 @@ abstract class DatabaseApi {
     String identityKey,
     String userId,
   );
+
+  Future<Map<String, Map>> getAllOlmSessions();
 
   Future<List<OlmSession>> getOlmSessionsForDevices(
     List<String> identityKeys,

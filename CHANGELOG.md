@@ -1,3 +1,40 @@
+## [0.7.0-nullsafety.10] - 26nd Nov 2021
+- feat: Migrate olm sessions on database migration
+- chore: Enable E2EE recovery by default
+
+## [0.7.0-nullsafety.9] - 25nd Nov 2021
+- fix: Limited timeline clean up on web
+- fix: Remove account avatar
+
+## [0.7.0-nullsafety.8] - 24nd Nov 2021
+- chore: Update FluffyBox
+
+## [0.7.0-nullsafety.7] - 23nd Nov 2021
+- feat: Add commands to create chats
+- feat: Add clear cache command
+- feat: Implement new FluffyBox database API implementation
+- fix: Workaround for a null exception for a non nullable boolean while user device key updating
+- fix: Limited timeline clears too many events
+- fix: Ability to remove avatar from room and account
+- fix: Request history in archived rooms
+- fix: Decrypt last event of a room
+- refactor: Remove Sembast database implementation
+
+## [0.7.0-nullsafety.6] - 16nd Nov 2021
+- feat: Implement sembast store
+- fix: HtmlToText crashes with an empty code block
+- fix: use originServerTs to check if state event is old
+- fix: Dont enable e2ee in new direct chats without encryption support
+- fix: Change eventstatus of edits in prevEvent
+- chore: Trim formatted username fallback
+
+## [0.7.0-nullsafety.5] - 10nd Nov 2021
+- fix: Edits as lastEvent do not update
+- fix: JSON parsing in decryptRoomEvent method
+- fix: Wrong null check in hive database
+- fix: crash on invalid displaynames
+- chore: Update matrix_api_lite
+
 ## [0.7.0-nullsafety.4] - 09nd Nov 2021
 - feat: More advanced create chat methods (encryption is now enabled by default)
 - feat: Make waiting on init db optional

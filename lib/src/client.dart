@@ -74,8 +74,6 @@ class Client extends MatrixApi {
 
   DatabaseApi? get database => _database;
 
-  bool enableE2eeRecovery;
-
   @deprecated
   MatrixApi get api => this;
 
@@ -120,7 +118,6 @@ class Client extends MatrixApi {
   /// [databaseBuilder]: A function that creates the database instance, that will be used.
   /// [legacyDatabaseBuilder]: Use this for your old database implementation to perform an automatic migration
   /// [databaseDestroyer]: A function that can be used to destroy a database instance, for example by deleting files from disk.
-  /// [enableE2eeRecovery]: Enable additional logic to try to recover from bad e2ee sessions
   /// [verificationMethods]: A set of all the verification methods this client can handle. Includes:
   ///    KeyVerificationMethod.numbers: Compare numbers. Most basic, should be supported
   ///    KeyVerificationMethod.emoji: Compare emojis
@@ -157,7 +154,8 @@ class Client extends MatrixApi {
     this.databaseDestroyer,
     this.legacyDatabaseBuilder,
     this.legacyDatabaseDestroyer,
-    this.enableE2eeRecovery = false,
+    @Deprecated('This is now always enabled by default.')
+        bool? enableE2eeRecovery,
     Set<KeyVerificationMethod>? verificationMethods,
     http.Client? httpClient,
     Set<String>? importantStateEvents,
@@ -568,7 +566,8 @@ class Client extends MatrixApi {
     final directChatRoomId = getDirectChatFromUserId(mxid);
     if (directChatRoomId != null) return directChatRoomId;
 
-    enableEncryption ??= await userOwnsEncryptionKeys(mxid);
+    enableEncryption ??=
+        encryptionEnabled && await userOwnsEncryptionKeys(mxid);
     if (enableEncryption) {
       initialState ??= [];
       if (!initialState.any((s) => s.type == EventTypes.Encryption)) {
@@ -609,6 +608,7 @@ class Client extends MatrixApi {
     List<String>? invite,
     CreateRoomPreset preset = CreateRoomPreset.privateChat,
     List<StateEvent>? initialState,
+    Visibility? visibility,
     bool waitForSync = true,
   }) async {
     enableEncryption ??=
@@ -629,6 +629,7 @@ class Client extends MatrixApi {
       preset: preset,
       name: groupName,
       initialState: initialState,
+      visibility: visibility,
     );
 
     if (waitForSync) {
@@ -649,7 +650,7 @@ class Client extends MatrixApi {
       return true;
     }
     final keys = await queryKeys({userId: []});
-    return keys.deviceKeys?.isNotEmpty ?? false;
+    return keys.deviceKeys?[userId]?.isNotEmpty ?? false;
   }
 
   /// Creates a new space and returns the Room ID. The parameters are mostly
@@ -772,6 +773,7 @@ class Client extends MatrixApi {
             leftRoom,
           ));
         });
+        leftRoom.prev_batch = room.timeline?.prevBatch;
         room.state?.forEach((event) {
           leftRoom.setState(Event.fromMatrixEvent(
             event,
@@ -817,8 +819,15 @@ class Client extends MatrixApi {
     }
   }
 
-  /// Uploads a new user avatar for this user.
-  Future<void> setAvatar(MatrixFile file) async {
+  /// Uploads a new user avatar for this user. Leave file null to remove the
+  /// current avatar.
+  Future<void> setAvatar(MatrixFile? file) async {
+    if (file == null) {
+      // We send an empty String to remove the avatar. Sending Null **should**
+      // work but it doesn't with Synapse. See:
+      // https://gitlab.com/famedly/company/frontend/famedlysdk/-/issues/254
+      return setAvatarUrl(userID!, Uri.parse(''));
+    }
     final uploadResp = await uploadContent(
       file.bytes,
       filename: file.name,
@@ -1063,8 +1072,7 @@ class Client extends MatrixApi {
         // make sure to throw an exception if libolm doesn't exist
         await olm.init();
         olm.get_library_version();
-        encryption =
-            Encryption(client: this, enableE2eeRecovery: enableE2eeRecovery);
+        encryption = Encryption(client: this);
       } catch (_) {
         encryption?.dispose();
         encryption = null;
@@ -1806,7 +1814,13 @@ class Client extends MatrixApi {
         final deviceKeysList =
             _userDeviceKeys[userId] ??= DeviceKeysList(userId, this);
         final failure = _keyQueryFailures[userId.domain];
-        if (deviceKeysList.outdated &&
+
+        // deviceKeysList.outdated is not nullable but we have seen this error
+        // in production: `Failed assertion: boolean expression must not be null`
+        // So this could either be a null safety bug in Dart or a result of
+        // using unsound null safety. The extra equal check `!= false` should
+        // save us here.
+        if (deviceKeysList.outdated != false &&
             (failure == null ||
                 DateTime.now()
                     .subtract(Duration(minutes: 5))
@@ -2380,6 +2394,24 @@ class Client extends MatrixApi {
             ssssCache.content ?? '',
           );
         }
+      }
+      Logs().d('Migrate OLM sessions...');
+      try {
+        final olmSessions = await legacyDatabase.getAllOlmSessions();
+        for (final identityKey in olmSessions.keys) {
+          final sessions = olmSessions[identityKey]!;
+          for (final sessionId in sessions.keys) {
+            final session = sessions[sessionId]!;
+            await database.storeOlmSession(
+              identityKey,
+              session['session_id'] as String,
+              session['pickle'] as String,
+              session['last_received'] as int,
+            );
+          }
+        }
+      } catch (e, s) {
+        Logs().e('Unable to migrate OLM sessions!', e, s);
       }
       Logs().d('Migrate Device Keys...');
       final userDeviceKeys = await legacyDatabase.getUserDeviceKeys(this);

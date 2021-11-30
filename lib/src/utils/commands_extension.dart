@@ -98,6 +98,19 @@ extension CommandsClientExtension on Client {
         txid: args.txid,
       );
     });
+    addCommand('dm', (CommandArgs args) async {
+      final parts = args.msg.split(' ');
+      return await args.room.client.startDirectChat(
+        parts.first,
+        enableEncryption: !parts.any((part) => part == '--no-encryption'),
+      );
+    });
+    addCommand('create', (CommandArgs args) async {
+      final parts = args.msg.split(' ');
+      return await args.room.client.createGroupChat(
+        enableEncryption: !parts.any((part) => part == '--no-encryption'),
+      );
+    });
     addCommand('plain', (CommandArgs args) async {
       return await args.room.sendTextEvent(
         args.msg,
@@ -200,6 +213,10 @@ extension CommandsClientExtension on Client {
     addCommand('discardsession', (CommandArgs args) async {
       await encryption?.keyManager
           .clearOrUseOutboundGroupSession(args.room.id, wipe: true);
+      return '';
+    });
+    addCommand('clearcache', (CommandArgs args) async {
+      await clearCache();
       return '';
     });
   }

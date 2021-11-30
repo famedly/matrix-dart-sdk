@@ -182,7 +182,7 @@ class KeyManager {
       // attempt to decrypt the last event
       final event = room.getState(EventTypes.Encrypted);
       if (event != null && event.content['session_id'] == sessionId) {
-        encryption.decryptRoomEvent(roomId, event, store: true);
+        room.setState(encryption.decryptRoomEventSync(roomId, event));
       }
       // and finally broadcast the new session
       room.onSessionKeyReceived.add(sessionId);
@@ -219,8 +219,7 @@ class KeyManager {
   void maybeAutoRequest(String roomId, String sessionId, String senderKey) {
     final room = client.getRoomById(roomId);
     final requestIdent = '$roomId|$sessionId|$senderKey';
-    if (client.enableE2eeRecovery &&
-        room != null &&
+    if (room != null &&
         !_requestedSessionIds.contains(requestIdent) &&
         !client.isUnknownSession) {
       // do e2ee recovery
