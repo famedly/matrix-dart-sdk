@@ -880,7 +880,7 @@ class CallSession {
       pc!.onIceGatheringState = (RTCIceGatheringState state) async {
         Logs().v('[VOIP] IceGatheringState => ${state.toString()}');
         if (state == RTCIceGatheringState.RTCIceGatheringStateGathering) {
-          Timer(Duration(milliseconds: 3000), () async {
+          Timer(Duration(seconds: 3), () async {
             if (!iceGatheringFinished) {
               iceGatheringFinished = true;
               await _candidateReady();
