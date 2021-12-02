@@ -301,6 +301,7 @@ class CallSession {
   late User remoteUser;
   late CallParty hangupParty;
   late String hangupReason;
+  late CallError lastError;
 
   SDPStreamMetadata? remoteSDPStreamMetadata;
   List<RTCRtpSender> usermediaSenders = [];
@@ -383,7 +384,7 @@ class CallSession {
         Logs().v('[VOIP] Call invite has expired. Hanging up.');
         hangupParty = CallParty.kRemote; // effectively
         setCallState(CallState.kEnded);
-        emit(CallEvent.kHangup);
+        fireCallEvent(CallEvent.kHangup);
       }
       ringingTimer?.cancel();
       ringingTimer = null;
@@ -447,7 +448,7 @@ class CallSession {
     final newLocalOnHold = await isLocalOnHold();
     if (prevLocalOnHold != newLocalOnHold) {
       localHold = newLocalOnHold;
-      emit(CallEvent.kLocalHoldUnhold, newLocalOnHold);
+      fireCallEvent(CallEvent.kLocalHoldUnhold);
     }
   }
 
@@ -470,14 +471,14 @@ class CallSession {
       } else {
         Logs().i('Not found purpose for remote stream $streamId, remove it?');
         wpstream.stopped = true;
-        emit(CallEvent.kFeedsChanged, streams);
+        fireCallEvent(CallEvent.kFeedsChanged);
       }
     });
   }
 
   void onSDPStreamMetadataReceived(SDPStreamMetadata metadata) async {
     _updateRemoteSDPStreamMetadata(metadata);
-    emit(CallEvent.kFeedsChanged, streams);
+    fireCallEvent(CallEvent.kFeedsChanged);
   }
 
   void onCandidatesReceived(List<dynamic> candidates) {
@@ -508,7 +509,7 @@ class CallSession {
 
   void onAssertedIdentityReceived(AssertedIdentity identity) async {
     remoteAssertedIdentity = identity;
-    emit(CallEvent.kAssertedIdentityChanged);
+    fireCallEvent(CallEvent.kAssertedIdentityChanged);
   }
 
   bool get screensharingEnabled => localScreenSharingStream != null;
@@ -536,10 +537,9 @@ class CallSession {
         _addLocalStream(stream, SDPStreamMetadataPurpose.Screenshare);
         return true;
       } catch (err) {
-        emit(
-            CallEvent.kError,
-            CallError(CallErrorCode.NoUserMedia,
-                'Failed to get screen-sharing stream: ', err));
+        fireCallEvent(CallEvent.kError);
+        lastError = CallError(CallErrorCode.NoUserMedia,
+            'Failed to get screen-sharing stream: ', err);
         return false;
       }
     } else {
@@ -550,8 +550,8 @@ class CallSession {
         await track.stop();
       }
       localScreenSharingStream!.stopped = true;
-      _removeStream(localScreenSharingStream!.stream!);
-      emit(CallEvent.kFeedsChanged, streams);
+      await _removeStream(localScreenSharingStream!.stream!);
+      fireCallEvent(CallEvent.kFeedsChanged);
       return false;
     }
   }
@@ -576,7 +576,7 @@ class CallSession {
       );
       await newStream.initialize();
       streams.add(newStream);
-      emit(CallEvent.kFeedsChanged, streams);
+      fireCallEvent(CallEvent.kFeedsChanged);
     }
 
     if (addToPeerConnection) {
@@ -591,7 +591,7 @@ class CallSession {
           usermediaSenders.add(await pc!.addTrack(track, stream));
         });
       }
-      emit(CallEvent.kFeedsChanged, streams);
+      fireCallEvent(CallEvent.kFeedsChanged);
     }
 
     if (purpose == SDPStreamMetadataPurpose.Usermedia) {
@@ -637,15 +637,13 @@ class CallSession {
       await newStream.initialize();
       streams.add(newStream);
     }
-    emit(CallEvent.kFeedsChanged, streams);
+    fireCallEvent(CallEvent.kFeedsChanged);
     Logs().i('Pushed remote stream (id="${stream.id}", purpose=$purpose)');
   }
 
   void setCallState(CallState newState) {
-    final oldState = state;
-    state = newState;
     _callStateController.add(newState);
-    emit(CallEvent.kState, state, oldState);
+    fireCallEvent(CallEvent.kState);
   }
 
   void setLocalVideoMuted(bool muted) {
@@ -672,7 +670,7 @@ class CallSession {
           : TransceiverDirection.SendRecv);
     }
     _updateMuteStatus();
-    emit(CallEvent.kRemoteHoldUnhold, remoteOnHold);
+    fireCallEvent(CallEvent.kRemoteHoldUnhold);
   }
 
   bool get isRemoteOnHold => remoteOnHold;
@@ -792,7 +790,7 @@ class CallSession {
     cleanUp();
     voip.delegate.handleCallEnded(this);
     if (shouldEmit) {
-      emit(CallEvent.kHangup, this);
+      fireCallEvent(CallEvent.kHangup);
     }
   }
 
@@ -1048,7 +1046,7 @@ class CallSession {
     }
     final wpstream = it.first;
     streams.removeWhere((element) => element.stream!.id == stream.id);
-    emit(CallEvent.kFeedsChanged, streams);
+    fireCallEvent(CallEvent.kFeedsChanged);
     await wpstream.dispose();
   }
 
@@ -1078,7 +1076,7 @@ class CallSession {
     }
   }
 
-  void emit(CallEvent event, [dynamic arg1, dynamic arg2, dynamic arg3]) {
+  void fireCallEvent(CallEvent event) {
     _callEventController.add(event);
     Logs().i('CallEvent: ${event.toString()}');
     switch (event) {
@@ -1104,28 +1102,19 @@ class CallSession {
 
   void _getLocalOfferFailed(dynamic err) {
     Logs().e('Failed to get local offer ${err.toString()}');
-
-    emit(
-      CallEvent.kError,
-      CallError(
-        CallErrorCode.LocalOfferFailed,
-        'Failed to get local offer!',
-        err,
-      ),
-    );
+    fireCallEvent(CallEvent.kError);
+    lastError = CallError(
+        CallErrorCode.LocalOfferFailed, 'Failed to get local offer!', err);
     terminate(CallParty.kLocal, CallErrorCode.LocalOfferFailed, false);
   }
 
   void _getUserMediaFailed(dynamic err) {
     Logs().w('Failed to get user media - ending call ${err.toString()}');
-    emit(
-      CallEvent.kError,
-      CallError(
+    fireCallEvent(CallEvent.kError);
+    lastError = CallError(
         CallErrorCode.NoUserMedia,
         'Couldn\'t start capturing media! Is your microphone set up and does this app have permission?',
-        err,
-      ),
-    );
+        err);
     terminate(CallParty.kLocal, CallErrorCode.NoUserMedia, false);
   }
 
