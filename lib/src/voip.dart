@@ -1258,6 +1258,9 @@ class VoIP {
         if (!call._answeredByUs) {
           delegate.stopRingtone();
         }
+        if (call.state == CallState.kRinging) {
+          call.onAnsweredElsewhere('Call ID ' + callId + ' answered elsewhere');
+        }
         return;
       }
 
