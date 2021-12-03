@@ -91,9 +91,9 @@ class Client extends MatrixApi {
 
   bool requestHistoryOnLimitedTimeline;
 
-  bool formatLocalpart = true;
+  final bool formatLocalpart;
 
-  bool mxidLocalPartFallback = true;
+  final bool mxidLocalPartFallback;
 
   // For CommandsClientExtension
   final Map<String, FutureOr<String?> Function(CommandArgs)> commands = {};
@@ -165,6 +165,8 @@ class Client extends MatrixApi {
     this.sendMessageTimeoutSeconds = 60,
     this.requestHistoryOnLimitedTimeline = false,
     Set<String>? supportedLoginTypes,
+    this.mxidLocalPartFallback = true,
+    this.formatLocalpart = true,
     this.compute,
     Filter? syncFilter,
     @deprecated bool? debug,
