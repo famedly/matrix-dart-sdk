@@ -1,3 +1,7 @@
+## [0.7.0] - 03nd Dec 2021
+- feat: Support for webRTC
+- fix: Add missing calcDisplayname global rules to client constructor
+
 ## [0.7.0-nullsafety.10] - 26nd Nov 2021
 - feat: Migrate olm sessions on database migration
 - chore: Enable E2EE recovery by default
