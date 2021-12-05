@@ -121,7 +121,7 @@ class SSSS {
   }
 
   static Uint8List decodeRecoveryKey(String recoveryKey) {
-    final result = base58.decode(recoveryKey.replaceAll(' ', ''));
+    final result = base58.decode(recoveryKey.replaceAll(RegExp(r'\s'), ''));
 
     final parity = result.fold<int>(0, (a, b) => a ^ b);
     if (parity != 0) {
