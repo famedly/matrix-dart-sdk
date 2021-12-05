@@ -126,7 +126,10 @@ void main() {
       if (!olmEnabled) return;
       final key = Uint8List.fromList(secureRandomBytes(32));
       final encoded = SSSS.encodeRecoveryKey(key);
-      final decoded = SSSS.decodeRecoveryKey(encoded);
+      var decoded = SSSS.decodeRecoveryKey(encoded);
+      expect(key, decoded);
+
+      decoded = SSSS.decodeRecoveryKey(encoded + ' \n\t');
       expect(key, decoded);
 
       final handle = client.encryption!.ssss.open();
