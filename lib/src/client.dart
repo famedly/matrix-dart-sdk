@@ -1706,12 +1706,23 @@ class Client extends MatrixApi {
             ),
           );
         } else {
-          if (stateEvent.type != EventTypes.Message ||
-              stateEvent.relationshipType != RelationshipTypes.edit ||
-              stateEvent.relationshipEventId == room.lastEvent?.eventId ||
-              ((room.lastEvent?.relationshipType == RelationshipTypes.edit &&
+          // We want to set state the in-memory cache for the room with the new event.
+          // To do this, we have to respect to not save edits, unless they edit the
+          // current last event.
+          // Additionally, we only store the event in-memory if the room has either been
+          // post-loaded or the event is animportant state event.
+          final noMessageOrNoEdit = stateEvent.type != EventTypes.Message ||
+              stateEvent.relationshipType != RelationshipTypes.edit;
+          final editingLastEvent =
+              stateEvent.relationshipEventId == room.lastEvent?.eventId;
+          final consecutiveEdit =
+              room.lastEvent?.relationshipType == RelationshipTypes.edit &&
                   stateEvent.relationshipEventId ==
-                      room.lastEvent?.relationshipEventId))) {
+                      room.lastEvent?.relationshipEventId;
+          final importantOrRoomLoaded =
+              !room.partial || importantStateEvents.contains(stateEvent.type);
+          if ((noMessageOrNoEdit || editingLastEvent || consecutiveEdit) &&
+              importantOrRoomLoaded) {
             room.setState(stateEvent);
           }
         }

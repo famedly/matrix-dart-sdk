@@ -348,6 +348,152 @@ void main() {
       expect(archive[1].name, 'The room name 2');
     });
 
+    test('sync state event in-memory handling', () async {
+      final roomId = '!726s6s6q:example.com';
+      final room = matrix.getRoomById(roomId)!;
+      // put an important state event in-memory
+      await matrix.handleSync(SyncUpdate.fromJson({
+        'next_batch': 'fakesync',
+        'rooms': {
+          'join': {
+            roomId: {
+              'state': {
+                'events': [
+                  <String, dynamic>{
+                    'sender': '@alice:example.com',
+                    'type': 'm.room.name',
+                    'content': <String, dynamic>{'name': 'foxies'},
+                    'state_key': '',
+                    'origin_server_ts': 1417731086799,
+                    'event_id': '66697273743033:example.com'
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }));
+      expect(room.getState('m.room.name')?.content['name'], 'foxies');
+
+      // drop an unimportant state event from in-memory handling
+      await matrix.handleSync(SyncUpdate.fromJson({
+        'next_batch': 'fakesync',
+        'rooms': {
+          'join': {
+            roomId: {
+              'state': {
+                'events': [
+                  <String, dynamic>{
+                    'sender': '@alice:example.com',
+                    'type': 'com.famedly.custom',
+                    'content': <String, dynamic>{'name': 'foxies'},
+                    'state_key': '',
+                    'origin_server_ts': 1417731086799,
+                    'event_id': '66697273743033:example.com'
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }));
+      expect(room.getState('com.famedly.custom'), null);
+
+      // persist normal room messages
+      await matrix.handleSync(SyncUpdate.fromJson({
+        'next_batch': 'fakesync',
+        'rooms': {
+          'join': {
+            roomId: {
+              'timeline': {
+                'events': [
+                  <String, dynamic>{
+                    'sender': '@alice:example.com',
+                    'type': 'm.room.message',
+                    'content': <String, dynamic>{
+                      'msgtype': 'm.text',
+                      'body': 'meow'
+                    },
+                    'origin_server_ts': 1417731086799,
+                    'event_id': '\$last:example.com'
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }));
+      expect(room.getState('m.room.message')!.content['body'], 'meow');
+
+      // ignore edits
+      await matrix.handleSync(SyncUpdate.fromJson({
+        'next_batch': 'fakesync',
+        'rooms': {
+          'join': {
+            roomId: {
+              'timeline': {
+                'events': [
+                  <String, dynamic>{
+                    'sender': '@alice:example.com',
+                    'type': 'm.room.message',
+                    'content': <String, dynamic>{
+                      'msgtype': 'm.text',
+                      'body': '* floooof',
+                      'm.new_content': <String, dynamic>{
+                        'msgtype': 'm.text',
+                        'body': 'floooof',
+                      },
+                      'm.relates_to': <String, dynamic>{
+                        'rel_type': 'm.replace',
+                        'event_id': '\$other:example.com'
+                      },
+                    },
+                    'origin_server_ts': 1417731086799,
+                    'event_id': '\$edit:example.com'
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }));
+      expect(room.getState('m.room.message')!.content['body'], 'meow');
+
+      // accept edits to the last event
+      await matrix.handleSync(SyncUpdate.fromJson({
+        'next_batch': 'fakesync',
+        'rooms': {
+          'join': {
+            roomId: {
+              'timeline': {
+                'events': [
+                  <String, dynamic>{
+                    'sender': '@alice:example.com',
+                    'type': 'm.room.message',
+                    'content': <String, dynamic>{
+                      'msgtype': 'm.text',
+                      'body': '* floooof',
+                      'm.new_content': <String, dynamic>{
+                        'msgtype': 'm.text',
+                        'body': 'floooof',
+                      },
+                      'm.relates_to': <String, dynamic>{
+                        'rel_type': 'm.replace',
+                        'event_id': '\$last:example.com'
+                      },
+                    },
+                    'origin_server_ts': 1417731086799,
+                    'event_id': '\$edit:example.com'
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }));
+      expect(room.getState('m.room.message')!.content['body'], '* floooof');
+    });
+
     test('getProfileFromUserId', () async {
       final profile = await matrix.getProfileFromUserId('@getme:example.com',
           getFromRooms: false);
