@@ -492,6 +492,40 @@ void main() {
         }
       }));
       expect(room.getState('m.room.message')!.content['body'], '* floooof');
+
+      // accepts a consecutive edit
+      await matrix.handleSync(SyncUpdate.fromJson({
+        'next_batch': 'fakesync',
+        'rooms': {
+          'join': {
+            roomId: {
+              'timeline': {
+                'events': [
+                  <String, dynamic>{
+                    'sender': '@alice:example.com',
+                    'type': 'm.room.message',
+                    'content': <String, dynamic>{
+                      'msgtype': 'm.text',
+                      'body': '* foxies',
+                      'm.new_content': <String, dynamic>{
+                        'msgtype': 'm.text',
+                        'body': 'foxies',
+                      },
+                      'm.relates_to': <String, dynamic>{
+                        'rel_type': 'm.replace',
+                        'event_id': '\$last:example.com'
+                      },
+                    },
+                    'origin_server_ts': 1417731086799,
+                    'event_id': '\$edit2:example.com'
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }));
+      expect(room.getState('m.room.message')!.content['body'], '* foxies');
     });
 
     test('getProfileFromUserId', () async {
