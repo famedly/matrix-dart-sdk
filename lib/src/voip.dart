@@ -642,6 +642,7 @@ class CallSession {
   }
 
   void setCallState(CallState newState) {
+    state = newState;
     _callStateController.add(newState);
     fireCallEvent(CallEvent.kState);
   }
