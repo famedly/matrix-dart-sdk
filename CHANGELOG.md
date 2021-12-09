@@ -1,3 +1,8 @@
+## 0.5.3
+- chore: Add missing matrix error types as per spec
+- feat: add additionalProperties in PusherData
+- feat: deletePusher
+
 ## 0.5.2
 - feat: Colored logs on native and web
 - chore: Make some tryGet errors verbose and display line
