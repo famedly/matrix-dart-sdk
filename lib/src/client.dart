@@ -2055,7 +2055,13 @@ class Client extends MatrixApi {
               (v as Map).map((k, v) => MapEntry<String, Map<String, dynamic>>(
                   k, Map<String, dynamic>.from(v)))));
 
-      await super.sendToDevice(entry.type, entry.txnId, data);
+      try {
+        await super.sendToDevice(entry.type, entry.txnId, data);
+      } on MatrixException catch (e) {
+        Logs().w(
+            '[To-Device] failed to to_device message from the queue to the server. Ignoring error: $e');
+        Logs().w('Payload: $data');
+      }
       await database.deleteFromToDeviceQueue(entry.id);
     }
   }
