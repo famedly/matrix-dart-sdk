@@ -747,6 +747,25 @@ class Room {
     );
   }
 
+  String _stripBodyFallback(String body) {
+    if (body.startsWith('> <@')) {
+      var temp = '';
+      var inPrefix = true;
+      for (final l in body.split('\n')) {
+        if (inPrefix && (l.isEmpty || l.startsWith('> '))) {
+          continue;
+        }
+
+        inPrefix = false;
+        temp += temp.isEmpty ? l : ('\n' + l);
+      }
+
+      return temp;
+    } else {
+      return body;
+    }
+  }
+
   /// Sends an event to this room with this json as a content. Returns the
   /// event ID generated from the server.
   Future<String?> sendEvent(
@@ -765,7 +784,8 @@ class Room {
     }
 
     if (inReplyTo != null) {
-      var replyText = '<${inReplyTo.senderId}> ' + inReplyTo.body;
+      var replyText =
+          '<${inReplyTo.senderId}> ' + _stripBodyFallback(inReplyTo.body);
       replyText = replyText.split('\n').map((line) => '> $line').join('\n');
       content['format'] = 'org.matrix.custom.html';
       // be sure that we strip any previous reply fallbacks
