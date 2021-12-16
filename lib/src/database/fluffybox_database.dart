@@ -22,13 +22,12 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:fluffybox/fluffybox.dart';
-import 'package:hive/hive.dart' show HiveCipher;
+import 'package:fluffybox/hive.dart' show HiveCipher;
 import 'package:matrix/encryption/utils/olm_session.dart';
 import 'package:matrix/encryption/utils/outbound_group_session.dart';
 import 'package:matrix/encryption/utils/ssss_cache.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/event_status.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 

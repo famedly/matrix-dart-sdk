@@ -1,3 +1,12 @@
+## [0.7.1] - 08nd Dec 2021
+- fix: fallback in body for replies to replies (Nicolas Werner)
+- fix: ignore 4xx errors when re-sending the to_device queue The to_device queue was introduced to ensure integrity if e.g. the server temporarily failed when attempting to send a to_device message. If, for whatever reason, the server responds with a 4xx error, though, then we want to ignore that to_device message from the queue and move on, as that means that something different was fundamentally wrong. This helps to fix the to_device queue clogging up, making clients incapable of sending to_device events anymore, should such clogging happen. (Sorunome)
+- fix: Database corruptions by updating FluffyBox (Krille Fear)
+- fix: Store the call state, fix the invite cannot be sent. (cloudwebrtc)
+- fix: Allow consecutive edits for state events in-memory The lastEvent was incorrect when trying to process an edit of an edit. This fixes that by allowing consecutive edits for the last event. (Sorunome)
+- fix: Only save state events from sync processing in-memory if needed If we dump all state events from sync into memory then we needlessly clog up our memory, potentially running out of ram. This is useless as when opening the timeline we post-load the unimportant state events anyways. So, this PR makes sure that only the state events of post-loaded rooms and important state events land in-memory when processing a sync request. (Sorunome)
+- fix(ssss): Strip all whitespace characters from recovery keys upon decode Previously we stripped all spaces off of the recovery when decoding it, so that we could format the recovery key nicely. It turns out, however, that some element flavours also format with linebreaks, leading to the user having to manually remove them. We fix this by just stripping *all* whitespace off of the recovery key. (Sorunome)
+
 ## [0.7.0] - 03nd Dec 2021
 - feat: Support for webRTC
 - fix: Add missing calcDisplayname global rules to client constructor
