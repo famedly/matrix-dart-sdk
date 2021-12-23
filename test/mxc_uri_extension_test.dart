@@ -19,8 +19,6 @@
 import 'package:matrix/matrix.dart';
 
 import 'package:test/test.dart';
-import 'package:matrix/src/client.dart';
-import 'package:matrix/src/utils/uri_extension.dart';
 
 import 'fake_matrix_api.dart';
 

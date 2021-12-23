@@ -20,7 +20,6 @@
 
 import 'dart:typed_data';
 
-import 'crypto/encrypted_file.dart';
 import 'package:mime/mime.dart';
 
 import '../../matrix.dart';

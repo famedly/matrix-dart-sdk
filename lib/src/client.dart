@@ -30,18 +30,7 @@ import 'package:collection/collection.dart' show IterableExtension;
 
 import '../encryption.dart';
 import '../matrix.dart';
-import 'database/database_api.dart';
-import 'event.dart';
-import 'room.dart';
-import 'user.dart';
-import 'utils/commands_extension.dart';
-import 'utils/device_keys_list.dart';
-import 'utils/event_update.dart';
-import 'utils/http_timeout.dart';
-import 'utils/matrix_file.dart';
 import 'utils/run_benchmarked.dart';
-import 'utils/to_device_event.dart';
-import 'utils/uia_request.dart';
 import 'utils/multilock.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);

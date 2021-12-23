@@ -24,9 +24,6 @@ import 'package:matrix/matrix.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../../encryption.dart';
-import '../client.dart';
-import '../event.dart';
-import '../room.dart';
 
 enum UserVerifiedStatus { verified, unknown, unknownDevice }
 
@@ -242,8 +239,7 @@ abstract class SignableKey extends MatrixSignableKey {
 
     for (final signatureEntries in signatures!.entries) {
       final otherUserId = signatureEntries.key;
-      if (!(signatureEntries.value is Map) ||
-          !client.userDeviceKeys.containsKey(otherUserId)) {
+      if (!client.userDeviceKeys.containsKey(otherUserId)) {
         continue;
       }
       // we don't allow transitive trust unless it is for ourself
@@ -253,9 +249,6 @@ abstract class SignableKey extends MatrixSignableKey {
       for (final signatureEntry in signatureEntries.value.entries) {
         final fullKeyId = signatureEntry.key;
         final signature = signatureEntry.value;
-        if (!(fullKeyId is String) || !(signature is String)) {
-          continue;
-        }
         final keyId = fullKeyId.substring('ed25519:'.length);
         // we ignore self-signatures here
         if (otherUserId == userId && keyId == identifier) {

@@ -20,9 +20,6 @@ import 'package:collection/collection.dart';
 
 import '../../encryption.dart';
 import '../../matrix.dart';
-import '../event.dart';
-import '../room.dart';
-import 'matrix_localizations.dart';
 
 abstract class EventLocalizations {
   // As we need to create the localized body off of a different set of parameters, we

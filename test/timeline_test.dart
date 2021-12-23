@@ -17,13 +17,8 @@
  */
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/event_status.dart';
 
 import 'package:test/test.dart';
-import 'package:matrix/src/client.dart';
-import 'package:matrix/src/room.dart';
-import 'package:matrix/src/timeline.dart';
-import 'package:matrix/src/utils/event_update.dart';
 import 'package:olm/olm.dart' as olm;
 import 'fake_client.dart';
 

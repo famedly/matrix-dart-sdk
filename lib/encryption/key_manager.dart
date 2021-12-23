@@ -596,9 +596,6 @@ class KeyManager {
           final sessionId = sessionEntry.key;
           final session = sessionEntry.value;
           final sessionData = session.sessionData;
-          if (!(sessionData is Map)) {
-            continue;
-          }
           Map<String, dynamic>? decrypted;
           try {
             decrypted = json.decode(decryption.decrypt(sessionData['ephemeral'],

@@ -18,9 +18,6 @@
 
 import '../matrix.dart';
 
-import 'event.dart';
-import 'room.dart';
-
 /// Represents a Matrix User which may be a participant in a Matrix Room.
 class User extends Event {
   factory User(

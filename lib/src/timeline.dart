@@ -21,10 +21,6 @@ import 'dart:async';
 import 'package:collection/src/iterable_extensions.dart';
 
 import '../matrix.dart';
-import 'event.dart';
-import 'event_status.dart';
-import 'room.dart';
-import 'utils/event_update.dart';
 
 /// Represents the timeline of a room. The callback [onUpdate] will be triggered
 /// automatically. The initial
