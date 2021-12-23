@@ -216,6 +216,7 @@ abstract class EventLocalizations {
         _localizedBodyNormalMessage(event, i18n, body),
     EventTypes.Message: (event, i18n, body) =>
         _localizedBodyNormalMessage(event, i18n, body),
-    EventTypes.Reaction: null,
+    EventTypes.Reaction: (event, i18n, body) =>
+        _localizedBodyNormalMessage(event, i18n, body),
   };
 }
