@@ -21,8 +21,6 @@ import 'dart:typed_data';
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/event.dart';
-import 'package:matrix/src/event_status.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
@@ -404,8 +402,6 @@ void main() {
           'membership': 'join'
         }
       }, room);
-      expect(
-          event.getLocalizedBody(MatrixDefaultLocalizations()) is String, true);
       expect(event.isEventTypeKnown, true);
 
       event = Event.fromJson({

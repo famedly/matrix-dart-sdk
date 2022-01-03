@@ -22,9 +22,6 @@ import 'dart:typed_data';
 
 import 'package:matrix/matrix.dart';
 
-import 'package:matrix/src/client.dart';
-import 'package:matrix/src/utils/event_update.dart';
-import 'package:matrix/src/utils/matrix_file.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 import 'package:canonical_json/canonical_json.dart';

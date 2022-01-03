@@ -22,13 +22,8 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../matrix.dart';
-import 'event_status.dart';
-import 'room.dart';
-import 'utils/crypto/encrypted_file.dart';
 import 'utils/event_localizations.dart';
 import 'utils/html_to_text.dart';
-import 'utils/matrix_localizations.dart';
-import 'utils/receipt.dart';
 
 abstract class RelationshipTypes {
   static const String reply = 'm.in_reply_to';

@@ -17,8 +17,6 @@
  */
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/event.dart';
-import 'package:matrix/src/user.dart';
 
 import 'package:test/test.dart';
 

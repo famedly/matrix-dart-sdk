@@ -24,18 +24,8 @@ import 'package:html_unescape/html_unescape.dart';
 import 'package:matrix/src/utils/space_child.dart';
 
 import '../matrix.dart';
-import 'client.dart';
-import 'event.dart';
-import 'event_status.dart';
-import 'timeline.dart';
-import 'user.dart';
-import 'utils/crypto/encrypted_file.dart';
-import 'utils/event_update.dart';
 import 'utils/markdown.dart';
 import 'utils/marked_unread.dart';
-import 'utils/matrix_file.dart';
-import 'utils/matrix_localizations.dart';
-import 'voip_content.dart';
 
 /// https://github.com/matrix-org/matrix-doc/pull/2746
 /// version 1
@@ -317,14 +307,11 @@ class Room {
       }
     }
 
-    if (client.directChats is Map<String, dynamic>) {
-      return client.directChats.entries
-          .firstWhereOrNull((MapEntry<String, dynamic> e) {
-        final roomIds = e.value;
-        return roomIds is List<dynamic> && roomIds.contains(id);
-      })?.key;
-    }
-    return null;
+    return client.directChats.entries
+        .firstWhereOrNull((MapEntry<String, dynamic> e) {
+      final roomIds = e.value;
+      return roomIds is List<dynamic> && roomIds.contains(id);
+    })?.key;
   }
 
   /// Wheither this is a direct chat or not
@@ -1171,7 +1158,7 @@ class Room {
       ]]) {
     final userList = <User>[];
     final members = states[EventTypes.RoomMember];
-    if (members != null && members is Map<String, dynamic>) {
+    if (members != null) {
       for (final entry in members.entries) {
         final state = entry.value;
         if (state.type == EventTypes.RoomMember) userList.add(state.asUser);

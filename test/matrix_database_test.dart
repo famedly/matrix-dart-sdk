@@ -18,7 +18,6 @@
  */
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/event_status.dart';
 
 import 'package:test/test.dart';
 import 'fake_database.dart';
