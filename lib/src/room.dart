@@ -18,9 +18,11 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
+import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/utils/space_child.dart';
 
 import '../matrix.dart';
@@ -1241,20 +1243,20 @@ class Room {
     bool ignoreErrors = false,
     bool requestProfile = true,
   }) async {
+    // Checks if the user is really missing
     final stateUser = getState(EventTypes.RoomMember, mxID);
     if (stateUser != null) {
       return stateUser.asUser;
     }
 
-    {
-      // it may be in the database
-      final user = await client.database?.getUser(mxID, this);
-      if (user != null) {
-        setState(user);
-        onUpdate.add(id);
-        return user;
-      }
+    // it may be in the database
+    final dbuser = await client.database?.getUser(mxID, this);
+    if (dbuser != null) {
+      setState(dbuser);
+      onUpdate.add(id);
+      return dbuser;
     }
+
     if (!_requestingMatrixIds.add(mxID)) return null;
     Map<String, dynamic>? resp;
     try {
@@ -1304,9 +1306,22 @@ class Room {
         'content': resp,
         'state_key': mxID,
       };
+      final fakeEventId = String.fromCharCodes(
+        await sha256(
+          Uint8List.fromList(
+              (id + mxID + client.generateUniqueTransactionId()).codeUnits),
+        ),
+      );
       await client.database?.storeEventUpdate(
         EventUpdate(
-          content: content,
+          content: MatrixEvent(
+            type: EventTypes.RoomMember,
+            content: resp!,
+            stateKey: mxID,
+            originServerTs: DateTime.now(),
+            senderId: mxID,
+            eventId: fakeEventId,
+          ).toJson(),
           roomID: id,
           type: EventUpdateType.state,
         ),
