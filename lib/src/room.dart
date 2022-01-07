@@ -1300,12 +1300,6 @@ class Room {
         room: this);
     setState(user);
     await client.database?.transaction(() async {
-      final content = <String, dynamic>{
-        'sender': mxID,
-        'type': EventTypes.RoomMember,
-        'content': resp,
-        'state_key': mxID,
-      };
       final fakeEventId = String.fromCharCodes(
         await sha256(
           Uint8List.fromList(
@@ -1407,7 +1401,9 @@ class Room {
   bool get canBan => _hasPermissionFor('ban');
 
   /// The default level required to send message events. Can be overridden by the events key.
-  bool get canSendDefaultMessages => _hasPermissionFor('events_default');
+  bool get canSendDefaultMessages =>
+      _hasPermissionFor('events_default') &&
+      (!encrypted || client.encryptionEnabled);
 
   /// The level required to invite a user.
   bool get canInvite => _hasPermissionFor('invite');
