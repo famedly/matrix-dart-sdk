@@ -141,6 +141,11 @@ void main() {
           matrix.rooms[1].roomAccountData['m.receipt']
               ?.content['@alice:example.com']['event_id'],
           '7365636s6r6432:example.com');
+
+      final inviteRoom = matrix.rooms
+          .singleWhere((room) => room.membership == Membership.invite);
+      expect(inviteRoom.name, 'My Room Name');
+      expect(inviteRoom.states[EventTypes.RoomMember]?.length, 1);
       expect(matrix.rooms.length, 2);
       expect(matrix.rooms[1].canonicalAlias,
           "#famedlyContactDiscovery:${matrix.userID!.split(":")[1]}");

@@ -1709,7 +1709,9 @@ class Client extends MatrixApi {
                   stateEvent.relationshipEventId ==
                       room.lastEvent?.relationshipEventId;
           final importantOrRoomLoaded =
-              !room.partial || importantStateEvents.contains(stateEvent.type);
+              eventUpdate.type == EventUpdateType.inviteState ||
+                  !room.partial ||
+                  importantStateEvents.contains(stateEvent.type);
           if ((noMessageOrNoEdit || editingLastEvent || consecutiveEdit) &&
               importantOrRoomLoaded) {
             room.setState(stateEvent);
