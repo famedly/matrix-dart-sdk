@@ -1,3 +1,10 @@
+## [0.7.2] - 08nd Jan 2022
+- feat: Let sendDefaultMessage return false on encryption failure (Krille Fear)
+- fix: Room Member updates should always be cached (Krille Fear)
+- fix: Requested users are not stored (Christian Pauly)
+- fix: Localize reactions (Krille Fear)
+- refactor: Remove unnecessary type checks and imports (Krille Fear)
+
 ## [0.7.1] - 08nd Dec 2021
 - fix: fallback in body for replies to replies (Nicolas Werner)
 - fix: ignore 4xx errors when re-sending the to_device queue The to_device queue was introduced to ensure integrity if e.g. the server temporarily failed when attempting to send a to_device message. If, for whatever reason, the server responds with a 4xx error, though, then we want to ignore that to_device message from the queue and move on, as that means that something different was fundamentally wrong. This helps to fix the to_device queue clogging up, making clients incapable of sending to_device events anymore, should such clogging happen. (Sorunome)
