@@ -24,6 +24,7 @@ import 'dart:typed_data';
 import 'package:base58check/base58.dart';
 import 'package:crypto/crypto.dart';
 import 'package:collection/collection.dart';
+import 'package:matrix/encryption/utils/base64_unpadded.dart';
 
 import '../matrix.dart';
 import '../src/utils/crypto/crypto.dart' as uc;
@@ -85,7 +86,7 @@ class SSSS {
       [String? ivStr]) async {
     Uint8List iv;
     if (ivStr != null) {
-      iv = base64.decode(ivStr);
+      iv = base64decodeUnpadded(ivStr);
     } else {
       iv = Uint8List.fromList(uc.secureRandomBytes(16));
     }
@@ -108,15 +109,15 @@ class SSSS {
   static Future<String> decryptAes(
       _Encrypted data, Uint8List key, String name) async {
     final keys = deriveKeys(key, name);
-    final cipher = base64.decode(data.ciphertext);
+    final cipher = base64decodeUnpadded(data.ciphertext);
     final hmac = base64
         .encode(Hmac(sha256, keys.hmacKey).convert(cipher).bytes)
         .replaceAll(RegExp(r'=+$'), '');
     if (hmac != data.mac.replaceAll(RegExp(r'=+$'), '')) {
       throw Exception('Bad MAC');
     }
-    final decipher =
-        await uc.aesCtr.encrypt(cipher, keys.aesKey, base64.decode(data.iv));
+    final decipher = await uc.aesCtr
+        .encrypt(cipher, keys.aesKey, base64decodeUnpadded(data.iv));
     return String.fromCharCodes(decipher);
   }
 

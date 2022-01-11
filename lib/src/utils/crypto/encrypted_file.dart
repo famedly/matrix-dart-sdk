@@ -18,6 +18,8 @@
 import 'dart:typed_data';
 import 'dart:convert';
 
+import 'package:matrix/encryption/utils/base64_unpadded.dart';
+
 import 'crypto.dart';
 
 class EncryptedFile {
@@ -52,7 +54,7 @@ Future<Uint8List?> decryptFile(EncryptedFile input) async {
     return null;
   }
 
-  final key = base64.decode(base64.normalize(input.k));
-  final iv = base64.decode(base64.normalize(input.iv));
+  final key = base64decodeUnpadded(base64.normalize(input.k));
+  final iv = base64decodeUnpadded(base64.normalize(input.iv));
   return await aesCtr.encrypt(input.data, key, iv);
 }
