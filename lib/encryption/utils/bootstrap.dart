@@ -26,6 +26,7 @@ import '../encryption.dart';
 import '../ssss.dart';
 import '../key_manager.dart';
 import '../../matrix.dart';
+import 'base64_unpadded.dart';
 
 enum BootstrapState {
   /// Is loading.
@@ -385,7 +386,7 @@ class Bootstrap {
         }
       } else {
         Logs().v('Get stored key...');
-        masterSigningKey = base64.decode(
+        masterSigningKey = base64decodeUnpadded(
             await newSsssKey?.getStored(EventTypes.CrossSigningMasterKey) ??
                 '');
         if (masterSigningKey.isEmpty) {

@@ -18,6 +18,7 @@
 
 import 'dart:convert';
 
+import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:collection/collection.dart';
@@ -49,7 +50,7 @@ class KeyManager {
             BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2) {
           return false;
         }
-        return keyObj.init_with_private_key(base64.decode(secret)) ==
+        return keyObj.init_with_private_key(base64decodeUnpadded(secret)) ==
             info.authData['public_key'];
       } catch (_) {
         return false;
@@ -579,7 +580,7 @@ class KeyManager {
       return;
     }
     final privateKey =
-        base64.decode((await encryption.ssss.getCached(megolmKey))!);
+        base64decodeUnpadded((await encryption.ssss.getCached(megolmKey))!);
     final decryption = olm.PkDecryption();
     final info = await getRoomKeysBackupInfo();
     String backupPubKey;
@@ -723,7 +724,7 @@ class KeyManager {
         return; // nothing to do
       }
       final privateKey =
-          base64.decode((await encryption.ssss.getCached(megolmKey))!);
+          base64decodeUnpadded((await encryption.ssss.getCached(megolmKey))!);
       // decryption is needed to calculate the public key and thus see if the claimed information is in fact valid
       final decryption = olm.PkDecryption();
       final info = await getRoomKeysBackupInfo(false);

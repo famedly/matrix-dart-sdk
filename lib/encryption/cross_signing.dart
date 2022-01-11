@@ -16,9 +16,9 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../matrix.dart';
@@ -33,7 +33,7 @@ class CrossSigning {
         (String secret) async {
       final keyObj = olm.PkSigning();
       try {
-        return keyObj.init_with_seed(base64.decode(secret)) ==
+        return keyObj.init_with_seed(base64decodeUnpadded(secret)) ==
             client.userDeviceKeys[client.userID]!.selfSigningKey!.ed25519Key;
       } catch (_) {
         return false;
@@ -45,7 +45,7 @@ class CrossSigning {
         (String secret) async {
       final keyObj = olm.PkSigning();
       try {
-        return keyObj.init_with_seed(base64.decode(secret)) ==
+        return keyObj.init_with_seed(base64decodeUnpadded(secret)) ==
             client.userDeviceKeys[client.userID]!.userSigningKey!.ed25519Key;
       } catch (_) {
         return false;
@@ -87,8 +87,8 @@ class CrossSigning {
       );
       await handle.maybeCacheAll();
     }
-    final masterPrivateKey =
-        base64.decode(await handle.getStored(EventTypes.CrossSigningMasterKey));
+    final masterPrivateKey = base64decodeUnpadded(
+        await handle.getStored(EventTypes.CrossSigningMasterKey));
     final keyObj = olm.PkSigning();
     String? masterPubkey;
     try {
@@ -153,7 +153,7 @@ class CrossSigning {
           // we don't care about signing other cross-signing keys
         } else {
           // okay, we'll sign a device key with our self signing key
-          selfSigningKey ??= base64.decode(await encryption.ssss
+          selfSigningKey ??= base64decodeUnpadded(await encryption.ssss
                   .getCached(EventTypes.CrossSigningSelfSigning) ??
               '');
           if (selfSigningKey.isNotEmpty) {
@@ -163,7 +163,7 @@ class CrossSigning {
         }
       } else if (key is CrossSigningKey && key.usage.contains('master')) {
         // we are signing someone elses master key
-        userSigningKey ??= base64.decode(await encryption.ssss
+        userSigningKey ??= base64decodeUnpadded(await encryption.ssss
                 .getCached(EventTypes.CrossSigningUserSigning) ??
             '');
         if (userSigningKey.isNotEmpty) {
