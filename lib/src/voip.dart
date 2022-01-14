@@ -1457,7 +1457,7 @@ class VoIP {
       {
         'username': _turnServerCredentials!.username,
         'credential': _turnServerCredentials!.password,
-        'url': _turnServerCredentials!.uris[0]
+        'urls': _turnServerCredentials!.uris[0]
       }
     ];
   }

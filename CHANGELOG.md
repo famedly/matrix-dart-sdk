@@ -1,3 +1,8 @@
+## [0.7.3] - 14nd Jan 2022
+- fix: Fix turn credentials format issue for safari.
+- fix: update fluffybox version to correctly clear rooms after logout. 
+- fix: Allow unpadded base64 decoding
+
 ## [0.7.2] - 08nd Jan 2022
 - feat: Let sendDefaultMessage return false on encryption failure (Krille Fear)
 - fix: Room Member updates should always be cached (Krille Fear)
