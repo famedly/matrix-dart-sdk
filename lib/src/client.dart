@@ -1101,7 +1101,6 @@ class Client extends MatrixApi {
           _rooms = rooms;
           _sortRooms();
         });
-        _sortRooms();
         accountDataLoading =
             database.getAccountData().then((data) => accountData = data);
         presences.clear();
@@ -1269,7 +1268,6 @@ class Client extends MatrixApi {
       if (prevBatch == null) {
         onFirstSync.add(true);
         prevBatch = syncResp.nextBatch;
-        _sortRooms();
       }
       prevBatch = syncResp.nextBatch;
       // ignore: unawaited_futures
