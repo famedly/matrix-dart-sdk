@@ -1163,10 +1163,9 @@ class Room {
     if (members != null) {
       for (final entry in members.entries) {
         final state = entry.value;
-        if (state.type == EventTypes.RoomMember) userList.add(state.asUser);
+        if (state.type == EventTypes.RoomMember && !membershipFilter.contains(state.asUser)) userList.add(state.asUser);
       }
     }
-    userList.removeWhere((u) => !membershipFilter.contains(u.membership));
     return userList;
   }
 
