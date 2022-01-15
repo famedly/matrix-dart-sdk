@@ -21,6 +21,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:fluffybox/fluffybox.dart';
 import 'package:fluffybox/hive.dart' show HiveCipher;
 import 'package:matrix/encryption/utils/olm_session.dart';
@@ -1447,13 +1448,15 @@ class TupleKey {
   const TupleKey.byParts(this.parts);
 
   TupleKey.fromString(String multiKeyString)
-      : parts = multiKeyString.split('|').toList();
+      : parts = multiKeyString.split('|');
 
   @override
   String toString() => parts.join('|');
 
   @override
-  bool operator ==(other) => parts.toString() == other.toString();
+  bool operator ==(covariant TupleKey other) {
+    return ListEquality().equals(parts, other.parts);
+  }
 }
 
 dynamic _castValue(dynamic value) {
