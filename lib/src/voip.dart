@@ -361,15 +361,19 @@ class CallSession {
     await _preparePeerConnection();
     setCallState(CallState.kCreateOffer);
     final stream = await _getUserMedia(type);
-    _addLocalStream(stream, SDPStreamMetadataPurpose.Usermedia);
+    if (stream != null) {
+      _addLocalStream(stream, SDPStreamMetadataPurpose.Usermedia);
+    }
   }
 
   Future<void> initWithInvite(CallType type, RTCSessionDescription offer,
       SDPStreamMetadata? metadata, int lifetime) async {
     await _preparePeerConnection();
 
-    _addLocalStream(
-        await _getUserMedia(type), SDPStreamMetadataPurpose.Usermedia);
+    final stream = await _getUserMedia(type);
+    if (stream != null) {
+      _addLocalStream(stream, SDPStreamMetadataPurpose.Usermedia);
+    }
 
     if (metadata != null) {
       _updateRemoteSDPStreamMetadata(metadata);
@@ -530,7 +534,7 @@ class CallSession {
 
     if (enabled) {
       try {
-        final MediaStream? stream = await _getDisplayMedia();
+        final stream = await _getDisplayMedia();
         if (stream == null) {
           return false;
         }
@@ -972,7 +976,7 @@ class CallSession {
     localCandidates.clear();
   }
 
-  Future<MediaStream> _getUserMedia(CallType type) async {
+  Future<MediaStream?> _getUserMedia(CallType type) async {
     final mediaConstraints = {
       'audio': true,
       'video': type == CallType.kVideo
@@ -992,10 +996,10 @@ class CallSession {
     } catch (e) {
       _getUserMediaFailed(e);
     }
-    return Null as MediaStream;
+    return null;
   }
 
-  Future<MediaStream> _getDisplayMedia() async {
+  Future<MediaStream?> _getDisplayMedia() async {
     final mediaConstraints = {
       'audio': false,
       'video': true,
@@ -1005,7 +1009,7 @@ class CallSession {
     } catch (e) {
       _getUserMediaFailed(e);
     }
-    return Null as MediaStream;
+    return null;
   }
 
   Future<RTCPeerConnection> _createPeerConnection() async {
@@ -1110,13 +1114,15 @@ class CallSession {
   }
 
   void _getUserMediaFailed(dynamic err) {
-    Logs().w('Failed to get user media - ending call ${err.toString()}');
-    fireCallEvent(CallEvent.kError);
-    lastError = CallError(
-        CallErrorCode.NoUserMedia,
-        'Couldn\'t start capturing media! Is your microphone set up and does this app have permission?',
-        err);
-    terminate(CallParty.kLocal, CallErrorCode.NoUserMedia, false);
+    if (state != CallState.kConnected) {
+      Logs().w('Failed to get user media - ending call ${err.toString()}');
+      fireCallEvent(CallEvent.kError);
+      lastError = CallError(
+          CallErrorCode.NoUserMedia,
+          'Couldn\'t start capturing media! Is your microphone set up and does this app have permission?',
+          err);
+      terminate(CallParty.kLocal, CallErrorCode.NoUserMedia, false);
+    }
   }
 
   void onSelectAnswerReceived(String? selectedPartyId) {
