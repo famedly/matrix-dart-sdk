@@ -1158,16 +1158,15 @@ class Room {
         Membership.invite,
         Membership.knock,
       ]]) {
-    final userList = <User>[];
     final members = states[EventTypes.RoomMember];
     if (members != null) {
-      for (final entry in members.entries) {
-        final state = entry.value;
-        if (state.type == EventTypes.RoomMember) userList.add(state.asUser);
-      }
+      return members.entries
+          .where((entry) => entry.value.type == EventTypes.RoomMember)
+          .map((entry) => entry.value.asUser)
+          .where((user) => membershipFilter.contains(user.membership))
+          .toList();
     }
-    userList.removeWhere((u) => !membershipFilter.contains(u.membership));
-    return userList;
+    return <User>[];
   }
 
   bool _requestedParticipants = false;
