@@ -18,8 +18,11 @@
 
 /// Workaround until [File] in dart:io and dart:html is unified
 
+import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:blurhash_dart/blurhash_dart.dart';
+import 'package:image/image.dart';
 import 'package:mime/mime.dart';
 
 import '../../matrix.dart';
@@ -63,18 +66,76 @@ class MatrixFile {
 }
 
 class MatrixImageFile extends MatrixFile {
-  int? width;
-  int? height;
-  String? blurhash;
+  Image? _image;
 
-  MatrixImageFile(
+  MatrixImageFile({
+    required Uint8List bytes,
+    required String name,
+    String? mimeType,
+  }) : super(bytes: bytes, name: name, mimeType: mimeType);
+
+  /// builds a [MatrixImageFile] and shrinks it in order to reduce traffic
+  ///
+  /// in case shrinking does not work (e.g. for unsupported MIME types), the
+  /// initial image is simply preserved
+  static Future<MatrixImageFile> shrink(
       {required Uint8List bytes,
       required String name,
+      int maxDimension = 1600,
       String? mimeType,
-      this.width,
-      this.height,
-      this.blurhash})
-      : super(bytes: bytes, name: name, mimeType: mimeType);
+      Future<T> Function<T, U>(FutureOr<T> Function(U arg) function, U arg)?
+          compute}) async {
+    Image? image;
+    final resizedData = compute != null
+        ? await compute(_resize, [bytes, maxDimension])
+        : _resize([bytes, maxDimension, name]);
+
+    if (resizedData == null) {
+      return MatrixImageFile(bytes: bytes, name: name, mimeType: mimeType);
+    }
+    image = decodeImage(resizedData);
+
+    if (image == null) {
+      return MatrixImageFile(bytes: bytes, name: name, mimeType: mimeType);
+    }
+
+    final encoded = encodeNamedImage(image, name);
+    if (encoded == null) {
+      return MatrixImageFile(bytes: bytes, name: name, mimeType: mimeType);
+    }
+
+    final thumbnailFile = MatrixImageFile(
+      bytes: Uint8List.fromList(encoded),
+      name: name,
+      mimeType: mimeType,
+    );
+    // preserving the previously generated image
+    thumbnailFile._image = image;
+    return thumbnailFile;
+  }
+
+  /// returns the width of the image
+  int? get width {
+    _image ??= decodeImage(bytes);
+    return _image?.width;
+  }
+
+  /// returns the height of the image
+  int? get height {
+    _image ??= decodeImage(bytes);
+    return _image?.height;
+  }
+
+  /// generates the blur hash for the image
+  String? get blurhash {
+    _image ??= decodeImage(bytes)!;
+    if (_image != null) {
+      final blur = BlurHash.encode(_image!, numCompX: 4, numCompY: 3);
+      return blur.hash;
+    }
+    return null;
+  }
+
   @override
   String get msgType => 'm.image';
   @override
@@ -84,6 +145,41 @@ class MatrixImageFile extends MatrixFile {
         if (height != null) 'h': height,
         if (blurhash != null) 'xyz.amorgan.blurhash': blurhash,
       });
+
+  /// computes a thumbnail for the image
+  Future<MatrixImageFile?> generateThumbnail(
+      {int dimension = Client.defaultThumbnailSize,
+      Future<T> Function<T, U>(FutureOr<T> Function(U arg) function, U arg)?
+          compute}) async {
+    final thumbnailFile = await shrink(
+      bytes: bytes,
+      name: name,
+      mimeType: mimeType,
+      compute: compute,
+      maxDimension: dimension,
+    );
+    // the thumbnail should rather return null than the unshrinked image
+    if ((thumbnailFile.width ?? 0) > dimension ||
+        (thumbnailFile.height ?? 0) > dimension) {
+      return null;
+    }
+    return thumbnailFile;
+  }
+
+  static Uint8List? _resize(List<dynamic> arguments) {
+    final bytes = arguments[0] as Uint8List;
+    final maxDimension = arguments[1] as int;
+    final fileName = arguments[2] as String;
+    final image = decodeImage(bytes);
+
+    final resized = copyResize(image!,
+        height: image.height > image.width ? maxDimension : null,
+        width: image.width >= image.height ? maxDimension : null);
+
+    final encoded = encodeNamedImage(resized, fileName);
+    if (encoded == null) return null;
+    return Uint8List.fromList(encoded);
+  }
 }
 
 class MatrixVideoFile extends MatrixFile {

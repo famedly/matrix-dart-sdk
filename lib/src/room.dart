@@ -625,6 +625,9 @@ class Room {
   /// the message event has received the server. Otherwise the future will only
   /// wait until the file has been uploaded.
   /// Optionally specify [extraContent] to tack on to the event.
+  ///
+  /// In case [file] is a [MatrixImageFile], [thumbnail] is automatically
+  /// computed unless it is explicitly provided.
   Future<Uri> sendFileEvent(
     MatrixFile file, {
     String? txid,
@@ -635,6 +638,10 @@ class Room {
     Map<String, dynamic>? extraContent,
   }) async {
     MatrixFile uploadFile = file; // ignore: omit_local_variable_types
+    // computing the thumbnail in case we can
+    thumbnail ??= (file is MatrixImageFile && encrypted
+        ? await file.generateThumbnail(compute: client.runInBackground)
+        : null);
     MatrixFile? uploadThumbnail =
         thumbnail; // ignore: omit_local_variable_types
     EncryptedFile? encryptedFile;
