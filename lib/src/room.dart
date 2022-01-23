@@ -24,6 +24,7 @@ import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/utils/space_child.dart';
+import 'package:matrix/widget.dart';
 
 import '../matrix.dart';
 import 'utils/markdown.dart';
@@ -369,6 +370,17 @@ class Room {
         : [];
   }
 
+  /// Returns all present Widgets in the room.
+  List<MatrixWidget> get widgets => {
+        ...states['m.widget'] ?? {},
+        ...states['im.vector.modular.widgets'] ?? {},
+      }
+          .values
+          .map(
+            (e) => MatrixWidget.fromJson(e.content, this),
+          )
+          .toList();
+
   /// Your current client instance.
   final Client client;
 
@@ -501,7 +513,7 @@ class Room {
   /// Returns true if this room is unread
   bool get isUnread => notificationCount > 0 || markedUnread;
 
-  @Deprecated('Use [markUnread] instead')
+  @Deprecated('Use [markUnread] instead')
   Future<void> setUnread(bool unread) => markUnread(unread);
 
   /// Sets an unread flag manually for this room. This changes the local account
