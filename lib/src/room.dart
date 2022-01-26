@@ -1117,9 +1117,12 @@ class Room {
   }
 
   /// Creates a timeline from the store. Returns a [Timeline] object.
-  Future<Timeline> getTimeline(
-      {void Function()? onUpdate,
-      void Function(int insertID)? onInsert}) async {
+  Future<Timeline> getTimeline({
+    void Function(int index)? onChange,
+    void Function(int index)? onRemove,
+    void Function(int insertID)? onInsert,
+    void Function()? onUpdate,
+  }) async {
     await postLoad();
     var events;
     events = await client.database?.getEventList(
@@ -1144,8 +1147,10 @@ class Room {
     final timeline = Timeline(
       room: this,
       events: events,
-      onUpdate: onUpdate,
+      onChange: onChange,
+      onRemove: onRemove,
       onInsert: onInsert,
+      onUpdate: onUpdate,
     );
     if (client.database == null) {
       await requestHistory(historyCount: 10);
