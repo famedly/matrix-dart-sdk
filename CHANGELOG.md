@@ -1,3 +1,9 @@
+## [0.8.0] - 25nd Jan 2022
+- BREAKING CHANGE: high-level hadling of image sizes
+- feat: expose Timeline.onChange to Room.getTimeline
+- fix: Use where and map instead of a loop and a removeWhere
+- fix: Remove sorts that shouldnt be required.
+
 ## [0.7.3] - 14nd Jan 2022
 - fix: Fix turn credentials format issue for safari.
 - fix: update fluffybox version to correctly clear rooms after logout. 
