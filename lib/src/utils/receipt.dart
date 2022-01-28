@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import '../user.dart';
+import '../event/user.dart';
 
 /// Represents a receipt.
 /// This [user] has read an event at the given [time].

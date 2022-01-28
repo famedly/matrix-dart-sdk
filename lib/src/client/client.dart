@@ -28,10 +28,10 @@ import 'package:mime/mime.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:collection/collection.dart' show IterableExtension;
 
-import '../encryption.dart';
-import '../matrix.dart';
-import 'utils/run_benchmarked.dart';
-import 'utils/multilock.dart';
+import '../../encryption.dart';
+import '../../matrix.dart';
+import '../utils/run_benchmarked.dart';
+import '../utils/multilock.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 

@@ -25,9 +25,9 @@ import 'package:html_unescape/html_unescape.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/utils/space_child.dart';
 
-import '../matrix.dart';
-import 'utils/markdown.dart';
-import 'utils/marked_unread.dart';
+import '../../matrix.dart';
+import '../utils/markdown.dart';
+import '../utils/marked_unread.dart';
 
 /// https://github.com/matrix-org/matrix-doc/pull/2746
 /// version 1

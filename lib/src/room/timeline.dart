@@ -20,7 +20,7 @@ import 'dart:async';
 
 import 'package:collection/src/iterable_extensions.dart';
 
-import '../matrix.dart';
+import '../../matrix.dart';
 
 /// Represents the timeline of a room. The callback [onUpdate] will be triggered
 /// automatically. The initial

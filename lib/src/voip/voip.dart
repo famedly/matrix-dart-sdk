@@ -4,7 +4,7 @@ import 'dart:core';
 import 'package:webrtc_interface/webrtc_interface.dart';
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 
-import '../matrix.dart';
+import '../../matrix.dart';
 
 /// Delegate WebRTC basic functionality.
 abstract class WebRTCDelegate {

@@ -21,9 +21,9 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
-import '../matrix.dart';
-import 'utils/event_localizations.dart';
-import 'utils/html_to_text.dart';
+import '../../matrix.dart';
+import '../utils/event_localizations.dart';
+import '../utils/html_to_text.dart';
 
 abstract class RelationshipTypes {
   static const String reply = 'm.in_reply_to';

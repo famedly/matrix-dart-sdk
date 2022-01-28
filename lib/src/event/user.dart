@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import '../matrix.dart';
+import '../../matrix.dart';
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
 class User extends Event {

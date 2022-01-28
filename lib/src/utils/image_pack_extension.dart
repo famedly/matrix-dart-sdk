@@ -19,7 +19,7 @@
 import 'package:slugify/slugify.dart';
 import 'package:matrix_api_lite/matrix_api_lite.dart';
 
-import '../room.dart';
+import '../room/room.dart';
 
 extension ImagePackRoomExtension on Room {
   /// Get all the active image packs for the specified [usage], mapped by their slug

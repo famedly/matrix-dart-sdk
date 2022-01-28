@@ -18,7 +18,7 @@
 
 import 'package:matrix_api_lite/matrix_api_lite.dart';
 
-import '../event.dart';
+import '../event/event.dart';
 
 class SpaceChild {
   final String? roomId;
