@@ -245,6 +245,10 @@ class Timeline {
     _removeEventFromSet(events, event);
     // add the new one
     events.add(event);
+    if (onChange != null) {
+      final index = _findEvent(event_id: relationshipEventId);
+      onChange?.call(index);
+    }
   }
 
   void removeAggregatedEvent(Event event) {
@@ -330,6 +334,7 @@ class Timeline {
           }
 
           addAggregatedEvent(newEvent);
+
           onInsert?.call(index);
         }
       }
