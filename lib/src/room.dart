@@ -1116,7 +1116,10 @@ class Room {
     return;
   }
 
-  /// Creates a timeline from the store. Returns a [Timeline] object.
+  /// Creates a timeline from the store. Returns a [Timeline] object. If you
+  /// just want to update the whole timeline on every change, use the [onUpdate]
+  /// callback. For updating only the parts that have changed, use the
+  /// [onChange], [onRemove] and the [onInsert] callbacks.
   Future<Timeline> getTimeline({
     void Function(int index)? onChange,
     void Function(int index)? onRemove,
