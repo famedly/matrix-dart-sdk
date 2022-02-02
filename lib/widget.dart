@@ -2,37 +2,40 @@ import 'package:matrix/src/room.dart';
 
 class MatrixWidget {
   final Room room;
-  final String creatorUserId;
-  final Map<String, dynamic> data;
-  final String id;
+  final String? creatorUserId;
+  final Map<String, dynamic>? data;
+  final String? id;
   final String name;
   final String type;
+
+  /// use [buildWidgetUrl] instead
   final String url;
   final bool waitForIframeLoad;
 
   MatrixWidget({
     required this.room,
-    required this.creatorUserId,
-    required this.data,
-    required this.id,
+    this.creatorUserId,
+    this.data = const {},
+    this.id,
     required this.name,
     required this.type,
-
-    /// use [buildWidgetUrl] instead
     required this.url,
-    required this.waitForIframeLoad,
+    this.waitForIframeLoad = false,
   });
 
   factory MatrixWidget.fromJson(Map<String, dynamic> json, Room room) =>
       MatrixWidget(
         room: room,
-        creatorUserId: json['creatorUserId'],
-        data: json['data'],
-        id: json['id'],
+        creatorUserId:
+            json.containsKey('creatorUserId') ? json['creatorUserId'] : null,
+        data: json.containsKey('data') ? json['data'] : {},
+        id: json.containsKey('id') ? json['id'] : null,
         name: json['name'],
         type: json['type'],
         url: json['url'],
-        waitForIframeLoad: json['waitForIframeLoad'],
+        waitForIframeLoad: json.containsKey('waitForIframeLoad')
+            ? json['waitForIframeLoad']
+            : false,
       );
 
   Future<Uri> buildWidgetUrl() async {
@@ -50,10 +53,11 @@ class MatrixWidget {
       r'$matrix_avatar_url': userProfile.avatarUrl?.toString() ?? '',
       // removing potentially dangerous keys containing anything but
       // `[a-zA-Z0-9_-]` as well as non string values
-      ...Map.from(data)
-        ..removeWhere((key, value) =>
-            !RegExp(r'^[\w-]+$').hasMatch(key) || !value is String)
-        ..map((key, value) => MapEntry('\$key', value)),
+      if (data != null)
+        ...Map.from(data!)
+          ..removeWhere((key, value) =>
+              !RegExp(r'^[\w-]+$').hasMatch(key) || !value is String)
+          ..map((key, value) => MapEntry('\$key', value)),
     };
 
     replaceMap.forEach((key, value) {
