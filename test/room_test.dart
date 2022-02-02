@@ -921,6 +921,10 @@ void main() {
       expect(room.getState('m.room.message') != null, true);
     });
 
+    test('Widgets', () {
+      expect(room.widgets.isEmpty, true);
+    });
+
     test('Spaces', () async {
       expect(room.isSpace, false);
       room.states['m.room.create'] = {
