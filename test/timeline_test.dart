@@ -31,6 +31,7 @@ void main() {
     final insertList = <int>[];
     final changeList = <int>[];
     final removeList = <int>[];
+    final historyRequestList = <int>[];
     var olmEnabled = true;
 
     late Client client;
@@ -59,6 +60,7 @@ void main() {
         onInsert: insertList.add,
         onChange: changeList.add,
         onRemove: removeList.add,
+        onHistoryReceived: historyRequestList.add,
       );
     });
 
@@ -291,7 +293,8 @@ void main() {
       await Future.delayed(Duration(milliseconds: 50));
 
       expect(updateCount, 20);
-      expect(insertList, [0, 0, 0, 0, 0, 1, 2, 0, 0, 1, 2]);
+      expect(insertList, [0, 0, 0, 0, 0, 1, 2, 0]);
+      expect(historyRequestList, []);
       expect(timeline.events.length, 3);
       expect(timeline.events[0].eventId, '3143273582443PhrSn:example.org');
       expect(timeline.events[1].eventId, '2143273582443PhrSn:example.org');
