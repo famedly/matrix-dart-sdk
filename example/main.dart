@@ -1,154 +1,219 @@
-import 'package:matrix/matrix.dart';
 import 'package:flutter/material.dart';
+import 'package:matrix/matrix.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
-void main() {
-  runApp(FamedlySdkExampleApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final client = Client(
+    'Matrix Example Chat',
+    databaseBuilder: (_) async {
+      final dir = await getApplicationSupportDirectory();
+      final db = FluffyBoxDatabase('matrix_example_chat', dir.path);
+      await db.open();
+      return db;
+    },
+  );
+  await client.init();
+  runApp(MatrixExampleChat(client: client));
 }
 
-class FamedlySdkExampleApp extends StatelessWidget {
+class MatrixExampleChat extends StatelessWidget {
+  final Client client;
+  const MatrixExampleChat({required this.client, Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    return Provider<Client>(
-      create: (_) => Client('Famedly SDK Example App'),
-      child: Builder(
-        builder: (context) => MaterialApp(
-          title: 'Famedly SDK Example App',
-          home: StreamBuilder<LoginState>(
-            stream: Provider.of<Client>(context).onLoginStateChanged.stream,
-            builder:
-                (BuildContext context, AsyncSnapshot<LoginState> snapshot) {
-              if (snapshot.hasError) {
-                return Center(child: Text(snapshot.error.toString()));
-              }
-              if (snapshot.data == LoginState.loggedIn) {
-                return ChatListView();
-              }
-              return LoginView();
-            },
-          ),
+    return MaterialApp(
+      title: 'Matrix Example Chat',
+      builder: (context, child) => Provider<Client>(
+        create: (context) => client,
+        child: child,
+      ),
+      home: client.isLogged() ? const RoomListPage() : const LoginPage(),
+    );
+  }
+}
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({Key? key}) : super(key: key);
+
+  @override
+  _LoginPageState createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _homeserverTextField = TextEditingController(
+    text: 'matrix.org',
+  );
+  final TextEditingController _usernameTextField = TextEditingController();
+  final TextEditingController _passwordTextField = TextEditingController();
+
+  bool _loading = false;
+
+  void _login() async {
+    setState(() {
+      _loading = true;
+    });
+
+    try {
+      final client = Provider.of<Client>(context, listen: false);
+      await client
+          .checkHomeserver(Uri.https(_homeserverTextField.text.trim(), ''));
+      await client.login(
+        LoginType.mLoginPassword,
+        password: _passwordTextField.text,
+        identifier: AuthenticationUserIdentifier(user: _usernameTextField.text),
+      );
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const RoomListPage()),
+        (route) => false,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+        ),
+      );
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Login')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _homeserverTextField,
+              readOnly: _loading,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                prefixText: 'https://',
+                border: OutlineInputBorder(),
+                labelText: 'Homeserver',
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _usernameTextField,
+              readOnly: _loading,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Username',
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _passwordTextField,
+              readOnly: _loading,
+              autocorrect: false,
+              obscureText: true,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Password',
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _loading ? null : _login,
+                child: _loading
+                    ? const LinearProgressIndicator()
+                    : const Text('Login'),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class LoginView extends StatefulWidget {
+class RoomListPage extends StatefulWidget {
+  const RoomListPage({Key? key}) : super(key: key);
+
   @override
-  _LoginViewState createState() => _LoginViewState();
+  _RoomListPageState createState() => _RoomListPageState();
 }
 
-class _LoginViewState extends State<LoginView> {
-  final TextEditingController _usernameController = TextEditingController(),
-      _passwordController = TextEditingController(),
-      _domainController = TextEditingController();
-
-  String _errorText;
-
-  bool _isLoading = false;
-
-  void _loginAction(Client client) async {
-    setState(() {
-      _errorText = null;
-      _isLoading = true;
-    });
-    try {
-      await client.checkHomeserver(_domainController.text);
-      await client.login(
-        user: _usernameController.text,
-        password: _passwordController.text,
-      );
-    } catch (e) {
-      setState(() => _errorText = e.toString());
-    }
-    setState(() => _isLoading = false);
+class _RoomListPageState extends State<RoomListPage> {
+  void _logout() async {
+    final client = Provider.of<Client>(context, listen: false);
+    await client.logout();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final client = Provider.of<Client>(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Famedly SDK Example App'),
-      ),
-      body: ListView(
-        padding: EdgeInsets.all(16),
-        children: [
-          TextField(
-            controller: _usernameController,
-            readOnly: _isLoading,
-            autocorrect: false,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(),
-              labelText: 'Username',
-            ),
-          ),
-          SizedBox(height: 16),
-          TextField(
-            controller: _passwordController,
-            readOnly: _isLoading,
-            autocorrect: false,
-            obscureText: true,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(),
-              labelText: 'Password',
-            ),
-          ),
-          SizedBox(height: 16),
-          TextField(
-            controller: _domainController,
-            readOnly: _isLoading,
-            autocorrect: false,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(),
-              labelText: 'Password',
-              hintText: 'https://matrix.org',
-              errorText: _errorText,
-              errorMaxLines: 4,
-            ),
-          ),
-          SizedBox(height: 16),
-          RaisedButton(
-            child: _isLoading ? LinearProgressIndicator() : Text('Login'),
-            onPressed: _isLoading ? null : () => _loginAction(client),
-          ),
-        ],
+  void _join(Room room) async {
+    if (room.membership != Membership.join) {
+      await room.join();
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RoomPage(room: room),
       ),
     );
   }
-}
 
-class ChatListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final client = Provider.of<Client>(context);
+    final client = Provider.of<Client>(context, listen: false);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chats'),
+        title: const Text('Chats'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _logout,
+          ),
+        ],
       ),
       body: StreamBuilder(
         stream: client.onSync.stream,
         builder: (context, _) => ListView.builder(
           itemCount: client.rooms.length,
-          itemBuilder: (BuildContext context, int i) => ListTile(
+          itemBuilder: (context, i) => ListTile(
             leading: CircleAvatar(
-              backgroundImage: client.rooms[i].avatar == null
+              foregroundImage: client.rooms[i].avatar == null
                   ? null
-                  : NetworkImage(
-                      client.rooms[i].avatar.getThumbnail(
+                  : NetworkImage(client.rooms[i].avatar!
+                      .getThumbnail(
                         client,
-                        width: 64,
-                        height: 64,
-                      ),
-                    ),
+                        width: 56,
+                        height: 56,
+                      )
+                      .toString()),
             ),
-            title: Text(client.rooms[i].displayname),
-            subtitle: Text(client.rooms[i].lastMessage),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => ChatView(roomId: client.rooms[i].id),
-              ),
+            title: Row(
+              children: [
+                Expanded(child: Text(client.rooms[i].displayname)),
+                if (client.rooms[i].notificationCount > 0)
+                  Material(
+                      borderRadius: BorderRadius.circular(99),
+                      color: Colors.red,
+                      child: Padding(
+                        padding: const EdgeInsets.all(2.0),
+                        child:
+                            Text(client.rooms[i].notificationCount.toString()),
+                      ))
+              ],
             ),
+            subtitle: Text(
+              client.rooms[i].lastEvent?.body ?? 'No messages',
+              maxLines: 1,
+            ),
+            onTap: () => _join(client.rooms[i]),
           ),
         ),
       ),
@@ -156,77 +221,128 @@ class ChatListView extends StatelessWidget {
   }
 }
 
-class ChatView extends StatelessWidget {
-  final String roomId;
+class RoomPage extends StatefulWidget {
+  final Room room;
+  const RoomPage({required this.room, Key? key}) : super(key: key);
 
-  const ChatView({Key key, @required this.roomId}) : super(key: key);
+  @override
+  _RoomPageState createState() => _RoomPageState();
+}
+
+class _RoomPageState extends State<RoomPage> {
+  late final Future<Timeline> _timelineFuture;
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+  int _count = 0;
+
+  @override
+  void initState() {
+    _timelineFuture = widget.room.getTimeline(onChange: (i) {
+      print('on change! $i');
+      _listKey.currentState?.setState(() {});
+    }, onInsert: (i) {
+      print('on insert! $i');
+      _listKey.currentState?.insertItem(i);
+      _count++;
+    }, onRemove: (i) {
+      print('On remove $i');
+      _count--;
+      _listKey.currentState?.removeItem(i, (_, __) => const ListTile());
+    }, onHistoryReceived: (count) {
+      print('On History Received $count');
+      for (var i = 0; i < count; i++) {
+        _listKey.currentState?.insertItem(_count + i);
+      }
+      _count += count;
+    });
+    super.initState();
+  }
+
+  final TextEditingController _sendController = TextEditingController();
+
+  void _send() {
+    widget.room.sendTextEvent(_sendController.text.trim());
+    _sendController.clear();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final client = Provider.of<Client>(context);
-    final TextEditingController _sendController = TextEditingController();
-    return StreamBuilder<Object>(
-        stream: client.onSync.stream,
-        builder: (context, _) {
-          final room = client.getRoomById(roomId);
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(room.displayname),
-            ),
-            body: SafeArea(
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.room.displayname),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
               child: FutureBuilder<Timeline>(
-                future: room.getTimeline(),
-                builder:
-                    (BuildContext context, AsyncSnapshot<Timeline> snapshot) {
-                  if (!snapshot.hasData) {
-                    return Center(child: CircularProgressIndicator());
-                  }
+                future: _timelineFuture,
+                builder: (context, snapshot) {
                   final timeline = snapshot.data;
+                  if (timeline == null) {
+                    return const Center(
+                      child: CircularProgressIndicator.adaptive(),
+                    );
+                  }
+                  _count = timeline.events.length;
                   return Column(
                     children: [
-                      Expanded(
-                        child: ListView.builder(
-                          reverse: true,
-                          itemCount: timeline.events.length,
-                          itemBuilder: (BuildContext context, int i) {
-                            final event = timeline.events[i];
-                            final sender = event.sender;
-                            return ListTile(
-                              leading: CircleAvatar(
-                                backgroundImage: sender.avatarUrl == null
-                                    ? null
-                                    : NetworkImage(
-                                        sender.avatarUrl.getThumbnail(
-                                          client,
-                                          width: 64,
-                                          height: 64,
-                                        ),
-                                      ),
-                              ),
-                              title: Text(sender.calcDisplayname()),
-                              subtitle: Text(event.body),
-                            );
-                          },
-                        ),
+                      Center(
+                        child: TextButton(
+                            onPressed: timeline.requestHistory,
+                            child: const Text('Load more...')),
                       ),
-                      Divider(height: 1),
-                      Container(
-                        height: 56,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _sendController,
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.send),
-                              onPressed: () {
-                                room.sendTextEvent(_sendController.text);
-                                _sendController.clear();
-                              },
-                            ),
-                          ],
+                      const Divider(height: 1),
+                      Expanded(
+                        child: AnimatedList(
+                          key: _listKey,
+                          reverse: true,
+                          initialItemCount: timeline.events.length,
+                          itemBuilder: (context, i, animation) => timeline
+                                      .events[i].relationshipEventId !=
+                                  null
+                              ? Container()
+                              : ScaleTransition(
+                                  scale: animation,
+                                  child: Opacity(
+                                    opacity: timeline.events[i].status.isSent
+                                        ? 1
+                                        : 0.5,
+                                    child: ListTile(
+                                      leading: CircleAvatar(
+                                        foregroundImage: timeline.events[i]
+                                                    .sender.avatarUrl ==
+                                                null
+                                            ? null
+                                            : NetworkImage(timeline
+                                                .events[i].sender.avatarUrl!
+                                                .getThumbnail(
+                                                  widget.room.client,
+                                                  width: 56,
+                                                  height: 56,
+                                                )
+                                                .toString()),
+                                      ),
+                                      title: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(timeline
+                                                .events[i].sender
+                                                .calcDisplayname()),
+                                          ),
+                                          Text(
+                                            timeline.events[i].originServerTs
+                                                .toIso8601String(),
+                                            style:
+                                                const TextStyle(fontSize: 10),
+                                          ),
+                                        ],
+                                      ),
+                                      subtitle: Text(timeline.events[i]
+                                          .getDisplayEvent(timeline)
+                                          .body),
+                                    ),
+                                  ),
+                                ),
                         ),
                       ),
                     ],
@@ -234,7 +350,28 @@ class ChatView extends StatelessWidget {
                 },
               ),
             ),
-          );
-        });
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                      child: TextField(
+                    controller: _sendController,
+                    decoration: const InputDecoration(
+                      hintText: 'Send message',
+                    ),
+                  )),
+                  IconButton(
+                    icon: const Icon(Icons.send_outlined),
+                    onPressed: _send,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

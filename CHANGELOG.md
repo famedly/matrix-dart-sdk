@@ -1,3 +1,9 @@
+## [0.8.1] - 03nd Feb 2022
+- refactor: Implement on history received in timeline
+- fix: null-safety issues with widgets
+- fix: Trigger onChange for index on aggregation event update
+- feat: implement to get a room's widgets
+
 ## [0.8.0] - 25nd Jan 2022
 - BREAKING CHANGE: high-level hadling of image sizes
 - feat: expose Timeline.onChange to Room.getTimeline
