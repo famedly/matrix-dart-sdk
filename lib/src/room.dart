@@ -983,7 +983,8 @@ class Room {
   /// Request more previous events from the server. [historyCount] defines how much events should
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
   /// the historical events will be published in the onEvent stream.
-  Future<void> requestHistory(
+  /// Returns the actual count of received timeline events.
+  Future<int> requestHistory(
       {int historyCount = defaultHistoryCount,
       void Function()? onHistoryReceived}) async {
     final prev_batch = this.prev_batch;
@@ -1044,6 +1045,8 @@ class Room {
     } else {
       await loadFn();
     }
+
+    return resp.chunk?.length ?? 0;
   }
 
   /// Sets this room as a direct chat for this user if not already.
@@ -1131,12 +1134,13 @@ class Room {
   /// Creates a timeline from the store. Returns a [Timeline] object. If you
   /// just want to update the whole timeline on every change, use the [onUpdate]
   /// callback. For updating only the parts that have changed, use the
-  /// [onChange], [onRemove] and the [onInsert] callbacks.
+  /// [onChange], [onRemove], [onInsert] and the [onHistoryReceived] callbacks.
   Future<Timeline> getTimeline({
     void Function(int index)? onChange,
     void Function(int index)? onRemove,
     void Function(int insertID)? onInsert,
     void Function()? onUpdate,
+    void Function(int count)? onHistoryReceived,
   }) async {
     await postLoad();
     var events;
@@ -1166,6 +1170,7 @@ class Room {
       onRemove: onRemove,
       onInsert: onInsert,
       onUpdate: onUpdate,
+      onHistoryReceived: onHistoryReceived,
     );
     if (client.database == null) {
       await requestHistory(historyCount: 10);

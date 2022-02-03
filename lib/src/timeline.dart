@@ -36,6 +36,7 @@ class Timeline {
   final void Function(int index)? onChange;
   final void Function(int index)? onInsert;
   final void Function(int index)? onRemove;
+  final void Function(int count)? onHistoryReceived;
 
   StreamSubscription<EventUpdate>? sub;
   StreamSubscription<SyncUpdate>? roomSub;
@@ -86,19 +87,16 @@ class Timeline {
       );
       if (eventsFromStore != null && eventsFromStore.isNotEmpty) {
         events.addAll(eventsFromStore);
-        final startIndex = events.length - eventsFromStore.length;
-        final endIndex = events.length;
-        for (var i = startIndex; i < endIndex; i++) {
-          onInsert?.call(i);
-        }
+        onHistoryReceived?.call(eventsFromStore.length);
       } else {
         Logs().v('No more events found in the store. Request from server...');
-        await room.requestHistory(
+        final count = await room.requestHistory(
           historyCount: historyCount,
           onHistoryReceived: () {
             _collectHistoryUpdates = true;
           },
         );
+        onHistoryReceived?.call(count);
       }
     } finally {
       _collectHistoryUpdates = false;
@@ -114,6 +112,7 @@ class Timeline {
     this.onChange,
     this.onInsert,
     this.onRemove,
+    this.onHistoryReceived,
   }) : events = events ?? [] {
     sub = room.client.onEvent.stream.listen(_handleEventUpdate);
 
@@ -331,11 +330,10 @@ class Timeline {
           } else {
             index = events.firstIndexWhereNotError;
             events.insert(index, newEvent);
+            onInsert?.call(index);
           }
 
           addAggregatedEvent(newEvent);
-
-          onInsert?.call(index);
         }
       }
       if (update && !_collectHistoryUpdates) {
