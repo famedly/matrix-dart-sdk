@@ -1,3 +1,7 @@
+## [0.8.2] - 04nd Feb 2022
+- fix: Add redaction events to timeline
+- fix: Resize image with compute by using const class arguments
+
 ## [0.8.1] - 03nd Feb 2022
 - refactor: Implement on history received in timeline
 - fix: null-safety issues with widgets
