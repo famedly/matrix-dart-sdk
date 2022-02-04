@@ -286,7 +286,8 @@ class Timeline {
           ));
           onChange?.call(index);
         }
-      } else if (status.isRemoved) {
+      }
+      if (status.isRemoved) {
         final i = _findEvent(event_id: eventUpdate.content['event_id']);
         if (i < events.length) {
           removeAggregatedEvent(events[i]);
