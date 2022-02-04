@@ -86,9 +86,14 @@ class MatrixImageFile extends MatrixFile {
       Future<T> Function<T, U>(FutureOr<T> Function(U arg) function, U arg)?
           compute}) async {
     Image? image;
+    final arguments = _ResizeArguments(
+      bytes: bytes,
+      maxDimension: maxDimension,
+      fileName: name,
+    );
     final resizedData = compute != null
-        ? await compute(_resize, [bytes, maxDimension])
-        : _resize([bytes, maxDimension, name]);
+        ? await compute(_resize, arguments)
+        : _resize(arguments);
 
     if (resizedData == null) {
       return MatrixImageFile(bytes: bytes, name: name, mimeType: mimeType);
@@ -166,20 +171,29 @@ class MatrixImageFile extends MatrixFile {
     return thumbnailFile;
   }
 
-  static Uint8List? _resize(List<dynamic> arguments) {
-    final bytes = arguments[0] as Uint8List;
-    final maxDimension = arguments[1] as int;
-    final fileName = arguments[2] as String;
-    final image = decodeImage(bytes);
+  static Uint8List? _resize(_ResizeArguments arguments) {
+    final image = decodeImage(arguments.bytes);
 
     final resized = copyResize(image!,
-        height: image.height > image.width ? maxDimension : null,
-        width: image.width >= image.height ? maxDimension : null);
+        height: image.height > image.width ? arguments.maxDimension : null,
+        width: image.width >= image.height ? arguments.maxDimension : null);
 
-    final encoded = encodeNamedImage(resized, fileName);
+    final encoded = encodeNamedImage(resized, arguments.fileName);
     if (encoded == null) return null;
     return Uint8List.fromList(encoded);
   }
+}
+
+class _ResizeArguments {
+  final Uint8List bytes;
+  final int maxDimension;
+  final String fileName;
+
+  const _ResizeArguments({
+    required this.bytes,
+    required this.maxDimension,
+    required this.fileName,
+  });
 }
 
 class MatrixVideoFile extends MatrixFile {
