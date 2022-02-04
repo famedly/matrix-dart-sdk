@@ -31,7 +31,7 @@ dependencies:
   fluffybox: ^0.4.2
 
 dev_dependencies:
-  dart_code_metrics: 4.4.0 # Pinned because of https://github.com/dart-code-checker/dart-code-metrics/issues/674
+  dart_code_metrics: ^4.10.1
   pedantic: ^1.11.0
   test: ^1.15.7
   coverage: ">=0.15.0 <2.0.0"

@@ -88,7 +88,7 @@ code_quality:
   stage: coverage
   image: google/dart
   before_script:
-    - dart pub global activate dart_code_metrics 4.4.0
+    - dart pub global activate dart_code_metrics
   script:
     - dart pub global run dart_code_metrics:metrics lib -r gitlab > code-quality-report.json
   artifacts:
