@@ -1140,7 +1140,6 @@ class Room {
     void Function(int index)? onRemove,
     void Function(int insertID)? onInsert,
     void Function()? onUpdate,
-    void Function(int count)? onHistoryReceived,
   }) async {
     await postLoad();
     var events;
@@ -1170,7 +1169,6 @@ class Room {
       onRemove: onRemove,
       onInsert: onInsert,
       onUpdate: onUpdate,
-      onHistoryReceived: onHistoryReceived,
     );
     if (client.database == null) {
       await requestHistory(historyCount: 10);

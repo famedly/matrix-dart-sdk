@@ -36,7 +36,6 @@ class Timeline {
   final void Function(int index)? onChange;
   final void Function(int index)? onInsert;
   final void Function(int index)? onRemove;
-  final void Function(int count)? onHistoryReceived;
 
   StreamSubscription<EventUpdate>? sub;
   StreamSubscription<SyncUpdate>? roomSub;
@@ -87,16 +86,19 @@ class Timeline {
       );
       if (eventsFromStore != null && eventsFromStore.isNotEmpty) {
         events.addAll(eventsFromStore);
-        onHistoryReceived?.call(eventsFromStore.length);
+        final startIndex = events.length - eventsFromStore.length;
+        final endIndex = events.length;
+        for (var i = startIndex; i < endIndex; i++) {
+          onInsert?.call(i);
+        }
       } else {
         Logs().v('No more events found in the store. Request from server...');
-        final count = await room.requestHistory(
+        await room.requestHistory(
           historyCount: historyCount,
           onHistoryReceived: () {
             _collectHistoryUpdates = true;
           },
         );
-        onHistoryReceived?.call(count);
       }
     } finally {
       _collectHistoryUpdates = false;
@@ -112,7 +114,6 @@ class Timeline {
     this.onChange,
     this.onInsert,
     this.onRemove,
-    this.onHistoryReceived,
   }) : events = events ?? [] {
     sub = room.client.onEvent.stream.listen(_handleEventUpdate);
 
@@ -260,6 +261,13 @@ class Timeline {
         _removeEventFromSet(events, event);
       }
     }
+    if (onChange != null) {
+      final relationshipEventId = event.relationshipEventId;
+      if (relationshipEventId != null) {
+        final index = _findEvent(event_id: relationshipEventId);
+        onChange?.call(index);
+      }
+    }
   }
 
   void _handleEventUpdate(EventUpdate eventUpdate, {bool update = true}) {
@@ -331,8 +339,8 @@ class Timeline {
           } else {
             index = events.firstIndexWhereNotError;
             events.insert(index, newEvent);
-            onInsert?.call(index);
           }
+          onInsert?.call(index);
 
           addAggregatedEvent(newEvent);
         }
