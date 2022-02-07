@@ -260,6 +260,13 @@ class Timeline {
         _removeEventFromSet(events, event);
       }
     }
+    if (onChange != null) {
+      final relationshipEventId = event.relationshipEventId;
+      if (relationshipEventId != null) {
+        final index = _findEvent(event_id: relationshipEventId);
+        onChange?.call(index);
+      }
+    }
   }
 
   void _handleEventUpdate(EventUpdate eventUpdate, {bool update = true}) {
