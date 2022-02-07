@@ -1,3 +1,7 @@
+## [0.8.3] - 07nd Feb 2022
+- fix: Remove onHistoryReceived which was broken anyway
+- fix: Remove aggregation event doesnt trigger onChange
+
 ## [0.8.2] - 04nd Feb 2022
 - fix: Add redaction events to timeline
 - fix: Resize image with compute by using const class arguments
