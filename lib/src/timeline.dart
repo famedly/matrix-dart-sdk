@@ -261,13 +261,6 @@ class Timeline {
         _removeEventFromSet(events, event);
       }
     }
-    if (onChange != null) {
-      final relationshipEventId = event.relationshipEventId;
-      if (relationshipEventId != null) {
-        final index = _findEvent(event_id: relationshipEventId);
-        onChange?.call(index);
-      }
-    }
   }
 
   void _handleEventUpdate(EventUpdate eventUpdate, {bool update = true}) {
@@ -283,18 +276,7 @@ class Timeline {
               ? eventUpdate.content['unsigned'][messageSendingStatusKey]
               : null) ??
           EventStatus.synced.intValue);
-      // Redaction events are handled as modification for existing events.
-      if (eventUpdate.content['type'] == EventTypes.Redaction) {
-        final index = _findEvent(event_id: eventUpdate.content['redacts']);
-        if (index < events.length) {
-          removeAggregatedEvent(events[index]);
-          events[index].setRedactionEvent(Event.fromJson(
-            eventUpdate.content,
-            room,
-          ));
-          onChange?.call(index);
-        }
-      }
+
       if (status.isRemoved) {
         final i = _findEvent(event_id: eventUpdate.content['event_id']);
         if (i < events.length) {
@@ -345,6 +327,30 @@ class Timeline {
           addAggregatedEvent(newEvent);
         }
       }
+
+      // Handle redaction events
+      if (eventUpdate.content['type'] == EventTypes.Redaction) {
+        final index = _findEvent(event_id: eventUpdate.content['redacts']);
+        if (index < events.length) {
+          removeAggregatedEvent(events[index]);
+
+          // Is the redacted event a reaction? Then update the event this
+          // belongs to:
+          if (onChange != null) {
+            final relationshipEventId = events[index].relationshipEventId;
+            if (relationshipEventId != null) {
+              onChange?.call(_findEvent(event_id: relationshipEventId));
+            }
+          }
+
+          events[index].setRedactionEvent(Event.fromJson(
+            eventUpdate.content,
+            room,
+          ));
+          onChange?.call(index);
+        }
+      }
+
       if (update && !_collectHistoryUpdates) {
         onUpdate?.call();
       }
