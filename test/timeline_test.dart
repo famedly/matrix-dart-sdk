@@ -146,7 +146,7 @@ void main() {
       expect(updateCount, 3);
       expect(insertList, [0, 0, 0]);
       expect(insertList.length, timeline.events.length);
-      expect(changeList, [1]);
+      expect(changeList, [2]);
       expect(removeList, []);
       expect(timeline.events.length, 3);
       expect(timeline.events[2].redacted, true);
@@ -215,7 +215,7 @@ void main() {
       expect(updateCount, 13);
       expect(insertList, [0, 0, 0, 0, 0, 0, 1, 2]);
       expect(insertList.length, timeline.events.length);
-      expect(changeList, [1, 0, 0, 0, 1, 2]);
+      expect(changeList, [2, 0, 0, 0, 1, 2]);
       expect(removeList, []);
       expect(timeline.events[0].status, EventStatus.error);
       expect(timeline.events[1].status, EventStatus.error);
@@ -230,7 +230,7 @@ void main() {
       expect(updateCount, 14);
 
       expect(insertList, [0, 0, 0, 0, 0, 0, 1, 2]);
-      expect(changeList, [1, 0, 0, 0, 1, 2]);
+      expect(changeList, [2, 0, 0, 0, 1, 2]);
       expect(removeList, [0]);
       expect(timeline.events.length, 7);
       expect(timeline.events[0].status, EventStatus.error);
@@ -277,7 +277,7 @@ void main() {
       expect(updateCount, 17);
 
       expect(insertList, [0, 0, 0, 0, 0, 0, 1, 2, 0]);
-      expect(changeList, [1, 0, 0, 0, 1, 2, 0, 0]);
+      expect(changeList, [2, 0, 0, 0, 1, 2, 0, 0]);
       expect(removeList, [0]);
       expect(timeline.events.length, 1);
       expect(timeline.events[0].status, EventStatus.sent);

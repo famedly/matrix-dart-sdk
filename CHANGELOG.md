@@ -1,3 +1,6 @@
+## [0.8.4] - 08nd Feb 2022
+- fix: Call onChange correctly on redacted aggregation events
+
 ## [0.8.3] - 07nd Feb 2022
 - fix: Remove onHistoryReceived which was broken anyway
 - fix: Remove aggregation event doesnt trigger onChange
