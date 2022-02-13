@@ -374,12 +374,13 @@ class Room {
   List<MatrixWidget> get widgets => {
         ...states['m.widget'] ?? {},
         ...states['im.vector.modular.widgets'] ?? {},
-      }
-          .values
-          .map(
-            (e) => MatrixWidget.fromJson(e.content, this),
-          )
-          .toList();
+      }.values.expand((e) {
+        try {
+          return [MatrixWidget.fromJson(e.content, this)];
+        } catch (_) {
+          return <MatrixWidget>[];
+        }
+      }).toList();
 
   /// Your current client instance.
   final Client client;
