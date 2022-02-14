@@ -225,7 +225,7 @@ class Room {
   /// list.
   List<String> get pinnedEventIds {
     final pinned = getState(EventTypes.RoomPinnedEvents)?.content['pinned'];
-    return pinned is List<String> ? pinned : [];
+    return pinned is Iterable ? pinned.map((e) => e.toString()).toList() : [];
   }
 
   /// Returns a localized displayname for this server. If the room is a groupchat
