@@ -1,3 +1,7 @@
+## [0.8.6] - 14nd Feb 2022
+- feat: Add hasNewMessages flag to room
+- fix: Sort rooms after updating the UI on web
+
 ## [0.8.5] - 14nd Feb 2022
 - fix: exception on removed widgets
 - fix: Fix black screen when end screensharing with system buttons.

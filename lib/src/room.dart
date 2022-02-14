@@ -511,7 +511,16 @@ class Room {
         .unread;
   }
 
-  /// Returns true if this room is unread
+  /// Checks if the last event has a read marker of the user.
+  bool get hasNewMessages {
+    final lastEvent = this.lastEvent;
+    return lastEvent != null &&
+        !lastEvent.receipts
+            .any((receipt) => receipt.user.senderId == client.userID!);
+  }
+
+  /// Returns true if this room is unread. To check if there are new messages
+  /// in muted rooms, use [hasNewMessages].
   bool get isUnread => notificationCount > 0 || markedUnread;
 
   @Deprecated('Use [markUnread] instead')
