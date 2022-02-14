@@ -1,3 +1,6 @@
+## [0.8.7] - 14nd Feb 2022
+- fix: Show reactions as last events and refactor hasNewMessage
+
 ## [0.8.6] - 14nd Feb 2022
 - feat: Add hasNewMessages flag to room
 - fix: Sort rooms after updating the UI on web

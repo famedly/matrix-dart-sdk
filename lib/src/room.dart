@@ -167,11 +167,7 @@ class Room {
       return;
     }
 
-    final isMessageEvent = [
-      EventTypes.Message,
-      EventTypes.Sticker,
-      EventTypes.Encrypted,
-    ].contains(state.type);
+    final isMessageEvent = client.roomPreviewLastEvents.contains(state.type);
 
     // We ignore events editing events older than the current-latest here so
     // i.e. newly sent edits for older events don't show up in room preview
@@ -514,9 +510,19 @@ class Room {
   /// Checks if the last event has a read marker of the user.
   bool get hasNewMessages {
     final lastEvent = this.lastEvent;
-    return lastEvent != null &&
-        !lastEvent.receipts
-            .any((receipt) => receipt.user.senderId == client.userID!);
+
+    // There is no known event or the last event is only a state fallback event,
+    // we assume there is no new messages.
+    if (lastEvent == null ||
+        !client.roomPreviewLastEvents.contains(lastEvent.type)) return false;
+
+    // Read marker is on the last event so no new messages.
+    if (lastEvent.receipts
+        .any((receipt) => receipt.user.senderId == client.userID!)) {
+      return false;
+    }
+
+    return true;
   }
 
   /// Returns true if this room is unread. To check if there are new messages

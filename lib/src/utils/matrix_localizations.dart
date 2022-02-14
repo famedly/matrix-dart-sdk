@@ -122,6 +122,8 @@ abstract class MatrixLocalizations {
 
   String sentAVideo(String senderName);
 
+  String sentReaction(String senderName, String reactionKey);
+
   String sharedTheLocation(String senderName);
 
   String couldNotDecryptMessage(String errorText);

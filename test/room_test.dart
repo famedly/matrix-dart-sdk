@@ -258,6 +258,26 @@ void main() {
       expect(room.lastEvent?.eventId, '5');
       expect(room.lastEvent?.body, 'edited cdc');
       expect(room.lastEvent?.status, EventStatus.sent);
+      // Are reactions coming through?
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: EventTypes.Reaction,
+          room: room,
+          eventId: '123456',
+          originServerTs: DateTime.now(),
+          content: {
+            'm.relates_to': {
+              'rel_type': RelationshipTypes.reaction,
+              'event_id': '1234',
+              'key': ':-)',
+            }
+          },
+          stateKey: '',
+        ),
+      );
+      expect(room.lastEvent?.eventId, '123456');
+      expect(room.lastEvent?.type, EventTypes.Reaction);
     });
     test('lastEvent when reply parent edited', () async {
       room.setState(

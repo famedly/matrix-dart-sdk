@@ -225,4 +225,9 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
   String startedACall(String senderName) {
     return 'startedACall';
   }
+
+  @override
+  String sentReaction(String senderName, String reactionKey) {
+    return '$senderName reacted with $reactionKey';
+  }
 }
