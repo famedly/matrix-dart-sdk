@@ -5,7 +5,7 @@ class MatrixWidget {
   final String? creatorUserId;
   final Map<String, dynamic>? data;
   final String? id;
-  final String name;
+  final String? name;
   final String type;
 
   /// use [buildWidgetUrl] instead
