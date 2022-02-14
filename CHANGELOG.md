@@ -1,3 +1,7 @@
+## [0.8.5] - 14nd Feb 2022
+- fix: exception on removed widgets
+- fix: Fix black screen when end screensharing with system buttons.
+
 ## [0.8.4] - 08nd Feb 2022
 - fix: Call onChange correctly on redacted aggregation events
 
