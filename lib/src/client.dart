@@ -1260,6 +1260,7 @@ class Client extends MatrixApi {
           () async => await _currentTransaction,
           syncResp.itemCount,
         );
+        _sortRooms();
         onSyncStatus.add(SyncStatusUpdate(SyncStatus.cleaningUp));
       } else {
         await _handleSync(syncResp);
@@ -1331,7 +1332,6 @@ class Client extends MatrixApi {
       if (leave != null) {
         await _handleRooms(leave, sortAtTheEnd: sortAtTheEnd);
       }
-      _sortRooms();
     }
     for (final newPresence in sync.presence ?? []) {
       presences[newPresence.senderId] = newPresence;
