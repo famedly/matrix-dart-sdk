@@ -213,7 +213,12 @@ abstract class EventLocalizations {
         _localizedBodyNormalMessage(event, i18n, body),
     EventTypes.Message: (event, i18n, body) =>
         _localizedBodyNormalMessage(event, i18n, body),
-    EventTypes.Reaction: (event, i18n, body) =>
-        _localizedBodyNormalMessage(event, i18n, body),
+    EventTypes.Reaction: (event, i18n, body) => i18n.sentReaction(
+          event.sender.calcDisplayname(),
+          event.content
+                  .tryGetMap<String, dynamic>('m.relates_to')
+                  ?.tryGet<String>('key') ??
+              body,
+        ),
   };
 }
