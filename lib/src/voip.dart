@@ -538,6 +538,11 @@ class CallSession {
         if (stream == null) {
           return false;
         }
+        stream.getVideoTracks().forEach((track) {
+          track.onEnded = () {
+            setScreensharingEnabled(false);
+          };
+        });
         _addLocalStream(stream, SDPStreamMetadataPurpose.Screenshare);
         return true;
       } catch (err) {
