@@ -508,6 +508,8 @@ class Room {
   }
 
   /// Checks if the last event has a read marker of the user.
+  /// Warning: This compares the origin server timestamp which might not map
+  /// to the real sort order of the timeline.
   bool get hasNewMessages {
     final lastEvent = this.lastEvent;
 
@@ -522,7 +524,13 @@ class Room {
       return false;
     }
 
-    return true;
+    final readAtMilliseconds = roomAccountData['m.receipt']
+            ?.content
+            .tryGetMap<String, dynamic>(client.userID!)
+            ?.tryGet<int>('ts') ??
+        0;
+
+    return readAtMilliseconds < lastEvent.originServerTs.millisecondsSinceEpoch;
   }
 
   /// Returns true if this room is unread. To check if there are new messages
