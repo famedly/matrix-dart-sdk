@@ -1,3 +1,7 @@
+## [0.8.8] - 14nd Feb 2022
+- fix: Has new messages compares ts
+- fix: handle dynamic content for pinned events
+
 ## [0.8.7] - 14nd Feb 2022
 - fix: Show reactions as last events and refactor hasNewMessage
 
