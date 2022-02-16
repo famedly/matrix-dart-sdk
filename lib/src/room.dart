@@ -524,12 +524,15 @@ class Room {
       return false;
     }
 
+    // If the last event is sent, we mark the room as read.
+    if (lastEvent.senderId == client.userID) return false;
+
+    // Get the timestamp of read marker and compare
     final readAtMilliseconds = roomAccountData['m.receipt']
             ?.content
             .tryGetMap<String, dynamic>(client.userID!)
             ?.tryGet<int>('ts') ??
         0;
-
     return readAtMilliseconds < lastEvent.originServerTs.millisecondsSinceEpoch;
   }
 
