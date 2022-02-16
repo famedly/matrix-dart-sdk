@@ -1,4 +1,9 @@
-## [0.8.8] - 14nd Feb 2022
+## [0.8.9] - 16nd Feb 2022
+- feat: Return homeserver summary on checkHomeserver
+- fix: hasNewMessage true when last event is sent
+- fix: Correctly end the call.
+
+## [0.8.8] - 15nd Feb 2022
 - fix: Has new messages compares ts
 - fix: handle dynamic content for pinned events
 
