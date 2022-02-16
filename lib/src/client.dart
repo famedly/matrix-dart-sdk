@@ -342,21 +342,11 @@ class Client extends MatrixApi {
     }
   }
 
-  @Deprecated('Use [checkHomeserver] instead.')
-  Future<bool> checkServer(dynamic serverUrl) async {
-    try {
-      await checkHomeserver(serverUrl);
-    } catch (_) {
-      return false;
-    }
-    return true;
-  }
-
   /// Checks the supported versions of the Matrix protocol and the supported
   /// login types. Throws an exception if the server is not compatible with the
   /// client and sets [homeserver] to [homeserverUrl] if it is. Supports the
   /// types `Uri` and `String`.
-  Future<DiscoveryInformation?> checkHomeserver(dynamic homeserverUrl,
+  Future<HomeserverSummary> checkHomeserver(dynamic homeserverUrl,
       {bool checkWellKnown = true}) async {
     try {
       var homeserver = this.homeserver =
@@ -389,7 +379,11 @@ class Client extends MatrixApi {
             loginTypes.map((f) => f.type ?? '').toSet(), supportedLoginTypes);
       }
 
-      return wellKnown;
+      return HomeserverSummary(
+        discoveryInformation: wellKnown,
+        versions: versions,
+        loginFlows: loginTypes,
+      );
     } catch (_) {
       homeserver = null;
       rethrow;
@@ -2533,4 +2527,16 @@ class BadServerLoginTypesException implements Exception {
   @override
   String toString() =>
       'Server supports the Login Types: ${serverLoginTypes.toString()} but this application is only compatible with ${supportedLoginTypes.toString()}.';
+}
+
+class HomeserverSummary {
+  final DiscoveryInformation? discoveryInformation;
+  final GetVersionsResponse versions;
+  final List<LoginFlow> loginFlows;
+
+  HomeserverSummary({
+    required this.discoveryInformation,
+    required this.versions,
+    required this.loginFlows,
+  });
 }
