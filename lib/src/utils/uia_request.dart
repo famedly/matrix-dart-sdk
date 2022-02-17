@@ -64,7 +64,9 @@ class UiaRequest<T> {
       return res;
     } on MatrixException catch (err) {
       if (err.session == null) {
-        rethrow;
+        error = err;
+        state = UiaRequestState.fail;
+        return null;
       }
       session ??= err.session;
       final completed = err.completedAuthenticationFlows;
@@ -72,7 +74,9 @@ class UiaRequest<T> {
       params = err.authenticationParams ?? <String, dynamic>{};
       nextStages = getNextStages(flows, completed);
       if (nextStages.isEmpty) {
-        rethrow;
+        error = err;
+        state = UiaRequestState.fail;
+        return null;
       }
       return null;
     } catch (err) {
