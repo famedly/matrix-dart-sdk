@@ -842,7 +842,7 @@ class Client extends MatrixApi {
   static const List<String> supportedGroupEncryptionAlgorithms = [
     AlgorithmTypes.megolmV1AesSha2
   ];
-  static const int defaultThumbnailSize = 256;
+  static const int defaultThumbnailSize = 800;
 
   /// The newEvent signal is the most important signal in this concept. Every time
   /// the app receives a new synchronization, this event is called for every signal
