@@ -1,3 +1,8 @@
+## [0.8.10] - 19nd Feb 2022
+- chore: Increase default thumbnail size to 800
+- fix: sortRooms should be triggered right before onSync is called
+- fix: UIA request stucks forever on unexpected matrixExceptions
+
 ## [0.8.9] - 16nd Feb 2022
 - feat: Return homeserver summary on checkHomeserver
 - fix: hasNewMessage true when last event is sent
