@@ -2232,9 +2232,8 @@ class Client extends MatrixApi {
       AuthenticationData? auth,
       bool? logoutDevices}) async {
     final userID = this.userID;
-    if (userID == null) return;
     try {
-      if (oldPassword != null) {
+      if (oldPassword != null && userID != null) {
         auth = AuthenticationPassword(
           identifier: AuthenticationUserIdentifier(user: userID),
           password: oldPassword,
@@ -2252,7 +2251,7 @@ class Client extends MatrixApi {
               false)) {
         rethrow;
       }
-      if (oldPassword == null) {
+      if (oldPassword == null || userID == null) {
         rethrow;
       }
       return changePassword(
