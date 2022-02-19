@@ -1,3 +1,6 @@
+## [0.8.11] - 19nd Feb 2022
+- fix: Change password using email authentication
+
 ## [0.8.10] - 19nd Feb 2022
 - chore: Increase default thumbnail size to 800
 - fix: sortRooms should be triggered right before onSync is called
