@@ -1255,7 +1255,6 @@ class Client extends MatrixApi {
           () async => await _currentTransaction,
           syncResp.itemCount,
         );
-        _sortRooms();
         onSyncStatus.add(SyncStatusUpdate(SyncStatus.cleaningUp));
       } else {
         await _handleSync(syncResp);
@@ -1349,6 +1348,7 @@ class Client extends MatrixApi {
       encryption?.handleDeviceOneTimeKeysCount(
           sync.deviceOneTimeKeysCount, sync.deviceUnusedFallbackKeyTypes);
     }
+    _sortRooms();
     onSync.add(sync);
   }
 
