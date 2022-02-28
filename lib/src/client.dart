@@ -1744,7 +1744,7 @@ class Client extends MatrixApi {
               .compareTo(a.timeCreated.millisecondsSinceEpoch);
 
   void _sortRooms() {
-    if (prevBatch == null || _sortLock || rooms.length < 2) return;
+    if (_sortLock || rooms.length < 2) return;
     _sortLock = true;
     rooms.sort(sortRoomsBy);
     _sortLock = false;
