@@ -1,3 +1,7 @@
+## [0.8.12] - 02nd Mar 2022
+- fix: Rooms sort order after login
+- fix: Change password using email authentication
+
 ## [0.8.11] - 19nd Feb 2022
 - fix: Change password using email authentication
 
