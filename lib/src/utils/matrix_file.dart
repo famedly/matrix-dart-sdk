@@ -28,9 +28,9 @@ import 'package:mime/mime.dart';
 import '../../matrix.dart';
 
 class MatrixFile {
-  Uint8List bytes;
-  String name;
-  String mimeType;
+  final Uint8List bytes;
+  final String name;
+  final String mimeType;
 
   /// Encrypts this file and returns the
   /// encryption information as an [EncryptedFile].
@@ -66,13 +66,35 @@ class MatrixFile {
 }
 
 class MatrixImageFile extends MatrixFile {
-  Image? _image;
-
   MatrixImageFile({
     required Uint8List bytes,
     required String name,
     String? mimeType,
+    this.width,
+    this.height,
+    this.blurhash,
   }) : super(bytes: bytes, name: name, mimeType: mimeType);
+
+  /// Creates a new image file and calculates the width, height and blurhash.
+  static Future<MatrixImageFile> create(
+      {required Uint8List bytes,
+      required String name,
+      String? mimeType,
+      Future<T> Function<T, U>(FutureOr<T> Function(U arg) function, U arg)?
+          compute}) async {
+    final metaData = compute != null
+        ? await compute(_calcMetadata, bytes)
+        : _calcMetadata(bytes);
+
+    return MatrixImageFile(
+      bytes: metaData?.bytes ?? bytes,
+      name: name,
+      mimeType: mimeType,
+      width: metaData?.width,
+      height: metaData?.height,
+      blurhash: metaData?.blurhash,
+    );
+  }
 
   /// builds a [MatrixImageFile] and shrinks it in order to reduce traffic
   ///
@@ -85,11 +107,11 @@ class MatrixImageFile extends MatrixFile {
       String? mimeType,
       Future<T> Function<T, U>(FutureOr<T> Function(U arg) function, U arg)?
           compute}) async {
-    Image? image;
     final arguments = _ResizeArguments(
       bytes: bytes,
       maxDimension: maxDimension,
       fileName: name,
+      calcBlurhash: true,
     );
     final resizedData = compute != null
         ? await compute(_resize, arguments)
@@ -98,48 +120,26 @@ class MatrixImageFile extends MatrixFile {
     if (resizedData == null) {
       return MatrixImageFile(bytes: bytes, name: name, mimeType: mimeType);
     }
-    image = decodeImage(resizedData);
-
-    if (image == null) {
-      return MatrixImageFile(bytes: bytes, name: name, mimeType: mimeType);
-    }
-
-    final encoded = encodeNamedImage(image, name);
-    if (encoded == null) {
-      return MatrixImageFile(bytes: bytes, name: name, mimeType: mimeType);
-    }
 
     final thumbnailFile = MatrixImageFile(
-      bytes: Uint8List.fromList(encoded),
+      bytes: resizedData.bytes,
       name: name,
       mimeType: mimeType,
+      width: resizedData.width,
+      height: resizedData.height,
+      blurhash: resizedData.blurhash,
     );
-    // preserving the previously generated image
-    thumbnailFile._image = image;
     return thumbnailFile;
   }
 
   /// returns the width of the image
-  int? get width {
-    _image ??= decodeImage(bytes);
-    return _image?.width;
-  }
+  final int? width;
 
   /// returns the height of the image
-  int? get height {
-    _image ??= decodeImage(bytes);
-    return _image?.height;
-  }
+  final int? height;
 
   /// generates the blur hash for the image
-  String? get blurhash {
-    _image ??= decodeImage(bytes)!;
-    if (_image != null) {
-      final blur = BlurHash.encode(_image!, numCompX: 4, numCompY: 3);
-      return blur.hash;
-    }
-    return null;
-  }
+  final String? blurhash;
 
   @override
   String get msgType => 'm.image';
@@ -171,7 +171,23 @@ class MatrixImageFile extends MatrixFile {
     return thumbnailFile;
   }
 
-  static Uint8List? _resize(_ResizeArguments arguments) {
+  static _ResizedResponse? _calcMetadata(Uint8List bytes) {
+    final image = decodeImage(bytes);
+    if (image == null) return null;
+
+    return _ResizedResponse(
+      bytes: bytes,
+      width: image.width,
+      height: image.height,
+      blurhash: BlurHash.encode(
+        image,
+        numCompX: 4,
+        numCompY: 3,
+      ).hash,
+    );
+  }
+
+  static _ResizedResponse? _resize(_ResizeArguments arguments) {
     final image = decodeImage(arguments.bytes);
 
     final resized = copyResize(image!,
@@ -180,26 +196,54 @@ class MatrixImageFile extends MatrixFile {
 
     final encoded = encodeNamedImage(resized, arguments.fileName);
     if (encoded == null) return null;
-    return Uint8List.fromList(encoded);
+    final bytes = Uint8List.fromList(encoded);
+    return _ResizedResponse(
+      bytes: bytes,
+      width: resized.width,
+      height: resized.height,
+      blurhash: arguments.calcBlurhash
+          ? BlurHash.encode(
+              resized,
+              numCompX: 4,
+              numCompY: 3,
+            ).hash
+          : null,
+    );
   }
+}
+
+class _ResizedResponse {
+  final Uint8List bytes;
+  final int width;
+  final int height;
+  final String? blurhash;
+
+  const _ResizedResponse({
+    required this.bytes,
+    required this.width,
+    required this.height,
+    this.blurhash,
+  });
 }
 
 class _ResizeArguments {
   final Uint8List bytes;
   final int maxDimension;
   final String fileName;
+  final bool calcBlurhash;
 
   const _ResizeArguments({
     required this.bytes,
     required this.maxDimension,
     required this.fileName,
+    required this.calcBlurhash,
   });
 }
 
 class MatrixVideoFile extends MatrixFile {
-  int? width;
-  int? height;
-  int? duration;
+  final int? width;
+  final int? height;
+  final int? duration;
 
   MatrixVideoFile(
       {required Uint8List bytes,
@@ -221,7 +265,7 @@ class MatrixVideoFile extends MatrixFile {
 }
 
 class MatrixAudioFile extends MatrixFile {
-  int? duration;
+  final int? duration;
 
   MatrixAudioFile(
       {required Uint8List bytes,
