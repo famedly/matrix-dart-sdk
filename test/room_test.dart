@@ -277,8 +277,9 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.lastEvent?.eventId, '123456');
-      expect(room.lastEvent?.type, EventTypes.Reaction);
+      expect(room.lastEvent?.eventId, '5');
+      expect(room.lastEvent?.body, 'edited cdc');
+      expect(room.lastEvent?.status, EventStatus.sent);
     });
     test('lastEvent when reply parent edited', () async {
       room.setState(
