@@ -675,12 +675,14 @@ class Client extends MatrixApi {
     if (rooms.isNotEmpty) {
       final profileSet = <Profile>{};
       for (final room in rooms) {
-        final user = room.getUserByMXIDSync(userID!);
-        profileSet.add(Profile(
-          avatarUrl: user.avatarUrl,
-          displayName: user.displayName,
-          userId: user.id,
-        ));
+        final user = await room.requestUser(userID!);
+        if (user != null) {
+          profileSet.add(Profile(
+            avatarUrl: user.avatarUrl,
+            displayName: user.displayName,
+            userId: user.id,
+          ));
+        }
       }
       if (profileSet.length == 1) return profileSet.single;
     }
