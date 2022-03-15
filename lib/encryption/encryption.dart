@@ -336,6 +336,12 @@ class Encryption {
   Future<Map<String, dynamic>> encryptGroupMessagePayload(
       String roomId, Map<String, dynamic> payload,
       {String type = EventTypes.Message}) async {
+    final Map<String, dynamic>? mRelatesTo = payload.remove('m.relates_to');
+    // Events which only contain a m.relates_to like reactions don't need to
+    // be encrypted.
+    if (payload.isEmpty && mRelatesTo != null) {
+      return {'m.relates_to': mRelatesTo};
+    }
     final room = client.getRoomById(roomId);
     if (room == null || !room.encrypted || !enabled) {
       return payload;
@@ -357,7 +363,6 @@ class Encryption {
     // we clone the payload as we do not want to remove 'm.relates_to' from the
     // original payload passed into this function
     payload = payload.copy();
-    final Map<String, dynamic>? mRelatesTo = payload.remove('m.relates_to');
     final payloadContent = {
       'content': payload,
       'type': type,

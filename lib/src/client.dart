@@ -190,7 +190,6 @@ class Client extends MatrixApi {
       EventTypes.Message,
       EventTypes.Encrypted,
       EventTypes.Sticker,
-      EventTypes.Reaction,
     ]);
 
     // register all the default commands
