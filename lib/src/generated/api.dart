@@ -42,6 +42,85 @@ class Api {
     return DiscoveryInformation.fromJson(json);
   }
 
+  /// Queries the server to determine if a given registration token is still
+  /// valid at the time of request. This is a point-in-time check where the
+  /// token might still expire by the time it is used.
+  ///
+  /// Servers should be sure to rate limit this endpoint to avoid brute force
+  /// attacks.
+  ///
+  /// [token] The token to check validity of.
+  ///
+  /// returns `valid`:
+  /// True if the token is still valid, false otherwise. This should
+  /// additionally be false if the token is not a recognised token by
+  /// the server.
+  Future<bool> registrationTokenValidity(String token) async {
+    final requestUri = Uri(
+        path: '_matrix/client/v1/register/m.login.registration_token/validity',
+        queryParameters: {
+          'token': token,
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return json['valid'] as bool;
+  }
+
+  /// Paginates over the space tree in a depth-first manner to locate child rooms of a given space.
+  ///
+  /// Where a child room is unknown to the local server, federation is used to fill in the details.
+  /// The servers listed in the `via` array should be contacted to attempt to fill in missing rooms.
+  ///
+  /// Only [`m.space.child`](#mspacechild) state events of the room are considered. Invalid child
+  /// rooms and parent events are not covered by this endpoint.
+  ///
+  /// [roomId] The room ID of the space to get a hierarchy for.
+  ///
+  /// [suggestedOnly] Optional (default `false`) flag to indicate whether or not the server should only consider
+  /// suggested rooms. Suggested rooms are annotated in their [`m.space.child`](#mspacechild) event
+  /// contents.
+  ///
+  /// [limit] Optional limit for the maximum number of rooms to include per response. Must be an integer
+  /// greater than zero.
+  ///
+  /// Servers should apply a default value, and impose a maximum value to avoid resource exhaustion.
+  ///
+  /// [maxDepth] Optional limit for how far to go into the space. Must be a non-negative integer.
+  ///
+  /// When reached, no further child rooms will be returned.
+  ///
+  /// Servers should apply a default value, and impose a maximum value to avoid resource exhaustion.
+  ///
+  /// [from] A pagination token from a previous result. If specified, `max_depth` and `suggested_only` cannot
+  /// be changed from the first request.
+  Future<GetSpaceHierarchyResponse> getSpaceHierarchy(String roomId,
+      {bool? suggestedOnly,
+      double? limit,
+      double? maxDepth,
+      String? from}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/v1/rooms/${Uri.encodeComponent(roomId)}/hierarchy',
+        queryParameters: {
+          if (suggestedOnly != null) 'suggested_only': suggestedOnly.toString(),
+          if (limit != null) 'limit': limit.toString(),
+          if (maxDepth != null) 'max_depth': maxDepth.toString(),
+          if (from != null) 'from': from,
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetSpaceHierarchyResponse.fromJson(json);
+  }
+
   /// Gets a list of the third party identifiers that the homeserver has
   /// associated with the user's account.
   ///
@@ -53,7 +132,7 @@ class Api {
   ///
   /// returns `threepids`
   Future<List<ThirdPartyIdentifier>?> getAccount3PIDs() async {
-    final requestUri = Uri(path: '_matrix/client/r0/account/3pid');
+    final requestUri = Uri(path: '_matrix/client/v3/account/3pid');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -78,9 +157,23 @@ class Api {
   /// than dual-purpose.
   ///
   /// [threePidCreds] The third party credentials to associate with the account.
+  ///
+  /// returns `submit_url`:
+  /// An optional field containing a URL where the client must
+  /// submit the validation token to, with identical parameters
+  /// to the Identity Service API's `POST
+  /// /validate/email/submitToken` endpoint (without the requirement
+  /// for an access token). The homeserver must send this token to the
+  /// user (if applicable), who should then be prompted to provide it
+  /// to the client.
+  ///
+  /// If this field is not present, the client can assume that
+  /// verification will happen without the client's involvement
+  /// provided the homeserver advertises this specification version
+  /// in the `/versions` response (ie: r0.5.0).
   @deprecated
-  Future<void> post3PIDs(ThreePidCredentials threePidCreds) async {
-    final requestUri = Uri(path: '_matrix/client/r0/account/3pid');
+  Future<Uri?> post3PIDs(ThreePidCredentials threePidCreds) async {
+    final requestUri = Uri(path: '_matrix/client/v3/account/3pid');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -92,7 +185,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return null;
+    return ((v) => v != null ? Uri.parse(v) : null)(json['submit_url']);
   }
 
   /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api).
@@ -111,7 +204,7 @@ class Api {
   /// [sid] The session identifier given by the homeserver.
   Future<void> add3PID(String clientSecret, String sid,
       {AuthenticationData? auth}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/account/3pid/add');
+    final requestUri = Uri(path: '_matrix/client/v3/account/3pid/add');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -145,7 +238,7 @@ class Api {
   /// [sid] The session identifier given by the identity server.
   Future<void> bind3PID(String clientSecret, String idAccessToken,
       String idServer, String sid) async {
-    final requestUri = Uri(path: '_matrix/client/r0/account/3pid/bind');
+    final requestUri = Uri(path: '_matrix/client/v3/account/3pid/bind');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -189,34 +282,29 @@ class Api {
   Future<IdServerUnbindResult> delete3pidFromAccount(
       String address, ThirdPartyIdentifierMedium medium,
       {String? idServer}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/account/3pid/delete');
+    final requestUri = Uri(path: '_matrix/client/v3/account/3pid/delete');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
       'address': address,
       if (idServer != null) 'id_server': idServer,
-      'medium': {
-        ThirdPartyIdentifierMedium.email: 'email',
-        ThirdPartyIdentifierMedium.msisdn: 'msisdn'
-      }[medium]!,
+      'medium': medium.name,
     }));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return {
-      'no-support': IdServerUnbindResult.noSupport,
-      'success': IdServerUnbindResult.success
-    }[json['id_server_unbind_result']]!;
+    return IdServerUnbindResult.values
+        .fromString(json['id_server_unbind_result'])!;
   }
 
   /// The homeserver must check that the given email address is **not**
   /// already associated with an account on this homeserver. This API should
   /// be used to request validation tokens when adding an email address to an
   /// account. This API's parameters and response are identical to that of
-  /// the [`/register/email/requestToken`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientr0registeremailrequesttoken)
+  /// the [`/register/email/requestToken`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3registeremailrequesttoken)
   /// endpoint. The homeserver should validate
   /// the email itself, either by sending a validation email itself or by using
   /// a service it has control over.
@@ -258,7 +346,7 @@ class Api {
       String clientSecret, String email, int sendAttempt,
       {String? nextLink, String? idAccessToken, String? idServer}) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/account/3pid/email/requestToken');
+        Uri(path: '_matrix/client/v3/account/3pid/email/requestToken');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
@@ -281,7 +369,7 @@ class Api {
   /// already associated with an account on this homeserver. This API should
   /// be used to request validation tokens when adding a phone number to an
   /// account. This API's parameters and response are identical to that of
-  /// the [`/register/msisdn/requestToken`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientr0registermsisdnrequesttoken)
+  /// the [`/register/msisdn/requestToken`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3registermsisdnrequesttoken)
   /// endpoint. The homeserver should validate
   /// the phone number itself, either by sending a validation message itself or by using
   /// a service it has control over.
@@ -325,7 +413,7 @@ class Api {
       String clientSecret, String country, String phoneNumber, int sendAttempt,
       {String? nextLink, String? idAccessToken, String? idServer}) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/account/3pid/msisdn/requestToken');
+        Uri(path: '_matrix/client/v3/account/3pid/msisdn/requestToken');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
@@ -370,27 +458,22 @@ class Api {
   Future<IdServerUnbindResult> unbind3pidFromAccount(
       String address, ThirdPartyIdentifierMedium medium,
       {String? idServer}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/account/3pid/unbind');
+    final requestUri = Uri(path: '_matrix/client/v3/account/3pid/unbind');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
       'address': address,
       if (idServer != null) 'id_server': idServer,
-      'medium': {
-        ThirdPartyIdentifierMedium.email: 'email',
-        ThirdPartyIdentifierMedium.msisdn: 'msisdn'
-      }[medium]!,
+      'medium': medium.name,
     }));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return {
-      'no-support': IdServerUnbindResult.noSupport,
-      'success': IdServerUnbindResult.success
-    }[json['id_server_unbind_result']]!;
+    return IdServerUnbindResult.values
+        .fromString(json['id_server_unbind_result'])!;
   }
 
   /// Deactivate the user's account, removing all ability for the user to
@@ -428,7 +511,7 @@ class Api {
   /// for the user.
   Future<IdServerUnbindResult> deactivateAccount(
       {AuthenticationData? auth, String? idServer}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/account/deactivate');
+    final requestUri = Uri(path: '_matrix/client/v3/account/deactivate');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -441,10 +524,8 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return {
-      'no-support': IdServerUnbindResult.noSupport,
-      'success': IdServerUnbindResult.success
-    }[json['id_server_unbind_result']]!;
+    return IdServerUnbindResult.values
+        .fromString(json['id_server_unbind_result'])!;
   }
 
   /// Changes the password for an account on this homeserver.
@@ -472,7 +553,7 @@ class Api {
   /// [newPassword] The new password for the account.
   Future<void> changePassword(String newPassword,
       {AuthenticationData? auth, bool? logoutDevices}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/account/password');
+    final requestUri = Uri(path: '_matrix/client/v3/account/password');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -495,7 +576,7 @@ class Api {
   /// `/account/password` endpoint.
   ///
   /// This API's parameters and response are identical to that of the
-  /// [`/register/email/requestToken`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientr0registeremailrequesttoken)
+  /// [`/register/email/requestToken`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3registeremailrequesttoken)
   /// endpoint, except that
   /// `M_THREEPID_NOT_FOUND` may be returned if no account matching the
   /// given email address could be found. The server may instead send an
@@ -542,7 +623,7 @@ class Api {
       String clientSecret, String email, int sendAttempt,
       {String? nextLink, String? idAccessToken, String? idServer}) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/account/password/email/requestToken');
+        Uri(path: '_matrix/client/v3/account/password/email/requestToken');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
@@ -567,7 +648,7 @@ class Api {
   /// `/account/password` endpoint.
   ///
   /// This API's parameters and response are identical to that of the
-  /// [`/register/msisdn/requestToken`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientr0registermsisdnrequesttoken)
+  /// [`/register/msisdn/requestToken`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3registermsisdnrequesttoken)
   /// endpoint, except that
   /// `M_THREEPID_NOT_FOUND` may be returned if no account matching the
   /// given phone number could be found. The server may instead send the SMS
@@ -616,7 +697,7 @@ class Api {
       String clientSecret, String country, String phoneNumber, int sendAttempt,
       {String? nextLink, String? idAccessToken, String? idServer}) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/account/password/msisdn/requestToken');
+        Uri(path: '_matrix/client/v3/account/password/msisdn/requestToken');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
@@ -645,7 +726,7 @@ class Api {
   /// is registered by the appservice, and return it in the response
   /// body.
   Future<TokenOwnerInfo> getTokenOwner() async {
-    final requestUri = Uri(path: '_matrix/client/r0/account/whoami');
+    final requestUri = Uri(path: '_matrix/client/v3/account/whoami');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -665,7 +746,7 @@ class Api {
   /// [userId] The user to look up.
   Future<WhoIsInfo> getWhoIs(String userId) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/admin/whois/${Uri.encodeComponent(userId)}');
+        path: '_matrix/client/v3/admin/whois/${Uri.encodeComponent(userId)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -683,7 +764,7 @@ class Api {
   /// The custom capabilities the server supports, using the
   /// Java package naming convention.
   Future<Capabilities> getCapabilities() async {
-    final requestUri = Uri(path: '_matrix/client/r0/capabilities');
+    final requestUri = Uri(path: '_matrix/client/v3/capabilities');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -737,9 +818,9 @@ class Api {
   /// `creation_content`.
   ///
   /// [creationContent] Extra keys, such as `m.federate`, to be added to the content
-  /// of the [`m.room.create`](client-server-api/#mroomcreate) event. The server will clobber the following
+  /// of the [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate) event. The server will overwrite the following
   /// keys: `creator`, `room_version`. Future versions of the specification
-  /// may allow the server to clobber other keys.
+  /// may allow the server to overwrite other keys.
   ///
   /// [initialState] A list of state events to set in the new room. This allows
   /// the user to override the default state events set in the new
@@ -747,7 +828,7 @@ class Api {
   /// with type, state_key and content keys set.
   ///
   /// Takes precedence over events set by `preset`, but gets
-  /// overriden by `name` and `topic` keys.
+  /// overridden by `name` and `topic` keys.
   ///
   /// [invite] A list of user IDs to invite to the room. This will tell the
   /// server to invite everyone in the list to the newly created room.
@@ -765,7 +846,7 @@ class Api {
   ///
   /// [powerLevelContentOverride] The power level content to override in the default power level
   /// event. This object is applied on top of the generated
-  /// [`m.room.power_levels`](client-server-api/#mroompower_levels)
+  /// [`m.room.power_levels`](https://spec.matrix.org/unstable/client-server-api/#mroompower_levels)
   /// event content prior to it being sent to the room. Defaults to
   /// overriding nothing.
   ///
@@ -819,7 +900,7 @@ class Api {
       String? roomVersion,
       String? topic,
       Visibility? visibility}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/createRoom');
+    final requestUri = Uri(path: '_matrix/client/v3/createRoom');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -834,20 +915,11 @@ class Api {
       if (name != null) 'name': name,
       if (powerLevelContentOverride != null)
         'power_level_content_override': powerLevelContentOverride,
-      if (preset != null)
-        'preset': {
-          CreateRoomPreset.privateChat: 'private_chat',
-          CreateRoomPreset.publicChat: 'public_chat',
-          CreateRoomPreset.trustedPrivateChat: 'trusted_private_chat'
-        }[preset]!,
+      if (preset != null) 'preset': preset.name,
       if (roomAliasName != null) 'room_alias_name': roomAliasName,
       if (roomVersion != null) 'room_version': roomVersion,
       if (topic != null) 'topic': topic,
-      if (visibility != null)
-        'visibility': {
-          Visibility.public: 'public',
-          Visibility.private: 'private'
-        }[visibility]!,
+      if (visibility != null) 'visibility': visibility.name,
     }));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -867,7 +939,7 @@ class Api {
   /// [devices] The list of device IDs to delete.
   Future<void> deleteDevices(List<String> devices,
       {AuthenticationData? auth}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/delete_devices');
+    final requestUri = Uri(path: '_matrix/client/v3/delete_devices');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -888,7 +960,7 @@ class Api {
   /// returns `devices`:
   /// A list of all registered devices for this user.
   Future<List<Device>?> getDevices() async {
-    final requestUri = Uri(path: '_matrix/client/r0/devices');
+    final requestUri = Uri(path: '_matrix/client/v3/devices');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -911,7 +983,7 @@ class Api {
   /// user-interactive authentication API.
   Future<void> deleteDevice(String deviceId, {AuthenticationData? auth}) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/devices/${Uri.encodeComponent(deviceId)}');
+        Uri(path: '_matrix/client/v3/devices/${Uri.encodeComponent(deviceId)}');
     final request = Request('DELETE', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -931,7 +1003,7 @@ class Api {
   /// [deviceId] The device to retrieve.
   Future<Device> getDevice(String deviceId) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/devices/${Uri.encodeComponent(deviceId)}');
+        Uri(path: '_matrix/client/v3/devices/${Uri.encodeComponent(deviceId)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -950,7 +1022,7 @@ class Api {
   /// display name is unchanged.
   Future<void> updateDevice(String deviceId, {String? displayName}) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/devices/${Uri.encodeComponent(deviceId)}');
+        Uri(path: '_matrix/client/v3/devices/${Uri.encodeComponent(deviceId)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -987,15 +1059,12 @@ class Api {
       String networkId, String roomId, Visibility visibility) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/directory/list/appservice/${Uri.encodeComponent(networkId)}/${Uri.encodeComponent(roomId)}');
+            '_matrix/client/v3/directory/list/appservice/${Uri.encodeComponent(networkId)}/${Uri.encodeComponent(roomId)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
-      'visibility': {
-        Visibility.public: 'public',
-        Visibility.private: 'private'
-      }[visibility]!,
+      'visibility': visibility.name,
     }));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -1014,16 +1083,15 @@ class Api {
   Future<Visibility?> getRoomVisibilityOnDirectory(String roomId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/directory/list/room/${Uri.encodeComponent(roomId)}');
+            '_matrix/client/v3/directory/list/room/${Uri.encodeComponent(roomId)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return ((v) => v != null
-        ? {'public': Visibility.public, 'private': Visibility.private}[v]!
-        : null)(json['visibility']);
+    return ((v) => v != null ? Visibility.values.fromString(v)! : null)(
+        json['visibility']);
   }
 
   /// Sets the visibility of a given room in the server's public room
@@ -1041,16 +1109,12 @@ class Api {
       {Visibility? visibility}) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/directory/list/room/${Uri.encodeComponent(roomId)}');
+            '_matrix/client/v3/directory/list/room/${Uri.encodeComponent(roomId)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
-      if (visibility != null)
-        'visibility': {
-          Visibility.public: 'public',
-          Visibility.private: 'private'
-        }[visibility]!,
+      if (visibility != null) 'visibility': visibility.name,
     }));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -1076,7 +1140,7 @@ class Api {
   Future<void> deleteRoomAlias(String roomAlias) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/directory/room/${Uri.encodeComponent(roomAlias)}');
+            '_matrix/client/v3/directory/room/${Uri.encodeComponent(roomAlias)}');
     final request = Request('DELETE', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -1097,7 +1161,7 @@ class Api {
   Future<GetRoomIdByAliasResponse> getRoomIdByAlias(String roomAlias) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/directory/room/${Uri.encodeComponent(roomAlias)}');
+            '_matrix/client/v3/directory/room/${Uri.encodeComponent(roomAlias)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -1115,7 +1179,7 @@ class Api {
   Future<void> setRoomAlias(String roomAlias, String roomId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/directory/room/${Uri.encodeComponent(roomAlias)}');
+            '_matrix/client/v3/directory/room/${Uri.encodeComponent(roomAlias)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -1134,8 +1198,8 @@ class Api {
   /// block until an event is received, or until the `timeout` is reached.
   ///
   /// This endpoint was deprecated in r0 of this specification. Clients
-  /// should instead call the [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0sync)
-  /// API with a `since` parameter. See
+  /// should instead call the [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3sync)
+  /// endpoint with a `since` parameter. See
   /// the [migration guide](https://matrix.org/docs/guides/migrating-from-client-server-api-v-1#deprecated-endpoints).
   ///
   /// [from] The token to stream from. This token is either from a previous
@@ -1143,8 +1207,8 @@ class Api {
   ///
   /// [timeout] The maximum time in milliseconds to wait for an event.
   @deprecated
-  Future<EventsSyncUpdate> getEvents({String? from, int? timeout}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/events', queryParameters: {
+  Future<GetEventsResponse> getEvents({String? from, int? timeout}) async {
+    final requestUri = Uri(path: '_matrix/client/v3/events', queryParameters: {
       if (from != null) 'from': from,
       if (timeout != null) 'timeout': timeout.toString(),
     });
@@ -1155,7 +1219,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return EventsSyncUpdate.fromJson(json);
+    return GetEventsResponse.fromJson(json);
   }
 
   /// This will listen for new events related to a particular room and return
@@ -1175,9 +1239,9 @@ class Api {
   /// [timeout] The maximum time in milliseconds to wait for an event.
   ///
   /// [roomId] The room ID for which events should be returned.
-  Future<EventsSyncUpdate> peekEvents(
+  Future<PeekEventsResponse> peekEvents(
       {String? from, int? timeout, String? roomId}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/events', queryParameters: {
+    final requestUri = Uri(path: '_matrix/client/v3/events', queryParameters: {
       if (from != null) 'from': from,
       if (timeout != null) 'timeout': timeout.toString(),
       if (roomId != null) 'room_id': roomId,
@@ -1189,7 +1253,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return EventsSyncUpdate.fromJson(json);
+    return PeekEventsResponse.fromJson(json);
   }
 
   /// Get a single event based on `event_id`. You must have permission to
@@ -1197,14 +1261,14 @@ class Api {
   ///
   /// This endpoint was deprecated in r0 of this specification. Clients
   /// should instead call the
-  /// [/rooms/{roomId}/event/{eventId}](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0roomsroomideventeventid) API
-  /// or the [/rooms/{roomId}/context/{eventId](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0roomsroomidcontexteventid) API.
+  /// [/rooms/{roomId}/event/{eventId}](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3roomsroomideventeventid) API
+  /// or the [/rooms/{roomId}/context/{eventId](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3roomsroomidcontexteventid) API.
   ///
   /// [eventId] The event ID to get.
   @deprecated
   Future<MatrixEvent> getOneEvent(String eventId) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/events/${Uri.encodeComponent(eventId)}');
+        Uri(path: '_matrix/client/v3/events/${Uri.encodeComponent(eventId)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -1223,8 +1287,8 @@ class Api {
   /// events associated with the room until the user leaves the room.
   ///
   /// After a user has joined a room, the room will appear as an entry in the
-  /// response of the [`/initialSync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0initialsync)
-  /// and [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0sync) APIs.
+  /// response of the [`/initialSync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3initialsync)
+  /// and [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3sync) APIs.
   ///
   /// [roomIdOrAlias] The room identifier or alias to join.
   ///
@@ -1245,7 +1309,7 @@ class Api {
       String? reason,
       ThirdPartySigned? thirdPartySigned}) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/join/${Uri.encodeComponent(roomIdOrAlias)}',
+        path: '_matrix/client/v3/join/${Uri.encodeComponent(roomIdOrAlias)}',
         queryParameters: {
           if (serverName != null)
             'server_name': serverName.map((v) => v).toList(),
@@ -1271,7 +1335,7 @@ class Api {
   /// returns `joined_rooms`:
   /// The ID of each room in which the user has `joined` membership.
   Future<List<String>> getJoinedRooms() async {
-    final requestUri = Uri(path: '_matrix/client/r0/joined_rooms');
+    final requestUri = Uri(path: '_matrix/client/v3/joined_rooms');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -1293,18 +1357,18 @@ class Api {
   ///   identity keys, between `from` and `to`.
   ///
   /// [from] The desired start point of the list. Should be the `next_batch` field
-  /// from a response to an earlier call to [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0sync). Users who have not
+  /// from a response to an earlier call to [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3sync). Users who have not
   /// uploaded new device identity keys since this point, nor deleted
   /// existing devices with identity keys since then, will be excluded
   /// from the results.
   ///
   /// [to] The desired end point of the list. Should be the `next_batch`
-  /// field from a recent call to [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0sync) - typically the most recent
+  /// field from a recent call to [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3sync) - typically the most recent
   /// such call. This may be used by the server as a hint to check its
   /// caches are up to date.
   Future<GetKeysChangesResponse> getKeysChanges(String from, String to) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/keys/changes', queryParameters: {
+        Uri(path: '_matrix/client/v3/keys/changes', queryParameters: {
       'from': from,
       'to': to,
     });
@@ -1328,7 +1392,7 @@ class Api {
   Future<ClaimKeysResponse> claimKeys(
       Map<String, Map<String, String>> oneTimeKeys,
       {int? timeout}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/keys/claim');
+    final requestUri = Uri(path: '_matrix/client/v3/keys/claim');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -1369,7 +1433,7 @@ class Api {
       MatrixCrossSigningKey? selfSigningKey,
       MatrixCrossSigningKey? userSigningKey}) async {
     final requestUri =
-        Uri(path: '_matrix/client/unstable/keys/device_signing/upload');
+        Uri(path: '_matrix/client/v3/keys/device_signing/upload');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -1402,7 +1466,7 @@ class Api {
   /// contains the keys advertised by the notification in that sync.
   Future<QueryKeysResponse> queryKeys(Map<String, List<String>> deviceKeys,
       {int? timeout, String? token}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/keys/query');
+    final requestUri = Uri(path: '_matrix/client/v3/keys/query');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -1432,7 +1496,7 @@ class Api {
   Future<Map<String, Map<String, Map<String, dynamic>>>?>
       uploadCrossSigningSignatures(
           Map<String, Map<String, Map<String, dynamic>>> signatures) async {
-    final requestUri = Uri(path: '_matrix/client/r0/keys/signatures/upload');
+    final requestUri = Uri(path: '_matrix/client/v3/keys/signatures/upload');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -1465,7 +1529,7 @@ class Api {
   /// history visibility to the user.
   ///
   /// The knock will appear as an entry in the response of the
-  /// [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0sync) API.
+  /// [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3sync) API.
   ///
   /// [roomIdOrAlias] The room identifier or alias to knock upon.
   ///
@@ -1480,7 +1544,7 @@ class Api {
   Future<String> knockRoom(String roomIdOrAlias,
       {List<String>? serverName, String? reason}) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/knock/${Uri.encodeComponent(roomIdOrAlias)}',
+        path: '_matrix/client/v3/knock/${Uri.encodeComponent(roomIdOrAlias)}',
         queryParameters: {
           if (serverName != null)
             'server_name': serverName.map((v) => v).toList(),
@@ -1505,7 +1569,7 @@ class Api {
   /// returns `flows`:
   /// The homeserver's supported login types
   Future<List<LoginFlow>?> getLoginFlows() async {
-    final requestUri = Uri(path: '_matrix/client/r0/login');
+    final requestUri = Uri(path: '_matrix/client/v3/login');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -1561,7 +1625,7 @@ class Api {
       String? password,
       String? token,
       String? user}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/login');
+    final requestUri = Uri(path: '_matrix/client/v3/login');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
@@ -1573,10 +1637,7 @@ class Api {
       if (medium != null) 'medium': medium,
       if (password != null) 'password': password,
       if (token != null) 'token': token,
-      'type': {
-        LoginType.mLoginPassword: 'm.login.password',
-        LoginType.mLoginToken: 'm.login.token'
-      }[type]!,
+      'type': type.name,
       if (user != null) 'user': user,
     }));
     final response = await httpClient.send(request);
@@ -1591,7 +1652,7 @@ class Api {
   /// authorization. The device associated with the access token is also deleted.
   /// [Device keys](https://spec.matrix.org/unstable/client-server-api/#device-keys) for the device are deleted alongside the device.
   Future<void> logout() async {
-    final requestUri = Uri(path: '_matrix/client/r0/logout');
+    final requestUri = Uri(path: '_matrix/client/v3/logout');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -1614,7 +1675,7 @@ class Api {
   /// the request, and therefore the attacker is unable to take over the account in
   /// this way.
   Future<void> logoutAll() async {
-    final requestUri = Uri(path: '_matrix/client/r0/logout/all');
+    final requestUri = Uri(path: '_matrix/client/v3/logout/all');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -1628,7 +1689,8 @@ class Api {
   /// This API is used to paginate through the list of events that the
   /// user has been, or would have been notified about.
   ///
-  /// [from] Pagination token given to retrieve the next set of events.
+  /// [from] Pagination token to continue from. This should be the `next_token`
+  /// returned from an earlier call to this endpoint.
   ///
   /// [limit] Limit on the number of events to return in this request.
   ///
@@ -1638,7 +1700,7 @@ class Api {
   Future<GetNotificationsResponse> getNotifications(
       {String? from, int? limit, String? only}) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/notifications', queryParameters: {
+        Uri(path: '_matrix/client/v3/notifications', queryParameters: {
       if (from != null) 'from': from,
       if (limit != null) 'limit': limit.toString(),
       if (only != null) 'only': only,
@@ -1659,7 +1721,7 @@ class Api {
   Future<GetPresenceResponse> getPresence(String userId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/presence/${Uri.encodeComponent(userId)}/status');
+            '_matrix/client/v3/presence/${Uri.encodeComponent(userId)}/status');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -1684,16 +1746,12 @@ class Api {
       {String? statusMsg}) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/presence/${Uri.encodeComponent(userId)}/status');
+            '_matrix/client/v3/presence/${Uri.encodeComponent(userId)}/status');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
-      'presence': {
-        PresenceType.online: 'online',
-        PresenceType.offline: 'offline',
-        PresenceType.unavailable: 'unavailable'
-      }[presence]!,
+      'presence': presence.name,
       if (statusMsg != null) 'status_msg': statusMsg,
     }));
     final response = await httpClient.send(request);
@@ -1712,7 +1770,7 @@ class Api {
   /// [userId] The user whose profile information to get.
   Future<ProfileInformation> getUserProfile(String userId) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/profile/${Uri.encodeComponent(userId)}');
+        Uri(path: '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -1733,7 +1791,7 @@ class Api {
   Future<Uri?> getAvatarUrl(String userId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/profile/${Uri.encodeComponent(userId)}/avatar_url');
+            '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}/avatar_url');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -1752,7 +1810,7 @@ class Api {
   Future<void> setAvatarUrl(String userId, Uri? avatarUrl) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/profile/${Uri.encodeComponent(userId)}/avatar_url');
+            '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}/avatar_url');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -1778,7 +1836,7 @@ class Api {
   Future<String?> getDisplayName(String userId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/profile/${Uri.encodeComponent(userId)}/displayname');
+            '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}/displayname');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -1797,7 +1855,7 @@ class Api {
   Future<void> setDisplayName(String userId, String? displayname) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/profile/${Uri.encodeComponent(userId)}/displayname');
+            '_matrix/client/v3/profile/${Uri.encodeComponent(userId)}/displayname');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -1829,7 +1887,7 @@ class Api {
   Future<GetPublicRoomsResponse> getPublicRooms(
       {int? limit, String? since, String? server}) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/publicRooms', queryParameters: {
+        Uri(path: '_matrix/client/v3/publicRooms', queryParameters: {
       if (limit != null) 'limit': limit.toString(),
       if (since != null) 'since': since,
       if (server != null) 'server': server,
@@ -1873,7 +1931,7 @@ class Api {
       String? since,
       String? thirdPartyInstanceId}) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/publicRooms', queryParameters: {
+        Uri(path: '_matrix/client/v3/publicRooms', queryParameters: {
       if (server != null) 'server': server,
     });
     final request = Request('POST', baseUri!.resolveUri(requestUri));
@@ -1901,7 +1959,7 @@ class Api {
   /// returns `pushers`:
   /// An array containing the current pushers for the user
   Future<List<Pusher>?> getPushers() async {
-    final requestUri = Uri(path: '_matrix/client/r0/pushers');
+    final requestUri = Uri(path: '_matrix/client/v3/pushers');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -1922,7 +1980,7 @@ class Api {
   /// returns `global`:
   /// The global ruleset.
   Future<PushRuleSet> getPushRules() async {
-    final requestUri = Uri(path: '_matrix/client/r0/pushrules');
+    final requestUri = Uri(path: '_matrix/client/v3/pushrules');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -1946,13 +2004,7 @@ class Api {
       String scope, PushRuleKind kind, String ruleId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent({
-      PushRuleKind.override: 'override',
-      PushRuleKind.underride: 'underride',
-      PushRuleKind.sender: 'sender',
-      PushRuleKind.room: 'room',
-      PushRuleKind.content: 'content'
-    }[kind]!)}/${Uri.encodeComponent(ruleId)}');
+            '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}');
     final request = Request('DELETE', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -1976,13 +2028,7 @@ class Api {
       String scope, PushRuleKind kind, String ruleId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent({
-      PushRuleKind.override: 'override',
-      PushRuleKind.underride: 'underride',
-      PushRuleKind.sender: 'sender',
-      PushRuleKind.room: 'room',
-      PushRuleKind.content: 'content'
-    }[kind]!)}/${Uri.encodeComponent(ruleId)}');
+            '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -2030,13 +2076,7 @@ class Api {
       String? pattern}) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent({
-          PushRuleKind.override: 'override',
-          PushRuleKind.underride: 'underride',
-          PushRuleKind.sender: 'sender',
-          PushRuleKind.room: 'room',
-          PushRuleKind.content: 'content'
-        }[kind]!)}/${Uri.encodeComponent(ruleId)}',
+            '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}',
         queryParameters: {
           if (before != null) 'before': before,
           if (after != null) 'after': after,
@@ -2075,13 +2115,7 @@ class Api {
       String scope, PushRuleKind kind, String ruleId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent({
-      PushRuleKind.override: 'override',
-      PushRuleKind.underride: 'underride',
-      PushRuleKind.sender: 'sender',
-      PushRuleKind.room: 'room',
-      PushRuleKind.content: 'content'
-    }[kind]!)}/${Uri.encodeComponent(ruleId)}/actions');
+            '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}/actions');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -2108,13 +2142,7 @@ class Api {
       String ruleId, List<dynamic> actions) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent({
-      PushRuleKind.override: 'override',
-      PushRuleKind.underride: 'underride',
-      PushRuleKind.sender: 'sender',
-      PushRuleKind.room: 'room',
-      PushRuleKind.content: 'content'
-    }[kind]!)}/${Uri.encodeComponent(ruleId)}/actions');
+            '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}/actions');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -2146,13 +2174,7 @@ class Api {
       String scope, PushRuleKind kind, String ruleId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent({
-      PushRuleKind.override: 'override',
-      PushRuleKind.underride: 'underride',
-      PushRuleKind.sender: 'sender',
-      PushRuleKind.room: 'room',
-      PushRuleKind.content: 'content'
-    }[kind]!)}/${Uri.encodeComponent(ruleId)}/enabled');
+            '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}/enabled');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -2178,13 +2200,7 @@ class Api {
       String scope, PushRuleKind kind, String ruleId, bool enabled) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent({
-      PushRuleKind.override: 'override',
-      PushRuleKind.underride: 'underride',
-      PushRuleKind.sender: 'sender',
-      PushRuleKind.room: 'room',
-      PushRuleKind.content: 'content'
-    }[kind]!)}/${Uri.encodeComponent(ruleId)}/enabled');
+            '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}/enabled');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -2271,9 +2287,8 @@ class Api {
       String? password,
       String? username}) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/register', queryParameters: {
-      if (kind != null)
-        'kind': {AccountKind.guest: 'guest', AccountKind.user: 'user'}[kind]!,
+        Uri(path: '_matrix/client/v3/register', queryParameters: {
+      if (kind != null) 'kind': kind.name,
     });
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['content-type'] = 'application/json';
@@ -2314,7 +2329,7 @@ class Api {
   /// be `true` when the server replies with 200 OK.
   Future<bool?> checkUsernameAvailability(String username) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/register/available', queryParameters: {
+        Uri(path: '_matrix/client/v3/register/available', queryParameters: {
       'username': username,
     });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
@@ -2368,7 +2383,7 @@ class Api {
       String clientSecret, String email, int sendAttempt,
       {String? nextLink, String? idAccessToken, String? idServer}) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/register/email/requestToken');
+        Uri(path: '_matrix/client/v3/register/email/requestToken');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
@@ -2431,7 +2446,7 @@ class Api {
       String clientSecret, String country, String phoneNumber, int sendAttempt,
       {String? nextLink, String? idAccessToken, String? idServer}) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/register/msisdn/requestToken');
+        Uri(path: '_matrix/client/v3/register/msisdn/requestToken');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
@@ -2456,7 +2471,7 @@ class Api {
   /// [version] The backup from which to delete the key
   Future<RoomKeysUpdateResponse> deleteRoomKeys(String version) async {
     final requestUri =
-        Uri(path: '_matrix/client/unstable/room_keys/keys', queryParameters: {
+        Uri(path: '_matrix/client/v3/room_keys/keys', queryParameters: {
       'version': version,
     });
     final request = Request('DELETE', baseUri!.resolveUri(requestUri));
@@ -2474,7 +2489,7 @@ class Api {
   /// [version] The backup from which to retrieve the keys.
   Future<RoomKeys> getRoomKeys(String version) async {
     final requestUri =
-        Uri(path: '_matrix/client/unstable/room_keys/keys', queryParameters: {
+        Uri(path: '_matrix/client/v3/room_keys/keys', queryParameters: {
       'version': version,
     });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
@@ -2495,7 +2510,7 @@ class Api {
   Future<RoomKeysUpdateResponse> putRoomKeys(
       String version, RoomKeys backupData) async {
     final requestUri =
-        Uri(path: '_matrix/client/unstable/room_keys/keys', queryParameters: {
+        Uri(path: '_matrix/client/v3/room_keys/keys', queryParameters: {
       'version': version,
     });
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
@@ -2518,8 +2533,7 @@ class Api {
   Future<RoomKeysUpdateResponse> deleteRoomKeysByRoomId(
       String roomId, String version) async {
     final requestUri = Uri(
-        path:
-            '_matrix/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}',
+        path: '_matrix/client/v3/room_keys/keys/${Uri.encodeComponent(roomId)}',
         queryParameters: {
           'version': version,
         });
@@ -2541,8 +2555,7 @@ class Api {
   Future<RoomKeyBackup> getRoomKeysByRoomId(
       String roomId, String version) async {
     final requestUri = Uri(
-        path:
-            '_matrix/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}',
+        path: '_matrix/client/v3/room_keys/keys/${Uri.encodeComponent(roomId)}',
         queryParameters: {
           'version': version,
         });
@@ -2566,8 +2579,7 @@ class Api {
   Future<RoomKeysUpdateResponse> putRoomKeysByRoomId(
       String roomId, String version, RoomKeyBackup backupData) async {
     final requestUri = Uri(
-        path:
-            '_matrix/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}',
+        path: '_matrix/client/v3/room_keys/keys/${Uri.encodeComponent(roomId)}',
         queryParameters: {
           'version': version,
         });
@@ -2590,11 +2602,11 @@ class Api {
   /// [sessionId] The ID of the megolm session whose key is to be deleted.
   ///
   /// [version] The backup from which to delete the key
-  Future<RoomKeysUpdateResponse> deleteRoomKeysBySessionId(
+  Future<RoomKeysUpdateResponse> deleteRoomKeyBySessionId(
       String roomId, String sessionId, String version) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}',
+            '_matrix/client/v3/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}',
         queryParameters: {
           'version': version,
         });
@@ -2615,11 +2627,11 @@ class Api {
   /// [sessionId] The ID of the megolm session whose key is requested.
   ///
   /// [version] The backup from which to retrieve the key.
-  Future<KeyBackupData> getRoomKeysBySessionId(
+  Future<KeyBackupData> getRoomKeyBySessionId(
       String roomId, String sessionId, String version) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}',
+            '_matrix/client/v3/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}',
         queryParameters: {
           'version': version,
         });
@@ -2642,11 +2654,11 @@ class Api {
   /// [version] The backup in which to store the key. Must be the current backup.
   ///
   /// [data] The key data.
-  Future<RoomKeysUpdateResponse> putRoomKeysBySessionId(String roomId,
+  Future<RoomKeysUpdateResponse> putRoomKeyBySessionId(String roomId,
       String sessionId, String version, KeyBackupData data) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/unstable/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}',
+            '_matrix/client/v3/room_keys/keys/${Uri.encodeComponent(roomId)}/${Uri.encodeComponent(sessionId)}',
         queryParameters: {
           'version': version,
         });
@@ -2664,7 +2676,7 @@ class Api {
 
   /// Get information about the latest backup version.
   Future<GetRoomKeysVersionCurrentResponse> getRoomKeysVersionCurrent() async {
-    final requestUri = Uri(path: '_matrix/client/unstable/room_keys/version');
+    final requestUri = Uri(path: '_matrix/client/v3/room_keys/version');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -2687,15 +2699,12 @@ class Api {
   /// The backup version. This is an opaque string.
   Future<String> postRoomKeysVersion(
       BackupAlgorithm algorithm, Map<String, dynamic> authData) async {
-    final requestUri = Uri(path: '_matrix/client/unstable/room_keys/version');
+    final requestUri = Uri(path: '_matrix/client/v3/room_keys/version');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
-      'algorithm': {
-        BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2:
-            'm.megolm_backup.v1.curve25519-aes-sha2'
-      }[algorithm]!,
+      'algorithm': algorithm.name,
       'auth_data': authData,
     }));
     final response = await httpClient.send(request);
@@ -2711,12 +2720,12 @@ class Api {
   ///
   /// [version] The backup version to delete, as returned in the `version`
   /// parameter in the response of
-  /// [`POST /_matrix/client/r0/room_keys/version`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientr0room_keysversion)
-  /// or [`GET /_matrix/client/r0/room_keys/version/{version}`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0room_keysversionversion).
+  /// [`POST /_matrix/client/v3/room_keys/version`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3room_keysversion)
+  /// or [`GET /_matrix/client/v3/room_keys/version/{version}`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3room_keysversionversion).
   Future<void> deleteRoomKeysVersion(String version) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/unstable/room_keys/version/${Uri.encodeComponent(version)}');
+            '_matrix/client/v3/room_keys/version/${Uri.encodeComponent(version)}');
     final request = Request('DELETE', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -2731,12 +2740,12 @@ class Api {
   ///
   /// [version] The backup version to get, as returned in the `version` parameter
   /// of the response in
-  /// [`POST /_matrix/client/r0/room_keys/version`](https://spec.matrix.org/unstable/client-server/#post_matrixclientr0room_keysversion)
+  /// [`POST /_matrix/client/v3/room_keys/version`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3room_keysversion)
   /// or this endpoint.
   Future<GetRoomKeysVersionResponse> getRoomKeysVersion(String version) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/unstable/room_keys/version/${Uri.encodeComponent(version)}');
+            '_matrix/client/v3/room_keys/version/${Uri.encodeComponent(version)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -2751,8 +2760,8 @@ class Api {
   ///
   /// [version] The backup version to update, as returned in the `version`
   /// parameter in the response of
-  /// [`POST /_matrix/client/r0/room_keys/version`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientr0room_keysversion)
-  /// or [`GET /_matrix/client/r0/room_keys/version/{version}`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0room_keysversionversion).
+  /// [`POST /_matrix/client/v3/room_keys/version`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3room_keysversion)
+  /// or [`GET /_matrix/client/v3/room_keys/version/{version}`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3room_keysversionversion).
   ///
   /// [algorithm] The algorithm used for storing backups.  Must be the same as
   /// the algorithm currently used by the backup.
@@ -2760,19 +2769,16 @@ class Api {
   /// [authData] Algorithm-dependent data. See the documentation for the backup
   /// algorithms in [Server-side key backups](https://spec.matrix.org/unstable/client-server-api/#server-side-key-backups) for more information on the
   /// expected format of the data.
-  Future<void> putRoomKeysVersion(String version, BackupAlgorithm algorithm,
-      Map<String, dynamic> authData) async {
+  Future<Map<String, dynamic>> putRoomKeysVersion(String version,
+      BackupAlgorithm algorithm, Map<String, dynamic> authData) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/unstable/room_keys/version/${Uri.encodeComponent(version)}');
+            '_matrix/client/v3/room_keys/version/${Uri.encodeComponent(version)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
-      'algorithm': {
-        BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2:
-            'm.megolm_backup.v1.curve25519-aes-sha2'
-      }[algorithm]!,
+      'algorithm': algorithm.name,
       'auth_data': authData,
     }));
     final response = await httpClient.send(request);
@@ -2780,7 +2786,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return ignore(json);
+    return json as Map<String, dynamic>;
   }
 
   /// Get a list of aliases maintained by the local server for the
@@ -2806,7 +2812,7 @@ class Api {
   /// The server's local aliases on the room. Can be empty.
   Future<List<String>> getLocalAliases(String roomId) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/aliases');
+        path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/aliases');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -2830,7 +2836,7 @@ class Api {
   /// [userId] The fully qualified user ID of the user being banned.
   Future<void> ban(String roomId, String userId, {String? reason}) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/ban');
+        Uri(path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/ban');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -2870,7 +2876,7 @@ class Api {
       {int? limit, String? filter}) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/context/${Uri.encodeComponent(eventId)}',
+            '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/context/${Uri.encodeComponent(eventId)}',
         queryParameters: {
           if (limit != null) 'limit': limit.toString(),
           if (filter != null) 'filter': filter,
@@ -2894,7 +2900,7 @@ class Api {
   Future<MatrixEvent> getOneRoomEvent(String roomId, String eventId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/event/${Uri.encodeComponent(eventId)}');
+            '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/event/${Uri.encodeComponent(eventId)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -2918,7 +2924,7 @@ class Api {
   /// [roomId] The room identifier to forget.
   Future<void> forgetRoom(String roomId) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/forget');
+        path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/forget');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -2934,7 +2940,7 @@ class Api {
   /// identifier of the invitee, and instead relies on third party identifiers.
   /// The homeserver uses an identity server to perform the mapping from
   /// third party identifier to a Matrix identifier. The other is documented in the*
-  /// [joining rooms section](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientr0roomsroomidinvite).
+  /// [joining rooms section](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3roomsroomidinvite).
   ///
   /// This API invites a user to participate in a particular room.
   /// They do not start participating in the room until they actually join the
@@ -2984,7 +2990,7 @@ class Api {
   Future<void> inviteBy3PID(String roomId, String address, String idAccessToken,
       String idServer, String medium) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/invite');
+        path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/invite');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3005,7 +3011,7 @@ class Api {
   /// *Note that there are two forms of this API, which are documented separately.
   /// This version of the API requires that the inviter knows the Matrix
   /// identifier of the invitee. The other is documented in the*
-  /// [third party invites section](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientr0roomsroomidinvite-1).
+  /// [third party invites section](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3roomsroomidinvite-1).
   ///
   /// This API invites a user to participate in a particular room.
   /// They do not start participating in the room until they actually join the
@@ -3026,7 +3032,7 @@ class Api {
   Future<void> inviteUser(String roomId, String userId,
       {String? reason}) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/invite');
+        path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/invite');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3051,8 +3057,8 @@ class Api {
   /// events associated with the room until the user leaves the room.
   ///
   /// After a user has joined a room, the room will appear as an entry in the
-  /// response of the [`/initialSync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0initialsync)
-  /// and [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientr0sync) APIs.
+  /// response of the [`/initialSync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3initialsync)
+  /// and [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3sync) APIs.
   ///
   /// [roomId] The room identifier (not alias) to join.
   ///
@@ -3068,7 +3074,7 @@ class Api {
   Future<String> joinRoomById(String roomId,
       {String? reason, ThirdPartySigned? thirdPartySigned}) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/join');
+        path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/join');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3094,7 +3100,7 @@ class Api {
   Future<Map<String, RoomMember>?> getJoinedMembersByRoom(String roomId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/joined_members');
+            '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/joined_members');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -3124,7 +3130,7 @@ class Api {
   /// [userId] The fully qualified user ID of the user being kicked.
   Future<void> kick(String roomId, String userId, {String? reason}) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/kick');
+        path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/kick');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3158,7 +3164,7 @@ class Api {
   /// membership event.
   Future<void> leaveRoom(String roomId, {String? reason}) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/leave');
+        path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/leave');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3194,25 +3200,11 @@ class Api {
   Future<List<MatrixEvent>?> getMembersByRoom(String roomId,
       {String? at, Membership? membership, Membership? notMembership}) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/members',
+        path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/members',
         queryParameters: {
           if (at != null) 'at': at,
-          if (membership != null)
-            'membership': {
-              Membership.invite: 'invite',
-              Membership.join: 'join',
-              Membership.knock: 'knock',
-              Membership.leave: 'leave',
-              Membership.ban: 'ban'
-            }[membership]!,
-          if (notMembership != null)
-            'not_membership': {
-              Membership.invite: 'invite',
-              Membership.join: 'join',
-              Membership.knock: 'knock',
-              Membership.leave: 'leave',
-              Membership.ban: 'ban'
-            }[notMembership]!,
+          if (membership != null) 'membership': membership.name,
+          if (notMembership != null) 'not_membership': notMembership.name,
         });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -3235,16 +3227,21 @@ class Api {
   /// [roomId] The room to get events from.
   ///
   /// [from] The token to start returning events from. This token can be obtained
-  /// from a `prev_batch` token returned for each room by the sync API,
-  /// or from a `start` or `end` token returned by a previous request
-  /// to this endpoint.
+  /// from a `prev_batch` or `next_batch` token returned by the `/sync` endpoint,
+  /// or from an `end` token returned by a previous request to this endpoint.
+  ///
+  /// This endpoint can also accept a value returned as a `start` token
+  /// by a previous request to this endpoint, though servers are not
+  /// required to support this. Clients should not rely on the behaviour.
   ///
   /// [to] The token to stop returning events at. This token can be obtained from
-  /// a `prev_batch` token returned for each room by the sync endpoint,
-  /// or from a `start` or `end` token returned by a previous request to
-  /// this endpoint.
+  /// a `prev_batch` or `next_batch` token returned by the `/sync` endpoint,
+  /// or from an `end` token returned by a previous request to this endpoint.
   ///
-  /// [dir] The direction to return events from.
+  /// [dir] The direction to return events from. If this is set to `f`, events
+  /// will be returned in chronological order starting at `from`. If it
+  /// is set to `b`, events will be returned in *reverse* chronological
+  /// order, again starting at `from`.
   ///
   /// [limit] The maximum number of events to return. Default: 10.
   ///
@@ -3253,11 +3250,11 @@ class Api {
       String roomId, String from, Direction dir,
       {String? to, int? limit, String? filter}) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/messages',
+        path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/messages',
         queryParameters: {
           'from': from,
           if (to != null) 'to': to,
-          'dir': {Direction.b: 'b', Direction.f: 'f'}[dir]!,
+          'dir': dir.name,
           if (limit != null) 'limit': limit.toString(),
           if (filter != null) 'filter': filter,
         });
@@ -3286,7 +3283,7 @@ class Api {
       {String? mRead}) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/read_markers');
+            '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/read_markers');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3317,9 +3314,7 @@ class Api {
       String eventId, Map<String, dynamic> receipt) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/receipt/${Uri.encodeComponent({
-      ReceiptType.mRead: 'm.read'
-    }[receiptType]!)}/${Uri.encodeComponent(eventId)}');
+            '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/receipt/${Uri.encodeComponent(receiptType.name)}/${Uri.encodeComponent(eventId)}');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3359,7 +3354,7 @@ class Api {
       {String? reason}) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/redact/${Uri.encodeComponent(eventId)}/${Uri.encodeComponent(txnId)}');
+            '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/redact/${Uri.encodeComponent(eventId)}/${Uri.encodeComponent(txnId)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3389,7 +3384,7 @@ class Api {
       {String? reason, int? score}) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/report/${Uri.encodeComponent(eventId)}');
+            '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/report/${Uri.encodeComponent(eventId)}');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3427,7 +3422,7 @@ class Api {
       Map<String, dynamic> body) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/send/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(txnId)}');
+            '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/send/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(txnId)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3445,7 +3440,7 @@ class Api {
   /// [roomId] The room to look up the state for.
   Future<List<MatrixEvent>> getRoomState(String roomId) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/state');
+        path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/state');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -3471,7 +3466,7 @@ class Api {
       String roomId, String eventType, String stateKey) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/state/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(stateKey)}');
+            '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/state/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(stateKey)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -3514,7 +3509,7 @@ class Api {
       String stateKey, Map<String, dynamic> body) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/state/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(stateKey)}');
+            '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/state/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(stateKey)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3544,7 +3539,7 @@ class Api {
       {int? timeout}) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/typing/${Uri.encodeComponent(userId)}');
+            '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/typing/${Uri.encodeComponent(userId)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3573,7 +3568,7 @@ class Api {
   /// [userId] The fully qualified user ID of the user being unbanned.
   Future<void> unban(String roomId, String userId, {String? reason}) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/unban');
+        path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/unban');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3599,7 +3594,7 @@ class Api {
   /// The ID of the new room.
   Future<String> upgradeRoom(String roomId, String newVersion) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/rooms/${Uri.encodeComponent(roomId)}/upgrade');
+        path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/upgrade');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3622,7 +3617,7 @@ class Api {
   /// [searchCategories] Describes which categories to search in and their criteria.
   Future<SearchResults> search(Categories searchCategories,
       {String? nextBatch}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/search', queryParameters: {
+    final requestUri = Uri(path: '_matrix/client/v3/search', queryParameters: {
       if (nextBatch != null) 'next_batch': nextBatch,
     });
     final request = Request('POST', baseUri!.resolveUri(requestUri));
@@ -3655,7 +3650,7 @@ class Api {
       Map<String, Map<String, Map<String, dynamic>>> messages) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/sendToDevice/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(txnId)}');
+            '_matrix/client/v3/sendToDevice/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(txnId)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3703,7 +3698,8 @@ class Api {
   ///
   /// See [Filtering](https://spec.matrix.org/unstable/client-server-api/#filtering) for more information.
   ///
-  /// [since] A point in time to continue a sync from.
+  /// [since] A point in time to continue a sync from. This should be the
+  /// `next_batch` token returned by an earlier call to this endpoint.
   ///
   /// [fullState] Controls whether to include the full state for all rooms the user
   /// is a member of.
@@ -3738,16 +3734,11 @@ class Api {
       bool? fullState,
       PresenceType? setPresence,
       int? timeout}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/sync', queryParameters: {
+    final requestUri = Uri(path: '_matrix/client/v3/sync', queryParameters: {
       if (filter != null) 'filter': filter,
       if (since != null) 'since': since,
       if (fullState != null) 'full_state': fullState.toString(),
-      if (setPresence != null)
-        'set_presence': {
-          PresenceType.online: 'online',
-          PresenceType.offline: 'offline',
-          PresenceType.unavailable: 'unavailable'
-        }[setPresence]!,
+      if (setPresence != null) 'set_presence': setPresence.name,
       if (timeout != null) 'timeout': timeout.toString(),
     });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
@@ -3766,7 +3757,7 @@ class Api {
   /// [alias] The Matrix room alias to look up.
   Future<List<Location>> queryLocationByAlias(String alias) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/thirdparty/location', queryParameters: {
+        Uri(path: '_matrix/client/v3/thirdparty/location', queryParameters: {
       'alias': alias,
     });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
@@ -3796,7 +3787,7 @@ class Api {
       {String? searchFields}) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/thirdparty/location/${Uri.encodeComponent(protocol)}',
+            '_matrix/client/v3/thirdparty/location/${Uri.encodeComponent(protocol)}',
         queryParameters: {
           if (searchFields != null) 'searchFields': searchFields,
         });
@@ -3816,7 +3807,7 @@ class Api {
   Future<Protocol> getProtocolMetadata(String protocol) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/thirdparty/protocol/${Uri.encodeComponent(protocol)}');
+            '_matrix/client/v3/thirdparty/protocol/${Uri.encodeComponent(protocol)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -3831,7 +3822,7 @@ class Api {
   /// homeserver. Includes both the available protocols and all fields
   /// required for queries against each protocol.
   Future<Map<String, Protocol>> getProtocols() async {
-    final requestUri = Uri(path: '_matrix/client/r0/thirdparty/protocols');
+    final requestUri = Uri(path: '_matrix/client/v3/thirdparty/protocols');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -3848,7 +3839,7 @@ class Api {
   /// [userid] The Matrix User ID to look up.
   Future<List<ThirdPartyUser>> queryUserByID(String userid) async {
     final requestUri =
-        Uri(path: '_matrix/client/r0/thirdparty/user', queryParameters: {
+        Uri(path: '_matrix/client/v3/thirdparty/user', queryParameters: {
       'userid': userid,
     });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
@@ -3871,7 +3862,7 @@ class Api {
       {String? fields}) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/thirdparty/user/${Uri.encodeComponent(protocol)}',
+            '_matrix/client/v3/thirdparty/user/${Uri.encodeComponent(protocol)}',
         queryParameters: {
           if (fields != null) 'fields...': fields,
         });
@@ -3897,7 +3888,7 @@ class Api {
       String userId, String type) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/account_data/${Uri.encodeComponent(type)}');
+            '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/account_data/${Uri.encodeComponent(type)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -3923,7 +3914,7 @@ class Api {
       String userId, String type, Map<String, dynamic> content) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/account_data/${Uri.encodeComponent(type)}');
+            '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/account_data/${Uri.encodeComponent(type)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3951,7 +3942,7 @@ class Api {
   /// declared filter by homeservers on some APIs.
   Future<String> defineFilter(String userId, Filter filter) async {
     final requestUri = Uri(
-        path: '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/filter');
+        path: '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/filter');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -3972,7 +3963,7 @@ class Api {
   Future<Filter> getFilter(String userId, String filterId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/filter/${Uri.encodeComponent(filterId)}');
+            '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/filter/${Uri.encodeComponent(filterId)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -4000,7 +3991,7 @@ class Api {
       String userId, Map<String, dynamic> body) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/openid/request_token');
+            '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/openid/request_token');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -4027,7 +4018,7 @@ class Api {
       String userId, String roomId, String type) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/account_data/${Uri.encodeComponent(type)}');
+            '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/account_data/${Uri.encodeComponent(type)}');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -4055,7 +4046,7 @@ class Api {
       Map<String, dynamic> content) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/account_data/${Uri.encodeComponent(type)}');
+            '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/account_data/${Uri.encodeComponent(type)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -4079,7 +4070,7 @@ class Api {
   Future<Map<String, Tag>?> getRoomTags(String userId, String roomId) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags');
+            '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -4104,7 +4095,7 @@ class Api {
   Future<void> deleteRoomTag(String userId, String roomId, String tag) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags/${Uri.encodeComponent(tag)}');
+            '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags/${Uri.encodeComponent(tag)}');
     final request = Request('DELETE', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -4131,7 +4122,7 @@ class Api {
       Map<String, dynamic> additionalProperties = const {}}) async {
     final requestUri = Uri(
         path:
-            '_matrix/client/r0/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags/${Uri.encodeComponent(tag)}');
+            '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags/${Uri.encodeComponent(tag)}');
     final request = Request('PUT', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -4163,7 +4154,7 @@ class Api {
   /// [searchTerm] The term to search for
   Future<SearchUserDirectoryResponse> searchUserDirectory(String searchTerm,
       {int? limit}) async {
-    final requestUri = Uri(path: '_matrix/client/r0/user_directory/search');
+    final requestUri = Uri(path: '_matrix/client/v3/user_directory/search');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
@@ -4182,7 +4173,7 @@ class Api {
   /// This API provides credentials for the client to use when initiating
   /// calls.
   Future<TurnServerCredentials> getTurnServer() async {
-    final requestUri = Uri(path: '_matrix/client/r0/voip/turnServer');
+    final requestUri = Uri(path: '_matrix/client/v3/voip/turnServer');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -4195,10 +4186,9 @@ class Api {
 
   /// Gets the versions of the specification supported by the server.
   ///
-  /// Values will take the form `rX.Y.Z`.
-  ///
-  /// Only the latest `Z` value will be reported for each supported `X.Y` value.
-  /// i.e. if the server implements `r0.0.0`, `r0.0.1`, and `r1.2.0`, it will report `r0.0.1` and `r1.2.0`.
+  /// Values will take the form `vX.Y` or `rX.Y.Z` in historical cases. See
+  /// [the Specification Versioning](../#specification-versions) for more
+  /// information.
   ///
   /// The server may additionally advertise experimental features it supports
   /// through `unstable_features`. These features should be namespaced and
@@ -4234,7 +4224,7 @@ class Api {
   /// repository APIs, for example, proxies may enforce a lower upload size limit
   /// than is advertised by the server on this endpoint.
   Future<ServerConfig> getConfig() async {
-    final requestUri = Uri(path: '_matrix/media/r0/config');
+    final requestUri = Uri(path: '_matrix/media/v3/config');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
@@ -4261,7 +4251,7 @@ class Api {
       {bool? allowRemote}) async {
     final requestUri = Uri(
         path:
-            '_matrix/media/r0/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}',
+            '_matrix/media/v3/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}',
         queryParameters: {
           if (allowRemote != null) 'allow_remote': allowRemote.toString(),
         });
@@ -4294,7 +4284,7 @@ class Api {
       {bool? allowRemote}) async {
     final requestUri = Uri(
         path:
-            '_matrix/media/r0/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}/${Uri.encodeComponent(fileName)}',
+            '_matrix/media/v3/download/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}/${Uri.encodeComponent(fileName)}',
         queryParameters: {
           if (allowRemote != null) 'allow_remote': allowRemote.toString(),
         });
@@ -4322,7 +4312,7 @@ class Api {
   /// available.
   Future<GetUrlPreviewResponse> getUrlPreview(Uri url, {int? ts}) async {
     final requestUri =
-        Uri(path: '_matrix/media/r0/preview_url', queryParameters: {
+        Uri(path: '_matrix/media/v3/preview_url', queryParameters: {
       'url': url.toString(),
       if (ts != null) 'ts': ts.toString(),
     });
@@ -4362,12 +4352,11 @@ class Api {
       {Method? method, bool? allowRemote}) async {
     final requestUri = Uri(
         path:
-            '_matrix/media/r0/thumbnail/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}',
+            '_matrix/media/v3/thumbnail/${Uri.encodeComponent(serverName)}/${Uri.encodeComponent(mediaId)}',
         queryParameters: {
           'width': width.toString(),
           'height': height.toString(),
-          if (method != null)
-            'method': {Method.crop: 'crop', Method.scale: 'scale'}[method]!,
+          if (method != null) 'method': method.name,
           if (allowRemote != null) 'allow_remote': allowRemote.toString(),
         });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
@@ -4390,7 +4379,7 @@ class Api {
   /// The [MXC URI](https://spec.matrix.org/unstable/client-server-api/#matrix-content-mxc-uris) to the uploaded content.
   Future<Uri> uploadContent(Uint8List content,
       {String? filename, String? contentType}) async {
-    final requestUri = Uri(path: '_matrix/media/r0/upload', queryParameters: {
+    final requestUri = Uri(path: '_matrix/media/v3/upload', queryParameters: {
       if (filename != null) 'filename': filename,
     });
     final request = Request('POST', baseUri!.resolveUri(requestUri));

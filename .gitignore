@@ -13,6 +13,10 @@ test/.test_coverage.dart
 coverage/
 coverage_badge.svg
 
+# codegen related
+*.bak
+*.bakmacoscompat
+
 # IntelliJ related
 *.iml
 *.ipr

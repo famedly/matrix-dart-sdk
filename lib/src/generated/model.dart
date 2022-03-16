@@ -6,6 +6,8 @@ import '../model/sync_update.dart';
 import '../model/matrix_event.dart';
 
 import 'internal.dart';
+import 'package:enhanced_enum/enhanced_enum.dart';
+part 'model.g.dart';
 
 class _NameSource {
   final String source;
@@ -82,8 +84,238 @@ class DiscoveryInformation {
   Map<String, Map<String, dynamic>> additionalProperties;
 }
 
+@_NameSource('spec')
+class PublicRoomsChunk {
+  PublicRoomsChunk({
+    this.avatarUrl,
+    this.canonicalAlias,
+    required this.guestCanJoin,
+    this.joinRule,
+    this.name,
+    required this.numJoinedMembers,
+    required this.roomId,
+    this.topic,
+    required this.worldReadable,
+  });
+
+  PublicRoomsChunk.fromJson(Map<String, dynamic> json)
+      : avatarUrl =
+            ((v) => v != null ? Uri.parse(v) : null)(json['avatar_url']),
+        canonicalAlias =
+            ((v) => v != null ? v as String : null)(json['canonical_alias']),
+        guestCanJoin = json['guest_can_join'] as bool,
+        joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
+        name = ((v) => v != null ? v as String : null)(json['name']),
+        numJoinedMembers = json['num_joined_members'] as int,
+        roomId = json['room_id'] as String,
+        topic = ((v) => v != null ? v as String : null)(json['topic']),
+        worldReadable = json['world_readable'] as bool;
+  Map<String, dynamic> toJson() {
+    final avatarUrl = this.avatarUrl;
+    final canonicalAlias = this.canonicalAlias;
+    final joinRule = this.joinRule;
+    final name = this.name;
+    final topic = this.topic;
+    return {
+      if (avatarUrl != null) 'avatar_url': avatarUrl.toString(),
+      if (canonicalAlias != null) 'canonical_alias': canonicalAlias,
+      'guest_can_join': guestCanJoin,
+      if (joinRule != null) 'join_rule': joinRule,
+      if (name != null) 'name': name,
+      'num_joined_members': numJoinedMembers,
+      'room_id': roomId,
+      if (topic != null) 'topic': topic,
+      'world_readable': worldReadable,
+    };
+  }
+
+  /// The URL for the room's avatar, if one is set.
+  Uri? avatarUrl;
+
+  /// The canonical alias of the room, if any.
+  String? canonicalAlias;
+
+  /// Whether guest users may join the room and participate in it.
+  /// If they can, they will be subject to ordinary power level
+  /// rules like any other user.
+  bool guestCanJoin;
+
+  /// The room's join rule. When not present, the room is assumed to
+  /// be `public`.
+  String? joinRule;
+
+  /// The name of the room, if any.
+  String? name;
+
+  /// The number of members joined to the room.
+  int numJoinedMembers;
+
+  /// The ID of the room.
+  String roomId;
+
+  /// The topic of the room, if any.
+  String? topic;
+
+  /// Whether the room may be viewed by guest users without joining.
+  bool worldReadable;
+}
+
 @_NameSource('rule override generated')
-enum ThirdPartyIdentifierMedium { email, msisdn }
+class SpaceRoomsChunkBase {
+  SpaceRoomsChunkBase({
+    required this.childrenState,
+    required this.roomType,
+  });
+
+  SpaceRoomsChunkBase.fromJson(Map<String, dynamic> json)
+      : childrenState = (json['children_state'] as List)
+            .map((v) => MatrixEvent.fromJson(v))
+            .toList(),
+        roomType = json['room_type'] as String;
+  Map<String, dynamic> toJson() => {
+        'children_state': childrenState.map((v) => v.toJson()).toList(),
+        'room_type': roomType,
+      };
+
+  /// The [`m.space.child`](#mspacechild) events of the space-room, represented
+  /// as [Stripped State Events](#stripped-state) with an added `origin_server_ts` key.
+  ///
+  /// If the room is not a space-room, this should be empty.
+  List<MatrixEvent> childrenState;
+
+  /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
+  String roomType;
+}
+
+@_NameSource('rule override generated')
+class SpaceRoomsChunk implements PublicRoomsChunk, SpaceRoomsChunkBase {
+  SpaceRoomsChunk({
+    this.avatarUrl,
+    this.canonicalAlias,
+    required this.guestCanJoin,
+    this.joinRule,
+    this.name,
+    required this.numJoinedMembers,
+    required this.roomId,
+    this.topic,
+    required this.worldReadable,
+    required this.childrenState,
+    required this.roomType,
+  });
+
+  SpaceRoomsChunk.fromJson(Map<String, dynamic> json)
+      : avatarUrl =
+            ((v) => v != null ? Uri.parse(v) : null)(json['avatar_url']),
+        canonicalAlias =
+            ((v) => v != null ? v as String : null)(json['canonical_alias']),
+        guestCanJoin = json['guest_can_join'] as bool,
+        joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
+        name = ((v) => v != null ? v as String : null)(json['name']),
+        numJoinedMembers = json['num_joined_members'] as int,
+        roomId = json['room_id'] as String,
+        topic = ((v) => v != null ? v as String : null)(json['topic']),
+        worldReadable = json['world_readable'] as bool,
+        childrenState = (json['children_state'] as List)
+            .map((v) => MatrixEvent.fromJson(v))
+            .toList(),
+        roomType = json['room_type'] as String;
+  Map<String, dynamic> toJson() {
+    final avatarUrl = this.avatarUrl;
+    final canonicalAlias = this.canonicalAlias;
+    final joinRule = this.joinRule;
+    final name = this.name;
+    final topic = this.topic;
+    return {
+      if (avatarUrl != null) 'avatar_url': avatarUrl.toString(),
+      if (canonicalAlias != null) 'canonical_alias': canonicalAlias,
+      'guest_can_join': guestCanJoin,
+      if (joinRule != null) 'join_rule': joinRule,
+      if (name != null) 'name': name,
+      'num_joined_members': numJoinedMembers,
+      'room_id': roomId,
+      if (topic != null) 'topic': topic,
+      'world_readable': worldReadable,
+      'children_state': childrenState.map((v) => v.toJson()).toList(),
+      'room_type': roomType,
+    };
+  }
+
+  /// The URL for the room's avatar, if one is set.
+  Uri? avatarUrl;
+
+  /// The canonical alias of the room, if any.
+  String? canonicalAlias;
+
+  /// Whether guest users may join the room and participate in it.
+  /// If they can, they will be subject to ordinary power level
+  /// rules like any other user.
+  bool guestCanJoin;
+
+  /// The room's join rule. When not present, the room is assumed to
+  /// be `public`.
+  String? joinRule;
+
+  /// The name of the room, if any.
+  String? name;
+
+  /// The number of members joined to the room.
+  int numJoinedMembers;
+
+  /// The ID of the room.
+  String roomId;
+
+  /// The topic of the room, if any.
+  String? topic;
+
+  /// Whether the room may be viewed by guest users without joining.
+  bool worldReadable;
+
+  /// The [`m.space.child`](#mspacechild) events of the space-room, represented
+  /// as [Stripped State Events](#stripped-state) with an added `origin_server_ts` key.
+  ///
+  /// If the room is not a space-room, this should be empty.
+  List<MatrixEvent> childrenState;
+
+  /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
+  String roomType;
+}
+
+@_NameSource('generated')
+class GetSpaceHierarchyResponse {
+  GetSpaceHierarchyResponse({
+    this.nextBatch,
+    required this.rooms,
+  });
+
+  GetSpaceHierarchyResponse.fromJson(Map<String, dynamic> json)
+      : nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+        rooms = (json['rooms'] as List)
+            .map((v) => SpaceRoomsChunk.fromJson(v))
+            .toList();
+  Map<String, dynamic> toJson() {
+    final nextBatch = this.nextBatch;
+    return {
+      if (nextBatch != null) 'next_batch': nextBatch,
+      'rooms': rooms.map((v) => v.toJson()).toList(),
+    };
+  }
+
+  /// A token to supply to `from` to keep paginating the responses. Not present when there are
+  /// no further results.
+  String? nextBatch;
+
+  /// The rooms for the current page, with the current filters.
+  List<SpaceRoomsChunk> rooms;
+}
+
+@_NameSource('rule override generated')
+@EnhancedEnum()
+enum ThirdPartyIdentifierMedium {
+  @EnhancedEnumValue(name: 'email')
+  email,
+  @EnhancedEnumValue(name: 'msisdn')
+  msisdn
+}
 
 @_NameSource('spec')
 class ThirdPartyIdentifier {
@@ -97,18 +329,12 @@ class ThirdPartyIdentifier {
   ThirdPartyIdentifier.fromJson(Map<String, dynamic> json)
       : addedAt = json['added_at'] as int,
         address = json['address'] as String,
-        medium = {
-          'email': ThirdPartyIdentifierMedium.email,
-          'msisdn': ThirdPartyIdentifierMedium.msisdn
-        }[json['medium']]!,
+        medium = ThirdPartyIdentifierMedium.values.fromString(json['medium'])!,
         validatedAt = json['validated_at'] as int;
   Map<String, dynamic> toJson() => {
         'added_at': addedAt,
         'address': address,
-        'medium': {
-          ThirdPartyIdentifierMedium.email: 'email',
-          ThirdPartyIdentifierMedium.msisdn: 'msisdn'
-        }[medium]!,
+        'medium': medium.name,
         'validated_at': validatedAt,
       };
 
@@ -163,7 +389,13 @@ class ThreePidCredentials {
 }
 
 @_NameSource('generated')
-enum IdServerUnbindResult { noSupport, success }
+@EnhancedEnum()
+enum IdServerUnbindResult {
+  @EnhancedEnumValue(name: 'no-support')
+  noSupport,
+  @EnhancedEnumValue(name: 'success')
+  success
+}
 
 @_NameSource('spec')
 class RequestTokenResponse {
@@ -206,16 +438,20 @@ class RequestTokenResponse {
 class TokenOwnerInfo {
   TokenOwnerInfo({
     this.deviceId,
+    this.isGuest,
     required this.userId,
   });
 
   TokenOwnerInfo.fromJson(Map<String, dynamic> json)
       : deviceId = ((v) => v != null ? v as String : null)(json['device_id']),
+        isGuest = ((v) => v != null ? v as bool : null)(json['is_guest']),
         userId = json['user_id'] as String;
   Map<String, dynamic> toJson() {
     final deviceId = this.deviceId;
+    final isGuest = this.isGuest;
     return {
       if (deviceId != null) 'device_id': deviceId,
+      if (isGuest != null) 'is_guest': isGuest,
       'user_id': userId,
     };
   }
@@ -225,6 +461,11 @@ class TokenOwnerInfo {
   /// of application services) then this field can be omitted.
   /// Otherwise this is required.
   String? deviceId;
+
+  /// When `true`, the user is a [Guest User](#guest-access). When
+  /// not present or `false`, the user is presumed to be a non-guest
+  /// user.
+  bool? isGuest;
 
   /// The user ID that owns the access token.
   String userId;
@@ -355,7 +596,13 @@ class ChangePasswordCapability {
 
 /// The stability of the room version.
 @_NameSource('rule override generated')
-enum RoomVersionAvailable { stable, unstable }
+@EnhancedEnum()
+enum RoomVersionAvailable {
+  @EnhancedEnumValue(name: 'stable')
+  stable,
+  @EnhancedEnumValue(name: 'unstable')
+  unstable
+}
 
 @_NameSource('spec')
 class RoomVersionsCapability {
@@ -365,21 +612,11 @@ class RoomVersionsCapability {
   });
 
   RoomVersionsCapability.fromJson(Map<String, dynamic> json)
-      : available = (json['available'] as Map<String, dynamic>).map((k, v) =>
-            MapEntry(
-                k,
-                {
-                  'stable': RoomVersionAvailable.stable,
-                  'unstable': RoomVersionAvailable.unstable
-                }[v]!)),
+      : available = (json['available'] as Map<String, dynamic>).map(
+            (k, v) => MapEntry(k, RoomVersionAvailable.values.fromString(v)!)),
         default$ = json['default'] as String;
   Map<String, dynamic> toJson() => {
-        'available': available.map((k, v) => MapEntry(
-            k,
-            {
-              RoomVersionAvailable.stable: 'stable',
-              RoomVersionAvailable.unstable: 'unstable'
-            }[v]!)),
+        'available': available.map((k, v) => MapEntry(k, v.name)),
         'default': default$,
       };
 
@@ -497,10 +734,24 @@ class Invite3pid {
 }
 
 @_NameSource('rule override generated')
-enum CreateRoomPreset { privateChat, publicChat, trustedPrivateChat }
+@EnhancedEnum()
+enum CreateRoomPreset {
+  @EnhancedEnumValue(name: 'private_chat')
+  privateChat,
+  @EnhancedEnumValue(name: 'public_chat')
+  publicChat,
+  @EnhancedEnumValue(name: 'trusted_private_chat')
+  trustedPrivateChat
+}
 
 @_NameSource('generated')
-enum Visibility { private, public }
+@EnhancedEnum()
+enum Visibility {
+  @EnhancedEnumValue(name: 'private')
+  private,
+  @EnhancedEnumValue(name: 'public')
+  public
+}
 
 /// A client device
 @_NameSource('spec')
@@ -576,15 +827,52 @@ class GetRoomIdByAliasResponse {
   List<String>? servers;
 }
 
-@_NameSource('rule override generated')
-class EventsSyncUpdate {
-  EventsSyncUpdate({
+@_NameSource('generated')
+class GetEventsResponse {
+  GetEventsResponse({
     this.chunk,
     this.end,
     this.start,
   });
 
-  EventsSyncUpdate.fromJson(Map<String, dynamic> json)
+  GetEventsResponse.fromJson(Map<String, dynamic> json)
+      : chunk = ((v) => v != null
+            ? (v as List).map((v) => MatrixEvent.fromJson(v)).toList()
+            : null)(json['chunk']),
+        end = ((v) => v != null ? v as String : null)(json['end']),
+        start = ((v) => v != null ? v as String : null)(json['start']);
+  Map<String, dynamic> toJson() {
+    final chunk = this.chunk;
+    final end = this.end;
+    final start = this.start;
+    return {
+      if (chunk != null) 'chunk': chunk.map((v) => v.toJson()).toList(),
+      if (end != null) 'end': end,
+      if (start != null) 'start': start,
+    };
+  }
+
+  /// An array of events.
+  List<MatrixEvent>? chunk;
+
+  /// A token which correlates to the end of `chunk`. This
+  /// token should be used in the next request to `/events`.
+  String? end;
+
+  /// A token which correlates to the start of `chunk`. This
+  /// is usually the same token supplied to `from=`.
+  String? start;
+}
+
+@_NameSource('generated')
+class PeekEventsResponse {
+  PeekEventsResponse({
+    this.chunk,
+    this.end,
+    this.start,
+  });
+
+  PeekEventsResponse.fromJson(Map<String, dynamic> json)
       : chunk = ((v) => v != null
             ? (v as List).map((v) => MatrixEvent.fromJson(v)).toList()
             : null)(json['chunk']),
@@ -727,6 +1015,9 @@ class ClaimKeysResponse {
   ///
   /// See the [key algorithms](https://spec.matrix.org/unstable/client-server-api/#key-algorithms) section for information
   /// on the Key Object format.
+  ///
+  /// If necessary, the claimed key might be a fallback key. Fallback
+  /// keys are re-used by the server until replaced by the device.
   Map<String, Map<String, dynamic>> oneTimeKeys;
 }
 
@@ -844,7 +1135,13 @@ class LoginFlow {
 }
 
 @_NameSource('rule override generated')
-enum LoginType { mLoginPassword, mLoginToken }
+@EnhancedEnum()
+enum LoginType {
+  @EnhancedEnumValue(name: 'm.login.password')
+  mLoginPassword,
+  @EnhancedEnumValue(name: 'm.login.token')
+  mLoginToken
+}
 
 @_NameSource('generated')
 class LoginResponse {
@@ -990,7 +1287,15 @@ class GetNotificationsResponse {
 }
 
 @_NameSource('rule override generated')
-enum PresenceType { offline, online, unavailable }
+@EnhancedEnum()
+enum PresenceType {
+  @EnhancedEnumValue(name: 'offline')
+  offline,
+  @EnhancedEnumValue(name: 'online')
+  online,
+  @EnhancedEnumValue(name: 'unavailable')
+  unavailable
+}
 
 @_NameSource('generated')
 class GetPresenceResponse {
@@ -1006,11 +1311,7 @@ class GetPresenceResponse {
             ((v) => v != null ? v as bool : null)(json['currently_active']),
         lastActiveAgo =
             ((v) => v != null ? v as int : null)(json['last_active_ago']),
-        presence = {
-          'online': PresenceType.online,
-          'offline': PresenceType.offline,
-          'unavailable': PresenceType.unavailable
-        }[json['presence']]!,
+        presence = PresenceType.values.fromString(json['presence'])!,
         statusMsg = ((v) => v != null ? v as String : null)(json['status_msg']);
   Map<String, dynamic> toJson() {
     final currentlyActive = this.currentlyActive;
@@ -1019,11 +1320,7 @@ class GetPresenceResponse {
     return {
       if (currentlyActive != null) 'currently_active': currentlyActive,
       if (lastActiveAgo != null) 'last_active_ago': lastActiveAgo,
-      'presence': {
-        PresenceType.online: 'online',
-        PresenceType.offline: 'offline',
-        PresenceType.unavailable: 'unavailable'
-      }[presence]!,
+      'presence': presence.name,
       if (statusMsg != null) 'status_msg': statusMsg,
     };
   }
@@ -1068,93 +1365,6 @@ class ProfileInformation {
 
   /// The user's display name if they have set one, otherwise not present.
   String? displayname;
-}
-
-@_NameSource('spec')
-class PublicRoomsChunk {
-  PublicRoomsChunk({
-    this.aliases,
-    this.avatarUrl,
-    this.canonicalAlias,
-    required this.guestCanJoin,
-    this.joinRule,
-    this.name,
-    required this.numJoinedMembers,
-    required this.roomId,
-    this.topic,
-    required this.worldReadable,
-  });
-
-  PublicRoomsChunk.fromJson(Map<String, dynamic> json)
-      : aliases = ((v) => v != null
-            ? (v as List).map((v) => v as String).toList()
-            : null)(json['aliases']),
-        avatarUrl =
-            ((v) => v != null ? Uri.parse(v) : null)(json['avatar_url']),
-        canonicalAlias =
-            ((v) => v != null ? v as String : null)(json['canonical_alias']),
-        guestCanJoin = json['guest_can_join'] as bool,
-        joinRule = ((v) => v != null ? v as String : null)(json['join_rule']),
-        name = ((v) => v != null ? v as String : null)(json['name']),
-        numJoinedMembers = json['num_joined_members'] as int,
-        roomId = json['room_id'] as String,
-        topic = ((v) => v != null ? v as String : null)(json['topic']),
-        worldReadable = json['world_readable'] as bool;
-  Map<String, dynamic> toJson() {
-    final aliases = this.aliases;
-    final avatarUrl = this.avatarUrl;
-    final canonicalAlias = this.canonicalAlias;
-    final joinRule = this.joinRule;
-    final name = this.name;
-    final topic = this.topic;
-    return {
-      if (aliases != null) 'aliases': aliases.map((v) => v).toList(),
-      if (avatarUrl != null) 'avatar_url': avatarUrl.toString(),
-      if (canonicalAlias != null) 'canonical_alias': canonicalAlias,
-      'guest_can_join': guestCanJoin,
-      if (joinRule != null) 'join_rule': joinRule,
-      if (name != null) 'name': name,
-      'num_joined_members': numJoinedMembers,
-      'room_id': roomId,
-      if (topic != null) 'topic': topic,
-      'world_readable': worldReadable,
-    };
-  }
-
-  /// Aliases of the room. May be empty.
-  List<String>? aliases;
-
-  /// The URL for the room's avatar, if one is set.
-  Uri? avatarUrl;
-
-  /// The canonical alias of the room, if any.
-  String? canonicalAlias;
-
-  /// Whether guest users may join the room and participate in it.
-  /// If they can, they will be subject to ordinary power level
-  /// rules like any other user.
-  bool guestCanJoin;
-
-  /// The room's join rule. When not present, the room is assumed to
-  /// be `public`. Note that rooms with `invite` join rules are not
-  /// expected here, but rooms with `knock` rules are given their
-  /// near-public nature.
-  String? joinRule;
-
-  /// The name of the room, if any.
-  String? name;
-
-  /// The number of members joined to the room.
-  int numJoinedMembers;
-
-  /// The ID of the room.
-  String roomId;
-
-  /// The topic of the room, if any.
-  String? topic;
-
-  /// Whether the room may be viewed by guest users without joining.
-  bool worldReadable;
 }
 
 /// A list of the rooms on the server.
@@ -1453,9 +1663,7 @@ class PushCondition {
   String kind;
 
   /// Required for `event_match` conditions. The glob-style pattern to
-  /// match against. Patterns with no special glob characters should be
-  /// treated as having asterisks prepended and appended when testing the
-  /// condition.
+  /// match against.
   String? pattern;
 }
 
@@ -1570,10 +1778,28 @@ class PushRuleSet {
 }
 
 @_NameSource('rule override generated')
-enum PushRuleKind { content, override, room, sender, underride }
+@EnhancedEnum()
+enum PushRuleKind {
+  @EnhancedEnumValue(name: 'content')
+  content,
+  @EnhancedEnumValue(name: 'override')
+  override,
+  @EnhancedEnumValue(name: 'room')
+  room,
+  @EnhancedEnumValue(name: 'sender')
+  sender,
+  @EnhancedEnumValue(name: 'underride')
+  underride
+}
 
 @_NameSource('rule override generated')
-enum AccountKind { guest, user }
+@EnhancedEnum()
+enum AccountKind {
+  @EnhancedEnumValue(name: 'guest')
+  guest,
+  @EnhancedEnumValue(name: 'user')
+  user
+}
 
 @_NameSource('generated')
 class RegisterResponse {
@@ -1725,7 +1951,11 @@ class RoomKeys {
 }
 
 @_NameSource('rule override generated')
-enum BackupAlgorithm { mMegolmBackupV1Curve25519AesSha2 }
+@EnhancedEnum()
+enum BackupAlgorithm {
+  @EnhancedEnumValue(name: 'm.megolm_backup.v1.curve25519-aes-sha2')
+  mMegolmBackupV1Curve25519AesSha2
+}
 
 @_NameSource('generated')
 class GetRoomKeysVersionCurrentResponse {
@@ -1738,19 +1968,13 @@ class GetRoomKeysVersionCurrentResponse {
   });
 
   GetRoomKeysVersionCurrentResponse.fromJson(Map<String, dynamic> json)
-      : algorithm = {
-          'm.megolm_backup.v1.curve25519-aes-sha2':
-              BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2
-        }[json['algorithm']]!,
+      : algorithm = BackupAlgorithm.values.fromString(json['algorithm'])!,
         authData = json['auth_data'] as Map<String, dynamic>,
         count = json['count'] as int,
         etag = json['etag'] as String,
         version = json['version'] as String;
   Map<String, dynamic> toJson() => {
-        'algorithm': {
-          BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2:
-              'm.megolm_backup.v1.curve25519-aes-sha2'
-        }[algorithm]!,
+        'algorithm': algorithm.name,
         'auth_data': authData,
         'count': count,
         'etag': etag,
@@ -1789,19 +2013,13 @@ class GetRoomKeysVersionResponse {
   });
 
   GetRoomKeysVersionResponse.fromJson(Map<String, dynamic> json)
-      : algorithm = {
-          'm.megolm_backup.v1.curve25519-aes-sha2':
-              BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2
-        }[json['algorithm']]!,
+      : algorithm = BackupAlgorithm.values.fromString(json['algorithm'])!,
         authData = json['auth_data'] as Map<String, dynamic>,
         count = json['count'] as int,
         etag = json['etag'] as String,
         version = json['version'] as String;
   Map<String, dynamic> toJson() => {
-        'algorithm': {
-          BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2:
-              'm.megolm_backup.v1.curve25519-aes-sha2'
-        }[algorithm]!,
+        'algorithm': algorithm.name,
         'auth_data': authData,
         'count': count,
         'etag': etag,
@@ -1924,56 +2142,81 @@ class RoomMember {
 }
 
 @_NameSource('(generated, rule override generated)')
-enum Membership { ban, invite, join, knock, leave }
+@EnhancedEnum()
+enum Membership {
+  @EnhancedEnumValue(name: 'ban')
+  ban,
+  @EnhancedEnumValue(name: 'invite')
+  invite,
+  @EnhancedEnumValue(name: 'join')
+  join,
+  @EnhancedEnumValue(name: 'knock')
+  knock,
+  @EnhancedEnumValue(name: 'leave')
+  leave
+}
 
 @_NameSource('rule override generated')
-enum Direction { b, f }
+@EnhancedEnum()
+enum Direction {
+  @EnhancedEnumValue(name: 'b')
+  b,
+  @EnhancedEnumValue(name: 'f')
+  f
+}
 
 /// A list of messages with a new token to request more.
 @_NameSource('generated')
 class GetRoomEventsResponse {
   GetRoomEventsResponse({
-    this.chunk,
+    required this.chunk,
     this.end,
-    this.start,
+    required this.start,
     this.state,
   });
 
   GetRoomEventsResponse.fromJson(Map<String, dynamic> json)
-      : chunk = ((v) => v != null
-            ? (v as List).map((v) => MatrixEvent.fromJson(v)).toList()
-            : null)(json['chunk']),
+      : chunk = (json['chunk'] as List)
+            .map((v) => MatrixEvent.fromJson(v))
+            .toList(),
         end = ((v) => v != null ? v as String : null)(json['end']),
-        start = ((v) => v != null ? v as String : null)(json['start']),
+        start = json['start'] as String,
         state = ((v) => v != null
             ? (v as List).map((v) => MatrixEvent.fromJson(v)).toList()
             : null)(json['state']);
   Map<String, dynamic> toJson() {
-    final chunk = this.chunk;
     final end = this.end;
-    final start = this.start;
     final state = this.state;
     return {
-      if (chunk != null) 'chunk': chunk.map((v) => v.toJson()).toList(),
+      'chunk': chunk.map((v) => v.toJson()).toList(),
       if (end != null) 'end': end,
-      if (start != null) 'start': start,
+      'start': start,
       if (state != null) 'state': state.map((v) => v.toJson()).toList(),
     };
   }
 
   /// A list of room events. The order depends on the `dir` parameter.
   /// For `dir=b` events will be in reverse-chronological order,
-  /// for `dir=f` in chronological order, so that events start
-  /// at the `from` point.
-  List<MatrixEvent>? chunk;
+  /// for `dir=f` in chronological order. (The exact definition of `chronological`
+  /// is dependent on the server implementation.)
+  ///
+  /// Note that an empty `chunk` does not *necessarily* imply that no more events
+  /// are available. Clients should continue to paginate until no `end` property
+  /// is returned.
+  List<MatrixEvent> chunk;
 
-  /// The token the pagination ends at. If `dir=b` this token should
-  /// be used again to request even earlier events.
+  /// A token corresponding to the end of `chunk`. This token can be passed
+  /// back to this endpoint to request further events.
+  ///
+  /// If no further events are available (either because we have
+  /// reached the start of the timeline, or because the user does
+  /// not have permission to see any more events), this property
+  /// is omitted from the response.
   String? end;
 
-  /// The token the pagination starts from. If `dir=b` this will be
-  /// the token supplied in `from`.
-  String? start;
+  /// A token corresponding to the start of `chunk`. This will be the same as
+  /// the value given in `from`.
+  String start;
 
   /// A list of state events relevant to showing the `chunk`. For example, if
   /// `lazy_load_members` is enabled in the filter then this may contain
@@ -1987,7 +2230,11 @@ class GetRoomEventsResponse {
 }
 
 @_NameSource('generated')
-enum ReceiptType { mRead }
+@EnhancedEnum()
+enum ReceiptType {
+  @EnhancedEnumValue(name: 'm.read')
+  mRead
+}
 
 @_NameSource('spec')
 class IncludeEventContext {
@@ -2250,7 +2497,13 @@ class SearchFilter implements EventFilter, RoomEventFilter {
 }
 
 @_NameSource('rule override generated')
-enum GroupKey { roomId, sender }
+@EnhancedEnum()
+enum GroupKey {
+  @EnhancedEnumValue(name: 'room_id')
+  roomId,
+  @EnhancedEnumValue(name: 'sender')
+  sender
+}
 
 /// Configuration for group.
 @_NameSource('spec')
@@ -2260,14 +2513,12 @@ class Group {
   });
 
   Group.fromJson(Map<String, dynamic> json)
-      : key = ((v) => v != null
-            ? {'room_id': GroupKey.roomId, 'sender': GroupKey.sender}[v]!
-            : null)(json['key']);
+      : key = ((v) =>
+            v != null ? GroupKey.values.fromString(v)! : null)(json['key']);
   Map<String, dynamic> toJson() {
     final key = this.key;
     return {
-      if (key != null)
-        'key': {GroupKey.roomId: 'room_id', GroupKey.sender: 'sender'}[key]!,
+      if (key != null) 'key': key.name,
     };
   }
 
@@ -2297,10 +2548,24 @@ class Groupings {
 }
 
 @_NameSource('rule override generated')
-enum KeyKind { contentBody, contentName, contentTopic }
+@EnhancedEnum()
+enum KeyKind {
+  @EnhancedEnumValue(name: 'content.body')
+  contentBody,
+  @EnhancedEnumValue(name: 'content.name')
+  contentName,
+  @EnhancedEnumValue(name: 'content.topic')
+  contentTopic
+}
 
 @_NameSource('rule override generated')
-enum SearchOrder { rank, recent }
+@EnhancedEnum()
+enum SearchOrder {
+  @EnhancedEnumValue(name: 'rank')
+  rank,
+  @EnhancedEnumValue(name: 'recent')
+  recent
+}
 
 @_NameSource('spec')
 class RoomEventsCriteria {
@@ -2325,17 +2590,10 @@ class RoomEventsCriteria {
         includeState =
             ((v) => v != null ? v as bool : null)(json['include_state']),
         keys = ((v) => v != null
-            ? (v as List)
-                .map((v) => {
-                      'content.body': KeyKind.contentBody,
-                      'content.name': KeyKind.contentName,
-                      'content.topic': KeyKind.contentTopic
-                    }[v]!)
-                .toList()
+            ? (v as List).map((v) => KeyKind.values.fromString(v)!).toList()
             : null)(json['keys']),
-        orderBy = ((v) => v != null
-            ? {'recent': SearchOrder.recent, 'rank': SearchOrder.rank}[v]!
-            : null)(json['order_by']),
+        orderBy = ((v) => v != null ? SearchOrder.values.fromString(v)! : null)(
+            json['order_by']),
         searchTerm = json['search_term'] as String;
   Map<String, dynamic> toJson() {
     final eventContext = this.eventContext;
@@ -2349,19 +2607,8 @@ class RoomEventsCriteria {
       if (filter != null) 'filter': filter.toJson(),
       if (groupings != null) 'groupings': groupings.toJson(),
       if (includeState != null) 'include_state': includeState,
-      if (keys != null)
-        'keys': keys
-            .map((v) => {
-                  KeyKind.contentBody: 'content.body',
-                  KeyKind.contentName: 'content.name',
-                  KeyKind.contentTopic: 'content.topic'
-                }[v]!)
-            .toList(),
-      if (orderBy != null)
-        'order_by': {
-          SearchOrder.recent: 'recent',
-          SearchOrder.rank: 'rank'
-        }[orderBy]!,
+      if (keys != null) 'keys': keys.map((v) => v.name).toList(),
+      if (orderBy != null) 'order_by': orderBy.name,
       'search_term': searchTerm,
     };
   }
@@ -2872,7 +3119,13 @@ class ThirdPartyUser {
 }
 
 @_NameSource('generated')
-enum EventFormat { client, federation }
+@EnhancedEnum()
+enum EventFormat {
+  @EnhancedEnumValue(name: 'client')
+  client,
+  @EnhancedEnumValue(name: 'federation')
+  federation
+}
 
 @_NameSource('rule override generated')
 class StateFilter implements EventFilter, RoomEventFilter {
@@ -3065,10 +3318,7 @@ class Filter {
             ? (v as List).map((v) => v as String).toList()
             : null)(json['event_fields']),
         eventFormat = ((v) => v != null
-            ? {
-                'client': EventFormat.client,
-                'federation': EventFormat.federation
-              }[v]!
+            ? EventFormat.values.fromString(v)!
             : null)(json['event_format']),
         presence = ((v) =>
             v != null ? EventFilter.fromJson(v) : null)(json['presence']),
@@ -3083,11 +3333,7 @@ class Filter {
       if (accountData != null) 'account_data': accountData.toJson(),
       if (eventFields != null)
         'event_fields': eventFields.map((v) => v).toList(),
-      if (eventFormat != null)
-        'event_format': {
-          EventFormat.client: 'client',
-          EventFormat.federation: 'federation'
-        }[eventFormat]!,
+      if (eventFormat != null) 'event_format': eventFormat.name,
       if (presence != null) 'presence': presence.toJson(),
       if (room != null) 'room': room.toJson(),
     };
@@ -3346,4 +3592,10 @@ class GetUrlPreviewResponse {
 }
 
 @_NameSource('generated')
-enum Method { crop, scale }
+@EnhancedEnum()
+enum Method {
+  @EnhancedEnumValue(name: 'crop')
+  crop,
+  @EnhancedEnumValue(name: 'scale')
+  scale
+}

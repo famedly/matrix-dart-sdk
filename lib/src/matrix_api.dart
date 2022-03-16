@@ -91,7 +91,7 @@ class MatrixApi extends Api {
     }
     dynamic json;
     (!(data is String)) ? json = jsonEncode(data) : json = data;
-    if (data is List<int> || action.startsWith('/media/r0/upload')) json = data;
+    if (data is List<int> || action.startsWith('/media/v3/upload')) json = data;
 
     final url = homeserver!
         .resolveUri(Uri(path: '_matrix$action', queryParameters: query));
@@ -154,7 +154,7 @@ class MatrixApi extends Api {
       Map<String, dynamic>? fallbackKeys}) async {
     final response = await request(
       RequestType.POST,
-      '/client/r0/keys/upload',
+      '/client/v3/keys/upload',
       data: {
         if (deviceKeys != null) 'device_keys': deviceKeys.toJson(),
         if (oneTimeKeys != null) 'one_time_keys': oneTimeKeys,
@@ -181,7 +181,7 @@ class MatrixApi extends Api {
     }
     await request(
       RequestType.POST,
-      '/client/r0/pushers/set',
+      '/client/v3/pushers/set',
       data: data,
     );
     return;
@@ -195,7 +195,7 @@ class MatrixApi extends Api {
     data['kind'] = null;
     await request(
       RequestType.POST,
-      '/client/r0/pushers/set',
+      '/client/v3/pushers/set',
       data: data,
     );
     return;
@@ -205,12 +205,30 @@ class MatrixApi extends Api {
   /// calls.
   @override
   Future<TurnServerCredentials> getTurnServer() async {
-    final json = await request(RequestType.GET, '/client/r0/voip/turnServer');
+    final json = await request(RequestType.GET, '/client/v3/voip/turnServer');
 
     // fix invalid responses from synapse
     // https://github.com/matrix-org/synapse/pull/10922
     json['ttl'] = json['ttl'].toInt();
 
     return TurnServerCredentials.fromJson(json);
+  }
+
+  @Deprecated('Use [deleteRoomKeyBySessionId] instead')
+  Future<RoomKeysUpdateResponse> deleteRoomKeysBySessionId(
+      String roomId, String sessionId, String version) async {
+    return deleteRoomKeyBySessionId(roomId, sessionId, version);
+  }
+
+  @Deprecated('Use [deleteRoomKeyBySessionId] instead')
+  Future<RoomKeysUpdateResponse> putRoomKeysBySessionId(String roomId,
+      String sessionId, String version, KeyBackupData data) async {
+    return putRoomKeyBySessionId(roomId, sessionId, version, data);
+  }
+
+  @Deprecated('Use [getRoomKeyBySessionId] instead')
+  Future<KeyBackupData> getRoomKeysBySessionId(
+      String roomId, String sessionId, String version) async {
+    return getRoomKeyBySessionId(roomId, sessionId, version);
   }
 }

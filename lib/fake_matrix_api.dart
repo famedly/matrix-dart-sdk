@@ -89,17 +89,17 @@ class FakeMatrixApi extends MockClient {
               statusCode = 405;
             }
           } else if (method == 'PUT' &&
-              action.contains('/client/r0/sendToDevice/')) {
+              action.contains('/client/v3/sendToDevice/')) {
             res = {};
           } else if (method == 'GET' &&
-              action.contains('/client/r0/rooms/') &&
+              action.contains('/client/v3/rooms/') &&
               action.contains('/state/m.room.member/')) {
             res = {'displayname': ''};
           } else if (method == 'PUT' &&
               action.contains(
-                  '/client/r0/rooms/!1234%3AfakeServer.notExisting/send/')) {
+                  '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/')) {
             res = {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
-          } else if (action.contains('/client/r0/sync')) {
+          } else if (action.contains('/client/v3/sync')) {
             res = {
               'next_batch': DateTime.now().millisecondsSinceEpoch.toString
             };
@@ -752,11 +752,11 @@ class FakeMatrixApi extends MockClient {
             'errcode': 'M_FORBIDDEN',
             'error': 'Blabla',
           },
-      '/media/r0/preview_url?url=https%3A%2F%2Fmatrix.org&ts=10': (var req) => {
+      '/media/v3/preview_url?url=https%3A%2F%2Fmatrix.org&ts=10': (var req) => {
             'og:image': 'mxc://example.com/ascERGshawAWawugaAcauga',
             'matrix:image:size': 102400
           },
-      '/media/r0/config': (var req) => {'m.upload.size': 50000000},
+      '/media/v3/config': (var req) => {'m.upload.size': 50000000},
       '/.well-known/matrix/client': (var req) => {
             'm.homeserver': {
               'base_url': 'https://fakeserver.notexisting',
@@ -768,7 +768,7 @@ class FakeMatrixApi extends MockClient {
               'app_url': 'https://custom.app.fakeserver.notexisting'
             }
           },
-      '/client/r0/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags':
+      '/client/v3/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags':
           (var req) => {
                 'tags': {
                   'm.favourite': {'order': 0.1},
@@ -776,7 +776,7 @@ class FakeMatrixApi extends MockClient {
                   'u.Customers': {}
                 }
               },
-      '/client/r0/events?from=1234&timeout=10&room_id=%211234': (var req) => {
+      '/client/v3/events?from=1234&timeout=10&room_id=%211234': (var req) => {
             'start': 's3456_9_0',
             'end': 's3457_9_0',
             'chunk': [
@@ -796,35 +796,35 @@ class FakeMatrixApi extends MockClient {
               }
             ]
           },
-      '/client/r0/thirdparty/location?alias=1234': (var req) => [
+      '/client/v3/thirdparty/location?alias=1234': (var req) => [
             {
               'alias': '#freenode_#matrix:matrix.org',
               'protocol': 'irc',
               'fields': {'network': 'freenode', 'channel': '#matrix'}
             }
           ],
-      '/client/r0/thirdparty/location/irc': (var req) => [
+      '/client/v3/thirdparty/location/irc': (var req) => [
             {
               'alias': '#freenode_#matrix:matrix.org',
               'protocol': 'irc',
               'fields': {'network': 'freenode', 'channel': '#matrix'}
             }
           ],
-      '/client/r0/thirdparty/user/irc': (var req) => [
+      '/client/v3/thirdparty/user/irc': (var req) => [
             {
               'userid': '@_gitter_jim:matrix.org',
               'protocol': 'gitter',
               'fields': {'user': 'jim'}
             }
           ],
-      '/client/r0/thirdparty/user?userid=1234': (var req) => [
+      '/client/v3/thirdparty/user?userid=1234': (var req) => [
             {
               'userid': '@_gitter_jim:matrix.org',
               'protocol': 'gitter',
               'fields': {'user': 'jim'}
             }
           ],
-      '/client/r0/thirdparty/protocol/irc': (var req) => {
+      '/client/v3/thirdparty/protocol/irc': (var req) => {
             'user_fields': ['network', 'nickname'],
             'location_fields': ['network', 'channel'],
             'icon': 'mxc://example.org/aBcDeFgH',
@@ -845,7 +845,7 @@ class FakeMatrixApi extends MockClient {
               }
             ]
           },
-      '/client/r0/thirdparty/protocols': (var req) => {
+      '/client/v3/thirdparty/protocols': (var req) => {
             'irc': {
               'user_fields': ['network', 'nickname'],
               'location_fields': ['network', 'channel'],
@@ -888,9 +888,9 @@ class FakeMatrixApi extends MockClient {
               ]
             }
           },
-      '/client/r0/account/whoami': (var req) =>
+      '/client/v3/account/whoami': (var req) =>
           {'user_id': 'alice@example.com'},
-      '/client/r0/capabilities': (var req) => {
+      '/client/v3/capabilities': (var req) => {
             'capabilities': {
               'm.change_password': {'enabled': false},
               'm.room_versions': {
@@ -905,7 +905,7 @@ class FakeMatrixApi extends MockClient {
               'com.example.custom.ratelimit': {'max_requests_per_hour': 600}
             }
           },
-      '/client/r0/rooms/1234/context/1234?limit=10&filter=%7B%7D': (var req) =>
+      '/client/v3/rooms/1234/context/1234?limit=10&filter=%7B%7D': (var req) =>
           {
             'end': 't29-57_2_0_2',
             'events_after': [
@@ -996,7 +996,7 @@ class FakeMatrixApi extends MockClient {
               }
             ]
           },
-      '/client/r0/admin/whois/%40alice%3Aexample.com': (var req) => {
+      '/client/v3/admin/whois/%40alice%3Aexample.com': (var req) => {
             'user_id': '@peter:rabbit.rocks',
             'devices': {
               'teapot': {
@@ -1020,15 +1020,15 @@ class FakeMatrixApi extends MockClient {
               }
             }
           },
-      '/client/r0/user/%40alice%3Aexample.com/account_data/test.account.data':
+      '/client/v3/user/%40alice%3Aexample.com/account_data/test.account.data':
           (var req) => {'foo': 'bar'},
-      '/client/r0/user/%40alice%3Aexample.com/rooms/1234/account_data/test.account.data':
+      '/client/v3/user/%40alice%3Aexample.com/rooms/1234/account_data/test.account.data':
           (var req) => {'foo': 'bar'},
-      '/client/r0/directory/room/%23testalias%3Aexample.com': (var reqI) => {
+      '/client/v3/directory/room/%23testalias%3Aexample.com': (var reqI) => {
             'room_id': '!abnjk1jdasj98:capuchins.com',
             'servers': ['capuchins.com', 'matrix.org', 'another.com']
           },
-      '/client/r0/account/3pid': (var req) => {
+      '/client/v3/account/3pid': (var req) => {
             'threepids': [
               {
                 'medium': 'email',
@@ -1038,7 +1038,7 @@ class FakeMatrixApi extends MockClient {
               }
             ]
           },
-      '/client/r0/devices': (var req) => {
+      '/client/v3/devices': (var req) => {
             'devices': [
               {
                 'device_id': 'QBUAZIFURK',
@@ -1048,7 +1048,7 @@ class FakeMatrixApi extends MockClient {
               }
             ]
           },
-      '/client/r0/notifications?from=1234&limit=10&only=1234': (var req) => {
+      '/client/v3/notifications?from=1234&limit=10&only=1234': (var req) => {
             'next_token': 'abcdef',
             'notifications': [
               {
@@ -1074,21 +1074,21 @@ class FakeMatrixApi extends MockClient {
               }
             ]
           },
-      '/client/r0/devices/QBUAZIFURK': (var req) => {
+      '/client/v3/devices/QBUAZIFURK': (var req) => {
             'device_id': 'QBUAZIFURK',
             'display_name': 'android',
             'last_seen_ip': '1.2.3.4',
             'last_seen_ts': 1474491775024
           },
-      '/client/r0/profile/%40alice%3Aexample.com/displayname': (var reqI) =>
+      '/client/v3/profile/%40alice%3Aexample.com/displayname': (var reqI) =>
           {'displayname': 'Alice M'},
-      '/client/r0/profile/%40alice%3Aexample.com/avatar_url': (var reqI) =>
+      '/client/v3/profile/%40alice%3Aexample.com/avatar_url': (var reqI) =>
           {'avatar_url': 'mxc://test'},
-      '/client/r0/profile/%40alice%3Aexample.com': (var reqI) => {
+      '/client/v3/profile/%40alice%3Aexample.com': (var reqI) => {
             'avatar_url': 'mxc://test',
             'displayname': 'Alice M',
           },
-      '/client/r0/voip/turnServer': (var req) => {
+      '/client/v3/voip/turnServer': (var req) => {
             'username': '1443779631:@user:example.com',
             'password': 'JlKfBy1QwLrO20385QyAtEyIv0=',
             'uris': [
@@ -1098,18 +1098,18 @@ class FakeMatrixApi extends MockClient {
             ],
             'ttl': 86400
           },
-      '/client/r0/presence/${Uri.encodeComponent('@alice:example.com')}/status':
+      '/client/v3/presence/${Uri.encodeComponent('@alice:example.com')}/status':
           (var req) => {
                 'presence': 'unavailable',
                 'last_active_ago': 420845,
                 'status_msg': 'test',
                 'currently_active': false
               },
-      '/client/r0/keys/changes?from=1234&to=1234': (var req) => {
+      '/client/v3/keys/changes?from=1234&to=1234': (var req) => {
             'changed': ['@alice:example.com', '@bob:example.org'],
             'left': ['@clara:example.com', '@doug:example.org']
           },
-      '/client/r0/pushers': (var req) => {
+      '/client/v3/pushers': (var req) => {
             'pushers': [
               {
                 'pushkey': 'Xp/MzCt8/9DcSNE9cuiaoT5Ac55job3TdLSSmtmYl4A=',
@@ -1126,11 +1126,10 @@ class FakeMatrixApi extends MockClient {
               }
             ]
           },
-      '/client/r0/publicRooms?limit=10&since=1234&server=example.com':
+      '/client/v3/publicRooms?limit=10&since=1234&server=example.com':
           (var req) => {
                 'chunk': [
                   {
-                    'aliases': ['#murrays:cheese.bar'],
                     'canonical_alias': '#murrays:cheese.bar',
                     'avatar_url': 'mxc://bleeker.street/CHEDDARandBRIE',
                     'guest_can_join': false,
@@ -1145,30 +1144,30 @@ class FakeMatrixApi extends MockClient {
                 'prev_batch': 'p1902',
                 'total_room_count_estimate': 115
               },
-      '/client/r0/rooms/!localpart%3Aexample.com/aliases': (var req) => {
+      '/client/v3/rooms/!localpart%3Aexample.com/aliases': (var req) => {
             'aliases': [
               '#somewhere:example.com',
               '#another:example.com',
               '#hat_trick:example.com'
             ]
           },
-      '/client/r0/joined_rooms': (var req) => {
+      '/client/v3/joined_rooms': (var req) => {
             'joined_rooms': ['!foo:example.com']
           },
-      '/client/r0/directory/list/room/!localpart%3Aexample.com': (var req) =>
+      '/client/v3/directory/list/room/!localpart%3Aexample.com': (var req) =>
           {'visibility': 'public'},
-      '/client/r0/rooms/1/state/m.room.member/@alice:example.com': (var req) =>
+      '/client/v3/rooms/1/state/m.room.member/@alice:example.com': (var req) =>
           {'displayname': 'Alice'},
-      '/client/r0/profile/%40getme%3Aexample.com': (var req) => {
+      '/client/v3/profile/%40getme%3Aexample.com': (var req) => {
             'avatar_url': 'mxc://test',
             'displayname': 'You got me',
           },
-      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.member/@getme%3Aexample.com':
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.member/@getme%3Aexample.com':
           (var req) => {
                 'avatar_url': 'mxc://test',
                 'displayname': 'You got me',
               },
-      '/client/r0/rooms/!localpart%3Aserver.abc/state': (var req) => [
+      '/client/v3/rooms/!localpart%3Aserver.abc/state': (var req) => [
             {
               'content': {'join_rule': 'public'},
               'type': 'm.room.join_rules',
@@ -1233,12 +1232,12 @@ class FakeMatrixApi extends MockClient {
               'state_key': ''
             }
           ],
-      '/client/r0/rooms/!localpart:server.abc/state/m.room.member/@getme:example.com':
+      '/client/v3/rooms/!localpart:server.abc/state/m.room.member/@getme:example.com':
           (var req) => {
                 'avatar_url': 'mxc://test',
                 'displayname': 'You got me',
               },
-      '/client/r0/rooms/!localpart:server.abc/event/1234': (var req) => {
+      '/client/v3/rooms/!localpart:server.abc/event/1234': (var req) => {
             'content': {
               'body': 'This is an example text message',
               'msgtype': 'm.text',
@@ -1252,7 +1251,7 @@ class FakeMatrixApi extends MockClient {
             'origin_server_ts': 1432735824653,
             'unsigned': {'age': 1234}
           },
-      '/client/r0/rooms/!localpart%3Aserver.abc/event/1234': (var req) => {
+      '/client/v3/rooms/!localpart%3Aserver.abc/event/1234': (var req) => {
             'content': {
               'body': 'This is an example text message',
               'msgtype': 'm.text',
@@ -1266,11 +1265,11 @@ class FakeMatrixApi extends MockClient {
             'origin_server_ts': 1432735824653,
             'unsigned': {'age': 1234}
           },
-      '/client/r0/rooms/!localpart%3Aserver.abc/messages?from=1234&to=1234&dir=b&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
+      '/client/v3/rooms/!localpart%3Aserver.abc/messages?from=1234&to=1234&dir=b&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponse,
-      '/client/r0/rooms/!localpart%3Aserver.abc/messages?from=&dir=b&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
+      '/client/v3/rooms/!localpart%3Aserver.abc/messages?from=&dir=b&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponse,
-      '/client/r0/rooms/!1234%3Aexample.com/messages?from=1234&dir=b&limit=100&filter=%7B%22lazy_load_members%22%3Atrue%7D':
+      '/client/v3/rooms/!1234%3Aexample.com/messages?from=1234&dir=b&limit=100&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponse,
       '/client/versions': (var req) => {
             'versions': [
@@ -1283,12 +1282,12 @@ class FakeMatrixApi extends MockClient {
             ],
             'unstable_features': {'m.lazy_load_members': true},
           },
-      '/client/r0/login': (var req) => {
+      '/client/v3/login': (var req) => {
             'flows': [
               {'type': 'm.login.password'}
             ]
           },
-      '/client/r0/rooms/!localpart%3Aserver.abc/joined_members': (var req) => {
+      '/client/v3/rooms/!localpart%3Aserver.abc/joined_members': (var req) => {
             'joined': {
               '@bar:example.com': {
                 'display_name': 'Bar',
@@ -1296,7 +1295,7 @@ class FakeMatrixApi extends MockClient {
               }
             }
           },
-      '/client/r0/rooms/!localpart%3Aserver.abc/members?at=1234&membership=join&not_membership=leave':
+      '/client/v3/rooms/!localpart%3Aserver.abc/members?at=1234&membership=join&not_membership=leave':
           (var req) => {
                 'chunk': [
                   {
@@ -1315,7 +1314,7 @@ class FakeMatrixApi extends MockClient {
                   }
                 ]
               },
-      '/client/r0/rooms/!696r7674:example.com/members': (var req) => {
+      '/client/v3/rooms/!696r7674:example.com/members': (var req) => {
             'chunk': [
               {
                 'content': {
@@ -1333,7 +1332,7 @@ class FakeMatrixApi extends MockClient {
               }
             ]
           },
-      '/client/r0/rooms/!726s6s6q:example.com/members': (var req) => {
+      '/client/v3/rooms/!726s6s6q:example.com/members': (var req) => {
             'chunk': [
               {
                 'content': {
@@ -1351,7 +1350,7 @@ class FakeMatrixApi extends MockClient {
               }
             ]
           },
-      '/client/r0/rooms/!localpart%3Aserver.abc/members': (var req) => {
+      '/client/v3/rooms/!localpart%3Aserver.abc/members': (var req) => {
             'chunk': [
               {
                 'content': {
@@ -1369,20 +1368,20 @@ class FakeMatrixApi extends MockClient {
               }
             ]
           },
-      '/client/r0/pushrules/global/content/nocake': (var req) => {
+      '/client/v3/pushrules/global/content/nocake': (var req) => {
             'actions': ['dont_notify'],
             'pattern': 'cake*lie',
             'rule_id': 'nocake',
             'enabled': true,
             'default': false
           },
-      '/client/r0/pushrules/global/content/nocake/enabled': (var req) => {
+      '/client/v3/pushrules/global/content/nocake/enabled': (var req) => {
             'enabled': true,
           },
-      '/client/r0/pushrules/global/content/nocake/actions': (var req) => {
+      '/client/v3/pushrules/global/content/nocake/actions': (var req) => {
             'actions': ['notify']
           },
-      '/client/r0/pushrules': (var req) => {
+      '/client/v3/pushrules': (var req) => {
             'global': {
               'content': [
                 {
@@ -1527,15 +1526,15 @@ class FakeMatrixApi extends MockClient {
               ]
             }
           },
-      '/client/r0/sync?filter=%7B%22room%22%3A%7B%22include_leave%22%3Atrue%2C%22timeline%22%3A%7B%22limit%22%3A10%7D%7D%7D&timeout=0':
+      '/client/v3/sync?filter=%7B%22room%22%3A%7B%22include_leave%22%3Atrue%2C%22timeline%22%3A%7B%22limit%22%3A10%7D%7D%7D&timeout=0':
           (var req) => archiveSyncResponse,
-      '/client/r0/sync?filter=%7B%22room%22%3A%7B%22state%22%3A%7B%22lazy_load_members%22%3Atrue%7D%7D%7D':
+      '/client/v3/sync?filter=%7B%22room%22%3A%7B%22state%22%3A%7B%22lazy_load_members%22%3Atrue%7D%7D%7D':
           (var req) => syncResponse,
-      '/client/r0/sync?filter=%7B%7D&since=1234&full_state=false&set_presence=unavailable&timeout=15':
+      '/client/v3/sync?filter=%7B%7D&since=1234&full_state=false&set_presence=unavailable&timeout=15':
           (var req) => syncResponse,
-      '/client/r0/register/available?username=testuser': (var req) =>
+      '/client/v3/register/available?username=testuser': (var req) =>
           {'available': true},
-      '/client/r0/user/${Uri.encodeComponent('alice@example.com')}/filter/1234':
+      '/client/v3/user/${Uri.encodeComponent('alice@example.com')}/filter/1234':
           (var req) => {
                 'room': {
                   'state': {
@@ -1566,7 +1565,7 @@ class FakeMatrixApi extends MockClient {
                 'event_format': 'client',
                 'event_fields': ['type', 'content', 'sender']
               },
-      '/client/unstable/room_keys/version': (var req) => {
+      '/client/v3/room_keys/version': (var req) => {
             'algorithm': AlgorithmTypes.megolmBackupV1Curve25519AesSha2,
             'auth_data': {
               'public_key': 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM',
@@ -1576,7 +1575,7 @@ class FakeMatrixApi extends MockClient {
             'etag': '0',
             'version': '5',
           },
-      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5':
+      '/client/v3/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5':
           (var req) => {
                 'first_message_index': 0,
                 'forwarded_count': 0,
@@ -1588,7 +1587,7 @@ class FakeMatrixApi extends MockClient {
                   'mac': 'QzKV/fgAs4U',
                 },
               },
-      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5':
+      '/client/v3/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5':
           (var req) => {
                 'sessions': {
                   'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU': {
@@ -1605,7 +1604,7 @@ class FakeMatrixApi extends MockClient {
                   },
                 },
               },
-      '/client/unstable/room_keys/keys?version=5': (var req) => {
+      '/client/v3/room_keys/keys?version=5': (var req) => {
             'rooms': {
               '!726s6s6q:example.com': {
                 'sessions': {
@@ -1627,16 +1626,16 @@ class FakeMatrixApi extends MockClient {
           },
     },
     'POST': {
-      '/client/r0/delete_devices': (var req) => {},
-      '/client/r0/account/3pid/add': (var req) => {},
-      '/client/r0/account/3pid/bind': (var req) => {},
-      '/client/r0/account/3pid/delete': (var req) =>
+      '/client/v3/delete_devices': (var req) => {},
+      '/client/v3/account/3pid/add': (var req) => {},
+      '/client/v3/account/3pid/bind': (var req) => {},
+      '/client/v3/account/3pid/delete': (var req) =>
           {'id_server_unbind_result': 'success'},
-      '/client/r0/account/3pid/unbind': (var req) =>
+      '/client/v3/account/3pid/unbind': (var req) =>
           {'id_server_unbind_result': 'success'},
-      '/client/r0/account/password': (var req) => {},
-      '/client/r0/rooms/1234/report/1234': (var req) => {},
-      '/client/r0/search': (var req) => {
+      '/client/v3/account/password': (var req) => {},
+      '/client/v3/rooms/1234/report/1234': (var req) => {},
+      '/client/v3/search': (var req) => {
             'search_categories': {
               'room_events': {
                 'groups': {
@@ -1674,9 +1673,9 @@ class FakeMatrixApi extends MockClient {
               }
             }
           },
-      '/client/r0/account/deactivate': (var req) =>
+      '/client/v3/account/deactivate': (var req) =>
           {'id_server_unbind_result': 'success'},
-      '/client/r0/user_directory/search': (var req) => {
+      '/client/v3/user_directory/search': (var req) => {
             'results': [
               {
                 'user_id': '@foo:bar.com',
@@ -1686,39 +1685,38 @@ class FakeMatrixApi extends MockClient {
             ],
             'limited': false
           },
-      '/client/r0/register/email/requestToken': (var req) => {
+      '/client/v3/register/email/requestToken': (var req) => {
             'sid': '123abc',
             'submit_url': 'https://example.org/path/to/submitToken'
           },
-      '/client/r0/register/msisdn/requestToken': (var req) => {
+      '/client/v3/register/msisdn/requestToken': (var req) => {
             'sid': '123abc',
             'submit_url': 'https://example.org/path/to/submitToken'
           },
-      '/client/r0/account/password/email/requestToken': (var req) => {
+      '/client/v3/account/password/email/requestToken': (var req) => {
             'sid': '123abc',
             'submit_url': 'https://example.org/path/to/submitToken'
           },
-      '/client/r0/account/password/msisdn/requestToken': (var req) => {
+      '/client/v3/account/password/msisdn/requestToken': (var req) => {
             'sid': '123abc',
             'submit_url': 'https://example.org/path/to/submitToken'
           },
-      '/client/r0/account/3pid/email/requestToken': (var req) => {
+      '/client/v3/account/3pid/email/requestToken': (var req) => {
             'sid': '123abc',
             'submit_url': 'https://example.org/path/to/submitToken'
           },
-      '/client/r0/account/3pid/msisdn/requestToken': (var req) => {
+      '/client/v3/account/3pid/msisdn/requestToken': (var req) => {
             'sid': '123abc',
             'submit_url': 'https://example.org/path/to/submitToken'
           },
-      '/client/r0/rooms/!localpart%3Aexample.com/receipt/m.read/%241234%3Aexample.com':
+      '/client/v3/rooms/!localpart%3Aexample.com/receipt/m.read/%241234%3Aexample.com':
           (var req) => {},
-      '/client/r0/rooms/!localpart%3Aexample.com/read_markers': (var req) => {},
-      '/client/r0/user/${Uri.encodeComponent('alice@example.com')}/filter':
+      '/client/v3/rooms/!localpart%3Aexample.com/read_markers': (var req) => {},
+      '/client/v3/user/${Uri.encodeComponent('alice@example.com')}/filter':
           (var req) => {'filter_id': '1234'},
-      '/client/r0/publicRooms?server=example.com': (var req) => {
+      '/client/v3/publicRooms?server=example.com': (var req) => {
             'chunk': [
               {
-                'aliases': ['#murrays:cheese.bar'],
                 'canonical_alias': '#murrays:cheese.bar',
                 'avatar_url': 'mxc://bleeker.street/CHEDDARandBRIE',
                 'guest_can_join': false,
@@ -1733,7 +1731,7 @@ class FakeMatrixApi extends MockClient {
             'prev_batch': 'p1902',
             'total_room_count_estimate': 115
           },
-      '/client/r0/keys/claim': (var req) => {
+      '/client/v3/keys/claim': (var req) => {
             'failures': {},
             'one_time_keys': {
               if (decodeJson(req)['one_time_keys']['@alice:example.com'] !=
@@ -1769,25 +1767,25 @@ class FakeMatrixApi extends MockClient {
                 },
             }
           },
-      '/client/r0/rooms/!localpart%3Aexample.com/invite': (var req) => {},
-      '/client/r0/rooms/!localpart%3Aexample.com/leave': (var req) => {},
-      '/client/r0/rooms/!localpart%3Aexample.com/forget': (var req) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/kick': (var req) => {},
-      '/client/r0/rooms/!localpart%3Aexample.com/kick': (var req) => {},
-      '/client/r0/rooms/!localpart%3Aexample.com/ban': (var req) => {},
-      '/client/r0/rooms/!localpart%3Aexample.com/unban': (var req) => {},
-      '/client/r0/rooms/!localpart%3Aexample.com/join': (var req) =>
+      '/client/v3/rooms/!localpart%3Aexample.com/invite': (var req) => {},
+      '/client/v3/rooms/!localpart%3Aexample.com/leave': (var req) => {},
+      '/client/v3/rooms/!localpart%3Aexample.com/forget': (var req) => {},
+      '/client/v3/rooms/!localpart%3Aserver.abc/kick': (var req) => {},
+      '/client/v3/rooms/!localpart%3Aexample.com/kick': (var req) => {},
+      '/client/v3/rooms/!localpart%3Aexample.com/ban': (var req) => {},
+      '/client/v3/rooms/!localpart%3Aexample.com/unban': (var req) => {},
+      '/client/v3/rooms/!localpart%3Aexample.com/join': (var req) =>
           {'room_id': '!localpart:example.com'},
-      '/client/r0/join/!localpart%3Aexample.com?server_name=example.com&server_name=example.abc':
+      '/client/v3/join/!localpart%3Aexample.com?server_name=example.com&server_name=example.abc':
           (var req) => {'room_id': '!localpart:example.com'},
-      '/client/r0/keys/upload': (var req) => {
+      '/client/v3/keys/upload': (var req) => {
             'one_time_key_counts': {
               'curve25519': 10,
               'signed_curve25519':
                   decodeJson(req)['one_time_keys']?.keys?.length ?? 0,
             }
           },
-      '/client/r0/keys/query': (var req) => {
+      '/client/v3/keys/query': (var req) => {
             'failures': {},
             'device_keys': {
               '@alice:example.com': {
@@ -1970,32 +1968,32 @@ class FakeMatrixApi extends MockClient {
               },
             },
           },
-      '/client/r0/register': (var req) => {
+      '/client/v3/register': (var req) => {
             'user_id': '@testuser:example.com',
             'access_token': '1234',
             'device_id': 'ABCD',
           },
-      '/client/r0/register?kind=user': (var req) =>
+      '/client/v3/register?kind=user': (var req) =>
           {'user_id': '@testuser:example.com'},
-      '/client/r0/register?kind=guest': (var req) =>
+      '/client/v3/register?kind=guest': (var req) =>
           {'user_id': '@testuser:example.com'},
-      '/client/r0/rooms/1234/upgrade': (var req) => {
+      '/client/v3/rooms/1234/upgrade': (var req) => {
             'replacement_room': '!1234:fakeServer.notExisting',
           },
-      '/client/r0/user/1234/openid/request_token': (var req) => {
+      '/client/v3/user/1234/openid/request_token': (var req) => {
             'access_token': 'SomeT0kenHere',
             'token_type': 'Bearer',
             'matrix_server_name': 'example.com',
             'expires_in': 3600
           },
-      '/client/r0/user/@test:fakeServer.notExisting/openid/request_token':
+      '/client/v3/user/@test:fakeServer.notExisting/openid/request_token':
           (var req) => {
                 'access_token': 'SomeT0kenHere',
                 'token_type': 'Bearer',
                 'matrix_server_name': 'example.com',
                 'expires_in': 3600
               },
-      '/client/r0/login': (var req) => {
+      '/client/v3/login': (var req) => {
             'user_id': '@test:fakeServer.notExisting',
             'access_token': 'abc123',
             'device_id': 'GHTYAJCE',
@@ -2004,160 +2002,160 @@ class FakeMatrixApi extends MockClient {
               'm.identity_server': {'base_url': 'https://id.example.org'}
             }
           },
-      '/media/r0/upload?filename=file.jpeg': (var req) =>
+      '/media/v3/upload?filename=file.jpeg': (var req) =>
           {'content_uri': 'mxc://example.com/AQwafuaFswefuhsfAFAgsw'},
-      '/client/r0/logout': (var reqI) => {},
-      '/client/r0/pushers/set': (var reqI) => {},
-      '/client/r0/join/1234': (var reqI) => {'room_id': '1234'},
-      '/client/r0/logout/all': (var reqI) => {},
-      '/client/r0/createRoom': (var reqI) => {
+      '/client/v3/logout': (var reqI) => {},
+      '/client/v3/pushers/set': (var reqI) => {},
+      '/client/v3/join/1234': (var reqI) => {'room_id': '1234'},
+      '/client/v3/logout/all': (var reqI) => {},
+      '/client/v3/createRoom': (var reqI) => {
             'room_id': '!1234:fakeServer.notExisting',
           },
-      '/client/r0/rooms/!localpart%3Aserver.abc/read_markers': (var reqI) => {},
-      '/client/r0/rooms/!localpart:server.abc/kick': (var reqI) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/ban': (var reqI) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/unban': (var reqI) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/invite': (var reqI) => {},
-      '/client/unstable/keys/device_signing/upload': (var reqI) {
+      '/client/v3/rooms/!localpart%3Aserver.abc/read_markers': (var reqI) => {},
+      '/client/v3/rooms/!localpart:server.abc/kick': (var reqI) => {},
+      '/client/v3/rooms/!localpart%3Aserver.abc/ban': (var reqI) => {},
+      '/client/v3/rooms/!localpart%3Aserver.abc/unban': (var reqI) => {},
+      '/client/v3/rooms/!localpart%3Aserver.abc/invite': (var reqI) => {},
+      '/client/v3/keys/device_signing/upload': (var reqI) {
         return {};
       },
-      '/client/r0/keys/signatures/upload': (var reqI) => {'failures': {}},
-      '/client/unstable/room_keys/version': (var reqI) => {'version': '5'},
+      '/client/v3/keys/signatures/upload': (var reqI) => {'failures': {}},
+      '/client/v3/room_keys/version': (var reqI) => {'version': '5'},
     },
     'PUT': {
-      '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/m.ignored_user_list':
+      '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.ignored_user_list':
           (var req) => {},
-      '/client/r0/presence/${Uri.encodeComponent('@alice:example.com')}/status':
+      '/client/v3/presence/${Uri.encodeComponent('@alice:example.com')}/status':
           (var req) => {},
-      '/client/r0/pushrules/global/content/nocake/enabled': (var req) => {},
-      '/client/r0/pushrules/global/content/nocake/actions': (var req) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.history_visibility':
+      '/client/v3/pushrules/global/content/nocake/enabled': (var req) => {},
+      '/client/v3/pushrules/global/content/nocake/actions': (var req) => {},
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.history_visibility':
           (var req) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.join_rules':
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.join_rules':
           (var req) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.guest_access':
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.guest_access':
           (var req) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.invite/1234':
+      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.invite/1234':
           (var req) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.answer/1234':
+      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.answer/1234':
           (var req) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.candidates/1234':
+      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.candidates/1234':
           (var req) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.call.hangup/1234':
+      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.hangup/1234':
           (var req) => {},
-      '/client/r0/rooms/!1234%3Aexample.com/redact/1143273582443PhrSn%3Aexample.org/1234':
+      '/client/v3/rooms/!1234%3Aexample.com/redact/1143273582443PhrSn%3Aexample.org/1234':
           (var req) => {'event_id': '1234'},
-      '/client/r0/pushrules/global/room/!localpart%3Aserver.abc': (var req) =>
+      '/client/v3/pushrules/global/room/!localpart%3Aserver.abc': (var req) =>
           {},
-      '/client/r0/pushrules/global/override/.m.rule.master/enabled':
+      '/client/v3/pushrules/global/override/.m.rule.master/enabled':
           (var req) => {},
-      '/client/r0/pushrules/global/content/nocake?before=1&after=2':
+      '/client/v3/pushrules/global/content/nocake?before=1&after=2':
           (var req) => {},
-      '/client/r0/devices/QBUAZIFURK': (var req) => {},
-      '/client/r0/directory/room/%23testalias%3Aexample.com': (var reqI) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.room.message/testtxid':
+      '/client/v3/devices/QBUAZIFURK': (var req) => {},
+      '/client/v3/directory/room/%23testalias%3Aexample.com': (var reqI) => {},
+      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.room.message/testtxid':
           (var reqI) => {
                 'event_id': '\$event${FakeMatrixApi.eventCounter++}',
               },
-      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.reaction/testtxid':
+      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.reaction/testtxid':
           (var reqI) => {
                 'event_id': '\$event${FakeMatrixApi.eventCounter++}',
               },
-      '/client/r0/rooms/!localpart%3Aexample.com/typing/%40alice%3Aexample.com':
+      '/client/v3/rooms/!localpart%3Aexample.com/typing/%40alice%3Aexample.com':
           (var req) => {},
-      '/client/r0/rooms/!1234%3Aexample.com/send/m.room.message/1234':
+      '/client/v3/rooms/!1234%3Aexample.com/send/m.room.message/1234':
           (var reqI) => {
                 'event_id': '\$event${FakeMatrixApi.eventCounter++}',
               },
-      '/client/r0/rooms/!1234%3Aexample.com/send/m.room.message/newresend':
+      '/client/v3/rooms/!1234%3Aexample.com/send/m.room.message/newresend':
           (var reqI) => {
                 'event_id': '\$event${FakeMatrixApi.eventCounter++}',
               },
-      '/client/r0/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/tags/m.favourite':
+      '/client/v3/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/tags/m.favourite':
           (var req) => {},
-      '/client/r0/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags/testtag':
+      '/client/v3/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags/testtag':
           (var req) => {},
-      '/client/r0/user/%40alice%3Aexample.com/account_data/test.account.data':
+      '/client/v3/user/%40alice%3Aexample.com/account_data/test.account.data':
           (var req) => {},
-      '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/best%20animal':
+      '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/best%20animal':
           (var req) => {},
-      '/client/r0/user/%40alice%3Aexample.com/rooms/1234/account_data/test.account.data':
+      '/client/v3/user/%40alice%3Aexample.com/rooms/1234/account_data/test.account.data':
           (var req) => {},
-      '/client/r0/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/account_data/com.famedly.marked_unread':
+      '/client/v3/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/account_data/com.famedly.marked_unread':
           (var req) => {},
-      '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/m.direct':
+      '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct':
           (var req) => {},
-      '/client/r0/user/%40othertest%3AfakeServer.notExisting/account_data/m.direct':
+      '/client/v3/user/%40othertest%3AfakeServer.notExisting/account_data/m.direct':
           (var req) => {},
-      '/client/r0/profile/%40alice%3Aexample.com/displayname': (var reqI) => {},
-      '/client/r0/profile/%40alice%3Aexample.com/avatar_url': (var reqI) => {},
-      '/client/r0/profile/%40test%3AfakeServer.notExisting/avatar_url':
+      '/client/v3/profile/%40alice%3Aexample.com/displayname': (var reqI) => {},
+      '/client/v3/profile/%40alice%3Aexample.com/avatar_url': (var reqI) => {},
+      '/client/v3/profile/%40test%3AfakeServer.notExisting/avatar_url':
           (var reqI) => {},
-      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.encryption':
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.encryption':
           (var reqI) => {'event_id': 'YUwRidLecu:example.com'},
-      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.avatar':
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.avatar':
           (var reqI) => {'event_id': 'YUwRidLecu:example.com'},
-      '/client/r0/rooms/!localpart%3Aserver.abc/send/m.room.message/1234':
+      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.room.message/1234':
           (var reqI) => {'event_id': 'YUwRidLecu:example.com'},
-      '/client/r0/rooms/!localpart%3Aserver.abc/redact/1234/1234': (var reqI) =>
+      '/client/v3/rooms/!localpart%3Aserver.abc/redact/1234/1234': (var reqI) =>
           {'event_id': 'YUwRidLecu:example.com'},
-      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.name':
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.name':
           (var reqI) => {
                 'event_id': '42',
               },
-      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.topic':
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.topic':
           (var reqI) => {
                 'event_id': '42',
               },
-      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.pinned_events':
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.pinned_events':
           (var reqI) => {
                 'event_id': '42',
               },
-      '/client/r0/rooms/!localpart%3Aserver.abc/state/m.room.power_levels':
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.power_levels':
           (var reqI) => {
                 'event_id': '42',
               },
-      '/client/r0/directory/list/room/!localpart%3Aexample.com': (var req) =>
+      '/client/v3/directory/list/room/!localpart%3Aexample.com': (var req) =>
           {},
-      '/client/unstable/room_keys/version/5': (var req) => {},
-      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5':
+      '/client/v3/room_keys/version/5': (var req) => {},
+      '/client/v3/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5':
           (var req) => {
                 'etag': 'asdf',
                 'count': 1,
               },
-      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5':
+      '/client/v3/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5':
           (var req) => {
                 'etag': 'asdf',
                 'count': 1,
               },
-      '/client/unstable/room_keys/keys?version=5': (var req) => {
+      '/client/v3/room_keys/keys?version=5': (var req) => {
             'etag': 'asdf',
             'count': 1,
           },
     },
     'DELETE': {
       '/unknown/token': (var req) => {'errcode': 'M_UNKNOWN_TOKEN'},
-      '/client/r0/devices/QBUAZIFURK': (var req) => {},
-      '/client/r0/directory/room/%23testalias%3Aexample.com': (var reqI) => {},
-      '/client/r0/pushrules/global/content/nocake': (var req) => {},
-      '/client/r0/pushrules/global/override/!localpart%3Aserver.abc':
+      '/client/v3/devices/QBUAZIFURK': (var req) => {},
+      '/client/v3/directory/room/%23testalias%3Aexample.com': (var reqI) => {},
+      '/client/v3/pushrules/global/content/nocake': (var req) => {},
+      '/client/v3/pushrules/global/override/!localpart%3Aserver.abc':
           (var req) => {},
-      '/client/r0/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/tags/m.favourite':
+      '/client/v3/user/%40test%3AfakeServer.notExisting/rooms/!localpart%3Aserver.abc/tags/m.favourite':
           (var req) => {},
-      '/client/r0/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags/testtag':
+      '/client/v3/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags/testtag':
           (var req) => {},
-      '/client/unstable/room_keys/version/5': (var req) => {},
-      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5':
+      '/client/v3/room_keys/version/5': (var req) => {},
+      '/client/v3/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}/${Uri.encodeComponent('ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU')}?version=5':
           (var req) => {
                 'etag': 'asdf',
                 'count': 1,
               },
-      '/client/unstable/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5':
+      '/client/v3/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5':
           (var req) => {
                 'etag': 'asdf',
                 'count': 1,
               },
-      '/client/unstable/room_keys/keys?version=5': (var req) => {
+      '/client/v3/room_keys/keys?version=5': (var req) => {
             'etag': 'asdf',
             'count': 1,
           },
