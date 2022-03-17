@@ -156,7 +156,7 @@ abstract class EventLocalizations {
         }
         // Has the user displayname changed?
         else if (newDisplayname != oldDisplayname && stateKey != null) {
-          text = i18n.changedTheDisplaynameTo(stateKey, newDisplayname);
+          text = i18n.changedTheDisplaynameTo(oldDisplayname, newDisplayname);
         }
       }
       return text;
