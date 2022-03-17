@@ -1,3 +1,10 @@
+## [0.8.13] - 02nd Mar 2022
+- fix: send oldusername in displayname changed event
+- fix: Dont encrypt reactions
+- refactor: Make MatrixFile final and move all image calculation into isolate
+- fix: own profile containing mxid
+- chore: Update fluffybox
+
 ## [0.8.12] - 02nd Mar 2022
 - fix: Rooms sort order after login
 - fix: Change password using email authentication
