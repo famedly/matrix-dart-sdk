@@ -19,7 +19,14 @@ dependencies:
   base58check: ^2.0.0
   olm: ^2.0.0
   matrix_api_lite: ^0.5.1
-  hive: ^2.0.4
+  # waiting for hive web workers
+  # https://github.com/hivedb/hive/pull/933
+  hive:
+    version: ^2.1.0
+    hosted:
+      url: https://famedly.gitlab.io/company/frontend/libraries/hive/
+      verion: ^2.10.0
+      name: hive
   image: ^3.1.1
   ffi: ^1.0.0
   js: ^0.6.3

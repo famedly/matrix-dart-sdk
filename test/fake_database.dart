@@ -46,7 +46,8 @@ Future<FamedlySdkHiveDatabase> getHiveDatabase(Client? c) async {
     final testHivePath =
         '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
     Directory(testHivePath).createSync(recursive: true);
-    Hive.init(testHivePath);
+    await Hive.init(testHivePath,
+        backendPreference: HiveStorageBackendPreference.webWorker);
     hiveInitialized = true;
   }
   final db = FamedlySdkHiveDatabase('unit_test.${c?.hashCode}');
