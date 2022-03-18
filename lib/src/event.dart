@@ -583,6 +583,8 @@ class Event extends MatrixEvent {
   /// room list you may find [withSenderNamePrefix] useful. Set [hideReply] to
   /// crop all lines starting with '>'. With [plaintextBody] it'll use the
   /// plaintextBody instead of the normal body.
+  /// [removeMarkdown] allow to remove the markdown formating from the event body.
+  /// Usefull form message preview or notifications text.
   String getLocalizedBody(MatrixLocalizations i18n,
       {bool withSenderNamePrefix = false,
       bool hideReply = false,
