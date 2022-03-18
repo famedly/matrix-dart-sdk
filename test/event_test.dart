@@ -1058,7 +1058,17 @@ void main() {
       expect(
           event.getLocalizedBody(MatrixDefaultLocalizations(),
               removeMarkdown: true, plaintextBody: true),
-          'Title\nsome text and 🔗link\nokay and this is important'); 
+          'Title\nsome text and 🔗link\nokay and this is important');
+      expect(
+          event.getLocalizedBody(MatrixDefaultLocalizations(),
+              removeMarkdown: true, withSenderNamePrefix: true),
+          'Example: Title\nsome text and link\nokay and this is important');
+      expect(
+          event.getLocalizedBody(MatrixDefaultLocalizations(),
+              removeMarkdown: true,
+              plaintextBody: true,
+              withSenderNamePrefix: true),
+          'Example: Title\nsome text and 🔗link\nokay and this is important');
     });
 
     test('aggregations', () {
