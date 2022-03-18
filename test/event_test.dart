@@ -1034,6 +1034,31 @@ void main() {
           event.getLocalizedBody(MatrixDefaultLocalizations(),
               hideReply: true, plaintextBody: true),
           'hmm, *fox*');
+
+      event = Event.fromJson({
+        'content': {
+          'body':
+              '# Title\nsome text and [link](https://example.com)\nokay and this is **important**',
+          'format': 'org.matrix.custom.html',
+          'formatted_body':
+              '<h1>Title</h1>\n<p>some text and <a href=\"https://example.com\">link</a><br>okay and this is <strong>important</strong></p>\n',
+          'msgtype': 'm.text'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.message',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(
+          event.getLocalizedBody(MatrixDefaultLocalizations(),
+              removeMarkdown: true),
+          'Title\nsome text and link\nokay and this is important');
+      expect(
+          event.getLocalizedBody(MatrixDefaultLocalizations(),
+              removeMarkdown: true, plaintextBody: true),
+          'Title\nsome text and 🔗link\nokay and this is important'); 
     });
 
     test('aggregations', () {

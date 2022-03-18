@@ -19,11 +19,13 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:html/parser.dart';
 import 'package:http/http.dart' as http;
 
 import '../matrix.dart';
 import 'utils/event_localizations.dart';
 import 'utils/html_to_text.dart';
+import 'utils/markdown.dart';
 
 abstract class RelationshipTypes {
   static const String reply = 'm.in_reply_to';
@@ -581,13 +583,12 @@ class Event extends MatrixEvent {
   /// room list you may find [withSenderNamePrefix] useful. Set [hideReply] to
   /// crop all lines starting with '>'. With [plaintextBody] it'll use the
   /// plaintextBody instead of the normal body.
-  String getLocalizedBody(
-    MatrixLocalizations i18n, {
-    bool withSenderNamePrefix = false,
-    bool hideReply = false,
-    bool hideEdit = false,
-    bool plaintextBody = false,
-  }) {
+  String getLocalizedBody(MatrixLocalizations i18n,
+      {bool withSenderNamePrefix = false,
+      bool hideReply = false,
+      bool hideEdit = false,
+      bool plaintextBody = false,
+      bool removeMarkdown = false}) {
     if (redacted) {
       return i18n.removedBy(redactedBecause?.sender.calcDisplayname() ?? '');
     }
@@ -621,6 +622,16 @@ class Event extends MatrixEvent {
       body = body.replaceFirst(
           RegExp(r'^>( \*)? <[^>]+>[^\n\r]+\r?\n(> [^\n]*\r?\n)*\r?\n'), '');
     }
+
+    // return the html tags free body
+    if (removeMarkdown == true) {
+      final html = markdown(body);
+      final document = parse(
+        html,
+      );
+      body = document.documentElement?.text ?? body;
+    }
+
     final callback = EventLocalizations.localizationsMap[type];
     var localizedBody = i18n.unknownEvent(type);
     if (callback != null) {
