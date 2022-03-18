@@ -57,6 +57,8 @@ abstract class EventTypes {
   static const String CallAssertedIdentity = 'm.call.asserted_identity';
   static const String CallAssertedIdentityPrefix =
       'org.matrix.call.asserted_identity';
+  static const String GroupCallPrefix = 'org.matrix.msc3401.call';
+  static const String GroupCallMemberPrefix = 'org.matrix.msc3401.call.member';
   static const String Unknown = 'm.unknown';
 
   // To device event types

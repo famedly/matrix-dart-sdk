@@ -29,9 +29,6 @@ import 'package:http/http.dart' as http;
 
 import '../matrix_api_lite.dart';
 import 'generated/api.dart';
-import 'model/matrix_connection_exception.dart';
-import 'model/matrix_exception.dart';
-import 'model/matrix_keys.dart';
 
 enum RequestType { GET, POST, PUT, DELETE }
 
