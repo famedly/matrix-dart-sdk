@@ -38,6 +38,55 @@ class MatrixWidget {
             : false,
       );
 
+  /// creates an `m.etherpad` [MatrixWidget]
+  factory MatrixWidget.etherpad(Room room, String name, Uri url) =>
+      MatrixWidget(
+        room: room,
+        name: name,
+        type: 'm.etherpad',
+        url: url.toString(),
+        data: {
+          'url': url.toString(),
+        },
+      );
+
+  /// creates an `m.jitsi` [MatrixWidget]
+  factory MatrixWidget.jitsi(Room room, String name, Uri url,
+          {bool isAudioOnly = false}) =>
+      MatrixWidget(
+        room: room,
+        name: name,
+        type: 'm.jitsi',
+        url: url.toString(),
+        data: {
+          'domain': url.host,
+          'conferenceId': url.pathSegments.last,
+          'isAudioOnly': isAudioOnly,
+        },
+      );
+
+  /// creates an `m.video` [MatrixWidget]
+  factory MatrixWidget.video(Room room, String name, Uri url) => MatrixWidget(
+        room: room,
+        name: name,
+        type: 'm.video',
+        url: url.toString(),
+        data: {
+          'url': url.toString(),
+        },
+      );
+
+  /// creates an `m.custom` [MatrixWidget]
+  factory MatrixWidget.custom(Room room, String name, Uri url) => MatrixWidget(
+        room: room,
+        name: name,
+        type: 'm.custom',
+        url: url.toString(),
+        data: {
+          'url': url.toString(),
+        },
+      );
+
   Future<Uri> buildWidgetUrl() async {
     // See https://github.com/matrix-org/matrix-doc/issues/1236 for a
     // description, specifically the section
@@ -66,4 +115,14 @@ class MatrixWidget {
 
     return Uri.parse(parsedUri);
   }
+
+  Map<String, dynamic> toJson() => {
+        'creatorUserId': creatorUserId,
+        'data': data,
+        'id': id,
+        'name': name,
+        'type': type,
+        'url': url,
+        'waitForIframeLoad': waitForIframeLoad,
+      };
 }
