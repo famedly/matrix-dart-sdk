@@ -443,8 +443,11 @@ class KeyManager {
     }
     _pendingNewOutboundGroupSessions[roomId] =
         _createOutboundGroupSession(roomId);
-    await _pendingNewOutboundGroupSessions[roomId];
-    return _pendingNewOutboundGroupSessions.remove(roomId)!;
+    try {
+      await _pendingNewOutboundGroupSessions[roomId];
+    } finally {
+      return _pendingNewOutboundGroupSessions.remove(roomId)!;
+    }
   }
 
   /// Prepares an outbound group session for a given room ID. That is, load it from
