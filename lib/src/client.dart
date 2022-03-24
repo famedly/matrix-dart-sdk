@@ -102,6 +102,8 @@ class Client extends MatrixApi {
     return await function(arg);
   }
 
+  final Duration sendTimelineEventTimeout;
+
   /// Create a client
   /// [clientName] = unique identifier of this client
   /// [databaseBuilder]: A function that creates the database instance, that will be used.
@@ -137,6 +139,8 @@ class Client extends MatrixApi {
   /// will use lazy_load_members.
   /// Set [compute] to the Flutter compute method to enable the SDK to run some
   /// code in background.
+  /// Set [timelineEventTimeout] to the preferred time the Client should retry
+  /// sending events on connection problems or to `Duration.zero` to disable it.
   Client(
     this.clientName, {
     this.databaseBuilder,
@@ -158,6 +162,7 @@ class Client extends MatrixApi {
     this.formatLocalpart = true,
     this.compute,
     Filter? syncFilter,
+    this.sendTimelineEventTimeout = const Duration(minutes: 1),
     @deprecated bool? debug,
   })  : syncFilter = syncFilter ??
             Filter(
