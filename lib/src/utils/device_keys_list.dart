@@ -86,6 +86,12 @@ class DeviceKeysList {
 
       final room =
           client.getRoomById(roomId) ?? Room(id: roomId, client: client);
+
+      if ((room.summary.mJoinedMemberCount ?? 0) > 2) {
+        throw Exception(
+            "Direct chat room has more than 2 members, can't do key verification in it");
+      }
+
       final request =
           KeyVerification(encryption: encryption, room: room, userId: userId);
       await request.start();
