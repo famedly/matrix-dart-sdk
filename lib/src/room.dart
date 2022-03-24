@@ -1411,9 +1411,12 @@ class Room {
     return user;
   }
 
-  /// Searches for the event on the server. Returns null if not found.
+  /// Searches for the event in the local cache and then on the server if not
+  /// found. Returns null if not found anywhere.
   Future<Event?> getEventById(String eventID) async {
     try {
+      final dbEvent = await client.database?.getEventById(eventID, this);
+      if (dbEvent != null) return dbEvent;
       final matrixEvent = await client.getOneRoomEvent(id, eventID);
       final event = Event.fromMatrixEvent(matrixEvent, this);
       if (event.type == EventTypes.Encrypted && client.encryptionEnabled) {
