@@ -468,35 +468,10 @@ class FluffyBoxDatabase extends DatabaseApi {
 
         final getRoomStateRequests = <String, Future<List>>{};
         final getRoomMembersRequests = <String, Future<List>>{};
+
         for (final raw in rawRooms.values) {
           // Get the room
           final room = Room.fromJson(copyMap(raw), client);
-
-          final membersToPostload = <String>{if (userID != null) userID};
-
-          // If the room is a direct chat, those IDs should be there too
-          if (room.isDirectChat) {
-            membersToPostload
-                .add(TupleKey(room.id, room.directChatMatrixID!).toString());
-          }
-          // the lastEvent message preview might have an author we need to fetch, if it is a group chat
-          final lastEvent = room.getState(EventTypes.Message);
-          if (lastEvent != null && !room.isDirectChat) {
-            membersToPostload
-                .add(TupleKey(room.id, lastEvent.senderId).toString());
-          }
-          // if the room has no name and no canonical alias, its name is calculated
-          // based on the heroes of the room
-          if (room.getState(EventTypes.RoomName) == null &&
-              room.getState(EventTypes.RoomCanonicalAlias) == null) {
-            // we don't have a name and no canonical alias, so we'll need to
-            // post-load the heroes
-            final heroes = room.summary.mHeroes;
-            if (heroes != null) {
-              heroes.forEach((hero) => membersToPostload.add(hero));
-            }
-          }
-
           // Get the "important" room states. All other states will be loaded once
           // `getUnimportantRoomStates()` is called.
           final dbKeys = client.importantStateEvents
@@ -504,14 +479,6 @@ class FluffyBoxDatabase extends DatabaseApi {
               .toList();
           getRoomStateRequests[room.id] = _roomStateBox.getAll(
             dbKeys,
-          );
-
-          // Load members
-          final membersDbKeys = membersToPostload
-              .map((member) => TupleKey(room.id, member).toString())
-              .toList();
-          getRoomMembersRequests[room.id] = _roomMembersBox.getAll(
-            membersDbKeys,
           );
 
           // Add to the list and continue.
@@ -531,8 +498,41 @@ class FluffyBoxDatabase extends DatabaseApi {
                 room.setState(state);
               }
             }
-          }
 
+            // now that we have the state we can continue
+            final membersToPostload = <String>{if (userID != null) userID};
+            // If the room is a direct chat, those IDs should be there too
+            if (room.isDirectChat) {
+              membersToPostload.add(room.directChatMatrixID!);
+            }
+
+            // the lastEvent message preview might have an author we need to fetch, if it is a group chat
+            if (room.lastEvent != null && !room.isDirectChat) {
+              membersToPostload.add(room.lastEvent!.senderId);
+            }
+
+            // if the room has no name and no canonical alias, its name is calculated
+            // based on the heroes of the room
+            if (room.getState(EventTypes.RoomName) == null &&
+                room.getState(EventTypes.RoomCanonicalAlias) == null) {
+              // we don't have a name and no canonical alias, so we'll need to
+              // post-load the heroes
+              final heroes = room.summary.mHeroes;
+              if (heroes != null) {
+                heroes.forEach((hero) => membersToPostload.add(hero));
+              }
+            }
+            // Load members
+            final membersDbKeys = membersToPostload
+                .map((member) => TupleKey(room.id, member).toString())
+                .toList();
+            getRoomMembersRequests[room.id] = _roomMembersBox.getAll(
+              membersDbKeys,
+            );
+          }
+        }
+
+        for (final room in rooms.values) {
           // Add members to the room
           final members = await getRoomMembersRequests[room.id];
           if (members != null) {
