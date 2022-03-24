@@ -247,12 +247,8 @@ class _RoomPageState extends State<RoomPage> {
       print('On remove $i');
       _count--;
       _listKey.currentState?.removeItem(i, (_, __) => const ListTile());
-    }, onHistoryReceived: (count) {
-      print('On History Received $count');
-      for (var i = 0; i < count; i++) {
-        _listKey.currentState?.insertItem(_count + i);
-      }
-      _count += count;
+    }, onUpdate: () {
+      print('On update');
     });
     super.initState();
   }
