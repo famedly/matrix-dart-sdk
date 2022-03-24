@@ -673,17 +673,11 @@ class Event extends MatrixEvent {
 
   /// Get the event ID that this relationship will reference. `null` if there is none
   String? get relationshipEventId {
-    if (!(content['m.relates_to'] is Map)) {
-      return null;
-    }
-    if (content['m.relates_to'].containsKey('event_id')) {
-      return content['m.relates_to']['event_id'];
-    }
-    if (content['m.relates_to']['m.in_reply_to'] is Map &&
-        content['m.relates_to']['m.in_reply_to'].containsKey('event_id')) {
-      return content['m.relates_to']['m.in_reply_to']['event_id'];
-    }
-    return null;
+    final relatesToMap = content.tryGetMap<String, dynamic>('m.relates_to');
+    return relatesToMap?.tryGet<String>('event_id') ??
+        relatesToMap
+            ?.tryGetMap<String, dynamic>('m.in_reply_to')
+            ?.tryGet<String>('event_id');
   }
 
   /// Get whether this event has aggregated events from a certain [type]
