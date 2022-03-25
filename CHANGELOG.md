@@ -1,3 +1,15 @@
+## [0.8.14] - 25th Mar 2022
+- feat: added doc (Henri Carnot)
+- feat: add some more tests (Henri Carnot)
+- feat: allow removing markdown formating (Henri Carnot)
+- feat: Get event in a room faster by searching in database (Christian Pauly)
+- feat: implement mofifying widgets (TheOneWithTheBraid)
+- feat: Set loglevel in client constructor (Christian Pauly)
+- fix: example (Henri Carnot)
+- fix: remove pending outbound group session creation on completed or errored (Henri Carnot)
+- fix: room members loading States were used before being fetched from the database. Thus, room membership states weren't set, and so, user display names weren't be fetched from the database. (Henri Carnot)
+- refactor: Simplify relates to and make it more type safe (Christian Pauly)
+
 ## [0.8.13] - 02nd Mar 2022
 - fix: send oldusername in displayname changed event
 - fix: Dont encrypt reactions
