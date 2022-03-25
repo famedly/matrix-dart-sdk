@@ -25,16 +25,19 @@ import 'package:test/test.dart';
 
 import 'fake_client.dart';
 import 'fake_matrix_api.dart';
+import 'fake_voip_delegate.dart';
 
 void main() {
   late Client matrix;
   late Room room;
+  late VoIP voip;
 
   /// All Tests related to the Event
   group('Room', () {
     Logs().level = Level.error;
     test('Login', () async {
       matrix = await getClient();
+      voip = VoIP(matrix, FakeVoIPDelegate());
     });
 
     test('Create from json', () async {
@@ -753,24 +756,29 @@ void main() {
     });
 
     test('Test call methods', () async {
-      await room.inviteToCall('1234', 1234, '4567', '7890', 'sdp',
+      await voip.sendInviteToCall(room, '1234', 1234, '4567', '7890', 'sdp',
           txid: '1234');
-      await room.answerCall('1234', 'sdp', '4567', txid: '1234');
-      await room.sendCallCandidates('1234', '4567', [], txid: '1234');
-      await room.selectCallAnswer('1234', 1234, '4567', '6789', txid: '1234');
-      await room.sendCallReject('1234', 1234, '4567', txid: '1234');
-      await room.sendCallNegotiate('1234', 1234, '4567', 'sdp', txid: '1234');
-      await room.hangupCall('1234', '4567', 'user_hangup', txid: '1234');
-      await room.sendAssertedIdentity(
+      await voip.sendAnswerCall(room, '1234', 'sdp', '4567', txid: '1234');
+      await voip.sendCallCandidates(room, '1234', '4567', [], txid: '1234');
+      await voip.sendSelectCallAnswer(room, '1234', 1234, '4567', '6789',
+          txid: '1234');
+      await voip.sendCallReject(room, '1234', 1234, '4567', txid: '1234');
+      await voip.sendCallNegotiate(room, '1234', 1234, '4567', 'sdp',
+          txid: '1234');
+      await voip.sendHangupCall(room, '1234', '4567', 'user_hangup',
+          txid: '1234');
+      await voip.sendAssertedIdentity(
+          room,
           '1234',
           '4567',
           AssertedIdentity()
             ..displayName = 'name'
             ..id = 'some_id',
           txid: '1234');
-      await room.sendCallReplaces('1234', '4567', CallReplaces(), txid: '1234');
-      await room.sendSDPStreamMetadataChanged(
-          '1234', '4567', SDPStreamMetadata({}),
+      await voip.sendCallReplaces(room, '1234', '4567', CallReplaces(),
+          txid: '1234');
+      await voip.sendSDPStreamMetadataChanged(
+          room, '1234', '4567', SDPStreamMetadata({}),
           txid: '1234');
     });
 
