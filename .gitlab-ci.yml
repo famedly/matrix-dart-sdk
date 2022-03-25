@@ -121,7 +121,7 @@ pub-dev:
         exit 1
       fi
 
-      mkdir -p /root/.pub-cache
+      mkdir -p ~/.config/dart/
       cp "${PUB_DEV_CREDENTIALS}" ~/.config/dart/pub-credentials.json
       
     - dart pub get
