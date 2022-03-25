@@ -157,6 +157,7 @@ class Client extends MatrixApi {
     this.mxidLocalPartFallback = true,
     this.formatLocalpart = true,
     this.compute,
+    Level? logLevel,
     Filter? syncFilter,
     @deprecated bool? debug,
   })  : syncFilter = syncFilter ??
@@ -174,6 +175,7 @@ class Client extends MatrixApi {
         super(
             httpClient:
                 VariableTimeoutHttpClient(httpClient ?? http.Client())) {
+    if (logLevel != null) Logs().level = logLevel;
     importantStateEvents.addAll([
       EventTypes.RoomName,
       EventTypes.RoomAvatar,
