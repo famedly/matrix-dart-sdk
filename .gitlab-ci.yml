@@ -106,41 +106,24 @@ dry-run:
     - dart pub get
     - dart pub publish --dry-run
 
+
 pub-dev:
   stage: publish
   image: google/dart
+  dependencies: [
+    dry-run
+  ]
   script:
     - rm -rf ./docs
     - |
-      if [ -z "${PUB_DEV_PUBLISH_ACCESS_TOKEN}" ]; then
-        echo "Missing PUB_DEV_PUBLISH_ACCESS_TOKEN environment variable"
+      if [ -z "${PUB_DEV_CREDENTIALS}" ]; then
+        echo "Missing PUB_DEV_CREDENTIALS environment variable"
         exit 1
       fi
 
-      if [ -z "${PUB_DEV_PUBLISH_REFRESH_TOKEN}" ]; then
-        echo "Missing PUB_DEV_PUBLISH_REFRESH_TOKEN environment variable"
-        exit 1
-      fi
-
-      if [ -z "${PUB_DEV_PUBLISH_TOKEN_ENDPOINT}" ]; then
-        echo "Missing PUB_DEV_PUBLISH_TOKEN_ENDPOINT environment variable"
-        exit 1
-      fi
-
-      if [ -z "${PUB_DEV_PUBLISH_EXPIRATION}" ]; then
-        echo "Missing PUB_DEV_PUBLISH_EXPIRATION environment variable"
-        exit 1
-      fi
-
-      cat <<EOF > ~/.pub-cache/credentials.json
-      {
-        "accessToken":"$(echo "${PUB_DEV_PUBLISH_ACCESS_TOKEN}" | base64 -d)",
-        "refreshToken":"$(echo "${PUB_DEV_PUBLISH_REFRESH_TOKEN}" | base64 -d)",
-        "tokenEndpoint":"${PUB_DEV_PUBLISH_TOKEN_ENDPOINT}",
-        "scopes":["https://www.googleapis.com/auth/userinfo.email","openid"],
-        "expiration":${PUB_DEV_PUBLISH_EXPIRATION}
-      }
-      EOF
+      mkdir -p /root/.pub-cache
+      cp "${PUB_DEV_CREDENTIALS}" ~/.config/dart/pub-credentials.json
+      
     - dart pub get
     - dart pub publish --force
   rules:
