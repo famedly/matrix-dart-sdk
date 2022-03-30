@@ -682,6 +682,8 @@ class Room {
     return sendEvent(event, txid: txid);
   }
 
+  final Map<String, MatrixFile> sendingFilePlaceholders = {};
+
   /// Sends a [file] to this room after uploading it. Returns the mxc uri of
   /// the uploaded file. If [waitUntilSent] is true, the future will wait until
   /// the message event has received the server. Otherwise the future will only
@@ -698,12 +700,12 @@ class Room {
     String? txid,
     Event? inReplyTo,
     String? editEventId,
-    bool waitUntilSent = false,
     int? shrinkImageMaxDimension,
     MatrixImageFile? thumbnail,
     Map<String, dynamic>? extraContent,
   }) async {
     txid ??= client.generateUniqueTransactionId();
+    sendingFilePlaceholders[txid] = file;
 
     // Create a fake Event object as a placeholder for the uploading file:
     final syncUpdate = SyncUpdate(
@@ -798,12 +800,14 @@ class Room {
         syncUpdate.rooms!.join!.values.first.timeline!.events!.first
             .unsigned![messageSendingStatusKey] = EventStatus.error.intValue;
         await _handleFakeSync(syncUpdate);
+        sendingFilePlaceholders.remove(txid);
         rethrow;
       } catch (_) {
         if (DateTime.now().isAfter(timeoutDate)) {
           syncUpdate.rooms!.join!.values.first.timeline!.events!.first
               .unsigned![messageSendingStatusKey] = EventStatus.error.intValue;
           await _handleFakeSync(syncUpdate);
+          sendingFilePlaceholders.remove(txid);
           rethrow;
         }
         Logs().v('Send File into room failed. Try again...');
@@ -855,15 +859,13 @@ class Room {
       },
       if (extraContent != null) ...extraContent,
     };
-    final sendResponse = sendEvent(
+    await sendEvent(
       content,
       txid: txid,
       inReplyTo: inReplyTo,
       editEventId: editEventId,
     );
-    if (waitUntilSent) {
-      await sendResponse;
-    }
+    sendingFilePlaceholders.remove(txid);
     return uploadResp;
   }
 
