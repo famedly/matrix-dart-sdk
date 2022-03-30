@@ -518,6 +518,10 @@ class Event extends MatrixEvent {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
+    if (status.isSending) {
+      final localFile = room.sendingFilePlaceholders[eventId];
+      if (localFile != null) return localFile;
+    }
     final database = room.client.database;
     final mxcUrl = attachmentOrThumbnailMxcUrl(getThumbnail: getThumbnail);
     if (mxcUrl == null) {
