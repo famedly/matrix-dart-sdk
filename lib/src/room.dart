@@ -714,18 +714,34 @@ class Room {
         uploadThumbnail = encryptedThumbnail.toMatrixFile();
       }
     }
-    final uploadResp = await client.uploadContent(
-      uploadFile.bytes,
-      filename: uploadFile.name,
-      contentType: uploadFile.mimeType,
-    );
-    final thumbnailUploadResp = uploadThumbnail != null
-        ? await client.uploadContent(
-            uploadThumbnail.bytes,
-            filename: uploadThumbnail.name,
-            contentType: uploadThumbnail.mimeType,
-          )
-        : null;
+    Uri? uploadResp, thumbnailUploadResp;
+
+    final timeoutDate = DateTime.now().add(client.sendTimelineEventTimeout);
+    while (uploadResp == null ||
+        (uploadThumbnail != null && thumbnailUploadResp == null)) {
+      try {
+        uploadResp = await client.uploadContent(
+          uploadFile.bytes,
+          filename: uploadFile.name,
+          contentType: uploadFile.mimeType,
+        );
+        thumbnailUploadResp = uploadThumbnail != null
+            ? await client.uploadContent(
+                uploadThumbnail.bytes,
+                filename: uploadThumbnail.name,
+                contentType: uploadThumbnail.mimeType,
+              )
+            : null;
+      } on MatrixException catch (_) {
+        rethrow;
+      } catch (_) {
+        if (DateTime.now().isAfter(timeoutDate)) {
+          rethrow;
+        }
+        Logs().v('Send File into room failed. Try again...');
+        await Future.delayed(Duration(seconds: 1));
+      }
+    }
 
     // Send event
     final content = <String, dynamic>{
@@ -912,6 +928,7 @@ class Room {
     );
     await _handleFakeSync(syncUpdate);
 
+    final timeoutDate = DateTime.now().add(client.sendTimelineEventTimeout);
     // Send the text and on success, store and display a *sent* event.
     String? res;
     while (res == null) {
@@ -922,20 +939,15 @@ class Room {
           txid: messageID,
         );
       } catch (e, s) {
-        if ((DateTime.now().millisecondsSinceEpoch -
-                sentDate.millisecondsSinceEpoch) <
-            (1000 * client.sendMessageTimeoutSeconds)) {
-          Logs().w('[Client] Problem while sending message because of "' +
-              e.toString() +
-              '". Try again in 1 seconds...');
-          await Future.delayed(Duration(seconds: 1));
-        } else {
-          Logs().w('[Client] Problem while sending message', e, s);
+        if (e is MatrixException || DateTime.now().isAfter(timeoutDate)) {
+          Logs().w('Problem while sending message', e, s);
           syncUpdate.rooms!.join!.values.first.timeline!.events!.first
               .unsigned![messageSendingStatusKey] = EventStatus.error.intValue;
           await _handleFakeSync(syncUpdate);
           return null;
         }
+        Logs().w('Problem while sending message: $e Try again in 1 seconds...');
+        await Future.delayed(Duration(seconds: 1));
       }
     }
     syncUpdate.rooms!.join!.values.first.timeline!.events!.first
