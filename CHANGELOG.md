@@ -1,3 +1,9 @@
+## [0.8.15] - 30th Mar 2022
+- feat: Pass through a custom image resize function to the client
+- feat: Display dummy event in timeline for sending files
+- chore: Move the call methods in room to the voip class.
+- fix: properly create the directory for the pub credentials
+
 ## [0.8.14] - 25th Mar 2022
 - feat: added doc (Henri Carnot)
 - feat: add some more tests (Henri Carnot)
