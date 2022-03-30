@@ -105,14 +105,17 @@ class MatrixImageFile extends MatrixFile {
       required String name,
       int maxDimension = 1600,
       String? mimeType,
+      MatrixImageFileResizedResponse? Function(MatrixImageFileResizeArguments)?
+          customImageResizer,
       Future<T> Function<T, U>(FutureOr<T> Function(U arg) function, U arg)?
           compute}) async {
-    final arguments = _ResizeArguments(
+    final arguments = MatrixImageFileResizeArguments(
       bytes: bytes,
       maxDimension: maxDimension,
       fileName: name,
       calcBlurhash: true,
     );
+    customImageResizer ??= _resize;
     final resizedData = compute != null
         ? await compute(_resize, arguments)
         : _resize(arguments);
@@ -154,6 +157,8 @@ class MatrixImageFile extends MatrixFile {
   /// computes a thumbnail for the image
   Future<MatrixImageFile?> generateThumbnail(
       {int dimension = Client.defaultThumbnailSize,
+      MatrixImageFileResizedResponse? Function(MatrixImageFileResizeArguments)?
+          customImageResizer,
       Future<T> Function<T, U>(FutureOr<T> Function(U arg) function, U arg)?
           compute}) async {
     final thumbnailFile = await shrink(
@@ -162,6 +167,7 @@ class MatrixImageFile extends MatrixFile {
       mimeType: mimeType,
       compute: compute,
       maxDimension: dimension,
+      customImageResizer: customImageResizer,
     );
     // the thumbnail should rather return null than the unshrinked image
     if ((thumbnailFile.width ?? 0) > dimension ||
@@ -171,11 +177,11 @@ class MatrixImageFile extends MatrixFile {
     return thumbnailFile;
   }
 
-  static _ResizedResponse? _calcMetadata(Uint8List bytes) {
+  static MatrixImageFileResizedResponse? _calcMetadata(Uint8List bytes) {
     final image = decodeImage(bytes);
     if (image == null) return null;
 
-    return _ResizedResponse(
+    return MatrixImageFileResizedResponse(
       bytes: bytes,
       width: image.width,
       height: image.height,
@@ -187,7 +193,8 @@ class MatrixImageFile extends MatrixFile {
     );
   }
 
-  static _ResizedResponse? _resize(_ResizeArguments arguments) {
+  static MatrixImageFileResizedResponse? _resize(
+      MatrixImageFileResizeArguments arguments) {
     final image = decodeImage(arguments.bytes);
 
     final resized = copyResize(image!,
@@ -197,7 +204,7 @@ class MatrixImageFile extends MatrixFile {
     final encoded = encodeNamedImage(resized, arguments.fileName);
     if (encoded == null) return null;
     final bytes = Uint8List.fromList(encoded);
-    return _ResizedResponse(
+    return MatrixImageFileResizedResponse(
       bytes: bytes,
       width: resized.width,
       height: resized.height,
@@ -212,13 +219,13 @@ class MatrixImageFile extends MatrixFile {
   }
 }
 
-class _ResizedResponse {
+class MatrixImageFileResizedResponse {
   final Uint8List bytes;
   final int width;
   final int height;
   final String? blurhash;
 
-  const _ResizedResponse({
+  const MatrixImageFileResizedResponse({
     required this.bytes,
     required this.width,
     required this.height,
@@ -226,13 +233,13 @@ class _ResizedResponse {
   });
 }
 
-class _ResizeArguments {
+class MatrixImageFileResizeArguments {
   final Uint8List bytes;
   final int maxDimension;
   final String fileName;
   final bool calcBlurhash;
 
-  const _ResizeArguments({
+  const MatrixImageFileResizeArguments({
     required this.bytes,
     required this.maxDimension,
     required this.fileName,

@@ -743,13 +743,16 @@ class Room {
               .unsigned![fileSendingStatusKey] =
           FileSendingStatus.generatingThumbnail.name;
       await _handleFakeSync(syncUpdate);
-      thumbnail ??=
-          await file.generateThumbnail(compute: client.runInBackground);
+      thumbnail ??= await file.generateThumbnail(
+        compute: client.runInBackground,
+        customImageResizer: client.customImageResizer,
+      );
       if (shrinkImageMaxDimension != null) {
         file = await MatrixImageFile.shrink(
           bytes: file.bytes,
           name: file.name,
           maxDimension: shrinkImageMaxDimension,
+          customImageResizer: client.customImageResizer,
         );
       }
     }

@@ -104,6 +104,9 @@ class Client extends MatrixApi {
 
   final Duration sendTimelineEventTimeout;
 
+  MatrixImageFileResizedResponse? Function(MatrixImageFileResizeArguments)?
+      customImageResizer;
+
   /// Create a client
   /// [clientName] = unique identifier of this client
   /// [databaseBuilder]: A function that creates the database instance, that will be used.
@@ -141,6 +144,8 @@ class Client extends MatrixApi {
   /// code in background.
   /// Set [timelineEventTimeout] to the preferred time the Client should retry
   /// sending events on connection problems or to `Duration.zero` to disable it.
+  /// Set [customImageResizer] to your own implementation for a more advanced
+  /// and faster image resizing experience.
   Client(
     this.clientName, {
     this.databaseBuilder,
@@ -164,6 +169,7 @@ class Client extends MatrixApi {
     Level? logLevel,
     Filter? syncFilter,
     this.sendTimelineEventTimeout = const Duration(minutes: 1),
+    this.customImageResizer,
     @deprecated bool? debug,
   })  : syncFilter = syncFilter ??
             Filter(
