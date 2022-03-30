@@ -50,6 +50,9 @@ const Map<HistoryVisibility, String> _historyVisibilityMap = {
 const String messageSendingStatusKey =
     'com.famedly.famedlysdk.message_sending_status';
 
+const String fileSendingStatusKey =
+    'com.famedly.famedlysdk.file_sending_status';
+
 const String sortOrderKey = 'com.famedly.famedlysdk.sort_order';
 
 /// Represents a Matrix room.
@@ -687,25 +690,81 @@ class Room {
   ///
   /// In case [file] is a [MatrixImageFile], [thumbnail] is automatically
   /// computed unless it is explicitly provided.
+  /// Set [shrinkImageMaxDimension] to for example `1600` if you want to shrink
+  /// your image before sending. This is ignored if the File is not a
+  /// [MatrixImageFile].
   Future<Uri> sendFileEvent(
     MatrixFile file, {
     String? txid,
     Event? inReplyTo,
     String? editEventId,
     bool waitUntilSent = false,
+    int? shrinkImageMaxDimension,
     MatrixImageFile? thumbnail,
     Map<String, dynamic>? extraContent,
   }) async {
+    txid ??= client.generateUniqueTransactionId();
+
+    // Create a fake Event object as a placeholder for the uploading file:
+    final syncUpdate = SyncUpdate(
+      nextBatch: '',
+      rooms: RoomsUpdate(
+        join: {
+          id: JoinedRoomUpdate(
+            timeline: TimelineUpdate(
+              events: [
+                MatrixEvent(
+                  content: {
+                    'msgtype': file.msgType,
+                    'body': file.name,
+                    'filename': file.name,
+                  },
+                  type: EventTypes.Message,
+                  eventId: txid,
+                  senderId: client.userID!,
+                  originServerTs: DateTime.now(),
+                  unsigned: {
+                    messageSendingStatusKey: EventStatus.sending.intValue,
+                    'transaction_id': txid,
+                  },
+                ),
+              ],
+            ),
+          ),
+        },
+      ),
+    );
+
     MatrixFile uploadFile = file; // ignore: omit_local_variable_types
     // computing the thumbnail in case we can
-    thumbnail ??= (file is MatrixImageFile && encrypted
-        ? await file.generateThumbnail(compute: client.runInBackground)
-        : null);
+    if (file is MatrixImageFile &&
+        (thumbnail == null || shrinkImageMaxDimension != null)) {
+      syncUpdate.rooms!.join!.values.first.timeline!.events!.first
+              .unsigned![fileSendingStatusKey] =
+          FileSendingStatus.generatingThumbnail.name;
+      await _handleFakeSync(syncUpdate);
+      thumbnail ??= await file.generateThumbnail(
+        compute: client.runInBackground,
+        customImageResizer: client.customImageResizer,
+      );
+      if (shrinkImageMaxDimension != null) {
+        file = await MatrixImageFile.shrink(
+          bytes: file.bytes,
+          name: file.name,
+          maxDimension: shrinkImageMaxDimension,
+          customImageResizer: client.customImageResizer,
+        );
+      }
+    }
+
     MatrixFile? uploadThumbnail =
         thumbnail; // ignore: omit_local_variable_types
     EncryptedFile? encryptedFile;
     EncryptedFile? encryptedThumbnail;
     if (encrypted && client.fileEncryptionEnabled) {
+      syncUpdate.rooms!.join!.values.first.timeline!.events!.first
+          .unsigned![fileSendingStatusKey] = FileSendingStatus.encrypting.name;
+      await _handleFakeSync(syncUpdate);
       encryptedFile = await file.encrypt();
       uploadFile = encryptedFile.toMatrixFile();
 
@@ -717,6 +776,9 @@ class Room {
     Uri? uploadResp, thumbnailUploadResp;
 
     final timeoutDate = DateTime.now().add(client.sendTimelineEventTimeout);
+
+    syncUpdate.rooms!.join!.values.first.timeline!.events!.first
+        .unsigned![fileSendingStatusKey] = FileSendingStatus.uploading.name;
     while (uploadResp == null ||
         (uploadThumbnail != null && thumbnailUploadResp == null)) {
       try {
@@ -733,9 +795,15 @@ class Room {
               )
             : null;
       } on MatrixException catch (_) {
+        syncUpdate.rooms!.join!.values.first.timeline!.events!.first
+            .unsigned![messageSendingStatusKey] = EventStatus.error.intValue;
+        await _handleFakeSync(syncUpdate);
         rethrow;
       } catch (_) {
         if (DateTime.now().isAfter(timeoutDate)) {
+          syncUpdate.rooms!.join!.values.first.timeline!.events!.first
+              .unsigned![messageSendingStatusKey] = EventStatus.error.intValue;
+          await _handleFakeSync(syncUpdate);
           rethrow;
         }
         Logs().v('Send File into room failed. Try again...');

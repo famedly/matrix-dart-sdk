@@ -19,6 +19,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:html/parser.dart';
 import 'package:http/http.dart' as http;
 
@@ -796,4 +797,19 @@ class Event extends MatrixEvent {
       return _countEmojiRegex.allMatches(plaintextBody).length;
     }
   }
+
+  /// If this event is in Status SENDING and it aims to send a file, then this
+  /// shows the status of the file sending.
+  FileSendingStatus? get fileSendingStatus {
+    final status = unsigned?.tryGet<String>(fileSendingStatusKey);
+    if (status == null) return null;
+    return FileSendingStatus.values.singleWhereOrNull(
+        (fileSendingStatus) => fileSendingStatus.name == status);
+  }
+}
+
+enum FileSendingStatus {
+  generatingThumbnail,
+  encrypting,
+  uploading,
 }
