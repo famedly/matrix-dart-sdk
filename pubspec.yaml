@@ -37,3 +37,9 @@ dev_dependencies:
   coverage: ">=0.15.0 <2.0.0"
   file: ^6.1.1
   #flutter_test: {sdk: flutter}
+
+dependency_overrides:
+  matrix_api_lite:
+    git:
+      url: https://gitlab.com/famedly/company/frontend/libraries/matrix_api_lite.git
+      ref: nico/api-1.2

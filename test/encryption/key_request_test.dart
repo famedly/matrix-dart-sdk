@@ -65,7 +65,7 @@ void main() {
       for (final entry in FakeMatrixApi.calledEndpoints.entries) {
         final payload = jsonDecode(entry.value.first);
         if (entry.key
-                .startsWith('/client/r0/sendToDevice/m.room_key_request') &&
+                .startsWith('/client/v3/sendToDevice/m.room_key_request') &&
             (payload['messages'] is Map) &&
             (payload['messages']['@alice:example.com'] is Map) &&
             (payload['messages']['@alice:example.com']['*'] is Map)) {
@@ -115,7 +115,7 @@ void main() {
       Logs().i(FakeMatrixApi.calledEndpoints.keys.toString());
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           true);
 
       // test a successful foreign share
@@ -142,7 +142,7 @@ void main() {
       Logs().i(FakeMatrixApi.calledEndpoints.keys.toString());
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           true);
       session.allowedAtIndex.remove('@test:fakeServer.notExisting');
 
@@ -168,7 +168,7 @@ void main() {
       Logs().i(FakeMatrixApi.calledEndpoints.keys.toString());
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           false);
 
       // no body
@@ -184,7 +184,7 @@ void main() {
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           false);
 
       // request by ourself
@@ -206,7 +206,7 @@ void main() {
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           false);
 
       // device not found
@@ -228,7 +228,7 @@ void main() {
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           false);
 
       // unknown room
@@ -250,7 +250,7 @@ void main() {
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           false);
 
       // unknwon session
@@ -272,7 +272,7 @@ void main() {
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           false);
 
       FakeMatrixApi.calledEndpoints.clear();

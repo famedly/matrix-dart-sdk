@@ -25,7 +25,7 @@ extension MxcUriExtension on Uri {
   Uri getDownloadLink(Client matrix) => isScheme('mxc')
       ? matrix.homeserver != null
           ? matrix.homeserver?.resolve(
-                  '_matrix/media/r0/download/$host${hasPort ? ':$port' : ''}$path') ??
+                  '_matrix/media/v3/download/$host${hasPort ? ':$port' : ''}$path') ??
               Uri()
           : Uri()
       : this;
@@ -48,7 +48,7 @@ extension MxcUriExtension on Uri {
     return Uri(
       scheme: homeserver.scheme,
       host: homeserver.host,
-      path: '/_matrix/media/r0/thumbnail/$host${hasPort ? ':$port' : ''}$path',
+      path: '/_matrix/media/v3/thumbnail/$host${hasPort ? ':$port' : ''}$path',
       port: homeserver.port,
       queryParameters: {
         if (width != null) 'width': width.round().toString(),

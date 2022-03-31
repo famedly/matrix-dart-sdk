@@ -61,7 +61,7 @@ void main() {
       expect(key.directVerified, true);
       expect(
           FakeMatrixApi.calledEndpoints
-              .containsKey('/client/r0/keys/signatures/upload'),
+              .containsKey('/client/v3/keys/signatures/upload'),
           true);
       expect(await client.encryption!.crossSigning.isCached(), true);
     });
@@ -99,7 +99,7 @@ void main() {
         client.userDeviceKeys['@othertest:fakeServer.notExisting']!.masterKey!
       ]);
       final body = json.decode(FakeMatrixApi
-          .calledEndpoints['/client/r0/keys/signatures/upload']!.first);
+          .calledEndpoints['/client/v3/keys/signatures/upload']!.first);
       expect(body['@test:fakeServer.notExisting']?.containsKey('OTHERDEVICE'),
           true);
       expect(
