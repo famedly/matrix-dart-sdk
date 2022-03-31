@@ -100,8 +100,11 @@ abstract class EventLocalizations {
       }
     },
     EventTypes.RoomMember: (event, i18n, body) {
-      var text = 'Failed to parse member event';
       final targetName = event.stateKeyUser?.calcDisplayname() ?? '';
+
+      // Fallback message if just nothing has changed:
+      var text = i18n.joinedTheChat(targetName);
+
       // Has the membership changed?
       final newMembership = event.content['membership'] ?? '';
       final oldMembership = event.prevContent?['membership'] ?? '';
