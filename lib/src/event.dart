@@ -327,13 +327,20 @@ class Event extends MatrixEvent {
   /// Try to send this event again. Only works with events of status -1.
   Future<String?> sendAgain({String? txid}) async {
     if (!status.isError) return null;
+    // If this is a failed file sending event, try to fetch the file from the
+    // database first.
+    final url = getAttachmentUrl();
+    if (url?.scheme == 'local') {
+      final file = await downloadAndDecryptAttachment();
+      return await room.sendFileEvent(file, extraContent: content);
+    }
+
     // we do not remove the event here. It will automatically be updated
     // in the `sendEvent` method to transition -1 -> 0 -> 1 -> 2
-    final newEventId = await room.sendEvent(
+    return await room.sendEvent(
       content,
       txid: txid ?? unsigned?['transaction_id'] ?? eventId,
     );
-    return newEventId;
   }
 
   /// Whether the client is allowed to redact this event.

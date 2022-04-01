@@ -695,7 +695,7 @@ class Room {
   /// Set [shrinkImageMaxDimension] to for example `1600` if you want to shrink
   /// your image before sending. This is ignored if the File is not a
   /// [MatrixImageFile].
-  Future<Uri> sendFileEvent(
+  Future<String?> sendFileEvent(
     MatrixFile file, {
     String? txid,
     Event? inReplyTo,
@@ -755,6 +755,7 @@ class Room {
           name: file.name,
           maxDimension: shrinkImageMaxDimension,
           customImageResizer: client.customImageResizer,
+          compute: client.runInBackground,
         );
       }
     }
@@ -859,14 +860,14 @@ class Room {
       },
       if (extraContent != null) ...extraContent,
     };
-    await sendEvent(
+    final eventId = await sendEvent(
       content,
       txid: txid,
       inReplyTo: inReplyTo,
       editEventId: editEventId,
     );
     sendingFilePlaceholders.remove(txid);
-    return uploadResp;
+    return eventId;
   }
 
   Future<String?> _sendContent(
@@ -1275,8 +1276,7 @@ class Room {
     void Function()? onUpdate,
   }) async {
     await postLoad();
-    var events;
-    events = await client.database?.getEventList(
+    final events = await client.database?.getEventList(
           this,
           limit: defaultHistoryCount,
         ) ??
@@ -1288,11 +1288,18 @@ class Room {
         for (var i = 0; i < events.length; i++) {
           if (events[i].type == EventTypes.Encrypted &&
               events[i].content['can_request_session'] == true) {
-            events[i] = await client.encryption
-                ?.decryptRoomEvent(id, events[i], store: true);
+            events[i] = await client.encryption!
+                .decryptRoomEvent(id, events[i], store: true);
           }
         }
       });
+    }
+
+    // Fetch all users from database we have got here.
+    for (final event in events) {
+      if (getState(EventTypes.RoomMember, event.senderId) != null) continue;
+      final dbUser = await client.database?.getUser(event.senderId, this);
+      if (dbUser != null) setState(dbUser);
     }
 
     final timeline = Timeline(
@@ -1303,9 +1310,6 @@ class Room {
       onInsert: onInsert,
       onUpdate: onUpdate,
     );
-    if (client.database == null) {
-      await requestHistory(historyCount: 10);
-    }
     return timeline;
   }
 

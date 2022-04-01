@@ -85,6 +85,16 @@ class Timeline {
         limit: Room.defaultHistoryCount,
       );
       if (eventsFromStore != null && eventsFromStore.isNotEmpty) {
+        // Fetch all users from database we have got here.
+        for (final event in events) {
+          if (room.getState(EventTypes.RoomMember, event.senderId) != null) {
+            continue;
+          }
+          final dbUser =
+              await room.client.database?.getUser(event.senderId, room);
+          if (dbUser != null) room.setState(dbUser);
+        }
+
         events.addAll(eventsFromStore);
         final startIndex = events.length - eventsFromStore.length;
         final endIndex = events.length;

@@ -745,7 +745,7 @@ void main() {
     test('sendFileEvent', () async {
       final testFile = MatrixFile(bytes: Uint8List(0), name: 'file.jpeg');
       final dynamic resp = await room.sendFileEvent(testFile, txid: 'testtxid');
-      expect(resp.toString(), 'mxc://example.com/AQwafuaFswefuhsfAFAgsw');
+      expect(resp.toString(), '\$event10');
     });
 
     test('pushRuleState', () async {
