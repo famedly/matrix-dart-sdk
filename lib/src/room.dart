@@ -695,7 +695,7 @@ class Room {
   /// Set [shrinkImageMaxDimension] to for example `1600` if you want to shrink
   /// your image before sending. This is ignored if the File is not a
   /// [MatrixImageFile].
-  Future<Uri> sendFileEvent(
+  Future<String?> sendFileEvent(
     MatrixFile file, {
     String? txid,
     Event? inReplyTo,
@@ -755,6 +755,7 @@ class Room {
           name: file.name,
           maxDimension: shrinkImageMaxDimension,
           customImageResizer: client.customImageResizer,
+          compute: client.runInBackground,
         );
       }
     }
@@ -859,14 +860,14 @@ class Room {
       },
       if (extraContent != null) ...extraContent,
     };
-    await sendEvent(
+    final eventId = await sendEvent(
       content,
       txid: txid,
       inReplyTo: inReplyTo,
       editEventId: editEventId,
     );
     sendingFilePlaceholders.remove(txid);
-    return uploadResp;
+    return eventId;
   }
 
   Future<String?> _sendContent(
