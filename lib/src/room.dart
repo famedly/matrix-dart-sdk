@@ -1559,7 +1559,8 @@ class Room {
   }
 
   bool _hasPermissionFor(String action) {
-    final pl = getState(EventTypes.RoomPowerLevels)?.content[action];
+    final pl =
+        getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>(action);
     if (pl == null) {
       return true;
     }
@@ -1589,8 +1590,10 @@ class Room {
   bool get canChangePowerLevel => canSendEvent(EventTypes.RoomPowerLevels);
 
   bool canSendEvent(String eventType) {
-    final pl =
-        getState(EventTypes.RoomPowerLevels)?.content['events']?[eventType];
+    final pl = getState(EventTypes.RoomPowerLevels)
+        ?.content
+        .tryGetMap<String, dynamic>('events')
+        ?.tryGet<int>(eventType);
     if (pl == null) {
       return eventType == EventTypes.Message
           ? canSendDefaultMessages

@@ -1,3 +1,9 @@
+## [0.8.16] - 3th Apr 2022
+- fix: Missing type check in power level calculation
+- fix: Post load all users on room opening
+- fix: Better fallback message for member events without any change
+- fix: Store sending files in database and fix retrying to send them
+
 ## [0.8.15] - 30th Mar 2022
 - feat: Pass through a custom image resize function to the client
 - feat: Display dummy event in timeline for sending files
