@@ -105,7 +105,8 @@ class MatrixImageFile extends MatrixFile {
       required String name,
       int maxDimension = 1600,
       String? mimeType,
-      MatrixImageFileResizedResponse? Function(MatrixImageFileResizeArguments)?
+      Future<MatrixImageFileResizedResponse?> Function(
+              MatrixImageFileResizeArguments)?
           customImageResizer,
       Future<T> Function<T, U>(FutureOr<T> Function(U arg) function, U arg)?
           compute}) async {
@@ -115,10 +116,11 @@ class MatrixImageFile extends MatrixFile {
       fileName: name,
       calcBlurhash: true,
     );
-    customImageResizer ??= _resize;
-    final resizedData = compute != null
-        ? await compute(_resize, arguments)
-        : _resize(arguments);
+    final resizedData = customImageResizer != null
+        ? await customImageResizer(arguments)
+        : compute != null
+            ? await compute(_resize, arguments)
+            : _resize(arguments);
 
     if (resizedData == null) {
       return MatrixImageFile(bytes: bytes, name: name, mimeType: mimeType);
@@ -157,7 +159,8 @@ class MatrixImageFile extends MatrixFile {
   /// computes a thumbnail for the image
   Future<MatrixImageFile?> generateThumbnail(
       {int dimension = Client.defaultThumbnailSize,
-      MatrixImageFileResizedResponse? Function(MatrixImageFileResizeArguments)?
+      Future<MatrixImageFileResizedResponse?> Function(
+              MatrixImageFileResizeArguments)?
           customImageResizer,
       Future<T> Function<T, U>(FutureOr<T> Function(U arg) function, U arg)?
           compute}) async {

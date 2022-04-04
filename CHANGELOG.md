@@ -1,3 +1,6 @@
+## [0.8.17] - 4th Apr 2022
+- chore: Allow custom image resizer to be an async method
+
 ## [0.8.16] - 3th Apr 2022
 - fix: Missing type check in power level calculation
 - fix: Post load all users on room opening
