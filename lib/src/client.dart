@@ -104,8 +104,8 @@ class Client extends MatrixApi {
 
   final Duration sendTimelineEventTimeout;
 
-  MatrixImageFileResizedResponse? Function(MatrixImageFileResizeArguments)?
-      customImageResizer;
+  Future<MatrixImageFileResizedResponse?> Function(
+      MatrixImageFileResizeArguments)? customImageResizer;
 
   /// Create a client
   /// [clientName] = unique identifier of this client
