@@ -857,6 +857,10 @@ class Room {
             'hashes': {'sha256': encryptedThumbnail.sha256}
           },
         if (thumbnail != null) 'thumbnail_info': thumbnail.info,
+        if (thumbnail?.blurhash != null &&
+            file is MatrixImageFile &&
+            file.blurhash == null)
+          'xyz.amorgan.blurhash': thumbnail!.blurhash
       },
       if (extraContent != null) ...extraContent,
     };
