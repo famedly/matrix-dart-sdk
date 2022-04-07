@@ -758,6 +758,10 @@ class Room {
           compute: client.runInBackground,
         );
       }
+
+      if (thumbnail != null && file.size < thumbnail.size) {
+        thumbnail = null; // in this case, the thumbnail is not usefull
+      }
     }
 
     MatrixFile? uploadThumbnail =
