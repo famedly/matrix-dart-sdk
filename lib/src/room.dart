@@ -23,6 +23,7 @@ import 'dart:typed_data';
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
+import 'package:matrix/src/utils/file_send_request_credentials.dart';
 import 'package:matrix/src/utils/space_child.dart';
 import 'package:matrix/widget.dart';
 
@@ -683,6 +684,7 @@ class Room {
   }
 
   final Map<String, MatrixFile> sendingFilePlaceholders = {};
+  final Map<String, MatrixImageFile> sendingFileThumbnails = {};
 
   /// Sends a [file] to this room after uploading it. Returns the mxc uri of
   /// the uploaded file. If [waitUntilSent] is true, the future will wait until
@@ -706,6 +708,9 @@ class Room {
   }) async {
     txid ??= client.generateUniqueTransactionId();
     sendingFilePlaceholders[txid] = file;
+    if (thumbnail != null) {
+      sendingFileThumbnails[txid] = thumbnail;
+    }
 
     // Create a fake Event object as a placeholder for the uploading file:
     final syncUpdate = SyncUpdate(
@@ -728,6 +733,12 @@ class Room {
                   unsigned: {
                     messageSendingStatusKey: EventStatus.sending.intValue,
                     'transaction_id': txid,
+                    ...FileSendRequestCredentials(
+                      inReplyTo: inReplyTo?.eventId,
+                      editEventId: editEventId,
+                      shrinkImageMaxDimension: shrinkImageMaxDimension,
+                      extraContent: extraContent,
+                    ).toJson(),
                   },
                 ),
               ],
@@ -805,14 +816,12 @@ class Room {
         syncUpdate.rooms!.join!.values.first.timeline!.events!.first
             .unsigned![messageSendingStatusKey] = EventStatus.error.intValue;
         await _handleFakeSync(syncUpdate);
-        sendingFilePlaceholders.remove(txid);
         rethrow;
       } catch (_) {
         if (DateTime.now().isAfter(timeoutDate)) {
           syncUpdate.rooms!.join!.values.first.timeline!.events!.first
               .unsigned![messageSendingStatusKey] = EventStatus.error.intValue;
           await _handleFakeSync(syncUpdate);
-          sendingFilePlaceholders.remove(txid);
           rethrow;
         }
         Logs().v('Send File into room failed. Try again...');
@@ -875,6 +884,7 @@ class Room {
       editEventId: editEventId,
     );
     sendingFilePlaceholders.remove(txid);
+    sendingFileThumbnails.remove(txid);
     return eventId;
   }
 

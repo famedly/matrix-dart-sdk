@@ -22,6 +22,7 @@ import 'dart:typed_data';
 import 'package:collection/collection.dart';
 import 'package:html/parser.dart';
 import 'package:http/http.dart' as http;
+import 'package:matrix/src/utils/file_send_request_credentials.dart';
 
 import '../matrix.dart';
 import 'utils/event_localizations.dart';
@@ -135,6 +136,18 @@ class Event extends MatrixEvent {
           ),
         );
       }
+    }
+
+    // If this is failed to send and the file is no longer cached, it should be removed!
+    if (!status.isSent &&
+        {
+          MessageTypes.Image,
+          MessageTypes.Video,
+          MessageTypes.Audio,
+          MessageTypes.File,
+        }.contains(messageType) &&
+        !room.sendingFilePlaceholders.containsKey(eventId)) {
+      remove();
     }
   }
 
@@ -327,12 +340,34 @@ class Event extends MatrixEvent {
   /// Try to send this event again. Only works with events of status -1.
   Future<String?> sendAgain({String? txid}) async {
     if (!status.isError) return null;
-    // If this is a failed file sending event, try to fetch the file from the
-    // database first.
-    final url = getAttachmentUrl();
-    if (url?.scheme == 'local') {
-      final file = await downloadAndDecryptAttachment();
-      return await room.sendFileEvent(file, extraContent: content);
+
+    // Retry sending a file:
+    if ({
+      MessageTypes.Image,
+      MessageTypes.Video,
+      MessageTypes.Audio,
+      MessageTypes.File,
+    }.contains(messageType)) {
+      final file = room.sendingFilePlaceholders[eventId];
+      if (file == null) {
+        await remove();
+        throw Exception('Can not try to send again. File is no longer cached.');
+      }
+      final thumbnail = room.sendingFileThumbnails[eventId];
+      final credentials = FileSendRequestCredentials.fromJson(unsigned ?? {});
+      final inReplyTo = credentials.inReplyTo == null
+          ? null
+          : await room.getEventById(credentials.inReplyTo!);
+      txid ??= unsigned?.tryGet<String>('transaction_id');
+      return await room.sendFileEvent(
+        file,
+        txid: txid,
+        thumbnail: thumbnail,
+        inReplyTo: inReplyTo,
+        editEventId: credentials.editEventId,
+        shrinkImageMaxDimension: credentials.shrinkImageMaxDimension,
+        extraContent: credentials.extraContent,
+      );
     }
 
     // we do not remove the event here. It will automatically be updated
