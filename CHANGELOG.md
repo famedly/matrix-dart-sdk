@@ -1,3 +1,8 @@
+## [0.8.18] - 8th Apr 2022
+- feat: check thumbnail size
+- feat: fallback to thumbnail preview
+- fix: Retry sending a file event
+
 ## [0.8.17] - 4th Apr 2022
 - chore: Allow custom image resizer to be an async method
 
