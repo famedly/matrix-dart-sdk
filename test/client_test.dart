@@ -917,5 +917,64 @@ void main() {
       await Future.delayed(Duration(milliseconds: 200));
       expect(hiveClient.isLogged(), true);
     });
+
+    test('getEventByPushNotification', () async {
+      final client = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        databaseBuilder: getDatabase,
+      )
+        ..accessToken = '1234'
+        ..baseUri = Uri.parse('https://fakeserver.notexisting');
+      Event? event;
+      event = await client
+          .getEventByPushNotification(PushNotification(devices: []));
+      expect(event, null);
+
+      event = await client.getEventByPushNotification(
+        PushNotification(
+          devices: [],
+          eventId: '123',
+          roomId: '!localpart2:server.abc',
+          content: {
+            'msgtype': 'm.text',
+            'body': 'Hello world',
+          },
+          roomAlias: '#testalias:blaaa',
+          roomName: 'TestRoomName',
+          sender: '@alicyy:example.com',
+          senderDisplayName: 'AlicE',
+          type: 'm.room.message',
+        ),
+      );
+      expect(event?.eventId, '123');
+      expect(event?.body, 'Hello world');
+      expect(event?.senderId, '@alicyy:example.com');
+      expect(event?.sender.calcDisplayname(), 'AlicE');
+      expect(event?.type, 'm.room.message');
+      expect(event?.messageType, 'm.text');
+      expect(event?.room.id, '!localpart2:server.abc');
+      expect(event?.room.name, 'TestRoomName');
+      expect(event?.room.canonicalAlias, '#testalias:blaaa');
+      final storedEvent =
+          await client.database?.getEventById('123', event!.room);
+      expect(storedEvent?.eventId, event?.eventId);
+
+      event = await client.getEventByPushNotification(
+        PushNotification(
+          devices: [],
+          eventId: '1234',
+          roomId: '!localpart:server.abc',
+        ),
+      );
+      expect(event?.eventId, '143273582443PhrSn:example.org');
+      expect(event?.room.id, '!localpart:server.abc');
+      expect(event?.body, 'This is an example text message');
+      expect(event?.messageType, 'm.text');
+      expect(event?.type, 'm.room.message');
+      final storedEvent2 = await client.database
+          ?.getEventById('143273582443PhrSn:example.org', event!.room);
+      expect(storedEvent2?.eventId, event?.eventId);
+    });
   });
 }

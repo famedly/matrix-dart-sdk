@@ -54,6 +54,9 @@ abstract class DatabaseApi {
 
   Future<List<Room>> getRoomList(Client client);
 
+  Future<Room?> getSingleRoom(Client client, String roomId,
+      {bool loadImportantStates = true});
+
   Future<Map<String, BasicEvent>> getAccountData();
 
   /// Stores a RoomUpdate object in the database. Must be called inside of

@@ -124,6 +124,11 @@ void testDatabase(
     expect(rooms.single.id, '!testroom');
   });
   test('getRoomList', () async {
+    final room =
+        await database.getSingleRoom(Client('testclient'), '!testroom');
+    expect(room?.id, '!testroom');
+  });
+  test('getRoomList', () async {
     final list = await database.getRoomList(Client('testclient'));
     expect(list.single.id, '!testroom');
   });

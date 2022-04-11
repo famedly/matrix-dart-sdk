@@ -516,6 +516,31 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
+  Future<Room?> getSingleRoom(Client client, String roomId,
+      {bool loadImportantStates = true}) async {
+    // Get raw room from database:
+    final roomData = await _roomsBox.get(roomId);
+    if (roomData == null) return null;
+    final room = Room.fromJson(copyMap(roomData), client);
+
+    // Get important states:
+    if (loadImportantStates) {
+      final dbKeys = client.importantStateEvents
+          .map((state) => TupleKey(roomId, state).toString())
+          .toList();
+      final rawStates = await Future.wait(
+        dbKeys.map((key) => _roomStateBox.get(key)),
+      );
+      for (final rawState in rawStates) {
+        if (rawState == null) continue;
+        room.setState(Event.fromJson(copyMap(rawState['']), room));
+      }
+    }
+
+    return room;
+  }
+
+  @override
   Future<List<Room>> getRoomList(Client client) =>
       runBenchmarked<List<Room>>('Get room list from hive', () async {
         final rooms = <String, Room>{};
