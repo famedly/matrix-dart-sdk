@@ -25,6 +25,9 @@ import '../matrix.dart';
 /// Represents the timeline of a room. The callback [onUpdate] will be triggered
 /// automatically. The initial
 /// event list will be retreived when created by the `room.getTimeline()` method.
+
+enum RequestDirection { p, f }
+
 class Timeline {
   final Room room;
   final List<Event> events;
@@ -71,6 +74,22 @@ class Timeline {
 
   Future<void> requestHistory(
       {int historyCount = Room.defaultHistoryCount}) async {
+    return await requestEvents(
+        direction: RequestDirection.p, historyCount: historyCount);
+  }
+
+  Future<void> requestFuture(
+      {int historyCount = Room.defaultHistoryCount}) async {
+    return await requestEvents(
+        direction: RequestDirection.f, historyCount: historyCount);
+  }
+
+  int start = 0;
+  int get end => start + events.length;
+
+  Future<void> requestEvents(
+      {int historyCount = Room.defaultHistoryCount,
+      required RequestDirection direction}) async {
     if (isRequestingHistory) {
       return;
     }
@@ -79,12 +98,17 @@ class Timeline {
 
     try {
       // Look up for events in hive first
-      final eventsFromStore = await room.client.database?.getEventList(
+      final timelineChunckFromStore =
+          await room.client.database?.getTimelineChunck(
         room,
-        start: events.length,
+        start: direction == RequestDirection.f ? start : end,
+        direction: direction,
         limit: Room.defaultHistoryCount,
       );
-      if (eventsFromStore != null && eventsFromStore.isNotEmpty) {
+
+      if (timelineChunckFromStore != null &&
+          timelineChunckFromStore.events.isNotEmpty) {
+        final eventsFromStore = timelineChunckFromStore.events;
         // Fetch all users from database we have got here.
         for (final event in events) {
           if (room.getState(EventTypes.RoomMember, event.senderId) != null) {
@@ -95,11 +119,20 @@ class Timeline {
           if (dbUser != null) room.setState(dbUser);
         }
 
-        events.addAll(eventsFromStore);
-        final startIndex = events.length - eventsFromStore.length;
-        final endIndex = events.length;
-        for (var i = startIndex; i < endIndex; i++) {
-          onInsert?.call(i);
+        if (direction == RequestDirection.p) {
+          events.addAll(eventsFromStore);
+          final startIndex = events.length - eventsFromStore.length;
+          final endIndex = events.length;
+          for (var i = startIndex; i < endIndex; i++) {
+            onInsert?.call(i);
+          }
+        } else {
+          events.insertAll(0, eventsFromStore);
+          final startIndex = eventsFromStore.length;
+          final endIndex = 0;
+          for (var i = startIndex; i > endIndex; i--) {
+            onInsert?.call(i);
+          }
         }
       } else {
         Logs().v('No more events found in the store. Request from server...');
@@ -117,14 +150,15 @@ class Timeline {
     }
   }
 
-  Timeline({
-    required this.room,
-    List<Event>? events,
-    this.onUpdate,
-    this.onChange,
-    this.onInsert,
-    this.onRemove,
-  }) : events = events ?? [] {
+  Timeline(
+      {required this.room,
+      List<Event>? events,
+      this.onUpdate,
+      this.onChange,
+      this.onInsert,
+      this.onRemove,
+      this.start = 0})
+      : events = events ?? [] {
     sub = room.client.onEvent.stream.listen(_handleEventUpdate);
 
     // If the timeline is limited we want to clear our events cache

@@ -31,6 +31,8 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 
+import '../timeline_chunk.dart';
+
 /// This database does not support file caching!
 class FluffyBoxDatabase extends DatabaseApi {
   static const int version = 6;
@@ -328,6 +330,36 @@ class FluffyBoxDatabase extends DatabaseApi {
     return Event.fromJson(copyMap(raw), room);
   }
 
+  @override
+  Future<TimelineChunck> getEventContext(
+          {required String eventId,
+          required Room room,
+          int limit = 10}) async =>
+      runBenchmarked<TimelineChunck>('Get event context', () async {
+        // Get the synced event IDs from the store
+        final timelineKey = TupleKey(room.id, '').toString();
+
+        final timelineEventIds =
+            (await _timelineFragmentsBox.get(timelineKey) ?? []);
+
+        // TODO: get the local SENDING events when last event is displayed
+
+        final itemPos =
+            timelineEventIds.indexWhere((item) => item.toString() == eventId);
+        print("itemPos: ${itemPos}");
+        if (itemPos == -1) return TimelineChunck(events: [], start: 0, end: 0);
+
+        var start = itemPos - limit ~/ 2;
+        if (start < 0) start = 0;
+        final end = min(timelineEventIds.length, start + limit);
+
+        final eventIds = timelineEventIds.getRange(start, end).toList();
+        return TimelineChunck(
+            events: await _getEventsByIds(eventIds.cast<String>(), room),
+            start: start,
+            end: end);
+      });
+
   /// Loads a whole list of events at once from the store for a specific room
   Future<List<Event>> _getEventsByIds(List<String> eventIds, Room room) async {
     final keys = eventIds
@@ -342,12 +374,13 @@ class FluffyBoxDatabase extends DatabaseApi {
   }
 
   @override
-  Future<List<Event>> getEventList(
+  Future<TimelineChunck> getTimelineChunck(
     Room room, {
+    required RequestDirection direction,
     int start = 0,
     int? limit,
   }) =>
-      runBenchmarked<List<Event>>('Get event list', () async {
+      runBenchmarked<TimelineChunck>('Get event list', () async {
         // Get the synced event IDs from the store
         final timelineKey = TupleKey(room.id, '').toString();
         final timelineEventIds =
@@ -362,17 +395,39 @@ class FluffyBoxDatabase extends DatabaseApi {
           sendingEventIds =
               (await _timelineFragmentsBox.get(sendingTimelineKey) ?? []);
         }
-
+        late List<dynamic> eventIds;
+        late int end;
         // Combine those two lists while respecting the start and limit parameters.
-        final end = min(timelineEventIds.length,
-            start + (limit ?? timelineEventIds.length));
-        final eventIds = sendingEventIds +
-            (start < timelineEventIds.length
-                ? timelineEventIds.getRange(start, end).toList()
-                : []);
+        if (direction == RequestDirection.p) {
+          end = min(timelineEventIds.length,
+              start + (limit ?? timelineEventIds.length));
+          eventIds = sendingEventIds +
+              (start < timelineEventIds.length
+                  ? timelineEventIds.getRange(start, end).toList()
+                  : []);
+        } else {
+          end = max(0, start - (limit ?? timelineEventIds.length));
+          eventIds = sendingEventIds +
+              (start < timelineEventIds.length
+                  ? timelineEventIds.getRange(end, start).toList()
+                  : []);
+        }
 
-        return await _getEventsByIds(eventIds.cast<String>(), room);
+        return TimelineChunck(
+            start: start,
+            end: end,
+            events: await _getEventsByIds(eventIds.cast<String>(), room));
       });
+
+  @override
+  Future<List<Event>> getEventList(
+    Room room, {
+    int start = 0,
+    int? limit,
+  }) async =>
+      (await getTimelineChunck(room,
+              start: start, limit: limit, direction: RequestDirection.p))
+          .events;
 
   @override
   Future<Uint8List?> getFile(Uri mxcUri) async {

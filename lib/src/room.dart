@@ -1292,13 +1292,27 @@ class Room {
     void Function(int index)? onRemove,
     void Function(int insertID)? onInsert,
     void Function()? onUpdate,
+    String? centerOnEvent,
   }) async {
     await postLoad();
-    final events = await client.database?.getEventList(
+
+    int? start;
+
+    var events = <Event>[];
+    if (client.database != null) {
+      if (centerOnEvent != null) {
+        final result = await client.database!
+            .getEventContext(eventId: centerOnEvent, room: this);
+
+        events = result.events;
+        start = result.start;
+      } else {
+        events = await client.database!.getEventList(
           this,
           limit: defaultHistoryCount,
-        ) ??
-        <Event>[];
+        );
+      }
+    }
 
     // Try again to decrypt encrypted events and update the database.
     if (encrypted && client.database != null && client.encryptionEnabled) {
@@ -1321,13 +1335,13 @@ class Room {
     }
 
     final timeline = Timeline(
-      room: this,
-      events: events,
-      onChange: onChange,
-      onRemove: onRemove,
-      onInsert: onInsert,
-      onUpdate: onUpdate,
-    );
+        room: this,
+        events: events,
+        onChange: onChange,
+        onRemove: onRemove,
+        onInsert: onInsert,
+        onUpdate: onUpdate,
+        start: start ?? 0);
     return timeline;
   }
 

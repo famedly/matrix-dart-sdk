@@ -30,6 +30,8 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 
+import '../timeline_chunk.dart';
+
 /// This is a basic database for the Matrix SDK using the hive store. You need
 /// to make sure that you perform `Hive.init()` or `Hive.flutterInit()` before
 /// you use this.
@@ -382,6 +384,21 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
             ),
           )
           .toList());
+
+  @override
+  Future<TimelineChunck> getEventContext(
+      {required String eventId, required Room room, int limit = 10}) async {
+    return TimelineChunck(events: [], start: 0, end: 0);
+  }
+
+  @override
+  Future<TimelineChunck> getTimelineChunck(
+    Room room, {
+    required RequestDirection direction,
+    int start = 0,
+    int? limit,
+  }) async =>
+      TimelineChunck(events: [], start: 0, end: 0);
 
   @override
   Future<List<Event>> getEventList(

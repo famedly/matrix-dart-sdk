@@ -25,6 +25,7 @@ import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 
 import '../../matrix.dart';
+import '../timeline_chunk.dart';
 
 abstract class DatabaseApi {
   int get maxFileSize => 1 * 1024 * 1024;
@@ -80,8 +81,18 @@ abstract class DatabaseApi {
 
   Future<List<User>> getUsers(Room room);
 
+  Future<TimelineChunck> getEventContext(
+      {required String eventId, required Room room, int limit = 10});
+
   Future<List<Event>> getEventList(
     Room room, {
+    int start = 0,
+    int limit,
+  });
+
+  Future<TimelineChunck> getTimelineChunck(
+    Room room, {
+    required RequestDirection direction,
     int start = 0,
     int limit,
   });
