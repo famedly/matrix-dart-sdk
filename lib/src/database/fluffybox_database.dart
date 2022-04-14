@@ -402,12 +402,13 @@ class FluffyBoxDatabase extends DatabaseApi {
         final timelineKey = TupleKey(room.id, '').toString();
 
         final newChunk = TimelineChunk(
-            end: chunk.end,
-            events: [],
-            fragmentId: chunk.fragmentId,
-            nextBatch: chunk.nextBatch,
-            prevBatch: chunk.prevBatch,
-            start: chunk.start);
+          start: chunk.start,
+          end: chunk.end,
+          events: [],
+          fragmentId: chunk.fragmentId,
+          nextBatch: chunk.nextBatch,
+          prevBatch: chunk.prevBatch,
+        );
 
         newChunk.eventIds = chunk.eventIds;
 
@@ -418,7 +419,6 @@ class FluffyBoxDatabase extends DatabaseApi {
         eventIds.forEach((element) {
           print("event: $element");
         });
-        print("events: ${eventIds.toList()}");
 
         newChunk.events = await _getEventsByIds(eventIds, room);
         return newChunk;
@@ -1103,37 +1103,47 @@ class FluffyBoxDatabase extends DatabaseApi {
       // Store the update in the timeline chunk
       final fragments =
           TimelineFragmentList(await _timelineFragmentsBox.get(key));
-      String keyName;
-      if (eventUpdate.nextBatch != null && eventUpdate.prevBatch != null) {
-        keyName = eventUpdate.nextBatch!;
-      } else {
-        keyName = '';
-      }
+
+      final keyName = fragments.getFragmentIdFromBatchId(
+          prevBatch: eventUpdate.prevBatch, nextBatch: eventUpdate.nextBatch);
 
       var fragment = fragments.getFragment(keyName);
-      print("Frag $fragment");
+
+      final roomRequest =
+          eventUpdate.prevBatch != null && eventUpdate.nextBatch != null;
+
+      // get the old timeline fragment or create a new one with the new sync batch anchors
+
       fragment ??= TimelineFragment(
-          eventsId: [], fragmentId: keyName, nextBatch: '', prevBatch: '');
+          eventsId: [],
+          fragmentId: keyName,
+          nextBatch: roomRequest ? eventUpdate.nextBatch! : '',
+          prevBatch: roomRequest ? eventUpdate.prevBatch! : '');
 
-      if (keyName != '') {
-        // update fragment values
+      // update fragment batch sync anchors
+      if (roomRequest) {
         if (eventUpdate.type == EventUpdateType.history) {
-          fragment.prevBatch = eventUpdate.prevBatch!;
+          fragment.prevBatch = eventUpdate.prevBatch ?? '';
+          if (eventUpdate.prevBatch == null) {
+            Logs().e('Null prev batch we must be doing initial sync');
+          }
         } else {
-          fragment.nextBatch = eventUpdate.nextBatch!;
+          fragment.nextBatch = eventUpdate.nextBatch ?? '';
+          if (eventUpdate.nextBatch == null) {
+            Logs().e('Null next batch we must be doing initial sync');
+          }
         }
-
-        fragment.nextBatch = eventUpdate.nextBatch!;
       }
 
-      print('eventsId: ${fragment.eventsId.length}');
+      Logs()
+          .w('Len - before: ${fragment.eventsId.length} - ${eventUpdate.type}');
 
       if (eventUpdate.type == EventUpdateType.history) {
         fragment.eventsId.add(eventId);
       } else {
         fragment.eventsId.insert(0, eventId);
       }
-      print('eventsId: ${fragment.eventsId.length}');
+      Logs().w('Len - after: ${fragment.eventsId.length}');
 
       fragments.setFragment(keyName, fragment);
       await _timelineFragmentsBox.put(key, fragments.fragments);

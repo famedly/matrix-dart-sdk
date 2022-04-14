@@ -1313,12 +1313,10 @@ class Room {
   }
 
   Future<int> getEventContext(String eventId) async {
-    final resp = await client.getEventContext(
-      id,
-      eventId,
-      // filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
-    );
-    print(jsonEncode(resp.toJson()));
+    final resp = await client.getEventContext(id, eventId,
+        limit: Room.defaultHistoryCount - 1
+        // filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
+        );
     final events = [
       if (resp.eventsAfter != null) ...resp.eventsAfter!.reversed.toList(),
       if (resp.event != null) resp.event!,

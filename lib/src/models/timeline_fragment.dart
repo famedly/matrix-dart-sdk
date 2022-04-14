@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'package:random_string/random_string.dart';
+import 'dart:math' show Random;
 
 import '../../matrix.dart';
 import 'timeline_chunk.dart';
@@ -65,17 +67,18 @@ class TimelineFragment {
 
     List<String> newEventIds;
     if (direction == Direction.b) {
-      print("before");
-      reqStart = end + 1;
+      print('before');
+      reqStart = end;
       reqEnd = min(eventsId.length, reqStart + (limit ?? eventsId.length));
     } else {
       reqEnd = start;
       reqStart = max(0, start - (limit ?? eventsId.length));
     }
 
-    print("len $reqStart -> $reqEnd : $eventsId.length");
-
     newEventIds = eventsId.getRange(reqStart, reqEnd).toList();
+
+    Logs().w(
+        'len $reqStart -> $reqEnd : ${eventsId.length} : ${newEventIds.length}');
 
     if (direction == Direction.b) {
       end = reqEnd;
@@ -124,7 +127,27 @@ class TimelineFragmentList {
   }
 
   void setFragment(String key, TimelineFragment map) {
-    print('Set timeline $key ${map.map}');
     fragments[key] = map.map;
+  }
+
+  String? _getIdFromBatchKey(String? data) {
+    if (data == null) return null;
+
+    for (final key in fragments.keys) {
+      final frag = getFragment(key);
+
+      if (frag != null && (frag.prevBatch == data || frag.nextBatch == data)) {
+        return key;
+      }
+    }
+
+    return null;
+  }
+
+  // return a fragment coinciding with this batch
+  String getFragmentIdFromBatchId({String? prevBatch, String? nextBatch}) {
+    return _getIdFromBatchKey(prevBatch) ??
+        _getIdFromBatchKey(nextBatch) ??
+        randomAlphaNumeric(6);
   }
 }

@@ -112,6 +112,9 @@ class TimelineNavigator {
 
       if (timelineChunkFromStore != null &&
           timelineChunkFromStore.events.isNotEmpty) {
+        chunk.start = timelineChunkFromStore.start;
+        chunk.end = timelineChunkFromStore.end;
+
         final eventsFromStore = timelineChunkFromStore.events;
         // Fetch all users from database we have got here.
         for (final event in events) {
@@ -138,8 +141,11 @@ class TimelineNavigator {
             onInsert?.call(i);
           }
         }
+
+        Logs().w(
+            'Chunk size: ${chunk.start} -> ${chunk.end}  and ${timelineChunkFromStore.start} -> ${timelineChunkFromStore.end}');
       } else {
-        Logs().v('No more events found in the store. Request from server...');
+        Logs().i('No more events found in the store. Request from server...');
         await getRoomEvents(
           historyCount: historyCount,
           direction: direction,
@@ -173,6 +179,8 @@ class TimelineNavigator {
     if (resp.end == null || resp.start == null) {
       Logs().w('end or start parameters where not set in the response');
     }
+    Logs().w(
+        "Direction: $direction - start: ${direction == Direction.b ? chunk.prevBatch : chunk.nextBatch} : ${chunk.prevBatch} -> ${chunk.nextBatch} : ${resp.start} -> ${resp.end}");
 
     final loadFn = () async {
       if (!((resp.chunk?.isNotEmpty ?? false) && resp.end != null)) return;
@@ -189,7 +197,7 @@ class TimelineNavigator {
                             limited: false,
                             events: direction == Direction.b
                                 ? resp.chunk
-                                : resp.chunk?.reversed.toList(),
+                                : resp.chunk,
                             nextBatch: direction == Direction.b
                                 ? resp.start
                                 : resp.end,
@@ -206,7 +214,9 @@ class TimelineNavigator {
                           state: resp.state,
                           timeline: TimelineUpdate(
                             limited: false,
-                            events: resp.chunk,
+                            events: direction == Direction.b
+                                ? resp.chunk
+                                : resp.chunk,
                             nextBatch: direction == Direction.b
                                 ? resp.start
                                 : resp.end,
@@ -218,6 +228,7 @@ class TimelineNavigator {
                       }
                     : null),
           ),
+          direction: direction,
           sortAtTheEnd: true);
     };
 
@@ -400,9 +411,11 @@ class TimelineNavigator {
       }
 
       if (eventUpdate.type == EventUpdateType.history) {
-        chunk.prevBatch = eventUpdate.prevBatch!;
+        chunk.prevBatch = eventUpdate.prevBatch ?? '';
+        chunk.end++;
       } else {
-        chunk.nextBatch = eventUpdate.nextBatch!;
+        chunk.nextBatch = eventUpdate.nextBatch ?? '';
+        chunk.end++;
       }
 
       final status = eventStatusFromInt(eventUpdate.content['status'] ??
