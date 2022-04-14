@@ -415,6 +415,10 @@ class FluffyBoxDatabase extends DatabaseApi {
             TimelineFragmentList(await _timelineFragmentsBox.get(timelineKey));
         final fragment = fragments.getFragment(newChunk.fragmentId)!;
         final eventIds = fragment.getNewEvents(newChunk, direction: direction);
+        eventIds.forEach((element) {
+          print("event: $element");
+        });
+        print("events: ${eventIds.toList()}");
 
         newChunk.events = await _getEventsByIds(eventIds, room);
         return newChunk;

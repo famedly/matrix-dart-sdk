@@ -1318,10 +1318,11 @@ class Room {
       eventId,
       // filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
     );
+    print(jsonEncode(resp.toJson()));
     final events = [
-      if (resp.eventsBefore != null) ...resp.eventsBefore!,
+      if (resp.eventsAfter != null) ...resp.eventsAfter!.reversed.toList(),
       if (resp.event != null) resp.event!,
-      if (resp.eventsAfter != null) ...resp.eventsAfter!
+      if (resp.eventsBefore != null) ...resp.eventsBefore!
     ];
     if (!(events.isNotEmpty && resp.end != null)) return 0;
 

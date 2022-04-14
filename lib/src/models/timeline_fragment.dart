@@ -65,12 +65,15 @@ class TimelineFragment {
 
     List<String> newEventIds;
     if (direction == Direction.b) {
-      reqStart = end;
+      print("before");
+      reqStart = end + 1;
       reqEnd = min(eventsId.length, reqStart + (limit ?? eventsId.length));
     } else {
       reqEnd = start;
       reqStart = max(0, start - (limit ?? eventsId.length));
     }
+
+    print("len $reqStart -> $reqEnd : $eventsId.length");
 
     newEventIds = eventsId.getRange(reqStart, reqEnd).toList();
 
