@@ -42,11 +42,15 @@ class EventUpdate {
   // The json payload of the content of this event.
   final Map<String, dynamic> content;
 
-  EventUpdate({
-    required this.roomID,
-    required this.type,
-    required this.content,
-  });
+  final String? start;
+  final String? end;
+
+  EventUpdate(
+      {required this.roomID,
+      required this.type,
+      required this.content,
+      this.start,
+      this.end});
 
   Future<EventUpdate> decrypt(Room room, {bool store = false}) async {
     final encryption = room.client.encryption;

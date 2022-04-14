@@ -17,17 +17,20 @@
  */
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:collection/src/iterable_extensions.dart';
 
 import '../matrix.dart';
+import 'models/timeline_chunk.dart';
 
 /// Represents the timeline of a room. The callback [onUpdate] will be triggered
 /// automatically. The initial
 /// event list will be retreived when created by the `room.getTimeline()` method.
-class Timeline {
+
+class TimelineNavigator {
   final Room room;
-  final List<Event> events;
+  List<Event> get events => chunk.events;
 
   /// Map of event ID to map of type to set of aggregated events
   final Map<String, Map<String, Set<Event>>> aggregatedEvents = {};
@@ -43,6 +46,8 @@ class Timeline {
   bool isRequestingHistory = false;
 
   final Map<String, Event> _eventCache = {};
+
+  TimelineChunk chunk;
 
   /// Searches for the event in this timeline. If not
   /// found, requests from the server. Requested events
@@ -71,6 +76,19 @@ class Timeline {
 
   Future<void> requestHistory(
       {int historyCount = Room.defaultHistoryCount}) async {
+    return await requestEvents(
+        direction: Direction.b, historyCount: historyCount);
+  }
+
+  Future<void> requestFuture(
+      {int historyCount = Room.defaultHistoryCount}) async {
+    return await requestEvents(
+        direction: Direction.f, historyCount: historyCount);
+  }
+
+  Future<void> requestEvents(
+      {int historyCount = Room.defaultHistoryCount,
+      required Direction direction}) async {
     if (isRequestingHistory) {
       return;
     }
@@ -79,12 +97,23 @@ class Timeline {
 
     try {
       // Look up for events in hive first
-      final eventsFromStore = await room.client.database?.getEventList(
+      final timelineChunkFromStore =
+          await room.client.database?.requestMoreTimelineChunkEvents(
         room,
-        start: events.length,
+        chunk: chunk,
+        direction: direction,
         limit: Room.defaultHistoryCount,
       );
-      if (eventsFromStore != null && eventsFromStore.isNotEmpty) {
+      if (timelineChunkFromStore != null) {
+        // save data
+        print(
+            "Sizes: ${chunk.events.length} - ${timelineChunkFromStore.events.length}");
+        chunk = timelineChunkFromStore;
+      }
+
+      if (timelineChunkFromStore != null &&
+          timelineChunkFromStore.events.isNotEmpty) {
+        final eventsFromStore = timelineChunkFromStore.events;
         // Fetch all users from database we have got here.
         for (final event in events) {
           if (room.getState(EventTypes.RoomMember, event.senderId) != null) {
@@ -95,19 +124,29 @@ class Timeline {
           if (dbUser != null) room.setState(dbUser);
         }
 
-        events.addAll(eventsFromStore);
-        final startIndex = events.length - eventsFromStore.length;
-        final endIndex = events.length;
-        for (var i = startIndex; i < endIndex; i++) {
-          onInsert?.call(i);
+        if (direction == Direction.b) {
+          events.addAll(eventsFromStore);
+          final startIndex = events.length - eventsFromStore.length;
+          final endIndex = events.length;
+          for (var i = startIndex; i < endIndex; i++) {
+            onInsert?.call(i);
+          }
+        } else {
+          events.insertAll(0, eventsFromStore);
+          final startIndex = eventsFromStore.length;
+          final endIndex = 0;
+          for (var i = startIndex; i > endIndex; i--) {
+            onInsert?.call(i);
+          }
         }
       } else {
         Logs().v('No more events found in the store. Request from server...');
-        await room.requestHistory(
+        await getRoomEvents(
           historyCount: historyCount,
-          onHistoryReceived: () {
+          direction: direction,
+          /* onHistoryReceived: () {
             _collectHistoryUpdates = true;
-          },
+          },*/
         );
       }
     } finally {
@@ -117,14 +156,99 @@ class Timeline {
     }
   }
 
-  Timeline({
-    required this.room,
-    List<Event>? events,
-    this.onUpdate,
-    this.onChange,
-    this.onInsert,
-    this.onRemove,
-  }) : events = events ?? [] {
+  /// Request more previous events from the server. [historyCount] defines how much events should
+  /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
+  /// the historical events will be published in the onEvent stream.
+  /// Returns the actual count of received timeline events.
+  Future<int> getRoomEvents(
+      {int historyCount = Room.defaultHistoryCount,
+      direction = Direction.b}) async {
+    final resp = await room.client.getRoomEvents(
+      room.id,
+      direction == Direction.b ? chunk.prevBatch : chunk.nextBatch,
+      direction,
+      limit: historyCount,
+      filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
+    );
+
+    if (resp.end == null || resp.start == null) {
+      Logs().w("end or start parameters where not set in the response");
+    }
+
+    final loadFn = () async {
+      if (!((resp.chunk?.isNotEmpty ?? false) && resp.end != null)) return;
+
+      await room.client.handleSync(
+          SyncUpdate(
+            nextBatch: '',
+            rooms: RoomsUpdate(
+                join: room.membership == Membership.join
+                    ? {
+                        room.id: JoinedRoomUpdate(
+                          state: resp.state,
+                          timeline: TimelineUpdate(
+                            limited: false,
+                            events: direction == Direction.b
+                                ? resp.chunk
+                                : resp.chunk?.reversed.toList(),
+                            nextBatch: direction == Direction.b
+                                ? resp.start
+                                : resp.end,
+                            prevBatch: direction == Direction.b
+                                ? resp.end
+                                : resp.start,
+                          ),
+                        )
+                      }
+                    : null,
+                leave: room.membership != Membership.join
+                    ? {
+                        room.id: LeftRoomUpdate(
+                          state: resp.state,
+                          timeline: TimelineUpdate(
+                            limited: false,
+                            events: resp.chunk,
+                            nextBatch: direction == Direction.b
+                                ? resp.start
+                                : resp.end,
+                            prevBatch: direction == Direction.b
+                                ? resp.end
+                                : resp.start,
+                          ),
+                        ),
+                      }
+                    : null),
+          ),
+          sortAtTheEnd: true);
+    };
+
+    if (direction == Direction.b) {
+      chunk.prevBatch = resp.end!;
+    } else {
+      chunk.nextBatch = resp.start!;
+    }
+
+    if (room.client.database != null) {
+      await room.client.database?.transaction(() async {
+        await loadFn();
+      });
+    } else {
+      await loadFn();
+    }
+
+    if (onUpdate != null) {
+      onUpdate!();
+    }
+    return resp.chunk?.length ?? 0;
+  }
+
+  TimelineNavigator(
+      {required this.room,
+      this.onUpdate,
+      this.onChange,
+      this.onInsert,
+      this.onRemove,
+      required this.chunk}) {
     sub = room.client.onEvent.stream.listen(_handleEventUpdate);
 
     // If the timeline is limited we want to clear our events cache

@@ -31,7 +31,8 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 
-import '../timeline_chunk.dart';
+import '../models/timeline_chunk.dart';
+import '../models/timeline_fragment.dart';
 
 /// This database does not support file caching!
 class FluffyBoxDatabase extends DatabaseApi {
@@ -71,7 +72,10 @@ class FluffyBoxDatabase extends DatabaseApi {
 
   /// Key is a tuple as Multikey(roomId, fragmentId) while the default
   /// fragmentId is an empty String
-  late Box<List> _timelineFragmentsBox;
+  late Box<List> _timelineFragmentsBoxLegacy;
+
+  /// Key is a tuple as Multikey(roomId, fragmentId)
+  late Box<Map> _timelineFragmentsBox;
 
   /// Key is a tuple as TupleKey(roomId, eventId)
   late Box<Map> _eventsBox;
@@ -111,7 +115,9 @@ class FluffyBoxDatabase extends DatabaseApi {
 
   String get _presencesBoxName => 'box_presences';
 
-  String get _timelineFragmentsBoxName => 'box_timeline_fragments';
+  String get _timelineFragmentsBoxName => 'box_timeline_fragments_map';
+
+  String get _timelineFragmentsBoxLegacyName => 'box_timeline_fragments';
 
   String get _eventsBoxName => 'box_events';
 
@@ -144,6 +150,7 @@ class FluffyBoxDatabase extends DatabaseApi {
         _ssssCacheBoxName,
         _presencesBoxName,
         _timelineFragmentsBoxName,
+        _timelineFragmentsBoxLegacyName,
         _eventsBoxName,
         _seenDeviceIdsBoxName,
         _seenDeviceKeysBoxName,
@@ -201,6 +208,9 @@ class FluffyBoxDatabase extends DatabaseApi {
     _presencesBox = await _collection.openBox(
       _presencesBoxName,
     );
+    _timelineFragmentsBoxLegacy = await _collection.openBox(
+      _timelineFragmentsBoxLegacyName,
+    );
     _timelineFragmentsBox = await _collection.openBox(
       _timelineFragmentsBoxName,
     );
@@ -241,7 +251,7 @@ class FluffyBoxDatabase extends DatabaseApi {
         await _roomStateBox.clear();
         await _roomMembersBox.clear();
         await _eventsBox.clear();
-        await _timelineFragmentsBox.clear();
+        await _timelineFragmentsBoxLegacy.clear();
         await _outboundGroupSessionsBox.clear();
         await _presencesBox.clear();
         await _clientBox.delete('prev_batch');
@@ -266,7 +276,8 @@ class FluffyBoxDatabase extends DatabaseApi {
 
   @override
   Future<void> forgetRoom(String roomId) => transaction(() async {
-        await _timelineFragmentsBox.delete(TupleKey(roomId, '').toString());
+        await _timelineFragmentsBoxLegacy
+            .delete(TupleKey(roomId, '').toString());
         final eventsBoxKeys = await _eventsBox.getAllKeys();
         for (final key in eventsBoxKeys) {
           final multiKey = TupleKey.fromString(key);
@@ -331,33 +342,31 @@ class FluffyBoxDatabase extends DatabaseApi {
   }
 
   @override
-  Future<TimelineChunck> getEventContext(
+  Future<TimelineChunk?> getEventContext(
           {required String eventId,
           required Room room,
           int limit = 10}) async =>
-      runBenchmarked<TimelineChunck>('Get event context', () async {
+      runBenchmarked<TimelineChunk?>('Get event context', () async {
         // Get the synced event IDs from the store
         final timelineKey = TupleKey(room.id, '').toString();
 
-        final timelineEventIds =
-            (await _timelineFragmentsBox.get(timelineKey) ?? []);
+        final fragmentList =
+            TimelineFragmentList(await _timelineFragmentsBox.get(timelineKey));
+        final key = fragmentList.findFragmentWithEvent(eventId: eventId);
+        if (key == null) return null; // the event doesn't exist
+
+        final fragment = fragmentList.getFragment(key)!;
 
         // TODO: get the local SENDING events when last event is displayed
 
-        final itemPos =
-            timelineEventIds.indexWhere((item) => item.toString() == eventId);
-        print("itemPos: ${itemPos}");
-        if (itemPos == -1) return TimelineChunck(events: [], start: 0, end: 0);
+        final chunk = fragment.getEventContext(eventId, limit: limit);
+        if (chunk == null) return null;
 
-        var start = itemPos - limit ~/ 2;
-        if (start < 0) start = 0;
-        final end = min(timelineEventIds.length, start + limit);
+        // populate the chunk
+        chunk.events =
+            await _getEventsByIds(chunk.eventIds.cast<String>(), room);
 
-        final eventIds = timelineEventIds.getRange(start, end).toList();
-        return TimelineChunck(
-            events: await _getEventsByIds(eventIds.cast<String>(), room),
-            start: start,
-            end: end);
+        return chunk;
       });
 
   /// Loads a whole list of events at once from the store for a specific room
@@ -374,17 +383,36 @@ class FluffyBoxDatabase extends DatabaseApi {
   }
 
   @override
-  Future<TimelineChunck> getTimelineChunck(
+  Future<TimelineChunk?> requestMoreTimelineChunkEvents(
     Room room, {
-    required RequestDirection direction,
+    required Direction direction,
+    required TimelineChunk chunk,
+    int? limit,
+  }) =>
+      runBenchmarked<TimelineChunk>('Request more event', () async {
+        // Get the synced event IDs from the store
+        final timelineKey = TupleKey(room.id, '').toString();
+
+        final fragments =
+            TimelineFragmentList(await _timelineFragmentsBox.get(timelineKey));
+        final fragment = fragments.getFragment(chunk.fragmentId)!;
+        final eventIds = fragment.getNewEvents(chunk, direction: direction);
+
+        chunk.events = await _getEventsByIds(eventIds, room);
+        return chunk;
+      });
+
+  @override
+  Future<List<Event>> getEventList(
+    Room room, {
     int start = 0,
     int? limit,
   }) =>
-      runBenchmarked<TimelineChunck>('Get event list', () async {
+      runBenchmarked<List<Event>>('Get event list', () async {
         // Get the synced event IDs from the store
         final timelineKey = TupleKey(room.id, '').toString();
         final timelineEventIds =
-            (await _timelineFragmentsBox.get(timelineKey) ?? []);
+            (await _timelineFragmentsBoxLegacy.get(timelineKey) ?? []);
 
         // Get the local stored SENDING events from the store
         late final List sendingEventIds;
@@ -393,41 +421,19 @@ class FluffyBoxDatabase extends DatabaseApi {
         } else {
           final sendingTimelineKey = TupleKey(room.id, 'SENDING').toString();
           sendingEventIds =
-              (await _timelineFragmentsBox.get(sendingTimelineKey) ?? []);
+              (await _timelineFragmentsBoxLegacy.get(sendingTimelineKey) ?? []);
         }
-        late List<dynamic> eventIds;
-        late int end;
+
         // Combine those two lists while respecting the start and limit parameters.
-        if (direction == RequestDirection.p) {
-          end = min(timelineEventIds.length,
-              start + (limit ?? timelineEventIds.length));
-          eventIds = sendingEventIds +
-              (start < timelineEventIds.length
-                  ? timelineEventIds.getRange(start, end).toList()
-                  : []);
-        } else {
-          end = max(0, start - (limit ?? timelineEventIds.length));
-          eventIds = sendingEventIds +
-              (start < timelineEventIds.length
-                  ? timelineEventIds.getRange(end, start).toList()
-                  : []);
-        }
+        final end = min(timelineEventIds.length,
+            start + (limit ?? timelineEventIds.length));
+        final eventIds = sendingEventIds +
+            (start < timelineEventIds.length
+                ? timelineEventIds.getRange(start, end).toList()
+                : []);
 
-        return TimelineChunck(
-            start: start,
-            end: end,
-            events: await _getEventsByIds(eventIds.cast<String>(), room));
+        return await _getEventsByIds(eventIds.cast<String>(), room);
       });
-
-  @override
-  Future<List<Event>> getEventList(
-    Room room, {
-    int start = 0,
-    int? limit,
-  }) async =>
-      (await getTimelineChunck(room,
-              start: start, limit: limit, direction: RequestDirection.p))
-          .events;
 
   @override
   Future<Uint8List?> getFile(Uri mxcUri) async {
@@ -843,15 +849,15 @@ class FluffyBoxDatabase extends DatabaseApi {
   @override
   Future<void> removeEvent(String eventId, String roomId) async {
     await _eventsBox.delete(TupleKey(roomId, eventId).toString());
-    final keys = await _timelineFragmentsBox.getAllKeys();
+    final keys = await _timelineFragmentsBoxLegacy.getAllKeys();
     for (final key in keys) {
       final multiKey = TupleKey.fromString(key);
       if (multiKey.parts.first != roomId) continue;
-      final eventIds = await _timelineFragmentsBox.get(key) ?? [];
+      final eventIds = await _timelineFragmentsBoxLegacy.get(key) ?? [];
       final prevLength = eventIds.length;
       eventIds.removeWhere((id) => id == eventId);
       if (eventIds.length < prevLength) {
-        await _timelineFragmentsBox.put(key, eventIds);
+        await _timelineFragmentsBoxLegacy.put(key, eventIds);
       }
     }
     return;
@@ -1054,7 +1060,7 @@ class FluffyBoxDatabase extends DatabaseApi {
           .toString();
 
       final eventIds =
-          List<String>.from(await _timelineFragmentsBox.get(key) ?? []);
+          List<String>.from(await _timelineFragmentsBoxLegacy.get(key) ?? []);
 
       if (!eventIds.contains(eventId)) {
         if (eventUpdate.type == EventUpdateType.history) {
@@ -1062,7 +1068,7 @@ class FluffyBoxDatabase extends DatabaseApi {
         } else {
           eventIds.insert(0, eventId);
         }
-        await _timelineFragmentsBox.put(key, eventIds);
+        await _timelineFragmentsBoxLegacy.put(key, eventIds);
       } else if (status.isSynced &&
           prevStatus != null &&
           prevStatus.isSent &&
@@ -1072,14 +1078,42 @@ class FluffyBoxDatabase extends DatabaseApi {
         eventIds.insert(0, eventId);
       }
 
+      // Store the update in the timeline chunk
+      final eventTimelineChunks =
+          Map<String, dynamic>.from(await _timelineFragmentsBox.get(key) ?? {});
+
+      String keyName;
+      if (eventUpdate.end != null && eventUpdate.start != null) {
+        keyName = eventUpdate.end!;
+      } else {
+        keyName = '';
+      }
+      final fragment = TimelineFragment.fromMap(
+          eventTimelineChunks[keyName] ?? {},
+          fragmentId: key);
+
+      if (keyName != '') {
+        fragment.prevBatch = eventUpdate.start!;
+        fragment.nextBatch = eventUpdate.end!;
+      }
+
+      if (eventUpdate.type == EventUpdateType.history) {
+        fragment.eventsId.add(eventId);
+      } else {
+        fragment.eventsId.insert(0, eventId);
+      }
+
+      eventTimelineChunks[keyName] = fragment.map;
+      await _timelineFragmentsBox.put(key, eventTimelineChunks);
+
       // If event comes from server timeline, remove sending events with this ID
       if (status.isSent) {
         final key = TupleKey(eventUpdate.roomID, 'SENDING').toString();
         final eventIds =
-            List<String>.from(await _timelineFragmentsBox.get(key) ?? []);
+            List<String>.from(await _timelineFragmentsBoxLegacy.get(key) ?? []);
         final i = eventIds.indexWhere((id) => id == eventId);
         if (i != -1) {
-          await _timelineFragmentsBox.put(key, eventIds..removeAt(i));
+          await _timelineFragmentsBoxLegacy.put(key, eventIds..removeAt(i));
         }
       }
 
@@ -1270,7 +1304,7 @@ class FluffyBoxDatabase extends DatabaseApi {
     // removed from the database!
     if (roomUpdate is JoinedRoomUpdate &&
         roomUpdate.timeline?.limited == true) {
-      await _timelineFragmentsBox.delete(TupleKey(roomId, '').toString());
+      await _timelineFragmentsBoxLegacy.delete(TupleKey(roomId, '').toString());
     }
   }
 

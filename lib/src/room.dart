@@ -22,12 +22,14 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
+import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/utils/file_send_request_credentials.dart';
 import 'package:matrix/src/utils/space_child.dart';
 import 'package:matrix/widget.dart';
 
 import '../matrix.dart';
+import 'timeline_navigator.dart';
 import 'utils/markdown.dart';
 import 'utils/marked_unread.dart';
 
@@ -1138,7 +1140,8 @@ class Room {
   /// Returns the actual count of received timeline events.
   Future<int> requestHistory(
       {int historyCount = defaultHistoryCount,
-      void Function()? onHistoryReceived}) async {
+      void Function()? onHistoryReceived,
+      direction = Direction.b}) async {
     final prev_batch = this.prev_batch;
     if (prev_batch == null) {
       throw 'Tried to request history without a prev_batch token';
@@ -1146,7 +1149,7 @@ class Room {
     final resp = await client.getRoomEvents(
       id,
       prev_batch,
-      Direction.b,
+      direction,
       limit: historyCount,
       filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
     );
@@ -1167,8 +1170,15 @@ class Room {
                           state: resp.state,
                           timeline: TimelineUpdate(
                             limited: false,
-                            events: resp.chunk,
-                            prevBatch: resp.end,
+                            events: direction == Direction.b
+                                ? resp.chunk
+                                : resp.chunk?.reversed.toList(),
+                            nextBatch: direction == Direction.b
+                                ? resp.start
+                                : resp.end,
+                            prevBatch: direction == Direction.b
+                                ? resp.end
+                                : resp.start,
                           ),
                         )
                       }
@@ -1180,7 +1190,12 @@ class Room {
                           timeline: TimelineUpdate(
                             limited: false,
                             events: resp.chunk,
-                            prevBatch: resp.end,
+                            nextBatch: direction == Direction.b
+                                ? resp.start
+                                : resp.end,
+                            prevBatch: direction == Direction.b
+                                ? resp.end
+                                : resp.start,
                           ),
                         ),
                       }
@@ -1283,6 +1298,79 @@ class Room {
     return;
   }
 
+  Future<TimelineChunk?> getEventContextMixed(String eventId) async {
+    final result =
+        await client.database?.getEventContext(eventId: eventId, room: this);
+    if (result == null || result.events.isEmpty) {
+      final count = await getEventContext(eventId);
+      Logs().i('Fetched $count events from context');
+      return await client.database
+          ?.getEventContext(eventId: eventId, room: this);
+    }
+
+    return result;
+  }
+
+  Future<int> getEventContext(String eventId) async {
+    final resp = await client.getEventContext(
+      id,
+      eventId,
+      // filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
+    );
+    final events = [
+      if (resp.eventsBefore != null) ...resp.eventsBefore!,
+      if (resp.event != null) resp.event!,
+      if (resp.eventsAfter != null) ...resp.eventsAfter!
+    ];
+    if (!(events.isNotEmpty && resp.end != null)) return 0;
+
+    final loadFn = () async {
+      await client.handleSync(
+          SyncUpdate(
+            nextBatch: '',
+            rooms: RoomsUpdate(
+                join: membership == Membership.join
+                    ? {
+                        id: JoinedRoomUpdate(
+                          state: resp.state,
+                          timeline: TimelineUpdate(
+                            limited: false,
+                            events: events,
+                            nextBatch: resp.start,
+                            prevBatch: resp.end,
+                          ),
+                        )
+                      }
+                    : null,
+                leave: membership != Membership.join
+                    ? {
+                        id: LeftRoomUpdate(
+                          state: resp.state,
+                          timeline: TimelineUpdate(
+                            limited: false,
+                            events: events,
+                            nextBatch: resp.start,
+                            prevBatch: resp.end,
+                          ),
+                        ),
+                      }
+                    : null),
+          ),
+          sortAtTheEnd: true);
+    };
+
+    if (client.database != null) {
+      await client.database?.transaction(() async {
+        await client.database?.setRoomPrevBatch(resp.end!, id, client);
+        await loadFn();
+      });
+    } else {
+      await loadFn();
+    }
+
+    return events.length;
+  }
+
   /// Creates a timeline from the store. Returns a [Timeline] object. If you
   /// just want to update the whole timeline on every change, use the [onUpdate]
   /// callback. For updating only the parts that have changed, use the
@@ -1292,28 +1380,59 @@ class Room {
     void Function(int index)? onRemove,
     void Function(int insertID)? onInsert,
     void Function()? onUpdate,
-    String? centerOnEvent,
   }) async {
     await postLoad();
 
-    int? start;
-
-    var events = <Event>[];
-    if (client.database != null) {
-      if (centerOnEvent != null) {
-        final result = await client.database!
-            .getEventContext(eventId: centerOnEvent, room: this);
-
-        events = result.events;
-        start = result.start;
-      } else {
-        events = await client.database!.getEventList(
+    final events = await client.database?.getEventList(
           this,
           limit: defaultHistoryCount,
-        );
-      }
+        ) ??
+        [];
+
+    await loadEvents(events);
+
+    final timeline = Timeline(
+        room: this,
+        events: events,
+        onChange: onChange,
+        onRemove: onRemove,
+        onInsert: onInsert,
+        onUpdate: onUpdate);
+    return timeline;
+  }
+
+  /// Creates a timeline from the store. Returns a [Timeline] object. If you
+  /// just want to update the whole timeline on every change, use the [onUpdate]
+  /// callback. For updating only the parts that have changed, use the
+  /// [onChange], [onRemove], [onInsert] and the [onHistoryReceived] callbacks.
+  Future<TimelineNavigator?> getTimelineOnEventContext({
+    void Function(int index)? onChange,
+    void Function(int index)? onRemove,
+    void Function(int insertID)? onInsert,
+    void Function()? onUpdate,
+    required String centerOnEvent,
+  }) async {
+    await postLoad();
+
+    if (client.database != null) {
+      final result = await getEventContextMixed(centerOnEvent);
+      if (result == null) return null;
+
+      await loadEvents(result.events);
+
+      return TimelineNavigator(
+          room: this,
+          chunk: result,
+          onChange: onChange,
+          onRemove: onRemove,
+          onInsert: onInsert,
+          onUpdate: onUpdate);
     }
 
+    return null;
+  }
+
+  Future<void> loadEvents(List<Event> events) async {
     // Try again to decrypt encrypted events and update the database.
     if (encrypted && client.database != null && client.encryptionEnabled) {
       await client.database?.transaction(() async {
@@ -1333,16 +1452,6 @@ class Room {
       final dbUser = await client.database?.getUser(event.senderId, this);
       if (dbUser != null) setState(dbUser);
     }
-
-    final timeline = Timeline(
-        room: this,
-        events: events,
-        onChange: onChange,
-        onRemove: onRemove,
-        onInsert: onInsert,
-        onUpdate: onUpdate,
-        start: start ?? 0);
-    return timeline;
   }
 
   /// Returns all participants for this room. With lazy loading this

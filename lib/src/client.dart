@@ -1564,11 +1564,14 @@ class Client extends MatrixApi {
       /// Handle now all room events and save them in the database
       if (room is JoinedRoomUpdate) {
         final state = room.state;
+
         if (state != null && state.isNotEmpty) {
           // TODO: This method seems to be comperatively slow for some updates
           await _handleRoomEvents(
-              id, state.map((i) => i.toJson()).toList(), EventUpdateType.state,
-              sortAtTheEnd: sortAtTheEnd);
+            id,
+            state.map((i) => i.toJson()).toList(),
+            EventUpdateType.state,
+          );
         }
 
         final timelineEvents = room.timeline?.events;
@@ -1577,7 +1580,8 @@ class Client extends MatrixApi {
               id,
               timelineEvents.map((i) => i.toJson()).toList(),
               sortAtTheEnd ? EventUpdateType.history : EventUpdateType.timeline,
-              sortAtTheEnd: sortAtTheEnd);
+              start: room.timeline!.nextBatch,
+              end: room.timeline!.prevBatch);
         }
 
         final ephemeral = room.ephemeral;
@@ -1600,10 +1604,10 @@ class Client extends MatrixApi {
         final timelineEvents = room.timeline?.events;
         if (timelineEvents != null && timelineEvents.isNotEmpty) {
           await _handleRoomEvents(
-              id,
-              timelineEvents.map((i) => i.toJson()).toList(),
-              EventUpdateType.timeline,
-              sortAtTheEnd: sortAtTheEnd);
+            id,
+            timelineEvents.map((i) => i.toJson()).toList(),
+            EventUpdateType.timeline,
+          );
         }
         final accountData = room.accountData;
         if (accountData != null && accountData.isNotEmpty) {
@@ -1675,15 +1679,15 @@ class Client extends MatrixApi {
 
   Future<void> _handleRoomEvents(
       String chat_id, List<dynamic> events, EventUpdateType type,
-      {bool sortAtTheEnd = false}) async {
+      {String? end, String? start}) async {
     for (final event in events) {
-      await _handleEvent(event, chat_id, type, sortAtTheEnd: sortAtTheEnd);
+      await _handleEvent(event, chat_id, type, start: start, end: end);
     }
   }
 
   Future<void> _handleEvent(
       Map<String, dynamic> event, String roomID, EventUpdateType type,
-      {bool sortAtTheEnd = false}) async {
+      {String? end, String? start}) async {
     if (event['type'] is String && event['content'] is Map<String, dynamic>) {
       // The client must ignore any new m.room.encryption event to prevent
       // man-in-the-middle attacks!
@@ -1697,10 +1701,7 @@ class Client extends MatrixApi {
       }
 
       var update = EventUpdate(
-        roomID: roomID,
-        type: type,
-        content: event,
-      );
+          roomID: roomID, type: type, content: event, start: start, end: end);
       if (event['type'] == EventTypes.Encrypted && encryptionEnabled) {
         update = await update.decrypt(room);
       }
