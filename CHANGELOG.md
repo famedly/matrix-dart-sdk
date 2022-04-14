@@ -1,3 +1,6 @@
+## [0.8.20] - 14th Apr 2022
+- fix: Wait for keys in push helper
+
 ## [0.8.19] - 14th Apr 2022
 - feat: Get event from push notification
 - feat: Add more localization strings and add default matrix localizations
