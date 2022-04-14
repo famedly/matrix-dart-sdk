@@ -1451,6 +1451,8 @@ class Room {
         EventTypes.RoomMember,
         mxID,
       );
+    } on MatrixException catch (_) {
+      // Ignore if we have no permission
     } catch (e, s) {
       if (!ignoreErrors) {
         _requestingMatrixIds.remove(mxID);
