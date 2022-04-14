@@ -1336,8 +1336,8 @@ class Room {
                           timeline: TimelineUpdate(
                             limited: false,
                             events: events,
-                            nextBatch: resp.start,
-                            prevBatch: resp.end,
+                            nextBatch: resp.end,
+                            prevBatch: resp.start,
                           ),
                         )
                       }
@@ -1349,8 +1349,8 @@ class Room {
                           timeline: TimelineUpdate(
                             limited: false,
                             events: events,
-                            nextBatch: resp.start,
-                            prevBatch: resp.end,
+                            nextBatch: resp.end,
+                            prevBatch: resp.start,
                           ),
                         ),
                       }

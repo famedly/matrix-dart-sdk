@@ -180,8 +180,9 @@ class TimelineNavigator {
       Logs().w('end or start parameters where not set in the response');
     }
     Logs().w(
-        "Direction: $direction - start: ${direction == Direction.b ? chunk.prevBatch : chunk.nextBatch} : ${chunk.prevBatch} -> ${chunk.nextBatch} : ${resp.start} -> ${resp.end}");
-
+        '[ nav]Direction: $direction - start: ${direction == Direction.b ? chunk.prevBatch : chunk.nextBatch}');
+    Logs().w('[nav] Actual chunk: ${chunk.prevBatch} -> ${chunk.nextBatch}');
+    Logs().w('[nav] resp : ${resp.start} -> ${resp.end}');
     final loadFn = () async {
       if (!((resp.chunk?.isNotEmpty ?? false) && resp.end != null)) return;
 
