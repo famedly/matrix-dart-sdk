@@ -52,6 +52,26 @@ abstract class MatrixLocalizations {
 
   String get roomHasBeenUpgraded;
 
+  String get youAcceptedTheInvitation;
+
+  String get youRejectedTheInvitation;
+
+  String get youJoinedTheChat;
+
+  String youInvitedBy(String senderName);
+
+  String youInvitedUser(String targetName);
+
+  String youUnbannedUser(String targetName);
+
+  String youBannedUser(String targetName);
+
+  String youKicked(String targetName);
+
+  String youKickedAndBanned(String targetName);
+
+  String youHaveWithdrawnTheInvitationFor(String targetName);
+
   String groupWith(String displayname);
 
   String removedBy(String calcDisplayname);

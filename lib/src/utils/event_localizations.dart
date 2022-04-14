@@ -101,6 +101,9 @@ abstract class EventLocalizations {
     },
     EventTypes.RoomMember: (event, i18n, body) {
       final targetName = event.stateKeyUser?.calcDisplayname() ?? '';
+      final senderName = event.sender.calcDisplayname();
+      final userIsTarget = event.stateKey == event.room.client.userID;
+      final userIsSender = event.senderId == event.room.client.userID;
 
       // Fallback message if just nothing has changed:
       var text = i18n.joinedTheChat(targetName);
@@ -111,37 +114,59 @@ abstract class EventLocalizations {
 
       if (newMembership != oldMembership) {
         if (oldMembership == 'invite' && newMembership == 'join') {
-          text = i18n.acceptedTheInvitation(targetName);
+          text = userIsTarget
+              ? i18n.youAcceptedTheInvitation
+              : i18n.acceptedTheInvitation(targetName);
         } else if (oldMembership == 'invite' && newMembership == 'leave') {
           if (event.stateKey == event.senderId) {
-            text = i18n.rejectedTheInvitation(targetName);
+            text = userIsTarget
+                ? i18n.youRejectedTheInvitation
+                : i18n.rejectedTheInvitation(targetName);
           } else {
-            text = i18n.hasWithdrawnTheInvitationFor(
-                event.sender.calcDisplayname(), targetName);
+            text = userIsSender
+                ? i18n.youHaveWithdrawnTheInvitationFor(targetName)
+                : i18n.hasWithdrawnTheInvitationFor(senderName, targetName);
           }
         } else if (oldMembership == 'leave' && newMembership == 'join') {
-          text = i18n.joinedTheChat(targetName);
+          text = userIsTarget
+              ? i18n.youJoinedTheChat
+              : i18n.joinedTheChat(targetName);
         } else if (oldMembership == 'join' && newMembership == 'ban') {
-          text =
-              i18n.kickedAndBanned(event.sender.calcDisplayname(), targetName);
+          text = userIsSender
+              ? i18n.youKickedAndBanned(targetName)
+              : i18n.kickedAndBanned(senderName, targetName);
         } else if (oldMembership == 'join' &&
             newMembership == 'leave' &&
             event.stateKey != event.senderId) {
-          text = i18n.kicked(event.sender.calcDisplayname(), targetName);
+          text = userIsSender
+              ? i18n.youKicked(targetName)
+              : i18n.kicked(senderName, targetName);
         } else if (oldMembership == 'join' &&
             newMembership == 'leave' &&
             event.stateKey == event.senderId) {
           text = i18n.userLeftTheChat(targetName);
         } else if (oldMembership == 'invite' && newMembership == 'ban') {
-          text = i18n.bannedUser(event.sender.calcDisplayname(), targetName);
+          text = userIsSender
+              ? i18n.youBannedUser(targetName)
+              : i18n.bannedUser(senderName, targetName);
         } else if (oldMembership == 'leave' && newMembership == 'ban') {
-          text = i18n.bannedUser(event.sender.calcDisplayname(), targetName);
+          text = userIsSender
+              ? i18n.youBannedUser(targetName)
+              : i18n.bannedUser(senderName, targetName);
         } else if (oldMembership == 'ban' && newMembership == 'leave') {
-          text = i18n.unbannedUser(event.sender.calcDisplayname(), targetName);
+          text = userIsSender
+              ? i18n.youUnbannedUser(targetName)
+              : i18n.unbannedUser(senderName, targetName);
         } else if (newMembership == 'invite') {
-          text = i18n.invitedUser(event.sender.calcDisplayname(), targetName);
+          text = userIsSender
+              ? i18n.youInvitedUser(targetName)
+              : userIsTarget
+                  ? i18n.youInvitedBy(senderName)
+                  : i18n.invitedUser(senderName, targetName);
         } else if (newMembership == 'join') {
-          text = i18n.joinedTheChat(targetName);
+          text = userIsTarget
+              ? i18n.youJoinedTheChat
+              : i18n.joinedTheChat(targetName);
         }
       } else if (newMembership == 'join') {
         final newAvatar = event.content.tryGet<String>('avatar_url') ?? '';
