@@ -103,7 +103,8 @@ class FakeMatrixApi extends MockClient {
             }
           } else if (method == 'GET' &&
               action.contains('/client/r0/rooms/') &&
-              action.contains('/state/m.room.member/')) {
+              action.contains('/state/m.room.member/') &&
+              !action.endsWith('%40alicyy%3Aexample.com')) {
             res = {'displayname': ''};
           } else if (method == 'PUT' &&
               action.contains(
