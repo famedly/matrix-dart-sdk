@@ -1088,11 +1088,13 @@ class Client extends MatrixApi {
 
     final encryption = this.encryption;
     if (event.type == EventTypes.Encrypted && encryption != null) {
-      event = await encryption.decryptRoomEvent(roomId, event);
-      if (event.type == EventTypes.Encrypted && _currentSync != null) {
-        await _currentSync;
-        event = await encryption.decryptRoomEvent(roomId, event);
+      var decrypted = await encryption.decryptRoomEvent(roomId, event);
+      if (decrypted.messageType == MessageTypes.BadEncrypted &&
+          prevBatch != null) {
+        await oneShotSync();
+        decrypted = await encryption.decryptRoomEvent(roomId, event);
       }
+      event = decrypted;
     }
 
     if (storeInDatabase) {
