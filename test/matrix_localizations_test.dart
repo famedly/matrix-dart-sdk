@@ -18,8 +18,6 @@
 import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
 
-import 'matrix_default_localizations.dart';
-
 void main() {
   /// All Tests related to device keys
   group('Matrix Localizations', () {

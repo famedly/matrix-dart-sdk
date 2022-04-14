@@ -230,4 +230,38 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
   String sentReaction(String senderName, String reactionKey) {
     return '$senderName reacted with $reactionKey';
   }
+
+  @override
+  // TODO: implement youAcceptedTheInvitation
+  String get youAcceptedTheInvitation => 'You accepted the invitation';
+
+  @override
+  String youBannedUser(String targetName) => 'You have banned $targetName';
+
+  @override
+  String youHaveWithdrawnTheInvitationFor(String targetName) =>
+      'You have withdrawn the invitation for $targetName';
+
+  @override
+  String youInvitedBy(String senderName) =>
+      'You have been invited by $senderName';
+
+  @override
+  String youInvitedUser(String targetName) => 'You invited $targetName';
+
+  @override
+  String get youJoinedTheChat => 'You joined the chat';
+
+  @override
+  String youKicked(String targetName) => 'You kicked $targetName';
+
+  @override
+  String youKickedAndBanned(String targetName) =>
+      'You kicked and banned $targetName';
+
+  @override
+  String get youRejectedTheInvitation => 'You have rejected the invitation';
+
+  @override
+  String youUnbannedUser(String targetName) => 'You unbanned $targetName';
 }

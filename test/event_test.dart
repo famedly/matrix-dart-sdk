@@ -26,7 +26,6 @@ import 'package:test/test.dart';
 
 import 'fake_client.dart';
 import 'fake_matrix_api.dart';
-import 'matrix_default_localizations.dart';
 
 void main() {
   /// All Tests related to the Event
