@@ -91,7 +91,7 @@ abstract class DatabaseApi {
   Future<TimelineChunk?> getEventContext(
       {required String eventId, required Room room, int limit = 10});
 
-  /// Take an actual timeline chunk and will load more events in it.
+  /// Take an actual timeline chunk and return a new timeline chunk with the new events.
   Future<TimelineChunk?> requestMoreTimelineChunkEvents(
     Room room, {
     required Direction direction,

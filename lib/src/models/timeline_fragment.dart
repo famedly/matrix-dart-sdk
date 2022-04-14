@@ -5,16 +5,17 @@ import 'timeline_chunk.dart';
 
 class TimelineFragment {
   String? fragmentId;
-  Map<String, dynamic> map = {};
+  Map<dynamic, dynamic> map = {};
 
-  String get prevBatch => map[
-      'prev_batch']; // pos of the first event of the database timeline chunk
+  String get prevBatch =>
+      map['prev_batch'] ??
+      ''; // pos of the first event of the database timeline chunk
   set prevBatch(String value) => map['prev_batch'] = value;
 
-  String get nextBatch => map['next_batch'];
+  String get nextBatch => map['next_batch'] ?? '';
   set nextBatch(String value) => map['next_batch'] = value;
 
-  List<String> get eventsId => map['events'] ?? [];
+  List<String> get eventsId => map['events'].cast<String>() ?? [];
   set eventsId(List<String> value) => map['events'] = value;
 
   TimelineFragment(
@@ -50,7 +51,8 @@ class TimelineFragment {
     return chunk;
   }
 
-  TimelineFragment.fromMap(this.map, {required this.fragmentId});
+  TimelineFragment.fromMap(Map? rawMap, {required this.fragmentId})
+      : map = rawMap ?? {};
 
   /// Get the new eventIds to download
   List<String> getNewEvents(TimelineChunk chunk,
@@ -114,6 +116,12 @@ class TimelineFragmentList {
   }
 
   TimelineFragment? getFragment(String key) {
+    if (fragments[key] == null) return null;
     return TimelineFragment.fromMap(fragments[key], fragmentId: key);
+  }
+
+  void setFragment(String key, TimelineFragment map) {
+    print('Set timeline $key ${map.map}');
+    fragments[key] = map.map;
   }
 }

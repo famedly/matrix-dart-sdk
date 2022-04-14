@@ -252,6 +252,7 @@ class FluffyBoxDatabase extends DatabaseApi {
         await _roomMembersBox.clear();
         await _eventsBox.clear();
         await _timelineFragmentsBoxLegacy.clear();
+        await _timelineFragmentsBox.clear();
         await _outboundGroupSessionsBox.clear();
         await _presencesBox.clear();
         await _clientBox.delete('prev_batch');
@@ -353,9 +354,13 @@ class FluffyBoxDatabase extends DatabaseApi {
         final fragmentList =
             TimelineFragmentList(await _timelineFragmentsBox.get(timelineKey));
         final key = fragmentList.findFragmentWithEvent(eventId: eventId);
+        Logs().w('Fragment - $key');
+
         if (key == null) return null; // the event doesn't exist
 
         final fragment = fragmentList.getFragment(key)!;
+        Logs().w(
+            'Fragment loaded - ${fragment.prevBatch} -  ${fragment.nextBatch}}');
 
         // TODO: get the local SENDING events when last event is displayed
 
@@ -363,9 +368,12 @@ class FluffyBoxDatabase extends DatabaseApi {
         if (chunk == null) return null;
 
         // populate the chunk
-        chunk.events =
-            await _getEventsByIds(chunk.eventIds.cast<String>(), room);
-
+        Logs().w('Populate chunk - ${chunk.eventIds.length}');
+        chunk.eventIds.forEach((element) {
+          print('Event: $element');
+        });
+        chunk.events = await _getEventsByIds(chunk.eventIds, room);
+        Logs().w('done - ${chunk.events.length}');
         return chunk;
       });
 
@@ -393,13 +401,23 @@ class FluffyBoxDatabase extends DatabaseApi {
         // Get the synced event IDs from the store
         final timelineKey = TupleKey(room.id, '').toString();
 
+        final newChunk = TimelineChunk(
+            end: chunk.end,
+            events: [],
+            fragmentId: chunk.fragmentId,
+            nextBatch: chunk.nextBatch,
+            prevBatch: chunk.prevBatch,
+            start: chunk.start);
+
+        newChunk.eventIds = chunk.eventIds;
+
         final fragments =
             TimelineFragmentList(await _timelineFragmentsBox.get(timelineKey));
-        final fragment = fragments.getFragment(chunk.fragmentId)!;
-        final eventIds = fragment.getNewEvents(chunk, direction: direction);
+        final fragment = fragments.getFragment(newChunk.fragmentId)!;
+        final eventIds = fragment.getNewEvents(newChunk, direction: direction);
 
-        chunk.events = await _getEventsByIds(eventIds, room);
-        return chunk;
+        newChunk.events = await _getEventsByIds(eventIds, room);
+        return newChunk;
       });
 
   @override
@@ -1079,32 +1097,42 @@ class FluffyBoxDatabase extends DatabaseApi {
       }
 
       // Store the update in the timeline chunk
-      final eventTimelineChunks =
-          Map<String, dynamic>.from(await _timelineFragmentsBox.get(key) ?? {});
-
+      final fragments =
+          TimelineFragmentList(await _timelineFragmentsBox.get(key));
       String keyName;
-      if (eventUpdate.end != null && eventUpdate.start != null) {
-        keyName = eventUpdate.end!;
+      if (eventUpdate.nextBatch != null && eventUpdate.prevBatch != null) {
+        keyName = eventUpdate.nextBatch!;
       } else {
         keyName = '';
       }
-      final fragment = TimelineFragment.fromMap(
-          eventTimelineChunks[keyName] ?? {},
-          fragmentId: key);
+
+      var fragment = fragments.getFragment(keyName);
+      print("Frag $fragment");
+      fragment ??= TimelineFragment(
+          eventsId: [], fragmentId: keyName, nextBatch: '', prevBatch: '');
 
       if (keyName != '') {
-        fragment.prevBatch = eventUpdate.start!;
-        fragment.nextBatch = eventUpdate.end!;
+        // update fragment values
+        if (eventUpdate.type == EventUpdateType.history) {
+          fragment.prevBatch = eventUpdate.prevBatch!;
+        } else {
+          fragment.nextBatch = eventUpdate.nextBatch!;
+        }
+
+        fragment.nextBatch = eventUpdate.nextBatch!;
       }
+
+      print('eventsId: ${fragment.eventsId.length}');
 
       if (eventUpdate.type == EventUpdateType.history) {
         fragment.eventsId.add(eventId);
       } else {
         fragment.eventsId.insert(0, eventId);
       }
+      print('eventsId: ${fragment.eventsId.length}');
 
-      eventTimelineChunks[keyName] = fragment.map;
-      await _timelineFragmentsBox.put(key, eventTimelineChunks);
+      fragments.setFragment(keyName, fragment);
+      await _timelineFragmentsBox.put(key, fragments.fragments);
 
       // If event comes from server timeline, remove sending events with this ID
       if (status.isSent) {

@@ -1577,11 +1577,12 @@ class Client extends MatrixApi {
         final timelineEvents = room.timeline?.events;
         if (timelineEvents != null && timelineEvents.isNotEmpty) {
           await _handleRoomEvents(
-              id,
-              timelineEvents.map((i) => i.toJson()).toList(),
-              sortAtTheEnd ? EventUpdateType.history : EventUpdateType.timeline,
-              start: room.timeline!.nextBatch,
-              end: room.timeline!.prevBatch);
+            id,
+            timelineEvents.map((i) => i.toJson()).toList(),
+            sortAtTheEnd ? EventUpdateType.history : EventUpdateType.timeline,
+            prevBatch: room.timeline!.prevBatch,
+            nextBatch: room.timeline!.nextBatch,
+          );
         }
 
         final ephemeral = room.ephemeral;
@@ -1679,15 +1680,16 @@ class Client extends MatrixApi {
 
   Future<void> _handleRoomEvents(
       String chat_id, List<dynamic> events, EventUpdateType type,
-      {String? end, String? start}) async {
+      {String? nextBatch, String? prevBatch}) async {
     for (final event in events) {
-      await _handleEvent(event, chat_id, type, start: start, end: end);
+      await _handleEvent(event, chat_id, type,
+          prevBatch: prevBatch, nextBatch: nextBatch);
     }
   }
 
   Future<void> _handleEvent(
       Map<String, dynamic> event, String roomID, EventUpdateType type,
-      {String? end, String? start}) async {
+      {String? nextBatch, String? prevBatch}) async {
     if (event['type'] is String && event['content'] is Map<String, dynamic>) {
       // The client must ignore any new m.room.encryption event to prevent
       // man-in-the-middle attacks!
@@ -1701,7 +1703,11 @@ class Client extends MatrixApi {
       }
 
       var update = EventUpdate(
-          roomID: roomID, type: type, content: event, start: start, end: end);
+          roomID: roomID,
+          type: type,
+          content: event,
+          prevBatch: prevBatch,
+          nextBatch: nextBatch);
       if (event['type'] == EventTypes.Encrypted && encryptionEnabled) {
         update = await update.decrypt(room);
       }

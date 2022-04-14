@@ -107,8 +107,7 @@ class TimelineNavigator {
       if (timelineChunkFromStore != null) {
         // save data
         print(
-            "Sizes: ${chunk.events.length} - ${timelineChunkFromStore.events.length}");
-        chunk = timelineChunkFromStore;
+            'Sizes: ${chunk.events.length} - ${timelineChunkFromStore.events.length}');
       }
 
       if (timelineChunkFromStore != null &&
@@ -172,7 +171,7 @@ class TimelineNavigator {
     );
 
     if (resp.end == null || resp.start == null) {
-      Logs().w("end or start parameters where not set in the response");
+      Logs().w('end or start parameters where not set in the response');
     }
 
     final loadFn = () async {
@@ -222,12 +221,6 @@ class TimelineNavigator {
           sortAtTheEnd: true);
     };
 
-    if (direction == Direction.b) {
-      chunk.prevBatch = resp.end!;
-    } else {
-      chunk.nextBatch = resp.start!;
-    }
-
     if (room.client.database != null) {
       await room.client.database?.transaction(() async {
         await loadFn();
@@ -260,7 +253,7 @@ class TimelineNavigator {
         room.onSessionKeyReceived.stream.listen(_sessionKeyReceived);
 
     // we want to populate our aggregated events
-    for (final e in this.events) {
+    for (final e in events) {
       addAggregatedEvent(e);
     }
   }
@@ -405,6 +398,13 @@ class TimelineNavigator {
           eventUpdate.type != EventUpdateType.history) {
         return;
       }
+
+      if (eventUpdate.type == EventUpdateType.history) {
+        chunk.prevBatch = eventUpdate.prevBatch!;
+      } else {
+        chunk.nextBatch = eventUpdate.nextBatch!;
+      }
+
       final status = eventStatusFromInt(eventUpdate.content['status'] ??
           (eventUpdate.content['unsigned'] is Map<String, dynamic>
               ? eventUpdate.content['unsigned'][messageSendingStatusKey]

@@ -29,7 +29,6 @@ import 'package:matrix/src/utils/space_child.dart';
 import 'package:matrix/widget.dart';
 
 import '../matrix.dart';
-import 'timeline_navigator.dart';
 import 'utils/markdown.dart';
 import 'utils/marked_unread.dart';
 
@@ -1299,8 +1298,10 @@ class Room {
   }
 
   Future<TimelineChunk?> getEventContextMixed(String eventId) async {
+    Logs().i('Fetching database');
     final result =
         await client.database?.getEventContext(eventId: eventId, room: this);
+    Logs().i('done');
     if (result == null || result.events.isEmpty) {
       final count = await getEventContext(eventId);
       Logs().i('Fetched $count events from context');
@@ -1415,8 +1416,13 @@ class Room {
     await postLoad();
 
     if (client.database != null) {
+      Logs().w('getting timeline');
       final result = await getEventContextMixed(centerOnEvent);
-      if (result == null) return null;
+      if (result == null) {
+        Logs().e('No timeline found');
+        return null;
+      }
+      Logs().w('done');
 
       await loadEvents(result.events);
 
