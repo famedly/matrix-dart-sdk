@@ -1,3 +1,8 @@
+## [0.8.19] - 14th Apr 2022
+- feat: Get event from push notification
+- feat: Add more localization strings and add default matrix localizations
+- fix: Ignore no permission errors on requesting users
+
 ## [0.8.18] - 8th Apr 2022
 - feat: check thumbnail size
 - feat: fallback to thumbnail preview
