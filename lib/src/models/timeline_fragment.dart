@@ -145,6 +145,7 @@ class TimelineFragmentList {
 
   // return a fragment coinciding with this batch
   String getFragmentIdFromBatchId({String? prevBatch, String? nextBatch}) {
+    if (prevBatch == null && nextBatch == null) return '';
     return _getIdFromBatchKey(prevBatch) ??
         _getIdFromBatchKey(nextBatch) ??
         randomAlphaNumeric(6);

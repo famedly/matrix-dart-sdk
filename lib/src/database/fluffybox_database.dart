@@ -1123,8 +1123,8 @@ class FluffyBoxDatabase extends DatabaseApi {
       fragment ??= TimelineFragment(
           eventsId: [],
           fragmentId: keyName,
-          nextBatch: roomRequest ? eventUpdate.nextBatch! : '',
-          prevBatch: roomRequest ? eventUpdate.prevBatch! : '');
+          nextBatch: eventUpdate.nextBatch ?? '',
+          prevBatch: eventUpdate.prevBatch ?? '');
 
       // update fragment batch sync anchors
       if (roomRequest) {
