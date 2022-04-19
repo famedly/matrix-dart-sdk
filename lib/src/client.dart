@@ -1408,7 +1408,7 @@ class Client extends MatrixApi {
         await roomsLoading;
         await accountDataLoading;
         _currentTransaction = database.transaction(() async {
-          await _handleSync(syncResp);
+          await _handleSync(syncResp, direction: Direction.f);
           if (prevBatch != syncResp.nextBatch) {
             await database.storePrevBatch(syncResp.nextBatch);
           }
@@ -1420,7 +1420,7 @@ class Client extends MatrixApi {
         );
         onSyncStatus.add(SyncStatusUpdate(SyncStatus.cleaningUp));
       } else {
-        await _handleSync(syncResp);
+        await _handleSync(syncResp, direction: Direction.f);
       }
       if (_disposed || _aborted) return;
       if (prevBatch == null) {
@@ -1464,15 +1464,13 @@ class Client extends MatrixApi {
   }
 
   /// Use this method only for testing utilities!
-  Future<void> handleSync(SyncUpdate sync,
-      {bool sortAtTheEnd = false, Direction? direction}) async {
+  Future<void> handleSync(SyncUpdate sync, {Direction? direction}) async {
     // ensure we don't upload keys because someone forgot to set a key count
     sync.deviceOneTimeKeysCount ??= {'signed_curve25519': 100};
-    await _handleSync(sync, sortAtTheEnd: sortAtTheEnd, direction: direction);
+    await _handleSync(sync, direction: direction);
   }
 
-  Future<void> _handleSync(SyncUpdate sync,
-      {bool sortAtTheEnd = false, Direction? direction}) async {
+  Future<void> _handleSync(SyncUpdate sync, {Direction? direction}) async {
     final syncToDevice = sync.toDevice;
     if (syncToDevice != null) {
       await _handleToDeviceEvents(syncToDevice);
@@ -1481,18 +1479,15 @@ class Client extends MatrixApi {
     if (sync.rooms != null) {
       final join = sync.rooms?.join;
       if (join != null) {
-        await _handleRooms(join,
-            sortAtTheEnd: sortAtTheEnd, direction: direction);
+        await _handleRooms(join, direction: direction);
       }
       final invite = sync.rooms?.invite;
       if (invite != null) {
-        await _handleRooms(invite,
-            sortAtTheEnd: sortAtTheEnd, direction: direction);
+        await _handleRooms(invite, direction: direction);
       }
       final leave = sync.rooms?.leave;
       if (leave != null) {
-        await _handleRooms(leave,
-            sortAtTheEnd: sortAtTheEnd, direction: direction);
+        await _handleRooms(leave, direction: direction);
       }
     }
     for (final newPresence in sync.presence ?? []) {
@@ -1553,7 +1548,7 @@ class Client extends MatrixApi {
   }
 
   Future<void> _handleRooms(Map<String, SyncRoomUpdate> rooms,
-      {bool sortAtTheEnd = false, Direction? direction}) async {
+      {Direction? direction}) async {
     var handledRooms = 0;
     for (final entry in rooms.entries) {
       onSyncStatus.add(SyncStatusUpdate(
@@ -1588,7 +1583,7 @@ class Client extends MatrixApi {
                 ? (direction == Direction.b
                     ? EventUpdateType.history
                     : EventUpdateType.timeline)
-                : EventUpdateType.history,
+                : EventUpdateType.timeline,
             prevBatch: room.timeline!.prevBatch,
             nextBatch: room.timeline!.nextBatch,
           );

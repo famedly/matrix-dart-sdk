@@ -1200,7 +1200,7 @@ class Room {
                       }
                     : null),
           ),
-          sortAtTheEnd: true);
+          direction: Direction.b);
     };
 
     if (client.database != null) {
@@ -1355,7 +1355,7 @@ class Room {
                       }
                     : null),
           ),
-          sortAtTheEnd: true);
+          direction: Direction.b);
     };
 
     if (client.database != null) {
@@ -1992,13 +1992,13 @@ class Room {
   }
 
   Future<void> _handleFakeSync(SyncUpdate syncUpdate,
-      {bool sortAtTheEnd = false}) async {
+      {Direction? direction}) async {
     if (client.database != null) {
       await client.database?.transaction(() async {
-        await client.handleSync(syncUpdate, sortAtTheEnd: sortAtTheEnd);
+        await client.handleSync(syncUpdate, direction: direction);
       });
     } else {
-      await client.handleSync(syncUpdate, sortAtTheEnd: sortAtTheEnd);
+      await client.handleSync(syncUpdate, direction: direction);
     }
   }
 

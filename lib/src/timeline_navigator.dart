@@ -229,8 +229,7 @@ class TimelineNavigator {
                       }
                     : null),
           ),
-          direction: direction,
-          sortAtTheEnd: true);
+          direction: direction);
     };
 
     if (room.client.database != null) {
