@@ -468,7 +468,14 @@ class FluffyBoxDatabase extends DatabaseApi {
     // Get raw room from database:
     final roomData = await _roomsBox.get(roomId);
     if (roomData == null) return null;
-    final room = Room.fromJson(copyMap(roomData), client);
+    final rawRoom = copyMap(roomData);
+    final room = Room.fromJson(rawRoom, client);
+
+    // Get last event:
+    final lastEventId = rawRoom.tryGet<String>('last_event');
+    if (lastEventId != null) {
+      room.lastEvent = await getEventById(lastEventId, room);
+    }
 
     // Get important states:
     if (loadImportantStates) {
@@ -493,12 +500,21 @@ class FluffyBoxDatabase extends DatabaseApi {
 
         final rawRooms = await _roomsBox.getAllValues();
 
+        final getLastEventRequests = <String, Future<Event?>>{};
         final getRoomStateRequests = <String, Future<List>>{};
         final getRoomMembersRequests = <String, Future<List>>{};
 
         for (final raw in rawRooms.values) {
           // Get the room
-          final room = Room.fromJson(copyMap(raw), client);
+          final rawRoom = copyMap(raw);
+          final room = Room.fromJson(rawRoom, client);
+
+          //Get last event
+          final lastEventId = rawRoom.tryGet<String>('last_event');
+          if (lastEventId != null) {
+            getLastEventRequests[room.id] = getEventById(lastEventId, room);
+          }
+
           // Get the "important" room states. All other states will be loaded once
           // `getUnimportantRoomStates()` is called.
           final dbKeys = client.importantStateEvents
@@ -513,6 +529,9 @@ class FluffyBoxDatabase extends DatabaseApi {
         }
 
         for (final room in rooms.values) {
+          // Add last Event to the room:
+          room.lastEvent = await getLastEventRequests[room.id];
+
           // Add states to the room
           final statesList = await getRoomStateRequests[room.id];
           if (statesList != null) {
@@ -930,7 +949,10 @@ class FluffyBoxDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client) async {
+  Future<void> storeEventUpdate(
+    EventUpdate eventUpdate,
+    Client client,
+  ) async {
     // Ephemerals should not be stored
     if (eventUpdate.type == EventUpdateType.ephemeral) return;
     final tmpRoom = Room(id: eventUpdate.roomID, client: client);
@@ -988,7 +1010,7 @@ class FluffyBoxDatabase extends DatabaseApi {
               newStatus,
             );
 
-      // Add the status and the sort order to the content so it get stored
+      // Add the status to the content so it get stored
       eventUpdate.content['unsigned'] ??= <String, dynamic>{};
       eventUpdate.content['unsigned'][messageSendingStatusKey] =
           eventUpdate.content['status'] = status.intValue;
@@ -1037,6 +1059,13 @@ class FluffyBoxDatabase extends DatabaseApi {
       // Is there a transaction id? Then delete the event with this id.
       if (!status.isError && !status.isSending && transactionId != null) {
         await removeEvent(transactionId, eventUpdate.roomID);
+      }
+
+      // Is this not a historical event? Then update the room object to update
+      // the last event.
+      final room = client.getRoomById(eventUpdate.roomID);
+      if (eventUpdate.type == EventUpdateType.timeline && room != null) {
+        await _roomsBox.put(eventUpdate.roomID, room.toJson());
       }
     }
 

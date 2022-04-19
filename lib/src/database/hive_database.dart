@@ -522,7 +522,14 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     // Get raw room from database:
     final roomData = await _roomsBox.get(roomId);
     if (roomData == null) return null;
-    final room = Room.fromJson(convertToJson(roomData), client);
+    final rawRoom = convertToJson(roomData);
+    final room = Room.fromJson(rawRoom, client);
+
+    // Get last event:
+    final lastEventId = rawRoom.tryGet<String>('last_event');
+    if (lastEventId != null) {
+      room.lastEvent = await getEventById(lastEventId, room);
+    }
 
     // Get important states:
     if (loadImportantStates) {
@@ -550,7 +557,14 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         for (final key in _roomsBox.keys) {
           // Get the room
           final raw = await _roomsBox.get(key);
-          final room = Room.fromJson(convertToJson(raw), client);
+          final rawRoom = convertToJson(raw);
+          final room = Room.fromJson(rawRoom, client);
+
+          // Get last event:
+          final lastEventId = rawRoom.tryGet<String>('last_event');
+          if (lastEventId != null) {
+            room.lastEvent = await getEventById(lastEventId, room);
+          }
 
           // let's see if we need any m.room.member events
           // We always need the member event for ourself

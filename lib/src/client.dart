@@ -2133,6 +2133,13 @@ class Client extends MatrixApi {
 
     switch (eventUpdate.type) {
       case EventUpdateType.timeline:
+        final event = Event.fromJson(eventUpdate.content, room);
+        if (roomPreviewLastEvents.contains(event.type) &&
+            (event.relationshipEventId == null ||
+                event.relationshipEventId == room.lastEvent?.eventId)) {
+          room.lastEvent = Event.fromJson(eventUpdate.content, room);
+        }
+        break;
       case EventUpdateType.state:
       case EventUpdateType.inviteState:
         final stateEvent = Event.fromJson(eventUpdate.content, room);
@@ -2155,20 +2162,12 @@ class Client extends MatrixApi {
           // current last event.
           // Additionally, we only store the event in-memory if the room has either been
           // post-loaded or the event is animportant state event.
-          final noMessageOrNoEdit = stateEvent.type != EventTypes.Message ||
-              stateEvent.relationshipType != RelationshipTypes.edit;
-          final editingLastEvent =
-              stateEvent.relationshipEventId == room.lastEvent?.eventId;
-          final consecutiveEdit =
-              room.lastEvent?.relationshipType == RelationshipTypes.edit &&
-                  stateEvent.relationshipEventId ==
-                      room.lastEvent?.relationshipEventId;
+
           final importantOrRoomLoaded =
               eventUpdate.type == EventUpdateType.inviteState ||
                   !room.partial ||
                   importantStateEvents.contains(stateEvent.type);
-          if ((noMessageOrNoEdit || editingLastEvent || consecutiveEdit) &&
-              importantOrRoomLoaded) {
+          if (importantOrRoomLoaded) {
             room.setState(stateEvent);
           }
         }

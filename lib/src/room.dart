@@ -101,6 +101,7 @@ class Room {
         'summary': summary.toJson(),
         'newest_sort_order': 0,
         'oldest_sort_order': 0,
+        'last_event': lastEvent?.eventId,
       };
 
   factory Room.fromJson(Map<String, dynamic> json, Client client) => Room(
@@ -320,44 +321,7 @@ class Room {
   /// Must be one of [all, mention]
   String? notificationSettings;
 
-  Event? get lastEvent {
-    // as lastEvent calculation is based on the state events we unfortunately cannot
-    // use sortOrder here: With many state events we just know which ones are the
-    // newest ones, without knowing in which order they actually happened. As such,
-    // using the origin_server_ts is the best guess for this algorithm. While not
-    // perfect, it is only used for the room preview in the room list and sorting
-    // said room list, so it should be good enough.
-    var lastTime = DateTime.fromMillisecondsSinceEpoch(0);
-    final lastEvents =
-        client.roomPreviewLastEvents.map(getState).whereType<Event>();
-
-    var lastEvent = lastEvents.isEmpty
-        ? null
-        : lastEvents.reduce((a, b) {
-            if (a.originServerTs == b.originServerTs) {
-              // if two events have the same sort order we want to give encrypted events a lower priority
-              // This is so that if the same event exists in the state both encrypted *and* unencrypted,
-              // the unencrypted one is picked
-              return a.type == EventTypes.Encrypted ? b : a;
-            }
-            return a.originServerTs.millisecondsSinceEpoch >
-                    b.originServerTs.millisecondsSinceEpoch
-                ? a
-                : b;
-          });
-    if (lastEvent == null) {
-      states.forEach((final String key, final entry) {
-        final state = entry[''];
-        if (state == null) return;
-        if (state.originServerTs.millisecondsSinceEpoch >
-            lastTime.millisecondsSinceEpoch) {
-          lastTime = state.originServerTs;
-          lastEvent = state;
-        }
-      });
-    }
-    return lastEvent;
-  }
+  Event? lastEvent;
 
   /// Returns a list of all current typing users.
   List<User> get typingUsers {
@@ -385,6 +349,7 @@ class Room {
     double newestSortOrder = 0.0,
     double oldestSortOrder = 0.0,
     RoomSummary? summary,
+    this.lastEvent,
   })  : roomAccountData = roomAccountData ?? <String, BasicRoomEvent>{},
         summary = summary ??
             RoomSummary.fromJson({

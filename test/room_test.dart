@@ -72,6 +72,7 @@ void main() {
           ),
         },
       );
+      room.client.rooms.add(room);
       room.setState(Event(
         room: room,
         eventId: '143273582443PhrSn:example.org',
@@ -161,15 +162,25 @@ void main() {
             stateKey: ''),
       );
       expect(room.pinnedEventIds.first, '1234');
-      room.setState(
-        Event(
-          senderId: '@test:example.com',
-          type: 'm.room.message',
-          room: room,
-          eventId: '12345',
-          originServerTs: DateTime.now(),
-          content: {'msgtype': 'm.text', 'body': 'abc'},
-          stateKey: '',
+      await room.client.handleSync(
+        SyncUpdate(
+          nextBatch: '',
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                  timeline: TimelineUpdate(events: [
+                Event(
+                  senderId: '@test:example.com',
+                  type: 'm.room.message',
+                  room: room,
+                  eventId: '12345',
+                  originServerTs: DateTime.now(),
+                  content: {'msgtype': 'm.text', 'body': 'abc'},
+                  stateKey: '',
+                )
+              ])),
+            },
+          ),
         ),
       );
       expect(room.lastEvent?.eventId, '12345');
@@ -177,8 +188,19 @@ void main() {
       expect(room.timeCreated, room.lastEvent?.originServerTs);
     });
 
-    test('lastEvent is set properly', () {
-      room.setState(
+    test('lastEvent is set properly', () async {
+      final syncRoomEvent = (Event event) async => await room.client.handleSync(
+            SyncUpdate(
+              nextBatch: '',
+              rooms: RoomsUpdate(
+                join: {
+                  room.id: JoinedRoomUpdate(
+                      timeline: TimelineUpdate(events: [event])),
+                },
+              ),
+            ),
+          );
+      await syncRoomEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -189,9 +211,9 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.hasNewMessages, true);
       expect(room.lastEvent?.body, 'cd');
-      room.setState(
+      expect(room.hasNewMessages, true);
+      await syncRoomEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -203,7 +225,7 @@ void main() {
         ),
       );
       expect(room.lastEvent?.body, 'cdc');
-      room.setState(
+      await syncRoomEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -220,7 +242,8 @@ void main() {
         ),
       );
       expect(room.lastEvent?.body, 'cdc'); // because we edited the "cd" message
-      room.setState(
+
+      await syncRoomEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -238,11 +261,11 @@ void main() {
         ),
       );
       expect(room.lastEvent?.body, 'edited cdc');
-      expect(room.lastEvent?.status, EventStatus.sending);
       expect(room.lastEvent?.eventId, '4');
+      expect(room.lastEvent?.status, EventStatus.sending);
 
       // Status update on edits working?
-      room.setState(
+      await syncRoomEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -264,7 +287,7 @@ void main() {
       expect(room.lastEvent?.body, 'edited cdc');
       expect(room.lastEvent?.status, EventStatus.sent);
       // Are reactions coming through?
-      room.setState(
+      await syncRoomEvent(
         Event(
           senderId: '@test:example.com',
           type: EventTypes.Reaction,
