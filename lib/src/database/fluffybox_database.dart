@@ -377,6 +377,12 @@ class FluffyBoxDatabase extends DatabaseApi {
         return chunk;
       });
 
+  @override
+  Future<TimelineFragmentList?> getFragments(Room room) async {
+    final timelineKey = TupleKey(room.id, '').toString();
+    return TimelineFragmentList(await _timelineFragmentsBox.get(timelineKey));
+  }
+
   /// Loads a whole list of events at once from the store for a specific room
   Future<List<Event>> _getEventsByIds(List<String> eventIds, Room room) async {
     final keys = eventIds

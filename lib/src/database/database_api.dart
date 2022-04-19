@@ -99,6 +99,8 @@ abstract class DatabaseApi {
     int limit,
   });
 
+  Future<TimelineFragmentList?> getFragments(Room room);
+
   Future<Uint8List?> getFile(Uri mxcUri);
 
   Future storeFile(Uri mxcUri, Uint8List bytes, int time);
