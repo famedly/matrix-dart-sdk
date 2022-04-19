@@ -1,24 +1,31 @@
 import 'dart:math';
-import 'package:random_string/random_string.dart';
-import 'dart:math' show Random;
 
 import '../../matrix.dart';
 import 'timeline_chunk.dart';
 
 class TimelineFragment {
-  String? fragmentId;
+  String fragmentId;
   Map<dynamic, dynamic> map = {};
 
-  String get prevBatch =>
-      map['prev_batch'] ??
-      ''; // pos of the first event of the database timeline chunk
+  String get prevBatch => map['prev_batch'] ?? '';
+
+  // wether this node is root
+  bool get isRoot => fragmentId == '';
+
+  // pos of the first event of the database timeline chunk
   set prevBatch(String value) => map['prev_batch'] = value;
 
   String get nextBatch => map['next_batch'] ?? '';
   set nextBatch(String value) => map['next_batch'] = value;
 
-  List<String> get eventsId => map['events'].cast<String>() ?? [];
+  List<String> get eventsId => map['events']?.cast<String>() ?? [];
   set eventsId(List<String> value) => map['events'] = value;
+
+  String? get replacedBy => map['replaced_by'];
+
+  void setReplacementFragmentID(String value) {
+    map['replaced_by'] = value;
+  }
 
   TimelineFragment(
       {required List<String> eventsId,
@@ -47,7 +54,7 @@ class TimelineFragment {
         events: [],
         prevBatch: prevBatch,
         nextBatch: nextBatch,
-        fragmentId: fragmentId!);
+        fragmentId: fragmentId);
 
     chunk.eventIds = eventsId.getRange(start, end).toList();
     return chunk;
@@ -96,58 +103,13 @@ class TimelineFragment {
 
     return newEventIds;
   }
-}
 
-class TimelineFragmentList {
-  late Map<dynamic, dynamic> fragments;
-
-  TimelineFragmentList(Map? frags) {
-    fragments = frags ?? {};
-  }
-
-  String? findFragmentWithEvent({required String eventId}) {
-    for (final key in fragments.keys) {
-      final fragment = fragments[key];
-      if (fragment != null) {
-        final list = fragment['events'] ?? [];
-
-        if (list.contains(eventId)) {
-          return key;
-        }
-      }
+  void addEvent(
+      {required String eventId, required EventUpdateType eventUpdateType}) {
+    if (eventUpdateType == EventUpdateType.history) {
+      eventsId.add(eventId);
+    } else {
+      eventsId.insert(0, eventId);
     }
-
-    return null;
-  }
-
-  TimelineFragment? getFragment(String key) {
-    if (fragments[key] == null) return null;
-    return TimelineFragment.fromMap(fragments[key], fragmentId: key);
-  }
-
-  void setFragment(String key, TimelineFragment map) {
-    fragments[key] = map.map;
-  }
-
-  String? _getIdFromBatchKey(String? data) {
-    if (data == null) return null;
-
-    for (final key in fragments.keys) {
-      final frag = getFragment(key);
-
-      if (frag != null && (frag.prevBatch == data || frag.nextBatch == data)) {
-        return key;
-      }
-    }
-
-    return null;
-  }
-
-  // return a fragment coinciding with this batch
-  String getFragmentIdFromBatchId({String? prevBatch, String? nextBatch}) {
-    if (prevBatch == null && nextBatch == null) return '';
-    return _getIdFromBatchKey(prevBatch) ??
-        _getIdFromBatchKey(nextBatch) ??
-        randomAlphaNumeric(6);
   }
 }

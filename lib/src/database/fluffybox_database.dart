@@ -32,7 +32,6 @@ import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 
 import '../models/timeline_chunk.dart';
-import '../models/timeline_fragment.dart';
 
 /// This database does not support file caching!
 class FluffyBoxDatabase extends DatabaseApi {
@@ -353,12 +352,10 @@ class FluffyBoxDatabase extends DatabaseApi {
 
         final fragmentList =
             TimelineFragmentList(await _timelineFragmentsBox.get(timelineKey));
-        final key = fragmentList.findFragmentWithEvent(eventId: eventId);
-        Logs().w('Fragment - $key');
+        final fragment = fragmentList.findFragmentWithEvent(eventId: eventId);
 
-        if (key == null) return null; // the event doesn't exist
+        if (fragment == null) return null; // the event doesn't exist
 
-        final fragment = fragmentList.getFragment(key)!;
         Logs().w(
             'Fragment loaded - ${fragment.prevBatch} -  ${fragment.nextBatch}}');
 
@@ -423,7 +420,7 @@ class FluffyBoxDatabase extends DatabaseApi {
         final fragment = fragments.getFragment(newChunk.fragmentId)!;
         final eventIds = fragment.getNewEvents(newChunk, direction: direction);
         eventIds.forEach((element) {
-          print("event: $element");
+          print('event: $element');
         });
 
         newChunk.events = await _getEventsByIds(eventIds, room);
@@ -439,9 +436,11 @@ class FluffyBoxDatabase extends DatabaseApi {
       runBenchmarked<List<Event>>('Get event list', () async {
         // Get the synced event IDs from the store
         final timelineKey = TupleKey(room.id, '').toString();
-        final timelineEventIds =
-            (await _timelineFragmentsBoxLegacy.get(timelineKey) ?? []);
+        final fragments =
+            TimelineFragmentList(await _timelineFragmentsBox.get(timelineKey));
+        final fragment = fragments.getFragment('')!;
 
+        final timelineEventIds = fragment.eventsId;
         // Get the local stored SENDING events from the store
         late final List sendingEventIds;
         if (start != 0) {
@@ -1110,10 +1109,10 @@ class FluffyBoxDatabase extends DatabaseApi {
       final fragments =
           TimelineFragmentList(await _timelineFragmentsBox.get(key));
 
-      final keyName = fragments.getFragmentIdFromBatchId(
+      final fragId = fragments.getFragmentIdFromBatchId(
           prevBatch: eventUpdate.prevBatch, nextBatch: eventUpdate.nextBatch);
 
-      var fragment = fragments.getFragment(keyName);
+      var fragment = fragments.getFragment(fragId);
 
       final roomRequest =
           eventUpdate.prevBatch != null && eventUpdate.nextBatch != null;
@@ -1122,7 +1121,7 @@ class FluffyBoxDatabase extends DatabaseApi {
 
       fragment ??= TimelineFragment(
           eventsId: [],
-          fragmentId: keyName,
+          fragmentId: fragId,
           nextBatch: eventUpdate.nextBatch ?? '',
           prevBatch: eventUpdate.prevBatch ?? '');
 
@@ -1144,15 +1143,19 @@ class FluffyBoxDatabase extends DatabaseApi {
       Logs()
           .w('Len - before: ${fragment.eventsId.length} - ${eventUpdate.type}');
 
-      if (eventUpdate.type == EventUpdateType.history) {
-        fragment.eventsId.add(eventId);
-      } else {
-        fragment.eventsId.insert(0, eventId);
+      fragment.addEvent(eventId: eventId, eventUpdateType: eventUpdate.type);
+      final oldFragId =
+          fragments.storeEventFragment(eventId: eventId, fragId: fragId);
+      if (oldFragId != null) {
+        fragment = fragments.mergeFragments(fragId, oldFragId);
+        print('Collision $oldFragId $fragId');
       }
+
       Logs().w('Len - after: ${fragment.eventsId.length}');
 
-      fragments.setFragment(keyName, fragment);
-      await _timelineFragmentsBox.put(key, fragments.fragments);
+      fragments.setFragment(fragId, fragment);
+
+      await _timelineFragmentsBox.put(key, fragments.fragmentsList);
 
       // If event comes from server timeline, remove sending events with this ID
       if (status.isSent) {
