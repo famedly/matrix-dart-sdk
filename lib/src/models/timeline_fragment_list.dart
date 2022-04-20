@@ -61,7 +61,7 @@ class TimelineFragmentList {
 
   TimelineFragment? findFragmentWithEvent({required String eventId}) {
     final id = fragmentsList['frag_map'][eventId];
-    return getFragment(id);
+    return id != null ? getFragment(id) : null;
   }
 
   // store in which fragment id is store this event. If the event was already store in a different fragment, we return the old fragment id.
