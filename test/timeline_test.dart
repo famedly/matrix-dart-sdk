@@ -17,6 +17,7 @@
  */
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/models/timeline_chunk.dart';
 
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
@@ -52,7 +53,13 @@ void main() {
           id: roomID, client: client, prev_batch: '1234', roomAccountData: {});
       timeline = Timeline(
         room: room,
-        events: [],
+        chunk: TimelineChunk(
+            events: [],
+            fragmentId: '',
+            nextBatch: '',
+            prevBatch: '',
+            start: 0,
+            end: 0),
         onUpdate: () {
           updateCount++;
         },

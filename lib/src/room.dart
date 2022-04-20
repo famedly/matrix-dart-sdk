@@ -1374,7 +1374,7 @@ class Room {
   /// just want to update the whole timeline on every change, use the [onUpdate]
   /// callback. For updating only the parts that have changed, use the
   /// [onChange], [onRemove], [onInsert] and the [onHistoryReceived] callbacks.
-  Future<TimelineNavigator> getTimeline({
+  Future<Timeline> getTimeline({
     void Function(int index)? onChange,
     void Function(int index)? onRemove,
     void Function(int insertID)? onInsert,
@@ -1389,7 +1389,7 @@ class Room {
 
     await loadEvents(chunk.events);
 
-    final timeline = TimelineNavigator(
+    final timeline = Timeline(
         room: this,
         chunk: chunk,
         onChange: onChange,
@@ -1403,7 +1403,7 @@ class Room {
   /// just want to update the whole timeline on every change, use the [onUpdate]
   /// callback. For updating only the parts that have changed, use the
   /// [onChange], [onRemove], [onInsert] and the [onHistoryReceived] callbacks.
-  Future<TimelineNavigator?> getTimelineOnEventContext({
+  Future<Timeline?> getTimelineOnEventContext({
     void Function(int index)? onChange,
     void Function(int index)? onRemove,
     void Function(int insertID)? onInsert,
@@ -1423,7 +1423,7 @@ class Room {
 
       await loadEvents(result.events);
 
-      return TimelineNavigator(
+      return Timeline(
           room: this,
           chunk: result,
           onChange: onChange,

@@ -31,7 +31,6 @@ export 'src/voip.dart';
 export 'src/voip_content.dart';
 export 'src/room.dart';
 export 'src/timeline.dart';
-export 'src/timeline_navigator.dart';
 export 'src/user.dart';
 export 'src/models/timeline_fragment.dart';
 export 'src/models/timeline_fragment_list.dart';
