@@ -1140,9 +1140,6 @@ class FluffyBoxDatabase extends DatabaseApi {
         }
       }
 
-      Logs()
-          .w('Len - before: ${fragment.eventsId.length} - ${eventUpdate.type}');
-
       fragment.addEvent(eventId: eventId, eventUpdateType: eventUpdate.type);
       final oldFragId =
           fragments.storeEventFragment(eventId: eventId, fragId: fragId);
