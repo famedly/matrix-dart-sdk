@@ -64,10 +64,11 @@ class EventUpdate {
           room.id, Event.fromJson(content, room),
           store: store, updateType: type);
       return EventUpdate(
-        roomID: roomID,
-        type: type,
-        content: decrpytedEvent.toJson(),
-      );
+          roomID: roomID,
+          type: type,
+          content: decrpytedEvent.toJson(),
+          nextBatch: nextBatch,
+          prevBatch: prevBatch);
     } catch (e, s) {
       Logs().e('[LibOlm] Could not decrypt megolm event', e, s);
       return this;
