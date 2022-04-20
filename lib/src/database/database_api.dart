@@ -87,6 +87,11 @@ abstract class DatabaseApi {
     int limit,
   });
 
+  Future<TimelineChunk> getEventChunk(
+    Room room, {
+    int limit,
+  });
+
   /// Return the context surrounding an event
   Future<TimelineChunk?> getEventContext(
       {required String eventId, required Room room, int limit = 10});

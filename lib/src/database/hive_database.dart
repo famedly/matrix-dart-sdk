@@ -404,6 +404,14 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   Future<TimelineFragmentList?> getFragments(Room room) async => null;
 
   @override
+  Future<TimelineChunk> getEventChunk(
+    Room room, {
+    int? limit,
+  }) async {
+    throw 'Not implemented';
+  }
+
+  @override
   Future<List<Event>> getEventList(
     Room room, {
     int start = 0,

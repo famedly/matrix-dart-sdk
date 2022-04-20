@@ -408,6 +408,7 @@ class FluffyBoxDatabase extends DatabaseApi {
         // Get the synced event IDs from the store
         final timelineKey = TupleKey(room.id, '').toString();
 
+        // copy the actual chunk
         final newChunk = TimelineChunk(
           start: chunk.start,
           end: chunk.end,
@@ -424,6 +425,53 @@ class FluffyBoxDatabase extends DatabaseApi {
         final fragment = fragments.getFragment(newChunk.fragmentId)!;
         final eventIds = fragment.getNewEvents(newChunk, direction: direction);
         newChunk.events = await _getEventsByIds(eventIds, room);
+        return newChunk;
+      });
+
+  @override
+  Future<TimelineChunk> getEventChunk(
+    Room room, {
+    int? limit,
+  }) =>
+      runBenchmarked<TimelineChunk>('Get event list', () async {
+        final start = 0;
+        // Get the synced event IDs from the store
+        final timelineKey = TupleKey(room.id, '').toString();
+        final fragments =
+            TimelineFragmentList(await _timelineFragmentsBox.get(timelineKey));
+        final fragment = fragments.getFragment('')!;
+
+        final timelineEventIds = fragment.eventsId;
+        // Get the local stored SENDING events from the store
+        late final List sendingEventIds;
+        if (start != 0) {
+          sendingEventIds = [];
+        } else {
+          final sendingTimelineKey = TupleKey(room.id, 'SENDING').toString();
+          sendingEventIds =
+              (await _timelineFragmentsBoxLegacy.get(sendingTimelineKey) ?? []);
+        }
+
+        // Combine those two lists while respecting the start and limit parameters.
+        final end = min(timelineEventIds.length,
+            start + (limit ?? timelineEventIds.length));
+        final eventIds = sendingEventIds +
+            (start < timelineEventIds.length
+                ? timelineEventIds.getRange(start, end).toList()
+                : []);
+
+        final newChunk = TimelineChunk(
+          start: start,
+          end: end,
+          events: [],
+          fragmentId: fragment.fragmentId,
+          nextBatch: fragment.nextBatch,
+          prevBatch: fragment.prevBatch,
+        );
+
+        newChunk.eventIds = eventIds.cast<String>();
+        newChunk.events = await _getEventsByIds(newChunk.eventIds, room);
+
         return newChunk;
       });
 
@@ -1112,6 +1160,9 @@ class FluffyBoxDatabase extends DatabaseApi {
       final fragId = fragments.getFragmentIdFromBatchId(
           prevBatch: eventUpdate.prevBatch, nextBatch: eventUpdate.nextBatch);
 
+      Logs().i(
+          'New event: ${eventUpdate.prevBatch} -> ${eventUpdate.nextBatch} : $fragId');
+
       var fragment = fragments.getFragment(fragId);
 
       final roomRequest =
@@ -1144,11 +1195,11 @@ class FluffyBoxDatabase extends DatabaseApi {
       final oldFragId =
           fragments.storeEventFragment(eventId: eventId, fragId: fragId);
       if (oldFragId != null) {
-        fragment = fragments.mergeFragments(fragId, oldFragId);
         Logs().e('Collision $oldFragId $fragId');
+        fragment = fragments.mergeFragments(fragId, oldFragId);
       }
 
-      Logs().w(
+      Logs().i(
           'Added in: ${fragment.fragmentId} len: ${fragment.eventsId.length} type: ${eventUpdate.type} ${eventUpdate.prevBatch} -> ${eventUpdate.nextBatch}');
 
       fragments.setFragment(fragId, fragment);

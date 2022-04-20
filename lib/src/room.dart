@@ -1374,7 +1374,7 @@ class Room {
   /// just want to update the whole timeline on every change, use the [onUpdate]
   /// callback. For updating only the parts that have changed, use the
   /// [onChange], [onRemove], [onInsert] and the [onHistoryReceived] callbacks.
-  Future<Timeline> getTimeline({
+  Future<TimelineNavigator> getTimeline({
     void Function(int index)? onChange,
     void Function(int index)? onRemove,
     void Function(int insertID)? onInsert,
@@ -1382,17 +1382,16 @@ class Room {
   }) async {
     await postLoad();
 
-    final events = await client.database?.getEventList(
-          this,
-          limit: defaultHistoryCount,
-        ) ??
-        [];
+    final chunk = await client.database!.getEventChunk(
+      this,
+      limit: defaultHistoryCount,
+    );
 
-    await loadEvents(events);
+    await loadEvents(chunk.events);
 
-    final timeline = Timeline(
+    final timeline = TimelineNavigator(
         room: this,
-        events: events,
+        chunk: chunk,
         onChange: onChange,
         onRemove: onRemove,
         onInsert: onInsert,
