@@ -112,4 +112,21 @@ class TimelineFragment {
       eventsId.insert(0, eventId);
     }
   }
+
+  void updateAnchors(
+      {required EventUpdateType type,
+      required String? prevBatch,
+      required String? nextBatch}) {
+    if (type == EventUpdateType.history) {
+      this.prevBatch = prevBatch ?? '';
+      if (prevBatch == null) {
+        Logs().e('Null prev batch we must be doing initial sync');
+      }
+    } else {
+      this.nextBatch = nextBatch ?? '';
+      if (nextBatch == null) {
+        Logs().e('Null next batch we must be doing initial sync');
+      }
+    }
+  }
 }

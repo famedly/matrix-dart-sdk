@@ -1062,6 +1062,27 @@ class FluffyBoxDatabase extends DatabaseApi {
   }
 
   @override
+  Future<void> storeNewChunkAnchors(
+      {required String fragId,
+      required String roomID,
+      required String? nextBatch,
+      required String? prevBatch,
+      required EventUpdateType type}) async {
+    final key = TupleKey(roomID, '').toString();
+
+    final fragments =
+        TimelineFragmentList(await _timelineFragmentsBox.get(key));
+
+    final fragment = fragments.getFragment(fragId);
+
+    fragment!
+        .updateAnchors(type: type, prevBatch: prevBatch, nextBatch: nextBatch);
+
+    fragments.setFragment(fragId, fragment);
+    await _timelineFragmentsBox.put(key, fragments.fragmentsList);
+  }
+
+  @override
   Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client) async {
     // Ephemerals should not be stored
     if (eventUpdate.type == EventUpdateType.ephemeral) return;
@@ -1157,7 +1178,7 @@ class FluffyBoxDatabase extends DatabaseApi {
       final fragments =
           TimelineFragmentList(await _timelineFragmentsBox.get(key));
 
-      final fragId = fragments.getFragmentIdFromBatchId(
+      final fragId = fragments.getFragmentIdFromBatchAnchors(
           prevBatch: eventUpdate.prevBatch, nextBatch: eventUpdate.nextBatch);
 
       Logs().i(
@@ -1178,17 +1199,10 @@ class FluffyBoxDatabase extends DatabaseApi {
 
       // update fragment batch sync anchors
       if (roomRequest) {
-        if (eventUpdate.type == EventUpdateType.history) {
-          fragment.prevBatch = eventUpdate.prevBatch ?? '';
-          if (eventUpdate.prevBatch == null) {
-            Logs().e('Null prev batch we must be doing initial sync');
-          }
-        } else {
-          fragment.nextBatch = eventUpdate.nextBatch ?? '';
-          if (eventUpdate.nextBatch == null) {
-            Logs().e('Null next batch we must be doing initial sync');
-          }
-        }
+        fragment.updateAnchors(
+            type: eventUpdate.type,
+            prevBatch: eventUpdate.prevBatch,
+            nextBatch: eventUpdate.nextBatch);
       }
 
       fragment.addEvent(eventId: eventId, eventUpdateType: eventUpdate.type);

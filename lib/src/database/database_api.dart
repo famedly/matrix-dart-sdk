@@ -207,6 +207,13 @@ abstract class DatabaseApi {
     String prevBatch,
   );
 
+  Future<void> storeNewChunkAnchors(
+      {required String fragId,
+      required String roomID,
+      required String? nextBatch,
+      required String? prevBatch,
+      required EventUpdateType type});
+
   Future deleteOldFiles(int savedAt);
 
   Future storeUserDeviceKeysInfo(

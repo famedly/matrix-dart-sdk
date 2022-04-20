@@ -446,6 +446,16 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       });
 
   @override
+  Future<void> storeNewChunkAnchors(
+      {required String fragId,
+      required String roomID,
+      required EventUpdateType type,
+      required String? nextBatch,
+      required String? prevBatch}) async {
+    throw 'Not implemented';
+  }
+
+  @override
   Future<Uint8List?> getFile(Uri mxcUri) async {
     return null;
   }

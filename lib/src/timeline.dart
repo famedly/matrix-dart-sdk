@@ -182,7 +182,29 @@ class Timeline {
         '[nav] resp: ${(resp.start == resp.end)} len: ${resp.state?.length}');
 
     if ((resp.state?.length ?? 0) == 0 && resp.start != resp.end) {
-      Logs().w('[nav] we can still request history');
+      final type = direction == Direction.b
+          ? EventUpdateType.history
+          : EventUpdateType.timeline;
+
+      final newNextBatch = direction == Direction.b ? resp.start : resp.end;
+      final newPrevBatch = direction == Direction.b ? resp.end : resp.start;
+
+      await room.client.database?.storeNewChunkAnchors(
+          fragId: chunk.fragmentId,
+          type: type,
+          roomID: room.id,
+          nextBatch: newNextBatch,
+          prevBatch: newPrevBatch);
+
+      if (type == EventUpdateType.history) {
+        chunk.prevBatch = newPrevBatch ?? '';
+        Logs().w(
+            '[nav] we can still request history prevBatch: $type $newPrevBatch');
+      } else {
+        chunk.nextBatch = newNextBatch ?? '';
+        Logs().w(
+            '[nav] we can still request history nextBatch: $type $newNextBatch');
+      }
     }
     final loadFn = () async {
       if (!((resp.chunk?.isNotEmpty ?? false) && resp.end != null)) return;

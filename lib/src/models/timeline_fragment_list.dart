@@ -50,7 +50,7 @@ class TimelineFragmentList {
   }
 
   // return a fragment coinciding with this batch
-  String getFragmentIdFromBatchId({String? prevBatch, String? nextBatch}) {
+  String getFragmentIdFromBatchAnchors({String? prevBatch, String? nextBatch}) {
     if (prevBatch != null && nextBatch == null) {
       return ''; // it's the last fragment
     }
