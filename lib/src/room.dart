@@ -1298,10 +1298,10 @@ class Room {
   }
 
   Future<TimelineChunk?> getEventContextMixed(String eventId) async {
-    Logs().i('Fetching database');
     final result = await client.database?.getEventContext(
         eventId: eventId, room: this, limit: defaultHistoryCount);
     if (result == null || result.events.isEmpty) {
+      Logs().i('Fetching server');
       final count = await getEventContext(eventId);
       Logs().i('Fetched $count events from context');
       return await client.database

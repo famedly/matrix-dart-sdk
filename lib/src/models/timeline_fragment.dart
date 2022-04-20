@@ -11,6 +11,7 @@ class TimelineFragment {
 
   // wether this node is root
   bool get isRoot => fragmentId == '';
+  bool get isRedirect => replacedBy != null;
 
   // pos of the first event of the database timeline chunk
   set prevBatch(String value) => map['prev_batch'] = value;

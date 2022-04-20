@@ -10,7 +10,12 @@ class TimelineFragmentList {
 
   TimelineFragmentList(Map? frags) : fragmentsList = frags ?? {'frags': {}};
 
-  TimelineFragment? getFragment(String key) {
+  /// Return the actual fragment or the fragment by which it has been remplaced.
+  TimelineFragment? getFragment(String key, {bool followRedirect = true}) {
+    if (!followRedirect) {
+      return TimelineFragment.fromMap(_fragments[key], fragmentId: key);
+    }
+
     return _getFragmentIterator(key, 0);
   }
 
@@ -69,9 +74,13 @@ class TimelineFragmentList {
       {required String eventId, required String fragId}) {
     if (fragmentsList['frag_map'] == null) fragmentsList['frag_map'] = {};
 
-    final oldFragment = fragmentsList['frag_map'][eventId];
+    var oldFragment = fragmentsList['frag_map'][eventId];
 
     if (oldFragment != fragId) {
+      // get the latest fragment name
+      if (oldFragment != null) {
+        oldFragment ??= getFragment(oldFragment)?.fragmentId;
+      }
       fragmentsList['frag_map'][eventId] = fragId;
       return oldFragment;
     }
@@ -80,8 +89,12 @@ class TimelineFragmentList {
   }
 
   TimelineFragment mergeFragments(String fragId, String oldFragId) {
-    final fragA = getFragment(fragId)!;
-    final fragB = getFragment(oldFragId)!;
+    final fragA = getFragment(fragId);
+    final fragB = getFragment(oldFragId);
+    Logs().w(
+        'Merge: Pre ${fragA?.fragmentId} and ${fragB?.fragmentId} $fragId $oldFragId');
+
+    if (fragA == null || fragB == null) return fragA ?? fragB!;
 
     var fragMain = fragA;
     var fragSecondary = fragB;
@@ -90,6 +103,9 @@ class TimelineFragmentList {
       fragMain = fragB;
       fragSecondary = fragA;
     }
+
+    Logs().w(
+        'Merge: Post ${fragMain.fragmentId} ${fragSecondary.fragmentId} $fragId $oldFragId');
 
 // TODO: properly merge timelines
     fragMain.eventsId.addAll(fragSecondary.eventsId);
