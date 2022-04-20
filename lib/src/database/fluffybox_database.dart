@@ -373,9 +373,6 @@ class FluffyBoxDatabase extends DatabaseApi {
 
         // populate the chunk
         Logs().w('Populate chunk - ${chunk.eventIds.length}');
-        chunk.eventIds.forEach((element) {
-          print('Event: $element');
-        });
         chunk.events = await _getEventsByIds(chunk.eventIds, room);
         Logs().w('done - ${chunk.events.length}');
         return chunk;
@@ -426,10 +423,6 @@ class FluffyBoxDatabase extends DatabaseApi {
             TimelineFragmentList(await _timelineFragmentsBox.get(timelineKey));
         final fragment = fragments.getFragment(newChunk.fragmentId)!;
         final eventIds = fragment.getNewEvents(newChunk, direction: direction);
-        eventIds.forEach((element) {
-          print('event: $element');
-        });
-
         newChunk.events = await _getEventsByIds(eventIds, room);
         return newChunk;
       });
@@ -1158,7 +1151,8 @@ class FluffyBoxDatabase extends DatabaseApi {
         print('Collision $oldFragId $fragId');
       }
 
-      Logs().w('Len - after: ${fragment.eventsId.length}');
+      Logs().w(
+          'Added in: ${fragment.fragmentId} len: ${fragment.eventsId.length} type: ${eventUpdate.type} ${eventUpdate.prevBatch} -> ${eventUpdate.nextBatch}');
 
       fragments.setFragment(fragId, fragment);
 

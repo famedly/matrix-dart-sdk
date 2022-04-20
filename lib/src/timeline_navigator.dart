@@ -104,11 +104,6 @@ class TimelineNavigator {
         direction: direction,
         limit: Room.defaultHistoryCount,
       );
-      if (timelineChunkFromStore != null) {
-        // save data
-        print(
-            'Sizes: ${chunk.events.length} - ${timelineChunkFromStore.events.length}');
-      }
 
       if (timelineChunkFromStore != null &&
           timelineChunkFromStore.events.isNotEmpty) {
@@ -180,9 +175,15 @@ class TimelineNavigator {
       Logs().w('end or start parameters where not set in the response');
     }
     Logs().w(
-        '[ nav]Direction: $direction - start: ${direction == Direction.b ? chunk.prevBatch : chunk.nextBatch}');
+        '[ nav] Direction: $direction - start: ${direction == Direction.b ? chunk.prevBatch : chunk.nextBatch}');
     Logs().w('[nav] Actual chunk: ${chunk.prevBatch} -> ${chunk.nextBatch}');
-    Logs().w('[nav] resp : ${resp.start} -> ${resp.end}');
+    Logs().w('[nav] resp: ${resp.start} -> ${resp.end}');
+    Logs().w(
+        '[nav] resp: ${(resp.start == resp.end)} len: ${resp.state?.length}');
+
+    if ((resp.state?.length ?? 0) == 0 && resp.start != resp.end) {
+      Logs().w('[nav] we can still request history');
+    }
     final loadFn = () async {
       if (!((resp.chunk?.isNotEmpty ?? false) && resp.end != null)) return;
 

@@ -1712,6 +1712,7 @@ class Client extends MatrixApi {
           content: event,
           prevBatch: prevBatch,
           nextBatch: nextBatch);
+
       if (event['type'] == EventTypes.Encrypted && encryptionEnabled) {
         update = await update.decrypt(room);
       }
