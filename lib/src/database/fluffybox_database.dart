@@ -1148,7 +1148,7 @@ class FluffyBoxDatabase extends DatabaseApi {
           fragments.storeEventFragment(eventId: eventId, fragId: fragId);
       if (oldFragId != null) {
         fragment = fragments.mergeFragments(fragId, oldFragId);
-        print('Collision $oldFragId $fragId');
+        Logs().e('Collision $oldFragId $fragId');
       }
 
       Logs().w(
