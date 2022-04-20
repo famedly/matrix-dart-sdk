@@ -1206,17 +1206,23 @@ class FluffyBoxDatabase extends DatabaseApi {
       }
 
       fragment.addEvent(eventId: eventId, eventUpdateType: eventUpdate.type);
-      final oldFragId =
-          fragments.storeEventFragment(eventId: eventId, fragId: fragId);
+
+      final oldFragId = fragments.storeEventFragReference(
+          eventId: eventId, fragId: fragment.fragmentId);
+
       if (oldFragId != null) {
-        Logs().e('Collision $oldFragId $fragId');
-        fragment = fragments.mergeFragments(fragId, oldFragId);
+        Logs().e('Collision $oldFragId ${fragment.fragmentId}');
+        fragment = fragments.mergeFragments(fragment, oldFragId);
+
+        // and update the new id
+        fragments.storeEventFragReference(
+            eventId: eventId, fragId: fragment.fragmentId);
       }
 
       Logs().i(
           'Added in: ${fragment.fragmentId} len: ${fragment.eventsId.length} type: ${eventUpdate.type} ${eventUpdate.prevBatch} -> ${eventUpdate.nextBatch}');
 
-      fragments.setFragment(fragId, fragment);
+      fragments.setFragment(fragment.fragmentId, fragment);
 
       await _timelineFragmentsBox.put(key, fragments.fragmentsList);
 

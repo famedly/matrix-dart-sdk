@@ -69,32 +69,36 @@ class TimelineFragmentList {
     return id != null ? getFragment(id) : null;
   }
 
-  // store in which fragment id is store this event. If the event was already store in a different fragment, we return the old fragment id.
-  String? storeEventFragment(
+  /// store in wich fragment id is stored this event.
+  /// If the event was stored in an other fragment which hasn't been
+  /// replaced, we return the old fragment Id.
+  String? storeEventFragReference(
       {required String eventId, required String fragId}) {
     if (fragmentsList['frag_map'] == null) fragmentsList['frag_map'] = {};
 
-    var oldFragment = fragmentsList['frag_map'][eventId];
+    final oldFragment = fragmentsList['frag_map'][eventId];
 
     if (oldFragment != fragId) {
-      // get the latest fragment name
-      if (oldFragment != null) {
-        oldFragment ??= getFragment(oldFragment)?.fragmentId;
-      }
       fragmentsList['frag_map'][eventId] = fragId;
-      return oldFragment;
+
+      // in case of with
+      if (oldFragment != null) {
+        final frag = getFragment(oldFragment, followRedirect: false);
+        if (frag?.isRedirect == false) {
+          return oldFragment;
+        }
+      }
     }
 
     return null;
   }
 
-  TimelineFragment mergeFragments(String fragId, String oldFragId) {
-    final fragA = getFragment(fragId);
-    final fragB = getFragment(oldFragId);
+  TimelineFragment mergeFragments(TimelineFragment fragA, String oldFragId) {
+    final fragB = getFragment(oldFragId, followRedirect: false);
     Logs().w(
-        'Merge: Pre ${fragA?.fragmentId} and ${fragB?.fragmentId} $fragId $oldFragId');
+        'Merge: Pre ${fragA.fragmentId} and ${fragB?.fragmentId} old: $oldFragId');
 
-    if (fragA == null || fragB == null) return fragA ?? fragB!;
+    if (fragB == null) return fragA;
 
     var fragMain = fragA;
     var fragSecondary = fragB;
@@ -105,14 +109,19 @@ class TimelineFragmentList {
     }
 
     Logs().w(
-        'Merge: Post ${fragMain.fragmentId} ${fragSecondary.fragmentId} $fragId $oldFragId');
+        'Merge: Post ${fragMain.fragmentId} and ${fragSecondary.fragmentId} old: $oldFragId');
 
-// TODO: properly merge timelines
+    // TODO: properly merge timelines
     fragMain.eventsId.addAll(fragSecondary.eventsId);
 
     // at the end, we replace the eventId
     fragSecondary.setReplacementFragmentID(fragMain.fragmentId);
     fragSecondary.eventsId = [];
+
+    setFragment(fragSecondary.fragmentId, fragSecondary);
+
+
+    
 
     return fragMain;
   }
