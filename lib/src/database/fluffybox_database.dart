@@ -278,6 +278,13 @@ class FluffyBoxDatabase extends DatabaseApi {
   Future<void> forgetRoom(String roomId) => transaction(() async {
         await _timelineFragmentsBoxLegacy
             .delete(TupleKey(roomId, '').toString());
+        await _timelineFragmentsBoxLegacy
+            .delete(TupleKey(roomId, 'SENDING').toString());
+
+        await _timelineFragmentsBox.delete(TupleKey(roomId, '').toString());
+        await _timelineFragmentsBox
+            .delete(TupleKey(roomId, 'SENDING').toString());
+
         final eventsBoxKeys = await _eventsBox.getAllKeys();
         for (final key in eventsBoxKeys) {
           final multiKey = TupleKey.fromString(key);
