@@ -63,7 +63,7 @@ void main() {
     });
 
     test('Create', () async {
-      await client.checkHomeserver('https://fakeserver.notexisting',
+      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
 
       client.onEvent.add(EventUpdate(

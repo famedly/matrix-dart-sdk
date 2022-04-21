@@ -28,7 +28,7 @@ void main() {
     Logs().level = Level.error;
     test('Formatting', () async {
       final client = Client('testclient', httpClient: FakeMatrixApi());
-      await client.checkHomeserver('https://fakeserver.notexisting',
+      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       final mxc = 'mxc://exampleserver.abc/abcdefghijklmn';
       final content = Uri.parse(mxc);
@@ -50,7 +50,7 @@ void main() {
     });
     test('other port', () async {
       final client = Client('testclient', httpClient: FakeMatrixApi());
-      await client.checkHomeserver('https://fakeserver.notexisting',
+      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       client.homeserver = Uri.parse('https://fakeserver.notexisting:1337');
       final mxc = 'mxc://exampleserver.abc/abcdefghijklmn';
@@ -73,7 +73,7 @@ void main() {
     });
     test('other remote port', () async {
       final client = Client('testclient', httpClient: FakeMatrixApi());
-      await client.checkHomeserver('https://fakeserver.notexisting',
+      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       final mxc = 'mxc://exampleserver.abc:1234/abcdefghijklmn';
       final content = Uri.parse(mxc);

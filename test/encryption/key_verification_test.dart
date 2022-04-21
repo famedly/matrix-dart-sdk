@@ -89,7 +89,7 @@ void main() {
         httpClient: FakeMatrixApi(),
         databaseBuilder: getDatabase,
       );
-      await client2.checkHomeserver('https://fakeserver.notexisting',
+      await client2.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       await client2.init(
         newToken: 'abc',

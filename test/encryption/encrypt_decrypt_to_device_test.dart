@@ -53,7 +53,8 @@ void main() {
 
       client = await getClient();
       await client.abortSync();
-      await otherClient.checkHomeserver('https://fakeserver.notexisting',
+      await otherClient.checkHomeserver(
+          Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       await otherClient.init(
         newToken: 'abc',

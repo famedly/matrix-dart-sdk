@@ -45,7 +45,7 @@ void main() {
     room.setState(user1);
     room.setState(user2);
     setUp(() async {
-      await client.checkHomeserver('https://fakeserver.notexisting',
+      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       await client.login(LoginType.mLoginPassword,
           identifier: AuthenticationUserIdentifier(user: 'test'),
