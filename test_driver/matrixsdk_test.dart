@@ -38,7 +38,7 @@ void test() async {
 
     Logs().i('++++ Login Alice at ++++');
     testClientA = Client('TestClientA', databaseBuilder: getDatabase);
-    await testClientA.checkHomeserver(TestUser.homeserver);
+    await testClientA.checkHomeserver(Uri.parse(TestUser.homeserver));
     await testClientA.login(LoginType.mLoginPassword,
         identifier: AuthenticationUserIdentifier(user: TestUser.username),
         password: TestUser.password);
@@ -46,7 +46,7 @@ void test() async {
 
     Logs().i('++++ Login Bob ++++');
     testClientB = Client('TestClientB', databaseBuilder: getDatabase);
-    await testClientB.checkHomeserver(TestUser.homeserver);
+    await testClientB.checkHomeserver(Uri.parse(TestUser.homeserver));
     await testClientB.login(LoginType.mLoginPassword,
         identifier: AuthenticationUserIdentifier(user: TestUser.username2),
         password: TestUser.password);
@@ -237,7 +237,7 @@ void test() async {
 
     Logs().i('++++ Login Bob in another client ++++');
     final testClientC = Client('TestClientC', databaseBuilder: getDatabase);
-    await testClientC.checkHomeserver(TestUser.homeserver);
+    await testClientC.checkHomeserver(Uri.parse(TestUser.homeserver));
     await testClientC.login(LoginType.mLoginPassword,
         identifier: AuthenticationUserIdentifier(user: TestUser.username2),
         password: TestUser.password);

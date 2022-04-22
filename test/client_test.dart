@@ -81,11 +81,12 @@ void main() {
       expect(matrix.homeserver, null);
 
       try {
-        await matrix.checkHomeserver('https://fakeserver.wrongaddress');
+        await matrix
+            .checkHomeserver(Uri.parse('https://fakeserver.wrongaddress'));
       } catch (exception) {
         expect(exception.toString().isNotEmpty, true);
       }
-      await matrix.checkHomeserver('https://fakeserver.notexisting',
+      await matrix.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       expect(matrix.homeserver.toString(), 'https://fakeserver.notexisting');
 
@@ -306,7 +307,7 @@ void main() {
 
       eventUpdateListFuture = matrix.onEvent.stream.toList();
 
-      await matrix.checkHomeserver('https://fakeserver.notexisting',
+      await matrix.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
 
       final loginResp = await matrix.login(LoginType.mLoginPassword,
@@ -894,7 +895,8 @@ void main() {
         databaseBuilder: (_) => database,
       );
       FakeMatrixApi.client = moorClient;
-      await moorClient.checkHomeserver('https://fakeServer.notExisting',
+      await moorClient.checkHomeserver(
+          Uri.parse('https://fakeServer.notExisting'),
           checkWellKnown: false);
       await moorClient.init(
         newToken: 'abcd',

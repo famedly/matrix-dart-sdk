@@ -265,7 +265,7 @@ void main() {
 
     test('sendAgain', () async {
       final matrix = Client('testclient', httpClient: FakeMatrixApi());
-      await matrix.checkHomeserver('https://fakeserver.notexisting',
+      await matrix.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       await matrix.login(LoginType.mLoginPassword,
           identifier: AuthenticationUserIdentifier(user: 'test'),
@@ -284,7 +284,7 @@ void main() {
 
     test('requestKey', () async {
       final matrix = Client('testclient', httpClient: FakeMatrixApi());
-      await matrix.checkHomeserver('https://fakeserver.notexisting',
+      await matrix.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       await matrix.login(LoginType.mLoginPassword,
           identifier: AuthenticationUserIdentifier(user: 'test'),
@@ -1252,7 +1252,7 @@ void main() {
           '/_matrix/media/r0/download/example.org/thumb': THUMBNAIL_BUFF,
         }[uri.path]!;
       };
-      await client.checkHomeserver('https://fakeserver.notexisting',
+      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       final room = Room(id: '!localpart:server.abc', client: client);
       var event = Event.fromJson({
@@ -1439,7 +1439,7 @@ void main() {
           '/_matrix/media/r0/download/example.org/newfile': FILE_BUFF,
         }[uri.path]!;
       };
-      await client.checkHomeserver('https://fakeserver.notexisting',
+      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       final room = Room(id: '!localpart:server.abc', client: await getClient());
       final event = Event.fromJson({

@@ -35,7 +35,7 @@ Future<Client> getClient() async {
     databaseBuilder: getDatabase,
   );
   FakeMatrixApi.client = client;
-  await client.checkHomeserver('https://fakeServer.notExisting',
+  await client.checkHomeserver(Uri.parse('https://fakeServer.notExisting'),
       checkWellKnown: false);
   await client.init(
     newToken: 'abcd',

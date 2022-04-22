@@ -358,20 +358,17 @@ class Client extends MatrixApi {
   /// login types. Throws an exception if the server is not compatible with the
   /// client and sets [homeserver] to [homeserverUrl] if it is. Supports the
   /// types `Uri` and `String`.
-  Future<HomeserverSummary> checkHomeserver(dynamic homeserverUrl,
+  Future<HomeserverSummary> checkHomeserver(Uri homeserverUrl,
       {bool checkWellKnown = true}) async {
     try {
-      var homeserver = this.homeserver =
-          (homeserverUrl is Uri) ? homeserverUrl : Uri.parse(homeserverUrl);
-      homeserver = this.homeserver = homeserver.stripTrailingSlash();
+      homeserver = homeserverUrl.stripTrailingSlash();
 
       // Look up well known
       DiscoveryInformation? wellKnown;
       if (checkWellKnown) {
         try {
           wellKnown = await getWellknown();
-          homeserver = this.homeserver =
-              wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
+          homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
         } catch (e) {
           Logs().v('Found no well known information', e);
         }
@@ -462,8 +459,15 @@ class Client extends MatrixApi {
     @Deprecated('Deprecated in favour of identifier.') String? medium,
     @Deprecated('Deprecated in favour of identifier.') String? address,
   }) async {
-    if (homeserver == null && user != null && user.isValidMatrixId) {
-      await checkHomeserver(user.domain);
+    if (homeserver == null) {
+      final domain = identifier is AuthenticationUserIdentifier
+          ? identifier.user.domain
+          : null;
+      if (domain != null) {
+        await checkHomeserver(Uri.https(domain, ''));
+      } else {
+        throw Exception('No homeserver specified!');
+      }
     }
     final response = await super.login(
       type,
