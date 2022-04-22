@@ -108,33 +108,6 @@ class OlmManager {
     return _olmAccount!.sign(s);
   }
 
-  /// Checks the signature of a signed json object.
-  @deprecated
-  bool checkJsonSignature(String key, Map<String, dynamic> signedJson,
-      String userId, String deviceId) {
-    if (!enabled) throw ('Encryption is disabled');
-    final Map<String, dynamic>? signatures = signedJson['signatures'];
-    if (signatures == null || !signatures.containsKey(userId)) return false;
-    signedJson.remove('unsigned');
-    signedJson.remove('signatures');
-    if (!signatures[userId].containsKey('ed25519:$deviceId')) return false;
-    final String signature = signatures[userId]['ed25519:$deviceId'];
-    final canonical = canonicalJson.encode(signedJson);
-    final message = String.fromCharCodes(canonical);
-    var isValid = false;
-    final olmutil = olm.Utility();
-    try {
-      olmutil.ed25519_verify(key, message, signature);
-      isValid = true;
-    } catch (e, s) {
-      isValid = false;
-      Logs().w('[LibOlm] Signature check failed', e, s);
-    } finally {
-      olmutil.free();
-    }
-    return isValid;
-  }
-
   bool _uploadKeysLock = false;
 
   /// Generates new one time keys, signs everything and upload it to the server.

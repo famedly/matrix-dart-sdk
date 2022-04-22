@@ -63,9 +63,6 @@ class Client extends MatrixApi {
 
   DatabaseApi? get database => _database;
 
-  @deprecated
-  MatrixApi get api => this;
-
   Encryption? encryption;
 
   Set<KeyVerificationMethod> verificationMethods;
@@ -152,8 +149,6 @@ class Client extends MatrixApi {
     this.databaseDestroyer,
     this.legacyDatabaseBuilder,
     this.legacyDatabaseDestroyer,
-    @Deprecated('This is now always enabled by default.')
-        bool? enableE2eeRecovery,
     Set<KeyVerificationMethod>? verificationMethods,
     http.Client? httpClient,
     Set<String>? importantStateEvents,
@@ -170,7 +165,6 @@ class Client extends MatrixApi {
     Filter? syncFilter,
     this.sendTimelineEventTimeout = const Duration(minutes: 1),
     this.customImageResizer,
-    @deprecated bool? debug,
   })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
@@ -747,9 +741,6 @@ class Client extends MatrixApi {
 
   final List<Room> _archivedRooms = [];
 
-  @Deprecated('Use [loadArchive()] instead.')
-  Future<List<Room>> get archive => loadArchive();
-
   Future<List<Room>> loadArchive() async {
     _archivedRooms.clear();
     final syncResp = await sync(
@@ -950,24 +941,6 @@ class Client extends MatrixApi {
   /// How long should the app wait until it retrys the synchronisation after
   /// an error?
   int syncErrorTimeoutSec = 3;
-
-  @Deprecated('Use init() instead')
-  void connect({
-    String? newToken,
-    Uri? newHomeserver,
-    String? newUserID,
-    String? newDeviceName,
-    String? newDeviceID,
-    String? newOlmAccount,
-  }) =>
-      init(
-        newToken: newToken,
-        newHomeserver: newHomeserver,
-        newUserID: newUserID,
-        newDeviceName: newDeviceName,
-        newDeviceID: newDeviceID,
-        newOlmAccount: newOlmAccount,
-      );
 
   bool _initLock = false;
 
@@ -2429,11 +2402,6 @@ class Client extends MatrixApi {
     } catch (_) {
       rethrow;
     }
-  }
-
-  @Deprecated('Use clearCache()')
-  Future<void> clearLocalCachedMessages() async {
-    await clearCache();
   }
 
   /// Clear all local cached messages, room information and outbound group

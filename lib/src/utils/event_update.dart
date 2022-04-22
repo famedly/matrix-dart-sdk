@@ -36,9 +36,6 @@ class EventUpdate {
   /// Most events belong to a room. If not, this equals to eventType.
   final String roomID;
 
-  @Deprecated("Use `content['type']` instead.")
-  String get eventType => content['type'];
-
   // The json payload of the content of this event.
   final Map<String, dynamic> content;
 

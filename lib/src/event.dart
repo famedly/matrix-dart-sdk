@@ -39,15 +39,6 @@ abstract class RelationshipTypes {
 class Event extends MatrixEvent {
   User get sender => room.getUserByMXIDSync(senderId);
 
-  @Deprecated('Use [originServerTs] instead')
-  DateTime get time => originServerTs;
-
-  @Deprecated('Use [type] instead')
-  String get typeKey => type;
-
-  @Deprecated('Use [sender.calcDisplayname()] instead')
-  String? get senderName => sender.calcDisplayname();
-
   /// The room this event belongs to. May be null.
   final Room room;
 
