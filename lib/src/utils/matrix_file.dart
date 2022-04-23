@@ -70,10 +70,12 @@ class MatrixImageFile extends MatrixFile {
     required Uint8List bytes,
     required String name,
     String? mimeType,
-    this.width,
-    this.height,
+    int? width,
+    int? height,
     this.blurhash,
-  }) : super(bytes: bytes, name: name, mimeType: mimeType);
+  })  : _width = width,
+        _height = height,
+        super(bytes: bytes, name: name, mimeType: mimeType);
 
   /// Creates a new image file and calculates the width, height and blurhash.
   static Future<MatrixImageFile> create(
@@ -137,11 +139,21 @@ class MatrixImageFile extends MatrixFile {
     return thumbnailFile;
   }
 
+  int? _width;
+
   /// returns the width of the image
-  final int? width;
+  int? get width => _width;
+
+  int? _height;
 
   /// returns the height of the image
-  final int? height;
+  int? get height => _height;
+
+  /// If the image size is null, allow us to update it's value.
+  void setImageSizeIfNull({required int width, required int height}) {
+    _width ??= width;
+    _height ??= height;
+  }
 
   /// generates the blur hash for the image
   final String? blurhash;
