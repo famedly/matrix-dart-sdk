@@ -310,4 +310,8 @@ abstract class DatabaseApi {
   Future<dynamic> close();
 
   Future<T> transaction<T>(Future<T> Function() action);
+
+  Future<String> exportDump();
+
+  Future<bool> importDump(String export);
 }

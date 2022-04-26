@@ -816,6 +816,55 @@ class Client extends MatrixApi {
     }
   }
 
+  /// dumps the local database and exports it into a String.
+  ///
+  /// WARNING: never re-import the dump twice
+  ///
+  /// This can be useful to migrate a session from one device to a future one.
+  Future<String?> exportDump() async {
+    if (database != null) {
+      await abortSync();
+      await dispose(closeDatabase: false);
+
+      final export = await database!.exportDump();
+
+      await clear();
+      return export;
+    }
+    return null;
+  }
+
+  /// imports a dumped session
+  ///
+  /// WARNING: never re-import the dump twice
+  Future<bool> importDump(String export) async {
+    try {
+      // stopping sync loop and subscriptions while keeping DB open
+      await dispose(closeDatabase: false);
+    } finally {
+      _database ??= await databaseBuilder!.call(this);
+
+      final success = await database!.importDump(export);
+
+      if (success) {
+        // closing including DB
+        await dispose();
+
+        try {
+          bearerToken = null;
+
+          await init(
+            waitForFirstSync: false,
+            waitUntilLoadCompletedLoaded: false,
+          );
+        } catch (e) {
+          return false;
+        }
+      }
+      return success;
+    }
+  }
+
   /// Uploads a new user avatar for this user. Leave file null to remove the
   /// current avatar.
   Future<void> setAvatar(MatrixFile? file) async {

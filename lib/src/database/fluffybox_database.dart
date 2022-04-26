@@ -39,7 +39,7 @@ class FluffyBoxDatabase extends DatabaseApi {
   final String name;
   final String path;
   final HiveCipher? key;
-  late final BoxCollection _collection;
+  late BoxCollection _collection;
   late Box<String> _clientBox;
   late Box<Map> _accountDataBox;
   late Box<Map> _roomsBox;
@@ -1457,5 +1457,109 @@ class FluffyBoxDatabase extends DatabaseApi {
     final raw = await _seenDeviceKeysBox.get(publicKey);
     if (raw == null) return null;
     return raw;
+  }
+
+  @override
+  Future<String> exportDump() async {
+    final dataMap = {
+      _clientBoxName: await _clientBox.getAllValues(),
+      _accountDataBoxName: await _accountDataBox.getAllValues(),
+      _roomsBoxName: await _roomsBox.getAllValues(),
+      _roomStateBoxName: await _roomStateBox.getAllValues(),
+      _roomMembersBoxName: await _roomMembersBox.getAllValues(),
+      _toDeviceQueueBoxName: await _toDeviceQueueBox.getAllValues(),
+      _roomAccountDataBoxName: await _roomAccountDataBox.getAllValues(),
+      _inboundGroupSessionsBoxName:
+          await _inboundGroupSessionsBox.getAllValues(),
+      _outboundGroupSessionsBoxName:
+          await _outboundGroupSessionsBox.getAllValues(),
+      _olmSessionsBoxName: await _olmSessionsBox.getAllValues(),
+      _userDeviceKeysBoxName: await _userDeviceKeysBox.getAllValues(),
+      _userDeviceKeysOutdatedBoxName:
+          await _userDeviceKeysOutdatedBox.getAllValues(),
+      _userCrossSigningKeysBoxName:
+          await _userCrossSigningKeysBox.getAllValues(),
+      _ssssCacheBoxName: await _ssssCacheBox.getAllValues(),
+      _presencesBoxName: await _presencesBox.getAllValues(),
+      _timelineFragmentsBoxName: await _timelineFragmentsBox.getAllValues(),
+      _eventsBoxName: await _eventsBox.getAllValues(),
+      _seenDeviceIdsBoxName: await _seenDeviceIdsBox.getAllValues(),
+      _seenDeviceKeysBoxName: await _seenDeviceKeysBox.getAllValues(),
+    };
+    final json = jsonEncode(dataMap);
+    await clear();
+    return json;
+  }
+
+  @override
+  Future<bool> importDump(String export) async {
+    try {
+      await clear();
+      await open();
+      final json = Map.from(jsonDecode(export)).cast<String, Map>();
+      for (final key in json[_clientBoxName]!.keys) {
+        await _clientBox.put(key, json[_clientBoxName]![key]);
+      }
+      for (final key in json[_accountDataBoxName]!.keys) {
+        await _accountDataBox.put(key, json[_accountDataBoxName]![key]);
+      }
+      for (final key in json[_roomsBoxName]!.keys) {
+        await _roomsBox.put(key, json[_roomsBoxName]![key]);
+      }
+      for (final key in json[_roomStateBoxName]!.keys) {
+        await _roomStateBox.put(key, json[_roomStateBoxName]![key]);
+      }
+      for (final key in json[_roomMembersBoxName]!.keys) {
+        await _roomMembersBox.put(key, json[_roomMembersBoxName]![key]);
+      }
+      for (final key in json[_toDeviceQueueBoxName]!.keys) {
+        await _toDeviceQueueBox.put(key, json[_toDeviceQueueBoxName]![key]);
+      }
+      for (final key in json[_roomAccountDataBoxName]!.keys) {
+        await _roomAccountDataBox.put(key, json[_roomAccountDataBoxName]![key]);
+      }
+      for (final key in json[_inboundGroupSessionsBoxName]!.keys) {
+        await _inboundGroupSessionsBox.put(
+            key, json[_inboundGroupSessionsBoxName]![key]);
+      }
+      for (final key in json[_outboundGroupSessionsBoxName]!.keys) {
+        await _outboundGroupSessionsBox.put(
+            key, json[_outboundGroupSessionsBoxName]![key]);
+      }
+      for (final key in json[_olmSessionsBoxName]!.keys) {
+        await _olmSessionsBox.put(key, json[_olmSessionsBoxName]![key]);
+      }
+      for (final key in json[_userDeviceKeysBoxName]!.keys) {
+        await _userDeviceKeysBox.put(key, json[_userDeviceKeysBoxName]![key]);
+      }
+      for (final key in json[_userDeviceKeysOutdatedBoxName]!.keys) {
+        await _userDeviceKeysOutdatedBox.put(
+            key, json[_userDeviceKeysOutdatedBoxName]![key]);
+      }
+      for (final key in json[_userCrossSigningKeysBoxName]!.keys) {
+        await _userCrossSigningKeysBox.put(
+            key, json[_userCrossSigningKeysBoxName]![key]);
+      }
+      for (final key in json[_ssssCacheBoxName]!.keys) {
+        await _ssssCacheBox.put(key, json[_ssssCacheBoxName]![key]);
+      }
+      for (final key in json[_presencesBoxName]!.keys) {
+        await _presencesBox.put(key, json[_presencesBoxName]![key]);
+      }
+      for (final key in json[_timelineFragmentsBoxName]!.keys) {
+        await _timelineFragmentsBox.put(
+            key, json[_timelineFragmentsBoxName]![key]);
+      }
+      for (final key in json[_seenDeviceIdsBoxName]!.keys) {
+        await _seenDeviceIdsBox.put(key, json[_seenDeviceIdsBoxName]![key]);
+      }
+      for (final key in json[_seenDeviceKeysBoxName]!.keys) {
+        await _seenDeviceKeysBox.put(key, json[_seenDeviceKeysBoxName]![key]);
+      }
+      return true;
+    } catch (e, s) {
+      Logs().e('Database import error: ', e, s);
+      return false;
+    }
   }
 }

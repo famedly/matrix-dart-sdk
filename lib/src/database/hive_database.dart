@@ -1405,6 +1405,18 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     if (raw == null) return null;
     return raw as String;
   }
+
+  @override
+  Future<String> exportDump() {
+    // see no need to implement this in a deprecated part
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<bool> importDump(String export) {
+    // see no need to implement this in a deprecated part
+    throw UnimplementedError();
+  }
 }
 
 dynamic _castValue(dynamic value) {
