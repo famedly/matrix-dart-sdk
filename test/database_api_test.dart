@@ -26,6 +26,11 @@ import 'package:olm/olm.dart' as olm;
 import 'fake_database.dart';
 
 void main() {
+  group('HiveCollections Database Test', () {
+    testDatabase(
+      getHiveCollectionsDatabase(null),
+    );
+  });
   group('FluffyBox Database Test', () {
     testDatabase(
       getFluffyBoxDatabase(null),

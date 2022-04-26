@@ -21,8 +21,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:fluffybox/fluffybox.dart';
-import 'package:fluffybox/hive.dart' show HiveCipher;
+import 'package:hive/hive.dart';
 import 'package:matrix/encryption/utils/olm_session.dart';
 import 'package:matrix/encryption/utils/outbound_group_session.dart';
 import 'package:matrix/encryption/utils/ssss_cache.dart';
@@ -32,52 +31,52 @@ import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 
 /// This database does not support file caching!
-class FluffyBoxDatabase extends DatabaseApi {
+class HiveCollectionsDatabase extends DatabaseApi {
   static const int version = 6;
   final String name;
   final String path;
   final HiveCipher? key;
   late final BoxCollection _collection;
-  late Box<String> _clientBox;
-  late Box<Map> _accountDataBox;
-  late Box<Map> _roomsBox;
-  late Box<Map> _toDeviceQueueBox;
+  late CollectionBox<String> _clientBox;
+  late CollectionBox<Map> _accountDataBox;
+  late CollectionBox<Map> _roomsBox;
+  late CollectionBox<Map> _toDeviceQueueBox;
 
   /// Key is a tuple as TupleKey(roomId, type) where stateKey can be
   /// an empty string.
-  late Box<Map> _roomStateBox;
+  late CollectionBox<Map> _roomStateBox;
 
   /// Key is a tuple as TupleKey(roomId, userId)
-  late Box<Map> _roomMembersBox;
+  late CollectionBox<Map> _roomMembersBox;
 
   /// Key is a tuple as TupleKey(roomId, type)
-  late Box<Map> _roomAccountDataBox;
-  late Box<Map> _inboundGroupSessionsBox;
-  late Box<Map> _outboundGroupSessionsBox;
-  late Box<Map> _olmSessionsBox;
+  late CollectionBox<Map> _roomAccountDataBox;
+  late CollectionBox<Map> _inboundGroupSessionsBox;
+  late CollectionBox<Map> _outboundGroupSessionsBox;
+  late CollectionBox<Map> _olmSessionsBox;
 
   /// Key is a tuple as TupleKey(userId, deviceId)
-  late Box<Map> _userDeviceKeysBox;
+  late CollectionBox<Map> _userDeviceKeysBox;
 
   /// Key is the user ID as a String
-  late Box<bool> _userDeviceKeysOutdatedBox;
+  late CollectionBox<bool> _userDeviceKeysOutdatedBox;
 
   /// Key is a tuple as TupleKey(userId, publicKey)
-  late Box<Map> _userCrossSigningKeysBox;
-  late Box<Map> _ssssCacheBox;
-  late Box<Map> _presencesBox;
+  late CollectionBox<Map> _userCrossSigningKeysBox;
+  late CollectionBox<Map> _ssssCacheBox;
+  late CollectionBox<Map> _presencesBox;
 
   /// Key is a tuple as Multikey(roomId, fragmentId) while the default
   /// fragmentId is an empty String
-  late Box<List> _timelineFragmentsBox;
+  late CollectionBox<List> _timelineFragmentsBox;
 
   /// Key is a tuple as TupleKey(roomId, eventId)
-  late Box<Map> _eventsBox;
+  late CollectionBox<Map> _eventsBox;
 
   /// Key is a tuple as TupleKey(userId, deviceId)
-  late Box<String> _seenDeviceIdsBox;
+  late CollectionBox<String> _seenDeviceIdsBox;
 
-  late Box<String> _seenDeviceKeysBox;
+  late CollectionBox<String> _seenDeviceKeysBox;
 
   String get _clientBoxName => 'box_client';
 
@@ -117,7 +116,7 @@ class FluffyBoxDatabase extends DatabaseApi {
 
   String get _seenDeviceKeysBoxName => 'box_seen_device_keys';
 
-  FluffyBoxDatabase(this.name, this.path, {this.key});
+  HiveCollectionsDatabase(this.name, this.path, {this.key});
 
   @override
   int get maxFileSize => 0;
@@ -1455,4 +1454,47 @@ class FluffyBoxDatabase extends DatabaseApi {
     if (raw == null) return null;
     return raw;
   }
+}
+
+class TupleKey {
+  final List<String> parts;
+
+  TupleKey(String key1, [String? key2, String? key3])
+      : parts = [
+          key1,
+          if (key2 != null) key2,
+          if (key3 != null) key3,
+        ];
+
+  const TupleKey.byParts(this.parts);
+
+  TupleKey.fromString(String multiKeyString)
+      : parts = multiKeyString.split('|').toList();
+
+  @override
+  String toString() => parts.join('|');
+
+  @override
+  bool operator ==(other) => parts.toString() == other.toString();
+}
+
+dynamic _castValue(dynamic value) {
+  if (value is Map) {
+    return copyMap(value);
+  }
+  if (value is List) {
+    return value.map(_castValue).toList();
+  }
+  return value;
+}
+
+/// The store always gives back an `_InternalLinkedHasMap<dynamic, dynamic>`. This
+/// creates a deep copy of the json and makes sure that the format is always
+/// `Map<String, dynamic>`.
+Map<String, dynamic> copyMap(Map map) {
+  final copy = Map<String, dynamic>.from(map);
+  for (final entry in copy.entries) {
+    copy[entry.key] = _castValue(entry.value);
+  }
+  return copy;
 }

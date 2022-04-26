@@ -37,3 +37,10 @@ dev_dependencies:
   coverage: ">=0.15.0 <2.0.0"
   file: ^6.1.1
   #flutter_test: {sdk: flutter}
+
+dependency_overrides:
+  hive:
+    git:
+      url: https://github.com/TheOneWithTheBraid/hive.git
+      ref: ebde26eaf67aac697367966952368cc3a150f2d7 #fluffy
+      path: hive

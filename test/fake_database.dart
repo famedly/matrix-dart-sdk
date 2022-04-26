@@ -23,9 +23,22 @@ import 'package:matrix/matrix.dart';
 import 'package:file/memory.dart';
 import 'package:hive/hive.dart';
 
-Future<DatabaseApi> getDatabase(Client? _) => getHiveDatabase(_);
+Future<DatabaseApi> getDatabase(Client? _) => getHiveCollectionsDatabase(_);
 
 bool hiveInitialized = false;
+
+Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
+  final fileSystem = MemoryFileSystem();
+  final testHivePath =
+      '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
+  Directory(testHivePath).createSync(recursive: true);
+  final db = HiveCollectionsDatabase(
+    'unit_test.${c?.hashCode}',
+    testHivePath,
+  );
+  await db.open();
+  return db;
+}
 
 Future<FluffyBoxDatabase> getFluffyBoxDatabase(Client? c) async {
   final fileSystem = MemoryFileSystem();
