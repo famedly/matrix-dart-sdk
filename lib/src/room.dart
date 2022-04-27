@@ -25,7 +25,6 @@ import 'package:html_unescape/html_unescape.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/utils/file_send_request_credentials.dart';
 import 'package:matrix/src/utils/space_child.dart';
-import 'package:matrix/widget.dart';
 
 import '../matrix.dart';
 import 'utils/markdown.dart';
@@ -355,42 +354,6 @@ class Room {
     return (typingMxid is List)
         ? typingMxid.cast<String>().map(getUserByMXIDSync).toList()
         : [];
-  }
-
-  /// Returns all present Widgets in the room.
-  List<MatrixWidget> get widgets => {
-        ...states['m.widget'] ?? states['im.vector.modular.widgets'] ?? {},
-      }.values.expand((e) {
-        try {
-          return [MatrixWidget.fromJson(e.content, this)];
-        } catch (_) {
-          return <MatrixWidget>[];
-        }
-      }).toList();
-
-  Future<String> addWidget(MatrixWidget widget) {
-    final user = client.userID;
-    final widgetId =
-        widget.name!.toLowerCase().replaceAll(RegExp(r'\W'), '_') + '_' + user!;
-
-    final json = widget.toJson();
-    json['creatorUserId'] = user;
-    json['id'] = widgetId;
-    return client.setRoomStateWithKey(
-      id,
-      'im.vector.modular.widgets',
-      widgetId,
-      json,
-    );
-  }
-
-  Future<String> deleteWidget(String widgetId) {
-    return client.setRoomStateWithKey(
-      id,
-      'im.vector.modular.widgets',
-      widgetId,
-      {},
-    );
   }
 
   /// Your current client instance.

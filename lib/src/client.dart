@@ -224,6 +224,7 @@ class Client extends MatrixApi {
   /// Returns the current login state.
   LoginState get loginState => __loginState;
   LoginState __loginState;
+
   set _loginState(LoginState state) {
     __loginState = state;
     onLoginStateChanged.add(state);
@@ -256,7 +257,9 @@ class Client extends MatrixApi {
   }
 
   /// Key/Value store of account data.
-  Map<String, BasicEvent> accountData = {};
+  Map<String, BasicEvent> _accountData = {};
+
+  Map<String, BasicEvent> get accountData => _accountData;
 
   /// Presences of users by a given matrix ID
   Map<String, Presence> presences = {};
@@ -287,12 +290,12 @@ class Client extends MatrixApi {
   }
 
   Map<String, dynamic> get directChats =>
-      accountData['m.direct']?.content ?? {};
+      _accountData['m.direct']?.content ?? {};
 
   /// Returns the (first) room ID from the store which is a private chat with the user [userId].
   /// Returns null if there is none.
   String? getDirectChatFromUserId(String userId) {
-    final directChats = accountData['m.direct']?.content[userId];
+    final directChats = _accountData['m.direct']?.content[userId];
     if (directChats is List<dynamic> && directChats.isNotEmpty) {
       final potentialRooms = directChats
           .cast<String>()
@@ -834,13 +837,13 @@ class Client extends MatrixApi {
 
   /// Returns the global push rules for the logged in user.
   PushRuleSet? get globalPushRules {
-    final pushrules = accountData['m.push_rules']?.content['global'];
+    final pushrules = _accountData['m.push_rules']?.content['global'];
     return pushrules != null ? PushRuleSet.fromJson(pushrules) : null;
   }
 
   /// Returns the device push rules for the logged in user.
   PushRuleSet? get devicePushRules {
-    final pushrules = accountData['m.push_rules']?.content['device'];
+    final pushrules = _accountData['m.push_rules']?.content['device'];
     return pushrules != null ? PushRuleSet.fromJson(pushrules) : null;
   }
 
@@ -1104,7 +1107,7 @@ class Client extends MatrixApi {
   /// get them from the database.
   ///
   /// Set [waitForFirstSync] and [waitUntilLoadCompletedLoaded] to false to speed this
-  /// up. You can then wait for `roomsLoading`, `accountDataLoading` and
+  /// up. You can then wait for `roomsLoading`, `_accountDataLoading` and
   /// `userDeviceKeysLoading` where it is necessary.
   Future<void> init({
     String? newToken,
@@ -1232,13 +1235,13 @@ class Client extends MatrixApi {
           _rooms = rooms;
           _sortRooms();
         });
-        accountDataLoading =
-            database.getAccountData().then((data) => accountData = data);
+        _accountDataLoading =
+            database.getAccountData().then((data) => _accountData = data);
         presences.clear();
         if (waitUntilLoadCompletedLoaded) {
           await userDeviceKeysLoading;
           await roomsLoading;
-          await accountDataLoading;
+          await _accountDataLoading;
         }
       }
       _initLock = false;
@@ -1379,7 +1382,7 @@ class Client extends MatrixApi {
       if (database != null) {
         await userDeviceKeysLoading;
         await roomsLoading;
-        await accountDataLoading;
+        await _accountDataLoading;
         _currentTransaction = database.transaction(() async {
           await _handleSync(syncResp);
           if (prevBatch != syncResp.nextBatch) {
@@ -1888,7 +1891,9 @@ class Client extends MatrixApi {
 
   Future? userDeviceKeysLoading;
   Future? roomsLoading;
-  Future? accountDataLoading;
+  Future? _accountDataLoading;
+
+  Future? get accountDataLoading => _accountDataLoading;
 
   /// A map of known device keys per user.
   Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
@@ -2338,7 +2343,7 @@ class Client extends MatrixApi {
   /// rule of the push rules: https://matrix.org/docs/spec/client_server/r0.6.0#m-rule-master
   bool get allPushNotificationsMuted {
     final Map<String, dynamic>? globalPushRules =
-        accountData['m.push_rules']?.content['global'];
+        _accountData['m.push_rules']?.content['global'];
     if (globalPushRules == null) return false;
 
     if (globalPushRules['override'] is List) {
@@ -2418,11 +2423,11 @@ class Client extends MatrixApi {
   }
 
   /// A list of mxids of users who are ignored.
-  List<String> get ignoredUsers => (accountData
+  List<String> get ignoredUsers => (_accountData
               .containsKey('m.ignored_user_list') &&
-          accountData['m.ignored_user_list']?.content['ignored_users'] is Map)
+          _accountData['m.ignored_user_list']?.content['ignored_users'] is Map)
       ? List<String>.from(
-          accountData['m.ignored_user_list']?.content['ignored_users'].keys)
+          _accountData['m.ignored_user_list']?.content['ignored_users'].keys)
       : [];
 
   /// Ignore another user. This will clear the local cached messages to
@@ -2630,6 +2635,7 @@ class SyncStatusUpdate {
   final SyncStatus status;
   final SdkError? error;
   final double? progress;
+
   const SyncStatusUpdate(this.status, {this.error, this.progress});
 }
 
@@ -2643,6 +2649,7 @@ enum SyncStatus {
 
 class BadServerVersionsException implements Exception {
   final Set<String> serverVersions, supportedVersions;
+
   BadServerVersionsException(this.serverVersions, this.supportedVersions);
 
   @override
@@ -2652,6 +2659,7 @@ class BadServerVersionsException implements Exception {
 
 class BadServerLoginTypesException implements Exception {
   final Set<String> serverLoginTypes, supportedLoginTypes;
+
   BadServerLoginTypesException(this.serverLoginTypes, this.supportedLoginTypes);
 
   @override

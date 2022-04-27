@@ -49,3 +49,6 @@ export 'src/utils/to_device_event.dart';
 export 'src/utils/uia_request.dart';
 export 'src/utils/uri_extension.dart';
 export 'src/voip_content.dart';
+
+export 'msc_extensions/extension_recent_emoji/recent_emoji.dart';
+export 'msc_extensions/msc_1236_widgets/msc_1236_widgets.dart';
