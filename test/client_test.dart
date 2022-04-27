@@ -322,6 +322,15 @@ void main() {
       await matrix.setAvatar(testFile);
     });
 
+    test('recentEmoji', () async {
+      final client = await getClient();
+      final emojis = client.recentEmojis;
+      expect(emojis.isEmpty, isTrue);
+
+      await client.addRecentEmoji('🦙');
+      expect(client.recentEmojis['🦙'], 1);
+    });
+
     test('setMuteAllPushNotifications', () async {
       await matrix.setMuteAllPushNotifications(false);
     });
