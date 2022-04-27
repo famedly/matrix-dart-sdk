@@ -41,7 +41,7 @@ coverage_without_olm:
   tags:
     - linux
   stage: coverage
-  image: google/dart
+  image: dart
   dependencies: []
   script:
     - dart pub get
@@ -75,7 +75,7 @@ code_analyze:
   tags:
     - docker
   stage: coverage
-  image: google/dart
+  image: dart
   dependencies: []
   script:
     - dart pub get
@@ -86,7 +86,7 @@ code_quality:
   tags:
     - docker
   stage: coverage
-  image: google/dart
+  image: dart
   before_script:
     - dart pub global activate dart_code_metrics
   script:
@@ -100,7 +100,7 @@ code_quality:
 
 dry-run:
   stage: publish
-  image: google/dart
+  image: dart
   script:
     - rm -rf ./docs
     - dart pub get
@@ -109,7 +109,7 @@ dry-run:
 
 pub-dev:
   stage: publish
-  image: google/dart
+  image: dart
   dependencies: [
     dry-run
   ]
