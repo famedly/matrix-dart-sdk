@@ -75,15 +75,6 @@ class Room {
 
   RoomSummary summary;
 
-  @deprecated
-  List<String>? get mHeroes => summary.mHeroes;
-
-  @deprecated
-  int? get mJoinedMemberCount => summary.mJoinedMemberCount;
-
-  @deprecated
-  int? get mInvitedMemberCount => summary.mInvitedMemberCount;
-
   /// The room states are a key value store of the key (`type`,`state_key`) => State(event).
   /// In a lot of cases the `state_key` might be an empty string. You **should** use the
   /// methods `getState()` and `setState()` to interact with the room states.
@@ -461,9 +452,6 @@ class Room {
     return 'Empty chat';
   }
 
-  @Deprecated('Use [lastEvent.body] instead')
-  String get lastMessage => lastEvent?.body ?? '';
-
   /// When the last message received.
   DateTime get timeCreated => lastEvent?.originServerTs ?? DateTime.now();
 
@@ -564,9 +552,6 @@ class Room {
   /// in muted rooms, use [hasNewMessages].
   bool get isUnread => notificationCount > 0 || markedUnread;
 
-  @Deprecated('Use [markUnread] instead')
-  Future<void> setUnread(bool unread) => markUnread(unread);
-
   /// Sets an unread flag manually for this room. This changes the local account
   /// data model before syncing it to make sure
   /// this works if there is no connection to the homeserver. This does **not**
@@ -617,11 +602,6 @@ class Room {
         {'pinned': pinnedEventIds},
       );
 
-  /// return all current emote packs for this room
-  @deprecated
-  Map<String, Map<String, String>> get emotePacks =>
-      getImagePacksFlat(ImagePackUsage.emoticon);
-
   /// returns the resolved mxid for a mention string, or null if none found
   String? getMention(String mention) => getParticipants()
       .firstWhereOrNull((u) => u.mentionFragments.contains(mention))
@@ -634,7 +614,6 @@ class Room {
       Event? inReplyTo,
       String? editEventId,
       bool parseMarkdown = true,
-      @deprecated Map<String, Map<String, String>>? emotePacks,
       bool parseCommands = true,
       String msgtype = MessageTypes.Text}) {
     if (parseCommands) {
@@ -1270,19 +1249,6 @@ class Room {
     return;
   }
 
-  /// Sends *m.fully_read* and *m.read* for the given event ID.
-  @Deprecated('Use sendReadMarker instead')
-  Future<void> sendReadReceipt(String eventID) async {
-    notificationCount = 0;
-    await client.database?.resetNotificationCount(id);
-    await client.setReadMarker(
-      id,
-      eventID,
-      mRead: eventID,
-    );
-    return;
-  }
-
   /// Creates a timeline from the store. Returns a [Timeline] object. If you
   /// just want to update the whole timeline on every change, use the [onUpdate]
   /// callback. For updating only the parts that have changed, use the
@@ -1398,12 +1364,6 @@ class Room {
     return knownParticipants.length ==
         (summary.mJoinedMemberCount ?? 0) + (summary.mInvitedMemberCount ?? 0);
   }
-
-  /// Returns the [User] object for the given [mxID] or requests it from
-  /// the homeserver and waits for a response.
-  @Deprecated('Use [requestUser] instead')
-  Future<User?> getUserByMXID(String mxID) async =>
-      getState(EventTypes.RoomMember, mxID)?.asUser ?? await requestUser(mxID);
 
   /// Returns the [User] object for the given [mxID] or requests it from
   /// the homeserver and returns a default [User] object while waiting.
@@ -1733,10 +1693,6 @@ class Room {
   /// it tells the server that the user has stopped typing.
   Future<void> setTyping(bool isTyping, {int? timeout}) =>
       client.setTyping(client.userID!, id, isTyping, timeout: timeout);
-
-  @Deprecated('Use sendTypingNotification instead')
-  Future<void> sendTypingInfo(bool isTyping, {int? timeout}) =>
-      setTyping(isTyping, timeout: timeout);
 
   /// A room may be public meaning anyone can join the room without any prior action. Alternatively,
   /// it can be invite meaning that a user who wishes to join the room must first receive an invite
