@@ -1220,6 +1220,15 @@ class Room {
     return;
   }
 
+  /// Get the user fully read marker
+  String? get userFullyReadMarker {
+    final readEvent = roomAccountData['m.fully_read'];
+    if (readEvent != null) {
+      return readEvent.content.tryGet<String>('event_id');
+    }
+    return null;
+  }
+
   /// Sets the position of the read marker for a given room, and optionally the
   /// read receipt's location.
   Future<void> setReadMarker(String eventId, {String? mRead}) async {
