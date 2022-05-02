@@ -70,6 +70,10 @@ void main() {
             type: 'com.test.foo',
             content: {'foo': 'bar'},
           ),
+          'm.fully_read': BasicRoomEvent(
+            type: 'm.fully_read',
+            content: {'event_id': '\$event_id:example.com'},
+          ),
         },
       );
       room.setState(Event(
@@ -94,6 +98,7 @@ void main() {
       expect(
           room.getState('m.room.join_rules')?.content['join_rule'], 'public');
       expect(room.roomAccountData['com.test.foo']?.content['foo'], 'bar');
+      expect(room.userFullyReadMarker, '\$event_id:example.com');
 
       room.setState(
         Event(
