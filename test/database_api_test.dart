@@ -232,7 +232,8 @@ void testDatabase(
   });
   test('getEventList', () async {
     final events = await database.getEventList(
-        Room(id: '!testroom:example.com', client: Client('testclient')));
+      Room(id: '!testroom:example.com', client: Client('testclient')),
+    );
     expect(events.single.type, EventTypes.Message);
   });
   test('getUser', () async {
