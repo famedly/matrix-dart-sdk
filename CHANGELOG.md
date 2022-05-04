@@ -1,3 +1,12 @@
+## [0.9.0] - 4th Mai 2022
+
+- refactor: Get rid of dynamic input in checkHomeserver (Christian Pauly)
+- feat: Make image size editable (Henri Carnot)
+- refactor: Remove old deprecations (Christian Pauly)
+- feat: Get fully read marker (Henri Carnot) 
+- feat: Get the recent emoji according to `io.element.recent_emoji` (TheOneWithTheBraid)
+- feat: Load fragmented timeline in memory (Henri Carnot)
+
 ## [0.8.20] - 14th Apr 2022
 - fix: Wait for keys in push helper
 
