@@ -262,7 +262,7 @@ class Client extends MatrixApi {
   Map<String, BasicEvent> get accountData => _accountData;
 
   /// Presences of users by a given matrix ID
-  Map<String, Presence> presences = {};
+  Map<String, CachedPresence> presences = {};
 
   int _transactionCounter = 0;
 
@@ -889,7 +889,13 @@ class Client extends MatrixApi {
       StreamController.broadcast();
 
   /// Callback will be called on presences.
+  @Deprecated(
+      'Deprecated, use onPresenceChanged instead which has a timestamp.')
   final StreamController<Presence> onPresence = StreamController.broadcast();
+
+  /// Callback will be called on presence updates.
+  final StreamController<CachedPresence> onPresenceChanged =
+      StreamController.broadcast();
 
   /// Callback will be called on account data updates.
   final StreamController<BasicEvent> onAccountData =
@@ -1467,8 +1473,11 @@ class Client extends MatrixApi {
       }
     }
     for (final newPresence in sync.presence ?? []) {
-      presences[newPresence.senderId] = newPresence;
+      final cachedPresence = CachedPresence.fromMatrixEvent(newPresence);
+      presences[newPresence.senderId] = cachedPresence;
+      // ignore: deprecated_member_use_from_same_package
       onPresence.add(newPresence);
+      onPresenceChanged.add(cachedPresence);
     }
     for (final newAccountData in sync.accountData ?? []) {
       await database?.storeAccountData(
