@@ -14,25 +14,13 @@ coverage:
   tags:
     - linux
   stage: coverage
-  image: debian:testing
+  image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable
   dependencies: []
   script:
-    - apt update
-    - apt install -y curl gnupg2 git unzip
-    - git clone https://github.com/flutter/flutter.git -b stable
-    - export PATH="$PATH:`pwd`/flutter/bin"
     - sed -i 's/#\([^ ]\)/\1/g' pubspec.yaml
-    - flutter doctor
-    - apt update
-    - apt install -y lcov libolm3 sqlite3 libsqlite3-dev
-    - ln -s /usr/lib/dart/bin/pub /usr/bin/
-    - useradd -m test
-    - chown -R 'test:' '.'
-    - chmod +x ./scripts/prepare.sh
-    - chmod +x ./scripts/test.sh
     - rm -r example
-    - ./scripts/prepare.sh test
-    - ./scripts/test.sh test
+    - ./scripts/prepare.sh
+    - ./scripts/test.sh
   artifacts:
     paths:
       - coverage/
@@ -51,23 +39,12 @@ e2ee_test:
   tags:
     - linux
   stage: coverage
-  image: debian:testing
+  image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable
   dependencies: []
   script:
-    - apt update
-    - apt install -y curl gnupg2 git
-    - curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
-    - curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list
-    - apt update
-    - apt install -y dart lcov libolm3 sqlite3 libsqlite3-dev
-    - ln -s /usr/lib/dart/bin/pub /usr/bin/
-    - useradd -m test
-    - chown -R 'test:' '.'
-    - chmod +x ./scripts/prepare.sh
-    - chmod +x ./scripts/test_driver.sh
     - printf "abstract class TestUser {\n  static const String homeserver = '$TEST_HOMESERVER';\n  static const String username = '$TEST_USER1';\n  static const String username2 = '$TEST_USER2';\n  static const String password = '$TEST_USER_PASSWORD';\n}" > ./test_driver/test_config.dart
-    - su -c ./scripts/prepare.sh test
-    - su -c ./scripts/test_driver.sh test
+    - ./scripts/prepare.sh
+    - ./scripts/test_driver.sh
   timeout: 16m
   resource_group: e2ee_test
 
