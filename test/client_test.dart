@@ -71,7 +71,7 @@ void main() {
 
       var presenceCounter = 0;
       var accountDataCounter = 0;
-      matrix.onPresence.stream.listen((Presence data) {
+      matrix.onPresenceChanged.stream.listen((CachedPresence data) {
         presenceCounter++;
       });
       matrix.onAccountData.stream.listen((BasicEvent data) {
@@ -150,7 +150,7 @@ void main() {
       expect(matrix.rooms.length, 2);
       expect(matrix.rooms[1].canonicalAlias,
           "#famedlyContactDiscovery:${matrix.userID!.split(":")[1]}");
-      expect(matrix.presences['@alice:example.com']?.presence.presence,
+      expect(matrix.presences['@alice:example.com']?.presence,
           PresenceType.online);
       expect(presenceCounter, 1);
       expect(accountDataCounter, 9);
