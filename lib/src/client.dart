@@ -451,7 +451,6 @@ class Client extends MatrixApi {
     String? token,
     String? deviceId,
     String? initialDeviceDisplayName,
-    AuthenticationData? auth,
     @Deprecated('Deprecated in favour of identifier.') String? user,
     @Deprecated('Deprecated in favour of identifier.') String? medium,
     @Deprecated('Deprecated in favour of identifier.') String? address,
