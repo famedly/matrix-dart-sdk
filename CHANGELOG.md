@@ -1,3 +1,11 @@
+## 1.2.0
+This introduces a new versioning system where the first two numbers refer to
+the matrix spec version (currently v1.2) and the last to the iteration of
+this spec version.
+
+- feat: Migrate to Matrix v1.2 spec
+- feat: Add GroupCallPrefix/GroupCallMemberPrefix to EventTypes.
+
 ## 0.5.3
 - chore: Add missing matrix error types as per spec
 - feat: add additionalProperties in PusherData
