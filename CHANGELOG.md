@@ -1,4 +1,8 @@
-## [0.9.0] - 4th Mai 2022
+## [0.9.1] - 9th May 2022
+- feat: Store timestamp in the presence events
+- chore: Move auth object passing to external msc implementations
+
+## [0.9.0] - 4th May 2022
 
 - refactor: Get rid of dynamic input in checkHomeserver (Christian Pauly)
 - feat: Make image size editable (Henri Carnot)
