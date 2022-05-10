@@ -8,6 +8,8 @@ import 'package:matrix/matrix.dart';
 extension UiaLogin on Client {
   /// Implementation of MSC2835:
   /// https://github.com/Sorunome/matrix-doc/blob/soru/uia-on-login/proposals/2835-uia-on-login.md
+  /// Set `pathVersion` to `r0` if you need to use the previous
+  /// version of the login endpoint.
   Future<LoginResponse> uiaLogin(
     LoginType type, {
     String? address,
@@ -19,8 +21,9 @@ extension UiaLogin on Client {
     String? token,
     String? user,
     AuthenticationData? auth,
+    String pathVersion = 'v3',
   }) async {
-    final requestUri = Uri(path: '_matrix/client/v3/login');
+    final requestUri = Uri(path: '_matrix/client/$pathVersion/login');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
