@@ -1,3 +1,6 @@
+## [0.9.2] - 10th May 2022
+- chore: Make path configurable in uiaLogin
+
 ## [0.9.1] - 9th May 2022
 - feat: Store timestamp in the presence events
 - chore: Move auth object passing to external msc implementations
