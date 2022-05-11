@@ -475,7 +475,7 @@ class FluffyBoxDatabase extends DatabaseApi {
           .toList();
       final rawStates = await _roomStateBox.getAll(dbKeys);
       for (final rawState in rawStates) {
-        if (rawState == null) continue;
+        if (rawState == null || rawState[''] == null) continue;
         room.setState(Event.fromJson(copyMap(rawState['']), room));
       }
     }

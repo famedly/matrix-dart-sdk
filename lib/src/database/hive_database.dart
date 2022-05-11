@@ -522,7 +522,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     // Get raw room from database:
     final roomData = await _roomsBox.get(roomId);
     if (roomData == null) return null;
-    final room = Room.fromJson(copyMap(roomData), client);
+    final room = Room.fromJson(convertToJson(roomData), client);
 
     // Get important states:
     if (loadImportantStates) {
@@ -533,8 +533,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         dbKeys.map((key) => _roomStateBox.get(key)),
       );
       for (final rawState in rawStates) {
-        if (rawState == null) continue;
-        room.setState(Event.fromJson(copyMap(rawState['']), room));
+        if (rawState == null || rawState[''] == null) continue;
+        room.setState(Event.fromJson(convertToJson(rawState['']), room));
       }
     }
 
