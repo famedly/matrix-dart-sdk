@@ -1,3 +1,6 @@
+## [0.9.3] - 11th May 2022
+- fix: Missing null check in get single room method 
+
 ## [0.9.2] - 10th May 2022
 - chore: Make path configurable in uiaLogin
 
