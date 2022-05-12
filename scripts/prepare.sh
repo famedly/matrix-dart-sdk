@@ -23,5 +23,5 @@ fi
 if which flutter >/dev/null; then
     flutter pub get
 else
-    pub get
+    dart pub get
 fi

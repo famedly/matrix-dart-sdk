@@ -148,7 +148,7 @@ class FakeMatrixApi extends MockClient {
           return Response.bytes(utf8.encode(json.encode(res)), statusCode);
         });
 
-  static Map<String, dynamic> messagesResponsePast = {
+  static Map<String, dynamic> messagesResponse = {
     'start': 't47429-4392820_219380_26003_2265',
     'end': 't47409-4357353_219380_26003_2265',
     'chunk': [
@@ -204,70 +204,6 @@ class FakeMatrixApi extends MockClient {
         'unsigned': {'age': 1234}
       }
     ],
-    'state': [],
-  };
-  static Map<String, dynamic> messagesResponseFuture = {
-    'start': 't456',
-    'end': 't789',
-    'chunk': [
-      {
-        'content': {
-          'body': 'Gangnam Style',
-          'url': 'mxc://example.org/a526eYUSFFxlgbQYZmo442',
-          'info': {
-            'thumbnail_url': 'mxc://example.org/FHyPlCeYUSFFxlgbQYZmoEoe',
-            'thumbnail_info': {
-              'mimetype': 'image/jpeg',
-              'size': 46144,
-              'w': 300,
-              'h': 300
-            },
-            'w': 480,
-            'h': 320,
-            'duration': 2140786,
-            'size': 1563685,
-            'mimetype': 'video/mp4'
-          },
-          'msgtype': 'm.video'
-        },
-        'type': 'm.room.message',
-        'event_id': '1143273582443PhrSn:example.org',
-        'room_id': '!1234:example.com',
-        'sender': '@example:example.org',
-        'origin_server_ts': 1432735824653,
-        'unsigned': {'age': 1234}
-      },
-      {
-        'content': {'name': 'The room name'},
-        'type': 'm.room.name',
-        'event_id': '2143273582443PhrSn:example.org',
-        'room_id': '!1234:example.com',
-        'sender': '@example:example.org',
-        'origin_server_ts': 1432735824653,
-        'unsigned': {'age': 1234},
-        'state_key': ''
-      },
-      {
-        'content': {
-          'body': 'This is an example text message',
-          'msgtype': 'm.text',
-          'format': 'org.matrix.custom.html',
-          'formatted_body': '<b>This is an example text message</b>'
-        },
-        'type': 'm.room.message',
-        'event_id': '3143273582443PhrSn:example.org',
-        'room_id': '!1234:example.com',
-        'sender': '@example:example.org',
-        'origin_server_ts': 1432735824653,
-        'unsigned': {'age': 1234}
-      }
-    ],
-    'state': [],
-  };
-  static Map<String, dynamic> messagesResponseFutureEnd = {
-    'start': 't789',
-    'end': 't789',
-    'chunk': [],
     'state': [],
   };
 
@@ -1401,19 +1337,11 @@ class FakeMatrixApi extends MockClient {
             'unsigned': {'age': 1234}
           },
       '/client/r0/rooms/!localpart%3Aserver.abc/messages?from=1234&dir=b&to=1234&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
-          (var req) => messagesResponsePast,
+          (var req) => messagesResponse,
       '/client/r0/rooms/!localpart%3Aserver.abc/messages?from=&dir=b&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
-          (var req) => messagesResponsePast,
+          (var req) => messagesResponse,
       '/client/r0/rooms/!1234%3Aexample.com/messages?from=1234&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
-          (var req) => messagesResponsePast,
-      '/client/r0/rooms/!localpart%3Aserver.abc/messages?from=t456&dir=f&to=1234&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
-          (var req) => messagesResponseFuture,
-      '/client/r0/rooms/!1234%3Aexample.com/messages?from=t456&dir=f&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
-          (var req) => messagesResponseFuture,
-      '/client/r0/rooms/!localpart%3Aserver.abc/messages?from=t789&dir=f&to=1234&limit=10&filter=%7B%22lazy_load_members%22%3Atrue%7D':
-          (var req) => messagesResponseFutureEnd,
-      '/client/r0/rooms/!1234%3Aexample.com/messages?from=t789&dir=f&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
-          (var req) => messagesResponseFutureEnd,
+          (var req) => messagesResponse,
       '/client/versions': (var req) => {
             'versions': [
               'r0.0.1',

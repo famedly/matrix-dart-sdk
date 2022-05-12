@@ -1389,7 +1389,7 @@ class Client extends MatrixApi {
         await roomsLoading;
         await _accountDataLoading;
         _currentTransaction = database.transaction(() async {
-          await _handleSync(syncResp, direction: Direction.f);
+          await _handleSync(syncResp);
           if (prevBatch != syncResp.nextBatch) {
             await database.storePrevBatch(syncResp.nextBatch);
           }
@@ -1401,7 +1401,7 @@ class Client extends MatrixApi {
         );
         onSyncStatus.add(SyncStatusUpdate(SyncStatus.cleaningUp));
       } else {
-        await _handleSync(syncResp, direction: Direction.f);
+        await _handleSync(syncResp);
       }
       if (_disposed || _aborted) return;
       if (prevBatch == null) {
@@ -1445,13 +1445,13 @@ class Client extends MatrixApi {
   }
 
   /// Use this method only for testing utilities!
-  Future<void> handleSync(SyncUpdate sync, {Direction? direction}) async {
+  Future<void> handleSync(SyncUpdate sync, {bool sortAtTheEnd = false}) async {
     // ensure we don't upload keys because someone forgot to set a key count
     sync.deviceOneTimeKeysCount ??= {'signed_curve25519': 100};
-    await _handleSync(sync, direction: direction);
+    await _handleSync(sync, sortAtTheEnd: sortAtTheEnd);
   }
 
-  Future<void> _handleSync(SyncUpdate sync, {Direction? direction}) async {
+  Future<void> _handleSync(SyncUpdate sync, {bool sortAtTheEnd = false}) async {
     final syncToDevice = sync.toDevice;
     if (syncToDevice != null) {
       await _handleToDeviceEvents(syncToDevice);
@@ -1460,15 +1460,15 @@ class Client extends MatrixApi {
     if (sync.rooms != null) {
       final join = sync.rooms?.join;
       if (join != null) {
-        await _handleRooms(join, direction: direction);
+        await _handleRooms(join, sortAtTheEnd: sortAtTheEnd);
       }
       final invite = sync.rooms?.invite;
       if (invite != null) {
-        await _handleRooms(invite, direction: direction);
+        await _handleRooms(invite, sortAtTheEnd: sortAtTheEnd);
       }
       final leave = sync.rooms?.leave;
       if (leave != null) {
-        await _handleRooms(leave, direction: direction);
+        await _handleRooms(leave, sortAtTheEnd: sortAtTheEnd);
       }
     }
     for (final newPresence in sync.presence ?? []) {
@@ -1532,7 +1532,7 @@ class Client extends MatrixApi {
   }
 
   Future<void> _handleRooms(Map<String, SyncRoomUpdate> rooms,
-      {Direction? direction}) async {
+      {bool sortAtTheEnd = false}) async {
     var handledRooms = 0;
     for (final entry in rooms.entries) {
       onSyncStatus.add(SyncStatusUpdate(
@@ -1548,14 +1548,11 @@ class Client extends MatrixApi {
       /// Handle now all room events and save them in the database
       if (room is JoinedRoomUpdate) {
         final state = room.state;
-
         if (state != null && state.isNotEmpty) {
           // TODO: This method seems to be comperatively slow for some updates
           await _handleRoomEvents(
-            id,
-            state.map((i) => i.toJson()).toList(),
-            EventUpdateType.state,
-          );
+              id, state.map((i) => i.toJson()).toList(), EventUpdateType.state,
+              sortAtTheEnd: sortAtTheEnd);
         }
 
         final timelineEvents = room.timeline?.events;
@@ -1563,11 +1560,8 @@ class Client extends MatrixApi {
           await _handleRoomEvents(
               id,
               timelineEvents.map((i) => i.toJson()).toList(),
-              direction != null
-                  ? (direction == Direction.b
-                      ? EventUpdateType.history
-                      : EventUpdateType.timeline)
-                  : EventUpdateType.timeline);
+              sortAtTheEnd ? EventUpdateType.history : EventUpdateType.timeline,
+              sortAtTheEnd: sortAtTheEnd);
         }
 
         final ephemeral = room.ephemeral;
@@ -1590,10 +1584,10 @@ class Client extends MatrixApi {
         final timelineEvents = room.timeline?.events;
         if (timelineEvents != null && timelineEvents.isNotEmpty) {
           await _handleRoomEvents(
-            id,
-            timelineEvents.map((i) => i.toJson()).toList(),
-            EventUpdateType.timeline,
-          );
+              id,
+              timelineEvents.map((i) => i.toJson()).toList(),
+              EventUpdateType.timeline,
+              sortAtTheEnd: sortAtTheEnd);
         }
         final accountData = room.accountData;
         if (accountData != null && accountData.isNotEmpty) {
@@ -1664,14 +1658,16 @@ class Client extends MatrixApi {
   }
 
   Future<void> _handleRoomEvents(
-      String chat_id, List<dynamic> events, EventUpdateType type) async {
+      String chat_id, List<dynamic> events, EventUpdateType type,
+      {bool sortAtTheEnd = false}) async {
     for (final event in events) {
-      await _handleEvent(event, chat_id, type);
+      await _handleEvent(event, chat_id, type, sortAtTheEnd: sortAtTheEnd);
     }
   }
 
   Future<void> _handleEvent(
-      Map<String, dynamic> event, String roomID, EventUpdateType type) async {
+      Map<String, dynamic> event, String roomID, EventUpdateType type,
+      {bool sortAtTheEnd = false}) async {
     if (event['type'] is String && event['content'] is Map<String, dynamic>) {
       // The client must ignore any new m.room.encryption event to prevent
       // man-in-the-middle attacks!
@@ -1684,7 +1680,11 @@ class Client extends MatrixApi {
         return;
       }
 
-      var update = EventUpdate(roomID: roomID, type: type, content: event);
+      var update = EventUpdate(
+        roomID: roomID,
+        type: type,
+        content: event,
+      );
       if (event['type'] == EventTypes.Encrypted && encryptionEnabled) {
         update = await update.decrypt(room);
       }

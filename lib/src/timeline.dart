@@ -17,20 +17,17 @@
  */
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:collection/src/iterable_extensions.dart';
 
 import '../matrix.dart';
-import 'models/timeline_chunk.dart';
 
 /// Represents the timeline of a room. The callback [onUpdate] will be triggered
 /// automatically. The initial
 /// event list will be retreived when created by the `room.getTimeline()` method.
-
 class Timeline {
   final Room room;
-  List<Event> get events => chunk.events;
+  final List<Event> events;
 
   /// Map of event ID to map of type to set of aggregated events
   final Map<String, Map<String, Set<Event>>> aggregatedEvents = {};
@@ -39,20 +36,13 @@ class Timeline {
   final void Function(int index)? onChange;
   final void Function(int index)? onInsert;
   final void Function(int index)? onRemove;
-  final void Function()? onNewEvent;
 
   StreamSubscription<EventUpdate>? sub;
   StreamSubscription<SyncUpdate>? roomSub;
   StreamSubscription<String>? sessionIdReceivedSub;
   bool isRequestingHistory = false;
-  bool isRequestingFuture = false;
-
-  bool allowNewEvent = true;
-  bool isFragmentedTimeline = false;
 
   final Map<String, Event> _eventCache = {};
-
-  TimelineChunk chunk;
 
   /// Searches for the event in this timeline. If not
   /// found, requests from the server. Requested events
@@ -84,41 +74,16 @@ class Timeline {
     if (isRequestingHistory) {
       return;
     }
-
     isRequestingHistory = true;
-    await _requestEvents(direction: Direction.b, historyCount: historyCount);
-    isRequestingHistory = false;
-  }
-
-  bool get canRequestFuture => !allowNewEvent;
-
-  Future<void> requestFuture(
-      {int historyCount = Room.defaultHistoryCount}) async {
-    if (allowNewEvent) {
-      return; // we shouldn't force to add new events if they will autatically be added
-    }
-
-    if (isRequestingFuture) return;
-    isRequestingFuture = true;
-    await _requestEvents(direction: Direction.f, historyCount: historyCount);
-    isRequestingFuture = false;
-  }
-
-  Future<void> _requestEvents(
-      {int historyCount = Room.defaultHistoryCount,
-      required Direction direction}) async {
     onUpdate?.call();
 
     try {
-      // Look up for events in the database first. With fragmented view, we should delete the database cache
-      final eventsFromStore = isFragmentedTimeline
-          ? null
-          : await room.client.database?.getEventList(
-              room,
-              start: events.length,
-              limit: Room.defaultHistoryCount,
-            );
-
+      // Look up for events in hive first
+      final eventsFromStore = await room.client.database?.getEventList(
+        room,
+        start: events.length,
+        limit: Room.defaultHistoryCount,
+      );
       if (eventsFromStore != null && eventsFromStore.isNotEmpty) {
         // Fetch all users from database we have got here.
         for (final event in events) {
@@ -130,37 +95,20 @@ class Timeline {
           if (dbUser != null) room.setState(dbUser);
         }
 
-        if (direction == Direction.b) {
-          events.addAll(eventsFromStore);
-          final startIndex = events.length - eventsFromStore.length;
-          final endIndex = events.length;
-          for (var i = startIndex; i < endIndex; i++) {
-            onInsert?.call(i);
-          }
-        } else {
-          events.insertAll(0, eventsFromStore);
-          final startIndex = eventsFromStore.length;
-          final endIndex = 0;
-          for (var i = startIndex; i > endIndex; i--) {
-            onInsert?.call(i);
-          }
+        events.addAll(eventsFromStore);
+        final startIndex = events.length - eventsFromStore.length;
+        final endIndex = events.length;
+        for (var i = startIndex; i < endIndex; i++) {
+          onInsert?.call(i);
         }
       } else {
-        Logs().i('No more events found in the store. Request from server...');
-        if (isFragmentedTimeline) {
-          await getRoomEvents(
-            historyCount: historyCount,
-            direction: direction,
-          );
-        } else {
-          await room.requestHistory(
-            historyCount: historyCount,
-            direction: direction,
-            onHistoryReceived: () {
-              _collectHistoryUpdates = true;
-            },
-          );
-        }
+        Logs().v('No more events found in the store. Request from server...');
+        await room.requestHistory(
+          historyCount: historyCount,
+          onHistoryReceived: () {
+            _collectHistoryUpdates = true;
+          },
+        );
       }
     } finally {
       _collectHistoryUpdates = false;
@@ -169,103 +117,14 @@ class Timeline {
     }
   }
 
-  /// Request more previous events from the server. [historyCount] defines how much events should
-  /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
-  /// the historical events will be published in the onEvent stream.
-  /// Returns the actual count of received timeline events.
-  Future<int> getRoomEvents(
-      {int historyCount = Room.defaultHistoryCount,
-      direction = Direction.b}) async {
-    final resp = await room.client.getRoomEvents(
-      room.id,
-      direction == Direction.b ? chunk.prevBatch : chunk.nextBatch,
-      direction,
-      limit: historyCount,
-      filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
-    );
-
-    if (resp.end == null || resp.start == null) {
-      Logs().w('end or start parameters where not set in the response');
-    }
-
-    final newNextBatch = direction == Direction.b ? resp.start : resp.end;
-    final newPrevBatch = direction == Direction.b ? resp.end : resp.start;
-
-    final type = direction == Direction.b
-        ? EventUpdateType.history
-        : EventUpdateType.timeline;
-
-    if ((resp.state?.length ?? 0) == 0 && resp.start != resp.end) {
-      if (type == EventUpdateType.history) {
-        Logs().w(
-            '[nav] we can still request history prevBatch: $type $newPrevBatch');
-      } else {
-        Logs().w(
-            '[nav] we can still request history nextBatch: $type $newNextBatch');
-      }
-    }
-
-    final newEvents =
-        resp.chunk?.map((e) => Event.fromMatrixEvent(e, room)).toList() ?? [];
-
-    if (!allowNewEvent) {
-      if (resp.start == resp.end) allowNewEvent = true;
-
-      if (allowNewEvent) {
-        Logs().d('We now allow sync update into the timeline.');
-        allowNewEvent = true;
-        newEvents.addAll(
-            await room.client.database?.getEventList(room, onlySending: true) ??
-                []);
-      }
-    }
-
-    // Try to decrypt encrypted events but don't update the database.
-    if (room.encrypted &&
-        room.client.database != null &&
-        room.client.encryptionEnabled) {
-      for (var i = 0; i < newEvents.length; i++) {
-        if (newEvents[i].type == EventTypes.Encrypted) {
-          newEvents[i] = await room.client.encryption!
-              .decryptRoomEvent(room.id, newEvents[i]);
-        }
-      }
-    }
-
-    // update chunk anchors
-    if (type == EventUpdateType.history) {
-      chunk.prevBatch = newPrevBatch ?? '';
-
-      final offset = chunk.events.length;
-
-      chunk.events.addAll(newEvents);
-
-      for (var i = 0; i < newEvents.length; i++) {
-        onInsert?.call(i + offset);
-      }
-    } else {
-      chunk.nextBatch = newNextBatch ?? '';
-      chunk.events.insertAll(0, newEvents.reversed);
-
-      for (var i = 0; i < newEvents.length; i++) {
-        onInsert?.call(i);
-      }
-    }
-
-    if (onUpdate != null) {
-      onUpdate!();
-    }
-    return resp.chunk?.length ?? 0;
-  }
-
-  Timeline(
-      {required this.room,
-      this.onUpdate,
-      this.onChange,
-      this.onInsert,
-      this.onRemove,
-      this.onNewEvent,
-      required this.chunk}) {
+  Timeline({
+    required this.room,
+    List<Event>? events,
+    this.onUpdate,
+    this.onChange,
+    this.onInsert,
+    this.onRemove,
+  }) : events = events ?? [] {
     sub = room.client.onEvent.stream.listen(_handleEventUpdate);
 
     // If the timeline is limited we want to clear our events cache
@@ -277,14 +136,8 @@ class Timeline {
         room.onSessionKeyReceived.stream.listen(_sessionKeyReceived);
 
     // we want to populate our aggregated events
-    for (final e in events) {
+    for (final e in this.events) {
       addAggregatedEvent(e);
-    }
-
-    // we are using a fragmented timeline
-    if (chunk.nextBatch != '') {
-      allowNewEvent = false;
-      isFragmentedTimeline = true;
     }
   }
 
@@ -428,13 +281,6 @@ class Timeline {
           eventUpdate.type != EventUpdateType.history) {
         return;
       }
-
-      if (eventUpdate.type == EventUpdateType.timeline) {
-        onNewEvent?.call();
-      }
-
-      if (!allowNewEvent) return;
-
       final status = eventStatusFromInt(eventUpdate.content['status'] ??
           (eventUpdate.content['unsigned'] is Map<String, dynamic>
               ? eventUpdate.content['unsigned'][messageSendingStatusKey]

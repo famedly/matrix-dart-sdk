@@ -21,7 +21,6 @@ import 'dart:typed_data';
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
@@ -1108,9 +1107,8 @@ void main() {
         'sender': '@example:example.org',
         'event_id': '\$edit2',
       }, room);
-      final timeline = Timeline(
-          chunk: TimelineChunk(events: <Event>[event, edit1, edit2]),
-          room: room);
+      final timeline =
+          Timeline(events: <Event>[event, edit1, edit2], room: room);
       expect(event.hasAggregatedEvents(timeline, RelationshipTypes.edit), true);
       expect(event.aggregatedEvents(timeline, RelationshipTypes.edit),
           {edit1, edit2});
@@ -1206,26 +1204,24 @@ void main() {
         'sender': '@bob:example.org',
       }, room);
       // no edits
-      var displayEvent = event.getDisplayEvent(
-          Timeline(chunk: TimelineChunk(events: <Event>[event]), room: room));
+      var displayEvent =
+          event.getDisplayEvent(Timeline(events: <Event>[event], room: room));
       expect(displayEvent.body, 'blah');
       // one edit
-      displayEvent = event.getDisplayEvent(Timeline(
-          chunk: TimelineChunk(events: <Event>[event, edit1]), room: room));
+      displayEvent = event
+          .getDisplayEvent(Timeline(events: <Event>[event, edit1], room: room));
       expect(displayEvent.body, 'edit 1');
       // two edits
-      displayEvent = event.getDisplayEvent(Timeline(
-          chunk: TimelineChunk(events: <Event>[event, edit1, edit2]),
-          room: room));
+      displayEvent = event.getDisplayEvent(
+          Timeline(events: <Event>[event, edit1, edit2], room: room));
       expect(displayEvent.body, 'edit 2');
       // foreign edit
-      displayEvent = event.getDisplayEvent(Timeline(
-          chunk: TimelineChunk(events: <Event>[event, edit3]), room: room));
+      displayEvent = event
+          .getDisplayEvent(Timeline(events: <Event>[event, edit3], room: room));
       expect(displayEvent.body, 'blah');
       // mixed foreign and non-foreign
-      displayEvent = event.getDisplayEvent(Timeline(
-          chunk: TimelineChunk(events: <Event>[event, edit1, edit2, edit3]),
-          room: room));
+      displayEvent = event.getDisplayEvent(
+          Timeline(events: <Event>[event, edit1, edit2, edit3], room: room));
       expect(displayEvent.body, 'edit 2');
       event = Event.fromJson({
         'type': EventTypes.Message,
@@ -1243,9 +1239,8 @@ void main() {
           },
         },
       }, room);
-      displayEvent = event.getDisplayEvent(Timeline(
-          chunk: TimelineChunk(events: <Event>[event, edit1, edit2, edit3]),
-          room: room));
+      displayEvent = event.getDisplayEvent(
+          Timeline(events: <Event>[event, edit1, edit2, edit3], room: room));
       expect(displayEvent.body, 'Redacted');
     });
     test('attachments', () async {
