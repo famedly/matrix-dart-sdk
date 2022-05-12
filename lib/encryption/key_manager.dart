@@ -558,6 +558,8 @@ class KeyManager {
     if (!enabled) {
       return false;
     }
+    await client.accountDataLoading;
+    await client.userDeviceKeysLoading;
     return (await encryption.ssss.getCached(megolmKey)) != null;
   }
 
