@@ -345,7 +345,6 @@ class FluffyBoxDatabase extends DatabaseApi {
   Future<List<Event>> getEventList(
     Room room, {
     int start = 0,
-    bool onlySending = false,
     int? limit,
   }) =>
       runBenchmarked<List<Event>>('Get event list', () async {
@@ -367,11 +366,10 @@ class FluffyBoxDatabase extends DatabaseApi {
         // Combine those two lists while respecting the start and limit parameters.
         final end = min(timelineEventIds.length,
             start + (limit ?? timelineEventIds.length));
-
-        final eventIds = sendingEventIds;
-        if (start < timelineEventIds.length && !onlySending) {
-          eventIds.addAll(timelineEventIds.getRange(start, end).toList());
-        }
+        final eventIds = sendingEventIds +
+            (start < timelineEventIds.length
+                ? timelineEventIds.getRange(start, end).toList()
+                : []);
 
         return await _getEventsByIds(eventIds.cast<String>(), room);
       });

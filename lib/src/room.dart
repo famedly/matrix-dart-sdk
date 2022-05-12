@@ -22,7 +22,6 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
-import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/utils/file_send_request_credentials.dart';
 import 'package:matrix/src/utils/space_child.dart';
@@ -32,8 +31,11 @@ import 'utils/markdown.dart';
 import 'utils/marked_unread.dart';
 
 enum PushRuleState { notify, mentionsOnly, dontNotify }
+
 enum JoinRules { public, knock, invite, private }
+
 enum GuestAccess { canJoin, forbidden }
+
 enum HistoryVisibility { invited, joined, shared, worldReadable }
 
 const Map<GuestAccess, String> _guestAccessMap = {
@@ -1081,8 +1083,7 @@ class Room {
   /// Returns the actual count of received timeline events.
   Future<int> requestHistory(
       {int historyCount = defaultHistoryCount,
-      void Function()? onHistoryReceived,
-      direction = Direction.b}) async {
+      void Function()? onHistoryReceived}) async {
     final prev_batch = this.prev_batch;
     if (prev_batch == null) {
       throw 'Tried to request history without a prev_batch token';
@@ -1090,7 +1091,7 @@ class Room {
     final resp = await client.getRoomEvents(
       id,
       prev_batch,
-      direction,
+      Direction.b,
       limit: historyCount,
       filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
     );
@@ -1111,12 +1112,8 @@ class Room {
                           state: resp.state,
                           timeline: TimelineUpdate(
                             limited: false,
-                            events: direction == Direction.b
-                                ? resp.chunk
-                                : resp.chunk?.reversed.toList(),
-                            prevBatch: direction == Direction.b
-                                ? resp.end
-                                : resp.start,
+                            events: resp.chunk,
+                            prevBatch: resp.end,
                           ),
                         )
                       }
@@ -1128,15 +1125,13 @@ class Room {
                           timeline: TimelineUpdate(
                             limited: false,
                             events: resp.chunk,
-                            prevBatch: direction == Direction.b
-                                ? resp.end
-                                : resp.start,
+                            prevBatch: resp.end,
                           ),
                         ),
                       }
                     : null),
           ),
-          direction: Direction.b);
+          sortAtTheEnd: true);
     };
 
     if (client.database != null) {
@@ -1215,34 +1210,6 @@ class Room {
     return;
   }
 
-  Future<TimelineChunk?> getEventContext(String eventId) async {
-    final resp = await client.getEventContext(id, eventId,
-        limit: Room.defaultHistoryCount
-        // filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
-        );
-
-    final events = [
-      if (resp.eventsAfter != null) ...resp.eventsAfter!.reversed.toList(),
-      if (resp.event != null) resp.event!,
-      if (resp.eventsBefore != null) ...resp.eventsBefore!
-    ].map((e) => Event.fromMatrixEvent(e, this)).toList();
-
-    // Try again to decrypt encrypted events but don't update the database.
-    if (encrypted && client.database != null && client.encryptionEnabled) {
-      for (var i = 0; i < events.length; i++) {
-        if (events[i].type == EventTypes.Encrypted &&
-            events[i].content['can_request_session'] == true) {
-          events[i] = await client.encryption!.decryptRoomEvent(id, events[i]);
-        }
-      }
-    }
-
-    final chunk = TimelineChunk(
-        nextBatch: resp.end ?? '', prevBatch: resp.start ?? '', events: events);
-
-    return chunk;
-  }
-
   /// This API updates the marker for the given receipt type to the event ID
   /// specified.
   Future<void> postReceipt(String eventId) async {
@@ -1261,80 +1228,47 @@ class Room {
   /// just want to update the whole timeline on every change, use the [onUpdate]
   /// callback. For updating only the parts that have changed, use the
   /// [onChange], [onRemove], [onInsert] and the [onHistoryReceived] callbacks.
-  /// This method can also retrieve the timeline at a specific point by setting
-  /// the [eventContextId]
-  Future<Timeline> getTimeline(
-      {void Function(int index)? onChange,
-      void Function(int index)? onRemove,
-      void Function(int insertID)? onInsert,
-      void Function()? onNewEvent,
-      void Function()? onUpdate,
-      String? eventContextId}) async {
+  Future<Timeline> getTimeline({
+    void Function(int index)? onChange,
+    void Function(int index)? onRemove,
+    void Function(int insertID)? onInsert,
+    void Function()? onUpdate,
+  }) async {
     await postLoad();
+    final events = await client.database?.getEventList(
+          this,
+          limit: defaultHistoryCount,
+        ) ??
+        <Event>[];
 
-    final _events = await client.database?.getEventList(
-      this,
-      limit: defaultHistoryCount,
-    );
-
-    var chunk = TimelineChunk(events: _events ?? []);
-
-    if (_events != null) {
-      if (eventContextId != null) {
-        if (_events
-                .firstWhereOrNull((event) => event.eventId == eventContextId) !=
-            null) {
-          chunk = TimelineChunk(events: _events);
-        } else {
-          chunk = await getEventContext(eventContextId) ??
-              TimelineChunk(events: []);
-        }
-      }
-
-      // Fetch all users from database we have got here.
-      if (eventContextId != null) {
-        for (final event in _events) {
-          if (getState(EventTypes.RoomMember, event.senderId) != null) continue;
-          final dbUser = await client.database?.getUser(event.senderId, this);
-          if (dbUser != null) setState(dbUser);
-        }
-      }
-    }
-
-    if (encrypted && client.encryptionEnabled) {
-      // decrypt messages
-      for (var i = 0; i < chunk.events.length; i++) {
-        if (chunk.events[i].type == EventTypes.Encrypted) {
-          if (eventContextId != null) {
-            // for the fragmented timeline, we don't cache the decrypted
-            //message in the database
-            chunk.events[i] = await client.encryption!.decryptRoomEvent(
-              id,
-              chunk.events[i],
-            );
-          } else if (client.database != null) {
-            // else, we need the database
-            await client.database?.transaction(() async {
-              for (var i = 0; i < chunk.events.length; i++) {
-                if (chunk.events[i].content['can_request_session'] == true) {
-                  chunk.events[i] = await client.encryption!
-                      .decryptRoomEvent(id, chunk.events[i], store: true);
-                }
-              }
-            });
+    // Try again to decrypt encrypted events and update the database.
+    if (encrypted && client.database != null && client.encryptionEnabled) {
+      await client.database?.transaction(() async {
+        for (var i = 0; i < events.length; i++) {
+          if (events[i].type == EventTypes.Encrypted &&
+              events[i].content['can_request_session'] == true) {
+            events[i] = await client.encryption!
+                .decryptRoomEvent(id, events[i], store: true);
           }
         }
-      }
+      });
+    }
+
+    // Fetch all users from database we have got here.
+    for (final event in events) {
+      if (getState(EventTypes.RoomMember, event.senderId) != null) continue;
+      final dbUser = await client.database?.getUser(event.senderId, this);
+      if (dbUser != null) setState(dbUser);
     }
 
     final timeline = Timeline(
-        room: this,
-        chunk: chunk,
-        onChange: onChange,
-        onRemove: onRemove,
-        onInsert: onInsert,
-        onNewEvent: onNewEvent,
-        onUpdate: onUpdate);
+      room: this,
+      events: events,
+      onChange: onChange,
+      onRemove: onRemove,
+      onInsert: onInsert,
+      onUpdate: onUpdate,
+    );
     return timeline;
   }
 
@@ -1862,13 +1796,13 @@ class Room {
   }
 
   Future<void> _handleFakeSync(SyncUpdate syncUpdate,
-      {Direction? direction}) async {
+      {bool sortAtTheEnd = false}) async {
     if (client.database != null) {
       await client.database?.transaction(() async {
-        await client.handleSync(syncUpdate, direction: direction);
+        await client.handleSync(syncUpdate, sortAtTheEnd: sortAtTheEnd);
       });
     } else {
-      await client.handleSync(syncUpdate, direction: direction);
+      await client.handleSync(syncUpdate, sortAtTheEnd: sortAtTheEnd);
     }
   }
 
