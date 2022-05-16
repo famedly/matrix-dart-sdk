@@ -98,7 +98,7 @@ void main() {
       expect(
           room.getState('m.room.join_rules')?.content['join_rule'], 'public');
       expect(room.roomAccountData['com.test.foo']?.content['foo'], 'bar');
-      expect(room.userFullyReadMarker, '\$event_id:example.com');
+      expect(room.fullyRead, '\$event_id:example.com');
 
       room.setState(
         Event(

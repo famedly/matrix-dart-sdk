@@ -198,7 +198,7 @@ class Room {
 
   /// ID of the fully read marker event.
   String get fullyRead =>
-      roomAccountData['m.fully_read']?.content['event_id'] ?? '';
+      roomAccountData['m.fully_read']?.content.tryGet<String>('event_id') ?? '';
 
   /// If something changes, this callback will be triggered. Will return the
   /// room id.
@@ -1195,13 +1195,8 @@ class Room {
   }
 
   /// Get the user fully read marker
-  String? get userFullyReadMarker {
-    final readEvent = roomAccountData['m.fully_read'];
-    if (readEvent != null) {
-      return readEvent.content.tryGet<String>('event_id');
-    }
-    return null;
-  }
+  @Deprecated('Use fullyRead marker')
+  String? get userFullyReadMarker => fullyRead;
 
   /// Sets the position of the read marker for a given room, and optionally the
   /// read receipt's location.
