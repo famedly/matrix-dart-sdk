@@ -4256,6 +4256,7 @@ class Api {
           if (allowRemote != null) 'allow_remote': allowRemote.toString(),
         });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -4289,6 +4290,7 @@ class Api {
           if (allowRemote != null) 'allow_remote': allowRemote.toString(),
         });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -4360,6 +4362,7 @@ class Api {
           if (allowRemote != null) 'allow_remote': allowRemote.toString(),
         });
     final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
