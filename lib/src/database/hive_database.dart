@@ -387,6 +387,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   Future<List<Event>> getEventList(
     Room room, {
     int start = 0,
+    bool onlySending = false,
     int? limit,
   }) =>
       runBenchmarked<List<Event>>('Get event list', () async {
@@ -410,7 +411,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         final end = min(timelineEventIds.length,
             start + (limit ?? timelineEventIds.length));
         final eventIds = sendingEventIds +
-            (start < timelineEventIds.length
+            (start < timelineEventIds.length && !onlySending
                 ? timelineEventIds.getRange(start, end).toList()
                 : []);
 

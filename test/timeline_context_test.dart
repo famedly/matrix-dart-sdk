@@ -24,7 +24,7 @@ import 'package:olm/olm.dart' as olm;
 import 'fake_client.dart';
 
 void main() {
-  group('Timeline', () {
+  group('Timeline context', () {
     Logs().level = Level.error;
     final roomID = '!1234:example.com';
     final testTimeStamp = DateTime.now().millisecondsSinceEpoch;
@@ -50,10 +50,10 @@ void main() {
       client.sendMessageTimeoutSeconds = 5;
 
       room = Room(
-          id: roomID, client: client, prev_batch: '1234', roomAccountData: {});
+          id: roomID, client: client, prev_batch: 't123', roomAccountData: {});
       timeline = Timeline(
         room: room,
-        chunk: TimelineChunk(events: []),
+        chunk: TimelineChunk(events: [], nextBatch: 't456', prevBatch: 't123'),
         onUpdate: () {
           updateCount++;
         },
@@ -61,105 +61,87 @@ void main() {
         onChange: changeList.add,
         onRemove: removeList.add,
       );
+
+      expect(timeline.isFragmentedTimeline, true);
+      expect(timeline.allowNewEvent, false);
     });
 
-    test('Create', () async {
-      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
-          checkWellKnown: false);
-
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.synced.intValue,
-          'event_id': '2',
-          'origin_server_ts': testTimeStamp - 1000
-        },
-      ));
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.synced.intValue,
-          'event_id': '1',
-          'origin_server_ts': testTimeStamp
-        },
-      ));
-
-      expect(timeline.sub != null, true);
-
-      await Future.delayed(Duration(milliseconds: 50));
-
-      expect(updateCount, 2);
-      expect(insertList, [0, 0]);
-      expect(insertList.length, timeline.events.length);
-      expect(changeList, []);
-      expect(removeList, []);
-      expect(timeline.events.length, 2);
-      expect(timeline.events[0].eventId, '1');
-      expect(timeline.events[0].sender.id, '@alice:example.com');
-      expect(timeline.events[0].originServerTs.millisecondsSinceEpoch,
-          testTimeStamp);
-      expect(timeline.events[0].body, 'Testcase');
-      expect(
-          timeline.events[0].originServerTs.millisecondsSinceEpoch >
-              timeline.events[1].originServerTs.millisecondsSinceEpoch,
-          true);
-      expect(timeline.events[0].receipts, []);
-
-      room.roomAccountData['m.receipt'] = BasicRoomEvent.fromJson({
-        'type': 'm.receipt',
-        'content': {
-          '@alice:example.com': {
-            'event_id': '1',
-            'ts': 1436451550453,
-          }
-        },
-        'room_id': roomID,
-      });
-
-      await Future.delayed(Duration(milliseconds: 50));
-
-      expect(timeline.events[0].receipts.length, 1);
-      expect(timeline.events[0].receipts[0].user.id, '@alice:example.com');
-
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.redaction',
-          'content': {'reason': 'spamming'},
-          'sender': '@alice:example.com',
-          'redacts': '2',
-          'event_id': '3',
-          'origin_server_ts': testTimeStamp + 1000
-        },
-      ));
+    test('Request future', () async {
+      timeline.events.clear();
+      await timeline.requestFuture();
 
       await Future.delayed(Duration(milliseconds: 50));
 
       expect(updateCount, 3);
-      expect(insertList, [0, 0, 0]);
-      expect(insertList.length, timeline.events.length);
-      expect(changeList, [2]);
-      expect(removeList, []);
+      expect(insertList, [0, 1, 2]);
       expect(timeline.events.length, 3);
-      expect(timeline.events[2].redacted, true);
+      expect(timeline.events[0].eventId, '3143273582443PhrSn:example.org');
+      expect(timeline.events[1].eventId, '2143273582443PhrSn:example.org');
+      expect(timeline.events[2].eventId, '1143273582443PhrSn:example.org');
+      expect(timeline.chunk.nextBatch, 't789');
+
+      expect(timeline.isFragmentedTimeline, true);
+      expect(timeline.allowNewEvent, false);
+    });
+
+    /// We send a message in a fragmented timeline, it didn't reached the end so we shouldn't be displayed.
+    test('Send message not displayed', () async {
+      updateCount = 0;
+
+      await room.sendTextEvent('test', txid: '1234');
+      await Future.delayed(Duration(milliseconds: 50));
+
+      expect(updateCount, 0);
+      expect(insertList, [0, 1, 2]);
+      expect(insertList.length,
+          timeline.events.length); // expect no new events to have been added
+
+      final eventId = '1844295642248BcDkn:example.org';
+      client.onEvent.add(EventUpdate(
+        type: EventUpdateType.timeline,
+        roomID: roomID,
+        content: {
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'test'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.synced.intValue,
+          'event_id': eventId,
+          'unsigned': {'transaction_id': '1234'},
+          'origin_server_ts': DateTime.now().millisecondsSinceEpoch
+        },
+      )); // just assume that it was on the server for this call but not for the following.
+
+      await Future.delayed(Duration(milliseconds: 50));
+
+      expect(updateCount, 0);
+      expect(insertList, [0, 1, 2]);
+      expect(timeline.events.length,
+          3); // we still expect the timeline to contain the same numbre of elements
+    });
+
+    test('Request future end of timeline', () async {
+      await timeline.requestFuture();
+
+      await Future.delayed(Duration(milliseconds: 50));
+
+      expect(updateCount, 3);
+      expect(insertList, [0, 1, 2]);
+      expect(insertList.length, timeline.events.length);
+      expect(timeline.events[0].eventId, '3143273582443PhrSn:example.org');
+      expect(timeline.events[1].eventId, '2143273582443PhrSn:example.org');
+      expect(timeline.events[2].eventId, '1143273582443PhrSn:example.org');
+      expect(timeline.chunk.nextBatch, 't789');
+
+      expect(timeline.isFragmentedTimeline, true);
+      expect(timeline.allowNewEvent, true);
     });
 
     test('Send message', () async {
       await room.sendTextEvent('test', txid: '1234');
 
       await Future.delayed(Duration(milliseconds: 50));
-
       expect(updateCount, 5);
-      expect(insertList, [0, 0, 0, 0]);
+      expect(insertList, [0, 1, 2, 0]);
       expect(insertList.length, timeline.events.length);
       final eventId = timeline.events[0].eventId;
       expect(eventId.startsWith('\$event'), true);
@@ -182,13 +164,14 @@ void main() {
       await Future.delayed(Duration(milliseconds: 50));
 
       expect(updateCount, 6);
-      expect(insertList, [0, 0, 0, 0]);
+      expect(insertList, [0, 1, 2, 0]);
       expect(insertList.length, timeline.events.length);
       expect(timeline.events[0].eventId, eventId);
       expect(timeline.events[0].status, EventStatus.synced);
     });
 
     test('Send message with error', () async {
+      updateCount = 0;
       client.onEvent.add(EventUpdate(
         type: EventUpdateType.timeline,
         roomID: roomID,
@@ -203,20 +186,20 @@ void main() {
       ));
       await Future.delayed(Duration(milliseconds: 50));
 
-      expect(updateCount, 7);
+      expect(updateCount, 1);
       await room.sendTextEvent('test', txid: 'errortxid');
       await Future.delayed(Duration(milliseconds: 50));
 
-      expect(updateCount, 9);
+      expect(updateCount, 3);
       await room.sendTextEvent('test', txid: 'errortxid2');
       await Future.delayed(Duration(milliseconds: 50));
       await room.sendTextEvent('test', txid: 'errortxid3');
       await Future.delayed(Duration(milliseconds: 50));
 
-      expect(updateCount, 13);
-      expect(insertList, [0, 0, 0, 0, 0, 0, 1, 2]);
+      expect(updateCount, 7);
+      expect(insertList, [0, 1, 2, 0, 0, 0, 1, 2]);
       expect(insertList.length, timeline.events.length);
-      expect(changeList, [2, 0, 0, 0, 1, 2]);
+      expect(changeList, [0, 0, 0, 1, 2]);
       expect(removeList, []);
       expect(timeline.events[0].status, EventStatus.error);
       expect(timeline.events[1].status, EventStatus.error);
@@ -224,14 +207,15 @@ void main() {
     });
 
     test('Remove message', () async {
+      updateCount = 0;
       await timeline.events[0].remove();
 
       await Future.delayed(Duration(milliseconds: 50));
 
-      expect(updateCount, 14);
+      expect(updateCount, 1);
 
-      expect(insertList, [0, 0, 0, 0, 0, 0, 1, 2]);
-      expect(changeList, [2, 0, 0, 0, 1, 2]);
+      expect(insertList, [0, 1, 2, 0, 0, 0, 1, 2]);
+      expect(changeList, [0, 0, 0, 1, 2]);
       expect(removeList, [0]);
       expect(timeline.events.length, 7);
       expect(timeline.events[0].status, EventStatus.error);
@@ -256,6 +240,7 @@ void main() {
 
     test('Resend message', () async {
       timeline.events.clear();
+      updateCount = 0;
       client.onEvent.add(EventUpdate(
         type: EventUpdateType.timeline,
         roomID: roomID,
@@ -275,30 +260,13 @@ void main() {
 
       await Future.delayed(Duration(milliseconds: 50));
 
-      expect(updateCount, 17);
+      expect(updateCount, 3);
 
-      expect(insertList, [0, 0, 0, 0, 0, 0, 1, 2, 0]);
-      expect(changeList, [2, 0, 0, 0, 1, 2, 0, 0]);
+      expect(insertList, [0, 1, 2, 0, 0, 0, 1, 2, 0]);
+      expect(changeList, [0, 0, 0, 1, 2, 0, 0]);
       expect(removeList, [0]);
       expect(timeline.events.length, 1);
       expect(timeline.events[0].status, EventStatus.sent);
-    });
-
-    test('Request history', () async {
-      timeline.events.clear();
-      expect(timeline.canRequestHistory, true);
-      await room.requestHistory();
-
-      await Future.delayed(Duration(milliseconds: 50));
-
-      expect(updateCount, 20);
-      expect(insertList, [0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 1, 2]);
-      expect(timeline.events.length, 3);
-      expect(timeline.events[0].eventId, '3143273582443PhrSn:example.org');
-      expect(timeline.events[1].eventId, '2143273582443PhrSn:example.org');
-      expect(timeline.events[2].eventId, '1143273582443PhrSn:example.org');
-      expect(room.prev_batch, 't47409-4357353_219380_26003_2265');
-      await timeline.events[2].redactEvent(reason: 'test', txid: '1234');
     });
 
     test('Clear cache on limited timeline', () async {
