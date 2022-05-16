@@ -83,6 +83,7 @@ abstract class DatabaseApi {
   Future<List<Event>> getEventList(
     Room room, {
     int start = 0,
+    bool onlySending,
     int limit,
   });
 

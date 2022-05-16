@@ -1,3 +1,6 @@
+## [0.9.5] - 13th May 2022
+- fix: Fix deep copy issue in the fragmented timeline feature and restored it
+
 ## [0.9.4] - 12th May 2022
 - fix: Revert fragmented timeline feature temporarily to fix SENDING timeline
 
