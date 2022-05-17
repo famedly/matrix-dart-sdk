@@ -66,7 +66,7 @@ void main() {
           .uploadKeys(uploadDeviceKeys: true);
       expect(res, true);
       var sent = json.decode(
-          FakeMatrixApi.calledEndpoints['/client/r0/keys/upload']!.first);
+          FakeMatrixApi.calledEndpoints['/client/v3/keys/upload']!.first);
       expect(sent['device_keys'] != null, true);
       expect(sent['one_time_keys'] != null, true);
       expect(sent['one_time_keys'].keys.length, 66);
@@ -75,14 +75,14 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption!.olmManager.uploadKeys();
       sent = json.decode(
-          FakeMatrixApi.calledEndpoints['/client/r0/keys/upload']!.first);
+          FakeMatrixApi.calledEndpoints['/client/v3/keys/upload']!.first);
       expect(sent['device_keys'] != null, false);
       expect(sent['fallback_keys'].keys.length, 1);
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption!.olmManager
           .uploadKeys(oldKeyCount: 20, unusedFallbackKey: true);
       sent = json.decode(
-          FakeMatrixApi.calledEndpoints['/client/r0/keys/upload']!.first);
+          FakeMatrixApi.calledEndpoints['/client/v3/keys/upload']!.first);
       expect(sent['one_time_keys'].keys.length, 46);
       expect(sent['fallback_keys'].keys.length, 0);
     });
@@ -94,7 +94,7 @@ void main() {
           .handleDeviceOneTimeKeysCount({'signed_curve25519': 20}, null);
       await Future.delayed(Duration(milliseconds: 50));
       expect(
-          FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'),
+          FakeMatrixApi.calledEndpoints.containsKey('/client/v3/keys/upload'),
           true);
 
       FakeMatrixApi.calledEndpoints.clear();
@@ -102,14 +102,14 @@ void main() {
           .handleDeviceOneTimeKeysCount({'signed_curve25519': 70}, null);
       await Future.delayed(Duration(milliseconds: 50));
       expect(
-          FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'),
+          FakeMatrixApi.calledEndpoints.containsKey('/client/v3/keys/upload'),
           false);
 
       FakeMatrixApi.calledEndpoints.clear();
       client.encryption!.olmManager.handleDeviceOneTimeKeysCount(null, []);
       await Future.delayed(Duration(milliseconds: 50));
       expect(
-          FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'),
+          FakeMatrixApi.calledEndpoints.containsKey('/client/v3/keys/upload'),
           true);
 
       // this will upload keys because we assume the key count is 0, if the server doesn't send one
@@ -118,7 +118,7 @@ void main() {
           .handleDeviceOneTimeKeysCount(null, ['signed_curve25519']);
       await Future.delayed(Duration(milliseconds: 50));
       expect(
-          FakeMatrixApi.calledEndpoints.containsKey('/client/r0/keys/upload'),
+          FakeMatrixApi.calledEndpoints.containsKey('/client/v3/keys/upload'),
           true);
     });
 
@@ -179,7 +179,7 @@ void main() {
       await client.encryption!.olmManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           true);
 
       // fail scenarios
@@ -204,7 +204,7 @@ void main() {
       await client.encryption!.olmManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           false);
 
       // device not found
@@ -229,7 +229,7 @@ void main() {
       await client.encryption!.olmManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           false);
 
       // don't replay if the last event is m.dummy itself
@@ -252,7 +252,7 @@ void main() {
       await client.encryption!.olmManager.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           false);
     });
 

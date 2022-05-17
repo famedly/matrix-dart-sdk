@@ -579,7 +579,7 @@ void main() {
           });
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           true);
     });
     test('sendToDeviceEncryptedChunked', () async {
@@ -599,7 +599,7 @@ void main() {
       expect(
           FakeMatrixApi.calledEndpoints.keys
               .where((k) =>
-                  k.startsWith('/client/r0/sendToDevice/m.room.encrypted'))
+                  k.startsWith('/client/v3/sendToDevice/m.room.encrypted'))
               .length,
           1);
 
@@ -641,14 +641,14 @@ void main() {
       expect(
           FakeMatrixApi.calledEndpoints.keys
               .where((k) =>
-                  k.startsWith('/client/r0/sendToDevice/m.room.encrypted'))
+                  k.startsWith('/client/v3/sendToDevice/m.room.encrypted'))
               .length,
           1);
       await Future.delayed(Duration(milliseconds: 100));
       expect(
           FakeMatrixApi.calledEndpoints.keys
               .where((k) =>
-                  k.startsWith('/client/r0/sendToDevice/m.room.encrypted'))
+                  k.startsWith('/client/v3/sendToDevice/m.room.encrypted'))
               .length,
           2);
     });
@@ -688,26 +688,26 @@ void main() {
       await client.sendToDevice('raccoon', 'raccoon_txnid', raccoonContent);
       expect(
           json.decode(FakeMatrixApi
-                  .calledEndpoints['/client/r0/sendToDevice/foxies/floof_txnid']
+                  .calledEndpoints['/client/v3/sendToDevice/foxies/floof_txnid']
               ?[0])['messages'],
           foxContent);
       expect(
           json.decode(FakeMatrixApi.calledEndpoints[
-              '/client/r0/sendToDevice/raccoon/raccoon_txnid']?[0])['messages'],
+              '/client/v3/sendToDevice/raccoon/raccoon_txnid']?[0])['messages'],
           raccoonContent);
       FakeMatrixApi.calledEndpoints.clear();
       await client.sendToDevice('bunny', 'bunny_txnid', bunnyContent);
       expect(
           FakeMatrixApi
-              .calledEndpoints['/client/r0/sendToDevice/foxies/floof_txnid'],
+              .calledEndpoints['/client/v3/sendToDevice/foxies/floof_txnid'],
           null);
       expect(
           FakeMatrixApi
-              .calledEndpoints['/client/r0/sendToDevice/raccoon/raccoon_txnid'],
+              .calledEndpoints['/client/v3/sendToDevice/raccoon/raccoon_txnid'],
           null);
       expect(
           json.decode(FakeMatrixApi
-                  .calledEndpoints['/client/r0/sendToDevice/bunny/bunny_txnid']
+                  .calledEndpoints['/client/v3/sendToDevice/bunny/bunny_txnid']
               ?[0])['messages'],
           bunnyContent);
       await client.dispose(closeDatabase: true);
@@ -751,16 +751,16 @@ void main() {
       await client.sendToDevice('bunny', 'bunny_txnid', bunnyContent);
       expect(
           json.decode(FakeMatrixApi
-                  .calledEndpoints['/client/r0/sendToDevice/foxies/floof_txnid']
+                  .calledEndpoints['/client/v3/sendToDevice/foxies/floof_txnid']
               ?[0])['messages'],
           foxContent);
       expect(
           json.decode(FakeMatrixApi.calledEndpoints[
-              '/client/r0/sendToDevice/raccoon/raccoon_txnid']?[0])['messages'],
+              '/client/v3/sendToDevice/raccoon/raccoon_txnid']?[0])['messages'],
           raccoonContent);
       expect(
           json.decode(FakeMatrixApi
-                  .calledEndpoints['/client/r0/sendToDevice/bunny/bunny_txnid']
+                  .calledEndpoints['/client/v3/sendToDevice/bunny/bunny_txnid']
               ?[0])['messages'],
           bunnyContent);
       await client.dispose(closeDatabase: true);

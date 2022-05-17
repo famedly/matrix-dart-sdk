@@ -35,9 +35,9 @@ void main() {
       expect(content.isScheme('mxc'), true);
 
       expect(content.getDownloadLink(client).toString(),
-          '${client.homeserver.toString()}/_matrix/media/r0/download/exampleserver.abc/abcdefghijklmn');
+          '${client.homeserver.toString()}/_matrix/media/v3/download/exampleserver.abc/abcdefghijklmn');
       expect(content.getThumbnail(client, width: 50, height: 50).toString(),
-          '${client.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
+          '${client.homeserver.toString()}/_matrix/media/v3/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
       expect(
           content
               .getThumbnail(client,
@@ -46,7 +46,7 @@ void main() {
                   method: ThumbnailMethod.scale,
                   animated: true)
               .toString(),
-          '${client.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale&animated=true');
+          '${client.homeserver.toString()}/_matrix/media/v3/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale&animated=true');
     });
     test('other port', () async {
       final client = Client('testclient', httpClient: FakeMatrixApi());
@@ -58,9 +58,9 @@ void main() {
       expect(content.isScheme('mxc'), true);
 
       expect(content.getDownloadLink(client).toString(),
-          '${client.homeserver.toString()}/_matrix/media/r0/download/exampleserver.abc/abcdefghijklmn');
+          '${client.homeserver.toString()}/_matrix/media/v3/download/exampleserver.abc/abcdefghijklmn');
       expect(content.getThumbnail(client, width: 50, height: 50).toString(),
-          '${client.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
+          '${client.homeserver.toString()}/_matrix/media/v3/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
       expect(
           content
               .getThumbnail(client,
@@ -69,7 +69,7 @@ void main() {
                   method: ThumbnailMethod.scale,
                   animated: true)
               .toString(),
-          'https://fakeserver.notexisting:1337/_matrix/media/r0/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale&animated=true');
+          'https://fakeserver.notexisting:1337/_matrix/media/v3/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale&animated=true');
     });
     test('other remote port', () async {
       final client = Client('testclient', httpClient: FakeMatrixApi());
@@ -80,9 +80,9 @@ void main() {
       expect(content.isScheme('mxc'), true);
 
       expect(content.getDownloadLink(client).toString(),
-          '${client.homeserver.toString()}/_matrix/media/r0/download/exampleserver.abc:1234/abcdefghijklmn');
+          '${client.homeserver.toString()}/_matrix/media/v3/download/exampleserver.abc:1234/abcdefghijklmn');
       expect(content.getThumbnail(client, width: 50, height: 50).toString(),
-          '${client.homeserver.toString()}/_matrix/media/r0/thumbnail/exampleserver.abc:1234/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
+          '${client.homeserver.toString()}/_matrix/media/v3/thumbnail/exampleserver.abc:1234/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
     });
   });
 }

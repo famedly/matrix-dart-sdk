@@ -539,8 +539,8 @@ void main() {
           .remove('JLAFKJWSCS');
 
       // Alice adds her device with same device ID but different keys
-      final oldResp = FakeMatrixApi.api['POST']?['/client/r0/keys/query'](null);
-      FakeMatrixApi.api['POST']?['/client/r0/keys/query'] = (_) {
+      final oldResp = FakeMatrixApi.api['POST']?['/client/v3/keys/query'](null);
+      FakeMatrixApi.api['POST']?['/client/v3/keys/query'] = (_) {
         oldResp['device_keys']['@alice:example.com']['JLAFKJWSCS'] = {
           'user_id': '@alice:example.com',
           'device_id': 'JLAFKJWSCS',

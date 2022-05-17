@@ -184,8 +184,8 @@ class Timeline {
       filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
     );
 
-    if (resp.end == null || resp.start == null) {
-      Logs().w('end or start parameters where not set in the response');
+    if (resp.end == null) {
+      Logs().w('end parameter was not set in the response');
     }
 
     final newNextBatch = direction == Direction.b ? resp.start : resp.end;
@@ -206,7 +206,7 @@ class Timeline {
     }
 
     final newEvents =
-        resp.chunk?.map((e) => Event.fromMatrixEvent(e, room)).toList() ?? [];
+        resp.chunk.map((e) => Event.fromMatrixEvent(e, room)).toList();
 
     if (!allowNewEvent) {
       if (resp.start == resp.end) allowNewEvent = true;
@@ -255,7 +255,7 @@ class Timeline {
     if (onUpdate != null) {
       onUpdate!();
     }
-    return resp.chunk?.length ?? 0;
+    return resp.chunk.length;
   }
 
   Timeline(

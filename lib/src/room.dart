@@ -1102,7 +1102,7 @@ class Room {
     this.prev_batch = resp.end;
 
     final loadFn = () async {
-      if (!((resp.chunk?.isNotEmpty ?? false) && resp.end != null)) return;
+      if (!((resp.chunk.isNotEmpty) && resp.end != null)) return;
 
       await client.handleSync(
           SyncUpdate(
@@ -1116,7 +1116,7 @@ class Room {
                             limited: false,
                             events: direction == Direction.b
                                 ? resp.chunk
-                                : resp.chunk?.reversed.toList(),
+                                : resp.chunk.reversed.toList(),
                             prevBatch: direction == Direction.b
                                 ? resp.end
                                 : resp.start,
@@ -1151,7 +1151,7 @@ class Room {
       await loadFn();
     }
 
-    return resp.chunk?.length ?? 0;
+    return resp.chunk.length;
   }
 
   /// Sets this room as a direct chat for this user if not already.

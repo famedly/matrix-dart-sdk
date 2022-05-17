@@ -846,7 +846,7 @@ class Client extends MatrixApi {
     return pushrules != null ? PushRuleSet.fromJson(pushrules) : null;
   }
 
-  static const Set<String> supportedVersions = {'r0.5.0', 'r0.6.0'};
+  static const Set<String> supportedVersions = {'v1.1', 'v1.2'};
   static const List<String> supportedDirectEncryptionAlgorithms = [
     AlgorithmTypes.olmV1Curve25519AesSha2
   ];
