@@ -192,7 +192,7 @@ void main() {
       await Future.delayed(Duration(milliseconds: 10));
       expect(
           FakeMatrixApi.calledEndpoints.keys
-              .any((k) => k == '/client/r0/keys/signatures/upload'),
+              .any((k) => k == '/client/v3/keys/signatures/upload'),
           true);
       expect(key.directVerified, true);
 
@@ -201,7 +201,7 @@ void main() {
       await Future.delayed(Duration(milliseconds: 10));
       expect(
           FakeMatrixApi.calledEndpoints.keys
-              .any((k) => k == '/client/r0/keys/signatures/upload'),
+              .any((k) => k == '/client/v3/keys/signatures/upload'),
           false);
       expect(key.directVerified, false);
       client.userDeviceKeys[client.userID]?.deviceKeys.remove('UNSIGNEDDEVICE');

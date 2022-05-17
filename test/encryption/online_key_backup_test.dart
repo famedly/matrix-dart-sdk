@@ -101,7 +101,7 @@ void main() {
       expect(dbSessions.isNotEmpty, true);
       await client.encryption!.keyManager.backgroundTasks();
       final payload = FakeMatrixApi
-          .calledEndpoints['/client/unstable/room_keys/keys?version=5']!.first;
+          .calledEndpoints['/client/v3/room_keys/keys?version=5']!.first;
       dbSessions = await client.database!.getInboundGroupSessionsToUpload();
       expect(dbSessions.isEmpty, true);
 

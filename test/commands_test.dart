@@ -35,7 +35,7 @@ void main() {
       final state = stateKey != null;
       return json.decode(FakeMatrixApi.calledEndpoints.entries
           .firstWhere((e) => e.key.startsWith(
-              '/client/r0/rooms/${Uri.encodeComponent(room.id)}/${state ? 'state' : 'send'}/${Uri.encodeComponent(type)}${state && stateKey?.isNotEmpty == true ? '/' + Uri.encodeComponent(stateKey!) : ''}'))
+              '/client/v3/rooms/${Uri.encodeComponent(room.id)}/${state ? 'state' : 'send'}/${Uri.encodeComponent(type)}${state && stateKey?.isNotEmpty == true ? '/' + Uri.encodeComponent(stateKey!) : ''}'))
           .value
           .first);
     };
@@ -168,7 +168,7 @@ void main() {
       await room.sendTextEvent('/join !newroom:example.com');
       expect(
           FakeMatrixApi
-                  .calledEndpoints['/client/r0/join/!newroom%3Aexample.com']
+                  .calledEndpoints['/client/v3/join/!newroom%3Aexample.com']
                   ?.first !=
               null,
           true);
@@ -180,7 +180,7 @@ void main() {
       expect(
           FakeMatrixApi
                   .calledEndpoints[
-                      '/client/r0/rooms/!1234%3AfakeServer.notExisting/leave']
+                      '/client/v3/rooms/!1234%3AfakeServer.notExisting/leave']
                   ?.first !=
               null,
           true);
@@ -208,7 +208,7 @@ void main() {
       expect(
           json.decode(FakeMatrixApi
               .calledEndpoints[
-                  '/client/r0/rooms/!1234%3AfakeServer.notExisting/kick']
+                  '/client/v3/rooms/!1234%3AfakeServer.notExisting/kick']
               ?.first),
           {
             'user_id': '@baduser:example.org',
@@ -221,7 +221,7 @@ void main() {
       expect(
           json.decode(FakeMatrixApi
               .calledEndpoints[
-                  '/client/r0/rooms/!1234%3AfakeServer.notExisting/ban']
+                  '/client/v3/rooms/!1234%3AfakeServer.notExisting/ban']
               ?.first),
           {
             'user_id': '@baduser:example.org',
@@ -234,7 +234,7 @@ void main() {
       expect(
           json.decode(FakeMatrixApi
               .calledEndpoints[
-                  '/client/r0/rooms/!1234%3AfakeServer.notExisting/unban']
+                  '/client/v3/rooms/!1234%3AfakeServer.notExisting/unban']
               ?.first),
           {
             'user_id': '@baduser:example.org',
@@ -247,7 +247,7 @@ void main() {
       expect(
           json.decode(FakeMatrixApi
               .calledEndpoints[
-                  '/client/r0/rooms/!1234%3AfakeServer.notExisting/invite']
+                  '/client/v3/rooms/!1234%3AfakeServer.notExisting/invite']
               ?.first),
           {
             'user_id': '@baduser:example.org',
@@ -279,7 +279,7 @@ void main() {
       await room.sendTextEvent('/dm @alice:example.com --no-encryption');
       expect(
           json.decode(
-              FakeMatrixApi.calledEndpoints['/client/r0/createRoom']?.first),
+              FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first),
           {
             'invite': ['@alice:example.com'],
             'is_direct': true,
@@ -292,7 +292,7 @@ void main() {
       await room.sendTextEvent('/create @alice:example.com --no-encryption');
       expect(
           json.decode(
-              FakeMatrixApi.calledEndpoints['/client/r0/createRoom']?.first),
+              FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.first),
           {'preset': 'private_chat'});
     });
 

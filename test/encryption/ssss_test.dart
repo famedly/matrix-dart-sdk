@@ -113,7 +113,7 @@ void main() {
       // account_data for this test
       final content = FakeMatrixApi
           .calledEndpoints[
-              '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/best%20animal']!
+              '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/best%20animal']!
           .first;
       client.accountData['best animal'] = BasicEvent.fromJson({
         'type': 'best animal',
@@ -206,7 +206,7 @@ void main() {
       await client.encryption!.ssss.request('some.type', [key]);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           true);
     });
 
@@ -226,7 +226,7 @@ void main() {
       await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           true);
 
       // now test some fail scenarios
@@ -246,7 +246,7 @@ void main() {
       await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           false);
 
       // secret not cached
@@ -264,7 +264,7 @@ void main() {
       await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           false);
 
       // is a cancelation
@@ -282,7 +282,7 @@ void main() {
       await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           false);
 
       // device not verified
@@ -305,7 +305,7 @@ void main() {
       await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
           FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/r0/sendToDevice/m.room.encrypted')),
+              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
           false);
       key.setDirectVerified(true);
     });

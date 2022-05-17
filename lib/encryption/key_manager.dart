@@ -631,7 +631,7 @@ class KeyManager {
   Future<void> loadSingleKey(String roomId, String sessionId) async {
     final info = await getRoomKeysBackupInfo();
     final ret =
-        await client.getRoomKeysBySessionId(roomId, sessionId, info.version);
+        await client.getRoomKeyBySessionId(roomId, sessionId, info.version);
     final keys = RoomKeys.fromJson({
       'rooms': {
         roomId: {
