@@ -504,6 +504,7 @@ class Timeline {
             final relationshipEventId = events[index].relationshipEventId;
             if (relationshipEventId != null) {
               onChange?.call(_findEvent(event_id: relationshipEventId));
+              return;
             }
           }
 
