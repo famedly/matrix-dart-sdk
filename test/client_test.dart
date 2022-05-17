@@ -121,7 +121,7 @@ void main() {
       }
       expect(sync.nextBatch == matrix.prevBatch, true);
 
-      expect(matrix.accountData.length, 9);
+      expect(matrix.accountData.length, 10);
       expect(matrix.getDirectChatFromUserId('@bob:example.com'),
           '!726s6s6q:example.com');
       expect(matrix.rooms[1].directChatMatrixID, '@bob:example.com');
@@ -153,7 +153,7 @@ void main() {
       expect(matrix.presences['@alice:example.com']?.presence,
           PresenceType.online);
       expect(presenceCounter, 1);
-      expect(accountDataCounter, 9);
+      expect(accountDataCounter, 10);
       await Future.delayed(Duration(milliseconds: 50));
       expect(matrix.userDeviceKeys.length, 4);
       expect(matrix.userDeviceKeys['@alice:example.com']?.outdated, false);
@@ -205,6 +205,18 @@ void main() {
           matrix.getRoomByAlias(
               "#famedlyContactDiscovery:${matrix.userID!.split(":")[1]}"),
           null);
+    });
+
+    test('recentEmoji', () async {
+      final emojis = matrix.recentEmojis;
+
+      expect(emojis.length, 2);
+
+      expect(emojis['👍️'], 1);
+      expect(emojis['🖇️'], 0);
+
+      await matrix.addRecentEmoji('🦙');
+      // To check if the emoji is properly added, we need to wait for a sync roundtrip
     });
 
     test('Logout', () async {
@@ -320,15 +332,6 @@ void main() {
     test('setAvatar', () async {
       final testFile = MatrixFile(bytes: Uint8List(0), name: 'file.jpeg');
       await matrix.setAvatar(testFile);
-    });
-
-    test('recentEmoji', () async {
-      final client = await getClient();
-      final emojis = client.recentEmojis;
-      expect(emojis.isEmpty, isTrue);
-
-      await client.addRecentEmoji('🦙');
-      expect(client.recentEmojis['🦙'], 1);
     });
 
     test('setMuteAllPushNotifications', () async {
