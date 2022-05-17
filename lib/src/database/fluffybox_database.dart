@@ -32,6 +32,8 @@ import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 
 /// This database does not support file caching!
+@Deprecated(
+    'Use [HiveCollectionsDatabase] instead. Don\'t forget to properly migrate!')
 class FluffyBoxDatabase extends DatabaseApi {
   static const int version = 6;
   final String name;
@@ -1456,47 +1458,4 @@ class FluffyBoxDatabase extends DatabaseApi {
     if (raw == null) return null;
     return raw;
   }
-}
-
-class TupleKey {
-  final List<String> parts;
-
-  TupleKey(String key1, [String? key2, String? key3])
-      : parts = [
-          key1,
-          if (key2 != null) key2,
-          if (key3 != null) key3,
-        ];
-
-  const TupleKey.byParts(this.parts);
-
-  TupleKey.fromString(String multiKeyString)
-      : parts = multiKeyString.split('|').toList();
-
-  @override
-  String toString() => parts.join('|');
-
-  @override
-  bool operator ==(other) => parts.toString() == other.toString();
-}
-
-dynamic _castValue(dynamic value) {
-  if (value is Map) {
-    return copyMap(value);
-  }
-  if (value is List) {
-    return value.map(_castValue).toList();
-  }
-  return value;
-}
-
-/// The store always gives back an `_InternalLinkedHasMap<dynamic, dynamic>`. This
-/// creates a deep copy of the json and makes sure that the format is always
-/// `Map<String, dynamic>`.
-Map<String, dynamic> copyMap(Map map) {
-  final copy = Map<String, dynamic>.from(map);
-  for (final entry in copy.entries) {
-    copy[entry.key] = _castValue(entry.value);
-  }
-  return copy;
 }

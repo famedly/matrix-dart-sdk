@@ -15,6 +15,7 @@
  *   You should have received a copy of the GNU Affero General Public License
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import 'package:hive/hive.dart';
 import 'package:matrix/matrix.dart';
 import '../test/fake_database.dart';
 import 'test_config.dart';
@@ -32,6 +33,8 @@ void test() async {
   Client? testClientA, testClientB;
 
   try {
+    Hive.init(null);
+
     await olm.init();
     olm.Account();
     Logs().i('[LibOlm] Enabled');
