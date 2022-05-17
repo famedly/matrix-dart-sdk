@@ -1,3 +1,6 @@
+## [0.9.6] - 16th May 2022
+- fix: Ignore invalid entries in `io.element.recent_emoji`
+
 ## [0.9.5] - 13th May 2022
 - fix: Fix deep copy issue in the fragmented timeline feature and restored it
 

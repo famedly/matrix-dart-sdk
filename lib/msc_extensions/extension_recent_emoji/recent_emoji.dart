@@ -22,14 +22,22 @@ extension RecentEmojiExtension on Client {
   ///
   /// There's no corresponding standard or MSC, it's just the reverse-engineered
   /// API from New Vector Ltd.
-  Map<String, int> get recentEmojis => Map.fromEntries(
-        (accountData['io.element.recent_emoji']?.content['recent_emoji']
-                    as List<dynamic>? ??
-                [])
-            .map(
-          (e) => MapEntry(e[0] as String, e[1] as int),
-        ),
-      );
+  Map<String, int> get recentEmojis {
+    final recents = <String, int>{};
+
+    accountData['io.element.recent_emoji']
+        ?.content
+        .tryGetList('recent_emoji')
+        ?.forEach((item) {
+      if (item is List) {
+        if (item.length > 1 && item[0] is String && item[1] is int) {
+          recents[item[0]] = item[1];
+        }
+      }
+    });
+
+    return recents;
+  }
 
   /// +1 the stated emoji in the account data
   Future<void> addRecentEmoji(String emoji) async {
@@ -44,6 +52,7 @@ extension RecentEmojiExtension on Client {
 
   /// sets the raw recent emoji account data. Use [addRecentEmoji] instead
   Future<void> setRecentEmojiData(Map<String, int> data) async {
+    if (userID == null) return;
     final content = List.from(data.entries.map((e) => [e.key, e.value]));
     return setAccountData(
         userID!, 'io.element.recent_emoji', {'recent_emoji': content});

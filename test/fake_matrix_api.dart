@@ -719,6 +719,18 @@ class FakeMatrixApi extends MockClient {
               }
             }
           }
+        },
+        {
+          'type': 'io.element.recent_emoji',
+          'content': {
+            'recent_emoji': [
+              ['👍️', 1],
+              ['🖇️', 0],
+              ['🙃', 'error'],
+              [null, null],
+              [1, '']
+            ]
+          }
         }
       ]
     },
@@ -2194,6 +2206,8 @@ class FakeMatrixApi extends MockClient {
     },
     'PUT': {
       '/client/r0/user/${Uri.encodeComponent('@alice:example.com')}/account_data/io.element.recent_emoji}':
+          (var req) => {},
+      '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/io.element.recent_emoji':
           (var req) => {},
       '/client/r0/user/%40test%3AfakeServer.notExisting/account_data/m.ignored_user_list':
           (var req) => {},
