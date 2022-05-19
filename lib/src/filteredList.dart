@@ -4,9 +4,11 @@ class FilteredList<T> {
   final List<T> filtered = [];
   final List<T> unfiltered;
 
-  final void Function(int i)? onInsert;
+  final void Function(int i)? onInsertCallback;
+  final void Function(int i)? onChangeCallback;
 
-  FilteredList(this.unfiltered, {required this.filter, this.onInsert}) {
+  FilteredList(this.unfiltered,
+      {required this.filter, this.onInsertCallback, this.onChangeCallback}) {
     filtered.addAll(unfiltered.where(filter));
   }
 
@@ -17,7 +19,7 @@ class FilteredList<T> {
     filtered.insertAll(pos, newItems.where(filter));
 
     for (var i = 0; i < newItemsFiltered.length; i++) {
-      onInsert?.call(i + pos);
+      onInsertCallback?.call(i + pos);
     }
   }
 
@@ -29,7 +31,7 @@ class FilteredList<T> {
     filtered.addAll(newItemsFiltered);
 
     for (var i = 0; i < newItemsFiltered.length; i++) {
-      onInsert?.call(i + offset);
+      onInsertCallback?.call(i + offset);
     }
   }
 
@@ -42,7 +44,14 @@ class FilteredList<T> {
     unfiltered.add(newItem);
     if (filter(newItem)) {
       filtered.add(newItem);
-      onInsert?.call(filtered.length - 1);
+      onInsertCallback?.call(filtered.length - 1);
+    }
+  }
+
+  void onChange(T event) {
+    if (filter(event)) {
+      final pos = filtered.indexOf(event);
+      onChangeCallback?.call(pos);
     }
   }
 }

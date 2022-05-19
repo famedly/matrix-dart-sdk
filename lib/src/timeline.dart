@@ -262,7 +262,10 @@ class Timeline {
       this.onNewEvent,
       this.filter,
       required this.chunk}) {
-    eventsList = FilteredList(chunk.events, filter: filter ?? (_) => true);
+    eventsList = FilteredList(chunk.events,
+        filter: filter ?? (_) => true,
+        onInsertCallback: onInsert,
+        onChangeCallback: onChange);
 
     sub = room.client.onEvent.stream.listen(_handleEventUpdate);
 
@@ -314,10 +317,7 @@ class Timeline {
           events[i] = await encryption.decryptRoomEvent(room.id, events[i],
               store: true);
 
-          if (filter?.call(events[i]) ?? true) {
-            final pos = fevents.indexOf(events[i]);
-            onChange?.call(pos);
-          }
+          eventsList.onChange(events[i]);
 
           if (events[i].type != EventTypes.Encrypted) {
             decryptAtLeastOneEvent = true;
@@ -408,7 +408,7 @@ class Timeline {
     eventsSet.add(event);
     if (onChange != null) {
       final index = _findEvent(fevents, event_id: relationshipEventId);
-      onChange?.call(index);
+      eventsList.onChange(events[index]);
     }
   }
 
@@ -476,11 +476,7 @@ class Timeline {
             events[i].status = oldStatus;
           }
           addAggregatedEvent(events[i]);
-
-          if (filter?.call(events[i]) ?? true) {
-            final pos = fevents.indexOf(events[i]);
-            onChange?.call(pos);
-          }
+          eventsList.onChange(events[i]);
         } else {
           final newEvent = Event.fromJson(
             eventUpdate.content,
@@ -513,9 +509,6 @@ class Timeline {
       if (eventUpdate.content['type'] == EventTypes.Redaction) {
         final index =
             _findEvent(events, event_id: eventUpdate.content['redacts']);
-        final filteredIndex =
-            _findEvent(fevents, event_id: eventUpdate.content['redacts']);
-
         if (index < events.length) {
           removeAggregatedEvent(events[index]);
 
@@ -534,7 +527,8 @@ class Timeline {
             eventUpdate.content,
             room,
           ));
-          onChange?.call(filteredIndex);
+
+          eventsList.onChange(events[index]);
         }
       }
 
