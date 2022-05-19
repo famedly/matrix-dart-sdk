@@ -262,6 +262,8 @@ class Timeline {
       this.onNewEvent,
       this.filter,
       required this.chunk}) {
+    eventsList = FilteredList(chunk.events, filter: filter ?? (_) => true);
+
     sub = room.client.onEvent.stream.listen(_handleEventUpdate);
 
     // If the timeline is limited we want to clear our events cache
@@ -273,7 +275,7 @@ class Timeline {
         room.onSessionKeyReceived.stream.listen(_sessionKeyReceived);
 
     // we want to populate our aggregated events
-    for (final e in events) {
+    for (final e in chunk.events) {
       addAggregatedEvent(e);
     }
 
@@ -282,8 +284,6 @@ class Timeline {
       allowNewEvent = false;
       isFragmentedTimeline = true;
     }
-
-    eventsList = FilteredList(fevents, filter: filter ?? (_) => true);
   }
 
   /// Removes all entries from [fevents] which are not in this SyncUpdate.
