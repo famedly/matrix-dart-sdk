@@ -62,7 +62,7 @@ class Timeline {
   /// found, requests from the server. Requested events
   /// are cached.
   Future<Event?> getEventById(String id) async {
-    for (final event in events) {
+    for (final event in uevents) {
       if (event.eventId == id) return event;
     }
     if (_eventCache.containsKey(id)) return _eventCache[id];
@@ -79,8 +79,8 @@ class Timeline {
   bool _collectHistoryUpdates = false;
 
   bool get canRequestHistory {
-    if (events.isEmpty) return true;
-    return events.last.type != EventTypes.RoomCreate;
+    if (uevents.isEmpty) return true;
+    return uevents.last.type != EventTypes.RoomCreate;
   }
 
   Future<void> requestHistory(
@@ -119,7 +119,7 @@ class Timeline {
           ? null
           : await room.client.database?.getEventList(
               room,
-              start: events.length,
+              start: uevents.length,
               limit: Room.defaultHistoryCount,
             );
 
@@ -135,14 +135,14 @@ class Timeline {
         }
 
         if (direction == Direction.b) {
-          events.addAll(eventsFromStore);
+          eventsList.addAll(eventsFromStore);
           final startIndex = events.length - eventsFromStore.length;
           final endIndex = events.length;
           for (var i = startIndex; i < endIndex; i++) {
             onInsert?.call(i);
           }
         } else {
-          events.insertAll(0, eventsFromStore);
+          eventsList.insertAll(0, eventsFromStore);
           final startIndex = eventsFromStore.length;
           final endIndex = 0;
           for (var i = startIndex; i > endIndex; i--) {
@@ -271,7 +271,7 @@ class Timeline {
         room.onSessionKeyReceived.stream.listen(_sessionKeyReceived);
 
     // we want to populate our aggregated events
-    for (final e in events) {
+    for (final e in uevents) {
       addAggregatedEvent(e);
     }
 
@@ -312,7 +312,7 @@ class Timeline {
           uevents[i] = await encryption.decryptRoomEvent(room.id, uevents[i],
               store: true);
 
-          if (filter!(uevents[i])) {
+          if (filter?.call(uevents[i]) ?? true) {
             final pos = events.indexOf(uevents[i]);
             onChange?.call(pos);
           }
@@ -333,7 +333,7 @@ class Timeline {
 
   /// Request the keys for undecryptable events of this timeline
   void requestKeys() {
-    for (final event in events) {
+    for (final event in uevents) {
       if (event.type == EventTypes.Encrypted &&
           event.messageType == MessageTypes.BadEncrypted &&
           event.content['can_request_session'] == true) {
@@ -350,7 +350,7 @@ class Timeline {
   /// Set the read marker to the last synced event in this timeline.
   Future<void> setReadMarker([String? eventId]) async {
     eventId ??=
-        events.firstWhereOrNull((event) => event.status.isSynced)?.eventId;
+        uevents.firstWhereOrNull((event) => event.status.isSynced)?.eventId;
     if (eventId == null) return;
     return room.setReadMarker(eventId, mRead: eventId);
   }
@@ -487,7 +487,7 @@ class Timeline {
           );
 
           if (eventUpdate.type == EventUpdateType.history &&
-              events.indexWhere(
+              uevents.indexWhere(
                       (e) => e.eventId == eventUpdate.content['event_id']) !=
                   -1) return;
           var indexUnFiltered = uevents.length;
