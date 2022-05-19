@@ -31,8 +31,10 @@ import 'models/timeline_chunk.dart';
 
 class Timeline {
   final Room room;
-  List<Event> get events => eventsList.filtered;
-  List<Event> get uevents => eventsList.unfiltered;
+  // filtered event list
+  List<Event> get fevents => eventsList.filtered;
+  // unfiltered event list
+  List<Event> get events => eventsList.unfiltered;
   late FilteredList<Event> eventsList;
 
   /// Map of event ID to map of type to set of aggregated events
@@ -62,7 +64,7 @@ class Timeline {
   /// found, requests from the server. Requested events
   /// are cached.
   Future<Event?> getEventById(String id) async {
-    for (final event in uevents) {
+    for (final event in events) {
       if (event.eventId == id) return event;
     }
     if (_eventCache.containsKey(id)) return _eventCache[id];
@@ -79,8 +81,8 @@ class Timeline {
   bool _collectHistoryUpdates = false;
 
   bool get canRequestHistory {
-    if (uevents.isEmpty) return true;
-    return uevents.last.type != EventTypes.RoomCreate;
+    if (events.isEmpty) return true;
+    return events.last.type != EventTypes.RoomCreate;
   }
 
   Future<void> requestHistory(
@@ -119,13 +121,13 @@ class Timeline {
           ? null
           : await room.client.database?.getEventList(
               room,
-              start: uevents.length,
+              start: events.length,
               limit: Room.defaultHistoryCount,
             );
 
       if (eventsFromStore != null && eventsFromStore.isNotEmpty) {
         // Fetch all users from database we have got here.
-        for (final event in events) {
+        for (final event in fevents) {
           if (room.getState(EventTypes.RoomMember, event.senderId) != null) {
             continue;
           }
@@ -136,8 +138,8 @@ class Timeline {
 
         if (direction == Direction.b) {
           eventsList.addAll(eventsFromStore);
-          final startIndex = events.length - eventsFromStore.length;
-          final endIndex = events.length;
+          final startIndex = fevents.length - eventsFromStore.length;
+          final endIndex = fevents.length;
           for (var i = startIndex; i < endIndex; i++) {
             onInsert?.call(i);
           }
@@ -271,7 +273,7 @@ class Timeline {
         room.onSessionKeyReceived.stream.listen(_sessionKeyReceived);
 
     // we want to populate our aggregated events
-    for (final e in uevents) {
+    for (final e in events) {
       addAggregatedEvent(e);
     }
 
@@ -281,10 +283,10 @@ class Timeline {
       isFragmentedTimeline = true;
     }
 
-    eventsList = FilteredList(events, filter: filter ?? (_) => true);
+    eventsList = FilteredList(fevents, filter: filter ?? (_) => true);
   }
 
-  /// Removes all entries from [events] which are not in this SyncUpdate.
+  /// Removes all entries from [fevents] which are not in this SyncUpdate.
   void _removeEventsNotInThisSync(SyncUpdate sync) {
     final newSyncEvents = sync.rooms?.join?[room.id]?.timeline?.events ?? [];
     final keepEventIds = newSyncEvents.map((e) => e.eventId);
@@ -305,19 +307,19 @@ class Timeline {
       if (!room.client.encryptionEnabled || encryption == null) {
         return;
       }
-      for (var i = 0; i < uevents.length; i++) {
-        if (uevents[i].type == EventTypes.Encrypted &&
-            uevents[i].messageType == MessageTypes.BadEncrypted &&
-            uevents[i].content['session_id'] == sessionId) {
-          uevents[i] = await encryption.decryptRoomEvent(room.id, uevents[i],
+      for (var i = 0; i < events.length; i++) {
+        if (events[i].type == EventTypes.Encrypted &&
+            events[i].messageType == MessageTypes.BadEncrypted &&
+            events[i].content['session_id'] == sessionId) {
+          events[i] = await encryption.decryptRoomEvent(room.id, events[i],
               store: true);
 
-          if (filter?.call(uevents[i]) ?? true) {
-            final pos = events.indexOf(uevents[i]);
+          if (filter?.call(events[i]) ?? true) {
+            final pos = fevents.indexOf(events[i]);
             onChange?.call(pos);
           }
 
-          if (uevents[i].type != EventTypes.Encrypted) {
+          if (events[i].type != EventTypes.Encrypted) {
             decryptAtLeastOneEvent = true;
           }
         }
@@ -333,7 +335,7 @@ class Timeline {
 
   /// Request the keys for undecryptable events of this timeline
   void requestKeys() {
-    for (final event in uevents) {
+    for (final event in events) {
       if (event.type == EventTypes.Encrypted &&
           event.messageType == MessageTypes.BadEncrypted &&
           event.content['can_request_session'] == true) {
@@ -350,7 +352,7 @@ class Timeline {
   /// Set the read marker to the last synced event in this timeline.
   Future<void> setReadMarker([String? eventId]) async {
     eventId ??=
-        uevents.firstWhereOrNull((event) => event.status.isSynced)?.eventId;
+        events.firstWhereOrNull((event) => event.status.isSynced)?.eventId;
     if (eventId == null) return;
     return room.setReadMarker(eventId, mRead: eventId);
   }
@@ -405,7 +407,7 @@ class Timeline {
     // add the new one
     eventsSet.add(event);
     if (onChange != null) {
-      final index = _findEvent(events, event_id: relationshipEventId);
+      final index = _findEvent(fevents, event_id: relationshipEventId);
       onChange?.call(index);
     }
   }
@@ -444,14 +446,13 @@ class Timeline {
           EventStatus.synced.intValue);
 
       if (status.isRemoved) {
-        final i =
-            _findEvent(uevents, event_id: eventUpdate.content['event_id']);
-        if (i < uevents.length) {
-          final event = uevents[i];
+        final i = _findEvent(events, event_id: eventUpdate.content['event_id']);
+        if (i < events.length) {
+          final event = events[i];
           removeAggregatedEvent(event);
           if (filter?.call(event) ?? true) {
-            final pos = events.indexOf(event);
-            events.removeAt(pos);
+            final pos = fevents.indexOf(event);
+            fevents.removeAt(pos);
             onRemove?.call(pos);
           }
         }
@@ -462,22 +463,22 @@ class Timeline {
                 ? eventUpdate.content['unsigned']['transaction_id']
                 : null);
 
-        if (i < uevents.length) {
+        if (i < events.length) {
           // if the old status is larger than the new one, we also want to preserve the old status
-          final oldStatus = uevents[i].status;
-          uevents[i] = Event.fromJson(
+          final oldStatus = events[i].status;
+          events[i] = Event.fromJson(
             eventUpdate.content,
             room,
           );
           // do we preserve the status? we should allow 0 -> -1 updates and status increases
           if ((latestEventStatus(status, oldStatus) == oldStatus) &&
               !(status.isError && oldStatus.isSending)) {
-            uevents[i].status = oldStatus;
+            events[i].status = oldStatus;
           }
-          addAggregatedEvent(uevents[i]);
+          addAggregatedEvent(events[i]);
 
-          if (filter?.call(uevents[i]) ?? true) {
-            final pos = events.indexOf(uevents[i]);
+          if (filter?.call(events[i]) ?? true) {
+            final pos = fevents.indexOf(events[i]);
             onChange?.call(pos);
           }
         } else {
@@ -487,19 +488,19 @@ class Timeline {
           );
 
           if (eventUpdate.type == EventUpdateType.history &&
-              uevents.indexWhere(
+              events.indexWhere(
                       (e) => e.eventId == eventUpdate.content['event_id']) !=
                   -1) return;
-          var indexUnFiltered = uevents.length;
+          var indexUnFiltered = events.length;
           if (eventUpdate.type == EventUpdateType.history) {
             eventsList.add(newEvent);
           } else {
-            indexUnFiltered = uevents.firstIndexWhereNotError;
-            uevents.insert(indexUnFiltered, newEvent);
+            indexUnFiltered = events.firstIndexWhereNotError;
+            events.insert(indexUnFiltered, newEvent);
 
             if (filter?.call(newEvent) ?? true) {
-              final indexFiltered = events.firstIndexWhereNotError;
-              events.insert(indexFiltered, newEvent);
+              final indexFiltered = fevents.firstIndexWhereNotError;
+              fevents.insert(indexFiltered, newEvent);
               onInsert?.call(indexFiltered);
             }
           }
@@ -511,24 +512,25 @@ class Timeline {
       // Handle redaction events
       if (eventUpdate.content['type'] == EventTypes.Redaction) {
         final index =
-            _findEvent(uevents, event_id: eventUpdate.content['redacts']);
-        final filteredIndex =
             _findEvent(events, event_id: eventUpdate.content['redacts']);
+        final filteredIndex =
+            _findEvent(fevents, event_id: eventUpdate.content['redacts']);
 
-        if (index < uevents.length) {
-          removeAggregatedEvent(uevents[index]);
+        if (index < events.length) {
+          removeAggregatedEvent(events[index]);
 
           // Is the redacted event a reaction? Then update the event this
           // belongs to:
           if (onChange != null) {
-            final relationshipEventId = uevents[index].relationshipEventId;
+            final relationshipEventId = events[index].relationshipEventId;
             if (relationshipEventId != null) {
-              onChange?.call(_findEvent(events, event_id: relationshipEventId));
+              onChange
+                  ?.call(_findEvent(fevents, event_id: relationshipEventId));
               return;
             }
           }
 
-          uevents[index].setRedactionEvent(Event.fromJson(
+          events[index].setRedactionEvent(Event.fromJson(
             eventUpdate.content,
             room,
           ));
