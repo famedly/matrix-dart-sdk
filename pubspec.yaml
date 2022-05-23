@@ -19,7 +19,7 @@ dependencies:
   base58check: ^2.0.0
   olm: ^2.0.0
   matrix_api_lite: ^1.0.0
-  hive: ^2.0.4
+  hive: ^2.2.1
   image: ^3.1.1
   ffi: ^1.0.0
   js: ^0.6.3

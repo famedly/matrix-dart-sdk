@@ -23,15 +23,33 @@ import 'package:matrix/matrix.dart';
 import 'package:file/memory.dart';
 import 'package:hive/hive.dart';
 
-Future<DatabaseApi> getDatabase(Client? _) => getHiveDatabase(_);
+Future<DatabaseApi> getDatabase(Client? _) => getHiveCollectionsDatabase(_);
 
 bool hiveInitialized = false;
 
+Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
+  final fileSystem = MemoryFileSystem();
+  final testHivePath =
+      '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
+  if (!hiveInitialized) {
+    Directory(testHivePath).createSync(recursive: true);
+    Hive.init(testHivePath);
+  }
+  final db = HiveCollectionsDatabase(
+    'unit_test.${c?.hashCode}',
+    testHivePath,
+  );
+  await db.open();
+  return db;
+}
+
+// ignore: deprecated_member_use_from_same_package
 Future<FluffyBoxDatabase> getFluffyBoxDatabase(Client? c) async {
   final fileSystem = MemoryFileSystem();
   final testHivePath =
       '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
   Directory(testHivePath).createSync(recursive: true);
+  // ignore: deprecated_member_use_from_same_package
   final db = FluffyBoxDatabase(
     'unit_test.${c?.hashCode}',
     testHivePath,
@@ -40,6 +58,7 @@ Future<FluffyBoxDatabase> getFluffyBoxDatabase(Client? c) async {
   return db;
 }
 
+// ignore: deprecated_member_use_from_same_package
 Future<FamedlySdkHiveDatabase> getHiveDatabase(Client? c) async {
   if (!hiveInitialized) {
     final fileSystem = MemoryFileSystem();
@@ -49,6 +68,7 @@ Future<FamedlySdkHiveDatabase> getHiveDatabase(Client? c) async {
     Hive.init(testHivePath);
     hiveInitialized = true;
   }
+  // ignore: deprecated_member_use_from_same_package
   final db = FamedlySdkHiveDatabase('unit_test.${c?.hashCode}');
   await db.open();
   return db;
