@@ -519,14 +519,13 @@ class Client extends MatrixApi {
   /// including all persistent data from the store.
   @override
   Future<void> logoutAll() async {
-    try {
-      await super.logoutAll();
-    } catch (e, s) {
+    final futures = <Future>[];
+    futures.add(super.logoutAll());
+    futures.add(clear());
+    await Future.wait(futures).catchError((e, s) {
       Logs().e('Logout all failed', e, s);
-      rethrow;
-    } finally {
-      await clear();
-    }
+      throw e;
+    });
   }
 
   /// Run any request and react on user interactive authentication flows here.
