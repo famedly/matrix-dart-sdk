@@ -1,3 +1,11 @@
+## [0.9.7] - 23rd May 2022
+- ci: use flutter images to install less (Nicolas Werner)
+- feat: implement session export (Lanna Michalke)
+- feat: support HiveCollections as Database provider (Lanna Michalke)
+- fix: buggy e2e test (Lanna Michalke)
+- fix: delete reaction (Reza)
+- refactor: Migrate to Matrix Api Lite 1.0.0 (Krille Fear)
+
 ## [0.9.6] - 16th May 2022
 - fix: Ignore invalid entries in `io.element.recent_emoji`
 
