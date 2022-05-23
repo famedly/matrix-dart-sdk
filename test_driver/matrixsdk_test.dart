@@ -130,6 +130,10 @@ void test() async {
         .deviceKeys[testClientA.deviceID!]!.verified);
     assert(!testClientB.userDeviceKeys[TestUser.username]!
         .deviceKeys[testClientA.deviceID!]!.blocked);
+    await Future.wait([
+      testClientA.updateUserDeviceKeys(),
+      testClientB.updateUserDeviceKeys(),
+    ]);
     await testClientA
         .userDeviceKeys[TestUser.username2]!.deviceKeys[testClientB.deviceID!]!
         .setVerified(true);

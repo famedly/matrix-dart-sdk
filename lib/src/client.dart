@@ -519,14 +519,13 @@ class Client extends MatrixApi {
   /// including all persistent data from the store.
   @override
   Future<void> logoutAll() async {
-    try {
-      await super.logoutAll();
-    } catch (e, s) {
+    final futures = <Future>[];
+    futures.add(super.logoutAll());
+    futures.add(clear());
+    await Future.wait(futures).catchError((e, s) {
       Logs().e('Logout all failed', e, s);
-      rethrow;
-    } finally {
-      await clear();
-    }
+      throw e;
+    });
   }
 
   /// Run any request and react on user interactive authentication flows here.
@@ -813,6 +812,55 @@ class Client extends MatrixApi {
     if (typing && room != null && encryptionEnabled && room.encrypted) {
       // ignore: unawaited_futures
       encryption?.keyManager.prepareOutboundGroupSession(roomId);
+    }
+  }
+
+  /// dumps the local database and exports it into a String.
+  ///
+  /// WARNING: never re-import the dump twice
+  ///
+  /// This can be useful to migrate a session from one device to a future one.
+  Future<String?> exportDump() async {
+    if (database != null) {
+      await abortSync();
+      await dispose(closeDatabase: false);
+
+      final export = await database!.exportDump();
+
+      await clear();
+      return export;
+    }
+    return null;
+  }
+
+  /// imports a dumped session
+  ///
+  /// WARNING: never re-import the dump twice
+  Future<bool> importDump(String export) async {
+    try {
+      // stopping sync loop and subscriptions while keeping DB open
+      await dispose(closeDatabase: false);
+    } finally {
+      _database ??= await databaseBuilder!.call(this);
+
+      final success = await database!.importDump(export);
+
+      if (success) {
+        // closing including DB
+        await dispose();
+
+        try {
+          bearerToken = null;
+
+          await init(
+            waitForFirstSync: false,
+            waitUntilLoadCompletedLoaded: false,
+          );
+        } catch (e) {
+          return false;
+        }
+      }
+      return success;
     }
   }
 
