@@ -44,7 +44,7 @@ class RoomList {
         client.onSync.stream.where((up) => up.rooms != null).listen(_onSync);
   }
 
-  bool syncContainRooms(SyncUpdate update, Room room) {
+  bool _syncContainRooms(SyncUpdate update, Room room) {
     if (update.rooms == null) return false;
 
     if ((update.rooms?.invite?.keys.contains(room.id) ?? false) ||
@@ -74,7 +74,7 @@ class RoomList {
       }
     }
 
-    seeIfRoomChanged(sync: sync, list: _roomsIds, newList: newRooms);
+    _seeIfRoomChanged(sync: sync, list: _roomsIds, newList: newRooms);
 
     // then when the list is equal, we can check which events where modified
     for (var i = 0; i < newRooms.length; i++) {
@@ -102,7 +102,7 @@ class RoomList {
     onUpdate?.call();
   }
 
-  void seeIfRoomChanged(
+  void _seeIfRoomChanged(
       {required SyncUpdate sync,
       required List<Room> list,
       required List<Room> newList}) {
@@ -173,7 +173,7 @@ class RoomList {
           modif++;
         }
       } else {
-        if (syncContainRooms(sync, newList[i])) {
+        if (_syncContainRooms(sync, newList[i])) {
           onChange?.call(i);
         }
         i++;
