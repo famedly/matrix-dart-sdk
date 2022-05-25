@@ -33,7 +33,7 @@ class RoomList {
 
   RoomList(this.client,
       {this.onUpdate, this.onRemove, this.onChange, this.onInsert})
-      : _roomsIds = client.rooms {
+      : _roomsIds = client.rooms.toList() {
     _onSyncSub =
         client.onSync.stream.where((up) => up.rooms != null).listen(_onSync);
   }
