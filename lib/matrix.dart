@@ -34,6 +34,7 @@ export 'src/voip_content.dart';
 export 'src/room.dart';
 export 'src/timeline.dart';
 export 'src/user.dart';
+export 'src/room_list.dart';
 export 'src/utils/commands_extension.dart';
 export 'src/utils/crypto/encrypted_file.dart';
 export 'src/utils/device_keys_list.dart';

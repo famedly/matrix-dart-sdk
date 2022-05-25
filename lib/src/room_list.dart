@@ -24,7 +24,6 @@ class RoomList {
   final Client client;
   final void Function()? onUpdate;
   final void Function(int index)? onChange;
-  final void Function(int oldPos, int newPos)? onPosChanged;
   final void Function(int index)? onInsert;
   final void Function(int index)? onRemove;
 
@@ -33,11 +32,7 @@ class RoomList {
   late List<Room> _roomsIds;
 
   RoomList(this.client,
-      {this.onUpdate,
-      this.onRemove,
-      this.onChange,
-      this.onPosChanged,
-      this.onInsert})
+      {this.onUpdate, this.onRemove, this.onChange, this.onInsert})
       : _roomsIds = client.rooms {
     _onSyncSub =
         client.onSync.stream.where((up) => up.rooms != null).listen(_onSync);
@@ -74,30 +69,6 @@ class RoomList {
     }
 
     _seeIfRoomChanged(sync: sync, list: _roomsIds, newList: newRooms);
-
-    // then when the list is equal, we can check which events where modified
-    for (var i = 0; i < newRooms.length; i++) {
-      final room = newRooms[i];
-      {
-        final newPos = newRooms.indexOf(room);
-        if (newPos != i) {
-          /// position was updated
-          _roomsIds.removeAt(i);
-          _roomsIds.insert(newPos, room);
-
-          onPosChanged?.call(i, newPos);
-
-          // If we added the new element later, we need to stay at the same place
-          if (i < newPos) {
-            i--;
-          }
-        } else {
-          // item could have been updated
-
-        }
-      }
-    }
-
     onUpdate?.call();
   }
 
@@ -149,9 +120,10 @@ class RoomList {
           // A
           final element = list[pos];
           list.removeAt(pos);
-          list.insert(i, element);
+          onRemove?.call(pos);
 
-          onPosChanged?.call(pos, i);
+          list.insert(i, element);
+          onInsert?.call(i);
 
           if (i > pos) {
             // never happens
@@ -162,8 +134,10 @@ class RoomList {
           // B
           final element = list[i];
           list.removeAt(i);
+          onRemove?.call(i);
+
           list.insert(pos_inversed, element);
-          onPosChanged?.call(i, pos_inversed);
+          onInsert?.call(pos_inversed);
 
           if (i > pos_inversed) {
             // never happens
