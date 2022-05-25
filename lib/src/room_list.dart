@@ -31,7 +31,6 @@ class RoomList {
   StreamSubscription<SyncUpdate>? _onSyncSub;
 
   late List<Room> _roomsIds;
-  late List<String> roomStates;
 
   RoomList(this.client,
       {this.onUpdate,
