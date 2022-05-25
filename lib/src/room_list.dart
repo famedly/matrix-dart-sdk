@@ -74,6 +74,8 @@ class RoomList {
       }
     }
 
+    seeIfRoomChanged(sync: sync, list: _roomsIds, newList: newRooms);
+
     // then when the list is equal, we can check which events where modified
     for (var i = 0; i < newRooms.length; i++) {
       final room = newRooms[i];
@@ -92,14 +94,98 @@ class RoomList {
           }
         } else {
           // item could have been updated
-          if (syncContainRooms(sync, room)) {
-            onChange?.call(i);
-          }
+
         }
       }
     }
 
     onUpdate?.call();
+  }
+
+  void seeIfRoomChanged(
+      {required SyncUpdate sync,
+      required List<Room> list,
+      required List<Room> newList}) {
+    final n = list.length;
+    final modifications = List.filled(list.length, 0);
+
+    var i = 0;
+    while (i < n) {
+      final pos = list.indexOf(newList[i]);
+
+      var index = 1;
+      while (pos + index < n &&
+          i + index < n &&
+          list[pos + index] == newList[i + index]) {
+        index++;
+      }
+
+      for (var j = 0; j < index; j++) {
+        modifications[i + j] = index;
+      }
+      i += index;
+    }
+
+    // apply modifications
+
+    // if there is too much isolated elements, the B algorithm is sub optimal as
+    // stuck in long-running loops.
+    // TODO: see why exactly what is the lower limit.
+    var sum = 0;
+    modifications.forEach((element) {
+      sum += element;
+    });
+    sum -= n;
+
+    final disableB = sum < n;
+
+    var modif = 0;
+    i = 0;
+    while (i < list.length) {
+      if (list[i] != newList[i]) {
+        final pos = list.indexOf(newList[i]);
+        final pos_inversed = newList.indexOf(list[i]);
+
+        if (disableB || modifications[i] <= modifications[pos_inversed]) {
+          // A
+          final element = list[pos];
+          list.removeAt(pos);
+          list.insert(i, element);
+
+          onPosChanged?.call(pos, i);
+
+          if (i > pos) {
+            // never happens
+            i++;
+          }
+          modif++;
+        } else {
+          // B
+          final element = list[i];
+          list.removeAt(i);
+          list.insert(pos_inversed, element);
+          onPosChanged?.call(i, pos_inversed);
+
+          if (i > pos_inversed) {
+            // never happens
+            i++;
+          }
+          modif++;
+        }
+      } else {
+        if (syncContainRooms(sync, newList[i])) {
+          onChange?.call(i);
+        }
+        i++;
+      }
+
+      if (modif > 2 * n) {
+        // TODO: here we hit an error, we should rerender all the list
+        _roomsIds = client.rooms;
+        onUpdate?.call();
+        break;
+      }
+    }
   }
 
   void dispose() => _onSyncSub?.cancel();
