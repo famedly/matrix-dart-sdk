@@ -523,6 +523,81 @@ class Timeline {
       Logs().w('Handle event update failed', e, s);
     }
   }
+
+  /// Searches [searchTerm] in this timeline. It first searches in the
+  /// cache, then in the database and then on the server. The search can
+  /// take a while, which is why this returns a stream so the already found
+  /// events can already be displayed.
+  /// Override the [searchFunc] if you need another search. This will then
+  /// ignore [searchTerm].
+  Stream<List<Event>> searchEvent({
+    String? searchTerm,
+    int requestHistoryCount = 100,
+    int maxHistoryRequests = 10,
+    bool Function(Event)? searchFunc,
+  }) async* {
+    assert(searchTerm != null || searchFunc != null);
+    searchFunc ??= (event) =>
+        event.body.toLowerCase().contains(searchTerm?.toLowerCase() ?? '');
+    final found = <Event>[];
+    // Search locally
+    for (final event in events) {
+      if (searchFunc(event)) {
+        yield found..add(event);
+      }
+    }
+
+    // Search in database
+    var start = events.length;
+    while (true) {
+      final eventsFromStore = await room.client.database?.getEventList(
+            room,
+            start: start,
+            limit: requestHistoryCount,
+          ) ??
+          [];
+      if (eventsFromStore.isEmpty) break;
+      start += eventsFromStore.length;
+      for (final event in events) {
+        if (searchFunc(event)) {
+          yield found..add(event);
+        }
+      }
+    }
+
+    // Search on the server
+    var prevBatch = room.prev_batch;
+    final encryption = room.client.encryption;
+    for (var i = 0; i < maxHistoryRequests; i++) {
+      if (prevBatch == null) break;
+      try {
+        final resp = await room.client.getRoomEvents(
+          room.id,
+          prevBatch,
+          Direction.b,
+          limit: requestHistoryCount,
+          filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
+        );
+        for (final matrixEvent in resp.chunk) {
+          var event = Event.fromMatrixEvent(matrixEvent, room);
+          if (event.type == EventTypes.Encrypted && encryption != null) {
+            event = await encryption.decryptRoomEvent(room.id, event);
+          }
+          if (searchFunc(event)) {
+            yield found..add(event);
+          }
+        }
+        prevBatch = resp.end;
+      } on MatrixException catch (e) {
+        // We have no permission anymore to request the history
+        if (e.error == MatrixError.M_FORBIDDEN) {
+          break;
+        }
+        rethrow;
+      }
+    }
+    return;
+  }
 }
 
 extension on List<Event> {
