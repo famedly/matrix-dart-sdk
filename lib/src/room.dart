@@ -519,6 +519,12 @@ class Room {
   /// in muted rooms, use [hasNewMessages].
   bool get isUnread => notificationCount > 0 || markedUnread;
 
+  /// Wait for the room to appear in join, leave or invited section of the
+  /// sync.
+  Future<SyncUpdate> get waitForSync async {
+    return await client.waitForRoomInSync(id);
+  }
+
   /// Sets an unread flag manually for this room. This changes the local account
   /// data model before syncing it to make sure
   /// this works if there is no connection to the homeserver. This does **not**

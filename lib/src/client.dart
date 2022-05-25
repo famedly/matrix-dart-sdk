@@ -587,8 +587,7 @@ class Client extends MatrixApi {
 
     if (waitForSync && getRoomById(roomId) == null) {
       // Wait for room actually appears in sync
-      await onSync.stream
-          .firstWhere((sync) => sync.rooms?.join?.containsKey(roomId) ?? false);
+      await waitForRoomInSync(roomId, join: true);
     }
 
     await Room(id: roomId, client: this).addToDirectChat(mxid);
@@ -632,11 +631,27 @@ class Client extends MatrixApi {
     if (waitForSync) {
       if (getRoomById(roomId) == null) {
         // Wait for room actually appears in sync
-        await onSync.stream.firstWhere(
-            (sync) => sync.rooms?.join?.containsKey(roomId) ?? false);
+        await waitForRoomInSync(roomId, join: true);
       }
     }
     return roomId;
+  }
+
+  /// Wait for the room to appear into the enabled section of the room sync.
+  /// By default, the function will listen for room in invite, join and leave
+  /// sections of the sync.
+  Future<SyncUpdate> waitForRoomInSync(String roomId,
+      {bool join = false, bool invite = false, bool leave = false}) async {
+    if (!join && !invite && !leave) {
+      join = true;
+      invite = true;
+      leave = true;
+    }
+
+    return await onSync.stream.firstWhere((sync) =>
+        invite && (sync.rooms?.invite?.containsKey(roomId) ?? false) ||
+        join && (sync.rooms?.join?.containsKey(roomId) ?? false) ||
+        leave && (sync.rooms?.leave?.containsKey(roomId) ?? false));
   }
 
   /// Checks if the given user has encryption keys. May query keys from the
@@ -657,26 +672,33 @@ class Client extends MatrixApi {
   /// room as a space with `room.toSpace()`.
   ///
   /// https://github.com/matrix-org/matrix-doc/blob/matthew/msc1772/proposals/1772-groups-as-rooms.md
-  Future<String> createSpace({
-    String? name,
-    String? topic,
-    Visibility visibility = Visibility.public,
-    String? spaceAliasName,
-    List<String>? invite,
-    List<Invite3pid>? invite3pid,
-    String? roomVersion,
-  }) =>
-      createRoom(
-        name: name,
-        topic: topic,
-        visibility: visibility,
-        roomAliasName: spaceAliasName,
-        creationContent: {'type': 'm.space'},
-        powerLevelContentOverride: {'events_default': 100},
-        invite: invite,
-        invite3pid: invite3pid,
-        roomVersion: roomVersion,
-      );
+  Future<String> createSpace(
+      {String? name,
+      String? topic,
+      Visibility visibility = Visibility.public,
+      String? spaceAliasName,
+      List<String>? invite,
+      List<Invite3pid>? invite3pid,
+      String? roomVersion,
+      bool waitForSync = false}) async {
+    final id = await createRoom(
+      name: name,
+      topic: topic,
+      visibility: visibility,
+      roomAliasName: spaceAliasName,
+      creationContent: {'type': 'm.space'},
+      powerLevelContentOverride: {'events_default': 100},
+      invite: invite,
+      invite3pid: invite3pid,
+      roomVersion: roomVersion,
+    );
+
+    if (waitForSync) {
+      await waitForRoomInSync(id, join: true);
+    }
+
+    return id;
+  }
 
   /// Returns the user's own displayname and avatar url. In Matrix it is possible that
   /// one user can have different displaynames and avatar urls in different rooms. So
