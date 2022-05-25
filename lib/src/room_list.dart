@@ -30,7 +30,7 @@ class RoomList {
 
   StreamSubscription<SyncUpdate>? _onSyncSub;
 
-  late List<String> _roomsIds;
+  late List<Room> _roomsIds;
   late List<String> roomStates;
 
   RoomList(this.client,
@@ -38,14 +38,10 @@ class RoomList {
       this.onRemove,
       this.onChange,
       this.onPosChanged,
-      this.onInsert}) {
-    _updateRoomList();
-
+      this.onInsert})
+      : _roomsIds = client.rooms {
     _onSyncSub =
         client.onSync.stream.where((up) => up.rooms != null).listen(_onSync);
-  }
-  void _updateRoomList() {
-    _roomsIds = rooms.map((e) => e.id).toList();
   }
 
   bool syncContainRooms(Map<String, SyncRoomUpdate>? update) {
@@ -59,34 +55,44 @@ class RoomList {
 
   void _onSync(SyncUpdate sync) {
     // first we trigger instertion and deletion
+    final newRooms = client.rooms.toList();
 
-    for (var i = 0; i < client.rooms.length; i++) {
-      
-    }
-    // then when the list is equal, we can check which events where modified
-    for (var i = 0; i < client.rooms.length; i++) {
-      final room = client.rooms[i];
-      if (!_roomsIds.contains(room.id)) {
+    for (var i = 0; i < rooms.length; i++) {
+      final room = newRooms[i];
+      if (!_roomsIds.contains(room)) {
         onInsert?.call(i);
-        _roomsIds.insert(i, room.id);
-      } else {
-        final oldPos = _roomsIds.indexOf(room.id);
+        _roomsIds.insert(i, room);
+      }
+    }
+
+    for (var i = 0; i < _roomsIds.length; i++) {
+      if (!newRooms.contains(_roomsIds[i])) {
+        onRemove?.call(i);
+        _roomsIds.removeAt(i);
+        i--;
+      }
+    }
+
+    // then when the list is equal, we can check which events where modified
+    for (var i = 0; i < newRooms.length; i++) {
+      final room = newRooms[i];
+      {
+        final oldPos = _roomsIds.indexOf(room);
         if (oldPos != i) {
           /// position was updated
           onPosChanged?.call(oldPos, i);
           _roomsIds.removeAt(oldPos);
-          _roomsIds.insert(i, room.id);
+          _roomsIds.insert(i, room);
         } else {
           // item could have been updated
         }
       }
     }
 
-    _updateRoomList();
     onUpdate?.call();
   }
 
   void dispose() => _onSyncSub?.cancel();
 
-  List<Room> get rooms => client.rooms;
+  List<Room> get rooms => _roomsIds;
 }
