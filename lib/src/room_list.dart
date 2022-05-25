@@ -44,12 +44,13 @@ class RoomList {
         client.onSync.stream.where((up) => up.rooms != null).listen(_onSync);
   }
 
-  bool syncContainRooms(Map<String, SyncRoomUpdate>? update) {
-    if (update == null) return false;
+  bool syncContainRooms(SyncUpdate update, Room room) {
+    if (update.rooms == null) return false;
 
-    for (final roomId in _roomsIds) {
-      if (update.keys.contains(roomId)) return true;
-    }
+    if ((update.rooms?.invite?.keys.contains(room.id) ?? false) ||
+        (update.rooms?.join?.keys.contains(room.id) ?? false) ||
+        (update.rooms?.leave?.keys.contains(room.id) ?? false)) return true;
+
     return false;
   }
 
@@ -60,15 +61,15 @@ class RoomList {
     for (var i = 0; i < rooms.length; i++) {
       final room = newRooms[i];
       if (!_roomsIds.contains(room)) {
-        onInsert?.call(i);
         _roomsIds.insert(i, room);
+        onInsert?.call(i);
       }
     }
 
     for (var i = 0; i < _roomsIds.length; i++) {
       if (!newRooms.contains(_roomsIds[i])) {
-        onRemove?.call(i);
         _roomsIds.removeAt(i);
+        onRemove?.call(i);
         i--;
       }
     }
@@ -77,14 +78,23 @@ class RoomList {
     for (var i = 0; i < newRooms.length; i++) {
       final room = newRooms[i];
       {
-        final oldPos = _roomsIds.indexOf(room);
-        if (oldPos != i) {
+        final newPos = newRooms.indexOf(room);
+        if (newPos != i) {
           /// position was updated
-          onPosChanged?.call(oldPos, i);
-          _roomsIds.removeAt(oldPos);
-          _roomsIds.insert(i, room);
+          _roomsIds.removeAt(i);
+          _roomsIds.insert(newPos, room);
+
+          onPosChanged?.call(i, newPos);
+
+          // If we added the new element later, we need to stay at the same place
+          if (i < newPos) {
+            i--;
+          }
         } else {
           // item could have been updated
+          if (syncContainRooms(sync, room)) {
+            onChange?.call(i);
+          }
         }
       }
     }
