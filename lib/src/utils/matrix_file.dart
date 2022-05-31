@@ -98,10 +98,9 @@ class MatrixImageFile extends MatrixFile {
     );
   }
 
-  /// builds a [MatrixImageFile] and shrinks it in order to reduce traffic
-  ///
-  /// in case shrinking does not work (e.g. for unsupported MIME types), the
-  /// initial image is simply preserved
+  /// Builds a [MatrixImageFile] and shrinks it in order to reduce traffic.
+  /// If shrinking does not work (e.g. for unsupported MIME types), the
+  /// initial image is preserved without shrinking it.
   static Future<MatrixImageFile> shrink(
       {required Uint8List bytes,
       required String name,
@@ -112,31 +111,13 @@ class MatrixImageFile extends MatrixFile {
           customImageResizer,
       Future<T> Function<T, U>(FutureOr<T> Function(U arg) function, U arg)?
           compute}) async {
-    final arguments = MatrixImageFileResizeArguments(
-      bytes: bytes,
-      maxDimension: maxDimension,
-      fileName: name,
-      calcBlurhash: true,
-    );
-    final resizedData = customImageResizer != null
-        ? await customImageResizer(arguments)
-        : compute != null
-            ? await compute(_resize, arguments)
-            : _resize(arguments);
+    final image = MatrixImageFile(name: name, mimeType: mimeType, bytes: bytes);
 
-    if (resizedData == null) {
-      return MatrixImageFile(bytes: bytes, name: name, mimeType: mimeType);
-    }
-
-    final thumbnailFile = MatrixImageFile(
-      bytes: resizedData.bytes,
-      name: name,
-      mimeType: mimeType,
-      width: resizedData.width,
-      height: resizedData.height,
-      blurhash: resizedData.blurhash,
-    );
-    return thumbnailFile;
+    return await image.generateThumbnail(
+            dimension: maxDimension,
+            customImageResizer: customImageResizer,
+            compute: compute) ??
+        image;
   }
 
   int? _width;
@@ -150,7 +131,7 @@ class MatrixImageFile extends MatrixFile {
   int? get height => _height;
 
   /// If the image size is null, allow us to update it's value.
-  void setImageSizeIfNull({required int width, required int height}) {
+  void setImageSizeIfNull({required int? width, required int? height}) {
     _width ??= width;
     _height ??= height;
   }
@@ -168,7 +149,8 @@ class MatrixImageFile extends MatrixFile {
         if (blurhash != null) 'xyz.amorgan.blurhash': blurhash,
       });
 
-  /// computes a thumbnail for the image
+  /// Computes a thumbnail for the image.
+  /// Also sets height and width on the original image if they were unset.
   Future<MatrixImageFile?> generateThumbnail(
       {int dimension = Client.defaultThumbnailSize,
       Future<MatrixImageFileResizedResponse?> Function(
@@ -176,19 +158,39 @@ class MatrixImageFile extends MatrixFile {
           customImageResizer,
       Future<T> Function<T, U>(FutureOr<T> Function(U arg) function, U arg)?
           compute}) async {
-    final thumbnailFile = await shrink(
+    final arguments = MatrixImageFileResizeArguments(
       bytes: bytes,
-      name: name,
-      mimeType: mimeType,
-      compute: compute,
       maxDimension: dimension,
-      customImageResizer: customImageResizer,
+      fileName: name,
+      calcBlurhash: true,
     );
-    // the thumbnail should rather return null than the unshrinked image
-    if ((thumbnailFile.width ?? 0) > dimension ||
-        (thumbnailFile.height ?? 0) > dimension) {
+    final resizedData = customImageResizer != null
+        ? await customImageResizer(arguments)
+        : compute != null
+            ? await compute(_resize, arguments)
+            : _resize(arguments);
+
+    if (resizedData == null) {
       return null;
     }
+
+    // we should take the opportinity to update the image dimmension
+    setImageSizeIfNull(
+        width: resizedData.originalWidth, height: resizedData.originalHeight);
+
+    // the thumbnail should rather return null than the unshrinked image
+    if (resizedData.width > dimension || resizedData.height > dimension) {
+      return null;
+    }
+
+    final thumbnailFile = MatrixImageFile(
+      bytes: resizedData.bytes,
+      name: name,
+      mimeType: mimeType,
+      width: resizedData.width,
+      height: resizedData.height,
+      blurhash: resizedData.blurhash,
+    );
     return thumbnailFile;
   }
 
@@ -223,6 +225,8 @@ class MatrixImageFile extends MatrixFile {
       bytes: bytes,
       width: resized.width,
       height: resized.height,
+      originalHeight: image.height,
+      originalWidth: image.width,
       blurhash: arguments.calcBlurhash
           ? BlurHash.encode(
               resized,
@@ -240,10 +244,15 @@ class MatrixImageFileResizedResponse {
   final int height;
   final String? blurhash;
 
+  final int? originalHeight;
+  final int? originalWidth;
+
   const MatrixImageFileResizedResponse({
     required this.bytes,
     required this.width,
     required this.height,
+    this.originalHeight,
+    this.originalWidth,
     this.blurhash,
   });
 }

@@ -22,6 +22,7 @@ import 'package:matrix/matrix.dart';
 
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
+import 'package:http/http.dart' as http;
 
 void main() {
   /// All Tests related to device keys
@@ -43,6 +44,29 @@ void main() {
       if (olmEnabled) {
         final encryptedFile = await file.encrypt();
         expect(encryptedFile.data.isNotEmpty, true);
+      }
+    });
+
+    test('Shrink', () async {
+      final resp = await http.get(Uri.parse(
+          'https://upload.wikimedia.org/wikipedia/commons/5/5f/Salagou_Lake%2C_Celles_cf01.jpg'));
+
+      if (resp.statusCode == 200) {
+        final file = MatrixImageFile(
+          name: 'file.jpg',
+          bytes: resp.bodyBytes,
+        );
+        expect(file.bytes.isNotEmpty, true);
+        expect(file.height, null);
+        expect(file.width, null);
+
+        final thumb = await file.generateThumbnail();
+
+        expect(thumb != null, true);
+
+        // and the image size where updated
+        expect(file.height, 4552);
+        expect(file.width, 7283);
       }
     });
   });
