@@ -1,3 +1,6 @@
+## [0.9.9] - 2nd Jun 2022
+- fix: Added deprecation mention for getUserByMXIDSync.
+
 ## [0.9.8] - 2nd Jun 2022
 - feat: Add search for events in timeline (Krille Fear)
 - feat: Add waitForSync helper (Henri Carnot)
