@@ -362,7 +362,7 @@ void main() {
           }
         }
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Removed by Example');
       expect(event.isEventTypeKnown, true);
 
@@ -429,7 +429,7 @@ void main() {
         'type': 'm.sticker',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example sent a sticker');
       expect(event.isEventTypeKnown, true);
 
@@ -443,7 +443,7 @@ void main() {
         'type': 'm.room.redaction',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example redacted an event');
       expect(event.isEventTypeKnown, true);
 
@@ -459,7 +459,7 @@ void main() {
         'type': 'm.room.aliases',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example changed the room aliases');
       expect(event.isEventTypeKnown, true);
 
@@ -475,7 +475,7 @@ void main() {
         'type': 'm.room.aliases',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example changed the room aliases');
       expect(event.isEventTypeKnown, true);
 
@@ -489,7 +489,7 @@ void main() {
         'type': 'm.room.canonical_alias',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example changed the room invitation link');
       expect(event.isEventTypeKnown, true);
 
@@ -511,7 +511,7 @@ void main() {
         'type': 'm.room.create',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example created the chat');
       expect(event.isEventTypeKnown, true);
 
@@ -528,7 +528,7 @@ void main() {
         'type': 'm.room.tombstone',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Room has been upgraded');
       expect(event.isEventTypeKnown, true);
 
@@ -542,7 +542,7 @@ void main() {
         'type': 'm.room.join_rules',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example changed the join rules to Anyone can join');
       expect(event.isEventTypeKnown, true);
 
@@ -560,7 +560,7 @@ void main() {
         'type': 'm.room.member',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Alice joined the chat');
       expect(event.isEventTypeKnown, true);
 
@@ -573,7 +573,7 @@ void main() {
         'state_key': '@alice:example.org',
         'type': 'm.room.member'
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example has invited Alice');
       expect(event.isEventTypeKnown, true);
 
@@ -589,7 +589,7 @@ void main() {
           'prev_content': {'membership': 'join'},
         }
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example kicked Alice');
       expect(event.isEventTypeKnown, true);
 
@@ -605,7 +605,7 @@ void main() {
           'prev_content': {'membership': 'join'},
         }
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example banned Alice');
       expect(event.isEventTypeKnown, true);
 
@@ -621,7 +621,7 @@ void main() {
           'prev_content': {'membership': 'invite'},
         }
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Alice accepted the invitation');
       expect(event.isEventTypeKnown, true);
 
@@ -637,7 +637,7 @@ void main() {
           'prev_content': {'membership': 'join'},
         }
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example has invited Alice');
       expect(event.isEventTypeKnown, true);
 
@@ -653,7 +653,7 @@ void main() {
           'prev_content': {'membership': 'invite'},
         }
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example has withdrawn the invitation for Alice');
       expect(event.isEventTypeKnown, true);
 
@@ -669,7 +669,7 @@ void main() {
           'prev_content': {'membership': 'invite'},
         }
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Alice rejected the invitation');
       expect(event.isEventTypeKnown, true);
 
@@ -694,7 +694,7 @@ void main() {
         'type': 'm.room.power_levels',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example changed the chat permissions');
       expect(event.isEventTypeKnown, true);
 
@@ -708,7 +708,7 @@ void main() {
         'type': 'm.room.name',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example changed the chat name to The room name');
       expect(event.isEventTypeKnown, true);
 
@@ -722,7 +722,7 @@ void main() {
         'type': 'm.room.topic',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example changed the chat description to A room topic');
       expect(event.isEventTypeKnown, true);
 
@@ -739,7 +739,7 @@ void main() {
         'type': 'm.room.avatar',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example changed the chat avatar');
       expect(event.isEventTypeKnown, true);
 
@@ -753,7 +753,7 @@ void main() {
         'type': 'm.room.history_visibility',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example changed the history visibility to Visible for all participants');
       expect(event.isEventTypeKnown, true);
 
@@ -771,7 +771,7 @@ void main() {
         'type': 'm.room.encryption',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example activated end to end encryption. Need pantalaimon');
       expect(event.isEventTypeKnown, true);
 
@@ -789,7 +789,7 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'This is an example text message');
       expect(event.isEventTypeKnown, true);
 
@@ -807,7 +807,7 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           '* thinks this is an example emote');
       expect(event.isEventTypeKnown, true);
 
@@ -825,7 +825,7 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'This is an example notice');
       expect(event.isEventTypeKnown, true);
 
@@ -843,7 +843,7 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example sent a picture');
       expect(event.isEventTypeKnown, true);
 
@@ -862,7 +862,7 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example sent a file');
       expect(event.isEventTypeKnown, true);
 
@@ -884,7 +884,7 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example sent an audio');
       expect(event.isEventTypeKnown, true);
 
@@ -910,7 +910,7 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example shared the location');
       expect(event.isEventTypeKnown, true);
 
@@ -941,7 +941,7 @@ void main() {
         'type': 'm.room.message',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Example sent a video');
       expect(event.isEventTypeKnown, true);
 
@@ -954,12 +954,12 @@ void main() {
         'type': 'unknown.event.type',
         'unsigned': {'age': 1234}
       }, room);
-      expect(event.getLocalizedBody(MatrixDefaultLocalizations()),
+      expect(await event.getLocalizedBodyAsync(MatrixDefaultLocalizations()),
           'Unknown event unknown.event.type');
       expect(event.isEventTypeKnown, false);
     });
 
-    test('getLocalizedBody, parameters', () {
+    test('getLocalizedBody, parameters', () async {
       final matrix = Client('testclient', httpClient: FakeMatrixApi());
       final room = Room(id: '!1234:example.com', client: matrix);
       var event = Event.fromJson({
@@ -977,7 +977,7 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(
-          event.getLocalizedBody(MatrixDefaultLocalizations(),
+          await event.getLocalizedBodyAsync(MatrixDefaultLocalizations(),
               plaintextBody: true),
           '**This is an example text message**');
 
@@ -1006,10 +1006,11 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(
-          event.getLocalizedBody(MatrixDefaultLocalizations(), hideEdit: true),
+          await event.getLocalizedBodyAsync(MatrixDefaultLocalizations(),
+              hideEdit: true),
           'This is an example text message');
       expect(
-          event.getLocalizedBody(MatrixDefaultLocalizations(),
+          await event.getLocalizedBodyAsync(MatrixDefaultLocalizations(),
               hideEdit: true, plaintextBody: true),
           '**This is an example text message**');
 
@@ -1028,10 +1029,11 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(
-          event.getLocalizedBody(MatrixDefaultLocalizations(), hideReply: true),
+          await event.getLocalizedBodyAsync(MatrixDefaultLocalizations(),
+              hideReply: true),
           'hmm, fox');
       expect(
-          event.getLocalizedBody(MatrixDefaultLocalizations(),
+          await event.getLocalizedBodyAsync(MatrixDefaultLocalizations(),
               hideReply: true, plaintextBody: true),
           'hmm, *fox*');
 
@@ -1052,19 +1054,19 @@ void main() {
         'unsigned': {'age': 1234}
       }, room);
       expect(
-          event.getLocalizedBody(MatrixDefaultLocalizations(),
+          await event.getLocalizedBodyAsync(MatrixDefaultLocalizations(),
               removeMarkdown: true),
           'Title\nsome text and link\nokay and this is important');
       expect(
-          event.getLocalizedBody(MatrixDefaultLocalizations(),
+          await event.getLocalizedBodyAsync(MatrixDefaultLocalizations(),
               removeMarkdown: true, plaintextBody: true),
           'Title\nsome text and 🔗link\nokay and this is important');
       expect(
-          event.getLocalizedBody(MatrixDefaultLocalizations(),
+          await event.getLocalizedBodyAsync(MatrixDefaultLocalizations(),
               removeMarkdown: true, withSenderNamePrefix: true),
           'Example: Title\nsome text and link\nokay and this is important');
       expect(
-          event.getLocalizedBody(MatrixDefaultLocalizations(),
+          await event.getLocalizedBodyAsync(MatrixDefaultLocalizations(),
               removeMarkdown: true,
               plaintextBody: true,
               withSenderNamePrefix: true),

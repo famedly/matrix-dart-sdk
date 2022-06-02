@@ -263,11 +263,13 @@ class Room {
     if (isDirectChat) {
       final user = directChatMatrixID;
       if (user != null) {
-        return getUserByMXIDSync(user).avatarUrl;
+        return unsafeGetUserFromMemoryOrFallback(user).avatarUrl;
       }
     }
     if (membership == Membership.invite) {
-      return getState(EventTypes.RoomMember, client.userID!)?.sender.avatarUrl;
+      return getState(EventTypes.RoomMember, client.userID!)
+          ?.senderFromMemoryOrFallback
+          .avatarUrl;
     }
     return null;
   }
@@ -356,7 +358,10 @@ class Room {
   List<User> get typingUsers {
     final typingMxid = ephemerals['m.typing']?.content['user_ids'];
     return (typingMxid is List)
-        ? typingMxid.cast<String>().map(getUserByMXIDSync).toList()
+        ? typingMxid
+            .cast<String>()
+            .map(unsafeGetUserFromMemoryOrFallback)
+            .toList()
         : [];
   }
 
@@ -401,18 +406,19 @@ class Room {
     if (heroes != null && heroes.isNotEmpty) {
       return heroes
           .where((hero) => hero.isNotEmpty)
-          .map((hero) => getUserByMXIDSync(hero).calcDisplayname())
+          .map((hero) =>
+              unsafeGetUserFromMemoryOrFallback(hero).calcDisplayname())
           .join(', ');
     }
     if (isDirectChat) {
       final user = directChatMatrixID;
       if (user != null) {
-        return getUserByMXIDSync(user).calcDisplayname();
+        return unsafeGetUserFromMemoryOrFallback(user).calcDisplayname();
       }
     }
     if (membership == Membership.invite) {
       final sender = getState(EventTypes.RoomMember, client.userID!)
-          ?.sender
+          ?.senderFromMemoryOrFallback
           .calcDisplayname();
       if (sender != null) return sender;
     }
@@ -1009,7 +1015,7 @@ class Room {
       if (invitation != null &&
           invitation.content['is_direct'] is bool &&
           invitation.content['is_direct']) {
-        await addToDirectChat(invitation.sender.id);
+        await addToDirectChat(invitation.senderId);
       }
     } on MatrixException catch (exception) {
       if (leaveIfNotFound &&
@@ -1410,9 +1416,10 @@ class Room {
         (summary.mJoinedMemberCount ?? 0) + (summary.mInvitedMemberCount ?? 0);
   }
 
-  /// Returns the [User] object for the given [mxID] or requests it from
-  /// the homeserver and returns a default [User] object while waiting.
-  User getUserByMXIDSync(String mxID) {
+  /// Returns the [User] object for the given [mxID] or return
+  /// a fallback [User] and start a request to get the user
+  /// from the homeserver.
+  User unsafeGetUserFromMemoryOrFallback(String mxID) {
     final user = getState(EventTypes.RoomMember, mxID);
     if (user != null) {
       return user.asUser;

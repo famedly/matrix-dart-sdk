@@ -103,7 +103,8 @@ void main() {
       expect(removeList, []);
       expect(timeline.events.length, 2);
       expect(timeline.events[0].eventId, '1');
-      expect(timeline.events[0].sender.id, '@alice:example.com');
+      expect(timeline.events[0].senderFromMemoryOrFallback.id,
+          '@alice:example.com');
       expect(timeline.events[0].originServerTs.millisecondsSinceEpoch,
           testTimeStamp);
       expect(timeline.events[0].body, 'Testcase');

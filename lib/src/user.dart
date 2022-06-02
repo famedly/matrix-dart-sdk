@@ -20,13 +20,11 @@ import '../matrix.dart';
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
 class User extends Event {
-  factory User(
-    String id, {
-    String? membership,
-    String? displayName,
-    String? avatarUrl,
-    required Room room,
-  }) {
+  factory User(String id,
+      {String? membership,
+      String? displayName,
+      String? avatarUrl,
+      required Room room}) {
     return User.fromState(
       stateKey: id,
       content: {

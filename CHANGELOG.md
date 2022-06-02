@@ -1,3 +1,9 @@
+## [0.9.8] - 2nd Jun 2022
+- feat: Add search for events in timeline (Krille Fear)
+- feat: Add waitForSync helper (Henri Carnot)
+- feat: Allow setting image size when generating a thumbnail (Henri Carnot)
+- refactr: Make event.sender async (Henri Carnot) 
+
 ## [0.9.7] - 23rd May 2022
 - ci: use flutter images to install less (Nicolas Werner)
 - feat: implement session export (Lanna Michalke)
