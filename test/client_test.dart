@@ -964,7 +964,7 @@ void main() {
       expect(event?.eventId, '123');
       expect(event?.body, 'Hello world');
       expect(event?.senderId, '@alicyy:example.com');
-      expect(event?.sender.calcDisplayname(), 'AlicE');
+      expect(event?.senderFromMemoryOrFallback.calcDisplayname(), 'AlicE');
       expect(event?.type, 'm.room.message');
       expect(event?.messageType, 'm.text');
       expect(event?.room.id, '!localpart2:server.abc');

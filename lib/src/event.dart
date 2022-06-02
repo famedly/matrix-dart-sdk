@@ -37,7 +37,13 @@ abstract class RelationshipTypes {
 
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
 class Event extends MatrixEvent {
-  User get sender => room.getUserByMXIDSync(senderId);
+  Future<User?> get eventSender async =>
+      await room.requestUser(senderId, ignoreErrors: true);
+  @Deprecated(
+      'Use eventSender instead or senderFromMemoryOrFallback for a synchronous alternative')
+  User get sender => senderFromMemoryOrFallback;
+  User get senderFromMemoryOrFallback =>
+      room.unsafeGetUserFromMemoryOrFallback(senderId);
 
   /// The room this event belongs to. May be null.
   final Room room;
@@ -58,7 +64,9 @@ class Event extends MatrixEvent {
 
   bool get redacted => redactedBecause != null;
 
-  User? get stateKeyUser => room.getUserByMXIDSync(stateKey!);
+  User? get stateKeyUser => stateKey != null
+      ? room.unsafeGetUserFromMemoryOrFallback(stateKey!)
+      : null;
 
   Event({
     this.status = defaultStatus,
@@ -300,7 +308,8 @@ class Event extends MatrixEvent {
     if (receipt == null) return [];
     return receipt.content.entries
         .where((entry) => entry.value['event_id'] == eventId)
-        .map((entry) => Receipt(room.getUserByMXIDSync(entry.key),
+        .map((entry) => Receipt(
+            room.unsafeGetUserFromMemoryOrFallback(entry.key),
             DateTime.fromMillisecondsSinceEpoch(entry.value['ts'])))
         .toList();
   }
@@ -623,15 +632,58 @@ class Event extends MatrixEvent {
   /// plaintextBody instead of the normal body.
   /// [removeMarkdown] allow to remove the markdown formating from the event body.
   /// Usefull form message preview or notifications text.
+  Future<String> getLocalizedBodyAsync(MatrixLocalizations i18n,
+      {bool withSenderNamePrefix = false,
+      bool hideReply = false,
+      bool hideEdit = false,
+      bool plaintextBody = false,
+      bool removeMarkdown = false}) async {
+    if (redacted) {
+      await redactedBecause?.eventSender;
+    }
+
+    if (withSenderNamePrefix &&
+        (type == EventTypes.Message || type.contains(EventTypes.Encrypted))) {
+      // To be sure that if the event need to be localized, the user is in memory.
+      // used by EventLocalizations._localizedBodyNormalMessage
+      await eventSender;
+    }
+
+    return _getLocalizedBody(i18n,
+        withSenderNamePrefix: withSenderNamePrefix,
+        hideReply: hideReply,
+        hideEdit: hideEdit,
+        plaintextBody: plaintextBody,
+        removeMarkdown: removeMarkdown);
+  }
+
+  @Deprecated("Use getLocalizedBodyAsync")
   String getLocalizedBody(MatrixLocalizations i18n,
       {bool withSenderNamePrefix = false,
       bool hideReply = false,
       bool hideEdit = false,
       bool plaintextBody = false,
       bool removeMarkdown = false}) {
+    return _getLocalizedBody(i18n,
+        withSenderNamePrefix: withSenderNamePrefix,
+        hideReply: hideReply,
+        hideEdit: hideEdit,
+        plaintextBody: plaintextBody,
+        removeMarkdown: removeMarkdown);
+  }
+
+  String _getLocalizedBody(MatrixLocalizations i18n,
+      {bool withSenderNamePrefix = false,
+      bool hideReply = false,
+      bool hideEdit = false,
+      bool plaintextBody = false,
+      bool removeMarkdown = false}) {
     if (redacted) {
-      return i18n.removedBy(redactedBecause?.sender.calcDisplayname() ?? '');
+      return i18n.removedBy(
+          (redactedBecause?.senderFromMemoryOrFallback)?.calcDisplayname() ??
+              senderId);
     }
+
     var body = plaintextBody ? this.plaintextBody : this.body;
 
     // we need to know if the message is an html message to be able to determine
@@ -684,7 +736,7 @@ class Event extends MatrixEvent {
         textOnlyMessageTypes.contains(messageType)) {
       final senderNameOrYou = senderId == room.client.userID
           ? i18n.you
-          : (sender.calcDisplayname());
+          : senderFromMemoryOrFallback.calcDisplayname();
       localizedBody = '$senderNameOrYou: $localizedBody';
     }
 

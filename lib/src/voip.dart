@@ -92,7 +92,7 @@ class WrappedMediaStream {
   String? get displayName => getUser().displayName;
 
   User getUser() {
-    return room.getUserByMXIDSync(userId);
+    return room.unsafeGetUserFromMemoryOrFallback(userId);
   }
 
   bool isLocal() {
@@ -1240,7 +1240,8 @@ class VoIP {
 
     final newCall = createNewCall(opts);
     newCall.remotePartyId = partyId;
-    newCall.remoteUser = event.sender;
+    newCall.remoteUser =
+        (await event.eventSender) ?? User(event.senderId, room: event.room);
     final offer = RTCSessionDescription(
       event.content['offer']['sdp'],
       event.content['offer']['type'],
@@ -1284,7 +1285,8 @@ class VoIP {
       }
 
       call.remotePartyId = partyId;
-      call.remoteUser = event.sender;
+      call.remoteUser =
+          await event.eventSender ?? User(event.senderId, room: event.room);
 
       final answer = RTCSessionDescription(
           event.content['answer']['sdp'], event.content['answer']['type']);
