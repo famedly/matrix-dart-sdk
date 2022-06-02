@@ -1416,6 +1416,12 @@ class Room {
         (summary.mJoinedMemberCount ?? 0) + (summary.mInvitedMemberCount ?? 0);
   }
 
+  @Deprecated(
+      "The method was renamed unsafeGetUserFromMemoryOrFallback. Please prefer requestParticipants.")
+  User getUserByMXIDSync(String mxID) {
+    return unsafeGetUserFromMemoryOrFallback(mxID);
+  }
+
   /// Returns the [User] object for the given [mxID] or return
   /// a fallback [User] and start a request to get the user
   /// from the homeserver.
