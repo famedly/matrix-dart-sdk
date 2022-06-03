@@ -1278,7 +1278,9 @@ class FakeMatrixApi extends MockClient {
               'r0.2.0',
               'r0.3.0',
               'r0.4.0',
-              'r0.5.0'
+              'r0.5.0',
+              'v1.1',
+              'v1.2',
             ],
             'unstable_features': {'m.lazy_load_members': true},
           },
