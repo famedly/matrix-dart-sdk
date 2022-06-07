@@ -1,3 +1,6 @@
+## [0.9.10] - 7nd Jun 2022
+- feat: Allow overriding supportedVersions (Christian Pauly)
+
 ## [0.9.9] - 2nd Jun 2022
 - fix: Added deprecation mention for getUserByMXIDSync.
 
