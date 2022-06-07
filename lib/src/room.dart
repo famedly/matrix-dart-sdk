@@ -1417,7 +1417,7 @@ class Room {
   }
 
   @Deprecated(
-      "The method was renamed unsafeGetUserFromMemoryOrFallback. Please prefer requestParticipants.")
+      'The method was renamed unsafeGetUserFromMemoryOrFallback. Please prefer requestParticipants.')
   User getUserByMXIDSync(String mxID) {
     return unsafeGetUserFromMemoryOrFallback(mxID);
   }

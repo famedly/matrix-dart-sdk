@@ -657,7 +657,7 @@ class Event extends MatrixEvent {
         removeMarkdown: removeMarkdown);
   }
 
-  @Deprecated("Use getLocalizedBodyAsync")
+  @Deprecated('Use getLocalizedBodyAsync')
   String getLocalizedBody(MatrixLocalizations i18n,
       {bool withSenderNamePrefix = false,
       bool hideReply = false,
