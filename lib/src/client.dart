@@ -1036,10 +1036,13 @@ class Client extends MatrixApi {
   /// initalized, it will only fetch the necessary parts of the database. This
   /// should make it possible to run this parallel to another client with the
   /// same client name.
+  /// This also checks if the given event has a readmarker and returns null
+  /// in this case.
   Future<Event?> getEventByPushNotification(
     PushNotification notification, {
     bool storeInDatabase = true,
     Duration timeoutForServerRequests = const Duration(seconds: 8),
+    bool returnNullIfSeen = true,
   }) async {
     // Get access token if necessary:
     final database = _database ??= await databaseBuilder?.call(this);
@@ -1111,6 +1114,7 @@ class Client extends MatrixApi {
     matrixEvent ??= await database
         ?.getEventById(eventId, room)
         .timeout(timeoutForServerRequests);
+
     try {
       matrixEvent ??= await getOneRoomEvent(roomId, eventId)
           .timeout(timeoutForServerRequests);
@@ -1126,6 +1130,28 @@ class Client extends MatrixApi {
 
     if (matrixEvent == null) {
       throw Exception('Unable to find event for this push notification!');
+    }
+
+    // If the event was already in database, check if it has a read marker
+    // before displaying it.
+    if (returnNullIfSeen) {
+      if (room.fullyRead == matrixEvent.eventId) {
+        return null;
+      }
+      final readMarkerEvent = await database
+          ?.getEventById(room.fullyRead, room)
+          .timeout(timeoutForServerRequests);
+      if (readMarkerEvent != null &&
+          readMarkerEvent.originServerTs.isAfter(
+            matrixEvent.originServerTs
+              // As origin server timestamps are not always correct data in
+              // a federated environment, we add 10 minutes to the calculation
+              // to reduce the possibility that an event is marked as read which
+              // isn't.
+              ..add(Duration(minutes: 10)),
+          )) {
+        return null;
+      }
     }
 
     // Load the sender of this event
