@@ -98,10 +98,7 @@ class Api {
   /// [from] A pagination token from a previous result. If specified, `max_depth` and `suggested_only` cannot
   /// be changed from the first request.
   Future<GetSpaceHierarchyResponse> getSpaceHierarchy(String roomId,
-      {bool? suggestedOnly,
-      double? limit,
-      double? maxDepth,
-      String? from}) async {
+      {bool? suggestedOnly, int? limit, int? maxDepth, String? from}) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v1/rooms/${Uri.encodeComponent(roomId)}/hierarchy',
@@ -3234,6 +3231,10 @@ class Api {
   /// by a previous request to this endpoint, though servers are not
   /// required to support this. Clients should not rely on the behaviour.
   ///
+  /// If it is not provided, the homeserver shall return a list of messages
+  /// from the first or last (per the value of the `dir` parameter) visible
+  /// event in the room history for the requesting user.
+  ///
   /// [to] The token to stop returning events at. This token can be obtained from
   /// a `prev_batch` or `next_batch` token returned by the `/sync` endpoint,
   /// or from an `end` token returned by a previous request to this endpoint.
@@ -3246,13 +3247,12 @@ class Api {
   /// [limit] The maximum number of events to return. Default: 10.
   ///
   /// [filter] A JSON RoomEventFilter to filter returned events with.
-  Future<GetRoomEventsResponse> getRoomEvents(
-      String roomId, String from, Direction dir,
-      {String? to, int? limit, String? filter}) async {
+  Future<GetRoomEventsResponse> getRoomEvents(String roomId, Direction dir,
+      {String? from, String? to, int? limit, String? filter}) async {
     final requestUri = Uri(
         path: '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/messages',
         queryParameters: {
-          'from': from,
+          if (from != null) 'from': from,
           if (to != null) 'to': to,
           'dir': dir.name,
           if (limit != null) 'limit': limit.toString(),

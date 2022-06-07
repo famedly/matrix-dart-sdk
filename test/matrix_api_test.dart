@@ -566,8 +566,8 @@ void main() {
 
       final timelineHistoryResponse = await matrixApi.getRoomEvents(
         '!localpart:server.abc',
-        '1234',
         Direction.b,
+        from: '1234',
         limit: 10,
         filter: '{"lazy_load_members":true}',
         to: '1234',

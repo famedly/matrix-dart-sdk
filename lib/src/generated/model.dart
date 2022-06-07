@@ -164,18 +164,21 @@ class PublicRoomsChunk {
 class SpaceRoomsChunkBase {
   SpaceRoomsChunkBase({
     required this.childrenState,
-    required this.roomType,
+    this.roomType,
   });
 
   SpaceRoomsChunkBase.fromJson(Map<String, dynamic> json)
       : childrenState = (json['children_state'] as List)
             .map((v) => MatrixEvent.fromJson(v))
             .toList(),
-        roomType = json['room_type'] as String;
-  Map<String, dynamic> toJson() => {
-        'children_state': childrenState.map((v) => v.toJson()).toList(),
-        'room_type': roomType,
-      };
+        roomType = ((v) => v != null ? v as String : null)(json['room_type']);
+  Map<String, dynamic> toJson() {
+    final roomType = this.roomType;
+    return {
+      'children_state': childrenState.map((v) => v.toJson()).toList(),
+      if (roomType != null) 'room_type': roomType,
+    };
+  }
 
   /// The [`m.space.child`](#mspacechild) events of the space-room, represented
   /// as [Stripped State Events](#stripped-state) with an added `origin_server_ts` key.
@@ -184,7 +187,7 @@ class SpaceRoomsChunkBase {
   List<MatrixEvent> childrenState;
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
-  String roomType;
+  String? roomType;
 }
 
 @_NameSource('rule override generated')
@@ -200,7 +203,7 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceRoomsChunkBase {
     this.topic,
     required this.worldReadable,
     required this.childrenState,
-    required this.roomType,
+    this.roomType,
   });
 
   SpaceRoomsChunk.fromJson(Map<String, dynamic> json)
@@ -218,13 +221,14 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceRoomsChunkBase {
         childrenState = (json['children_state'] as List)
             .map((v) => MatrixEvent.fromJson(v))
             .toList(),
-        roomType = json['room_type'] as String;
+        roomType = ((v) => v != null ? v as String : null)(json['room_type']);
   Map<String, dynamic> toJson() {
     final avatarUrl = this.avatarUrl;
     final canonicalAlias = this.canonicalAlias;
     final joinRule = this.joinRule;
     final name = this.name;
     final topic = this.topic;
+    final roomType = this.roomType;
     return {
       if (avatarUrl != null) 'avatar_url': avatarUrl.toString(),
       if (canonicalAlias != null) 'canonical_alias': canonicalAlias,
@@ -236,7 +240,7 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceRoomsChunkBase {
       if (topic != null) 'topic': topic,
       'world_readable': worldReadable,
       'children_state': childrenState.map((v) => v.toJson()).toList(),
-      'room_type': roomType,
+      if (roomType != null) 'room_type': roomType,
     };
   }
 
@@ -277,7 +281,7 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceRoomsChunkBase {
   List<MatrixEvent> childrenState;
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
-  String roomType;
+  String? roomType;
 }
 
 @_NameSource('generated')
