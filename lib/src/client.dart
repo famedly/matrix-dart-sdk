@@ -355,8 +355,13 @@ class Client extends MatrixApi {
   /// login types. Throws an exception if the server is not compatible with the
   /// client and sets [homeserver] to [homeserverUrl] if it is. Supports the
   /// types `Uri` and `String`.
-  Future<HomeserverSummary> checkHomeserver(Uri homeserverUrl,
-      {bool checkWellKnown = true}) async {
+  Future<HomeserverSummary> checkHomeserver(
+    Uri homeserverUrl, {
+    bool checkWellKnown = true,
+    Set<String>? overrideSupportedVersions,
+  }) async {
+    final supportedVersions =
+        overrideSupportedVersions ?? Client.supportedVersions;
     try {
       homeserver = homeserverUrl.stripTrailingSlash();
 
@@ -376,7 +381,9 @@ class Client extends MatrixApi {
       if (!versions.versions
           .any((version) => supportedVersions.contains(version))) {
         throw BadServerVersionsException(
-            versions.versions.toSet(), supportedVersions);
+          versions.versions.toSet(),
+          supportedVersions,
+        );
       }
 
       final loginTypes = await getLoginFlows() ?? [];
