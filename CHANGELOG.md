@@ -1,16 +1,26 @@
-## [0.9.10] - 7nd Jun 2022
+## [0.9.11] - 8th Jun 2022
+
+- chore: Update Matrix API Lite for spaces fixes
+- refactor: Rename methods and get rid of all Future getter
+- fix: Do not show seen events in push notification
+
+## [0.9.10] - 7th Jun 2022
+
 - feat: Allow overriding supportedVersions (Christian Pauly)
 
 ## [0.9.9] - 2nd Jun 2022
+
 - fix: Added deprecation mention for getUserByMXIDSync.
 
 ## [0.9.8] - 2nd Jun 2022
+
 - feat: Add search for events in timeline (Krille Fear)
 - feat: Add waitForSync helper (Henri Carnot)
 - feat: Allow setting image size when generating a thumbnail (Henri Carnot)
-- refactr: Make event.sender async (Henri Carnot) 
+- refactr: Make event.sender async (Henri Carnot)
 
 ## [0.9.7] - 23rd May 2022
+
 - ci: use flutter images to install less (Nicolas Werner)
 - feat: implement session export (Lanna Michalke)
 - feat: support HiveCollections as Database provider (Lanna Michalke)
@@ -19,21 +29,27 @@
 - refactor: Migrate to Matrix Api Lite 1.0.0 (Krille Fear)
 
 ## [0.9.6] - 16th May 2022
+
 - fix: Ignore invalid entries in `io.element.recent_emoji`
 
 ## [0.9.5] - 13th May 2022
+
 - fix: Fix deep copy issue in the fragmented timeline feature and restored it
 
 ## [0.9.4] - 12th May 2022
+
 - fix: Revert fragmented timeline feature temporarily to fix SENDING timeline
 
 ## [0.9.3] - 11th May 2022
-- fix: Missing null check in get single room method 
+
+- fix: Missing null check in get single room method
 
 ## [0.9.2] - 10th May 2022
+
 - chore: Make path configurable in uiaLogin
 
 ## [0.9.1] - 9th May 2022
+
 - feat: Store timestamp in the presence events
 - chore: Move auth object passing to external msc implementations
 
@@ -42,39 +58,46 @@
 - refactor: Get rid of dynamic input in checkHomeserver (Christian Pauly)
 - feat: Make image size editable (Henri Carnot)
 - refactor: Remove old deprecations (Christian Pauly)
-- feat: Get fully read marker (Henri Carnot) 
+- feat: Get fully read marker (Henri Carnot)
 - feat: Get the recent emoji according to `io.element.recent_emoji` (TheOneWithTheBraid)
 - feat: Load fragmented timeline in memory (Henri Carnot)
 
 ## [0.8.20] - 14th Apr 2022
+
 - fix: Wait for keys in push helper
 
 ## [0.8.19] - 14th Apr 2022
+
 - feat: Get event from push notification
 - feat: Add more localization strings and add default matrix localizations
 - fix: Ignore no permission errors on requesting users
 
 ## [0.8.18] - 8th Apr 2022
+
 - feat: check thumbnail size
 - feat: fallback to thumbnail preview
 - fix: Retry sending a file event
 
 ## [0.8.17] - 4th Apr 2022
+
 - chore: Allow custom image resizer to be an async method
 
 ## [0.8.16] - 3th Apr 2022
+
 - fix: Missing type check in power level calculation
 - fix: Post load all users on room opening
 - fix: Better fallback message for member events without any change
 - fix: Store sending files in database and fix retrying to send them
 
 ## [0.8.15] - 30th Mar 2022
+
 - feat: Pass through a custom image resize function to the client
 - feat: Display dummy event in timeline for sending files
 - chore: Move the call methods in room to the voip class.
 - fix: properly create the directory for the pub credentials
 
 ## [0.8.14] - 25th Mar 2022
+
 - feat: added doc (Henri Carnot)
 - feat: add some more tests (Henri Carnot)
 - feat: allow removing markdown formating (Henri Carnot)
@@ -87,6 +110,7 @@
 - refactor: Simplify relates to and make it more type safe (Christian Pauly)
 
 ## [0.8.13] - 02nd Mar 2022
+
 - fix: send oldusername in displayname changed event
 - fix: Dont encrypt reactions
 - refactor: Make MatrixFile final and move all image calculation into isolate
@@ -94,66 +118,81 @@
 - chore: Update fluffybox
 
 ## [0.8.12] - 02nd Mar 2022
+
 - fix: Rooms sort order after login
 - fix: Change password using email authentication
 
 ## [0.8.11] - 19nd Feb 2022
+
 - fix: Change password using email authentication
 
 ## [0.8.10] - 19nd Feb 2022
+
 - chore: Increase default thumbnail size to 800
 - fix: sortRooms should be triggered right before onSync is called
 - fix: UIA request stucks forever on unexpected matrixExceptions
 
 ## [0.8.9] - 16nd Feb 2022
+
 - feat: Return homeserver summary on checkHomeserver
 - fix: hasNewMessage true when last event is sent
 - fix: Correctly end the call.
 
 ## [0.8.8] - 15nd Feb 2022
+
 - fix: Has new messages compares ts
 - fix: handle dynamic content for pinned events
 
 ## [0.8.7] - 14nd Feb 2022
+
 - fix: Show reactions as last events and refactor hasNewMessage
 
 ## [0.8.6] - 14nd Feb 2022
+
 - feat: Add hasNewMessages flag to room
 - fix: Sort rooms after updating the UI on web
 
 ## [0.8.5] - 14nd Feb 2022
+
 - fix: exception on removed widgets
 - fix: Fix black screen when end screensharing with system buttons.
 
 ## [0.8.4] - 08nd Feb 2022
+
 - fix: Call onChange correctly on redacted aggregation events
 
 ## [0.8.3] - 07nd Feb 2022
+
 - fix: Remove onHistoryReceived which was broken anyway
 - fix: Remove aggregation event doesnt trigger onChange
 
 ## [0.8.2] - 04nd Feb 2022
+
 - fix: Add redaction events to timeline
 - fix: Resize image with compute by using const class arguments
 
 ## [0.8.1] - 03nd Feb 2022
+
 - refactor: Implement on history received in timeline
 - fix: null-safety issues with widgets
 - fix: Trigger onChange for index on aggregation event update
 - feat: implement to get a room's widgets
 
 ## [0.8.0] - 25nd Jan 2022
+
 - BREAKING CHANGE: high-level hadling of image sizes
 - feat: expose Timeline.onChange to Room.getTimeline
 - fix: Use where and map instead of a loop and a removeWhere
 - fix: Remove sorts that shouldnt be required.
 
 ## [0.7.3] - 14nd Jan 2022
+
 - fix: Fix turn credentials format issue for safari.
-- fix: update fluffybox version to correctly clear rooms after logout. 
+- fix: update fluffybox version to correctly clear rooms after logout.
 - fix: Allow unpadded base64 decoding
 
 ## [0.7.2] - 08nd Jan 2022
+
 - feat: Let sendDefaultMessage return false on encryption failure (Krille Fear)
 - fix: Room Member updates should always be cached (Krille Fear)
 - fix: Requested users are not stored (Christian Pauly)
@@ -161,30 +200,36 @@
 - refactor: Remove unnecessary type checks and imports (Krille Fear)
 
 ## [0.7.1] - 08nd Dec 2021
+
 - fix: fallback in body for replies to replies (Nicolas Werner)
 - fix: ignore 4xx errors when re-sending the to_device queue The to_device queue was introduced to ensure integrity if e.g. the server temporarily failed when attempting to send a to_device message. If, for whatever reason, the server responds with a 4xx error, though, then we want to ignore that to_device message from the queue and move on, as that means that something different was fundamentally wrong. This helps to fix the to_device queue clogging up, making clients incapable of sending to_device events anymore, should such clogging happen. (Sorunome)
 - fix: Database corruptions by updating FluffyBox (Krille Fear)
 - fix: Store the call state, fix the invite cannot be sent. (cloudwebrtc)
 - fix: Allow consecutive edits for state events in-memory The lastEvent was incorrect when trying to process an edit of an edit. This fixes that by allowing consecutive edits for the last event. (Sorunome)
 - fix: Only save state events from sync processing in-memory if needed If we dump all state events from sync into memory then we needlessly clog up our memory, potentially running out of ram. This is useless as when opening the timeline we post-load the unimportant state events anyways. So, this PR makes sure that only the state events of post-loaded rooms and important state events land in-memory when processing a sync request. (Sorunome)
-- fix(ssss): Strip all whitespace characters from recovery keys upon decode Previously we stripped all spaces off of the recovery when decoding it, so that we could format the recovery key nicely. It turns out, however, that some element flavours also format with linebreaks, leading to the user having to manually remove them. We fix this by just stripping *all* whitespace off of the recovery key. (Sorunome)
+- fix(ssss): Strip all whitespace characters from recovery keys upon decode Previously we stripped all spaces off of the recovery when decoding it, so that we could format the recovery key nicely. It turns out, however, that some element flavours also format with linebreaks, leading to the user having to manually remove them. We fix this by just stripping _all_ whitespace off of the recovery key. (Sorunome)
 
 ## [0.7.0] - 03nd Dec 2021
+
 - feat: Support for webRTC
 - fix: Add missing calcDisplayname global rules to client constructor
 
 ## [0.7.0-nullsafety.10] - 26nd Nov 2021
+
 - feat: Migrate olm sessions on database migration
 - chore: Enable E2EE recovery by default
 
 ## [0.7.0-nullsafety.9] - 25nd Nov 2021
+
 - fix: Limited timeline clean up on web
 - fix: Remove account avatar
 
 ## [0.7.0-nullsafety.8] - 24nd Nov 2021
+
 - chore: Update FluffyBox
 
 ## [0.7.0-nullsafety.7] - 23nd Nov 2021
+
 - feat: Add commands to create chats
 - feat: Add clear cache command
 - feat: Implement new FluffyBox database API implementation
@@ -196,6 +241,7 @@
 - refactor: Remove Sembast database implementation
 
 ## [0.7.0-nullsafety.6] - 16nd Nov 2021
+
 - feat: Implement sembast store
 - fix: HtmlToText crashes with an empty code block
 - fix: use originServerTs to check if state event is old
@@ -204,6 +250,7 @@
 - chore: Trim formatted username fallback
 
 ## [0.7.0-nullsafety.5] - 10nd Nov 2021
+
 - fix: Edits as lastEvent do not update
 - fix: JSON parsing in decryptRoomEvent method
 - fix: Wrong null check in hive database
@@ -211,6 +258,7 @@
 - chore: Update matrix_api_lite
 
 ## [0.7.0-nullsafety.4] - 09nd Nov 2021
+
 - feat: More advanced create chat methods (encryption is now enabled by default)
 - feat: Make waiting on init db optional
 - feat: Add more benchmarks for sync, timeline, init
@@ -218,14 +266,18 @@
 - refactor: Move setreadmarker functionality to timeline
 
 ## [0.7.0-nullsafety.3] - 05nd Nov 2021
+
 - fix: Null error in get own profile
 
 ## [0.7.0-nullsafety.2] - 04nd Nov 2021
+
 - refactor: Make room in Event class not nullable
 - refactor: download method should not return null
 
 ## [0.7.0-nullsafety.1] - 04nd Nov 2021
+
 Prerelease of the null safety version of the SDK.
+
 - feat: choose memberships returned by requestParticipants()
 - refactor: Make SDK null safe
 - fix: add room invite update to roomStateBox, so invites don't show empty room when app is restarted
@@ -233,13 +285,16 @@ Prerelease of the null safety version of the SDK.
 - fix: obay explicitly set ports in mxc URLs
 
 ## [0.6.2] - 25nd Oct 2021
+
 - fix: Unnecessary null check
 - fix: Auto update room states
 
 ## [0.6.1] - 18nd Oct 2021
+
 - fix: Missing null check in a nested json map
 
 ## [0.6.0] - 15nd Oct 2021
+
 - feat: Calc benchmarks for hive operations on init
 - refactor: Change event status to enum
 - refactor: Migrate more files to null safety
@@ -254,12 +309,15 @@ Prerelease of the null safety version of the SDK.
 - fix: Add type checkings for User.displayName
 
 ## [0.5.5] - 20nd Sep 2021
- fix: Autodetect mime type on file upload
+
+fix: Autodetect mime type on file upload
 
 ## [0.5.4] - 20nd Sep 2021
+
 - feat: Add waitForFirstSync parameter to init method
 
 ## [0.5.3] - 19nd Sep 2021
+
 - feat: Add /discardsession command
 - fix: Auto-reply key requests
 - fix: Room previews not showing replies
@@ -267,13 +325,16 @@ Prerelease of the null safety version of the SDK.
 - fix: only/number emotes in a reply
 
 ## [0.5.2] - 14nd Sep 2021
+
 - fix: Delete box if it can not be cleared when calling database.clear() -> This should fix some box corruption problems
 - fix: Do not set old events as state events -> This should fix the room list sort ordering bug
 
 ## [0.5.1] - 13nd Sep 2021
+
 - fix: Room.notificationCount set to null sometimes
 
 ## [0.5.0] - 13nd Sep 2021
+
 - hotfix: Key sharing security vulnerability! -> Please upgrade as soon as possible to this version
 - feat: MSC2746: Improved Signalling for 1:1 VoIP
 - fix: Get direct chat from user ID method crashes on more than one DM rooms with one account
@@ -281,15 +342,19 @@ Prerelease of the null safety version of the SDK.
 - refactor: Remove onRoomUpdate stream
 
 ## [0.4.3] - 8nd Sep 2021
+
 - fix: Do not handle sending event updates which are already synced
 
 ## [0.4.2] - 6nd Sep 2021
+
 - revert: Make bytes in EncryptedFile nullable
 
 ## [0.4.1] - 6nd Sep 2021
+
 - fix: Make bytes in EncryptedFile nullable
 
 ## [0.4.0] - 3nd Sep 2021
+
 - fix: Check if database got disposed in keyManager
 - fix: Implement dummy transactions for hive
 - fix: room account data key/type returned encoded
@@ -303,53 +368,60 @@ Prerelease of the null safety version of the SDK.
 - refactor: Workarounds for missing mHeroes in rooms
 
 ## [0.3.6] - 30nd Aug 2021
+
 - hotfix: uiaRequests send broken auth object at first try
 
 ## [0.3.5] - 28nd Aug 2021
+
 - hotfix: Send unencrypted thumbnails
 
 ## [0.3.4] - 28nd Aug 2021
+
 - fix: String.parseIdentifierIntoParts not working with unicode matrix.to links
-    Some clients do not uri-encode the identifier for matrix.to links, so we must
-    handle if we can't uri-decode them
+  Some clients do not uri-encode the identifier for matrix.to links, so we must
+  handle if we can't uri-decode them
 - fix: missing null check in hideEdit condition
 - fix: missing null check
-    It seems `device_keys` in the reply of `/keys/query` is not required. While synapse always
-    sent it, conduit did not, which resulted in an error.
+  It seems `device_keys` in the reply of `/keys/query` is not required. While synapse always
+  sent it, conduit did not, which resulted in an error.
 
 ## [0.3.3] - 20nd Aug 2021
+
 - fix: room.lastEvent order now respects edits
-- feat: use m.new_content in lastEvent (so no more * fallback)
+- feat: use m.new_content in lastEvent (so no more \* fallback)
 
 ## [0.3.2] - 20nd Aug 2021
+
 - feat: cache archived rooms to access them with `getRoomById`
 - fix: requestHistory() for archived rooms
 - refactor: Change name of archive getter to function
 
 ## [0.3.1] - 20nd Aug 2021
+
 - hotfix: Opt-out null safety for crypto files because of an error in web
 
 ## [0.3.0] - 20nd Aug 2021
+
 - remove: deprecated moor database (breaking change)
 - feat(events): add plain-text body representation from HTML
 - feat: get new_content in getLocalizedBody
 - feat: Add a way to get a verification request by its transaction id
-    A client might find the need to get the verification request object by
-    its transaction id, to be able to e.g. display for in-room verification
-    an "accept verification request" button easily.
+  A client might find the need to get the verification request object by
+  its transaction id, to be able to e.g. display for in-room verification
+  an "accept verification request" button easily.
 - fix: Correctly parse the reason of a spoiler
-    Previously only the first child node of a spoiler was considered to
-    determine if there should be a spoiler reason. This was, unfortunately,
-    incorrect, as soon as e.g. the reason had more than one space. This is
-    fixed by properly iterating all child nodes to search for the reason.
+  Previously only the first child node of a spoiler was considered to
+  determine if there should be a spoiler reason. This was, unfortunately,
+  incorrect, as soon as e.g. the reason had more than one space. This is
+  fixed by properly iterating all child nodes to search for the reason.
 - fix: Add space states to important events
-    We need the space state events in the important events to be able to
-    differentiate rooms and spaces in the room list.
+  We need the space state events in the important events to be able to
+  differentiate rooms and spaces in the room list.
 - feat: Allow specifying extraContent for Room.sendFileEvent, in case clients want to specify some custom stuff
 - fix: toDouble was called on null when you had a pinned room
 - fix: Typo in key backup requests
-    This may lead to messages not decrypting after interactive verification,
-    which would make the user manually press the request keys button.
+  This may lead to messages not decrypting after interactive verification,
+  which would make the user manually press the request keys button.
 - refactor: rename LoginState.logged to loggedIn
 
 ## [0.2.1] - 2nd Aug 2021
