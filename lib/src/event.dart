@@ -37,8 +37,12 @@ abstract class RelationshipTypes {
 
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
 class Event extends MatrixEvent {
-  Future<User?> get eventSender async =>
-      await room.requestUser(senderId, ignoreErrors: true);
+  /// Requests the user object of the sender of this event.
+  Future<User?> fetchSenderUser() => room.requestUser(
+        senderId,
+        ignoreErrors: true,
+      );
+
   @Deprecated(
       'Use eventSender instead or senderFromMemoryOrFallback for a synchronous alternative')
   User get sender => senderFromMemoryOrFallback;
@@ -632,21 +636,21 @@ class Event extends MatrixEvent {
   /// plaintextBody instead of the normal body.
   /// [removeMarkdown] allow to remove the markdown formating from the event body.
   /// Usefull form message preview or notifications text.
-  Future<String> getLocalizedBodyAsync(MatrixLocalizations i18n,
+  Future<String> calcLocalizedBody(MatrixLocalizations i18n,
       {bool withSenderNamePrefix = false,
       bool hideReply = false,
       bool hideEdit = false,
       bool plaintextBody = false,
       bool removeMarkdown = false}) async {
     if (redacted) {
-      await redactedBecause?.eventSender;
+      await redactedBecause?.fetchSenderUser();
     }
 
     if (withSenderNamePrefix &&
         (type == EventTypes.Message || type.contains(EventTypes.Encrypted))) {
       // To be sure that if the event need to be localized, the user is in memory.
       // used by EventLocalizations._localizedBodyNormalMessage
-      await eventSender;
+      await fetchSenderUser();
     }
 
     return _getLocalizedBody(i18n,
@@ -657,7 +661,7 @@ class Event extends MatrixEvent {
         removeMarkdown: removeMarkdown);
   }
 
-  @Deprecated('Use getLocalizedBodyAsync')
+  @Deprecated('Use calcLocalizedBody')
   String getLocalizedBody(MatrixLocalizations i18n,
       {bool withSenderNamePrefix = false,
       bool hideReply = false,

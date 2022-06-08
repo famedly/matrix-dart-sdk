@@ -131,7 +131,8 @@ void main() {
           ]
         }
       }));
-      expect((await user1.currentPresence).presence, PresenceType.online);
+      expect(
+          (await user1.fetchCurrentPresence()).presence, PresenceType.online);
     });
     test('canBan', () async {
       expect(user1.canBan, false);

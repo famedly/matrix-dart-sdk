@@ -707,11 +707,14 @@ class Client extends MatrixApi {
     return id;
   }
 
+  @Deprecated('Use fetchOwnProfile() instead')
+  Future<Profile> get ownProfile => fetchOwnProfile();
+
   /// Returns the user's own displayname and avatar url. In Matrix it is possible that
   /// one user can have different displaynames and avatar urls in different rooms. So
   /// this endpoint first checks if the profile is the same in all rooms. If not, the
   /// profile will be requested from the homserver.
-  Future<Profile> get ownProfile async {
+  Future<Profile> fetchOwnProfile() async {
     if (rooms.isNotEmpty) {
       final profileSet = <Profile>{};
       for (final room in rooms) {

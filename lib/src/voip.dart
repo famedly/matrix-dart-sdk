@@ -1240,8 +1240,8 @@ class VoIP {
 
     final newCall = createNewCall(opts);
     newCall.remotePartyId = partyId;
-    newCall.remoteUser =
-        (await event.eventSender) ?? User(event.senderId, room: event.room);
+    newCall.remoteUser = (await event.fetchSenderUser()) ??
+        User(event.senderId, room: event.room);
     final offer = RTCSessionDescription(
       event.content['offer']['sdp'],
       event.content['offer']['type'],
@@ -1285,8 +1285,8 @@ class VoIP {
       }
 
       call.remotePartyId = partyId;
-      call.remoteUser =
-          await event.eventSender ?? User(event.senderId, room: event.room);
+      call.remoteUser = await event.fetchSenderUser() ??
+          User(event.senderId, room: event.room);
 
       final answer = RTCSessionDescription(
           event.content['answer']['sdp'], event.content['answer']['type']);

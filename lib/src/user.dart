@@ -159,8 +159,11 @@ class User extends Event {
   @Deprecated('Deprecated in favour of currentPresence.')
   Presence? get presence => room.client.presences[id]?.toPresence();
 
+  @Deprecated('Use fetchCurrentPresence() instead')
+  Future<CachedPresence> get currentPresence => fetchCurrentPresence();
+
   /// The newest presence of this user if there is any. Fetches it from the server if necessary or returns offline.
-  Future<CachedPresence> get currentPresence async {
+  Future<CachedPresence> fetchCurrentPresence() async {
     final cachedPresence = room.client.presences[id];
     if (cachedPresence != null) {
       return cachedPresence;
