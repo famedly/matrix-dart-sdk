@@ -1,3 +1,9 @@
+## 1.1.1
+
+- fix: wrong type for children_state in spaces hierarchy API
+- fix: Missing trailing slash on pushrules endpoint
+- tests: added tests for spaces hierarchy
+
 ## 1.1.0
 
 - fix: wrong types in spaces hierarchy API
