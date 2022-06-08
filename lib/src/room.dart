@@ -525,9 +525,12 @@ class Room {
   /// in muted rooms, use [hasNewMessages].
   bool get isUnread => notificationCount > 0 || markedUnread;
 
+  @Deprecated('Use waitForRoomInSync() instead')
+  Future<SyncUpdate> get waitForSync => waitForRoomInSync();
+
   /// Wait for the room to appear in join, leave or invited section of the
   /// sync.
-  Future<SyncUpdate> get waitForSync async {
+  Future<SyncUpdate> waitForRoomInSync() async {
     return await client.waitForRoomInSync(id);
   }
 

@@ -91,7 +91,7 @@ class MatrixWidget {
     // See https://github.com/matrix-org/matrix-doc/issues/1236 for a
     // description, specifically the section
     // `What does the other stuff in content mean?`
-    final userProfile = await room.client.ownProfile;
+    final userProfile = await room.client.fetchOwnProfile();
     var parsedUri = url;
 
     // a key-value map with the strings to be replaced
