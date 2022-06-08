@@ -4,6 +4,7 @@ import '../model/auth/authentication_identifier.dart';
 import '../model/matrix_keys.dart';
 import '../model/sync_update.dart';
 import '../model/matrix_event.dart';
+import '../model/children_state.dart';
 
 import 'internal.dart';
 import 'package:enhanced_enum/enhanced_enum.dart';
@@ -169,7 +170,7 @@ class SpaceRoomsChunkBase {
 
   SpaceRoomsChunkBase.fromJson(Map<String, dynamic> json)
       : childrenState = (json['children_state'] as List)
-            .map((v) => MatrixEvent.fromJson(v))
+            .map((v) => ChildrenState.fromJson(v))
             .toList(),
         roomType = ((v) => v != null ? v as String : null)(json['room_type']);
   Map<String, dynamic> toJson() {
@@ -184,7 +185,7 @@ class SpaceRoomsChunkBase {
   /// as [Stripped State Events](#stripped-state) with an added `origin_server_ts` key.
   ///
   /// If the room is not a space-room, this should be empty.
-  List<MatrixEvent> childrenState;
+  List<ChildrenState> childrenState;
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
   String? roomType;
@@ -219,7 +220,7 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceRoomsChunkBase {
         topic = ((v) => v != null ? v as String : null)(json['topic']),
         worldReadable = json['world_readable'] as bool,
         childrenState = (json['children_state'] as List)
-            .map((v) => MatrixEvent.fromJson(v))
+            .map((v) => ChildrenState.fromJson(v))
             .toList(),
         roomType = ((v) => v != null ? v as String : null)(json['room_type']);
   Map<String, dynamic> toJson() {
@@ -278,7 +279,7 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceRoomsChunkBase {
   /// as [Stripped State Events](#stripped-state) with an added `origin_server_ts` key.
   ///
   /// If the room is not a space-room, this should be empty.
-  List<MatrixEvent> childrenState;
+  List<ChildrenState> childrenState;
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
   String? roomType;

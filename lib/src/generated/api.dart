@@ -4,6 +4,7 @@ import '../model/auth/authentication_identifier.dart';
 import '../model/matrix_keys.dart';
 import '../model/sync_update.dart';
 import '../model/matrix_event.dart';
+import '../model/children_state.dart';
 
 import 'model.dart';
 import 'fixed_model.dart';
@@ -1977,7 +1978,7 @@ class Api {
   /// returns `global`:
   /// The global ruleset.
   Future<PushRuleSet> getPushRules() async {
-    final requestUri = Uri(path: '_matrix/client/v3/pushrules');
+    final requestUri = Uri(path: '_matrix/client/v3/pushrules/');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     final response = await httpClient.send(request);
