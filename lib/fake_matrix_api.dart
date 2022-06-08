@@ -746,6 +746,214 @@ class FakeMatrixApi extends MockClient {
     }
   };
 
+  static Map<String, dynamic> spaceHierarchyResponse = {
+    'rooms': [
+      {
+        'room_id': '!gPxZhKUssFZKZcoCKY:neko.dev',
+        'name': 'Gentoo Community',
+        'topic':
+            'Unofficial Gentoo community rooms. Please keep chatter to the chatter room and have Gentoo discussions and questions in the actual Gentoo rooms. Also listen to the mods and try to keep nasty stuff to yourself. Thank you!',
+        'canonical_alias': '#gentoo-community:matrix.org',
+        'num_joined_members': 71,
+        'avatar_url': 'mxc://neko.dev/YShzHcuHenkxaxostDrlMEYL',
+        'join_rule': 'public',
+        'world_readable': true,
+        'guest_can_join': true,
+        'room_type': 'm.space',
+        'children_state': [
+          {
+            'type': 'm.space.child',
+            'state_key': '!UpbiadsgRndwvYKPLK:neko.dev',
+            'content': {
+              'via': ['neko.dev'],
+              'suggested': true,
+              'auto_join': false
+            },
+            'sender': '@deepbluev7:neko.dev',
+            'origin_server_ts': 1636376075316
+          },
+          {
+            'type': 'm.space.child',
+            'state_key': '!aZUzMIEZvEwnDquxLf:neko.dev',
+            'content': {
+              'via': ['neko.dev', 'matrix.org', 'privacytools.io'],
+              'suggested': true,
+              'auto_join': false
+            },
+            'sender': '@deepbluev7:neko.dev',
+            'origin_server_ts': 1636378043231
+          },
+          {
+            'type': 'm.space.child',
+            'state_key': '!aRzRZBvOAkHMcEjAPS:libera.chat',
+            'content': {
+              'via': ['libera.chat', 'kde.org', 'neko.dev'],
+              'suggested': false,
+              'auto_join': false
+            },
+            'sender': '@deepbluev7:neko.dev',
+            'origin_server_ts': 1637612945217
+          },
+          {
+            'type': 'm.space.child',
+            'state_key': '!DXsRRxkqqDhDkAyXfL:matrix.org',
+            'content': {
+              'via': ['matrix.org', 'libera.chat', 'neko.dev'],
+              'suggested': false,
+              'auto_join': false
+            },
+            'sender': '@deepbluev7:neko.dev',
+            'origin_server_ts': 1637612945334
+          },
+          {
+            'type': 'm.space.child',
+            'state_key': '!tbCRpmsMiwMBlIThOd:matrix.org',
+            'content': {
+              'via': ['kde.org', 'matrix.org', 'server.matrix4ulm.de'],
+              'suggested': false,
+              'auto_join': false
+            },
+            'sender': '@deepbluev7:neko.dev',
+            'origin_server_ts': 1637612945491
+          },
+          {
+            'type': 'm.space.child',
+            'state_key': '!LPpmvMsEgDwuSuHSpM:matrix.org',
+            'content': {
+              'via': ['matrix.org', 'anontier.nl', 't2bot.io'],
+              'suggested': false,
+              'auto_join': false
+            },
+            'sender': '@deepbluev7:neko.dev',
+            'origin_server_ts': 1638720840346
+          },
+          {
+            'type': 'm.space.child',
+            'state_key': '!prlZxmnmAGuCYHUNSw:neko.dev',
+            'content': {
+              'auto_join': false,
+              'suggested': true,
+              'via': ['neko.dev', 'matrix.org']
+            },
+            'sender': '@mo-the-alias-manager:matrix.org',
+            'origin_server_ts': 1645661824176
+          },
+          {
+            'type': 'm.space.child',
+            'state_key': '!ooHixUOgoLVUjCSMZC:matrix.org',
+            'content': {
+              'via': ['neko.dev'],
+              'suggested': false,
+              'auto_join': false
+            },
+            'sender': '@deepbluev7:neko.dev',
+            'origin_server_ts': 1647825979776
+          }
+        ]
+      },
+      {
+        'room_id': '!UpbiadsgRndwvYKPLK:neko.dev',
+        'name': 'Gentoo Chatter',
+        'topic':
+            'Offtopic discussions, distractions while emerge is running and banter. Keep attacks, politics and illegal stuff out of here, but otherwise most topics can end up here.',
+        'canonical_alias': '#gentoo-chatter:matrix.org',
+        'num_joined_members': 109,
+        'avatar_url': 'mxc://neko.dev/kGMWPCWawJbKGEtEGwCETSrM',
+        'join_rule': 'public',
+        'world_readable': true,
+        'guest_can_join': true,
+        'children_state': []
+      },
+      {
+        'room_id': '!aZUzMIEZvEwnDquxLf:neko.dev',
+        'name': 'Gentoo',
+        'topic':
+            "Unofficial. Talk about Gentoo stuff. Lightly moderated, i.e. try to keep topics Gentoo related and listen to the mods. Don't talk about politics, stuff like that never stays civil. (There are other rooms for that.) Checkout #gentoo-community:matrix.org and #gentoo-chatter:matrix.org. Also we love cats :3",
+        'canonical_alias': '#gentoo:matrix.org',
+        'num_joined_members': 1044,
+        'avatar_url': 'mxc://neko.dev/dESQaOugYSkcFgLJYPNlWiNg',
+        'join_rule': 'public',
+        'world_readable': true,
+        'guest_can_join': true,
+        'children_state': []
+      },
+      {
+        'room_id': '!aRzRZBvOAkHMcEjAPS:libera.chat',
+        'name': '#gentoo-qt',
+        'topic':
+            'Gentoo Qt Project | Project page: https://qt.gentoo.org/ | Bugz: https://tinyurl.com/genqtbugs | FAQ: https://bit.ly/1jz8EhK | Latest Qt Stable: 5.15.3 / Unstable 5.15.4 | LXQt Stable: 1.0.0 / Unstable: 1.1.0 | Overlay: qt (Qt 6.3.0 Masked for Testing and 9999s for All)',
+        'canonical_alias': '#gentoo-qt:libera.chat',
+        'num_joined_members': 72,
+        'join_rule': 'public',
+        'world_readable': false,
+        'guest_can_join': false,
+        'children_state': []
+      },
+      {
+        'room_id': '!DXsRRxkqqDhDkAyXfL:matrix.org',
+        'name': 'Gentoo - de',
+        'topic':
+            'Deutschsprachiger Raum rund um die GNU/Linux Distribution Gentoo.',
+        'canonical_alias': '#german-gentoo:matrix.org',
+        'num_joined_members': 15,
+        'avatar_url': 'mxc://matrix.org/UDJIpOEsVDGbgAliaxjqmhlf',
+        'join_rule': 'public',
+        'world_readable': false,
+        'guest_can_join': false,
+        'children_state': []
+      },
+      {
+        'room_id': '!tbCRpmsMiwMBlIThOd:matrix.org',
+        'name': '#gentoo-kde',
+        'topic':
+            "Gentoo KDE | Guide: http://xrl.us/kdeguide | KF5 5.54.0 stable, 5.56.0 testing | Plasma 5.14.5 stable, 5.15.3 testing | Applications 18.08.3 stable, 18.12.3 testing | Bugs: http://xrl.us/kdebugs | Statistics: https://tinyurl.com/gkdestats | Please report bugs with pastebin'd build.log",
+        'canonical_alias': '#freenode_#gentoo-kde:matrix.org',
+        'num_joined_members': 86,
+        'join_rule': 'public',
+        'world_readable': false,
+        'guest_can_join': false,
+        'children_state': []
+      },
+      {
+        'room_id': '!LPpmvMsEgDwuSuHSpM:matrix.org',
+        'name': 'Gentoo-rus (Русский/Russian)',
+        'topic': 'Вопросы по Gentoo',
+        'canonical_alias': '#gentoo-rus:matrix.org',
+        'num_joined_members': 68,
+        'avatar_url': 'mxc://matrix.org/KuRHZNSQttAmQekputXpXmeQ',
+        'join_rule': 'public',
+        'world_readable': true,
+        'guest_can_join': true,
+        'children_state': []
+      },
+      {
+        'room_id': '!prlZxmnmAGuCYHUNSw:neko.dev',
+        'name': 'Gentoo Hardening',
+        'topic':
+            'If you care too much about security and Gentoo, this is your place to talk about it. Bring your hard hats, it sometimes gets heated (please behave). (Unofficial)',
+        'canonical_alias': '#gentoo-hardening:matrix.org',
+        'num_joined_members': 47,
+        'avatar_url': 'mxc://neko.dev/MMDsJENimfwQlHshSkdFlDaU',
+        'join_rule': 'public',
+        'world_readable': true,
+        'guest_can_join': false,
+        'children_state': []
+      },
+      {
+        'room_id': '!ooHixUOgoLVUjCSMZC:matrix.org',
+        'name': 'Gentoo Brasil',
+        'topic': 'Usuários brasileiros do Gentoo Linux',
+        'canonical_alias': '#gentoobr:matrix.org',
+        'num_joined_members': 35,
+        'avatar_url': 'mxc://matrix.org/vXqGcGnyUbIjhXAalSxfDxJD',
+        'join_rule': 'public',
+        'world_readable': true,
+        'guest_can_join': true,
+        'children_state': []
+      }
+    ]
+  };
+
   static final Map<String, Map<String, dynamic>> api = {
     'GET': {
       '/path/to/auth/error': (var req) => {
@@ -1626,6 +1834,8 @@ class FakeMatrixApi extends MockClient {
               },
             },
           },
+      '/client/v1/rooms/${Uri.encodeComponent('!gPxZhKUssFZKZcoCKY:neko.dev')}/hierarchy':
+          (var req) => spaceHierarchyResponse,
     },
     'POST': {
       '/client/v3/delete_devices': (var req) => {},

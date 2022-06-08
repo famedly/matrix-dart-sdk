@@ -855,6 +855,20 @@ void main() {
 
       matrixApi.homeserver = matrixApi.accessToken = null;
     });
+    test('getSpaceHierarchy', () async {
+      matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
+      matrixApi.accessToken = '1234';
+
+      final response =
+          await matrixApi.getSpaceHierarchy('!gPxZhKUssFZKZcoCKY:neko.dev');
+
+      expect(
+          FakeMatrixApi.api['GET']![
+              '/client/v1/rooms/${Uri.encodeComponent('!gPxZhKUssFZKZcoCKY:neko.dev')}/hierarchy']({}),
+          response.toJson());
+
+      matrixApi.homeserver = matrixApi.accessToken = null;
+    });
     test('searchUser', () async {
       matrixApi.homeserver = Uri.parse('https://fakeserver.notexisting');
       matrixApi.accessToken = '1234';
