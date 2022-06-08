@@ -1,76 +1,101 @@
-## 1.2.0
-This introduces a new versioning system where the first two numbers refer to
-the matrix spec version (currently v1.2) and the last to the iteration of
-this spec version.
+## 1.1.0
+
+- fix: wrong types in spaces hierarchy API
+- fix: Add missing versions to fake matrix api
+- feat: Authenticate media downloads
+
+## 1.0.0
+
+This release should be compatible with version 1.2 of the Matrix specification.
 
 - feat: Migrate to Matrix v1.2 spec
 - feat: Add GroupCallPrefix/GroupCallMemberPrefix to EventTypes.
 
 ## 0.5.3
+
 - chore: Add missing matrix error types as per spec
 - feat: add additionalProperties in PusherData
 - feat: deletePusher
 
 ## 0.5.2
+
 - feat: Colored logs on native and web
 - chore: Make some tryGet errors verbose and display line
 
 ## 0.5.1
+
 - feat: Add constructors to SyncUpdate classes
 
 ## 0.5.0
+
 - fix: threepidCreds should be threepid_creds and an object
 
 ## 0.4.4
+
 - chore: workaround for invalid getTurnServer responses from synapse
 
 ## 0.4.3
+
 - fix: Make type in AuthenticationData nullable
 - refactor: remove uploadKeySignatures (use uploadCrossSigningSignatures)
 
 ## 0.4.2
+
 - feat: Add more call event for improve voip.
 
 ## 0.4.1
+
 - fix: change tryGet default loglevel to Optional
 
 ## 0.4.0
+
 - refactor: Migrate to null safety
 - refactor: Use openAPI code generation to create most of the methods
 - refactor: remove timeouts in matrix_api_lite
 
 ## 0.3.5
+
 - feat: Add image pack event content models
 
 ## 0.3.3
+
 - fix: Log filter in wrong direction
 
 ## 0.3.2
+
 - fix: Logs should only printed if loglevel is high enough
 
 ## 0.3.1
+
 - change: Remove logger package
 
 ## 0.3.0
+
 - feat: operation names from OpenAPI spec
 
 ## 0.2.6
+
 - fix: Missing RoomCreationTypes
 
 ## 0.2.5
+
 - fix: Request aliases
 
 ## 0.2.3
+
 - feat: Add room and event types for spaces
 
 ## 0.2.2
+
 - chore: upgrade logger to 1.0.0
 - refactor: upgrade to http 0.13
 
 ## 0.2.1
+
 - fix: Update dependency mime
 
 ## 0.2.0
+
 - refactor: login method AuthenticationIdentifier
 
 This is a breaking change for the login method to use the correct format.
@@ -81,6 +106,7 @@ allow curly braces in Strings where not needed
 anymore.
 
 ## 0.1.9
+
 - feat: Add support for fallback keys
 
 ## 0.1.8
