@@ -1107,8 +1107,8 @@ class Room {
     }
     final resp = await client.getRoomEvents(
       id,
-      prev_batch,
       direction,
+      from: prev_batch,
       limit: historyCount,
       filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
     );

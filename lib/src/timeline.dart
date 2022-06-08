@@ -178,8 +178,8 @@ class Timeline {
       direction = Direction.b}) async {
     final resp = await room.client.getRoomEvents(
       room.id,
-      direction == Direction.b ? chunk.prevBatch : chunk.nextBatch,
       direction,
+      from: direction == Direction.b ? chunk.prevBatch : chunk.nextBatch,
       limit: historyCount,
       filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
     );
@@ -573,8 +573,8 @@ class Timeline {
       try {
         final resp = await room.client.getRoomEvents(
           room.id,
-          prevBatch,
           Direction.b,
+          from: prevBatch,
           limit: requestHistoryCount,
           filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
         );
