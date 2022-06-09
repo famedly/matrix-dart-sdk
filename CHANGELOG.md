@@ -1,3 +1,7 @@
+## [0.9.12] - 9th Jun 2022
+
+- refactor: add calcLocalizedBodyFallback method (Christian Pauly)
+
 ## [0.9.11] - 8th Jun 2022
 
 - chore: Update Matrix API Lite for spaces fixes
