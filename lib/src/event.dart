@@ -653,7 +653,7 @@ class Event extends MatrixEvent {
       await fetchSenderUser();
     }
 
-    return _getLocalizedBody(i18n,
+    return calcLocalizedBodyFallback(i18n,
         withSenderNamePrefix: withSenderNamePrefix,
         hideReply: hideReply,
         hideEdit: hideEdit,
@@ -661,22 +661,26 @@ class Event extends MatrixEvent {
         removeMarkdown: removeMarkdown);
   }
 
-  @Deprecated('Use calcLocalizedBody')
+  @Deprecated('Use calcLocalizedBody or calcLocalizedBodyFallback')
   String getLocalizedBody(MatrixLocalizations i18n,
-      {bool withSenderNamePrefix = false,
-      bool hideReply = false,
-      bool hideEdit = false,
-      bool plaintextBody = false,
-      bool removeMarkdown = false}) {
-    return _getLocalizedBody(i18n,
-        withSenderNamePrefix: withSenderNamePrefix,
-        hideReply: hideReply,
-        hideEdit: hideEdit,
-        plaintextBody: plaintextBody,
-        removeMarkdown: removeMarkdown);
-  }
+          {bool withSenderNamePrefix = false,
+          bool hideReply = false,
+          bool hideEdit = false,
+          bool plaintextBody = false,
+          bool removeMarkdown = false}) =>
+      calcLocalizedBodyFallback(i18n,
+          withSenderNamePrefix: withSenderNamePrefix,
+          hideReply: hideReply,
+          hideEdit: hideEdit,
+          plaintextBody: plaintextBody,
+          removeMarkdown: removeMarkdown);
 
-  String _getLocalizedBody(MatrixLocalizations i18n,
+  /// Works similar to `calcLocalizedBody()` but does not wait for the sender
+  /// user to be fetched. If it is not in the cache it will just use the
+  /// fallback and display the localpart of the MXID according to the
+  /// values of `formatLocalpart` and `mxidLocalPartFallback` in the `Client`
+  /// class.
+  String calcLocalizedBodyFallback(MatrixLocalizations i18n,
       {bool withSenderNamePrefix = false,
       bool hideReply = false,
       bool hideEdit = false,
