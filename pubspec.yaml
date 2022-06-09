@@ -12,6 +12,7 @@ dependencies:
   http: ^0.13.0
   mime: ^1.0.0
   canonical_json: ^1.1.0
+  cryptography: ^2.0.5
   markdown: ^4.0.0
   html_unescape: ^2.0.0
   random_string: ^2.3.1
@@ -37,3 +38,10 @@ dev_dependencies:
   coverage: ">=0.15.0 <2.0.0"
   file: ^6.1.1
   #flutter_test: {sdk: flutter}
+
+dependency_overrides:
+  hive:
+    git:
+      url: https://github.com/hivedb/hive.git
+      path: hive
+      ref: e37ca7c3046cf9fbcdc313676c035254151b7664 # braid/crypto

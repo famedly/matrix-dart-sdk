@@ -36,6 +36,7 @@ export 'src/timeline.dart';
 export 'src/user.dart';
 export 'src/utils/commands_extension.dart';
 export 'src/utils/crypto/encrypted_file.dart';
+export 'src/utils/crypto/hive_aes_libcrypto_cipher.dart';
 export 'src/utils/device_keys_list.dart';
 export 'src/utils/event_update.dart';
 export 'src/utils/http_timeout.dart';
