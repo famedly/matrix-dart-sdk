@@ -36,7 +36,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
   final String name;
   final String path;
   final HiveCipher? key;
-  late final BoxCollection _collection;
+  late BoxCollection _collection;
   late CollectionBox<String> _clientBox;
   late CollectionBox<Map> _accountDataBox;
   late CollectionBox<Map> _roomsBox;
