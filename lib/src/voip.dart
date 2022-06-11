@@ -1259,8 +1259,7 @@ class VoIP {
     if (delegate.isBackgroud) {
       /// Forced to enable signaling synchronization until the end of the call.
       client.backgroundSync = true;
-
-      ///TODO: notify the callkeep that the call is incoming.
+      delegate.handleNewCall(newCall);
     }
     // Play ringtone
     delegate.playRingtone();
