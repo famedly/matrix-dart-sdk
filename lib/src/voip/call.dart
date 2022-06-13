@@ -1,30 +1,31 @@
+/*
+ *   Famedly Matrix SDK
+ *   Copyright (C) 2021 Famedly GmbH
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU Affero General Public License as
+ *   published by the Free Software Foundation, either version 3 of the
+ *   License, or (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *   GNU Affero General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Affero General Public License
+ *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 import 'dart:async';
 import 'dart:core';
 
 import 'package:webrtc_interface/webrtc_interface.dart';
-import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 
-import '../matrix.dart';
+import '../../matrix.dart';
 
 /// https://github.com/matrix-org/matrix-doc/pull/2746
 /// version 1
 const String voipProtoVersion = '1';
-
-/// Delegate WebRTC basic functionality.
-abstract class WebRTCDelegate {
-  MediaDevices get mediaDevices;
-  Future<RTCPeerConnection> createPeerConnection(
-      Map<String, dynamic> configuration,
-      [Map<String, dynamic> constraints = const {}]);
-  VideoRenderer createRenderer();
-  void playRingtone();
-  void stopRingtone();
-  void handleNewCall(CallSession session);
-  void handleCallEnded(CallSession session);
-
-  bool get isBackgroud;
-  bool get isWeb;
-}
 
 /// The default life time for call events, in millisecond.
 const lifetimeMs = 10 * 1000;
@@ -45,11 +46,15 @@ class WrappedMediaStream {
   final Client client;
   VideoRenderer renderer;
   final bool isWeb;
+  final bool isGroupCall;
 
   /// for debug
   String get title => '$displayName:$purpose:a[$audioMuted]:v[$videoMuted]';
   bool stopped = false;
-  void Function(bool audioMuted, bool videoMuted)? onMuteStateChanged;
+
+  final StreamController<WrappedMediaStream> onMuteStateChanged =
+      StreamController.broadcast();
+
   void Function(MediaStream stream)? onNewStream;
 
   WrappedMediaStream(
@@ -61,7 +66,8 @@ class WrappedMediaStream {
       required this.client,
       required this.audioMuted,
       required this.videoMuted,
-      required this.isWeb});
+      required this.isWeb,
+      required this.isGroupCall});
 
   /// Initialize the video renderer
   Future<void> initialize() async {
@@ -75,7 +81,7 @@ class WrappedMediaStream {
 
   Future<void> dispose() async {
     renderer.srcObject = null;
-    if (isLocal() && stream != null) {
+    if (isLocal() && !isGroupCall && stream != null) {
       if (isWeb) {
         stream!.getTracks().forEach((element) {
           element.stop();
@@ -85,6 +91,8 @@ class WrappedMediaStream {
       stream = null;
     }
   }
+
+  Uri? get avatarUrl => getUser().avatarUrl;
 
   String get avatarName =>
       getUser().calcDisplayname(mxidLocalPartFallback: false);
@@ -117,16 +125,12 @@ class WrappedMediaStream {
 
   void setAudioMuted(bool muted) {
     audioMuted = muted;
-    if (onMuteStateChanged != null) {
-      onMuteStateChanged?.call(audioMuted, videoMuted);
-    }
+    onMuteStateChanged.add(this);
   }
 
   void setVideoMuted(bool muted) {
     videoMuted = muted;
-    if (onMuteStateChanged != null) {
-      onMuteStateChanged?.call(audioMuted, videoMuted);
-    }
+    onMuteStateChanged.add(this);
   }
 }
 
@@ -264,6 +268,7 @@ enum CallParty { kLocal, kRemote }
 /// Initialization parameters of the call session.
 class CallOptions {
   late String callId;
+  String? groupCallId;
   late CallType type;
   late CallDirection dir;
   late String localPartyId;
@@ -279,6 +284,7 @@ class CallSession {
   CallType get type => opts.type;
   Room get room => opts.room;
   VoIP get voip => opts.voip;
+  String? get groupCallId => opts.groupCallId;
   String get callId => opts.callId;
   String get localPartyId => opts.localPartyId;
   String? get displayName => room.displayname;
@@ -300,12 +306,40 @@ class CallSession {
   bool makingOffer = false;
   bool ignoreOffer = false;
   String facingMode = 'user';
+  bool get answeredByUs => _answeredByUs;
   Client get client => opts.room.client;
   String? remotePartyId;
-  late User remoteUser;
+  String? opponentDeviceId;
+  String? opponentSessionId;
+  String? invitee;
+  User? remoteUser;
   late CallParty hangupParty;
-  late String hangupReason;
+  String? hangupReason;
   late CallError lastError;
+  CallSession? successor;
+  bool waitForLocalAVStream = false;
+  int toDeviceSeq = 0;
+
+  final StreamController<CallSession> onCallStreamsChanged =
+      StreamController.broadcast();
+
+  final StreamController<CallSession> onCallReplaced =
+      StreamController.broadcast();
+
+  final StreamController<CallSession> onCallHangup =
+      StreamController.broadcast();
+
+  final StreamController<CallState> onCallStateChanged =
+      StreamController.broadcast();
+
+  final StreamController<CallEvent> onCallEventChanged =
+      StreamController.broadcast();
+
+  final StreamController<WrappedMediaStream> onStreamAdd =
+      StreamController.broadcast();
+
+  final StreamController<WrappedMediaStream> onStreamRemoved =
+      StreamController.broadcast();
 
   SDPStreamMetadata? remoteSDPStreamMetadata;
   List<RTCRtpSender> usermediaSenders = [];
@@ -352,12 +386,6 @@ class CallSession {
     return null;
   }
 
-  final _callStateController =
-      StreamController<CallState>.broadcast(sync: true);
-  Stream<CallState> get onCallStateChanged => _callStateController.stream;
-  final _callEventController =
-      StreamController<CallEvent>.broadcast(sync: true);
-  Stream<CallEvent> get onCallEventChanged => _callEventController.stream;
   Timer? inviteTimer;
   Timer? ringingTimer;
 
@@ -366,7 +394,7 @@ class CallSession {
     setCallState(CallState.kCreateOffer);
     final stream = await _getUserMedia(type);
     if (stream != null) {
-      _addLocalStream(stream, SDPStreamMetadataPurpose.Usermedia);
+      addLocalStream(stream, SDPStreamMetadataPurpose.Usermedia);
     }
   }
 
@@ -376,7 +404,7 @@ class CallSession {
 
     final stream = await _getUserMedia(type);
     if (stream != null) {
-      _addLocalStream(stream, SDPStreamMetadataPurpose.Usermedia);
+      addLocalStream(stream, SDPStreamMetadataPurpose.Usermedia);
     }
 
     if (metadata != null) {
@@ -399,6 +427,96 @@ class CallSession {
     });
   }
 
+  void answerWithStreams(List<WrappedMediaStream> callFeeds) {
+    if (inviteOrAnswerSent) return;
+    Logs().d('nswering call $callId');
+    gotCallFeedsForAnswer(callFeeds);
+  }
+
+  void replacedBy(CallSession newCall) {
+    if (state == CallState.kWaitLocalMedia) {
+      Logs().v('Telling new call to wait for local media');
+      newCall.waitForLocalAVStream = true;
+    } else if (state == CallState.kCreateOffer ||
+        state == CallState.kInviteSent) {
+      Logs().v('Handing local stream to new call');
+      newCall.gotCallFeedsForAnswer(getLocalStreams);
+    }
+    successor = newCall;
+    onCallReplaced.add(newCall);
+    hangup(CallErrorCode.Replaced, true);
+  }
+
+  Future<void> sendAnswer(RTCSessionDescription answer) async {
+    final callCapabilities = CallCapabilities()
+      ..dtmf = false
+      ..transferee = false;
+
+    final metadata = SDPStreamMetadata({
+      localUserMediaStream!.stream!.id: SDPStreamPurpose(
+          purpose: SDPStreamMetadataPurpose.Usermedia,
+          audio_muted: localUserMediaStream!.stream!.getAudioTracks().isEmpty,
+          video_muted: localUserMediaStream!.stream!.getVideoTracks().isEmpty)
+    });
+
+    final res = await sendAnswerCall(room, callId, answer.sdp!, localPartyId,
+        type: answer.type!, capabilities: callCapabilities, metadata: metadata);
+    Logs().v('[VOIP] answer res => $res');
+  }
+
+  Future<void> gotCallFeedsForAnswer(List<WrappedMediaStream> callFeeds) async {
+    if (state == CallState.kEnded) return;
+
+    waitForLocalAVStream = false;
+
+    callFeeds.forEach((element) {
+      // Safari can't send a MediaStream to multiple sources, so clone it
+      addLocalStream(element.stream!.clone(), element.purpose);
+    });
+
+    answer();
+  }
+
+  Future<void> placeCallWithStreams(List<WrappedMediaStream> callFeeds,
+      [bool requestScreenshareFeed = false]) async {
+    opts.dir = CallDirection.kOutgoing;
+
+    voip.calls[callId] = this;
+
+    // create the peer connection now so it can be gathering candidates while we get user
+    // media (assuming a candidate pool size is configured)
+    await _preparePeerConnection();
+    gotCallFeedsForInvite(callFeeds, requestScreenshareFeed);
+  }
+
+  void gotCallFeedsForInvite(List<WrappedMediaStream> callFeeds,
+      [bool requestScreenshareFeed = false]) {
+    if (successor != null) {
+      successor!.gotCallFeedsForAnswer(callFeeds);
+      return;
+    }
+    if (state == CallState.kEnded) {
+      cleanUp();
+      return;
+    }
+
+    callFeeds.forEach((element) {
+      addLocalStream(element.stream!.clone(), element.purpose);
+    });
+
+    if (requestScreenshareFeed) {
+      pc!.addTransceiver(
+          kind: RTCRtpMediaType.RTCRtpMediaTypeVideo,
+          init:
+              RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly));
+    }
+
+    setCallState(CallState.kCreateOffer);
+
+    Logs().d('gotUserMediaForInvite');
+    // Now we wait for the negotiationneeded event
+  }
+
   void initWithHangup() {
     setCallState(CallState.kEnded);
   }
@@ -414,6 +532,10 @@ class CallSession {
       await pc!.setRemoteDescription(answer);
       remoteCandidates.forEach((candidate) => pc!.addCandidate(candidate));
     }
+
+    /// Send select_answer event.
+    await sendSelectCallAnswer(
+        opts.room, callId, lifetimeMs, localPartyId, remotePartyId!);
   }
 
   void onNegotiateReceived(
@@ -442,8 +564,8 @@ class CallSession {
       await pc!.setRemoteDescription(description);
       if (description.type == 'offer') {
         final answer = await pc!.createAnswer({});
-        await voip.sendCallNegotiate(
-            opts.room, callId, lifetimeMs, localPartyId, answer.sdp!,
+        await sendCallNegotiate(
+            room, callId, lifetimeMs, localPartyId, answer.sdp!,
             type: answer.type!);
         await pc!.setLocalDescription(answer);
       }
@@ -547,7 +669,7 @@ class CallSession {
             setScreensharingEnabled(false);
           };
         });
-        _addLocalStream(stream, SDPStreamMetadataPurpose.Screenshare);
+        addLocalStream(stream, SDPStreamMetadataPurpose.Screenshare);
         return true;
       } catch (err) {
         fireCallEvent(CallEvent.kError);
@@ -569,7 +691,7 @@ class CallSession {
     }
   }
 
-  void _addLocalStream(MediaStream stream, String purpose,
+  void addLocalStream(MediaStream stream, String purpose,
       {bool addToPeerConnection = true}) async {
     final existingStream =
         getLocalStreams.where((element) => element.purpose == purpose);
@@ -577,19 +699,19 @@ class CallSession {
       existingStream.first.setNewStream(stream);
     } else {
       final newStream = WrappedMediaStream(
-        renderer: voip.delegate.createRenderer(),
-        userId: client.userID!,
-        room: opts.room,
-        stream: stream,
-        purpose: purpose,
-        client: client,
-        audioMuted: stream.getAudioTracks().isEmpty,
-        videoMuted: stream.getVideoTracks().isEmpty,
-        isWeb: voip.delegate.isWeb,
-      );
+          renderer: voip.delegate.createRenderer(),
+          userId: client.userID!,
+          room: opts.room,
+          stream: stream,
+          purpose: purpose,
+          client: client,
+          audioMuted: stream.getAudioTracks().isEmpty,
+          videoMuted: stream.getVideoTracks().isEmpty,
+          isWeb: voip.delegate.isWeb,
+          isGroupCall: groupCallId != null);
       await newStream.initialize();
       streams.add(newStream);
-      fireCallEvent(CallEvent.kFeedsChanged);
+      onStreamAdd.add(newStream);
     }
 
     if (addToPeerConnection) {
@@ -604,7 +726,6 @@ class CallSession {
           usermediaSenders.add(await pc!.addTrack(track, stream));
         });
       }
-      fireCallEvent(CallEvent.kFeedsChanged);
     }
 
     if (purpose == SDPStreamMetadataPurpose.Usermedia) {
@@ -614,10 +735,12 @@ class CallSession {
         audioTrack.enableSpeakerphone(speakerOn);
       }
     }
+
+    fireCallEvent(CallEvent.kFeedsChanged);
   }
 
   void _addRemoteStream(MediaStream stream) async {
-    //const userId = this.getOpponentMember().userId;
+    //final userId = remoteUser.id;
     final metadata = remoteSDPStreamMetadata!.sdpStreamMetadatas[stream.id];
     if (metadata == null) {
       Logs().i(
@@ -637,26 +760,74 @@ class CallSession {
       existingStream.first.setNewStream(stream);
     } else {
       final newStream = WrappedMediaStream(
-        renderer: voip.delegate.createRenderer(),
-        userId: remoteUser.id,
-        room: opts.room,
-        stream: stream,
-        purpose: purpose,
-        client: client,
-        audioMuted: audioMuted,
-        videoMuted: videoMuted,
-        isWeb: voip.delegate.isWeb,
-      );
+          renderer: voip.delegate.createRenderer(),
+          userId: remoteUser!.id,
+          room: opts.room,
+          stream: stream,
+          purpose: purpose,
+          client: client,
+          audioMuted: audioMuted,
+          videoMuted: videoMuted,
+          isWeb: voip.delegate.isWeb,
+          isGroupCall: groupCallId != null);
       await newStream.initialize();
       streams.add(newStream);
+      onStreamAdd.add(newStream);
     }
     fireCallEvent(CallEvent.kFeedsChanged);
     Logs().i('Pushed remote stream (id="${stream.id}", purpose=$purpose)');
   }
 
+  void deleteAllStreams() {
+    streams.forEach((stream) async {
+      if (stream.isLocal() || groupCallId == null) {
+        await stream.dispose();
+      }
+    });
+    streams.clear();
+    fireCallEvent(CallEvent.kFeedsChanged);
+  }
+
+  void deleteFeedByStream(MediaStream stream) {
+    final index =
+        streams.indexWhere((element) => element.stream!.id == stream.id);
+    if (index == -1) {
+      Logs().w('Didn\'t find the feed with stream id ${stream.id} to delete');
+      return;
+    }
+    final wstream = streams.elementAt(index);
+    onStreamRemoved.add(wstream);
+    deleteStream(wstream);
+  }
+
+  void deleteStream(WrappedMediaStream stream) {
+    stream.dispose();
+    streams.removeAt(streams.indexOf(stream));
+    fireCallEvent(CallEvent.kFeedsChanged);
+  }
+
+  void removeLocalStream(WrappedMediaStream callFeed) {
+    final senderArray = callFeed.purpose == SDPStreamMetadataPurpose.Usermedia
+        ? usermediaSenders
+        : screensharingSenders;
+
+    senderArray.forEach((element) async {
+      await pc!.removeTrack(element);
+    });
+
+    if (callFeed.purpose == SDPStreamMetadataPurpose.Screenshare) {
+      stopMediaStream(callFeed.stream);
+    }
+
+    // Empty the array
+    senderArray.removeRange(0, senderArray.length);
+    onStreamRemoved.add(callFeed);
+    deleteStream(callFeed);
+  }
+
   void setCallState(CallState newState) {
     state = newState;
-    _callStateController.add(newState);
+    onCallStateChanged.add(newState);
     fireCallEvent(CallEvent.kState);
   }
 
@@ -732,8 +903,7 @@ class CallSession {
             video_muted: localUserMediaStream!.stream!.getVideoTracks().isEmpty)
       });
 
-      final res = await voip.sendAnswerCall(
-          opts.room, callId, answer.sdp!, localPartyId,
+      final res = await sendAnswerCall(room, callId, answer.sdp!, localPartyId,
           type: answer.type!,
           capabilities: callCapabilities,
           metadata: metadata);
@@ -756,7 +926,7 @@ class CallSession {
     }
     Logs().d('[VOIP] Rejecting call: $callId');
     terminate(CallParty.kLocal, CallErrorCode.UserHangup, true);
-    voip.sendCallReject(opts.room, callId, lifetimeMs, localPartyId);
+    sendCallReject(room, callId, lifetimeMs, localPartyId);
   }
 
   void hangup([String? reason, bool suppressEvent = true]) async {
@@ -767,8 +937,8 @@ class CallSession {
         CallParty.kLocal, reason ?? CallErrorCode.UserHangup, !suppressEvent);
 
     try {
-      final res = await voip.sendHangupCall(
-          opts.room, callId, localPartyId, 'userHangup');
+      final res =
+          await sendHangupCall(room, callId, localPartyId, 'userHangup');
       Logs().v('[VOIP] hangup res => $res');
     } catch (e) {
       Logs().v('[VOIP] hangup error => ${e.toString()}');
@@ -786,7 +956,7 @@ class CallSession {
     Logs().e('Unable to find a track to send DTMF on');
   }
 
-  void terminate(CallParty party, String hangupReason, bool shouldEmit) async {
+  void terminate(CallParty party, String reason, bool shouldEmit) async {
     if (state == CallState.kEnded) {
       return;
     }
@@ -798,12 +968,15 @@ class CallSession {
     ringingTimer = null;
 
     hangupParty = party;
-    hangupReason = hangupReason;
+    hangupReason = reason;
 
     setCallState(CallState.kEnded);
     voip.currentCID = null;
     voip.calls.remove(callId);
     cleanUp();
+
+    onCallHangup.add(this);
+
     voip.delegate.handleCallEnded(this);
     if (shouldEmit) {
       fireCallEvent(CallEvent.kHangup);
@@ -848,8 +1021,8 @@ class CallSession {
       ..transferee = false;
     final metadata = _getLocalSDPStreamMetadata();
     if (state == CallState.kCreateOffer) {
-      await voip.sendInviteToCall(
-          opts.room, callId, lifetimeMs, localPartyId, null, offer.sdp!,
+      await sendInviteToCall(
+          room, callId, lifetimeMs, localPartyId, null, offer.sdp!,
           capabilities: callCapabilities, metadata: metadata);
       inviteOrAnswerSent = true;
       setCallState(CallState.kInviteSent);
@@ -862,8 +1035,8 @@ class CallSession {
         inviteTimer = null;
       });
     } else {
-      await voip.sendCallNegotiate(
-          opts.room, callId, lifetimeMs, localPartyId, offer.sdp!,
+      await sendCallNegotiate(
+          room, callId, lifetimeMs, localPartyId, offer.sdp!,
           type: offer.type!,
           capabilities: callCapabilities,
           metadata: metadata);
@@ -926,7 +1099,7 @@ class CallSession {
     }
   }
 
-  void onAnsweredElsewhere(String msg) {
+  void onAnsweredElsewhere() {
     Logs().d('Call ID $callId answered elsewhere');
     terminate(CallParty.kRemote, CallErrorCode.AnsweredElsewhere, true);
   }
@@ -955,8 +1128,8 @@ class CallSession {
     _setTracksEnabled(localUserMediaStream?.stream!.getVideoTracks() ?? [],
         !vidShouldBeMuted);
 
-    await opts.voip.sendSDPStreamMetadataChanged(
-        opts.room, callId, localPartyId, _getLocalSDPStreamMetadata());
+    await sendSDPStreamMetadataChanged(
+        room, callId, localPartyId, _getLocalSDPStreamMetadata());
   }
 
   void _setTracksEnabled(List<MediaStreamTrack> tracks, bool enabled) {
@@ -1034,9 +1207,18 @@ class CallSession {
       if (event.streams.isNotEmpty) {
         final stream = event.streams[0];
         _addRemoteStream(stream);
+        stream.getVideoTracks().forEach((track) {
+          track.onEnded = () {
+            _removeStream(stream);
+          };
+        });
       }
     };
     return pc;
+  }
+
+  void createDataChannel(String label, RTCDataChannelInit dataChannelDict) {
+    pc?.createDataChannel(label, dataChannelDict);
   }
 
   void tryRemoveStopedStreams() {
@@ -1063,6 +1245,7 @@ class CallSession {
     }
     final wpstream = it.first;
     streams.removeWhere((element) => element.stream!.id == stream.id);
+    onStreamRemoved.add(wpstream);
     fireCallEvent(CallEvent.kFeedsChanged);
     await wpstream.dispose();
   }
@@ -1085,8 +1268,8 @@ class CallSession {
       localCandidates.forEach((element) {
         candidates.add(element.toMap());
       });
-      final res = await voip.sendCallCandidates(
-          opts.room, callId, localPartyId, candidates);
+      final res =
+          await sendCallCandidates(opts.room, callId, localPartyId, candidates);
       Logs().v('[VOIP] sendCallCandidates res => $res');
     } catch (e) {
       Logs().v('[VOIP] sendCallCandidates e => ${e.toString()}');
@@ -1094,10 +1277,11 @@ class CallSession {
   }
 
   void fireCallEvent(CallEvent event) {
-    _callEventController.add(event);
+    onCallEventChanged.add(event);
     Logs().i('CallEvent: ${event.toString()}');
     switch (event) {
       case CallEvent.kFeedsChanged:
+        onCallStreamsChanged.add(this);
         break;
       case CallEvent.kState:
         Logs().i('CallState: ${state.toString()}');
@@ -1155,365 +1339,6 @@ class CallSession {
       terminate(CallParty.kRemote, CallErrorCode.AnsweredElsewhere, true);
     }
   }
-}
-
-class VoIP {
-  TurnServerCredentials? _turnServerCredentials;
-  Map<String, CallSession> calls = <String, CallSession>{};
-  String? currentCID;
-  String? get localPartyId => client.deviceID;
-  final Client client;
-  final WebRTCDelegate delegate;
-
-  VoIP(this.client, this.delegate) : super() {
-    client.onCallInvite.stream.listen(onCallInvite);
-    client.onCallAnswer.stream.listen(onCallAnswer);
-    client.onCallCandidates.stream.listen(onCallCandidates);
-    client.onCallHangup.stream.listen(onCallHangup);
-    client.onCallReject.stream.listen(onCallReject);
-    client.onCallNegotiate.stream.listen(onCallNegotiate);
-    client.onCallReplaces.stream.listen(onCallReplaces);
-    client.onCallSelectAnswer.stream.listen(onCallSelectAnswer);
-    client.onSDPStreamMetadataChangedReceived.stream
-        .listen(onSDPStreamMetadataChangedReceived);
-    client.onAssertedIdentityReceived.stream.listen(onAssertedIdentityReceived);
-  }
-
-  Future<void> onCallInvite(Event event) async {
-    if (event.senderId == client.userID) {
-      // Ignore messages to yourself.
-      return;
-    }
-
-    Logs().v(
-        '[VOIP] onCallInvite ${event.senderId} => ${client.userID}, \ncontent => ${event.content.toString()}');
-
-    final String callId = event.content['call_id'];
-    final String partyId = event.content['party_id'];
-    final int lifetime = event.content['lifetime'];
-
-    if (currentCID != null) {
-      // Only one session at a time.
-      Logs().v('[VOIP] onCallInvite: There is already a session.');
-      await sendHangupCall(event.room, callId, localPartyId!, 'userBusy');
-      return;
-    }
-    if (calls[callId] != null) {
-      // Session already exist.
-      Logs().v('[VOIP] onCallInvite: Session [$callId] already exist.');
-      return;
-    }
-
-    if (event.content['capabilities'] != null) {
-      final capabilities =
-          CallCapabilities.fromJson(event.content['capabilities']);
-      Logs().v(
-          '[VOIP] CallCapabilities: dtmf => ${capabilities.dtmf}, transferee => ${capabilities.transferee}');
-    }
-
-    var callType = CallType.kVoice;
-    SDPStreamMetadata? sdpStreamMetadata;
-    if (event.content[sdpStreamMetadataKey] != null) {
-      sdpStreamMetadata =
-          SDPStreamMetadata.fromJson(event.content[sdpStreamMetadataKey]);
-      sdpStreamMetadata.sdpStreamMetadatas
-          .forEach((streamId, SDPStreamPurpose purpose) {
-        Logs().v(
-            '[VOIP] [$streamId] => purpose: ${purpose.purpose}, audioMuted: ${purpose.audio_muted}, videoMuted:  ${purpose.video_muted}');
-
-        if (!purpose.video_muted) {
-          callType = CallType.kVideo;
-        }
-      });
-    } else {
-      callType = getCallType(event.content['offer']['sdp']);
-    }
-
-    final opts = CallOptions()
-      ..voip = this
-      ..callId = callId
-      ..dir = CallDirection.kIncoming
-      ..type = callType
-      ..room = event.room
-      ..localPartyId = localPartyId!
-      ..iceServers = await getIceSevers();
-
-    final newCall = createNewCall(opts);
-    newCall.remotePartyId = partyId;
-    newCall.remoteUser = (await event.fetchSenderUser()) ??
-        User(event.senderId, room: event.room);
-    final offer = RTCSessionDescription(
-      event.content['offer']['sdp'],
-      event.content['offer']['type'],
-    );
-    await newCall
-        .initWithInvite(callType, offer, sdpStreamMetadata, lifetime)
-        .then((_) {
-      // Popup CallingPage for incoming call.
-      if (!delegate.isBackgroud) {
-        delegate.handleNewCall(newCall);
-      }
-    });
-    currentCID = callId;
-
-    if (delegate.isBackgroud) {
-      /// Forced to enable signaling synchronization until the end of the call.
-      client.backgroundSync = true;
-
-      ///TODO: notify the callkeep that the call is incoming.
-    }
-    // Play ringtone
-    delegate.playRingtone();
-  }
-
-  void onCallAnswer(Event event) async {
-    Logs().v('[VOIP] onCallAnswer => ${event.content.toString()}');
-    final String callId = event.content['call_id'];
-    final String partyId = event.content['party_id'];
-
-    final call = calls[callId];
-    if (call != null) {
-      if (event.senderId == client.userID) {
-        // Ignore messages to yourself.
-        if (!call._answeredByUs) {
-          delegate.stopRingtone();
-        }
-        if (call.state == CallState.kRinging) {
-          call.onAnsweredElsewhere('Call ID ' + callId + ' answered elsewhere');
-        }
-        return;
-      }
-
-      call.remotePartyId = partyId;
-      call.remoteUser = await event.fetchSenderUser() ??
-          User(event.senderId, room: event.room);
-
-      final answer = RTCSessionDescription(
-          event.content['answer']['sdp'], event.content['answer']['type']);
-
-      SDPStreamMetadata? metadata;
-      if (event.content[sdpStreamMetadataKey] != null) {
-        metadata =
-            SDPStreamMetadata.fromJson(event.content[sdpStreamMetadataKey]);
-      }
-      call.onAnswerReceived(answer, metadata);
-
-      /// Send select_answer event.
-      await sendSelectCallAnswer(
-          event.room, callId, lifetimeMs, localPartyId!, call.remotePartyId!);
-    } else {
-      Logs().v('[VOIP] onCallAnswer: Session [$callId] not found!');
-    }
-  }
-
-  void onCallCandidates(Event event) async {
-    if (event.senderId == client.userID) {
-      // Ignore messages to yourself.
-      return;
-    }
-    Logs().v('[VOIP] onCallCandidates => ${event.content.toString()}');
-    final String callId = event.content['call_id'];
-    final call = calls[callId];
-    if (call != null) {
-      call.onCandidatesReceived(event.content['candidates']);
-    } else {
-      Logs().v('[VOIP] onCallCandidates: Session [$callId] not found!');
-    }
-  }
-
-  void onCallHangup(Event event) async {
-    // stop play ringtone, if this is an incoming call
-    if (!delegate.isBackgroud) {
-      delegate.stopRingtone();
-    }
-    Logs().v('[VOIP] onCallHangup => ${event.content.toString()}');
-    final String callId = event.content['call_id'];
-    final call = calls[callId];
-    if (call != null) {
-      // hangup in any case, either if the other party hung up or we did on another device
-      call.terminate(CallParty.kRemote,
-          event.content['reason'] ?? CallErrorCode.UserHangup, true);
-    } else {
-      Logs().v('[VOIP] onCallHangup: Session [$callId] not found!');
-    }
-    currentCID = null;
-  }
-
-  void onCallReject(Event event) async {
-    if (event.senderId == client.userID) {
-      // Ignore messages to yourself.
-      return;
-    }
-    final String callId = event.content['call_id'];
-    Logs().d('Reject received for call ID ' + callId);
-
-    final call = calls[callId];
-    if (call != null) {
-      call.onRejectReceived(event.content['reason']);
-    } else {
-      Logs().v('[VOIP] onCallHangup: Session [$callId] not found!');
-    }
-  }
-
-  void onCallReplaces(Event event) async {
-    if (event.senderId == client.userID) {
-      // Ignore messages to yourself.
-      return;
-    }
-    final String callId = event.content['call_id'];
-    Logs().d('onCallReplaces received for call ID ' + callId);
-    final call = calls[callId];
-    if (call != null) {
-      //TODO: handle replaces
-    }
-  }
-
-  void onCallSelectAnswer(Event event) async {
-    if (event.senderId == client.userID) {
-      // Ignore messages to yourself.
-      return;
-    }
-    final String callId = event.content['call_id'];
-    Logs().d('SelectAnswer received for call ID ' + callId);
-    final call = calls[callId];
-    final String selectedPartyId = event.content['selected_party_id'];
-
-    if (call != null) {
-      call.onSelectAnswerReceived(selectedPartyId);
-    }
-  }
-
-  void onSDPStreamMetadataChangedReceived(Event event) async {
-    if (event.senderId == client.userID) {
-      // Ignore messages to yourself.
-      return;
-    }
-    final String callId = event.content['call_id'];
-    Logs().d('SDP Stream metadata received for call ID ' + callId);
-    final call = calls[callId];
-    if (call != null) {
-      if (event.content[sdpStreamMetadataKey] == null) {
-        Logs().d('SDP Stream metadata is null');
-        return;
-      }
-      call.onSDPStreamMetadataReceived(
-          SDPStreamMetadata.fromJson(event.content[sdpStreamMetadataKey]));
-    }
-  }
-
-  void onAssertedIdentityReceived(Event event) async {
-    if (event.senderId == client.userID) {
-      // Ignore messages to yourself.
-      return;
-    }
-    final String callId = event.content['call_id'];
-    Logs().d('Asserted identity received for call ID ' + callId);
-    final call = calls[callId];
-    if (call != null) {
-      if (event.content['asserted_identity'] == null) {
-        Logs().d('asserted_identity is null ');
-        return;
-      }
-      call.onAssertedIdentityReceived(
-          AssertedIdentity.fromJson(event.content['asserted_identity']));
-    }
-  }
-
-  void onCallNegotiate(Event event) async {
-    if (event.senderId == client.userID) {
-      // Ignore messages to yourself.
-      return;
-    }
-    final String callId = event.content['call_id'];
-    Logs().d('Negotiate received for call ID ' + callId);
-    final call = calls[callId];
-    if (call != null) {
-      final description = event.content['description'];
-      try {
-        SDPStreamMetadata? metadata;
-        if (event.content[sdpStreamMetadataKey] != null) {
-          metadata =
-              SDPStreamMetadata.fromJson(event.content[sdpStreamMetadataKey]);
-        }
-        call.onNegotiateReceived(metadata,
-            RTCSessionDescription(description['sdp'], description['type']));
-      } catch (err) {
-        Logs().e('Failed to complete negotiation ${err.toString()}');
-      }
-    }
-  }
-
-  CallType getCallType(String sdp) {
-    try {
-      final session = sdp_transform.parse(sdp);
-      if (session['media'].indexWhere((e) => e['type'] == 'video') != -1) {
-        return CallType.kVideo;
-      }
-    } catch (err) {
-      Logs().e('Failed to getCallType ${err.toString()}');
-    }
-
-    return CallType.kVoice;
-  }
-
-  Future<bool> requestTurnServerCredentials() async {
-    return true;
-  }
-
-  Future<List<Map<String, dynamic>>> getIceSevers() async {
-    if (_turnServerCredentials == null) {
-      try {
-        _turnServerCredentials = await client.getTurnServer();
-      } catch (e) {
-        Logs().v('[VOIP] getTurnServerCredentials error => ${e.toString()}');
-      }
-    }
-
-    if (_turnServerCredentials == null) {
-      return [];
-    }
-
-    return [
-      {
-        'username': _turnServerCredentials!.username,
-        'credential': _turnServerCredentials!.password,
-        'urls': _turnServerCredentials!.uris[0]
-      }
-    ];
-  }
-
-  Future<CallSession> inviteToCall(String roomId, CallType type) async {
-    final room = client.getRoomById(roomId);
-    if (room == null) {
-      Logs().v('[VOIP] Invalid room id [$roomId].');
-      return Null as CallSession;
-    }
-    final callId = 'cid${DateTime.now().millisecondsSinceEpoch}';
-    final opts = CallOptions()
-      ..callId = callId
-      ..type = type
-      ..dir = CallDirection.kOutgoing
-      ..room = room
-      ..voip = this
-      ..localPartyId = localPartyId!
-      ..iceServers = await getIceSevers();
-
-    final newCall = createNewCall(opts);
-    currentCID = callId;
-    await newCall.initOutboundCall(type).then((_) {
-      if (!delegate.isBackgroud) {
-        delegate.handleNewCall(newCall);
-      }
-    });
-    currentCID = callId;
-    return newCall;
-  }
-
-  CallSession createNewCall(CallOptions opts) {
-    final call = CallSession(opts);
-    calls[opts.callId] = call;
-    return call;
-  }
 
   /// This is sent by the caller when they wish to establish a call.
   /// [callId] is a unique identifier for the call.
@@ -1537,6 +1362,7 @@ class VoIP {
     final content = {
       'call_id': callId,
       'party_id': party_id,
+      if (groupCallId != null) 'conf_id': groupCallId,
       'version': version,
       'lifetime': lifetime,
       'offer': {'sdp': sdp, 'type': type},
@@ -1569,6 +1395,7 @@ class VoIP {
     final content = {
       'call_id': callId,
       'party_id': party_id,
+      if (groupCallId != null) 'conf_id': groupCallId,
       'version': version,
       'lifetime': lifetime,
       'selected_party_id': selected_party_id,
@@ -1594,6 +1421,7 @@ class VoIP {
     final content = {
       'call_id': callId,
       'party_id': party_id,
+      if (groupCallId != null) 'conf_id': groupCallId,
       'version': version,
       'lifetime': lifetime,
     };
@@ -1622,6 +1450,7 @@ class VoIP {
     final content = {
       'call_id': callId,
       'party_id': party_id,
+      if (groupCallId != null) 'conf_id': groupCallId,
       'version': version,
       'lifetime': lifetime,
       'description': {'sdp': sdp, 'type': type},
@@ -1668,6 +1497,7 @@ class VoIP {
     final content = {
       'call_id': callId,
       'party_id': party_id,
+      if (groupCallId != null) 'conf_id': groupCallId,
       'version': version,
       'candidates': candidates,
     };
@@ -1696,6 +1526,7 @@ class VoIP {
     final content = {
       'call_id': callId,
       'party_id': party_id,
+      if (groupCallId != null) 'conf_id': groupCallId,
       'version': version,
       'answer': {'sdp': sdp, 'type': type},
       if (capabilities != null) 'capabilities': capabilities.toJson(),
@@ -1721,6 +1552,7 @@ class VoIP {
     final content = {
       'call_id': callId,
       'party_id': party_id,
+      if (groupCallId != null) 'conf_id': groupCallId,
       'version': version,
       if (hangupCause != null) 'reason': hangupCause,
     };
@@ -1753,6 +1585,7 @@ class VoIP {
     final content = {
       'call_id': callId,
       'party_id': party_id,
+      if (groupCallId != null) 'conf_id': groupCallId,
       'version': version,
       sdpStreamMetadataKey: metadata.toJson(),
     };
@@ -1777,6 +1610,7 @@ class VoIP {
     final content = {
       'call_id': callId,
       'party_id': party_id,
+      if (groupCallId != null) 'conf_id': groupCallId,
       'version': version,
       ...callReplaces.toJson(),
     };
@@ -1801,6 +1635,7 @@ class VoIP {
     final content = {
       'call_id': callId,
       'party_id': party_id,
+      if (groupCallId != null) 'conf_id': groupCallId,
       'version': version,
       'asserted_identity': assertedIdentity.toJson(),
     };
@@ -1819,20 +1654,51 @@ class VoIP {
     String? txid,
   }) async {
     txid ??= client.generateUniqueTransactionId();
-
     final mustEncrypt = room.encrypted && client.encryptionEnabled;
+    if (opponentDeviceId != null) {
+      final toDeviceSeq = this.toDeviceSeq++;
 
-    final sendMessageContent = mustEncrypt
-        ? await client.encryption!
-            .encryptGroupMessagePayload(room.id, content, type: type)
-        : content;
-    return await client.sendMessage(
-      room.id,
-      sendMessageContent.containsKey('ciphertext')
-          ? EventTypes.Encrypted
-          : type,
-      txid,
-      sendMessageContent,
-    );
+      if (mustEncrypt) {
+        await client.sendToDeviceEncrypted(
+            [
+              client.userDeviceKeys[invitee ?? remoteUser!.id]!
+                  .deviceKeys[opponentDeviceId]!
+            ],
+            type,
+            {
+              ...content,
+              'device_id': client.deviceID!,
+              'seq': toDeviceSeq,
+              'dest_session_id': opponentSessionId,
+              'sender_session_id': client.groupCallSessionId,
+            });
+      } else {
+        final data = <String, Map<String, Map<String, dynamic>>>{};
+        data[invitee ?? remoteUser!.id] = {
+          opponentDeviceId!: {
+            ...content,
+            'device_id': client.deviceID!,
+            'seq': toDeviceSeq,
+            'dest_session_id': opponentSessionId,
+            'sender_session_id': client.groupCallSessionId,
+          }
+        };
+        await client.sendToDevice(type, txid, data);
+      }
+      return '';
+    } else {
+      final sendMessageContent = mustEncrypt
+          ? await client.encryption!
+              .encryptGroupMessagePayload(room.id, content, type: type)
+          : content;
+      return await client.sendMessage(
+        room.id,
+        sendMessageContent.containsKey('ciphertext')
+            ? EventTypes.Encrypted
+            : type,
+        txid,
+        sendMessageContent,
+      );
+    }
   }
 }
