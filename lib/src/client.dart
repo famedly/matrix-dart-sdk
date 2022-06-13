@@ -27,6 +27,7 @@ import 'package:matrix/src/utils/sync_update_item_count.dart';
 import 'package:mime/mime.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:collection/collection.dart' show IterableExtension;
+import 'package:random_string/random_string.dart';
 
 import '../encryption.dart';
 import '../matrix.dart';
@@ -220,6 +221,11 @@ class Client extends MatrixApi {
   /// The device name is a human readable identifier for this device.
   String? get deviceName => _deviceName;
   String? _deviceName;
+
+  // for group calls
+  // A unique identifier used for resolving duplicate group call sessions from a given device. When the session_id field changes from an incoming m.call.member event, any existing calls from this device in this call should be terminated. The id is generated once per client load.
+  String? get groupCallSessionId => _groupCallSessionId;
+  String? _groupCallSessionId;
 
   /// Returns the current login state.
   LoginState get loginState => __loginState;
@@ -613,6 +619,7 @@ class Client extends MatrixApi {
     List<StateEvent>? initialState,
     Visibility? visibility,
     bool waitForSync = true,
+    bool groupCall = false,
   }) async {
     enableEncryption ??=
         encryptionEnabled && preset != CreateRoomPreset.publicChat;
@@ -628,12 +635,18 @@ class Client extends MatrixApi {
       }
     }
     final roomId = await createRoom(
-      invite: invite,
-      preset: preset,
-      name: groupName,
-      initialState: initialState,
-      visibility: visibility,
-    );
+        invite: invite,
+        preset: preset,
+        name: groupName,
+        initialState: initialState,
+        visibility: visibility,
+        powerLevelContentOverride: groupCall
+            ? <String, dynamic>{
+                'events': <String, dynamic>{
+                  'org.matrix.msc3401.call.member': 0,
+                },
+              }
+            : null);
 
     if (waitForSync) {
       if (getRoomById(roomId) == null) {
@@ -1026,6 +1039,11 @@ class Client extends MatrixApi {
   final StreamController<UiaRequest> onUiaRequest =
       StreamController.broadcast();
 
+  final StreamController<Event> onGroupCallRequest =
+      StreamController.broadcast();
+
+  final StreamController<Event> onGroupMember = StreamController.broadcast();
+
   /// How long should the app wait until it retrys the synchronisation after
   /// an error?
   int syncErrorTimeoutSec = 3;
@@ -1257,6 +1275,8 @@ class Client extends MatrixApi {
           () async => await databaseBuilder(this),
         );
       }
+
+      _groupCallSessionId = randomAlpha(12);
 
       String? olmAccount;
       String? accessToken;
@@ -1844,6 +1864,10 @@ class Client extends MatrixApi {
                 EventTypes.CallSDPStreamMetadataChangedPrefix) {
           onSDPStreamMetadataChangedReceived
               .add(Event.fromJson(rawUnencryptedEvent, room));
+          // TODO(duan): Only used (org.matrix.msc3401.call) during the current test,
+          // need to add GroupCallPrefix in matrix_api_lite
+        } else if (rawUnencryptedEvent['type'] == EventTypes.GroupCallPrefix) {
+          onGroupCallRequest.add(Event.fromJson(rawUnencryptedEvent, room));
         }
       }
     }
