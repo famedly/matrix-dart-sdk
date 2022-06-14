@@ -1,3 +1,8 @@
+## [0.10.0] - 14th Jun 2022
+
+- fix: BoxCollection not re-assignable (Lanna Michalke)
+- feat: Support group calls (experimental) (cloudwebrtc)
+
 ## [0.9.12] - 9th Jun 2022
 
 - refactor: add calcLocalizedBodyFallback method (Christian Pauly)
