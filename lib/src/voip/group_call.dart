@@ -815,7 +815,7 @@ class GroupCall {
       ..localPartyId = client.deviceID!
       ..groupCallId = groupCallId
       ..type = CallType.kVideo
-      ..iceServers = [];
+      ..iceServers = await voip.getIceSevers();
 
     final newCall = voip.createNewCall(opts);
     newCall.opponentDeviceId = opponentDevice.device_id;
