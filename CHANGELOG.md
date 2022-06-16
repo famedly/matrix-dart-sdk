@@ -1,3 +1,8 @@
+## [0.10.1] - 16th Jun 2022
+
+- fix: ringtone not stopping when rejecting a call
+- fix: missing turn servers in group calls
+
 ## [0.10.0] - 14th Jun 2022
 
 - fix: BoxCollection not re-assignable (Lanna Michalke)
