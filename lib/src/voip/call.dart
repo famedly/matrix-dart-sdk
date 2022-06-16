@@ -920,6 +920,9 @@ class CallSession {
   /// event as of MSC2746.
   ///
   void reject() {
+    // stop play ringtone
+    voip.delegate.stopRingtone();
+
     if (state != CallState.kRinging) {
       Logs().e('[VOIP] Call must be in \'ringing\' state to reject!');
       return;
