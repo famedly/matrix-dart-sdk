@@ -1613,14 +1613,9 @@ class Client extends MatrixApi {
 
       // invalid the room cache if needed
       if (newAccountData.type == 'm.direct') {
-        directChats.entries.forEach((MapEntry<String, dynamic> e) {
-          final roomIds = e.value;
-          if (roomIds is List<dynamic>) {
-            roomIds.forEach((id) {
-              getRoomById(id)?.invalidCache();
-            });
-          }
-        });
+        for (var i = 0; i < rooms.length; i++) {
+          rooms[i].invalidCache();
+        }
       }
       onAccountData.add(newAccountData);
     }

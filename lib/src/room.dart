@@ -293,22 +293,27 @@ class Room {
   }
 
   void invalidCache() {
+    directChatCacheSet = false;
     _directChatMatrixID = null;
+    _pushRuleState = null;
   }
 
+  bool directChatCacheSet = false;
   String? _directChatMatrixID;
 
   /// If this room is a direct chat, this is the matrix ID of the user.
   /// Returns null otherwise.
   String? get directChatMatrixID {
-    if (_directChatMatrixID != null) return _directChatMatrixID!;
+    if (directChatCacheSet) return _directChatMatrixID;
     if (membership == Membership.invite) {
       final invitation = getState(EventTypes.RoomMember, client.userID!);
       if (invitation != null && invitation.content['is_direct'] == true) {
+        directChatCacheSet = true;
         return _directChatMatrixID = invitation.senderId;
       }
     }
 
+    directChatCacheSet = true;
     return _directChatMatrixID = client.directChats.entries
         .firstWhereOrNull((MapEntry<String, dynamic> e) {
       final roomIds = e.value;
@@ -1652,7 +1657,9 @@ class Room {
 
   /// Returns the [PushRuleState] for this room, based on the m.push_rules stored in
   /// the account_data.
-  PushRuleState get pushRuleState {
+  PushRuleState? _pushRuleState;
+  PushRuleState get pushRuleState => _pushRuleState ??= calcPushRuleState();
+  PushRuleState calcPushRuleState() {
     final globalPushRules =
         client.accountData['m.push_rules']?.content['global'];
     if (!(globalPushRules is Map)) {
