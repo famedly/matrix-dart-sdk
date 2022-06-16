@@ -1610,6 +1610,18 @@ class Client extends MatrixApi {
         jsonEncode(newAccountData.content),
       );
       accountData[newAccountData.type] = newAccountData;
+
+      // invalid the room cache if needed
+      if (newAccountData.type == 'm.direct') {
+        directChats.entries.forEach((MapEntry<String, dynamic> e) {
+          final roomIds = e.value;
+          if (roomIds is List<dynamic>) {
+            roomIds.forEach((id) {
+              getRoomById(id)?.invalidCache();
+            });
+          }
+        });
+      }
       onAccountData.add(newAccountData);
     }
 
@@ -1939,6 +1951,9 @@ class Client extends MatrixApi {
             'Limited timeline for ${rooms[roomIndex].id} request history now');
         runInRoot(rooms[roomIndex].requestHistory);
       }
+
+      // in this case, we must invalid the room cache
+      rooms[roomIndex].invalidCache();
     }
   }
 
