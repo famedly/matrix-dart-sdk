@@ -1666,29 +1666,29 @@ class Client extends MatrixApi {
         progress: ++handledRooms / rooms.length,
       ));
       final id = entry.key;
-      final room = entry.value;
+      final syncRoomUpdate = entry.value;
 
-      await database?.storeRoomUpdate(id, room, this);
-      _updateRoomsByRoomUpdate(id, room);
+      await database?.storeRoomUpdate(id, syncRoomUpdate, this);
+      final room = _updateRoomsByRoomUpdate(id, syncRoomUpdate);
 
       /// Handle now all room events and save them in the database
-      if (room is JoinedRoomUpdate) {
-        final state = room.state;
+      if (syncRoomUpdate is JoinedRoomUpdate) {
+        final state = syncRoomUpdate.state;
 
         if (state != null && state.isNotEmpty) {
           // TODO: This method seems to be comperatively slow for some updates
           await _handleRoomEvents(
-            id,
-            state.map((i) => i.toJson()).toList(),
+            room,
+            state,
             EventUpdateType.state,
           );
         }
 
-        final timelineEvents = room.timeline?.events;
+        final timelineEvents = syncRoomUpdate.timeline?.events;
         if (timelineEvents != null && timelineEvents.isNotEmpty) {
           await _handleRoomEvents(
-              id,
-              timelineEvents.map((i) => i.toJson()).toList(),
+              room,
+              timelineEvents,
               direction != null
                   ? (direction == Direction.b
                       ? EventUpdateType.history
@@ -1696,66 +1696,65 @@ class Client extends MatrixApi {
                   : EventUpdateType.timeline);
         }
 
-        final ephemeral = room.ephemeral;
+        final ephemeral = syncRoomUpdate.ephemeral;
         if (ephemeral != null && ephemeral.isNotEmpty) {
           // TODO: This method seems to be comperatively slow for some updates
           await _handleEphemerals(
-              id, ephemeral.map((i) => i.toJson()).toList());
+            room,
+            ephemeral.map((i) => i.toJson()).toList(),
+          );
         }
 
-        final accountData = room.accountData;
+        final accountData = syncRoomUpdate.accountData;
         if (accountData != null && accountData.isNotEmpty) {
           await _handleRoomEvents(
-              id,
-              accountData.map((i) => i.toJson()).toList(),
-              EventUpdateType.accountData);
+            room,
+            accountData,
+            EventUpdateType.accountData,
+          );
         }
       }
 
-      if (room is LeftRoomUpdate) {
-        final timelineEvents = room.timeline?.events;
+      if (syncRoomUpdate is LeftRoomUpdate) {
+        final timelineEvents = syncRoomUpdate.timeline?.events;
         if (timelineEvents != null && timelineEvents.isNotEmpty) {
           await _handleRoomEvents(
-            id,
-            timelineEvents.map((i) => i.toJson()).toList(),
+            room,
+            timelineEvents,
             EventUpdateType.timeline,
           );
         }
-        final accountData = room.accountData;
+        final accountData = syncRoomUpdate.accountData;
         if (accountData != null && accountData.isNotEmpty) {
           await _handleRoomEvents(
-              id,
-              accountData.map((i) => i.toJson()).toList(),
-              EventUpdateType.accountData);
+            room,
+            accountData,
+            EventUpdateType.accountData,
+          );
         }
-        final state = room.state;
+        final state = syncRoomUpdate.state;
         if (state != null && state.isNotEmpty) {
-          await _handleRoomEvents(
-              id, state.map((i) => i.toJson()).toList(), EventUpdateType.state);
+          await _handleRoomEvents(room, state, EventUpdateType.state);
         }
       }
 
-      if (room is InvitedRoomUpdate) {
-        final state = room.inviteState;
+      if (syncRoomUpdate is InvitedRoomUpdate) {
+        final state = syncRoomUpdate.inviteState;
         if (state != null && state.isNotEmpty) {
-          await _handleRoomEvents(id, state.map((i) => i.toJson()).toList(),
-              EventUpdateType.inviteState);
+          await _handleRoomEvents(room, state, EventUpdateType.inviteState);
         }
       }
     }
   }
 
-  Future<void> _handleEphemerals(String id, List<dynamic> events) async {
+  Future<void> _handleEphemerals(Room room, List<dynamic> events) async {
     for (final event in events) {
-      await _handleEvent(event, id, EventUpdateType.ephemeral);
+      await _handleEvent(event, room, EventUpdateType.ephemeral);
 
       // Receipt events are deltas between two states. We will create a
       // fake room account data event for this and store the difference
       // there.
       if (event['type'] == 'm.receipt') {
-        var room = getRoomById(id);
-        room ??= Room(id: id, client: this);
-
         final receiptStateContent =
             room.roomAccountData['m.receipt']?.content ?? {};
         for (final eventEntry in event['content'].entries) {
@@ -1784,96 +1783,98 @@ class Client extends MatrixApi {
           }
         }
         event['content'] = receiptStateContent;
-        await _handleEvent(event, id, EventUpdateType.accountData);
+        await _handleEvent(event, room, EventUpdateType.accountData);
       }
     }
   }
 
   Future<void> _handleRoomEvents(
-      String chat_id, List<dynamic> events, EventUpdateType type) async {
+    Room room,
+    List<BasicEvent> events,
+    EventUpdateType type,
+  ) async {
     for (final event in events) {
-      await _handleEvent(event, chat_id, type);
+      await _handleEvent(event.toJson(), room, type);
     }
   }
 
   Future<void> _handleEvent(
-      Map<String, dynamic> event, String roomID, EventUpdateType type) async {
-    if (event['type'] is String && event['content'] is Map<String, dynamic>) {
-      // The client must ignore any new m.room.encryption event to prevent
-      // man-in-the-middle attacks!
-      final room = getRoomById(roomID);
-      if (room == null ||
-          (event['type'] == EventTypes.Encryption &&
-              room.encrypted &&
-              event['content']['algorithm'] !=
-                  room.getState(EventTypes.Encryption)?.content['algorithm'])) {
-        return;
-      }
+    Map<String, dynamic> event,
+    Room room,
+    EventUpdateType type,
+  ) async {
+    // The client must ignore any new m.room.encryption event to prevent
+    // man-in-the-middle attacks!
+    if ((event['type'] == EventTypes.Encryption &&
+        room.encrypted &&
+        event['content']['algorithm'] !=
+            room.getState(EventTypes.Encryption)?.content['algorithm'])) {
+      return;
+    }
 
-      var update = EventUpdate(roomID: roomID, type: type, content: event);
-      if (event['type'] == EventTypes.Encrypted && encryptionEnabled) {
-        update = await update.decrypt(room);
+    var update = EventUpdate(roomID: room.id, type: type, content: event);
+    if (event['type'] == EventTypes.Encrypted && encryptionEnabled) {
+      update = await update.decrypt(room);
+    }
+    if (event['type'] == EventTypes.Message &&
+        !room.isDirectChat &&
+        database != null &&
+        room.getState(EventTypes.RoomMember, event['sender']) == null) {
+      // In order to correctly render room list previews we need to fetch the member from the database
+      final user = await database?.getUser(event['sender'], room);
+      if (user != null) {
+        room.setState(user);
       }
-      if (event['type'] == EventTypes.Message &&
-          !room.isDirectChat &&
-          database != null &&
-          room.getState(EventTypes.RoomMember, event['sender']) == null) {
-        // In order to correctly render room list previews we need to fetch the member from the database
-        final user = await database?.getUser(event['sender'], room);
-        if (user != null) {
-          room.setState(user);
-        }
-      }
-      _updateRoomsByEventUpdate(update);
-      if (type != EventUpdateType.ephemeral) {
-        await database?.storeEventUpdate(update, this);
-      }
-      if (encryptionEnabled) {
-        await encryption?.handleEventUpdate(update);
-      }
-      onEvent.add(update);
+    }
+    _updateRoomsByEventUpdate(room, update);
+    if (type != EventUpdateType.ephemeral) {
+      await database?.storeEventUpdate(update, this);
+    }
+    if (encryptionEnabled) {
+      await encryption?.handleEventUpdate(update);
+    }
+    onEvent.add(update);
 
-      final rawUnencryptedEvent = update.content;
+    final rawUnencryptedEvent = update.content;
 
-      if (prevBatch != null && type == EventUpdateType.timeline) {
-        if (rawUnencryptedEvent['type'] == EventTypes.CallInvite) {
-          onCallInvite.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] == EventTypes.CallHangup) {
-          onCallHangup.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] == EventTypes.CallAnswer) {
-          onCallAnswer.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] == EventTypes.CallCandidates) {
-          onCallCandidates.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] == EventTypes.CallSelectAnswer) {
-          onCallSelectAnswer.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] == EventTypes.CallReject) {
-          onCallReject.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] == EventTypes.CallNegotiate) {
-          onCallNegotiate.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] == EventTypes.CallReplaces) {
-          onCallReplaces.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] ==
-                EventTypes.CallAssertedIdentity ||
-            rawUnencryptedEvent['type'] ==
-                EventTypes.CallAssertedIdentityPrefix) {
-          onAssertedIdentityReceived
-              .add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] ==
-                EventTypes.CallSDPStreamMetadataChanged ||
-            rawUnencryptedEvent['type'] ==
-                EventTypes.CallSDPStreamMetadataChangedPrefix) {
-          onSDPStreamMetadataChangedReceived
-              .add(Event.fromJson(rawUnencryptedEvent, room));
-          // TODO(duan): Only used (org.matrix.msc3401.call) during the current test,
-          // need to add GroupCallPrefix in matrix_api_lite
-        } else if (rawUnencryptedEvent['type'] == EventTypes.GroupCallPrefix) {
-          onGroupCallRequest.add(Event.fromJson(rawUnencryptedEvent, room));
-        }
+    if (prevBatch != null && type == EventUpdateType.timeline) {
+      if (rawUnencryptedEvent['type'] == EventTypes.CallInvite) {
+        onCallInvite.add(Event.fromJson(rawUnencryptedEvent, room));
+      } else if (rawUnencryptedEvent['type'] == EventTypes.CallHangup) {
+        onCallHangup.add(Event.fromJson(rawUnencryptedEvent, room));
+      } else if (rawUnencryptedEvent['type'] == EventTypes.CallAnswer) {
+        onCallAnswer.add(Event.fromJson(rawUnencryptedEvent, room));
+      } else if (rawUnencryptedEvent['type'] == EventTypes.CallCandidates) {
+        onCallCandidates.add(Event.fromJson(rawUnencryptedEvent, room));
+      } else if (rawUnencryptedEvent['type'] == EventTypes.CallSelectAnswer) {
+        onCallSelectAnswer.add(Event.fromJson(rawUnencryptedEvent, room));
+      } else if (rawUnencryptedEvent['type'] == EventTypes.CallReject) {
+        onCallReject.add(Event.fromJson(rawUnencryptedEvent, room));
+      } else if (rawUnencryptedEvent['type'] == EventTypes.CallNegotiate) {
+        onCallNegotiate.add(Event.fromJson(rawUnencryptedEvent, room));
+      } else if (rawUnencryptedEvent['type'] == EventTypes.CallReplaces) {
+        onCallReplaces.add(Event.fromJson(rawUnencryptedEvent, room));
+      } else if (rawUnencryptedEvent['type'] ==
+              EventTypes.CallAssertedIdentity ||
+          rawUnencryptedEvent['type'] ==
+              EventTypes.CallAssertedIdentityPrefix) {
+        onAssertedIdentityReceived
+            .add(Event.fromJson(rawUnencryptedEvent, room));
+      } else if (rawUnencryptedEvent['type'] ==
+              EventTypes.CallSDPStreamMetadataChanged ||
+          rawUnencryptedEvent['type'] ==
+              EventTypes.CallSDPStreamMetadataChangedPrefix) {
+        onSDPStreamMetadataChangedReceived
+            .add(Event.fromJson(rawUnencryptedEvent, room));
+        // TODO(duan): Only used (org.matrix.msc3401.call) during the current test,
+        // need to add GroupCallPrefix in matrix_api_lite
+      } else if (rawUnencryptedEvent['type'] == EventTypes.GroupCallPrefix) {
+        onGroupCallRequest.add(Event.fromJson(rawUnencryptedEvent, room));
       }
     }
   }
 
-  void _updateRoomsByRoomUpdate(String roomId, SyncRoomUpdate chatUpdate) {
+  Room _updateRoomsByRoomUpdate(String roomId, SyncRoomUpdate chatUpdate) {
     // Update the chat list item.
     // Search the room in the rooms
     final roomIndex = rooms.indexWhere((r) => r.id == roomId);
@@ -1884,24 +1885,27 @@ class Client extends MatrixApi {
             ? Membership.invite
             : Membership.join;
 
+    final room = found
+        ? rooms[roomIndex]
+        : (chatUpdate is JoinedRoomUpdate
+            ? Room(
+                id: roomId,
+                membership: membership,
+                prev_batch: chatUpdate.timeline?.prevBatch,
+                highlightCount:
+                    chatUpdate.unreadNotifications?.highlightCount ?? 0,
+                notificationCount:
+                    chatUpdate.unreadNotifications?.notificationCount ?? 0,
+                summary: chatUpdate.summary,
+                client: this,
+              )
+            : Room(id: roomId, membership: membership, client: this));
+
     // Does the chat already exist in the list rooms?
     if (!found && membership != Membership.leave) {
       final position = membership == Membership.invite ? 0 : rooms.length;
       // Add the new chat to the list
-      final newRoom = chatUpdate is JoinedRoomUpdate
-          ? Room(
-              id: roomId,
-              membership: membership,
-              prev_batch: chatUpdate.timeline?.prevBatch,
-              highlightCount:
-                  chatUpdate.unreadNotifications?.highlightCount ?? 0,
-              notificationCount:
-                  chatUpdate.unreadNotifications?.notificationCount ?? 0,
-              summary: chatUpdate.summary,
-              client: this,
-            )
-          : Room(id: roomId, membership: membership, client: this);
-      rooms.insert(position, newRoom);
+      rooms.insert(position, room);
     }
     // If the membership is "leave" then remove the item and stop here
     else if (found && membership == Membership.leave) {
@@ -1940,13 +1944,11 @@ class Client extends MatrixApi {
         runInRoot(rooms[roomIndex].requestHistory);
       }
     }
+    return room;
   }
 
-  void _updateRoomsByEventUpdate(EventUpdate eventUpdate) {
+  void _updateRoomsByEventUpdate(Room room, EventUpdate eventUpdate) {
     if (eventUpdate.type == EventUpdateType.history) return;
-
-    final room = getRoomById(eventUpdate.roomID);
-    if (room == null) return;
 
     switch (eventUpdate.type) {
       case EventUpdateType.timeline:
