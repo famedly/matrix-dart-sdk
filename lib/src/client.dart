@@ -1701,7 +1701,7 @@ class Client extends MatrixApi {
           // TODO: This method seems to be comperatively slow for some updates
           await _handleEphemerals(
             room,
-            ephemeral.map((i) => i.toJson()).toList(),
+            ephemeral,
           );
         }
 
@@ -1747,21 +1747,21 @@ class Client extends MatrixApi {
     }
   }
 
-  Future<void> _handleEphemerals(Room room, List<dynamic> events) async {
+  Future<void> _handleEphemerals(Room room, List<BasicRoomEvent> events) async {
     for (final event in events) {
-      await _handleEvent(event, room, EventUpdateType.ephemeral);
+      await _handleEvent(event.toJson(), room, EventUpdateType.ephemeral);
 
       // Receipt events are deltas between two states. We will create a
       // fake room account data event for this and store the difference
       // there.
-      if (event['type'] == 'm.receipt') {
+      if (event.type == 'm.receipt') {
         final receiptStateContent =
             room.roomAccountData['m.receipt']?.content ?? {};
-        for (final eventEntry in event['content'].entries) {
-          final String eventID = eventEntry.key;
-          if (event['content'][eventID]['m.read'] != null) {
+        for (final eventEntry in event.content.entries) {
+          final eventID = eventEntry.key;
+          if (event.content[eventID]['m.read'] != null) {
             final Map<String, dynamic> userTimestampMap =
-                event['content'][eventID]['m.read'];
+                event.content[eventID]['m.read'];
             for (final userTimestampMapEntry in userTimestampMap.entries) {
               final mxid = userTimestampMapEntry.key;
 
@@ -1782,8 +1782,8 @@ class Client extends MatrixApi {
             }
           }
         }
-        event['content'] = receiptStateContent;
-        await _handleEvent(event, room, EventUpdateType.accountData);
+        event.content = receiptStateContent;
+        await _handleEvent(event.toJson(), room, EventUpdateType.accountData);
       }
     }
   }
