@@ -1793,6 +1793,10 @@ class Client extends MatrixApi {
     List<BasicEvent> events,
     EventUpdateType type,
   ) async {
+    // Calling events can be omitted if they are outdated from the same sync. So
+    // we collect them first before we handle them.
+    final callEvents = <Event>{};
+
     for (final event in events) {
       // The client must ignore any new m.room.encryption event to prevent
       // man-in-the-middle attacks!
@@ -1828,43 +1832,74 @@ class Client extends MatrixApi {
       }
       onEvent.add(update);
 
-      final rawUnencryptedEvent = update.content;
-
       if (prevBatch != null && type == EventUpdateType.timeline) {
-        if (rawUnencryptedEvent['type'] == EventTypes.CallInvite) {
-          onCallInvite.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] == EventTypes.CallHangup) {
-          onCallHangup.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] == EventTypes.CallAnswer) {
-          onCallAnswer.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] == EventTypes.CallCandidates) {
-          onCallCandidates.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] == EventTypes.CallSelectAnswer) {
-          onCallSelectAnswer.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] == EventTypes.CallReject) {
-          onCallReject.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] == EventTypes.CallNegotiate) {
-          onCallNegotiate.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] == EventTypes.CallReplaces) {
-          onCallReplaces.add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] ==
-                EventTypes.CallAssertedIdentity ||
-            rawUnencryptedEvent['type'] ==
-                EventTypes.CallAssertedIdentityPrefix) {
-          onAssertedIdentityReceived
-              .add(Event.fromJson(rawUnencryptedEvent, room));
-        } else if (rawUnencryptedEvent['type'] ==
-                EventTypes.CallSDPStreamMetadataChanged ||
-            rawUnencryptedEvent['type'] ==
-                EventTypes.CallSDPStreamMetadataChangedPrefix) {
-          onSDPStreamMetadataChangedReceived
-              .add(Event.fromJson(rawUnencryptedEvent, room));
-          // TODO(duan): Only used (org.matrix.msc3401.call) during the current test,
-          // need to add GroupCallPrefix in matrix_api_lite
-        } else if (rawUnencryptedEvent['type'] == EventTypes.GroupCallPrefix) {
-          onGroupCallRequest.add(Event.fromJson(rawUnencryptedEvent, room));
+        if (update.content.tryGet<String>('type')?.startsWith('m.call.') ??
+            false) {
+          final callEvent = Event.fromJson(update.content, room);
+          final callId = callEvent.content.tryGet<String>('call_id');
+          callEvents.add(callEvent);
+
+          // Call Invites should be omitted for a call that is already answered,
+          // has ended, is rejectd or replaced.
+          const callEndedEventTypes = {
+            EventTypes.CallAnswer,
+            EventTypes.CallHangup,
+            EventTypes.CallReject,
+            EventTypes.CallReplaces,
+          };
+          const ommitWhenCallEndedTypes = {
+            EventTypes.CallInvite,
+            EventTypes.CallCandidates,
+            EventTypes.CallNegotiate,
+            EventTypes.CallSDPStreamMetadataChanged,
+            EventTypes.CallSDPStreamMetadataChangedPrefix,
+          };
+
+          if (callEndedEventTypes.contains(callEvent.type)) {
+            callEvents.removeWhere((event) {
+              if (ommitWhenCallEndedTypes.contains(event.type) &&
+                  event.content.tryGet<String>('call_id') == callId) {
+                Logs().v(
+                    'Ommit "${event.type}" event for an already terminated call');
+                return true;
+              }
+              return false;
+            });
+          }
         }
       }
+    }
+
+    callEvents.forEach(_callStreamByCallEvent);
+  }
+
+  void _callStreamByCallEvent(Event event) {
+    if (event.type == EventTypes.CallInvite) {
+      onCallInvite.add(event);
+    } else if (event.type == EventTypes.CallHangup) {
+      onCallHangup.add(event);
+    } else if (event.type == EventTypes.CallAnswer) {
+      onCallAnswer.add(event);
+    } else if (event.type == EventTypes.CallCandidates) {
+      onCallCandidates.add(event);
+    } else if (event.type == EventTypes.CallSelectAnswer) {
+      onCallSelectAnswer.add(event);
+    } else if (event.type == EventTypes.CallReject) {
+      onCallReject.add(event);
+    } else if (event.type == EventTypes.CallNegotiate) {
+      onCallNegotiate.add(event);
+    } else if (event.type == EventTypes.CallReplaces) {
+      onCallReplaces.add(event);
+    } else if (event.type == EventTypes.CallAssertedIdentity ||
+        event.type == EventTypes.CallAssertedIdentityPrefix) {
+      onAssertedIdentityReceived.add(event);
+    } else if (event.type == EventTypes.CallSDPStreamMetadataChanged ||
+        event.type == EventTypes.CallSDPStreamMetadataChangedPrefix) {
+      onSDPStreamMetadataChangedReceived.add(event);
+      // TODO(duan): Only used (org.matrix.msc3401.call) during the current test,
+      // need to add GroupCallPrefix in matrix_api_lite
+    } else if (event.type == EventTypes.GroupCallPrefix) {
+      onGroupCallRequest.add(event);
     }
   }
 
