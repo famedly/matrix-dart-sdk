@@ -1749,7 +1749,7 @@ class Client extends MatrixApi {
 
   Future<void> _handleEphemerals(Room room, List<BasicRoomEvent> events) async {
     for (final event in events) {
-      await _handleEvent(event, room, EventUpdateType.ephemeral);
+      await _handleRoomEvents(room, [event], EventUpdateType.ephemeral);
 
       // Receipt events are deltas between two states. We will create a
       // fake room account data event for this and store the difference
@@ -1783,7 +1783,7 @@ class Client extends MatrixApi {
           }
         }
         event.content = receiptStateContent;
-        await _handleEvent(event, room, EventUpdateType.accountData);
+        await _handleRoomEvents(room, [event], EventUpdateType.accountData);
       }
     }
   }
@@ -1794,84 +1794,76 @@ class Client extends MatrixApi {
     EventUpdateType type,
   ) async {
     for (final event in events) {
-      await _handleEvent(event, room, type);
-    }
-  }
-
-  Future<void> _handleEvent(
-    BasicEvent event,
-    Room room,
-    EventUpdateType type,
-  ) async {
-    // The client must ignore any new m.room.encryption event to prevent
-    // man-in-the-middle attacks!
-    if ((event.type == EventTypes.Encryption &&
-        room.encrypted &&
-        event.content['algorithm'] !=
-            room.getState(EventTypes.Encryption)?.content['algorithm'])) {
-      return;
-    }
-
-    var update =
-        EventUpdate(roomID: room.id, type: type, content: event.toJson());
-    if (event.type == EventTypes.Encrypted && encryptionEnabled) {
-      update = await update.decrypt(room);
-    }
-    if (event.type == EventTypes.Message &&
-        !room.isDirectChat &&
-        database != null &&
-        event is MatrixEvent &&
-        room.getState(EventTypes.RoomMember, event.senderId) == null) {
-      // In order to correctly render room list previews we need to fetch the member from the database
-      final user = await database?.getUser(event.senderId, room);
-      if (user != null) {
-        room.setState(user);
+      // The client must ignore any new m.room.encryption event to prevent
+      // man-in-the-middle attacks!
+      if ((event.type == EventTypes.Encryption &&
+          room.encrypted &&
+          event.content['algorithm'] !=
+              room.getState(EventTypes.Encryption)?.content['algorithm'])) {
+        return;
       }
-    }
-    _updateRoomsByEventUpdate(room, update);
-    if (type != EventUpdateType.ephemeral) {
-      await database?.storeEventUpdate(update, this);
-    }
-    if (encryptionEnabled) {
-      await encryption?.handleEventUpdate(update);
-    }
-    onEvent.add(update);
 
-    final rawUnencryptedEvent = update.content;
+      var update =
+          EventUpdate(roomID: room.id, type: type, content: event.toJson());
+      if (event.type == EventTypes.Encrypted && encryptionEnabled) {
+        update = await update.decrypt(room);
+      }
+      if (event.type == EventTypes.Message &&
+          !room.isDirectChat &&
+          database != null &&
+          event is MatrixEvent &&
+          room.getState(EventTypes.RoomMember, event.senderId) == null) {
+        // In order to correctly render room list previews we need to fetch the member from the database
+        final user = await database?.getUser(event.senderId, room);
+        if (user != null) {
+          room.setState(user);
+        }
+      }
+      _updateRoomsByEventUpdate(room, update);
+      if (type != EventUpdateType.ephemeral) {
+        await database?.storeEventUpdate(update, this);
+      }
+      if (encryptionEnabled) {
+        await encryption?.handleEventUpdate(update);
+      }
+      onEvent.add(update);
 
-    if (prevBatch != null && type == EventUpdateType.timeline) {
-      if (rawUnencryptedEvent['type'] == EventTypes.CallInvite) {
-        onCallInvite.add(Event.fromJson(rawUnencryptedEvent, room));
-      } else if (rawUnencryptedEvent['type'] == EventTypes.CallHangup) {
-        onCallHangup.add(Event.fromJson(rawUnencryptedEvent, room));
-      } else if (rawUnencryptedEvent['type'] == EventTypes.CallAnswer) {
-        onCallAnswer.add(Event.fromJson(rawUnencryptedEvent, room));
-      } else if (rawUnencryptedEvent['type'] == EventTypes.CallCandidates) {
-        onCallCandidates.add(Event.fromJson(rawUnencryptedEvent, room));
-      } else if (rawUnencryptedEvent['type'] == EventTypes.CallSelectAnswer) {
-        onCallSelectAnswer.add(Event.fromJson(rawUnencryptedEvent, room));
-      } else if (rawUnencryptedEvent['type'] == EventTypes.CallReject) {
-        onCallReject.add(Event.fromJson(rawUnencryptedEvent, room));
-      } else if (rawUnencryptedEvent['type'] == EventTypes.CallNegotiate) {
-        onCallNegotiate.add(Event.fromJson(rawUnencryptedEvent, room));
-      } else if (rawUnencryptedEvent['type'] == EventTypes.CallReplaces) {
-        onCallReplaces.add(Event.fromJson(rawUnencryptedEvent, room));
-      } else if (rawUnencryptedEvent['type'] ==
-              EventTypes.CallAssertedIdentity ||
-          rawUnencryptedEvent['type'] ==
-              EventTypes.CallAssertedIdentityPrefix) {
-        onAssertedIdentityReceived
-            .add(Event.fromJson(rawUnencryptedEvent, room));
-      } else if (rawUnencryptedEvent['type'] ==
-              EventTypes.CallSDPStreamMetadataChanged ||
-          rawUnencryptedEvent['type'] ==
-              EventTypes.CallSDPStreamMetadataChangedPrefix) {
-        onSDPStreamMetadataChangedReceived
-            .add(Event.fromJson(rawUnencryptedEvent, room));
-        // TODO(duan): Only used (org.matrix.msc3401.call) during the current test,
-        // need to add GroupCallPrefix in matrix_api_lite
-      } else if (rawUnencryptedEvent['type'] == EventTypes.GroupCallPrefix) {
-        onGroupCallRequest.add(Event.fromJson(rawUnencryptedEvent, room));
+      final rawUnencryptedEvent = update.content;
+
+      if (prevBatch != null && type == EventUpdateType.timeline) {
+        if (rawUnencryptedEvent['type'] == EventTypes.CallInvite) {
+          onCallInvite.add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] == EventTypes.CallHangup) {
+          onCallHangup.add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] == EventTypes.CallAnswer) {
+          onCallAnswer.add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] == EventTypes.CallCandidates) {
+          onCallCandidates.add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] == EventTypes.CallSelectAnswer) {
+          onCallSelectAnswer.add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] == EventTypes.CallReject) {
+          onCallReject.add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] == EventTypes.CallNegotiate) {
+          onCallNegotiate.add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] == EventTypes.CallReplaces) {
+          onCallReplaces.add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] ==
+                EventTypes.CallAssertedIdentity ||
+            rawUnencryptedEvent['type'] ==
+                EventTypes.CallAssertedIdentityPrefix) {
+          onAssertedIdentityReceived
+              .add(Event.fromJson(rawUnencryptedEvent, room));
+        } else if (rawUnencryptedEvent['type'] ==
+                EventTypes.CallSDPStreamMetadataChanged ||
+            rawUnencryptedEvent['type'] ==
+                EventTypes.CallSDPStreamMetadataChangedPrefix) {
+          onSDPStreamMetadataChangedReceived
+              .add(Event.fromJson(rawUnencryptedEvent, room));
+          // TODO(duan): Only used (org.matrix.msc3401.call) during the current test,
+          // need to add GroupCallPrefix in matrix_api_lite
+        } else if (rawUnencryptedEvent['type'] == EventTypes.GroupCallPrefix) {
+          onGroupCallRequest.add(Event.fromJson(rawUnencryptedEvent, room));
+        }
       }
     }
   }
