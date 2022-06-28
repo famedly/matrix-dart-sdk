@@ -1749,7 +1749,7 @@ class Client extends MatrixApi {
 
   Future<void> _handleEphemerals(Room room, List<BasicRoomEvent> events) async {
     for (final event in events) {
-      await _handleEvent(event.toJson(), room, EventUpdateType.ephemeral);
+      await _handleEvent(event, room, EventUpdateType.ephemeral);
 
       // Receipt events are deltas between two states. We will create a
       // fake room account data event for this and store the difference
@@ -1783,7 +1783,7 @@ class Client extends MatrixApi {
           }
         }
         event.content = receiptStateContent;
-        await _handleEvent(event.toJson(), room, EventUpdateType.accountData);
+        await _handleEvent(event, room, EventUpdateType.accountData);
       }
     }
   }
@@ -1794,34 +1794,36 @@ class Client extends MatrixApi {
     EventUpdateType type,
   ) async {
     for (final event in events) {
-      await _handleEvent(event.toJson(), room, type);
+      await _handleEvent(event, room, type);
     }
   }
 
   Future<void> _handleEvent(
-    Map<String, dynamic> event,
+    BasicEvent event,
     Room room,
     EventUpdateType type,
   ) async {
     // The client must ignore any new m.room.encryption event to prevent
     // man-in-the-middle attacks!
-    if ((event['type'] == EventTypes.Encryption &&
+    if ((event.type == EventTypes.Encryption &&
         room.encrypted &&
-        event['content']['algorithm'] !=
+        event.content['algorithm'] !=
             room.getState(EventTypes.Encryption)?.content['algorithm'])) {
       return;
     }
 
-    var update = EventUpdate(roomID: room.id, type: type, content: event);
-    if (event['type'] == EventTypes.Encrypted && encryptionEnabled) {
+    var update =
+        EventUpdate(roomID: room.id, type: type, content: event.toJson());
+    if (event.type == EventTypes.Encrypted && encryptionEnabled) {
       update = await update.decrypt(room);
     }
-    if (event['type'] == EventTypes.Message &&
+    if (event.type == EventTypes.Message &&
         !room.isDirectChat &&
         database != null &&
-        room.getState(EventTypes.RoomMember, event['sender']) == null) {
+        event is MatrixEvent &&
+        room.getState(EventTypes.RoomMember, event.senderId) == null) {
       // In order to correctly render room list previews we need to fetch the member from the database
-      final user = await database?.getUser(event['sender'], room);
+      final user = await database?.getUser(event.senderId, room);
       if (user != null) {
         room.setState(user);
       }
