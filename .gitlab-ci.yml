@@ -10,11 +10,14 @@ workflow:
     - if: $CI_COMMIT_TAG
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
+variables:
+  FLUTTER_IMAGE_TAG: '3.0.3'
+
 coverage:
   tags:
     - linux
   stage: coverage
-  image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable
+  image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable:${FLUTTER_IMAGE_TAG}
   dependencies: []
   script:
     - sed -i 's/#\([^ ]\)/\1/g' pubspec.yaml
@@ -39,7 +42,7 @@ e2ee_test:
   tags:
     - linux
   stage: coverage
-  image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable
+  image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable:${FLUTTER_IMAGE_TAG}
   dependencies: []
   script:
     - printf "abstract class TestUser {\n  static const String homeserver = '$TEST_HOMESERVER';\n  static const String username = '$TEST_USER1';\n  static const String username2 = '$TEST_USER2';\n  static const String password = '$TEST_USER_PASSWORD';\n}" > ./test_driver/test_config.dart
