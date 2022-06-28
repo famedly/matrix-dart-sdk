@@ -18,15 +18,27 @@
 import 'dart:ffi';
 import 'dart:io';
 
-final libcrypto = Platform.isIOS
-    ? DynamicLibrary.process()
-    : DynamicLibrary.open(Platform.isAndroid
-        ? 'libcrypto.so'
-        : Platform.isWindows
-            ? 'libcrypto.dll'
-            : Platform.isMacOS
-                ? 'libcrypto.1.1.dylib'
-                : 'libcrypto.so.1.1');
+final libcrypto = () {
+  if (Platform.isIOS) {
+    return DynamicLibrary.process();
+  } else if (Platform.isAndroid) {
+    return DynamicLibrary.open('libcrypto.so');
+  } else if (Platform.isWindows) {
+    return DynamicLibrary.open('libcrypto.dll');
+  } else if (Platform.isMacOS) {
+    try {
+      return DynamicLibrary.open('libcrypto.3.dylib');
+    } catch (_) {
+      return DynamicLibrary.open('libcrypto.1.1.dylib');
+    }
+  } else {
+    try {
+      return DynamicLibrary.open('libcrypto.so.3');
+    } catch (_) {
+      return DynamicLibrary.open('libcrypto.so.1.1');
+    }
+  }
+}();
 
 final PKCS5_PBKDF2_HMAC = libcrypto.lookupFunction<
     IntPtr Function(
@@ -118,6 +130,15 @@ final EVP_Digest = libcrypto.lookupFunction<
         Pointer<NativeType> alg,
         Pointer<NativeType> engine)>('EVP_Digest');
 
-final EVP_MD_size = libcrypto.lookupFunction<
-    IntPtr Function(Pointer<NativeType> ctx),
-    int Function(Pointer<NativeType> ctx)>('EVP_MD_size');
+final EVP_MD_size = () {
+  // EVP_MD_size was renamed to EVP_MD_get_size in Openssl3.0.
+  // There is an alias macro, but those don't exist in libraries.
+  // Try loading the new name first, then fall back to the old one if not found.
+  try {
+    return libcrypto.lookupFunction<IntPtr Function(Pointer<NativeType> ctx),
+        int Function(Pointer<NativeType> ctx)>('EVP_MD_get_size');
+  } catch (e) {
+    return libcrypto.lookupFunction<IntPtr Function(Pointer<NativeType> ctx),
+        int Function(Pointer<NativeType> ctx)>('EVP_MD_size');
+  }
+}();
