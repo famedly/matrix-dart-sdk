@@ -239,7 +239,7 @@ void main() {
 
       final eventUpdateList = await eventUpdateListFuture;
 
-      expect(eventUpdateList.length, 14);
+      expect(eventUpdateList.length, 18);
 
       expect(eventUpdateList[0].content['type'], 'm.room.member');
       expect(eventUpdateList[0].roomID, '!726s6s6q:example.com');
