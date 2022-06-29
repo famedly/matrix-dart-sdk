@@ -1748,43 +1748,62 @@ class Client extends MatrixApi {
   }
 
   Future<void> _handleEphemerals(Room room, List<BasicRoomEvent> events) async {
+    var updateReceipts = false;
+    final receiptStateContent =
+        room.roomAccountData['m.receipt']?.content ?? {};
     for (final event in events) {
       await _handleRoomEvents(room, [event], EventUpdateType.ephemeral);
 
       // Receipt events are deltas between two states. We will create a
       // fake room account data event for this and store the difference
       // there.
-      if (event.type == 'm.receipt') {
-        final receiptStateContent =
-            room.roomAccountData['m.receipt']?.content ?? {};
-        for (final eventEntry in event.content.entries) {
-          final eventID = eventEntry.key;
-          if (event.content[eventID]['m.read'] != null) {
-            final Map<String, dynamic> userTimestampMap =
-                event.content[eventID]['m.read'];
-            for (final userTimestampMapEntry in userTimestampMap.entries) {
-              final mxid = userTimestampMapEntry.key;
+      if (event.type != 'm.receipt') continue;
+      updateReceipts = true;
+      for (final entry in event.content.entries) {
+        final eventId = entry.key;
+        final value = entry.value;
 
-              // Remove previous receipt event from this user
-              if (receiptStateContent[eventID] is Map<String, dynamic> &&
-                  receiptStateContent[eventID]['m.read']
-                      is Map<String, dynamic> &&
-                  receiptStateContent[eventID]['m.read'].containsKey(mxid)) {
-                receiptStateContent[eventID]['m.read'].remove(mxid);
-              }
-              if (userTimestampMap[mxid] is Map<String, dynamic> &&
-                  userTimestampMap[mxid].containsKey('ts')) {
-                receiptStateContent[mxid] = {
-                  'event_id': eventID,
-                  'ts': userTimestampMap[mxid]['ts'],
-                };
-              }
-            }
+        final userTimestampMap =
+            (value is Map ? Map<String, dynamic>.from(value) : null)
+                ?.tryGetMap<String, dynamic>('m.read');
+
+        if (userTimestampMap == null) continue;
+
+        for (final userTimestampMapEntry in userTimestampMap.entries) {
+          final mxid = userTimestampMapEntry.key;
+
+          // Remove previous receipt event from this user
+          if (receiptStateContent
+                  .tryGetMap<String, dynamic>(eventId)
+                  ?.tryGetMap<String, dynamic>('m.read')
+                  ?.containsKey(mxid) ??
+              false) {
+            receiptStateContent[eventId]['m.read'].remove(mxid);
+          }
+          if (userTimestampMap
+                  .tryGetMap<String, dynamic>(mxid)
+                  ?.containsKey('ts') ??
+              false) {
+            receiptStateContent[mxid] = {
+              'event_id': eventId,
+              'ts': userTimestampMap[mxid]['ts'],
+            };
           }
         }
-        event.content = receiptStateContent;
-        await _handleRoomEvents(room, [event], EventUpdateType.accountData);
       }
+    }
+
+    if (updateReceipts) {
+      await _handleRoomEvents(
+          room,
+          [
+            BasicRoomEvent(
+              type: 'm.receipt',
+              roomId: room.id,
+              content: receiptStateContent,
+            )
+          ],
+          EventUpdateType.accountData);
     }
   }
 
