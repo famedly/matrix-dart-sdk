@@ -94,7 +94,6 @@ void main() {
       expect(available, true);
 
       final loginStateFuture = matrix.onLoginStateChanged.stream.first;
-      final firstSyncFuture = matrix.onFirstSync.stream.first;
       final syncFuture = matrix.onSync.stream.first;
 
       await matrix.init(
@@ -109,11 +108,10 @@ void main() {
       await Future.delayed(Duration(milliseconds: 50));
 
       final loginState = await loginStateFuture;
-      final firstSync = await firstSyncFuture;
       final sync = await syncFuture;
 
       expect(loginState, LoginState.loggedIn);
-      expect(firstSync, true);
+      expect(matrix.onSync.value != null, true);
       expect(matrix.encryptionEnabled, olmEnabled);
       if (olmEnabled) {
         expect(matrix.identityKey, identityKey);

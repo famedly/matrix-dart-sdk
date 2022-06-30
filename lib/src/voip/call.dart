@@ -19,6 +19,7 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import '../../matrix.dart';
@@ -52,8 +53,8 @@ class WrappedMediaStream {
   String get title => '$displayName:$purpose:a[$audioMuted]:v[$videoMuted]';
   bool stopped = false;
 
-  final StreamController<WrappedMediaStream> onMuteStateChanged =
-      StreamController.broadcast();
+  final CachedStreamController<WrappedMediaStream> onMuteStateChanged =
+      CachedStreamController();
 
   void Function(MediaStream stream)? onNewStream;
 
@@ -320,26 +321,26 @@ class CallSession {
   bool waitForLocalAVStream = false;
   int toDeviceSeq = 0;
 
-  final StreamController<CallSession> onCallStreamsChanged =
-      StreamController.broadcast();
+  final CachedStreamController<CallSession> onCallStreamsChanged =
+      CachedStreamController();
 
-  final StreamController<CallSession> onCallReplaced =
-      StreamController.broadcast();
+  final CachedStreamController<CallSession> onCallReplaced =
+      CachedStreamController();
 
-  final StreamController<CallSession> onCallHangup =
-      StreamController.broadcast();
+  final CachedStreamController<CallSession> onCallHangup =
+      CachedStreamController();
 
-  final StreamController<CallState> onCallStateChanged =
-      StreamController.broadcast();
+  final CachedStreamController<CallState> onCallStateChanged =
+      CachedStreamController();
 
-  final StreamController<CallEvent> onCallEventChanged =
-      StreamController.broadcast();
+  final CachedStreamController<CallEvent> onCallEventChanged =
+      CachedStreamController();
 
-  final StreamController<WrappedMediaStream> onStreamAdd =
-      StreamController.broadcast();
+  final CachedStreamController<WrappedMediaStream> onStreamAdd =
+      CachedStreamController();
 
-  final StreamController<WrappedMediaStream> onStreamRemoved =
-      StreamController.broadcast();
+  final CachedStreamController<WrappedMediaStream> onStreamRemoved =
+      CachedStreamController();
 
   SDPStreamMetadata? remoteSDPStreamMetadata;
   List<RTCRtpSender> usermediaSenders = [];

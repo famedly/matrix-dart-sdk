@@ -25,6 +25,7 @@ import 'package:html_unescape/html_unescape.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/utils/file_send_request_credentials.dart';
+import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/space_child.dart';
 
 import '../matrix.dart';
@@ -202,12 +203,12 @@ class Room {
 
   /// If something changes, this callback will be triggered. Will return the
   /// room id.
-  final StreamController<String> onUpdate = StreamController.broadcast();
+  final CachedStreamController<String> onUpdate = CachedStreamController();
 
   /// If there is a new session key received, this will be triggered with
   /// the session ID.
-  final StreamController<String> onSessionKeyReceived =
-      StreamController.broadcast();
+  final CachedStreamController<String> onSessionKeyReceived =
+      CachedStreamController();
 
   /// The name of the room if set by a participant.
   String get name {

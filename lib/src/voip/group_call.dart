@@ -20,6 +20,7 @@ import 'dart:async';
 import 'dart:core';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 /// TODO(@duan): Need to add voice activity detection mechanism
@@ -198,20 +199,20 @@ class GroupCall {
   Timer? retryCallLoopTimeout;
   Map<String, num> retryCallCounts = {};
 
-  final StreamController<GroupCall> onGroupCallFeedsChanged =
-      StreamController.broadcast();
+  final CachedStreamController<GroupCall> onGroupCallFeedsChanged =
+      CachedStreamController();
 
-  final StreamController<GroupCallState> onGroupCallState =
-      StreamController.broadcast();
+  final CachedStreamController<GroupCallState> onGroupCallState =
+      CachedStreamController();
 
-  final StreamController<String> onGroupCallEvent =
-      StreamController.broadcast();
+  final CachedStreamController<String> onGroupCallEvent =
+      CachedStreamController();
 
-  final StreamController<WrappedMediaStream> onStreamAdd =
-      StreamController.broadcast();
+  final CachedStreamController<WrappedMediaStream> onStreamAdd =
+      CachedStreamController();
 
-  final StreamController<WrappedMediaStream> onStreamRemoved =
-      StreamController.broadcast();
+  final CachedStreamController<WrappedMediaStream> onStreamRemoved =
+      CachedStreamController();
 
   GroupCall({
     String? groupCallId,
