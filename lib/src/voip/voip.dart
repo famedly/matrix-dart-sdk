@@ -1,6 +1,6 @@
-import 'dart:async';
 import 'dart:core';
 
+import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 
@@ -29,8 +29,8 @@ class VoIP {
   TurnServerCredentials? _turnServerCredentials;
   Map<String, CallSession> calls = <String, CallSession>{};
   Map<String, GroupCall> groupCalls = <String, GroupCall>{};
-  final StreamController<CallSession> onIncomingCall =
-      StreamController.broadcast();
+  final CachedStreamController<CallSession> onIncomingCall =
+      CachedStreamController();
   String? currentCID;
   String? currentGroupCID;
   String? get localPartyId => client.deviceID;
