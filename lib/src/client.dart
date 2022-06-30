@@ -1793,8 +1793,11 @@ class Client extends MatrixApi {
       // man-in-the-middle attacks!
       if ((event.type == EventTypes.Encryption &&
           room.encrypted &&
-          event.content['algorithm'] !=
-              room.getState(EventTypes.Encryption)?.content['algorithm'])) {
+          event.content.tryGet<String>('algorithm') !=
+              room
+                  .getState(EventTypes.Encryption)
+                  ?.content
+                  .tryGet<String>('algorithm'))) {
         return;
       }
 
