@@ -197,7 +197,8 @@ class VoIP {
       content['offer']['type'],
     );
     await newCall
-        .initWithInvite(callType, offer, sdpStreamMetadata, lifetime)
+        .initWithInvite(
+            callType, offer, sdpStreamMetadata, lifetime, confId != null)
         .then((_) {
       // Popup CallingPage for incoming call.
       if (!delegate.isBackgroud && confId == null) {
