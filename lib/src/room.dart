@@ -90,6 +90,8 @@ class Room {
   /// Key-Value store for private account data only visible for this user.
   Map<String, BasicRoomEvent> roomAccountData = {};
 
+  final _sendingQueue = <Completer>[];
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'membership': membership.toString().split('.').last,
@@ -894,6 +896,7 @@ class Room {
 
   /// Sends an event to this room with this json as a content. Returns the
   /// event ID generated from the server.
+  /// It uses list of completer to make sure events are sending in a row.
   Future<String?> sendEvent(
     Map<String, dynamic> content, {
     String type = EventTypes.Message,
@@ -978,10 +981,16 @@ class Room {
       ),
     );
     await _handleFakeSync(syncUpdate);
+    final completer = Completer();
+    _sendingQueue.add(completer);
+    while (_sendingQueue.first != completer) {
+      await _sendingQueue.first.future;
+    }
 
     final timeoutDate = DateTime.now().add(client.sendTimelineEventTimeout);
     // Send the text and on success, store and display a *sent* event.
     String? res;
+
     while (res == null) {
       try {
         res = await _sendContent(
@@ -995,6 +1004,8 @@ class Room {
           syncUpdate.rooms!.join!.values.first.timeline!.events!.first
               .unsigned![messageSendingStatusKey] = EventStatus.error.intValue;
           await _handleFakeSync(syncUpdate);
+          completer.complete();
+          _sendingQueue.remove(completer);
           return null;
         }
         Logs().w('Problem while sending message: $e Try again in 1 seconds...');
@@ -1005,6 +1016,8 @@ class Room {
         .unsigned![messageSendingStatusKey] = EventStatus.sent.intValue;
     syncUpdate.rooms!.join!.values.first.timeline!.events!.first.eventId = res;
     await _handleFakeSync(syncUpdate);
+    completer.complete();
+    _sendingQueue.remove(completer);
 
     return res;
   }
