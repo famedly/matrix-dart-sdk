@@ -400,12 +400,15 @@ class CallSession {
   }
 
   Future<void> initWithInvite(CallType type, RTCSessionDescription offer,
-      SDPStreamMetadata? metadata, int lifetime) async {
+      SDPStreamMetadata? metadata, int lifetime, bool isGroupCall) async {
     await _preparePeerConnection();
 
-    final stream = await _getUserMedia(type);
-    if (stream != null) {
-      addLocalStream(stream, SDPStreamMetadataPurpose.Usermedia);
+    /// only add local stream if it is not a group call.
+    if (!isGroupCall) {
+      final stream = await _getUserMedia(type);
+      if (stream != null) {
+        addLocalStream(stream, SDPStreamMetadataPurpose.Usermedia);
+      }
     }
 
     if (metadata != null) {
