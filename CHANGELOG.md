@@ -1,3 +1,14 @@
+## [0.10.2] - 17th Jun 2022
+- feat: Implement CachedStreamController (Christian Pauly)
+- fix: Only trigger onCall streams by latest call event for a call_id (Christian Pauly)
+- fix: Support for OpenSSL 3.0 (Nicolas Werner)
+- fix: implement sending queue (Reza)
+- refactor: Call handleEphemerals with BasicRoomEvent instead of dynamic (Christian Pauly)
+- refactor: Let _handleRoomEvents use BasicEvent (Christian Pauly)
+- refactor: Pass BasicEvent to handleEvent instead of JSON (Christian Pauly)
+- refactor: Use handleRoomEvents method instead of handleEvent (Christian Pauly)
+- refactor: Use tryGet in handleRoomEvents (Christian Pauly)
+
 ## [0.10.1] - 16th Jun 2022
 
 - fix: ringtone not stopping when rejecting a call
