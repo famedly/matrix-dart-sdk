@@ -130,7 +130,7 @@ void main() {
       expect(timeline.events[0].eventId, '3143273582443PhrSn:example.org');
       expect(timeline.events[1].eventId, '2143273582443PhrSn:example.org');
       expect(timeline.events[2].eventId, '1143273582443PhrSn:example.org');
-      expect(timeline.chunk.nextBatch, 't789');
+      expect(timeline.chunk.nextBatch, '');
 
       expect(timeline.isFragmentedTimeline, true);
       expect(timeline.allowNewEvent, true);
