@@ -185,7 +185,7 @@ class Timeline {
     );
 
     if (resp.end == null) {
-      Logs().w('end parameter was not set in the response');
+      Logs().w('We reached the end of the timeline');
     }
 
     final newNextBatch = direction == Direction.b ? resp.start : resp.end;
@@ -195,13 +195,16 @@ class Timeline {
         ? EventUpdateType.history
         : EventUpdateType.timeline;
 
-    if ((resp.state?.length ?? 0) == 0 && resp.start != resp.end) {
+    if ((resp.state?.length ?? 0) == 0 &&
+        resp.start != resp.end &&
+        newPrevBatch != null &&
+        newNextBatch != null) {
       if (type == EventUpdateType.history) {
         Logs().w(
             '[nav] we can still request history prevBatch: $type $newPrevBatch');
       } else {
         Logs().w(
-            '[nav] we can still request history nextBatch: $type $newNextBatch');
+            '[nav] we can still request timeline nextBatch: $type $newNextBatch');
       }
     }
 
@@ -209,11 +212,11 @@ class Timeline {
         resp.chunk.map((e) => Event.fromMatrixEvent(e, room)).toList();
 
     if (!allowNewEvent) {
-      if (resp.start == resp.end) allowNewEvent = true;
+      if (resp.start == resp.end ||
+          (resp.end == null && direction == Direction.f)) allowNewEvent = true;
 
       if (allowNewEvent) {
         Logs().d('We now allow sync update into the timeline.');
-        allowNewEvent = true;
         newEvents.addAll(
             await room.client.database?.getEventList(room, onlySending: true) ??
                 []);

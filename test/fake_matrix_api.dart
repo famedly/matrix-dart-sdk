@@ -266,7 +266,7 @@ class FakeMatrixApi extends MockClient {
   };
   static Map<String, dynamic> messagesResponseFutureEnd = {
     'start': 't789',
-    'end': 't789',
+    'end': null,
     'chunk': [],
     'state': [],
   };
