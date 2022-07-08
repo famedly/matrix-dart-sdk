@@ -229,7 +229,28 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> clear() => _collection.deleteFromDisk();
+  Future<void> clear() => Future.wait([
+        _clientBox.clear(),
+        _accountDataBox.clear(),
+        _roomsBox.clear(),
+        _roomStateBox.clear(),
+        _roomMembersBox.clear(),
+        _toDeviceQueueBox.clear(),
+        _roomAccountDataBox.clear(),
+        _inboundGroupSessionsBox.clear(),
+        _outboundGroupSessionsBox.clear(),
+        _olmSessionsBox.clear(),
+        _userDeviceKeysBox.clear(),
+        _userDeviceKeysOutdatedBox.clear(),
+        _userCrossSigningKeysBox.clear(),
+        _ssssCacheBox.clear(),
+        _presencesBox.clear(),
+        _timelineFragmentsBox.clear(),
+        _eventsBox.clear(),
+        _seenDeviceIdsBox.clear(),
+        _seenDeviceKeysBox.clear(),
+        _collection.deleteFromDisk(),
+      ]);
 
   @override
   Future<void> clearCache() => transaction(() async {
