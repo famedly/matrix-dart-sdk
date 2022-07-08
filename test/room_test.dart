@@ -349,6 +349,13 @@ void main() {
       expect(user.room.id, '!localpart:server.abc');
     });
 
+    test('calcEncryptionHealthState', () async {
+      expect(
+        await room.calcEncryptionHealthState(),
+        EncryptionHealthState.unverifiedDevices,
+      );
+    });
+
     test('getEventByID', () async {
       final event = await room.getEventById('1234');
       expect(event?.eventId, '143273582443PhrSn:example.org');

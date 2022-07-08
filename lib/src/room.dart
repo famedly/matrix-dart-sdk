@@ -852,6 +852,26 @@ class Room {
     return eventId;
   }
 
+  /// Calculates how secure the communication is. When all devices are blocked or
+  /// verified, then this returns [EncryptionHealthState.allVerified]. When at
+  /// least one device is not verified, then it returns
+  /// [EncryptionHealthState.unverifiedDevices]. Apps should display this health
+  /// state next to the input text field to inform the user about the current
+  /// encryption security level.
+  Future<EncryptionHealthState> calcEncryptionHealthState() async {
+    final users = await requestParticipants();
+    users.removeWhere((u) =>
+        !{Membership.invite, Membership.join}.contains(u.membership) ||
+        !client.userDeviceKeys.containsKey(u.id));
+
+    if (users.any((u) =>
+        client.userDeviceKeys[u.id]!.verified != UserVerifiedStatus.verified)) {
+      return EncryptionHealthState.unverifiedDevices;
+    }
+
+    return EncryptionHealthState.allVerified;
+  }
+
   Future<String?> _sendContent(
     String type,
     Map<String, dynamic> content, {
@@ -1976,4 +1996,9 @@ class Room {
 
   @override
   bool operator ==(dynamic other) => (other is Room && other.id == id);
+}
+
+enum EncryptionHealthState {
+  allVerified,
+  unverifiedDevices,
 }

@@ -156,6 +156,11 @@ void main() {
           },
         },
       }, client);
+      expect(client.shareKeysWithUnverifiedDevices, true);
+      expect(key.encryptToDevice, true);
+      client.shareKeysWithUnverifiedDevices = false;
+      expect(key.encryptToDevice, false);
+      client.shareKeysWithUnverifiedDevices = true;
       final masterKey = client.userDeviceKeys[client.userID]!.masterKey!;
       masterKey.setDirectVerified(true);
       // we need to populate the ssss cache to be able to test signing easily
@@ -175,7 +180,7 @@ void main() {
       expect(
           client.userDeviceKeys[client.userID]?.deviceKeys['UNSIGNEDDEVICE']
               ?.encryptToDevice,
-          false);
+          true);
 
       expect(masterKey.verified, true);
       await masterKey.setBlocked(true);

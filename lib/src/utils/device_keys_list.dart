@@ -151,13 +151,13 @@ abstract class SignableKey extends MatrixSignableKey {
   bool get blocked => _blocked ?? false;
   set blocked(bool b) => _blocked = b;
 
-  bool get encryptToDevice =>
-      !(blocked) &&
-      identifier != null &&
-      ed25519Key != null &&
-      (client.userDeviceKeys[userId]?.masterKey?.verified ?? false
-          ? verified
-          : true);
+  bool get encryptToDevice {
+    if (blocked) return false;
+
+    if (identifier == null || ed25519Key == null) return false;
+
+    return client.shareKeysWithUnverifiedDevices || verified;
+  }
 
   void setDirectVerified(bool v) {
     _verified = v;
