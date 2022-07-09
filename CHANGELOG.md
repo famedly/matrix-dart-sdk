@@ -1,3 +1,11 @@
+## [0.10.3] - 09th Jul 2022
+- feat: Calc encryption health state and allow key sharing with unknown devices (Christian Pauly)
+- fix: Add WebRTCDelegate.cloneStream to adapt to platform differences. (Duan Weiwei)
+- fix: Database did not get cleared correctly (Christian Pauly)
+- fix: fixed camera is still active after leaving the group call. (Duan Weiwei)
+- fix: request history (Henri Carnot)
+- refactor: Handle Ephemerals method (Christian Pauly)
+
 ## [0.10.2] - 17th Jun 2022
 - feat: Implement CachedStreamController (Christian Pauly)
 - fix: Only trigger onCall streams by latest call event for a call_id (Christian Pauly)
