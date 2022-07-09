@@ -473,9 +473,9 @@ class CallSession {
 
     waitForLocalAVStream = false;
 
-    callFeeds.forEach((element) {
-      // Safari can't send a MediaStream to multiple sources, so clone it
-      addLocalStream(element.stream!.clone(), element.purpose);
+    callFeeds.forEach((element) async {
+      addLocalStream(
+          await voip.delegate.cloneStream(element.stream!), element.purpose);
     });
 
     answer();
@@ -504,8 +504,9 @@ class CallSession {
       return;
     }
 
-    callFeeds.forEach((element) {
-      addLocalStream(element.stream!.clone(), element.purpose);
+    callFeeds.forEach((element) async {
+      addLocalStream(
+          await voip.delegate.cloneStream(element.stream!), element.purpose);
     });
 
     if (requestScreenshareFeed) {
