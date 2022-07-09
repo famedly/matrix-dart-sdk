@@ -83,6 +83,8 @@ class Client extends MatrixApi {
 
   final bool mxidLocalPartFallback;
 
+  bool shareKeysWithUnverifiedDevices;
+
   // For CommandsClientExtension
   final Map<String, FutureOr<String?> Function(CommandArgs)> commands = {};
   final Filter syncFilter;
@@ -167,6 +169,7 @@ class Client extends MatrixApi {
     Filter? syncFilter,
     this.sendTimelineEventTimeout = const Duration(minutes: 1),
     this.customImageResizer,
+    this.shareKeysWithUnverifiedDevices = true,
   })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
