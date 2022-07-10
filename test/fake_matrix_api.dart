@@ -68,7 +68,7 @@ class FakeMatrixApi extends MockClient {
           dynamic res = {};
           var statusCode = 200;
 
-          //print('\$method request to $action with Data: $data');
+          //print('$method request to $action with Data: $data');
 
           // Sync requests with timeout
           if (data is Map<String, dynamic> && data['timeout'] is String) {
@@ -1191,6 +1191,8 @@ class FakeMatrixApi extends MockClient {
             'last_seen_ip': '1.2.3.4',
             'last_seen_ts': 1474491775024
           },
+      '/client/v3/profile/%40test%3AfakeServer.notExisting': (var reqI) =>
+          {'displayname': 'Some First Name Some Last Name'},
       '/client/v3/profile/%40alice%3Aexample.com/displayname': (var reqI) =>
           {'displayname': 'Alice M'},
       '/client/v3/profile/%40alice%3Aexample.com/avatar_url': (var reqI) =>
