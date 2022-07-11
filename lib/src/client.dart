@@ -769,7 +769,9 @@ class Client extends MatrixApi {
       }
     }
     profile = await getUserProfile(userId);
-    if (cache) _profileCache[userId] = profile;
+    if (cache || _profileCache.containsKey(userId)) {
+      _profileCache[userId] = profile;
+    }
     return Profile(
         userId: userId,
         displayName: profile.displayname,
