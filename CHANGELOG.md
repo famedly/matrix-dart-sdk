@@ -1,3 +1,6 @@
+## [0.10.4] - 11th Jul 2022
+- refactor: Better fetch own profile (Christian Pauly)
+
 ## [0.10.3] - 09th Jul 2022
 - feat: Calc encryption health state and allow key sharing with unknown devices (Christian Pauly)
 - fix: Add WebRTCDelegate.cloneStream to adapt to platform differences. (Duan Weiwei)
