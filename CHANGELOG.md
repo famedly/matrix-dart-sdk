@@ -1,3 +1,6 @@
+## [0.10.5] - 11th Jul 2022
+- fix: Cache user profile even with cache=false when there is a cache
+
 ## [0.10.4] - 11th Jul 2022
 - refactor: Better fetch own profile (Christian Pauly)
 
