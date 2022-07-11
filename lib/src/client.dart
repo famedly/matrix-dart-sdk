@@ -726,23 +726,15 @@ class Client extends MatrixApi {
   /// one user can have different displaynames and avatar urls in different rooms. So
   /// this endpoint first checks if the profile is the same in all rooms. If not, the
   /// profile will be requested from the homserver.
-  Future<Profile> fetchOwnProfile() async {
-    if (rooms.isNotEmpty) {
-      final profileSet = <Profile>{};
-      for (final room in rooms) {
-        final user = await room.requestUser(userID!);
-        if (user != null) {
-          profileSet.add(Profile(
-            avatarUrl: user.avatarUrl,
-            displayName: user.displayName,
-            userId: user.id,
-          ));
-        }
-      }
-      if (profileSet.length == 1) return profileSet.single;
-    }
-    return getProfileFromUserId(userID!);
-  }
+  Future<Profile> fetchOwnProfile({
+    bool getFromRooms = true,
+    bool cache = true,
+  }) =>
+      getProfileFromUserId(
+        userID!,
+        getFromRooms: getFromRooms,
+        cache: cache,
+      );
 
   final Map<String, ProfileInformation> _profileCache = {};
 
@@ -755,6 +747,14 @@ class Client extends MatrixApi {
   /// become outdated if the user changes the displayname or avatar in this session.
   Future<Profile> getProfileFromUserId(String userId,
       {bool cache = true, bool getFromRooms = true}) async {
+    var profile = _profileCache[userId];
+    if (cache && profile != null) {
+      return Profile(
+          userId: userId,
+          displayName: profile.displayname,
+          avatarUrl: profile.avatarUrl);
+    }
+
     if (getFromRooms) {
       final room = rooms.firstWhereOrNull((Room room) =>
           room.getParticipants().indexWhere((User user) => user.id == userId) !=
@@ -768,16 +768,8 @@ class Client extends MatrixApi {
             avatarUrl: user.avatarUrl);
       }
     }
-
-    var profile = _profileCache[userId];
-    if (cache && profile != null) {
-      return Profile(
-          userId: userId,
-          displayName: profile.displayname,
-          avatarUrl: profile.avatarUrl);
-    }
     profile = await getUserProfile(userId);
-    _profileCache[userId] = profile;
+    if (cache) _profileCache[userId] = profile;
     return Profile(
         userId: userId,
         displayName: profile.displayname,
