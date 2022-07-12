@@ -21,19 +21,19 @@ import 'dart:convert';
 import 'dart:core';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
 import 'package:mime/mime.dart';
 import 'package:olm/olm.dart' as olm;
-import 'package:collection/collection.dart' show IterableExtension;
 import 'package:random_string/random_string.dart';
 
 import '../encryption.dart';
 import '../matrix.dart';
-import 'utils/run_benchmarked.dart';
 import 'utils/multilock.dart';
+import 'utils/run_benchmarked.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -570,6 +570,7 @@ class Client extends MatrixApi {
     bool? enableEncryption,
     List<StateEvent>? initialState,
     bool waitForSync = true,
+    Map<String, dynamic>? powerLevelContentOverride,
   }) async {
     // Try to find an existing direct chat
     final directChatRoomId = getDirectChatFromUserId(mxid);
@@ -595,6 +596,7 @@ class Client extends MatrixApi {
       isDirect: true,
       preset: CreateRoomPreset.trustedPrivateChat,
       initialState: initialState,
+      powerLevelContentOverride: powerLevelContentOverride,
     );
 
     if (waitForSync && getRoomById(roomId) == null) {
@@ -619,6 +621,7 @@ class Client extends MatrixApi {
     Visibility? visibility,
     bool waitForSync = true,
     bool groupCall = false,
+    Map<String, dynamic>? powerLevelContentOverride,
   }) async {
     enableEncryption ??=
         encryptionEnabled && preset != CreateRoomPreset.publicChat;
@@ -633,19 +636,19 @@ class Client extends MatrixApi {
         ));
       }
     }
+    if (groupCall) {
+      powerLevelContentOverride ??= {};
+      powerLevelContentOverride['events'] = <String, dynamic>{
+        'org.matrix.msc3401.call.member': 0,
+      };
+    }
     final roomId = await createRoom(
         invite: invite,
         preset: preset,
         name: groupName,
         initialState: initialState,
         visibility: visibility,
-        powerLevelContentOverride: groupCall
-            ? <String, dynamic>{
-                'events': <String, dynamic>{
-                  'org.matrix.msc3401.call.member': 0,
-                },
-              }
-            : null);
+        powerLevelContentOverride: powerLevelContentOverride);
 
     if (waitForSync) {
       if (getRoomById(roomId) == null) {
