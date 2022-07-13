@@ -93,13 +93,14 @@ void main() {
         'sender_claimed_ed25519_key': client.fingerprintKey,
       };
       FakeMatrixApi.calledEndpoints.clear();
-      client.encryption!.keyManager.setInboundGroupSession(
+      await client.encryption!.keyManager.setInboundGroupSession(
           roomId, sessionId, senderKey, sessionPayload,
           forwarded: true);
-      await Future.delayed(Duration(milliseconds: 500));
       var dbSessions = await client.database!.getInboundGroupSessionsToUpload();
       expect(dbSessions.isNotEmpty, true);
       await client.encryption!.keyManager.backgroundTasks();
+      await FakeMatrixApi.firstWhereValue(
+          '/client/v3/room_keys/keys?version=5');
       final payload = FakeMatrixApi
           .calledEndpoints['/client/v3/room_keys/keys?version=5']!.first;
       dbSessions = await client.database!.getInboundGroupSessionsToUpload();

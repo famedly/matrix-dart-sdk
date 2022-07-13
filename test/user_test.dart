@@ -163,6 +163,7 @@ void main() {
       expect(user2.mentionFragments, {'@Bob', '@Bob#1542'});
     });
     test('dispose client', () async {
+      await Future.delayed(Duration(milliseconds: 50));
       await client.dispose(closeDatabase: true);
     });
   });

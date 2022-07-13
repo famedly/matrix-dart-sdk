@@ -221,6 +221,16 @@ class KeyVerification {
             await cancel('m.unknown_method');
             return;
           }
+
+          // ensure we have the other sides keys
+          if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
+            await client.updateUserDeviceKeys(additionalUsers: {userId});
+            if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
+              await cancel('im.fluffychat.unknown_device');
+              return;
+            }
+          }
+
           setState(KeyVerificationState.askAccept);
           break;
         case 'm.key.verification.ready':
@@ -248,6 +258,16 @@ class KeyVerification {
             await cancel('m.unknown_method');
             return;
           }
+
+          // ensure we have the other sides keys
+          if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
+            await client.updateUserDeviceKeys(additionalUsers: {userId});
+            if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
+              await cancel('im.fluffychat.unknown_device');
+              return;
+            }
+          }
+
           // as both parties can send a start, the last step being "ready" is race-condition prone
           // as such, we better set it *before* we send our start
           lastStep = type;
@@ -291,6 +311,16 @@ class KeyVerification {
             await cancel('m.unknown_method');
             return;
           }
+
+          // ensure we have the other sides keys
+          if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
+            await client.updateUserDeviceKeys(additionalUsers: {userId});
+            if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
+              await cancel('im.fluffychat.unknown_device');
+              return;
+            }
+          }
+
           method = _makeVerificationMethod(payload['method'], this);
           if (lastStep == null) {
             // validate the start time
@@ -352,17 +382,17 @@ class KeyVerification {
       String? recoveryKey,
       String? keyOrPassphrase,
       bool skip = false}) async {
-    final next = () {
+    final next = () async {
       if (_nextAction == 'request') {
-        sendStart();
+        await sendStart();
       } else if (_nextAction == 'done') {
         // and now let's sign them all in the background
-        encryption.crossSigning.sign(_verifiedDevices);
+        unawaited(encryption.crossSigning.sign(_verifiedDevices));
         setState(KeyVerificationState.done);
       }
     };
     if (skip) {
-      next();
+      await next();
       return;
     }
     final handle = encryption.ssss.open(EventTypes.CrossSigningUserSigning);
@@ -371,7 +401,7 @@ class KeyVerification {
         recoveryKey: recoveryKey,
         keyOrPassphrase: keyOrPassphrase);
     await handle.maybeCacheAll();
-    next();
+    await next();
   }
 
   /// called when the user accepts an incoming verification
@@ -512,9 +542,9 @@ class KeyVerification {
         encryption.crossSigning.signable(_verifiedDevices)) {
       // these keys can be signed! Let's do so
       if (await encryption.crossSigning.isCached()) {
-        // and now let's sign them all in the background
-        // ignore: unawaited_futures
-        encryption.crossSigning.sign(_verifiedDevices);
+        // we want to make sure the verification state is correct for the other party after this event is handled.
+        // Otherwise the verification dialog might be stuck in an unverified but done state for a bit.
+        await encryption.crossSigning.sign(_verifiedDevices);
       } else if (!wasUnknownSession) {
         askingSSSS = true;
       }

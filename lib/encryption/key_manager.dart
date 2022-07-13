@@ -16,6 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
@@ -85,7 +86,7 @@ class KeyManager {
     _inboundGroupSessions.clear();
   }
 
-  void setInboundGroupSession(
+  Future<void> setInboundGroupSession(
     String roomId,
     String sessionId,
     String senderKey,
@@ -98,7 +99,7 @@ class KeyManager {
     final senderClaimedKeys_ = senderClaimedKeys ?? <String, String>{};
     final allowedAtIndex_ = allowedAtIndex ?? <String, Map<String, int>>{};
     final userId = client.userID;
-    if (userId == null) return;
+    if (userId == null) return Future.value();
 
     if (!senderClaimedKeys_.containsKey('ed25519')) {
       final device = client.getUserDeviceKeysByCurve25519Key(senderKey);
@@ -109,7 +110,7 @@ class KeyManager {
     final oldSession =
         getInboundGroupSession(roomId, sessionId, senderKey, otherRooms: false);
     if (content['algorithm'] != AlgorithmTypes.megolmV1AesSha2) {
-      return;
+      return Future.value();
     }
     late olm.InboundGroupSession inboundGroupSession;
     try {
@@ -122,7 +123,7 @@ class KeyManager {
     } catch (e, s) {
       inboundGroupSession.free();
       Logs().e('[LibOlm] Could not create new InboundGroupSession', e, s);
-      return;
+      return Future.value();
     }
     final newSession = SessionKey(
       content: content,
@@ -148,16 +149,16 @@ class KeyManager {
     } else {
       // we are gonna keep our old session
       newSession.dispose();
-      return;
+      return Future.value();
     }
 
     final roomInboundGroupSessions =
         _inboundGroupSessions[roomId] ??= <String, SessionKey>{};
     roomInboundGroupSessions[sessionId] = newSession;
     if (!client.isLogged() || client.encryption == null) {
-      return;
+      return Future.value();
     }
-    client.database
+    final storeFuture = client.database
         ?.storeInboundGroupSession(
       roomId,
       sessionId,
@@ -188,6 +189,8 @@ class KeyManager {
       // and finally broadcast the new session
       room.onSessionKeyReceived.add(sessionId);
     }
+
+    return storeFuture ?? Future.value();
   }
 
   SessionKey? getInboundGroupSession(
@@ -503,7 +506,7 @@ class KeyManager {
       allowedAtIndex[device.userId]![device.curve25519Key!] =
           outboundGroupSession.message_index();
     }
-    setInboundGroupSession(
+    await setInboundGroupSession(
         roomId, rawSession['session_id'], encryption.identityKey!, rawSession,
         allowedAtIndex: allowedAtIndex);
     final sess = OutboundGroupSession(
@@ -612,7 +615,7 @@ class KeyManager {
           if (decrypted != null) {
             decrypted['session_id'] = sessionId;
             decrypted['room_id'] = roomId;
-            setInboundGroupSession(
+            await setInboundGroupSession(
                 roomId, sessionId, decrypted['sender_key'], decrypted,
                 forwarded: true,
                 senderClaimedKeys: decrypted['sender_claimed_keys'] != null
@@ -901,7 +904,7 @@ class KeyManager {
           .add(encryptedContent['sender_key']);
       // TODO: verify that the keys work to decrypt a message
       // alright, all checks out, let's go ahead and store this session
-      setInboundGroupSession(
+      await setInboundGroupSession(
           request.room.id, request.sessionId, request.senderKey, event.content,
           forwarded: true,
           senderClaimedKeys: {
@@ -946,7 +949,7 @@ class KeyManager {
         event.content['sender_claimed_ed25519_key'] = sender_ed25519;
       }
       Logs().v('[KeyManager] Keeping room key');
-      setInboundGroupSession(
+      await setInboundGroupSession(
           roomId, sessionId, encryptedContent['sender_key'], event.content,
           forwarded: false);
     }

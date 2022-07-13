@@ -1307,7 +1307,7 @@ class Client extends MatrixApi {
           if (isLogged()) return;
         }
         // we aren't logged in
-        encryption?.dispose();
+        await encryption?.dispose();
         encryption = null;
         onLoginStateChanged.add(LoginState.loggedOut);
         Logs().i('User is not logged in.');
@@ -1315,14 +1315,14 @@ class Client extends MatrixApi {
         return;
       }
 
-      encryption?.dispose();
+      await encryption?.dispose();
       try {
         // make sure to throw an exception if libolm doesn't exist
         await olm.init();
         olm.get_library_version();
         encryption = Encryption(client: this);
       } catch (_) {
-        encryption?.dispose();
+        await encryption?.dispose();
         encryption = null;
       }
       await encryption?.init(olmAccount);
@@ -1408,7 +1408,7 @@ class Client extends MatrixApi {
     _id = accessToken = syncFilterId =
         homeserver = _userID = _deviceID = _deviceName = prevBatch = null;
     _rooms = [];
-    encryption?.dispose();
+    await encryption?.dispose();
     encryption = null;
     final databaseDestroyer = this.databaseDestroyer;
     if (databaseDestroyer != null) {
@@ -1443,18 +1443,14 @@ class Client extends MatrixApi {
     return _sync();
   }
 
-  Future<void> _sync() async {
-    if (_currentSync == null) {
-      final _currentSync = this._currentSync = _innerSync();
-      // ignore: unawaited_futures
-      _currentSync.whenComplete(() {
-        this._currentSync = null;
-        if (_backgroundSync && isLogged() && !_disposed) {
-          _sync();
-        }
-      });
-    }
-    await _currentSync;
+  Future<void> _sync() {
+    final _currentSync = this._currentSync ??= _innerSync().whenComplete(() {
+      this._currentSync = null;
+      if (_backgroundSync && isLogged() && !_disposed) {
+        _sync();
+      }
+    });
+    return _currentSync;
   }
 
   /// Presence that is set on sync.
@@ -2112,7 +2108,7 @@ class Client extends MatrixApi {
 
   final Map<String, DateTime> _keyQueryFailures = {};
 
-  Future<void> updateUserDeviceKeys() async {
+  Future<void> updateUserDeviceKeys({Set<String>? additionalUsers}) async {
     try {
       final database = this.database;
       if (!isLogged() || database == null) return;
@@ -2120,6 +2116,7 @@ class Client extends MatrixApi {
       final trackedUserIds = await _getUserIdsInEncryptedRooms();
       if (!isLogged()) return;
       trackedUserIds.add(userID!);
+      if (additionalUsers != null) trackedUserIds.addAll(additionalUsers);
 
       // Remove all userIds we no longer need to track the devices of.
       _userDeviceKeys
@@ -2511,8 +2508,7 @@ class Client extends MatrixApi {
                   ? deviceKeys.length
                   : i + chunkSize);
           // and send
-          // ignore: unawaited_futures
-          sendToDeviceEncrypted(chunk, eventType, message);
+          await sendToDeviceEncrypted(chunk, eventType, message);
         }
       }();
     }
@@ -2665,14 +2661,15 @@ class Client extends MatrixApi {
   Future<void> dispose({bool closeDatabase = true}) async {
     _disposed = true;
     await abortSync();
-    encryption?.dispose();
+    await encryption?.dispose();
     encryption = null;
     try {
       if (closeDatabase) {
+        final database = _database;
+        _database = null;
         await database
             ?.close()
             .catchError((e, s) => Logs().w('Failed to close database: ', e, s));
-        _database = null;
       }
     } catch (error, stacktrace) {
       Logs().w('Failed to close database: ', error, stacktrace);

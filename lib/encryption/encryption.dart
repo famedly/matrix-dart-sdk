@@ -417,10 +417,10 @@ class Encryption {
     }
   }
 
-  void dispose() {
+  Future<void> dispose() async {
     _backgroundTasksRunning = false;
     keyManager.dispose();
-    olmManager.dispose();
+    await olmManager.dispose();
     keyVerificationManager.dispose();
   }
 }

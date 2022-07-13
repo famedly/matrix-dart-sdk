@@ -33,7 +33,7 @@ void main() {
 
     late Client client;
 
-    test('setupClient', () async {
+    setUp(() async {
       try {
         await olm.init();
         olm.get_library_version();
@@ -42,9 +42,10 @@ void main() {
         Logs().w('[LibOlm] Failed to load LibOlm', e);
       }
       Logs().i('[LibOlm] Enabled: $olmEnabled');
-      if (!olmEnabled) return;
+      if (!olmEnabled) return Future.value();
 
       client = await getClient();
+      return Future.value();
     });
 
     test('signatures', () async {
@@ -89,10 +90,11 @@ void main() {
 
     test('handleDeviceOneTimeKeysCount', () async {
       if (!olmEnabled) return;
+
       FakeMatrixApi.calledEndpoints.clear();
       client.encryption!.olmManager
           .handleDeviceOneTimeKeysCount({'signed_curve25519': 20}, null);
-      await Future.delayed(Duration(milliseconds: 50));
+      await FakeMatrixApi.firstWhereValue('/client/v3/keys/upload');
       expect(
           FakeMatrixApi.calledEndpoints.containsKey('/client/v3/keys/upload'),
           true);
@@ -100,14 +102,15 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       client.encryption!.olmManager
           .handleDeviceOneTimeKeysCount({'signed_curve25519': 70}, null);
-      await Future.delayed(Duration(milliseconds: 50));
+      await FakeMatrixApi.firstWhereValue('/client/v3/keys/upload')
+          .timeout(Duration(milliseconds: 50), onTimeout: () => '');
       expect(
           FakeMatrixApi.calledEndpoints.containsKey('/client/v3/keys/upload'),
           false);
 
       FakeMatrixApi.calledEndpoints.clear();
       client.encryption!.olmManager.handleDeviceOneTimeKeysCount(null, []);
-      await Future.delayed(Duration(milliseconds: 50));
+      await FakeMatrixApi.firstWhereValue('/client/v3/keys/upload');
       expect(
           FakeMatrixApi.calledEndpoints.containsKey('/client/v3/keys/upload'),
           true);
@@ -116,7 +119,7 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       client.encryption!.olmManager
           .handleDeviceOneTimeKeysCount(null, ['signed_curve25519']);
-      await Future.delayed(Duration(milliseconds: 50));
+      await FakeMatrixApi.firstWhereValue('/client/v3/keys/upload');
       expect(
           FakeMatrixApi.calledEndpoints.containsKey('/client/v3/keys/upload'),
           true);

@@ -16,12 +16,12 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 import 'dart:math';
 
 import 'package:http/http.dart';
-import 'package:http/testing.dart';
 import 'package:matrix/matrix.dart' as sdk;
 import 'package:matrix/matrix.dart';
 
@@ -35,120 +35,209 @@ Map<String, dynamic> decodeJson(dynamic data) {
   return data;
 }
 
-class FakeMatrixApi extends MockClient {
-  static final calledEndpoints = <String, List<dynamic>>{};
-  static int eventCounter = 0;
-  static sdk.Client? client;
-  static bool failToDevice = false;
+class FakeMatrixApi extends BaseClient {
+  static Map<String, List<dynamic>> get calledEndpoints =>
+      currentApi!._calledEndpoints;
+  static int get eventCounter => currentApi!._eventCounter;
+  static set eventCounter(int c) {
+    currentApi!._eventCounter = c;
+  }
 
-  FakeMatrixApi()
-      : super((request) async {
-          // Collect data from Request
-          var action = request.url.path;
-          if (request.url.path.contains('/_matrix')) {
-            action = request.url.path.split('/_matrix').last +
-                '?' +
-                request.url.query;
-          }
+  static set client(sdk.Client? c) {
+    currentApi?._client = c;
+  }
 
-          if (action.endsWith('?')) {
-            action = action.substring(0, action.length - 1);
-          }
-          if (action.endsWith('?server_name')) {
-            // This can be removed after matrix_api_lite is released with:
-            // https://gitlab.com/famedly/libraries/matrix_api_lite/-/merge_requests/16
-            action = action.substring(0, action.length - 12);
-          }
-          if (action.endsWith('/')) {
-            action = action.substring(0, action.length - 1);
-          }
-          final method = request.method;
-          final dynamic data =
-              method == 'GET' ? request.url.queryParameters : request.body;
-          dynamic res = {};
-          var statusCode = 200;
+  static set failToDevice(bool fail) {
+    currentApi?._failToDevice = fail;
+  }
 
-          //print('$method request to $action with Data: $data');
+  static set trace(bool t) {
+    currentApi?._trace = t;
+  }
 
-          // Sync requests with timeout
-          if (data is Map<String, dynamic> && data['timeout'] is String) {
-            await Future.delayed(Duration(seconds: 5));
-          }
+  final _calledEndpoints = <String, List<dynamic>>{};
+  int _eventCounter = 0;
+  sdk.Client? _client;
+  bool _failToDevice = false;
+  bool _trace = false;
+  final _apiCallStream = StreamController<String>.broadcast();
 
-          if (request.url.origin != 'https://fakeserver.notexisting') {
-            return Response(
-                '<html><head></head><body>Not found...</body></html>', 404);
-          }
+  static FakeMatrixApi? currentApi;
 
-          // Call API
-          if (!calledEndpoints.containsKey(action)) {
-            calledEndpoints[action] = <dynamic>[];
-          }
-          calledEndpoints[action]?.add(data);
-          final act = api[method]?[action];
-          if (act != null) {
-            res = act(data);
-            if (res is Map && res.containsKey('errcode')) {
-              if (res['errcode'] == 'M_NOT_FOUND') {
-                statusCode = 404;
-              } else {
-                statusCode = 405;
-              }
-            }
-          } else if (method == 'PUT' &&
-              action.contains('/client/v3/sendToDevice/')) {
-            res = {};
-            if (failToDevice) {
-              statusCode = 500;
-            }
-          } else if (method == 'GET' &&
-              action.contains('/client/v3/rooms/') &&
-              action.contains('/state/m.room.member/') &&
-              !action.endsWith('%40alicyy%3Aexample.com')) {
-            res = {'displayname': ''};
-          } else if (method == 'PUT' &&
-              action.contains(
-                  '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/')) {
-            res = {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
-          } else if (method == 'PUT' &&
-              action.contains(
-                  '/client/v3/rooms/!1234%3AfakeServer.notExisting/state/')) {
-            res = {'event_id': '\$event${FakeMatrixApi.eventCounter++}'};
-          } else if (action.contains('/client/v3/sync')) {
-            res = {
-              'next_batch': DateTime.now().millisecondsSinceEpoch.toString(),
-            };
-          } else if (method == 'PUT' &&
-              client != null &&
-              action.contains('/account_data/') &&
-              !action.contains('/room/')) {
-            final type = Uri.decodeComponent(action.split('/').last);
-            final syncUpdate = sdk.SyncUpdate(
-              nextBatch: '',
-              accountData: [
-                sdk.BasicEvent(content: decodeJson(data), type: type)
-              ],
-            );
-            if (client?.database != null) {
-              await client?.database?.transaction(() async {
-                await client?.handleSync(syncUpdate);
-              });
-            } else {
-              await client?.handleSync(syncUpdate);
-            }
-            res = {};
-          } else {
-            res = {
-              'errcode': 'M_UNRECOGNIZED',
-              'error': 'Unrecognized request'
-            };
-            statusCode = 405;
-          }
+  static Future<String> firstWhereValue(String value) {
+    return firstWhere((v) => v == value);
+  }
 
-          return Response.bytes(utf8.encode(json.encode(res)), statusCode);
+  static Future<String> firstWhere(bool Function(String element) test) {
+    for (final e in currentApi!._calledEndpoints.entries) {
+      if (e.value.isNotEmpty && test(e.key)) {
+        return Future.value(e.key);
+      }
+    }
+
+    final completer = Completer<String>();
+    StreamSubscription<String>? sub;
+    sub = currentApi!._apiCallStream.stream.listen((action) {
+      if (test(action)) {
+        sub?.cancel();
+        completer.complete(action);
+      }
+    });
+    return completer.future;
+  }
+
+  FutureOr<Response> mockIntercept(Request request) async {
+    // Collect data from Request
+    var action = request.url.path;
+    if (request.url.path.contains('/_matrix')) {
+      action =
+          request.url.path.split('/_matrix').last + '?' + request.url.query;
+    }
+
+    // ignore: avoid_print
+    if (_trace) print('called $action');
+
+    if (action.endsWith('?')) {
+      action = action.substring(0, action.length - 1);
+    }
+    if (action.endsWith('?server_name')) {
+      // This can be removed after matrix_api_lite is released with:
+      // https://gitlab.com/famedly/libraries/matrix_api_lite/-/merge_requests/16
+      action = action.substring(0, action.length - 12);
+    }
+    if (action.endsWith('/')) {
+      action = action.substring(0, action.length - 1);
+    }
+    final method = request.method;
+    final dynamic data =
+        method == 'GET' ? request.url.queryParameters : request.body;
+    dynamic res = {};
+    var statusCode = 200;
+
+    //print('\$method request to $action with Data: $data');
+
+    // Sync requests with timeout
+    if (data is Map<String, dynamic> && data['timeout'] is String) {
+      await Future.delayed(Duration(seconds: 5));
+    }
+
+    if (request.url.origin != 'https://fakeserver.notexisting') {
+      return Response(
+          '<html><head></head><body>Not found...</body></html>', 404);
+    }
+
+    // Call API
+    (_calledEndpoints[action] ??= <dynamic>[]).add(data);
+    final act = api[method]?[action];
+    if (act != null) {
+      res = act(data);
+      if (res is Map && res.containsKey('errcode')) {
+        if (res['errcode'] == 'M_NOT_FOUND') {
+          statusCode = 404;
+        } else {
+          statusCode = 405;
+        }
+      }
+    } else if (method == 'PUT' && action.contains('/client/v3/sendToDevice/')) {
+      res = {};
+      if (_failToDevice) {
+        statusCode = 500;
+      }
+    } else if (method == 'GET' &&
+        action.contains('/client/v3/rooms/') &&
+        action.contains('/state/m.room.member/') &&
+        !action.endsWith('%40alicyy%3Aexample.com')) {
+      res = {'displayname': ''};
+    } else if (method == 'PUT' &&
+        action.contains(
+            '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/')) {
+      res = {'event_id': '\$event${_eventCounter++}'};
+    } else if (method == 'PUT' &&
+        action.contains(
+            '/client/v3/rooms/!1234%3AfakeServer.notExisting/state/')) {
+      res = {'event_id': '\$event${_eventCounter++}'};
+    } else if (action.contains('/client/v3/sync')) {
+      res = {
+        'next_batch': DateTime.now().millisecondsSinceEpoch.toString(),
+      };
+    } else if (method == 'PUT' &&
+        _client != null &&
+        action.contains('/account_data/') &&
+        !action.contains('/room/')) {
+      final type = Uri.decodeComponent(action.split('/').last);
+      final syncUpdate = sdk.SyncUpdate(
+        nextBatch: '',
+        accountData: [sdk.BasicEvent(content: decodeJson(data), type: type)],
+      );
+      if (_client?.database != null) {
+        await _client?.database?.transaction(() async {
+          await _client?.handleSync(syncUpdate);
         });
+      } else {
+        await _client?.handleSync(syncUpdate);
+      }
+      res = {};
+    } else {
+      res = {'errcode': 'M_UNRECOGNIZED', 'error': 'Unrecognized request'};
+      statusCode = 405;
+    }
 
-  static Map<String, dynamic> messagesResponsePast = {
+    unawaited(Future.delayed(Duration(milliseconds: 1)).then((_) async {
+      _apiCallStream.add(action);
+    }));
+    return Response.bytes(utf8.encode(json.encode(res)), statusCode);
+  }
+
+  @override
+  Future<StreamedResponse> send(BaseRequest baseRequest) async {
+    final bodyStream = baseRequest.finalize();
+    final bodyBytes = await bodyStream.toBytes();
+    final request = Request(baseRequest.method, baseRequest.url)
+      ..persistentConnection = baseRequest.persistentConnection
+      ..followRedirects = baseRequest.followRedirects
+      ..maxRedirects = baseRequest.maxRedirects
+      ..headers.addAll(baseRequest.headers)
+      ..bodyBytes = bodyBytes
+      ..finalize();
+
+    final response = await mockIntercept(request);
+    return StreamedResponse(
+        ByteStream.fromBytes(response.bodyBytes), response.statusCode,
+        contentLength: response.contentLength,
+        request: baseRequest,
+        headers: response.headers,
+        isRedirect: response.isRedirect,
+        persistentConnection: response.persistentConnection,
+        reasonPhrase: response.reasonPhrase);
+  }
+
+  FakeMatrixApi() {
+    currentApi = this;
+    api['POST']?['/client/v3/keys/device_signing/upload'] = (var reqI) {
+      if (_client != null) {
+        final jsonBody = decodeJson(reqI);
+        for (final keyType in {
+          'master_key',
+          'self_signing_key',
+          'user_signing_key'
+        }) {
+          if (jsonBody[keyType] != null) {
+            final key =
+                sdk.CrossSigningKey.fromJson(jsonBody[keyType], _client!);
+            _client!.userDeviceKeys[_client!.userID!]?.crossSigningKeys
+                .removeWhere((k, v) => v.usage.contains(key.usage.first));
+            _client!.userDeviceKeys[_client!.userID!]
+                ?.crossSigningKeys[key.publicKey!] = key;
+          }
+        }
+        // and generate a fake sync
+        _client!.handleSync(sdk.SyncUpdate(nextBatch: ''));
+      }
+      return {};
+    };
+  }
+
+  static const Map<String, dynamic> messagesResponsePast = {
     'start': 't47429-4392820_219380_26003_2265',
     'end': 't47409-4357353_219380_26003_2265',
     'chunk': [
@@ -206,7 +295,7 @@ class FakeMatrixApi extends MockClient {
     ],
     'state': [],
   };
-  static Map<String, dynamic> messagesResponseFuture = {
+  static const Map<String, dynamic> messagesResponseFuture = {
     'start': 't456',
     'end': 't789',
     'chunk': [
@@ -264,7 +353,7 @@ class FakeMatrixApi extends MockClient {
     ],
     'state': [],
   };
-  static Map<String, dynamic> messagesResponseFutureEnd = {
+  static const Map<String, dynamic> messagesResponseFutureEnd = {
     'start': 't789',
     'end': null,
     'chunk': [],
@@ -856,7 +945,7 @@ class FakeMatrixApi extends MockClient {
     }
   };
 
-  static final Map<String, Map<String, dynamic>> api = {
+  final Map<String, Map<String, dynamic>> api = {
     'GET': {
       '/path/to/auth/error': (var req) => {
             'errcode': 'M_FORBIDDEN',
@@ -2177,28 +2266,6 @@ class FakeMatrixApi extends MockClient {
       '/client/v3/rooms/!localpart%3Aserver.abc/ban': (var reqI) => {},
       '/client/v3/rooms/!localpart%3Aserver.abc/unban': (var reqI) => {},
       '/client/v3/rooms/!localpart%3Aserver.abc/invite': (var reqI) => {},
-      '/client/v3/keys/device_signing/upload': (var reqI) {
-        if (client != null) {
-          final jsonBody = decodeJson(reqI);
-          for (final keyType in {
-            'master_key',
-            'self_signing_key',
-            'user_signing_key'
-          }) {
-            if (jsonBody[keyType] != null) {
-              final key =
-                  sdk.CrossSigningKey.fromJson(jsonBody[keyType], client!);
-              client!.userDeviceKeys[client!.userID!]?.crossSigningKeys
-                  .removeWhere((k, v) => v.usage.contains(key.usage.first));
-              client!.userDeviceKeys[client!.userID!]
-                  ?.crossSigningKeys[key.publicKey!] = key;
-            }
-          }
-          // and generate a fake sync
-          client!.handleSync(sdk.SyncUpdate(nextBatch: ''));
-        }
-        return {};
-      },
       '/client/v3/keys/signatures/upload': (var reqI) => {'failures': {}},
       '/client/v3/room_keys/version': (var reqI) => {'version': '5'},
     },

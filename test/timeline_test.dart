@@ -16,28 +16,57 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
+import 'dart:math';
+
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 
 import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
 import 'fake_client.dart';
+import 'fake_matrix_api.dart';
 
 void main() {
   group('Timeline', () {
     Logs().level = Level.error;
     final roomID = '!1234:example.com';
-    final testTimeStamp = DateTime.now().millisecondsSinceEpoch;
+    var testTimeStamp = 0;
     var updateCount = 0;
     final insertList = <int>[];
     final changeList = <int>[];
     final removeList = <int>[];
     var olmEnabled = true;
+    var currentPoison = 0;
+
+    final countStream = StreamController<int>.broadcast();
+    Future<int> waitForCount(int count) {
+      if (updateCount == count) {
+        return Future.value(updateCount);
+      }
+
+      final completer = Completer<int>();
+
+      StreamSubscription<int>? sub;
+      sub = countStream.stream.listen((newCount) {
+        if (newCount == count) {
+          sub?.cancel();
+          completer.complete(count);
+        }
+      });
+
+      return completer.future.timeout(Duration(seconds: 1),
+          onTimeout: () async {
+        throw TimeoutException(
+            'Failed to wait for updateCount == $count, current == $updateCount',
+            Duration(seconds: 1));
+      });
+    }
 
     late Client client;
     late Room room;
     late Timeline timeline;
-    test('create stuff', () async {
+    setUp(() async {
       try {
         await olm.init();
         olm.get_library_version();
@@ -49,24 +78,40 @@ void main() {
       client = await getClient();
       client.sendMessageTimeoutSeconds = 5;
 
+      final poison = Random().nextInt(2 ^ 32);
+      currentPoison = poison;
+
       room = Room(
           id: roomID, client: client, prev_batch: '1234', roomAccountData: {});
       timeline = Timeline(
         room: room,
         chunk: TimelineChunk(events: []),
         onUpdate: () {
+          if (poison != currentPoison) return;
           updateCount++;
+          countStream.add(updateCount);
         },
         onInsert: insertList.add,
         onChange: changeList.add,
         onRemove: removeList.add,
       );
-    });
 
-    test('Create', () async {
       await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
+      await client.abortSync();
 
+      updateCount = 0;
+      insertList.clear();
+      changeList.clear();
+      removeList.clear();
+
+      await client.abortSync();
+      testTimeStamp = DateTime.now().millisecondsSinceEpoch;
+    });
+
+    tearDown(() => client.dispose(closeDatabase: true).onError((e, s) {}));
+
+    test('Create', () async {
       client.onEvent.add(EventUpdate(
         type: EventUpdateType.timeline,
         roomID: roomID,
@@ -94,7 +139,7 @@ void main() {
 
       expect(timeline.sub != null, true);
 
-      await Future.delayed(Duration(milliseconds: 50));
+      await waitForCount(2);
 
       expect(updateCount, 2);
       expect(insertList, [0, 0]);
@@ -143,7 +188,7 @@ void main() {
         },
       ));
 
-      await Future.delayed(Duration(milliseconds: 50));
+      await waitForCount(3);
 
       expect(updateCount, 3);
       expect(insertList, [0, 0, 0]);
@@ -157,10 +202,9 @@ void main() {
     test('Send message', () async {
       await room.sendTextEvent('test', txid: '1234');
 
-      await Future.delayed(Duration(milliseconds: 50));
-
-      expect(updateCount, 5);
-      expect(insertList, [0, 0, 0, 0]);
+      await waitForCount(2);
+      expect(updateCount, 2);
+      expect(insertList, [0]);
       expect(insertList.length, timeline.events.length);
       final eventId = timeline.events[0].eventId;
       expect(eventId.startsWith('\$event'), true);
@@ -180,16 +224,52 @@ void main() {
         },
       ));
 
-      await Future.delayed(Duration(milliseconds: 50));
-
-      expect(updateCount, 6);
-      expect(insertList, [0, 0, 0, 0]);
+      await waitForCount(3);
+      expect(updateCount, 3);
+      expect(insertList, [0]);
       expect(insertList.length, timeline.events.length);
       expect(timeline.events[0].eventId, eventId);
       expect(timeline.events[0].status, EventStatus.synced);
     });
 
     test('Send message with error', () async {
+      client.onEvent.add(EventUpdate(
+        type: EventUpdateType.timeline,
+        roomID: roomID,
+        content: {
+          'type': 'm.room.message',
+          'content': {
+            'msgtype': 'm.text',
+            'body': 'Testcase should not show up in Sync'
+          },
+          'sender': '@alice:example.com',
+          'status': EventStatus.sending.intValue,
+          'event_id': 'abc',
+          'origin_server_ts': testTimeStamp
+        },
+      ));
+      await waitForCount(1);
+
+      await room.sendTextEvent('test', txid: 'errortxid');
+      await waitForCount(3);
+
+      await room.sendTextEvent('test', txid: 'errortxid2');
+      await waitForCount(5);
+      await room.sendTextEvent('test', txid: 'errortxid3');
+      await waitForCount(7);
+
+      expect(updateCount, 7);
+      expect(insertList, [0, 0, 1, 2]);
+      expect(insertList.length, timeline.events.length);
+      expect(changeList, [0, 1, 2]);
+      expect(removeList, []);
+      expect(timeline.events[0].status, EventStatus.error);
+      expect(timeline.events[1].status, EventStatus.error);
+      expect(timeline.events[2].status, EventStatus.error);
+    });
+
+    test('Remove message', () async {
+      // send a failed message
       client.onEvent.add(EventUpdate(
         type: EventUpdateType.timeline,
         roomID: roomID,
@@ -202,43 +282,32 @@ void main() {
           'origin_server_ts': testTimeStamp
         },
       ));
-      await Future.delayed(Duration(milliseconds: 50));
+      await waitForCount(1);
 
-      expect(updateCount, 7);
-      await room.sendTextEvent('test', txid: 'errortxid');
-      await Future.delayed(Duration(milliseconds: 50));
-
-      expect(updateCount, 9);
-      await room.sendTextEvent('test', txid: 'errortxid2');
-      await Future.delayed(Duration(milliseconds: 50));
-      await room.sendTextEvent('test', txid: 'errortxid3');
-      await Future.delayed(Duration(milliseconds: 50));
-
-      expect(updateCount, 13);
-      expect(insertList, [0, 0, 0, 0, 0, 0, 1, 2]);
-      expect(insertList.length, timeline.events.length);
-      expect(changeList, [2, 0, 0, 0, 1, 2]);
-      expect(removeList, []);
-      expect(timeline.events[0].status, EventStatus.error);
-      expect(timeline.events[1].status, EventStatus.error);
-      expect(timeline.events[2].status, EventStatus.error);
-    });
-
-    test('Remove message', () async {
       await timeline.events[0].remove();
 
-      await Future.delayed(Duration(milliseconds: 50));
+      await waitForCount(2);
 
-      expect(updateCount, 14);
-
-      expect(insertList, [0, 0, 0, 0, 0, 0, 1, 2]);
-      expect(changeList, [2, 0, 0, 0, 1, 2]);
+      expect(insertList, [0]);
+      expect(changeList, []);
       expect(removeList, [0]);
-      expect(timeline.events.length, 7);
-      expect(timeline.events[0].status, EventStatus.error);
+      expect(timeline.events.length, 0);
     });
 
     test('getEventById', () async {
+      client.onEvent.add(EventUpdate(
+        type: EventUpdateType.timeline,
+        roomID: roomID,
+        content: {
+          'type': 'm.room.message',
+          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+          'sender': '@alice:example.com',
+          'status': EventStatus.sending.intValue,
+          'event_id': 'abc',
+          'origin_server_ts': testTimeStamp
+        },
+      ));
+      await waitForCount(1);
       var event = await timeline.getEventById('abc');
       expect(event?.content, {'msgtype': 'm.text', 'body': 'Testcase'});
 
@@ -270,17 +339,17 @@ void main() {
           'unsigned': {'transaction_id': 'newresend'},
         },
       ));
-      await Future.delayed(Duration(milliseconds: 50));
+      await waitForCount(1);
       expect(timeline.events[0].status, EventStatus.error);
       await timeline.events[0].sendAgain();
 
-      await Future.delayed(Duration(milliseconds: 50));
+      await waitForCount(3);
 
-      expect(updateCount, 17);
+      expect(updateCount, 3);
 
-      expect(insertList, [0, 0, 0, 0, 0, 0, 1, 2, 0]);
-      expect(changeList, [2, 0, 0, 0, 1, 2, 0, 0]);
-      expect(removeList, [0]);
+      expect(insertList, [0]);
+      expect(changeList, [0, 0]);
+      expect(removeList, []);
       expect(timeline.events.length, 1);
       expect(timeline.events[0].status, EventStatus.sent);
     });
@@ -290,10 +359,10 @@ void main() {
       expect(timeline.canRequestHistory, true);
       await room.requestHistory();
 
-      await Future.delayed(Duration(milliseconds: 50));
+      await waitForCount(3);
 
-      expect(updateCount, 20);
-      expect(insertList, [0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 1, 2]);
+      expect(updateCount, 3);
+      expect(insertList, [0, 1, 2]);
       expect(timeline.events.length, 3);
       expect(timeline.events[0].eventId, '3143273582443PhrSn:example.org');
       expect(timeline.events[1].eventId, '2143273582443PhrSn:example.org');
