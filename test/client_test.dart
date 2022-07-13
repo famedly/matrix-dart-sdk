@@ -20,12 +20,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:matrix/matrix.dart';
-
+import 'package:canonical_json/canonical_json.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
-import 'package:canonical_json/canonical_json.dart';
 
+import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
 import 'fake_database.dart';
 import 'fake_matrix_api.dart';

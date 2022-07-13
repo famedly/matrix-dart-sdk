@@ -15,11 +15,11 @@
  *   You should have received a copy of the GNU Affero General Public License
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import 'dart:typed_data';
+
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
-
 import 'crypto.dart';
 
 class EncryptedFile {

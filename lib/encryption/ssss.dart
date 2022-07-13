@@ -22,10 +22,10 @@ import 'dart:core';
 import 'dart:typed_data';
 
 import 'package:base58check/base58.dart';
-import 'package:crypto/crypto.dart';
 import 'package:collection/collection.dart';
-import 'package:matrix/encryption/utils/base64_unpadded.dart';
+import 'package:crypto/crypto.dart';
 
+import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import '../matrix.dart';
 import '../src/utils/crypto/crypto.dart' as uc;
 import '../src/utils/run_in_root.dart';

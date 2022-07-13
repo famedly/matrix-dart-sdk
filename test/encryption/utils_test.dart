@@ -18,9 +18,10 @@
 
 import 'dart:convert';
 
+import 'package:test/test.dart';
+
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/matrix.dart';
-import 'package:test/test.dart';
 
 void main() {
   group('Utils', () {

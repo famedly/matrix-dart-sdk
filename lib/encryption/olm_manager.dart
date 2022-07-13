@@ -21,9 +21,9 @@ import 'dart:convert';
 import 'package:async/async.dart';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart';
-import 'package:matrix/matrix.dart';
 import 'package:olm/olm.dart' as olm;
 
+import 'package:matrix/matrix.dart';
 import '../encryption/utils/json_signature_check_extension.dart';
 import '../src/utils/run_in_root.dart';
 import 'encryption.dart';

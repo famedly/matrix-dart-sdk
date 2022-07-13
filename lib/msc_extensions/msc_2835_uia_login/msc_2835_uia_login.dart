@@ -3,6 +3,7 @@ library msc_2835_uia_login;
 import 'dart:convert';
 
 import 'package:http/http.dart' hide Client;
+
 import 'package:matrix/matrix.dart';
 
 extension UiaLogin on Client {
