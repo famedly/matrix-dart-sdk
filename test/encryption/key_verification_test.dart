@@ -16,6 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:matrix/matrix.dart';
@@ -59,11 +60,22 @@ EventUpdate getLastSentEvent(KeyVerification req) {
   );
 }
 
-void main() {
+void main() async {
+  var olmEnabled = true;
+  try {
+    await olm.init();
+    olm.get_library_version();
+  } catch (e) {
+    olmEnabled = false;
+    Logs().w('[LibOlm] Failed to load LibOlm', e);
+  }
+  Logs().i('[LibOlm] Enabled: $olmEnabled');
+
+  final dynamic skip = olmEnabled ? false : 'olm library not available';
+
   /// All Tests related to the ChatTime
   group('Key Verification', () {
     Logs().level = Level.error;
-    var olmEnabled = true;
 
     // key @othertest:fakeServer.notExisting
     const otherPickledOlmAccount =
@@ -72,21 +84,11 @@ void main() {
     late Client client1;
     late Client client2;
 
-    test('setupClient', () async {
-      try {
-        await olm.init();
-        olm.get_library_version();
-      } catch (e) {
-        olmEnabled = false;
-        Logs().w('[LibOlm] Failed to load LibOlm', e);
-      }
-      Logs().i('[LibOlm] Enabled: $olmEnabled');
-      if (!olmEnabled) return;
-
+    setUp(() async {
       client1 = await getClient();
       client2 = Client(
         'othertestclient',
-        httpClient: FakeMatrixApi(),
+        httpClient: FakeMatrixApi.currentApi!,
         databaseBuilder: getDatabase,
       );
       await client2.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
@@ -109,9 +111,12 @@ void main() {
         KeyVerificationMethod.numbers
       };
     });
+    tearDown(() async {
+      await client1.dispose(closeDatabase: true);
+      await client2.dispose(closeDatabase: true);
+    });
 
     test('Run emoji / number verification', () async {
-      if (!olmEnabled) return;
       // for a full run we test in-room verification in a cleartext room
       // because then we can easily intercept the payloads and inject in the other client
       FakeMatrixApi.calledEndpoints.clear();
@@ -122,15 +127,17 @@ void main() {
           await client1.userDeviceKeys[client2.userID]!.startVerification(
         newDirectChatEnableEncryption: false,
       );
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.room.message'));
       var evt = getLastSentEvent(req1);
       expect(req1.state, KeyVerificationState.waitingAccept);
 
-      late KeyVerification req2;
+      final comp = Completer<KeyVerification>();
       final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        req2 = req;
+        comp.complete(req);
       });
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
-      await Future.delayed(Duration(milliseconds: 10));
+      final req2 = await comp.future;
       await sub.cancel();
 
       expect(
@@ -141,27 +148,37 @@ void main() {
       // send ready
       FakeMatrixApi.calledEndpoints.clear();
       await req2.acceptVerification();
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.ready'));
       evt = getLastSentEvent(req2);
       expect(req2.state, KeyVerificationState.waitingAccept);
 
       // send start
       FakeMatrixApi.calledEndpoints.clear();
       await client1.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.start'));
       evt = getLastSentEvent(req1);
 
       // send accept
       FakeMatrixApi.calledEndpoints.clear();
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.accept'));
       evt = getLastSentEvent(req2);
 
       // send key
       FakeMatrixApi.calledEndpoints.clear();
       await client1.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.key'));
       evt = getLastSentEvent(req1);
 
       // send key
       FakeMatrixApi.calledEndpoints.clear();
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.key'));
       evt = getLastSentEvent(req2);
 
       // receive last key
@@ -196,13 +213,22 @@ void main() {
       await req1.acceptSas();
       evt = getLastSentEvent(req1);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.mac'));
       expect(req1.state, KeyVerificationState.waitingSas);
 
       // send mac
       FakeMatrixApi.calledEndpoints.clear();
       await req2.acceptSas();
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.mac'));
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.done'));
       evt = getLastSentEvent(req2);
+      FakeMatrixApi.calledEndpoints.clear();
       await client1.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.done'));
 
       expect(req1.state, KeyVerificationState.done);
       expect(req2.state, KeyVerificationState.done);
@@ -219,7 +245,6 @@ void main() {
     });
 
     test('ask SSSS start', () async {
-      if (!olmEnabled) return;
       client1.userDeviceKeys[client1.userID]!.masterKey!
           .setDirectVerified(true);
       await client1.encryption!.ssss.clearCache();
@@ -227,7 +252,8 @@ void main() {
           .startVerification(newDirectChatEnableEncryption: false);
       expect(req1.state, KeyVerificationState.askSSSS);
       await req1.openSSSS(recoveryKey: ssssKey);
-      await Future.delayed(Duration(seconds: 1));
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.room.message'));
       expect(req1.state, KeyVerificationState.waitingAccept);
 
       await req1.cancel();
@@ -235,7 +261,6 @@ void main() {
     });
 
     test('ask SSSS end', () async {
-      if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
       // make sure our master key is *not* verified to not triger SSSS for now
       client1.userDeviceKeys[client1.userID]!.masterKey!
@@ -245,41 +270,53 @@ void main() {
           .setDirectVerified(true);
       final req1 = await client1.userDeviceKeys[client2.userID]!
           .startVerification(newDirectChatEnableEncryption: false);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.room.message'));
       var evt = getLastSentEvent(req1);
       expect(req1.state, KeyVerificationState.waitingAccept);
 
-      late KeyVerification req2;
+      final comp = Completer<KeyVerification>();
       final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        req2 = req;
+        comp.complete(req);
       });
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
-      await Future.delayed(Duration(milliseconds: 10));
+      final req2 = await comp.future;
       await sub.cancel();
 
       // send ready
       FakeMatrixApi.calledEndpoints.clear();
       await req2.acceptVerification();
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.ready'));
       evt = getLastSentEvent(req2);
       expect(req2.state, KeyVerificationState.waitingAccept);
 
       // send start
       FakeMatrixApi.calledEndpoints.clear();
       await client1.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.start'));
       evt = getLastSentEvent(req1);
 
       // send accept
       FakeMatrixApi.calledEndpoints.clear();
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.accept'));
       evt = getLastSentEvent(req2);
 
       // send key
       FakeMatrixApi.calledEndpoints.clear();
       await client1.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.key'));
       evt = getLastSentEvent(req1);
 
       // send key
       FakeMatrixApi.calledEndpoints.clear();
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.key'));
       evt = getLastSentEvent(req2);
 
       // receive last key
@@ -313,6 +350,8 @@ void main() {
       await req1.acceptSas();
       evt = getLastSentEvent(req1);
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.mac'));
       expect(req1.state, KeyVerificationState.waitingSas);
 
       // send mac
@@ -320,12 +359,16 @@ void main() {
       await req2.acceptSas();
       evt = getLastSentEvent(req2);
       await client1.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.mac'));
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.done'));
+      FakeMatrixApi.calledEndpoints.clear();
 
       expect(req1.state, KeyVerificationState.askSSSS);
       expect(req2.state, KeyVerificationState.done);
 
       await req1.openSSSS(recoveryKey: ssssKey);
-      await Future.delayed(Duration(milliseconds: 10));
       expect(req1.state, KeyVerificationState.done);
 
       client1.encryption!.ssss = MockSSSS(client1.encryption!);
@@ -334,34 +377,35 @@ void main() {
       await req1.maybeRequestSSSSSecrets();
       await Future.delayed(Duration(milliseconds: 10));
       expect((client1.encryption!.ssss as MockSSSS).requestedSecrets, true);
-      // delay for 12 seconds to be sure no other tests clear the ssss cache
-      await Future.delayed(Duration(seconds: 12));
 
       await client1.encryption!.keyVerificationManager.cleanup();
       await client2.encryption!.keyVerificationManager.cleanup();
     });
 
     test('reject verification', () async {
-      if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
       // make sure our master key is *not* verified to not triger SSSS for now
       client1.userDeviceKeys[client1.userID]!.masterKey!
           .setDirectVerified(false);
       final req1 = await client1.userDeviceKeys[client2.userID]!
           .startVerification(newDirectChatEnableEncryption: false);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.room.message'));
       var evt = getLastSentEvent(req1);
       expect(req1.state, KeyVerificationState.waitingAccept);
 
-      late KeyVerification req2;
+      final comp = Completer<KeyVerification>();
       final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        req2 = req;
+        comp.complete(req);
       });
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
-      await Future.delayed(Duration(milliseconds: 10));
+      final req2 = await comp.future;
       await sub.cancel();
 
       FakeMatrixApi.calledEndpoints.clear();
       await req2.rejectVerification();
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.cancel'));
       evt = getLastSentEvent(req2);
       await client1.encryption!.keyVerificationManager.handleEventUpdate(evt);
       expect(req1.state, KeyVerificationState.error);
@@ -372,48 +416,59 @@ void main() {
     });
 
     test('reject sas', () async {
-      if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
       // make sure our master key is *not* verified to not triger SSSS for now
       client1.userDeviceKeys[client1.userID]!.masterKey!
           .setDirectVerified(false);
       final req1 = await client1.userDeviceKeys[client2.userID]!
           .startVerification(newDirectChatEnableEncryption: false);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.room.message'));
       var evt = getLastSentEvent(req1);
       expect(req1.state, KeyVerificationState.waitingAccept);
 
-      late KeyVerification req2;
+      final comp = Completer<KeyVerification>();
       final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        req2 = req;
+        comp.complete(req);
       });
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
-      await Future.delayed(Duration(milliseconds: 10));
+      final req2 = await comp.future;
       await sub.cancel();
 
       // send ready
       FakeMatrixApi.calledEndpoints.clear();
       await req2.acceptVerification();
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.ready'));
       evt = getLastSentEvent(req2);
       expect(req2.state, KeyVerificationState.waitingAccept);
 
       // send start
       FakeMatrixApi.calledEndpoints.clear();
       await client1.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.start'));
       evt = getLastSentEvent(req1);
 
       // send accept
       FakeMatrixApi.calledEndpoints.clear();
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.accept'));
       evt = getLastSentEvent(req2);
 
       // send key
       FakeMatrixApi.calledEndpoints.clear();
       await client1.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.key'));
       evt = getLastSentEvent(req1);
 
       // send key
       FakeMatrixApi.calledEndpoints.clear();
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.key'));
       evt = getLastSentEvent(req2);
 
       // receive last key
@@ -421,8 +476,12 @@ void main() {
       await client1.encryption!.keyVerificationManager.handleEventUpdate(evt);
 
       await req1.acceptSas();
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.mac'));
       FakeMatrixApi.calledEndpoints.clear();
       await req2.rejectSas();
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.cancel'));
       evt = getLastSentEvent(req2);
       await client1.encryption!.keyVerificationManager.handleEventUpdate(evt);
       expect(req1.state, KeyVerificationState.error);
@@ -433,22 +492,23 @@ void main() {
     });
 
     test('other device accepted', () async {
-      if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
       // make sure our master key is *not* verified to not triger SSSS for now
       client1.userDeviceKeys[client1.userID]!.masterKey!
           .setDirectVerified(false);
       final req1 = await client1.userDeviceKeys[client2.userID]!
           .startVerification(newDirectChatEnableEncryption: false);
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.room.message'));
       final evt = getLastSentEvent(req1);
       expect(req1.state, KeyVerificationState.waitingAccept);
 
-      late KeyVerification req2;
+      final comp = Completer<KeyVerification>();
       final sub = client2.onKeyVerificationRequest.stream.listen((req) {
-        req2 = req;
+        comp.complete(req);
       });
       await client2.encryption!.keyVerificationManager.handleEventUpdate(evt);
-      await Future.delayed(Duration(milliseconds: 10));
+      final req2 = await comp.future;
       await sub.cancel();
 
       await client2.encryption!.keyVerificationManager
@@ -473,14 +533,10 @@ void main() {
       expect(req2.state, KeyVerificationState.error);
 
       await req2.cancel();
+      await FakeMatrixApi.firstWhere((e) => e.startsWith(
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.cancel'));
       await client1.encryption!.keyVerificationManager.cleanup();
       await client2.encryption!.keyVerificationManager.cleanup();
     });
-
-    test('dispose client', () async {
-      if (!olmEnabled) return;
-      await client1.dispose(closeDatabase: true);
-      await client2.dispose(closeDatabase: true);
-    });
-  });
+  }, skip: skip);
 }

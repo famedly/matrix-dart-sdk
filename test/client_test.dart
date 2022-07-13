@@ -33,9 +33,6 @@ import 'fake_matrix_api.dart';
 void main() {
   late Client matrix;
 
-  Future<List<EventUpdate>> eventUpdateListFuture;
-  Future<List<ToDeviceEvent>> toDeviceUpdateListFuture;
-
   // key @test:fakeServer.notExisting
   const pickledOlmAccount =
       'N2v1MkIFGcl0mQpo2OCwSopxPQJ0wnl7oe7PKiT4141AijfdTIhRu+ceXzXKy3Kr00nLqXtRv7kid6hU4a+V0rfJWLL0Y51+3Rp/ORDVnQy+SSeo6Fn4FHcXrxifJEJ0djla5u98fBcJ8BSkhIDmtXRPi5/oJAvpiYn+8zMjFHobOeZUAxYR0VfQ9JzSYBsSovoQ7uFkNks1M4EDUvHtuyg3RxViwdNxs3718fyAqQ/VSwbXsY0Nl+qQbF+nlVGHenGqk5SuNl1P6e1PzZxcR0IfXA94Xij1Ob5gDv5YH4UCn9wRMG0abZsQP0YzpDM0FLaHSCyo9i5JD/vMlhH+nZWrgAzPPCTNGYewNV8/h3c+VyJh8ZTx/fVi6Yq46Fv+27Ga2ETRZ3Qn+Oyx6dLBjnBZ9iUvIhqpe2XqaGA1PopOz8iDnaZitw';
@@ -48,18 +45,20 @@ void main() {
 
     /// Check if all Elements get created
 
-    matrix = Client(
-      'testclient',
-      httpClient: FakeMatrixApi(),
-      databaseBuilder: getDatabase,
-    );
-
-    eventUpdateListFuture = matrix.onEvent.stream.toList();
-    toDeviceUpdateListFuture = matrix.onToDeviceEvent.stream.toList();
+    setUp(() async {
+      matrix = await getClient();
+    });
 
     var olmEnabled = true;
 
     test('Login', () async {
+      matrix = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        databaseBuilder: getDatabase,
+      );
+      final eventUpdateListFuture = matrix.onEvent.stream.toList();
+      final toDeviceUpdateListFuture = matrix.onToDeviceEvent.stream.toList();
       try {
         await olm.init();
         olm.get_library_version();
@@ -203,36 +202,7 @@ void main() {
           matrix.getRoomByAlias(
               "#famedlyContactDiscovery:${matrix.userID!.split(":")[1]}"),
           null);
-    });
 
-    test('recentEmoji', () async {
-      final emojis = matrix.recentEmojis;
-
-      expect(emojis.length, 2);
-
-      expect(emojis['👍️'], 1);
-      expect(emojis['🖇️'], 0);
-
-      await matrix.addRecentEmoji('🦙');
-      // To check if the emoji is properly added, we need to wait for a sync roundtrip
-    });
-
-    test('Logout', () async {
-      final loginStateFuture = matrix.onLoginStateChanged.stream.first;
-      await matrix.logout();
-
-      expect(matrix.accessToken == null, true);
-      expect(matrix.homeserver == null, true);
-      expect(matrix.userID == null, true);
-      expect(matrix.deviceID == null, true);
-      expect(matrix.deviceName == null, true);
-      expect(matrix.prevBatch == null, true);
-
-      final loginState = await loginStateFuture;
-      expect(loginState, LoginState.loggedOut);
-    });
-
-    test('Event Update Test', () async {
       await matrix.onEvent.close();
 
       final eventUpdateList = await eventUpdateListFuture;
@@ -291,21 +261,46 @@ void main() {
       expect(eventUpdateList[12].content['type'], 'm.room.member');
       expect(eventUpdateList[12].roomID, '!696r7674:example.com');
       expect(eventUpdateList[12].type, EventUpdateType.inviteState);
-    });
 
-    test('To Device Update Test', () async {
       await matrix.onToDeviceEvent.close();
 
-      final eventUpdateList = await toDeviceUpdateListFuture;
+      final deviceeventUpdateList = await toDeviceUpdateListFuture;
 
-      expect(eventUpdateList.length, 2);
+      expect(deviceeventUpdateList.length, 2);
 
-      expect(eventUpdateList[0].type, 'm.new_device');
+      expect(deviceeventUpdateList[0].type, 'm.new_device');
       if (olmEnabled) {
-        expect(eventUpdateList[1].type, 'm.room_key');
+        expect(deviceeventUpdateList[1].type, 'm.room_key');
       } else {
-        expect(eventUpdateList[1].type, 'm.room.encrypted');
+        expect(deviceeventUpdateList[1].type, 'm.room.encrypted');
       }
+    });
+
+    test('recentEmoji', () async {
+      final emojis = matrix.recentEmojis;
+
+      expect(emojis.length, 2);
+
+      expect(emojis['👍️'], 1);
+      expect(emojis['🖇️'], 0);
+
+      await matrix.addRecentEmoji('🦙');
+      // To check if the emoji is properly added, we need to wait for a sync roundtrip
+    });
+
+    test('Logout', () async {
+      final loginStateFuture = matrix.onLoginStateChanged.stream.first;
+      await matrix.logout();
+
+      expect(matrix.accessToken == null, true);
+      expect(matrix.homeserver == null, true);
+      expect(matrix.userID == null, true);
+      expect(matrix.deviceID == null, true);
+      expect(matrix.deviceName == null, true);
+      expect(matrix.prevBatch == null, true);
+
+      final loginState = await loginStateFuture;
+      expect(loginState, LoginState.loggedOut);
     });
 
     test('Login', () async {
@@ -314,8 +309,6 @@ void main() {
         httpClient: FakeMatrixApi(),
         databaseBuilder: getDatabase,
       );
-
-      eventUpdateListFuture = matrix.onEvent.stream.toList();
 
       await matrix.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
@@ -561,12 +554,14 @@ void main() {
           '{\"next_batch\":\"s82_571_2_6_39_1_2_34_1\",\"account_data\":{\"events\":[{\"type\":\"m.push_rules\",\"content\":{\"global\":{\"underride\":[{\"conditions\":[{\"kind\":\"event_match\",\"key\":\"type\",\"pattern\":\"m.call.invite\"}],\"actions\":[\"notify\",{\"set_tweak\":\"sound\",\"value\":\"ring\"},{\"set_tweak\":\"highlight\",\"value\":false}],\"rule_id\":\".m.rule.call\",\"default\":true,\"enabled\":true},{\"conditions\":[{\"kind\":\"room_member_count\",\"is\":\"2\"},{\"kind\":\"event_match\",\"key\":\"type\",\"pattern\":\"m.room.message\"}],\"actions\":[\"notify\",{\"set_tweak\":\"sound\",\"value\":\"default\"},{\"set_tweak\":\"highlight\",\"value\":false}],\"rule_id\":\".m.rule.room_one_to_one\",\"default\":true,\"enabled\":true},{\"conditions\":[{\"kind\":\"room_member_count\",\"is\":\"2\"},{\"kind\":\"event_match\",\"key\":\"type\",\"pattern\":\"m.room.encrypted\"}],\"actions\":[\"notify\",{\"set_tweak\":\"sound\",\"value\":\"default\"},{\"set_tweak\":\"highlight\",\"value\":false}],\"rule_id\":\".m.rule.encrypted_room_one_to_one\",\"default\":true,\"enabled\":true},{\"conditions\":[{\"kind\":\"event_match\",\"key\":\"type\",\"pattern\":\"m.room.message\"}],\"actions\":[\"notify\",{\"set_tweak\":\"highlight\",\"value\":false}],\"rule_id\":\".m.rule.message\",\"default\":true,\"enabled\":true},{\"conditions\":[{\"kind\":\"event_match\",\"key\":\"type\",\"pattern\":\"m.room.encrypted\"}],\"actions\":[\"notify\",{\"set_tweak\":\"highlight\",\"value\":false}],\"rule_id\":\".m.rule.encrypted\",\"default\":true,\"enabled\":true},{\"conditions\":[{\"kind\":\"event_match\",\"key\":\"type\",\"pattern\":\"im.vector.modular.widgets\"},{\"kind\":\"event_match\",\"key\":\"content.type\",\"pattern\":\"jitsi\"},{\"kind\":\"event_match\",\"key\":\"state_key\",\"pattern\":\"*\"}],\"actions\":[\"notify\",{\"set_tweak\":\"highlight\",\"value\":false}],\"rule_id\":\".im.vector.jitsi\",\"default\":true,\"enabled\":true}],\"sender\":[],\"room\":[],\"content\":[{\"actions\":[\"notify\",{\"set_tweak\":\"sound\",\"value\":\"default\"},{\"set_tweak\":\"highlight\"}],\"pattern\":\"056d6976-fb61-47cf-86f0-147387461565\",\"rule_id\":\".m.rule.contains_user_name\",\"default\":true,\"enabled\":true}],\"override\":[{\"conditions\":[],\"actions\":[\"dont_notify\"],\"rule_id\":\".m.rule.master\",\"default\":true,\"enabled\":false},{\"conditions\":[{\"kind\":\"event_match\",\"key\":\"content.msgtype\",\"pattern\":\"m.notice\"}],\"actions\":[\"dont_notify\"],\"rule_id\":\".m.rule.suppress_notices\",\"default\":true,\"enabled\":true},{\"conditions\":[{\"kind\":\"event_match\",\"key\":\"type\",\"pattern\":\"m.room.member\"},{\"kind\":\"event_match\",\"key\":\"content.membership\",\"pattern\":\"invite\"},{\"kind\":\"event_match\",\"key\":\"state_key\",\"pattern\":\"@056d6976-fb61-47cf-86f0-147387461565:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\"}],\"actions\":[\"notify\",{\"set_tweak\":\"sound\",\"value\":\"default\"},{\"set_tweak\":\"highlight\",\"value\":false}],\"rule_id\":\".m.rule.invite_for_me\",\"default\":true,\"enabled\":true},{\"conditions\":[{\"kind\":\"event_match\",\"key\":\"type\",\"pattern\":\"m.room.member\"}],\"actions\":[\"dont_notify\"],\"rule_id\":\".m.rule.member_event\",\"default\":true,\"enabled\":true},{\"conditions\":[{\"kind\":\"contains_display_name\"}],\"actions\":[\"notify\",{\"set_tweak\":\"sound\",\"value\":\"default\"},{\"set_tweak\":\"highlight\"}],\"rule_id\":\".m.rule.contains_display_name\",\"default\":true,\"enabled\":true},{\"conditions\":[{\"kind\":\"event_match\",\"key\":\"content.body\",\"pattern\":\"@room\"},{\"kind\":\"sender_notification_permission\",\"key\":\"room\"}],\"actions\":[\"notify\",{\"set_tweak\":\"highlight\",\"value\":true}],\"rule_id\":\".m.rule.roomnotif\",\"default\":true,\"enabled\":true},{\"conditions\":[{\"kind\":\"event_match\",\"key\":\"type\",\"pattern\":\"m.room.tombstone\"},{\"kind\":\"event_match\",\"key\":\"state_key\",\"pattern\":\"\"}],\"actions\":[\"notify\",{\"set_tweak\":\"highlight\",\"value\":true}],\"rule_id\":\".m.rule.tombstone\",\"default\":true,\"enabled\":true},{\"conditions\":[{\"kind\":\"event_match\",\"key\":\"type\",\"pattern\":\"m.reaction\"}],\"actions\":[\"dont_notify\"],\"rule_id\":\".m.rule.reaction\",\"default\":true,\"enabled\":true}]},\"device\":{}}}]},\"presence\":{\"events\":[{\"type\":\"m.presence\",\"sender\":\"@056d6976-fb61-47cf-86f0-147387461565:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\",\"content\":{\"presence\":\"online\",\"last_active_ago\":43,\"currently_active\":true}}]},\"device_one_time_keys_count\":{\"signed_curve25519\":66},\"org.matrix.msc2732.device_unused_fallback_key_types\":[\"signed_curve25519\"],\"device_unused_fallback_key_types\":[\"signed_curve25519\"],\"rooms\":{\"join\":{\"!MEgZosbiZqjSjbHFqI:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\":{\"timeline\":{\"events\":[{\"type\":\"m.room.member\",\"sender\":\"@8640f1e6-a824-4f9c-9924-2d8fc40bc030:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\",\"content\":{\"membership\":\"join\",\"displayname\":\"Lars Kaiser\"},\"state_key\":\"@8640f1e6-a824-4f9c-9924-2d8fc40bc030:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\",\"origin_server_ts\":1647296944593,\"unsigned\":{\"age\":545455},\"event_id\":\"\$mk9kFUEAKBZJgarWApLyYqOZQQocLIVV8tWp_gJEZFU\"},{\"type\":\"m.room.power_levels\",\"sender\":\"@8640f1e6-a824-4f9c-9924-2d8fc40bc030:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\",\"content\":{\"users\":{\"@8640f1e6-a824-4f9c-9924-2d8fc40bc030:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\":100},\"users_default\":0,\"events\":{\"m.room.name\":50,\"m.room.power_levels\":100,\"m.room.history_visibility\":100,\"m.room.canonical_alias\":50,\"m.room.avatar\":50,\"m.room.tombstone\":100,\"m.room.server_acl\":100,\"m.room.encryption\":100},\"events_default\":0,\"state_default\":50,\"ban\":50,\"kick\":50,\"redact\":50,\"invite\":50,\"historical\":100},\"state_key\":\"\",\"origin_server_ts\":1647296944690,\"unsigned\":{\"age\":545358},\"event_id\":\"\$3wL2YgVNQzgfl8y_ksi3BPMqRs94jb_m0WRonL1HNpY\"},{\"type\":\"m.room.canonical_alias\",\"sender\":\"@8640f1e6-a824-4f9c-9924-2d8fc40bc030:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\",\"content\":{\"alias\":\"#user-discovery:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\"},\"state_key\":\"\",\"origin_server_ts\":1647296944806,\"unsigned\":{\"age\":545242},\"event_id\":\"\$yXaVETL9F4jSN9rpRNyT_kUoctzD07n5Z4AIHziP7DQ\"},{\"type\":\"m.room.join_rules\",\"sender\":\"@8640f1e6-a824-4f9c-9924-2d8fc40bc030:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\",\"content\":{\"join_rule\":\"public\"},\"state_key\":\"\",\"origin_server_ts\":1647296944894,\"unsigned\":{\"age\":545154},\"event_id\":\"\$jBDHhgpNqr125eWUsGVw4r7ZG2hgr0BTzzR77S-ubvY\"},{\"type\":\"m.room.history_visibility\",\"sender\":\"@8640f1e6-a824-4f9c-9924-2d8fc40bc030:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\",\"content\":{\"history_visibility\":\"shared\"},\"state_key\":\"\",\"origin_server_ts\":1647296944965,\"unsigned\":{\"age\":545083},\"event_id\":\"\$kMessP7gAphUKW7mzOLlJT6NT8IsVGPmGir3_1uBNCE\"},{\"type\":\"m.room.name\",\"sender\":\"@8640f1e6-a824-4f9c-9924-2d8fc40bc030:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\",\"content\":{\"name\":\"User Discovery\"},\"state_key\":\"\",\"origin_server_ts\":1647296945062,\"unsigned\":{\"age\":544986},\"event_id\":\"\$Bo9Ut_0vcr3FuxCRye4IHEMxUxIIcSwc-ePnMzx-hYU\"},{\"type\":\"m.room.member\",\"sender\":\"@test:fakeServer.notExisting\",\"content\":{\"membership\":\"join\",\"displayname\":\"1c2e5c2b-f958-45a5-9fcb-eef3969c31df\"},\"state_key\":\"@test:fakeServer.notExisting\",\"origin_server_ts\":1647296989893,\"unsigned\":{\"age\":500155},\"event_id\":\"\$fYCf2qtlHwzcdLgwjHb2EOdStv3isAlIUy2Esh5qfVE\"},{\"type\":\"m.room.member\",\"sender\":\"@test:fakeServer.notExisting\",\"content\":{\"membership\":\"join\",\"displayname\":\"Some First Name Some Last Name\"},\"state_key\":\"@test:fakeServer.notExisting\",\"origin_server_ts\":1647296990076,\"unsigned\":{\"replaces_state\":\"\$fYCf2qtlHwzcdLgwjHb2EOdStv3isAlIUy2Esh5qfVE\",\"prev_content\":{\"membership\":\"join\",\"displayname\":\"1c2e5c2b-f958-45a5-9fcb-eef3969c31df\"},\"prev_sender\":\"@test:fakeServer.notExisting\",\"age\":499972},\"event_id\":\"\$3Ut97nFBgOtsrnRPW-pqr28z7ETNMttj7GcjkIv4zWw\"},{\"type\":\"m.room.member\",\"sender\":\"@056d6976-fb61-47cf-86f0-147387461565:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\",\"content\":{\"membership\":\"join\",\"displayname\":\"056d6976-fb61-47cf-86f0-147387461565\"},\"state_key\":\"@056d6976-fb61-47cf-86f0-147387461565:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\",\"origin_server_ts\":1647297489154,\"unsigned\":{\"age\":894},\"event_id\":\"\$6EsjHSLQDVDW9WDH1c5Eu57VaPGZmOPtNRjCjtWPLV0\"},{\"type\":\"m.room.member\",\"sender\":\"@056d6976-fb61-47cf-86f0-147387461565:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\",\"content\":{\"membership\":\"join\",\"displayname\":\"Another User\"},\"state_key\":\"@056d6976-fb61-47cf-86f0-147387461565:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\",\"origin_server_ts\":1647297489290,\"unsigned\":{\"replaces_state\":\"\$6EsjHSLQDVDW9WDH1c5Eu57VaPGZmOPtNRjCjtWPLV0\",\"prev_content\":{\"membership\":\"join\",\"displayname\":\"056d6976-fb61-47cf-86f0-147387461565\"},\"prev_sender\":\"@056d6976-fb61-47cf-86f0-147387461565:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\",\"age\":758},\"event_id\":\"\$dtQblqCbjr3TGc3WmrQ4YTkHaXJ2PcO0TAYDr9K7iQc\"}],\"prev_batch\":\"t2-62_571_2_6_39_1_2_34_1\",\"limited\":true},\"state\":{\"events\":[{\"type\":\"m.room.create\",\"sender\":\"@8640f1e6-a824-4f9c-9924-2d8fc40bc030:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\",\"content\":{\"m.federate\":false,\"room_version\":\"9\",\"creator\":\"@8640f1e6-a824-4f9c-9924-2d8fc40bc030:c3d35860-36fe-45d1-8e16-936cf50513fb.gedisa-staging.famedly.de\"},\"state_key\":\"\",\"origin_server_ts\":1647296944511,\"unsigned\":{\"age\":545537},\"event_id\":\"\$PAWKKULBVOLnqfrAAtXZz8tHEPXXjgRVbJJLifwQWbE\"}]},\"account_data\":{\"events\":[]},\"ephemeral\":{\"events\":[]},\"unread_notifications\":{\"notification_count\":0,\"highlight_count\":0},\"summary\":{\"m.joined_member_count\":3,\"m.invited_member_count\":0},\"org.matrix.msc2654.unread_count\":0}}}}')));
       final profile = await client.fetchOwnProfile();
       expect(profile.displayName, 'Some First Name Some Last Name');
+      await client.dispose(closeDatabase: true);
     });
     test('sendToDeviceEncrypted', () async {
       if (!olmEnabled) {
         return;
       }
       FakeMatrixApi.calledEndpoints.clear();
+
       await matrix.sendToDeviceEncrypted(
           matrix.userDeviceKeys['@alice:example.com']!.deviceKeys.values
               .toList(),
@@ -716,6 +711,8 @@ void main() {
       // send raccoon --> fail
       // send bunny --> all sent
       final client = await getClient();
+      await client.abortSync();
+
       FakeMatrixApi.failToDevice = true;
       final foxContent = {
         '@fox:example.org': {
@@ -741,26 +738,42 @@ void main() {
       await client
           .sendToDevice('foxies', 'floof_txnid', foxContent)
           .catchError((e) => null); // ignore the error
+
+      await FakeMatrixApi.firstWhereValue(
+          '/client/v3/sendToDevice/foxies/floof_txnid');
+      FakeMatrixApi.calledEndpoints.clear();
+
       await client
           .sendToDevice('raccoon', 'raccoon_txnid', raccoonContent)
           .catchError((e) => null);
-      FakeMatrixApi.failToDevice = false;
+
+      await FakeMatrixApi.firstWhereValue(
+          '/client/v3/sendToDevice/foxies/floof_txnid');
+
       FakeMatrixApi.calledEndpoints.clear();
+      FakeMatrixApi.failToDevice = false;
+
       await client.sendToDevice('bunny', 'bunny_txnid', bunnyContent);
-      expect(
-          json.decode(FakeMatrixApi
-                  .calledEndpoints['/client/v3/sendToDevice/foxies/floof_txnid']
-              ?[0])['messages'],
-          foxContent);
-      expect(
-          json.decode(FakeMatrixApi.calledEndpoints[
-              '/client/v3/sendToDevice/raccoon/raccoon_txnid']?[0])['messages'],
-          raccoonContent);
-      expect(
-          json.decode(FakeMatrixApi
-                  .calledEndpoints['/client/v3/sendToDevice/bunny/bunny_txnid']
-              ?[0])['messages'],
-          bunnyContent);
+
+      await FakeMatrixApi.firstWhereValue(
+          '/client/v3/sendToDevice/foxies/floof_txnid');
+      await FakeMatrixApi.firstWhereValue(
+          '/client/v3/sendToDevice/bunny/bunny_txnid');
+      final foxcall = FakeMatrixApi
+          .calledEndpoints['/client/v3/sendToDevice/foxies/floof_txnid']?[0];
+      expect(foxcall != null, true);
+      expect(json.decode(foxcall)['messages'], foxContent);
+
+      final racooncall = FakeMatrixApi
+          .calledEndpoints['/client/v3/sendToDevice/raccoon/raccoon_txnid']?[0];
+      expect(racooncall != null, true);
+      expect(json.decode(racooncall)['messages'], raccoonContent);
+
+      final bunnycall = FakeMatrixApi
+          .calledEndpoints['/client/v3/sendToDevice/bunny/bunny_txnid']?[0];
+      expect(bunnycall != null, true);
+      expect(json.decode(bunnycall)['messages'], bunnyContent);
+
       await client.dispose(closeDatabase: true);
     });
     test('startDirectChat', () async {
@@ -830,8 +843,6 @@ void main() {
         },
       });
       expect(matrix.ignoredUsers, ['@charley:stupid.abc']);
-    });
-    test('ignoredUsers', () async {
       await matrix.ignoreUser('@charley2:stupid.abc');
       await matrix.unignoreUser('@charley:stupid.abc');
     });
@@ -987,6 +998,10 @@ void main() {
       final storedEvent2 = await client.database
           ?.getEventById('143273582443PhrSn:example.org', event!.room);
       expect(storedEvent2?.eventId, event?.eventId);
+    });
+
+    tearDown(() {
+      matrix.dispose(closeDatabase: true);
     });
   });
 }

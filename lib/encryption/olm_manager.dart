@@ -18,6 +18,7 @@
 
 import 'dart:convert';
 
+import 'package:async/async.dart';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart';
 import 'package:matrix/matrix.dart';
@@ -109,6 +110,7 @@ class OlmManager {
   }
 
   bool _uploadKeysLock = false;
+  CancelableOperation<Map<String, int>>? currentUpload;
 
   /// Generates new one time keys, signs everything and upload it to the server.
   Future<bool> uploadKeys({
@@ -211,13 +213,20 @@ class OlmManager {
       }
       // Workaround: Make sure we stop if we got logged out in the meantime.
       if (!client.isLogged()) return true;
-      final response = await client.uploadKeys(
+      final currentUpload =
+          this.currentUpload = CancelableOperation.fromFuture(client.uploadKeys(
         deviceKeys: uploadDeviceKeys
             ? MatrixDeviceKeys.fromJson(keysContent['device_keys'])
             : null,
         oneTimeKeys: signedOneTimeKeys,
         fallbackKeys: signedFallbackKeys,
-      );
+      ));
+      final response = await currentUpload.valueOrCancellation();
+      if (response == null) {
+        _uploadKeysLock = false;
+        return false;
+      }
+
       // mark the OTKs as published and save that to datbase
       _olmAccount.mark_keys_as_published();
       if (updateDatabase) {
@@ -231,8 +240,8 @@ class OlmManager {
     }
   }
 
-  void handleDeviceOneTimeKeysCount(
-      Map<String, int>? countJson, List<String>? unusedFallbackKeyTypes) {
+  Future<void> handleDeviceOneTimeKeysCount(
+      Map<String, int>? countJson, List<String>? unusedFallbackKeyTypes) async {
     if (!enabled) {
       return;
     }
@@ -255,13 +264,13 @@ class OlmManager {
       final requestingKeysFrom = {
         client.userID!: {client.deviceID!: 'signed_curve25519'}
       };
-      client.claimKeys(requestingKeysFrom, timeout: 10000);
+      await client.claimKeys(requestingKeysFrom, timeout: 10000);
     }
 
     // Only upload keys if they are less than half of the max or we have no unused fallback key
     if (keyCount < (_olmAccount!.max_number_of_one_time_keys() / 2) ||
         !unusedFallbackKey) {
-      uploadKeys(
+      await uploadKeys(
         oldKeyCount: keyCount < (_olmAccount!.max_number_of_one_time_keys() / 2)
             ? keyCount
             : null,
@@ -293,7 +302,7 @@ class OlmManager {
             DateTime.now().millisecondsSinceEpoch);
   }
 
-  ToDeviceEvent _decryptToDeviceEvent(ToDeviceEvent event) {
+  Future<ToDeviceEvent> _decryptToDeviceEvent(ToDeviceEvent event) async {
     if (event.type != EventTypes.Encrypted) {
       return event;
     }
@@ -341,12 +350,12 @@ class OlmManager {
             throw DecryptException(
                 DecryptException.decryptionFailed, e.toString());
           }
-          updateSessionUsage(session);
+          await updateSessionUsage(session);
           break;
         } else if (type == 1) {
           try {
             plaintext = session.session!.decrypt(type, body);
-            updateSessionUsage(session);
+            await updateSessionUsage(session);
             break;
           } catch (_) {
             plaintext = null;
@@ -363,16 +372,16 @@ class OlmManager {
       try {
         newSession.create_inbound_from(_olmAccount!, senderKey, body);
         _olmAccount!.remove_one_time_keys(newSession);
-        client.database?.updateClientKeys(pickledOlmAccount!);
+        await client.database?.updateClientKeys(pickledOlmAccount!);
         plaintext = newSession.decrypt(type, body);
-        runInRoot(() => storeOlmSession(OlmSession(
+        await runInRoot(() => storeOlmSession(OlmSession(
               key: client.userID!,
               identityKey: senderKey,
               sessionId: newSession.session_id(),
               session: newSession,
               lastReceived: DateTime.now(),
             )));
-        updateSessionUsage();
+        await updateSessionUsage();
       } catch (e) {
         newSession.free();
         throw DecryptException(DecryptException.decryptionFailed, e.toString());
@@ -479,7 +488,7 @@ class OlmManager {
       await loadFromDb();
     }
     try {
-      event = _decryptToDeviceEvent(event);
+      event = await _decryptToDeviceEvent(event);
       if (event.type != EventTypes.Encrypted || !(await loadFromDb())) {
         return event;
       }
@@ -566,14 +575,14 @@ class OlmManager {
     final encryptResult = sess.first.session!.encrypt(json.encode(fullPayload));
     await storeOlmSession(sess.first);
     if (client.database != null) {
-      // ignore: unawaited_futures
-      runInRoot(() => client.database?.setLastSentMessageUserDeviceKey(
-          json.encode({
-            'type': type,
-            'content': payload,
-          }),
-          device.userId,
-          device.deviceId!));
+      await runInRoot(
+          () async => client.database?.setLastSentMessageUserDeviceKey(
+              json.encode({
+                'type': type,
+                'content': payload,
+              }),
+              device.userId,
+              device.deviceId!));
     }
     final encryptedBody = <String, dynamic>{
       'algorithm': AlgorithmTypes.olmV1Curve25519AesSha2,
@@ -651,7 +660,8 @@ class OlmManager {
     }
   }
 
-  void dispose() {
+  Future<void> dispose() async {
+    await currentUpload?.cancel();
     for (final sessions in olmSessions.values) {
       for (final sess in sessions) {
         sess.dispose();
