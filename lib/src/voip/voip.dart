@@ -197,17 +197,17 @@ class VoIP {
       content['offer']['sdp'],
       content['offer']['type'],
     );
-    await newCall
-        .initWithInvite(
-            callType, offer, sdpStreamMetadata, lifetime, confId != null)
-        .then((_) {
-      // Popup CallingPage for incoming call.
-      if (!delegate.isBackgroud && confId == null) {
-        delegate.handleNewCall(newCall);
-      }
-      onIncomingCall.add(newCall);
-    });
+    await newCall.initWithInvite(
+        callType, offer, sdpStreamMetadata, lifetime, confId != null);
+
     currentCID = callId;
+
+    // Popup CallingPage for incoming call.
+    if (!delegate.isBackgroud && confId == null) {
+      delegate.handleNewCall(newCall);
+    }
+
+    onIncomingCall.add(newCall);
 
     if (delegate.isBackgroud) {
       /// Forced to enable signaling synchronization until the end of the call.
