@@ -340,9 +340,9 @@ void main() {
     });
 
     test('get archive', () async {
+      await matrix.abortSync();
       final archive = await matrix.loadArchive();
 
-      await Future.delayed(Duration(milliseconds: 50));
       expect(archive.length, 2);
       expect(archive[0].id, '!5345234234:example.com');
       expect(archive[0].membership, Membership.leave);
