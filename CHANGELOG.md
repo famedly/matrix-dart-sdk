@@ -1,3 +1,8 @@
+## [0.10.6] - 19th Jul 2022
+- Add powerLevelContentOverride to startDirectChat and createGroupChat (Isabella Hundstorfer)
+- fix: race conditions in the SDK and its tests (Nicolas Werner)
+- fix: set fixed time for ringer, should fix calls with element (Jayesh Nirve)
+
 ## [0.10.5] - 11th Jul 2022
 - fix: Cache user profile even with cache=false when there is a cache
 
