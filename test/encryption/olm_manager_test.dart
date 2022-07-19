@@ -92,7 +92,7 @@ void main() {
       if (!olmEnabled) return;
 
       FakeMatrixApi.calledEndpoints.clear();
-      client.encryption!.olmManager
+      await client.encryption!.olmManager
           .handleDeviceOneTimeKeysCount({'signed_curve25519': 20}, null);
       await FakeMatrixApi.firstWhereValue('/client/v3/keys/upload');
       expect(
@@ -100,7 +100,7 @@ void main() {
           true);
 
       FakeMatrixApi.calledEndpoints.clear();
-      client.encryption!.olmManager
+      await client.encryption!.olmManager
           .handleDeviceOneTimeKeysCount({'signed_curve25519': 70}, null);
       await FakeMatrixApi.firstWhereValue('/client/v3/keys/upload')
           .timeout(Duration(milliseconds: 50), onTimeout: () => '');
@@ -109,7 +109,8 @@ void main() {
           false);
 
       FakeMatrixApi.calledEndpoints.clear();
-      client.encryption!.olmManager.handleDeviceOneTimeKeysCount(null, []);
+      await client.encryption!.olmManager
+          .handleDeviceOneTimeKeysCount(null, []);
       await FakeMatrixApi.firstWhereValue('/client/v3/keys/upload');
       expect(
           FakeMatrixApi.calledEndpoints.containsKey('/client/v3/keys/upload'),
@@ -117,7 +118,7 @@ void main() {
 
       // this will upload keys because we assume the key count is 0, if the server doesn't send one
       FakeMatrixApi.calledEndpoints.clear();
-      client.encryption!.olmManager
+      await client.encryption!.olmManager
           .handleDeviceOneTimeKeysCount(null, ['signed_curve25519']);
       await FakeMatrixApi.firstWhereValue('/client/v3/keys/upload');
       expect(

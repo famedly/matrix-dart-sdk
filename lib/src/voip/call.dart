@@ -419,7 +419,7 @@ class CallSession {
 
     setCallState(CallState.kRinging);
 
-    ringingTimer = Timer(Duration(milliseconds: 30000 - lifetime), () {
+    ringingTimer = Timer(Duration(seconds: 30), () {
       if (state == CallState.kRinging) {
         Logs().v('[VOIP] Call invite has expired. Hanging up.');
         hangupParty = CallParty.kRemote; // effectively
