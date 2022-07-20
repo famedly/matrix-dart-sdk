@@ -1645,6 +1645,35 @@ class Room {
   /// The level required to ban a user.
   bool get canBan => _hasPermissionFor('ban');
 
+  /// if returned value is not null `org.matrix.msc3401.call.member` is present
+  /// and group calls can be used
+  bool get groupCallsEnabled {
+    final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
+    final groupCallPowerLevel =
+        powerLevelMap?.tryGetMap('events')?['org.matrix.msc3401.call.member'];
+    return groupCallPowerLevel != null &&
+        groupCallPowerLevel >= powerLevelMap?['users_default'];
+  }
+
+  /// sets the `org.matrix.msc3401.call.member` power level to users default for
+  /// group calls, needs permissions to change power levels
+  Future<void> enableGroupCalls() async {
+    if (!canChangePowerLevel) return;
+    final currentPowerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
+    if (currentPowerLevelsMap != null) {
+      final newPowerLevelMap = currentPowerLevelsMap;
+      newPowerLevelMap['events'].addAll({
+        'org.matrix.msc3401.call.member': currentPowerLevelsMap['users_default']
+      });
+      await client.setRoomStateWithKey(
+        id,
+        EventTypes.RoomPowerLevels,
+        '',
+        newPowerLevelMap,
+      );
+    }
+  }
+
   /// The default level required to send message events. Can be overridden by the events key.
   bool get canSendDefaultMessages =>
       _hasPermissionFor('events_default') &&
