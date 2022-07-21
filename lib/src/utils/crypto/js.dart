@@ -3,8 +3,8 @@
 
 import 'dart:typed_data';
 
-import 'subtle.dart';
 import 'subtle.dart' as subtle;
+import 'subtle.dart';
 
 abstract class Hash {
   Hash._(this.name);

@@ -15,14 +15,15 @@
  *   You should have received a copy of the GNU Affero General Public License
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
-import 'dart:async';
+
+import 'package:olm/olm.dart' as olm;
+import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
-import 'package:test/test.dart';
-import 'package:olm/olm.dart' as olm;
-
 import 'fake_database.dart';
 
 void main() {

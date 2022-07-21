@@ -1,9 +1,9 @@
 import 'dart:core';
 
-import 'package:matrix/src/utils/cached_stream_controller.dart';
-import 'package:webrtc_interface/webrtc_interface.dart';
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
+import 'package:webrtc_interface/webrtc_interface.dart';
 
+import 'package:matrix/src/utils/cached_stream_controller.dart';
 import '../../matrix.dart';
 
 /// Delegate WebRTC basic functionality.
@@ -219,7 +219,7 @@ class VoIP {
     delegate.playRingtone();
   }
 
-  void onCallAnswer(
+  Future<void> onCallAnswer(
       String roomId, String senderId, Map<String, dynamic> content) async {
     Logs().v('[VOIP] onCallAnswer => ${content.toString()}');
     final String callId = content['call_id'];
@@ -252,13 +252,13 @@ class VoIP {
       if (content[sdpStreamMetadataKey] != null) {
         metadata = SDPStreamMetadata.fromJson(content[sdpStreamMetadataKey]);
       }
-      call.onAnswerReceived(answer, metadata);
+      await call.onAnswerReceived(answer, metadata);
     } else {
       Logs().v('[VOIP] onCallAnswer: Session [$callId] not found!');
     }
   }
 
-  void onCallCandidates(
+  Future<void> onCallCandidates(
       String roomId, String senderId, Map<String, dynamic> content) async {
     if (senderId == client.userID) {
       // Ignore messages to yourself.
@@ -273,13 +273,13 @@ class VoIP {
             'Ignoring call candidates for room $roomId claiming to be for call in room ${call.room.id}');
         return;
       }
-      call.onCandidatesReceived(content['candidates']);
+      await call.onCandidatesReceived(content['candidates']);
     } else {
       Logs().v('[VOIP] onCallCandidates: Session [$callId] not found!');
     }
   }
 
-  void onCallHangup(String roomId, String _ /*senderId unused*/,
+  Future<void> onCallHangup(String roomId, String _ /*senderId unused*/,
       Map<String, dynamic> content) async {
     // stop play ringtone, if this is an incoming call
     if (!delegate.isBackgroud) {
@@ -295,7 +295,7 @@ class VoIP {
         return;
       }
       // hangup in any case, either if the other party hung up or we did on another device
-      call.terminate(CallParty.kRemote,
+      await call.terminate(CallParty.kRemote,
           content['reason'] ?? CallErrorCode.UserHangup, true);
     } else {
       Logs().v('[VOIP] onCallHangup: Session [$callId] not found!');
@@ -303,7 +303,7 @@ class VoIP {
     currentCID = null;
   }
 
-  void onCallReject(
+  Future<void> onCallReject(
       String roomId, String senderId, Map<String, dynamic> content) async {
     if (senderId == client.userID) {
       // Ignore messages to yourself.
@@ -319,13 +319,13 @@ class VoIP {
             'Ignoring call reject for room $roomId claiming to be for call in room ${call.room.id}');
         return;
       }
-      call.onRejectReceived(content['reason']);
+      await call.onRejectReceived(content['reason']);
     } else {
       Logs().v('[VOIP] onCallHangup: Session [$callId] not found!');
     }
   }
 
-  void onCallReplaces(
+  Future<void> onCallReplaces(
       String roomId, String senderId, Map<String, dynamic> content) async {
     if (senderId == client.userID) {
       // Ignore messages to yourself.
@@ -344,7 +344,7 @@ class VoIP {
     }
   }
 
-  void onCallSelectAnswer(
+  Future<void> onCallSelectAnswer(
       String roomId, String senderId, Map<String, dynamic> content) async {
     if (senderId == client.userID) {
       // Ignore messages to yourself.
@@ -365,7 +365,7 @@ class VoIP {
     }
   }
 
-  void onSDPStreamMetadataChangedReceived(
+  Future<void> onSDPStreamMetadataChangedReceived(
       String roomId, String senderId, Map<String, dynamic> content) async {
     if (senderId == client.userID) {
       // Ignore messages to yourself.
@@ -385,12 +385,12 @@ class VoIP {
         Logs().d('SDP Stream metadata is null');
         return;
       }
-      call.onSDPStreamMetadataReceived(
+      await call.onSDPStreamMetadataReceived(
           SDPStreamMetadata.fromJson(content[sdpStreamMetadataKey]));
     }
   }
 
-  void onAssertedIdentityReceived(
+  Future<void> onAssertedIdentityReceived(
       String roomId, String senderId, Map<String, dynamic> content) async {
     if (senderId == client.userID) {
       // Ignore messages to yourself.
@@ -415,7 +415,7 @@ class VoIP {
     }
   }
 
-  void onCallNegotiate(
+  Future<void> onCallNegotiate(
       String roomId, String senderId, Map<String, dynamic> content) async {
     if (senderId == client.userID) {
       // Ignore messages to yourself.
@@ -437,7 +437,7 @@ class VoIP {
         if (content[sdpStreamMetadataKey] != null) {
           metadata = SDPStreamMetadata.fromJson(content[sdpStreamMetadataKey]);
         }
-        call.onNegotiateReceived(metadata,
+        await call.onNegotiateReceived(metadata,
             RTCSessionDescription(description['sdp'], description['type']));
       } catch (err) {
         Logs().e('Failed to complete negotiation ${err.toString()}');
@@ -564,7 +564,7 @@ class VoIP {
     return groupCalls[groupCallId];
   }
 
-  void startGroupCalls() async {
+  Future<void> startGroupCalls() async {
     final rooms = client.rooms;
     rooms.forEach((element) {
       createGroupCallForRoom(element);

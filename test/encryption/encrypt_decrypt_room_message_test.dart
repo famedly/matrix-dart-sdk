@@ -16,11 +16,10 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:matrix/matrix.dart';
-
-import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
+import 'package:test/test.dart';
 
+import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
 
 void main() {

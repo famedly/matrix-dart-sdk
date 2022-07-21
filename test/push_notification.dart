@@ -1,7 +1,8 @@
 import 'dart:convert';
 
-import 'package:matrix/matrix.dart';
 import 'package:test/test.dart';
+
+import 'package:matrix/matrix.dart';
 
 void main() {
   group('Push Notification', () {

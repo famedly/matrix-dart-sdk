@@ -16,8 +16,8 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:slugify/slugify.dart';
 import 'package:matrix_api_lite/matrix_api_lite.dart';
+import 'package:slugify/slugify.dart';
 
 import '../room.dart';
 

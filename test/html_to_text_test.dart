@@ -16,8 +16,9 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:matrix/src/utils/html_to_text.dart';
 import 'package:test/test.dart';
+
+import 'package:matrix/src/utils/html_to_text.dart';
 
 void main() {
   group('htmlToText', () {

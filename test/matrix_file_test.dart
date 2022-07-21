@@ -18,11 +18,11 @@
 
 import 'dart:typed_data';
 
-import 'package:matrix/matrix.dart';
-
-import 'package:test/test.dart';
-import 'package:olm/olm.dart' as olm;
 import 'package:http/http.dart' as http;
+import 'package:olm/olm.dart' as olm;
+import 'package:test/test.dart';
+
+import 'package:matrix/matrix.dart';
 
 void main() {
   /// All Tests related to device keys

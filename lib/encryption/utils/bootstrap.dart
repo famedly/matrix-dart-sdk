@@ -22,10 +22,10 @@ import 'dart:typed_data';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:olm/olm.dart' as olm;
 
-import '../encryption.dart';
-import '../ssss.dart';
-import '../key_manager.dart';
 import '../../matrix.dart';
+import '../encryption.dart';
+import '../key_manager.dart';
+import '../ssss.dart';
 import 'base64_unpadded.dart';
 
 enum BootstrapState {

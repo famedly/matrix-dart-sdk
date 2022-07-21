@@ -15,6 +15,7 @@
  *   You should have received a copy of the GNU Affero General Public License
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 import 'dart:async';
 
 /// Lock management class. It allows to lock and unlock multiple keys at once. The keys have
