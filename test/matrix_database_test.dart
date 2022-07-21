@@ -17,9 +17,9 @@
  *
  */
 
-import 'package:matrix/matrix.dart';
-
 import 'package:test/test.dart';
+
+import 'package:matrix/matrix.dart';
 import 'fake_database.dart';
 
 void main() {

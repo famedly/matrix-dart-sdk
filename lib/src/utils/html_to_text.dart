@@ -17,9 +17,8 @@
  */
 
 import 'package:collection/collection.dart';
-
-import 'package:html/parser.dart';
 import 'package:html/dom.dart';
+import 'package:html/parser.dart';
 import 'package:html_unescape/html_unescape.dart';
 
 class HtmlToText {

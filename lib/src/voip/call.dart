@@ -19,9 +19,9 @@
 import 'dart:async';
 import 'dart:core';
 
-import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
+import 'package:matrix/src/utils/cached_stream_controller.dart';
 import '../../matrix.dart';
 
 /// https://github.com/matrix-org/matrix-doc/pull/2746

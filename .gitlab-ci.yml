@@ -1,8 +1,7 @@
-stages:
-  - coverage
-  - builddocs
-  - deploy
-  - publish
+include:
+  - project: "famedly/company/frontend/ci-templates"
+    ref: main
+    file: "/all.yml"
 
 workflow:
   rules:
@@ -16,7 +15,7 @@ variables:
 coverage:
   tags:
     - linux
-  stage: coverage
+  stage: test
   image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable:${FLUTTER_IMAGE_TAG}
   dependencies: []
   script:
@@ -31,7 +30,7 @@ coverage:
 coverage_without_olm:
   tags:
     - linux
-  stage: coverage
+  stage: test
   image: dart
   dependencies: []
   script:
@@ -41,7 +40,7 @@ coverage_without_olm:
 e2ee_test:
   tags:
     - linux
-  stage: coverage
+  stage: test
   image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable:${FLUTTER_IMAGE_TAG}
   dependencies: []
   script:
@@ -51,35 +50,8 @@ e2ee_test:
   timeout: 16m
   resource_group: e2ee_test
 
-code_analyze:
-  tags:
-    - docker
-  stage: coverage
-  image: dart
-  dependencies: []
-  script:
-    - dart pub get
-    - dart format lib/ test/ test_driver/ --set-exit-if-changed
-    - dart analyze
-
-code_quality:
-  tags:
-    - docker
-  stage: coverage
-  image: dart
-  before_script:
-    - dart pub global activate dart_code_metrics
-  script:
-    - dart pub global run dart_code_metrics:metrics analyze lib -r gitlab > code-quality-report.json
-  artifacts:
-    reports:
-      codequality: code-quality-report.json
-    # also create an actual artifact for inspection purposes
-    paths:
-      - code-quality-report.json
-
 dry-run:
-  stage: publish
+  stage: deploy
   image: dart
   script:
     - rm -rf ./docs
@@ -88,7 +60,7 @@ dry-run:
 
 
 pub-dev:
-  stage: publish
+  stage: deploy
   image: dart
   dependencies: [
     dry-run

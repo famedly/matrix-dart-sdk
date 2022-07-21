@@ -19,16 +19,16 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
+import 'package:olm/olm.dart' as olm;
+
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
-import 'package:olm/olm.dart' as olm;
-import 'package:collection/collection.dart';
-
+import '../matrix.dart';
+import '../src/utils/run_in_root.dart';
 import './encryption.dart';
 import './utils/outbound_group_session.dart';
 import './utils/session_key.dart';
-import '../matrix.dart';
-import '../src/utils/run_in_root.dart';
 
 const megolmKey = EventTypes.MegolmBackup;
 

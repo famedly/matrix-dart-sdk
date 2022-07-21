@@ -18,8 +18,9 @@
 
 import 'dart:convert';
 
-import 'package:test/test.dart';
 import 'package:olm/olm.dart' as olm;
+import 'package:test/test.dart';
+
 import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
 import 'fake_matrix_api.dart';

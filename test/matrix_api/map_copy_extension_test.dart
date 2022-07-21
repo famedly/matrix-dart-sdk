@@ -16,8 +16,9 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:matrix/src/utils/map_copy_extension.dart';
 import 'package:test/test.dart';
+
+import 'package:matrix/src/utils/map_copy_extension.dart';
 
 void main() {
   group('Map-copy-extension', () {

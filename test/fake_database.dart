@@ -19,9 +19,10 @@
 import 'dart:io';
 import 'dart:math';
 
-import 'package:matrix/matrix.dart';
 import 'package:file/memory.dart';
 import 'package:hive/hive.dart';
+
+import 'package:matrix/matrix.dart';
 
 Future<DatabaseApi> getDatabase(Client? _) => getHiveCollectionsDatabase(_);
 

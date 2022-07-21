@@ -17,6 +17,7 @@
  */
 
 import 'package:test/test.dart';
+
 import 'package:matrix/src/utils/matrix_id_string_extension.dart';
 
 void main() {

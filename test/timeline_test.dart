@@ -19,11 +19,11 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:olm/olm.dart' as olm;
+import 'package:test/test.dart';
+
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
-
-import 'package:test/test.dart';
-import 'package:olm/olm.dart' as olm;
 import 'fake_client.dart';
 
 void main() {

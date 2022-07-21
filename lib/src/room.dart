@@ -22,12 +22,12 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
+
 import 'package:matrix/src/models/timeline_chunk.dart';
+import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/utils/file_send_request_credentials.dart';
-import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/space_child.dart';
-
 import '../matrix.dart';
 import 'utils/markdown.dart';
 import 'utils/marked_unread.dart';

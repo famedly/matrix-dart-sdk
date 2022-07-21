@@ -19,9 +19,10 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:webrtc_interface/webrtc_interface.dart';
+
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
-import 'package:webrtc_interface/webrtc_interface.dart';
 
 /// TODO(@duan): Need to add voice activity detection mechanism
 /// const int SPEAKING_THRESHOLD = -60; // dB

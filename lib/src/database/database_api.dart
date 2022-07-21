@@ -23,7 +23,6 @@ import 'package:matrix/encryption/utils/outbound_group_session.dart';
 import 'package:matrix/encryption/utils/ssss_cache.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
-
 import '../../matrix.dart';
 
 abstract class DatabaseApi {
