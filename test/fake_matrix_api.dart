@@ -361,6 +361,65 @@ class FakeMatrixApi extends BaseClient {
     'state': [],
   };
 
+  static Map<String, dynamic> archivesMessageResponse = {
+    'start': 't47429-4392820_219380_26003_2265',
+    'end': 't47409-4357353_219380_26003_2265',
+    'chunk': [
+      {
+        'content': {
+          'body': 'This is an example text message',
+          'msgtype': 'm.text',
+          'format': 'org.matrix.custom.html',
+          'formatted_body': '<b>This is an example text message</b>'
+        },
+        'type': 'm.room.message',
+        'event_id': '3143273582443PhrSn:example.org',
+        'room_id': '!5345234234:example.com',
+        'sender': '@example:example.org',
+        'origin_server_ts': 1432735824653,
+        'unsigned': {'age': 1234}
+      },
+      {
+        'content': {'name': 'The room name'},
+        'type': 'm.room.name',
+        'event_id': '2143273582443PhrSn:example.org',
+        'room_id': '!5345234234:example.com',
+        'sender': '@example:example.org',
+        'origin_server_ts': 1432735824653,
+        'unsigned': {'age': 1234},
+        'state_key': ''
+      },
+      {
+        'content': {
+          'body': 'Gangnam Style',
+          'url': 'mxc://example.org/a526eYUSFFxlgbQYZmo442',
+          'info': {
+            'thumbnail_url': 'mxc://example.org/FHyPlCeYUSFFxlgbQYZmoEoe',
+            'thumbnail_info': {
+              'mimetype': 'image/jpeg',
+              'size': 46144,
+              'w': 300,
+              'h': 300
+            },
+            'w': 480,
+            'h': 320,
+            'duration': 2140786,
+            'size': 1563685,
+            'mimetype': 'video/mp4'
+          },
+          'msgtype': 'm.video'
+        },
+        'type': 'm.room.message',
+        'event_id': '1143273582466PhrSn:example.org',
+        'room_id': '!5345234234:example.com',
+        'sender': '@example:example.org',
+        'origin_server_ts': 1432735824654,
+        'unsigned': {'age': 1234}
+      }
+    ],
+    'state': [],
+  };
+
   static Map<String, dynamic> syncResponse = {
     'next_batch': Random().nextDouble().toString(),
     'rooms': {
@@ -888,19 +947,36 @@ class FakeMatrixApi extends BaseClient {
             'events': [
               {
                 'content': {
-                  'body': 'This is an example text message',
+                  'body': 'This is a second text example message',
                   'msgtype': 'm.text',
                   'format': 'org.matrix.custom.html',
-                  'formatted_body': '<b>This is an example text message</b>'
+                  'formatted_body':
+                      '<b>This is a second text example message</b>'
                 },
                 'type': 'm.room.message',
-                'event_id': '143273582443PhrSn:example.org',
+                'event_id': '143274597446PhrSn:example.org',
+                'room_id': '!5345234234:example.com',
+                'sender': '@example:example.org',
+                'origin_server_ts': 1432735824654,
+                'unsigned': {'age': 1234}
+              },
+              {
+                'content': {
+                  'body': 'This is a first text example message',
+                  'msgtype': 'm.text',
+                  'format': 'org.matrix.custom.html',
+                  'formatted_body':
+                      '<b>This is a first text example message</b>'
+                },
+                'type': 'm.room.message',
+                'event_id': '143274597443PhrSn:example.org',
                 'room_id': '!5345234234:example.com',
                 'sender': '@example:example.org',
                 'origin_server_ts': 1432735824653,
                 'unsigned': {'age': 1234}
-              },
-            ]
+              }
+            ],
+            'prev_batch': 't_1234a'
           },
           'state': {
             'events': [
@@ -940,7 +1016,8 @@ class FakeMatrixApi extends BaseClient {
                 'state_key': ''
               },
             ]
-          }
+          },
+          'prev_batch': 't_1234b'
         },
       },
     }
@@ -1518,6 +1595,8 @@ class FakeMatrixApi extends BaseClient {
           (var req) => messagesResponseFutureEnd,
       '/client/v3/rooms/!1234%3Aexample.com/messages?from=t789&dir=f&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
           (var req) => messagesResponseFutureEnd,
+      '/client/v3/rooms/!5345234234%3Aexample.com/messages?from=t_1234a&dir=b&limit=30&filter=%7B%22lazy_load_members%22%3Atrue%7D':
+          (var req) => archivesMessageResponse,
       '/client/versions': (var req) => {
             'versions': [
               'v1.1',

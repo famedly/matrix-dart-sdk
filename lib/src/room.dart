@@ -1136,6 +1136,9 @@ class Room {
       void Function()? onHistoryReceived,
       direction = Direction.b}) async {
     final prev_batch = this.prev_batch;
+
+    final storeInDatabase = !isArchived;
+
     if (prev_batch == null) {
       throw 'Tried to request history without a prev_batch token';
     }
@@ -1179,7 +1182,9 @@ class Room {
                           state: resp.state,
                           timeline: TimelineUpdate(
                             limited: false,
-                            events: resp.chunk,
+                            events: direction == Direction.b
+                                ? resp.chunk
+                                : resp.chunk.reversed.toList(),
                             prevBatch: direction == Direction.b
                                 ? resp.end
                                 : resp.start,
@@ -1193,7 +1198,9 @@ class Room {
 
     if (client.database != null) {
       await client.database?.transaction(() async {
-        await client.database?.setRoomPrevBatch(resp.end!, id, client);
+        if (storeInDatabase) {
+          await client.database?.setRoomPrevBatch(resp.end!, id, client);
+        }
         await loadFn();
       });
     } else {
@@ -1304,6 +1311,9 @@ class Room {
     return;
   }
 
+  /// Is the room archived
+  bool get isArchived => membership == Membership.leave;
+
   /// Creates a timeline from the store. Returns a [Timeline] object. If you
   /// just want to update the whole timeline on every change, use the [onUpdate]
   /// callback. For updating only the parts that have changed, use the
@@ -1319,35 +1329,41 @@ class Room {
       String? eventContextId}) async {
     await postLoad();
 
-    final _events = await client.database?.getEventList(
-      this,
-      limit: defaultHistoryCount,
-    );
+    var events;
 
-    var chunk = TimelineChunk(events: _events ?? []);
+    if (!isArchived) {
+      events = await client.database?.getEventList(
+            this,
+            limit: defaultHistoryCount,
+          ) ??
+          <Event>[];
+    } else {
+      final archive = client.getArchiveRoomFromCache(id);
+      events = archive?.timeline.events.toList() ?? [];
+    }
 
-    if (_events != null) {
-      if (eventContextId != null) {
-        if (_events
-                .firstWhereOrNull((event) => event.eventId == eventContextId) !=
-            null) {
-          chunk = TimelineChunk(events: _events);
-        } else {
-          chunk = await getEventContext(eventContextId) ??
-              TimelineChunk(events: []);
-        }
-      }
-
-      // Fetch all users from database we have got here.
-      if (eventContextId == null) {
-        for (final event in _events) {
-          if (getState(EventTypes.RoomMember, event.senderId) != null) continue;
-          final dbUser = await client.database?.getUser(event.senderId, this);
-          if (dbUser != null) setState(dbUser);
-        }
+    var chunk = TimelineChunk(events: events);
+    // Load the timeline arround eventContextId if set
+    if (eventContextId != null) {
+      if (events.firstWhereOrNull((event) => event.eventId == eventContextId) !=
+          null) {
+        chunk = TimelineChunk(events: events);
+      } else {
+        chunk =
+            await getEventContext(eventContextId) ?? TimelineChunk(events: []);
       }
     }
 
+    // Fetch all users from database we have got here.
+    if (eventContextId == null) {
+      for (final event in events) {
+        if (getState(EventTypes.RoomMember, event.senderId) != null) continue;
+        final dbUser = await client.database?.getUser(event.senderId, this);
+        if (dbUser != null) setState(dbUser);
+      }
+    }
+
+    // Try again to decrypt encrypted events and update the database.
     if (encrypted && client.encryptionEnabled) {
       // decrypt messages
       for (var i = 0; i < chunk.events.length; i++) {
@@ -1364,8 +1380,9 @@ class Room {
             await client.database?.transaction(() async {
               for (var i = 0; i < chunk.events.length; i++) {
                 if (chunk.events[i].content['can_request_session'] == true) {
-                  chunk.events[i] = await client.encryption!
-                      .decryptRoomEvent(id, chunk.events[i], store: true);
+                  chunk.events[i] = await client.encryption!.decryptRoomEvent(
+                      id, chunk.events[i],
+                      store: !isArchived);
                 }
               }
             });

@@ -32,6 +32,7 @@ import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
 import '../encryption.dart';
 import '../matrix.dart';
+import 'models/timeline_chunk.dart';
 import 'utils/multilock.dart';
 import 'utils/run_benchmarked.dart';
 
@@ -287,7 +288,7 @@ class Client extends MatrixApi {
   /// found. If you have loaded the [loadArchive()] before, it can also return
   /// archived rooms.
   Room? getRoomById(String id) {
-    for (final room in <Room>[...rooms, ..._archivedRooms]) {
+    for (final room in <Room>[...rooms, ..._archivedRooms.map((e) => e.room)]) {
       if (room.id == id) return room;
     }
 
@@ -781,9 +782,35 @@ class Client extends MatrixApi {
         avatarUrl: profile.avatarUrl);
   }
 
-  final List<Room> _archivedRooms = [];
+  final List<ArchivedRoom> _archivedRooms = [];
 
+  /// Return an archive room containing the room and the timeline for a specific archived room.
+  ArchivedRoom? getArchiveRoomFromCache(String roomId) {
+    for (var i = 0; i < _archivedRooms.length; i++) {
+      final archive = _archivedRooms[i];
+      if (archive.room.id == roomId) return archive;
+    }
+    return null;
+  }
+
+  /// Remove all the archives stored in cache.
+  void clearArchivesFromCache() {
+    _archivedRooms.clear();
+  }
+
+  @Deprecated('Use [loadArchive()] instead.')
+  Future<List<Room>> get archive => loadArchive();
+
+  /// Fetch all the archived rooms from the server and return the list of the
+  /// room. If you want to have the Timelines bundled with it, use
+  /// loadArchiveWithTimeline instead.
   Future<List<Room>> loadArchive() async {
+    return (await loadArchiveWithTimeline()).map((e) => e.room).toList();
+  }
+
+  /// Fetch the archived rooms from the server and return them as a list of
+  /// [ArchivedRoom] objects containing the [Room] and the associated [Timeline].
+  Future<List<ArchivedRoom>> loadArchiveWithTimeline() async {
     _archivedRooms.clear();
     final syncResp = await sync(
       filter: '{"room":{"include_leave":true,"timeline":{"limit":10}}}',
@@ -804,12 +831,32 @@ class Client extends MatrixApi {
                   <String, BasicRoomEvent>{},
         );
 
+        final timeline = Timeline(
+            room: leftRoom,
+            chunk: TimelineChunk(
+                events: room.timeline?.events?.reversed
+                        .toList() // we display the event in the other sence
+                        .map((e) => Event.fromMatrixEvent(e, leftRoom))
+                        .toList() ??
+                    []));
+
+        for (var i = 0; i < timeline.events.length; i++) {
+          // Try to decrypt encrypted events but don't update the database.
+          if (leftRoom.encrypted && leftRoom.client.encryptionEnabled) {
+            if (timeline.events[i].type == EventTypes.Encrypted) {
+              timeline.events[i] = await leftRoom.client.encryption!
+                  .decryptRoomEvent(leftRoom.id, timeline.events[i]);
+            }
+          }
+        }
+
         room.timeline?.events?.forEach((event) {
           leftRoom.setState(Event.fromMatrixEvent(
             event,
             leftRoom,
           ));
         });
+
         leftRoom.prev_batch = room.timeline?.prevBatch;
         room.state?.forEach((event) {
           leftRoom.setState(Event.fromMatrixEvent(
@@ -817,7 +864,8 @@ class Client extends MatrixApi {
             leftRoom,
           ));
         });
-        _archivedRooms.add(leftRoom);
+
+        _archivedRooms.add(ArchivedRoom(room: leftRoom, timeline: timeline));
       }
     }
     return _archivedRooms;
@@ -1658,6 +1706,12 @@ class Client extends MatrixApi {
       await database?.storeRoomUpdate(id, syncRoomUpdate, this);
       final room = _updateRoomsByRoomUpdate(id, syncRoomUpdate);
 
+      final timelineUpdateType = direction != null
+          ? (direction == Direction.b
+              ? EventUpdateType.history
+              : EventUpdateType.timeline)
+          : EventUpdateType.timeline;
+
       /// Handle now all room events and save them in the database
       if (syncRoomUpdate is JoinedRoomUpdate) {
         final state = syncRoomUpdate.state;
@@ -1673,14 +1727,7 @@ class Client extends MatrixApi {
 
         final timelineEvents = syncRoomUpdate.timeline?.events;
         if (timelineEvents != null && timelineEvents.isNotEmpty) {
-          await _handleRoomEvents(
-              room,
-              timelineEvents,
-              direction != null
-                  ? (direction == Direction.b
-                      ? EventUpdateType.history
-                      : EventUpdateType.timeline)
-                  : EventUpdateType.timeline);
+          await _handleRoomEvents(room, timelineEvents, timelineUpdateType);
         }
 
         final ephemeral = syncRoomUpdate.ephemeral;
@@ -1705,23 +1752,19 @@ class Client extends MatrixApi {
       if (syncRoomUpdate is LeftRoomUpdate) {
         final timelineEvents = syncRoomUpdate.timeline?.events;
         if (timelineEvents != null && timelineEvents.isNotEmpty) {
-          await _handleRoomEvents(
-            room,
-            timelineEvents,
-            EventUpdateType.timeline,
-          );
+          await _handleRoomEvents(room, timelineEvents, timelineUpdateType,
+              store: false);
         }
         final accountData = syncRoomUpdate.accountData;
         if (accountData != null && accountData.isNotEmpty) {
           await _handleRoomEvents(
-            room,
-            accountData,
-            EventUpdateType.accountData,
-          );
+              room, accountData, EventUpdateType.accountData,
+              store: false);
         }
         final state = syncRoomUpdate.state;
         if (state != null && state.isNotEmpty) {
-          await _handleRoomEvents(room, state, EventUpdateType.state);
+          await _handleRoomEvents(room, state, EventUpdateType.state,
+              store: false);
         }
       }
 
@@ -1795,10 +1838,8 @@ class Client extends MatrixApi {
   }
 
   Future<void> _handleRoomEvents(
-    Room room,
-    List<BasicEvent> events,
-    EventUpdateType type,
-  ) async {
+      Room room, List<BasicEvent> events, EventUpdateType type,
+      {bool store = true}) async {
     // Calling events can be omitted if they are outdated from the same sync. So
     // we collect them first before we handle them.
     final callEvents = <Event>{};
@@ -1833,7 +1874,7 @@ class Client extends MatrixApi {
         }
       }
       _updateRoomsByEventUpdate(room, update);
-      if (type != EventUpdateType.ephemeral) {
+      if (type != EventUpdateType.ephemeral && store) {
         await database?.storeEventUpdate(update, this);
       }
       if (encryptionEnabled) {
@@ -1941,6 +1982,10 @@ class Client extends MatrixApi {
 
     // Does the chat already exist in the list rooms?
     if (!found && membership != Membership.leave) {
+      // Check if the room is not in the rooms in the invited list
+      if (_archivedRooms.isNotEmpty) {
+        _archivedRooms.removeWhere((archive) => archive.room.id == roomId);
+      }
       final position = membership == Membership.invite ? 0 : rooms.length;
       // Add the new chat to the list
       rooms.insert(position, room);
@@ -2856,4 +2901,10 @@ class HomeserverSummary {
     required this.versions,
     required this.loginFlows,
   });
+}
+
+class ArchivedRoom {
+  final Room room;
+  final Timeline timeline;
+  ArchivedRoom({required this.room, required this.timeline});
 }
