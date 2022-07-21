@@ -460,6 +460,101 @@ void main() {
       expect(resp, '42');
     });
 
+    test('Enabling group calls', () async {
+      expect(room.groupCallsEnabled, false);
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.power_levels',
+          room: room,
+          eventId: '123a',
+          content: {
+            'events': {'org.matrix.msc3401.call.member': 100},
+            'state_default': 50,
+            'users': {'@test:fakeServer.notExisting': 100},
+            'users_default': 0
+          },
+          originServerTs: DateTime.now(),
+          stateKey: '',
+        ),
+      );
+      expect(room.groupCallsEnabled, false);
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.power_levels',
+          room: room,
+          eventId: '123a',
+          content: {
+            'events': {'org.matrix.msc3401.call.member': 27},
+            'state_default': 50,
+            'users': {'@test:fakeServer.notExisting': 100},
+            'users_default': 100
+          },
+          originServerTs: DateTime.now(),
+          stateKey: '',
+        ),
+      );
+      expect(room.groupCallsEnabled, true);
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.power_levels',
+            room: room,
+            eventId: '123',
+            content: {
+              'events': {},
+              'state_default': 50,
+              'users': {'@test:fakeServer.notExisting': 100},
+              'users_default': 0
+            },
+            originServerTs: DateTime.now(),
+            stateKey: ''),
+      );
+      expect(room.groupCallsEnabled, false);
+      await room.enableGroupCalls();
+      expect(room.groupCallsEnabled, true);
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.power_levels',
+          room: room,
+          eventId: '123',
+          content: {
+            'events': {},
+            'state_default': 50,
+            'users': {'@test:fakeServer.notExisting': 100},
+          },
+          originServerTs: DateTime.now(),
+          stateKey: '',
+        ),
+      );
+      await room.enableGroupCalls();
+      expect(room.groupCallsEnabled, true);
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.power_levels',
+          room: room,
+          eventId: '123abc',
+          content: {
+            'ban': 50,
+            'events': {'m.room.name': 0, 'm.room.power_levels': 100},
+            'events_default': 0,
+            'invite': 50,
+            'kick': 50,
+            'notifications': {'room': 20},
+            'redact': 50,
+            'state_default': 50,
+            'users': {},
+            'users_default': 0
+          },
+          originServerTs: DateTime.now(),
+          stateKey: '',
+        ),
+      );
+    });
+
     test('invite', () async {
       await room.invite('Testname');
     });

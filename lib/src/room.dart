@@ -1593,16 +1593,14 @@ class Room {
   /// Returns the power level of the given user ID.
   int getPowerLevelByUserId(String userId) {
     var powerLevel = 0;
-    final powerLevelState = getState(EventTypes.RoomPowerLevels);
-    if (powerLevelState == null) return powerLevel;
-    if (powerLevelState.content['users_default'] is int) {
-      powerLevel = powerLevelState.content['users_default'];
-    }
-    if (powerLevelState.content
+    final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
+    if (powerLevelMap == null) return powerLevel;
+    powerLevel = getDefaultPowerLevel(powerLevelMap);
+    if (powerLevelMap
             .tryGet<Map<String, dynamic>>('users')
             ?.tryGet<int>(userId) !=
         null) {
-      powerLevel = powerLevelState.content['users'][userId];
+      powerLevel = powerLevelMap['users'][userId];
     }
     return powerLevel;
   }
@@ -1652,7 +1650,7 @@ class Room {
     final groupCallPowerLevel =
         powerLevelMap?.tryGetMap('events')?['org.matrix.msc3401.call.member'];
     return groupCallPowerLevel != null &&
-        groupCallPowerLevel >= powerLevelMap?['users_default'];
+        groupCallPowerLevel <= getDefaultPowerLevel(powerLevelMap!);
   }
 
   /// sets the `org.matrix.msc3401.call.member` power level to users default for
@@ -1663,7 +1661,8 @@ class Room {
     if (currentPowerLevelsMap != null) {
       final newPowerLevelMap = currentPowerLevelsMap;
       newPowerLevelMap['events'].addAll({
-        'org.matrix.msc3401.call.member': currentPowerLevelsMap['users_default']
+        'org.matrix.msc3401.call.member':
+            getDefaultPowerLevel(currentPowerLevelsMap)
       });
       await client.setRoomStateWithKey(
         id,
@@ -1672,6 +1671,11 @@ class Room {
         newPowerLevelMap,
       );
     }
+  }
+
+  /// Takes in `[m.room.power_levels].content` and returns the default power level
+  int getDefaultPowerLevel(Map<String, dynamic> powerLevelMap) {
+    return powerLevelMap.tryGet('users_default') ?? 0;
   }
 
   /// The default level required to send message events. Can be overridden by the events key.
