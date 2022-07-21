@@ -224,9 +224,7 @@ class Timeline {
     }
 
     // Try to decrypt encrypted events but don't update the database.
-    if (room.encrypted &&
-        room.client.database != null &&
-        room.client.encryptionEnabled) {
+    if (room.encrypted && room.client.encryptionEnabled) {
       for (var i = 0; i < newEvents.length; i++) {
         if (newEvents[i].type == EventTypes.Encrypted) {
           newEvents[i] = await room.client.encryption!
