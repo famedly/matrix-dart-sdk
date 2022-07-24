@@ -1,7 +1,14 @@
-## [0.10.6] - 19th Jul 2022
-- Add powerLevelContentOverride to startDirectChat and createGroupChat (Isabella Hundstorfer)
+## [0.11.0] - 21th Jul 2022
+- feat: Add powerLevelContentOverride to startDirectChat and createGroupChat (Isabella Hundstorfer)
+- chore: add tests for group calls (td)
+- chore: cleanup unused imports and analyzer warnings (td)
+- feat: allow enabling group calls in already created rooms (td)
+- feat: (breaking) keep timeline history for archive rooms in memory (Henri Carnot)
+- fix: (potentially) a race in the archive test (Nicolas Werner)
+- fix: Await unawaited stuff in voip code (Nicolas Werner)
 - fix: race conditions in the SDK and its tests (Nicolas Werner)
-- fix: set fixed time for ringer, should fix calls with element (Jayesh Nirve)
+- fix: set fixed time for ringer (td)
+- refactor: Use import sorter and ci templates (Christian Pauly)
 
 ## [0.10.5] - 11th Jul 2022
 - fix: Cache user profile even with cache=false when there is a cache
