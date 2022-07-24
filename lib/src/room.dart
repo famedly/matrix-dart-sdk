@@ -1610,16 +1610,14 @@ class Room {
   /// Returns the power level of the given user ID.
   int getPowerLevelByUserId(String userId) {
     var powerLevel = 0;
-    final powerLevelState = getState(EventTypes.RoomPowerLevels);
-    if (powerLevelState == null) return powerLevel;
-    if (powerLevelState.content['users_default'] is int) {
-      powerLevel = powerLevelState.content['users_default'];
-    }
-    if (powerLevelState.content
+    final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
+    if (powerLevelMap == null) return powerLevel;
+    powerLevel = getDefaultPowerLevel(powerLevelMap);
+    if (powerLevelMap
             .tryGet<Map<String, dynamic>>('users')
             ?.tryGet<int>(userId) !=
         null) {
-      powerLevel = powerLevelState.content['users'][userId];
+      powerLevel = powerLevelMap['users'][userId];
     }
     return powerLevel;
   }
@@ -1661,6 +1659,41 @@ class Room {
 
   /// The level required to ban a user.
   bool get canBan => _hasPermissionFor('ban');
+
+  /// if returned value is not null `org.matrix.msc3401.call.member` is present
+  /// and group calls can be used
+  bool get groupCallsEnabled {
+    final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
+    final groupCallPowerLevel =
+        powerLevelMap?.tryGetMap('events')?['org.matrix.msc3401.call.member'];
+    return groupCallPowerLevel != null &&
+        groupCallPowerLevel <= getDefaultPowerLevel(powerLevelMap!);
+  }
+
+  /// sets the `org.matrix.msc3401.call.member` power level to users default for
+  /// group calls, needs permissions to change power levels
+  Future<void> enableGroupCalls() async {
+    if (!canChangePowerLevel) return;
+    final currentPowerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
+    if (currentPowerLevelsMap != null) {
+      final newPowerLevelMap = currentPowerLevelsMap;
+      newPowerLevelMap['events'].addAll({
+        'org.matrix.msc3401.call.member':
+            getDefaultPowerLevel(currentPowerLevelsMap)
+      });
+      await client.setRoomStateWithKey(
+        id,
+        EventTypes.RoomPowerLevels,
+        '',
+        newPowerLevelMap,
+      );
+    }
+  }
+
+  /// Takes in `[m.room.power_levels].content` and returns the default power level
+  int getDefaultPowerLevel(Map<String, dynamic> powerLevelMap) {
+    return powerLevelMap.tryGet('users_default') ?? 0;
+  }
 
   /// The default level required to send message events. Can be overridden by the events key.
   bool get canSendDefaultMessages =>
