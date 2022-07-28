@@ -34,6 +34,7 @@ const megolmKey = EventTypes.MegolmBackup;
 
 class KeyManager {
   final Encryption encryption;
+
   Client get client => encryption.client;
   final outgoingShareRequests = <String, KeyManagerKeyShareRequest>{};
   final incomingShareRequests = <String, KeyManagerKeyShareRequest>{};
@@ -568,6 +569,7 @@ class KeyManager {
 
   GetRoomKeysVersionCurrentResponse? _roomKeysVersionCache;
   DateTime? _roomKeysVersionCacheDate;
+
   Future<GetRoomKeysVersionCurrentResponse> getRoomKeysBackupInfo(
       [bool useCache = true]) async {
     if (_roomKeysVersionCache != null &&
@@ -715,6 +717,7 @@ class KeyManager {
 
   bool _isUploadingKeys = false;
   bool _haveKeysToUpload = true;
+
   Future<void> backgroundTasks() async {
     final database = client.database;
     final userID = client.userID;
@@ -745,7 +748,7 @@ class KeyManager {
             info.authData['public_key'] != backupPubKey) {
           return;
         }
-        final args = _GenerateUploadKeysArgs(
+        final args = GenerateUploadKeysArgs(
           pubkey: backupPubKey,
           dbSessions: <_DbInboundGroupSessionBundle>[],
           userId: userID,
@@ -768,8 +771,7 @@ class KeyManager {
           }
         }
         final roomKeys =
-            await client.runInBackground<RoomKeys, _GenerateUploadKeysArgs>(
-                _generateUploadKeys, args);
+            await client.nativeImplementations.generateUploadKeys(args);
         Logs().i('[Key Manager] Uploading ${dbSessions.length} room keys...');
         // upload the payload...
         await client.putRoomKeys(info.version, roomKeys);
@@ -988,6 +990,7 @@ class KeyManagerKeyShareRequest {
 class RoomKeyRequest extends ToDeviceEvent {
   KeyManager keyManager;
   KeyManagerKeyShareRequest request;
+
   RoomKeyRequest.fromToDeviceEvent(
       ToDeviceEvent toDeviceEvent, this.keyManager, this.request)
       : super(
@@ -1035,7 +1038,9 @@ class RoomKeyRequest extends ToDeviceEvent {
   }
 }
 
-RoomKeys _generateUploadKeys(_GenerateUploadKeysArgs args) {
+/// you would likely want to use [NativeImplementations] and
+/// [Client.nativeImplementations] instead
+RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
   final enc = olm.PkEncryption();
   try {
     enc.set_recipient_key(args.pubkey);
@@ -1087,13 +1092,39 @@ class _DbInboundGroupSessionBundle {
   _DbInboundGroupSessionBundle(
       {required this.dbSession, required this.verified});
 
+  factory _DbInboundGroupSessionBundle.fromJson(Map<dynamic, dynamic> json) =>
+      _DbInboundGroupSessionBundle(
+        dbSession:
+            StoredInboundGroupSession.fromJson(Map.from(json['dbSession'])),
+        verified: json['verified'],
+      );
+
+  Map<String, Object> toJson() => {
+        'dbSession': dbSession.toJson(),
+        'verified': verified,
+      };
   StoredInboundGroupSession dbSession;
   bool verified;
 }
 
-class _GenerateUploadKeysArgs {
-  _GenerateUploadKeysArgs(
+class GenerateUploadKeysArgs {
+  GenerateUploadKeysArgs(
       {required this.pubkey, required this.dbSessions, required this.userId});
+
+  factory GenerateUploadKeysArgs.fromJson(Map<dynamic, dynamic> json) =>
+      GenerateUploadKeysArgs(
+        pubkey: json['pubkey'],
+        dbSessions: (json['dbSessions'] as Iterable)
+            .map((e) => _DbInboundGroupSessionBundle.fromJson(e))
+            .toList(),
+        userId: json['userId'],
+      );
+
+  Map<String, Object> toJson() => {
+        'pubkey': pubkey,
+        'dbSessions': dbSessions.map((e) => e.toJson()).toList(),
+        'userId': userId,
+      };
 
   String pubkey;
   List<_DbInboundGroupSessionBundle> dbSessions;

@@ -617,8 +617,8 @@ class Event extends MatrixEvent {
         k: fileMap['key']['k'],
         sha256: fileMap['hashes']['sha256'],
       );
-      uint8list = await room.client.runInBackground<Uint8List?, EncryptedFile>(
-          decryptFile, encryptedFile);
+      uint8list =
+          await room.client.nativeImplementations.decryptFile(encryptedFile);
       if (uint8list == null) {
         throw ('Unable to decrypt file');
       }

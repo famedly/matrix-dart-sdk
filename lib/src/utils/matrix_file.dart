@@ -26,6 +26,7 @@ import 'package:image/image.dart';
 import 'package:mime/mime.dart';
 
 import '../../matrix.dart';
+import 'compute_callback.dart';
 
 class MatrixFile {
   final Uint8List bytes;
@@ -78,15 +79,18 @@ class MatrixImageFile extends MatrixFile {
         super(bytes: bytes, name: name, mimeType: mimeType);
 
   /// Creates a new image file and calculates the width, height and blurhash.
-  static Future<MatrixImageFile> create(
-      {required Uint8List bytes,
-      required String name,
-      String? mimeType,
-      Future<T> Function<T, U>(FutureOr<T> Function(U arg) function, U arg)?
-          compute}) async {
-    final metaData = compute != null
-        ? await compute(_calcMetadata, bytes)
-        : _calcMetadata(bytes);
+  static Future<MatrixImageFile> create({
+    required Uint8List bytes,
+    required String name,
+    String? mimeType,
+    @Deprecated('Use [nativeImplementations] instead') ComputeRunner? compute,
+    NativeImplementations nativeImplementations = NativeImplementations.dummy,
+  }) async {
+    if (compute != null) {
+      nativeImplementations =
+          NativeImplementationsIsolate.fromRunInBackground(compute);
+    }
+    final metaData = await nativeImplementations.calcImageMetadata(bytes);
 
     return MatrixImageFile(
       bytes: metaData?.bytes ?? bytes,
@@ -101,22 +105,27 @@ class MatrixImageFile extends MatrixFile {
   /// Builds a [MatrixImageFile] and shrinks it in order to reduce traffic.
   /// If shrinking does not work (e.g. for unsupported MIME types), the
   /// initial image is preserved without shrinking it.
-  static Future<MatrixImageFile> shrink(
-      {required Uint8List bytes,
-      required String name,
-      int maxDimension = 1600,
-      String? mimeType,
-      Future<MatrixImageFileResizedResponse?> Function(
-              MatrixImageFileResizeArguments)?
-          customImageResizer,
-      Future<T> Function<T, U>(FutureOr<T> Function(U arg) function, U arg)?
-          compute}) async {
+  static Future<MatrixImageFile> shrink({
+    required Uint8List bytes,
+    required String name,
+    int maxDimension = 1600,
+    String? mimeType,
+    Future<MatrixImageFileResizedResponse?> Function(
+            MatrixImageFileResizeArguments)?
+        customImageResizer,
+    @Deprecated('Use [nativeImplementations] instead') ComputeRunner? compute,
+    NativeImplementations nativeImplementations = NativeImplementations.dummy,
+  }) async {
+    if (compute != null) {
+      nativeImplementations =
+          NativeImplementationsIsolate.fromRunInBackground(compute);
+    }
     final image = MatrixImageFile(name: name, mimeType: mimeType, bytes: bytes);
 
     return await image.generateThumbnail(
             dimension: maxDimension,
             customImageResizer: customImageResizer,
-            compute: compute) ??
+            nativeImplementations: nativeImplementations) ??
         image;
   }
 
@@ -141,6 +150,7 @@ class MatrixImageFile extends MatrixFile {
 
   @override
   String get msgType => 'm.image';
+
   @override
   Map<String, dynamic> get info => ({
         ...super.info,
@@ -151,13 +161,18 @@ class MatrixImageFile extends MatrixFile {
 
   /// Computes a thumbnail for the image.
   /// Also sets height and width on the original image if they were unset.
-  Future<MatrixImageFile?> generateThumbnail(
-      {int dimension = Client.defaultThumbnailSize,
-      Future<MatrixImageFileResizedResponse?> Function(
-              MatrixImageFileResizeArguments)?
-          customImageResizer,
-      Future<T> Function<T, U>(FutureOr<T> Function(U arg) function, U arg)?
-          compute}) async {
+  Future<MatrixImageFile?> generateThumbnail({
+    int dimension = Client.defaultThumbnailSize,
+    Future<MatrixImageFileResizedResponse?> Function(
+            MatrixImageFileResizeArguments)?
+        customImageResizer,
+    @Deprecated('Use [nativeImplementations] instead') ComputeRunner? compute,
+    NativeImplementations nativeImplementations = NativeImplementations.dummy,
+  }) async {
+    if (compute != null) {
+      nativeImplementations =
+          NativeImplementationsIsolate.fromRunInBackground(compute);
+    }
     final arguments = MatrixImageFileResizeArguments(
       bytes: bytes,
       maxDimension: dimension,
@@ -166,19 +181,17 @@ class MatrixImageFile extends MatrixFile {
     );
     final resizedData = customImageResizer != null
         ? await customImageResizer(arguments)
-        : compute != null
-            ? await compute(_resize, arguments)
-            : _resize(arguments);
+        : await nativeImplementations.shrinkImage(arguments);
 
     if (resizedData == null) {
       return null;
     }
 
-    // we should take the opportinity to update the image dimmension
+    // we should take the opportunity to update the image dimension
     setImageSizeIfNull(
         width: resizedData.originalWidth, height: resizedData.originalHeight);
 
-    // the thumbnail should rather return null than the unshrinked image
+    // the thumbnail should rather return null than the enshrined image
     if (resizedData.width > dimension || resizedData.height > dimension) {
       return null;
     }
@@ -194,7 +207,10 @@ class MatrixImageFile extends MatrixFile {
     return thumbnailFile;
   }
 
-  static MatrixImageFileResizedResponse? _calcMetadata(Uint8List bytes) {
+  /// you would likely want to use [NativeImplementations] and
+  /// [Client.nativeImplementations] instead
+  static MatrixImageFileResizedResponse? calcMetadataImplementation(
+      Uint8List bytes) {
     final image = decodeImage(bytes);
     if (image == null) return null;
 
@@ -210,7 +226,9 @@ class MatrixImageFile extends MatrixFile {
     );
   }
 
-  static MatrixImageFileResizedResponse? _resize(
+  /// you would likely want to use [NativeImplementations] and
+  /// [Client.nativeImplementations] instead
+  static MatrixImageFileResizedResponse? resizeImplementation(
       MatrixImageFileResizeArguments arguments) {
     final image = decodeImage(arguments.bytes);
 
@@ -255,6 +273,28 @@ class MatrixImageFileResizedResponse {
     this.originalWidth,
     this.blurhash,
   });
+
+  factory MatrixImageFileResizedResponse.fromJson(
+    Map<String, dynamic> json,
+  ) =>
+      MatrixImageFileResizedResponse(
+        bytes: Uint8List.fromList(
+            (json['bytes'] as Iterable<dynamic>).whereType<int>().toList()),
+        width: json['width'],
+        height: json['height'],
+        originalHeight: json['originalHeight'],
+        originalWidth: json['originalWidth'],
+        blurhash: json['blurhash'],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'bytes': bytes,
+        'width': width,
+        'height': height,
+        if (blurhash != null) 'blurhash': blurhash,
+        if (originalHeight != null) 'originalHeight': originalHeight,
+        if (originalWidth != null) 'originalWidth': originalWidth,
+      };
 }
 
 class MatrixImageFileResizeArguments {
@@ -269,6 +309,21 @@ class MatrixImageFileResizeArguments {
     required this.fileName,
     required this.calcBlurhash,
   });
+
+  factory MatrixImageFileResizeArguments.fromJson(Map<String, dynamic> json) =>
+      MatrixImageFileResizeArguments(
+        bytes: json['bytes'],
+        maxDimension: json['maxDimension'],
+        fileName: json['fileName'],
+        calcBlurhash: json['calcBlurhash'],
+      );
+
+  Map<String, Object> toJson() => {
+        'bytes': bytes,
+        'maxDimension': maxDimension,
+        'fileName': fileName,
+        'calcBlurhash': calcBlurhash,
+      };
 }
 
 class MatrixVideoFile extends MatrixFile {
@@ -284,8 +339,10 @@ class MatrixVideoFile extends MatrixFile {
       this.height,
       this.duration})
       : super(bytes: bytes, name: name, mimeType: mimeType);
+
   @override
   String get msgType => 'm.video';
+
   @override
   Map<String, dynamic> get info => ({
         ...super.info,
@@ -304,8 +361,10 @@ class MatrixAudioFile extends MatrixFile {
       String? mimeType,
       this.duration})
       : super(bytes: bytes, name: name, mimeType: mimeType);
+
   @override
   String get msgType => 'm.audio';
+
   @override
   Map<String, dynamic> get info => ({
         ...super.info,

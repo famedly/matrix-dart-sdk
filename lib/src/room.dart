@@ -721,7 +721,7 @@ class Room {
           FileSendingStatus.generatingThumbnail.name;
       await _handleFakeSync(syncUpdate);
       thumbnail ??= await file.generateThumbnail(
-        compute: client.runInBackground,
+        nativeImplementations: client.nativeImplementations,
         customImageResizer: client.customImageResizer,
       );
       if (shrinkImageMaxDimension != null) {
@@ -730,7 +730,7 @@ class Room {
           name: file.name,
           maxDimension: shrinkImageMaxDimension,
           customImageResizer: client.customImageResizer,
-          compute: client.runInBackground,
+          nativeImplementations: client.nativeImplementations,
         );
       }
 
@@ -942,7 +942,7 @@ class Room {
               ? inReplyTo.formattedText
               : htmlEscape.convert(inReplyTo.body).replaceAll('\n', '<br>'))
           .replaceAll(
-              RegExp(r'<mx-reply>.*<\/mx-reply>',
+              RegExp(r'<mx-reply>.*</mx-reply>',
                   caseSensitive: false, multiLine: false, dotAll: true),
               '');
       final repliedHtml = content.tryGet<String>('formatted_body') ??
