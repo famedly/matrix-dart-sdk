@@ -420,6 +420,33 @@ void main() {
       expect(room.canSendEvent('m.room.member'), true);
       expect(room.powerLevels,
           room.getState('m.room.power_levels')?.content['users']);
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.power_levels',
+            room: room,
+            eventId: '123',
+            content: {
+              'ban': 50,
+              'events': {
+                'm.room.name': 'lannaForcedMeToTestThis',
+                'm.room.power_levels': 100,
+              },
+              'events_default': 0,
+              'invite': 50,
+              'kick': 50,
+              'notifications': {'room': 20},
+              'redact': 50,
+              'state_default': 60,
+              'users': {'@test:fakeServer.notExisting': 100},
+              'users_default': 10
+            },
+            originServerTs: DateTime.now(),
+            stateKey: ''),
+      );
+      expect(room.powerForChangingStateEvent('m.room.name'), 60);
+      expect(room.powerForChangingStateEvent('m.room.power_levels'), 100);
+      expect(room.powerForChangingStateEvent('m.room.nonExisting'), 60);
 
       room.setState(
         Event(
@@ -461,6 +488,8 @@ void main() {
 
     test('Enabling group calls', () async {
       expect(room.groupCallsEnabled, false);
+
+      // users default is 0 and so group calls not enabled
       room.setState(
         Event(
           senderId: '@test:example.com',
@@ -470,7 +499,6 @@ void main() {
           content: {
             'events': {'org.matrix.msc3401.call.member': 100},
             'state_default': 50,
-            'users': {'@test:fakeServer.notExisting': 100},
             'users_default': 0
           },
           originServerTs: DateTime.now(),
@@ -478,6 +506,8 @@ void main() {
         ),
       );
       expect(room.groupCallsEnabled, false);
+
+      // one of the group call permissions is unspecified in events override
       room.setState(
         Event(
           senderId: '@test:example.com',
@@ -487,14 +517,62 @@ void main() {
           content: {
             'events': {'org.matrix.msc3401.call.member': 27},
             'state_default': 50,
-            'users': {'@test:fakeServer.notExisting': 100},
-            'users_default': 100
+            'users_default': 49
+          },
+          originServerTs: DateTime.now(),
+          stateKey: '',
+        ),
+      );
+      expect(room.groupCallsEnabled, false);
+
+      // only override one of the group calls permission, other one still less
+      // than users_default and state_default
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.power_levels',
+          room: room,
+          eventId: '123a',
+          content: {
+            'events': {
+              'org.matrix.msc3401.call.member': 27,
+              'org.matrix.msc3401.call': 0
+            },
+            'state_default': 50,
+            'users_default': 2
+          },
+          originServerTs: DateTime.now(),
+          stateKey: '',
+        ),
+      );
+      expect(room.groupCallsEnabled, false);
+      expect(room.canJoinGroupCall, false);
+      expect(room.canCreateGroupCall, false);
+
+      // state_default 50 and user_default 26, but override evnents present
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.power_levels',
+          room: room,
+          eventId: '123a',
+          content: {
+            'events': {
+              'org.matrix.msc3401.call.member': 25,
+              'org.matrix.msc3401.call': 25
+            },
+            'state_default': 50,
+            'users_default': 26
           },
           originServerTs: DateTime.now(),
           stateKey: '',
         ),
       );
       expect(room.groupCallsEnabled, true);
+      expect(room.canJoinGroupCall, true);
+      expect(room.canCreateGroupCall, true);
+
+      // state_default 50 and user_default 0, use enableGroupCall
       room.setState(
         Event(
             senderId: '@test:example.com',
@@ -502,7 +580,6 @@ void main() {
             room: room,
             eventId: '123',
             content: {
-              'events': {},
               'state_default': 50,
               'users': {'@test:fakeServer.notExisting': 100},
               'users_default': 0
@@ -511,8 +588,12 @@ void main() {
             stateKey: ''),
       );
       expect(room.groupCallsEnabled, false);
+      expect(room.canJoinGroupCall, false);
+      expect(room.canCreateGroupCall, false);
       await room.enableGroupCalls();
       expect(room.groupCallsEnabled, true);
+
+      // state_default 50 and user_default unspecified, use enableGroupCall
       room.setState(
         Event(
           senderId: '@test:example.com',
@@ -520,7 +601,6 @@ void main() {
           room: room,
           eventId: '123',
           content: {
-            'events': {},
             'state_default': 50,
             'users': {'@test:fakeServer.notExisting': 100},
           },
@@ -530,6 +610,27 @@ void main() {
       );
       await room.enableGroupCalls();
       expect(room.groupCallsEnabled, true);
+      expect(room.canJoinGroupCall, true);
+      expect(room.canCreateGroupCall, true);
+
+      // state_default is 0 so users should be able to send state events
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.power_levels',
+          room: room,
+          eventId: '123',
+          content: {
+            'state_default': 0,
+            'users': {'@test:fakeServer.notExisting': 100},
+          },
+          originServerTs: DateTime.now(),
+          stateKey: '',
+        ),
+      );
+      expect(room.groupCallsEnabled, true);
+      expect(room.canJoinGroupCall, true);
+      expect(room.canCreateGroupCall, true);
       room.setState(
         Event(
           senderId: '@test:example.com',
