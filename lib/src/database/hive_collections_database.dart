@@ -35,7 +35,7 @@ import 'package:matrix/src/utils/run_benchmarked.dart';
 class HiveCollectionsDatabase extends DatabaseApi {
   static const int version = 6;
   final String name;
-  final String path;
+  final String? path;
   final HiveCipher? key;
   late BoxCollection _collection;
   late CollectionBox<String> _clientBox;
