@@ -40,6 +40,7 @@ class Logs {
   }
 
   Level level = Level.info;
+  bool nativeColors = true;
 
   final List<LogEvent> outputEvents = [];
 

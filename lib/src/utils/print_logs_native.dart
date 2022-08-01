@@ -9,24 +9,26 @@ extension PrintLogs on LogEvent {
     if (stackTrace != null) {
       logsStr += '\n${stackTrace.toString()}';
     }
-    switch (level) {
-      case Level.wtf:
-        logsStr = '\x1B[31m!!!CRITICAL!!! $logsStr\x1B[0m';
-        break;
-      case Level.error:
-        logsStr = '\x1B[31m$logsStr\x1B[0m';
-        break;
-      case Level.warning:
-        logsStr = '\x1B[33m$logsStr\x1B[0m';
-        break;
-      case Level.info:
-        logsStr = '\x1B[32m$logsStr\x1B[0m';
-        break;
-      case Level.debug:
-        logsStr = '\x1B[34m$logsStr\x1B[0m';
-        break;
-      case Level.verbose:
-        break;
+    if (Logs().nativeColors) {
+      switch (level) {
+        case Level.wtf:
+          logsStr = '\x1B[31m!!!CRITICAL!!! $logsStr\x1B[0m';
+          break;
+        case Level.error:
+          logsStr = '\x1B[31m$logsStr\x1B[0m';
+          break;
+        case Level.warning:
+          logsStr = '\x1B[33m$logsStr\x1B[0m';
+          break;
+        case Level.info:
+          logsStr = '\x1B[32m$logsStr\x1B[0m';
+          break;
+        case Level.debug:
+          logsStr = '\x1B[34m$logsStr\x1B[0m';
+          break;
+        case Level.verbose:
+          break;
+      }
     }
     // ignore: avoid_print
     print('[Matrix] $logsStr');
