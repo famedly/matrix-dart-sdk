@@ -47,6 +47,7 @@ export 'src/utils/matrix_file.dart';
 export 'src/utils/matrix_id_string_extension.dart';
 export 'src/utils/matrix_default_localizations.dart';
 export 'src/utils/matrix_localizations.dart';
+export 'src/utils/native_implementations.dart';
 export 'src/utils/push_notification.dart';
 export 'src/utils/receipt.dart';
 export 'src/utils/sync_update_extension.dart';
@@ -56,3 +57,9 @@ export 'src/utils/uri_extension.dart';
 
 export 'msc_extensions/extension_recent_emoji/recent_emoji.dart';
 export 'msc_extensions/msc_1236_widgets/msc_1236_widgets.dart';
+
+export 'src/utils/web_worker/web_worker_stub.dart'
+    if (dart.library.html) 'src/utils/web_worker/web_worker.dart';
+
+export 'src/utils/web_worker/native_implementations_web_worker_stub.dart'
+    if (dart.library.html) 'src/utils/web_worker/native_implementations_web_worker.dart';

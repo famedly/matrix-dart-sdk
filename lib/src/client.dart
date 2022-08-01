@@ -33,6 +33,7 @@ import 'package:matrix/src/utils/sync_update_item_count.dart';
 import '../encryption.dart';
 import '../matrix.dart';
 import 'models/timeline_chunk.dart';
+import 'utils/compute_callback.dart';
 import 'utils/multilock.dart';
 import 'utils/run_benchmarked.dart';
 
@@ -90,11 +91,13 @@ class Client extends MatrixApi {
   final Map<String, FutureOr<String?> Function(CommandArgs)> commands = {};
   final Filter syncFilter;
 
+  final NativeImplementations nativeImplementations;
+
   String? syncFilterId;
 
-  final Future<R> Function<Q, R>(FutureOr<R> Function(Q), Q,
-      {String debugLabel})? compute;
+  final ComputeCallback? compute;
 
+  @Deprecated('Use [nativeImplementations] instead')
   Future<T> runInBackground<T, U>(
       FutureOr<T> Function(U arg) function, U arg) async {
     final compute = this.compute;
@@ -142,8 +145,8 @@ class Client extends MatrixApi {
   /// If your client supports more login types like login with token or SSO, then add this to
   /// [supportedLoginTypes]. Set a custom [syncFilter] if you like. By default the app
   /// will use lazy_load_members.
-  /// Set [compute] to the Flutter compute method to enable the SDK to run some
-  /// code in background.
+  /// Set [nativeImplementations] to [NativeImplementationsIsolate] in order to
+  /// enable the SDK to compute some code in background.
   /// Set [timelineEventTimeout] to the preferred time the Client should retry
   /// sending events on connection problems or to `Duration.zero` to disable it.
   /// Set [customImageResizer] to your own implementation for a more advanced
@@ -165,7 +168,8 @@ class Client extends MatrixApi {
     Set<String>? supportedLoginTypes,
     this.mxidLocalPartFallback = true,
     this.formatLocalpart = true,
-    this.compute,
+    @Deprecated('Use [nativeImplementations] instead') this.compute,
+    NativeImplementations nativeImplementations = NativeImplementations.dummy,
     Level? logLevel,
     Filter? syncFilter,
     this.sendTimelineEventTimeout = const Duration(minutes: 1),
@@ -182,6 +186,9 @@ class Client extends MatrixApi {
         supportedLoginTypes =
             supportedLoginTypes ?? {AuthenticationTypes.password},
         verificationMethods = verificationMethods ?? <KeyVerificationMethod>{},
+        nativeImplementations = compute != null
+            ? NativeImplementationsIsolate(compute)
+            : nativeImplementations,
         super(
             httpClient:
                 VariableTimeoutHttpClient(httpClient ?? http.Client())) {
@@ -227,7 +234,10 @@ class Client extends MatrixApi {
   String? _deviceName;
 
   // for group calls
-  // A unique identifier used for resolving duplicate group call sessions from a given device. When the session_id field changes from an incoming m.call.member event, any existing calls from this device in this call should be terminated. The id is generated once per client load.
+  // A unique identifier used for resolving duplicate group call
+  // sessions from a given device. When the session_id field changes from
+  // an incoming m.call.member event, any existing calls from this device in
+  // this call should be terminated. The id is generated once per client load.
   String? get groupCallSessionId => _groupCallSessionId;
   String? _groupCallSessionId;
 
@@ -2906,5 +2916,6 @@ class HomeserverSummary {
 class ArchivedRoom {
   final Room room;
   final Timeline timeline;
+
   ArchivedRoom({required this.room, required this.timeline});
 }

@@ -48,7 +48,9 @@ Future<EncryptedFile> encryptFile(Uint8List input) async {
   );
 }
 
-Future<Uint8List?> decryptFile(EncryptedFile input) async {
+/// you would likely want to use [NativeImplementations] and
+/// [Client.nativeImplementations] instead
+Future<Uint8List?> decryptFileImplementation(EncryptedFile input) async {
   if (base64.encode(await sha256(input.data)) !=
       base64.normalize(input.sha256)) {
     return null;

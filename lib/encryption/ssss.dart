@@ -215,15 +215,14 @@ class SSSS {
         algorithm: AlgorithmTypes.pbkdf2,
         bits: ssssKeyLength * 8,
       );
-      privateKey = await client
-          .runInBackground(
-            _keyFromPassphrase,
-            _KeyFromPassphraseArgs(
-              passphrase: passphrase,
-              info: content.passphrase!,
-            ),
-          )
-          .timeout(Duration(seconds: 10));
+      privateKey = await Future.value(
+        client.nativeImplementations.keyFromPassphrase(
+          KeyFromPassphraseArgs(
+            passphrase: passphrase,
+            info: content.passphrase!,
+          ),
+        ),
+      ).timeout(Duration(seconds: 10));
     } else {
       // we need to just generate a new key from scratch
       privateKey = Uint8List.fromList(uc.secureRandomBytes(ssssKeyLength));
@@ -657,15 +656,14 @@ class OpenSSSS {
         throw Exception(
             'Tried to unlock with passphrase while key does not have a passphrase');
       }
-      privateKey = await ssss.client
-          .runInBackground(
-            _keyFromPassphrase,
-            _KeyFromPassphraseArgs(
-              passphrase: passphrase,
-              info: keyData.passphrase!,
-            ),
-          )
-          .timeout(Duration(seconds: 10));
+      privateKey = await Future.value(
+        ssss.client.nativeImplementations.keyFromPassphrase(
+          KeyFromPassphraseArgs(
+            passphrase: passphrase,
+            info: keyData.passphrase!,
+          ),
+        ),
+      ).timeout(Duration(seconds: 10));
     } else if (recoveryKey != null) {
       privateKey = SSSS.decodeRecoveryKey(recoveryKey);
     } else {
@@ -743,13 +741,15 @@ class OpenSSSS {
   }
 }
 
-class _KeyFromPassphraseArgs {
+class KeyFromPassphraseArgs {
   final String passphrase;
   final PassphraseInfo info;
 
-  _KeyFromPassphraseArgs({required this.passphrase, required this.info});
+  KeyFromPassphraseArgs({required this.passphrase, required this.info});
 }
 
-Future<Uint8List> _keyFromPassphrase(_KeyFromPassphraseArgs args) async {
+/// you would likely want to use [NativeImplementations] and
+/// [Client.nativeImplementations] instead
+Future<Uint8List> generateKeyFromPassphrase(KeyFromPassphraseArgs args) async {
   return await SSSS.keyFromPassphrase(args.passphrase, args.info);
 }
