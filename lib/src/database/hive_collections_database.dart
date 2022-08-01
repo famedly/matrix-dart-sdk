@@ -21,6 +21,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:hive/hive.dart';
 
 import 'package:matrix/encryption/utils/olm_session.dart';
@@ -358,7 +359,9 @@ class HiveCollectionsDatabase extends DatabaseApi {
         .toList();
     final rawEvents = await _eventsBox.getAll(keys);
     return rawEvents
-        .map((rawEvent) => Event.fromJson(copyMap(rawEvent!), room))
+        .map((rawEvent) =>
+            rawEvent != null ? Event.fromJson(copyMap(rawEvent), room) : null)
+        .whereNotNull()
         .toList();
   }
 
