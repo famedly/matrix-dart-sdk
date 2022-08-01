@@ -1,3 +1,9 @@
+## [0.11.1] - 1st Aug 2022
+- chore: introduce native implementations (Lanna Michalke)
+- fix: check for m.call permissions in groupCallEnabled (td)
+- fix: make Hive Collection path nullable (Lanna Michalke)
+- fix: missing null check (Lanna Michalke)
+
 ## [0.11.0] - 21th Jul 2022
 - feat: Add powerLevelContentOverride to startDirectChat and createGroupChat (Isabella Hundstorfer)
 - chore: add tests for group calls (td)
