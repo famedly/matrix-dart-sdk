@@ -1660,14 +1660,39 @@ class Room {
   /// The level required to ban a user.
   bool get canBan => _hasPermissionFor('ban');
 
+  /// returns if user can change a particular state event by comparing `ownPowerLevel`
+  /// with possible overrides in `events`, if not present compares `ownPowerLevel`
+  /// with state_default
+  bool canChangeStateEvent(String action) {
+    return powerForChangingStateEvent(action) <= ownPowerLevel;
+  }
+
+  /// returns the powerlevel required for chaning the `action` defaults to
+  /// state_default if `action` isn't specified in events override
+  int powerForChangingStateEvent(String action) {
+    final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
+    return powerLevelMap!
+            .tryGetMap<String, dynamic>('events')
+            ?.tryGet<int>(action) ??
+        powerLevelMap.tryGet<int>('state_default') ??
+        50;
+  }
+
+  bool get canCreateGroupCall =>
+      canChangeStateEvent('org.matrix.msc3401.call') && groupCallsEnabled;
+  bool get canJoinGroupCall =>
+      canChangeStateEvent('org.matrix.msc3401.call.member') &&
+      groupCallsEnabled;
+
   /// if returned value is not null `org.matrix.msc3401.call.member` is present
   /// and group calls can be used
   bool get groupCallsEnabled {
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
-    final groupCallPowerLevel =
-        powerLevelMap?.tryGetMap('events')?['org.matrix.msc3401.call.member'];
-    return groupCallPowerLevel != null &&
-        groupCallPowerLevel <= getDefaultPowerLevel(powerLevelMap!);
+    if (powerLevelMap == null) return false;
+    return powerForChangingStateEvent('org.matrix.msc3401.call.member') <=
+            getDefaultPowerLevel(powerLevelMap) &&
+        powerForChangingStateEvent('org.matrix.msc3401.call') <=
+            getDefaultPowerLevel(powerLevelMap);
   }
 
   /// sets the `org.matrix.msc3401.call.member` power level to users default for
@@ -1677,10 +1702,13 @@ class Room {
     final currentPowerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
     if (currentPowerLevelsMap != null) {
       final newPowerLevelMap = currentPowerLevelsMap;
-      newPowerLevelMap['events'].addAll({
+      final eventsMap = newPowerLevelMap['events'] ?? {};
+      eventsMap.addAll({
+        'org.matrix.msc3401.call': getDefaultPowerLevel(currentPowerLevelsMap),
         'org.matrix.msc3401.call.member':
             getDefaultPowerLevel(currentPowerLevelsMap)
       });
+      newPowerLevelMap.addAll({'events': eventsMap});
       await client.setRoomStateWithKey(
         id,
         EventTypes.RoomPowerLevels,
