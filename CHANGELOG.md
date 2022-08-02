@@ -1,3 +1,6 @@
+## [1.1.2] - 2nd Aug 2022
+- feat: Add a flag to disable colors in logs
+
 ## 1.1.1
 
 - fix: wrong type for children_state in spaces hierarchy API
