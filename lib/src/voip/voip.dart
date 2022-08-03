@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:core';
 
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
@@ -37,6 +38,7 @@ class VoIP {
   String? get localPartyId => client.deviceID;
   final Client client;
   final WebRTCDelegate delegate;
+  final StreamController<GroupCall> onIncomingGroupCall = StreamController();
 
   void _handleEvent(
           Event event,
@@ -536,6 +538,10 @@ class VoIP {
   Future<GroupCall?> newGroupCall(String roomId, String type, String intent,
       [bool? dataChannelsEnabled,
       RTCDataChannelInit? dataChannelOptions]) async {
+    if (getGroupCallForRoom(roomId) != null) {
+      Logs().e('[VOIP] [$roomId] already has an existing group call.');
+      return null;
+    }
     final room = client.getRoomById(roomId);
     if (room == null) {
       Logs().v('[VOIP] Invalid room id [$roomId].');
@@ -553,7 +559,51 @@ class VoIP {
       dataChannelOptions: dataChannelOptions ?? RTCDataChannelInit(),
     ).create();
     groupCalls[groupId] = groupCall;
+    groupCalls[roomId] = groupCall;
     return groupCall;
+  }
+
+  Future<GroupCall?> fetchOrCreateGroupCall(String roomId) async {
+    final groupCall = getGroupCallForRoom(roomId);
+    if (groupCall != null) return groupCall;
+
+    final room = client.getRoomById(roomId);
+
+    if (room == null) {
+      Logs().w('Not found room id = $roomId');
+      return null;
+    }
+
+    if (!room.groupCallsEnabled) {
+      await room.enableGroupCalls();
+    }
+
+    if (room.canCreateGroupCall) {
+      // The call doesn't exist, but we can create it
+      return await newGroupCall(
+          roomId, GroupCallType.Video, GroupCallIntent.Prompt);
+    }
+
+    if (room.canJoinGroupCall) {
+      Logs().w('No permission to join group calls in room $roomId');
+      return null;
+    }
+
+    final completer = Completer<GroupCall?>();
+    Timer? timer;
+    final subscription = onIncomingGroupCall.stream.listen((GroupCall call) {
+      if (call.room.id == roomId) {
+        timer?.cancel();
+        completer.complete(call);
+      }
+    });
+
+    timer = Timer(Duration(seconds: 30), () {
+      subscription.cancel();
+      completer.completeError('timeout');
+    });
+
+    return completer.future;
   }
 
   GroupCall? getGroupCallForRoom(String roomId) {
@@ -653,6 +703,7 @@ class VoIP {
 
     groupCalls[groupCallId!] = groupCall;
     groupCalls[room.id] = groupCall;
+    onIncomingGroupCall.add(groupCall);
     delegate.handleNewGroupCall(groupCall);
     return groupCall;
   }

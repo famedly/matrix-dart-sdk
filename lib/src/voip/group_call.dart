@@ -491,6 +491,7 @@ class GroupCall {
     );
     */
     voip.groupCalls.remove(room.id);
+    voip.groupCalls.remove(groupCallId);
 
     if (emitStateEvent) {
       final existingStateEvent = await getStateEvent(
@@ -711,7 +712,7 @@ class GroupCall {
 
       if (existingCallIndex != -1) {
         if (memberCallState != null) {
-          calls.replaceRange(existingCallIndex, 1, [memberCallState]);
+          calls[existingCallIndex] = memberCallState;
         } else {
           calls.removeAt(existingCallIndex);
         }
@@ -752,8 +753,15 @@ class GroupCall {
     }
 
     // Currently we only support a single call per room. So grab the first call.
-    final callState =
-        callsState.calls.isNotEmpty ? callsState.calls.elementAt(0) : null;
+    IGroupCallRoomMemberCallState? callState;
+
+    if (callsState.calls.isNotEmpty) {
+      final index = callsState.calls
+          .indexWhere((element) => element.call_id == groupCallId);
+      if (index != -1) {
+        callState = callsState.calls[index];
+      }
+    }
 
     if (callState == null) {
       Logs().w(
