@@ -41,5 +41,10 @@ void main() {
       expect(data.tryGet<Map<String, dynamic>>('pam')?.tryGet<String>('beep'),
           null);
     });
+
+    // see https://github.com/dart-lang/test/issues/1698
+    test('KeyVerification dummy test', () async {
+      await Future.delayed(Duration(milliseconds: 400));
+    });
   });
 }

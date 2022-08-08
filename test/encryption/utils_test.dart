@@ -73,5 +73,10 @@ void main() {
       expect(shrinkedImage.blurhash, 'L75NyU5kvvbx^7AF#kSgZxOZ%5NE',
           reason: 'Unexpected scaled image blur');
     });
+
+    // see https://github.com/dart-lang/test/issues/1698
+    test('KeyVerification dummy test', () async {
+      await Future.delayed(Duration(seconds: 1));
+    });
   });
 }
