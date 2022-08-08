@@ -219,6 +219,14 @@ extension CommandsClientExtension on Client {
       await clearCache();
       return '';
     });
+    addCommand('markasdm', (CommandArgs args) async {
+      await args.room.addToDirectChat(args.msg);
+      return;
+    });
+    addCommand('markasgroup', (CommandArgs args) async {
+      await args.room.removeFromDirectChat();
+      return;
+    });
   }
 }
 
