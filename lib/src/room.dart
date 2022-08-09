@@ -197,6 +197,8 @@ class Room {
     }
 
     (states[state.type] ??= {})[stateKey] = state;
+
+    client.onRoomState.add(state);
   }
 
   /// ID of the fully read marker event.

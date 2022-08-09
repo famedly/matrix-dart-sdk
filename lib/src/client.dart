@@ -1098,6 +1098,8 @@ class Client extends MatrixApi {
 
   final CachedStreamController<Event> onGroupMember = CachedStreamController();
 
+  final CachedStreamController<Event> onRoomState = CachedStreamController();
+
   /// How long should the app wait until it retrys the synchronisation after
   /// an error?
   int syncErrorTimeoutSec = 3;

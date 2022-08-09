@@ -68,9 +68,14 @@ class VoIP {
     client.onAssertedIdentityReceived.stream
         .listen((event) => _handleEvent(event, onAssertedIdentityReceived));
 
-    client.onGroupCallRequest.stream.listen((event) {
-      Logs().v('[VOIP] onGroupCallRequest: type ${event.toJson()}.');
-      onRoomStateChanged(event);
+    client.onRoomState.stream.listen((event) {
+      if ([
+        EventTypes.GroupCallPrefix,
+        EventTypes.GroupCallMemberPrefix,
+      ].contains(event.type)) {
+        Logs().v('[VOIP] onRoomState: type ${event.toJson()}.');
+        onRoomStateChanged(event);
+      }
     });
 
     client.onToDeviceEvent.stream.listen((event) {

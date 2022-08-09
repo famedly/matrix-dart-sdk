@@ -197,9 +197,6 @@ class GroupCall {
 
   Timer? activeSpeakerLoopTimeout;
 
-  Timer? retryCallLoopTimeout;
-  Map<String, num> retryCallCounts = {};
-
   final CachedStreamController<GroupCall> onGroupCallFeedsChanged =
       CachedStreamController();
 
@@ -430,8 +427,6 @@ class GroupCall {
       onMemberStateChanged(stateEvent);
     });
 
-    retryCallLoopTimeout = Timer.periodic(
-        Duration(milliseconds: retryCallInterval), onRetryCallLoop);
     onActiveSpeakerLoop();
 
     voip.currentGroupCID = groupCallId;
@@ -467,8 +462,6 @@ class GroupCall {
 
     activeSpeaker = null;
     activeSpeakerLoopTimeout?.cancel();
-    retryCallCounts.clear();
-    retryCallLoopTimeout?.cancel();
     _callSubscription?.cancel();
   }
 
@@ -876,24 +869,6 @@ class GroupCall {
     return memberDevices[0];
   }
 
-  /// Monitor member status and respond to mesh calls by regularly updating
-  /// the state event in the room
-  void onRetryCallLoop(Timer _) async {
-    final memberStateEvents =
-        await getStateEventsList(EventTypes.GroupCallMemberPrefix);
-
-    memberStateEvents.forEach((event) {
-      final memberId = event.senderId;
-      final existingCall =
-          calls.indexWhere((call) => call.remoteUser!.id == memberId) != -1;
-      final retryCallCount = retryCallCounts[memberId] ?? 0;
-      if (!existingCall && retryCallCount < 3) {
-        retryCallCounts[memberId] = retryCallCount + 1;
-        onMemberStateChanged(event);
-      }
-    });
-  }
-
   CallSession? getCallByUserId(String userId) {
     final value = calls.where((item) => item.remoteUser!.id == userId);
     if (value.isNotEmpty) {
@@ -1063,10 +1038,6 @@ class GroupCall {
     if (call.localUserMediaStream != null &&
         call.isLocalVideoMuted != videoMuted) {
       call.setLocalVideoMuted(videoMuted);
-    }
-
-    if (state == CallState.kConnected) {
-      retryCallCounts.remove(call.remoteUser!.id);
     }
   }
 
