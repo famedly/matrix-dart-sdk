@@ -312,7 +312,68 @@ void main() {
       }
     });
 
-    test('create', () async {
+    test('markasdm', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent('/markasdm @fakealice:example.com');
+      expect(
+          json.decode(FakeMatrixApi
+              .calledEndpoints[
+                  '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct']
+              ?.first)?['@alice:example.com'],
+          ['!1234:fakeServer.notExisting']);
+      expect(
+          json.decode(FakeMatrixApi
+              .calledEndpoints[
+                  '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct']
+              ?.first)?['@fakealice:example.com'],
+          ['!1234:fakeServer.notExisting']);
+      expect(
+          json
+              .decode(FakeMatrixApi
+                  .calledEndpoints[
+                      '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct']
+                  ?.first)
+              .entries
+              .any((e) =>
+                  e.key != '@fakealice:example.com' &&
+                  e.key != '@alice:example.com' &&
+                  e.value.contains('!1234:fakeServer.notExisting')),
+          false);
+
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent('/markasdm');
+      expect(
+          json.decode(FakeMatrixApi
+              .calledEndpoints[
+                  '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct']
+              ?.first)?[''],
+          ['!1234:fakeServer.notExisting']);
+    });
+
+    test('markasgroup', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent('/markasgroup');
+      expect(
+          json
+              .decode(FakeMatrixApi
+                  .calledEndpoints[
+                      '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct']
+                  ?.first)
+              ?.containsKey('@alice:example.com'),
+          false);
+      expect(
+          json
+              .decode(FakeMatrixApi
+                  .calledEndpoints[
+                      '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct']
+                  ?.first)
+              .entries
+              .any((e) => (e.value as List<dynamic>)
+                  .contains('!1234:fakeServer.notExisting')),
+          false);
+    });
+
+    test('clearcache', () async {
       await room.sendTextEvent('/clearcache');
       expect(room.client.prevBatch, null);
     });
