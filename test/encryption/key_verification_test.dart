@@ -241,7 +241,7 @@ void main() async {
           true);
       await client1.encryption!.keyVerificationManager.cleanup();
       await client2.encryption!.keyVerificationManager.cleanup();
-    });
+    }, skip: skip);
 
     test('ask SSSS start', () async {
       client1.userDeviceKeys[client1.userID]!.masterKey!
@@ -257,7 +257,7 @@ void main() async {
 
       await req1.cancel();
       await client1.encryption!.keyVerificationManager.cleanup();
-    });
+    }, skip: skip);
 
     test('ask SSSS end', () async {
       FakeMatrixApi.calledEndpoints.clear();
@@ -379,7 +379,7 @@ void main() async {
 
       await client1.encryption!.keyVerificationManager.cleanup();
       await client2.encryption!.keyVerificationManager.cleanup();
-    });
+    }, skip: skip);
 
     test('reject verification', () async {
       FakeMatrixApi.calledEndpoints.clear();
@@ -412,7 +412,7 @@ void main() async {
 
       await client1.encryption!.keyVerificationManager.cleanup();
       await client2.encryption!.keyVerificationManager.cleanup();
-    });
+    }, skip: skip);
 
     test('reject sas', () async {
       FakeMatrixApi.calledEndpoints.clear();
@@ -488,7 +488,7 @@ void main() async {
 
       await client1.encryption!.keyVerificationManager.cleanup();
       await client2.encryption!.keyVerificationManager.cleanup();
-    });
+    }, skip: skip);
 
     test('other device accepted', () async {
       FakeMatrixApi.calledEndpoints.clear();
@@ -536,6 +536,11 @@ void main() async {
           '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/m.key.verification.cancel'));
       await client1.encryption!.keyVerificationManager.cleanup();
       await client2.encryption!.keyVerificationManager.cleanup();
-    });
-  }, skip: skip);
+    }, skip: skip);
+
+    // see https://github.com/dart-lang/test/issues/1698
+    test('KeyVerification dummy test', () async {
+      await Future.delayed(Duration(seconds: 1));
+    }, skip: skip != 'false' ? 'false' : 'No need for dummy');
+  });
 }

@@ -10,7 +10,7 @@ workflow:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 variables:
-  FLUTTER_IMAGE_TAG: '3.0.3'
+  FLUTTER_IMAGE_TAG: '3.0.5'
 
 coverage:
   tags:
@@ -23,9 +23,18 @@ coverage:
     - rm -r example
     - ./scripts/prepare.sh
     - ./scripts/test.sh
+  coverage: /^\s*lines\.*:\s*\d+.\d+\%/
   artifacts:
+    when: always
     paths:
       - coverage/
+      - coverage.xml
+      - TEST-report.xml
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: TEST-report.xml
 
 coverage_without_olm:
   tags:
@@ -33,9 +42,26 @@ coverage_without_olm:
   stage: test
   image: dart
   dependencies: []
+  variables:
+    NO_OLM: 1
+  before_script:
+    - apt-get update && apt-get install --no-install-recommends --no-install-suggests -y curl lcov python3 python3-distutils
+    - curl -o /bin/lcov_cobertura.py https://raw.githubusercontent.com/eriwen/lcov-to-cobertura-xml/master/lcov_cobertura/lcov_cobertura.py && sed 's/env python/env python3/' -i /bin/lcov_cobertura.py && chmod +x /bin/lcov_cobertura.py
   script:
     - dart pub get
-    - dart pub run test
+    - ./scripts/test.sh
+  coverage: /^\s*lines\.*:\s*\d+.\d+\%/
+  artifacts:
+    when: always
+    paths:
+      - coverage/
+      - coverage.xml
+      - TEST-report.xml
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: TEST-report.xml
 
 e2ee_test:
   tags:
