@@ -62,7 +62,9 @@ class NativeImplementationsWebWorker extends NativeImplementations {
 
   @override
   Future<MatrixImageFileResizedResponse?> calcImageMetadata(
-      Uint8List bytes) async {
+    Uint8List bytes, {
+    bool retryInDummy = false,
+  }) async {
     try {
       final result = await operation<Map<dynamic, dynamic>, Uint8List>(
         WebWorkerOperations.calcImageMetadata,
@@ -70,6 +72,11 @@ class NativeImplementationsWebWorker extends NativeImplementations {
       );
       return MatrixImageFileResizedResponse.fromJson(Map.from(result));
     } catch (e, s) {
+      if (!retryInDummy) {
+        Logs().e(
+            'Web worker computation error. Ignoring and returning null', e, s);
+        return null;
+      }
       Logs().e('Web worker computation error. Fallback to main thread', e, s);
       return NativeImplementations.dummy.calcImageMetadata(bytes);
     }
@@ -77,7 +84,9 @@ class NativeImplementationsWebWorker extends NativeImplementations {
 
   @override
   Future<MatrixImageFileResizedResponse?> shrinkImage(
-      MatrixImageFileResizeArguments args) async {
+    MatrixImageFileResizeArguments args, {
+    bool retryInDummy = false,
+  }) async {
     try {
       final result =
           await operation<Map<dynamic, dynamic>, Map<String, dynamic>>(
@@ -86,13 +95,21 @@ class NativeImplementationsWebWorker extends NativeImplementations {
       );
       return MatrixImageFileResizedResponse.fromJson(Map.from(result));
     } catch (e, s) {
+      if (!retryInDummy) {
+        Logs().e(
+            'Web worker computation error. Ignoring and returning null', e, s);
+        return null;
+      }
       Logs().e('Web worker computation error. Fallback to main thread', e, s);
       return NativeImplementations.dummy.shrinkImage(args);
     }
   }
 
   @override
-  Future<RoomKeys> generateUploadKeys(GenerateUploadKeysArgs args) async {
+  Future<RoomKeys> generateUploadKeys(
+    GenerateUploadKeysArgs args, {
+    bool retryInDummy = true,
+  }) async {
     try {
       final result =
           await operation<Map<dynamic, dynamic>, Map<String, dynamic>>(
@@ -101,6 +118,7 @@ class NativeImplementationsWebWorker extends NativeImplementations {
       );
       return RoomKeys.fromJson(Map.from(result));
     } catch (e, s) {
+      if (!retryInDummy) rethrow;
       Logs().e('Web worker computation error. Fallback to main thread', e, s);
       return NativeImplementations.dummy.generateUploadKeys(args);
     }
