@@ -25,22 +25,37 @@ abstract class NativeImplementations {
   /// the UI to likely freeze
   static const dummy = NativeImplementationsDummy();
 
-  FutureOr<RoomKeys> generateUploadKeys(GenerateUploadKeysArgs args);
+  FutureOr<RoomKeys> generateUploadKeys(
+    GenerateUploadKeysArgs args, {
+    bool retryInDummy = true,
+  });
 
-  FutureOr<Uint8List> keyFromPassphrase(KeyFromPassphraseArgs args);
+  FutureOr<Uint8List> keyFromPassphrase(
+    KeyFromPassphraseArgs args, {
+    bool retryInDummy = true,
+  });
 
-  FutureOr<Uint8List?> decryptFile(EncryptedFile file);
+  FutureOr<Uint8List?> decryptFile(
+    EncryptedFile file, {
+    bool retryInDummy = true,
+  });
 
   FutureOr<MatrixImageFileResizedResponse?> shrinkImage(
-      MatrixImageFileResizeArguments args);
+    MatrixImageFileResizeArguments args, {
+    bool retryInDummy = false,
+  });
 
-  FutureOr<MatrixImageFileResizedResponse?> calcImageMetadata(Uint8List bytes);
+  FutureOr<MatrixImageFileResizedResponse?> calcImageMetadata(
+    Uint8List bytes, {
+    bool retryInDummy = false,
+  });
 
   @override
 
   /// this implementation will catch any non-implemented method
   dynamic noSuchMethod(Invocation invocation) {
     final dynamic argument = invocation.positionalArguments.single;
+    final bool retryInDummy = invocation.namedArguments['retryInDummy'] as bool;
     final memberName = invocation.memberName.toString().split('"')[1];
 
     Logs().w(
@@ -50,15 +65,15 @@ abstract class NativeImplementations {
     );
     switch (memberName) {
       case 'generateUploadKeys':
-        return dummy.generateUploadKeys(argument);
+        return dummy.generateUploadKeys(argument, retryInDummy: retryInDummy);
       case 'keyFromPassphrase':
-        return dummy.keyFromPassphrase(argument);
+        return dummy.keyFromPassphrase(argument, retryInDummy: retryInDummy);
       case 'decryptFile':
-        return dummy.decryptFile(argument);
+        return dummy.decryptFile(argument, retryInDummy: retryInDummy);
       case 'shrinkImage':
-        return dummy.shrinkImage(argument);
+        return dummy.shrinkImage(argument, retryInDummy: retryInDummy);
       case 'calcImageMetadata':
-        return dummy.calcImageMetadata(argument);
+        return dummy.calcImageMetadata(argument, retryInDummy: retryInDummy);
       default:
         return super.noSuchMethod(invocation);
     }
@@ -69,28 +84,42 @@ class NativeImplementationsDummy extends NativeImplementations {
   const NativeImplementationsDummy();
 
   @override
-  Future<Uint8List?> decryptFile(EncryptedFile file) {
+  Future<Uint8List?> decryptFile(
+    EncryptedFile file, {
+    bool retryInDummy = true,
+  }) {
     return decryptFileImplementation(file);
   }
 
   @override
-  Future<RoomKeys> generateUploadKeys(GenerateUploadKeysArgs args) async {
+  Future<RoomKeys> generateUploadKeys(
+    GenerateUploadKeysArgs args, {
+    bool retryInDummy = true,
+  }) async {
     return generateUploadKeysImplementation(args);
   }
 
   @override
-  Future<Uint8List> keyFromPassphrase(KeyFromPassphraseArgs args) {
+  Future<Uint8List> keyFromPassphrase(
+    KeyFromPassphraseArgs args, {
+    bool retryInDummy = true,
+  }) {
     return generateKeyFromPassphrase(args);
   }
 
   @override
   MatrixImageFileResizedResponse? shrinkImage(
-      MatrixImageFileResizeArguments args) {
+    MatrixImageFileResizeArguments args, {
+    bool retryInDummy = false,
+  }) {
     return MatrixImageFile.resizeImplementation(args);
   }
 
   @override
-  MatrixImageFileResizedResponse? calcImageMetadata(Uint8List bytes) {
+  MatrixImageFileResizedResponse? calcImageMetadata(
+    Uint8List bytes, {
+    bool retryInDummy = false,
+  }) {
     return MatrixImageFile.calcMetadataImplementation(bytes);
   }
 }
@@ -122,7 +151,10 @@ class NativeImplementationsIsolate extends NativeImplementations {
   }
 
   @override
-  Future<Uint8List?> decryptFile(EncryptedFile file) {
+  Future<Uint8List?> decryptFile(
+    EncryptedFile file, {
+    bool retryInDummy = true,
+  }) {
     return runInBackground<Uint8List?, EncryptedFile>(
       NativeImplementations.dummy.decryptFile,
       file,
@@ -130,7 +162,10 @@ class NativeImplementationsIsolate extends NativeImplementations {
   }
 
   @override
-  Future<RoomKeys> generateUploadKeys(GenerateUploadKeysArgs args) async {
+  Future<RoomKeys> generateUploadKeys(
+    GenerateUploadKeysArgs args, {
+    bool retryInDummy = true,
+  }) async {
     return runInBackground<RoomKeys, GenerateUploadKeysArgs>(
       NativeImplementations.dummy.generateUploadKeys,
       args,
@@ -138,7 +173,10 @@ class NativeImplementationsIsolate extends NativeImplementations {
   }
 
   @override
-  Future<Uint8List> keyFromPassphrase(KeyFromPassphraseArgs args) {
+  Future<Uint8List> keyFromPassphrase(
+    KeyFromPassphraseArgs args, {
+    bool retryInDummy = true,
+  }) {
     return runInBackground<Uint8List, KeyFromPassphraseArgs>(
       NativeImplementations.dummy.keyFromPassphrase,
       args,
@@ -147,7 +185,9 @@ class NativeImplementationsIsolate extends NativeImplementations {
 
   @override
   Future<MatrixImageFileResizedResponse?> shrinkImage(
-      MatrixImageFileResizeArguments args) {
+    MatrixImageFileResizeArguments args, {
+    bool retryInDummy = false,
+  }) {
     return runInBackground<MatrixImageFileResizedResponse?,
         MatrixImageFileResizeArguments>(
       NativeImplementations.dummy.shrinkImage,
@@ -156,7 +196,10 @@ class NativeImplementationsIsolate extends NativeImplementations {
   }
 
   @override
-  FutureOr<MatrixImageFileResizedResponse?> calcImageMetadata(Uint8List bytes) {
+  FutureOr<MatrixImageFileResizedResponse?> calcImageMetadata(
+    Uint8List bytes, {
+    bool retryInDummy = false,
+  }) {
     return runInBackground<MatrixImageFileResizedResponse?, Uint8List>(
       NativeImplementations.dummy.calcImageMetadata,
       bytes,
