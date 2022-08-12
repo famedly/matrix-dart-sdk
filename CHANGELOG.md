@@ -1,3 +1,7 @@
+## [1.1.3] - 2nd Aug 2022
+- fix: Secret storage keys are used as account data but are not uri encoded
+- chore: export filter map extension
+
 ## [1.1.2] - 2nd Aug 2022
 - feat: Add a flag to disable colors in logs
 
