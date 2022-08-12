@@ -55,7 +55,7 @@ abstract class NativeImplementations {
   /// this implementation will catch any non-implemented method
   dynamic noSuchMethod(Invocation invocation) {
     final dynamic argument = invocation.positionalArguments.single;
-    final bool retryInDummy = invocation.namedArguments['retryInDummy'] as bool;
+    final retryInDummy = invocation.namedArguments['retryInDummy'] as bool;
     final memberName = invocation.memberName.toString().split('"')[1];
 
     Logs().w(

@@ -53,10 +53,7 @@ void main() {
 
       Bootstrap? bootstrap;
       bootstrap = client.encryption!.bootstrap(
-        onUpdate: () async {
-          while (bootstrap == null) {
-            await Future.delayed(Duration(milliseconds: 5));
-          }
+        onUpdate: (bootstrap) async {
           if (bootstrap.state == BootstrapState.askWipeSsss) {
             bootstrap.wipeSsss(true);
           } else if (bootstrap.state == BootstrapState.askNewSsss) {
@@ -111,10 +108,7 @@ void main() {
       if (!olmEnabled) return;
       Bootstrap? bootstrap;
       bootstrap = client.encryption!.bootstrap(
-        onUpdate: () async {
-          while (bootstrap == null) {
-            await Future.delayed(Duration(milliseconds: 5));
-          }
+        onUpdate: (bootstrap) async {
           if (bootstrap.state == BootstrapState.askWipeSsss) {
             bootstrap.wipeSsss(false);
           } else if (bootstrap.state == BootstrapState.askUseExistingSsss) {
@@ -165,10 +159,7 @@ void main() {
 
       Bootstrap? bootstrap;
       bootstrap = client.encryption!.bootstrap(
-        onUpdate: () async {
-          while (bootstrap == null) {
-            await Future.delayed(Duration(milliseconds: 5));
-          }
+        onUpdate: (bootstrap) async {
           if (bootstrap.state == BootstrapState.askWipeSsss) {
             bootstrap.wipeSsss(false);
           } else if (bootstrap.state == BootstrapState.askUseExistingSsss) {
@@ -219,10 +210,7 @@ void main() {
       client.accountData.clear();
       Bootstrap? bootstrap;
       bootstrap = client.encryption!.bootstrap(
-        onUpdate: () async {
-          while (bootstrap == null) {
-            await Future.delayed(Duration(milliseconds: 5));
-          }
+        onUpdate: (bootstrap) async {
           if (bootstrap.state == BootstrapState.askNewSsss) {
             await bootstrap.newSsss('thenewestfoxies');
           } else if (bootstrap.state == BootstrapState.askSetupCrossSigning) {
@@ -248,10 +236,7 @@ void main() {
       var askedBadSsss = false;
       Bootstrap? bootstrap;
       bootstrap = client.encryption!.bootstrap(
-        onUpdate: () async {
-          while (bootstrap == null) {
-            await Future.delayed(Duration(milliseconds: 5));
-          }
+        onUpdate: (bootstrap) async {
           if (bootstrap.state == BootstrapState.askWipeSsss) {
             bootstrap.wipeSsss(false);
           } else if (bootstrap.state == BootstrapState.askBadSsss) {
