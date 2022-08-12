@@ -73,7 +73,7 @@ enum BootstrapState {
 class Bootstrap {
   final Encryption encryption;
   Client get client => encryption.client;
-  void Function()? onUpdate;
+  void Function(Bootstrap)? onUpdate;
   BootstrapState get state => _state;
   BootstrapState _state = BootstrapState.loading;
   Map<String, OpenSSSS>? oldSsssKeys;
@@ -593,7 +593,7 @@ class Bootstrap {
       _state = newState;
     }
 
-    onUpdate?.call();
+    onUpdate?.call(this);
   }
 }
 

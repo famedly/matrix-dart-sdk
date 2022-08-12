@@ -79,7 +79,7 @@ class Encryption {
     }
   }
 
-  Bootstrap bootstrap({void Function()? onUpdate}) => Bootstrap(
+  Bootstrap bootstrap({void Function(Bootstrap)? onUpdate}) => Bootstrap(
         encryption: this,
         onUpdate: onUpdate,
       );
