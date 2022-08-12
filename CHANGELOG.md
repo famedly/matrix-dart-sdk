@@ -1,3 +1,10 @@
+## [0.11.2] - 12th Aug 2022
+- chore: Use onRoomState to monitor group call creation and member join and leave. (cloudwebrtc)
+- chore: expose option to retry computations (Lanna Michalke)
+- chore: fix group call id mismatch. (cloudwebrtc)
+- feat: add coverage to MRs (Nicolas Werner)
+- fix: Fix currentCID is null when handleNewCall is triggered, which will cause family-app. (cloudwebrtc)
+
 ## [0.11.1] - 1st Aug 2022
 - chore: introduce native implementations (Lanna Michalke)
 - fix: check for m.call permissions in groupCallEnabled (td)
@@ -24,9 +31,9 @@
 
 ## [0.10.3] - 09th Jul 2022
 - feat: Calc encryption health state and allow key sharing with unknown devices (Christian Pauly)
-- fix: Add WebRTCDelegate.cloneStream to adapt to platform differences. (Duan Weiwei)
+- fix: Add WebRTCDelegate.cloneStream to adapt to platform differences. (cloudwebrtc)
 - fix: Database did not get cleared correctly (Christian Pauly)
-- fix: fixed camera is still active after leaving the group call. (Duan Weiwei)
+- fix: fixed camera is still active after leaving the group call. (cloudwebrtc)
 - fix: request history (Henri Carnot)
 - refactor: Handle Ephemerals method (Christian Pauly)
 
