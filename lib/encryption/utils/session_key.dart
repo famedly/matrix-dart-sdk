@@ -20,7 +20,7 @@ import 'package:matrix_api_lite/src/utils/filter_map_extension.dart';
 import 'package:olm/olm.dart' as olm;
 
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
-import '../../matrix.dart';
+import 'package:matrix/matrix.dart';
 
 class SessionKey {
   /// The raw json content of the key
@@ -74,9 +74,8 @@ class SessionKey {
       : indexes = indexes ?? <String, String>{},
         allowedAtIndex = allowedAtIndex ?? <String, Map<String, int>>{};
 
-  SessionKey.fromDb(StoredInboundGroupSession dbEntry, String key)
-      : key = key,
-        content = Event.getMapFromPayload(dbEntry.content),
+  SessionKey.fromDb(StoredInboundGroupSession dbEntry, this.key)
+      : content = Event.getMapFromPayload(dbEntry.content),
         indexes = Event.getMapFromPayload(dbEntry.indexes)
             .catchMap((k, v) => MapEntry<String, String>(k, v)),
         allowedAtIndex = Event.getMapFromPayload(dbEntry.allowedAtIndex)

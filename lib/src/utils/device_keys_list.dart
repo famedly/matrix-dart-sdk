@@ -22,8 +22,8 @@ import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:olm/olm.dart' as olm;
 
+import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
-import '../../encryption.dart';
 
 enum UserVerifiedStatus { verified, unknown, unknownDevice }
 
@@ -349,6 +349,9 @@ abstract class SignableKey extends MatrixSignableKey {
   bool operator ==(dynamic other) => (other is SignableKey &&
       other.userId == userId &&
       other.identifier == identifier);
+
+  @override
+  int get hashCode => Object.hash(userId, identifier);
 }
 
 class CrossSigningKey extends SignableKey {

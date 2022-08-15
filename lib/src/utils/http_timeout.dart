@@ -20,7 +20,7 @@ import 'dart:async';
 
 import 'package:http/http.dart' as http;
 
-import '../../matrix.dart';
+import 'package:matrix/matrix.dart';
 
 /// Stream.timeout fails if no progress is made in timeLimit.
 /// In contrast, streamTotalTimeout fails if the stream isn't completed
@@ -68,10 +68,6 @@ class FixedTimeoutHttpClient extends TimeoutHttpClient {
   FixedTimeoutHttpClient(http.Client inner, this.timeout) : super(inner);
   @override
   Duration timeout;
-
-  @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) =>
-      super.send(request);
 }
 
 class VariableTimeoutHttpClient extends TimeoutHttpClient {

@@ -4,8 +4,8 @@ import 'dart:core';
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 import 'package:webrtc_interface/webrtc_interface.dart';
 
+import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
-import '../../matrix.dart';
 
 /// Delegate WebRTC basic functionality.
 abstract class WebRTCDelegate {
@@ -317,7 +317,7 @@ class VoIP {
       return;
     }
     final String callId = content['call_id'];
-    Logs().d('Reject received for call ID ' + callId);
+    Logs().d('Reject received for call ID $callId');
 
     final call = calls[callId];
     if (call != null) {
@@ -339,7 +339,7 @@ class VoIP {
       return;
     }
     final String callId = content['call_id'];
-    Logs().d('onCallReplaces received for call ID ' + callId);
+    Logs().d('onCallReplaces received for call ID $callId');
     final call = calls[callId];
     if (call != null) {
       if (call.room.id != roomId) {
@@ -358,7 +358,7 @@ class VoIP {
       return;
     }
     final String callId = content['call_id'];
-    Logs().d('SelectAnswer received for call ID ' + callId);
+    Logs().d('SelectAnswer received for call ID $callId');
     final call = calls[callId];
     final String selectedPartyId = content['selected_party_id'];
 
@@ -379,7 +379,7 @@ class VoIP {
       return;
     }
     final String callId = content['call_id'];
-    Logs().d('SDP Stream metadata received for call ID ' + callId);
+    Logs().d('SDP Stream metadata received for call ID $callId');
     final call = calls[callId];
     if (call != null) {
       if (call.room.id != roomId) {
@@ -404,7 +404,7 @@ class VoIP {
       return;
     }
     final String callId = content['call_id'];
-    Logs().d('Asserted identity received for call ID ' + callId);
+    Logs().d('Asserted identity received for call ID $callId');
     final call = calls[callId];
     if (call != null) {
       if (call.room.id != roomId) {
@@ -429,7 +429,7 @@ class VoIP {
       return;
     }
     final String callId = content['call_id'];
-    Logs().d('Negotiate received for call ID ' + callId);
+    Logs().d('Negotiate received for call ID $callId');
     final call = calls[callId];
     if (call != null) {
       if (call.room.id != roomId) {

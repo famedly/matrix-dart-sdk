@@ -25,12 +25,12 @@ import 'package:base58check/base58.dart';
 import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart';
 
+import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
-import '../matrix.dart';
-import '../src/utils/crypto/crypto.dart' as uc;
-import '../src/utils/run_in_root.dart';
-import 'encryption.dart';
-import 'utils/ssss_cache.dart';
+import 'package:matrix/encryption/utils/ssss_cache.dart';
+import 'package:matrix/matrix.dart';
+import 'package:matrix/src/utils/crypto/crypto.dart' as uc;
+import 'package:matrix/src/utils/run_in_root.dart';
 
 const cacheTypes = <String>{
   EventTypes.CrossSigningSelfSigning,
@@ -286,7 +286,7 @@ class SSSS {
     if (keys == null) {
       return null;
     }
-    final isValid = (dbEntry) =>
+    bool isValid(dbEntry) =>
         keys.contains(dbEntry.keyId) &&
         dbEntry.ciphertext != null &&
         client.accountData[type]?.content['encrypted'][dbEntry.keyId]
@@ -311,10 +311,10 @@ class SSSS {
     if (secretInfo == null) {
       throw Exception('Not found');
     }
-    if (!(secretInfo.content['encrypted'] is Map)) {
+    if (secretInfo.content['encrypted'] is! Map) {
       throw Exception('Content is not encrypted');
     }
-    if (!(secretInfo.content['encrypted'][keyId] is Map)) {
+    if (secretInfo.content['encrypted'][keyId] is! Map) {
       throw Exception('Wrong / unknown key');
     }
     final enc = secretInfo.content['encrypted'][keyId];
@@ -338,7 +338,7 @@ class SSSS {
     Map<String, dynamic>? content;
     if (add && client.accountData[type] != null) {
       content = client.accountData[type]!.content.copy();
-      if (!(content['encrypted'] is Map)) {
+      if (content['encrypted'] is! Map) {
         content['encrypted'] = <String, dynamic>{};
       }
     }
@@ -526,7 +526,7 @@ class SSSS {
         return; // someone replied whom we didn't send the share request to
       }
       final secret = event.content['secret'];
-      if (!(event.content['secret'] is String)) {
+      if (event.content['secret'] is! String) {
         Logs().i('[SSSS] Secret wasn\'t a string');
         return; // the secret wasn't a string....wut?
       }

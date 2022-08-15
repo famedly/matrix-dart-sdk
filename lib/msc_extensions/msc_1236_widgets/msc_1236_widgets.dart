@@ -19,7 +19,7 @@ extension MatrixWidgets on Room {
   Future<String> addWidget(MatrixWidget widget) {
     final user = client.userID;
     final widgetId =
-        widget.name!.toLowerCase().replaceAll(RegExp(r'\W'), '_') + '_' + user!;
+        '${widget.name!.toLowerCase().replaceAll(RegExp(r'\W'), '_')}_${user!}';
 
     final json = widget.toJson();
     json['creatorUserId'] = user;

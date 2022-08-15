@@ -21,8 +21,8 @@ import 'dart:core';
 
 import 'package:webrtc_interface/webrtc_interface.dart';
 
+import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
-import '../../matrix.dart';
 
 /// https://github.com/matrix-org/matrix-doc/pull/2746
 /// version 1
@@ -997,7 +997,7 @@ class CallSession {
   }
 
   Future<void> onRejectReceived(String? reason) async {
-    Logs().v('[VOIP] Reject received for call ID ' + callId);
+    Logs().v('[VOIP] Reject received for call ID $callId');
     // No need to check party_id for reject because if we'd received either
     // an answer or reject, we wouldn't be in state InviteSent
     final shouldTerminate = (state == CallState.kFledgling &&

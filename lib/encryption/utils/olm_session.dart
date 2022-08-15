@@ -18,7 +18,7 @@
 
 import 'package:olm/olm.dart' as olm;
 
-import '../../matrix.dart';
+import 'package:matrix/matrix.dart';
 
 class OlmSession {
   String identityKey;
@@ -38,9 +38,8 @@ class OlmSession {
     required this.lastReceived,
   });
 
-  OlmSession.fromJson(Map<String, dynamic> dbEntry, String key)
-      : key = key,
-        identityKey = dbEntry['identity_key'] ?? '' {
+  OlmSession.fromJson(Map<String, dynamic> dbEntry, this.key)
+      : identityKey = dbEntry['identity_key'] ?? '' {
     session = olm.Session();
     try {
       session!.unpickle(key, dbEntry['pickle']);

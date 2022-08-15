@@ -505,9 +505,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
   @override
   Future<List<OlmSession>> getOlmSessionsForDevices(
-      List<String> identityKey, String userId) async {
+      List<String> identityKeys, String userId) async {
     final sessions = await Future.wait(
-        identityKey.map((identityKey) => getOlmSessions(identityKey, userId)));
+        identityKeys.map((identityKey) => getOlmSessions(identityKey, userId)));
     return <OlmSession>[for (final sublist in sessions) ...sublist];
   }
 
@@ -1380,10 +1380,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   Future<void> addSeenDeviceId(
     String userId,
     String deviceId,
-    String publicKeysHash,
+    String publicKeys,
   ) =>
-      _seenDeviceIdsBox.put(
-          MultiKey(userId, deviceId).toString(), publicKeysHash);
+      _seenDeviceIdsBox.put(MultiKey(userId, deviceId).toString(), publicKeys);
 
   @override
   Future<void> addSeenPublicKey(
@@ -1461,6 +1460,9 @@ class MultiKey {
 
   @override
   bool operator ==(other) => parts.toString() == other.toString();
+
+  @override
+  int get hashCode => Object.hashAll(parts);
 }
 
 extension HiveKeyExtension on String {

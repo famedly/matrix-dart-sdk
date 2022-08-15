@@ -1043,7 +1043,7 @@ void main() {
               '# Title\nsome text and [link](https://example.com)\nokay and this is **important**',
           'format': 'org.matrix.custom.html',
           'formatted_body':
-              '<h1>Title</h1>\n<p>some text and <a href=\"https://example.com\">link</a><br>okay and this is <strong>important</strong></p>\n',
+              '<h1>Title</h1>\n<p>some text and <a href="https://example.com">link</a><br>okay and this is <strong>important</strong></p>\n',
           'msgtype': 'm.text'
         },
         'event_id': '\$143273582443PhrSn:example.org',
@@ -1253,12 +1253,13 @@ void main() {
     test('attachments', () async {
       final FILE_BUFF = Uint8List.fromList([0]);
       final THUMBNAIL_BUFF = Uint8List.fromList([2]);
-      final downloadCallback = (Uri uri) async {
+      Future<Uint8List> downloadCallback(Uri uri) async {
         return {
           '/_matrix/media/v3/download/example.org/file': FILE_BUFF,
           '/_matrix/media/v3/download/example.org/thumb': THUMBNAIL_BUFF,
         }[uri.path]!;
-      };
+      }
+
       await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       final room = Room(id: '!localpart:server.abc', client: client);
@@ -1344,12 +1345,13 @@ void main() {
           Uint8List.fromList([0x55, 0xD7, 0xEB, 0x72, 0x05, 0x13]);
       final THUMB_BUFF_DEC =
           Uint8List.fromList([0x74, 0x68, 0x75, 0x6D, 0x62, 0x0A]);
-      final downloadCallback = (Uri uri) async {
+      Future<Uint8List> downloadCallback(Uri uri) async {
         return {
           '/_matrix/media/v3/download/example.com/file': FILE_BUFF_ENC,
           '/_matrix/media/v3/download/example.com/thumb': THUMB_BUFF_ENC,
         }[uri.path]!;
-      };
+      }
+
       final room = Room(id: '!localpart:server.abc', client: await getClient());
       var event = Event.fromJson({
         'type': EventTypes.Message,
@@ -1440,12 +1442,13 @@ void main() {
     test('downloadAndDecryptAttachment store', () async {
       final FILE_BUFF = Uint8List.fromList([0]);
       var serverHits = 0;
-      final downloadCallback = (Uri uri) async {
+      Future<Uint8List> downloadCallback(Uri uri) async {
         serverHits++;
         return {
           '/_matrix/media/v3/download/example.org/newfile': FILE_BUFF,
         }[uri.path]!;
-      };
+      }
+
       await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       final room = Room(id: '!localpart:server.abc', client: await getClient());
@@ -1606,7 +1609,7 @@ void main() {
           ❤❤❤''',
           'format': 'org.matrix.custom.html',
           'formatted_body':
-              '\<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>😒😒</blockquote></mx-reply>❤❤❤'
+              '<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>😒😒</blockquote></mx-reply>❤❤❤'
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
@@ -1622,7 +1625,7 @@ void main() {
           ❤❤''',
           'format': 'org.matrix.custom.html',
           'formatted_body':
-              '\<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>A 😒</blockquote></mx-reply>❤❤'
+              '<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>A 😒</blockquote></mx-reply>❤❤'
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
@@ -1638,7 +1641,7 @@ void main() {
           ❤A❤''',
           'format': 'org.matrix.custom.html',
           'formatted_body':
-              '\<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>😒😒😒</blockquote></mx-reply>❤A❤'
+              '<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>😒😒😒</blockquote></mx-reply>❤A❤'
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',
@@ -1654,7 +1657,7 @@ void main() {
           ❤A❤''',
           'format': 'org.matrix.custom.html',
           'formatted_body':
-              '\<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>A😒</blockquote></mx-reply>❤A❤'
+              '<mx-reply><blockquote><a href="https://fakeserver.notexisting/\$jEsUZKDJdhlrceRyVU">In reply to</a> <a href="https://fakeserver.notexisting/@alice:example.org">@alice:example.org</a><br>A😒</blockquote></mx-reply>❤A❤'
         },
         'event_id': '\$edit2',
         'sender': '@alice:example.org',

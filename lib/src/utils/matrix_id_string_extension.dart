@@ -81,14 +81,8 @@ extension MatrixIdExtension on String {
       }
       return uri.replace(pathSegments: identifiers);
     } else if (toLowerCase().startsWith(matrixToPrefix)) {
-      return Uri.tryParse('//' +
-          substring(matrixToPrefix.length - 1)
-              .replaceAllMapped(
-                  RegExp(r'(?<=/)[#!@+][^:]*:|(\?.*$)'),
-                  (m) => m[0]!.replaceAllMapped(
-                      RegExp(m.group(1) != null ? '' : '[/?]'),
-                      (m) => Uri.encodeComponent(m.group(0)!)))
-              .replaceAll('#', '%23'));
+      return Uri.tryParse(
+          '//${substring(matrixToPrefix.length - 1).replaceAllMapped(RegExp(r'(?<=/)[#!@+][^:]*:|(\?.*$)'), (m) => m[0]!.replaceAllMapped(RegExp(m.group(1) != null ? '' : '[/?]'), (m) => Uri.encodeComponent(m.group(0)!))).replaceAll('#', '%23')}');
     } else {
       return Uri(
           pathSegments: RegExp(r'/((?:[#!@+][^:]*:)?[^/?]*)(?:\?.*$)?')

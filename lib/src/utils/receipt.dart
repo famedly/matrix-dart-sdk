@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import '../user.dart';
+import 'package:matrix/src/user.dart';
 
 /// Represents a receipt.
 /// This [user] has read an event at the given [time].
@@ -30,4 +30,7 @@ class Receipt {
   bool operator ==(dynamic other) => (other is Receipt &&
       other.user == user &&
       other.time.microsecondsSinceEpoch == time.microsecondsSinceEpoch);
+
+  @override
+  int get hashCode => Object.hash(user, time);
 }

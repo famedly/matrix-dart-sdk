@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
-import 'compute_callback.dart';
+import 'package:matrix/src/utils/compute_callback.dart';
 
 /// provides native implementations for demanding arithmetic operations
 /// in order to prevent the UI from blocking

@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import '../matrix.dart';
+import 'package:matrix/matrix.dart';
 
 class CachedPresence {
   PresenceType presence;
@@ -45,9 +45,7 @@ class CachedPresence {
       : this(event.presence, event.lastActiveAgo, event.statusMsg,
             event.currentlyActive, userid);
 
-  CachedPresence.neverSeen(String userid)
-      : presence = PresenceType.offline,
-        userid = userid;
+  CachedPresence.neverSeen(this.userid) : presence = PresenceType.offline;
 
   Presence toPresence() {
     final content = <String, dynamic>{

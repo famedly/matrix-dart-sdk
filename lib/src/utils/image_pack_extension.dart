@@ -19,14 +19,15 @@
 import 'package:matrix_api_lite/matrix_api_lite.dart';
 import 'package:slugify/slugify.dart';
 
-import '../room.dart';
+import 'package:matrix/src/room.dart';
 
 extension ImagePackRoomExtension on Room {
   /// Get all the active image packs for the specified [usage], mapped by their slug
   Map<String, ImagePackContent> getImagePacks([ImagePackUsage? usage]) {
     final allMxcs = <Uri>{}; // used for easy deduplication
     final packs = <String, ImagePackContent>{};
-    final addImagePack = (BasicEvent? event, {Room? room, String? slug}) {
+
+    void addImagePack(BasicEvent? event, {Room? room, String? slug}) {
       if (event == null) return;
       final imagePack = event.parsedImagePackContent;
       final finalSlug = slugify(slug ?? 'pack');
@@ -53,7 +54,8 @@ extension ImagePackRoomExtension on Room {
             .images[entry.key] = image;
         allMxcs.add(image.url);
       }
-    };
+    }
+
     // first we add the user image pack
     addImagePack(client.accountData['im.ponies.user_emotes'], slug: 'user');
     // next we add all the external image packs

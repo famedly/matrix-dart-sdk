@@ -1,12 +1,21 @@
-include: package:pedantic/analysis_options.yaml
+include: package:lints/recommended.yaml
 
 linter:
   rules:
-    - camel_case_types
-    - avoid_print
-    - constant_identifier_names
-    - prefer_final_locals
-    - prefer_final_in_for_each
+    camel_case_types: true
+    avoid_print: true
+    constant_identifier_names: true
+    prefer_final_locals: true
+    prefer_final_in_for_each: true
+    sort_pub_dependencies: true
+    always_use_package_imports: true
+    always_declare_return_types: true
+    prefer_single_quotes: true
+    sort_child_properties_last: true
+    unawaited_futures: true
+    unsafe_html: true
+    avoid_function_literals_in_foreach_calls: false
+    non_constant_identifier_names: false # seems to wrongly diagnose static const variables
 
 analyzer:
   errors:

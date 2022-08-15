@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
-import 'ffi.dart';
+import 'package:matrix/src/utils/crypto/ffi.dart';
 
 abstract class Hash {
   Hash._(this.ptr);

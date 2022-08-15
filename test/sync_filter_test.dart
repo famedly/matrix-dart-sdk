@@ -139,7 +139,7 @@ void main() {
   group('Sync Filters', () {
     Logs().level = Level.error;
     test('room update', () {
-      final testFn = (SyncUpdate s) => s.hasRoomUpdate;
+      bool testFn(SyncUpdate s) => s.hasRoomUpdate;
       final expected = {
         'empty': false,
         'presence': false,
@@ -153,7 +153,7 @@ void main() {
     });
 
     test('presence update', () {
-      final testFn = (SyncUpdate s) => s.hasPresenceUpdate;
+      bool testFn(SyncUpdate s) => s.hasPresenceUpdate;
       final expected = {
         'empty': false,
         'presence': true,

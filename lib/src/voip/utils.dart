@@ -28,5 +28,5 @@ String roomAliasFromRoomName(String roomName) {
 }
 
 String genCallID() {
-  return '${DateTime.now().millisecondsSinceEpoch}' + randomAlphaNumeric(16);
+  return '${DateTime.now().millisecondsSinceEpoch}${randomAlphaNumeric(16)}';
 }

@@ -27,15 +27,15 @@ import 'package:mime/mime.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:random_string/random_string.dart';
 
+import 'package:matrix/encryption.dart';
+import 'package:matrix/matrix.dart';
+import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
+import 'package:matrix/src/utils/compute_callback.dart';
+import 'package:matrix/src/utils/multilock.dart';
+import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
-import '../encryption.dart';
-import '../matrix.dart';
-import 'models/timeline_chunk.dart';
-import 'utils/compute_callback.dart';
-import 'utils/multilock.dart';
-import 'utils/run_benchmarked.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -940,28 +940,30 @@ class Client extends MatrixApi {
     try {
       // stopping sync loop and subscriptions while keeping DB open
       await dispose(closeDatabase: false);
-    } finally {
-      _database ??= await databaseBuilder!.call(this);
-
-      final success = await database!.importDump(export);
-
-      if (success) {
-        // closing including DB
-        await dispose();
-
-        try {
-          bearerToken = null;
-
-          await init(
-            waitForFirstSync: false,
-            waitUntilLoadCompletedLoaded: false,
-          );
-        } catch (e) {
-          return false;
-        }
-      }
-      return success;
+    } catch (_) {
+      // Client was probably not initialized yet.
     }
+
+    _database ??= await databaseBuilder!.call(this);
+
+    final success = await database!.importDump(export);
+
+    if (success) {
+      // closing including DB
+      await dispose();
+
+      try {
+        bearerToken = null;
+
+        await init(
+          waitForFirstSync: false,
+          waitUntilLoadCompletedLoaded: false,
+        );
+      } catch (e) {
+        return false;
+      }
+    }
+    return success;
   }
 
   /// Uploads a new user avatar for this user. Leave file null to remove the
@@ -1336,13 +1338,13 @@ class Client extends MatrixApi {
 
       String? olmAccount;
       String? accessToken;
-      String? _userID;
+      String? userID;
       final account = await this.database?.getClient(clientName);
       if (account != null) {
         _id = account['client_id'];
         homeserver = Uri.parse(account['homeserver_url']);
         accessToken = this.accessToken = account['token'];
-        _userID = this._userID = account['user_id'];
+        userID = _userID = account['user_id'];
         _deviceID = account['device_id'];
         _deviceName = account['device_name'];
         syncFilterId = account['sync_filter_id'];
@@ -1352,20 +1354,20 @@ class Client extends MatrixApi {
       if (newToken != null) {
         accessToken = this.accessToken = newToken;
         homeserver = newHomeserver;
-        _userID = this._userID = newUserID;
+        userID = _userID = newUserID;
         _deviceID = newDeviceID;
         _deviceName = newDeviceName;
         olmAccount = newOlmAccount;
       } else {
         accessToken = this.accessToken = newToken ?? accessToken;
         homeserver = newHomeserver ?? homeserver;
-        _userID = this._userID = newUserID ?? _userID;
+        userID = _userID = newUserID ?? userID;
         _deviceID = newDeviceID ?? _deviceID;
         _deviceName = newDeviceName ?? _deviceName;
         olmAccount = newOlmAccount ?? olmAccount;
       }
 
-      if (accessToken == null || homeserver == null || _userID == null) {
+      if (accessToken == null || homeserver == null || userID == null) {
         if (legacyDatabaseBuilder != null) {
           await _migrateFromLegacyDatabase();
           if (isLogged()) return;
@@ -1397,7 +1399,7 @@ class Client extends MatrixApi {
           await database.updateClient(
             homeserver.toString(),
             accessToken,
-            _userID,
+            userID,
             _deviceID,
             _deviceName,
             prevBatch,
@@ -1408,7 +1410,7 @@ class Client extends MatrixApi {
             clientName,
             homeserver.toString(),
             accessToken,
-            _userID,
+            userID,
             _deviceID,
             _deviceName,
             prevBatch,
@@ -1434,7 +1436,7 @@ class Client extends MatrixApi {
       _initLock = false;
       onLoginStateChanged.add(LoginState.loggedIn);
       Logs().i(
-        'Successfully connected as ${userID?.localpart} with ${homeserver.toString()}',
+        'Successfully connected as ${userID.localpart} with ${homeserver.toString()}',
       );
 
       final syncFuture = _sync();
@@ -1508,13 +1510,13 @@ class Client extends MatrixApi {
   }
 
   Future<void> _sync() {
-    final _currentSync = this._currentSync ??= _innerSync().whenComplete(() {
-      this._currentSync = null;
+    final currentSync = _currentSync ??= _innerSync().whenComplete(() {
+      _currentSync = null;
       if (_backgroundSync && isLogged() && !_disposed) {
         _sync();
       }
     });
-    return _currentSync;
+    return currentSync;
   }
 
   /// Presence that is set on sync.
@@ -1533,13 +1535,13 @@ class Client extends MatrixApi {
   Future<void> _innerSync() async {
     await _retryDelay;
     _retryDelay = Future.delayed(Duration(seconds: syncErrorTimeoutSec));
-    if (!isLogged() || _disposed || _aborted) return null;
+    if (!isLogged() || _disposed || _aborted) return;
     try {
       if (_initLock) {
         Logs().d('Running sync while init isn\'t done yet, dropping request');
         return;
       }
-      var syncError;
+      dynamic syncError;
       await _checkSyncFilter();
       final syncRequest = sync(
         filter: syncFilterId,

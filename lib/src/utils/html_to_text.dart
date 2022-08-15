@@ -32,7 +32,7 @@ class HtmlToText {
     // miss-matching tags, and this way we actually correctly identify what we want to strip and, well,
     // strip it.
     final renderHtml = html.replaceAll(
-        RegExp('<mx-reply>.*<\/mx-reply>',
+        RegExp('<mx-reply>.*</mx-reply>',
             caseSensitive: false, multiLine: false, dotAll: true),
         '');
 
@@ -84,7 +84,7 @@ class HtmlToText {
 
   static String _parseBlockquoteContent(_ConvertOpts opts, Element node) {
     final msg = _walkChildNodes(opts, node);
-    return msg.split('\n').map((s) => '> $s').join('\n') + '\n';
+    return '${msg.split('\n').map((s) => '> $s').join('\n')}\n';
   }
 
   static String _parseSpanContent(_ConvertOpts opts, Element node) {
@@ -109,10 +109,7 @@ class HtmlToText {
 
     return entries
         .map((s) =>
-            ('    ' * opts.listDepth) +
-            bulletPoint +
-            ' ' +
-            s.replaceAll('\n', '\n' + ('    ' * opts.listDepth) + '  '))
+            '${'    ' * opts.listDepth}$bulletPoint ${s.replaceAll('\n', '\n${'    ' * opts.listDepth}  ')}')
         .join('\n');
   }
 
@@ -128,9 +125,7 @@ class HtmlToText {
 
     return entries
         .mapIndexed((index, s) =>
-            ('    ' * opts.listDepth) +
-            '${start + index}. ' +
-            s.replaceAll('\n', '\n' + ('    ' * opts.listDepth) + '  '))
+            '${'    ' * opts.listDepth}${start + index}. ${s.replaceAll('\n', '\n${'    ' * opts.listDepth}  ')}')
         .join('\n');
   }
 

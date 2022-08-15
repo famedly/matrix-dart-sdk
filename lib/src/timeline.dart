@@ -19,10 +19,10 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:collection/src/iterable_extensions.dart';
+import 'package:collection/collection.dart';
 
-import '../matrix.dart';
-import 'models/timeline_chunk.dart';
+import 'package:matrix/matrix.dart';
+import 'package:matrix/src/models/timeline_chunk.dart';
 
 /// Represents the timeline of a room. The callback [onUpdate] will be triggered
 /// automatically. The initial
@@ -305,7 +305,7 @@ class Timeline {
 
   void _sessionKeyReceived(String sessionId) async {
     var decryptAtLeastOneEvent = false;
-    final decryptFn = () async {
+    Future<void> decryptFn() async {
       final encryption = room.client.encryption;
       if (!room.client.encryptionEnabled || encryption == null) {
         return;
@@ -322,7 +322,8 @@ class Timeline {
           }
         }
       }
-    };
+    }
+
     if (room.client.database != null) {
       await room.client.database?.transaction(decryptFn);
     } else {

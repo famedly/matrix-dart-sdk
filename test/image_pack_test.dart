@@ -45,7 +45,7 @@ void main() {
         content: {'membership': 'join'},
         room: room,
         stateKey: client.userID,
-        senderId: '\@fakeuser:fakeServer.notExisting',
+        senderId: '@fakeuser:fakeServer.notExisting',
         eventId: '\$fakeid2:fakeServer.notExisting',
         originServerTs: DateTime.now(),
       ));
@@ -63,7 +63,7 @@ void main() {
         content: {'membership': 'join'},
         room: room,
         stateKey: client.userID,
-        senderId: '\@fakeuser:fakeServer.notExisting',
+        senderId: '@fakeuser:fakeServer.notExisting',
         eventId: '\$fakeid4:fakeServer.notExisting',
         originServerTs: DateTime.now(),
       ));
@@ -81,7 +81,7 @@ void main() {
         },
         room: room,
         stateKey: '',
-        senderId: '\@fakeuser:fakeServer.notExisting',
+        senderId: '@fakeuser:fakeServer.notExisting',
         eventId: '\$fakeid5:fakeServer.notExisting',
         originServerTs: DateTime.now(),
       ));
@@ -110,7 +110,7 @@ void main() {
         },
         room: room,
         stateKey: '',
-        senderId: '\@fakeuser:fakeServer.notExisting',
+        senderId: '@fakeuser:fakeServer.notExisting',
         eventId: '\$fakeid6:fakeServer.notExisting',
         originServerTs: DateTime.now(),
       ));
@@ -135,7 +135,7 @@ void main() {
         },
         room: room,
         stateKey: '',
-        senderId: '\@fakeuser:fakeServer.notExisting',
+        senderId: '@fakeuser:fakeServer.notExisting',
         eventId: '\$fakeid7:fakeServer.notExisting',
         originServerTs: DateTime.now(),
       ));
@@ -158,7 +158,7 @@ void main() {
         },
         room: room,
         stateKey: 'fox',
-        senderId: '\@fakeuser:fakeServer.notExisting',
+        senderId: '@fakeuser:fakeServer.notExisting',
         eventId: '\$fakeid8:fakeServer.notExisting',
         originServerTs: DateTime.now(),
       ));
@@ -201,7 +201,7 @@ void main() {
         },
         room: room2,
         stateKey: '',
-        senderId: '\@fakeuser:fakeServer.notExisting',
+        senderId: '@fakeuser:fakeServer.notExisting',
         eventId: '\$fakeid9:fakeServer.notExisting',
         originServerTs: DateTime.now(),
       ));
@@ -234,7 +234,7 @@ void main() {
         },
         room: room2,
         stateKey: 'fox',
-        senderId: '\@fakeuser:fakeServer.notExisting',
+        senderId: '@fakeuser:fakeServer.notExisting',
         eventId: '\$fakeid10:fakeServer.notExisting',
         originServerTs: DateTime.now(),
       ));

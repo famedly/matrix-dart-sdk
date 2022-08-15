@@ -23,11 +23,11 @@ import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart';
 import 'package:olm/olm.dart' as olm;
 
+import 'package:matrix/encryption/encryption.dart';
+import 'package:matrix/encryption/utils/json_signature_check_extension.dart';
+import 'package:matrix/encryption/utils/olm_session.dart';
 import 'package:matrix/matrix.dart';
-import '../encryption/utils/json_signature_check_extension.dart';
-import '../src/utils/run_in_root.dart';
-import 'encryption.dart';
-import 'utils/olm_session.dart';
+import 'package:matrix/src/utils/run_in_root.dart';
 
 class OlmManager {
   final Encryption encryption;
@@ -119,8 +119,8 @@ class OlmManager {
     bool updateDatabase = true,
     bool? unusedFallbackKey = false,
   }) async {
-    final _olmAccount = this._olmAccount;
-    if (_olmAccount == null) {
+    final olmAccount = _olmAccount;
+    if (olmAccount == null) {
       return true;
     }
 
@@ -136,22 +136,22 @@ class OlmManager {
         // check if we have OTKs that still need uploading. If we do, we don't try to generate new ones,
         // instead we try to upload the old ones first
         final oldOTKsNeedingUpload = json
-            .decode(_olmAccount.one_time_keys())['curve25519']
+            .decode(olmAccount.one_time_keys())['curve25519']
             .entries
             .length as int;
         // generate one-time keys
         // we generate 2/3rds of max, so that other keys people may still have can
         // still be used
         final oneTimeKeysCount =
-            (_olmAccount.max_number_of_one_time_keys() * 2 / 3).floor() -
+            (olmAccount.max_number_of_one_time_keys() * 2 / 3).floor() -
                 oldKeyCount -
                 oldOTKsNeedingUpload;
         if (oneTimeKeysCount > 0) {
-          _olmAccount.generate_one_time_keys(oneTimeKeysCount);
+          olmAccount.generate_one_time_keys(oneTimeKeysCount);
         }
         uploadedOneTimeKeysCount = oneTimeKeysCount + oldOTKsNeedingUpload;
         final Map<String, dynamic> oneTimeKeys =
-            json.decode(_olmAccount.one_time_keys());
+            json.decode(olmAccount.one_time_keys());
 
         // now sign all the one-time keys
         for (final entry in oneTimeKeys['curve25519'].entries) {
@@ -166,8 +166,8 @@ class OlmManager {
       final signedFallbackKeys = <String, dynamic>{};
       if (encryption.isMinOlmVersion(3, 2, 0) && unusedFallbackKey == false) {
         // we don't have an unused fallback key uploaded....so let's change that!
-        _olmAccount.generate_fallback_key();
-        final fallbackKey = json.decode(_olmAccount.fallback_key());
+        olmAccount.generate_fallback_key();
+        final fallbackKey = json.decode(olmAccount.fallback_key());
         // now sign all the fallback keys
         for (final entry in fallbackKey['curve25519'].entries) {
           final key = entry.key;
@@ -194,7 +194,7 @@ class OlmManager {
       };
       if (uploadDeviceKeys) {
         final Map<String, dynamic> keys =
-            json.decode(_olmAccount.identity_keys());
+            json.decode(olmAccount.identity_keys());
         for (final entry in keys.entries) {
           final algorithm = entry.key;
           final value = entry.value;
@@ -228,7 +228,7 @@ class OlmManager {
       }
 
       // mark the OTKs as published and save that to datbase
-      _olmAccount.mark_keys_as_published();
+      olmAccount.mark_keys_as_published();
       if (updateDatabase) {
         await client.database?.updateClientKeys(pickledOlmAccount!);
       }
@@ -324,7 +324,8 @@ class OlmManager {
     final device = client.userDeviceKeys[event.sender]?.deviceKeys.values
         .firstWhereOrNull((d) => d.curve25519Key == senderKey);
     final existingSessions = olmSessions[senderKey];
-    final updateSessionUsage = ([OlmSession? session]) => runInRoot(() async {
+    Future<void> updateSessionUsage([OlmSession? session]) =>
+        runInRoot(() async {
           if (session != null) {
             session.lastReceived = DateTime.now();
             await storeOlmSession(session);
@@ -480,10 +481,11 @@ class OlmManager {
       return event;
     }
     final senderKey = event.parsedRoomEncryptedContent.senderKey;
-    final loadFromDb = () async {
+    Future<bool> loadFromDb() async {
       final sessions = await getOlmSessions(senderKey);
       return sessions.isNotEmpty;
-    };
+    }
+
     if (!_olmSessions.containsKey(senderKey)) {
       await loadFromDb();
     }

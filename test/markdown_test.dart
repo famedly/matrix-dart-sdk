@@ -40,7 +40,7 @@ void main() {
       '@[Fast Fox]#123': '@fastfox:example.org',
       '@[">]': '@blah:example.org',
     };
-    final getMention = (mention) => mentionMap[mention];
+    String? getMention(mention) => mentionMap[mention];
     test('simple markdown', () {
       expect(markdown('hey *there* how are **you** doing?'),
           'hey <em>there</em> how are <strong>you</strong> doing?');
