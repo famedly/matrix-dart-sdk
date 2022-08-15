@@ -10,7 +10,7 @@ workflow:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 variables:
-  FLUTTER_IMAGE_TAG: '3.0.5'
+  FLUTTER_IMAGE_TAG: "3.0.5"
 
 coverage:
   tags:
@@ -70,7 +70,7 @@ e2ee_test:
   image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable:${FLUTTER_IMAGE_TAG}
   dependencies: []
   script:
-    - printf "abstract class TestUser {\n  static const String homeserver = '$TEST_HOMESERVER';\n  static const String username = '$TEST_USER1';\n  static const String username2 = '$TEST_USER2';\n  static const String password = '$TEST_USER_PASSWORD';\n}" > ./test_driver/test_config.dart
+    - printf "abstract class TestUser {\n  static const String homeserver = '$TEST_HOMESERVER';\n  static const String username = '$TEST_USER1';\n  static const String username2 = '$TEST_USER2';\n  static const String displayname = '$TEST_USER1_NAME';\n  static const String displayname2 = '$TEST_USER2_NAME';\n  static const String password = '$TEST_USER_PASSWORD';\n}" > ./test_driver/test_config.dart
     - ./scripts/prepare.sh
     - ./scripts/test_driver.sh
   timeout: 16m
@@ -84,13 +84,10 @@ dry-run:
     - dart pub get
     - dart pub publish --dry-run
 
-
 pub-dev:
   stage: deploy
   image: dart
-  dependencies: [
-    dry-run
-  ]
+  dependencies: [dry-run]
   script:
     - rm -rf ./docs
     - |
@@ -101,7 +98,7 @@ pub-dev:
 
       mkdir -p ~/.config/dart/
       cp "${PUB_DEV_CREDENTIALS}" ~/.config/dart/pub-credentials.json
-      
+
     - dart pub get
     - dart pub publish --force
   rules:

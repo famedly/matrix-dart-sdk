@@ -44,16 +44,20 @@ void test() async {
     Logs().i('++++ Login Alice at ++++');
     testClientA = Client('TestClientA', databaseBuilder: getDatabase);
     await testClientA.checkHomeserver(Uri.parse(TestUser.homeserver));
+    // Workaround: Logging in with displayname instead of mxid because of a bug
+    // in the UIA proxy: https://gitlab.com/famedly/company/backend/services/uia-proxy/-/issues/27
+    // When this gets fixed, we no longer need the displayname login at all.
     await testClientA.login(LoginType.mLoginPassword,
-        identifier: AuthenticationUserIdentifier(user: TestUser.username),
+        identifier: AuthenticationUserIdentifier(user: TestUser.displayname),
         password: TestUser.password);
     assert(testClientA.encryptionEnabled);
 
     Logs().i('++++ Login Bob ++++');
     testClientB = Client('TestClientB', databaseBuilder: getDatabase);
     await testClientB.checkHomeserver(Uri.parse(TestUser.homeserver));
+    // Workaround: Logging in with displayname instead of mxid
     await testClientB.login(LoginType.mLoginPassword,
-        identifier: AuthenticationUserIdentifier(user: TestUser.username2),
+        identifier: AuthenticationUserIdentifier(user: TestUser.displayname2),
         password: TestUser.password);
     assert(testClientB.encryptionEnabled);
 
@@ -247,8 +251,9 @@ void test() async {
     Logs().i('++++ Login Bob in another client ++++');
     final testClientC = Client('TestClientC', databaseBuilder: getDatabase);
     await testClientC.checkHomeserver(Uri.parse(TestUser.homeserver));
+    // Workaround: Logging in with displayname instead of mxid
     await testClientC.login(LoginType.mLoginPassword,
-        identifier: AuthenticationUserIdentifier(user: TestUser.username2),
+        identifier: AuthenticationUserIdentifier(user: TestUser.displayname2),
         password: TestUser.password);
     await Future.delayed(Duration(seconds: 3));
 
