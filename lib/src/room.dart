@@ -1235,17 +1235,21 @@ class Room {
 
   /// Removes this room from all direct chat tags.
   Future<void> removeFromDirectChat() async {
-    final directChats = client.directChats;
-    if (directChats[directChatMatrixID] is List &&
-        directChats[directChatMatrixID].contains(id)) {
-      directChats[directChatMatrixID].remove(id);
-    } else {
-      return;
-    } // Nothing to do here
+    final directChats = client.directChats.copy();
+    for (final k in directChats.keys) {
+      if (directChats[k] is List && directChats[k].contains(id)) {
+        directChats[k].remove(id);
+      }
+    }
 
-    await client.setAccountDataPerRoom(
+    directChats.removeWhere((_, v) => v is List && v.isEmpty);
+
+    if (directChats == client.directChats) {
+      return;
+    }
+
+    await client.setAccountData(
       client.userID!,
-      id,
       'm.direct',
       directChats,
     );
