@@ -23,11 +23,11 @@ import 'package:collection/collection.dart';
 import 'package:html/parser.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:matrix/matrix.dart';
+import 'package:matrix/src/utils/event_localizations.dart';
 import 'package:matrix/src/utils/file_send_request_credentials.dart';
-import '../matrix.dart';
-import 'utils/event_localizations.dart';
-import 'utils/html_to_text.dart';
-import 'utils/markdown.dart';
+import 'package:matrix/src/utils/html_to_text.dart';
+import 'package:matrix/src/utils/markdown.dart';
 
 abstract class RelationshipTypes {
   static const String reply = 'm.in_reply_to';
@@ -296,7 +296,7 @@ class Event extends MatrixEvent {
     if (redacted) return 'Redacted';
     if (text != '') return text;
     if (formattedText != '') return formattedText;
-    return '$type';
+    return type;
   }
 
   /// Use this to get a plain-text representation of the event, stripping things
@@ -870,7 +870,7 @@ class Event extends MatrixEvent {
   bool get onlyEmotes {
     if (isRichMessage) {
       final formattedTextStripped = formattedText.replaceAll(
-          RegExp('<mx-reply>.*<\/mx-reply>',
+          RegExp('<mx-reply>.*</mx-reply>',
               caseSensitive: false, multiLine: false, dotAll: true),
           '');
       return _onlyEmojiEmoteRegex.hasMatch(formattedTextStripped);
@@ -886,7 +886,7 @@ class Event extends MatrixEvent {
   int get numberEmotes {
     if (isRichMessage) {
       final formattedTextStripped = formattedText.replaceAll(
-          RegExp('<mx-reply>.*<\/mx-reply>',
+          RegExp('<mx-reply>.*</mx-reply>',
               caseSensitive: false, multiLine: false, dotAll: true),
           '');
       return _countEmojiEmoteRegex.allMatches(formattedTextStripped).length;

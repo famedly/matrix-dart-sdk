@@ -1,4 +1,4 @@
-import '../../matrix.dart';
+import 'package:matrix/matrix.dart';
 
 class TimelineChunk {
   String prevBatch; // pos of the first event of the database timeline chunk

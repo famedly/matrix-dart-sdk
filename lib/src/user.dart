@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import '../matrix.dart';
+import 'package:matrix/matrix.dart';
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
 class User extends Event {
@@ -80,7 +80,7 @@ class User extends Event {
   /// ban
   Membership get membership => Membership.values.firstWhere((e) {
         if (content['membership'] != null) {
-          return e.toString() == 'Membership.' + content['membership'];
+          return e.toString() == 'Membership.${content['membership']}';
         }
         return false;
       }, orElse: () => Membership.join);
@@ -197,6 +197,9 @@ class User extends Event {
       other.room == room &&
       other.membership == membership);
 
+  @override
+  int get hashCode => Object.hash(id, room, membership);
+
   /// Get the mention text to use in a plain text body to mention this specific user
   /// in this specific room
   String get mention {
@@ -210,11 +213,8 @@ class User extends Event {
       return id;
     }
 
-    final identifier = '@' +
-        // if we have non-word characters we need to surround with []
-        (RegExp(r'^\w+$').hasMatch(displayName)
-            ? displayName
-            : '[$displayName]');
+    final identifier =
+        '@${RegExp(r'^\w+$').hasMatch(displayName) ? displayName : '[$displayName]'}';
 
     // get all the users with the same display name
     final allUsersWithSameDisplayname = room.getParticipants();
@@ -243,11 +243,8 @@ class User extends Event {
         {'[', ']', ':'}.any(displayName.contains)) {
       return {};
     }
-    final identifier = '@' +
-        // if we have non-word characters we need to surround with []
-        (RegExp(r'^\w+$').hasMatch(displayName)
-            ? displayName
-            : '[$displayName]');
+    final identifier =
+        '@${RegExp(r'^\w+$').hasMatch(displayName) ? displayName : '[$displayName]'}';
 
     final hash = _hash(id);
     return {identifier, '$identifier#$hash'};

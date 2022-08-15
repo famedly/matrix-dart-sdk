@@ -25,8 +25,8 @@ import 'package:blurhash_dart/blurhash_dart.dart';
 import 'package:image/image.dart';
 import 'package:mime/mime.dart';
 
-import '../../matrix.dart';
-import 'compute_callback.dart';
+import 'package:matrix/matrix.dart';
+import 'package:matrix/src/utils/compute_callback.dart';
 
 class MatrixFile {
   final Uint8List bytes;

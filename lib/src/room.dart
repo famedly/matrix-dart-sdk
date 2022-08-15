@@ -23,14 +23,14 @@ import 'dart:typed_data';
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
 
+import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/utils/file_send_request_credentials.dart';
+import 'package:matrix/src/utils/markdown.dart';
+import 'package:matrix/src/utils/marked_unread.dart';
 import 'package:matrix/src/utils/space_child.dart';
-import '../matrix.dart';
-import 'utils/markdown.dart';
-import 'utils/marked_unread.dart';
 
 enum PushRuleState { notify, mentionsOnly, dontNotify }
 
@@ -907,7 +907,7 @@ class Room {
         }
 
         inPrefix = false;
-        temp += temp.isEmpty ? l : ('\n' + l);
+        temp += temp.isEmpty ? l : ('\n$l');
       }
 
       return temp;
@@ -936,7 +936,7 @@ class Room {
 
     if (inReplyTo != null) {
       var replyText =
-          '<${inReplyTo.senderId}> ' + _stripBodyFallback(inReplyTo.body);
+          '<${inReplyTo.senderId}> ${_stripBodyFallback(inReplyTo.body)}';
       replyText = replyText.split('\n').map((line) => '> $line').join('\n');
       content['format'] = 'org.matrix.custom.html';
       // be sure that we strip any previous reply fallbacks
@@ -971,10 +971,10 @@ class Room {
         'rel_type': RelationshipTypes.edit,
       };
       if (content['body'] is String) {
-        content['body'] = '* ' + content['body'];
+        content['body'] = '* ${content['body']}';
       }
       if (content['formatted_body'] is String) {
-        content['formatted_body'] = '* ' + content['formatted_body'];
+        content['formatted_body'] = '* ${content['formatted_body']}';
       }
     }
     final sentDate = DateTime.now();
@@ -1113,7 +1113,7 @@ class Room {
   /// power level event, there might something broken and this returns null.
   Future<String> setPower(String userID, int power) async {
     var powerMap = getState(EventTypes.RoomPowerLevels)?.content;
-    if (!(powerMap is Map<String, dynamic>)) {
+    if (powerMap is! Map<String, dynamic>) {
       powerMap = <String, dynamic>{};
     }
     (powerMap['users'] ??= {})[userID] = power;
@@ -1155,7 +1155,7 @@ class Room {
     if (onHistoryReceived != null) onHistoryReceived();
     this.prev_batch = resp.end;
 
-    final loadFn = () async {
+    Future<void> loadFn() async {
       if (!((resp.chunk.isNotEmpty) && resp.end != null)) return;
 
       await client.handleSync(
@@ -1196,7 +1196,7 @@ class Room {
                     : null),
           ),
           direction: Direction.b);
-    };
+    }
 
     if (client.database != null) {
       await client.database?.transaction(() async {
@@ -1331,7 +1331,7 @@ class Room {
       String? eventContextId}) async {
     await postLoad();
 
-    var events;
+    List<Event> events;
 
     if (!isArchived) {
       events = await client.database?.getEventList(
@@ -1762,7 +1762,7 @@ class Room {
   PushRuleState get pushRuleState {
     final globalPushRules =
         client.accountData['m.push_rules']?.content['global'];
-    if (!(globalPushRules is Map)) {
+    if (globalPushRules is! Map) {
       return PushRuleState.notify;
     }
 
@@ -1794,7 +1794,7 @@ class Room {
   /// Sends a request to the homeserver to set the [PushRuleState] for this room.
   /// Returns ErrorResponse if something goes wrong.
   Future<void> setPushRuleState(PushRuleState newState) async {
-    if (newState == pushRuleState) return null;
+    if (newState == pushRuleState) return;
     dynamic resp;
     switch (newState) {
       // All push notifications should be sent to the user
@@ -2076,6 +2076,9 @@ class Room {
 
   @override
   bool operator ==(dynamic other) => (other is Room && other.id == id);
+
+  @override
+  int get hashCode => Object.hashAll([id]);
 }
 
 enum EncryptionHealthState {

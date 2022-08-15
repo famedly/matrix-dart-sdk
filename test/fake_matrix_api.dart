@@ -92,7 +92,7 @@ class FakeMatrixApi extends BaseClient {
     var action = request.url.path;
     if (request.url.path.contains('/_matrix')) {
       action =
-          request.url.path.split('/_matrix').last + '?' + request.url.query;
+          '${request.url.path.split('/_matrix').last}?${request.url.query}';
     }
 
     // ignore: avoid_print

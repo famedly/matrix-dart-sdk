@@ -11,7 +11,7 @@ import 'package:js/js_util.dart';
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart' hide Event;
-import 'native_implementations_web_worker.dart';
+import 'package:matrix/src/utils/web_worker/native_implementations_web_worker.dart';
 
 ///
 ///

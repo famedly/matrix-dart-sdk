@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:matrix_api_lite/src/utils/try_get_map_extension.dart';
+import 'package:matrix_api_lite/matrix_api_lite.dart';
 
 mixin EventType {
   static const String markedUnread = 'com.famedly.marked_unread';

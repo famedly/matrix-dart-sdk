@@ -18,8 +18,8 @@
 
 import 'package:collection/collection.dart';
 
-import '../../encryption.dart';
-import '../../matrix.dart';
+import 'package:matrix/encryption.dart';
+import 'package:matrix/matrix.dart';
 
 abstract class EventLocalizations {
   // As we need to create the localized body off of a different set of parameters, we
@@ -54,16 +54,16 @@ abstract class EventLocalizations {
         String errorText;
         switch (event.body) {
           case DecryptException.channelCorrupted:
-            errorText = i18n.channelCorruptedDecryptError + '.';
+            errorText = '${i18n.channelCorruptedDecryptError}.';
             break;
           case DecryptException.notEnabled:
-            errorText = i18n.encryptionNotEnabled + '.';
+            errorText = '${i18n.encryptionNotEnabled}.';
             break;
           case DecryptException.unknownAlgorithm:
-            errorText = i18n.unknownEncryptionAlgorithm + '.';
+            errorText = '${i18n.unknownEncryptionAlgorithm}.';
             break;
           case DecryptException.unknownSession:
-            errorText = i18n.noPermission + '.';
+            errorText = '${i18n.noPermission}.';
             break;
           default:
             errorText = body;
@@ -240,7 +240,7 @@ abstract class EventLocalizations {
       var localizedBody = i18n.activatedEndToEndEncryption(
           event.senderFromMemoryOrFallback.calcDisplayname());
       if (event.room.client.encryptionEnabled == false) {
-        localizedBody += '. ' + i18n.needPantalaimonWarning;
+        localizedBody += '. ${i18n.needPantalaimonWarning}';
       }
       return localizedBody;
     },

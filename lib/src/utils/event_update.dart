@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import '../../matrix.dart';
+import 'package:matrix/matrix.dart';
 
 enum EventUpdateType {
   timeline,

@@ -20,10 +20,10 @@ import 'dart:typed_data';
 
 import 'package:olm/olm.dart' as olm;
 
+import 'package:matrix/encryption/encryption.dart';
+import 'package:matrix/encryption/ssss.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
-import '../matrix.dart';
-import 'encryption.dart';
-import 'ssss.dart';
+import 'package:matrix/matrix.dart';
 
 class CrossSigning {
   final Encryption encryption;
@@ -131,14 +131,14 @@ class CrossSigning {
       throw Exception('[sign] keys are not in cache but sign was called');
     }
 
-    final addSignature =
-        (SignableKey key, SignableKey signedWith, String signature) {
+    void addSignature(
+        SignableKey key, SignableKey signedWith, String signature) {
       final signedKey = key.cloneForSigning();
       ((signedKey.signatures ??=
               <String, Map<String, String>>{})[signedWith.userId] ??=
           <String, String>{})['ed25519:${signedWith.identifier}'] = signature;
       signedKeys.add(signedKey);
-    };
+    }
 
     for (final key in keys) {
       if (key.userId == client.userID) {

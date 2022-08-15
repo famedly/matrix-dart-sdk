@@ -4,6 +4,7 @@
 *.pyc
 *.swp
 *.swo
+*.swn
 *.dylib
 .DS_Store
 .atom/

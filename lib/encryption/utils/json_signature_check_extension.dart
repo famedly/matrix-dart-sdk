@@ -19,14 +19,14 @@
 import 'package:canonical_json/canonical_json.dart';
 import 'package:olm/olm.dart' as olm;
 
-import '../../matrix.dart';
+import 'package:matrix/matrix.dart';
 
 extension JsonSignatureCheckExtension on Map<String, dynamic> {
   /// Checks the signature of a signed json object.
   bool checkJsonSignature(String key, String userId, String deviceId) {
     final signatures = this['signatures'];
     if (signatures == null ||
-        !(signatures is Map<String, dynamic>) ||
+        signatures is! Map<String, dynamic> ||
         !signatures.containsKey(userId)) return false;
     remove('unsigned');
     remove('signatures');

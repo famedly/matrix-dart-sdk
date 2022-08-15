@@ -31,15 +31,15 @@ void main() {
     late Room room;
     var olmEnabled = true;
 
-    final getLastMessagePayload =
-        ([String type = 'm.room.message', String? stateKey]) {
+    Map<String, dynamic> getLastMessagePayload(
+        [String type = 'm.room.message', String? stateKey]) {
       final state = stateKey != null;
       return json.decode(FakeMatrixApi.calledEndpoints.entries
           .firstWhere((e) => e.key.startsWith(
-              '/client/v3/rooms/${Uri.encodeComponent(room.id)}/${state ? 'state' : 'send'}/${Uri.encodeComponent(type)}${state && stateKey?.isNotEmpty == true ? '/' + Uri.encodeComponent(stateKey!) : ''}'))
+              '/client/v3/rooms/${Uri.encodeComponent(room.id)}/${state ? 'state' : 'send'}/${Uri.encodeComponent(type)}${state && stateKey?.isNotEmpty == true ? '/${Uri.encodeComponent(stateKey!)}' : ''}'))
           .value
           .first);
-    };
+    }
 
     test('setupClient', () async {
       try {
@@ -57,7 +57,7 @@ void main() {
         stateKey: '',
         eventId: '\$fakeeventid',
         originServerTs: DateTime.now(),
-        senderId: '\@fakeuser:fakeServer.notExisting',
+        senderId: '@fakeuser:fakeServer.notExisting',
       ));
       room.setState(Event(
         type: 'm.room.member',
@@ -66,7 +66,7 @@ void main() {
         stateKey: client.userID,
         eventId: '\$fakeeventid',
         originServerTs: DateTime.now(),
-        senderId: '\@fakeuser:fakeServer.notExisting',
+        senderId: '@fakeuser:fakeServer.notExisting',
       ));
     });
 

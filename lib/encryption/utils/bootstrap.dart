@@ -22,11 +22,11 @@ import 'dart:typed_data';
 import 'package:canonical_json/canonical_json.dart';
 import 'package:olm/olm.dart' as olm;
 
-import '../../matrix.dart';
-import '../encryption.dart';
-import '../key_manager.dart';
-import '../ssss.dart';
-import 'base64_unpadded.dart';
+import 'package:matrix/encryption/encryption.dart';
+import 'package:matrix/encryption/key_manager.dart';
+import 'package:matrix/encryption/ssss.dart';
+import 'package:matrix/encryption/utils/base64_unpadded.dart';
+import 'package:matrix/matrix.dart';
 
 enum BootstrapState {
   /// Is loading.
@@ -104,7 +104,7 @@ class Bootstrap {
     for (final entry in client.accountData.entries) {
       final type = entry.key;
       final event = entry.value;
-      if (!(event.content['encrypted'] is Map)) {
+      if (event.content['encrypted'] is! Map) {
         continue;
       }
       final validKeys = <String>{};
@@ -112,13 +112,13 @@ class Bootstrap {
       for (final keyEntry in event.content['encrypted'].entries) {
         final key = keyEntry.key;
         final value = keyEntry.value;
-        if (!(value is Map)) {
+        if (value is! Map) {
           // we don't add the key to invalidKeys as this was not a proper secret anyways!
           continue;
         }
-        if (!(value['iv'] is String) ||
-            !(value['ciphertext'] is String) ||
-            !(value['mac'] is String)) {
+        if (value['iv'] is! String ||
+            value['ciphertext'] is! String ||
+            value['mac'] is! String) {
           invalidKeys.add(key);
           continue;
         }
@@ -163,11 +163,12 @@ class Bootstrap {
         (k, v) => v.isEmpty); // we don't care about the failed secrets here
     final keys = <String>{};
     final defaultKeyId = encryption.ssss.defaultKeyId;
-    final removeKey = (String key) {
+    int removeKey(String key) {
       final sizeBefore = secrets.length;
       secrets.removeWhere((k, v) => v.contains(key));
       return sizeBefore - secrets.length;
-    };
+    }
+
     // first we want to try the default key id
     if (defaultKeyId != null) {
       if (removeKey(defaultKeyId) > 0) {
@@ -264,14 +265,15 @@ class Bootstrap {
       if (oldSsssKeys != null) {
         // alright, we have to re-encrypt old secrets with the new key
         final secrets = analyzeSecrets();
-        final removeKey = (String key) {
+        Set<String> removeKey(String key) {
           final s = secrets.entries
               .where((e) => e.value.contains(key))
               .map((e) => e.key)
               .toSet();
           secrets.removeWhere((k, v) => v.contains(key));
           return s;
-        };
+        }
+
         secretMap = <String, String>{};
         for (final entry in oldSsssKeys!.entries) {
           final key = entry.value;
@@ -400,7 +402,7 @@ class Bootstrap {
           master.free();
         }
       }
-      final _sign = (Map<String, dynamic> object) {
+      String? sign(Map<String, dynamic> object) {
         final keyObj = olm.PkSigning();
         try {
           keyObj.init_with_seed(masterSigningKey);
@@ -409,7 +411,8 @@ class Bootstrap {
         } finally {
           keyObj.free();
         }
-      };
+      }
+
       if (setupSelfSigningKey) {
         final selfSigning = olm.PkSigning();
         try {
@@ -422,7 +425,7 @@ class Bootstrap {
               'ed25519:$selfSigningPub': selfSigningPub,
             },
           };
-          final signature = _sign(json);
+          final signature = sign(json);
           json['signatures'] = <String, dynamic>{
             userID: <String, dynamic>{
               'ed25519:$masterPub': signature,
@@ -447,7 +450,7 @@ class Bootstrap {
               'ed25519:$userSigningPub': userSigningPub,
             },
           };
-          final signature = _sign(json);
+          final signature = sign(json);
           json['signatures'] = <String, dynamic>{
             userID: <String, dynamic>{
               'ed25519:$masterPub': signature,

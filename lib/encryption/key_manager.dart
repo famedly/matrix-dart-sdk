@@ -22,13 +22,13 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:olm/olm.dart' as olm;
 
+import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
+import 'package:matrix/encryption/utils/outbound_group_session.dart';
+import 'package:matrix/encryption/utils/session_key.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
-import '../matrix.dart';
-import '../src/utils/run_in_root.dart';
-import './encryption.dart';
-import './utils/outbound_group_session.dart';
-import './utils/session_key.dart';
+import 'package:matrix/matrix.dart';
+import 'package:matrix/src/utils/run_in_root.dart';
 
 const megolmKey = EventTypes.MegolmBackup;
 
@@ -445,13 +445,17 @@ class KeyManager {
     if (sess != null) {
       return sess;
     }
-    _pendingNewOutboundGroupSessions[roomId] =
+    final newSess = _pendingNewOutboundGroupSessions[roomId] =
         _createOutboundGroupSession(roomId);
+
     try {
-      await _pendingNewOutboundGroupSessions[roomId];
+      await newSess;
     } finally {
-      return _pendingNewOutboundGroupSessions.remove(roomId)!;
+      _pendingNewOutboundGroupSessions
+          .removeWhere((_, value) => value == newSess);
     }
+
+    return newSess;
   }
 
   /// Prepares an outbound group session for a given room ID. That is, load it from
@@ -794,7 +798,7 @@ class KeyManager {
   /// Handle an incoming to_device event that is related to key sharing
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
     if (event.type == EventTypes.RoomKeyRequest) {
-      if (!(event.content['request_id'] is String)) {
+      if (event.content['request_id'] is! String) {
         return; // invalid event
       }
       if (event.content['action'] == 'request') {
@@ -899,7 +903,7 @@ class KeyManager {
         return; // someone we didn't send our request to replied....better ignore this
       }
       // we add the sender key to the forwarded key chain
-      if (!(event.content['forwarding_curve25519_key_chain'] is List)) {
+      if (event.content['forwarding_curve25519_key_chain'] is! List) {
         event.content['forwarding_curve25519_key_chain'] = <String>[];
       }
       event.content['forwarding_curve25519_key_chain']

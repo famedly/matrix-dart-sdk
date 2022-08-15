@@ -18,7 +18,7 @@
 
 import 'dart:core';
 
-import '../client.dart';
+import 'package:matrix/src/client.dart';
 
 extension MxcUriExtension on Uri {
   /// Returns a download Link to this content.

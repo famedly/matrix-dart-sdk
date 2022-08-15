@@ -128,7 +128,7 @@ void main() {
       var decoded = SSSS.decodeRecoveryKey(encoded);
       expect(key, decoded);
 
-      decoded = SSSS.decodeRecoveryKey(encoded + ' \n\t');
+      decoded = SSSS.decodeRecoveryKey('$encoded \n\t');
       expect(key, decoded);
 
       final handle = client.encryption!.ssss.open();

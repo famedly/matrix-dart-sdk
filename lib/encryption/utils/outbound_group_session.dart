@@ -20,7 +20,7 @@ import 'dart:convert';
 
 import 'package:olm/olm.dart' as olm;
 
-import '../../matrix.dart';
+import 'package:matrix/matrix.dart';
 
 class OutboundGroupSession {
   /// The devices is a map from user id to device id to if the device is blocked.
@@ -41,8 +41,7 @@ class OutboundGroupSession {
       required this.outboundGroupSession,
       required this.key});
 
-  OutboundGroupSession.fromJson(Map<String, dynamic> dbEntry, String key)
-      : key = key {
+  OutboundGroupSession.fromJson(Map<String, dynamic> dbEntry, this.key) {
     try {
       for (final entry in json.decode(dbEntry['device_ids']).entries) {
         devices[entry.key] = Map<String, bool>.from(entry.value);
@@ -50,8 +49,7 @@ class OutboundGroupSession {
     } catch (e) {
       // devices is bad (old data), so just not use this session
       Logs().i(
-          '[OutboundGroupSession] Session in database is old, not using it. ' +
-              e.toString());
+          '[OutboundGroupSession] Session in database is old, not using it. $e');
       return;
     }
     outboundGroupSession = olm.OutboundGroupSession();
