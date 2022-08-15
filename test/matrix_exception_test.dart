@@ -65,10 +65,5 @@ void main() {
       );
       expect(matrixException.error, MatrixError.M_UNKNOWN);
     });
-
-    // see https://github.com/dart-lang/test/issues/1698
-    test('KeyVerification dummy test', () async {
-      await Future.delayed(Duration(milliseconds: 400));
-    });
   });
 }

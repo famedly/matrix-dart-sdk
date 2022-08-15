@@ -50,17 +50,17 @@ coverage_without_olm:
   script:
     - dart pub get
     - ./scripts/test.sh
-  coverage: /^\s*lines\.*:\s*\d+.\d+\%/
+  #coverage: /^\s*lines\.*:\s*\d+.\d+\%/ <- broken see https://github.com/dart-lang/test/issues/1698
   artifacts:
     when: always
     paths:
-      - coverage/
-      - coverage.xml
+      #- coverage/
+      #- coverage.xml
       - TEST-report.xml
     reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage.xml
+      #coverage_report:
+      #  coverage_format: cobertura
+      #  path: coverage.xml
       junit: TEST-report.xml
 
 e2ee_test:

@@ -117,10 +117,5 @@ void main() {
       if (!olmEnabled) return;
       await client.dispose(closeDatabase: true);
     });
-
-    // see https://github.com/dart-lang/test/issues/1698
-    test('KeyVerification dummy test', () async {
-      await Future.delayed(Duration(seconds: 1));
-    });
   });
 }
