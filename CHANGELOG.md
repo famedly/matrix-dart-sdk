@@ -1,3 +1,7 @@
+## [0.12.0] - 16th Aug 2022
+- feat: Add markasdm and markasgroup commands (Christian Pauly)
+- refactor: Add reference to itself in bootstrap onUpdate callback (Christian Pauly)
+
 ## [0.11.2] - 12th Aug 2022
 - chore: Use onRoomState to monitor group call creation and member join and leave. (cloudwebrtc)
 - chore: expose option to retry computations (Lanna Michalke)
