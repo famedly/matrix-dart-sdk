@@ -1351,10 +1351,7 @@ class Room {
     var chunk = TimelineChunk(events: events);
     // Load the timeline arround eventContextId if set
     if (eventContextId != null) {
-      if (events.firstWhereOrNull((event) => event.eventId == eventContextId) !=
-          null) {
-        chunk = TimelineChunk(events: events);
-      } else {
+      if (!events.any((Event event) => event.eventId == eventContextId)) {
         chunk =
             await getEventContext(eventContextId) ?? TimelineChunk(events: []);
       }
