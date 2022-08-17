@@ -402,6 +402,10 @@ class CallSession {
   Future<void> initWithInvite(CallType type, RTCSessionDescription offer,
       SDPStreamMetadata? metadata, int lifetime, bool isGroupCall) async {
     await _preparePeerConnection();
+    if (metadata != null) {
+      _updateRemoteSDPStreamMetadata(metadata);
+    }
+    await pc!.setRemoteDescription(offer);
 
     /// only add local stream if it is not a group call.
     if (!isGroupCall) {
@@ -410,12 +414,6 @@ class CallSession {
         await addLocalStream(stream, SDPStreamMetadataPurpose.Usermedia);
       }
     }
-
-    if (metadata != null) {
-      _updateRemoteSDPStreamMetadata(metadata);
-    }
-
-    await pc!.setRemoteDescription(offer);
 
     setCallState(CallState.kRinging);
 
@@ -1075,7 +1073,6 @@ class CallSession {
   Future<void> _preparePeerConnection() async {
     try {
       pc = await _createPeerConnection();
-
       pc!.onRenegotiationNeeded = onNegotiationNeeded;
 
       pc!.onIceCandidate = (RTCIceCandidate candidate) async {
