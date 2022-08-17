@@ -45,9 +45,37 @@ class MatrixFile {
             'application/octet-stream',
         name = name.split('/').last.toLowerCase();
 
+  /// derivatives the MIME type from the [bytes] and correspondingly creates a
+  /// [MatrixFile], [MatrixImageFile], [MatrixAudioFile] or a [MatrixVideoFile]
+  factory MatrixFile.fromMimeType(
+      {required Uint8List bytes, required String name, String? mimeType}) {
+    final msgType = msgTypeFromMime(mimeType ??
+        lookupMimeType(name, headerBytes: bytes) ??
+        'application/octet-stream');
+    if (msgType == MessageTypes.Image) {
+      return MatrixImageFile(bytes: bytes, name: name, mimeType: mimeType);
+    }
+    if (msgType == MessageTypes.Video) {
+      return MatrixVideoFile(bytes: bytes, name: name, mimeType: mimeType);
+    }
+    if (msgType == MessageTypes.Audio) {
+      return MatrixAudioFile(bytes: bytes, name: name, mimeType: mimeType);
+    }
+    return MatrixFile(bytes: bytes, name: name, mimeType: mimeType);
+  }
+
   int get size => bytes.length;
 
   String get msgType {
+    return msgTypeFromMime(mimeType);
+  }
+
+  Map<String, dynamic> get info => ({
+        'mimetype': mimeType,
+        'size': size,
+      });
+
+  static String msgTypeFromMime(String mimeType) {
     if (mimeType.toLowerCase().startsWith('image/')) {
       return MessageTypes.Image;
     }
@@ -59,11 +87,6 @@ class MatrixFile {
     }
     return MessageTypes.File;
   }
-
-  Map<String, dynamic> get info => ({
-        'mimetype': mimeType,
-        'size': size,
-      });
 }
 
 class MatrixImageFile extends MatrixFile {
@@ -374,7 +397,6 @@ class MatrixAudioFile extends MatrixFile {
 
 extension ToMatrixFile on EncryptedFile {
   MatrixFile toMatrixFile() {
-    return MatrixFile(
-        bytes: data, name: 'crypt', mimeType: 'application/octet-stream');
+    return MatrixFile.fromMimeType(bytes: data, name: 'crypt');
   }
 }
