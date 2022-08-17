@@ -82,11 +82,9 @@ class WrappedMediaStream {
 
   Future<void> dispose() async {
     renderer.srcObject = null;
-    if (isLocal() && !isGroupCall && stream != null) {
-      if (isWeb) {
-        for (final element in stream!.getTracks()) {
-          await element.stop();
-        }
+    if (isLocal() && stream != null) {
+      for (final element in stream!.getTracks()) {
+        await element.stop();
       }
       await stream?.dispose();
       stream = null;
@@ -735,7 +733,9 @@ class CallSession {
 
     if (purpose == SDPStreamMetadataPurpose.Usermedia) {
       speakerOn = type == CallType.kVideo;
-      if (!voip.delegate.isWeb && !voip.delegate.isBackgroud) {
+      if (!voip.delegate.isWeb &&
+          !voip.delegate.isBackgroud &&
+          stream.getAudioTracks().isNotEmpty) {
         final audioTrack = stream.getAudioTracks()[0];
         audioTrack.enableSpeakerphone(speakerOn);
       }
