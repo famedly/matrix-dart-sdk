@@ -1,3 +1,7 @@
+## [0.12.2] - 17th Aug 2022
+- chore: Correctly release the cloned stream. (cloudwebrtc)
+- fix: setRemoteDescription before adding local stream to prevent early feedsChanged and negotiation (td)
+
 ## [0.12.1] - 17th Aug 2022
 - chore: simplify getTimeline condition a bit (Nicolas Werner)
 - chore: support MIME in file factory (Lanna Michalke)
