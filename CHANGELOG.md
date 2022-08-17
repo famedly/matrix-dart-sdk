@@ -1,3 +1,8 @@
+## [0.12.1] - 17th Aug 2022
+- chore: simplify getTimeline condition a bit (Nicolas Werner)
+- chore: support MIME in file factory (Lanna Michalke)
+- fix: follow up for native implementations web (Lanna Michalke)
+
 ## [0.12.0] - 16th Aug 2022
 - feat: Add markasdm and markasgroup commands (Christian Pauly)
 - refactor: Add reference to itself in bootstrap onUpdate callback (Christian Pauly)
