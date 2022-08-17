@@ -9,7 +9,6 @@ import 'dart:typed_data';
 import 'package:js/js.dart';
 import 'package:js/js_util.dart';
 
-import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart' hide Event;
 import 'package:matrix/src/utils/web_worker/native_implementations_web_worker.dart';
 
@@ -56,14 +55,6 @@ Future<void> startWebWorker() async {
                   Uint8List.fromList(
                       (operation.data as JsArray).whereType<int>().toList()));
               sendResponse(operation.label as double, result?.toJson());
-              break;
-            case WebWorkerOperations.generateUploadKeys:
-              final result = generateUploadKeysImplementation(
-                GenerateUploadKeysArgs.fromJson(
-                  Map.from(operation.data as Map),
-                ),
-              );
-              sendResponse(operation.label as double, result.toJson());
               break;
             default:
               throw NullThrownError();

@@ -55,7 +55,6 @@ abstract class NativeImplementations {
   /// this implementation will catch any non-implemented method
   dynamic noSuchMethod(Invocation invocation) {
     final dynamic argument = invocation.positionalArguments.single;
-    final retryInDummy = invocation.namedArguments['retryInDummy'] as bool;
     final memberName = invocation.memberName.toString().split('"')[1];
 
     Logs().w(
@@ -65,15 +64,15 @@ abstract class NativeImplementations {
     );
     switch (memberName) {
       case 'generateUploadKeys':
-        return dummy.generateUploadKeys(argument, retryInDummy: retryInDummy);
+        return dummy.generateUploadKeys(argument);
       case 'keyFromPassphrase':
-        return dummy.keyFromPassphrase(argument, retryInDummy: retryInDummy);
+        return dummy.keyFromPassphrase(argument);
       case 'decryptFile':
-        return dummy.decryptFile(argument, retryInDummy: retryInDummy);
+        return dummy.decryptFile(argument);
       case 'shrinkImage':
-        return dummy.shrinkImage(argument, retryInDummy: retryInDummy);
+        return dummy.shrinkImage(argument);
       case 'calcImageMetadata':
-        return dummy.calcImageMetadata(argument, retryInDummy: retryInDummy);
+        return dummy.calcImageMetadata(argument);
       default:
         return super.noSuchMethod(invocation);
     }

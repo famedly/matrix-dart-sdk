@@ -4,7 +4,6 @@ import 'dart:html';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 
 class NativeImplementationsWebWorker extends NativeImplementations {
@@ -104,25 +103,6 @@ class NativeImplementationsWebWorker extends NativeImplementations {
       return NativeImplementations.dummy.shrinkImage(args);
     }
   }
-
-  @override
-  Future<RoomKeys> generateUploadKeys(
-    GenerateUploadKeysArgs args, {
-    bool retryInDummy = true,
-  }) async {
-    try {
-      final result =
-          await operation<Map<dynamic, dynamic>, Map<String, dynamic>>(
-        WebWorkerOperations.generateUploadKeys,
-        args.toJson(),
-      );
-      return RoomKeys.fromJson(Map.from(result));
-    } catch (e, s) {
-      if (!retryInDummy) rethrow;
-      Logs().e('Web worker computation error. Fallback to main thread', e, s);
-      return NativeImplementations.dummy.generateUploadKeys(args);
-    }
-  }
 }
 
 class WebWorkerData {
@@ -151,7 +131,6 @@ class WebWorkerData {
 enum WebWorkerOperations {
   shrinkImage,
   calcImageMetadata,
-  generateUploadKeys,
 }
 
 class WebWorkerError extends Error {
