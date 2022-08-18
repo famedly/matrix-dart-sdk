@@ -14,18 +14,18 @@ dependencies:
   canonical_json: ^1.1.0
   collection: ^1.15.0
   crypto: ^3.0.0
-  ffi: ^1.0.0
-  fluffybox: ^0.4.3
+  ffi: ^2.0.1
+  fluffybox: ^0.5.0
   hive: ^2.2.1
   html: ^0.15.0
   html_unescape: ^2.0.0
   http: ^0.13.0
   image: ^3.1.1
   js: ^0.6.3
-  markdown: ^4.0.0
-  matrix_api_lite: ^1.1.0
+  markdown: ^6.0.0
+  matrix_api_lite: ^1.1.3
   mime: ^1.0.0
-  olm: ^2.0.0
+  olm: ^2.0.1
   random_string: ^2.3.1
   sdp_transform: ^0.3.2
   slugify: ^2.0.0
@@ -33,8 +33,8 @@ dependencies:
 
 dev_dependencies:
   coverage: ">=0.15.0 <2.0.0"
-  dart_code_metrics: ^4.10.1
-  file: ^6.1.1
+  dart_code_metrics: ^4.17.1
+  file: ^6.1.3
   import_sorter: ^4.6.0
   lints: ^2.0.0
   test: ^1.15.7

@@ -32,12 +32,17 @@ class LinebreakSyntax extends InlineSyntax {
   }
 }
 
-class SpoilerSyntax extends TagSyntax {
-  SpoilerSyntax() : super(r'\|\|', requiresDelimiterRun: true);
+class SpoilerSyntax extends DelimiterSyntax {
+  SpoilerSyntax() : super(r'||', requiresDelimiterRun: true);
 
   @override
-  Node close(InlineParser parser, Delimiter opener, Delimiter closer,
-      {required List<Node> Function() getChildren}) {
+  Node close(
+    InlineParser parser,
+    Delimiter opener,
+    Delimiter closer, {
+    required List<Node> Function() getChildren,
+    required String tag,
+  }) {
     final children = getChildren();
     final newChildren = <Node>[];
     var searchingForReason = true;
@@ -74,6 +79,7 @@ class SpoilerSyntax extends TagSyntax {
 class EmoteSyntax extends InlineSyntax {
   final Map<String, Map<String, String>> Function()? getEmotePacks;
   Map<String, Map<String, String>>? emotePacks;
+
   EmoteSyntax(this.getEmotePacks) : super(r':(?:([-\w]+)~)?([-\w]+):');
 
   @override
@@ -110,7 +116,7 @@ class EmoteSyntax extends InlineSyntax {
   }
 }
 
-class InlineLatexSyntax extends TagSyntax {
+class InlineLatexSyntax extends DelimiterSyntax {
   InlineLatexSyntax() : super(r'\$([^\s$]([^\$]*[^\s$])?)\$');
 
   @override
@@ -185,6 +191,7 @@ class PillSyntax extends InlineSyntax {
 
 class MentionSyntax extends InlineSyntax {
   final String? Function(String)? getMention;
+
   MentionSyntax(this.getMention) : super(r'(@(?:\[[^\]:]+\]|\w+)(?:#\w+)?)');
 
   @override
