@@ -8,10 +8,10 @@ test:
   tags:
     - linux
   stage: coverage
-  image: google/dart
+  image: dart
   script:
-    - pub get
-    - pub run test
+    - dart pub get
+    - dart pub run test
   
 code_analyze:
   tags:
@@ -53,7 +53,7 @@ pages:
 
 dry-run:
   stage: publish
-  image: google/dart
+  image: dart
   script:
     - rm -rf ./docs
     - dart pub get
@@ -61,7 +61,7 @@ dry-run:
 
 pub-dev:
   stage: publish
-  image: google/dart
+  image: dart
   script:
     - rm -rf ./docs
     - |
