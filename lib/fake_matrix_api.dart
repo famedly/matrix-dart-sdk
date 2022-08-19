@@ -49,9 +49,8 @@ class FakeMatrixApi extends MockClient {
           // Collect data from Request
           var action = request.url.path;
           if (request.url.path.contains('/_matrix')) {
-            action = request.url.path.split('/_matrix').last +
-                '?' +
-                request.url.query;
+            action =
+                '${request.url.path.split('/_matrix').last}?${request.url.query}';
           }
 
           if (action.endsWith('?')) {

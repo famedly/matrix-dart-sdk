@@ -4,7 +4,7 @@ extension PrintLogs on LogEvent {
   void printOut() {
     var logsStr = title;
     if (exception != null) {
-      logsStr += ' - ' + exception.toString();
+      logsStr += ' - ${exception.toString()}';
     }
     if (stackTrace != null) {
       logsStr += '\n${stackTrace.toString()}';

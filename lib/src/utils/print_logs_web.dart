@@ -5,7 +5,7 @@ extension PrintLogs on LogEvent {
   void printOut() {
     var logsStr = '[Matrix] $title';
     if (exception != null) {
-      logsStr += ' - ' + exception.toString();
+      logsStr += ' - ${exception.toString()}';
     }
     if (stackTrace != null) {
       logsStr += '\n${stackTrace.toString()}';

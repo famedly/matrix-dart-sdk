@@ -45,11 +45,11 @@ class MatrixApi extends Api {
   set accessToken(String? token) => bearerToken = token;
 
   @override
-  Never unexpectedResponse(http.BaseResponse response, Uint8List responseBody) {
+  Never unexpectedResponse(http.BaseResponse response, Uint8List body) {
     if (response.statusCode >= 400 && response.statusCode < 500) {
-      throw MatrixException.fromJson(json.decode(utf8.decode(responseBody)));
+      throw MatrixException.fromJson(json.decode(utf8.decode(body)));
     }
-    super.unexpectedResponse(response, responseBody);
+    super.unexpectedResponse(response, body);
   }
 
   MatrixApi({
@@ -90,7 +90,7 @@ class MatrixApi extends Api {
       throw ('No homeserver specified.');
     }
     dynamic json;
-    (!(data is String)) ? json = jsonEncode(data) : json = data;
+    (data is! String) ? json = jsonEncode(data) : json = data;
     if (data is List<int> || action.startsWith('/media/v3/upload')) json = data;
 
     final url = homeserver!
@@ -132,7 +132,7 @@ class MatrixApi extends Api {
       }
       var jsonString = String.fromCharCodes(respBody.runes);
       if (jsonString.startsWith('[') && jsonString.endsWith(']')) {
-        jsonString = '\{"chunk":$jsonString\}';
+        jsonString = '{"chunk":$jsonString}';
       }
       jsonResp = jsonDecode(jsonString)
           as Map<String, dynamic>?; // May throw FormatException
