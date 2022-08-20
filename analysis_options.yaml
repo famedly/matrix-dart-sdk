@@ -10,6 +10,10 @@ linter:
     avoid_dynamic_calls: true
 
 analyzer:
+  language:
+    strict-casts: false
+    strict-inference: true
+    strict-raw-types: false
   errors:
     todo: ignore
   exclude:

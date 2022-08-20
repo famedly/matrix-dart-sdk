@@ -38,8 +38,9 @@ class SecretStorageKeyContent {
   SecretStorageKeyContent();
 
   SecretStorageKeyContent.fromJson(Map<String, dynamic> json)
-      : passphrase = ((x) => x != null ? PassphraseInfo.fromJson(x) : null)(
-            json.tryGet('passphrase')),
+      : passphrase = ((Map<String, dynamic>? x) => x != null
+            ? PassphraseInfo.fromJson(x)
+            : null)(json.tryGet('passphrase')),
         iv = json.tryGet('iv'),
         mac = json.tryGet('mac'),
         algorithm = json.tryGet('algorithm');

@@ -238,7 +238,7 @@ void main() {
         'type': 'some type',
         'content': {
           'images': {
-            'emote': {},
+            'emote': <String, dynamic>{},
           },
         },
       };
