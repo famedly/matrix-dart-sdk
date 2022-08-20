@@ -33,11 +33,13 @@ Map<String, dynamic> decodeJson(dynamic data) {
   if (data is String) {
     return json.decode(data);
   }
-  if (data.isEmpty) {
+  if (data is Map && data.isEmpty) {
     return <String, dynamic>{};
   }
   return data;
 }
+
+T? tryCast<T>(dynamic object) => object is T ? object : null;
 
 /// A mock http client for testing purposes.
 class FakeMatrixApi extends MockClient {
@@ -83,7 +85,7 @@ class FakeMatrixApi extends MockClient {
           }
           calledEndpoints[action]!.add(data);
           if (api.containsKey(method) && api[method]!.containsKey(action)) {
-            res = api[method]![action](data);
+            res = api[method]![action]?.call(data);
             if (res is Map && res.containsKey('errcode')) {
               statusCode = 405;
             }
@@ -953,7 +955,7 @@ class FakeMatrixApi extends MockClient {
     ]
   };
 
-  static final Map<String, Map<String, dynamic>> api = {
+  static final Map<String, Map<String, dynamic Function(dynamic)>> api = {
     'GET': {
       '/path/to/auth/error': (var req) => {
             'errcode': 'M_FORBIDDEN',
@@ -1942,42 +1944,45 @@ class FakeMatrixApi extends MockClient {
             'prev_batch': 'p1902',
             'total_room_count_estimate': 115
           },
-      '/client/v3/keys/claim': (var req) => {
-            'failures': {},
-            'one_time_keys': {
-              if (decodeJson(req)['one_time_keys']['@alice:example.com'] !=
-                  null)
-                '@alice:example.com': {
-                  'JLAFKJWSCS': {
-                    'signed_curve25519:AAAAAQ': {
-                      'key': 'ikMXajRlkS7Xi9CROrAh3jXnbygk8mLBdSaY9/al0X0',
-                      'signatures': {
-                        '@alice:example.com': {
-                          'ed25519:JLAFKJWSCS':
-                              'XdboCa0Ljoh0Y0i/IVnmMqy/+T1hJyu8BA/nRYniJMQ7QWh/pGS5AsWswdARD+MAX+r4u98Qzk0y27HUddZXDA'
-                        }
+      '/client/v3/keys/claim': (dynamic req) {
+        final request = decodeJson(req)["one_time_keys"];
+        final keys = (request is Map<String, dynamic>)
+            ? request["one_time_keys"] as Map<String, dynamic>?
+            : null;
+        return {
+          'failures': {},
+          'one_time_keys': {
+            if (keys?['@alice:example.com'] != null)
+              '@alice:example.com': {
+                'JLAFKJWSCS': {
+                  'signed_curve25519:AAAAAQ': {
+                    'key': 'ikMXajRlkS7Xi9CROrAh3jXnbygk8mLBdSaY9/al0X0',
+                    'signatures': {
+                      '@alice:example.com': {
+                        'ed25519:JLAFKJWSCS':
+                            'XdboCa0Ljoh0Y0i/IVnmMqy/+T1hJyu8BA/nRYniJMQ7QWh/pGS5AsWswdARD+MAX+r4u98Qzk0y27HUddZXDA'
                       }
                     }
                   }
-                },
-              if (decodeJson(req)['one_time_keys']
-                      ['@test:fakeServer.notExisting'] !=
-                  null)
-                '@test:fakeServer.notExisting': {
-                  'GHTYAJCE': {
-                    'signed_curve25519:AAAAAQ': {
-                      'key': 'qc72ve94cA28iuE0fXa98QO3uls39DHWdQlYyvvhGh0',
-                      'signatures': {
-                        '@test:fakeServer.notExisting': {
-                          'ed25519:GHTYAJCE':
-                              'dFwffr5kTKefO7sjnWLMhTzw7oV31nkPIDRxFy5OQT2OP5++Ao0KRbaBZ6qfuT7lW1owKK0Xk3s7QTBvc/eNDA',
-                        },
+                }
+              },
+            if (keys?['@test:fakeServer.notExisting'] != null)
+              '@test:fakeServer.notExisting': {
+                'GHTYAJCE': {
+                  'signed_curve25519:AAAAAQ': {
+                    'key': 'qc72ve94cA28iuE0fXa98QO3uls39DHWdQlYyvvhGh0',
+                    'signatures': {
+                      '@test:fakeServer.notExisting': {
+                        'ed25519:GHTYAJCE':
+                            'dFwffr5kTKefO7sjnWLMhTzw7oV31nkPIDRxFy5OQT2OP5++Ao0KRbaBZ6qfuT7lW1owKK0Xk3s7QTBvc/eNDA',
                       },
                     },
                   },
                 },
-            }
-          },
+              },
+          }
+        };
+      },
       '/client/v3/rooms/!localpart%3Aexample.com/invite': (var req) => {},
       '/client/v3/rooms/!localpart%3Aexample.com/leave': (var req) => {},
       '/client/v3/rooms/!localpart%3Aexample.com/forget': (var req) => {},
@@ -1992,8 +1997,11 @@ class FakeMatrixApi extends MockClient {
       '/client/v3/keys/upload': (var req) => {
             'one_time_key_counts': {
               'curve25519': 10,
-              'signed_curve25519':
-                  decodeJson(req)['one_time_keys']?.keys?.length ?? 0,
+              'signed_curve25519': tryCast<Map<String, Map<String, dynamic>>>(
+                          decodeJson(req))?['one_time_keys']
+                      ?.keys
+                      .length ??
+                  0,
             }
           },
       '/client/v3/keys/query': (var req) => {

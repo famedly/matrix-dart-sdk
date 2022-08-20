@@ -54,24 +54,15 @@ class SyncUpdate {
       : nextBatch = json['next_batch'],
         rooms =
             json['rooms'] != null ? RoomsUpdate.fromJson(json['rooms']) : null,
-        presence =
-            (json['presence'] != null && json['presence']['events'] != null)
-                ? (json['presence']['events'] as List)
-                    .map((i) => Presence.fromJson(i))
-                    .toList()
-                : null,
-        accountData = (json['account_data'] != null &&
-                json['account_data']['events'] != null)
-            ? (json['account_data']['events'] as List)
-                .map((i) => BasicEvent.fromJson(i))
-                .toList()
-            : null,
-        toDevice =
-            (json['to_device'] != null && json['to_device']['events'] != null)
-                ? (json['to_device']['events'] as List)
-                    .map((i) => BasicEventWithSender.fromJson(i))
-                    .toList()
-                : null,
+        presence = ((json['presence'] as Map?)?['events'] as List?)
+            ?.map((i) => Presence.fromJson(i))
+            .toList(),
+        accountData = ((json['account_data'] as Map?)?['events'] as List?)
+            ?.map((i) => BasicEvent.fromJson(i))
+            .toList(),
+        toDevice = ((json['to_device'] as Map?)?['events'] as List?)
+            ?.map((i) => BasicEventWithSender.fromJson(i))
+            .toList(),
         deviceLists = json['device_lists'] != null
             ? DeviceListsUpdate.fromJson(json['device_lists'])
             : null,
@@ -183,34 +174,25 @@ class JoinedRoomUpdate extends SyncRoomUpdate {
     this.unreadNotifications,
   });
 
-  JoinedRoomUpdate.fromJson(Map<String, dynamic> json) {
-    summary =
-        json['summary'] != null ? RoomSummary.fromJson(json['summary']) : null;
-    state = (json['state'] != null && json['state']['events'] != null)
-        ? (json['state']['events'] as List)
-            .map((i) => MatrixEvent.fromJson(i))
-            .toList()
-        : null;
-    timeline = json['timeline'] != null
-        ? TimelineUpdate.fromJson(json['timeline'])
-        : null;
-
-    ephemeral =
-        (json['ephemeral'] != null && json['ephemeral']['events'] != null)
-            ? (json['ephemeral']['events'] as List)
-                .map((i) => BasicRoomEvent.fromJson(i))
-                .toList()
+  JoinedRoomUpdate.fromJson(Map<String, dynamic> json)
+      : summary = json['summary'] != null
+            ? RoomSummary.fromJson(json['summary'])
+            : null,
+        state = ((json['state'] as Map?)?['events'] as List?)
+            ?.map((i) => MatrixEvent.fromJson(i))
+            .toList(),
+        timeline = json['timeline'] != null
+            ? TimelineUpdate.fromJson(json['timeline'])
+            : null,
+        ephemeral = ((json['ephemeral'] as Map?)?['events'] as List?)
+            ?.map((i) => BasicRoomEvent.fromJson(i))
+            .toList(),
+        accountData = ((json['account_data'] as Map?)?['events'] as List?)
+            ?.map((i) => BasicRoomEvent.fromJson(i))
+            .toList(),
+        unreadNotifications = json['unread_notifications'] != null
+            ? UnreadNotificationCounts.fromJson(json['unread_notifications'])
             : null;
-    accountData =
-        (json['account_data'] != null && json['account_data']['events'] != null)
-            ? (json['account_data']['events'] as List)
-                .map((i) => BasicRoomEvent.fromJson(i))
-                .toList()
-            : null;
-    unreadNotifications = json['unread_notifications'] != null
-        ? UnreadNotificationCounts.fromJson(json['unread_notifications'])
-        : null;
-  }
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -247,14 +229,10 @@ class InvitedRoomUpdate extends SyncRoomUpdate {
 
   InvitedRoomUpdate({this.inviteState});
 
-  InvitedRoomUpdate.fromJson(Map<String, dynamic> json) {
-    inviteState =
-        (json['invite_state'] != null && json['invite_state']['events'] != null)
-            ? (json['invite_state']['events'] as List)
-                .map((i) => StrippedStateEvent.fromJson(i))
-                .toList()
-            : null;
-  }
+  InvitedRoomUpdate.fromJson(Map<String, dynamic> json)
+      : inviteState = ((json['invite_state'] as Map?)?['events'] as List?)
+            ?.map((i) => StrippedStateEvent.fromJson(i))
+            .toList();
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -278,22 +256,16 @@ class LeftRoomUpdate extends SyncRoomUpdate {
     this.accountData,
   });
 
-  LeftRoomUpdate.fromJson(Map<String, dynamic> json) {
-    state = (json['state'] != null && json['state']['events'] != null)
-        ? (json['state']['events'] as List)
-            .map((i) => MatrixEvent.fromJson(i))
-            .toList()
-        : null;
-    timeline = json['timeline'] != null
-        ? TimelineUpdate.fromJson(json['timeline'])
-        : null;
-    accountData =
-        (json['account_data'] != null && json['account_data']['events'] != null)
-            ? (json['account_data']['events'] as List)
-                .map((i) => BasicRoomEvent.fromJson(i))
-                .toList()
-            : null;
-  }
+  LeftRoomUpdate.fromJson(Map<String, dynamic> json)
+      : state = ((json['state'] as Map?)?['events'] as List?)
+            ?.map((i) => MatrixEvent.fromJson(i))
+            .toList(),
+        timeline = json['timeline'] != null
+            ? TimelineUpdate.fromJson(json['timeline'])
+            : null,
+        accountData = ((json['account_data'] as Map?)?['events'] as List?)
+            ?.map((i) => BasicRoomEvent.fromJson(i))
+            .toList();
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

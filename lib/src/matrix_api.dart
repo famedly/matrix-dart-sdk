@@ -209,7 +209,10 @@ class MatrixApi extends Api {
 
     // fix invalid responses from synapse
     // https://github.com/matrix-org/synapse/pull/10922
-    json['ttl'] = json['ttl'].toInt();
+    final ttl = json['ttl'];
+    if (ttl is double) {
+      json['ttl'] = ttl.toInt();
+    }
 
     return TurnServerCredentials.fromJson(json);
   }

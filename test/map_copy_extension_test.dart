@@ -35,10 +35,10 @@ void main() {
         },
       };
       final copy = original.copy();
-      original['child']['attr'] = 'raccoon';
-      expect(copy['child']['attr'], 'bunny');
-      original['child']['list'].add(3);
-      expect(copy['child']['list'], [1, 2]);
+      (original['child'] as Map<String, dynamic>)['attr'] = 'raccoon';
+      expect((copy['child'] as Map<String, dynamic>)['attr'], 'bunny');
+      ((original['child'] as Map<String, dynamic>)['list'] as List<int>).add(3);
+      expect((copy['child'] as Map<String, dynamic>)['list'], [1, 2]);
     });
     test('should do arrays', () {
       final original = <String, dynamic>{
@@ -48,10 +48,11 @@ void main() {
         ],
       };
       final copy = original.copy();
-      original['arr'][0].add(3);
-      expect(copy['arr'][0], [1, 2]);
-      original['arr'][1]['beep'] = 'blargh';
-      expect(copy['arr'][1]['beep'], 'boop');
+      ((original['arr'] as List)[0] as List<int>).add(3);
+      expect((copy['arr'] as List)[0], [1, 2]);
+      ((original['arr'] as List)[1] as Map<String, dynamic>)['beep'] = 'blargh';
+      expect(
+          ((copy['arr'] as List)[1] as Map<String, dynamic>)['beep'], 'boop');
     });
   });
 }
