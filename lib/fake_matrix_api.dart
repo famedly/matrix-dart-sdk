@@ -171,7 +171,7 @@ class FakeMatrixApi extends MockClient {
         'unsigned': {'age': 1234}
       }
     ],
-    'state': <Map>[],
+    'state': <Map<String, dynamic>>[],
   };
 
   static Map<String, dynamic> syncResponse = {
@@ -393,7 +393,7 @@ class FakeMatrixApi extends MockClient {
               'override': [
                 {
                   'actions': ['dont_notify'],
-                  'conditions': <Map>[],
+                  'conditions': <Map<String, dynamic>>[],
                   'default': true,
                   'enabled': false,
                   'rule_id': '.m.rule.master'
@@ -427,7 +427,7 @@ class FakeMatrixApi extends MockClient {
                   'rule_id': '!localpart:server.abc'
                 }
               ],
-              'sender': <Map>[],
+              'sender': <Map<String, dynamic>>[],
               'underride': [
                 {
                   'actions': [
@@ -677,12 +677,12 @@ class FakeMatrixApi extends MockClient {
 
   static Map<String, dynamic> archiveSyncResponse = {
     'next_batch': Random().nextDouble().toString(),
-    'presence': {'events': <Map>[]},
-    'account_data': {'events': <Map>[]},
-    'to_device': {'events': <Map>[]},
+    'presence': {'events': <Map<String, dynamic>>[]},
+    'account_data': {'events': <Map<String, dynamic>>[]},
+    'to_device': {'events': <Map<String, dynamic>>[]},
     'rooms': {
-      'join': <String, Map>{},
-      'invite': <String, Map>{},
+      'join': <String, dynamic>{},
+      'invite': <String, dynamic>{},
       'leave': {
         '!5345234234:example.com': {
           'timeline': {
@@ -727,7 +727,7 @@ class FakeMatrixApi extends MockClient {
           },
         },
         '!5345234235:example.com': {
-          'timeline': {'events': <Map>[]},
+          'timeline': {'events': <Map<String, dynamic>>[]},
           'state': {
             'events': [
               {
@@ -863,7 +863,7 @@ class FakeMatrixApi extends MockClient {
         'join_rule': 'public',
         'world_readable': true,
         'guest_can_join': true,
-        'children_state': <Map>[]
+        'children_state': <Map<String, dynamic>>[]
       },
       {
         'room_id': '!aZUzMIEZvEwnDquxLf:neko.dev',
@@ -876,7 +876,7 @@ class FakeMatrixApi extends MockClient {
         'join_rule': 'public',
         'world_readable': true,
         'guest_can_join': true,
-        'children_state': <Map>[]
+        'children_state': <Map<String, dynamic>>[]
       },
       {
         'room_id': '!aRzRZBvOAkHMcEjAPS:libera.chat',
@@ -888,7 +888,7 @@ class FakeMatrixApi extends MockClient {
         'join_rule': 'public',
         'world_readable': false,
         'guest_can_join': false,
-        'children_state': <Map>[]
+        'children_state': <Map<String, dynamic>>[]
       },
       {
         'room_id': '!DXsRRxkqqDhDkAyXfL:matrix.org',
@@ -901,7 +901,7 @@ class FakeMatrixApi extends MockClient {
         'join_rule': 'public',
         'world_readable': false,
         'guest_can_join': false,
-        'children_state': <Map>[]
+        'children_state': <Map<String, dynamic>>[]
       },
       {
         'room_id': '!tbCRpmsMiwMBlIThOd:matrix.org',
@@ -913,7 +913,7 @@ class FakeMatrixApi extends MockClient {
         'join_rule': 'public',
         'world_readable': false,
         'guest_can_join': false,
-        'children_state': <Map>[]
+        'children_state': <Map<String, dynamic>>[]
       },
       {
         'room_id': '!LPpmvMsEgDwuSuHSpM:matrix.org',
@@ -925,7 +925,7 @@ class FakeMatrixApi extends MockClient {
         'join_rule': 'public',
         'world_readable': true,
         'guest_can_join': true,
-        'children_state': <Map>[]
+        'children_state': <Map<String, dynamic>>[]
       },
       {
         'room_id': '!prlZxmnmAGuCYHUNSw:neko.dev',
@@ -938,7 +938,7 @@ class FakeMatrixApi extends MockClient {
         'join_rule': 'public',
         'world_readable': true,
         'guest_can_join': false,
-        'children_state': <Map>[]
+        'children_state': <Map<String, dynamic>>[]
       },
       {
         'room_id': '!ooHixUOgoLVUjCSMZC:matrix.org',
@@ -950,7 +950,7 @@ class FakeMatrixApi extends MockClient {
         'join_rule': 'public',
         'world_readable': true,
         'guest_can_join': true,
-        'children_state': <Map>[]
+        'children_state': <Map<String, dynamic>>[]
       }
     ]
   };
@@ -1610,7 +1610,7 @@ class FakeMatrixApi extends MockClient {
               'override': [
                 {
                   'actions': ['dont_notify'],
-                  'conditions': <Map>[],
+                  'conditions': <Map<String, dynamic>>[],
                   'default': true,
                   'enabled': false,
                   'rule_id': '.m.rule.master'
@@ -1629,8 +1629,8 @@ class FakeMatrixApi extends MockClient {
                   'rule_id': '.m.rule.suppress_notices'
                 }
               ],
-              'room': <Map>[],
-              'sender': <Map>[],
+              'room': <Map<String, dynamic>>[],
+              'sender': <Map<String, dynamic>>[],
               'underride': [
                 {
                   'actions': [

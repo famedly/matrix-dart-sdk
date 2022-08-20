@@ -39,7 +39,7 @@ void main() {
       expect(data.tryGet<String>('str'), 'foxies');
       expect(data.tryGet<int>('str'), null);
       expect(data.tryGet<int>('int'), 42);
-      expect(data.tryGet<List>('list'), [2, 3, 4]);
+      expect(data.tryGet<List<int>>('list'), [2, 3, 4]);
       expect(data.tryGetMap<String, dynamic>('map')?.tryGet<String>('beep'),
           'boop');
       expect(
