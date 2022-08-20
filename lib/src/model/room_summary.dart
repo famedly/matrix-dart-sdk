@@ -28,10 +28,10 @@ class RoomSummary {
 
   RoomSummary.fromJson(Map<String, dynamic> json)
       : mHeroes = json['m.heroes'] != null
-            ? List<String>.from(json['m.heroes'])
+            ? List<String>.from(json['m.heroes'] as List)
             : null,
-        mJoinedMemberCount = json['m.joined_member_count'],
-        mInvitedMemberCount = json['m.invited_member_count'];
+        mJoinedMemberCount = json['m.joined_member_count'] as int?,
+        mInvitedMemberCount = json['m.invited_member_count'] as int?;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

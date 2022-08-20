@@ -33,7 +33,7 @@ class BasicEvent {
   });
 
   BasicEvent.fromJson(Map<String, dynamic> json)
-      : type = json['type'],
+      : type = json['type'] as String,
         content = (json['content'] as Map<String, dynamic>).copy();
 
   Map<String, dynamic> toJson() {

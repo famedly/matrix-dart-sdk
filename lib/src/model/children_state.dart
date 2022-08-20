@@ -39,8 +39,8 @@ class ChildrenState extends StrippedStateEvent {
             stateKey: stateKey);
 
   ChildrenState.fromJson(Map<String, dynamic> json)
-      : originServerTs =
-            DateTime.fromMillisecondsSinceEpoch(json['origin_server_ts']),
+      : originServerTs = DateTime.fromMillisecondsSinceEpoch(
+            json['origin_server_ts'] as int),
         super.fromJson(json);
 
   @override

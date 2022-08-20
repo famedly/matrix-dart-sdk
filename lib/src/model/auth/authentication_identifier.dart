@@ -32,7 +32,7 @@ class AuthenticationIdentifier {
   AuthenticationIdentifier({required this.type});
 
   AuthenticationIdentifier.fromJson(Map<String, dynamic> json)
-      : type = json['type'];
+      : type = json['type'] as String;
 
   factory AuthenticationIdentifier.subFromJson(Map<String, dynamic> json) {
     switch (json['type']) {

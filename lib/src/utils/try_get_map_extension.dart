@@ -100,6 +100,13 @@ extension TryGetMapExtension on Map<String, dynamic> {
       return null;
     }
   }
+
+  A? tryGetFromJson<A>(String key, A Function(Map<String, dynamic>) fromJson,
+      [TryGet log = TryGet.optional]) {
+    final value = tryGetMap<String, dynamic>(key, log);
+
+    return value != null ? fromJson(value) : null;
+  }
 }
 
 extension on StackTrace {

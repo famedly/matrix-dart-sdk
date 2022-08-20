@@ -65,12 +65,12 @@ class MatrixException implements Exception {
 
   /// The unique identifier for this error.
   String get errcode =>
-      raw['errcode'] ??
+      raw['errcode'] as String? ??
       (requireAdditionalAuthentication ? 'M_FORBIDDEN' : 'M_UNKNOWN');
 
   /// A human readable error description.
   String get errorMessage =>
-      raw['error'] ??
+      raw['error'] as String? ??
       (requireAdditionalAuthentication
           ? 'Require additional authentication'
           : 'Unknown error');
@@ -79,7 +79,7 @@ class MatrixException implements Exception {
   http.Response? response;
 
   MatrixException(http.Response this.response)
-      : raw = json.decode(response.body);
+      : raw = json.decode(response.body) as Map<String, dynamic>;
 
   MatrixException.fromJson(Map<String, dynamic> content) : raw = content;
 
@@ -91,11 +91,11 @@ class MatrixException implements Exception {
       (e) => e.toString() == 'MatrixError.${(raw["errcode"] ?? "")}',
       orElse: () => MatrixError.M_UNKNOWN);
 
-  int? get retryAfterMs => raw['retry_after_ms'];
+  int? get retryAfterMs => raw['retry_after_ms'] as int?;
 
   /// This is a session identifier that the client must pass back to the homeserver, if one is provided,
   /// in subsequent attempts to authenticate in the same API call.
-  String? get session => raw['session'];
+  String? get session => raw['session'] as String?;
 
   /// Returns true if the server requires additional authentication.
   bool get requireAdditionalAuthentication => response != null
@@ -119,11 +119,12 @@ class MatrixException implements Exception {
   /// This section contains any information that the client will need to know in order to use a given type
   /// of authentication. For each authentication type presented, that type may be present as a key in this
   /// dictionary. For example, the public part of an OAuth client ID could be given here.
-  Map<String, dynamic>? get authenticationParams => raw['params'];
+  Map<String, dynamic>? get authenticationParams =>
+      raw['params'] as Map<String, dynamic>?;
 
   /// Returns the list of already completed authentication flows from previous requests.
   List<String> get completedAuthenticationFlows =>
-      List<String>.from(raw['completed'] ?? []);
+      List<String>.from(raw['completed'] as List<String>? ?? []);
 }
 
 /// For each endpoint, a server offers one or more 'flows' that the client can use

@@ -36,7 +36,7 @@ class BasicRoomEvent extends BasicEvent {
         );
 
   BasicRoomEvent.fromJson(Map<String, dynamic> json)
-      : roomId = json['room_id'],
+      : roomId = json['room_id'] as String?,
         super.fromJson(json);
 
   @override

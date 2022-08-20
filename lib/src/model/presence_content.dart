@@ -21,7 +21,7 @@
 * SOFTWARE.
 */
 
-import '../generated/model.dart';
+import 'package:matrix_api_lite/matrix_api_lite.dart';
 
 class PresenceContent {
   PresenceType presence;
@@ -32,9 +32,9 @@ class PresenceContent {
   PresenceContent.fromJson(Map<String, dynamic> json)
       : presence = PresenceType.values.firstWhere(
             (p) => p.toString().split('.').last == json['presence']),
-        lastActiveAgo = json['last_active_ago'],
-        statusMsg = json['status_msg'],
-        currentlyActive = json['currently_active'];
+        lastActiveAgo = json.tryGet<int>('last_active_ago'),
+        statusMsg = json.tryGet<String>('status_msg'),
+        currentlyActive = json.tryGet<bool>('currently_active');
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

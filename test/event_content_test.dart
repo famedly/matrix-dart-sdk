@@ -43,7 +43,7 @@ void main() {
         'type': 'm.room.encryption',
         'unsigned': {'age': 1234}
       };
-      json = jsonDecode(jsonEncode(json));
+      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
       expect(MatrixEvent.fromJson(json!).parsedRoomEncryptionContent.toJson(),
           json['content']);
     });
@@ -63,7 +63,7 @@ void main() {
         'type': 'm.room.encrypted',
         'unsigned': {'age': 1234}
       };
-      json = jsonDecode(jsonEncode(json));
+      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
       expect(MatrixEvent.fromJson(json!).parsedRoomEncryptedContent.toJson(),
           json['content']);
       json = <String, dynamic>{
@@ -84,7 +84,7 @@ void main() {
         'type': 'm.room.encrypted',
         'unsigned': {'age': 1234}
       };
-      json = jsonDecode(jsonEncode(json));
+      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
       expect(MatrixEvent.fromJson(json!).parsedRoomEncryptedContent.toJson(),
           json['content']);
     });
@@ -98,7 +98,7 @@ void main() {
         },
         'type': 'm.room_key'
       };
-      json = jsonDecode(jsonEncode(json));
+      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
       expect(BasicEvent.fromJson(json!).parsedRoomKeyContent.toJson(),
           json['content']);
     });
@@ -111,7 +111,7 @@ void main() {
         },
         'type': 'm.room_key_request'
       };
-      json = jsonDecode(jsonEncode(json));
+      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
       expect(BasicEvent.fromJson(json!).parsedRoomKeyRequestContent.toJson(),
           json['content']);
       json = <String, dynamic>{
@@ -128,7 +128,7 @@ void main() {
         },
         'type': 'm.room_key_request'
       };
-      json = jsonDecode(jsonEncode(json));
+      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
       expect(BasicEvent.fromJson(json!).parsedRoomKeyRequestContent.toJson(),
           json['content']);
     });
@@ -148,7 +148,7 @@ void main() {
         },
         'type': 'm.forwarded_room_key'
       };
-      json = jsonDecode(jsonEncode(json));
+      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
       expect(BasicEvent.fromJson(json!).parsedForwardedRoomKeyContent.toJson(),
           json['content']);
     });
@@ -164,7 +164,7 @@ void main() {
         'recipient_keys': {'ed25519': '<our_ed25519_key>'},
         'keys': {'ed25519': '<sender_ed25519_key>'}
       };
-      json = jsonDecode(jsonEncode(json));
+      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
       expect(OlmPlaintextPayload.fromJson(json!).toJson(), json);
     });
     test('Image Pack Content', () {
@@ -190,7 +190,7 @@ void main() {
           'org.custom': 'blah',
         },
       };
-      json = jsonDecode(jsonEncode(json));
+      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>;
       expect(BasicEvent.fromJson(json).parsedImagePackContent.toJson(),
           json['content']);
 
@@ -205,7 +205,7 @@ void main() {
           },
         },
       };
-      json = jsonDecode(jsonEncode(json));
+      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>;
       expect(
           BasicEvent.fromJson(json)
               .parsedImagePackContent
@@ -223,7 +223,7 @@ void main() {
           },
         },
       };
-      json = jsonDecode(jsonEncode(json));
+      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>;
       expect(
           BasicEvent.fromJson(json)
               .parsedImagePackContent
@@ -242,7 +242,7 @@ void main() {
           },
         },
       };
-      json = jsonDecode(jsonEncode(json));
+      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>;
       expect(BasicEvent.fromJson(json).parsedImagePackContent.images['emote'],
           null);
     });

@@ -21,6 +21,8 @@
 * SOFTWARE.
 */
 
+import 'package:matrix_api_lite/matrix_api_lite.dart';
+
 class RoomKeysSingleKey {
   int firstMessageIndex;
   int forwardedCount;
@@ -34,10 +36,10 @@ class RoomKeysSingleKey {
       required this.sessionData});
 
   RoomKeysSingleKey.fromJson(Map<String, dynamic> json)
-      : firstMessageIndex = json['first_message_index'],
-        forwardedCount = json['forwarded_count'],
-        isVerified = json['is_verified'],
-        sessionData = json['session_data'];
+      : firstMessageIndex = json['first_message_index'] as int,
+        forwardedCount = json['forwarded_count'] as int,
+        isVerified = json['is_verified'] as bool,
+        sessionData = json['session_data'] as Map<String, dynamic>;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -55,8 +57,8 @@ class RoomKeysRoom {
   RoomKeysRoom({required this.sessions});
 
   RoomKeysRoom.fromJson(Map<String, dynamic> json)
-      : sessions = (json['sessions'] as Map)
-            .map((k, v) => MapEntry(k, RoomKeysSingleKey.fromJson(v)));
+      : sessions = (json['sessions'] as Map<String, dynamic>).map((k, v) =>
+            MapEntry(k, RoomKeysSingleKey.fromJson(v as Map<String, dynamic>)));
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -70,8 +72,9 @@ class RoomKeysUpdateResponse {
   int count;
 
   RoomKeysUpdateResponse.fromJson(Map<String, dynamic> json)
-      : etag = json['etag'], // synapse replies an int but docs say string?
-        count = json['count'];
+      : etag = json.tryGet<String>('etag') ??
+            '', // synapse replies an int but docs say string?
+        count = json.tryGet<int>('count') ?? 0;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

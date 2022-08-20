@@ -47,7 +47,10 @@ class MatrixApi extends Api {
   @override
   Never unexpectedResponse(http.BaseResponse response, Uint8List body) {
     if (response.statusCode >= 400 && response.statusCode < 500) {
-      throw MatrixException.fromJson(json.decode(utf8.decode(body)));
+      final resp = json.decode(utf8.decode(body));
+      if (resp is Map<String, dynamic>) {
+        throw MatrixException.fromJson(resp);
+      }
     }
     super.unexpectedResponse(response, body);
   }
@@ -164,7 +167,7 @@ class MatrixApi extends Api {
         },
       },
     );
-    return Map<String, int>.from(response['one_time_key_counts']);
+    return Map<String, int>.from(response['one_time_key_counts'] as Map);
   }
 
   /// This endpoint allows the creation, modification and deletion of pushers

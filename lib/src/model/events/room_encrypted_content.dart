@@ -49,7 +49,8 @@ class RoomEncryptedContent {
         // filter out invalid/incomplete CiphertextInfos
         ciphertextOlm = json
             .tryGet<Map<String, dynamic>>('ciphertext', TryGet.silent)
-            ?.catchMap((k, v) => MapEntry(k, CiphertextInfo.fromJson(v)));
+            ?.catchMap((k, v) => MapEntry(
+                k, CiphertextInfo.fromJson(v as Map<String, dynamic>)));
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -81,8 +82,8 @@ class CiphertextInfo {
   int type;
 
   CiphertextInfo.fromJson(Map<String, dynamic> json)
-      : body = json['body'],
-        type = json['type'];
+      : body = json['body'] as String,
+        type = json['type'] as int;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

@@ -31,12 +31,12 @@ import 'package:matrix_api_lite/matrix_api_lite.dart';
 
 Map<String, dynamic> decodeJson(dynamic data) {
   if (data is String) {
-    return json.decode(data);
+    return json.decode(data) as Map<String, dynamic>;
   }
   if (data is Map && data.isEmpty) {
     return <String, dynamic>{};
   }
-  return data;
+  return data as Map<String, dynamic>;
 }
 
 T? tryCast<T>(dynamic object) => object is T ? object : null;

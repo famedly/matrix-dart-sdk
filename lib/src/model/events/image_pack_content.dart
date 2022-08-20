@@ -78,15 +78,19 @@ class ImagePackContent {
             (e) => !['images', 'pack', 'emoticons', 'short'].contains(e.key))),
         pack = ImagePackPackContent.fromJson(
             json.tryGetMap<String, dynamic>('pack') ?? {}),
-        images = json.tryGetMap<String, dynamic>('images')?.catchMap(
-                (k, v) => MapEntry(k, ImagePackImageContent.fromJson(v))) ??
+        images = json.tryGetMap<String, dynamic>('images')?.catchMap((k, v) =>
+                MapEntry(
+                    k,
+                    ImagePackImageContent.fromJson(
+                        v as Map<String, dynamic>))) ??
             // the "emoticons" key needs a small migration on the key, ":string:" --> "string"
             json.tryGetMap<String, dynamic>('emoticons')?.catchMap((k, v) =>
                 MapEntry(
                     k.startsWith(':') && k.endsWith(':')
                         ? k.substring(1, k.length - 1)
                         : k,
-                    ImagePackImageContent.fromJson(v))) ??
+                    ImagePackImageContent.fromJson(
+                        v as Map<String, dynamic>))) ??
             // the "short" key was still just a map from shortcode to mxc uri
             json.tryGetMap<String, String>('short')?.catchMap((k, v) =>
                 MapEntry(
@@ -118,7 +122,7 @@ class ImagePackImageContent {
   ImagePackImageContent.fromJson(Map<String, dynamic> json)
       : _json = Map.fromEntries(json.entries
             .where((e) => !['url', 'body', 'info'].contains(e.key))),
-        url = Uri.parse(json['url']),
+        url = Uri.parse(json['url'] as String),
         body = json.tryGet('body'),
         info = json.tryGetMap<String, dynamic>('info'),
         usage = imagePackUsageFromJson(json.tryGetList<String>('usage'));

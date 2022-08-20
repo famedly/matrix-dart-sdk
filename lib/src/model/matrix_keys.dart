@@ -21,7 +21,7 @@
 * SOFTWARE.
 */
 
-import '../utils/map_copy_extension.dart';
+import 'package:matrix_api_lite/matrix_api_lite.dart';
 
 abstract class MatrixSignableKey {
   String userId;
@@ -39,14 +39,11 @@ abstract class MatrixSignableKey {
 
   MatrixSignableKey.fromJson(Map<String, dynamic> json)
       : _json = json,
-        userId = json['user_id'],
-        keys = Map<String, String>.from(json['keys']),
+        userId = json['user_id'] as String,
+        keys = Map<String, String>.from(json['keys'] as Map<String, dynamic>),
         // we need to manually copy to ensure that our map is Map<String, Map<String, String>>
-        signatures = json['signatures'] is Map
-            ? Map<String, Map<String, String>>.from((json['signatures'] as Map)
-                .map((k, v) => MapEntry(k, Map<String, String>.from(v))))
-            : null,
-        unsigned = (json['unsigned'] as Map<String, dynamic>?)?.copy();
+        signatures = json.tryGetMap<String, Map<String, String>>('signatures'),
+        unsigned = json.tryGetMap<String, dynamic>('unsigned');
 
   Map<String, dynamic> toJson() {
     final data = _json ?? <String, dynamic>{};
@@ -81,7 +78,7 @@ class MatrixCrossSigningKey extends MatrixSignableKey {
 
   @override
   MatrixCrossSigningKey.fromJson(Map<String, dynamic> json)
-      : usage = List<String>.from(json['usage']),
+      : usage = json.tryGetList<String>('usage') ?? [],
         super.fromJson(json);
 
   @override
@@ -97,7 +94,7 @@ class MatrixDeviceKeys extends MatrixSignableKey {
   List<String> algorithms;
 
   String? get deviceDisplayName =>
-      unsigned != null ? unsigned!['device_display_name'] : null;
+      unsigned?.tryGet<String>('device_display_name');
 
   MatrixDeviceKeys(
     String userId,
@@ -113,8 +110,8 @@ class MatrixDeviceKeys extends MatrixSignableKey {
 
   @override
   MatrixDeviceKeys.fromJson(Map<String, dynamic> json)
-      : algorithms = (json['algorithms'] as List).cast<String>(),
-        deviceId = json['device_id'],
+      : algorithms = json.tryGetList<String>('algorithms') ?? [],
+        deviceId = json['device_id'] as String,
         super.fromJson(json);
 
   @override
