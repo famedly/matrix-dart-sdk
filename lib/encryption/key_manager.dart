@@ -183,9 +183,14 @@ class KeyManager {
     final room = client.getRoomById(roomId);
     if (room != null) {
       // attempt to decrypt the last event
-      final event = room.getState(EventTypes.Encrypted);
-      if (event != null && event.content['session_id'] == sessionId) {
-        room.setState(encryption.decryptRoomEventSync(roomId, event));
+      final event = room.lastEvent;
+      if (event != null &&
+          event.type == EventTypes.Encrypted &&
+          event.content['session_id'] == sessionId) {
+        final decrypted = encryption.decryptRoomEventSync(roomId, event);
+        if (decrypted.type != EventTypes.Encrypted) {
+          room.setState(decrypted);
+        }
       }
       // and finally broadcast the new session
       room.onSessionKeyReceived.add(sessionId);
@@ -887,7 +892,11 @@ class KeyManager {
       // we *received* an incoming key request
       final encryptedContent = event.encryptedContent;
       if (encryptedContent == null) {
-        return; // event wasn't encrypted, this is a security risk
+        Logs().w(
+          'Ignoring an unencrypted forwarded key from a to device message',
+          event.toJson(),
+        );
+        return;
       }
       final request = outgoingShareRequests.values.firstWhereOrNull((r) =>
           r.room.id == event.content['room_id'] &&
