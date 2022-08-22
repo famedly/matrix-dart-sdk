@@ -96,7 +96,7 @@ class KeyManager {
     Map<String, String>? senderClaimedKeys,
     bool uploaded = false,
     Map<String, Map<String, int>>? allowedAtIndex,
-  }) {
+  }) async {
     final senderClaimedKeys_ = senderClaimedKeys ?? <String, String>{};
     final allowedAtIndex_ = allowedAtIndex ?? <String, Map<String, int>>{};
     final userId = client.userID;
@@ -111,7 +111,7 @@ class KeyManager {
     final oldSession =
         getInboundGroupSession(roomId, sessionId, senderKey, otherRooms: false);
     if (content['algorithm'] != AlgorithmTypes.megolmV1AesSha2) {
-      return Future.value();
+      return;
     }
     late olm.InboundGroupSession inboundGroupSession;
     try {
@@ -150,14 +150,14 @@ class KeyManager {
     } else {
       // we are gonna keep our old session
       newSession.dispose();
-      return Future.value();
+      return;
     }
 
     final roomInboundGroupSessions =
         _inboundGroupSessions[roomId] ??= <String, SessionKey>{};
     roomInboundGroupSessions[sessionId] = newSession;
     if (!client.isLogged() || client.encryption == null) {
-      return Future.value();
+      return;
     }
     final storeFuture = client.database
         ?.storeInboundGroupSession(
@@ -170,12 +170,13 @@ class KeyManager {
       senderKey,
       json.encode(senderClaimedKeys_),
     )
-        .then((_) {
+        .then((_) async {
       if (!client.isLogged() || client.encryption == null) {
         return;
       }
       if (uploaded) {
-        client.database?.markInboundGroupSessionAsUploaded(roomId, sessionId);
+        await client.database
+            ?.markInboundGroupSessionAsUploaded(roomId, sessionId);
       } else {
         _haveKeysToUpload = true;
       }

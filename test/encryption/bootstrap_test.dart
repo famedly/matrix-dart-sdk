@@ -59,7 +59,7 @@ void main() {
           } else if (bootstrap.state == BootstrapState.askNewSsss) {
             await bootstrap.newSsss('foxies');
           } else if (bootstrap.state == BootstrapState.askWipeCrossSigning) {
-            bootstrap.wipeCrossSigning(true);
+            await bootstrap.wipeCrossSigning(true);
           } else if (bootstrap.state == BootstrapState.askSetupCrossSigning) {
             await bootstrap.askSetupCrossSigning(
               setupMasterKey: true,
@@ -120,7 +120,7 @@ void main() {
           } else if (bootstrap.state == BootstrapState.askNewSsss) {
             await bootstrap.newSsss('newfoxies');
           } else if (bootstrap.state == BootstrapState.askWipeCrossSigning) {
-            bootstrap.wipeCrossSigning(false);
+            await bootstrap.wipeCrossSigning(false);
           } else if (bootstrap.state == BootstrapState.askWipeOnlineKeyBackup) {
             bootstrap.wipeOnlineKeyBackup(false);
           }
@@ -173,7 +173,7 @@ void main() {
           } else if (bootstrap.state == BootstrapState.askNewSsss) {
             await bootstrap.newSsss('supernewfoxies');
           } else if (bootstrap.state == BootstrapState.askWipeCrossSigning) {
-            bootstrap.wipeCrossSigning(false);
+            await bootstrap.wipeCrossSigning(false);
           } else if (bootstrap.state == BootstrapState.askWipeOnlineKeyBackup) {
             bootstrap.wipeOnlineKeyBackup(false);
           }
