@@ -108,8 +108,7 @@ pub-dev:
 
 sonarqube-check:
   image: 
-    name: sonarsource/sonar-scanner-cli:latest
-    entrypoint: [""]
+    name: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable:${FLUTTER_IMAGE_TAG}
   variables:
     SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
     GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
@@ -118,6 +117,10 @@ sonarqube-check:
     paths:
       - .sonar/cache
   script: 
+    - apt-get update && apt-get install --no-install-recommends --no-install-suggests -y sonar-scanner
+    - flutter pub get 
+    - flutter test
+    - flutter test --machine --coverage > tests.output 
     - sonar-scanner
   allow_failure: true
   #only:
