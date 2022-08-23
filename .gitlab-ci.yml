@@ -126,8 +126,8 @@ sonarqube-check:
     - sudo chmod +x /opt/sonar-scanner-${SONAR_SCANNER_CLI_VERSION}/bin/sonar-scanner
     - sudo ln -s /opt/sonar-scanner-${SONAR_SCANNER_CLI_VERSION}/bin/sonar-scanner /usr/local/bin/sonar-scanner
     - flutter pub get 
-    - flutter test
-    - flutter test --machine --coverage > tests.output 
+    - flutter test --machine > tests.output
+    - flutter test --coverage
     - sonar-scanner
   allow_failure: true
   #only:
