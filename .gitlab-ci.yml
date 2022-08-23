@@ -118,7 +118,7 @@ sonarqube-check:
     paths:
       - .sonar/cache
   script: 
-    - sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y curl lcov python3 python3-distutils wget unzip
+    - sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y curl lcov python3 python3-distutils wget unzip default-jre
     - sudo wget -O sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_CLI_VERSION-linux}.zip
     - sudo unzip sonar-scanner-cli.zip -d /opt
     - sudo chown -R $(whoami):$(whoami) /opt/sonar-scanner-${SONAR_SCANNER_CLI_VERSION}
