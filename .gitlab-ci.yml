@@ -112,12 +112,19 @@ sonarqube-check:
   variables:
     SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
     GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+    SONAR_SCANNER_CLI_VERSION: 4.7.0.2747
   cache:
     key: "${CI_JOB_NAME}"
     paths:
       - .sonar/cache
   script: 
-    - apt-get update && apt-get install --no-install-recommends --no-install-suggests -y sonar-scanner
+    - apt-get update && apt-get install --no-install-recommends --no-install-suggests -y wget unzip
+    - wget -qO sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-$SONAR_SCANNER_CLI_VERSION-linux.zip
+    - unzip sonar-scanner-cli.zip -d /opt
+    - chown -R $(whoami):$(whoami) /opt/sonar-scanner-$SONAR_SCANNER_CLI_VERSION-linux
+    - rm sonar-scanner-cli.zip
+    - chmod +x /opt/sonar-scanner-$SONAR_SCANNER_CLI_VERSION-linux/bin/sonar-scanner
+    - ln -s /opt/sonar-scanner-$SONAR_SCANNER_CLI_VERSION-linux/bin/sonar-scanner /usr/local/bin/sonar-scanner
     - flutter pub get 
     - flutter test
     - flutter test --machine --coverage > tests.output 
