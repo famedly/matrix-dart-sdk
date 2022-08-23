@@ -118,13 +118,14 @@ sonarqube-check:
     paths:
       - .sonar/cache
   script: 
-    - apt-get update && apt-get install --no-install-recommends --no-install-suggests -y wget unzip
-    - wget -qO sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-$SONAR_SCANNER_CLI_VERSION-linux.zip
+    - apt-get update
+    - apt-get install -y wget unzip
+    - wget -O sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_CLI_VERSION-linux}.zip
     - unzip sonar-scanner-cli.zip -d /opt
-    - chown -R $(whoami):$(whoami) /opt/sonar-scanner-$SONAR_SCANNER_CLI_VERSION-linux
+    - chown -R $(whoami):$(whoami) /opt/sonar-scanner-${SONAR_SCANNER_CLI_VERSION}-linux
     - rm sonar-scanner-cli.zip
-    - chmod +x /opt/sonar-scanner-$SONAR_SCANNER_CLI_VERSION-linux/bin/sonar-scanner
-    - ln -s /opt/sonar-scanner-$SONAR_SCANNER_CLI_VERSION-linux/bin/sonar-scanner /usr/local/bin/sonar-scanner
+    - chmod +x /opt/sonar-scanner-${SONAR_SCANNER_CLI_VERSION}-linux/bin/sonar-scanner
+    - ln -s /opt/sonar-scanner-${SONAR_SCANNER_CLI_VERSION}-linux/bin/sonar-scanner /usr/local/bin/sonar-scanner
     - flutter pub get 
     - flutter test
     - flutter test --machine --coverage > tests.output 
