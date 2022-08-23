@@ -119,16 +119,16 @@ sonarqube-check:
       - .sonar/cache
   script: 
     - sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y curl lcov python3 python3-distutils wget unzip
-    - wget -O sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_CLI_VERSION-linux}.zip
-    - unzip sonar-scanner-cli.zip -d /opt
-    - chown -R $(whoami):$(whoami) /opt/sonar-scanner-${SONAR_SCANNER_CLI_VERSION}-linux
-    - rm sonar-scanner-cli.zip
-    - chmod +x /opt/sonar-scanner-${SONAR_SCANNER_CLI_VERSION}-linux/bin/sonar-scanner
-    - ln -s /opt/sonar-scanner-${SONAR_SCANNER_CLI_VERSION}-linux/bin/sonar-scanner /usr/local/bin/sonar-scanner
-    - flutter pub get 
-    - flutter test
-    - flutter test --machine --coverage > tests.output 
-    - sonar-scanner
+    - sudo wget -O sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_CLI_VERSION-linux}.zip
+    - sudo unzip sonar-scanner-cli.zip -d /opt
+    - sudo chown -R $(whoami):$(whoami) /opt/sonar-scanner-${SONAR_SCANNER_CLI_VERSION}-linux
+    - sudo rm sonar-scanner-cli.zip
+    - sudo chmod +x /opt/sonar-scanner-${SONAR_SCANNER_CLI_VERSION}-linux/bin/sonar-scanner
+    - sudo ln -s /opt/sonar-scanner-${SONAR_SCANNER_CLI_VERSION}-linux/bin/sonar-scanner /usr/local/bin/sonar-scanner
+    - sudo flutter pub get 
+    - sudo flutter test
+    - sudo flutter test --machine --coverage > tests.output 
+    - sudo sonar-scanner
   allow_failure: true
   #only:
   #  - master # or the name of your main branch
