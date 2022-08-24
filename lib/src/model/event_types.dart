@@ -81,9 +81,7 @@ abstract class EventTypes {
   static const String MegolmBackup = 'm.megolm_backup.v1';
   static const String SecretStorageDefaultKey = 'm.secret_storage.default_key';
 
-  // Also used as account data type so it needs to be uri encoded
-  static String secretStorageKey(String keyId) =>
-      Uri.encodeComponent('m.secret_storage.key.$keyId');
+  static String secretStorageKey(String keyId) => 'm.secret_storage.key.$keyId';
 
   // Spaces
   static const String spaceParent = 'm.space.parent';
