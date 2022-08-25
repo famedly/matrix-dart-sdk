@@ -1092,13 +1092,10 @@ class GroupCall {
 
     onStreamRemoved.add(stream);
 
-    if (voip.delegate.isWeb) {
-      stream.stream!.getTracks().forEach((element) {
-        element.stop();
-      });
-    }
-
-    stream.dispose();
+    stream.stream!.getTracks().forEach((element) {
+      element.stop();
+    });
+    stream.stream!.dispose();
 
     onGroupCallEvent.add(GroupCallEvent.UserMediaStreamsChanged);
 
