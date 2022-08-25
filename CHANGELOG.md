@@ -1,3 +1,12 @@
+## [1.1.4] - 25nd Aug 2022
+- Revert "fix: Secret storage keys are used as account data but are not uri encoded"
+- chore: disable dynamic calls (Nicolas Werner)
+- chore: export filter map extension (Nicolas Werner)
+- chore: strict casts (Nicolas Werner)
+- chore: strict inference (Nicolas Werner)
+- chore: strict raw types (Nicolas Werner)
+- chore: upgrade from pedantic to lints (Nicolas Werner)
+
 ## [1.1.3] - 2nd Aug 2022
 - fix: Secret storage keys are used as account data but are not uri encoded
 - chore: export filter map extension
