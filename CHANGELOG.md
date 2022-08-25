@@ -1,3 +1,6 @@
+## [1.1.5] - 25nd Aug 2022
+- fix: Fixed dysfunctional key-verification (Emoji+manual)
+
 ## [1.1.4] - 25nd Aug 2022
 - Revert "fix: Secret storage keys are used as account data but are not uri encoded"
 - chore: disable dynamic calls (Nicolas Werner)
