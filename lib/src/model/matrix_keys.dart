@@ -42,8 +42,25 @@ abstract class MatrixSignableKey {
         userId = json['user_id'] as String,
         keys = Map<String, String>.from(json['keys'] as Map<String, dynamic>),
         // we need to manually copy to ensure that our map is Map<String, Map<String, String>>
-        signatures = json.tryGetMap<String, Map<String, String>>('signatures'),
-        unsigned = json.tryGetMap<String, dynamic>('unsigned');
+        signatures = (() {
+          final orig = json.tryGetMap<String, dynamic>('signatures');
+          final res = <String, Map<String, String>>{};
+          for (final entry
+              in (orig?.entries ?? <MapEntry<String, dynamic>>[])) {
+            final deviceSigs = entry.value;
+            if (deviceSigs is Map<String, dynamic>) {
+              for (final nestedEntry in deviceSigs.entries) {
+                final nestedValue = nestedEntry.value;
+                if (nestedValue is String) {
+                  (res[entry.key] ??= <String, String>{})[nestedEntry.key] =
+                      nestedValue;
+                }
+              }
+            }
+          }
+          return res;
+        }()),
+        unsigned = json.tryGetMap<String, dynamic>('unsigned')?.copy();
 
   Map<String, dynamic> toJson() {
     final data = _json ?? <String, dynamic>{};

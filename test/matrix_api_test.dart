@@ -1197,7 +1197,7 @@ void main() {
           'ed25519:82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8':
               '82mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8',
         },
-        'signatures': <String, dynamic>{},
+        'signatures': <String, Map<String, String>>{},
       });
       final selfSigningKey = MatrixCrossSigningKey.fromJson({
         'user_id': '@test:fakeServer.notExisting',
@@ -1206,7 +1206,7 @@ void main() {
           'ed25519:F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY':
               'F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY',
         },
-        'signatures': <String, dynamic>{},
+        'signatures': <String, Map<String, String>>{},
       });
       final userSigningKey = MatrixCrossSigningKey.fromJson({
         'user_id': '@test:fakeServer.notExisting',
@@ -1215,7 +1215,7 @@ void main() {
           'ed25519:0PiwulzJ/RU86LlzSSZ8St80HUMN3dqjKa/orIJoA0g':
               '0PiwulzJ/RU86LlzSSZ8St80HUMN3dqjKa/orIJoA0g',
         },
-        'signatures': <String, dynamic>{},
+        'signatures': <String, Map<String, String>>{},
       });
       await matrixApi.uploadCrossSigningKeys(
           masterKey: masterKey,
@@ -1638,7 +1638,7 @@ void main() {
       final algorithm = BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2;
       final authData = <String, dynamic>{
         'public_key': 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM',
-        'signatures': <String, dynamic>{},
+        'signatures': <String, Map<String, String>>{},
       };
       final ret = await matrixApi.postRoomKeysVersion(algorithm, authData);
       expect(
@@ -1663,7 +1663,7 @@ void main() {
       final algorithm = BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2;
       final authData = <String, dynamic>{
         'public_key': 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM',
-        'signatures': <String, dynamic>{},
+        'signatures': <String, Map<String, String>>{},
       };
       await matrixApi.putRoomKeysVersion('5', algorithm, authData);
     });
