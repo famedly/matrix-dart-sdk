@@ -75,6 +75,6 @@ pub-dev:
       cp "${PUB_DEV_CREDENTIALS}" ~/.config/dart/pub-credentials.json
 
     - dart pub get
-    - dart pub publish
+    - dart pub publish --force
   rules:
     - if: $CI_COMMIT_TAG
