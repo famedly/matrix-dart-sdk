@@ -1,7 +1,5 @@
 stages:
   - coverage
-  - builddocs
-  - deploy
   - publish
 
 test:
@@ -22,34 +20,6 @@ code_analyze:
   script:
     - flutter format lib/ test/ --set-exit-if-changed
     - flutter analyze
-
-build_api_doc:
-  tags:
-    - docker
-  stage: builddocs
-  image: cirrusci/flutter
-  script:
-    - dartdoc --exclude "dart:async,dart:collection,dart:convert,dart:core,dart:developer,dart:io,dart:isolate,dart:math,dart:typed_data,dart:ui"
-  artifacts:
-    paths:
-      - doc/api/
-  only:
-    - main
-
-pages:
-  tags:
-    - linux
-  stage: deploy
-  image: alpine:latest
-  script:
-    - mv doc/api/ public
-  dependencies:
-    - build_api_doc
-  artifacts:
-    paths:
-      - public
-  only:
-    - main
 
 dry-run:
   stage: publish
