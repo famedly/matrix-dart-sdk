@@ -1,7 +1,10 @@
-## [1.1.5] - 25nd Aug 2022
+## [1.1.6] - 26th Aug 2022
+- fix: Fixed missing .pub-cache folder creation in .gitlab-ci.yml
+
+## [1.1.5] - 25th Aug 2022
 - fix: Fixed dysfunctional key-verification (Emoji+manual)
 
-## [1.1.4] - 25nd Aug 2022
+## [1.1.4] - 25th Aug 2022
 - Revert "fix: Secret storage keys are used as account data but are not uri encoded"
 - chore: disable dynamic calls (Nicolas Werner)
 - chore: export filter map extension (Nicolas Werner)
