@@ -27,11 +27,11 @@ import 'package:matrix/matrix.dart';
 import 'fake_database.dart';
 
 void main() {
-  group('HiveCollections Database Test', () {
+  group('Matrix SDK Database Test', () {
     late DatabaseApi database;
     late int toDeviceQueueIndex;
-    test('Open', () async {
-      database = await getHiveCollectionsDatabase(null);
+    test('Setup', () async {
+      database = await getMatrixSdkDatabase(null);
     });
     test('transaction', () async {
       var counter = 0;
