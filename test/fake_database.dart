@@ -21,6 +21,7 @@ import 'dart:math';
 
 import 'package:file/memory.dart';
 import 'package:hive/hive.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:matrix/matrix.dart';
 
@@ -40,6 +41,16 @@ Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
     'unit_test.${c?.hashCode}',
     testHivePath,
   );
+  await db.open();
+  return db;
+}
+
+// ignore: deprecated_member_use_from_same_package
+Future<FluffyBoxDatabase> getFluffyBoxDatabase(Client? c) async {
+  final fileSystem = MemoryFileSystem();
+  final path = '${fileSystem.path}/${Random().nextDouble()}';
+  final database = await databaseFactoryFfi.openDatabase(path);
+  final db = FluffyBoxDatabase('unit_test.${c?.hashCode}', database: database);
   await db.open();
   return db;
 }

@@ -32,6 +32,11 @@ void main() {
       getHiveCollectionsDatabase(null),
     );
   });
+  group('FluffyBox Database Test', () {
+    testDatabase(
+      getFluffyBoxDatabase(null),
+    );
+  });
 }
 
 Future<bool> olmEnabled() async {
