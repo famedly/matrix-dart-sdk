@@ -32,6 +32,11 @@ void main() {
       getHiveCollectionsDatabase(null),
     );
   });
+  group('EasyIdb Database Test', () {
+    testDatabase(
+      getEasyIdbDatabase(null),
+    );
+  });
 }
 
 Future<bool> olmEnabled() async {

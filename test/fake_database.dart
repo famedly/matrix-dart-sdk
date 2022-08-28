@@ -45,6 +45,14 @@ Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
 }
 
 // ignore: deprecated_member_use_from_same_package
+Future<EasyIdbDatabase> getEasyIdbDatabase(Client? c) async {
+  // ignore: deprecated_member_use_from_same_package
+  final db = EasyIdbDatabase('unit_test.${c?.hashCode}');
+  await db.open();
+  return db;
+}
+
+// ignore: deprecated_member_use_from_same_package
 Future<FamedlySdkHiveDatabase> getHiveDatabase(Client? c) async {
   if (!hiveInitialized) {
     final fileSystem = MemoryFileSystem();

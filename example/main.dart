@@ -10,7 +10,7 @@ void main() async {
     'Matrix Example Chat',
     databaseBuilder: (_) async {
       final dir = await getApplicationSupportDirectory();
-      final db = HiveCollectionsDatabase('matrix_example_chat', dir.path);
+      final db = EasyIdbDatabase('matrix_example_chat');
       await db.open();
       return db;
     },

@@ -14,11 +14,13 @@ dependencies:
   canonical_json: ^1.1.0
   collection: ^1.15.0
   crypto: ^3.0.0
+  easy_idb: ^1.0.0
   ffi: ^2.0.0
   hive: ^2.2.3
   html: ^0.15.0
   html_unescape: ^2.0.0
   http: ^0.13.0
+  idb_shim: ^2.0.1+1
   image: ^4.0.15
   js: ^0.6.3
   markdown: ^4.0.0
