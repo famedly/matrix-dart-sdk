@@ -226,7 +226,13 @@ class KeyManager {
   }
 
   /// Attempt auto-request for a key
-  void maybeAutoRequest(String roomId, String sessionId, String senderKey) {
+  void maybeAutoRequest(
+    String roomId,
+    String sessionId,
+    String senderKey, {
+    bool tryOnlineBackup = true,
+    bool onlineKeyBackupOnly = true,
+  }) {
     final room = client.getRoomById(roomId);
     final requestIdent = '$roomId|$sessionId|$senderKey';
     if (room != null &&
@@ -234,8 +240,13 @@ class KeyManager {
         !client.isUnknownSession) {
       // do e2ee recovery
       _requestedSessionIds.add(requestIdent);
-      runInRoot(
-          () => request(room, sessionId, senderKey, onlineKeyBackupOnly: true));
+      runInRoot(() => request(
+            room,
+            sessionId,
+            senderKey,
+            tryOnlineBackup: tryOnlineBackup,
+            onlineKeyBackupOnly: onlineKeyBackupOnly,
+          ));
     }
   }
 
