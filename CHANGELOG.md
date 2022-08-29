@@ -1,3 +1,6 @@
+## [1.1.7] - 29th Aug 2022
+- fix: Parsing of MatrixException parameters
+
 ## [1.1.6] - 26th Aug 2022
 - fix: Fixed missing .pub-cache folder creation in .gitlab-ci.yml
 
