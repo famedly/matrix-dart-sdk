@@ -27,6 +27,7 @@ import 'package:matrix/encryption/key_manager.dart';
 import 'package:matrix/encryption/ssss.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/msc_extensions/msc_3814_dehydrated_devices/msc_3814_dehydrated_devices.dart';
 
 enum BootstrapState {
   /// Is loading.
@@ -338,13 +339,14 @@ class Bootstrap {
     state = BootstrapState.askSetupCrossSigning;
   }
 
-  void wipeCrossSigning(bool wipe) {
+  Future<void> wipeCrossSigning(bool wipe) async {
     if (state != BootstrapState.askWipeCrossSigning) {
       throw BootstrapBadStateException();
     }
     if (wipe) {
       state = BootstrapState.askSetupCrossSigning;
     } else {
+      await client.dehydratedDeviceSetup(newSsssKey!);
       checkOnlineKeyBackup();
     }
   }
@@ -357,6 +359,7 @@ class Bootstrap {
       throw BootstrapBadStateException();
     }
     if (!setupMasterKey && !setupSelfSigningKey && !setupUserSigningKey) {
+      await client.dehydratedDeviceSetup(newSsssKey!);
       checkOnlineKeyBackup();
       return;
     }
@@ -526,6 +529,7 @@ class Bootstrap {
       return;
     }
 
+    await client.dehydratedDeviceSetup(newSsssKey!);
     checkOnlineKeyBackup();
   }
 

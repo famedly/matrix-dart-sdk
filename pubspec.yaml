@@ -14,7 +14,7 @@ dependencies:
   canonical_json: ^1.1.0
   collection: ^1.15.0
   crypto: ^3.0.0
-  ffi: ^1.0.0
+  ffi: ^2.0.0
   fluffybox: ^0.4.3
   hive: ^2.2.1
   html: ^0.15.0
@@ -23,9 +23,9 @@ dependencies:
   image: ^3.1.1
   js: ^0.6.3
   markdown: ^4.0.0
-  matrix_api_lite: ^1.1.0
+  matrix_api_lite: ^1.1.7
   mime: ^1.0.0
-  olm: ^2.0.0
+  olm: ^2.0.2
   random_string: ^2.3.1
   sdp_transform: ^0.3.2
   slugify: ^2.0.0

@@ -43,11 +43,18 @@ class Encryption {
   String? get fingerprintKey => olmManager.fingerprintKey;
   String? get identityKey => olmManager.identityKey;
 
-  late KeyManager keyManager;
-  late OlmManager olmManager;
-  late KeyVerificationManager keyVerificationManager;
-  late CrossSigning crossSigning;
-  late SSSS ssss;
+  /// Returns the database used to store olm sessions and the olm account.
+  /// We don't want to store olm keys for dehydrated devices.
+  DatabaseApi? get olmDatabase =>
+      ourDeviceId == client.deviceID ? client.database : null;
+
+  late final KeyManager keyManager;
+  late final OlmManager olmManager;
+  late final KeyVerificationManager keyVerificationManager;
+  late final CrossSigning crossSigning;
+  late SSSS ssss; // some tests mock this, which is why it isn't final
+
+  late String ourDeviceId;
 
   Encryption({
     required this.client,
@@ -61,9 +68,17 @@ class Encryption {
   }
 
   // initial login passes null to init a new olm account
-  Future<void> init(String? olmAccount) async {
-    await olmManager.init(olmAccount);
-    _backgroundTasksRunning = true;
+  Future<void> init(String? olmAccount,
+      {String? deviceId,
+      String? pickleKey,
+      bool isDehydratedDevice = false}) async {
+    ourDeviceId = deviceId ?? client.deviceID!;
+    await olmManager.init(
+        olmAccount: olmAccount,
+        deviceId: isDehydratedDevice ? deviceId : ourDeviceId,
+        pickleKey: pickleKey);
+    _backgroundTasksRunning = ourDeviceId ==
+        client.deviceID; // Don't run tasks for dehydrated devices
     _backgroundTasks(); // start the background tasks
   }
 

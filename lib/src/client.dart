@@ -151,6 +151,7 @@ class Client extends MatrixApi {
   /// sending events on connection problems or to `Duration.zero` to disable it.
   /// Set [customImageResizer] to your own implementation for a more advanced
   /// and faster image resizing experience.
+  /// Set [enableDehydratedDevices] to enable experimental support for enabling MSC3814 dehydrated devices.
   Client(
     this.clientName, {
     this.databaseBuilder,
@@ -175,6 +176,7 @@ class Client extends MatrixApi {
     this.sendTimelineEventTimeout = const Duration(minutes: 1),
     this.customImageResizer,
     this.shareKeysWithUnverifiedDevices = true,
+    this.enableDehydratedDevices = false,
   })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
@@ -252,11 +254,13 @@ class Client extends MatrixApi {
   List<Room> get rooms => _rooms;
   List<Room> _rooms = [];
 
+  bool enableDehydratedDevices = false;
+
   /// Whether this client supports end-to-end encryption using olm.
   bool get encryptionEnabled => encryption?.enabled == true;
 
   /// Whether this client is able to encrypt and decrypt files.
-  bool get fileEncryptionEnabled => encryptionEnabled && true;
+  bool get fileEncryptionEnabled => encryptionEnabled;
 
   String get identityKey => encryption?.identityKey ?? '';
 
@@ -2187,6 +2191,9 @@ class Client extends MatrixApi {
 
       // Check if there are outdated device key lists. Add it to the set.
       final outdatedLists = <String, List<String>>{};
+      for (final userId in (additionalUsers ?? <String>[])) {
+        outdatedLists[userId] = [];
+      }
       for (final userId in trackedUserIds) {
         final deviceKeysList =
             _userDeviceKeys[userId] ??= DeviceKeysList(userId, this);

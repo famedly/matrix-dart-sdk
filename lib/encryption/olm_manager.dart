@@ -27,12 +27,14 @@ import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/json_signature_check_extension.dart';
 import 'package:matrix/encryption/utils/olm_session.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/msc_extensions/msc_3814_dehydrated_devices/api.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 
 class OlmManager {
   final Encryption encryption;
   Client get client => encryption.client;
   olm.Account? _olmAccount;
+  String? ourDeviceId;
 
   /// Returns the base64 encoded keys to store them in a store.
   /// This String should **never** leave the device!
@@ -43,6 +45,9 @@ class OlmManager {
   String? get identityKey =>
       enabled ? json.decode(_olmAccount!.identity_keys())['curve25519'] : null;
 
+  String? pickleOlmAccountWithKey(String key) =>
+      enabled ? _olmAccount!.pickle(key) : null;
+
   bool get enabled => _olmAccount != null;
 
   OlmManager(this.encryption);
@@ -52,13 +57,21 @@ class OlmManager {
   final Map<String, List<OlmSession>> _olmSessions = {};
 
   // NOTE(Nico): On initial login we pass null to create a new account
-  Future<void> init(String? olmAccount) async {
+  Future<void> init(
+      {String? olmAccount,
+      required String? deviceId,
+      String? pickleKey}) async {
+    ourDeviceId = deviceId;
     if (olmAccount == null) {
       try {
         await olm.init();
         _olmAccount = olm.Account();
         _olmAccount!.create();
-        if (!await uploadKeys(uploadDeviceKeys: true, updateDatabase: false)) {
+        if (!await uploadKeys(
+            uploadDeviceKeys: true,
+            updateDatabase: false,
+            // dehydrated devices don't have a device id when created, so skip upload in that case.
+            skipAllUploads: deviceId == null)) {
           throw ('Upload key failed');
         }
       } catch (_) {
@@ -70,7 +83,7 @@ class OlmManager {
       try {
         await olm.init();
         _olmAccount = olm.Account();
-        _olmAccount!.unpickle(client.userID!, olmAccount);
+        _olmAccount!.unpickle(pickleKey ?? client.userID!, olmAccount);
       } catch (_) {
         _olmAccount?.free();
         _olmAccount = null;
@@ -97,8 +110,7 @@ class OlmManager {
     if (!payload['signatures'].containsKey(client.userID)) {
       payload['signatures'][client.userID] = <String, dynamic>{};
     }
-    payload['signatures'][client.userID]['ed25519:${client.deviceID}'] =
-        signature;
+    payload['signatures'][client.userID]['ed25519:$ourDeviceId'] = signature;
     if (unsigned != null) {
       payload['unsigned'] = unsigned;
     }
@@ -118,6 +130,7 @@ class OlmManager {
     int? oldKeyCount = 0,
     bool updateDatabase = true,
     bool? unusedFallbackKey = false,
+    bool skipAllUploads = false,
   }) async {
     final olmAccount = _olmAccount;
     if (olmAccount == null) {
@@ -130,7 +143,6 @@ class OlmManager {
     _uploadKeysLock = true;
 
     try {
-      final signedOneTimeKeys = <String, dynamic>{};
       int? uploadedOneTimeKeysCount;
       if (oldKeyCount != null) {
         // check if we have OTKs that still need uploading. If we do, we don't try to generate new ones,
@@ -150,24 +162,61 @@ class OlmManager {
           olmAccount.generate_one_time_keys(oneTimeKeysCount);
         }
         uploadedOneTimeKeysCount = oneTimeKeysCount + oldOTKsNeedingUpload;
-        final Map<String, dynamic> oneTimeKeys =
-            json.decode(olmAccount.one_time_keys());
+      }
 
-        // now sign all the one-time keys
-        for (final entry in oneTimeKeys['curve25519'].entries) {
-          final key = entry.key;
+      if (encryption.isMinOlmVersion(3, 2, 7) && unusedFallbackKey == false) {
+        // we don't have an unused fallback key uploaded....so let's change that!
+        olmAccount.generate_fallback_key();
+      }
+
+      // we save the generated OTKs into the database.
+      // in case the app gets killed during upload or the upload fails due to bad network
+      // we can still re-try later
+      if (updateDatabase) {
+        await encryption.olmDatabase?.updateClientKeys(pickledOlmAccount!);
+      }
+
+      if (skipAllUploads) {
+        _uploadKeysLock = false;
+        return true;
+      }
+
+      // and now generate the payload to upload
+      var deviceKeys = <String, dynamic>{
+        'user_id': client.userID,
+        'device_id': ourDeviceId,
+        'algorithms': [
+          AlgorithmTypes.olmV1Curve25519AesSha2,
+          AlgorithmTypes.megolmV1AesSha2
+        ],
+        'keys': <String, dynamic>{},
+      };
+
+      if (uploadDeviceKeys) {
+        final Map<String, dynamic> keys =
+            json.decode(olmAccount.identity_keys());
+        for (final entry in keys.entries) {
+          final algorithm = entry.key;
           final value = entry.value;
-          signedOneTimeKeys['signed_curve25519:$key'] = signJson({
-            'key': value,
-          });
+          deviceKeys['keys']['$algorithm:$ourDeviceId'] = value;
         }
+        deviceKeys = signJson(deviceKeys);
+      }
+
+      final signedOneTimeKeys = <String, dynamic>{};
+      // now sign all the one-time keys
+      for (final entry
+          in json.decode(olmAccount.one_time_keys())['curve25519'].entries) {
+        final key = entry.key;
+        final value = entry.value;
+        signedOneTimeKeys['signed_curve25519:$key'] = signJson({
+          'key': value,
+        });
       }
 
       final signedFallbackKeys = <String, dynamic>{};
-      if (encryption.isMinOlmVersion(3, 2, 0) && unusedFallbackKey == false) {
-        // we don't have an unused fallback key uploaded....so let's change that!
-        olmAccount.generate_fallback_key();
-        final fallbackKey = json.decode(olmAccount.fallback_key());
+      if (encryption.isMinOlmVersion(3, 2, 7)) {
+        final fallbackKey = json.decode(olmAccount.unpublished_fallback_key());
         // now sign all the fallback keys
         for (final entry in fallbackKey['curve25519'].entries) {
           final key = entry.key;
@@ -179,48 +228,32 @@ class OlmManager {
         }
       }
 
-      // and now generate the payload to upload
-      final keysContent = <String, dynamic>{
-        if (uploadDeviceKeys)
-          'device_keys': {
-            'user_id': client.userID,
-            'device_id': client.deviceID,
-            'algorithms': [
-              AlgorithmTypes.olmV1Curve25519AesSha2,
-              AlgorithmTypes.megolmV1AesSha2
-            ],
-            'keys': <String, dynamic>{},
-          },
-      };
-      if (uploadDeviceKeys) {
-        final Map<String, dynamic> keys =
-            json.decode(olmAccount.identity_keys());
-        for (final entry in keys.entries) {
-          final algorithm = entry.key;
-          final value = entry.value;
-          keysContent['device_keys']['keys']['$algorithm:${client.deviceID}'] =
-              value;
-        }
-        keysContent['device_keys'] =
-            signJson(keysContent['device_keys'] as Map<String, dynamic>);
+      if (signedFallbackKeys.isEmpty &&
+          signedOneTimeKeys.isEmpty &&
+          !uploadDeviceKeys) {
+        _uploadKeysLock = false;
+        return true;
       }
 
-      // we save the generated OTKs into the database.
-      // in case the app gets killed during upload or the upload fails due to bad network
-      // we can still re-try later
-      if (updateDatabase) {
-        await client.database?.updateClientKeys(pickledOlmAccount!);
-      }
       // Workaround: Make sure we stop if we got logged out in the meantime.
       if (!client.isLogged()) return true;
-      final currentUpload =
-          this.currentUpload = CancelableOperation.fromFuture(client.uploadKeys(
-        deviceKeys: uploadDeviceKeys
-            ? MatrixDeviceKeys.fromJson(keysContent['device_keys'])
-            : null,
-        oneTimeKeys: signedOneTimeKeys,
-        fallbackKeys: signedFallbackKeys,
-      ));
+      final currentUpload = this.currentUpload =
+          CancelableOperation.fromFuture(ourDeviceId == client.deviceID
+              ? client.uploadKeys(
+                  deviceKeys: uploadDeviceKeys
+                      ? MatrixDeviceKeys.fromJson(deviceKeys)
+                      : null,
+                  oneTimeKeys: signedOneTimeKeys,
+                  fallbackKeys: signedFallbackKeys,
+                )
+              : client.uploadKeysForDevice(
+                  ourDeviceId!,
+                  deviceKeys: uploadDeviceKeys
+                      ? MatrixDeviceKeys.fromJson(deviceKeys)
+                      : null,
+                  oneTimeKeys: signedOneTimeKeys,
+                  fallbackKeys: signedFallbackKeys,
+                ));
       final response = await currentUpload.valueOrCancellation();
       if (response == null) {
         _uploadKeysLock = false;
@@ -230,7 +263,7 @@ class OlmManager {
       // mark the OTKs as published and save that to datbase
       olmAccount.mark_keys_as_published();
       if (updateDatabase) {
-        await client.database?.updateClientKeys(pickledOlmAccount!);
+        await encryption.olmDatabase?.updateClientKeys(pickledOlmAccount!);
       }
       return (uploadedOneTimeKeysCount != null &&
               response['signed_curve25519'] == uploadedOneTimeKeysCount) ||
@@ -262,7 +295,7 @@ class OlmManager {
     // fixup accidental too many uploads. We delete only one of them so that the server has time to update the counts and because we will get rate limited anyway.
     if (keyCount > _olmAccount!.max_number_of_one_time_keys()) {
       final requestingKeysFrom = {
-        client.userID!: {client.deviceID!: 'signed_curve25519'}
+        client.userID!: {ourDeviceId!: 'signed_curve25519'}
       };
       await client.claimKeys(requestingKeysFrom, timeout: 10000);
     }
@@ -294,7 +327,7 @@ class OlmManager {
       // update an existing session
       _olmSessions[session.identityKey]![ix] = session;
     }
-    await client.database?.storeOlmSession(
+    await encryption.olmDatabase?.storeOlmSession(
         session.identityKey,
         session.sessionId!,
         session.pickledSession!,
@@ -332,7 +365,7 @@ class OlmManager {
           }
           if (device != null) {
             device.lastActive = DateTime.now();
-            await client.database?.setLastActiveUserDeviceKey(
+            await encryption.olmDatabase?.setLastActiveUserDeviceKey(
                 device.lastActive.millisecondsSinceEpoch,
                 device.userId,
                 device.deviceId!);
@@ -373,7 +406,7 @@ class OlmManager {
       try {
         newSession.create_inbound_from(_olmAccount!, senderKey, body);
         _olmAccount!.remove_one_time_keys(newSession);
-        await client.database?.updateClientKeys(pickledOlmAccount!);
+        await encryption.olmDatabase?.updateClientKeys(pickledOlmAccount!);
         plaintext = newSession.decrypt(type, body);
         await runInRoot(() => storeOlmSession(OlmSession(
               key: client.userID!,
@@ -410,13 +443,13 @@ class OlmManager {
 
   Future<List<OlmSession>> getOlmSessionsFromDatabase(String senderKey) async {
     final olmSessions =
-        await client.database?.getOlmSessions(senderKey, client.userID!);
+        await encryption.olmDatabase?.getOlmSessions(senderKey, client.userID!);
     return olmSessions?.where((sess) => sess.isValid).toList() ?? [];
   }
 
   Future<void> getOlmSessionsForDevicesFromDatabase(
       List<String> senderKeys) async {
-    final rows = await client.database?.getOlmSessionsForDevices(
+    final rows = await encryption.olmDatabase?.getOlmSessionsForDevices(
       senderKeys,
       client.userID!,
     );
@@ -576,9 +609,9 @@ class OlmManager {
     };
     final encryptResult = sess.first.session!.encrypt(json.encode(fullPayload));
     await storeOlmSession(sess.first);
-    if (client.database != null) {
+    if (encryption.olmDatabase != null) {
       await runInRoot(
-          () async => client.database?.setLastSentMessageUserDeviceKey(
+          () async => encryption.olmDatabase?.setLastSentMessageUserDeviceKey(
               json.encode({
                 'type': type,
                 'content': payload,
@@ -604,7 +637,7 @@ class OlmManager {
       Map<String, dynamic> payload) async {
     final data = <String, Map<String, Map<String, dynamic>>>{};
     // first check if any of our sessions we want to encrypt for are in the database
-    if (client.database != null) {
+    if (encryption.olmDatabase != null) {
       await getOlmSessionsForDevicesFromDatabase(
           deviceKeys.map((d) => d.curve25519Key!).toList());
     }
@@ -633,7 +666,7 @@ class OlmManager {
       // We receive dan encrypted m.dummy. This means that the other end was not able to
       // decrypt our last message. So, we re-send it.
       final encryptedContent = event.encryptedContent;
-      if (encryptedContent == null || client.database == null) {
+      if (encryptedContent == null || encryption.olmDatabase == null) {
         return;
       }
       final device = client.getUserDeviceKeysByCurve25519Key(
@@ -643,7 +676,7 @@ class OlmManager {
       }
       Logs().v(
           '[OlmManager] Device ${device.userId}:${device.deviceId} generated a new olm session, replaying last sent message...');
-      final lastSentMessageRes = await client.database
+      final lastSentMessageRes = await encryption.olmDatabase
           ?.getLastSentMessageUserDeviceKey(device.userId, device.deviceId!);
       if (lastSentMessageRes == null ||
           lastSentMessageRes.isEmpty ||
