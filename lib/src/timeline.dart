@@ -333,14 +333,22 @@ class Timeline {
   }
 
   /// Request the keys for undecryptable events of this timeline
-  void requestKeys() {
+  void requestKeys({
+    bool tryOnlineBackup = true,
+    bool onlineKeyBackupOnly = true,
+  }) {
     for (final event in events) {
       if (event.type == EventTypes.Encrypted &&
           event.messageType == MessageTypes.BadEncrypted &&
           event.content['can_request_session'] == true) {
         try {
-          room.client.encryption?.keyManager.maybeAutoRequest(room.id,
-              event.content['session_id'], event.content['sender_key']);
+          room.client.encryption?.keyManager.maybeAutoRequest(
+            room.id,
+            event.content['session_id'],
+            event.content['sender_key'],
+            tryOnlineBackup: tryOnlineBackup,
+            onlineKeyBackupOnly: onlineKeyBackupOnly,
+          );
         } catch (_) {
           // dispose
         }
