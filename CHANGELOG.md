@@ -1,3 +1,10 @@
+## [0.13.0] - 29th Aug 2022
+- feat: Allow auto request keys via key sharing requests (Christian Pauly)
+- feat: support dehydrated devices (Nicolas Werner)
+- fix: Decrypt of last event might make an old message as last event (Christian Pauly)
+- fix: Fixed issue with group calls for web and flutter. (cloudwebrtc)
+- chore: Upgrade Hive to 2.2.3 which as a breaking change with BoxCollections (might need migration!!)
+
 ## [0.12.2] - 17th Aug 2022
 - chore: Correctly release the cloned stream. (cloudwebrtc)
 - fix: setRemoteDescription before adding local stream to prevent early feedsChanged and negotiation (td)
