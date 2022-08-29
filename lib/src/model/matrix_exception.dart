@@ -24,6 +24,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:matrix_api_lite/matrix_api_lite.dart';
 
 enum MatrixError {
   M_UNKNOWN,
@@ -65,12 +66,12 @@ class MatrixException implements Exception {
 
   /// The unique identifier for this error.
   String get errcode =>
-      raw['errcode'] as String? ??
+      raw.tryGet<String>('errcode') ??
       (requireAdditionalAuthentication ? 'M_FORBIDDEN' : 'M_UNKNOWN');
 
   /// A human readable error description.
   String get errorMessage =>
-      raw['error'] as String? ??
+      raw.tryGet<String>('error') ??
       (requireAdditionalAuthentication
           ? 'Require additional authentication'
           : 'Unknown error');
@@ -91,11 +92,11 @@ class MatrixException implements Exception {
       (e) => e.toString() == 'MatrixError.${(raw["errcode"] ?? "")}',
       orElse: () => MatrixError.M_UNKNOWN);
 
-  int? get retryAfterMs => raw['retry_after_ms'] as int?;
+  int? get retryAfterMs => raw.tryGet<int>('retry_after_ms');
 
   /// This is a session identifier that the client must pass back to the homeserver, if one is provided,
   /// in subsequent attempts to authenticate in the same API call.
-  String? get session => raw['session'] as String?;
+  String? get session => raw.tryGet<String>('session');
 
   /// Returns true if the server requires additional authentication.
   bool get requireAdditionalAuthentication => response != null
@@ -105,26 +106,24 @@ class MatrixException implements Exception {
   /// For each endpoint, a server offers one or more 'flows' that the client can use
   /// to authenticate itself. Each flow comprises a series of stages. If this request
   /// doesn't need additional authentication, then this is null.
-  List<AuthenticationFlow>? get authenticationFlows {
-    final flows = raw['flows'];
-    return (flows is List<Map<String, List<String>>>)
-        ? flows
-            .map((flow) => flow['stages'])
-            .whereType<List<String>>()
-            .map((stages) => AuthenticationFlow(List<String>.from(stages)))
-            .toList()
-        : null;
-  }
+  List<AuthenticationFlow>? get authenticationFlows => raw
+      .tryGet<List<dynamic>>('flows')
+      ?.whereType<Map<String, dynamic>>()
+      .map((flow) => flow['stages'])
+      .whereType<List<dynamic>>()
+      .map((stages) =>
+          AuthenticationFlow(List<String>.from(stages.whereType<String>())))
+      .toList();
 
   /// This section contains any information that the client will need to know in order to use a given type
   /// of authentication. For each authentication type presented, that type may be present as a key in this
   /// dictionary. For example, the public part of an OAuth client ID could be given here.
   Map<String, dynamic>? get authenticationParams =>
-      raw['params'] as Map<String, dynamic>?;
+      raw.tryGetMap<String, dynamic>('params');
 
   /// Returns the list of already completed authentication flows from previous requests.
   List<String> get completedAuthenticationFlows =>
-      List<String>.from(raw['completed'] as List<String>? ?? []);
+      raw.tryGetList<String>('completed') ?? [];
 }
 
 /// For each endpoint, a server offers one or more 'flows' that the client can use
