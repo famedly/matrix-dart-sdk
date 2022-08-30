@@ -61,8 +61,6 @@ class Client extends MatrixApi {
 
   final FutureOr<DatabaseApi> Function(Client)? databaseBuilder;
   final FutureOr<DatabaseApi> Function(Client)? legacyDatabaseBuilder;
-  final FutureOr<void> Function(Client)? databaseDestroyer;
-  final FutureOr<void> Function(Client)? legacyDatabaseDestroyer;
   DatabaseApi? _database;
 
   DatabaseApi? get database => _database;
@@ -155,9 +153,7 @@ class Client extends MatrixApi {
   Client(
     this.clientName, {
     this.databaseBuilder,
-    this.databaseDestroyer,
     this.legacyDatabaseBuilder,
-    this.legacyDatabaseDestroyer,
     Set<KeyVerificationMethod>? verificationMethods,
     http.Client? httpClient,
     Set<String>? importantStateEvents,
@@ -1480,16 +1476,6 @@ class Client extends MatrixApi {
     _rooms = [];
     await encryption?.dispose();
     encryption = null;
-    final databaseDestroyer = this.databaseDestroyer;
-    if (databaseDestroyer != null) {
-      try {
-        await database?.close();
-      } catch (e, s) {
-        Logs().e('Unable to close database', e, s);
-      }
-      await databaseDestroyer(this);
-      _database = null;
-    }
     onLoginStateChanged.add(LoginState.loggedOut);
   }
 
@@ -2860,7 +2846,6 @@ class Client extends MatrixApi {
       }
 
       await legacyDatabase.clear();
-      await legacyDatabaseDestroyer?.call(this);
     }
     await legacyDatabase?.close();
     _initLock = false;
