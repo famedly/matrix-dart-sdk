@@ -68,7 +68,7 @@ class SSSS {
     _cache.clear();
   }
 
-  static _DerivedKeys deriveKeys(Uint8List key, String name) {
+  static DerivedKeys deriveKeys(Uint8List key, String name) {
     final zerosalt = Uint8List(8);
     final prk = Hmac(sha256, zerosalt).convert(key);
     final b = Uint8List(1);
@@ -77,12 +77,13 @@ class SSSS {
     b[0] = 2;
     final hmacKey =
         Hmac(sha256, prk.bytes).convert(aesKey.bytes + utf8.encode(name) + b);
-    return _DerivedKeys(
+    return DerivedKeys(
         aesKey: Uint8List.fromList(aesKey.bytes),
         hmacKey: Uint8List.fromList(hmacKey.bytes));
   }
 
-  static Future<_Encrypted> encryptAes(String data, Uint8List key, String name,
+  static Future<EncryptedContent> encryptAes(
+      String data, Uint8List key, String name,
       [String? ivStr]) async {
     Uint8List iv;
     if (ivStr != null) {
@@ -100,14 +101,14 @@ class SSSS {
 
     final hmac = Hmac(sha256, keys.hmacKey).convert(ciphertext);
 
-    return _Encrypted(
+    return EncryptedContent(
         iv: base64.encode(iv),
         ciphertext: base64.encode(ciphertext),
         mac: base64.encode(hmac.bytes));
   }
 
   static Future<String> decryptAes(
-      _Encrypted data, Uint8List key, String name) async {
+      EncryptedContent data, Uint8List key, String name) async {
     final keys = deriveKeys(key, name);
     final cipher = base64decodeUnpadded(data.ciphertext);
     final hmac = base64
@@ -318,7 +319,7 @@ class SSSS {
       throw Exception('Wrong / unknown key');
     }
     final enc = secretInfo.content['encrypted'][keyId];
-    final encryptInfo = _Encrypted(
+    final encryptInfo = EncryptedContent(
         iv: enc['iv'], ciphertext: enc['ciphertext'], mac: enc['mac']);
     final decrypted = await decryptAes(encryptInfo, key, type);
     final db = client.database;
@@ -604,19 +605,20 @@ class _ShareRequest {
       : start = DateTime.now();
 }
 
-class _Encrypted {
+class EncryptedContent {
   final String iv;
   final String ciphertext;
   final String mac;
 
-  _Encrypted({required this.iv, required this.ciphertext, required this.mac});
+  EncryptedContent(
+      {required this.iv, required this.ciphertext, required this.mac});
 }
 
-class _DerivedKeys {
+class DerivedKeys {
   final Uint8List aesKey;
   final Uint8List hmacKey;
 
-  _DerivedKeys({required this.aesKey, required this.hmacKey});
+  DerivedKeys({required this.aesKey, required this.hmacKey});
 }
 
 class OpenSSSS {

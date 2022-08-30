@@ -771,7 +771,7 @@ class KeyManager {
         }
         final args = GenerateUploadKeysArgs(
           pubkey: backupPubKey,
-          dbSessions: <_DbInboundGroupSessionBundle>[],
+          dbSessions: <DbInboundGroupSessionBundle>[],
           userId: userID,
         );
         // we need to calculate verified beforehand, as else we pass a closure to an isolate
@@ -781,7 +781,7 @@ class KeyManager {
         for (final dbSession in dbSessions) {
           final device =
               client.getUserDeviceKeysByCurve25519Key(dbSession.senderKey);
-          args.dbSessions.add(_DbInboundGroupSessionBundle(
+          args.dbSessions.add(DbInboundGroupSessionBundle(
             dbSession: dbSession,
             verified: device?.verified ?? false,
           ));
@@ -1113,12 +1113,12 @@ RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
   }
 }
 
-class _DbInboundGroupSessionBundle {
-  _DbInboundGroupSessionBundle(
+class DbInboundGroupSessionBundle {
+  DbInboundGroupSessionBundle(
       {required this.dbSession, required this.verified});
 
-  factory _DbInboundGroupSessionBundle.fromJson(Map<dynamic, dynamic> json) =>
-      _DbInboundGroupSessionBundle(
+  factory DbInboundGroupSessionBundle.fromJson(Map<dynamic, dynamic> json) =>
+      DbInboundGroupSessionBundle(
         dbSession:
             StoredInboundGroupSession.fromJson(Map.from(json['dbSession'])),
         verified: json['verified'],
@@ -1140,7 +1140,7 @@ class GenerateUploadKeysArgs {
       GenerateUploadKeysArgs(
         pubkey: json['pubkey'],
         dbSessions: (json['dbSessions'] as Iterable)
-            .map((e) => _DbInboundGroupSessionBundle.fromJson(e))
+            .map((e) => DbInboundGroupSessionBundle.fromJson(e))
             .toList(),
         userId: json['userId'],
       );
@@ -1152,6 +1152,6 @@ class GenerateUploadKeysArgs {
       };
 
   String pubkey;
-  List<_DbInboundGroupSessionBundle> dbSessions;
+  List<DbInboundGroupSessionBundle> dbSessions;
   String userId;
 }
