@@ -1439,7 +1439,8 @@ class Client extends MatrixApi {
         'Successfully connected as ${userID.localpart} with ${homeserver.toString()}',
       );
 
-      final syncFuture = _sync();
+      /// Timeout of 0, so that we don't see a spinner for 30 seconds.
+      final syncFuture = _sync(timeout: Duration.zero);
       if (waitForFirstSync) {
         await syncFuture;
       }
@@ -1499,8 +1500,11 @@ class Client extends MatrixApi {
     return _sync();
   }
 
-  Future<void> _sync() {
-    final currentSync = _currentSync ??= _innerSync().whenComplete(() {
+  /// Pass a timeout to set how long the server waits before sending an empty response.
+  /// (Corresponds to the timeout param on the /sync request.)
+  Future<void> _sync({Duration? timeout}) {
+    final currentSync =
+        _currentSync ??= _innerSync(timeout: timeout).whenComplete(() {
       _currentSync = null;
       if (_backgroundSync && isLogged() && !_disposed) {
         _sync();
@@ -1522,7 +1526,9 @@ class Client extends MatrixApi {
     return;
   }
 
-  Future<void> _innerSync() async {
+  /// Pass a timeout to set how long the server waits before sending an empty response.
+  /// (Corresponds to the timeout param on the /sync request.)
+  Future<void> _innerSync({Duration? timeout}) async {
     await _retryDelay;
     _retryDelay = Future.delayed(Duration(seconds: syncErrorTimeoutSec));
     if (!isLogged() || _disposed || _aborted) return;
@@ -1536,7 +1542,7 @@ class Client extends MatrixApi {
       final syncRequest = sync(
         filter: syncFilterId,
         since: prevBatch,
-        timeout: prevBatch != null ? 30000 : null,
+        timeout: timeout?.inMilliseconds ?? 30000,
         setPresence: syncPresence,
       ).then((v) => Future<SyncUpdate?>.value(v)).catchError((e) {
         syncError = e;
