@@ -238,7 +238,7 @@ class Encryption {
         // the entry should always exist. In the case it doesn't, the following
         // line *could* throw an error. As that is a future, though, and we call
         // it un-awaited here, nothing happens, which is exactly the result we want
-        client.database?.updateInboundGroupSessionIndexes(
+        client.database.updateInboundGroupSessionIndexes(
             json.encode(inboundGroupSession.indexes), roomId, sessionId);
       }
       decryptedPayload = json.decode(decryptResult.plaintext);
@@ -299,8 +299,7 @@ class Encryption {
     final content = event.parsedRoomEncryptedContent;
     final sessionId = content.sessionId;
     try {
-      if (client.database != null &&
-          sessionId != null &&
+      if (sessionId != null &&
           !(keyManager
                   .getInboundGroupSession(
                     roomId,
@@ -329,7 +328,7 @@ class Encryption {
         if (updateType != EventUpdateType.history) {
           event.room.setState(event);
         }
-        await client.database?.storeEventUpdate(
+        await client.database.storeEventUpdate(
           EventUpdate(
             content: event.toJson(),
             roomID: roomId,
@@ -406,8 +405,7 @@ class Encryption {
     // check if we can set our own master key as verified, if it isn't yet
     final userId = client.userID;
     final masterKey = client.userDeviceKeys[userId]?.masterKey;
-    if (client.database != null &&
-        masterKey != null &&
+    if (masterKey != null &&
         userId != null &&
         !masterKey.directVerified &&
         masterKey.hasValidSignatureChain(onlyValidateUserIds: {userId})) {

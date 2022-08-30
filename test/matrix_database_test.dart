@@ -27,7 +27,7 @@ void main() {
     Logs().level = Level.error;
     final room = Room(id: '!room:blubb', client: Client('testclient'));
     test('setupDatabase', () async {
-      final database = await getDatabase(null);
+      final database = await getDatabase();
       await database.insertClient(
         'testclient',
         'https://example.org',
@@ -42,7 +42,7 @@ void main() {
 
     test('storeEventUpdate', () async {
       final client = Client('testclient');
-      final database = await getDatabase(client);
+      final database = await getDatabase();
       // store a simple update
       var update = EventUpdate(
         type: EventUpdateType.timeline,

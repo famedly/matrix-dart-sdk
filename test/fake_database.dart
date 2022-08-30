@@ -24,11 +24,11 @@ import 'package:hive/hive.dart';
 
 import 'package:matrix/matrix.dart';
 
-Future<DatabaseApi> getDatabase(Client? _) => getHiveCollectionsDatabase(_);
+Future<DatabaseApi> getDatabase() => getHiveCollectionsDatabase();
 
 bool hiveInitialized = false;
 
-Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
+Future<HiveCollectionsDatabase> getHiveCollectionsDatabase() async {
   final fileSystem = MemoryFileSystem();
   final testHivePath =
       '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
@@ -37,7 +37,7 @@ Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
     Hive.init(testHivePath);
   }
   final db = HiveCollectionsDatabase(
-    'unit_test.${c?.hashCode}',
+    'unit_test',
     testHivePath,
   );
   await db.open();
@@ -45,14 +45,14 @@ Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
 }
 
 // ignore: deprecated_member_use_from_same_package
-Future<FluffyBoxDatabase> getFluffyBoxDatabase(Client? c) async {
+Future<FluffyBoxDatabase> getFluffyBoxDatabase() async {
   final fileSystem = MemoryFileSystem();
   final testHivePath =
       '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
   Directory(testHivePath).createSync(recursive: true);
   // ignore: deprecated_member_use_from_same_package
   final db = FluffyBoxDatabase(
-    'unit_test.${c?.hashCode}',
+    'unit_test',
     testHivePath,
   );
   await db.open();
@@ -60,7 +60,7 @@ Future<FluffyBoxDatabase> getFluffyBoxDatabase(Client? c) async {
 }
 
 // ignore: deprecated_member_use_from_same_package
-Future<FamedlySdkHiveDatabase> getHiveDatabase(Client? c) async {
+Future<FamedlySdkHiveDatabase> getHiveDatabase() async {
   if (!hiveInitialized) {
     final fileSystem = MemoryFileSystem();
     final testHivePath =
@@ -70,7 +70,7 @@ Future<FamedlySdkHiveDatabase> getHiveDatabase(Client? c) async {
     hiveInitialized = true;
   }
   // ignore: deprecated_member_use_from_same_package
-  final db = FamedlySdkHiveDatabase('unit_test.${c?.hashCode}');
+  final db = FamedlySdkHiveDatabase('unit_test');
   await db.open();
   return db;
 }

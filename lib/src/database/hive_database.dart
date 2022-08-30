@@ -152,6 +152,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         action(_seenDeviceKeysBox),
       ]);
 
+  @override
   Future<void> open() async {
     _clientBox = await Hive.openBox(
       _clientBoxName,

@@ -113,7 +113,7 @@ class Timeline {
       // Look up for events in the database first. With fragmented view, we should delete the database cache
       final eventsFromStore = isFragmentedTimeline
           ? null
-          : await room.client.database?.getEventList(
+          : await room.client.database.getEventList(
               room,
               start: events.length,
               limit: Room.defaultHistoryCount,
@@ -126,7 +126,7 @@ class Timeline {
             continue;
           }
           final dbUser =
-              await room.client.database?.getUser(event.senderId, room);
+              await room.client.database.getUser(event.senderId, room);
           if (dbUser != null) room.setState(dbUser);
         }
 
@@ -218,8 +218,8 @@ class Timeline {
       if (allowNewEvent) {
         Logs().d('We now allow sync update into the timeline.');
         newEvents.addAll(
-            await room.client.database?.getEventList(room, onlySending: true) ??
-                []);
+          await room.client.database.getEventList(room, onlySending: true),
+        );
       }
     }
 
@@ -324,11 +324,8 @@ class Timeline {
       }
     }
 
-    if (room.client.database != null) {
-      await room.client.database?.transaction(decryptFn);
-    } else {
-      await decryptFn();
-    }
+    await room.client.database.transaction(decryptFn);
+
     if (decryptAtLeastOneEvent) onUpdate?.call();
   }
 
@@ -560,12 +557,11 @@ class Timeline {
     // Search in database
     var start = events.length;
     while (true) {
-      final eventsFromStore = await room.client.database?.getEventList(
-            room,
-            start: start,
-            limit: requestHistoryCount,
-          ) ??
-          [];
+      final eventsFromStore = await room.client.database.getEventList(
+        room,
+        start: start,
+        limit: requestHistoryCount,
+      );
       if (eventsFromStore.isEmpty) break;
       start += eventsFromStore.length;
       for (final event in events) {

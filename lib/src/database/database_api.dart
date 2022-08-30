@@ -306,7 +306,9 @@ abstract class DatabaseApi {
 
   Future<String?> publicKeySeen(String publicKey);
 
-  Future<dynamic> close();
+  Future<void> open();
+
+  Future<void> close();
 
   Future<T> transaction<T>(Future<T> Function() action);
 

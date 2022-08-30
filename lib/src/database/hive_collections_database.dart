@@ -22,6 +22,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
+import 'package:file/memory.dart';
 import 'package:hive/hive.dart';
 
 import 'package:matrix/encryption/utils/olm_session.dart';
@@ -120,9 +121,20 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   HiveCollectionsDatabase(this.name, this.path, {this.key});
 
+  factory HiveCollectionsDatabase.memory(String name, {HiveCipher? key}) {
+    final fileSystem = MemoryFileSystem();
+    final testHivePath =
+        '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
+    return HiveCollectionsDatabase(
+      'unit_test',
+      testHivePath,
+    );
+  }
+
   @override
   int get maxFileSize => 0;
 
+  @override
   Future<void> open() async {
     _collection = await BoxCollection.open(
       name,

@@ -31,7 +31,7 @@ Future<Client> getClient() async {
   final client = Client(
     'testclient',
     httpClient: FakeMatrixApi(),
-    databaseBuilder: getDatabase,
+    database: await getDatabase(),
   );
   FakeMatrixApi.client = client;
   await client.checkHomeserver(Uri.parse('https://fakeServer.notExisting'),

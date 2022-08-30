@@ -1469,14 +1469,14 @@ void main() {
       var buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
       expect(await event.isAttachmentInLocalStore(),
-          event.room.client.database?.supportsFileStoring);
+          event.room.client.database.supportsFileStoring);
       expect(buffer.bytes, FILE_BUFF);
       expect(serverHits, 1);
       buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
       expect(buffer.bytes, FILE_BUFF);
       expect(
-          serverHits, event.room.client.database!.supportsFileStoring ? 1 : 2);
+          serverHits, event.room.client.database.supportsFileStoring ? 1 : 2);
 
       await room.client.dispose(closeDatabase: true);
     });

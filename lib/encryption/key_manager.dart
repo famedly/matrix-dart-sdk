@@ -160,7 +160,7 @@ class KeyManager {
       return;
     }
     final storeFuture = client.database
-        ?.storeInboundGroupSession(
+        .storeInboundGroupSession(
       roomId,
       sessionId,
       inboundGroupSession.pickle(userId),
@@ -176,7 +176,7 @@ class KeyManager {
       }
       if (uploaded) {
         await client.database
-            ?.markInboundGroupSessionAsUploaded(roomId, sessionId);
+            .markInboundGroupSessionAsUploaded(roomId, sessionId);
       } else {
         _haveKeysToUpload = true;
       }
@@ -197,7 +197,7 @@ class KeyManager {
       room.onSessionKeyReceived.add(sessionId);
     }
 
-    return storeFuture ?? Future.value();
+    return storeFuture;
   }
 
   SessionKey? getInboundGroupSession(
@@ -262,7 +262,7 @@ class KeyManager {
       return sess; // nothing to do
     }
     final session =
-        await client.database?.getInboundGroupSession(roomId, sessionId);
+        await client.database.getInboundGroupSession(roomId, sessionId);
     if (session == null) return null;
     final userID = client.userID;
     if (userID == null) return null;
@@ -418,7 +418,7 @@ class KeyManager {
                     sess.outboundGroupSession!.message_index();
               }
             }
-            await client.database?.updateInboundGroupSessionAllowedAtIndex(
+            await client.database.updateInboundGroupSessionAllowedAtIndex(
                 json.encode(inboundSess!.allowedAtIndex),
                 room.id,
                 sess.outboundGroupSession!.session_id());
@@ -437,7 +437,7 @@ class KeyManager {
     }
     sess.dispose();
     _outboundGroupSessions.remove(roomId);
-    await client.database?.removeOutboundGroupSession(roomId);
+    await client.database.removeOutboundGroupSession(roomId);
     return true;
   }
 
@@ -446,7 +446,7 @@ class KeyManager {
       String roomId, OutboundGroupSession sess) async {
     final userID = client.userID;
     if (userID == null) return;
-    await client.database?.storeOutboundGroupSession(
+    await client.database.storeOutboundGroupSession(
         roomId,
         sess.outboundGroupSession!.pickle(userID),
         json.encode(sess.devices),
@@ -564,7 +564,6 @@ class KeyManager {
     final userID = client.userID;
     if (_loadedOutboundGroupSessions.contains(roomId) ||
         _outboundGroupSessions.containsKey(roomId) ||
-        database == null ||
         userID == null) {
       return; // nothing to do
     }
@@ -742,7 +741,7 @@ class KeyManager {
   Future<void> backgroundTasks() async {
     final database = client.database;
     final userID = client.userID;
-    if (_isUploadingKeys || database == null || userID == null) {
+    if (_isUploadingKeys || userID == null) {
       return;
     }
     _isUploadingKeys = true;

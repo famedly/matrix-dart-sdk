@@ -42,7 +42,7 @@ void test() async {
     Logs().i('[LibOlm] Enabled');
 
     Logs().i('++++ Login Alice at ++++');
-    testClientA = Client('TestClientA', databaseBuilder: getDatabase);
+    testClientA = Client('TestClientA', database: await getDatabase());
     await testClientA.checkHomeserver(Uri.parse(TestUser.homeserver));
     // Workaround: Logging in with displayname instead of mxid because of a bug
     // in the UIA proxy: https://gitlab.com/famedly/company/backend/services/uia-proxy/-/issues/27
@@ -53,7 +53,7 @@ void test() async {
     assert(testClientA.encryptionEnabled);
 
     Logs().i('++++ Login Bob ++++');
-    testClientB = Client('TestClientB', databaseBuilder: getDatabase);
+    testClientB = Client('TestClientB', database: await getDatabase());
     await testClientB.checkHomeserver(Uri.parse(TestUser.homeserver));
     // Workaround: Logging in with displayname instead of mxid
     await testClientB.login(LoginType.mLoginPassword,
@@ -249,7 +249,7 @@ void test() async {
         "++++ (Alice) Received decrypted message: '${room.lastEvent!.body}' ++++");
 
     Logs().i('++++ Login Bob in another client ++++');
-    final testClientC = Client('TestClientC', databaseBuilder: getDatabase);
+    final testClientC = Client('TestClientC', database: await getDatabase());
     await testClientC.checkHomeserver(Uri.parse(TestUser.homeserver));
     // Workaround: Logging in with displayname instead of mxid
     await testClientC.login(LoginType.mLoginPassword,

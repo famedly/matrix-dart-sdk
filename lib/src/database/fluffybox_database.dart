@@ -125,6 +125,7 @@ class FluffyBoxDatabase extends DatabaseApi {
   @override
   int get maxFileSize => 0;
 
+  @override
   Future<void> open() async {
     _collection = await BoxCollection.open(
       name,

@@ -29,12 +29,12 @@ import 'fake_database.dart';
 void main() {
   group('HiveCollections Database Test', () {
     testDatabase(
-      getHiveCollectionsDatabase(null),
+      getHiveCollectionsDatabase(),
     );
   });
   group('FluffyBox Database Test', () {
     testDatabase(
-      getFluffyBoxDatabase(null),
+      getFluffyBoxDatabase(),
     );
   });
 }

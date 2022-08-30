@@ -130,13 +130,11 @@ class Room {
       return;
     }
     final allStates = await client.database
-        ?.getUnimportantRoomEventStatesForRoom(
+        .getUnimportantRoomEventStatesForRoom(
             client.importantStateEvents.toList(), this);
 
-    if (allStates != null) {
-      for (final state in allStates) {
-        setState(state);
-      }
+    for (final state in allStates) {
+      setState(state);
     }
     partial = false;
   }
@@ -1094,7 +1092,7 @@ class Room {
 
   /// Call the Matrix API to forget this room if you already left it.
   Future<void> forget() async {
-    await client.database?.forgetRoom(id);
+    await client.database.forgetRoom(id);
     await client.forgetRoom(id);
     return;
   }
@@ -1198,16 +1196,12 @@ class Room {
           direction: Direction.b);
     }
 
-    if (client.database != null) {
-      await client.database?.transaction(() async {
-        if (storeInDatabase) {
-          await client.database?.setRoomPrevBatch(resp.end!, id, client);
-        }
-        await loadFn();
-      });
-    } else {
+    await client.database.transaction(() async {
+      if (storeInDatabase) {
+        await client.database.setRoomPrevBatch(resp.end!, id, client);
+      }
       await loadFn();
-    }
+    });
 
     return resp.chunk.length;
   }
@@ -1265,7 +1259,7 @@ class Room {
   Future<void> setReadMarker(String eventId, {String? mRead}) async {
     if (mRead != null) {
       notificationCount = 0;
-      await client.database?.resetNotificationCount(id);
+      await client.database.resetNotificationCount(id);
     }
     await client.setReadMarker(
       id,
@@ -1288,7 +1282,7 @@ class Room {
     ].map((e) => Event.fromMatrixEvent(e, this)).toList();
 
     // Try again to decrypt encrypted events but don't update the database.
-    if (encrypted && client.database != null && client.encryptionEnabled) {
+    if (encrypted && client.encryptionEnabled) {
       for (var i = 0; i < events.length; i++) {
         if (events[i].type == EventTypes.Encrypted &&
             events[i].content['can_request_session'] == true) {
@@ -1307,7 +1301,7 @@ class Room {
   /// specified.
   Future<void> postReceipt(String eventId) async {
     notificationCount = 0;
-    await client.database?.resetNotificationCount(id);
+    await client.database.resetNotificationCount(id);
     await client.postReceipt(
       id,
       ReceiptType.mRead,
@@ -1338,11 +1332,10 @@ class Room {
     List<Event> events;
 
     if (!isArchived) {
-      events = await client.database?.getEventList(
-            this,
-            limit: defaultHistoryCount,
-          ) ??
-          <Event>[];
+      events = await client.database.getEventList(
+        this,
+        limit: defaultHistoryCount,
+      );
     } else {
       final archive = client.getArchiveRoomFromCache(id);
       events = archive?.timeline.events.toList() ?? [];
@@ -1361,7 +1354,7 @@ class Room {
     if (eventContextId == null) {
       for (final event in events) {
         if (getState(EventTypes.RoomMember, event.senderId) != null) continue;
-        final dbUser = await client.database?.getUser(event.senderId, this);
+        final dbUser = await client.database.getUser(event.senderId, this);
         if (dbUser != null) setState(dbUser);
       }
     }
@@ -1378,9 +1371,8 @@ class Room {
               id,
               chunk.events[i],
             );
-          } else if (client.database != null) {
-            // else, we need the database
-            await client.database?.transaction(() async {
+          } else {
+            await client.database.transaction(() async {
               for (var i = 0; i < chunk.events.length; i++) {
                 if (chunk.events[i].content['can_request_session'] == true) {
                   chunk.events[i] = await client.encryption!.decryptRoomEvent(
@@ -1443,7 +1435,7 @@ class Room {
       ]]) async {
     if (!participantListComplete && partial) {
       // we aren't fully loaded, maybe the users are in the database
-      final users = await client.database?.getUsers(this) ?? [];
+      final users = await client.database.getUsers(this);
       for (final user in users) {
         setState(user);
       }
@@ -1509,7 +1501,7 @@ class Room {
     }
 
     // it may be in the database
-    final dbuser = await client.database?.getUser(mxID, this);
+    final dbuser = await client.database.getUser(mxID, this);
     if (dbuser != null) {
       setState(dbuser);
       onUpdate.add(id);
@@ -1560,14 +1552,14 @@ class Room {
         avatarUrl: resp['avatar_url'],
         room: this);
     setState(user);
-    await client.database?.transaction(() async {
+    await client.database.transaction(() async {
       final fakeEventId = String.fromCharCodes(
         await sha256(
           Uint8List.fromList(
               (id + mxID + client.generateUniqueTransactionId()).codeUnits),
         ),
       );
-      await client.database?.storeEventUpdate(
+      await client.database.storeEventUpdate(
         EventUpdate(
           content: MatrixEvent(
             type: EventTypes.RoomMember,
@@ -1592,7 +1584,7 @@ class Room {
   /// found. Returns null if not found anywhere.
   Future<Event?> getEventById(String eventID) async {
     try {
-      final dbEvent = await client.database?.getEventById(eventID, this);
+      final dbEvent = await client.database.getEventById(eventID, this);
       if (dbEvent != null) return dbEvent;
       final matrixEvent = await client.getOneRoomEvent(id, eventID);
       final event = Event.fromMatrixEvent(matrixEvent, this);
@@ -1998,13 +1990,9 @@ class Room {
 
   Future<void> _handleFakeSync(SyncUpdate syncUpdate,
       {Direction? direction}) async {
-    if (client.database != null) {
-      await client.database?.transaction(() async {
-        await client.handleSync(syncUpdate, direction: direction);
-      });
-    } else {
+    await client.database.transaction(() async {
       await client.handleSync(syncUpdate, direction: direction);
-    }
+    });
   }
 
   /// Whether this is an extinct room which has been archived in favor of a new
