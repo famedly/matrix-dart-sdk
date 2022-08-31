@@ -89,6 +89,12 @@ class WrappedMediaStream {
       await stream?.dispose();
       stream = null;
     }
+    await renderer.dispose();
+  }
+
+  Future<void> disposeRenderer() async {
+    renderer.srcObject = null;
+    await renderer.dispose();
   }
 
   Uri? get avatarUrl => getUser().avatarUrl;
