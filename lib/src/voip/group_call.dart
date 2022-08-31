@@ -1095,7 +1095,9 @@ class GroupCall {
     stream.stream!.getTracks().forEach((element) {
       element.stop();
     });
+
     stream.stream!.dispose();
+    stream.disposeRenderer();
 
     onGroupCallEvent.add(GroupCallEvent.UserMediaStreamsChanged);
 
