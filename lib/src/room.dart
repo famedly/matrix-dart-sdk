@@ -672,6 +672,12 @@ class Room {
     MatrixImageFile? thumbnail,
     Map<String, dynamic>? extraContent,
   }) async {
+    final mediaConfig = await client.getConfig();
+    final maxMediaSize = mediaConfig.mUploadSize;
+    if (maxMediaSize != null && maxMediaSize < file.bytes.lengthInBytes) {
+      throw FileTooBigMatrixException(file.bytes.lengthInBytes, maxMediaSize);
+    }
+
     txid ??= client.generateUniqueTransactionId();
     sendingFilePlaceholders[txid] = file;
     if (thumbnail != null) {
