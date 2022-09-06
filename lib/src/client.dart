@@ -189,8 +189,8 @@ class Client extends MatrixApi {
             ? NativeImplementationsIsolate(compute)
             : nativeImplementations,
         super(
-            httpClient:
-                VariableTimeoutHttpClient(httpClient ?? http.Client())) {
+            httpClient: FixedTimeoutHttpClient(
+                httpClient ?? http.Client(), Duration(seconds: 35))) {
     if (logLevel != null) Logs().level = logLevel;
     importantStateEvents.addAll([
       EventTypes.RoomName,
