@@ -19,6 +19,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart' show IterableExtension;
@@ -887,6 +888,12 @@ class Client extends MatrixApi {
   @override
   Future<Uri> uploadContent(Uint8List file,
       {String? filename, String? contentType}) async {
+    final mediaConfig = await getConfig();
+    final maxMediaSize = mediaConfig.mUploadSize;
+    if (maxMediaSize != null && maxMediaSize < file.lengthInBytes) {
+      throw FileTooBigMatrixException(file.lengthInBytes, maxMediaSize);
+    }
+
     contentType ??= lookupMimeType(filename ?? '', headerBytes: file);
     final mxc = await super
         .uploadContent(file, filename: filename, contentType: contentType);
@@ -2902,6 +2909,35 @@ class BadServerLoginTypesException implements Exception {
   @override
   String toString() =>
       'Server supports the Login Types: ${serverLoginTypes.toString()} but this application is only compatible with ${supportedLoginTypes.toString()}.';
+}
+
+class FileTooBigMatrixException extends MatrixException {
+  int actualFileSize;
+  int maxFileSize;
+
+  static String _formatFileSize(int size) {
+    if (size < 1024) return '$size B';
+    final i = (log(size) / log(1024)).floor();
+    final num = (size / pow(1024, i));
+    final round = num.round();
+    final numString = round < 10
+        ? num.toStringAsFixed(2)
+        : round < 100
+            ? num.toStringAsFixed(1)
+            : round.toString();
+    return '$numString ${'kMGTPEZY'[i - 1]}B';
+  }
+
+  FileTooBigMatrixException(this.actualFileSize, this.maxFileSize)
+      : super.fromJson({
+          'errcode': MatrixError.M_TOO_LARGE,
+          'error':
+              'File size ${_formatFileSize(actualFileSize)} exceeds allowed maximum of ${_formatFileSize(maxFileSize)}'
+        });
+
+  @override
+  String toString() =>
+      'File size ${_formatFileSize(actualFileSize)} exceeds allowed maximum of ${_formatFileSize(maxFileSize)}';
 }
 
 class HomeserverSummary {
