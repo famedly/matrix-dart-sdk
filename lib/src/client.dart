@@ -993,13 +993,17 @@ class Client extends MatrixApi {
 
   /// Returns the global push rules for the logged in user.
   PushRuleSet? get globalPushRules {
-    final pushrules = _accountData['m.push_rules']?.content['global'];
+    final pushrules = _accountData['m.push_rules']
+        ?.content
+        .tryGetMap<String, dynamic>('global');
     return pushrules != null ? PushRuleSet.fromJson(pushrules) : null;
   }
 
   /// Returns the device push rules for the logged in user.
   PushRuleSet? get devicePushRules {
-    final pushrules = _accountData['m.push_rules']?.content['device'];
+    final pushrules = _accountData['m.push_rules']
+        ?.content
+        .tryGetMap<String, dynamic>('device');
     return pushrules != null ? PushRuleSet.fromJson(pushrules) : null;
   }
 
