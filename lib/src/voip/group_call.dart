@@ -1033,7 +1033,7 @@ class GroupCall {
       call.setMicrophoneMuted(audioMuted);
     }
 
-    final videoMuted = localUserMediaStream?.isAudioMuted() ?? true;
+    final videoMuted = localUserMediaStream?.isVideoMuted() ?? true;
 
     if (call.localUserMediaStream != null &&
         call.isLocalVideoMuted != videoMuted) {
