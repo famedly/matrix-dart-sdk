@@ -374,17 +374,14 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   /// Loads a whole list of events at once from the store for a specific room
-  Future<List<Event>> _getEventsByIds(List<String> eventIds, Room room) =>
-      Future.wait(eventIds
-          .map(
-            (eventId) async => Event.fromJson(
-              convertToJson(
-                await _eventsBox.get(MultiKey(room.id, eventId).toString()),
-              ),
-              room,
-            ),
-          )
-          .toList());
+  Future<List<Event>> _getEventsByIds(List<String> eventIds, Room room) async {
+    final events = await Future.wait(eventIds.map((String eventId) async {
+      final entry = await _eventsBox.get(MultiKey(room.id, eventId).toString());
+      return entry is Map ? Event.fromJson(convertToJson(entry), room) : null;
+    }));
+
+    return events.whereType<Event>().toList();
+  }
 
   @override
   Future<List<Event>> getEventList(
