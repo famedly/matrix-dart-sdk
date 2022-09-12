@@ -58,9 +58,8 @@ void main() {
 
       final matrix = await getClient();
       final requestRoom = matrix.getRoomById('!726s6s6q:example.com')!;
-      await matrix.encryption!.keyManager.request(
-          requestRoom, 'sessionId', validSenderKey,
-          tryOnlineBackup: false);
+      await matrix.encryption!.keyManager
+          .request(requestRoom, 'sessionId', tryOnlineBackup: false);
       var foundEvent = false;
       for (final entry in FakeMatrixApi.calledEndpoints.entries) {
         final payload = jsonDecode(entry.value.first);
@@ -72,7 +71,6 @@ void main() {
           final content = payload['messages']['@alice:example.com']['*'];
           if (content['action'] == 'request' &&
               content['body']['room_id'] == '!726s6s6q:example.com' &&
-              content['body']['sender_key'] == validSenderKey &&
               content['body']['session_id'] == 'sessionId') {
             foundEvent = true;
             break;
@@ -94,8 +92,7 @@ void main() {
           .userDeviceKeys['@alice:example.com']!.deviceKeys['OTHERDEVICE']!
           .setVerified(true);
       final session = await matrix.encryption!.keyManager
-          .loadInboundGroupSession(
-              '!726s6s6q:example.com', validSessionId, validSenderKey);
+          .loadInboundGroupSession('!726s6s6q:example.com', validSessionId);
       // test a successful share
       var event = ToDeviceEvent(
           sender: '@alice:example.com',
@@ -282,13 +279,11 @@ void main() {
       if (!olmEnabled) return;
       final matrix = await getClient();
       final requestRoom = matrix.getRoomById('!726s6s6q:example.com')!;
-      await matrix.encryption!.keyManager.request(
-          requestRoom, validSessionId, validSenderKey,
-          tryOnlineBackup: false);
+      await matrix.encryption!.keyManager
+          .request(requestRoom, validSessionId, tryOnlineBackup: false);
 
       final session = (await matrix.encryption!.keyManager
-          .loadInboundGroupSession(
-              requestRoom.id, validSessionId, validSenderKey))!;
+          .loadInboundGroupSession(requestRoom.id, validSessionId))!;
       final sessionKey = session.inboundGroupSession!
           .export_session(session.inboundGroupSession!.first_known_index());
       matrix.encryption!.keyManager.clearInboundGroupSessions();
@@ -300,7 +295,6 @@ void main() {
             'room_id': '!726s6s6q:example.com',
             'session_id': validSessionId,
             'session_key': sessionKey,
-            'sender_key': validSenderKey,
             'forwarding_curve25519_key_chain': [],
             'sender_claimed_ed25519_key':
                 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
@@ -310,8 +304,8 @@ void main() {
           });
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          matrix.encryption!.keyManager.getInboundGroupSession(
-                  requestRoom.id, validSessionId, validSenderKey) !=
+          matrix.encryption!.keyManager
+                  .getInboundGroupSession(requestRoom.id, validSessionId) !=
               null,
           true);
 
@@ -327,7 +321,6 @@ void main() {
             'room_id': '!726s6s6q:example.com',
             'session_id': validSessionId,
             'session_key': sessionKey,
-            'sender_key': validSenderKey,
             'forwarding_curve25519_key_chain': [],
             'sender_claimed_ed25519_key':
                 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
@@ -337,15 +330,14 @@ void main() {
           });
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          matrix.encryption!.keyManager.getInboundGroupSession(
-                  requestRoom.id, validSessionId, validSenderKey) !=
+          matrix.encryption!.keyManager
+                  .getInboundGroupSession(requestRoom.id, validSessionId) !=
               null,
           false);
 
       // unknown device
-      await matrix.encryption!.keyManager.request(
-          requestRoom, validSessionId, validSenderKey,
-          tryOnlineBackup: false);
+      await matrix.encryption!.keyManager
+          .request(requestRoom, validSessionId, tryOnlineBackup: false);
       matrix.encryption!.keyManager.clearInboundGroupSessions();
       event = ToDeviceEvent(
           sender: '@alice:example.com',
@@ -355,7 +347,6 @@ void main() {
             'room_id': '!726s6s6q:example.com',
             'session_id': validSessionId,
             'session_key': sessionKey,
-            'sender_key': validSenderKey,
             'forwarding_curve25519_key_chain': [],
             'sender_claimed_ed25519_key':
                 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
@@ -365,15 +356,14 @@ void main() {
           });
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          matrix.encryption!.keyManager.getInboundGroupSession(
-                  requestRoom.id, validSessionId, validSenderKey) !=
+          matrix.encryption!.keyManager
+                  .getInboundGroupSession(requestRoom.id, validSessionId) !=
               null,
           false);
 
       // no encrypted content
-      await matrix.encryption!.keyManager.request(
-          requestRoom, validSessionId, validSenderKey,
-          tryOnlineBackup: false);
+      await matrix.encryption!.keyManager
+          .request(requestRoom, validSessionId, tryOnlineBackup: false);
       matrix.encryption!.keyManager.clearInboundGroupSessions();
       event = ToDeviceEvent(
           sender: '@alice:example.com',
@@ -383,15 +373,14 @@ void main() {
             'room_id': '!726s6s6q:example.com',
             'session_id': validSessionId,
             'session_key': sessionKey,
-            'sender_key': validSenderKey,
             'forwarding_curve25519_key_chain': [],
             'sender_claimed_ed25519_key':
                 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8',
           });
       await matrix.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
-          matrix.encryption!.keyManager.getInboundGroupSession(
-                  requestRoom.id, validSessionId, validSenderKey) !=
+          matrix.encryption!.keyManager
+                  .getInboundGroupSession(requestRoom.id, validSessionId) !=
               null,
           false);
 

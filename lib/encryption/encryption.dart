@@ -201,13 +201,12 @@ class Encryption {
         throw DecryptException(DecryptException.unknownAlgorithm);
       }
       final sessionId = content.sessionId;
-      final senderKey = content.senderKey;
       if (sessionId == null) {
         throw DecryptException(DecryptException.unknownSession);
       }
 
       final inboundGroupSession =
-          keyManager.getInboundGroupSession(roomId, sessionId, senderKey);
+          keyManager.getInboundGroupSession(roomId, sessionId);
       if (!(inboundGroupSession?.isValid ?? false)) {
         canRequestSession = true;
         throw DecryptException(DecryptException.unknownSession);
@@ -305,14 +304,12 @@ class Encryption {
                   .getInboundGroupSession(
                     roomId,
                     sessionId,
-                    content.senderKey,
                   )
                   ?.isValid ??
               false)) {
         await keyManager.loadInboundGroupSession(
           roomId,
           sessionId,
-          content.senderKey,
         );
       }
       event = decryptRoomEventSync(roomId, event);
@@ -322,7 +319,6 @@ class Encryption {
         keyManager.maybeAutoRequest(
           roomId,
           sessionId,
-          content.senderKey,
         );
       }
       if (event.type != EventTypes.Encrypted && store) {

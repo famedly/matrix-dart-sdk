@@ -64,10 +64,10 @@ void main() {
       if (!olmEnabled) return;
       client.encryption!.keyManager.clearInboundGroupSessions();
       await client.encryption!.keyManager
-          .request(client.getRoomById(roomId)!, sessionId, senderKey);
+          .request(client.getRoomById(roomId)!, sessionId);
       expect(
           client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId, senderKey) !=
+                  .getInboundGroupSession(roomId, sessionId) !=
               null,
           true);
     });
@@ -108,11 +108,11 @@ void main() {
       final onlineKeys = RoomKeys.fromJson(json.decode(payload));
       client.encryption!.keyManager.clearInboundGroupSessions();
       var ret = client.encryption!.keyManager
-          .getInboundGroupSession(roomId, sessionId, senderKey);
+          .getInboundGroupSession(roomId, sessionId);
       expect(ret, null);
       await client.encryption!.keyManager.loadFromResponse(onlineKeys);
       ret = client.encryption!.keyManager
-          .getInboundGroupSession(roomId, sessionId, senderKey);
+          .getInboundGroupSession(roomId, sessionId);
       expect(ret != null, true);
     });
 

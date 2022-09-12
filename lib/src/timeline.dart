@@ -345,7 +345,6 @@ class Timeline {
           room.client.encryption?.keyManager.maybeAutoRequest(
             room.id,
             event.content['session_id'],
-            event.content['sender_key'],
             tryOnlineBackup: tryOnlineBackup,
             onlineKeyBackupOnly: onlineKeyBackupOnly,
           );

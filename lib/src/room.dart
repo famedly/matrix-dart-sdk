@@ -1995,11 +1995,11 @@ class Room {
     return deviceKeys;
   }
 
-  Future<void> requestSessionKey(String sessionId, String senderKey) async {
+  Future<void> requestSessionKey(String sessionId, [String? senderKey]) async {
     if (!client.encryptionEnabled) {
       return;
     }
-    await client.encryption?.keyManager.request(this, sessionId, senderKey);
+    await client.encryption?.keyManager.request(this, sessionId);
   }
 
   Future<void> _handleFakeSync(SyncUpdate syncUpdate,
