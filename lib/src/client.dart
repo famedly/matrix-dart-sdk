@@ -584,6 +584,7 @@ class Client extends MatrixApi {
     bool waitForSync = true,
     Map<String, dynamic>? powerLevelContentOverride,
   }) async {
+    if (mxid == userID) throw CanNotInviteYourselfException();
     // Try to find an existing direct chat
     final directChatRoomId = getDirectChatFromUserId(mxid);
     if (directChatRoomId != null) return directChatRoomId;
@@ -635,6 +636,9 @@ class Client extends MatrixApi {
     bool groupCall = false,
     Map<String, dynamic>? powerLevelContentOverride,
   }) async {
+    if (invite != null && invite.contains(userID)) {
+      throw CanNotInviteYourselfException();
+    }
     enableEncryption ??=
         encryptionEnabled && preset != CreateRoomPreset.publicChat;
     if (enableEncryption) {
@@ -2913,6 +2917,11 @@ class BadServerLoginTypesException implements Exception {
   @override
   String toString() =>
       'Server supports the Login Types: ${serverLoginTypes.toString()} but this application is only compatible with ${supportedLoginTypes.toString()}.';
+}
+
+class CanNotInviteYourselfException implements Exception {
+  @override
+  String toString() => 'You can not invite yourself';
 }
 
 class FileTooBigMatrixException extends MatrixException {
