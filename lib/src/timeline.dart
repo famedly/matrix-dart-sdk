@@ -504,7 +504,8 @@ class Timeline {
 
       // Handle redaction events
       if (eventUpdate.content['type'] == EventTypes.Redaction) {
-        final index = _findEvent(event_id: eventUpdate.content['redacts']);
+        final index =
+            _findEvent(event_id: eventUpdate.content.tryGet<String>('redacts'));
         if (index < events.length) {
           removeAggregatedEvent(events[index]);
 
