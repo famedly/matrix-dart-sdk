@@ -594,9 +594,10 @@ class GroupCall {
 
         onGroupCallEvent.add(GroupCallEvent.LocalScreenshareStateChanged);
 
-        calls.forEach((call) {
-          call.addLocalStream(
-              localScreenshareStream!.stream!, localScreenshareStream!.purpose);
+        calls.forEach((call) async {
+          await call.addLocalStream(
+              await voip.delegate.cloneStream(localScreenshareStream!.stream!),
+              localScreenshareStream!.purpose);
         });
 
         await sendMemberStateEvent();
