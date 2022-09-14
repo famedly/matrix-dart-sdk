@@ -944,7 +944,7 @@ class CallSession {
     await sendCallReject(room, callId, lifetimeMs, localPartyId, reason);
   }
 
-  Future<void> hangup([String? reason, bool suppressEvent = true]) async {
+  Future<void> hangup([String? reason, bool suppressEvent = false]) async {
     // stop play ringtone
     voip.delegate.stopRingtone();
 
