@@ -932,17 +932,16 @@ class CallSession {
   /// This used to be done by calling hangup, but is a separate method and protocol
   /// event as of MSC2746.
   ///
-  Future<void> reject() async {
+  Future<void> reject({String? reason, bool shouldEmit = true}) async {
     // stop play ringtone
     voip.delegate.stopRingtone();
-
-    if (state != CallState.kRinging) {
-      Logs().e('[VOIP] Call must be in \'ringing\' state to reject!');
+    if (state != CallState.kRinging && state != CallState.kFledgling) {
+      Logs().e('[VOIP] Call must be in \'ringing|fledgling\' state to reject!');
       return;
     }
     Logs().d('[VOIP] Rejecting call: $callId');
-    await terminate(CallParty.kLocal, CallErrorCode.UserHangup, true);
-    await sendCallReject(room, callId, lifetimeMs, localPartyId);
+    await terminate(CallParty.kLocal, CallErrorCode.UserHangup, shouldEmit);
+    await sendCallReject(room, callId, lifetimeMs, localPartyId, reason);
   }
 
   Future<void> hangup([String? reason, bool suppressEvent = true]) async {
@@ -987,15 +986,15 @@ class CallSession {
     hangupParty = party;
     hangupReason = reason;
 
-    setCallState(CallState.kEnded);
+    if (shouldEmit) {
+      setCallState(CallState.kEnded);
+    }
     voip.currentCID = null;
     voip.calls.remove(callId);
     await cleanUp();
-
-    onCallHangup.add(this);
-
-    voip.delegate.handleCallEnded(this);
     if (shouldEmit) {
+      onCallHangup.add(this);
+      voip.delegate.handleCallEnded(this);
       fireCallEvent(CallEvent.kHangup);
     }
   }
@@ -1432,7 +1431,7 @@ class CallSession {
   /// [version] is the version of the VoIP specification this message adheres to. This specification is version 1.
   /// [party_id] The party ID for call, Can be set to client.deviceId.
   Future<String?> sendCallReject(
-      Room room, String callId, int lifetime, String party_id,
+      Room room, String callId, int lifetime, String party_id, String? reason,
       {String version = voipProtoVersion, String? txid}) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
 
@@ -1440,6 +1439,7 @@ class CallSession {
       'call_id': callId,
       'party_id': party_id,
       if (groupCallId != null) 'conf_id': groupCallId,
+      if (reason != null) 'reason': reason,
       'version': version,
       'lifetime': lifetime,
     };
