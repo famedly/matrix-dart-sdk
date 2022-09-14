@@ -305,14 +305,12 @@ class Encryption {
                   .getInboundGroupSession(
                     roomId,
                     sessionId,
-                    content.senderKey,
                   )
                   ?.isValid ??
               false)) {
         await keyManager.loadInboundGroupSession(
           roomId,
           sessionId,
-          content.senderKey,
         );
       }
       event = decryptRoomEventSync(roomId, event);
@@ -322,7 +320,6 @@ class Encryption {
         keyManager.maybeAutoRequest(
           roomId,
           sessionId,
-          content.senderKey,
         );
       }
       if (event.type != EventTypes.Encrypted && store) {
