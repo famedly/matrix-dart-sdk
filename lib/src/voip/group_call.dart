@@ -1093,12 +1093,10 @@ class GroupCall {
 
     onStreamRemoved.add(stream);
 
-    stream.stream!.getTracks().forEach((element) {
-      element.stop();
-    });
-
-    stream.stream!.dispose();
-    stream.disposeRenderer();
+    if (stream.isLocal()) {
+      stream?.disposeRenderer();
+      stream?.stream?.dispose();
+    }
 
     onGroupCallEvent.add(GroupCallEvent.UserMediaStreamsChanged);
 
@@ -1187,12 +1185,6 @@ class GroupCall {
         .removeWhere((element) => element.userId == stream.userId);
 
     onStreamRemoved.add(stream);
-
-    if (voip.delegate.isWeb) {
-      stream.stream!.getTracks().forEach((element) {
-        element.stop();
-      });
-    }
 
     stream.dispose();
 

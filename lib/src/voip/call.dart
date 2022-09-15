@@ -82,13 +82,16 @@ class WrappedMediaStream {
 
   Future<void> dispose() async {
     renderer.srcObject = null;
-    if (isLocal() && stream != null && isWeb) {
-      for (final element in stream!.getTracks()) {
-        await element.stop();
+    if (isLocal()) {
+      if (isWeb) {
+        await stream?.dispose();
+      } else {
+        if (!isGroupCall) {
+          await stream?.dispose();
+        }
       }
-      await stream?.dispose();
-      stream = null;
     }
+    stream = null;
     await renderer.dispose();
   }
 
