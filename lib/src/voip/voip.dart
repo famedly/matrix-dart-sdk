@@ -203,7 +203,7 @@ class VoIP {
     if (!delegate.canHandleNewCall &&
         (confId == null || confId != currentGroupCID)) {
       Logs().v(
-          '[VOIP] onCallInvite: canRespondNewCalls is false, maybe user is busy.');
+          '[VOIP] onCallInvite: Unable to handle new calls, maybe user is busy.');
       await newCall.reject(reason: 'busy', shouldEmit: false);
       delegate.handleMissedCall(newCall);
       return;
