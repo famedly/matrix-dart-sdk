@@ -967,7 +967,8 @@ void main() {
       await call.sendCallCandidates(room, '1234', '4567', [], txid: '1234');
       await call.sendSelectCallAnswer(room, '1234', 1234, '4567', '6789',
           txid: '1234');
-      await call.sendCallReject(room, '1234', 1234, '4567', txid: '1234');
+      await call.sendCallReject(room, '1234', 1234, '4567', 'busy',
+          txid: '1234');
       await call.sendCallNegotiate(room, '1234', 1234, '4567', 'sdp',
           txid: '1234');
       await call.sendHangupCall(room, '1234', '4567', 'user_hangup',

@@ -830,7 +830,7 @@ class CallSession {
     }
 
     if (callFeed.purpose == SDPStreamMetadataPurpose.Screenshare) {
-      stopMediaStream(callFeed.stream);
+      await stopMediaStream(callFeed.stream);
     }
 
     // Empty the array
