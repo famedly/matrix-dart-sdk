@@ -84,10 +84,10 @@ class WrappedMediaStream {
     renderer.srcObject = null;
     if (isLocal()) {
       if (isWeb) {
-        await stream?.dispose();
+        await stopMediaStream(stream);
       } else {
         if (!isGroupCall) {
-          await stream?.dispose();
+          await stopMediaStream(stream);
         }
       }
     }

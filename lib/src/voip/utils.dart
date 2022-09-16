@@ -1,10 +1,11 @@
 import 'package:random_string/random_string.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
-void stopMediaStream(MediaStream? stream) async {
+Future<void> stopMediaStream(MediaStream? stream) async {
   stream?.getTracks().forEach((element) async {
     await element.stop();
   });
+  await stream?.dispose();
 }
 
 void setTracksEnabled(List<MediaStreamTrack> tracks, bool enabled) {

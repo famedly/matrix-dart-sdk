@@ -614,7 +614,7 @@ class GroupCall {
       calls.forEach((call) {
         call.removeLocalStream(call.localScreenSharingStream!);
       });
-      stopMediaStream(localScreenshareStream!.stream);
+      await stopMediaStream(localScreenshareStream?.stream);
       removeScreenshareStream(localScreenshareStream!);
       localScreenshareStream = null;
       localDesktopCapturerSourceId = null;
@@ -1094,8 +1094,8 @@ class GroupCall {
     onStreamRemoved.add(stream);
 
     if (stream.isLocal()) {
-      stream?.disposeRenderer();
-      stream?.stream?.dispose();
+      stream.disposeRenderer();
+      stopMediaStream(stream.stream);
     }
 
     onGroupCallEvent.add(GroupCallEvent.UserMediaStreamsChanged);
@@ -1186,7 +1186,10 @@ class GroupCall {
 
     onStreamRemoved.add(stream);
 
-    stream.dispose();
+    if (stream.isLocal()) {
+      stream.disposeRenderer();
+      stopMediaStream(stream.stream);
+    }
 
     onGroupCallEvent.add(GroupCallEvent.ScreenshareStreamsChanged);
   }
