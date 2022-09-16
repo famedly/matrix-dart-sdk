@@ -1,4 +1,17 @@
+## [0.14.0] - 12th Sep 2022
+
+- chore: fix video muted updates for local stream (td)
+- fix: Check ahead of download if a file exceeds the maximum file size (Nicolas Werner)
+- fix: Get push rules crashes if malformed (Christian Pauly)
+- fix: The initial sync waiting for a long time in some cases (Nicolas Werner)
+- fix: properly handle events not already in the db (Nicolas Werner)
+- fix: release renderer to fix crashes on android. (cloudwebrtc)
+- fix: timeout when sending large files (Nicolas Werner)
+- refactor: Avoid using private types in public api (Christian Pauly)
+- refactor: Remove databaseDestroyer (Christian Pauly)
+
 ## [0.13.0] - 29th Aug 2022
+
 - feat: Allow auto request keys via key sharing requests (Christian Pauly)
 - feat: support dehydrated devices (Nicolas Werner)
 - fix: Decrypt of last event might make an old message as last event (Christian Pauly)
@@ -6,19 +19,23 @@
 - chore: Upgrade Hive to 2.2.3 which as a breaking change with BoxCollections (might need migration!!)
 
 ## [0.12.2] - 17th Aug 2022
+
 - chore: Correctly release the cloned stream. (cloudwebrtc)
 - fix: setRemoteDescription before adding local stream to prevent early feedsChanged and negotiation (td)
 
 ## [0.12.1] - 17th Aug 2022
+
 - chore: simplify getTimeline condition a bit (Nicolas Werner)
 - chore: support MIME in file factory (Lanna Michalke)
 - fix: follow up for native implementations web (Lanna Michalke)
 
 ## [0.12.0] - 16th Aug 2022
+
 - feat: Add markasdm and markasgroup commands (Christian Pauly)
 - refactor: Add reference to itself in bootstrap onUpdate callback (Christian Pauly)
 
 ## [0.11.2] - 12th Aug 2022
+
 - chore: Use onRoomState to monitor group call creation and member join and leave. (cloudwebrtc)
 - chore: expose option to retry computations (Lanna Michalke)
 - chore: fix group call id mismatch. (cloudwebrtc)
@@ -26,12 +43,14 @@
 - fix: Fix currentCID is null when handleNewCall is triggered, which will cause family-app. (cloudwebrtc)
 
 ## [0.11.1] - 1st Aug 2022
+
 - chore: introduce native implementations (Lanna Michalke)
 - fix: check for m.call permissions in groupCallEnabled (td)
 - fix: make Hive Collection path nullable (Lanna Michalke)
 - fix: missing null check (Lanna Michalke)
 
 ## [0.11.0] - 21th Jul 2022
+
 - feat: Add powerLevelContentOverride to startDirectChat and createGroupChat (Isabella Hundstorfer)
 - chore: add tests for group calls (td)
 - chore: cleanup unused imports and analyzer warnings (td)
@@ -44,12 +63,15 @@
 - refactor: Use import sorter and ci templates (Christian Pauly)
 
 ## [0.10.5] - 11th Jul 2022
+
 - fix: Cache user profile even with cache=false when there is a cache
 
 ## [0.10.4] - 11th Jul 2022
+
 - refactor: Better fetch own profile (Christian Pauly)
 
 ## [0.10.3] - 09th Jul 2022
+
 - feat: Calc encryption health state and allow key sharing with unknown devices (Christian Pauly)
 - fix: Add WebRTCDelegate.cloneStream to adapt to platform differences. (cloudwebrtc)
 - fix: Database did not get cleared correctly (Christian Pauly)
@@ -58,12 +80,13 @@
 - refactor: Handle Ephemerals method (Christian Pauly)
 
 ## [0.10.2] - 17th Jun 2022
+
 - feat: Implement CachedStreamController (Christian Pauly)
 - fix: Only trigger onCall streams by latest call event for a call_id (Christian Pauly)
 - fix: Support for OpenSSL 3.0 (Nicolas Werner)
 - fix: implement sending queue (Reza)
 - refactor: Call handleEphemerals with BasicRoomEvent instead of dynamic (Christian Pauly)
-- refactor: Let _handleRoomEvents use BasicEvent (Christian Pauly)
+- refactor: Let \_handleRoomEvents use BasicEvent (Christian Pauly)
 - refactor: Pass BasicEvent to handleEvent instead of JSON (Christian Pauly)
 - refactor: Use handleRoomEvents method instead of handleEvent (Christian Pauly)
 - refactor: Use tryGet in handleRoomEvents (Christian Pauly)

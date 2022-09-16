@@ -80,7 +80,6 @@ dry-run:
   stage: deploy
   image: dart
   script:
-    - rm -rf ./docs
     - dart pub get
     - dart pub publish --dry-run
 
@@ -89,7 +88,6 @@ pub-dev:
   image: dart
   dependencies: [dry-run]
   script:
-    - rm -rf ./docs
     - |
       if [ -z "${PUB_DEV_CREDENTIALS}" ]; then
         echo "Missing PUB_DEV_CREDENTIALS environment variable"
