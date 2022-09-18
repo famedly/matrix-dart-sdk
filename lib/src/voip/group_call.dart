@@ -594,9 +594,10 @@ class GroupCall {
 
         onGroupCallEvent.add(GroupCallEvent.LocalScreenshareStateChanged);
 
-        calls.forEach((call) {
-          call.addLocalStream(
-              localScreenshareStream!.stream!, localScreenshareStream!.purpose);
+        calls.forEach((call) async {
+          await call.addLocalStream(
+              await voip.delegate.cloneStream(localScreenshareStream!.stream!),
+              localScreenshareStream!.purpose);
         });
 
         await sendMemberStateEvent();
@@ -613,7 +614,7 @@ class GroupCall {
       calls.forEach((call) {
         call.removeLocalStream(call.localScreenSharingStream!);
       });
-      stopMediaStream(localScreenshareStream!.stream);
+      await stopMediaStream(localScreenshareStream?.stream);
       removeScreenshareStream(localScreenshareStream!);
       localScreenshareStream = null;
       localDesktopCapturerSourceId = null;
@@ -1092,12 +1093,10 @@ class GroupCall {
 
     onStreamRemoved.add(stream);
 
-    stream.stream!.getTracks().forEach((element) {
-      element.stop();
-    });
-
-    stream.stream!.dispose();
-    stream.disposeRenderer();
+    if (stream.isLocal()) {
+      stream.disposeRenderer();
+      stopMediaStream(stream.stream);
+    }
 
     onGroupCallEvent.add(GroupCallEvent.UserMediaStreamsChanged);
 
@@ -1187,13 +1186,10 @@ class GroupCall {
 
     onStreamRemoved.add(stream);
 
-    if (voip.delegate.isWeb) {
-      stream.stream!.getTracks().forEach((element) {
-        element.stop();
-      });
+    if (stream.isLocal()) {
+      stream.disposeRenderer();
+      stopMediaStream(stream.stream);
     }
-
-    stream.dispose();
 
     onGroupCallEvent.add(GroupCallEvent.ScreenshareStreamsChanged);
   }

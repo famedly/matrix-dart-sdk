@@ -19,12 +19,12 @@ abstract class WebRTCDelegate {
   void stopRingtone();
   void handleNewCall(CallSession session);
   void handleCallEnded(CallSession session);
-
+  void handleMissedCall(CallSession session);
   void handleNewGroupCall(GroupCall groupCall);
   void handleGroupCallEnded(GroupCall groupCall);
-
   bool get isBackgroud;
   bool get isWeb;
+  bool get canHandleNewCall => true;
 }
 
 class VoIP {
@@ -200,10 +200,20 @@ class VoIP {
     newCall.opponentDeviceId = deviceId;
     newCall.opponentSessionId = content['sender_session_id'];
 
+    if (!delegate.canHandleNewCall &&
+        (confId == null || confId != currentGroupCID)) {
+      Logs().v(
+          '[VOIP] onCallInvite: Unable to handle new calls, maybe user is busy.');
+      await newCall.reject(reason: 'busy', shouldEmit: false);
+      delegate.handleMissedCall(newCall);
+      return;
+    }
+
     final offer = RTCSessionDescription(
       content['offer']['sdp'],
       content['offer']['type'],
     );
+
     await newCall.initWithInvite(
         callType, offer, sdpStreamMetadata, lifetime, confId != null);
 
@@ -223,7 +233,9 @@ class VoIP {
       ///TODO: notify the callkeep that the call is incoming.
     }
     // Play ringtone
-    delegate.playRingtone();
+    if (confId == null) {
+      delegate.playRingtone();
+    }
   }
 
   Future<void> onCallAnswer(
