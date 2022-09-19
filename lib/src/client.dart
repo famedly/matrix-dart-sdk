@@ -2061,16 +2061,18 @@ class Client extends MatrixApi {
       case EventUpdateType.inviteState:
         final stateEvent = Event.fromJson(eventUpdate.content, room);
         if (stateEvent.type == EventTypes.Redaction) {
-          final String redacts = eventUpdate.content['redacts'];
-          room.states.forEach(
-            (String key, Map<String, Event> states) => states.forEach(
-              (String key, Event state) {
-                if (state.eventId == redacts) {
-                  state.setRedactionEvent(stateEvent);
-                }
-              },
-            ),
-          );
+          final String? redacts = eventUpdate.content.tryGet<String>('redacts');
+          if (redacts != null) {
+            room.states.forEach(
+              (String key, Map<String, Event> states) => states.forEach(
+                (String key, Event state) {
+                  if (state.eventId == redacts) {
+                    state.setRedactionEvent(stateEvent);
+                  }
+                },
+              ),
+            );
+          }
         } else {
           // We want to set state the in-memory cache for the room with the new event.
           // To do this, we have to respect to not save edits, unless they edit the

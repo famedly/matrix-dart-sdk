@@ -937,7 +937,9 @@ class FluffyBoxDatabase extends DatabaseApi {
 
     // In case of this is a redaction event
     if (eventUpdate.content['type'] == EventTypes.Redaction) {
-      final event = await getEventById(eventUpdate.content['redacts'], tmpRoom);
+      final eventId = eventUpdate.content.tryGet<String>('redacts');
+      final event =
+          eventId != null ? await getEventById(eventId, tmpRoom) : null;
       if (event != null) {
         event.setRedactionEvent(Event.fromJson(eventUpdate.content, tmpRoom));
         await _eventsBox.put(
