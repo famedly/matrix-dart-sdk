@@ -287,6 +287,7 @@ class Encryption {
       stateKey: event.stateKey,
       prevContent: event.prevContent,
       status: event.status,
+      originalSource: event,
     );
   }
 

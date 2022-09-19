@@ -72,6 +72,8 @@ class Event extends MatrixEvent {
       ? room.unsafeGetUserFromMemoryOrFallback(stateKey!)
       : null;
 
+  final MatrixEvent? originalSource;
+
   Event({
     this.status = defaultStatus,
     required Map<String, dynamic> content,
@@ -83,6 +85,7 @@ class Event extends MatrixEvent {
     Map<String, dynamic>? prevContent,
     String? stateKey,
     required this.room,
+    this.originalSource,
   }) : super(
           content: content,
           type: type,
@@ -154,7 +157,7 @@ class Event extends MatrixEvent {
     }
   }
 
-  static Map<String, dynamic> getMapFromPayload(dynamic payload) {
+  static Map<String, dynamic> getMapFromPayload(Object? payload) {
     if (payload is String) {
       try {
         return json.decode(payload);
@@ -192,22 +195,27 @@ class Event extends MatrixEvent {
     final content = Event.getMapFromPayload(jsonPayload['content']);
     final unsigned = Event.getMapFromPayload(jsonPayload['unsigned']);
     final prevContent = Event.getMapFromPayload(jsonPayload['prev_content']);
+    final originalSource =
+        Event.getMapFromPayload(jsonPayload['original_source']);
     return Event(
-      status: eventStatusFromInt(jsonPayload['status'] ??
-          unsigned[messageSendingStatusKey] ??
-          defaultStatus.intValue),
-      stateKey: jsonPayload['state_key'],
-      prevContent: prevContent,
-      content: content,
-      type: jsonPayload['type'],
-      eventId: jsonPayload['event_id'] ?? '',
-      senderId: jsonPayload['sender'],
-      originServerTs: jsonPayload.containsKey('origin_server_ts')
-          ? DateTime.fromMillisecondsSinceEpoch(jsonPayload['origin_server_ts'])
-          : DateTime.now(),
-      unsigned: unsigned,
-      room: room,
-    );
+        status: eventStatusFromInt(jsonPayload['status'] ??
+            unsigned[messageSendingStatusKey] ??
+            defaultStatus.intValue),
+        stateKey: jsonPayload['state_key'],
+        prevContent: prevContent,
+        content: content,
+        type: jsonPayload['type'],
+        eventId: jsonPayload['event_id'] ?? '',
+        senderId: jsonPayload['sender'],
+        originServerTs: jsonPayload.containsKey('origin_server_ts')
+            ? DateTime.fromMillisecondsSinceEpoch(
+                jsonPayload['origin_server_ts'])
+            : DateTime.now(),
+        unsigned: unsigned,
+        room: room,
+        originalSource: originalSource.isEmpty
+            ? null
+            : MatrixEvent.fromJson(originalSource));
   }
 
   @override
@@ -225,6 +233,9 @@ class Event extends MatrixEvent {
     data['origin_server_ts'] = originServerTs.millisecondsSinceEpoch;
     if (unsigned?.isNotEmpty == true) {
       data['unsigned'] = unsigned;
+    }
+    if (originalSource != null) {
+      data['original_source'] = originalSource?.toJson();
     }
     return data;
   }
