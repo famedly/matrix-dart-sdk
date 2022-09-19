@@ -76,6 +76,7 @@ void main() {
       expect(decryptedEvent.type, 'm.room.message');
       expect(decryptedEvent.content['msgtype'], 'm.text');
       expect(decryptedEvent.content['text'], 'Hello foxies!');
+      expect(decryptedEvent.originalSource?.toJson(), encryptedEvent.toJson());
     });
 
     test('decrypt payload nocache', () async {
