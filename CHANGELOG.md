@@ -1,3 +1,16 @@
+## [0.14.1] - 20th Sep 2022
+- chore: Fire events by default during hangup. (cloudwebrtc)
+- chore: Properly close usermedia/screen stream for 1v1/group calls. (cloudwebrtc)
+- chore: fix analyzer error. (cloudwebrtc)
+- chore: update. (cloudwebrtc)
+- chore: update. (cloudwebrtc)
+- feat: Add onSecretStored StreamController to SSSS (Christian Pauly)
+- feat: Store original event (Christian Pauly)
+- fix: Ensures that p2p/group calls are in progress to reject new call invitations, and emits a call reject events. (cloudwebrtc)
+- fix: Fix remote hangup call causing local screenstream to be released. (cloudwebrtc)
+- fix: don't assume redacts attribute from content to be valid (henri2h)
+- refactor: Clean up deprecated website data (Christian Pauly)
+
 ## [0.14.0] - 12th Sep 2022
 
 - chore: fix video muted updates for local stream (td)
