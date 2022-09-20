@@ -43,7 +43,7 @@ class MatrixFile {
       : mimeType = mimeType ??
             lookupMimeType(name, headerBytes: bytes) ??
             'application/octet-stream',
-        name = name.split('/').last.toLowerCase();
+        name = name.split('/').last;
 
   /// derivatives the MIME type from the [bytes] and correspondingly creates a
   /// [MatrixFile], [MatrixImageFile], [MatrixAudioFile] or a [MatrixVideoFile]
