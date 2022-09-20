@@ -29,6 +29,7 @@ import 'package:matrix/encryption/encryption.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/encryption/utils/ssss_cache.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart' as uc;
 import 'package:matrix/src/utils/run_in_root.dart';
 
@@ -59,6 +60,10 @@ class SSSS {
   final _validators = <String, FutureOr<bool> Function(String)>{};
   final _cacheCallbacks = <String, FutureOr<void> Function(String)>{};
   final Map<String, SSSSCache> _cache = <String, SSSSCache>{};
+
+  /// Will be called when a new secret has been stored in the database
+  final CachedStreamController<String> onSecretStored =
+      CachedStreamController();
 
   SSSS(this.encryption);
 
@@ -326,6 +331,7 @@ class SSSS {
     if (cacheTypes.contains(type) && db != null) {
       // cache the thing
       await db.storeSSSSCache(type, keyId, enc['ciphertext'], decrypted);
+      onSecretStored.add(keyId);
       if (_cacheCallbacks.containsKey(type) && await getCached(type) == null) {
         _cacheCallbacks[type]!(decrypted);
       }
@@ -357,6 +363,7 @@ class SSSS {
     if (cacheTypes.contains(type) && db != null) {
       // cache the thing
       await db.storeSSSSCache(type, keyId, encrypted.ciphertext, secret);
+      onSecretStored.add(keyId);
       if (_cacheCallbacks.containsKey(type) && await getCached(type) == null) {
         _cacheCallbacks[type]!(secret);
       }
@@ -387,6 +394,7 @@ class SSSS {
       // cache the thing
       await client.database?.storeSSSSCache(
           type, keyId, content['encrypted'][keyId]['ciphertext'], secret);
+      onSecretStored.add(keyId);
     }
   }
 
@@ -553,6 +561,7 @@ class SSSS {
           if (_cacheCallbacks.containsKey(request.type)) {
             _cacheCallbacks[request.type]!(secret);
           }
+          onSecretStored.add(keyId);
         }
       }
     }
