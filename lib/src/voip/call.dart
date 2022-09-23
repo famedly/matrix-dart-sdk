@@ -18,6 +18,7 @@
 
 import 'dart:async';
 import 'dart:core';
+import 'dart:math';
 
 import 'package:webrtc_interface/webrtc_interface.dart';
 
@@ -327,6 +328,7 @@ class CallSession {
   CallSession? successor;
   bool waitForLocalAVStream = false;
   int toDeviceSeq = 0;
+  int candidateSendTries = 0;
 
   final CachedStreamController<CallSession> onCallStreamsChanged =
       CachedStreamController();
@@ -1084,23 +1086,36 @@ class CallSession {
       pc!.onRenegotiationNeeded = onNegotiationNeeded;
 
       pc!.onIceCandidate = (RTCIceCandidate candidate) async {
+        if (callHasEnded) return;
         //Logs().v('[VOIP] onIceCandidate => ${candidate.toMap().toString()}');
         localCandidates.add(candidate);
+
+        if (state == CallState.kRinging || !inviteOrAnswerSent) return;
+
+        // MSC2746 recommends these values (can be quite long when calling because the
+        // callee will need a while to answer the call)
+        final delay = direction == CallDirection.kIncoming ? 500 : 2000;
+        if (candidateSendTries == 0) {
+          Timer(Duration(milliseconds: delay), () {
+            _sendCandidateQueue();
+          });
+        }
       };
+
       pc!.onIceGatheringState = (RTCIceGatheringState state) async {
         Logs().v('[VOIP] IceGatheringState => ${state.toString()}');
         if (state == RTCIceGatheringState.RTCIceGatheringStateGathering) {
           Timer(Duration(seconds: 3), () async {
             if (!iceGatheringFinished) {
               iceGatheringFinished = true;
-              await _candidateReady();
+              await _sendCandidateQueue();
             }
           });
         }
         if (state == RTCIceGatheringState.RTCIceGatheringStateComplete) {
           if (!iceGatheringFinished) {
             iceGatheringFinished = true;
-            await _candidateReady();
+            await _sendCandidateQueue();
           }
         }
       };
@@ -1277,22 +1292,43 @@ class CallSession {
     };
   }
 
-  Future<void> _candidateReady() async {
+  Future<void> _sendCandidateQueue() async {
+    if (callHasEnded) return;
     /*
     Currently, trickle-ice is not supported, so it will take a
     long time to wait to collect all the canidates, set the
     timeout for collection canidates to speed up the connection.
     */
+    final candidatesQueue = localCandidates;
     try {
-      final candidates = <Map<String, dynamic>>[];
-      localCandidates.forEach((element) {
-        candidates.add(element.toMap());
-      });
-      final res =
-          await sendCallCandidates(opts.room, callId, localPartyId, candidates);
-      Logs().v('[VOIP] sendCallCandidates res => $res');
+      if (candidatesQueue.isNotEmpty) {
+        final candidates = <Map<String, dynamic>>[];
+        candidatesQueue.forEach((element) {
+          candidates.add(element.toMap());
+        });
+        localCandidates = [];
+        final res = await sendCallCandidates(
+            opts.room, callId, localPartyId, candidates);
+        Logs().v('[VOIP] sendCallCandidates res => $res');
+      }
     } catch (e) {
       Logs().v('[VOIP] sendCallCandidates e => ${e.toString()}');
+      candidateSendTries++;
+      localCandidates = candidatesQueue;
+
+      if (candidateSendTries > 5) {
+        Logs().d(
+            'Failed to send candidates on attempt $candidateSendTries Giving up on this call.');
+        lastError =
+            CallError(CallErrorCode.SignallingFailed, 'Signalling failed', e);
+        await hangup(CallErrorCode.SignallingFailed, true);
+        return;
+      }
+
+      final delay = 500 * pow(2, candidateSendTries);
+      Timer(Duration(milliseconds: delay as int), () {
+        _sendCandidateQueue();
+      });
     }
   }
 
