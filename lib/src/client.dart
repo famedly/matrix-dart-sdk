@@ -2146,6 +2146,20 @@ class Client extends MatrixApi {
   Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
   Map<String, DeviceKeysList> _userDeviceKeys = {};
 
+  /// A list of all not verified and not blocked device keys. Clients should
+  /// display a warning if this list is not empty and suggest the user to
+  /// verify or block those devices.
+  List<DeviceKeys> get unverifiedDevices {
+    final userId = userID;
+    if (userId == null) return [];
+    return userDeviceKeys[userId]
+            ?.deviceKeys
+            .values
+            .where((deviceKey) => !deviceKey.verified && !deviceKey.blocked)
+            .toList() ??
+        [];
+  }
+
   /// Gets user device keys by its curve25519 key. Returns null if it isn't found
   DeviceKeys? getUserDeviceKeysByCurve25519Key(String senderKey) {
     for (final user in userDeviceKeys.values) {
