@@ -1876,7 +1876,7 @@ class Client extends MatrixApi {
                   .getState(EventTypes.Encryption)
                   ?.content
                   .tryGet<String>('algorithm'))) {
-        return;
+        continue;
       }
 
       var update =
