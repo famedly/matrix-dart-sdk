@@ -757,4 +757,110 @@ class VoIP {
       groupCall.onMemberStateChanged(event);
     }
   }
+
+  bool hasActiveCall(Room room) {
+    final groupCallStates =
+        room.states.tryGetMap<dynamic, Event>(EventTypes.GroupCallPrefix);
+    if (groupCallStates != null) {
+      groupCallStates.values
+          .toList()
+          .sort((a, b) => a.originServerTs.compareTo(b.originServerTs));
+      final latestGroupCallEvent = groupCallStates.values.last;
+      if (!latestGroupCallEvent.content.containsKey('m.terminated')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future sendGroupCallTerminateEvent(Room room, String groupCallId) async {
+    try {
+      Logs().d('[VOIP] running sendterminator');
+      final existingStateEvent =
+          room.getState(EventTypes.GroupCallPrefix, groupCallId);
+      if (existingStateEvent == null) {
+        Logs().e('could not find group call with id $groupCallId');
+        return;
+      }
+      await client.setRoomStateWithKey(
+          room.id, EventTypes.GroupCallPrefix, groupCallId, {
+        ...existingStateEvent.content,
+        'm.terminated': GroupCallTerminationReason.CallEnded,
+      });
+      Logs().d('[VOIP] Group call $groupCallId was killed uwu');
+    } catch (e) {
+      Logs().i('killing stale call $groupCallId failed. reason: $e');
+    }
+  }
+
+  Map<String, Timer> staleGroupCallsTimer = {};
+
+  /// stops the stale call checker timer
+  void stopStaleCallsChecker(String roomId) {
+    if (staleGroupCallsTimer.tryGet(roomId) != null) {
+      staleGroupCallsTimer[roomId]!.cancel();
+    } else {
+      Logs().w('[VOIP] no stale call checker for room found');
+    }
+  }
+
+  static const staleCallCheckerDuration = Duration(seconds: 30);
+
+  /// checks for stale calls in a room and sends `m.terminated` if all the
+  /// expires_ts are expired. Call when opening a room
+  void startStaleCallsChecker(String roomId) async {
+    staleGroupCallsTimer[roomId] = Timer.periodic(
+      staleCallCheckerDuration,
+      (timer) {
+        final room = client.getRoomById(roomId);
+        if (room == null) {
+          Logs().w('[VOIP] stale call checker got incorrect room id');
+        } else {
+          Logs().d('checking for stale group calls.');
+          final copyGroupCallIds =
+              room.states.tryGetMap<dynamic, Event>(EventTypes.GroupCallPrefix);
+          if (copyGroupCallIds == null) return;
+          copyGroupCallIds.forEach(
+            (groupCallId, groupCallEvent) async {
+              if (groupCallEvent.content.tryGet('m.intent') == 'm.room') return;
+              if (!groupCallEvent.content.containsKey('m.terminated')) {
+                if (groupCallId != null) {
+                  Logs().i(
+                      'found non terminated group call with id $groupCallId');
+                  // call is not empty but check for stale participants (gone offline)
+                  // with expire_ts
+                  final Map<String, int> participants = {};
+                  final callMemberEvents = room.states.tryGetMap<String, Event>(
+                      EventTypes.GroupCallMemberPrefix);
+                  Logs().e(
+                      'callmemeberEvents length ${callMemberEvents?.length}');
+                  if (callMemberEvents != null) {
+                    callMemberEvents.forEach((userId, memberEvent) async {
+                      final callMemberEvent = groupCallEvent.room.getState(
+                        EventTypes.GroupCallMemberPrefix,
+                        userId,
+                      );
+                      if (callMemberEvent != null) {
+                        final event =
+                            IGroupCallRoomMemberState.fromJson(callMemberEvent);
+                        participants[userId] = event.expireTs;
+                      }
+                    });
+                  }
+
+                  Logs().e(participants.toString());
+                  if (!participants.values.any((expire_ts) =>
+                      expire_ts > DateTime.now().millisecondsSinceEpoch)) {
+                    Logs().i(
+                        'Group call with expired timestamps detected, terminating');
+                    await sendGroupCallTerminateEvent(room, groupCallId);
+                  }
+                }
+              }
+            },
+          );
+        }
+      },
+    );
+  }
 }

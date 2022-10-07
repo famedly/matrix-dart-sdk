@@ -141,12 +141,17 @@ class IGroupCallRoomMemberCallState {
 }
 
 class IGroupCallRoomMemberState {
+  final DEFAULT_EXPIRE_TS = Duration(seconds: 300);
+  late int expireTs;
   List<IGroupCallRoomMemberCallState> calls = [];
-  IGroupCallRoomMemberState.fromJson(Map<String, dynamic> json) {
-    if (json['m.calls'] != null) {
-      (json['m.calls'] as List<dynamic>).forEach(
+  IGroupCallRoomMemberState.fromJson(MatrixEvent event) {
+    if (event.content['m.calls'] != null) {
+      (event.content['m.calls'] as List<dynamic>).forEach(
           (call) => calls.add(IGroupCallRoomMemberCallState.formJson(call)));
     }
+
+    expireTs = event.content['m.expires_ts'] ??
+        event.originServerTs.add(DEFAULT_EXPIRE_TS).millisecondsSinceEpoch;
   }
 }
 
@@ -168,6 +173,10 @@ abstract class ICallHandlers {
 
 class GroupCall {
   // Config
+
+  static const updateExpireTsTimerDuration = Duration(seconds: 15);
+  static const expireTsBumpDuration = Duration(seconds: 45);
+
   var activeSpeakerInterval = 1000;
   var retryCallInterval = 5000;
   var participantTimeout = 1000 * 15;
@@ -196,6 +205,8 @@ class GroupCall {
   Map<String, ICallHandlers> callHandlers = {};
 
   Timer? activeSpeakerLoopTimeout;
+
+  Timer? resendMemberStateEventTimer;
 
   final CachedStreamController<GroupCall> onGroupCallFeedsChanged =
       CachedStreamController();
@@ -255,28 +266,30 @@ class GroupCall {
     return room.unsafeGetUserFromMemoryOrFallback(client.userID!);
   }
 
-  Future<List<MatrixEvent>> getStateEventsList(String type) async {
+  bool callMemberStateIsExpired(MatrixEvent event) {
+    final callMemberState = IGroupCallRoomMemberState.fromJson(event);
+    return callMemberState.expireTs < DateTime.now().millisecondsSinceEpoch;
+  }
+
+  Event? getMemberStateEvent(String userId) {
+    final event = room.getState(EventTypes.GroupCallMemberPrefix, userId);
+    if (event != null) {
+      return callMemberStateIsExpired(event) ? null : event;
+    }
+    return null;
+  }
+
+  Future<List<MatrixEvent>> getAllMemberStateEvents() async {
+    final List<MatrixEvent> events = [];
     final roomStates = await client.getRoomState(room.id);
     roomStates.sort((a, b) => a.originServerTs.compareTo(b.originServerTs));
-    final events = <MatrixEvent>[];
-    roomStates.forEach((evt) {
-      if (evt.type == type) {
-        events.add(evt);
+    roomStates.forEach((value) {
+      if (value.type == EventTypes.GroupCallMemberPrefix &&
+          !callMemberStateIsExpired(value)) {
+        events.add(value);
       }
     });
     return events;
-  }
-
-  Future<MatrixEvent?> getStateEvent(String type, [String? userId]) async {
-    final roomStates = await client.getRoomState(room.id);
-    roomStates.sort((a, b) => a.originServerTs.compareTo(b.originServerTs));
-    MatrixEvent? event;
-    roomStates.forEach((value) {
-      if (value.type == type && (userId == null || value.senderId == userId)) {
-        event = value;
-      }
-    });
-    return event;
   }
 
   void setState(String newState) {
@@ -420,8 +433,7 @@ class GroupCall {
     // Set up participants for the members currently in the room.
     // Other members will be picked up by the RoomState.members event.
 
-    final memberStateEvents =
-        await getStateEventsList(EventTypes.GroupCallMemberPrefix);
+    final memberStateEvents = await getAllMemberStateEvents();
 
     memberStateEvents.forEach((stateEvent) {
       onMemberStateChanged(stateEvent);
@@ -470,33 +482,34 @@ class GroupCall {
     setState(GroupCallState.LocalCallFeedUninitialized);
     voip.currentGroupCID = null;
     voip.delegate.handleGroupCallEnded(this);
+    final justLeftGroupCall = voip.groupCalls.tryGet<GroupCall>(room.id);
+    // terminate group call if empty
+    if (justLeftGroupCall != null &&
+        justLeftGroupCall.intent != 'm.room' &&
+        justLeftGroupCall.participants.isEmpty &&
+        room.canCreateGroupCall) {
+      terminate();
+    } else {
+      Logs().d(
+          '[VOIP] left group call but cannot terminate. participants: ${participants.length}, pl: ${room.canCreateGroupCall}');
+    }
   }
 
   /// terminate group call.
   void terminate({bool emitStateEvent = true}) async {
+    final existingStateEvent =
+        room.getState(EventTypes.GroupCallPrefix, groupCallId);
     dispose();
-
     participants = [];
-    //TODO(duan): remove this
-    /* client.removeListener(
-      'RoomState.members',
-      onMemberStateChanged,
-    );
-    */
     voip.groupCalls.remove(room.id);
     voip.groupCalls.remove(groupCallId);
-
     if (emitStateEvent) {
-      final existingStateEvent = await getStateEvent(
-        EventTypes.GroupCallPrefix,
-        groupCallId,
-      );
-
       await client.setRoomStateWithKey(
           room.id, EventTypes.GroupCallPrefix, groupCallId, {
         ...existingStateEvent!.content,
         'm.terminated': GroupCallTerminationReason.CallEnded,
       });
+      Logs().d('[VOIP] Group call $groupCallId was killed');
     }
     voip.delegate.handleGroupCallEnded(this);
     setState(GroupCallState.Ended);
@@ -665,9 +678,9 @@ class GroupCall {
     newCall.answerWithStreams(getLocalStreams());
   }
 
-  Future<void> sendMemberStateEvent() {
+  Future<void> sendMemberStateEvent() async {
     final deviceId = client.deviceID;
-    return updateMemberCallState(IGroupCallRoomMemberCallState.formJson({
+    await updateMemberCallState(IGroupCallRoomMemberCallState.formJson({
       'm.call_id': groupCallId,
       'm.devices': [
         {
@@ -683,9 +696,23 @@ class GroupCall {
       ],
       // TODO 'm.foci'
     }));
+
+    if (resendMemberStateEventTimer != null) {
+      resendMemberStateEventTimer!.cancel();
+    }
+    resendMemberStateEventTimer =
+        Timer.periodic(updateExpireTsTimerDuration, ((timer) async {
+      Logs().d('updating member event with timer');
+      return await sendMemberStateEvent();
+    }));
   }
 
   Future<void> removeMemberStateEvent() {
+    if (resendMemberStateEventTimer != null) {
+      Logs().d('resend member event timer cancelled');
+      resendMemberStateEventTimer!.cancel();
+      resendMemberStateEventTimer = null;
+    }
     return updateMemberCallState();
   }
 
@@ -693,13 +720,13 @@ class GroupCall {
       [IGroupCallRoomMemberCallState? memberCallState]) async {
     final localUserId = client.userID;
 
-    final currentStateEvent =
-        await getStateEvent(EventTypes.GroupCallMemberPrefix, localUserId);
+    final currentStateEvent = getMemberStateEvent(localUserId!);
     final eventContent = currentStateEvent?.content ?? {};
     var calls = <IGroupCallRoomMemberCallState>[];
 
     if (currentStateEvent != null) {
-      final memberStateEvent = IGroupCallRoomMemberState.fromJson(eventContent);
+      final memberStateEvent =
+          IGroupCallRoomMemberState.fromJson(currentStateEvent);
       calls = memberStateEvent.calls;
       final existingCallIndex =
           calls.indexWhere((element) => groupCallId == element.call_id);
@@ -716,13 +743,15 @@ class GroupCall {
     } else if (memberCallState != null) {
       calls.add(memberCallState);
     }
-
     final content = {
       'm.calls': calls.map((e) => e.toJson()).toList(),
+      'm.expires_ts': calls.isEmpty
+          ? eventContent.tryGet('m.expires_ts')
+          : DateTime.now().add(expireTsBumpDuration).millisecondsSinceEpoch
     };
 
     await client.setRoomStateWithKey(
-        room.id, EventTypes.GroupCallMemberPrefix, localUserId!, content);
+        room.id, EventTypes.GroupCallMemberPrefix, localUserId, content);
   }
 
   void onMemberStateChanged(MatrixEvent event) async {
@@ -737,7 +766,7 @@ class GroupCall {
       return;
     }
 
-    final callsState = IGroupCallRoomMemberState.fromJson(event.content);
+    final callsState = IGroupCallRoomMemberState.fromJson(event);
 
     if (callsState is List) {
       Logs()
@@ -843,14 +872,12 @@ class GroupCall {
   }
 
   Future<IGroupCallRoomMemberDevice?> getDeviceForMember(String userId) async {
-    final memberStateEvent =
-        await getStateEvent(EventTypes.GroupCallMemberPrefix, userId);
+    final memberStateEvent = getMemberStateEvent(userId);
     if (memberStateEvent == null) {
       return null;
     }
 
-    final memberState =
-        IGroupCallRoomMemberState.fromJson(memberStateEvent.content);
+    final memberState = IGroupCallRoomMemberState.fromJson(memberStateEvent);
 
     final memberGroupCallState =
         memberState.calls.where(((call) => call.call_id == groupCallId));
