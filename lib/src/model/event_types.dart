@@ -80,6 +80,7 @@ abstract class EventTypes {
   static const String CrossSigningMasterKey = 'm.cross_signing.master';
   static const String MegolmBackup = 'm.megolm_backup.v1';
   static const String SecretStorageDefaultKey = 'm.secret_storage.default_key';
+  static const String PushRules = 'm.push_rules';
 
   static String secretStorageKey(String keyId) => 'm.secret_storage.key.$keyId';
 
