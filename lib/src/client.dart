@@ -324,11 +324,10 @@ class Client extends MatrixApi {
           if (r == null) {
             return prev;
           }
-          final prevLast =
-              prev.lastEvent?.originServerTs.millisecondsSinceEpoch ?? 0;
-          final rLast = r.lastEvent?.originServerTs.millisecondsSinceEpoch ?? 0;
+          final prevLast = prev.lastEvent?.originServerTs ?? DateTime(0);
+          final rLast = r.lastEvent?.originServerTs ?? DateTime(0);
 
-          return rLast > prevLast ? r : prev;
+          return rLast.isAfter(prevLast) ? r : prev;
         }).id;
       }
     }
