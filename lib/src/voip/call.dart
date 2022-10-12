@@ -20,6 +20,7 @@ import 'dart:async';
 import 'dart:core';
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
@@ -599,16 +600,17 @@ class CallSession {
 
   Future<void> updateAudioDevice([MediaStreamTrack? track]) async {
     final sender = usermediaSenders
-        .where((element) => element.track!.kind == 'audio')
-        .first;
-    await sender.track!.stop();
+        .firstWhereOrNull((element) => element.track!.kind == 'audio');
+    await sender?.track?.stop();
     if (track != null) {
-      await sender.replaceTrack(track);
+      await sender?.replaceTrack(track);
     } else {
       final stream =
           await voip.delegate.mediaDevices.getUserMedia({'audio': true});
-      final audioTrack = stream.getAudioTracks().first;
-      await sender.replaceTrack(audioTrack);
+      final audioTrack = stream.getAudioTracks().firstOrNull;
+      if (audioTrack != null) {
+        await sender?.replaceTrack(audioTrack);
+      }
     }
   }
 
