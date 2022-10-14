@@ -1,3 +1,7 @@
+## [1.1.8] - 29th Aug 2022
+- fix: Edge case where MatrixException.error differs from errcode
+- chore: add pushrules to the event types
+
 ## [1.1.7] - 29th Aug 2022
 - fix: Parsing of MatrixException parameters
 
