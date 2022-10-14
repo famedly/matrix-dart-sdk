@@ -70,7 +70,7 @@ void main() {
       expect(exception.completedAuthenticationFlows, ['example.type.foo']);
       expect(exception.requireAdditionalAuthentication, true);
       expect(exception.retryAfterMs, null);
-      expect(exception.error, MatrixError.M_UNKNOWN);
+      expect(exception.error, MatrixError.M_FORBIDDEN);
       expect(exception.errcode, 'M_FORBIDDEN');
       expect(exception.errorMessage, 'Require additional authentication');
     });

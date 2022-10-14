@@ -87,10 +87,11 @@ class MatrixException implements Exception {
   @override
   String toString() => '$errcode: $errorMessage';
 
-  /// Returns the [ResponseError]. Is ResponseError.NONE if there wasn't an error.
+  /// Returns the errcode as an [MatrixError].
   MatrixError get error => MatrixError.values.firstWhere(
-      (e) => e.toString() == 'MatrixError.${(raw["errcode"] ?? "")}',
-      orElse: () => MatrixError.M_UNKNOWN);
+        (e) => e.name == errcode,
+        orElse: () => MatrixError.M_UNKNOWN,
+      );
 
   int? get retryAfterMs => raw.tryGet<int>('retry_after_ms');
 
