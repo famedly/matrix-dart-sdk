@@ -60,7 +60,7 @@ void main() {
       final matrixException = MatrixException(
         Response(
           '{"error":"HAHA"}',
-          401,
+          420,
         ),
       );
       expect(matrixException.error, MatrixError.M_UNKNOWN);
