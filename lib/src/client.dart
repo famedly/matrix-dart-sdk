@@ -34,6 +34,7 @@ import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/compute_callback.dart';
 import 'package:matrix/src/utils/multilock.dart';
+import 'package:matrix/src/utils/pushrule_evaluator.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
@@ -277,6 +278,17 @@ class Client extends MatrixApi {
   Map<String, BasicEvent> _accountData = {};
 
   Map<String, BasicEvent> get accountData => _accountData;
+
+  /// Evaluate if an event should notify quickly
+  PushruleEvaluator get pushruleEvaluator =>
+      _pushruleEvaluator ?? PushruleEvaluator.fromRuleset(PushRuleSet());
+  PushruleEvaluator? _pushruleEvaluator;
+
+  void _updatePushrules() {
+    final ruleset = PushRuleSet.fromJson(
+        _accountData[EventTypes.PushRules]?.content['global'] ?? {});
+    _pushruleEvaluator = PushruleEvaluator.fromRuleset(ruleset);
+  }
 
   /// Presences of users by a given matrix ID
   Map<String, CachedPresence> presences = {};
@@ -1434,8 +1446,10 @@ class Client extends MatrixApi {
           _rooms = rooms;
           _sortRooms();
         });
-        _accountDataLoading =
-            database.getAccountData().then((data) => _accountData = data);
+        _accountDataLoading = database.getAccountData().then((data) {
+          _accountData = data;
+          _updatePushrules();
+        });
         presences.clear();
         if (waitUntilLoadCompletedLoaded) {
           await userDeviceKeysLoading;
@@ -1667,6 +1681,10 @@ class Client extends MatrixApi {
       );
       accountData[newAccountData.type] = newAccountData;
       onAccountData.add(newAccountData);
+
+      if (newAccountData.type == EventTypes.PushRules) {
+        _updatePushrules();
+      }
     }
 
     final syncDeviceLists = sync.deviceLists;
@@ -2606,7 +2624,7 @@ class Client extends MatrixApi {
   /// rule of the push rules: https://matrix.org/docs/spec/client_server/r0.6.0#m-rule-master
   bool get allPushNotificationsMuted {
     final Map<String, dynamic>? globalPushRules =
-        _accountData['m.push_rules']?.content['global'];
+        _accountData[EventTypes.PushRules]?.content['global'];
     if (globalPushRules == null) return false;
 
     if (globalPushRules['override'] is List) {

@@ -1764,6 +1764,17 @@ class Room {
     return ownPowerLevel >= pl;
   }
 
+  bool canSendNotification(String userid, {String notificationType = 'room'}) {
+    final userLevel = getPowerLevelByUserId(userid);
+    final notificationLevel = getState(EventTypes.RoomPowerLevels)
+            ?.content
+            .tryGetMap<String, dynamic>('notifications')
+            ?.tryGet<int>(notificationType) ??
+        50;
+
+    return userLevel >= notificationLevel;
+  }
+
   /// Returns the [PushRuleState] for this room, based on the m.push_rules stored in
   /// the account_data.
   PushRuleState get pushRuleState {
