@@ -34,7 +34,6 @@ import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/compute_callback.dart';
 import 'package:matrix/src/utils/multilock.dart';
-import 'package:matrix/src/utils/pushrule_evaluator.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
