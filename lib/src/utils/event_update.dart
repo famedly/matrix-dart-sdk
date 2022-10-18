@@ -19,12 +19,26 @@
 import 'package:matrix/matrix.dart';
 
 enum EventUpdateType {
+  /// Newly received events from /sync
   timeline,
+
+  /// A state update not visible in the timeline currently
   state,
+
+  /// Messages that have been fetched when requesting past history
   history,
+
+  /// Updates to account data
   accountData,
+
+  /// Ephemeral events like receipts
   ephemeral,
-  inviteState
+
+  /// The state of an invite
+  inviteState,
+
+  /// Events that came down timeline, but we only received the keys for it later so we send a second update for them in the decrypted state
+  decryptedTimelineQueue,
 }
 
 /// Represents a new event (e.g. a message in a room) or an update for an

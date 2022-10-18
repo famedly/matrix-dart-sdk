@@ -922,8 +922,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     }
 
     // Store a common message event
-    if ({EventUpdateType.timeline, EventUpdateType.history}
-        .contains(eventUpdate.type)) {
+    if ({
+      EventUpdateType.timeline,
+      EventUpdateType.history,
+      EventUpdateType.decryptedTimelineQueue
+    }.contains(eventUpdate.type)) {
       final eventId = eventUpdate.content['event_id'];
       // Is this ID already in the store?
       final Map? prevEvent = await _eventsBox
