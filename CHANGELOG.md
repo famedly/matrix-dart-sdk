@@ -1,3 +1,12 @@
+## [0.14.2] - 18th Oct 2022
+- Improve ice connection speed. (Duan Weiwei)
+- chore: fix exception test after api_lite update (Nicolas Werner)
+- feat: Add getter for own unverified devices (Christian Pauly)
+- feat: Support evaluating pushrules (Nicolas Werner)
+- feat: implement expire_ts in group calls and provide methods to terminate stale calls (td)
+- fix: files get needlessly lowercased (Nicolas Werner)
+- refactor: Use DateTime method instead of comparing milliseconds (Christian Pauly)
+
 ## [0.14.1] - 20th Sep 2022
 - chore: Fire events by default during hangup. (cloudwebrtc)
 - chore: Properly close usermedia/screen stream for 1v1/group calls. (cloudwebrtc)
