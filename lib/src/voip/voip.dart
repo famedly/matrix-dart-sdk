@@ -129,6 +129,22 @@ class VoIP {
           break;
       }
     });
+
+    delegate.mediaDevices.ondevicechange = _onDeviceChange;
+  }
+
+  Future<void> _onDeviceChange(dynamic _) async {
+    Logs().v('[VOIP] _onDeviceChange');
+    for (final call in calls.values) {
+      if (call.state == CallState.kConnected && !call.isGroupCall) {
+        await call.updateAudioDevice();
+      }
+    }
+    for (final groupCall in groupCalls.values) {
+      if (groupCall.state == GroupCallState.Entered) {
+        await groupCall.updateAudioDevice();
+      }
+    }
   }
 
   Future<void> onCallInvite(

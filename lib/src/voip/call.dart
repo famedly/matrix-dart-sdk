@@ -20,6 +20,7 @@ import 'dart:async';
 import 'dart:core';
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
@@ -329,6 +330,7 @@ class CallSession {
   bool waitForLocalAVStream = false;
   int toDeviceSeq = 0;
   int candidateSendTries = 0;
+  bool get isGroupCall => groupCallId != null;
 
   final CachedStreamController<CallSession> onCallStreamsChanged =
       CachedStreamController();
@@ -593,6 +595,22 @@ class CallSession {
     if (prevLocalOnHold != newLocalOnHold) {
       localHold = newLocalOnHold;
       fireCallEvent(CallEvent.kLocalHoldUnhold);
+    }
+  }
+
+  Future<void> updateAudioDevice([MediaStreamTrack? track]) async {
+    final sender = usermediaSenders
+        .firstWhereOrNull((element) => element.track!.kind == 'audio');
+    await sender?.track?.stop();
+    if (track != null) {
+      await sender?.replaceTrack(track);
+    } else {
+      final stream =
+          await voip.delegate.mediaDevices.getUserMedia({'audio': true});
+      final audioTrack = stream.getAudioTracks().firstOrNull;
+      if (audioTrack != null) {
+        await sender?.replaceTrack(audioTrack);
+      }
     }
   }
 

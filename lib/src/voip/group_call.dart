@@ -394,6 +394,15 @@ class GroupCall {
     return newStream;
   }
 
+  Future<void> updateAudioDevice() async {
+    final stream =
+        await voip.delegate.mediaDevices.getUserMedia({'audio': true});
+    final audioTrack = stream.getAudioTracks().first;
+    for (final call in calls) {
+      await call.updateAudioDevice(audioTrack);
+    }
+  }
+
   void updateLocalUsermediaStream(WrappedMediaStream stream) {
     if (localUserMediaStream != null) {
       final oldStream = localUserMediaStream!.stream;
