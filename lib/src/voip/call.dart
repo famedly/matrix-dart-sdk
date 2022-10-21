@@ -939,13 +939,18 @@ class CallSession {
             video_muted: localUserMediaStream!.stream!.getVideoTracks().isEmpty)
       });
 
+      await pc!.setLocalDescription(answer);
+      setCallState(CallState.kConnecting);
+
+      // Allow a short time for initial candidates to be gathered
+      await Future.delayed(Duration(milliseconds: 200));
+
       final res = await sendAnswerCall(room, callId, answer.sdp!, localPartyId,
           type: answer.type!,
           capabilities: callCapabilities,
           metadata: metadata);
       Logs().v('[VOIP] answer res => $res');
-      await pc!.setLocalDescription(answer);
-      setCallState(CallState.kConnecting);
+
       inviteOrAnswerSent = true;
       _answeredByUs = true;
     }
@@ -1055,6 +1060,12 @@ class CallSession {
       return;
     }
 
+    if (pc!.iceGatheringState ==
+        RTCIceGatheringState.RTCIceGatheringStateGathering) {
+      // Allow a short time for initial candidates to be gathered
+      await Future.delayed(Duration(milliseconds: 200));
+    }
+
     if (callHasEnded) return;
 
     final callCapabilities = CallCapabilities()
@@ -1088,6 +1099,11 @@ class CallSession {
     Logs().i('Negotiation is needed!');
     makingOffer = true;
     try {
+      // The first addTrack(audio track) on iOS will trigger
+      // onNegotiationNeeded, which causes creatOffer to only include
+      // audio m-line, add delay and wait for video track to be added,
+      // then createOffer can get audio/video m-line correctly.
+      await Future.delayed(Duration(milliseconds: 100));
       final offer = await pc!.createOffer({});
       await _gotLocalOffer(offer);
     } catch (e) {
