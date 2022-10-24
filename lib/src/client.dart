@@ -37,6 +37,7 @@ import 'package:matrix/src/utils/multilock.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
+import 'package:matrix/src/utils/try_get_push_rule.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -284,8 +285,11 @@ class Client extends MatrixApi {
   PushruleEvaluator? _pushruleEvaluator;
 
   void _updatePushrules() {
-    final ruleset = PushRuleSet.fromJson(
-        _accountData[EventTypes.PushRules]?.content['global'] ?? {});
+    final ruleset = TryGetPushRule.tryFromJson(
+        _accountData[EventTypes.PushRules]
+                ?.content
+                .tryGetMap<String, dynamic>('global') ??
+            {});
     _pushruleEvaluator = PushruleEvaluator.fromRuleset(ruleset);
   }
 
@@ -1006,7 +1010,7 @@ class Client extends MatrixApi {
     final pushrules = _accountData['m.push_rules']
         ?.content
         .tryGetMap<String, dynamic>('global');
-    return pushrules != null ? PushRuleSet.fromJson(pushrules) : null;
+    return pushrules != null ? TryGetPushRule.tryFromJson(pushrules) : null;
   }
 
   /// Returns the device push rules for the logged in user.
@@ -1014,7 +1018,7 @@ class Client extends MatrixApi {
     final pushrules = _accountData['m.push_rules']
         ?.content
         .tryGetMap<String, dynamic>('device');
-    return pushrules != null ? PushRuleSet.fromJson(pushrules) : null;
+    return pushrules != null ? TryGetPushRule.tryFromJson(pushrules) : null;
   }
 
   static const Set<String> supportedVersions = {'v1.1', 'v1.2'};
