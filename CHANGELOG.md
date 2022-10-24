@@ -1,3 +1,8 @@
+## [0.14.3] - 24th Oct 2022
+- fix: Do not assume that push rules are never malformed in account data
+- chore: change codeowners
+- refactor: Remove unused imports
+
 ## [0.14.2] - 18th Oct 2022
 - Improve ice connection speed. (Duan Weiwei)
 - chore: fix exception test after api_lite update (Nicolas Werner)
