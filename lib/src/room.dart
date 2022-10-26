@@ -530,6 +530,10 @@ class Room {
   /// in muted rooms, use [hasNewMessages].
   bool get isUnread => notificationCount > 0 || markedUnread;
 
+  /// Returns true if this room is to be marked as unread. This extends
+  /// [isUnread] to rooms with [Membership.invite].
+  bool get isUnreadOrInvited => isUnread || membership == Membership.invite;
+
   @Deprecated('Use waitForRoomInSync() instead')
   Future<SyncUpdate> get waitForSync => waitForRoomInSync();
 
@@ -1689,6 +1693,7 @@ class Room {
 
   bool get canCreateGroupCall =>
       canChangeStateEvent('org.matrix.msc3401.call') && groupCallsEnabled;
+
   bool get canJoinGroupCall =>
       canChangeStateEvent('org.matrix.msc3401.call.member') &&
       groupCallsEnabled;
