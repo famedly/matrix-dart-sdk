@@ -13,6 +13,8 @@ variables:
   FLUTTER_IMAGE_TAG: "3.0.5"
 
 coverage:
+  tags:
+    - linux
   stage: test
   image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable:${FLUTTER_IMAGE_TAG}
   dependencies: []
@@ -35,6 +37,8 @@ coverage:
       junit: TEST-report.xml
 
 coverage_without_olm:
+  tags:
+    - linux
   stage: test
   image: dart
   dependencies: []
@@ -60,6 +64,8 @@ coverage_without_olm:
       junit: TEST-report.xml
 
 e2ee_test:
+  tags:
+    - linux
   stage: test
   image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable:${FLUTTER_IMAGE_TAG}
   dependencies: []
