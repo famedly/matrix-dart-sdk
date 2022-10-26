@@ -2961,7 +2961,10 @@ class Client extends MatrixApi {
     await legacyDatabase?.close();
     _initLock = false;
     if (migrateClient != null) {
-      return init();
+      return init(
+        waitForFirstSync: false,
+        waitUntilLoadCompletedLoaded: false,
+      );
     }
   }
 }
