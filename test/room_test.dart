@@ -189,7 +189,8 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.hasNewMessages, true);
+      expect(room.hasNewMessages, isTrue);
+      expect(room.isUnreadOrInvited, isTrue);
       expect(room.lastEvent?.body, 'cd');
       room.setState(
         Event(
