@@ -1,3 +1,6 @@
+## [0.14.4] - 26th Oct 2022
+- fix: Do not wait for first sync after migration init
+
 ## [0.14.3] - 24th Oct 2022
 - fix: Do not assume that push rules are never malformed in account data
 - chore: change codeowners
