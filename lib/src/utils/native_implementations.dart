@@ -57,7 +57,7 @@ abstract class NativeImplementations {
     final dynamic argument = invocation.positionalArguments.single;
     final memberName = invocation.memberName.toString().split('"')[1];
 
-    Logs().w(
+    Logs().d(
       'Missing implementations of Client.nativeImplementations.$memberName. '
       'You should consider implementing it. '
       'Fallback from NativeImplementations.dummy used.',
