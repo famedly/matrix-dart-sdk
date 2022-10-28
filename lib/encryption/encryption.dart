@@ -189,6 +189,9 @@ class Encryption {
   }
 
   Event decryptRoomEventSync(String roomId, Event event) {
+    if (event.type != EventTypes.Encrypted || event.redacted) {
+      return event;
+    }
     final content = event.parsedRoomEncryptedContent;
     if (event.type != EventTypes.Encrypted ||
         content.ciphertextMegolm == null) {
@@ -294,7 +297,7 @@ class Encryption {
   Future<Event> decryptRoomEvent(String roomId, Event event,
       {bool store = false,
       EventUpdateType updateType = EventUpdateType.timeline}) async {
-    if (event.type != EventTypes.Encrypted) {
+    if (event.type != EventTypes.Encrypted || event.redacted) {
       return event;
     }
     final content = event.parsedRoomEncryptedContent;
