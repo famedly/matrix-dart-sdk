@@ -72,7 +72,8 @@ class Event extends MatrixEvent {
       ? room.unsafeGetUserFromMemoryOrFallback(stateKey!)
       : null;
 
-  final MatrixEvent? originalSource;
+  MatrixEvent? _originalSource;
+  MatrixEvent? get originalSource => _originalSource;
 
   Event({
     this.status = defaultStatus,
@@ -85,8 +86,9 @@ class Event extends MatrixEvent {
     Map<String, dynamic>? prevContent,
     String? stateKey,
     required this.room,
-    this.originalSource,
-  }) : super(
+    MatrixEvent? originalSource,
+  })  : _originalSource = originalSource,
+        super(
           content: content,
           type: type,
           eventId: eventId,
@@ -262,6 +264,7 @@ class Event extends MatrixEvent {
       'redacted_because': redactedBecause.toJson(),
     };
     prevContent = null;
+    _originalSource = null;
     final contentKeyWhiteList = <String>[];
     switch (type) {
       case EventTypes.RoomMember:
