@@ -45,21 +45,6 @@ Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
 }
 
 // ignore: deprecated_member_use_from_same_package
-Future<FluffyBoxDatabase> getFluffyBoxDatabase(Client? c) async {
-  final fileSystem = MemoryFileSystem();
-  final testHivePath =
-      '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
-  Directory(testHivePath).createSync(recursive: true);
-  // ignore: deprecated_member_use_from_same_package
-  final db = FluffyBoxDatabase(
-    'unit_test.${c?.hashCode}',
-    testHivePath,
-  );
-  await db.open();
-  return db;
-}
-
-// ignore: deprecated_member_use_from_same_package
 Future<FamedlySdkHiveDatabase> getHiveDatabase(Client? c) async {
   if (!hiveInitialized) {
     final fileSystem = MemoryFileSystem();
