@@ -15,7 +15,6 @@ dependencies:
   collection: ^1.15.0
   crypto: ^3.0.0
   ffi: ^2.0.0
-  fluffybox: ^0.4.3
   hive: ^2.2.3
   html: ^0.15.0
   html_unescape: ^2.0.0
