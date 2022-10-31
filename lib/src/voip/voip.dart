@@ -89,7 +89,7 @@ class VoIP {
       final confId = event.content['conf_id'];
       final groupCall = groupCalls[confId];
       if (groupCall == null) {
-        Logs().e('[VOIP] onToDeviceEvent: groupCall is null.');
+        Logs().d('[VOIP] onToDeviceEvent: groupCall is null.');
         return;
       }
       final roomId = groupCall.room.id;

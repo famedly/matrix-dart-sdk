@@ -1,3 +1,11 @@
+## [0.15.0] - 28th Oct 2022
+- chore: reduce error logging level of groupCall is null (td)
+- fix: filter list for adding p2p call events (td)
+- refactor: Remove deprecated fluffybox (Christian Pauly)
+- chore: Lower logs level of native implementation noSuchMethod (Christian Pauly)
+- fix: Redact originalSource on redaction (Christian Pauly)
+- fix: Do not try to decrypt redacted events (Christian Pauly)
+
 ## [0.14.4] - 26th Oct 2022
 - fix: Do not wait for first sync after migration init
 

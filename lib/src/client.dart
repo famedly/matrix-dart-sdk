@@ -1981,8 +1981,12 @@ class Client extends MatrixApi {
       if (prevBatch != null &&
           (type == EventUpdateType.timeline ||
               type == EventUpdateType.decryptedTimelineQueue)) {
-        if (update.content.tryGet<String>('type')?.startsWith('m.call.') ??
-            false) {
+        if ((update.content.tryGet<String>('type')?.startsWith('m.call.') ??
+                false) ||
+            (update.content
+                    .tryGet<String>('type')
+                    ?.startsWith('org.matrix.call.') ??
+                false)) {
           final callEvent = Event.fromJson(update.content, room);
           final callId = callEvent.content.tryGet<String>('call_id');
           callEvents.add(callEvent);
