@@ -30,11 +30,19 @@ import 'package:matrix/src/utils/cached_stream_controller.dart';
 /// version 1
 const String voipProtoVersion = '1';
 
-/// The default life time for call events, in millisecond.
-const lifetimeMs = 10 * 1000;
+class Timeouts {
+  /// The default life time for call events, in millisecond.
+  static const lifetimeMs = 10 * 1000;
 
-/// The length of time a call can be ringing for.
-const callTimeoutSec = 60;
+  /// The length of time a call can be ringing for.
+  static const callTimeoutSec = 60;
+
+  /// The delay for ice gathering.
+  static const iceGatheringDelayMs = 200;
+
+  /// Delay before createOffer.
+  static const delayBeforeOfferMs = 100;
+}
 
 /// Wrapped MediaStream, used to adapt Widget to display
 class WrappedMediaStream {
@@ -551,7 +559,7 @@ class CallSession {
 
     /// Send select_answer event.
     await sendSelectCallAnswer(
-        opts.room, callId, lifetimeMs, localPartyId, remotePartyId!);
+        opts.room, callId, Timeouts.lifetimeMs, localPartyId, remotePartyId!);
   }
 
   Future<void> onNegotiateReceived(
@@ -581,7 +589,7 @@ class CallSession {
       if (description.type == 'offer') {
         final answer = await pc!.createAnswer({});
         await sendCallNegotiate(
-            room, callId, lifetimeMs, localPartyId, answer.sdp!,
+            room, callId, Timeouts.lifetimeMs, localPartyId, answer.sdp!,
             type: answer.type!);
         await pc!.setLocalDescription(answer);
       }
@@ -969,7 +977,8 @@ class CallSession {
     }
     Logs().d('[VOIP] Rejecting call: $callId');
     await terminate(CallParty.kLocal, CallErrorCode.UserHangup, shouldEmit);
-    await sendCallReject(room, callId, lifetimeMs, localPartyId, reason);
+    await sendCallReject(
+        room, callId, Timeouts.lifetimeMs, localPartyId, reason);
   }
 
   Future<void> hangup([String? reason, bool suppressEvent = false]) async {
@@ -1063,7 +1072,8 @@ class CallSession {
     if (pc!.iceGatheringState ==
         RTCIceGatheringState.RTCIceGatheringStateGathering) {
       // Allow a short time for initial candidates to be gathered
-      await Future.delayed(Duration(milliseconds: 200));
+      await Future.delayed(
+          Duration(milliseconds: Timeouts.iceGatheringDelayMs));
     }
 
     if (callHasEnded) return;
@@ -1074,12 +1084,12 @@ class CallSession {
     final metadata = _getLocalSDPStreamMetadata();
     if (state == CallState.kCreateOffer) {
       await sendInviteToCall(
-          room, callId, lifetimeMs, localPartyId, null, offer.sdp!,
+          room, callId, Timeouts.lifetimeMs, localPartyId, null, offer.sdp!,
           capabilities: callCapabilities, metadata: metadata);
       inviteOrAnswerSent = true;
       setCallState(CallState.kInviteSent);
 
-      inviteTimer = Timer(Duration(seconds: callTimeoutSec), () {
+      inviteTimer = Timer(Duration(seconds: Timeouts.callTimeoutSec), () {
         if (state == CallState.kInviteSent) {
           hangup(CallErrorCode.InviteTimeout, false);
         }
@@ -1088,7 +1098,7 @@ class CallSession {
       });
     } else {
       await sendCallNegotiate(
-          room, callId, lifetimeMs, localPartyId, offer.sdp!,
+          room, callId, Timeouts.lifetimeMs, localPartyId, offer.sdp!,
           type: offer.type!,
           capabilities: callCapabilities,
           metadata: metadata);
@@ -1103,7 +1113,7 @@ class CallSession {
       // onNegotiationNeeded, which causes creatOffer to only include
       // audio m-line, add delay and wait for video track to be added,
       // then createOffer can get audio/video m-line correctly.
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(Duration(milliseconds: Timeouts.delayBeforeOfferMs));
       final offer = await pc!.createOffer({});
       await _gotLocalOffer(offer);
     } catch (e) {
