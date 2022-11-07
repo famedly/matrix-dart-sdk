@@ -1458,9 +1458,16 @@ class Room {
         setState(user);
       }
     }
-    if (_requestedParticipants || participantListComplete) {
+
+    // Do not request users from the server if we have already done it
+    // in this session, have a complete list locally or are not a joined
+    // member of this room.
+    if (_requestedParticipants ||
+        participantListComplete ||
+        membership != Membership.join) {
       return getParticipants();
     }
+
     final matrixEvents = await client.getMembersByRoom(id);
     final users = matrixEvents
             ?.map((e) => Event.fromMatrixEvent(e, this).asUser)
