@@ -2617,8 +2617,10 @@ class Client extends MatrixApi {
 
       // Send with send-to-device messaging
       final data = await encryption.encryptToDeviceMessage(
-              deviceKeys, eventType, message)
-          as Map<String, Map<String, Map<String, dynamic>>>;
+        deviceKeys,
+        eventType,
+        message,
+      );
       eventType = EventTypes.Encrypted;
       await sendToDevice(
           eventType, messageId ?? generateUniqueTransactionId(), data);

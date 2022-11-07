@@ -631,7 +631,7 @@ class OlmManager {
     return encryptedBody;
   }
 
-  Future<Map<String, dynamic>> encryptToDeviceMessage(
+  Future<Map<String, Map<String, Map<String, dynamic>>>> encryptToDeviceMessage(
       List<DeviceKeys> deviceKeys,
       String type,
       Map<String, dynamic> payload) async {
