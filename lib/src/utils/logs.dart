@@ -35,6 +35,10 @@ enum Level {
 class Logs {
   static final Logs _singleton = Logs._internal();
 
+  /// Override this function if you want to convert a stacktrace for some reason
+  /// for example to apply a source map in the browser.
+  static StackTrace? Function(StackTrace?) stackTraceConverter = (s) => s;
+
   factory Logs() {
     return _singleton;
   }
@@ -58,7 +62,7 @@ class Logs {
         LogEvent(
           title,
           exception: exception,
-          stackTrace: stackTrace,
+          stackTrace: stackTraceConverter(stackTrace),
           level: Level.wtf,
         ),
       );
@@ -68,7 +72,7 @@ class Logs {
         LogEvent(
           title,
           exception: exception,
-          stackTrace: stackTrace,
+          stackTrace: stackTraceConverter(stackTrace),
           level: Level.error,
         ),
       );
@@ -78,7 +82,7 @@ class Logs {
         LogEvent(
           title,
           exception: exception,
-          stackTrace: stackTrace,
+          stackTrace: stackTraceConverter(stackTrace),
           level: Level.warning,
         ),
       );
@@ -88,7 +92,7 @@ class Logs {
         LogEvent(
           title,
           exception: exception,
-          stackTrace: stackTrace,
+          stackTrace: stackTraceConverter(stackTrace),
           level: Level.info,
         ),
       );
@@ -98,7 +102,7 @@ class Logs {
         LogEvent(
           title,
           exception: exception,
-          stackTrace: stackTrace,
+          stackTrace: stackTraceConverter(stackTrace),
           level: Level.debug,
         ),
       );
@@ -108,7 +112,7 @@ class Logs {
         LogEvent(
           title,
           exception: exception,
-          stackTrace: stackTrace,
+          stackTrace: stackTraceConverter(stackTrace),
           level: Level.verbose,
         ),
       );
