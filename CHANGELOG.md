@@ -1,3 +1,6 @@
+## [1.1.9] - 7th Nov 2022
+- feat: Allow converting of stacktraces in logs
+
 ## [1.1.8] - 29th Aug 2022
 - fix: Edge case where MatrixException.error differs from errcode
 - chore: add pushrules to the event types
