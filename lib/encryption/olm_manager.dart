@@ -566,6 +566,10 @@ class OlmManager {
           if (fingerprintKey == null ||
               identityKey == null ||
               !deviceKey.checkJsonSignature(fingerprintKey, userId, deviceId)) {
+            Logs().w(
+              'Skipping invalid device key from $userId:$deviceId',
+              deviceKey,
+            );
             continue;
           }
           Logs().v('[OlmManager] Starting session with $userId:$deviceId');
@@ -591,13 +595,17 @@ class OlmManager {
     }
   }
 
+  /// Encryptes a ToDeviceMessage for the given device with an existing
+  /// olm session.
+  /// Throws `NoOlmSessionFoundException` if there is no olm session with this
+  /// device and none could be created.
   Future<Map<String, dynamic>> encryptToDeviceMessagePayload(
       DeviceKeys device, String type, Map<String, dynamic> payload,
       {bool getFromDb = true}) async {
     final sess =
         await getOlmSessions(device.curve25519Key!, getFromDb: getFromDb);
     if (sess.isEmpty) {
-      throw ('No olm session found for ${device.userId}:${device.deviceId}');
+      throw NoOlmSessionFoundException(device);
     }
     final fullPayload = {
       'type': type,
@@ -653,8 +661,11 @@ class OlmManager {
         userData[device.deviceId!] = await encryptToDeviceMessagePayload(
             device, type, payload,
             getFromDb: false);
+      } on NoOlmSessionFoundException catch (e) {
+        Logs().d('[LibOlm] Error encrypting to-device event', e);
+        continue;
       } catch (e, s) {
-        Logs().w('[LibOlm] Error encrypting to-device event', e, s);
+        Logs().wtf('[LibOlm] Error encrypting to-device event', e, s);
         continue;
       }
     }
@@ -705,4 +716,14 @@ class OlmManager {
     _olmAccount?.free();
     _olmAccount = null;
   }
+}
+
+class NoOlmSessionFoundException implements Exception {
+  final DeviceKeys device;
+
+  NoOlmSessionFoundException(this.device);
+
+  @override
+  String toString() =>
+      'No olm session found for ${device.userId}:${device.deviceId}';
 }
