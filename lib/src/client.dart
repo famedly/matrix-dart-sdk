@@ -2256,7 +2256,7 @@ class Client extends MatrixApi {
   Future<Set<String>> _getUserIdsInEncryptedRooms() async {
     final userIds = <String>{};
     for (final room in rooms) {
-      if (room.encrypted) {
+      if (room.encrypted && room.membership == Membership.join) {
         try {
           final userList = await room.requestParticipants();
           for (final user in userList) {

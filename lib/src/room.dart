@@ -1460,11 +1460,8 @@ class Room {
     }
 
     // Do not request users from the server if we have already done it
-    // in this session, have a complete list locally or are not a joined
-    // member of this room.
-    if (_requestedParticipants ||
-        participantListComplete ||
-        membership != Membership.join) {
+    // in this session or have a complete list locally.
+    if (_requestedParticipants || participantListComplete) {
       return getParticipants();
     }
 
