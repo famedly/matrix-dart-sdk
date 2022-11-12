@@ -491,8 +491,7 @@ class CallSession {
     waitForLocalAVStream = false;
 
     for (final element in callFeeds) {
-      await addLocalStream(
-          await voip.delegate.cloneStream(element.stream!), element.purpose);
+      await addLocalStream(await element.stream!.clone(), element.purpose);
     }
 
     await answer();
@@ -522,8 +521,7 @@ class CallSession {
     }
 
     for (final element in callFeeds) {
-      await addLocalStream(
-          await voip.delegate.cloneStream(element.stream!), element.purpose);
+      await addLocalStream(await element.stream!.clone(), element.purpose);
     }
 
     if (requestScreenshareFeed) {

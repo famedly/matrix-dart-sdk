@@ -618,7 +618,7 @@ class GroupCall {
 
         calls.forEach((call) async {
           await call.addLocalStream(
-              await voip.delegate.cloneStream(localScreenshareStream!.stream!),
+              await localScreenshareStream!.stream!.clone(),
               localScreenshareStream!.purpose);
         });
 

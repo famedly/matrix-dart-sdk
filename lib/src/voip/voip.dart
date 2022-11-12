@@ -14,7 +14,6 @@ abstract class WebRTCDelegate {
       Map<String, dynamic> configuration,
       [Map<String, dynamic> constraints = const {}]);
   VideoRenderer createRenderer();
-  Future<MediaStream> cloneStream(MediaStream stream);
   void playRingtone();
   void stopRingtone();
   void handleNewCall(CallSession session);
