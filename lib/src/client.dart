@@ -597,6 +597,7 @@ class Client extends MatrixApi {
     List<StateEvent>? initialState,
     bool waitForSync = true,
     Map<String, dynamic>? powerLevelContentOverride,
+    CreateRoomPreset? preset = CreateRoomPreset.trustedPrivateChat,
   }) async {
     // Try to find an existing direct chat
     final directChatRoomId = getDirectChatFromUserId(mxid);
@@ -620,7 +621,7 @@ class Client extends MatrixApi {
     final roomId = await createRoom(
       invite: [mxid],
       isDirect: true,
-      preset: CreateRoomPreset.trustedPrivateChat,
+      preset: preset,
       initialState: initialState,
       powerLevelContentOverride: powerLevelContentOverride,
     );
