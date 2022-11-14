@@ -72,7 +72,7 @@ class OlmManager {
             updateDatabase: false,
             // dehydrated devices don't have a device id when created, so skip upload in that case.
             skipAllUploads: deviceId == null)) {
-          throw ('Upload key failed');
+          Logs().d('Uploading keys on initialization failed');
         }
       } catch (_) {
         _olmAccount?.free();
