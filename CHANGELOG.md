@@ -1,3 +1,13 @@
+## [0.15.1] - 14th Nov 2022
+- chore: Follow up fix for request users in invite rooms (Christian Pauly)
+- chore: Put all hard-coded timeout parameters into the Timeouts class. (cloudwebrtc)
+- chore: upgrade webrtc_interface, remove WebRTCDelegate.cloneStream. (cloudwebrtc)
+- fix: Do not request users in not joined rooms (Christian Pauly)
+- fix: sdp negotiation issue on iOS, close #335. (cloudwebrtc)
+- refactor: Add argument for custom CreateRoomPreset to startDirectChat method (Grieshofer Philipp)
+- refactor: Get rid of unnecessary type cast (Christian Pauly)
+- refactor: Improve error handling for no olm session found exception (Christian Pauly)
+
 ## [0.15.0] - 28th Oct 2022
 - chore: reduce error logging level of groupCall is null (td)
 - fix: filter list for adding p2p call events (td)
