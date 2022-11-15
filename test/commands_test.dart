@@ -378,6 +378,27 @@ void main() {
       expect(room.client.prevBatch, null);
     });
 
+    test('cute events - googly eyes', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent('/googly');
+      final sent = getLastMessagePayload();
+      expect(sent, CuteEventContent.googlyEyes);
+    });
+
+    test('cute events - hug', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent('/hug');
+      final sent = getLastMessagePayload();
+      expect(sent, CuteEventContent.hug);
+    });
+
+    test('cute events - hug', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent('/cuddle');
+      final sent = getLastMessagePayload();
+      expect(sent, CuteEventContent.cuddle);
+    });
+
     test('dispose client', () async {
       await client.dispose(closeDatabase: true);
     });

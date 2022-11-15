@@ -227,6 +227,33 @@ extension CommandsClientExtension on Client {
       await args.room.removeFromDirectChat();
       return;
     });
+    addCommand('hug', (CommandArgs args) async {
+      final content = CuteEventContent.hug;
+      return await args.room.sendEvent(
+        content,
+        inReplyTo: args.inReplyTo,
+        editEventId: args.editEventId,
+        txid: args.txid,
+      );
+    });
+    addCommand('googly', (CommandArgs args) async {
+      final content = CuteEventContent.googlyEyes;
+      return await args.room.sendEvent(
+        content,
+        inReplyTo: args.inReplyTo,
+        editEventId: args.editEventId,
+        txid: args.txid,
+      );
+    });
+    addCommand('cuddle', (CommandArgs args) async {
+      final content = CuteEventContent.cuddle;
+      return await args.room.sendEvent(
+        content,
+        inReplyTo: args.inReplyTo,
+        editEventId: args.editEventId,
+        txid: args.txid,
+      );
+    });
   }
 }
 
@@ -236,6 +263,7 @@ class CommandArgs {
   Event? inReplyTo;
   Room room;
   String? txid;
+
   CommandArgs(
       {required this.msg,
       this.editEventId,

@@ -56,7 +56,10 @@ export 'src/utils/uia_request.dart';
 export 'src/utils/uri_extension.dart';
 
 export 'msc_extensions/extension_recent_emoji/recent_emoji.dart';
+export 'msc_extensions/msc_3935_cute_events/msc_3935_cute_events.dart';
 export 'msc_extensions/msc_1236_widgets/msc_1236_widgets.dart';
+export 'msc_extensions/msc_2835_uia_login/msc_2835_uia_login.dart';
+export 'msc_extensions/msc_3814_dehydrated_devices/msc_3814_dehydrated_devices.dart';
 
 export 'src/utils/web_worker/web_worker_stub.dart'
     if (dart.library.html) 'src/utils/web_worker/web_worker.dart';
