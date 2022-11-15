@@ -125,12 +125,14 @@ class OlmManager {
   CancelableOperation<Map<String, int>>? currentUpload;
 
   /// Generates new one time keys, signs everything and upload it to the server.
+  /// If `retry` is > 0, the request will be retried with new OTKs on upload failure.
   Future<bool> uploadKeys({
     bool uploadDeviceKeys = false,
     int? oldKeyCount = 0,
     bool updateDatabase = true,
     bool? unusedFallbackKey = false,
     bool skipAllUploads = false,
+    int retry = 1,
   }) async {
     final olmAccount = _olmAccount;
     if (olmAccount == null) {
@@ -142,6 +144,7 @@ class OlmManager {
     }
     _uploadKeysLock = true;
 
+    final signedOneTimeKeys = <String, dynamic>{};
     try {
       int? uploadedOneTimeKeysCount;
       if (oldKeyCount != null) {
@@ -203,7 +206,6 @@ class OlmManager {
         deviceKeys = signJson(deviceKeys);
       }
 
-      final signedOneTimeKeys = <String, dynamic>{};
       // now sign all the one-time keys
       for (final entry
           in json.decode(olmAccount.one_time_keys())['curve25519'].entries) {
@@ -268,9 +270,43 @@ class OlmManager {
       return (uploadedOneTimeKeysCount != null &&
               response['signed_curve25519'] == uploadedOneTimeKeysCount) ||
           uploadedOneTimeKeysCount == null;
+    } on MatrixException catch (exception) {
+      _uploadKeysLock = false;
+
+      // we failed to upload the keys. If we only tried to upload one time keys, try to recover by removing them and generating new ones.
+      if (!uploadDeviceKeys &&
+          unusedFallbackKey != false &&
+          !skipAllUploads &&
+          retry > 0 &&
+          signedOneTimeKeys.isNotEmpty &&
+          exception.error == MatrixError.M_UNKNOWN) {
+        Logs().w('Rotating otks because upload failed', exception);
+        for (final otk in signedOneTimeKeys.values) {
+          // Keys can only be removed by creating a session...
+          final session = olm.Session();
+          try {
+            final String identity =
+                json.decode(olmAccount.identity_keys())['curve25519'];
+            session.create_outbound(_olmAccount!, identity, otk['key']);
+            olmAccount.remove_one_time_keys(session);
+          } finally {
+            session.free();
+          }
+        }
+
+        await uploadKeys(
+            uploadDeviceKeys: uploadDeviceKeys,
+            oldKeyCount: oldKeyCount,
+            updateDatabase: updateDatabase,
+            unusedFallbackKey: unusedFallbackKey,
+            skipAllUploads: skipAllUploads,
+            retry: retry - 1);
+      }
     } finally {
       _uploadKeysLock = false;
     }
+
+    return false;
   }
 
   Future<void> handleDeviceOneTimeKeysCount(
