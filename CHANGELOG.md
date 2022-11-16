@@ -1,3 +1,6 @@
+## [0.15.2] - 16th Nov 2022
+- fix: recover from very unlikely key upload errors (Nicolas Werner)
+
 ## [0.15.1] - 14th Nov 2022
 - chore: Follow up fix for request users in invite rooms (Christian Pauly)
 - chore: Put all hard-coded timeout parameters into the Timeouts class. (cloudwebrtc)
