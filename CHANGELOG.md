@@ -1,3 +1,6 @@
+## [0.15.3] - 18th Nov 2022
+- fix: handleMissedCalls on remote hangups before answer (td)
+
 ## [0.15.2] - 16th Nov 2022
 - fix: recover from very unlikely key upload errors (Nicolas Werner)
 

@@ -339,6 +339,7 @@ class CallSession {
   int toDeviceSeq = 0;
   int candidateSendTries = 0;
   bool get isGroupCall => groupCallId != null;
+  bool missedCall = true;
 
   final CachedStreamController<CallSession> onCallStreamsChanged =
       CachedStreamController();
@@ -1031,6 +1032,9 @@ class CallSession {
       onCallHangup.add(this);
       voip.delegate.handleCallEnded(this);
       fireCallEvent(CallEvent.kHangup);
+      if ((party == CallParty.kRemote && missedCall)) {
+        voip.delegate.handleMissedCall(this);
+      }
     }
   }
 
@@ -1167,6 +1171,7 @@ class CallSession {
           localCandidates.clear();
           remoteCandidates.clear();
           setCallState(CallState.kConnected);
+          missedCall = false;
         } else if (state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
           hangup(CallErrorCode.IceFailed, false);
         }
