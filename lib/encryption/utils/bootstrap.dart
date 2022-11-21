@@ -27,7 +27,6 @@ import 'package:matrix/encryption/key_manager.dart';
 import 'package:matrix/encryption/ssss.dart';
 import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/matrix.dart';
-import 'package:matrix/msc_extensions/msc_3814_dehydrated_devices/msc_3814_dehydrated_devices.dart';
 
 enum BootstrapState {
   /// Is loading.
