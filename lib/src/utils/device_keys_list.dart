@@ -216,10 +216,14 @@ abstract class SignableKey extends MatrixSignableKey {
     return valid;
   }
 
-  bool hasValidSignatureChain(
-      {bool verifiedOnly = true,
-      Set<String>? visited,
-      Set<String>? onlyValidateUserIds}) {
+  bool hasValidSignatureChain({
+    bool verifiedOnly = true,
+    Set<String>? visited,
+    Set<String>? onlyValidateUserIds,
+
+    /// Only check if this key is verified by any Master key.
+    bool verifiedByAnyMasterKey = false,
+  }) {
     if (!client.encryptionEnabled) {
       return false;
     }
@@ -300,8 +304,8 @@ abstract class SignableKey extends MatrixSignableKey {
         if ((verifiedOnly && key.directVerified) ||
             (key is CrossSigningKey &&
                 key.usage.contains('master') &&
-                key.directVerified &&
-                key.userId == client.userID)) {
+                (verifiedByAnyMasterKey ||
+                    (key.directVerified && key.userId == client.userID)))) {
           return true; // we verified this key and it is valid...all checks out!
         }
         // or else we just recurse into that key and chack if it works out
