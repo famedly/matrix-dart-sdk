@@ -331,6 +331,15 @@ void main() {
       expect(event.stateKeyUser?.id, '@alice:example.com');
     });
     test('canRedact', () async {
+      final client = await getClient();
+      jsonObj['sender'] = client.userID!;
+      final event = Event.fromJson(
+        jsonObj,
+        Room(
+          id: '!localpart:server.abc',
+          client: client,
+        ),
+      );
       expect(event.canRedact, true);
     });
     test('getLocalizedBody, isEventKnown', () async {

@@ -1625,24 +1625,28 @@ class Room {
   }
 
   /// Returns the power level of the given user ID.
+  /// If a user_id is in the users list, then that user_id has the associated
+  /// power level. Otherwise they have the default level users_default.
+  /// If users_default is not supplied, it is assumed to be 0. If the room
+  /// contains no m.room.power_levels event, the room’s creator has a power
+  /// level of 100, and all other users have a power level of 0.
   int getPowerLevelByUserId(String userId) {
-    var powerLevel = 0;
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
-    if (powerLevelMap == null) return powerLevel;
-    powerLevel = getDefaultPowerLevel(powerLevelMap);
-    if (powerLevelMap
-            .tryGet<Map<String, dynamic>>('users')
-            ?.tryGet<int>(userId) !=
-        null) {
-      powerLevel = powerLevelMap['users'][userId];
+    if (powerLevelMap == null) {
+      return getState(EventTypes.RoomCreate)?.senderId == userId ? 100 : 0;
     }
-    return powerLevel;
+    return powerLevelMap
+            .tryGetMap<String, dynamic>('users')
+            ?.tryGet<int>(userId) ??
+        powerLevelMap.tryGet<int>('users_default') ??
+        0;
   }
 
   /// Returns the user's own power level.
   int get ownPowerLevel => getPowerLevelByUserId(client.userID!);
 
   /// Returns the power levels from all users for this room or null if not given.
+  @Deprecated('Use `getPowerLevelByUserId(String userId)` instead')
   Map<String, int>? get powerLevels {
     final powerLevelState =
         getState(EventTypes.RoomPowerLevels)?.content['users'];
@@ -1665,17 +1669,11 @@ class Room {
     );
   }
 
-  bool _hasPermissionFor(String action) {
-    final pl =
-        getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>(action);
-    if (pl == null) {
-      return true;
-    }
-    return ownPowerLevel >= pl;
-  }
-
   /// The level required to ban a user.
-  bool get canBan => _hasPermissionFor('ban');
+  bool get canBan =>
+      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('ban') ??
+          50) <=
+      ownPowerLevel;
 
   /// returns if user can change a particular state event by comparing `ownPowerLevel`
   /// with possible overrides in `events`, if not present compares `ownPowerLevel`
@@ -1685,10 +1683,14 @@ class Room {
   }
 
   /// returns the powerlevel required for chaning the `action` defaults to
-  /// state_default if `action` isn't specified in events override
+  /// state_default if `action` isn't specified in events override.
+  /// If there is no state_default in the m.room.power_levels event, the
+  /// state_default is 50. If the room contains no m.room.power_levels event,
+  /// the state_default is 0.
   int powerForChangingStateEvent(String action) {
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
-    return powerLevelMap!
+    if (powerLevelMap == null) return 0;
+    return powerLevelMap
             .tryGetMap<String, dynamic>('events')
             ?.tryGet<int>(action) ??
         powerLevelMap.tryGet<int>('state_default') ??
@@ -1743,36 +1745,59 @@ class Room {
 
   /// The default level required to send message events. Can be overridden by the events key.
   bool get canSendDefaultMessages =>
-      _hasPermissionFor('events_default') &&
+      (getState(EventTypes.RoomPowerLevels)
+                  ?.content
+                  .tryGet<int>('events_default') ??
+              0) <=
+          ownPowerLevel &&
       (!encrypted || client.encryptionEnabled);
 
   /// The level required to invite a user.
-  bool get canInvite => _hasPermissionFor('invite');
+  bool get canInvite =>
+      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('invite') ??
+          0) <=
+      ownPowerLevel;
 
   /// The level required to kick a user.
-  bool get canKick => _hasPermissionFor('kick');
+  bool get canKick =>
+      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('kick') ??
+          50) <=
+      ownPowerLevel;
 
   /// The level required to redact an event.
-  bool get canRedact => _hasPermissionFor('redact');
+  bool get canRedact =>
+      (getState(EventTypes.RoomPowerLevels)?.content.tryGet<int>('redact') ??
+          50) <=
+      ownPowerLevel;
 
   ///  	The default level required to send state events. Can be overridden by the events key.
-  bool get canSendDefaultStates => _hasPermissionFor('state_default');
+  bool get canSendDefaultStates {
+    final powerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
+    if (powerLevelsMap == null) return 0 <= ownPowerLevel;
+    return (getState(EventTypes.RoomPowerLevels)
+                ?.content
+                .tryGet<int>('state_default') ??
+            50) <=
+        ownPowerLevel;
+  }
 
-  bool get canChangePowerLevel => canSendEvent(EventTypes.RoomPowerLevels);
+  bool get canChangePowerLevel =>
+      canChangeStateEvent(EventTypes.RoomPowerLevels);
 
+  /// The level required to send a certain event. Defaults to 0 if there is no
+  /// events_default set or there is no power level state in the room.
   bool canSendEvent(String eventType) {
-    final pl = getState(EventTypes.RoomPowerLevels)
-        ?.content
-        .tryGetMap<String, dynamic>('events')
-        ?.tryGet<int>(eventType);
-    if (pl == null) {
-      return eventType == EventTypes.Message
-          ? canSendDefaultMessages
-          : canSendDefaultStates;
-    }
+    final powerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
+    if (powerLevelsMap == null) return 0 <= ownPowerLevel;
+    final pl = powerLevelsMap
+            .tryGetMap<String, dynamic>('events')
+            ?.tryGet<int>(eventType) ??
+        powerLevelsMap.tryGet<int>('events_default') ??
+        0;
     return ownPowerLevel >= pl;
   }
 
+  /// The power level requirements for specific notification types.
   bool canSendNotification(String userid, {String notificationType = 'room'}) {
     final userLevel = getPowerLevelByUserId(userid);
     final notificationLevel = getState(EventTypes.RoomPowerLevels)
@@ -1922,7 +1947,7 @@ class Room {
   }
 
   /// Whether the user has the permission to change the join rules.
-  bool get canChangeJoinRules => canSendEvent(EventTypes.RoomJoinRules);
+  bool get canChangeJoinRules => canChangeStateEvent(EventTypes.RoomJoinRules);
 
   /// This event controls whether guest users are allowed to join rooms. If this event
   /// is absent, servers should act as if it is present and has the guest_access value "forbidden".
@@ -1948,7 +1973,7 @@ class Room {
   }
 
   /// Whether the user has the permission to change the guest access.
-  bool get canChangeGuestAccess => canSendEvent(EventTypes.GuestAccess);
+  bool get canChangeGuestAccess => canChangeStateEvent(EventTypes.GuestAccess);
 
   /// This event controls whether a user can see the events that happened in a room from before they joined.
   HistoryVisibility? get historyVisibility {
@@ -1974,7 +1999,7 @@ class Room {
 
   /// Whether the user has the permission to change the history visibility.
   bool get canChangeHistoryVisibility =>
-      canSendEvent(EventTypes.HistoryVisibility);
+      canChangeStateEvent(EventTypes.HistoryVisibility);
 
   /// Returns the encryption algorithm. Currently only `m.megolm.v1.aes-sha2` is supported.
   /// Returns null if there is no encryption algorithm.

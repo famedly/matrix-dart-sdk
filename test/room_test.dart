@@ -414,13 +414,10 @@ void main() {
       expect(room.canKick, true);
       expect(room.canRedact, true);
       expect(room.canSendDefaultMessages, true);
-      expect(room.canSendDefaultStates, true);
       expect(room.canChangePowerLevel, true);
       expect(room.canSendEvent('m.room.name'), true);
       expect(room.canSendEvent('m.room.power_levels'), true);
       expect(room.canSendEvent('m.room.member'), true);
-      expect(room.powerLevels,
-          room.getState('m.room.power_levels')?.content['users']);
       room.setState(
         Event(
             senderId: '@test:example.com',
@@ -477,11 +474,10 @@ void main() {
       expect(room.canKick, false);
       expect(room.canRedact, false);
       expect(room.canSendDefaultMessages, true);
-      expect(room.canSendDefaultStates, false);
       expect(room.canChangePowerLevel, false);
-      expect(room.canSendEvent('m.room.name'), true);
-      expect(room.canSendEvent('m.room.power_levels'), false);
-      expect(room.canSendEvent('m.room.member'), false);
+      expect(room.canChangeStateEvent('m.room.name'), true);
+      expect(room.canChangeStateEvent('m.room.power_levels'), false);
+      expect(room.canChangeStateEvent('m.room.member'), false);
       expect(room.canSendEvent('m.room.message'), true);
       final resp = await room.setPower('@test:fakeServer.notExisting', 90);
       expect(resp, '42');
