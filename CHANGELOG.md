@@ -1,3 +1,7 @@
+## [0.15.4] - 21st Nov 2022
+- feat: support MSC 3935: cute events (TheOneWithTheBraid)
+- fix: PowerLevel calculation regarding to spec (Krille Fear)
+
 ## [0.15.3] - 18th Nov 2022
 - fix: handleMissedCalls on remote hangups before answer (td)
 
