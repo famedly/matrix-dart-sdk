@@ -61,14 +61,39 @@ coverage_without_olm:
 
 e2ee_test:
   stage: test
-  image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable:${FLUTTER_IMAGE_TAG}
+  image:
+    name: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter/stable:${FLUTTER_IMAGE_TAG}
+    pull_policy: if-not-present
+  services:
+    - name: docker:dind
+      alias: docker
+  variables:
+    # activate container-to-container networking
+    FF_NETWORK_PER_BUILD: "true"
+    # Tell docker CLI how to talk to Docker daemon.
+    DOCKER_HOST: tcp://docker:2375/
+    # Use the overlayfs driver for improved performance.
+    DOCKER_DRIVER: overlay2
+    # Disable TLS since we're running inside local network.
+    DOCKER_TLS_CERTDIR: ""
   dependencies: []
+  parallel:
+    matrix:
+      - HOMESERVER:
+          - synapse
+          - dendrite
+          - conduit
+  before_script:
+    - scripts/integration-prepare-alpine.sh
+    # create Synapse instance
+    - scripts/integration-server-$HOMESERVER.sh
+    # properly set the homeserver IP and create test users
+    - scripts/integration-prepare-homeserver.sh
+    # setup OLM
+    - scripts/prepare.sh
   script:
-    - printf "abstract class TestUser {\n  static const String homeserver = '$TEST_HOMESERVER';\n  static const String username = '$TEST_USER1';\n  static const String username2 = '$TEST_USER2';\n  static const String displayname = '$TEST_USER1_NAME';\n  static const String displayname2 = '$TEST_USER2_NAME';\n  static const String password = '$TEST_USER_PASSWORD';\n}" > ./test_driver/test_config.dart
-    - ./scripts/prepare.sh
     - ./scripts/test_driver.sh
-  timeout: 16m
-  resource_group: e2ee_test
+  timeout: 10m
 
 dry-run:
   stage: deploy
