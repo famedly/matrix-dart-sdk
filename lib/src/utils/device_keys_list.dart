@@ -312,7 +312,8 @@ abstract class SignableKey extends MatrixSignableKey {
         final haveChain = key.hasValidSignatureChain(
             verifiedOnly: verifiedOnly,
             visited: visited_,
-            onlyValidateUserIds: onlyValidateUserIds);
+            onlyValidateUserIds: onlyValidateUserIds,
+            verifiedByAnyMasterKey: verifiedByAnyMasterKey);
         if (haveChain) {
           return true;
         }
