@@ -22,6 +22,7 @@ import 'dart:core';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:async/async.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
@@ -1546,9 +1547,19 @@ class Client extends MatrixApi {
   /// Presence that is set on sync.
   PresenceType? syncPresence;
 
+  final AsyncCache<TokenOwnerInfo> _whoami =
+      AsyncCache<TokenOwnerInfo>(Duration(hours: 1));
+
+  FutureOr<TokenOwnerInfo> getCachedTokenOwner() =>
+      _whoami.fetch(() => getTokenOwner());
+
   Future<void> _checkSyncFilter() async {
     final userID = this.userID;
+
     if (syncFilterId == null && userID != null) {
+      final tokenCache = await getCachedTokenOwner();
+      if (tokenCache.isGuest ?? false) return;
+
       final syncFilterId =
           this.syncFilterId = await defineFilter(userID, syncFilter);
       await database?.storeSyncFilterId(syncFilterId);
