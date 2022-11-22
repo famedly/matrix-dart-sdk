@@ -2970,6 +2970,12 @@ class Client extends MatrixApi {
     _initLock = false;
     if (migrateClient != null) {
       return init(
+        newToken: migrateClient['token'],
+        newHomeserver: Uri.parse(migrateClient['homeserver_url']),
+        newDeviceID: migrateClient['device_id'],
+        newDeviceName: migrateClient['device_name'],
+        newOlmAccount: migrateClient['olm_account'],
+        newUserID: migrateClient['user_id'],
         waitForFirstSync: false,
         waitUntilLoadCompletedLoaded: false,
       );
