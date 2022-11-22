@@ -448,6 +448,7 @@ class Client extends MatrixApi {
     AccountKind? kind,
   }) async {
     final response = await super.register(
+      kind: kind,
       username: username,
       password: password,
       auth: auth,
