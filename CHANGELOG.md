@@ -1,3 +1,6 @@
+## [0.15.5] - 22nd Nov 2022
+- fix: follow account kind in registration (TheOneWithTheBraid)
+
 ## [0.15.4] - 21st Nov 2022
 - feat: support MSC 3935: cute events (TheOneWithTheBraid)
 - fix: PowerLevel calculation regarding to spec (Krille Fear)
