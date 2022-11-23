@@ -51,6 +51,7 @@ class EvaluatedPushRuleAction {
 
 class _PatternCondition {
   RegExp pattern = RegExp('');
+
   // what field to match on, i.e. content.body
   String field = '';
 
@@ -140,6 +141,7 @@ class _MemberCountCondition {
       count = int.parse(is_);
     }
   }
+
   bool match(int memberCount) {
     switch (op) {
       case _CountComparisonOp.ge:
@@ -234,11 +236,19 @@ class PushruleEvaluator {
   PushruleEvaluator.fromRuleset(PushRuleSet ruleset) {
     for (final o in ruleset.override ?? []) {
       if (!o.enabled) continue;
-      _override.add(_OptimizedRules.fromRule(o));
+      try {
+        _override.add(_OptimizedRules.fromRule(o));
+      } catch (e) {
+        Logs().d('Error parsing push rule $o', e);
+      }
     }
     for (final u in ruleset.underride ?? []) {
       if (!u.enabled) continue;
-      _underride.add(_OptimizedRules.fromRule(u));
+      try {
+        _underride.add(_OptimizedRules.fromRule(u));
+      } catch (e) {
+        Logs().d('Error parsing push rule $u', e);
+      }
     }
     for (final c in ruleset.content ?? []) {
       if (!c.enabled) continue;
@@ -252,7 +262,11 @@ class PushruleEvaluator {
         default$: c.default$,
         enabled: c.enabled,
       );
-      _content_rules.add(_OptimizedRules.fromRule(rule));
+      try {
+        _content_rules.add(_OptimizedRules.fromRule(rule));
+      } catch (e) {
+        Logs().d('Error parsing push rule $rule', e);
+      }
     }
     for (final r in ruleset.room ?? []) {
       if (r.enabled) {

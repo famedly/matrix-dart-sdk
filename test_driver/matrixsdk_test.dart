@@ -44,21 +44,19 @@ void test() async {
     Logs().i('++++ Login Alice at ++++');
     testClientA = Client('TestClientA', databaseBuilder: getDatabase);
     await testClientA.checkHomeserver(Uri.parse(TestUser.homeserver));
-    // Workaround: Logging in with displayname instead of mxid because of a bug
-    // in the UIA proxy: https://gitlab.com/famedly/company/backend/services/uia-proxy/-/issues/27
-    // When this gets fixed, we no longer need the displayname login at all.
     await testClientA.login(LoginType.mLoginPassword,
-        identifier: AuthenticationUserIdentifier(user: TestUser.displayname),
+        identifier:
+            AuthenticationUserIdentifier(user: TestUser.username.localpart!),
         password: TestUser.password);
     assert(testClientA.encryptionEnabled);
 
     Logs().i('++++ Login Bob ++++');
     testClientB = Client('TestClientB', databaseBuilder: getDatabase);
     await testClientB.checkHomeserver(Uri.parse(TestUser.homeserver));
-    // Workaround: Logging in with displayname instead of mxid
     await testClientB.login(LoginType.mLoginPassword,
-        identifier: AuthenticationUserIdentifier(user: TestUser.displayname2),
-        password: TestUser.password);
+        identifier:
+            AuthenticationUserIdentifier(user: TestUser.username2.localpart!),
+        password: TestUser.password2);
     assert(testClientB.encryptionEnabled);
 
     Logs().i('++++ (Alice) Leave all rooms ++++');
@@ -101,7 +99,10 @@ void test() async {
         .deviceKeys[testClientB.deviceID!]!.blocked);
 
     Logs().i('++++ (Alice) Create room and invite Bob ++++');
-    await testClientA.createRoom(invite: [TestUser.username2]);
+    await testClientA.startDirectChat(
+      TestUser.username2,
+      enableEncryption: false,
+    );
     await Future.delayed(Duration(seconds: 1));
     final room = testClientA.rooms.first;
     final roomId = room.id;
@@ -254,7 +255,7 @@ void test() async {
     // Workaround: Logging in with displayname instead of mxid
     await testClientC.login(LoginType.mLoginPassword,
         identifier: AuthenticationUserIdentifier(user: TestUser.displayname2),
-        password: TestUser.password);
+        password: TestUser.password2);
     await Future.delayed(Duration(seconds: 3));
 
     Logs().i("++++ (Alice) Send again encrypted message: '$testMessage4' ++++");
