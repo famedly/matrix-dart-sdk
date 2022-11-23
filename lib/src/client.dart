@@ -1430,7 +1430,7 @@ class Client extends MatrixApi {
             _deviceID,
             _deviceName,
             prevBatch,
-            encryption?.pickledOlmAccount,
+            encryption?.pickledOlmAccount ?? olmAccount,
           );
         } else {
           _id = await database.insertClient(
@@ -1441,7 +1441,7 @@ class Client extends MatrixApi {
             _deviceID,
             _deviceName,
             prevBatch,
-            encryption?.pickledOlmAccount,
+            encryption?.pickledOlmAccount ?? olmAccount,
           );
         }
         userDeviceKeysLoading = database
@@ -2970,6 +2970,12 @@ class Client extends MatrixApi {
     _initLock = false;
     if (migrateClient != null) {
       return init(
+        newToken: migrateClient['token'],
+        newHomeserver: Uri.parse(migrateClient['homeserver_url']),
+        newDeviceID: migrateClient['device_id'],
+        newDeviceName: migrateClient['device_name'],
+        newOlmAccount: migrateClient['olm_account'],
+        newUserID: migrateClient['user_id'],
         waitForFirstSync: false,
         waitUntilLoadCompletedLoaded: false,
       );
