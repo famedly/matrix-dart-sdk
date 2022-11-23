@@ -159,17 +159,21 @@ class KeyVerification {
     return methods;
   }
 
-  Future<void> sendStart() async {
-    await send(EventTypes.KeyVerificationRequest, {
-      'methods': knownVerificationMethods,
-      if (room == null) 'timestamp': DateTime.now().millisecondsSinceEpoch,
-    });
+  Future<void> sendStart({List<Device>? verifiedDevices}) async {
+    await send(
+      EventTypes.KeyVerificationRequest,
+      {
+        'methods': knownVerificationMethods,
+        if (room == null) 'timestamp': DateTime.now().millisecondsSinceEpoch,
+      },
+      verifiedDevices: verifiedDevices,
+    );
     startedVerification = true;
     setState(KeyVerificationState.waitingAccept);
     lastActivity = DateTime.now();
   }
 
-  Future<void> start() async {
+  Future<void> start({List<Device>? verifiedDevices}) async {
     if (room == null) {
       transactionId = client.generateUniqueTransactionId();
     }
@@ -179,7 +183,9 @@ class KeyVerification {
       setState(KeyVerificationState.askSSSS);
       _nextAction = 'request';
     } else {
-      await sendStart();
+      await sendStart(
+        verifiedDevices: verifiedDevices,
+      );
     }
   }
 
@@ -604,7 +610,8 @@ class KeyVerification {
     }
   }
 
-  Future<void> send(String type, Map<String, dynamic> payload) async {
+  Future<void> send(String type, Map<String, dynamic> payload,
+      {List<Device>? verifiedDevices}) async {
     makePayload(payload);
     Logs().i('[Key Verification] Sending type $type: $payload');
     if (room != null) {
@@ -628,7 +635,19 @@ class KeyVerification {
           EventTypes.KeyVerificationRequest,
           EventTypes.KeyVerificationCancel,
         }.contains(type)) {
-          await client.sendToDevicesOfUserIds({userId}, type, payload);
+          if (verifiedDevices == null || verifiedDevices.isEmpty) {
+            await client.sendToDevicesOfUserIds({userId}, type, payload);
+          } else {
+            final deviceKeys = client.userDeviceKeys[userId]?.deviceKeys;
+            deviceKeys?.removeWhere((key, value) =>
+                verifiedDevices.map((e) => e.deviceId).toList().contains(key) ==
+                false);
+            await client.sendToDeviceEncrypted(
+              deviceKeys!.values.toList(),
+              type,
+              payload,
+            );
+          }
         } else {
           Logs().e(
               '[Key Verification] Tried to broadcast and un-broadcastable type: $type');
