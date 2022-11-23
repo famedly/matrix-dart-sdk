@@ -639,9 +639,10 @@ class KeyVerification {
             await client.sendToDevicesOfUserIds({userId}, type, payload);
           } else {
             final deviceKeys = client.userDeviceKeys[userId]?.deviceKeys;
-            deviceKeys?.removeWhere((key, value) =>
-                verifiedDevices.map((e) => e.deviceId).toList().contains(key) ==
-                false);
+            deviceKeys?.removeWhere((key, _) => !verifiedDevices
+                .map((device) => device.deviceId)
+                .toList()
+                .contains(key));
             await client.sendToDeviceEncrypted(
               deviceKeys!.values.toList(),
               type,

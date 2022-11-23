@@ -70,7 +70,7 @@ class DeviceKeysList {
   Future<KeyVerification> startVerification({
     bool? newDirectChatEnableEncryption,
     List<StateEvent>? newDirectChatInitialState,
-    List<Device>? verifiedDevice,
+    List<Device>? verifiedDevices,
   }) async {
     final encryption = client.encryption;
     if (encryption == null) {
@@ -98,7 +98,7 @@ class DeviceKeysList {
       final request = KeyVerification(
           encryption: encryption, userId: userId, deviceId: '*');
       await request.start(
-        verifiedDevices: verifiedDevice,
+        verifiedDevices: verifiedDevices,
       );
       encryption.keyVerificationManager.addRequest(request);
       return request;
