@@ -160,10 +160,13 @@ class KeyVerification {
   }
 
   Future<void> sendStart() async {
-    await send(EventTypes.KeyVerificationRequest, {
-      'methods': knownVerificationMethods,
-      if (room == null) 'timestamp': DateTime.now().millisecondsSinceEpoch,
-    });
+    await send(
+      EventTypes.KeyVerificationRequest,
+      {
+        'methods': knownVerificationMethods,
+        if (room == null) 'timestamp': DateTime.now().millisecondsSinceEpoch,
+      },
+    );
     startedVerification = true;
     setState(KeyVerificationState.waitingAccept);
     lastActivity = DateTime.now();
@@ -604,7 +607,10 @@ class KeyVerification {
     }
   }
 
-  Future<void> send(String type, Map<String, dynamic> payload) async {
+  Future<void> send(
+    String type,
+    Map<String, dynamic> payload,
+  ) async {
     makePayload(payload);
     Logs().i('[Key Verification] Sending type $type: $payload');
     if (room != null) {
@@ -628,7 +634,17 @@ class KeyVerification {
           EventTypes.KeyVerificationRequest,
           EventTypes.KeyVerificationCancel,
         }.contains(type)) {
-          await client.sendToDevicesOfUserIds({userId}, type, payload);
+          final deviceKeys = client.userDeviceKeys[userId]?.deviceKeys.values
+              .where((deviceKey) => deviceKey.hasValidSignatureChain(
+                  verifiedByTheirMasterKey: true));
+
+          if (deviceKeys != null) {
+            await client.sendToDeviceEncrypted(
+              deviceKeys.toList(),
+              type,
+              payload,
+            );
+          }
         } else {
           Logs().e(
               '[Key Verification] Tried to broadcast and un-broadcastable type: $type');

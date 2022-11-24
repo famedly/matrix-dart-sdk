@@ -93,7 +93,7 @@ class DeviceKeysList {
       // verification request that'll happen automatically once we know the transaction id
       return request;
     } else {
-      // broadcast self-verification
+      // start verification with verified devices
       final request = KeyVerification(
           encryption: encryption, userId: userId, deviceId: '*');
       await request.start();
@@ -216,10 +216,14 @@ abstract class SignableKey extends MatrixSignableKey {
     return valid;
   }
 
-  bool hasValidSignatureChain(
-      {bool verifiedOnly = true,
-      Set<String>? visited,
-      Set<String>? onlyValidateUserIds}) {
+  bool hasValidSignatureChain({
+    bool verifiedOnly = true,
+    Set<String>? visited,
+    Set<String>? onlyValidateUserIds,
+
+    /// Only check if this key is verified by their Master key.
+    bool verifiedByTheirMasterKey = false,
+  }) {
     if (!client.encryptionEnabled) {
       return false;
     }
@@ -300,15 +304,16 @@ abstract class SignableKey extends MatrixSignableKey {
         if ((verifiedOnly && key.directVerified) ||
             (key is CrossSigningKey &&
                 key.usage.contains('master') &&
-                key.directVerified &&
-                key.userId == client.userID)) {
+                (verifiedByTheirMasterKey ||
+                    (key.directVerified && key.userId == client.userID)))) {
           return true; // we verified this key and it is valid...all checks out!
         }
-        // or else we just recurse into that key and chack if it works out
+        // or else we just recurse into that key and check if it works out
         final haveChain = key.hasValidSignatureChain(
             verifiedOnly: verifiedOnly,
             visited: visited_,
-            onlyValidateUserIds: onlyValidateUserIds);
+            onlyValidateUserIds: onlyValidateUserIds,
+            verifiedByTheirMasterKey: verifiedByTheirMasterKey);
         if (haveChain) {
           return true;
         }
