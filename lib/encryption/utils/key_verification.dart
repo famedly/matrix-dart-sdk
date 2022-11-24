@@ -159,21 +159,20 @@ class KeyVerification {
     return methods;
   }
 
-  Future<void> sendStart({List<Device>? verifiedDevices}) async {
+  Future<void> sendStart() async {
     await send(
       EventTypes.KeyVerificationRequest,
       {
         'methods': knownVerificationMethods,
         if (room == null) 'timestamp': DateTime.now().millisecondsSinceEpoch,
       },
-      verifiedDevices: verifiedDevices,
     );
     startedVerification = true;
     setState(KeyVerificationState.waitingAccept);
     lastActivity = DateTime.now();
   }
 
-  Future<void> start({List<Device>? verifiedDevices}) async {
+  Future<void> start() async {
     if (room == null) {
       transactionId = client.generateUniqueTransactionId();
     }
@@ -183,9 +182,7 @@ class KeyVerification {
       setState(KeyVerificationState.askSSSS);
       _nextAction = 'request';
     } else {
-      await sendStart(
-        verifiedDevices: verifiedDevices,
-      );
+      await sendStart();
     }
   }
 
@@ -610,8 +607,11 @@ class KeyVerification {
     }
   }
 
-  Future<void> send(String type, Map<String, dynamic> payload,
-      {List<Device>? verifiedDevices}) async {
+  Future<void> send(
+    String type,
+    Map<String, dynamic> payload,
+  ) async {
+    Logs().e('payload is ', payload);
     makePayload(payload);
     Logs().i('[Key Verification] Sending type $type: $payload');
     if (room != null) {
@@ -635,21 +635,16 @@ class KeyVerification {
           EventTypes.KeyVerificationRequest,
           EventTypes.KeyVerificationCancel,
         }.contains(type)) {
-          if (verifiedDevices == null || verifiedDevices.isEmpty) {
-            await client.sendToDevicesOfUserIds({userId}, type, payload);
-          } else {
-            final deviceKeys = client.userDeviceKeys[userId]?.deviceKeys;
-            deviceKeys?.removeWhere((key, _) => !verifiedDevices
-                .map((device) => device.deviceId)
-                .toList()
-                .contains(key));
-            if (deviceKeys != null && deviceKeys.isNotEmpty) {
-              await client.sendToDeviceEncrypted(
-                deviceKeys.values.toList(),
-                type,
-                payload,
-              );
-            }
+          final deviceKeys = client.userDeviceKeys[userId]?.deviceKeys;
+          deviceKeys?.removeWhere((_, value) =>
+              value.hasValidSignatureChain(verifiedByTheirMasterKey: true) ==
+              false);
+          if (deviceKeys != null) {
+            await client.sendToDeviceEncrypted(
+              deviceKeys.values.toList(),
+              type,
+              payload,
+            );
           }
         } else {
           Logs().e(
