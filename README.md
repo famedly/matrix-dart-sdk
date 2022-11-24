@@ -36,9 +36,9 @@ The SDK works better with a database. Otherwise it has no persistence. For this 
 ```dart
 final client = Client(
   "HappyChat",
-  databaseBuilder: (Client client) async {
-    await Hive.init('/path/to/your/storage');
-    final db = FamedlySdkHiveDatabase(client.clientName);
+  databaseBuilder: (_) async {
+    final dir = await getApplicationSupportDirectory(); // Recommend path_provider package
+    final db = HiveCollectionsDatabase('matrix_example_chat', dir.path);
     await db.open();
     return db;
   },
