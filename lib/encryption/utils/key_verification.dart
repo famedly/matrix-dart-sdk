@@ -637,8 +637,7 @@ class KeyVerification {
         }.contains(type)) {
           final deviceKeys = client.userDeviceKeys[userId]?.deviceKeys;
           deviceKeys?.removeWhere((_, value) =>
-              value.hasValidSignatureChain(verifiedByTheirMasterKey: true) ==
-              false);
+              !value.hasValidSignatureChain(verifiedByTheirMasterKey: true));
           if (deviceKeys != null) {
             await client.sendToDeviceEncrypted(
               deviceKeys.values.toList(),

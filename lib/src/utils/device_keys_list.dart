@@ -221,7 +221,7 @@ abstract class SignableKey extends MatrixSignableKey {
     Set<String>? visited,
     Set<String>? onlyValidateUserIds,
 
-    /// Only check if this key is verified by any Master key.
+    /// Only check if this key is verified by their Master key.
     bool verifiedByTheirMasterKey = false,
   }) {
     if (!client.encryptionEnabled) {
