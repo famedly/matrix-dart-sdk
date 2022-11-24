@@ -611,7 +611,6 @@ class KeyVerification {
     String type,
     Map<String, dynamic> payload,
   ) async {
-    Logs().e('payload is ', payload);
     makePayload(payload);
     Logs().i('[Key Verification] Sending type $type: $payload');
     if (room != null) {
@@ -635,12 +634,13 @@ class KeyVerification {
           EventTypes.KeyVerificationRequest,
           EventTypes.KeyVerificationCancel,
         }.contains(type)) {
-          final deviceKeys = client.userDeviceKeys[userId]?.deviceKeys;
-          deviceKeys?.removeWhere((_, value) =>
-              !value.hasValidSignatureChain(verifiedByTheirMasterKey: true));
+          final deviceKeys = client.userDeviceKeys[userId]?.deviceKeys.values
+              .where((deviceKey) => deviceKey.hasValidSignatureChain(
+                  verifiedByTheirMasterKey: true));
+
           if (deviceKeys != null) {
             await client.sendToDeviceEncrypted(
-              deviceKeys.values.toList(),
+              deviceKeys.toList(),
               type,
               payload,
             );
