@@ -643,11 +643,13 @@ class KeyVerification {
                 .map((device) => device.deviceId)
                 .toList()
                 .contains(key));
-            await client.sendToDeviceEncrypted(
-              deviceKeys!.values.toList(),
-              type,
-              payload,
-            );
+            if (deviceKeys != null && deviceKeys.isNotEmpty) {
+              await client.sendToDeviceEncrypted(
+                deviceKeys.values.toList(),
+                type,
+                payload,
+              );
+            }
           }
         } else {
           Logs().e(
