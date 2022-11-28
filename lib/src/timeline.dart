@@ -593,6 +593,11 @@ class Timeline {
           var event = Event.fromMatrixEvent(matrixEvent, room);
           if (event.type == EventTypes.Encrypted && encryption != null) {
             event = await encryption.decryptRoomEvent(room.id, event);
+            if (event.type == EventTypes.Encrypted ||
+                event.messageType == MessageTypes.BadEncrypted ||
+                event.content['can_request_session'] == true) {
+              unawaited(event.requestKey());
+            }
           }
           if (searchFunc(event)) {
             yield found..add(event);
