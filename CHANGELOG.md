@@ -1,8 +1,12 @@
-## [0.15.6] - 24th Nov 2022
+## [0.15.7] - 1st Dec 2022
+- fix: await requestKey() in event search (Philipp Grieshofer)
+- fix: Request session key for bad encrypted events before the text search is carried out (Philipp Grieshofer)
 
+## [0.15.6] - 24th Nov 2022
 - feat: migrate e2ee test to DinD (TheOneWithTheBraid)
 - chore: Update readme with new database (Christian Pauly)
 - feat: Check if a key is verified by any master key (Reza)
+
 ## [0.15.5] - 22nd Nov 2022
 - fix: follow account kind in registration (TheOneWithTheBraid)
 
