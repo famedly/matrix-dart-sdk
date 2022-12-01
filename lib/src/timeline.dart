@@ -596,7 +596,8 @@ class Timeline {
             if (event.type == EventTypes.Encrypted ||
                 event.messageType == MessageTypes.BadEncrypted ||
                 event.content['can_request_session'] == true) {
-              unawaited(event.requestKey());
+              // Await requestKey() here to ensure decrypted message bodies
+              await event.requestKey();
             }
           }
           if (searchFunc(event)) {
