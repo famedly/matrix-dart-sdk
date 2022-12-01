@@ -32,6 +32,7 @@ export 'src/voip/call.dart';
 export 'src/voip/group_call.dart';
 export 'src/voip/voip.dart';
 export 'src/voip/voip_content.dart';
+export 'src/voip/conn_tester.dart';
 export 'src/voip/utils.dart';
 export 'src/room.dart';
 export 'src/timeline.dart';
