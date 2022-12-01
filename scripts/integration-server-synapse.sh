@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
-chown -R 991:991 test_driver/synapse
-docker run -d --name synapse --user 991:991 --volume="$(pwd)/test_driver/synapse/data":/data:rw -p 80:80 matrixdotorg/synapse:latest
+docker run -d --name synapse --tmpfs /data \
+    --volume="$(pwd)/test_driver/synapse/data/homeserver.yaml":/data/homeserver.yaml:rw \
+    --volume="$(pwd)/test_driver/synapse/data/localhost.log.config":/data/localhost.log.config:rw \
+    -p 80:80 matrixdotorg/synapse:latest

@@ -13,6 +13,6 @@ echo "Homeserver is up."
 
 sed -i "s/localhost/$IP_ADDRESS/g" test_driver/test_config.dart
 
-curl -XPOST -d '{"username":"alice", "password":"AliceInWonderland", "inhibit_login":true, "auth": {"type":"m.login.dummy"}}' "http://$IP_ADDRESS/_matrix/client/r0/register"
-curl -XPOST -d '{"username":"bob", "password":"JoWirSchaffenDas", "inhibit_login":true, "auth": {"type":"m.login.dummy"}}' "http://$IP_ADDRESS/_matrix/client/r0/register"
-curl -XPOST -d '{"username":"trudy", "password":"HaveIBeenPwned", "inhibit_login":true, "auth": {"type":"m.login.dummy"}}' "http://$IP_ADDRESS/_matrix/client/r0/register"
+curl -fS --retry 3 -XPOST -d '{"username":"alice", "password":"AliceInWonderland", "inhibit_login":true, "auth": {"type":"m.login.dummy"}}' "http://$IP_ADDRESS/_matrix/client/r0/register"
+curl -fS --retry 3 -XPOST -d '{"username":"bob", "password":"JoWirSchaffenDas", "inhibit_login":true, "auth": {"type":"m.login.dummy"}}' "http://$IP_ADDRESS/_matrix/client/r0/register"
+curl -fS --retry 3 -XPOST -d '{"username":"trudy", "password":"HaveIBeenPwned", "inhibit_login":true, "auth": {"type":"m.login.dummy"}}' "http://$IP_ADDRESS/_matrix/client/r0/register"
