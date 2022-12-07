@@ -59,6 +59,7 @@ const String fileSendingStatusKey =
     'com.famedly.famedlysdk.file_sending_status';
 
 const String sortOrderKey = 'com.famedly.famedlysdk.sort_order';
+const String emptyRoomName = 'Empty chat';
 
 /// Represents a Matrix room.
 class Room {
@@ -240,6 +241,20 @@ class Room {
       return i18n.groupWith(displayname);
     }
     if (displayname.isNotEmpty) {
+      if (directChatMatrixID != null) {
+        final displayName =
+            unsafeGetUserFromMemoryOrFallback(directChatMatrixID!)
+                .calcDisplayname();
+        final dmPartnerMembership =
+            getState(EventTypes.RoomMember, directChatMatrixID!)
+                ?.asUser
+                .membership;
+        if (dmPartnerMembership == null ||
+            dmPartnerMembership == Membership.leave) {
+          return i18n.wasDirectChatDisplayName(displayName);
+        }
+        return displayName;
+      }
       return displayname;
     }
     return i18n.emptyChat;
@@ -406,19 +421,35 @@ class Room {
     if (canonicalAlias != null && canonicalAlias.isNotEmpty) {
       return canonicalAlias;
     }
-
     final heroes = summary.mHeroes;
     if (heroes != null && heroes.isNotEmpty) {
-      return heroes
+      final result = heroes
           .where((hero) => hero.isNotEmpty)
           .map((hero) =>
               unsafeGetUserFromMemoryOrFallback(hero).calcDisplayname())
           .join(', ');
+      if (directChatMatrixID != null) {
+        final dmPartnerMembership = getState(
+          EventTypes.RoomMember,
+          directChatMatrixID!,
+        )?.asUser.membership;
+        if (dmPartnerMembership == null ||
+            dmPartnerMembership == Membership.leave) {
+          return leavedDirectChatName(result);
+        }
+        return result;
+      } else {
+        return result;
+      }
     }
     if (isDirectChat) {
       final user = directChatMatrixID;
       if (user != null) {
-        return unsafeGetUserFromMemoryOrFallback(user).calcDisplayname();
+        final displayName =
+            unsafeGetUserFromMemoryOrFallback(user).calcDisplayname();
+        return membership == Membership.leave
+            ? leavedDirectChatName(displayName)
+            : displayName;
       }
     }
     if (membership == Membership.invite) {
@@ -427,7 +458,20 @@ class Room {
           .calcDisplayname();
       if (sender != null) return sender;
     }
-    return 'Empty chat';
+    if (membership == Membership.leave) {
+      final invitation = getState(EventTypes.RoomMember, client.userID!);
+      if (invitation != null && invitation.unsigned?['prev_sender'] != null) {
+        final name = unsafeGetUserFromMemoryOrFallback(
+                invitation.unsigned?['prev_sender'])
+            .calcDisplayname();
+        return leavedDirectChatName(name);
+      }
+    }
+    return emptyRoomName;
+  }
+
+  String leavedDirectChatName(String prevName) {
+    return '$emptyRoomName (was $prevName)';
   }
 
   /// When the last message received.
@@ -1080,7 +1124,6 @@ class Room {
   /// Call the Matrix API to leave this room. If this room is set as a direct
   /// chat, this will be removed too.
   Future<void> leave() async {
-    if (directChatMatrixID != '') await removeFromDirectChat();
     try {
       await client.leaveRoom(id);
     } on MatrixException catch (exception) {

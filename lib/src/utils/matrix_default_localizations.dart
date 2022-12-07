@@ -265,4 +265,8 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
 
   @override
   String youUnbannedUser(String targetName) => 'You unbanned $targetName';
+
+  @override
+  String wasDirectChatDisplayName(String oldDisplayName) =>
+      'Empty chat (was $oldDisplayName)';
 }

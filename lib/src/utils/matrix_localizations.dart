@@ -157,6 +157,8 @@ abstract class MatrixLocalizations {
   String answeredTheCall(String senderName);
 
   String sentCallInformations(String senderName);
+
+  String wasDirectChatDisplayName(String oldDisplayName);
 }
 
 extension HistoryVisibilityDisplayString on HistoryVisibility {
