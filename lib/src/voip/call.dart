@@ -474,6 +474,8 @@ class CallSession {
       ..dtmf = false
       ..transferee = false;
 
+    Logs().i('sendAnswer. ${answer.sdp} ');
+
     final metadata = SDPStreamMetadata({
       localUserMediaStream!.stream!.id: SDPStreamPurpose(
           purpose: SDPStreamMetadataPurpose.Usermedia,
@@ -544,6 +546,8 @@ class CallSession {
 
   Future<void> onAnswerReceived(
       RTCSessionDescription answer, SDPStreamMetadata? metadata) async {
+    Logs().i('onAnswerReceived. ${answer.sdp} ');
+
     if (metadata != null) {
       _updateRemoteSDPStreamMetadata(metadata);
     }
@@ -552,6 +556,7 @@ class CallSession {
       setCallState(CallState.kConnecting);
       await pc!.setRemoteDescription(answer);
       for (final candidate in remoteCandidates) {
+        Logs().i('onAnswerReceived::addCandidate. ${candidate.candidate} ');
         await pc!.addCandidate(candidate);
       }
     }
@@ -657,7 +662,7 @@ class CallSession {
         json['sdpMid'] ?? '',
         json['sdpMLineIndex']?.round() ?? 0,
       );
-
+      Logs().i('[VOIP] onCandidatesReceived => ${candidate.candidate}');
       if (pc != null && inviteOrAnswerSent && remotePartyId != null) {
         try {
           await pc!.addCandidate(candidate);
@@ -1085,6 +1090,7 @@ class CallSession {
       ..transferee = false;
     final metadata = _getLocalSDPStreamMetadata();
     if (state == CallState.kCreateOffer) {
+      Logs().i('sendInviteToCall. ${offer.sdp} ');
       await sendInviteToCall(
           room, callId, Timeouts.lifetimeMs, localPartyId, null, offer.sdp!,
           capabilities: callCapabilities, metadata: metadata);
@@ -1099,6 +1105,7 @@ class CallSession {
         inviteTimer = null;
       });
     } else {
+      Logs().i('sendCallNegotiate. ${offer.sdp} ');
       await sendCallNegotiate(
           room, callId, Timeouts.lifetimeMs, localPartyId, offer.sdp!,
           type: offer.type!,
@@ -1132,6 +1139,8 @@ class CallSession {
       pc!.onRenegotiationNeeded = onNegotiationNeeded;
 
       pc!.onIceCandidate = (RTCIceCandidate candidate) async {
+        Logs().i('onIceCandidate. ${candidate.candidate} ');
+
         if (callHasEnded) return;
         //Logs().v('[VOIP] onIceCandidate => ${candidate.toMap().toString()}');
         localCandidates.add(candidate);
