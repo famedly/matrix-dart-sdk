@@ -6,6 +6,7 @@
 *.swo
 *.swn
 *.dylib
+*.bakmacoscompat
 .DS_Store
 .atom/
 .buildlog/
