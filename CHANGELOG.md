@@ -1,26 +1,38 @@
+## [0.15.8] - 12th Dec 2022
+
+- fix: leaved direct chat name (Reza)
+- chore: Add voip connection tester (td)
+
 ## [0.15.7] - 1st Dec 2022
+
 - fix: await requestKey() in event search (Philipp Grieshofer)
 - fix: Request session key for bad encrypted events before the text search is carried out (Philipp Grieshofer)
 
 ## [0.15.6] - 24th Nov 2022
+
 - feat: migrate e2ee test to DinD (TheOneWithTheBraid)
 - chore: Update readme with new database (Christian Pauly)
 - feat: Check if a key is verified by any master key (Reza)
 
 ## [0.15.5] - 22nd Nov 2022
+
 - fix: follow account kind in registration (TheOneWithTheBraid)
 
 ## [0.15.4] - 21st Nov 2022
+
 - feat: support MSC 3935: cute events (TheOneWithTheBraid)
 - fix: PowerLevel calculation regarding to spec (Krille Fear)
 
 ## [0.15.3] - 18th Nov 2022
+
 - fix: handleMissedCalls on remote hangups before answer (td)
 
 ## [0.15.2] - 16th Nov 2022
+
 - fix: recover from very unlikely key upload errors (Nicolas Werner)
 
 ## [0.15.1] - 14th Nov 2022
+
 - chore: Follow up fix for request users in invite rooms (Christian Pauly)
 - chore: Put all hard-coded timeout parameters into the Timeouts class. (cloudwebrtc)
 - chore: upgrade webrtc_interface, remove WebRTCDelegate.cloneStream. (cloudwebrtc)
@@ -31,6 +43,7 @@
 - refactor: Improve error handling for no olm session found exception (Christian Pauly)
 
 ## [0.15.0] - 28th Oct 2022
+
 - chore: reduce error logging level of groupCall is null (td)
 - fix: filter list for adding p2p call events (td)
 - refactor: Remove deprecated fluffybox (Christian Pauly)
@@ -39,14 +52,17 @@
 - fix: Do not try to decrypt redacted events (Christian Pauly)
 
 ## [0.14.4] - 26th Oct 2022
+
 - fix: Do not wait for first sync after migration init
 
 ## [0.14.3] - 24th Oct 2022
+
 - fix: Do not assume that push rules are never malformed in account data
 - chore: change codeowners
 - refactor: Remove unused imports
 
 ## [0.14.2] - 18th Oct 2022
+
 - Improve ice connection speed. (Duan Weiwei)
 - chore: fix exception test after api_lite update (Nicolas Werner)
 - feat: Add getter for own unverified devices (Christian Pauly)
@@ -56,6 +72,7 @@
 - refactor: Use DateTime method instead of comparing milliseconds (Christian Pauly)
 
 ## [0.14.1] - 20th Sep 2022
+
 - chore: Fire events by default during hangup. (cloudwebrtc)
 - chore: Properly close usermedia/screen stream for 1v1/group calls. (cloudwebrtc)
 - chore: fix analyzer error. (cloudwebrtc)
