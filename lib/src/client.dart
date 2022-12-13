@@ -1135,6 +1135,8 @@ class Client extends MatrixApi {
 
   bool _initLock = false;
 
+  bool get isInitialized => _initLock;
+
   /// Fetches the corresponding Event object from a notification including a
   /// full Room object with the sender User object in it. Returns null if this
   /// push notification is not corresponding to an existing event.
