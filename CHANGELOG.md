@@ -1,3 +1,6 @@
+## [0.10.6] - 11th Jul 2022
+- refactor: Key manager megolm handling to make key generation more efficient
+
 ## [0.10.5] - 11th Jul 2022
 - fix: Cache user profile even with cache=false when there is a cache
 

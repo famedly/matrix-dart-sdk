@@ -17,7 +17,6 @@
  */
 
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
-import 'package:matrix_api_lite/src/utils/filter_map_extension.dart';
 import 'package:olm/olm.dart' as olm;
 
 import '../../matrix.dart';
