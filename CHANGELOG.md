@@ -1,3 +1,6 @@
+## [0.15.9] - 14th Dec 2022
+- refactor: Key manager megolm handling to make key generation more efficient
+
 ## [0.15.8] - 12th Dec 2022
 
 - fix: leaved direct chat name (Reza)
