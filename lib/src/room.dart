@@ -287,7 +287,9 @@ class Room {
       }
     }
     if (membership == Membership.invite) {
-      return getState(EventTypes.RoomMember, client.userID!)
+      final userID = client.userID;
+      if (userID == null) return null;
+      return getState(EventTypes.RoomMember, userID)
           ?.senderFromMemoryOrFallback
           .avatarUrl;
     }
@@ -316,7 +318,9 @@ class Room {
   /// Returns null otherwise.
   String? get directChatMatrixID {
     if (membership == Membership.invite) {
-      final invitation = getState(EventTypes.RoomMember, client.userID!);
+      final userID = client.userID;
+      if (userID == null) return null;
+      final invitation = getState(EventTypes.RoomMember, userID);
       if (invitation != null && invitation.content['is_direct'] == true) {
         return invitation.senderId;
       }
