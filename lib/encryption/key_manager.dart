@@ -382,6 +382,14 @@ class KeyManager {
                   .where((e) => !e.value)
                   .map((e) => e.key))
               : <String>{};
+
+          // check if a device got removed
+          if (oldDeviceIds.difference(newDeviceIds).isNotEmpty) {
+            wipe = true;
+            break;
+          }
+
+          // check if any new devices need keys
           final newDevices = newDeviceIds.difference(oldDeviceIds);
           if (newDeviceIds.isNotEmpty) {
             devicesToReceive.addAll(newDeviceKeys.where(
