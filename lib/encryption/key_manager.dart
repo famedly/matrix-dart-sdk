@@ -190,7 +190,21 @@ class KeyManager {
           event.content['session_id'] == sessionId) {
         final decrypted = encryption.decryptRoomEventSync(roomId, event);
         if (decrypted.type != EventTypes.Encrypted) {
+          // Set the decrypted event as last event by adding it to the state
           room.setState(decrypted);
+          // Also store in database
+          final database = client.database;
+          if (database != null) {
+            await database.transaction(() async {
+              await database.storeEventUpdate(
+                  EventUpdate(
+                    roomID: room.id,
+                    type: EventUpdateType.state,
+                    content: decrypted.toJson(),
+                  ),
+                  client);
+            });
+          }
         }
       }
       // and finally broadcast the new session
