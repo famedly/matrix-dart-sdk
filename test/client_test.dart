@@ -287,6 +287,38 @@ void main() {
       // To check if the emoji is properly added, we need to wait for a sync roundtrip
     });
 
+    test('accountData', () async {
+      final content = {
+        'bla': 'blub',
+      };
+
+      final key = 'abc def!/_-';
+      await matrix.setAccountData(matrix.userID!, key, content);
+      final dbContent = await matrix.database?.getAccountData();
+
+      expect(matrix.accountData[key]?.content, content);
+      expect(dbContent?[key]?.content, content);
+    });
+
+    test('roomAccountData', () async {
+      final content = {
+        'bla': 'blub',
+      };
+
+      final key = 'abc def!/_-';
+      final roomId = '!726s6s6q:example.com';
+      await matrix.setAccountDataPerRoom(matrix.userID!, roomId, key, content);
+      final roomFromList = (await matrix.database?.getRoomList(matrix))
+          ?.firstWhere((room) => room.id == roomId);
+      final roomFromDb = await matrix.database?.getSingleRoom(matrix, roomId);
+
+      expect(
+          matrix.getRoomById(roomId)?.roomAccountData[key]?.content, content);
+      expect(roomFromList?.roomAccountData[key]?.content, content);
+      expect(roomFromDb?.roomAccountData[key]?.content, content,
+          skip: 'The single room function does not load account data');
+    });
+
     test('Logout', () async {
       final loginStateFuture = matrix.onLoginStateChanged.stream.first;
       await matrix.logout();
