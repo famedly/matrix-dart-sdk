@@ -1,4 +1,10 @@
+## [0.15.10] - 23rd Dec 2022
+
+- fix: make some Room getters null safe (TheOneWithTheBraid)
+- fix: Store decrypted last event in store (Krille Fear)
+
 ## [0.15.9] - 14th Dec 2022
+
 - refactor: Key manager megolm handling to make key generation more efficient
 
 ## [0.15.8] - 12th Dec 2022
