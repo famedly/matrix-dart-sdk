@@ -940,10 +940,20 @@ class CallSession {
         ..transferee = false;
 
       final metadata = SDPStreamMetadata({
-        localUserMediaStream!.stream!.id: SDPStreamPurpose(
-            purpose: SDPStreamMetadataPurpose.Usermedia,
-            audio_muted: localUserMediaStream!.stream!.getAudioTracks().isEmpty,
-            video_muted: localUserMediaStream!.stream!.getVideoTracks().isEmpty)
+        if (localUserMediaStream != null)
+          localUserMediaStream!.stream!.id: SDPStreamPurpose(
+              purpose: SDPStreamMetadataPurpose.Usermedia,
+              audio_muted:
+                  localUserMediaStream!.stream!.getAudioTracks().isEmpty,
+              video_muted:
+                  localUserMediaStream!.stream!.getVideoTracks().isEmpty),
+        if (localScreenSharingStream != null)
+          localScreenSharingStream!.stream!.id: SDPStreamPurpose(
+              purpose: SDPStreamMetadataPurpose.Screenshare,
+              audio_muted:
+                  localScreenSharingStream!.stream!.getAudioTracks().isEmpty,
+              video_muted:
+                  localScreenSharingStream!.stream!.getVideoTracks().isEmpty),
       });
 
       await pc!.setLocalDescription(answer);
