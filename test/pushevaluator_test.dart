@@ -324,5 +324,306 @@ void main() {
       event.senderId = '@a:b.c';
       expect(evaluator.match(event).notify, false);
     });
+
+    test('invalid content rule', () async {
+      final invalid_content_ruleset = PushRuleSet(content: [
+        PushRule(
+          ruleId: 'my.rule',
+          default$: false,
+          enabled: true,
+          actions: [
+            'notify',
+            {'set_tweak': 'highlight', 'value': true},
+            {'set_tweak': 'sound', 'value': 'goose.wav'},
+          ],
+          // pattern: 'fox', <- no pattern!
+        )
+      ]);
+
+      expect(() => PushruleEvaluator.fromRuleset(invalid_content_ruleset),
+          returnsNormally);
+
+      final dendriteRuleset = PushRuleSet.fromJson(json.decode('''{
+  "global": {
+    "override": [
+      {
+        "rule_id": ".m.rule.master",
+        "default": true,
+        "enabled": false,
+        "actions": [
+          "dont_notify"
+        ],
+        "conditions": [],
+        "pattern": ""
+      },
+      {
+        "rule_id": ".m.rule.suppress_notices",
+        "default": true,
+        "enabled": true,
+        "actions": [
+          "dont_notify"
+        ],
+        "conditions": [
+          {
+            "kind": "event_match",
+            "key": "content.msgtype",
+            "pattern": "m.notice"
+          }
+        ],
+        "pattern": ""
+      },
+      {
+        "rule_id": ".m.rule.invite_for_me",
+        "default": true,
+        "enabled": true,
+        "actions": [
+          "notify",
+          {
+            "set_tweak": "sound",
+            "value": "default"
+          },
+          {
+            "set_tweak": "highlight",
+            "value": false
+          }
+        ],
+        "conditions": [
+          {
+            "kind": "event_match",
+            "key": "type",
+            "pattern": "m.room.member"
+          },
+          {
+            "kind": "event_match",
+            "key": "content.membership",
+            "pattern": "invite"
+          },
+          {
+            "kind": "event_match",
+            "key": "state_key",
+            "pattern": "@deepbluev7:dendrite.matrix.org"
+          }
+        ],
+        "pattern": ""
+      },
+      {
+        "rule_id": ".m.rule.member_event",
+        "default": true,
+        "enabled": true,
+        "actions": [
+          "dont_notify"
+        ],
+        "conditions": [
+          {
+            "kind": "event_match",
+            "key": "type",
+            "pattern": "m.room.member"
+          }
+        ],
+        "pattern": ""
+      },
+      {
+        "rule_id": ".m.rule.contains_display_name",
+        "default": true,
+        "enabled": true,
+        "actions": [
+          "notify",
+          {
+            "set_tweak": "sound",
+            "value": "default"
+          },
+          {
+            "set_tweak": "highlight",
+            "value": true
+          }
+        ],
+        "conditions": [
+          {
+            "kind": "contains_display_name"
+          }
+        ],
+        "pattern": ""
+      },
+      {
+        "rule_id": ".m.rule.tombstone",
+        "default": true,
+        "enabled": true,
+        "actions": [
+          "notify",
+          {
+            "set_tweak": "highlight",
+            "value": false
+          }
+        ],
+        "conditions": [
+          {
+            "kind": "event_match",
+            "key": "type",
+            "pattern": "m.room.tombstone"
+          },
+          {
+            "kind": "event_match",
+            "key": "state_key"
+          }
+        ],
+        "pattern": ""
+      },
+      {
+        "rule_id": ".m.rule.roomnotif",
+        "default": true,
+        "enabled": true,
+        "actions": [
+          "notify",
+          {
+            "set_tweak": "highlight",
+            "value": false
+          }
+        ],
+        "conditions": [
+          {
+            "kind": "event_match",
+            "key": "content.body",
+            "pattern": "@room"
+          },
+          {
+            "kind": "sender_notification_permission",
+            "key": "room"
+          }
+        ],
+        "pattern": ""
+      }
+    ],
+    "content": [
+      {
+        "rule_id": ".m.rule.contains_user_name",
+        "default": true,
+        "enabled": true,
+        "actions": [
+          "notify",
+          {
+            "set_tweak": "sound",
+            "value": "default"
+          },
+          {
+            "set_tweak": "highlight",
+            "value": true
+          }
+        ],
+        "conditions": null,
+        "pattern": "deepbluev7"
+      }
+    ],
+    "underride": [
+      {
+        "rule_id": ".m.rule.call",
+        "default": true,
+        "enabled": true,
+        "actions": [
+          "notify",
+          {
+            "set_tweak": "sound",
+            "value": "ring"
+          },
+          {
+            "set_tweak": "highlight",
+            "value": false
+          }
+        ],
+        "conditions": [
+          {
+            "kind": "event_match",
+            "key": "type",
+            "pattern": "m.call.invite"
+          }
+        ],
+        "pattern": ""
+      },
+      {
+        "rule_id": ".m.rule.encrypted_room_one_to_one",
+        "default": true,
+        "enabled": true,
+        "actions": [
+          "notify",
+          {
+            "set_tweak": "highlight",
+            "value": false
+          }
+        ],
+        "conditions": [
+          {
+            "kind": "room_member_count",
+            "is": "2"
+          },
+          {
+            "kind": "event_match",
+            "key": "type",
+            "pattern": "m.room.encrypted"
+          }
+        ],
+        "pattern": ""
+      },
+      {
+        "rule_id": ".m.rule.room_one_to_one",
+        "default": true,
+        "enabled": true,
+        "actions": [
+          "notify",
+          {
+            "set_tweak": "highlight",
+            "value": false
+          }
+        ],
+        "conditions": [
+          {
+            "kind": "room_member_count",
+            "is": "2"
+          },
+          {
+            "kind": "event_match",
+            "key": "type",
+            "pattern": "m.room.message"
+          }
+        ],
+        "pattern": ""
+      },
+      {
+        "rule_id": ".m.rule.message",
+        "default": true,
+        "enabled": true,
+        "actions": [
+          "notify"
+        ],
+        "conditions": [
+          {
+            "kind": "event_match",
+            "key": "type",
+            "pattern": "m.room.message"
+          }
+        ],
+        "pattern": ""
+      },
+      {
+        "rule_id": ".m.rule.encrypted",
+        "default": true,
+        "enabled": true,
+        "actions": [
+          "notify"
+        ],
+        "conditions": [
+          {
+            "kind": "event_match",
+            "key": "type",
+            "pattern": "m.room.encrypted"
+          }
+        ],
+        "pattern": ""
+      }
+    ]
+  }
+}
+'''));
+      expect(() => PushruleEvaluator.fromRuleset(dendriteRuleset),
+          returnsNormally);
+    });
   });
 }
