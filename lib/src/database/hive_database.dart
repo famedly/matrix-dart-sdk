@@ -1255,7 +1255,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   final _transactionZones = <Zone>{};
 
   @override
-  Future<T> transaction<T>(Future<T> Function() action) async {
+  Future<void> transaction(Future<void> Function() action) async {
     // we want transactions to lock, however NOT if transactoins are run inside of each other.
     // to be able to do this, we use dart zones (https://dart.dev/articles/archive/zones).
     // _transactionZones holds a set of all zones which are currently running a transaction.

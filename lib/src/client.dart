@@ -1569,10 +1569,11 @@ class Client extends MatrixApi {
       }
       dynamic syncError;
       await _checkSyncFilter();
+      timeout ??= const Duration(seconds: 30);
       final syncRequest = sync(
         filter: syncFilterId,
         since: prevBatch,
-        timeout: timeout?.inMilliseconds ?? 30000,
+        timeout: timeout.inMilliseconds,
         setPresence: syncPresence,
       ).then((v) => Future<SyncUpdate?>.value(v)).catchError((e) {
         syncError = e;
@@ -1580,7 +1581,8 @@ class Client extends MatrixApi {
       });
       _currentSyncId = syncRequest.hashCode;
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.waitingForResponse));
-      final syncResp = await syncRequest;
+      final syncResp =
+          await syncRequest.timeout(timeout + const Duration(seconds: 10));
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.processing));
       if (syncResp == null) throw syncError ?? 'Unknown sync error';
       if (_currentSyncId != syncRequest.hashCode) {

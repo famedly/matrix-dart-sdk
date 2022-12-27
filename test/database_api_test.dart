@@ -64,18 +64,6 @@ void testDatabase(
       });
       expect(counter++, 3);
     });
-
-    // we can't use Zone.root.run inside of tests so we abuse timers instead
-    Timer(Duration(milliseconds: 50), () async {
-      await database.transaction(() async {
-        expect(counter++, 6);
-      });
-    });
-    await database.transaction(() async {
-      expect(counter++, 4);
-      await Future.delayed(Duration(milliseconds: 100));
-      expect(counter++, 5);
-    });
   });
   test('insertIntoToDeviceQueue', () async {
     toDeviceQueueIndex = await database.insertIntoToDeviceQueue(
