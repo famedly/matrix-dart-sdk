@@ -1,3 +1,9 @@
+## [0.15.11] - 27th Dec 2022
+
+- fix: Fix the called party not sending screensharing correctly. (cloudwebrtc)
+- test: Add test for dendrites invalid pushrules (Nicolas Werner)
+- test: Add tests for account data store and retrieve (Nicolas Werner)
+
 ## [0.15.10] - 23rd Dec 2022
 
 - fix: make some Room getters null safe (TheOneWithTheBraid)
