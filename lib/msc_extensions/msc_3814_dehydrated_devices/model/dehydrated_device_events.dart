@@ -32,14 +32,14 @@ class DehydratedDeviceEvents {
     this.events,
   });
 
-  DehydratedDeviceEvents.fromJson(Map<String, dynamic> json)
+  DehydratedDeviceEvents.fromJson(Map<String, Object?> json)
       : nextBatch = json['next_batch'] as String?,
         events = json
-            .tryGetList<Map<String, dynamic>>('events')
+            .tryGetList<Map<String, Object?>>('events')
             ?.map((i) => ToDeviceEvent.fromJson(i))
             .toList();
 
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     return {
       if (nextBatch != null) 'next_batch': nextBatch,
       if (events != null) 'events': events,

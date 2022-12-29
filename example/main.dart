@@ -12,7 +12,8 @@ void main() async {
       final dir = await getApplicationSupportDirectory();
       final db = HiveCollectionsDatabase('matrix_example_chat', dir.path);
       await db.open();
-      return db;
+      
+return db;
     },
   );
   await client.init();
@@ -25,7 +26,8 @@ class MatrixExampleChat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    
+return MaterialApp(
       title: 'Matrix Example Chat',
       builder: (context, child) => Provider<Client>(
         create: (context) => client,
@@ -84,7 +86,8 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    
+return Scaffold(
       appBar: AppBar(title: const Text('Login')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -169,7 +172,8 @@ class _RoomListPageState extends State<RoomListPage> {
   @override
   Widget build(BuildContext context) {
     final client = Provider.of<Client>(context, listen: false);
-    return Scaffold(
+    
+return Scaffold(
       appBar: AppBar(
         title: const Text('Chats'),
         actions: [
@@ -262,7 +266,8 @@ class _RoomPageState extends State<RoomPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    
+return Scaffold(
       appBar: AppBar(
         title: Text(widget.room.displayname),
       ),
@@ -275,12 +280,14 @@ class _RoomPageState extends State<RoomPage> {
                 builder: (context, snapshot) {
                   final timeline = snapshot.data;
                   if (timeline == null) {
-                    return const Center(
+                    
+return const Center(
                       child: CircularProgressIndicator.adaptive(),
                     );
                   }
                   _count = timeline.events.length;
-                  return Column(
+                  
+return Column(
                     children: [
                       Center(
                         child: TextButton(

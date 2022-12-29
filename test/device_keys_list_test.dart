@@ -50,7 +50,7 @@ void main() {
 
     test('fromJson', () async {
       if (!olmEnabled) return;
-      var rawJson = <String, dynamic>{
+      var rawJson = <String, Object?>{
         'user_id': '@alice:example.com',
         'device_id': 'JLAFKJWSCS',
         'algorithms': [
@@ -79,7 +79,7 @@ void main() {
       expect(key.directVerified, false);
       expect(key.blocked, true);
 
-      rawJson = <String, dynamic>{
+      rawJson = <String, Object?>{
         'user_id': '@test:fakeServer.notExisting',
         'usage': ['master'],
         'keys': {
@@ -95,37 +95,45 @@ void main() {
 
     test('reject devices without self-signature', () async {
       if (!olmEnabled) return;
-      var key = DeviceKeys.fromJson({
-        'user_id': '@test:fakeServer.notExisting',
-        'device_id': 'BADDEVICE',
-        'algorithms': [
-          AlgorithmTypes.olmV1Curve25519AesSha2,
-          AlgorithmTypes.megolmV1AesSha2
-        ],
-        'keys': {
-          'curve25519:BADDEVICE': 'ds6+bItpDiWyRaT/b0ofoz1R+GCy7YTbORLJI4dmYho',
-          'ed25519:BADDEVICE': 'CdDKVf44LO2QlfWopP6VWmqedSrRaf9rhHKvdVyH38w'
-        },
-      }, client);
-      expect(key.isValid, false);
-      expect(key.selfSigned, false);
-      key = DeviceKeys.fromJson({
-        'user_id': '@test:fakeServer.notExisting',
-        'device_id': 'BADDEVICE',
-        'algorithms': [
-          AlgorithmTypes.olmV1Curve25519AesSha2,
-          AlgorithmTypes.megolmV1AesSha2
-        ],
-        'keys': {
-          'curve25519:BADDEVICE': 'ds6+bItpDiWyRaT/b0ofoz1R+GCy7YTbORLJI4dmYho',
-          'ed25519:BADDEVICE': 'CdDKVf44LO2QlfWopP6VWmqedSrRaf9rhHKvdVyH38w'
-        },
-        'signatures': {
-          '@test:fakeServer.notExisting': {
-            'ed25519:BADDEVICE': 'invalid',
+      var key = DeviceKeys.fromJson(
+        {
+          'user_id': '@test:fakeServer.notExisting',
+          'device_id': 'BADDEVICE',
+          'algorithms': [
+            AlgorithmTypes.olmV1Curve25519AesSha2,
+            AlgorithmTypes.megolmV1AesSha2
+          ],
+          'keys': {
+            'curve25519:BADDEVICE':
+                'ds6+bItpDiWyRaT/b0ofoz1R+GCy7YTbORLJI4dmYho',
+            'ed25519:BADDEVICE': 'CdDKVf44LO2QlfWopP6VWmqedSrRaf9rhHKvdVyH38w'
           },
         },
-      }, client);
+        client,
+      );
+      expect(key.isValid, false);
+      expect(key.selfSigned, false);
+      key = DeviceKeys.fromJson(
+        {
+          'user_id': '@test:fakeServer.notExisting',
+          'device_id': 'BADDEVICE',
+          'algorithms': [
+            AlgorithmTypes.olmV1Curve25519AesSha2,
+            AlgorithmTypes.megolmV1AesSha2
+          ],
+          'keys': {
+            'curve25519:BADDEVICE':
+                'ds6+bItpDiWyRaT/b0ofoz1R+GCy7YTbORLJI4dmYho',
+            'ed25519:BADDEVICE': 'CdDKVf44LO2QlfWopP6VWmqedSrRaf9rhHKvdVyH38w'
+          },
+          'signatures': {
+            '@test:fakeServer.notExisting': {
+              'ed25519:BADDEVICE': 'invalid',
+            },
+          },
+        },
+        client,
+      );
       expect(key.isValid, false);
       expect(key.selfSigned, false);
     });
@@ -135,26 +143,29 @@ void main() {
       final key =
           client.userDeviceKeys[client.userID]!.deviceKeys['OTHERDEVICE']!;
       client.userDeviceKeys[client.userID]?.deviceKeys['UNSIGNEDDEVICE'] =
-          DeviceKeys.fromJson({
-        'user_id': '@test:fakeServer.notExisting',
-        'device_id': 'UNSIGNEDDEVICE',
-        'algorithms': [
-          AlgorithmTypes.olmV1Curve25519AesSha2,
-          AlgorithmTypes.megolmV1AesSha2
-        ],
-        'keys': {
-          'curve25519:UNSIGNEDDEVICE':
-              'ds6+bItpDiWyRaT/b0ofoz1R+GCy7YTbORLJI4dmYho',
-          'ed25519:UNSIGNEDDEVICE':
-              'CdDKVf44LO2QlfWopP6VWmqedSrRaf9rhHKvdVyH38w'
-        },
-        'signatures': {
-          '@test:fakeServer.notExisting': {
+          DeviceKeys.fromJson(
+        {
+          'user_id': '@test:fakeServer.notExisting',
+          'device_id': 'UNSIGNEDDEVICE',
+          'algorithms': [
+            AlgorithmTypes.olmV1Curve25519AesSha2,
+            AlgorithmTypes.megolmV1AesSha2
+          ],
+          'keys': {
+            'curve25519:UNSIGNEDDEVICE':
+                'ds6+bItpDiWyRaT/b0ofoz1R+GCy7YTbORLJI4dmYho',
             'ed25519:UNSIGNEDDEVICE':
-                'f2p1kv6PIz+hnoFYnHEurhUKIyRsdxwR2RTKT1EnQ3aF2zlZOjmnndOCtIT24Q8vs2PovRw+/jkHKj4ge2yDDw',
+                'CdDKVf44LO2QlfWopP6VWmqedSrRaf9rhHKvdVyH38w'
+          },
+          'signatures': {
+            '@test:fakeServer.notExisting': {
+              'ed25519:UNSIGNEDDEVICE':
+                  'f2p1kv6PIz+hnoFYnHEurhUKIyRsdxwR2RTKT1EnQ3aF2zlZOjmnndOCtIT24Q8vs2PovRw+/jkHKj4ge2yDDw',
+            },
           },
         },
-      }, client);
+        client,
+      );
       expect(client.shareKeysWithUnverifiedDevices, true);
       expect(key.encryptToDevice, true);
       client.shareKeysWithUnverifiedDevices = false;
@@ -177,17 +188,19 @@ void main() {
       expect(key.verified, true); // still verified via cross-sgining
       expect(key.encryptToDevice, true);
       expect(
-          client.userDeviceKeys[client.userID]?.deviceKeys['UNSIGNEDDEVICE']
-              ?.encryptToDevice,
-          true);
+        client.userDeviceKeys[client.userID]?.deviceKeys['UNSIGNEDDEVICE']
+            ?.encryptToDevice,
+        true,
+      );
 
       expect(masterKey.verified, true);
       await masterKey.setBlocked(true);
       expect(masterKey.verified, false);
       expect(
-          client.userDeviceKeys[client.userID]?.deviceKeys['UNSIGNEDDEVICE']
-              ?.encryptToDevice,
-          true);
+        client.userDeviceKeys[client.userID]?.deviceKeys['UNSIGNEDDEVICE']
+            ?.encryptToDevice,
+        true,
+      );
       await masterKey.setBlocked(false);
       expect(masterKey.verified, true);
 
@@ -195,18 +208,20 @@ void main() {
       await key.setVerified(true);
       await Future.delayed(Duration(milliseconds: 10));
       expect(
-          FakeMatrixApi.calledEndpoints.keys
-              .any((k) => k == '/client/v3/keys/signatures/upload'),
-          true);
+        FakeMatrixApi.calledEndpoints.keys
+            .any((k) => k == '/client/v3/keys/signatures/upload'),
+        true,
+      );
       expect(key.directVerified, true);
 
       FakeMatrixApi.calledEndpoints.clear();
       await key.setVerified(false);
       await Future.delayed(Duration(milliseconds: 10));
       expect(
-          FakeMatrixApi.calledEndpoints.keys
-              .any((k) => k == '/client/v3/keys/signatures/upload'),
-          false);
+        FakeMatrixApi.calledEndpoints.keys
+            .any((k) => k == '/client/v3/keys/signatures/upload'),
+        false,
+      );
       expect(key.directVerified, false);
       client.userDeviceKeys[client.userID]?.deviceKeys.remove('UNSIGNEDDEVICE');
     });
@@ -221,10 +236,11 @@ void main() {
       expect(user.deviceKeys['OTHERDEVICE']?.crossVerified, true);
       expect(user.selfSigningKey?.crossVerified, true);
       expect(
-          user
-              .getKey('F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY')
-              ?.crossVerified,
-          true);
+        user
+            .getKey('F9ypFzgbISXCzxQhhSnXMkc1vq12Luna3Nw5rqViOJY')
+            ?.crossVerified,
+        true,
+      );
       expect(user.userSigningKey?.crossVerified, true);
       expect(user.verified, UserVerifiedStatus.verified);
       user.masterKey?.setDirectVerified(false);
@@ -239,10 +255,14 @@ void main() {
       user.masterKey?.setDirectVerified(true);
       user.deviceKeys['GHTYAJCE']?.signatures?[client.userID]
           ?.removeWhere((k, v) => k != 'ed25519:GHTYAJCE');
-      expect(user.deviceKeys['GHTYAJCE']?.verified,
-          true); // it's our own device, should be direct verified
-      expect(user.deviceKeys['GHTYAJCE']?.signed,
-          false); // not verified for others
+      expect(
+        user.deviceKeys['GHTYAJCE']?.verified,
+        true,
+      ); // it's our own device, should be direct verified
+      expect(
+        user.deviceKeys['GHTYAJCE']?.signed,
+        false,
+      ); // not verified for others
       user.deviceKeys['OTHERDEVICE']?.signatures?.clear();
       expect(user.verified, UserVerifiedStatus.unknownDevice);
     });

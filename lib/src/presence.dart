@@ -25,8 +25,13 @@ class CachedPresence {
   bool? currentlyActive;
   String userid;
 
-  CachedPresence(this.presence, int? lastActiveAgo, this.statusMsg,
-      this.currentlyActive, this.userid) {
+  CachedPresence(
+    this.presence,
+    int? lastActiveAgo,
+    this.statusMsg,
+    this.currentlyActive,
+    this.userid,
+  ) {
     if (lastActiveAgo != null) {
       lastActiveTimestamp =
           DateTime.now().subtract(Duration(milliseconds: lastActiveAgo));
@@ -35,20 +40,26 @@ class CachedPresence {
 
   CachedPresence.fromMatrixEvent(Presence event)
       : this(
-            event.presence.presence,
-            event.presence.lastActiveAgo,
-            event.presence.statusMsg,
-            event.presence.currentlyActive,
-            event.senderId);
+          event.presence.presence,
+          event.presence.lastActiveAgo,
+          event.presence.statusMsg,
+          event.presence.currentlyActive,
+          event.senderId,
+        );
 
   CachedPresence.fromPresenceResponse(GetPresenceResponse event, String userid)
-      : this(event.presence, event.lastActiveAgo, event.statusMsg,
-            event.currentlyActive, userid);
+      : this(
+          event.presence,
+          event.lastActiveAgo,
+          event.statusMsg,
+          event.currentlyActive,
+          userid,
+        );
 
   CachedPresence.neverSeen(this.userid) : presence = PresenceType.offline;
 
   Presence toPresence() {
-    final content = <String, dynamic>{
+    final content = <String, Object?>{
       'presence': presence.toString(),
     };
     if (currentlyActive != null) content['currently_active'] = currentlyActive!;

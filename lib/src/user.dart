@@ -20,11 +20,13 @@ import 'package:matrix/matrix.dart';
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
 class User extends Event {
-  factory User(String id,
-      {String? membership,
-      String? displayName,
-      String? avatarUrl,
-      required Room room}) {
+  factory User(
+    String id, {
+    String? membership,
+    String? displayName,
+    String? avatarUrl,
+    required Room room,
+  }) {
     return User.fromState(
       stateKey: id,
       content: {
@@ -40,15 +42,15 @@ class User extends Event {
   }
 
   User.fromState({
-    dynamic prevContent,
+    Map<String, Object?>? prevContent,
     required String stateKey,
-    dynamic content,
+    required Map<String, Object?> content,
     required String typeKey,
     String eventId = 'fakevent',
     String? roomId,
     String senderId = 'fakesender',
     required DateTime originServerTs,
-    dynamic unsigned,
+    Map<String, Object?>? unsigned,
     required Room room,
   }) : super(
           stateKey: stateKey,
@@ -70,7 +72,7 @@ class User extends Event {
       content.tryGet<String>('displayname') ??
       prevContent?.tryGet<String>('displayname');
 
-  /// Returns the power level of this user.
+  /// returns the power level of this user.
   int get powerLevel => room.getPowerLevelByUserId(id);
 
   /// The membership status of the user. One of:
@@ -78,16 +80,21 @@ class User extends Event {
   /// invite
   /// leave
   /// ban
-  Membership get membership => Membership.values.firstWhere((e) {
-        if (content['membership'] != null) {
-          return e.toString() == 'Membership.${content['membership']}';
-        }
-        return false;
-      }, orElse: () => Membership.join);
+  Membership get membership => Membership.values.firstWhere(
+        (e) {
+          if (content['membership'] != null) {
+            return e.toString() == 'Membership.${content['membership']}';
+          }
+
+          return false;
+        },
+        orElse: () => Membership.join,
+      );
 
   /// The avatar if the user has one.
   Uri? get avatarUrl {
     final prevContent = this.prevContent;
+
     return content.containsKey('avatar_url')
         ? (content['avatar_url'] is String
             ? Uri.tryParse(content['avatar_url'])
@@ -97,7 +104,7 @@ class User extends Event {
             : null);
   }
 
-  /// Returns the displayname or the local part of the Matrix ID if the user
+  /// returns the displayname or the local part of the Matrix ID if the user
   /// has no displayname. If [formatLocalpart] is true, then the localpart will
   /// be formatted in the way, that all "_" characters are becomming white spaces and
   /// the first character of each word becomes uppercase.
@@ -124,8 +131,10 @@ class User extends Event {
           words[i] = words[i][0].toUpperCase() + words[i].substring(1);
         }
       }
+
       return words.join(' ').trim();
     }
+
     return 'Unknown user';
   }
 
@@ -141,8 +150,8 @@ class User extends Event {
   /// Call the Matrix API to change the power level of this user.
   Future<void> setPower(int power) async => await room.setPower(id, power);
 
-  /// Returns an existing direct chat ID with this user or creates a new one.
-  /// Returns null on error.
+  /// returns an existing direct chat ID with this user or creates a new one.
+  /// returns null on error.
   Future<String> startDirectChat({
     bool? enableEncryption,
     List<StateEvent>? initialState,
@@ -171,6 +180,7 @@ class User extends Event {
 
     try {
       final newPresence = await room.client.getPresence(id);
+
       return CachedPresence.fromPresenceResponse(newPresence, id);
     } catch (e) {
       return CachedPresence.neverSeen(id);
@@ -192,7 +202,7 @@ class User extends Event {
       room.canChangePowerLevel && powerLevel < room.ownPowerLevel;
 
   @override
-  bool operator ==(dynamic other) => (other is User &&
+  bool operator ==(Object? other) => (other is User &&
       other.id == id &&
       other.room == room &&
       other.membership == membership);
@@ -218,10 +228,12 @@ class User extends Event {
 
     // get all the users with the same display name
     final allUsersWithSameDisplayname = room.getParticipants();
-    allUsersWithSameDisplayname.removeWhere((user) =>
-        user.id == id ||
-        (user.displayName?.isEmpty ?? true) ||
-        user.displayName != displayName);
+    allUsersWithSameDisplayname.removeWhere(
+      (user) =>
+          user.id == id ||
+          (user.displayName?.isEmpty ?? true) ||
+          user.displayName != displayName,
+    );
     if (allUsersWithSameDisplayname.isEmpty) {
       return identifier;
     }
@@ -232,6 +244,7 @@ class User extends Event {
     if (hashes.contains(ourHash)) {
       return id;
     }
+
     return '$identifier#$ourHash';
   }
 
@@ -247,6 +260,7 @@ class User extends Event {
         '@${RegExp(r'^\w+$').hasMatch(displayName) ? displayName : '[$displayName]'}';
 
     final hash = _hash(id);
+
     return {identifier, '$identifier#$hash'};
   }
 }

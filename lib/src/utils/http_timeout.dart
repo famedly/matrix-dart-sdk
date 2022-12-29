@@ -21,7 +21,9 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 
 http.StreamedResponse replaceStream(
-        http.StreamedResponse base, Stream<List<int>> stream) =>
+  http.StreamedResponse base,
+  Stream<List<int>> stream,
+) =>
     http.StreamedResponse(
       http.ByteStream(stream),
       base.statusCode,
@@ -45,6 +47,7 @@ abstract class TimeoutHttpClient extends http.BaseClient {
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     final response = await inner.send(request);
+
     return replaceStream(response, response.stream.timeout(timeout));
   }
 }

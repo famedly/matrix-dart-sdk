@@ -21,30 +21,34 @@ import 'dart:core';
 import 'package:matrix/src/client.dart';
 
 extension MxcUriExtension on Uri {
-  /// Returns a download Link to this content.
+  /// returns a download Link to this content.
   Uri getDownloadLink(Client matrix) => isScheme('mxc')
       ? matrix.homeserver != null
           ? matrix.homeserver?.resolve(
-                  '_matrix/media/v3/download/$host${hasPort ? ':$port' : ''}$path') ??
+                '_matrix/media/v3/download/$host${hasPort ? ':$port' : ''}$path',
+              ) ??
               Uri()
           : Uri()
       : this;
 
-  /// Returns a scaled thumbnail link to this content with the given `width` and
+  /// returns a scaled thumbnail link to this content with the given `width` and
   /// `height`. `method` can be `ThumbnailMethod.crop` or
   /// `ThumbnailMethod.scale` and defaults to `ThumbnailMethod.scale`.
   /// If `animated` (default false) is set to true, an animated thumbnail is requested
   /// as per MSC2705. Thumbnails only animate if the media repository supports that.
-  Uri getThumbnail(Client matrix,
-      {num? width,
-      num? height,
-      ThumbnailMethod? method = ThumbnailMethod.crop,
-      bool? animated = false}) {
+  Uri getThumbnail(
+    Client matrix, {
+    num? width,
+    num? height,
+    ThumbnailMethod? method = ThumbnailMethod.crop,
+    bool? animated = false,
+  }) {
     if (!isScheme('mxc')) return this;
     final homeserver = matrix.homeserver;
     if (homeserver == null) {
       return Uri();
     }
+
     return Uri(
       scheme: homeserver.scheme,
       host: homeserver.host,

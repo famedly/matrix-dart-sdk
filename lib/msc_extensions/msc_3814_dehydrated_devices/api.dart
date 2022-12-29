@@ -31,10 +31,12 @@ import 'package:matrix/msc_extensions/msc_3814_dehydrated_devices/model/dehydrat
 extension DehydratedDeviceMatrixApi on MatrixApi {
   /// Publishes end-to-end encryption keys for the specified device.
   /// https://github.com/matrix-org/matrix-spec-proposals/pull/3814
-  Future<Map<String, int>> uploadKeysForDevice(String device,
-      {MatrixDeviceKeys? deviceKeys,
-      Map<String, dynamic>? oneTimeKeys,
-      Map<String, dynamic>? fallbackKeys}) async {
+  Future<Map<String, int>> uploadKeysForDevice(
+    String device, {
+    MatrixDeviceKeys? deviceKeys,
+    Map<String, Object?>? oneTimeKeys,
+    Map<String, Object?>? fallbackKeys,
+  }) async {
     final response = await request(
       RequestType.POST,
       '/client/v3/keys/upload/${Uri.encodeComponent(device)}',
@@ -47,14 +49,16 @@ extension DehydratedDeviceMatrixApi on MatrixApi {
         },
       },
     );
+
     return Map<String, int>.from(response['one_time_key_counts']);
   }
 
   /// uploads a dehydrated device.
   /// https://github.com/matrix-org/matrix-spec-proposals/pull/3814
-  Future<String> uploadDehydratedDevice(
-      {String? initialDeviceDisplayName,
-      Map<String, dynamic>? deviceData}) async {
+  Future<String> uploadDehydratedDevice({
+    String? initialDeviceDisplayName,
+    Map<String, Object?>? deviceData,
+  }) async {
     final response = await request(
       RequestType.PUT,
       '/client/unstable/org.matrix.msc3814.v1/dehydrated_device',
@@ -64,6 +68,7 @@ extension DehydratedDeviceMatrixApi on MatrixApi {
         if (deviceData != null) 'device_data': deviceData,
       },
     );
+
     return response['device_id'] as String;
   }
 
@@ -74,13 +79,17 @@ extension DehydratedDeviceMatrixApi on MatrixApi {
       RequestType.GET,
       '/client/unstable/org.matrix.msc3814.v1/dehydrated_device',
     );
+
     return DehydratedDevice.fromJson(response);
   }
 
   /// fetch events sent to a dehydrated device.
   /// https://github.com/matrix-org/matrix-spec-proposals/pull/3814
-  Future<DehydratedDeviceEvents> getDehydratedDeviceEvents(String deviceId,
-      {String? from, int limit = 100}) async {
+  Future<DehydratedDeviceEvents> getDehydratedDeviceEvents(
+    String deviceId, {
+    String? from,
+    int limit = 100,
+  }) async {
     final response = await request(
       RequestType.GET,
       '/client/unstable/org.matrix.msc3814.v1/dehydrated_device/$deviceId/events',
@@ -89,6 +98,7 @@ extension DehydratedDeviceMatrixApi on MatrixApi {
         'limit': limit.toString(),
       },
     );
+
     return DehydratedDeviceEvents.fromJson(response);
   }
 }

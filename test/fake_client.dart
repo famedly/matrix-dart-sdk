@@ -34,8 +34,10 @@ Future<Client> getClient() async {
     databaseBuilder: getDatabase,
   );
   FakeMatrixApi.client = client;
-  await client.checkHomeserver(Uri.parse('https://fakeServer.notExisting'),
-      checkWellKnown: false);
+  await client.checkHomeserver(
+    Uri.parse('https://fakeServer.notExisting'),
+    checkWellKnown: false,
+  );
   await client.init(
     newToken: 'abcd',
     newUserID: '@test:fakeServer.notExisting',
@@ -45,5 +47,6 @@ Future<Client> getClient() async {
     newOlmAccount: pickledOlmAccount,
   );
   await Future.delayed(Duration(milliseconds: 10));
+
   return client;
 }

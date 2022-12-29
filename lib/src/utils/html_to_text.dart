@@ -32,13 +32,19 @@ class HtmlToText {
     // miss-matching tags, and this way we actually correctly identify what we want to strip and, well,
     // strip it.
     final renderHtml = html.replaceAll(
-        RegExp('<mx-reply>.*</mx-reply>',
-            caseSensitive: false, multiLine: false, dotAll: true),
-        '');
+      RegExp(
+        '<mx-reply>.*</mx-reply>',
+        caseSensitive: false,
+        multiLine: false,
+        dotAll: true,
+      ),
+      '',
+    );
 
     final opts = _ConvertOpts();
     var reply = _walkNode(opts, parseFragment(renderHtml));
     reply = reply.replaceAll(RegExp(r'\s*$', multiLine: false), '');
+
     return reply;
   }
 
@@ -57,13 +63,16 @@ class HtmlToText {
           text += '\n';
         }
       }
+
       return text;
     }
     // remove <code> opening tag
     text = text.substring(match.end);
     // remove the </code> closing tag
     text = text.replaceAll(
-        RegExp(r'</code>$', multiLine: false, caseSensitive: false), '');
+      RegExp(r'</code>$', multiLine: false, caseSensitive: false),
+      '',
+    );
     text = HtmlUnescape().convert(text);
     if (text.isNotEmpty) {
       if (text[0] != '\n') {
@@ -79,11 +88,13 @@ class HtmlToText {
     if (language != null) {
       text = language.group(1)! + text;
     }
+
     return text;
   }
 
   static String _parseBlockquoteContent(_ConvertOpts opts, Element node) {
     final msg = _walkChildNodes(opts, node);
+
     return '${msg.split('\n').map((s) => '> $s').join('\n')}\n';
   }
 
@@ -95,8 +106,10 @@ class HtmlToText {
       if (reason != '') {
         spoiler = '($reason) $spoiler';
       }
+
       return spoiler;
     }
+
     return content;
   }
 
@@ -108,8 +121,10 @@ class HtmlToText {
         _listBulletPoints[opts.listDepth % _listBulletPoints.length];
 
     return entries
-        .map((s) =>
-            '${'    ' * opts.listDepth}$bulletPoint ${s.replaceAll('\n', '\n${'    ' * opts.listDepth}  ')}')
+        .map(
+          (s) =>
+              '${'    ' * opts.listDepth}$bulletPoint ${s.replaceAll('\n', '\n${'    ' * opts.listDepth}  ')}',
+        )
         .join('\n');
   }
 
@@ -124,15 +139,20 @@ class HtmlToText {
         : 1;
 
     return entries
-        .mapIndexed((index, s) =>
-            '${'    ' * opts.listDepth}${start + index}. ${s.replaceAll('\n', '\n${'    ' * opts.listDepth}  ')}')
+        .mapIndexed(
+          (index, s) =>
+              '${'    ' * opts.listDepth}${start + index}. ${s.replaceAll('\n', '\n${'    ' * opts.listDepth}  ')}',
+        )
         .join('\n');
   }
 
   static const _listBulletPoints = <String>['●', '○', '■', '‣'];
 
-  static List<String> _listChildNodes(_ConvertOpts opts, Element node,
-      [Iterable<String>? types]) {
+  static List<String> _listChildNodes(
+    _ConvertOpts opts,
+    Element node, [
+    Iterable<String>? types,
+  ]) {
     final replies = <String>[];
     for (final child in node.nodes) {
       if (types != null &&
@@ -144,6 +164,7 @@ class HtmlToText {
       }
       replies.add(_walkNode(opts, child));
     }
+
     return replies;
   }
 
@@ -177,12 +198,14 @@ class HtmlToText {
         lastTag = thisTag;
       }
     }
+
     return reply;
   }
 
   static String _walkNode(_ConvertOpts opts, Node node) {
     if (node is Text) {
       // ignore \n between single nodes
+
       return node.text == '\n' ? '' : node.text;
     } else if (node is Element) {
       final tag = node.localName!.toLowerCase();
@@ -211,6 +234,7 @@ class HtmlToText {
               href.toLowerCase().startsWith('matrix:')) {
             return content;
           }
+
           return '🔗$content';
         case 'img':
           return node.attributes['alt'] ??
@@ -236,6 +260,7 @@ class HtmlToText {
         case 'h5':
         case 'h6':
           final mark = '#' * int.parse(tag[1]);
+
           return '$mark ${_walkChildNodes(opts, node)}\n';
         case 'span':
           return _parseSpanContent(opts, node);

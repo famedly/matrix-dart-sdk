@@ -21,17 +21,19 @@ import 'package:olm/olm.dart' as olm;
 
 import 'package:matrix/matrix.dart';
 
-extension JsonSignatureCheckExtension on Map<String, dynamic> {
+extension JsonSignatureCheckExtension on Map<String, Object?> {
   /// Checks the signature of a signed json object.
   bool checkJsonSignature(String key, String userId, String deviceId) {
     final signatures = this['signatures'];
     if (signatures == null ||
-        signatures is! Map<String, dynamic> ||
+        signatures is! Map<String, Object?> ||
         !signatures.containsKey(userId)) return false;
     remove('unsigned');
     remove('signatures');
-    if (!signatures[userId].containsKey('ed25519:$deviceId')) return false;
-    final String signature = signatures[userId]['ed25519:$deviceId'];
+    if (!(signatures[userId] as Map<String, Object?>)
+        .containsKey('ed25519:$deviceId')) return false;
+    final String signature = (signatures[userId]
+        as Map<String, Object?>)['ed25519:$deviceId'] as String;
     final canonical = canonicalJson.encode(this);
     final message = String.fromCharCodes(canonical);
     var isValid = false;
@@ -45,6 +47,7 @@ extension JsonSignatureCheckExtension on Map<String, dynamic> {
     } finally {
       olmutil.free();
     }
+
     return isValid;
   }
 }

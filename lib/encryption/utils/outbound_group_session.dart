@@ -35,28 +35,32 @@ class OutboundGroupSession {
   bool get isValid => outboundGroupSession != null;
   final String key;
 
-  OutboundGroupSession(
-      {required this.devices,
-      required this.creationTime,
-      required this.outboundGroupSession,
-      required this.key});
+  OutboundGroupSession({
+    required this.devices,
+    required this.creationTime,
+    required this.outboundGroupSession,
+    required this.key,
+  });
 
-  OutboundGroupSession.fromJson(Map<String, dynamic> dbEntry, this.key) {
+  OutboundGroupSession.fromJson(Map<String, Object?> dbEntry, this.key) {
     try {
-      for (final entry in json.decode(dbEntry['device_ids']).entries) {
+      for (final entry
+          in json.decode(dbEntry['device_ids'] as String).entries) {
         devices[entry.key] = Map<String, bool>.from(entry.value);
       }
     } catch (e) {
       // devices is bad (old data), so just not use this session
       Logs().i(
-          '[OutboundGroupSession] Session in database is old, not using it. $e');
+        '[OutboundGroupSession] Session in database is old, not using it. $e',
+      );
+
       return;
     }
     outboundGroupSession = olm.OutboundGroupSession();
     try {
-      outboundGroupSession!.unpickle(key, dbEntry['pickle']);
+      outboundGroupSession!.unpickle(key, dbEntry['pickle'] as String);
       creationTime =
-          DateTime.fromMillisecondsSinceEpoch(dbEntry['creation_time']);
+          DateTime.fromMillisecondsSinceEpoch(dbEntry['creation_time'] as int);
     } catch (e, s) {
       dispose();
       Logs().e('[LibOlm] Unable to unpickle outboundGroupSession', e, s);

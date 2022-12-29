@@ -41,7 +41,7 @@ class UiaRequest<T> {
   T? result;
   Exception? error;
   Set<String> nextStages = <String>{};
-  Map<String, dynamic> params = <String, dynamic>{};
+  Map<String, Object?> params = <String, Object?>{};
 
   UiaRequestState get state => _state;
 
@@ -61,27 +61,32 @@ class UiaRequest<T> {
       final res = await request(auth);
       state = UiaRequestState.done;
       result = res;
+
       return res;
     } on MatrixException catch (err) {
       if (err.session == null) {
         error = err;
         state = UiaRequestState.fail;
+
         return null;
       }
       session ??= err.session;
       final completed = err.completedAuthenticationFlows;
       final flows = err.authenticationFlows ?? <AuthenticationFlow>[];
-      params = err.authenticationParams ?? <String, dynamic>{};
+      params = err.authenticationParams ?? <String, Object?>{};
       nextStages = getNextStages(flows, completed);
       if (nextStages.isEmpty) {
         error = err;
         state = UiaRequestState.fail;
+
         return null;
       }
+
       return null;
     } catch (err) {
       error = err is Exception ? err : Exception(err);
       state = UiaRequestState.fail;
+
       return null;
     } finally {
       if (state == UiaRequestState.loading) {
@@ -99,7 +104,9 @@ class UiaRequest<T> {
   }
 
   Set<String> getNextStages(
-      List<AuthenticationFlow> flows, List<String> completed) {
+    List<AuthenticationFlow> flows,
+    List<String> completed,
+  ) {
     final nextStages = <String>{};
     for (final flow in flows) {
       final stages = flow.stages;
@@ -115,6 +122,7 @@ class UiaRequest<T> {
         nextStages.add(nextStage);
       }
     }
+
     return nextStages;
   }
 }

@@ -85,7 +85,7 @@ const updates = {
     'next_batch': 'blah',
     'rooms': {
       'leave': {
-        '!room': <String, dynamic>{},
+        '!room': <String, Object?>{},
       },
     },
   },
@@ -106,8 +106,8 @@ const updates = {
           'ephemeral': {
             'events': [],
           },
-          'unread_notifications': <String, dynamic>{},
-          'summary': <String, dynamic>{},
+          'unread_notifications': <String, Object?>{},
+          'summary': <String, Object?>{},
         },
       },
     },

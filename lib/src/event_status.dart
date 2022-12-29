@@ -14,7 +14,7 @@ enum EventStatus {
   roomState,
 }
 
-/// Returns `EventStatusEnum` value from `intValue`.
+/// returns `EventStatusEnum` value from `intValue`.
 ///
 /// - -2 == removed;
 /// - -1 == error;
@@ -31,7 +31,7 @@ EventStatus latestEventStatus(EventStatus status1, EventStatus status2) =>
     status1.intValue > status2.intValue ? status1 : status2;
 
 extension EventStatusExtension on EventStatus {
-  /// Returns int value of the event status.
+  /// returns int value of the event status.
   ///
   /// - -2 == removed;
   /// - -1 == error;
@@ -41,27 +41,27 @@ extension EventStatusExtension on EventStatus {
   /// -  3 == roomState;
   int get intValue => (index - 2);
 
-  /// Return `true` if the `EventStatus` equals `removed`.
+  /// return `true` if the `EventStatus` equals `removed`.
   bool get isRemoved => this == EventStatus.removed;
 
-  /// Return `true` if the `EventStatus` equals `error`.
+  /// return `true` if the `EventStatus` equals `error`.
   bool get isError => this == EventStatus.error;
 
-  /// Return `true` if the `EventStatus` equals `sending`.
+  /// return `true` if the `EventStatus` equals `sending`.
   bool get isSending => this == EventStatus.sending;
 
-  /// Return `true` if the `EventStatus` equals `roomState`.
+  /// return `true` if the `EventStatus` equals `roomState`.
   bool get isRoomState => this == EventStatus.roomState;
 
-  /// Returns `true` if the status is sent or later:
+  /// returns `true` if the status is sent or later:
   /// [EventStatus.sent], [EventStatus.synced] or [EventStatus.roomState].
   bool get isSent => [
         EventStatus.sent,
         EventStatus.synced,
-        EventStatus.roomState
+        EventStatus.roomState,
       ].contains(this);
 
-  /// Returns `true` if the status is `synced` or `roomState`:
+  /// returns `true` if the status is `synced` or `roomState`:
   /// [EventStatus.synced] or [EventStatus.roomState].
   bool get isSynced => [
         EventStatus.synced,

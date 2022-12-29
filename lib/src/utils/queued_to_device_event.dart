@@ -22,7 +22,7 @@ class QueuedToDeviceEvent {
   final int id;
   final String type;
   final String txnId;
-  final Map<String, dynamic> content;
+  final Map<String, Object?> content;
 
   QueuedToDeviceEvent({
     required this.id,
@@ -31,18 +31,18 @@ class QueuedToDeviceEvent {
     required this.content,
   });
 
-  factory QueuedToDeviceEvent.fromJson(Map<String, dynamic> json) =>
+  factory QueuedToDeviceEvent.fromJson(Map<String, Object?> json) =>
       QueuedToDeviceEvent(
-        id: json['id'],
-        type: json['type'],
-        txnId: json['txn_id'],
+        id: json['id'] as int,
+        type: json['type'] as String,
+        txnId: json['txn_id'] as String,
         // Temporary fix to stay compatible to Moor AND a key value store
         content: json['content'] is String
-            ? jsonDecode(json['content'])
+            ? jsonDecode(json['content'] as String)
             : json['content'],
       );
 
-  Map<String, dynamic> toJson() => {
+  Map<String, Object?> toJson() => {
         'id': id,
         'type': type,
         'txn_id': txnId,

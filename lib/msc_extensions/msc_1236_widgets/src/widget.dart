@@ -3,7 +3,7 @@ import 'package:matrix/src/room.dart';
 class MatrixWidget {
   final Room room;
   final String? creatorUserId;
-  final Map<String, dynamic>? data;
+  final Map<String, Object?>? data;
   final String? id;
   final String? name;
   final String type;
@@ -23,18 +23,21 @@ class MatrixWidget {
     this.waitForIframeLoad = false,
   });
 
-  factory MatrixWidget.fromJson(Map<String, dynamic> json, Room room) =>
+  factory MatrixWidget.fromJson(Map<String, Object?> json, Room room) =>
       MatrixWidget(
         room: room,
-        creatorUserId:
-            json.containsKey('creatorUserId') ? json['creatorUserId'] : null,
-        data: json.containsKey('data') ? json['data'] : {},
-        id: json.containsKey('id') ? json['id'] : null,
-        name: json['name'],
-        type: json['type'],
-        url: json['url'],
+        creatorUserId: json.containsKey('creatorUserId')
+            ? json['creatorUserId'] as String?
+            : null,
+        data: json.containsKey('data')
+            ? json['data'] as Map<String, Object?>
+            : {},
+        id: json.containsKey('id') ? json['id'] as String? : null,
+        name: json['name'] as String?,
+        type: json['type'] as String,
+        url: json['url'] as String,
         waitForIframeLoad: json.containsKey('waitForIframeLoad')
-            ? json['waitForIframeLoad']
+            ? json['waitForIframeLoad'] as bool
             : false,
       );
 
@@ -51,8 +54,12 @@ class MatrixWidget {
       );
 
   /// creates an `m.jitsi` [MatrixWidget]
-  factory MatrixWidget.jitsi(Room room, String name, Uri url,
-          {bool isAudioOnly = false}) =>
+  factory MatrixWidget.jitsi(
+    Room room,
+    String name,
+    Uri url, {
+    bool isAudioOnly = false,
+  }) =>
       MatrixWidget(
         room: room,
         name: name,
@@ -104,8 +111,10 @@ class MatrixWidget {
       // `[a-zA-Z0-9_-]` as well as non string values
       if (data != null)
         ...Map.from(data!)
-          ..removeWhere((key, value) =>
-              !RegExp(r'^[\w-]+$').hasMatch(key) || !value is String)
+          ..removeWhere(
+            (key, value) =>
+                !RegExp(r'^[\w-]+$').hasMatch(key) || !value is String,
+          )
           ..map((key, value) => MapEntry('\$key', value)),
     };
 
@@ -116,7 +125,7 @@ class MatrixWidget {
     return Uri.parse(parsedUri);
   }
 
-  Map<String, dynamic> toJson() => {
+  Map<String, Object?> toJson() => {
         'creatorUserId': creatorUserId,
         'data': data,
         'id': id,

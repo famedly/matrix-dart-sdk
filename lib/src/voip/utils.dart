@@ -16,11 +16,13 @@ void setTracksEnabled(List<MediaStreamTrack> tracks, bool enabled) {
 
 Future<bool> hasAudioDevice() async {
   //TODO(duan): implement this, check if there is any audio device
+
   return true;
 }
 
 Future<bool> hasVideoDevice() async {
   //TODO(duan): implement this, check if there is any video device
+
   return true;
 }
 

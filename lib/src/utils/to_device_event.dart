@@ -19,7 +19,7 @@
 import 'package:matrix/matrix.dart';
 
 class ToDeviceEvent extends BasicEventWithSender {
-  Map<String, dynamic>? encryptedContent;
+  Map<String, Object?>? encryptedContent;
 
   String get sender => senderId;
   set sender(String sender) => senderId = sender;
@@ -27,14 +27,18 @@ class ToDeviceEvent extends BasicEventWithSender {
   ToDeviceEvent({
     required String sender,
     required String type,
-    required Map<String, dynamic> content,
+    required Map<String, Object?> content,
     this.encryptedContent,
   }) : super(senderId: sender, type: type, content: content);
 
-  factory ToDeviceEvent.fromJson(Map<String, dynamic> json) {
+  factory ToDeviceEvent.fromJson(Map<String, Object?> json) {
     final event = BasicEventWithSender.fromJson(json);
+
     return ToDeviceEvent(
-        sender: event.senderId, type: event.type, content: event.content);
+      sender: event.senderId,
+      type: event.type,
+      content: event.content,
+    );
   }
 }
 

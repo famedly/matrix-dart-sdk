@@ -34,7 +34,7 @@ void main() {
           if (auth != null &&
               auth.session != null &&
               auth.session != 'foxies') {
-            throw MatrixException.fromJson(<String, dynamic>{});
+            throw MatrixException.fromJson(<String, Object?>{});
           }
           if (auth != null && auth.type == 'stage1') {
             if (completed.isEmpty) {
@@ -43,18 +43,19 @@ void main() {
           } else if (auth != null && auth.type == 'stage2') {
             if (completed.length == 1 && completed[0] == 'stage1') {
               // okay, we are done!
+
               return 'FOXIES ARE FLOOOOOFY!!!!!';
             }
           }
-          final res = <String, dynamic>{
+          final res = <String, Object?>{
             'session': 'foxies',
             'completed': completed,
             'flows': [
-              <String, dynamic>{
+              <String, Object?>{
                 'stages': ['stage1', 'stage2'],
               }
             ],
-            'params': <String, dynamic>{},
+            'params': <String, Object?>{},
           };
           throw MatrixException.fromJson(res);
         },

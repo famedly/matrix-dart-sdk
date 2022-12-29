@@ -11,7 +11,7 @@ class NativeImplementationsWebWorker extends NativeImplementations {
   final Duration timeout;
   final WebWorkerStackTraceCallback onStackTrace;
 
-  final Map<double, Completer<dynamic>> _completers = {};
+  final Map<double, Completer<Object?>> _completers = {};
   final _random = Random();
 
   /// the default handler for stackTraces in web workers
@@ -65,18 +65,24 @@ class NativeImplementationsWebWorker extends NativeImplementations {
     bool retryInDummy = false,
   }) async {
     try {
-      final result = await operation<Map<dynamic, dynamic>, Uint8List>(
+      final result = await operation<Map<dynamic, Object?>, Uint8List>(
         WebWorkerOperations.calcImageMetadata,
         bytes,
       );
+
       return MatrixImageFileResizedResponse.fromJson(Map.from(result));
     } catch (e, s) {
       if (!retryInDummy) {
         Logs().e(
-            'Web worker computation error. Ignoring and returning null', e, s);
+          'Web worker computation error. Ignoring and returning null',
+          e,
+          s,
+        );
+
         return null;
       }
       Logs().e('Web worker computation error. Fallback to main thread', e, s);
+
       return NativeImplementations.dummy.calcImageMetadata(bytes);
     }
   }
@@ -88,18 +94,23 @@ class NativeImplementationsWebWorker extends NativeImplementations {
   }) async {
     try {
       final result =
-          await operation<Map<dynamic, dynamic>, Map<String, dynamic>>(
+          await operation<Map<dynamic, Object?>, Map<String, Object?>>(
         WebWorkerOperations.shrinkImage,
         args.toJson(),
       );
+
       return MatrixImageFileResizedResponse.fromJson(Map.from(result));
     } catch (e, s) {
       if (!retryInDummy) {
         Logs().e(
-            'Web worker computation error. Ignoring and returning null', e, s);
+          'Web worker computation error. Ignoring and returning null',
+          e,
+          s,
+        );
         return null;
       }
       Logs().e('Web worker computation error. Fallback to main thread', e, s);
+
       return NativeImplementations.dummy.shrinkImage(args);
     }
   }
@@ -112,11 +123,11 @@ class WebWorkerData {
 
   const WebWorkerData(this.label, this.name, this.data);
 
-  factory WebWorkerData.fromJson(LinkedHashMap<dynamic, dynamic> data) =>
+  factory WebWorkerData.fromJson(LinkedHashMap<dynamic, Object?> data) =>
       WebWorkerData(
         data['label'],
         data.containsKey('name')
-            ? WebWorkerOperations.values[data['name']]
+            ? WebWorkerOperations.values[data['name'] as int]
             : null,
         data['data'],
       );
@@ -151,4 +162,5 @@ class WebWorkerError extends Error {
 
 /// converts a stringifyed, obfuscated [StackTrace] into a [StackTrace]
 typedef WebWorkerStackTraceCallback = FutureOr<StackTrace> Function(
-    String obfuscatedStackTrace);
+  String obfuscatedStackTrace,
+);

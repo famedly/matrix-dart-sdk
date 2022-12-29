@@ -66,8 +66,10 @@ void main() {
       expect(archive[0].room.id, '!5345234234:example.com');
       expect(archive[0].room.membership, Membership.leave);
       expect(archive[0].room.name, 'The room name');
-      expect(archive[0].room.lastEvent?.body,
-          'This is a second text example message');
+      expect(
+        archive[0].room.lastEvent?.body,
+        'This is a second text example message',
+      );
       expect(archive[0].room.roomAccountData.length, 1);
       expect(archive[1].room.id, '!5345234235:example.com');
       expect(archive[1].room.membership, Membership.leave);
@@ -116,12 +118,18 @@ void main() {
 
     test('discard room from archives when membership change', () async {
       await client.loadArchiveWithTimeline();
-      expect(client.getArchiveRoomFromCache('!5345234235:example.com') != null,
-          true);
-      await client.handleSync(SyncUpdate(
+      expect(
+        client.getArchiveRoomFromCache('!5345234235:example.com') != null,
+        true,
+      );
+      await client.handleSync(
+        SyncUpdate(
           nextBatch: 't_456',
           rooms: RoomsUpdate(
-              invite: {'!5345234235:example.com': InvitedRoomUpdate()})));
+            invite: {'!5345234235:example.com': InvitedRoomUpdate()},
+          ),
+        ),
+      );
       expect(client.getArchiveRoomFromCache('!5345234235:example.com'), null);
     });
 

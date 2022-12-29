@@ -24,14 +24,21 @@ extension CommandsClientExtension on Client {
   /// Add a command to the command handler. `command` is its name, and `callback` is the
   /// callback to invoke
   void addCommand(
-      String command, FutureOr<String?> Function(CommandArgs) callback) {
+    String command,
+    FutureOr<String?> Function(CommandArgs) callback,
+  ) {
     commands[command.toLowerCase()] = callback;
   }
 
   /// Parse and execute a string, `msg` is the input. Optionally `inReplyTo` is the event being
   /// replied to and `editEventId` is the eventId of the event being replied to
-  Future<String?> parseAndRunCommand(Room room, String msg,
-      {Event? inReplyTo, String? editEventId, String? txid}) async {
+  Future<String?> parseAndRunCommand(
+    Room room,
+    String msg, {
+    Event? inReplyTo,
+    String? editEventId,
+    String? txid,
+  }) async {
     final args = CommandArgs(
       inReplyTo: inReplyTo,
       editEventId: editEventId,
@@ -43,8 +50,10 @@ extension CommandsClientExtension on Client {
       final sendCommand = commands['send'];
       if (sendCommand != null) {
         args.msg = msg;
+
         return await sendCommand(args);
       }
+
       return null;
     }
     // remove the /
@@ -66,9 +75,11 @@ extension CommandsClientExtension on Client {
       final sendCommand = commands['send'];
       if (sendCommand != null) {
         args.msg = msg;
+
         return await sendCommand(args);
       }
     }
+
     return null;
   }
 
@@ -100,6 +111,7 @@ extension CommandsClientExtension on Client {
     });
     addCommand('dm', (CommandArgs args) async {
       final parts = args.msg.split(' ');
+
       return await args.room.client.startDirectChat(
         parts.first,
         enableEncryption: !parts.any((part) => part == '--no-encryption'),
@@ -107,6 +119,7 @@ extension CommandsClientExtension on Client {
     });
     addCommand('create', (CommandArgs args) async {
       final parts = args.msg.split(' ');
+
       return await args.room.client.createGroupChat(
         enableEncryption: !parts.any((part) => part == '--no-encryption'),
       );
@@ -122,12 +135,13 @@ extension CommandsClientExtension on Client {
       );
     });
     addCommand('html', (CommandArgs args) async {
-      final event = <String, dynamic>{
+      final event = <String, Object?>{
         'msgtype': 'm.text',
         'body': args.msg,
         'format': 'org.matrix.custom.html',
         'formatted_body': args.msg,
       };
+
       return await args.room.sendEvent(
         event,
         inReplyTo: args.inReplyTo,
@@ -140,14 +154,17 @@ extension CommandsClientExtension on Client {
       if (inReplyTo == null) {
         return null;
       }
+
       return await args.room.sendReaction(inReplyTo.eventId, args.msg);
     });
     addCommand('join', (CommandArgs args) async {
       await args.room.client.joinRoom(args.msg);
+
       return null;
     });
     addCommand('leave', (CommandArgs args) async {
       await args.room.leave();
+
       return '';
     });
     addCommand('op', (CommandArgs args) async {
@@ -160,26 +177,31 @@ extension CommandsClientExtension on Client {
         pl = int.tryParse(parts[1]);
       }
       final mxid = parts.first;
+
       return await args.room.setPower(mxid, pl ?? 50);
     });
     addCommand('kick', (CommandArgs args) async {
       final parts = args.msg.split(' ');
       await args.room.kick(parts.first);
+
       return '';
     });
     addCommand('ban', (CommandArgs args) async {
       final parts = args.msg.split(' ');
       await args.room.ban(parts.first);
+
       return '';
     });
     addCommand('unban', (CommandArgs args) async {
       final parts = args.msg.split(' ');
       await args.room.unban(parts.first);
+
       return '';
     });
     addCommand('invite', (CommandArgs args) async {
       final parts = args.msg.split(' ');
       await args.room.invite(parts.first);
+
       return '';
     });
     addCommand('myroomnick', (CommandArgs args) async {
@@ -189,6 +211,7 @@ extension CommandsClientExtension on Client {
               .copy() ??
           {};
       currentEventJson['displayname'] = args.msg;
+
       return await args.room.client.setRoomStateWithKey(
         args.room.id,
         EventTypes.RoomMember,
@@ -203,6 +226,7 @@ extension CommandsClientExtension on Client {
               .copy() ??
           {};
       currentEventJson['avatar_url'] = args.msg;
+
       return await args.room.client.setRoomStateWithKey(
         args.room.id,
         EventTypes.RoomMember,
@@ -213,22 +237,27 @@ extension CommandsClientExtension on Client {
     addCommand('discardsession', (CommandArgs args) async {
       await encryption?.keyManager
           .clearOrUseOutboundGroupSession(args.room.id, wipe: true);
+
       return '';
     });
     addCommand('clearcache', (CommandArgs args) async {
       await clearCache();
+
       return '';
     });
     addCommand('markasdm', (CommandArgs args) async {
       await args.room.addToDirectChat(args.msg);
+
       return;
     });
     addCommand('markasgroup', (CommandArgs args) async {
       await args.room.removeFromDirectChat();
+
       return;
     });
     addCommand('hug', (CommandArgs args) async {
       final content = CuteEventContent.hug;
+
       return await args.room.sendEvent(
         content,
         inReplyTo: args.inReplyTo,
@@ -238,6 +267,7 @@ extension CommandsClientExtension on Client {
     });
     addCommand('googly', (CommandArgs args) async {
       final content = CuteEventContent.googlyEyes;
+
       return await args.room.sendEvent(
         content,
         inReplyTo: args.inReplyTo,
@@ -247,6 +277,7 @@ extension CommandsClientExtension on Client {
     });
     addCommand('cuddle', (CommandArgs args) async {
       final content = CuteEventContent.cuddle;
+
       return await args.room.sendEvent(
         content,
         inReplyTo: args.inReplyTo,
@@ -264,10 +295,11 @@ class CommandArgs {
   Room room;
   String? txid;
 
-  CommandArgs(
-      {required this.msg,
-      this.editEventId,
-      this.inReplyTo,
-      required this.room,
-      this.txid});
+  CommandArgs({
+    required this.msg,
+    this.editEventId,
+    this.inReplyTo,
+    required this.room,
+    this.txid,
+  });
 }

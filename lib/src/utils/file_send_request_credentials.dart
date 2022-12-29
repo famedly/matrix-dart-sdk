@@ -20,7 +20,7 @@ class FileSendRequestCredentials {
   final String? inReplyTo;
   final String? editEventId;
   final int? shrinkImageMaxDimension;
-  final Map<String, dynamic>? extraContent;
+  final Map<String, Object?>? extraContent;
 
   const FileSendRequestCredentials({
     this.inReplyTo,
@@ -29,15 +29,15 @@ class FileSendRequestCredentials {
     this.extraContent,
   });
 
-  factory FileSendRequestCredentials.fromJson(Map<String, dynamic> json) =>
+  factory FileSendRequestCredentials.fromJson(Map<String, Object?> json) =>
       FileSendRequestCredentials(
-        inReplyTo: json['in_reply_to'],
-        editEventId: json['edit_event_id'],
-        shrinkImageMaxDimension: json['shrink_image_max_dimension'],
-        extraContent: json['extra_content'],
+        inReplyTo: json['in_reply_to'] as String?,
+        editEventId: json['edit_event_id'] as String?,
+        shrinkImageMaxDimension: json['shrink_image_max_dimension'] as int?,
+        extraContent: json['extra_content'] as Map<String, Object?>?,
       );
 
-  Map<String, dynamic> toJson() => {
+  Map<String, Object?> toJson() => {
         if (inReplyTo != null) 'in_reply_to': inReplyTo,
         if (editEventId != null) 'edit_event_id': editEventId,
         if (shrinkImageMaxDimension != null)

@@ -47,6 +47,7 @@ extension RecentEmojiExtension on Client {
     } else {
       data[emoji] = 1;
     }
+
     return setRecentEmojiData(data);
   }
 
@@ -54,7 +55,11 @@ extension RecentEmojiExtension on Client {
   Future<void> setRecentEmojiData(Map<String, int> data) async {
     if (userID == null) return;
     final content = List.from(data.entries.map((e) => [e.key, e.value]));
+
     return setAccountData(
-        userID!, 'io.element.recent_emoji', {'recent_emoji': content});
+      userID!,
+      'io.element.recent_emoji',
+      {'recent_emoji': content},
+    );
   }
 }

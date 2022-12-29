@@ -9,5 +9,6 @@ import 'dart:typed_data';
 /// See: https://github.com/dart-lang/sdk/issues/39510
 Uint8List base64decodeUnpadded(String s) {
   final needEquals = (4 - (s.length % 4)) % 4;
+
   return base64.decode(s + ('=' * needEquals));
 }

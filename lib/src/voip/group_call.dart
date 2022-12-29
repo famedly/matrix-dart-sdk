@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names
+
 /*
  *   Famedly Matrix SDK
  *   Copyright (C) 2021 Famedly GmbH
@@ -28,47 +30,47 @@ import 'package:matrix/src/utils/cached_stream_controller.dart';
 /// const int SPEAKING_THRESHOLD = -60; // dB
 
 class GroupCallIntent {
-  static String Ring = 'm.ring';
-  static String Prompt = 'm.prompt';
-  static String Room = 'm.room';
+  static const String Ring = 'm.ring';
+  static const String Prompt = 'm.prompt';
+  static const String Room = 'm.room';
 }
 
 class GroupCallType {
-  static String Video = 'm.video';
-  static String Voice = 'm.voice';
+  static const String Video = 'm.video';
+  static const String Voice = 'm.voice';
 }
 
 class GroupCallTerminationReason {
-  static String CallEnded = 'call_ended';
+  static const String CallEnded = 'call_ended';
 }
 
 class GroupCallEvent {
-  static String GroupCallStateChanged = 'group_call_state_changed';
-  static String ActiveSpeakerChanged = 'active_speaker_changed';
-  static String CallsChanged = 'calls_changed';
-  static String UserMediaStreamsChanged = 'user_media_feeds_changed';
-  static String ScreenshareStreamsChanged = 'screenshare_feeds_changed';
-  static String LocalScreenshareStateChanged =
+  static const String GroupCallStateChanged = 'group_call_state_changed';
+  static const String ActiveSpeakerChanged = 'active_speaker_changed';
+  static const String CallsChanged = 'calls_changed';
+  static const String UserMediaStreamsChanged = 'user_media_feeds_changed';
+  static const String ScreenshareStreamsChanged = 'screenshare_feeds_changed';
+  static const String LocalScreenshareStateChanged =
       'local_screenshare_state_changed';
-  static String LocalMuteStateChanged = 'local_mute_state_changed';
-  static String ParticipantsChanged = 'participants_changed';
-  static String Error = 'error';
+  static const String LocalMuteStateChanged = 'local_mute_state_changed';
+  static const String ParticipantsChanged = 'participants_changed';
+  static const String Error = 'error';
 }
 
 class GroupCallErrorCode {
-  static String NoUserMedia = 'no_user_media';
-  static String UnknownDevice = 'unknown_device';
+  static const String NoUserMedia = 'no_user_media';
+  static const String UnknownDevice = 'unknown_device';
 }
 
 class GroupCallError extends Error {
   final String code;
   final String msg;
-  final dynamic err;
+  final Object? err;
   GroupCallError(this.code, this.msg, this.err);
 
   @override
   String toString() {
-    return 'Group Call Error: [$code] $msg, err: ${err.toString()}';
+    return 'Group Call Error: [$code] $msg, err: ${err?.toString()}';
   }
 }
 
@@ -79,12 +81,13 @@ abstract class ISendEventResponse {
 class IGroupCallRoomMemberFeed {
   String? purpose;
   // TODO: Sources for adaptive bitrate
-  IGroupCallRoomMemberFeed.fromJson(Map<String, dynamic> json) {
-    purpose = json['purpose'];
+  IGroupCallRoomMemberFeed.fromJson(Map<String, Object?> json) {
+    purpose = json['purpose'] as String?;
   }
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
     data['purpose'] = purpose;
+
     return data;
   }
 }
@@ -93,21 +96,25 @@ class IGroupCallRoomMemberDevice {
   String? device_id;
   String? session_id;
   List<IGroupCallRoomMemberFeed> feeds = [];
-  IGroupCallRoomMemberDevice.fromJson(Map<String, dynamic> json) {
-    device_id = json['device_id'];
-    session_id = json['session_id'];
+  IGroupCallRoomMemberDevice.fromJson(Map<String, Object?> json) {
+    device_id = json['device_id'] as String?;
+    session_id = json['session_id'] as String?;
     if (json['feeds'] != null) {
-      feeds = (json['feeds'] as List<dynamic>)
-          .map((feed) => IGroupCallRoomMemberFeed.fromJson(feed))
+      feeds = (json['feeds'] as List<Object?>)
+          .map(
+            (feed) =>
+                IGroupCallRoomMemberFeed.fromJson(feed as Map<String, Object?>),
+          )
           .toList();
     }
   }
 
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
     data['device_id'] = device_id;
     data['session_id'] = session_id;
     data['feeds'] = feeds.map((feed) => feed.toJson()).toList();
+
     return data;
   }
 }
@@ -116,19 +123,23 @@ class IGroupCallRoomMemberCallState {
   String? call_id;
   List<String>? foci;
   List<IGroupCallRoomMemberDevice> devices = [];
-  IGroupCallRoomMemberCallState.formJson(Map<String, dynamic> json) {
-    call_id = json['m.call_id'];
+  IGroupCallRoomMemberCallState.formJson(Map<String, Object?> json) {
+    call_id = json['m.call_id'] as String?;
     if (json['m.foci'] != null) {
-      foci = (json['m.foci'] as List<dynamic>).cast<String>();
+      foci = (json['m.foci'] as List<Object?>).cast<String>();
     }
     if (json['m.devices'] != null) {
-      devices = (json['m.devices'] as List<dynamic>)
-          .map((device) => IGroupCallRoomMemberDevice.fromJson(device))
+      devices = (json['m.devices'] as List<Object?>)
+          .map(
+            (device) => IGroupCallRoomMemberDevice.fromJson(
+              device as Map<String, Object?>,
+            ),
+          )
           .toList();
     }
   }
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
     data['m.call_id'] = call_id;
     if (foci != null) {
       data['m.foci'] = foci;
@@ -136,6 +147,7 @@ class IGroupCallRoomMemberCallState {
     if (devices.isNotEmpty) {
       data['m.devices'] = devices.map((e) => e.toJson()).toList();
     }
+
     return data;
   }
 }
@@ -146,8 +158,13 @@ class IGroupCallRoomMemberState {
   List<IGroupCallRoomMemberCallState> calls = [];
   IGroupCallRoomMemberState.fromJson(MatrixEvent event) {
     if (event.content['m.calls'] != null) {
-      (event.content['m.calls'] as List<dynamic>).forEach(
-          (call) => calls.add(IGroupCallRoomMemberCallState.formJson(call)));
+      (event.content['m.calls'] as List<Object?>).forEach(
+        (call) => calls.add(
+          IGroupCallRoomMemberCallState.formJson(
+            call as Map<String, Object?>,
+          ),
+        ),
+      );
     }
 
     expireTs = event.content['m.expires_ts'] ??
@@ -156,12 +173,14 @@ class IGroupCallRoomMemberState {
 }
 
 class GroupCallState {
-  static String LocalCallFeedUninitialized = 'local_call_feed_uninitialized';
-  static String InitializingLocalCallFeed = 'initializing_local_call_feed';
-  static String LocalCallFeedInitialized = 'local_call_feed_initialized';
-  static String Entering = 'entering';
-  static String Entered = 'entered';
-  static String Ended = 'ended';
+  static const String LocalCallFeedUninitialized =
+      'local_call_feed_uninitialized';
+  static const String InitializingLocalCallFeed =
+      'initializing_local_call_feed';
+  static const String LocalCallFeedInitialized = 'local_call_feed_initialized';
+  static const String Entering = 'entering';
+  static const String Entered = 'entered';
+  static const String Ended = 'ended';
 }
 
 abstract class ICallHandlers {
@@ -268,6 +287,7 @@ class GroupCall {
 
   bool callMemberStateIsExpired(MatrixEvent event) {
     final callMemberState = IGroupCallRoomMemberState.fromJson(event);
+
     return callMemberState.expireTs < DateTime.now().millisecondsSinceEpoch;
   }
 
@@ -276,6 +296,7 @@ class GroupCall {
     if (event != null) {
       return callMemberStateIsExpired(event) ? null : event;
     }
+
     return null;
   }
 
@@ -289,6 +310,7 @@ class GroupCall {
         events.add(value);
       }
     });
+
     return events;
   }
 
@@ -313,6 +335,7 @@ class GroupCall {
 
   bool hasLocalParticipant() {
     final userId = client.userID;
+
     return participants.indexWhere((member) => member.id == userId) != -1;
   }
 
@@ -336,6 +359,7 @@ class GroupCall {
     } catch (e) {
       setState(GroupCallState.LocalCallFeedUninitialized);
     }
+
     return Null as MediaStream;
   }
 
@@ -349,6 +373,7 @@ class GroupCall {
     } catch (e) {
       setState(GroupCallState.LocalCallFeedUninitialized);
     }
+
     return Null as MediaStream;
   }
 
@@ -365,7 +390,8 @@ class GroupCall {
 
     try {
       stream = await _getUserMedia(
-          type == GroupCallType.Video ? CallType.kVideo : CallType.kVoice);
+        type == GroupCallType.Video ? CallType.kVideo : CallType.kVoice,
+      );
     } catch (error) {
       setState(GroupCallState.LocalCallFeedUninitialized);
       rethrow;
@@ -374,16 +400,17 @@ class GroupCall {
     final userId = client.userID;
 
     final newStream = WrappedMediaStream(
-        renderer: voip.delegate.createRenderer(),
-        stream: stream,
-        userId: userId!,
-        room: room,
-        client: client,
-        purpose: SDPStreamMetadataPurpose.Usermedia,
-        audioMuted: stream.getAudioTracks().isEmpty,
-        videoMuted: stream.getVideoTracks().isEmpty,
-        isWeb: voip.delegate.isWeb,
-        isGroupCall: true);
+      renderer: voip.delegate.createRenderer(),
+      stream: stream,
+      userId: userId!,
+      room: room,
+      client: client,
+      purpose: SDPStreamMetadataPurpose.Usermedia,
+      audioMuted: stream.getAudioTracks().isEmpty,
+      videoMuted: stream.getVideoTracks().isEmpty,
+      isWeb: voip.delegate.isWeb,
+      isGroupCall: true,
+    );
 
     localUserMediaStream = newStream;
     await localUserMediaStream!.initialize();
@@ -423,7 +450,8 @@ class GroupCall {
     }
 
     _addParticipant(
-        (await room.requestUser(client.userID!, ignoreErrors: true))!);
+      (await room.requestUser(client.userID!, ignoreErrors: true))!,
+    );
 
     await sendMemberStateEvent();
 
@@ -500,7 +528,8 @@ class GroupCall {
       terminate();
     } else {
       Logs().d(
-          '[VOIP] left group call but cannot terminate. participants: ${participants.length}, pl: ${room.canCreateGroupCall}');
+        '[VOIP] left group call but cannot terminate. participants: ${participants.length}, pl: ${room.canCreateGroupCall}',
+      );
     }
   }
 
@@ -555,6 +584,7 @@ class GroupCall {
     });
 
     onGroupCallEvent.add(GroupCallEvent.LocalMuteStateChanged);
+
     return true;
   }
 
@@ -573,6 +603,7 @@ class GroupCall {
     });
 
     onGroupCallEvent.add(GroupCallEvent.LocalMuteStateChanged);
+
     return true;
   }
 
@@ -597,19 +628,21 @@ class GroupCall {
           };
         });
         Logs().v(
-            'Screensharing permissions granted. Setting screensharing enabled on all calls');
+          'Screensharing permissions granted. Setting screensharing enabled on all calls',
+        );
         localDesktopCapturerSourceId = desktopCapturerSourceId;
         localScreenshareStream = WrappedMediaStream(
-            renderer: voip.delegate.createRenderer(),
-            stream: stream,
-            userId: client.userID!,
-            room: room,
-            client: client,
-            purpose: SDPStreamMetadataPurpose.Screenshare,
-            audioMuted: stream.getAudioTracks().isEmpty,
-            videoMuted: stream.getVideoTracks().isEmpty,
-            isWeb: voip.delegate.isWeb,
-            isGroupCall: true);
+          renderer: voip.delegate.createRenderer(),
+          stream: stream,
+          userId: client.userID!,
+          room: room,
+          client: client,
+          purpose: SDPStreamMetadataPurpose.Screenshare,
+          audioMuted: stream.getAudioTracks().isEmpty,
+          videoMuted: stream.getVideoTracks().isEmpty,
+          isWeb: voip.delegate.isWeb,
+          isGroupCall: true,
+        );
 
         addScreenshareStream(localScreenshareStream!);
         await localScreenshareStream!.initialize();
@@ -618,8 +651,9 @@ class GroupCall {
 
         calls.forEach((call) async {
           await call.addLocalStream(
-              await localScreenshareStream!.stream!.clone(),
-              localScreenshareStream!.purpose);
+            await localScreenshareStream!.stream!.clone(),
+            localScreenshareStream!.purpose,
+          );
         });
 
         await sendMemberStateEvent();
@@ -627,9 +661,13 @@ class GroupCall {
         return true;
       } catch (error) {
         Logs().e('Enabling screensharing error', error);
-        lastError = GroupCallError(GroupCallErrorCode.NoUserMedia,
-            'Failed to get screen-sharing stream: ', error);
+        lastError = GroupCallError(
+          GroupCallErrorCode.NoUserMedia,
+          'Failed to get screen-sharing stream: ',
+          error,
+        );
         onGroupCallEvent.add(GroupCallEvent.Error);
+
         return false;
       }
     } else {
@@ -642,6 +680,7 @@ class GroupCall {
       localDesktopCapturerSourceId = null;
       await sendMemberStateEvent();
       onGroupCallEvent.add(GroupCallEvent.LocalMuteStateChanged);
+
       return false;
     }
   }
@@ -658,13 +697,16 @@ class GroupCall {
 
     if (newCall.state != CallState.kRinging) {
       Logs().w('Incoming call no longer in ringing state. Ignoring.');
+
       return;
     }
 
     if (newCall.groupCallId == null || newCall.groupCallId != groupCallId) {
       Logs().v(
-          'Incoming call with groupCallId ${newCall.groupCallId} ignored because it doesn\'t match the current group call');
+        'Incoming call with groupCallId ${newCall.groupCallId} ignored because it doesn\'t match the current group call',
+      );
       newCall.reject();
+
       return;
     }
 
@@ -689,31 +731,38 @@ class GroupCall {
 
   Future<void> sendMemberStateEvent() async {
     final deviceId = client.deviceID;
-    await updateMemberCallState(IGroupCallRoomMemberCallState.formJson({
-      'm.call_id': groupCallId,
-      'm.devices': [
-        {
-          'device_id': deviceId,
-          'session_id': client.groupCallSessionId,
-          'feeds': getLocalStreams()
-              .map((feed) => ({
+    await updateMemberCallState(
+      IGroupCallRoomMemberCallState.formJson({
+        'm.call_id': groupCallId,
+        'm.devices': [
+          {
+            'device_id': deviceId,
+            'session_id': client.groupCallSessionId,
+            'feeds': getLocalStreams()
+                .map(
+                  (feed) => ({
                     'purpose': feed.purpose,
-                  }))
-              .toList(),
-          // TODO: Add data channels
-        },
-      ],
-      // TODO 'm.foci'
-    }));
+                  }),
+                )
+                .toList(),
+            // TODO: Add data channels
+          },
+        ],
+        // TODO 'm.foci'
+      }),
+    );
 
     if (resendMemberStateEventTimer != null) {
       resendMemberStateEventTimer!.cancel();
     }
-    resendMemberStateEventTimer =
-        Timer.periodic(updateExpireTsTimerDuration, ((timer) async {
-      Logs().d('updating member event with timer');
-      return await sendMemberStateEvent();
-    }));
+    resendMemberStateEventTimer = Timer.periodic(
+      updateExpireTsTimerDuration,
+      ((timer) async {
+        Logs().d('updating member event with timer');
+
+        return await sendMemberStateEvent();
+      }),
+    );
   }
 
   Future<void> removeMemberStateEvent() {
@@ -722,11 +771,13 @@ class GroupCall {
       resendMemberStateEventTimer!.cancel();
       resendMemberStateEventTimer = null;
     }
+
     return updateMemberCallState();
   }
 
-  Future<void> updateMemberCallState(
-      [IGroupCallRoomMemberCallState? memberCallState]) async {
+  Future<void> updateMemberCallState([
+    IGroupCallRoomMemberCallState? memberCallState,
+  ]) async {
     final localUserId = client.userID;
 
     final currentStateEvent = getMemberStateEvent(localUserId!);
@@ -760,7 +811,11 @@ class GroupCall {
     };
 
     await client.setRoomStateWithKey(
-        room.id, EventTypes.GroupCallMemberPrefix, localUserId, content);
+      room.id,
+      EventTypes.GroupCallMemberPrefix,
+      localUserId,
+      content,
+    );
   }
 
   void onMemberStateChanged(MatrixEvent event) async {
@@ -781,6 +836,7 @@ class GroupCall {
       Logs()
           .w('Ignoring member state from ${user.id} member not in any calls.');
       _removeParticipant(user.id);
+
       return;
     }
 
@@ -797,16 +853,20 @@ class GroupCall {
 
     if (callState == null) {
       Logs().w(
-          'Room member ${user.id} does not have a valid m.call_id set. Ignoring.');
+        'Room member ${user.id} does not have a valid m.call_id set. Ignoring.',
+      );
       _removeParticipant(user.id);
+
       return;
     }
 
     final callId = callState.call_id;
     if (callId != null && callId != groupCallId) {
       Logs().w(
-          'Call id $callId does not match group call id $groupCallId, ignoring.');
+        'Call id $callId does not match group call id $groupCallId, ignoring.',
+      );
       _removeParticipant(user.id);
+
       return;
     }
 
@@ -827,6 +887,7 @@ class GroupCall {
     // less than your own. Otherwise, that user will call you.
     if (localUserId!.compareTo(user.id) > 0) {
       Logs().i('Waiting for ${user.id} to send call invite.');
+
       return;
     }
 
@@ -846,6 +907,7 @@ class GroupCall {
         'Outgoing Call: No opponent device found for ${user.id}, ignoring.',
       );
       onGroupCallEvent.add(GroupCallEvent.Error);
+
       return;
     }
 
@@ -866,12 +928,15 @@ class GroupCall {
     newCall.invitee = user.id;
 
     final requestScreenshareFeed = opponentDevice.feeds.indexWhere(
-            (IGroupCallRoomMemberFeed feed) =>
-                feed.purpose == SDPStreamMetadataPurpose.Screenshare) !=
+          (IGroupCallRoomMemberFeed feed) =>
+              feed.purpose == SDPStreamMetadataPurpose.Screenshare,
+        ) !=
         -1;
 
     await newCall.placeCallWithStreams(
-        getLocalStreams(), requestScreenshareFeed);
+      getLocalStreams(),
+      requestScreenshareFeed,
+    );
 
     if (dataChannelsEnabled) {
       newCall.createDataChannel('datachannel', dataChannelOptions!);
@@ -903,6 +968,7 @@ class GroupCall {
 
     /// NOTE: For now we only support one device so we use the device id in
     /// the first source.
+
     return memberDevices[0];
   }
 
@@ -911,6 +977,7 @@ class GroupCall {
     if (value.isNotEmpty) {
       return value.first;
     }
+
     return null;
   }
 
@@ -1053,7 +1120,9 @@ class GroupCall {
       } else if (currentScreenshareStream != null &&
           remoteScreensharingStream != null) {
         replaceScreenshareStream(
-            currentScreenshareStream, remoteScreensharingStream);
+          currentScreenshareStream,
+          remoteScreensharingStream,
+        );
       } else if (currentScreenshareStream != null &&
           remoteScreensharingStream == null) {
         removeScreenshareStream(currentScreenshareStream);
@@ -1091,6 +1160,7 @@ class GroupCall {
     if (stream.isNotEmpty) {
       return stream.first;
     }
+
     return null;
   }
 
@@ -1102,7 +1172,9 @@ class GroupCall {
   }
 
   void replaceUserMediaStream(
-      WrappedMediaStream existingStream, WrappedMediaStream replacementStream) {
+    WrappedMediaStream existingStream,
+    WrappedMediaStream replacementStream,
+  ) {
     final streamIndex = userMediaStreams
         .indexWhere((stream) => stream.userId == existingStream.userId);
 
@@ -1149,7 +1221,8 @@ class GroupCall {
 
     userMediaFeeds.forEach((callFeed) {
       if (callFeed.userId == client.userID && userMediaFeeds.length > 1) {
-        return;
+        
+return;
       }
       
             var total = 0;
@@ -1185,6 +1258,7 @@ class GroupCall {
     if (stream.isNotEmpty) {
       return stream.first;
     }
+
     return null;
   }
 
@@ -1195,7 +1269,9 @@ class GroupCall {
   }
 
   void replaceScreenshareStream(
-      WrappedMediaStream existingStream, WrappedMediaStream replacementStream) {
+    WrappedMediaStream existingStream,
+    WrappedMediaStream replacementStream,
+  ) {
     final streamIndex = screenshareStreams
         .indexWhere((stream) => stream.userId == existingStream.userId);
 

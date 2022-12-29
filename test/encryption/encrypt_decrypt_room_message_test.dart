@@ -30,7 +30,7 @@ void main() {
     late Client client;
     final roomId = '!726s6s6q:example.com';
     late Room room;
-    late Map<String, dynamic> payload;
+    late Map<String, Object?> payload;
     final now = DateTime.now();
 
     test('setupClient', () async {

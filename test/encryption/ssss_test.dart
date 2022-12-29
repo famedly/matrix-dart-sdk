@@ -32,6 +32,7 @@ Uint8List secureRandomBytes(int len) {
   final rng = Random.secure();
   final list = Uint8List(len);
   list.setAll(0, Iterable.generate(list.length, (i) => rng.nextInt(256)));
+
   return list;
 }
 
@@ -71,8 +72,10 @@ void main() {
 
     test('basic things', () async {
       if (!olmEnabled) return;
-      expect(client.encryption!.ssss.defaultKeyId,
-          '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3');
+      expect(
+        client.encryption!.ssss.defaultKeyId,
+        '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3',
+      );
     });
 
     test('encrypt / decrypt', () async {
@@ -116,7 +119,7 @@ void main() {
           .first;
       client.accountData['best animal'] = BasicEvent.fromJson({
         'type': 'best animal',
-        'content': json.decode(content),
+        'content': json.decode(content as String),
       });
       expect(await handle.getStored('best animal'), 'foxies');
     });
@@ -143,31 +146,36 @@ void main() {
           client.encryption!.ssss.open(EventTypes.CrossSigningSelfSigning);
       await handle.unlock(recoveryKey: ssssKey, postUnlock: false);
       expect(
-          (await client.encryption!.ssss
-                  .getCached(EventTypes.CrossSigningSelfSigning)) !=
-              null,
-          false);
+        (await client.encryption!.ssss
+                .getCached(EventTypes.CrossSigningSelfSigning)) !=
+            null,
+        false,
+      );
       expect(
-          (await client.encryption!.ssss
-                  .getCached(EventTypes.CrossSigningUserSigning)) !=
-              null,
-          false);
+        (await client.encryption!.ssss
+                .getCached(EventTypes.CrossSigningUserSigning)) !=
+            null,
+        false,
+      );
       await handle.getStored(EventTypes.CrossSigningSelfSigning);
       expect(
-          (await client.encryption!.ssss
-                  .getCached(EventTypes.CrossSigningSelfSigning)) !=
-              null,
-          true);
+        (await client.encryption!.ssss
+                .getCached(EventTypes.CrossSigningSelfSigning)) !=
+            null,
+        true,
+      );
       await handle.maybeCacheAll();
       expect(
-          (await client.encryption!.ssss
-                  .getCached(EventTypes.CrossSigningUserSigning)) !=
-              null,
-          true);
+        (await client.encryption!.ssss
+                .getCached(EventTypes.CrossSigningUserSigning)) !=
+            null,
+        true,
+      );
       expect(
-          (await client.encryption!.ssss.getCached(EventTypes.MegolmBackup)) !=
-              null,
-          true);
+        (await client.encryption!.ssss.getCached(EventTypes.MegolmBackup)) !=
+            null,
+        true,
+      );
     });
 
     test('postUnlock', () async {
@@ -179,21 +187,26 @@ void main() {
           client.encryption!.ssss.open(EventTypes.CrossSigningSelfSigning);
       await handle.unlock(recoveryKey: ssssKey);
       expect(
-          (await client.encryption!.ssss
-                  .getCached(EventTypes.CrossSigningSelfSigning)) !=
-              null,
-          true);
+        (await client.encryption!.ssss
+                .getCached(EventTypes.CrossSigningSelfSigning)) !=
+            null,
+        true,
+      );
       expect(
-          (await client.encryption!.ssss
-                  .getCached(EventTypes.CrossSigningUserSigning)) !=
-              null,
-          true);
+        (await client.encryption!.ssss
+                .getCached(EventTypes.CrossSigningUserSigning)) !=
+            null,
+        true,
+      );
       expect(
-          (await client.encryption!.ssss.getCached(EventTypes.MegolmBackup)) !=
-              null,
-          true);
-      expect(client.userDeviceKeys[client.userID!]!.masterKey!.directVerified,
-          true);
+        (await client.encryption!.ssss.getCached(EventTypes.MegolmBackup)) !=
+            null,
+        true,
+      );
+      expect(
+        client.userDeviceKeys[client.userID!]!.masterKey!.directVerified,
+        true,
+      );
     });
 
     test('make share requests', () async {
@@ -204,9 +217,11 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption!.ssss.request('some.type', [key]);
       expect(
-          FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
-          true);
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
+        ),
+        true,
+      );
     });
 
     test('answer to share requests', () async {
@@ -224,9 +239,11 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
-          FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
-          true);
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
+        ),
+        true,
+      );
 
       // now test some fail scenarios
 
@@ -244,9 +261,11 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
-          FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
-          false);
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
+        ),
+        false,
+      );
 
       // secret not cached
       event = ToDeviceEvent(
@@ -262,9 +281,11 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
-          FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
-          false);
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
+        ),
+        false,
+      );
 
       // is a cancelation
       event = ToDeviceEvent(
@@ -280,9 +301,11 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
-          FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
-          false);
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
+        ),
+        false,
+      );
 
       // device not verified
       final key =
@@ -303,9 +326,11 @@ void main() {
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption!.ssss.handleToDeviceEvent(event);
       expect(
-          FakeMatrixApi.calledEndpoints.keys.any(
-              (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted')),
-          false);
+        FakeMatrixApi.calledEndpoints.keys.any(
+          (k) => k.startsWith('/client/v3/sendToDevice/m.room.encrypted'),
+        ),
+        false,
+      );
       key.setDirectVerified(true);
     });
 
@@ -448,8 +473,10 @@ void main() {
         },
       );
       await client.encryption!.ssss.handleToDeviceEvent(event);
-      expect(await client.encryption!.ssss.getCached(EventTypes.MegolmBackup),
-          null);
+      expect(
+        await client.encryption!.ssss.getCached(EventTypes.MegolmBackup),
+        null,
+      );
     });
 
     test('request all', () async {

@@ -53,6 +53,7 @@ class DeviceKeysList {
           return UserVerifiedStatus.unknownDevice;
         }
       }
+
       return UserVerifiedStatus.verified;
     } else {
       for (final key in deviceKeys.values) {
@@ -60,6 +61,7 @@ class DeviceKeysList {
           return UserVerifiedStatus.unknown;
         }
       }
+
       return UserVerifiedStatus.verified;
     }
   }
@@ -91,30 +93,35 @@ class DeviceKeysList {
       await request.start();
       // no need to add to the request client object. As we are doing a room
       // verification request that'll happen automatically once we know the transaction id
+
       return request;
     } else {
       // start verification with verified devices
       final request = KeyVerification(
-          encryption: encryption, userId: userId, deviceId: '*');
+        encryption: encryption,
+        userId: userId,
+        deviceId: '*',
+      );
       await request.start();
       encryption.keyVerificationManager.addRequest(request);
+
       return request;
     }
   }
 
   DeviceKeysList.fromDbJson(
-      Map<String, dynamic> dbEntry,
-      List<Map<String, dynamic>> childEntries,
-      List<Map<String, dynamic>> crossSigningEntries,
-      Client cl)
-      : client = cl,
-        userId = dbEntry['user_id'] ?? '' {
-    outdated = dbEntry['outdated'];
+    Map<String, Object?> dbEntry,
+    List<Map<String, Object?>> childEntries,
+    List<Map<String, Object?>> crossSigningEntries,
+    Client cl,
+  )   : client = cl,
+        userId = dbEntry['user_id'] as String? ?? '' {
+    outdated = dbEntry['outdated'] as bool;
     deviceKeys = {};
     for (final childEntry in childEntries) {
       final entry = DeviceKeys.fromDb(childEntry, client);
       if (entry.isValid) {
-        deviceKeys[childEntry['device_id']] = entry;
+        deviceKeys[childEntry['device_id'] as String] = entry;
       } else {
         outdated = true;
       }
@@ -122,7 +129,7 @@ class DeviceKeysList {
     for (final crossSigningEntry in crossSigningEntries) {
       final entry = CrossSigningKey.fromDbJson(crossSigningEntry, client);
       if (entry.isValid) {
-        crossSigningKeys[crossSigningEntry['public_key']] = entry;
+        crossSigningKeys[crossSigningEntry['public_key'] as String] = entry;
       } else {
         outdated = true;
       }
@@ -136,12 +143,12 @@ class SimpleSignableKey extends MatrixSignableKey {
   @override
   String? identifier;
 
-  SimpleSignableKey.fromJson(Map<String, dynamic> json) : super.fromJson(json);
+  SimpleSignableKey.fromJson(Map<String, Object?> json) : super.fromJson(json);
 }
 
 abstract class SignableKey extends MatrixSignableKey {
   Client client;
-  Map<String, dynamic>? validSignatures;
+  Map<String, Object?>? validSignatures;
   bool? _verified;
   bool? _blocked;
 
@@ -167,7 +174,7 @@ abstract class SignableKey extends MatrixSignableKey {
   bool get crossVerified => hasValidSignatureChain();
   bool get signed => hasValidSignatureChain(verifiedOnly: false);
 
-  SignableKey.fromJson(Map<String, dynamic> json, Client cl)
+  SignableKey.fromJson(Map<String, Object?> json, Client cl)
       : client = cl,
         super.fromJson(json) {
     _verified = false;
@@ -178,6 +185,7 @@ abstract class SignableKey extends MatrixSignableKey {
     final newKey = SimpleSignableKey.fromJson(toJson().copy());
     newKey.identifier = identifier;
     (newKey.signatures ??= {}).clear();
+
     return newKey;
   }
 
@@ -189,11 +197,15 @@ abstract class SignableKey extends MatrixSignableKey {
     // remove the keys not needed for signing
     data.remove('unsigned');
     data.remove('signatures');
+
     return String.fromCharCodes(canonicalJson.encode(data));
   }
 
-  bool _verifySignature(String pubKey, String signature,
-      {bool isSignatureWithoutLibolmValid = false}) {
+  bool _verifySignature(
+    String pubKey,
+    String signature, {
+    bool isSignatureWithoutLibolmValid = false,
+  }) {
     olm.Utility olmutil;
     try {
       olmutil = olm.Utility();
@@ -201,6 +213,7 @@ abstract class SignableKey extends MatrixSignableKey {
       // if no libolm is present we land in this catch block, and return the default
       // set if no libolm is there. Some signatures should be assumed-valid while others
       // should be assumed-invalid
+
       return isSignatureWithoutLibolmValid;
     }
     var valid = false;
@@ -213,6 +226,7 @@ abstract class SignableKey extends MatrixSignableKey {
     } finally {
       olmutil.free();
     }
+
     return valid;
   }
 
@@ -277,7 +291,7 @@ abstract class SignableKey extends MatrixSignableKey {
         var haveValidSignature = false;
         var gotSignatureFromCache = false;
         final fullKeyIdBool = validSignatures
-            ?.tryGetMap<String, dynamic>(otherUserId)
+            ?.tryGetMap<String, Object?>(otherUserId)
             ?.tryGet<bool>(fullKeyId);
         if (fullKeyIdBool == true) {
           haveValidSignature = true;
@@ -290,11 +304,12 @@ abstract class SignableKey extends MatrixSignableKey {
         if (!gotSignatureFromCache && key.ed25519Key != null) {
           // validate the signature manually
           haveValidSignature = _verifySignature(key.ed25519Key!, signature);
-          final validSignatures = this.validSignatures ??= <String, dynamic>{};
+          final validSignatures = this.validSignatures ??= <String, Object?>{};
           if (!validSignatures.containsKey(otherUserId)) {
-            validSignatures[otherUserId] = <String, dynamic>{};
+            validSignatures[otherUserId] = <String, Object?>{};
           }
-          validSignatures[otherUserId][fullKeyId] = haveValidSignature;
+          (validSignatures[otherUserId] as Map<String, Object?>)[fullKeyId] =
+              haveValidSignature;
         }
         if (!haveValidSignature) {
           // no valid signature, this key is useless
@@ -310,15 +325,17 @@ abstract class SignableKey extends MatrixSignableKey {
         }
         // or else we just recurse into that key and check if it works out
         final haveChain = key.hasValidSignatureChain(
-            verifiedOnly: verifiedOnly,
-            visited: visited_,
-            onlyValidateUserIds: onlyValidateUserIds,
-            verifiedByTheirMasterKey: verifiedByTheirMasterKey);
+          verifiedOnly: verifiedOnly,
+          visited: visited_,
+          onlyValidateUserIds: onlyValidateUserIds,
+          verifiedByTheirMasterKey: verifiedByTheirMasterKey,
+        );
         if (haveChain) {
           return true;
         }
       }
     }
+
     return false;
   }
 
@@ -339,11 +356,12 @@ abstract class SignableKey extends MatrixSignableKey {
   Future<void> setBlocked(bool newBlocked);
 
   @override
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     final data = super.toJson().copy();
     // some old data may have the verified and blocked keys which are unneeded now
     data.remove('verified');
     data.remove('blocked');
+
     return data;
   }
 
@@ -396,22 +414,22 @@ class CrossSigningKey extends SignableKey {
       : super.fromJson(k.toJson().copy(), cl) {
     final json = toJson();
     identifier = k.publicKey;
-    usage = json['usage'].cast<String>();
+    usage = (json['usage'] as List).cast<String>();
   }
 
-  CrossSigningKey.fromDbJson(Map<String, dynamic> dbEntry, Client cl)
+  CrossSigningKey.fromDbJson(Map<String, Object?> dbEntry, Client cl)
       : super.fromJson(Event.getMapFromPayload(dbEntry['content']), cl) {
     final json = toJson();
-    identifier = dbEntry['public_key'];
-    usage = json['usage'].cast<String>();
-    _verified = dbEntry['verified'];
-    _blocked = dbEntry['blocked'];
+    identifier = dbEntry['public_key'] as String?;
+    usage = (json['usage'] as List).cast<String>();
+    _verified = dbEntry['verified'] as bool?;
+    _blocked = dbEntry['blocked'] as bool?;
   }
 
-  CrossSigningKey.fromJson(Map<String, dynamic> json, Client cl)
+  CrossSigningKey.fromJson(Map<String, Object?> json, Client cl)
       : super.fromJson(json.copy(), cl) {
     final json = toJson();
-    usage = json['usage'].cast<String>();
+    usage = (json['usage'] as List).cast<String>();
     if (keys.isNotEmpty) {
       identifier = keys.values.first;
     }
@@ -434,15 +452,17 @@ class DeviceKeys extends SignableKey {
       _validSelfSignature ??
       (_validSelfSignature = (deviceId != null &&
               signatures
-                      ?.tryGetMap<String, dynamic>(userId)
+                      ?.tryGetMap<String, Object?>(userId)
                       ?.tryGet<String>('ed25519:$deviceId') ==
                   null
           ? false
           // without libolm we still want to be able to add devices. In that case we ofc just can't
           // verify the signature
           : _verifySignature(
-              ed25519Key!, signatures![userId]!['ed25519:$deviceId']!,
-              isSignatureWithoutLibolmValid: true)));
+              ed25519Key!,
+              signatures![userId]!['ed25519:$deviceId']!,
+              isSignatureWithoutLibolmValid: true,
+            )));
 
   @override
   bool get blocked => super.blocked || !selfSigned;
@@ -458,6 +478,7 @@ class DeviceKeys extends SignableKey {
   Future<void> setVerified(bool newVerified, [bool sign = true]) async {
     if (!isValid) {
       //throw Exception('setVerified called on invalid key');
+
       return;
     }
     await super.setVerified(newVerified, sign);
@@ -469,6 +490,7 @@ class DeviceKeys extends SignableKey {
   Future<void> setBlocked(bool newBlocked) async {
     if (!isValid) {
       //throw Exception('setBlocked called on invalid key');
+
       return;
     }
     _blocked = newBlocked;
@@ -476,31 +498,34 @@ class DeviceKeys extends SignableKey {
         ?.setBlockedUserDeviceKey(newBlocked, userId, deviceId!);
   }
 
-  DeviceKeys.fromMatrixDeviceKeys(MatrixDeviceKeys k, Client cl,
-      [DateTime? lastActiveTs])
-      : super.fromJson(k.toJson().copy(), cl) {
+  DeviceKeys.fromMatrixDeviceKeys(
+    MatrixDeviceKeys k,
+    Client cl, [
+    DateTime? lastActiveTs,
+  ]) : super.fromJson(k.toJson().copy(), cl) {
     final json = toJson();
     identifier = k.deviceId;
-    algorithms = json['algorithms'].cast<String>();
+    algorithms = (json['algorithms'] as List).cast<String>();
     lastActive = lastActiveTs ?? DateTime.now();
   }
 
-  DeviceKeys.fromDb(Map<String, dynamic> dbEntry, Client cl)
+  DeviceKeys.fromDb(Map<String, Object?> dbEntry, Client cl)
       : super.fromJson(Event.getMapFromPayload(dbEntry['content']), cl) {
     final json = toJson();
-    identifier = dbEntry['device_id'];
-    algorithms = json['algorithms'].cast<String>();
-    _verified = dbEntry['verified'];
-    _blocked = dbEntry['blocked'];
-    lastActive =
-        DateTime.fromMillisecondsSinceEpoch(dbEntry['last_active'] ?? 0);
+    identifier = dbEntry['device_id'] as String?;
+    algorithms = (json['algorithms'] as List).cast<String>();
+    _verified = dbEntry['verified'] as bool?;
+    _blocked = dbEntry['blocked'] as bool?;
+    lastActive = DateTime.fromMillisecondsSinceEpoch(
+      dbEntry['last_active'] as int? ?? 0,
+    );
   }
 
-  DeviceKeys.fromJson(Map<String, dynamic> json, Client cl)
+  DeviceKeys.fromJson(Map<String, Object?> json, Client cl)
       : super.fromJson(json.copy(), cl) {
     final json = toJson();
-    identifier = json['device_id'];
-    algorithms = json['algorithms'].cast<String>();
+    identifier = json['device_id'] as String?;
+    algorithms = (json['algorithms'] as List).cast<String>();
     lastActive = DateTime.fromMillisecondsSinceEpoch(0);
   }
 
@@ -514,10 +539,14 @@ class DeviceKeys extends SignableKey {
     }
 
     final request = KeyVerification(
-        encryption: encryption, userId: userId, deviceId: deviceId!);
+      encryption: encryption,
+      userId: userId,
+      deviceId: deviceId!,
+    );
 
     request.start();
     encryption.keyVerificationManager.addRequest(request);
+
     return request;
   }
 }

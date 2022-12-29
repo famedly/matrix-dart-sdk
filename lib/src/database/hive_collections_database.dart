@@ -276,6 +276,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
   @override
   Future<void> deleteFromToDeviceQueue(int id) async {
     await _toDeviceQueueBox.delete(id.toString());
+
     return;
   }
 
@@ -326,13 +327,14 @@ class HiveCollectionsDatabase extends DatabaseApi {
             content: copyMap(entry.value),
           );
         }
+
         return accountData;
       });
 
   @override
-  Future<Map<String, dynamic>?> getClient(String name) =>
+  Future<Map<String, Object?>?> getClient(String name) =>
       runBenchmarked('Get Client from store', () async {
-        final map = <String, dynamic>{};
+        final map = <String, Object?>{};
         final keys = await _clientBox.getAllKeys();
         for (final key in keys) {
           if (key == 'version') continue;
@@ -340,6 +342,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
           if (value != null) map[key] = value;
         }
         if (map.isEmpty) return null;
+
         return map;
       });
 
@@ -347,6 +350,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
   Future<Event?> getEventById(String eventId, Room room) async {
     final raw = await _eventsBox.get(TupleKey(room.id, eventId).toString());
     if (raw == null) return null;
+
     return Event.fromJson(copyMap(raw), room);
   }
 
@@ -358,9 +362,12 @@ class HiveCollectionsDatabase extends DatabaseApi {
         )
         .toList();
     final rawEvents = await _eventsBox.getAll(keys);
+
     return rawEvents
-        .map((rawEvent) =>
-            rawEvent != null ? Event.fromJson(copyMap(rawEvent), room) : null)
+        .map(
+          (rawEvent) =>
+              rawEvent != null ? Event.fromJson(copyMap(rawEvent), room) : null,
+        )
         .whereNotNull()
         .toList();
   }
@@ -391,8 +398,10 @@ class HiveCollectionsDatabase extends DatabaseApi {
         }
 
         // Combine those two lists while respecting the start and limit parameters.
-        final end = min(timelineEventIds.length,
-            start + (limit ?? timelineEventIds.length));
+        final end = min(
+          timelineEventIds.length,
+          start + (limit ?? timelineEventIds.length),
+        );
         final eventIds = <String>[
           ...sendingEventIds,
           ...(start < timelineEventIds.length && !onlySending
@@ -416,6 +425,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
   ) async {
     final raw = await _inboundGroupSessionsBox.get(sessionId);
     if (raw == null) return null;
+
     return StoredInboundGroupSession.fromJson(copyMap(raw));
   }
 
@@ -432,37 +442,49 @@ class HiveCollectionsDatabase extends DatabaseApi {
           ),
         )
         .toList();
+
     return sessions;
   }
 
   @override
   Future<List<String>> getLastSentMessageUserDeviceKey(
-      String userId, String deviceId) async {
+    String userId,
+    String deviceId,
+  ) async {
     final raw =
         await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString());
     if (raw == null) return <String>[];
+
     return <String>[raw['last_sent_message']];
   }
 
   @override
-  Future<void> storeOlmSession(String identityKey, String sessionId,
-      String pickle, int lastReceived) async {
+  Future<void> storeOlmSession(
+    String identityKey,
+    String sessionId,
+    String pickle,
+    int lastReceived,
+  ) async {
     final rawSessions = (await _olmSessionsBox.get(identityKey)) ?? {};
-    rawSessions[sessionId] = <String, dynamic>{
+    rawSessions[sessionId] = <String, Object?>{
       'identity_key': identityKey,
       'pickle': pickle,
       'session_id': sessionId,
       'last_received': lastReceived,
     };
     await _olmSessionsBox.put(identityKey, rawSessions);
+
     return;
   }
 
   @override
   Future<List<OlmSession>> getOlmSessions(
-      String identityKey, String userId) async {
+    String identityKey,
+    String userId,
+  ) async {
     final rawSessions = await _olmSessionsBox.get(identityKey);
     if (rawSessions == null || rawSessions.isEmpty) return <OlmSession>[];
+
     return rawSessions.values
         .map((json) => OlmSession.fromJson(copyMap(json), userId))
         .toList();
@@ -474,23 +496,33 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   @override
   Future<List<OlmSession>> getOlmSessionsForDevices(
-      List<String> identityKeys, String userId) async {
+    List<String> identityKeys,
+    String userId,
+  ) async {
     final sessions = await Future.wait(
-        identityKeys.map((identityKey) => getOlmSessions(identityKey, userId)));
+      identityKeys.map((identityKey) => getOlmSessions(identityKey, userId)),
+    );
+
     return <OlmSession>[for (final sublist in sessions) ...sublist];
   }
 
   @override
   Future<OutboundGroupSession?> getOutboundGroupSession(
-      String roomId, String userId) async {
+    String roomId,
+    String userId,
+  ) async {
     final raw = await _outboundGroupSessionsBox.get(roomId);
     if (raw == null) return null;
+
     return OutboundGroupSession.fromJson(copyMap(raw), userId);
   }
 
   @override
-  Future<Room?> getSingleRoom(Client client, String roomId,
-      {bool loadImportantStates = true}) async {
+  Future<Room?> getSingleRoom(
+    Client client,
+    String roomId, {
+    bool loadImportantStates = true,
+  }) async {
     // Get raw room from database:
     final roomData = await _roomsBox.get(roomId);
     if (roomData == null) return null;
@@ -609,7 +641,8 @@ class HiveCollectionsDatabase extends DatabaseApi {
                 basicRoomEvent;
           } else {
             Logs().w(
-                'Found account data for unknown room $roomId. Delete now...');
+              'Found account data for unknown room $roomId. Delete now...',
+            );
             await _roomAccountDataBox
                 .delete(TupleKey(roomId, basicRoomEvent.type).toString());
           }
@@ -622,6 +655,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
   Future<SSSSCache?> getSSSSCache(String type) async {
     final raw = await _ssssCacheBox.get(type);
     if (raw == null) return null;
+
     return SSSSCache.fromJson(copyMap(raw));
   }
 
@@ -631,17 +665,22 @@ class HiveCollectionsDatabase extends DatabaseApi {
     final copiedRaws = raws.entries.map((entry) {
       final copiedRaw = copyMap(entry.value);
       copiedRaw['id'] = int.parse(entry.key);
-      copiedRaw['content'] = jsonDecode(copiedRaw['content']);
+      copiedRaw['content'] = jsonDecode(copiedRaw['content'] as String);
+
       return copiedRaw;
     }).toList();
+
     return copiedRaws.map((raw) => QueuedToDeviceEvent.fromJson(raw)).toList();
   }
 
   @override
   Future<List<Event>> getUnimportantRoomEventStatesForRoom(
-      List<String> events, Room room) async {
+    List<String> events,
+    Room room,
+  ) async {
     final keys = (await _roomStateBox.getAllKeys()).where((key) {
       final tuple = TupleKey.fromString(key);
+
       return tuple.parts.first == room.id && !events.contains(tuple.parts[1]);
     });
 
@@ -650,8 +689,10 @@ class HiveCollectionsDatabase extends DatabaseApi {
       final states = await _roomStateBox.get(key);
       if (states == null) continue;
       unimportantEvents.addAll(
-          states.values.map((raw) => Event.fromJson(copyMap(raw), room)));
+        states.values.map((raw) => Event.fromJson(copyMap(raw), room)),
+      );
     }
+
     return unimportantEvents;
   }
 
@@ -660,6 +701,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
     final state =
         await _roomMembersBox.get(TupleKey(room.id, userId).toString());
     if (state == null) return null;
+
     return Event.fromJson(copyMap(state), room).asUser;
   }
 
@@ -679,11 +721,13 @@ class HiveCollectionsDatabase extends DatabaseApi {
         for (final userId in deviceKeysOutdated) {
           final deviceKeysBoxKeys = userDeviceKeysBoxKeys.where((tuple) {
             final tupleKey = TupleKey.fromString(tuple);
+
             return tupleKey.parts.first == userId;
           });
           final crossSigningKeysBoxKeys =
               userCrossSigningKeysBoxKeys.where((tuple) {
             final tupleKey = TupleKey.fromString(tuple);
+
             return tupleKey.parts.first == userId;
           });
           final childEntries = await Future.wait(
@@ -691,6 +735,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
               (key) async {
                 final userDeviceKey = await _userDeviceKeysBox.get(key);
                 if (userDeviceKey == null) return null;
+
                 return copyMap(userDeviceKey);
               },
             ),
@@ -700,26 +745,29 @@ class HiveCollectionsDatabase extends DatabaseApi {
               (key) async {
                 final crossSigningKey = await _userCrossSigningKeysBox.get(key);
                 if (crossSigningKey == null) return null;
+
                 return copyMap(crossSigningKey);
               },
             ),
           );
           res[userId] = DeviceKeysList.fromDbJson(
-              {
-                'client_id': client.id,
-                'user_id': userId,
-                'outdated': await _userDeviceKeysOutdatedBox.get(userId),
-              },
-              childEntries
-                  .where((c) => c != null)
-                  .toList()
-                  .cast<Map<String, dynamic>>(),
-              crossSigningEntries
-                  .where((c) => c != null)
-                  .toList()
-                  .cast<Map<String, dynamic>>(),
-              client);
+            {
+              'client_id': client.id,
+              'user_id': userId,
+              'outdated': await _userDeviceKeysOutdatedBox.get(userId),
+            },
+            childEntries
+                .where((c) => c != null)
+                .toList()
+                .cast<Map<String, Object?>>(),
+            crossSigningEntries
+                .where((c) => c != null)
+                .toList()
+                .cast<Map<String, Object?>>(),
+            client,
+          );
         }
+
         return res;
       });
 
@@ -740,14 +788,15 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   @override
   Future<int> insertClient(
-      String name,
-      String homeserverUrl,
-      String token,
-      String userId,
-      String? deviceId,
-      String? deviceName,
-      String? prevBatch,
-      String? olmAccount) async {
+    String name,
+    String homeserverUrl,
+    String token,
+    String userId,
+    String? deviceId,
+    String? deviceName,
+    String? prevBatch,
+    String? olmAccount,
+  ) async {
     await transaction(() async {
       await _clientBox.put('homeserver_url', homeserverUrl);
       await _clientBox.put('token', token);
@@ -774,32 +823,42 @@ class HiveCollectionsDatabase extends DatabaseApi {
       }
       await _clientBox.delete('sync_filter_id');
     });
+
     return 0;
   }
 
   @override
   Future<int> insertIntoToDeviceQueue(
-      String type, String txnId, String content) async {
+    String type,
+    String txnId,
+    String content,
+  ) async {
     final id = DateTime.now().millisecondsSinceEpoch;
     await _toDeviceQueueBox.put(id.toString(), {
       'type': type,
       'txn_id': txnId,
       'content': content,
     });
+
     return id;
   }
 
   @override
   Future<void> markInboundGroupSessionAsUploaded(
-      String roomId, String sessionId) async {
+    String roomId,
+    String sessionId,
+  ) async {
     final raw = await _inboundGroupSessionsBox.get(sessionId);
     if (raw == null) {
       Logs().w(
-          'Tried to mark inbound group session as uploaded which was not found in the database!');
+        'Tried to mark inbound group session as uploaded which was not found in the database!',
+      );
+
       return;
     }
     raw['uploaded'] = true;
     await _inboundGroupSessionsBox.put(sessionId, raw);
+
     return;
   }
 
@@ -812,6 +871,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
       raw['uploaded'] = false;
       await _inboundGroupSessionsBox.put(sessionId, raw);
     }
+
     return;
   }
 
@@ -829,26 +889,32 @@ class HiveCollectionsDatabase extends DatabaseApi {
         await _timelineFragmentsBox.put(key, eventIds);
       }
     }
+
     return;
   }
 
   @override
   Future<void> removeOutboundGroupSession(String roomId) async {
     await _outboundGroupSessionsBox.delete(roomId);
+
     return;
   }
 
   @override
   Future<void> removeUserCrossSigningKey(
-      String userId, String publicKey) async {
+    String userId,
+    String publicKey,
+  ) async {
     await _userCrossSigningKeysBox
         .delete(TupleKey(userId, publicKey).toString());
+
     return;
   }
 
   @override
   Future<void> removeUserDeviceKey(String userId, String deviceId) async {
     await _userDeviceKeysBox.delete(TupleKey(userId, deviceId).toString());
+
     return;
   }
 
@@ -858,12 +924,16 @@ class HiveCollectionsDatabase extends DatabaseApi {
     if (raw == null) return;
     raw['notification_count'] = raw['highlight_count'] = 0;
     await _roomsBox.put(roomId, raw);
+
     return;
   }
 
   @override
   Future<void> setBlockedUserCrossSigningKey(
-      bool blocked, String userId, String publicKey) async {
+    bool blocked,
+    String userId,
+    String publicKey,
+  ) async {
     final raw = await _userCrossSigningKeysBox
         .get(TupleKey(userId, publicKey).toString());
     raw!['blocked'] = blocked;
@@ -871,12 +941,16 @@ class HiveCollectionsDatabase extends DatabaseApi {
       TupleKey(userId, publicKey).toString(),
       raw,
     );
+
     return;
   }
 
   @override
   Future<void> setBlockedUserDeviceKey(
-      bool blocked, String userId, String deviceId) async {
+    bool blocked,
+    String userId,
+    String deviceId,
+  ) async {
     final raw =
         await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString());
     raw!['blocked'] = blocked;
@@ -884,12 +958,16 @@ class HiveCollectionsDatabase extends DatabaseApi {
       TupleKey(userId, deviceId).toString(),
       raw,
     );
+
     return;
   }
 
   @override
   Future<void> setLastActiveUserDeviceKey(
-      int lastActive, String userId, String deviceId) async {
+    int lastActive,
+    String userId,
+    String deviceId,
+  ) async {
     final raw =
         await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString());
     raw!['last_active'] = lastActive;
@@ -901,7 +979,10 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   @override
   Future<void> setLastSentMessageUserDeviceKey(
-      String lastSentMessage, String userId, String deviceId) async {
+    String lastSentMessage,
+    String userId,
+    String deviceId,
+  ) async {
     final raw =
         await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString());
     raw!['last_sent_message'] = lastSentMessage;
@@ -913,18 +994,25 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   @override
   Future<void> setRoomPrevBatch(
-      String prevBatch, String roomId, Client client) async {
+    String prevBatch,
+    String roomId,
+    Client client,
+  ) async {
     final raw = await _roomsBox.get(roomId);
     if (raw == null) return;
     final room = Room.fromJson(copyMap(raw), client);
     room.prev_batch = prevBatch;
     await _roomsBox.put(roomId, room.toJson());
+
     return;
   }
 
   @override
   Future<void> setVerifiedUserCrossSigningKey(
-      bool verified, String userId, String publicKey) async {
+    bool verified,
+    String userId,
+    String publicKey,
+  ) async {
     final raw = (await _userCrossSigningKeysBox
             .get(TupleKey(userId, publicKey).toString())) ??
         {};
@@ -933,12 +1021,16 @@ class HiveCollectionsDatabase extends DatabaseApi {
       TupleKey(userId, publicKey).toString(),
       raw,
     );
+
     return;
   }
 
   @override
   Future<void> setVerifiedUserDeviceKey(
-      bool verified, String userId, String deviceId) async {
+    bool verified,
+    String userId,
+    String deviceId,
+  ) async {
     final raw =
         await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString());
     raw!['verified'] = verified;
@@ -946,12 +1038,14 @@ class HiveCollectionsDatabase extends DatabaseApi {
       TupleKey(userId, deviceId).toString(),
       raw,
     );
+
     return;
   }
 
   @override
   Future<void> storeAccountData(String type, String content) async {
     await _accountDataBox.put(type, copyMap(jsonDecode(content)));
+
     return;
   }
 
@@ -969,8 +1063,9 @@ class HiveCollectionsDatabase extends DatabaseApi {
       if (event != null) {
         event.setRedactionEvent(Event.fromJson(eventUpdate.content, tmpRoom));
         await _eventsBox.put(
-            TupleKey(eventUpdate.roomID, event.eventId).toString(),
-            event.toJson());
+          TupleKey(eventUpdate.roomID, event.eventId).toString(),
+          event.toJson(),
+        );
       }
     }
 
@@ -983,15 +1078,16 @@ class HiveCollectionsDatabase extends DatabaseApi {
       final eventId = eventUpdate.content['event_id'];
       // Is this ID already in the store?
       final prevEvent = await _eventsBox
-          .get(TupleKey(eventUpdate.roomID, eventId).toString());
+          .get(TupleKey(eventUpdate.roomID, eventId as String?).toString());
       final prevStatus = prevEvent == null
           ? null
           : () {
               final json = copyMap(prevEvent);
               final statusInt = json.tryGet<int>('status') ??
                   json
-                      .tryGetMap<String, dynamic>('unsigned')
+                      .tryGetMap<String, Object?>('unsigned')
                       ?.tryGet<int>(messageSendingStatusKey);
+
               return statusInt == null ? null : eventStatusFromInt(statusInt);
             }();
 
@@ -999,7 +1095,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
       final newStatus = eventStatusFromInt(
         eventUpdate.content.tryGet<int>('status') ??
             eventUpdate.content
-                .tryGetMap<String, dynamic>('unsigned')
+                .tryGetMap<String, Object?>('unsigned')
                 ?.tryGet<int>(messageSendingStatusKey) ??
             EventStatus.synced.intValue,
       );
@@ -1018,16 +1114,19 @@ class HiveCollectionsDatabase extends DatabaseApi {
             );
 
       // Add the status and the sort order to the content so it get stored
-      eventUpdate.content['unsigned'] ??= <String, dynamic>{};
-      eventUpdate.content['unsigned'][messageSendingStatusKey] =
+      eventUpdate.content['unsigned'] ??= <String, Object?>{};
+      (eventUpdate.content['unsigned']
+              as Map<String, Object?>)[messageSendingStatusKey] =
           eventUpdate.content['status'] = status.intValue;
 
       // In case this event has sent from this account we have a transaction ID
       final transactionId = eventUpdate.content
-          .tryGetMap<String, dynamic>('unsigned')
+          .tryGetMap<String, Object?>('unsigned')
           ?.tryGet<String>('transaction_id');
-      await _eventsBox.put(TupleKey(eventUpdate.roomID, eventId).toString(),
-          eventUpdate.content);
+      await _eventsBox.put(
+        TupleKey(eventUpdate.roomID, eventId).toString(),
+        eventUpdate.content,
+      );
 
       // Update timeline fragments
       final key = TupleKey(eventUpdate.roomID, status.isSent ? '' : 'SENDING')
@@ -1038,9 +1137,9 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
       if (!eventIds.contains(eventId)) {
         if (eventUpdate.type == EventUpdateType.history) {
-          eventIds.add(eventId);
+          eventIds.add(eventId as String);
         } else {
-          eventIds.insert(0, eventId);
+          eventIds.insert(0, eventId as String);
         }
         await _timelineFragmentsBox.put(key, eventIds);
       } else if (status.isSynced &&
@@ -1049,7 +1148,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
           eventUpdate.type != EventUpdateType.history) {
         // Status changes from 1 -> 2? Make sure event is correctly sorted.
         eventIds.remove(eventId);
-        eventIds.insert(0, eventId);
+        eventIds.insert(0, eventId as String);
       }
 
       // If event comes from server timeline, remove sending events with this ID
@@ -1073,49 +1172,50 @@ class HiveCollectionsDatabase extends DatabaseApi {
     if ({
       EventUpdateType.timeline,
       EventUpdateType.state,
-      EventUpdateType.inviteState
+      EventUpdateType.inviteState,
     }.contains(eventUpdate.type)) {
       if (eventUpdate.content['type'] == EventTypes.RoomMember) {
         await _roomMembersBox.put(
-            TupleKey(
-              eventUpdate.roomID,
-              eventUpdate.content['state_key'],
-            ).toString(),
-            eventUpdate.content);
+          TupleKey(
+            eventUpdate.roomID,
+            eventUpdate.content['state_key'] as String?,
+          ).toString(),
+          eventUpdate.content,
+        );
       } else {
         final key = TupleKey(
           eventUpdate.roomID,
-          eventUpdate.content['type'],
+          eventUpdate.content['type'] as String?,
         ).toString();
         final stateMap = copyMap(await _roomStateBox.get(key) ?? {});
         // store state events and new messages, that either are not an edit or an edit of the lastest message
         // An edit is an event, that has an edit relation to the latest event. In some cases for the second edit, we need to compare if both have an edit relation to the same event instead.
         if (eventUpdate.content
-                .tryGetMap<String, dynamic>('content')
-                ?.tryGetMap<String, dynamic>('m.relates_to') ==
+                .tryGetMap<String, Object?>('content')
+                ?.tryGetMap<String, Object?>('m.relates_to') ==
             null) {
-          stateMap[eventUpdate.content['state_key'] ?? ''] =
+          stateMap[eventUpdate.content['state_key'] as String? ?? ''] =
               eventUpdate.content;
           await _roomStateBox.put(key, stateMap);
         } else {
           final editedEventRelationshipEventId = eventUpdate.content
-              .tryGetMap<String, dynamic>('content')
-              ?.tryGetMap<String, dynamic>('m.relates_to')
+              .tryGetMap<String, Object?>('content')
+              ?.tryGetMap<String, Object?>('m.relates_to')
               ?.tryGet<String>('event_id');
           final state = stateMap[''] == null
               ? null
-              : Event.fromJson(stateMap[''] as Map<String, dynamic>, tmpRoom);
+              : Event.fromJson(stateMap[''] as Map<String, Object?>, tmpRoom);
           if (eventUpdate.content['type'] != EventTypes.Message ||
               eventUpdate.content
-                      .tryGetMap<String, dynamic>('content')
-                      ?.tryGetMap<String, dynamic>('m.relates_to')
+                      .tryGetMap<String, Object?>('content')
+                      ?.tryGetMap<String, Object?>('m.relates_to')
                       ?.tryGet<String>('rel_type') !=
                   RelationshipTypes.edit ||
               editedEventRelationshipEventId == state?.eventId ||
               ((state?.relationshipType == RelationshipTypes.edit &&
                   editedEventRelationshipEventId ==
                       state?.relationshipEventId))) {
-            stateMap[eventUpdate.content['state_key'] ?? ''] =
+            stateMap[eventUpdate.content['state_key'] as String? ?? ''] =
                 eventUpdate.content;
             await _roomStateBox.put(key, stateMap);
           }
@@ -1128,7 +1228,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
       await _roomAccountDataBox.put(
         TupleKey(
           eventUpdate.roomID,
-          eventUpdate.content['type'],
+          eventUpdate.content['type'] as String?,
         ).toString(),
         eventUpdate.content,
       );
@@ -1142,39 +1242,47 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   @override
   Future<void> storeInboundGroupSession(
-      String roomId,
-      String sessionId,
-      String pickle,
-      String content,
-      String indexes,
-      String allowedAtIndex,
-      String senderKey,
-      String senderClaimedKey) async {
+    String roomId,
+    String sessionId,
+    String pickle,
+    String content,
+    String indexes,
+    String allowedAtIndex,
+    String senderKey,
+    String senderClaimedKey,
+  ) async {
     await _inboundGroupSessionsBox.put(
-        sessionId,
-        StoredInboundGroupSession(
-          roomId: roomId,
-          sessionId: sessionId,
-          pickle: pickle,
-          content: content,
-          indexes: indexes,
-          allowedAtIndex: allowedAtIndex,
-          senderKey: senderKey,
-          senderClaimedKeys: senderClaimedKey,
-          uploaded: false,
-        ).toJson());
+      sessionId,
+      StoredInboundGroupSession(
+        roomId: roomId,
+        sessionId: sessionId,
+        pickle: pickle,
+        content: content,
+        indexes: indexes,
+        allowedAtIndex: allowedAtIndex,
+        senderKey: senderKey,
+        senderClaimedKeys: senderClaimedKey,
+        uploaded: false,
+      ).toJson(),
+    );
+
     return;
   }
 
   @override
   Future<void> storeOutboundGroupSession(
-      String roomId, String pickle, String deviceIds, int creationTime) async {
-    await _outboundGroupSessionsBox.put(roomId, <String, dynamic>{
+    String roomId,
+    String pickle,
+    String deviceIds,
+    int creationTime,
+  ) async {
+    await _outboundGroupSessionsBox.put(roomId, <String, Object?>{
       'room_id': roomId,
       'pickle': pickle,
       'device_ids': deviceIds,
       'creation_time': creationTime,
     });
+
     return;
   }
 
@@ -1184,15 +1292,20 @@ class HiveCollectionsDatabase extends DatabaseApi {
   ) async {
     if ((await _clientBox.getAllKeys()).isEmpty) return;
     await _clientBox.put('prev_batch', prevBatch);
+
     return;
   }
 
   @override
   Future<void> storeRoomUpdate(
-      String roomId, SyncRoomUpdate roomUpdate, Client client) async {
+    String roomId,
+    SyncRoomUpdate roomUpdate,
+    Client client,
+  ) async {
     // Leave room if membership is leave
     if (roomUpdate is LeftRoomUpdate) {
       await forgetRoom(roomId);
+
       return;
     }
     final membership = roomUpdate is LeftRoomUpdate
@@ -1204,46 +1317,49 @@ class HiveCollectionsDatabase extends DatabaseApi {
     final currentRawRoom = await _roomsBox.get(roomId);
     if (currentRawRoom == null) {
       await _roomsBox.put(
-          roomId,
-          roomUpdate is JoinedRoomUpdate
-              ? Room(
-                  client: client,
-                  id: roomId,
-                  membership: membership,
-                  highlightCount:
-                      roomUpdate.unreadNotifications?.highlightCount?.toInt() ??
-                          0,
-                  notificationCount: roomUpdate
-                          .unreadNotifications?.notificationCount
-                          ?.toInt() ??
-                      0,
-                  prev_batch: roomUpdate.timeline?.prevBatch,
-                  summary: roomUpdate.summary,
-                ).toJson()
-              : Room(
-                  client: client,
-                  id: roomId,
-                  membership: membership,
-                ).toJson());
+        roomId,
+        roomUpdate is JoinedRoomUpdate
+            ? Room(
+                client: client,
+                id: roomId,
+                membership: membership,
+                highlightCount:
+                    roomUpdate.unreadNotifications?.highlightCount?.toInt() ??
+                        0,
+                notificationCount: roomUpdate
+                        .unreadNotifications?.notificationCount
+                        ?.toInt() ??
+                    0,
+                prev_batch: roomUpdate.timeline?.prevBatch,
+                summary: roomUpdate.summary,
+              ).toJson()
+            : Room(
+                client: client,
+                id: roomId,
+                membership: membership,
+              ).toJson(),
+      );
     } else if (roomUpdate is JoinedRoomUpdate) {
       final currentRoom = Room.fromJson(copyMap(currentRawRoom), client);
       await _roomsBox.put(
-          roomId,
-          Room(
-            client: client,
-            id: roomId,
-            membership: membership,
-            highlightCount:
-                roomUpdate.unreadNotifications?.highlightCount?.toInt() ??
-                    currentRoom.highlightCount,
-            notificationCount:
-                roomUpdate.unreadNotifications?.notificationCount?.toInt() ??
-                    currentRoom.notificationCount,
-            prev_batch:
-                roomUpdate.timeline?.prevBatch ?? currentRoom.prev_batch,
-            summary: RoomSummary.fromJson(currentRoom.summary.toJson()
-              ..addAll(roomUpdate.summary?.toJson() ?? {})),
-          ).toJson());
+        roomId,
+        Room(
+          client: client,
+          id: roomId,
+          membership: membership,
+          highlightCount:
+              roomUpdate.unreadNotifications?.highlightCount?.toInt() ??
+                  currentRoom.highlightCount,
+          notificationCount:
+              roomUpdate.unreadNotifications?.notificationCount?.toInt() ??
+                  currentRoom.notificationCount,
+          prev_batch: roomUpdate.timeline?.prevBatch ?? currentRoom.prev_batch,
+          summary: RoomSummary.fromJson(
+            currentRoom.summary.toJson()
+              ..addAll(roomUpdate.summary?.toJson() ?? {}),
+          ),
+        ).toJson(),
+      );
     }
 
     // Is the timeline limited? Then all previous messages should be
@@ -1256,15 +1372,20 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   @override
   Future<void> storeSSSSCache(
-      String type, String keyId, String ciphertext, String content) async {
+    String type,
+    String keyId,
+    String ciphertext,
+    String content,
+  ) async {
     await _ssssCacheBox.put(
-        type,
-        SSSSCache(
-          type: type,
-          keyId: keyId,
-          ciphertext: ciphertext,
-          content: content,
-        ).toJson());
+      type,
+      SSSSCache(
+        type: type,
+        keyId: keyId,
+        ciphertext: ciphertext,
+        content: content,
+      ).toJson(),
+    );
   }
 
   @override
@@ -1275,8 +1396,13 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> storeUserCrossSigningKey(String userId, String publicKey,
-      String content, bool verified, bool blocked) async {
+  Future<void> storeUserCrossSigningKey(
+    String userId,
+    String publicKey,
+    String content,
+    bool verified,
+    bool blocked,
+  ) async {
     await _userCrossSigningKeysBox.put(
       TupleKey(userId, publicKey).toString(),
       {
@@ -1290,8 +1416,14 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> storeUserDeviceKey(String userId, String deviceId,
-      String content, bool verified, bool blocked, int lastActive) async {
+  Future<void> storeUserDeviceKey(
+    String userId,
+    String deviceId,
+    String content,
+    bool verified,
+    bool blocked,
+    int lastActive,
+  ) async {
     await _userDeviceKeysBox.put(TupleKey(userId, deviceId).toString(), {
       'user_id': userId,
       'device_id': deviceId,
@@ -1301,12 +1433,14 @@ class HiveCollectionsDatabase extends DatabaseApi {
       'last_active': lastActive,
       'last_sent_message': '',
     });
+
     return;
   }
 
   @override
   Future<void> storeUserDeviceKeysInfo(String userId, bool outdated) async {
     await _userDeviceKeysOutdatedBox.put(userId, outdated);
+
     return;
   }
 
@@ -1349,6 +1483,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
         await _clientBox.put('olm_account', olmAccount);
       }
     });
+
     return;
   }
 
@@ -1357,52 +1492,70 @@ class HiveCollectionsDatabase extends DatabaseApi {
     String olmAccount,
   ) async {
     await _clientBox.put('olm_account', olmAccount);
+
     return;
   }
 
   @override
   Future<void> updateInboundGroupSessionAllowedAtIndex(
-      String allowedAtIndex, String roomId, String sessionId) async {
+    String allowedAtIndex,
+    String roomId,
+    String sessionId,
+  ) async {
     final raw = await _inboundGroupSessionsBox.get(sessionId);
     if (raw == null) {
       Logs().w(
-          'Tried to update inbound group session as uploaded which wasnt found in the database!');
+        'Tried to update inbound group session as uploaded which wasnt found in the database!',
+      );
+
       return;
     }
     raw['allowed_at_index'] = allowedAtIndex;
     await _inboundGroupSessionsBox.put(sessionId, raw);
+
     return;
   }
 
   @override
   Future<void> updateInboundGroupSessionIndexes(
-      String indexes, String roomId, String sessionId) async {
+    String indexes,
+    String roomId,
+    String sessionId,
+  ) async {
     final raw = await _inboundGroupSessionsBox.get(sessionId);
     if (raw == null) {
       Logs().w(
-          'Tried to update inbound group session indexes of a session which was not found in the database!');
+        'Tried to update inbound group session indexes of a session which was not found in the database!',
+      );
+
       return;
     }
     final json = copyMap(raw);
     json['indexes'] = indexes;
     await _inboundGroupSessionsBox.put(sessionId, json);
+
     return;
   }
 
   @override
   Future<void> updateRoomSortOrder(
-      double oldestSortOrder, double newestSortOrder, String roomId) async {
+    double oldestSortOrder,
+    double newestSortOrder,
+    String roomId,
+  ) async {
     final raw = await _roomsBox.get(roomId);
     if (raw == null) throw ('Room not found');
     raw['oldest_sort_order'] = oldestSortOrder;
     raw['newest_sort_order'] = newestSortOrder;
     await _roomsBox.put(roomId, raw);
+
     return;
   }
 
   @override
   Future<List<StoredInboundGroupSession>> getAllInboundGroupSessions() async {
     final rawSessions = await _inboundGroupSessionsBox.getAllValues();
+
     return rawSessions.values
         .map((raw) => StoredInboundGroupSession.fromJson(copyMap(raw)))
         .toList();
@@ -1428,6 +1581,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
     final raw =
         await _seenDeviceIdsBox.get(TupleKey(userId, deviceId).toString());
     if (raw == null) return null;
+
     return raw;
   }
 
@@ -1435,6 +1589,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
   Future<String?> publicKeySeen(String publicKey) async {
     final raw = await _seenDeviceKeysBox.get(publicKey);
     if (raw == null) return null;
+
     return raw;
   }
 
@@ -1467,6 +1622,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
     };
     final json = jsonEncode(dataMap);
     await clear();
+
     return json;
   }
 
@@ -1499,11 +1655,15 @@ class HiveCollectionsDatabase extends DatabaseApi {
       }
       for (final key in json[_inboundGroupSessionsBoxName]!.keys) {
         await _inboundGroupSessionsBox.put(
-            key, json[_inboundGroupSessionsBoxName]![key]);
+          key,
+          json[_inboundGroupSessionsBoxName]![key],
+        );
       }
       for (final key in json[_outboundGroupSessionsBoxName]!.keys) {
         await _outboundGroupSessionsBox.put(
-            key, json[_outboundGroupSessionsBoxName]![key]);
+          key,
+          json[_outboundGroupSessionsBoxName]![key],
+        );
       }
       for (final key in json[_olmSessionsBoxName]!.keys) {
         await _olmSessionsBox.put(key, json[_olmSessionsBoxName]![key]);
@@ -1513,11 +1673,15 @@ class HiveCollectionsDatabase extends DatabaseApi {
       }
       for (final key in json[_userDeviceKeysOutdatedBoxName]!.keys) {
         await _userDeviceKeysOutdatedBox.put(
-            key, json[_userDeviceKeysOutdatedBoxName]![key]);
+          key,
+          json[_userDeviceKeysOutdatedBoxName]![key],
+        );
       }
       for (final key in json[_userCrossSigningKeysBoxName]!.keys) {
         await _userCrossSigningKeysBox.put(
-            key, json[_userCrossSigningKeysBoxName]![key]);
+          key,
+          json[_userCrossSigningKeysBoxName]![key],
+        );
       }
       for (final key in json[_ssssCacheBoxName]!.keys) {
         await _ssssCacheBox.put(key, json[_ssssCacheBoxName]![key]);
@@ -1527,7 +1691,9 @@ class HiveCollectionsDatabase extends DatabaseApi {
       }
       for (final key in json[_timelineFragmentsBoxName]!.keys) {
         await _timelineFragmentsBox.put(
-            key, json[_timelineFragmentsBoxName]![key]);
+          key,
+          json[_timelineFragmentsBoxName]![key],
+        );
       }
       for (final key in json[_seenDeviceIdsBoxName]!.keys) {
         await _seenDeviceIdsBox.put(key, json[_seenDeviceIdsBoxName]![key]);
@@ -1535,9 +1701,11 @@ class HiveCollectionsDatabase extends DatabaseApi {
       for (final key in json[_seenDeviceKeysBoxName]!.keys) {
         await _seenDeviceKeysBox.put(key, json[_seenDeviceKeysBoxName]![key]);
       }
+
       return true;
     } catch (e, s) {
       Logs().e('Database import error: ', e, s);
+
       return false;
     }
   }
@@ -1568,23 +1736,25 @@ class TupleKey {
   int get hashCode => Object.hashAll(parts);
 }
 
-dynamic _castValue(dynamic value) {
+Object? _castValue<T>(T value) {
   if (value is Map) {
     return copyMap(value);
   }
   if (value is List) {
     return value.map(_castValue).toList();
   }
+
   return value;
 }
 
-/// The store always gives back an `_InternalLinkedHasMap<dynamic, dynamic>`. This
+/// The store always gives back an `_InternalLinkedHasMap<dynamic, Object?>`. This
 /// creates a deep copy of the json and makes sure that the format is always
-/// `Map<String, dynamic>`.
-Map<String, dynamic> copyMap(Map map) {
-  final copy = Map<String, dynamic>.from(map);
+/// `Map<String, Object?>`.
+Map<String, Object?> copyMap(Map map) {
+  final copy = Map<String, Object?>.from(map);
   for (final entry in copy.entries) {
     copy[entry.key] = _castValue(entry.value);
   }
+
   return copy;
 }

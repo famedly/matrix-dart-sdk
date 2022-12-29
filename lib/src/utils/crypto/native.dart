@@ -17,6 +17,7 @@ abstract class Hash {
     try {
       dataMem.asTypedList(data.length).setAll(0, data);
       EVP_Digest(dataMem, data.length, mem, nullptr, ptr, nullptr);
+
       return Uint8List.fromList(mem.asTypedList(outSize));
     } finally {
       malloc.free(mem);
@@ -60,6 +61,7 @@ abstract class Cipher {
       EVP_EncryptUpdate(ctx, dataMem, lenMem, dataMem, input.length);
       EVP_EncryptFinal_ex(ctx, dataMem.elementAt(lenMem.value), lenMem);
       EVP_CIPHER_CTX_free(ctx);
+
       return Uint8List.fromList(dataMem.asTypedList(input.length));
     } finally {
       malloc.free(mem);
@@ -86,7 +88,12 @@ class _AesCtr extends Cipher {
 }
 
 FutureOr<Uint8List> pbkdf2(
-    Uint8List passphrase, Uint8List salt, Hash hash, int iterations, int bits) {
+  Uint8List passphrase,
+  Uint8List salt,
+  Hash hash,
+  int iterations,
+  int bits,
+) {
   final outLen = bits ~/ 8;
   final mem = malloc.call<Uint8>(passphrase.length + salt.length + outLen);
   final saltMem = mem.elementAt(passphrase.length);
@@ -94,8 +101,17 @@ FutureOr<Uint8List> pbkdf2(
   try {
     mem.asTypedList(passphrase.length).setAll(0, passphrase);
     saltMem.asTypedList(salt.length).setAll(0, salt);
-    PKCS5_PBKDF2_HMAC(mem, passphrase.length, saltMem, salt.length, iterations,
-        hash.ptr, outLen, outMem);
+    PKCS5_PBKDF2_HMAC(
+      mem,
+      passphrase.length,
+      saltMem,
+      salt.length,
+      iterations,
+      hash.ptr,
+      outLen,
+      outMem,
+    );
+
     return Uint8List.fromList(outMem.asTypedList(outLen));
   } finally {
     malloc.free(mem);

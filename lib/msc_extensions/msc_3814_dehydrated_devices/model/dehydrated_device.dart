@@ -25,18 +25,18 @@ import 'package:matrix_api_lite/matrix_api_lite.dart';
 
 class DehydratedDevice {
   String deviceId;
-  Map<String, dynamic>? deviceData;
+  Map<String, Object?>? deviceData;
 
   DehydratedDevice({
     required this.deviceId,
     this.deviceData,
   });
 
-  DehydratedDevice.fromJson(Map<String, dynamic> json)
+  DehydratedDevice.fromJson(Map<String, Object?> json)
       : deviceId = json['device_id'] as String,
-        deviceData = (json['device_data'] as Map<String, dynamic>?)?.copy();
+        deviceData = (json['device_data'] as Map<String, Object?>?)?.copy();
 
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     return {
       'device_id': deviceId,
       if (deviceData != null) 'device_data': deviceData,

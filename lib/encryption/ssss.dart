@@ -82,14 +82,19 @@ class SSSS {
     b[0] = 2;
     final hmacKey =
         Hmac(sha256, prk.bytes).convert(aesKey.bytes + utf8.encode(name) + b);
+
     return DerivedKeys(
-        aesKey: Uint8List.fromList(aesKey.bytes),
-        hmacKey: Uint8List.fromList(hmacKey.bytes));
+      aesKey: Uint8List.fromList(aesKey.bytes),
+      hmacKey: Uint8List.fromList(hmacKey.bytes),
+    );
   }
 
   static Future<EncryptedContent> encryptAes(
-      String data, Uint8List key, String name,
-      [String? ivStr]) async {
+    String data,
+    Uint8List key,
+    String name, [
+    String? ivStr,
+  ]) async {
     Uint8List iv;
     if (ivStr != null) {
       iv = base64decodeUnpadded(ivStr);
@@ -107,13 +112,17 @@ class SSSS {
     final hmac = Hmac(sha256, keys.hmacKey).convert(ciphertext);
 
     return EncryptedContent(
-        iv: base64.encode(iv),
-        ciphertext: base64.encode(ciphertext),
-        mac: base64.encode(hmac.bytes));
+      iv: base64.encode(iv),
+      ciphertext: base64.encode(ciphertext),
+      mac: base64.encode(hmac.bytes),
+    );
   }
 
   static Future<String> decryptAes(
-      EncryptedContent data, Uint8List key, String name) async {
+    EncryptedContent data,
+    Uint8List key,
+    String name,
+  ) async {
     final keys = deriveKeys(key, name);
     final cipher = base64decodeUnpadded(data.ciphertext);
     final hmac = base64
@@ -124,6 +133,7 @@ class SSSS {
     }
     final decipher = await uc.aesCtr
         .encrypt(cipher, keys.aesKey, base64decodeUnpadded(data.iv));
+
     return String.fromCharCodes(decipher);
   }
 
@@ -145,8 +155,12 @@ class SSSS {
       throw Exception('Incorrect length');
     }
 
-    return Uint8List.fromList(result.sublist(olmRecoveryKeyPrefix.length,
-        olmRecoveryKeyPrefix.length + ssssKeyLength));
+    return Uint8List.fromList(
+      result.sublist(
+        olmRecoveryKeyPrefix.length,
+        olmRecoveryKeyPrefix.length + ssssKeyLength,
+      ),
+    );
   }
 
   static String encodeRecoveryKey(Uint8List recoveryKey) {
@@ -154,6 +168,7 @@ class SSSS {
     final parity = keyToEncode.fold<int>(0, (a, b) => a ^ b);
     keyToEncode.add(parity);
     // base58-encode and add a space every four chars
+
     return base58
         .encode(keyToEncode)
         .replaceAllMapped(RegExp(r'.{4}'), (s) => '${s.group(0)} ')
@@ -161,7 +176,9 @@ class SSSS {
   }
 
   static Future<Uint8List> keyFromPassphrase(
-      String passphrase, PassphraseInfo info) async {
+    String passphrase,
+    PassphraseInfo info,
+  ) async {
     if (info.algorithm != AlgorithmTypes.pbkdf2) {
       throw Exception('Unknown algorithm');
     }
@@ -171,12 +188,14 @@ class SSSS {
     if (info.salt == null) {
       throw Exception('Passphrase info without salt');
     }
+
     return await uc.pbkdf2(
-        Uint8List.fromList(utf8.encode(passphrase)),
-        Uint8List.fromList(utf8.encode(info.salt!)),
-        uc.sha512,
-        info.iterations!,
-        info.bits ?? 256);
+      Uint8List.fromList(utf8.encode(passphrase)),
+      Uint8List.fromList(utf8.encode(info.salt!)),
+      uc.sha512,
+      info.iterations!,
+      info.bits ?? 256,
+    );
   }
 
   void setValidator(String type, FutureOr<bool> Function(String) validator) {
@@ -251,16 +270,22 @@ class SSSS {
 
     final accountDataType = EventTypes.secretStorageKey(keyId);
     // noooow we set the account data
-    final waitForAccountData = client.onSync.stream.firstWhere((syncUpdate) =>
-        syncUpdate.accountData != null &&
-        syncUpdate.accountData!
-            .any((accountData) => accountData.type == accountDataType));
+    final waitForAccountData = client.onSync.stream.firstWhere(
+      (syncUpdate) =>
+          syncUpdate.accountData != null &&
+          syncUpdate.accountData!
+              .any((accountData) => accountData.type == accountDataType),
+    );
     await client.setAccountData(
-        client.userID!, accountDataType, content.toJson());
+      client.userID!,
+      accountDataType,
+      content.toJson(),
+    );
     await waitForAccountData;
 
     final key = open(keyId);
     await key.setPrivateKey(privateKey);
+
     return key;
   }
 
@@ -268,10 +293,12 @@ class SSSS {
     if (info.algorithm == AlgorithmTypes.secretStorageV1AesHmcSha2) {
       if ((info.mac is String) && (info.iv is String)) {
         final encrypted = await encryptAes(zeroStr, key, '', info.iv);
+
         return info.mac!.replaceAll(RegExp(r'=+$'), '') ==
             encrypted.mac.replaceAll(RegExp(r'=+$'), '');
       } else {
         // no real information about the key, assume it is valid
+
         return true;
       }
     } else {
@@ -307,8 +334,10 @@ class SSSS {
     }
     if (isValid(ret)) {
       _cache[type] = ret;
+
       return ret.content;
     }
+
     return null;
   }
 
@@ -325,7 +354,10 @@ class SSSS {
     }
     final enc = secretInfo.content['encrypted'][keyId];
     final encryptInfo = EncryptedContent(
-        iv: enc['iv'], ciphertext: enc['ciphertext'], mac: enc['mac']);
+      iv: enc['iv'],
+      ciphertext: enc['ciphertext'],
+      mac: enc['mac'],
+    );
     final decrypted = await decryptAes(encryptInfo, key, type);
     final db = client.database;
     if (cacheTypes.contains(type) && db != null) {
@@ -336,23 +368,29 @@ class SSSS {
         _cacheCallbacks[type]!(decrypted);
       }
     }
+
     return decrypted;
   }
 
-  Future<void> store(String type, String secret, String keyId, Uint8List key,
-      {bool add = false}) async {
+  Future<void> store(
+    String type,
+    String secret,
+    String keyId,
+    Uint8List key, {
+    bool add = false,
+  }) async {
     final encrypted = await encryptAes(secret, key, type);
-    Map<String, dynamic>? content;
+    Map<String, Object?>? content;
     if (add && client.accountData[type] != null) {
       content = client.accountData[type]!.content.copy();
       if (content['encrypted'] is! Map) {
-        content['encrypted'] = <String, dynamic>{};
+        content['encrypted'] = <String, Object?>{};
       }
     }
-    content ??= <String, dynamic>{
-      'encrypted': <String, dynamic>{},
+    content ??= <String, Object?>{
+      'encrypted': <String, Object?>{},
     };
-    content['encrypted'][keyId] = <String, dynamic>{
+    (content['encrypted'] as Map<String, Object?>)[keyId] = <String, Object?>{
       'iv': encrypted.iv,
       'ciphertext': encrypted.ciphertext,
       'mac': encrypted.mac,
@@ -371,7 +409,11 @@ class SSSS {
   }
 
   Future<void> validateAndStripOtherKeys(
-      String type, String secret, String keyId, Uint8List key) async {
+    String type,
+    String secret,
+    String keyId,
+    Uint8List key,
+  ) async {
     if (await getStored(type, keyId, key) != secret) {
       throw Exception('Secrets do not match up!');
     }
@@ -393,7 +435,11 @@ class SSSS {
     if (cacheTypes.contains(type)) {
       // cache the thing
       await client.database?.storeSSSSCache(
-          type, keyId, content['encrypted'][keyId]['ciphertext'], secret);
+        type,
+        keyId,
+        content['encrypted'][keyId]['ciphertext'],
+        secret,
+      );
       onSecretStored.add(keyId);
     }
   }
@@ -428,18 +474,22 @@ class SSSS {
     if (devices == null || devices.isEmpty) {
       if (!client.userDeviceKeys.containsKey(client.userID)) {
         Logs().w('[SSSS] User does not have any devices');
+
         return;
       }
       devices =
           client.userDeviceKeys[client.userID]!.deviceKeys.values.toList();
     }
-    devices.removeWhere((DeviceKeys d) =>
-        d.userId != client.userID ||
-        !d.verified ||
-        d.blocked ||
-        d.deviceId == client.deviceID);
+    devices.removeWhere(
+      (DeviceKeys d) =>
+          d.userId != client.userID ||
+          !d.verified ||
+          d.blocked ||
+          d.deviceId == client.deviceID,
+    );
     if (devices.isEmpty) {
       Logs().w('[SSSS] No devices');
+
       return;
     }
     final requestId = client.generateUniqueTransactionId();
@@ -468,6 +518,7 @@ class SSSS {
                 .isBefore(_lastCacheRequest!)) ||
         client.isUnknownSession) {
       // we are already requesting right now or we attempted to within the last 15 min
+
       return;
     }
     _lastCacheRequest = DateTime.now();
@@ -486,16 +537,19 @@ class SSSS {
       if (event.sender != client.userID ||
           !client.userDeviceKeys.containsKey(client.userID)) {
         Logs().i('[SSSS] Not sent by us');
+
         return; // we aren't asking for it ourselves, so ignore
       }
       if (event.content['action'] != 'request') {
         Logs().i('[SSSS] it is actually a cancelation');
+
         return; // not actually requesting, so ignore
       }
       final device = client.userDeviceKeys[client.userID]!
           .deviceKeys[event.content['requesting_device_id']];
       if (device == null || !device.verified || device.blocked) {
         Logs().i('[SSSS] Unknown / unverified devices, ignoring');
+
         return; // nope....unknown or untrusted device
       }
       // alright, all seems fine...let's check if we actually have the secret they are asking for
@@ -504,17 +558,19 @@ class SSSS {
       if (secret == null) {
         Logs()
             .i('[SSSS] We don\'t have the secret for $type ourself, ignoring');
+
         return; // seems like we don't have this, either
       }
       // okay, all checks out...time to share this secret!
       Logs().i('[SSSS] Replying with secret for $type');
       await client.sendToDeviceEncrypted(
-          [device],
-          EventTypes.SecretSend,
-          {
-            'request_id': event.content['request_id'],
-            'secret': secret,
-          });
+        [device],
+        EventTypes.SecretSend,
+        {
+          'request_id': event.content['request_id'],
+          'secret': secret,
+        },
+      );
     } else if (event.type == EventTypes.SecretSend) {
       // receiving a secret we asked for
       Logs().i('[SSSS] Received shared secret...');
@@ -523,31 +579,38 @@ class SSSS {
           !pendingShareRequests.containsKey(event.content['request_id']) ||
           encryptedContent == null) {
         Logs().i('[SSSS] Not by us or unknown request');
+
         return; // we have no idea what we just received
       }
       final request = pendingShareRequests[event.content['request_id']]!;
       // alright, as we received a known request id, let's check if the sender is valid
-      final device = request.devices.firstWhereOrNull((d) =>
-          d.userId == event.sender &&
-          d.curve25519Key == encryptedContent['sender_key']);
+      final device = request.devices.firstWhereOrNull(
+        (d) =>
+            d.userId == event.sender &&
+            d.curve25519Key == encryptedContent['sender_key'],
+      );
       if (device == null) {
         Logs().i('[SSSS] Someone else replied?');
+
         return; // someone replied whom we didn't send the share request to
       }
       final secret = event.content['secret'];
       if (event.content['secret'] is! String) {
         Logs().i('[SSSS] Secret wasn\'t a string');
+
         return; // the secret wasn't a string....wut?
       }
       // let's validate if the secret is, well, valid
       if (_validators.containsKey(request.type) &&
           !(await _validators[request.type]!(secret))) {
         Logs().i('[SSSS] The received secret was invalid');
+
         return; // didn't pass the validator
       }
       pendingShareRequests.remove(request.requestId);
       if (request.start.add(Duration(minutes: 15)).isBefore(DateTime.now())) {
         Logs().i('[SSSS] Request is too far in the past');
+
         return; // our request is more than 15min in the past...better not trust it anymore
       }
       Logs().i('[SSSS] Secret for type ${request.type} is ok, storing it');
@@ -575,6 +638,7 @@ class SSSS {
     if (data.content['encrypted'] is Map) {
       return data.content['encrypted'].keys.toSet();
     }
+
     return null;
   }
 
@@ -586,6 +650,7 @@ class SSSS {
     if (keys.contains(defaultKeyId)) {
       return defaultKeyId;
     }
+
     return keys.first;
   }
 
@@ -599,6 +664,7 @@ class SSSS {
     if (key == null) {
       throw Exception('Unknown key to open');
     }
+
     return OpenSSSS(ssss: this, keyId: keyToOpen, keyData: key);
   }
 }
@@ -609,9 +675,11 @@ class _ShareRequest {
   final List<DeviceKeys> devices;
   final DateTime start;
 
-  _ShareRequest(
-      {required this.requestId, required this.type, required this.devices})
-      : start = DateTime.now();
+  _ShareRequest({
+    required this.requestId,
+    required this.type,
+    required this.devices,
+  }) : start = DateTime.now();
 }
 
 class EncryptedContent {
@@ -619,8 +687,11 @@ class EncryptedContent {
   final String ciphertext;
   final String mac;
 
-  EncryptedContent(
-      {required this.iv, required this.ciphertext, required this.mac});
+  EncryptedContent({
+    required this.iv,
+    required this.ciphertext,
+    required this.mac,
+  });
 }
 
 class DerivedKeys {
@@ -646,11 +717,12 @@ class OpenSSSS {
   String? get recoveryKey =>
       isUnlocked ? SSSS.encodeRecoveryKey(privateKey!) : null;
 
-  Future<void> unlock(
-      {String? passphrase,
-      String? recoveryKey,
-      String? keyOrPassphrase,
-      bool postUnlock = true}) async {
+  Future<void> unlock({
+    String? passphrase,
+    String? recoveryKey,
+    String? keyOrPassphrase,
+    bool postUnlock = true,
+  }) async {
     if (keyOrPassphrase != null) {
       try {
         await unlock(recoveryKey: keyOrPassphrase, postUnlock: postUnlock);
@@ -661,11 +733,13 @@ class OpenSSSS {
           rethrow;
         }
       }
+
       return;
     } else if (passphrase != null) {
       if (!hasPassphrase) {
         throw Exception(
-            'Tried to unlock with passphrase while key does not have a passphrase');
+          'Tried to unlock with passphrase while key does not have a passphrase',
+        );
       }
       privateKey = await Future.value(
         ssss.client.nativeImplementations.keyFromPassphrase(
@@ -702,6 +776,7 @@ class OpenSSSS {
     if (privateKey == null) {
       throw Exception('SSSS not unlocked');
     }
+
     return await ssss.getStored(type, keyId, privateKey);
   }
 

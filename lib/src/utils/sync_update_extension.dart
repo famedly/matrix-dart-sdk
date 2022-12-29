@@ -39,6 +39,6 @@ extension SyncUpdateFilters on SyncUpdate {
         (rooms?.leave?.isNotEmpty ?? false);
   }
 
-  /// Returns if this sync update has presence updates
+  /// returns if this sync update has presence updates
   bool get hasPresenceUpdate => presence?.isNotEmpty ?? false;
 }

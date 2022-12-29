@@ -66,10 +66,11 @@ void main() {
       await client.encryption!.keyManager
           .request(client.getRoomById(roomId)!, sessionId, senderKey);
       expect(
-          client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId, senderKey) !=
-              null,
-          true);
+        client.encryption!.keyManager
+                .getInboundGroupSession(roomId, sessionId, senderKey) !=
+            null,
+        true,
+      );
     });
 
     test('upload key', () async {
@@ -82,7 +83,7 @@ void main() {
       final roomId = '!someroom:example.org';
       final sessionId = inbound.session_id();
       // set a payload...
-      final sessionPayload = <String, dynamic>{
+      final sessionPayload = <String, Object?>{
         'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'room_id': roomId,
         'forwarding_curve25519_key_chain': [client.identityKey],
@@ -93,19 +94,24 @@ void main() {
       };
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption!.keyManager.setInboundGroupSession(
-          roomId, sessionId, senderKey, sessionPayload,
-          forwarded: true);
+        roomId,
+        sessionId,
+        senderKey,
+        sessionPayload,
+        forwarded: true,
+      );
       var dbSessions = await client.database!.getInboundGroupSessionsToUpload();
       expect(dbSessions.isNotEmpty, true);
       await client.encryption!.keyManager.backgroundTasks();
       await FakeMatrixApi.firstWhereValue(
-          '/client/v3/room_keys/keys?version=5');
+        '/client/v3/room_keys/keys?version=5',
+      );
       final payload = FakeMatrixApi
           .calledEndpoints['/client/v3/room_keys/keys?version=5']!.first;
       dbSessions = await client.database!.getInboundGroupSessionsToUpload();
       expect(dbSessions.isEmpty, true);
 
-      final onlineKeys = RoomKeys.fromJson(json.decode(payload));
+      final onlineKeys = RoomKeys.fromJson(json.decode(payload as String));
       client.encryption!.keyManager.clearInboundGroupSessions();
       var ret = client.encryption!.keyManager
           .getInboundGroupSession(roomId, sessionId, senderKey);

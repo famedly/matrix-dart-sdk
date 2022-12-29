@@ -39,20 +39,20 @@ class StoredInboundGroupSession {
     required this.senderClaimedKeys,
   });
 
-  factory StoredInboundGroupSession.fromJson(Map<String, dynamic> json) =>
+  factory StoredInboundGroupSession.fromJson(Map<String, Object?> json) =>
       StoredInboundGroupSession(
-        roomId: json['room_id'],
-        sessionId: json['session_id'],
-        pickle: json['pickle'],
-        content: json['content'],
-        indexes: json['indexes'],
-        allowedAtIndex: json['allowed_at_index'],
-        uploaded: json['uploaded'],
-        senderKey: json['sender_key'],
-        senderClaimedKeys: json['sender_claimed_keys'],
+        roomId: json['room_id'] as String,
+        sessionId: json['session_id'] as String,
+        pickle: json['pickle'] as String,
+        content: json['content'] as String,
+        indexes: json['indexes'] as String,
+        allowedAtIndex: json['allowed_at_index'] as String,
+        uploaded: json['uploaded'] as bool,
+        senderKey: json['sender_key'] as String,
+        senderClaimedKeys: json['sender_claimed_keys'] as String,
       );
 
-  Map<String, dynamic> toJson() => {
+  Map<String, Object?> toJson() => {
         'room_id': roomId,
         'session_id': sessionId,
         'pickle': pickle,

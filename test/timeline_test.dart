@@ -54,12 +54,15 @@ void main() {
         }
       });
 
-      return completer.future.timeout(Duration(seconds: 1),
-          onTimeout: () async {
-        throw TimeoutException(
+      return completer.future.timeout(
+        Duration(seconds: 1),
+        onTimeout: () async {
+          throw TimeoutException(
             'Failed to wait for updateCount == $count, current == $updateCount',
-            Duration(seconds: 1));
-      });
+            Duration(seconds: 1),
+          );
+        },
+      );
     }
 
     late Client client;
@@ -81,7 +84,11 @@ void main() {
       currentPoison = poison;
 
       room = Room(
-          id: roomID, client: client, prev_batch: '1234', roomAccountData: {});
+        id: roomID,
+        client: client,
+        prev_batch: '1234',
+        roomAccountData: {},
+      );
       timeline = Timeline(
         room: room,
         chunk: TimelineChunk(events: []),
@@ -95,8 +102,10 @@ void main() {
         onRemove: removeList.add,
       );
 
-      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
-          checkWellKnown: false);
+      await client.checkHomeserver(
+        Uri.parse('https://fakeserver.notexisting'),
+        checkWellKnown: false,
+      );
       await client.abortSync();
 
       updateCount = 0;
@@ -111,30 +120,34 @@ void main() {
     tearDown(() => client.dispose(closeDatabase: true).onError((e, s) {}));
 
     test('Create', () async {
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.synced.intValue,
-          'event_id': '2',
-          'origin_server_ts': testTimeStamp - 1000
-        },
-      ));
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.synced.intValue,
-          'event_id': '1',
-          'origin_server_ts': testTimeStamp
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.synced.intValue,
+            'event_id': '2',
+            'origin_server_ts': testTimeStamp - 1000
+          },
+        ),
+      );
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.synced.intValue,
+            'event_id': '1',
+            'origin_server_ts': testTimeStamp
+          },
+        ),
+      );
 
       expect(timeline.sub != null, true);
 
@@ -147,15 +160,20 @@ void main() {
       expect(removeList, []);
       expect(timeline.events.length, 2);
       expect(timeline.events[0].eventId, '1');
-      expect(timeline.events[0].senderFromMemoryOrFallback.id,
-          '@alice:example.com');
-      expect(timeline.events[0].originServerTs.millisecondsSinceEpoch,
-          testTimeStamp);
+      expect(
+        timeline.events[0].senderFromMemoryOrFallback.id,
+        '@alice:example.com',
+      );
+      expect(
+        timeline.events[0].originServerTs.millisecondsSinceEpoch,
+        testTimeStamp,
+      );
       expect(timeline.events[0].body, 'Testcase');
       expect(
-          timeline.events[0].originServerTs.millisecondsSinceEpoch >
-              timeline.events[1].originServerTs.millisecondsSinceEpoch,
-          true);
+        timeline.events[0].originServerTs.millisecondsSinceEpoch >
+            timeline.events[1].originServerTs.millisecondsSinceEpoch,
+        true,
+      );
       expect(timeline.events[0].receipts, []);
 
       room.roomAccountData['m.receipt'] = BasicRoomEvent.fromJson({
@@ -174,18 +192,20 @@ void main() {
       expect(timeline.events[0].receipts.length, 1);
       expect(timeline.events[0].receipts[0].user.id, '@alice:example.com');
 
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.redaction',
-          'content': {'reason': 'spamming'},
-          'sender': '@alice:example.com',
-          'redacts': '2',
-          'event_id': '3',
-          'origin_server_ts': testTimeStamp + 1000
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.redaction',
+            'content': {'reason': 'spamming'},
+            'sender': '@alice:example.com',
+            'redacts': '2',
+            'event_id': '3',
+            'origin_server_ts': testTimeStamp + 1000
+          },
+        ),
+      );
 
       await waitForCount(3);
 
@@ -209,19 +229,21 @@ void main() {
       expect(eventId.startsWith('\$event'), true);
       expect(timeline.events[0].status, EventStatus.sent);
 
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'test'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.synced.intValue,
-          'event_id': eventId,
-          'unsigned': {'transaction_id': '1234'},
-          'origin_server_ts': DateTime.now().millisecondsSinceEpoch
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'test'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.synced.intValue,
+            'event_id': eventId,
+            'unsigned': {'transaction_id': '1234'},
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch
+          },
+        ),
+      );
 
       await waitForCount(3);
       expect(updateCount, 3);
@@ -232,21 +254,23 @@ void main() {
     });
 
     test('Send message with error', () async {
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {
-            'msgtype': 'm.text',
-            'body': 'Testcase should not show up in Sync'
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {
+              'msgtype': 'm.text',
+              'body': 'Testcase should not show up in Sync'
+            },
+            'sender': '@alice:example.com',
+            'status': EventStatus.sending.intValue,
+            'event_id': 'abc',
+            'origin_server_ts': testTimeStamp
           },
-          'sender': '@alice:example.com',
-          'status': EventStatus.sending.intValue,
-          'event_id': 'abc',
-          'origin_server_ts': testTimeStamp
-        },
-      ));
+        ),
+      );
       await waitForCount(1);
 
       await room.sendTextEvent('test', txid: 'errortxid');
@@ -269,18 +293,20 @@ void main() {
 
     test('Remove message', () async {
       // send a failed message
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.sending.intValue,
-          'event_id': 'abc',
-          'origin_server_ts': testTimeStamp
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.sending.intValue,
+            'event_id': 'abc',
+            'origin_server_ts': testTimeStamp
+          },
+        ),
+      );
       await waitForCount(1);
 
       await timeline.events[0].remove();
@@ -294,18 +320,20 @@ void main() {
     });
 
     test('getEventById', () async {
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.sending.intValue,
-          'event_id': 'abc',
-          'origin_server_ts': testTimeStamp
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.sending.intValue,
+            'event_id': 'abc',
+            'origin_server_ts': testTimeStamp
+          },
+        ),
+      );
       await waitForCount(1);
       var event = await timeline.getEventById('abc');
       expect(event?.content, {'msgtype': 'm.text', 'body': 'Testcase'});
@@ -325,19 +353,21 @@ void main() {
 
     test('Resend message', () async {
       timeline.events.clear();
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.error.intValue,
-          'event_id': 'new-test-event',
-          'origin_server_ts': testTimeStamp,
-          'unsigned': {'transaction_id': 'newresend'},
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.error.intValue,
+            'event_id': 'new-test-event',
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'newresend'},
+          },
+        ),
+      );
       await waitForCount(1);
       expect(timeline.events[0].status, EventStatus.error);
       await timeline.events[0].sendAgain();
@@ -396,30 +426,34 @@ void main() {
 
     test('sort errors on top', () async {
       timeline.events.clear();
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.error.intValue,
-          'event_id': 'abc',
-          'origin_server_ts': testTimeStamp
-        },
-      ));
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.synced.intValue,
-          'event_id': 'def',
-          'origin_server_ts': testTimeStamp + 5
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.error.intValue,
+            'event_id': 'abc',
+            'origin_server_ts': testTimeStamp
+          },
+        ),
+      );
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.synced.intValue,
+            'event_id': 'def',
+            'origin_server_ts': testTimeStamp + 5
+          },
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.error);
       expect(timeline.events[1].status, EventStatus.synced);
@@ -427,50 +461,56 @@ void main() {
 
     test('sending event to failed update', () async {
       timeline.events.clear();
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.sending.intValue,
-          'event_id': 'will-fail',
-          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.sending.intValue,
+            'event_id': 'will-fail',
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+          },
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 1);
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.error.intValue,
-          'event_id': 'will-fail',
-          'origin_server_ts': testTimeStamp
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.error.intValue,
+            'event_id': 'will-fail',
+            'origin_server_ts': testTimeStamp
+          },
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.error);
       expect(timeline.events.length, 1);
     });
     test('setReadMarker', () async {
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.synced.intValue,
-          'event_id': 'will-work',
-          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.synced.intValue,
+            'event_id': 'will-work',
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+          },
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       room.notificationCount = 1;
       await timeline.setReadMarker();
@@ -479,50 +519,56 @@ void main() {
     test('sending an event and the http request finishes first, 0 -> 1 -> 2',
         () async {
       timeline.events.clear();
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.sending.intValue,
-          'event_id': 'transaction',
-          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.sending.intValue,
+            'event_id': 'transaction',
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+          },
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 1);
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.sent.intValue,
-          'event_id': '\$event',
-          'origin_server_ts': testTimeStamp,
-          'unsigned': {'transaction_id': 'transaction'}
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.sent.intValue,
+            'event_id': '\$event',
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'transaction'}
+          },
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.sent);
       expect(timeline.events.length, 1);
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.synced.intValue,
-          'event_id': '\$event',
-          'origin_server_ts': testTimeStamp,
-          'unsigned': {'transaction_id': 'transaction'}
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.synced.intValue,
+            'event_id': '\$event',
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'transaction'}
+          },
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.synced);
       expect(timeline.events.length, 1);
@@ -530,155 +576,173 @@ void main() {
     test('sending an event where the sync reply arrives first, 0 -> 2 -> 1',
         () async {
       timeline.events.clear();
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'event_id': 'transaction',
-          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-          'unsigned': {
-            messageSendingStatusKey: EventStatus.sending.intValue,
-            'transaction_id': 'transaction',
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'event_id': 'transaction',
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+            'unsigned': {
+              messageSendingStatusKey: EventStatus.sending.intValue,
+              'transaction_id': 'transaction',
+            },
           },
-        },
-      ));
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 1);
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'event_id': '\$event',
-          'origin_server_ts': testTimeStamp,
-          'unsigned': {
-            'transaction_id': 'transaction',
-            messageSendingStatusKey: EventStatus.synced.intValue,
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'event_id': '\$event',
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {
+              'transaction_id': 'transaction',
+              messageSendingStatusKey: EventStatus.synced.intValue,
+            },
           },
-        },
-      ));
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.synced);
       expect(timeline.events.length, 1);
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'event_id': '\$event',
-          'origin_server_ts': testTimeStamp,
-          'unsigned': {
-            'transaction_id': 'transaction',
-            messageSendingStatusKey: EventStatus.sent.intValue,
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'event_id': '\$event',
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {
+              'transaction_id': 'transaction',
+              messageSendingStatusKey: EventStatus.sent.intValue,
+            },
           },
-        },
-      ));
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.synced);
       expect(timeline.events.length, 1);
     });
     test('sending an event 0 -> -1 -> 2', () async {
       timeline.events.clear();
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.sending.intValue,
-          'event_id': 'transaction',
-          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.sending.intValue,
+            'event_id': 'transaction',
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+          },
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 1);
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.error.intValue,
-          'origin_server_ts': testTimeStamp,
-          'unsigned': {'transaction_id': 'transaction'},
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.error.intValue,
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'transaction'},
+          },
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.error);
       expect(timeline.events.length, 1);
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.synced.intValue,
-          'event_id': '\$event',
-          'origin_server_ts': testTimeStamp,
-          'unsigned': {'transaction_id': 'transaction'},
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.synced.intValue,
+            'event_id': '\$event',
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'transaction'},
+          },
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.synced);
       expect(timeline.events.length, 1);
     });
     test('sending an event 0 -> 2 -> -1', () async {
       timeline.events.clear();
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.sending.intValue,
-          'event_id': 'transaction',
-          'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.sending.intValue,
+            'event_id': 'transaction',
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
+          },
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.sending);
       expect(timeline.events.length, 1);
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.synced.intValue,
-          'event_id': '\$event',
-          'origin_server_ts': testTimeStamp,
-          'unsigned': {'transaction_id': 'transaction'},
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.synced.intValue,
+            'event_id': '\$event',
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'transaction'},
+          },
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.synced);
       expect(timeline.events.length, 1);
-      client.onEvent.add(EventUpdate(
-        type: EventUpdateType.timeline,
-        roomID: roomID,
-        content: {
-          'type': 'm.room.message',
-          'content': {'msgtype': 'm.text', 'body': 'Testcase'},
-          'sender': '@alice:example.com',
-          'status': EventStatus.error.intValue,
-          'origin_server_ts': testTimeStamp,
-          'unsigned': {'transaction_id': 'transaction'},
-        },
-      ));
+      client.onEvent.add(
+        EventUpdate(
+          type: EventUpdateType.timeline,
+          roomID: roomID,
+          content: {
+            'type': 'm.room.message',
+            'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+            'sender': '@alice:example.com',
+            'status': EventStatus.error.intValue,
+            'origin_server_ts': testTimeStamp,
+            'unsigned': {'transaction_id': 'transaction'},
+          },
+        ),
+      );
       await Future.delayed(Duration(milliseconds: 50));
       expect(timeline.events[0].status, EventStatus.synced);
       expect(timeline.events.length, 1);

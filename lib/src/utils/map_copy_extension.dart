@@ -16,18 +16,19 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-extension MapCopyExtension on Map<String, dynamic> {
+extension MapCopyExtension on Map<String, Object?> {
   /// Deep-copies a given json map
-  Map<String, dynamic> copy() {
-    final copy = Map<String, dynamic>.from(this);
+  Map<String, Object?> copy() {
+    final copy = Map<String, Object?>.from(this);
     for (final entry in copy.entries) {
-      if (entry.value is Map<String, dynamic>) {
-        copy[entry.key] = (entry.value as Map<String, dynamic>).copy();
+      if (entry.value is Map<String, Object?>) {
+        copy[entry.key] = (entry.value as Map<String, Object?>).copy();
       }
       if (entry.value is List) {
-        copy[entry.key] = List.from(entry.value);
+        copy[entry.key] = List.from(entry.value as Iterable);
       }
     }
+
     return copy;
   }
 }

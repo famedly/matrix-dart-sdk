@@ -28,6 +28,7 @@ class LinebreakSyntax extends InlineSyntax {
   @override
   bool onMatch(InlineParser parser, Match match) {
     parser.addNode(Element.empty('br'));
+
     return true;
   }
 }
@@ -36,8 +37,12 @@ class SpoilerSyntax extends TagSyntax {
   SpoilerSyntax() : super(r'\|\|', requiresDelimiterRun: true);
 
   @override
-  Node close(InlineParser parser, Delimiter opener, Delimiter closer,
-      {required List<Node> Function() getChildren}) {
+  Node close(
+    InlineParser parser,
+    Delimiter opener,
+    Delimiter closer, {
+    required List<Node> Function() getChildren,
+  }) {
     final children = getChildren();
     final newChildren = <Node>[];
     var searchingForReason = true;
@@ -67,6 +72,7 @@ class SpoilerSyntax extends TagSyntax {
         Element('span', searchingForReason ? children : newChildren);
     element.attributes['data-mx-spoiler'] =
         searchingForReason ? '' : htmlAttrEscape.convert(reason);
+
     return element;
   }
 }
@@ -96,6 +102,7 @@ class EmoteSyntax extends InlineSyntax {
     if (mxc == null) {
       // emote not found. Insert the whole thing as plain text
       parser.addNode(Text(match[0]!));
+
       return true;
     }
     final element = Element.empty('img');
@@ -106,6 +113,7 @@ class EmoteSyntax extends InlineSyntax {
     element.attributes['height'] = '32';
     element.attributes['vertical-align'] = 'middle';
     parser.addNode(element);
+
     return true;
   }
 }
@@ -119,6 +127,7 @@ class InlineLatexSyntax extends TagSyntax {
         Element('span', [Element.text('code', htmlEscape.convert(match[1]!))]);
     element.attributes['data-mx-maths'] = htmlAttrEscape.convert(match[1]!);
     parser.addNode(element);
+
     return true;
   }
 }
@@ -146,6 +155,7 @@ class BlockLatexSyntax extends BlockSyntax {
       }
       first = false;
     }
+
     return childLines;
   }
 
@@ -158,6 +168,7 @@ class BlockLatexSyntax extends BlockSyntax {
       Element('pre', [Element.text('code', htmlEscape.convert(latex))])
     ]);
     element.attributes['data-mx-maths'] = htmlAttrEscape.convert(latex);
+
     return element;
   }
 }
@@ -165,13 +176,15 @@ class BlockLatexSyntax extends BlockSyntax {
 class PillSyntax extends InlineSyntax {
   PillSyntax()
       : super(
-            r'([@#!][^\s:]*:(?:[^\s]+\.\w+|[\d\.]+|\[[a-fA-F0-9:]+\])(?::\d+)?)');
+          r'([@#!][^\s:]*:(?:[^\s]+\.\w+|[\d\.]+|\[[a-fA-F0-9:]+\])(?::\d+)?)',
+        );
 
   @override
   bool onMatch(InlineParser parser, Match match) {
     if (match.start > 0 &&
         !RegExp(r'[\s.!?:;\(]').hasMatch(match.input[match.start - 1])) {
       parser.addNode(Text(match[0]!));
+
       return true;
     }
     final identifier = match[1]!;
@@ -179,6 +192,7 @@ class PillSyntax extends InlineSyntax {
     element.attributes['href'] =
         htmlAttrEscape.convert('https://matrix.to/#/$identifier');
     parser.addNode(element);
+
     return true;
   }
 }
@@ -194,12 +208,14 @@ class MentionSyntax extends InlineSyntax {
             !RegExp(r'[\s.!?:;\(]').hasMatch(match.input[match.start - 1])) ||
         mention == null) {
       parser.addNode(Text(match[0]!));
+
       return true;
     }
     final element = Element.text('a', htmlEscape.convert(match[1]!));
     element.attributes['href'] =
         htmlAttrEscape.convert('https://matrix.to/#/$mention');
     parser.addNode(element);
+
     return true;
   }
 }
@@ -253,5 +269,6 @@ String markdown(
   if (stripPTags) {
     ret = ret.replaceAll('<p>', '').replaceAll('</p>', '');
   }
+
   return ret.trim().replaceAll(RegExp(r'(<br />)+$'), '');
 }

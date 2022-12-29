@@ -99,7 +99,9 @@ class Client extends MatrixApi {
 
   @Deprecated('Use [nativeImplementations] instead')
   Future<T> runInBackground<T, U>(
-      FutureOr<T> Function(U arg) function, U arg) async {
+    FutureOr<T> Function(U arg) function,
+    U arg,
+  ) async {
     final compute = this.compute;
     if (compute != null) {
       return await compute(function, arg);
@@ -110,7 +112,8 @@ class Client extends MatrixApi {
   final Duration sendTimelineEventTimeout;
 
   Future<MatrixImageFileResizedResponse?> Function(
-      MatrixImageFileResizeArguments)? customImageResizer;
+    MatrixImageFileResizeArguments,
+  )? customImageResizer;
 
   /// Create a client
   /// [clientName] = unique identifier of this client
@@ -190,8 +193,11 @@ class Client extends MatrixApi {
             ? NativeImplementationsIsolate(compute)
             : nativeImplementations,
         super(
-            httpClient: FixedTimeoutHttpClient(
-                httpClient ?? http.Client(), Duration(seconds: 35))) {
+          httpClient: FixedTimeoutHttpClient(
+            httpClient ?? http.Client(),
+            Duration(seconds: 35),
+          ),
+        ) {
     if (logLevel != null) Logs().level = logLevel;
     importantStateEvents.addAll([
       EventTypes.RoomName,
@@ -241,7 +247,7 @@ class Client extends MatrixApi {
   String? get groupCallSessionId => _groupCallSessionId;
   String? _groupCallSessionId;
 
-  /// Returns the current login state.
+  /// returns the current login state.
   @Deprecated('Use [onLoginStateChanged.value] instead')
   LoginState get loginState =>
       onLoginStateChanged.value ?? LoginState.loggedOut;
@@ -286,10 +292,11 @@ class Client extends MatrixApi {
 
   void _updatePushrules() {
     final ruleset = TryGetPushRule.tryFromJson(
-        _accountData[EventTypes.PushRules]
-                ?.content
-                .tryGetMap<String, dynamic>('global') ??
-            {});
+      _accountData[EventTypes.PushRules]
+              ?.content
+              .tryGetMap<String, Object?>('global') ??
+          {},
+    );
     _pushruleEvaluator = PushruleEvaluator.fromRuleset(ruleset);
   }
 
@@ -300,6 +307,7 @@ class Client extends MatrixApi {
 
   String generateUniqueTransactionId() {
     _transactionCounter++;
+
     return '$clientName-$_transactionCounter-${DateTime.now().millisecondsSinceEpoch}';
   }
 
@@ -307,6 +315,7 @@ class Client extends MatrixApi {
     for (final room in rooms) {
       if (room.canonicalAlias == alias) return room;
     }
+
     return null;
   }
 
@@ -321,14 +330,14 @@ class Client extends MatrixApi {
     return null;
   }
 
-  Map<String, dynamic> get directChats =>
+  Map<String, Object?> get directChats =>
       _accountData['m.direct']?.content ?? {};
 
   /// Returns the (first) room ID from the store which is a private chat with the user [userId].
   /// Returns null if there is none.
   String? getDirectChatFromUserId(String userId) {
     final directChats = _accountData['m.direct']?.content[userId];
-    if (directChats is List<dynamic> && directChats.isNotEmpty) {
+    if (directChats is List<Object?> && directChats.isNotEmpty) {
       final potentialRooms = directChats
           .cast<String>()
           .map(getRoomById)
@@ -354,6 +363,7 @@ class Client extends MatrixApi {
         return room.id;
       }
     }
+
     return null;
   }
 
@@ -362,8 +372,12 @@ class Client extends MatrixApi {
     String MatrixIdOrDomain,
   ) async {
     try {
-      final response = await http.get(Uri.https(
-          MatrixIdOrDomain.domain ?? '', '/.well-known/matrix/client'));
+      final response = await http.get(
+        Uri.https(
+          MatrixIdOrDomain.domain ?? '',
+          '/.well-known/matrix/client',
+        ),
+      );
       var respBody = response.body;
       try {
         respBody = utf8.decode(response.bodyBytes);
@@ -371,13 +385,16 @@ class Client extends MatrixApi {
         // No-OP
       }
       final rawJson = json.decode(respBody);
+
       return DiscoveryInformation.fromJson(rawJson);
     } catch (_) {
       // we got an error processing or fetching the well-known information, let's
       // provide a reasonable fallback.
+
       return DiscoveryInformation(
         mHomeserver: HomeserverInformation(
-            baseUrl: Uri.https(MatrixIdOrDomain.domain ?? '', '')),
+          baseUrl: Uri.https(MatrixIdOrDomain.domain ?? '', ''),
+        ),
       );
     }
   }
@@ -420,7 +437,9 @@ class Client extends MatrixApi {
       final loginTypes = await getLoginFlows() ?? [];
       if (!loginTypes.any((f) => supportedLoginTypes.contains(f.type))) {
         throw BadServerLoginTypesException(
-            loginTypes.map((f) => f.type ?? '').toSet(), supportedLoginTypes);
+          loginTypes.map((f) => f.type ?? '').toSet(),
+          supportedLoginTypes,
+        );
       }
 
       return HomeserverSummary(
@@ -435,7 +454,7 @@ class Client extends MatrixApi {
   }
 
   /// Checks to see if a username is available, and valid, for the server.
-  /// Returns the fully-qualified Matrix user ID (MXID) that has been registered.
+  /// returns the fully-qualified Matrix user ID (MXID) that has been registered.
   /// You have to call [checkHomeserver] first to set a homeserver.
   @override
   Future<RegisterResponse> register({
@@ -464,14 +483,17 @@ class Client extends MatrixApi {
     final homeserver = this.homeserver;
     if (accessToken == null || deviceId_ == null || homeserver == null) {
       throw Exception(
-          'Registered but token, device ID, user ID or homeserver is null.');
+        'Registered but token, device ID, user ID or homeserver is null.',
+      );
     }
     await init(
-        newToken: accessToken,
-        newUserID: userId,
-        newHomeserver: homeserver,
-        newDeviceName: initialDeviceDisplayName ?? '',
-        newDeviceID: deviceId_);
+      newToken: accessToken,
+      newUserID: userId,
+      newHomeserver: homeserver,
+      newDeviceName: initialDeviceDisplayName ?? '',
+      newDeviceID: deviceId_,
+    );
+
     return response;
   }
 
@@ -537,6 +559,7 @@ class Client extends MatrixApi {
       newDeviceName: initialDeviceDisplayName ?? '',
       newDeviceID: deviceId_,
     );
+
     return response;
   }
 
@@ -569,7 +592,8 @@ class Client extends MatrixApi {
 
   /// Run any request and react on user interactive authentication flows here.
   Future<T> uiaRequestBackground<T>(
-      Future<T> Function(AuthenticationData? auth) request) {
+    Future<T> Function(AuthenticationData? auth) request,
+  ) {
     final completer = Completer<T>();
     UiaRequest? uia;
     uia = UiaRequest(
@@ -586,10 +610,11 @@ class Client extends MatrixApi {
         }
       },
     );
+
     return completer.future;
   }
 
-  /// Returns an existing direct room ID with this user or creates a new one.
+  /// returns an existing direct room ID with this user or creates a new one.
   /// By default encryption will be enabled if the client supports encryption
   /// and the other user has uploaded any encryption keys.
   Future<String> startDirectChat(
@@ -597,7 +622,7 @@ class Client extends MatrixApi {
     bool? enableEncryption,
     List<StateEvent>? initialState,
     bool waitForSync = true,
-    Map<String, dynamic>? powerLevelContentOverride,
+    Map<String, Object?>? powerLevelContentOverride,
     CreateRoomPreset? preset = CreateRoomPreset.trustedPrivateChat,
   }) async {
     // Try to find an existing direct chat
@@ -609,12 +634,14 @@ class Client extends MatrixApi {
     if (enableEncryption) {
       initialState ??= [];
       if (!initialState.any((s) => s.type == EventTypes.Encryption)) {
-        initialState.add(StateEvent(
-          content: {
-            'algorithm': supportedGroupEncryptionAlgorithms.first,
-          },
-          type: EventTypes.Encryption,
-        ));
+        initialState.add(
+          StateEvent(
+            content: {
+              'algorithm': supportedGroupEncryptionAlgorithms.first,
+            },
+            type: EventTypes.Encryption,
+          ),
+        );
       }
     }
 
@@ -649,35 +676,38 @@ class Client extends MatrixApi {
     Visibility? visibility,
     bool waitForSync = true,
     bool groupCall = false,
-    Map<String, dynamic>? powerLevelContentOverride,
+    Map<String, Object?>? powerLevelContentOverride,
   }) async {
     enableEncryption ??=
         encryptionEnabled && preset != CreateRoomPreset.publicChat;
     if (enableEncryption) {
       initialState ??= [];
       if (!initialState.any((s) => s.type == EventTypes.Encryption)) {
-        initialState.add(StateEvent(
-          content: {
-            'algorithm': supportedGroupEncryptionAlgorithms.first,
-          },
-          type: EventTypes.Encryption,
-        ));
+        initialState.add(
+          StateEvent(
+            content: {
+              'algorithm': supportedGroupEncryptionAlgorithms.first,
+            },
+            type: EventTypes.Encryption,
+          ),
+        );
       }
     }
     if (groupCall) {
       powerLevelContentOverride ??= {};
-      powerLevelContentOverride['events'] = <String, dynamic>{
+      powerLevelContentOverride['events'] = <String, Object?>{
         'org.matrix.msc3401.call.member': 0,
         'org.matrix.msc3401.call': 0,
       };
     }
     final roomId = await createRoom(
-        invite: invite,
-        preset: preset,
-        name: groupName,
-        initialState: initialState,
-        visibility: visibility,
-        powerLevelContentOverride: powerLevelContentOverride);
+      invite: invite,
+      preset: preset,
+      name: groupName,
+      initialState: initialState,
+      visibility: visibility,
+      powerLevelContentOverride: powerLevelContentOverride,
+    );
 
     if (waitForSync) {
       if (getRoomById(roomId) == null) {
@@ -685,24 +715,31 @@ class Client extends MatrixApi {
         await waitForRoomInSync(roomId, join: true);
       }
     }
+
     return roomId;
   }
 
   /// Wait for the room to appear into the enabled section of the room sync.
   /// By default, the function will listen for room in invite, join and leave
   /// sections of the sync.
-  Future<SyncUpdate> waitForRoomInSync(String roomId,
-      {bool join = false, bool invite = false, bool leave = false}) async {
+  Future<SyncUpdate> waitForRoomInSync(
+    String roomId, {
+    bool join = false,
+    bool invite = false,
+    bool leave = false,
+  }) async {
     if (!join && !invite && !leave) {
       join = true;
       invite = true;
       leave = true;
     }
 
-    return await onSync.stream.firstWhere((sync) =>
-        invite && (sync.rooms?.invite?.containsKey(roomId) ?? false) ||
-        join && (sync.rooms?.join?.containsKey(roomId) ?? false) ||
-        leave && (sync.rooms?.leave?.containsKey(roomId) ?? false));
+    return await onSync.stream.firstWhere(
+      (sync) =>
+          invite && (sync.rooms?.invite?.containsKey(roomId) ?? false) ||
+          join && (sync.rooms?.join?.containsKey(roomId) ?? false) ||
+          leave && (sync.rooms?.leave?.containsKey(roomId) ?? false),
+    );
   }
 
   /// Checks if the given user has encryption keys. May query keys from the
@@ -713,6 +750,7 @@ class Client extends MatrixApi {
       return true;
     }
     final keys = await queryKeys({userId: []});
+
     return keys.deviceKeys?[userId]?.isNotEmpty ?? false;
   }
 
@@ -723,15 +761,16 @@ class Client extends MatrixApi {
   /// room as a space with `room.toSpace()`.
   ///
   /// https://github.com/matrix-org/matrix-doc/blob/matthew/msc1772/proposals/1772-groups-as-rooms.md
-  Future<String> createSpace(
-      {String? name,
-      String? topic,
-      Visibility visibility = Visibility.public,
-      String? spaceAliasName,
-      List<String>? invite,
-      List<Invite3pid>? invite3pid,
-      String? roomVersion,
-      bool waitForSync = false}) async {
+  Future<String> createSpace({
+    String? name,
+    String? topic,
+    Visibility visibility = Visibility.public,
+    String? spaceAliasName,
+    List<String>? invite,
+    List<Invite3pid>? invite3pid,
+    String? roomVersion,
+    bool waitForSync = false,
+  }) async {
     final id = await createRoom(
       name: name,
       topic: topic,
@@ -754,7 +793,7 @@ class Client extends MatrixApi {
   @Deprecated('Use fetchOwnProfile() instead')
   Future<Profile> get ownProfile => fetchOwnProfile();
 
-  /// Returns the user's own displayname and avatar url. In Matrix it is possible that
+  /// returns the user's own displayname and avatar url. In Matrix it is possible that
   /// one user can have different displaynames and avatar urls in different rooms. So
   /// this endpoint first checks if the profile is the same in all rooms. If not, the
   /// profile will be requested from the homserver.
@@ -777,47 +816,60 @@ class Client extends MatrixApi {
   /// If [cache] is true then
   /// the profile get cached for this session. Please note that then the profile may
   /// become outdated if the user changes the displayname or avatar in this session.
-  Future<Profile> getProfileFromUserId(String userId,
-      {bool cache = true, bool getFromRooms = true}) async {
+  Future<Profile> getProfileFromUserId(
+    String userId, {
+    bool cache = true,
+    bool getFromRooms = true,
+  }) async {
     var profile = _profileCache[userId];
     if (cache && profile != null) {
       return Profile(
-          userId: userId,
-          displayName: profile.displayname,
-          avatarUrl: profile.avatarUrl);
+        userId: userId,
+        displayName: profile.displayname,
+        avatarUrl: profile.avatarUrl,
+      );
     }
 
     if (getFromRooms) {
-      final room = rooms.firstWhereOrNull((Room room) =>
-          room.getParticipants().indexWhere((User user) => user.id == userId) !=
-          -1);
+      final room = rooms.firstWhereOrNull(
+        (Room room) =>
+            room
+                .getParticipants()
+                .indexWhere((User user) => user.id == userId) !=
+            -1,
+      );
       if (room != null) {
         final user =
             room.getParticipants().firstWhere((User user) => user.id == userId);
+
         return Profile(
-            userId: userId,
-            displayName: user.displayName,
-            avatarUrl: user.avatarUrl);
+          userId: userId,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+        );
       }
     }
     profile = await getUserProfile(userId);
     if (cache || _profileCache.containsKey(userId)) {
       _profileCache[userId] = profile;
     }
+
     return Profile(
-        userId: userId,
-        displayName: profile.displayname,
-        avatarUrl: profile.avatarUrl);
+      userId: userId,
+      displayName: profile.displayname,
+      avatarUrl: profile.avatarUrl,
+    );
   }
 
   final List<ArchivedRoom> _archivedRooms = [];
 
-  /// Return an archive room containing the room and the timeline for a specific archived room.
+  /// return an archive room containing the room and the timeline for a specific archived room.
   ArchivedRoom? getArchiveRoomFromCache(String roomId) {
     for (var i = 0; i < _archivedRooms.length; i++) {
       final archive = _archivedRooms[i];
       if (archive.room.id == roomId) return archive;
     }
+
     return null;
   }
 
@@ -860,13 +912,15 @@ class Client extends MatrixApi {
         );
 
         final timeline = Timeline(
-            room: leftRoom,
-            chunk: TimelineChunk(
-                events: room.timeline?.events?.reversed
-                        .toList() // we display the event in the other sence
-                        .map((e) => Event.fromMatrixEvent(e, leftRoom))
-                        .toList() ??
-                    []));
+          room: leftRoom,
+          chunk: TimelineChunk(
+            events: room.timeline?.events?.reversed
+                    .toList() // we display the event in the other sence
+                    .map((e) => Event.fromMatrixEvent(e, leftRoom))
+                    .toList() ??
+                [],
+          ),
+        );
 
         for (var i = 0; i < timeline.events.length; i++) {
           // Try to decrypt encrypted events but don't update the database.
@@ -879,31 +933,39 @@ class Client extends MatrixApi {
         }
 
         room.timeline?.events?.forEach((event) {
-          leftRoom.setState(Event.fromMatrixEvent(
-            event,
-            leftRoom,
-          ));
+          leftRoom.setState(
+            Event.fromMatrixEvent(
+              event,
+              leftRoom,
+            ),
+          );
         });
 
         leftRoom.prev_batch = room.timeline?.prevBatch;
         room.state?.forEach((event) {
-          leftRoom.setState(Event.fromMatrixEvent(
-            event,
-            leftRoom,
-          ));
+          leftRoom.setState(
+            Event.fromMatrixEvent(
+              event,
+              leftRoom,
+            ),
+          );
         });
 
         _archivedRooms.add(ArchivedRoom(room: leftRoom, timeline: timeline));
       }
     }
+
     return _archivedRooms;
   }
 
   /// Uploads a file and automatically caches it in the database, if it is small enough
   /// and returns the mxc url.
   @override
-  Future<Uri> uploadContent(Uint8List file,
-      {String? filename, String? contentType}) async {
+  Future<Uri> uploadContent(
+    Uint8List file, {
+    String? filename,
+    String? contentType,
+  }) async {
     final mediaConfig = await getConfig();
     final maxMediaSize = mediaConfig.mUploadSize;
     if (maxMediaSize != null && maxMediaSize < file.lengthInBytes) {
@@ -917,8 +979,12 @@ class Client extends MatrixApi {
     final database = this.database;
     if (database != null && file.length <= database.maxFileSize) {
       await database.storeFile(
-          mxc, file, DateTime.now().millisecondsSinceEpoch);
+        mxc,
+        file,
+        DateTime.now().millisecondsSinceEpoch,
+      );
     }
+
     return mxc;
   }
 
@@ -951,8 +1017,10 @@ class Client extends MatrixApi {
       final export = await database!.exportDump();
 
       await clear();
+
       return export;
     }
+
     return null;
   }
 
@@ -986,6 +1054,7 @@ class Client extends MatrixApi {
         return false;
       }
     }
+
     return success;
   }
 
@@ -996,6 +1065,7 @@ class Client extends MatrixApi {
       // We send an empty String to remove the avatar. Sending Null **should**
       // work but it doesn't with Synapse. See:
       // https://gitlab.com/famedly/company/frontend/famedlysdk/-/issues/254
+
       return setAvatarUrl(userID!, Uri.parse(''));
     }
     final uploadResp = await uploadContent(
@@ -1004,22 +1074,25 @@ class Client extends MatrixApi {
       contentType: file.mimeType,
     );
     await setAvatarUrl(userID!, uploadResp);
+
     return;
   }
 
-  /// Returns the global push rules for the logged in user.
+  /// returns the global push rules for the logged in user.
   PushRuleSet? get globalPushRules {
     final pushrules = _accountData['m.push_rules']
         ?.content
-        .tryGetMap<String, dynamic>('global');
+        .tryGetMap<String, Object?>('global');
+
     return pushrules != null ? TryGetPushRule.tryFromJson(pushrules) : null;
   }
 
-  /// Returns the device push rules for the logged in user.
+  /// returns the device push rules for the logged in user.
   PushRuleSet? get devicePushRules {
     final pushrules = _accountData['m.push_rules']
         ?.content
-        .tryGetMap<String, dynamic>('device');
+        .tryGetMap<String, Object?>('device');
+
     return pushrules != null ? TryGetPushRule.tryFromJson(pushrules) : null;
   }
 
@@ -1063,7 +1136,8 @@ class Client extends MatrixApi {
 
   /// Callback will be called on presences.
   @Deprecated(
-      'Deprecated, use onPresenceChanged instead which has a timestamp.')
+    'Deprecated, use onPresenceChanged instead which has a timestamp.',
+  )
   final CachedStreamController<Presence> onPresence = CachedStreamController();
 
   /// Callback will be called on presence updates.
@@ -1136,7 +1210,7 @@ class Client extends MatrixApi {
   bool _initLock = false;
 
   /// Fetches the corresponding Event object from a notification including a
-  /// full Room object with the sender User object in it. Returns null if this
+  /// full Room object with the sender User object in it. returns null if this
   /// push notification is not corresponding to an existing event.
   /// The client does **not** need to be initialized first. If it is not
   /// initalized, it will only fetch the necessary parts of the database. This
@@ -1155,7 +1229,8 @@ class Client extends MatrixApi {
     if (!isLogged()) {
       if (database == null) {
         throw Exception(
-            'Can not execute getEventByPushNotification() without a database');
+          'Can not execute getEventByPushNotification() without a database',
+        );
       }
       final clientInfoMap = await database.getClient(clientName);
       final token = clientInfoMap?.tryGet<String>('token');
@@ -1180,26 +1255,30 @@ class Client extends MatrixApi {
     final roomName = notification.roomName;
     final roomAlias = notification.roomAlias;
     if (roomName != null) {
-      room.setState(Event(
-        eventId: 'TEMP',
-        stateKey: '',
-        type: EventTypes.RoomName,
-        content: {'name': roomName},
-        room: room,
-        senderId: 'UNKNOWN',
-        originServerTs: DateTime.now(),
-      ));
+      room.setState(
+        Event(
+          eventId: 'TEMP',
+          stateKey: '',
+          type: EventTypes.RoomName,
+          content: {'name': roomName},
+          room: room,
+          senderId: 'UNKNOWN',
+          originServerTs: DateTime.now(),
+        ),
+      );
     }
     if (roomAlias != null) {
-      room.setState(Event(
-        eventId: 'TEMP',
-        stateKey: '',
-        type: EventTypes.RoomCanonicalAlias,
-        content: {'alias': roomAlias},
-        room: room,
-        senderId: 'UNKNOWN',
-        originServerTs: DateTime.now(),
-      ));
+      room.setState(
+        Event(
+          eventId: 'TEMP',
+          stateKey: '',
+          type: EventTypes.RoomCanonicalAlias,
+          content: {'alias': roomAlias},
+          room: room,
+          senderId: 'UNKNOWN',
+          originServerTs: DateTime.now(),
+        ),
+      );
     }
 
     // Load the event from the notification or from the database or from server:
@@ -1228,9 +1307,11 @@ class Client extends MatrixApi {
       // No access to the MatrixEvent. Search in /notifications
       final notificationsResponse = await getNotifications();
       matrixEvent ??= notificationsResponse.notifications
-          .firstWhereOrNull((notification) =>
-              notification.roomId == roomId &&
-              notification.event.eventId == eventId)
+          .firstWhereOrNull(
+            (notification) =>
+                notification.roomId == roomId &&
+                notification.event.eventId == eventId,
+          )
           ?.event;
     }
 
@@ -1294,12 +1375,13 @@ class Client extends MatrixApi {
     if (storeInDatabase) {
       await database?.transaction(() async {
         await database.storeEventUpdate(
-            EventUpdate(
-              roomID: roomId,
-              type: EventUpdateType.timeline,
-              content: event.toJson(),
-            ),
-            this);
+          EventUpdate(
+            roomID: roomId,
+            type: EventUpdateType.timeline,
+            content: event.toJson(),
+          ),
+          this,
+        );
       });
     }
 
@@ -1342,7 +1424,8 @@ class Client extends MatrixApi {
             newDeviceID == null ||
             newDeviceName == null)) {
       throw Exception(
-          'If one of [newToken, newUserID, newDeviceID, newDeviceName] is set then all of them must be set!');
+        'If one of [newToken, newUserID, newDeviceID, newDeviceName] is set then all of them must be set!',
+      );
     }
 
     if (_initLock) throw Exception('[init()] has been called multiple times!');
@@ -1368,15 +1451,15 @@ class Client extends MatrixApi {
       String? userID;
       final account = await this.database?.getClient(clientName);
       if (account != null) {
-        _id = account['client_id'];
-        homeserver = Uri.parse(account['homeserver_url']);
-        accessToken = this.accessToken = account['token'];
-        userID = _userID = account['user_id'];
-        _deviceID = account['device_id'];
-        _deviceName = account['device_name'];
-        syncFilterId = account['sync_filter_id'];
-        prevBatch = account['prev_batch'];
-        olmAccount = account['olm_account'];
+        _id = account['client_id'] as int?;
+        homeserver = Uri.parse(account['homeserver_url'] as String);
+        accessToken = this.accessToken = account['token'] as String?;
+        userID = _userID = account['user_id'] as String?;
+        _deviceID = account['device_id'] as String?;
+        _deviceName = account['device_name'] as String?;
+        syncFilterId = account['sync_filter_id'] as String?;
+        prevBatch = account['prev_batch'] as String?;
+        olmAccount = account['olm_account'] as String?;
       }
       if (newToken != null) {
         accessToken = this.accessToken = newToken;
@@ -1405,6 +1488,7 @@ class Client extends MatrixApi {
         onLoginStateChanged.add(LoginState.loggedOut);
         Logs().i('User is not logged in.');
         _initLock = false;
+
         return;
       }
 
@@ -1473,6 +1557,7 @@ class Client extends MatrixApi {
       if (waitForFirstSync) {
         await syncFuture;
       }
+
       return;
     } catch (e, s) {
       Logs().e('Initialization failed', e, s);
@@ -1540,6 +1625,7 @@ class Client extends MatrixApi {
         _sync();
       }
     });
+
     return currentSync;
   }
 
@@ -1553,6 +1639,7 @@ class Client extends MatrixApi {
           this.syncFilterId = await defineFilter(userID, syncFilter);
       await database?.storeSyncFilterId(syncFilterId);
     }
+
     return;
   }
 
@@ -1565,9 +1652,10 @@ class Client extends MatrixApi {
     try {
       if (_initLock) {
         Logs().d('Running sync while init isn\'t done yet, dropping request');
+
         return;
       }
-      dynamic syncError;
+      Object? syncError;
       await _checkSyncFilter();
       timeout ??= const Duration(seconds: 30);
       final syncRequest = sync(
@@ -1577,6 +1665,7 @@ class Client extends MatrixApi {
         setPresence: syncPresence,
       ).then((v) => Future<SyncUpdate?>.value(v)).catchError((e) {
         syncError = e;
+
         return null;
       });
       _currentSyncId = syncRequest.hashCode;
@@ -1588,6 +1677,7 @@ class Client extends MatrixApi {
       if (_currentSyncId != syncRequest.hashCode) {
         Logs()
             .w('Current sync request ID has changed. Dropping this sync loop!');
+
         return;
       }
 
@@ -1615,7 +1705,8 @@ class Client extends MatrixApi {
       prevBatch = syncResp.nextBatch;
       // ignore: unawaited_futures
       database?.deleteOldFiles(
-          DateTime.now().subtract(Duration(days: 30)).millisecondsSinceEpoch);
+        DateTime.now().subtract(Duration(days: 30)).millisecondsSinceEpoch,
+      );
       await updateUserDeviceKeys();
       if (encryptionEnabled) {
         encryption?.onSync();
@@ -1629,22 +1720,36 @@ class Client extends MatrixApi {
       _retryDelay = Future.value();
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.finished));
     } on MatrixException catch (e, s) {
-      onSyncStatus.add(SyncStatusUpdate(SyncStatus.error,
-          error: SdkError(exception: e, stackTrace: s)));
+      onSyncStatus.add(
+        SyncStatusUpdate(
+          SyncStatus.error,
+          error: SdkError(exception: e, stackTrace: s),
+        ),
+      );
       if (e.error == MatrixError.M_UNKNOWN_TOKEN) {
         Logs().w('The user has been logged out!');
         await clear();
       }
     } on MatrixConnectionException catch (e, s) {
       Logs().w('Synchronization connection failed');
-      onSyncStatus.add(SyncStatusUpdate(SyncStatus.error,
-          error: SdkError(exception: e, stackTrace: s)));
+      onSyncStatus.add(
+        SyncStatusUpdate(
+          SyncStatus.error,
+          error: SdkError(exception: e, stackTrace: s),
+        ),
+      );
     } catch (e, s) {
       if (!isLogged() || _disposed || _aborted) return;
       Logs().e('Error during processing events', e, s);
-      onSyncStatus.add(SyncStatusUpdate(SyncStatus.error,
+      onSyncStatus.add(
+        SyncStatusUpdate(
+          SyncStatus.error,
           error: SdkError(
-              exception: e is Exception ? e : Exception(e), stackTrace: s)));
+            exception: e is Exception ? e : Exception(e),
+            stackTrace: s,
+          ),
+        ),
+      );
     }
   }
 
@@ -1701,7 +1806,9 @@ class Client extends MatrixApi {
     }
     if (encryptionEnabled) {
       encryption?.handleDeviceOneTimeKeysCount(
-          sync.deviceOneTimeKeysCount, sync.deviceUnusedFallbackKeyTypes);
+        sync.deviceOneTimeKeysCount,
+        sync.deviceUnusedFallbackKeyTypes,
+      );
     }
     _sortRooms();
     onSync.add(sync);
@@ -1760,7 +1867,9 @@ class Client extends MatrixApi {
         for (final event in _eventsPendingDecryption) {
           if (event.event.roomID != roomId) continue;
           if (!sessionIds.contains(
-              event.event.content['content']?['session_id'])) continue;
+            (event.event.content['content']
+                as Map<String, Object?>?)?['session_id'],
+          )) continue;
 
           final decryptedEvent = await event.event.decrypt(room);
           if (decryptedEvent.content.tryGet<String>('type') !=
@@ -1770,25 +1879,35 @@ class Client extends MatrixApi {
         }
 
         await _handleRoomEvents(
-            room, events, EventUpdateType.decryptedTimelineQueue);
+          room,
+          events,
+          EventUpdateType.decryptedTimelineQueue,
+        );
 
-        _eventsPendingDecryption.removeWhere((e) => events.any(
+        _eventsPendingDecryption.removeWhere(
+          (e) => events.any(
             (decryptedEvent) =>
                 decryptedEvent.content['event_id'] ==
-                e.event.content['event_id']));
+                e.event.content['event_id'],
+          ),
+        );
       }
     }
     _eventsPendingDecryption.removeWhere((e) => e.timedOut);
   }
 
-  Future<void> _handleRooms(Map<String, SyncRoomUpdate> rooms,
-      {Direction? direction}) async {
+  Future<void> _handleRooms(
+    Map<String, SyncRoomUpdate> rooms, {
+    Direction? direction,
+  }) async {
     var handledRooms = 0;
     for (final entry in rooms.entries) {
-      onSyncStatus.add(SyncStatusUpdate(
-        SyncStatus.processing,
-        progress: ++handledRooms / rooms.length,
-      ));
+      onSyncStatus.add(
+        SyncStatusUpdate(
+          SyncStatus.processing,
+          progress: ++handledRooms / rooms.length,
+        ),
+      );
       final id = entry.key;
       final syncRoomUpdate = entry.value;
 
@@ -1841,19 +1960,30 @@ class Client extends MatrixApi {
       if (syncRoomUpdate is LeftRoomUpdate) {
         final timelineEvents = syncRoomUpdate.timeline?.events;
         if (timelineEvents != null && timelineEvents.isNotEmpty) {
-          await _handleRoomEvents(room, timelineEvents, timelineUpdateType,
-              store: false);
+          await _handleRoomEvents(
+            room,
+            timelineEvents,
+            timelineUpdateType,
+            store: false,
+          );
         }
         final accountData = syncRoomUpdate.accountData;
         if (accountData != null && accountData.isNotEmpty) {
           await _handleRoomEvents(
-              room, accountData, EventUpdateType.accountData,
-              store: false);
+            room,
+            accountData,
+            EventUpdateType.accountData,
+            store: false,
+          );
         }
         final state = syncRoomUpdate.state;
         if (state != null && state.isNotEmpty) {
-          await _handleRoomEvents(room, state, EventUpdateType.state,
-              store: false);
+          await _handleRoomEvents(
+            room,
+            state,
+            EventUpdateType.state,
+            store: false,
+          );
         }
       }
 
@@ -1883,8 +2013,8 @@ class Client extends MatrixApi {
         final value = entry.value;
 
         final userTimestampMap =
-            (value is Map ? Map<String, dynamic>.from(value) : null)
-                ?.tryGetMap<String, dynamic>('m.read');
+            (value is Map ? Map<String, Object?>.from(value) : null)
+                ?.tryGetMap<String, Object?>('m.read');
 
         if (userTimestampMap == null) continue;
 
@@ -1893,19 +2023,19 @@ class Client extends MatrixApi {
 
           // Remove previous receipt event from this user
           if (receiptStateContent
-                  .tryGetMap<String, dynamic>(eventId)
-                  ?.tryGetMap<String, dynamic>('m.read')
+                  .tryGetMap<String, Object?>(eventId)
+                  ?.tryGetMap<String, Object?>('m.read')
                   ?.containsKey(mxid) ??
               false) {
             receiptStateContent[eventId]['m.read'].remove(mxid);
           }
           if (userTimestampMap
-                  .tryGetMap<String, dynamic>(mxid)
+                  .tryGetMap<String, Object?>(mxid)
                   ?.containsKey('ts') ??
               false) {
             receiptStateContent[mxid] = {
               'event_id': eventId,
-              'ts': userTimestampMap[mxid]['ts'],
+              'ts': (userTimestampMap[mxid] as Map<String, Object?>)['ts'],
             };
           }
         }
@@ -1914,15 +2044,16 @@ class Client extends MatrixApi {
 
     if (updateReceipts) {
       await _handleRoomEvents(
-          room,
-          [
-            BasicRoomEvent(
-              type: 'm.receipt',
-              roomId: room.id,
-              content: receiptStateContent,
-            )
-          ],
-          EventUpdateType.accountData);
+        room,
+        [
+          BasicRoomEvent(
+            type: 'm.receipt',
+            roomId: room.id,
+            content: receiptStateContent,
+          )
+        ],
+        EventUpdateType.accountData,
+      );
     }
   }
 
@@ -1930,8 +2061,11 @@ class Client extends MatrixApi {
   final List<_EventPendingDecryption> _eventsPendingDecryption = [];
 
   Future<void> _handleRoomEvents(
-      Room room, List<BasicEvent> events, EventUpdateType type,
-      {bool store = true}) async {
+    Room room,
+    List<BasicEvent> events,
+    EventUpdateType type, {
+    bool store = true,
+  }) async {
     // Calling events can be omitted if they are outdated from the same sync. So
     // we collect them first before we handle them.
     final callEvents = <Event>{};
@@ -1956,10 +2090,15 @@ class Client extends MatrixApi {
 
         // if the event failed to decrypt, add it to the queue
         if (update.content.tryGet<String>('type') == EventTypes.Encrypted) {
-          _eventsPendingDecryption.add(_EventPendingDecryption(EventUpdate(
-              roomID: update.roomID,
-              type: EventUpdateType.decryptedTimelineQueue,
-              content: update.content)));
+          _eventsPendingDecryption.add(
+            _EventPendingDecryption(
+              EventUpdate(
+                roomID: update.roomID,
+                type: EventUpdateType.decryptedTimelineQueue,
+                content: update.content,
+              ),
+            ),
+          );
         }
       }
       if (event.type == EventTypes.Message &&
@@ -2016,9 +2155,12 @@ class Client extends MatrixApi {
               if (ommitWhenCallEndedTypes.contains(event.type) &&
                   event.content.tryGet<String>('call_id') == callId) {
                 Logs().v(
-                    'Ommit "${event.type}" event for an already terminated call');
+                  'Ommit "${event.type}" event for an already terminated call',
+                );
+
                 return true;
               }
+
               return false;
             });
           }
@@ -2129,10 +2271,12 @@ class Client extends MatrixApi {
       if ((chatUpdate.timeline?.limited ?? false) &&
           requestHistoryOnLimitedTimeline) {
         Logs().v(
-            'Limited timeline for ${rooms[roomIndex].id} request history now');
+          'Limited timeline for ${rooms[roomIndex].id} request history now',
+        );
         runInRoot(rooms[roomIndex].requestHistory);
       }
     }
+
     return room;
   }
 
@@ -2182,11 +2326,11 @@ class Client extends MatrixApi {
         }
         break;
       case EventUpdateType.accountData:
-        room.roomAccountData[eventUpdate.content['type']] =
+        room.roomAccountData[eventUpdate.content['type'] as String] =
             BasicRoomEvent.fromJson(eventUpdate.content);
         break;
       case EventUpdateType.ephemeral:
-        room.ephemerals[eventUpdate.content['type']] =
+        room.ephemerals[eventUpdate.content['type'] as String] =
             BasicRoomEvent.fromJson(eventUpdate.content);
         break;
       case EventUpdateType.history:
@@ -2237,6 +2381,7 @@ class Client extends MatrixApi {
   List<DeviceKeys> get unverifiedDevices {
     final userId = userID;
     if (userId == null) return [];
+
     return userDeviceKeys[userId]
             ?.deviceKeys
             .values
@@ -2245,7 +2390,7 @@ class Client extends MatrixApi {
         [];
   }
 
-  /// Gets user device keys by its curve25519 key. Returns null if it isn't found
+  /// Gets user device keys by its curve25519 key. returns null if it isn't found
   DeviceKeys? getUserDeviceKeysByCurve25519Key(String senderKey) {
     for (final user in userDeviceKeys.values) {
       final device = user.deviceKeys.values
@@ -2254,6 +2399,7 @@ class Client extends MatrixApi {
         return device;
       }
     }
+
     return null;
   }
 
@@ -2274,6 +2420,7 @@ class Client extends MatrixApi {
         }
       }
     }
+
     return userIds;
   }
 
@@ -2283,7 +2430,7 @@ class Client extends MatrixApi {
     try {
       final database = this.database;
       if (!isLogged() || database == null) return;
-      final dbActions = <Future<dynamic> Function()>[];
+      final dbActions = <Future<Object?> Function()>[];
       final trackedUserIds = await _getUserIdsInEncryptedRooms();
       if (!isLogged()) return;
       trackedUserIds.add(userID!);
@@ -2336,7 +2483,10 @@ class Client extends MatrixApi {
 
               // Set the new device key for this device
               final entry = DeviceKeys.fromMatrixDeviceKeys(
-                  rawDeviceKeyEntry.value, this, oldKeys[deviceId]?.lastActive);
+                rawDeviceKeyEntry.value,
+                this,
+                oldKeys[deviceId]?.lastActive,
+              );
               final ed25519Key = entry.ed25519Key;
               final curve25519Key = entry.curve25519Key;
               if (entry.isValid &&
@@ -2350,24 +2500,30 @@ class Client extends MatrixApi {
                   if (oldPublicKeys != null &&
                       oldPublicKeys != curve25519Key + ed25519Key) {
                     Logs().w(
-                        'Already seen Device ID has been added again. This might be an attack!');
+                      'Already seen Device ID has been added again. This might be an attack!',
+                    );
                     continue;
                   }
                   final oldDeviceId = await database.publicKeySeen(ed25519Key);
                   if (oldDeviceId != null && oldDeviceId != deviceId) {
                     Logs().w(
-                        'Already seen ED25519 has been added again. This might be an attack!');
+                      'Already seen ED25519 has been added again. This might be an attack!',
+                    );
                     continue;
                   }
                   final oldDeviceId2 =
                       await database.publicKeySeen(curve25519Key);
                   if (oldDeviceId2 != null && oldDeviceId2 != deviceId) {
                     Logs().w(
-                        'Already seen Curve25519 has been added again. This might be an attack!');
+                      'Already seen Curve25519 has been added again. This might be an attack!',
+                    );
                     continue;
                   }
                   await database.addSeenDeviceId(
-                      userId, deviceId, curve25519Key + ed25519Key);
+                    userId,
+                    deviceId,
+                    curve25519Key + ed25519Key,
+                  );
                   await database.addSeenPublicKey(ed25519Key, deviceId);
                   await database.addSeenPublicKey(curve25519Key, deviceId);
                 }
@@ -2390,14 +2546,16 @@ class Client extends MatrixApi {
                     // Always trust the own device
                     entry.setDirectVerified(true);
                   }
-                  dbActions.add(() => database.storeUserDeviceKey(
-                        userId,
-                        deviceId,
-                        json.encode(entry.toJson()),
-                        entry.directVerified,
-                        entry.blocked,
-                        entry.lastActive.millisecondsSinceEpoch,
-                      ));
+                  dbActions.add(
+                    () => database.storeUserDeviceKey(
+                      userId,
+                      deviceId,
+                      json.encode(entry.toJson()),
+                      entry.directVerified,
+                      entry.blocked,
+                      entry.lastActive.millisecondsSinceEpoch,
+                    ),
+                  );
                 } else if (oldKeys.containsKey(deviceId)) {
                   // This shouldn't ever happen. The same device ID has gotten
                   // a new public key. So we ignore the update. TODO: ask krille
@@ -2448,12 +2606,16 @@ class Client extends MatrixApi {
               } else {
                 // There is a previous cross-signing key with  this usage, that we no
                 // longer need/use. Clear it from the database.
-                dbActions.add(() =>
-                    database.removeUserCrossSigningKey(userId, oldEntry.key));
+                dbActions.add(
+                  () =>
+                      database.removeUserCrossSigningKey(userId, oldEntry.key),
+                );
               }
             }
             final entry = CrossSigningKey.fromMatrixCrossSigningKey(
-                crossSigningKeyListEntry.value, this);
+              crossSigningKeyListEntry.value,
+              this,
+            );
             final publicKey = entry.publicKey;
             if (entry.isValid && publicKey != null) {
               final oldKey = oldKeys[publicKey];
@@ -2471,13 +2633,15 @@ class Client extends MatrixApi {
                 // if we should instead use the new key with unknown verified / blocked status
                 userKeys.crossSigningKeys[publicKey] = oldKey;
               }
-              dbActions.add(() => database.storeUserCrossSigningKey(
-                    userId,
-                    publicKey,
-                    json.encode(entry.toJson()),
-                    entry.directVerified,
-                    entry.blocked,
-                  ));
+              dbActions.add(
+                () => database.storeUserCrossSigningKey(
+                  userId,
+                  publicKey,
+                  json.encode(entry.toJson()),
+                  entry.directVerified,
+                  entry.blocked,
+                ),
+              );
             }
             _userDeviceKeys[userId]?.outdated = false;
             dbActions
@@ -2519,22 +2683,30 @@ class Client extends MatrixApi {
     final entries = await database.getToDeviceEventQueue();
     if (entries.isEmpty) {
       _toDeviceQueueNeedsProcessing = false;
+
       return;
     }
     for (final entry in entries) {
       // Convert the Json Map to the correct format regarding
       // https: //matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-sendtodevice-eventtype-txnid
-      final data = entry.content.map((k, v) =>
-          MapEntry<String, Map<String, Map<String, dynamic>>>(
+      final data = entry.content.map(
+        (k, v) => MapEntry<String, Map<String, Map<String, Object?>>>(
+          k,
+          (v as Map).map(
+            (k, v) => MapEntry<String, Map<String, Object?>>(
               k,
-              (v as Map).map((k, v) => MapEntry<String, Map<String, dynamic>>(
-                  k, Map<String, dynamic>.from(v)))));
+              Map<String, Object?>.from(v),
+            ),
+          ),
+        ),
+      );
 
       try {
         await super.sendToDevice(entry.type, entry.txnId, data);
       } on MatrixException catch (e) {
         Logs().w(
-            '[To-Device] failed to to_device message from the queue to the server. Ignoring error: $e');
+          '[To-Device] failed to to_device message from the queue to the server. Ignoring error: $e',
+        );
         Logs().w('Payload: $data');
       }
       await database.deleteFromToDeviceQueue(entry.id);
@@ -2548,21 +2720,25 @@ class Client extends MatrixApi {
   Future<void> sendToDevice(
     String eventType,
     String txnId,
-    Map<String, Map<String, Map<String, dynamic>>> messages,
+    Map<String, Map<String, Map<String, Object?>>> messages,
   ) async {
     try {
       await processToDeviceQueue();
       await super.sendToDevice(eventType, txnId, messages);
     } catch (e, s) {
       Logs().w(
-          '[Client] Problem while sending to_device event, retrying later...',
-          e,
-          s);
+        '[Client] Problem while sending to_device event, retrying later...',
+        e,
+        s,
+      );
       final database = this.database;
       if (database != null) {
         _toDeviceQueueNeedsProcessing = true;
         await database.insertIntoToDeviceQueue(
-            eventType, txnId, json.encode(messages));
+          eventType,
+          txnId,
+          json.encode(messages),
+        );
       }
       rethrow;
     }
@@ -2573,16 +2749,20 @@ class Client extends MatrixApi {
   Future<void> sendToDevicesOfUserIds(
     Set<String> users,
     String eventType,
-    Map<String, dynamic> message, {
+    Map<String, Object?> message, {
     String? messageId,
   }) async {
     // Send with send-to-device messaging
-    final data = <String, Map<String, Map<String, dynamic>>>{};
+    final data = <String, Map<String, Map<String, Object?>>>{};
     for (final user in users) {
       data[user] = {'*': message};
     }
     await sendToDevice(
-        eventType, messageId ?? generateUniqueTransactionId(), data);
+      eventType,
+      messageId ?? generateUniqueTransactionId(),
+      data,
+    );
+
     return;
   }
 
@@ -2592,7 +2772,7 @@ class Client extends MatrixApi {
   Future<void> sendToDeviceEncrypted(
     List<DeviceKeys> deviceKeys,
     String eventType,
-    Map<String, dynamic> message, {
+    Map<String, Object?> message, {
     String? messageId,
     bool onlyVerified = false,
   }) async {
@@ -2601,10 +2781,12 @@ class Client extends MatrixApi {
     // Don't send this message to blocked devices, and if specified onlyVerified
     // then only send it to verified devices
     if (deviceKeys.isNotEmpty) {
-      deviceKeys.removeWhere((DeviceKeys deviceKeys) =>
-          deviceKeys.blocked ||
-          (deviceKeys.userId == userID && deviceKeys.deviceId == deviceID) ||
-          (onlyVerified && !deviceKeys.verified));
+      deviceKeys.removeWhere(
+        (DeviceKeys deviceKeys) =>
+            deviceKeys.blocked ||
+            (deviceKeys.userId == userID && deviceKeys.deviceId == deviceID) ||
+            (onlyVerified && !deviceKeys.verified),
+      );
       if (deviceKeys.isEmpty) return;
     }
 
@@ -2627,7 +2809,10 @@ class Client extends MatrixApi {
       );
       eventType = EventTypes.Encrypted;
       await sendToDevice(
-          eventType, messageId ?? generateUniqueTransactionId(), data);
+        eventType,
+        messageId ?? generateUniqueTransactionId(),
+        data,
+      );
     } finally {
       _sendToDeviceEncryptedLock.unlock(deviceKeys);
     }
@@ -2640,15 +2825,17 @@ class Client extends MatrixApi {
   Future<void> sendToDeviceEncryptedChunked(
     List<DeviceKeys> deviceKeys,
     String eventType,
-    Map<String, dynamic> message,
+    Map<String, Object> message,
   ) async {
     if (!encryptionEnabled) return;
     // be sure to copy our device keys list
     deviceKeys = List<DeviceKeys>.from(deviceKeys);
-    deviceKeys.removeWhere((DeviceKeys k) =>
-        k.blocked || (k.userId == userID && k.deviceId == deviceID));
+    deviceKeys.removeWhere(
+      (DeviceKeys k) =>
+          k.blocked || (k.userId == userID && k.deviceId == deviceID),
+    );
     if (deviceKeys.isEmpty) return;
-    message = message.copy(); // make sure we deep-copy the message
+    message = Map.from(message.copy()); // make sure we deep-copy the message
     // make sure all the olm sessions are loaded from database
     Logs().v('Sending to device chunked... (${deviceKeys.length} devices)');
     // sort so that devices we last received messages from get our message first
@@ -2663,10 +2850,9 @@ class Client extends MatrixApi {
     for (; i < deviceKeys.length && i <= 0; i += chunkSize) {
       Logs().v('Sending chunk $i...');
       final chunk = deviceKeys.sublist(
-          i,
-          i + chunkSize > deviceKeys.length
-              ? deviceKeys.length
-              : i + chunkSize);
+        i,
+        i + chunkSize > deviceKeys.length ? deviceKeys.length : i + chunkSize,
+      );
       // and send
       await sendToDeviceEncrypted(chunk, eventType, message);
     }
@@ -2679,10 +2865,11 @@ class Client extends MatrixApi {
           await Future.delayed(Duration(milliseconds: 50));
           Logs().v('Sending chunk $i...');
           final chunk = deviceKeys.sublist(
-              i,
-              i + chunkSize > deviceKeys.length
-                  ? deviceKeys.length
-                  : i + chunkSize);
+            i,
+            i + chunkSize > deviceKeys.length
+                ? deviceKeys.length
+                : i + chunkSize,
+          );
           // and send
           await sendToDeviceEncrypted(chunk, eventType, message);
         }
@@ -2693,17 +2880,18 @@ class Client extends MatrixApi {
   /// Whether all push notifications are muted using the [.m.rule.master]
   /// rule of the push rules: https://matrix.org/docs/spec/client_server/r0.6.0#m-rule-master
   bool get allPushNotificationsMuted {
-    final Map<String, dynamic>? globalPushRules =
+    final Map<String, Object?>? globalPushRules =
         _accountData[EventTypes.PushRules]?.content['global'];
     if (globalPushRules == null) return false;
 
     if (globalPushRules['override'] is List) {
-      for (final pushRule in globalPushRules['override']) {
+      for (final pushRule in globalPushRules['override'] as List) {
         if (pushRule['rule_id'] == '.m.rule.master') {
           return pushRule['enabled'];
         }
       }
     }
+
     return false;
   }
 
@@ -2714,15 +2902,18 @@ class Client extends MatrixApi {
       '.m.rule.master',
       muted,
     );
+
     return;
   }
 
   /// Changes the password. You should either set oldPasswort or another authentication flow.
   @override
-  Future<void> changePassword(String newPassword,
-      {String? oldPassword,
-      AuthenticationData? auth,
-      bool? logoutDevices}) async {
+  Future<void> changePassword(
+    String newPassword, {
+    String? oldPassword,
+    AuthenticationData? auth,
+    bool? logoutDevices,
+  }) async {
     final userID = this.userID;
     try {
       if (oldPassword != null && userID != null) {
@@ -2731,8 +2922,11 @@ class Client extends MatrixApi {
           password: oldPassword,
         );
       }
-      await super.changePassword(newPassword,
-          auth: auth, logoutDevices: logoutDevices);
+      await super.changePassword(
+        newPassword,
+        auth: auth,
+        logoutDevices: logoutDevices,
+      );
     } on MatrixException catch (matrixException) {
       if (!matrixException.requireAdditionalAuthentication) {
         rethrow;
@@ -2746,6 +2940,7 @@ class Client extends MatrixApi {
       if (oldPassword == null || userID == null) {
         rethrow;
       }
+
       return changePassword(
         newPassword,
         auth: AuthenticationPassword(
@@ -2779,7 +2974,8 @@ class Client extends MatrixApi {
               .containsKey('m.ignored_user_list') &&
           _accountData['m.ignored_user_list']?.content['ignored_users'] is Map)
       ? List<String>.from(
-          _accountData['m.ignored_user_list']?.content['ignored_users'].keys)
+          _accountData['m.ignored_user_list']?.content['ignored_users'].keys,
+        )
       : [];
 
   /// Ignore another user. This will clear the local cached messages to
@@ -2790,9 +2986,11 @@ class Client extends MatrixApi {
     }
     await setAccountData(userID!, 'm.ignored_user_list', {
       'ignored_users': Map.fromEntries(
-          (ignoredUsers..add(userId)).map((key) => MapEntry(key, {}))),
+        (ignoredUsers..add(userId)).map((key) => MapEntry(key, {})),
+      ),
     });
     await clearCache();
+
     return;
   }
 
@@ -2807,9 +3005,11 @@ class Client extends MatrixApi {
     }
     await setAccountData(userID!, 'm.ignored_user_list', {
       'ignored_users': Map.fromEntries(
-          (ignoredUsers..remove(userId)).map((key) => MapEntry(key, {}))),
+        (ignoredUsers..remove(userId)).map((key) => MapEntry(key, {})),
+      ),
     });
     await clearCache();
+
     return;
   }
 
@@ -2851,6 +3051,7 @@ class Client extends MatrixApi {
     } catch (error, stacktrace) {
       Logs().w('Failed to close database: ', error, stacktrace);
     }
+
     return;
   }
 
@@ -2862,16 +3063,16 @@ class Client extends MatrixApi {
 
     if (migrateClient != null && legacyDatabase != null && database != null) {
       Logs().i('Found data in the legacy database!');
-      _id = migrateClient['client_id'];
+      _id = migrateClient['client_id'] as int?;
       await database.insertClient(
         clientName,
-        migrateClient['homeserver_url'],
-        migrateClient['token'],
-        migrateClient['user_id'],
-        migrateClient['device_id'],
-        migrateClient['device_name'],
+        migrateClient['homeserver_url'] as String,
+        migrateClient['token'] as String,
+        migrateClient['user_id'] as String,
+        migrateClient['device_id'] as String?,
+        migrateClient['device_name'] as String?,
         null,
-        migrateClient['olm_account'],
+        migrateClient['olm_account'] as String?,
       );
       Logs().d('Migrate SSSSCache...');
       for (final type in cacheTypes) {
@@ -2914,7 +3115,8 @@ class Client extends MatrixApi {
           final pubKey = crossSigningKey.publicKey;
           if (pubKey != null) {
             Logs().d(
-                'Migrate cross signing key with usage ${crossSigningKey.usage} and verified ${crossSigningKey.directVerified}...');
+              'Migrate cross signing key with usage ${crossSigningKey.usage} and verified ${crossSigningKey.directVerified}...',
+            );
             await database.storeUserCrossSigningKey(
               userId,
               pubKey,
@@ -2942,7 +3144,9 @@ class Client extends MatrixApi {
           }
           Logs().d('Migrate user device keys info...');
           await database.storeUserDeviceKeysInfo(
-              userId, deviceKeysList.outdated);
+            userId,
+            deviceKeysList.outdated,
+          );
         }
       }
       Logs().d('Migrate inbound group sessions...');
@@ -2980,7 +3184,7 @@ class Client extends MatrixApi {
 }
 
 class SdkError {
-  dynamic exception;
+  Object? exception;
   StackTrace? stackTrace;
 
   SdkError({this.exception, this.stackTrace});
@@ -3036,6 +3240,7 @@ class FileTooBigMatrixException extends MatrixException {
         : round < 100
             ? num.toStringAsFixed(1)
             : round.toString();
+
     return '$numString ${'kMGTPEZY'[i - 1]}B';
   }
 

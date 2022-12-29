@@ -34,10 +34,12 @@ extension DehydratedDeviceHandler on Client {
       } on MatrixException catch (e) {
         if (e.response?.statusCode == 400) {
           Logs().i('Dehydrated devices unsupported, skipping.');
+
           return;
         }
         // No device, so we just create a new device.
         await _uploadNewDevice(secureStorage);
+
         return;
       }
 
@@ -45,6 +47,7 @@ extension DehydratedDeviceHandler on Client {
       if (_oldDehydratedDeviceAlgorithms
           .contains(device.deviceData?.tryGet<String>('algorithm'))) {
         await _uploadNewDevice(secureStorage);
+
         return;
       }
 
@@ -59,8 +62,10 @@ extension DehydratedDeviceHandler on Client {
       if (dehydratedDeviceIdentity == null ||
           !dehydratedDeviceIdentity.hasValidSignatureChain()) {
         Logs().w(
-            'Dehydrated device ${device.deviceId} is unknown or unverified, replacing it');
+          'Dehydrated device ${device.deviceId} is unknown or unverified, replacing it',
+        );
         await _uploadNewDevice(secureStorage);
+
         return;
       }
 
@@ -71,6 +76,7 @@ extension DehydratedDeviceHandler on Client {
         Logs()
             .w('Dehydrated device ${device.deviceId} is invalid, replacing it');
         await _uploadNewDevice(secureStorage);
+
         return;
       }
 
@@ -78,10 +84,12 @@ extension DehydratedDeviceHandler on Client {
       // We need to be careful to not use the client.deviceId here and such.
       final encryption = Encryption(client: this);
       try {
-        await encryption.init(pickledDevice,
-            deviceId: device.deviceId,
-            pickleKey: pickleDeviceKey,
-            isDehydratedDevice: true);
+        await encryption.init(
+          pickledDevice,
+          deviceId: device.deviceId,
+          pickleKey: pickleDeviceKey,
+          isDehydratedDevice: true,
+        );
 
         if (dehydratedDeviceIdentity.curve25519Key != encryption.identityKey ||
             dehydratedDeviceIdentity.ed25519Key != encryption.fingerprintKey) {
@@ -89,6 +97,7 @@ extension DehydratedDeviceHandler on Client {
               .w('Invalid dehydrated device ${device.deviceId}, replacing it');
           await encryption.dispose();
           await _uploadNewDevice(secureStorage);
+
           return;
         }
 
@@ -96,8 +105,10 @@ extension DehydratedDeviceHandler on Client {
         DehydratedDeviceEvents? events;
 
         do {
-          events = await getDehydratedDeviceEvents(device.deviceId,
-              from: events?.nextBatch);
+          events = await getDehydratedDeviceEvents(
+            device.deviceId,
+            from: events?.nextBatch,
+          );
 
           for (final e in events.events ?? []) {
             // We are only interested in roomkeys, which ALWAYS need to be encrypted.
@@ -117,6 +128,7 @@ extension DehydratedDeviceHandler on Client {
       }
     } catch (e) {
       Logs().w('Exception while handling dehydrated devices: ${e.toString()}');
+
       return;
     }
   }
@@ -133,25 +145,33 @@ extension DehydratedDeviceHandler on Client {
         Logs().i('Dehydrated device key not found, creating new one.');
         pickleDeviceKey = base64.encode(uc.secureRandomBytes(128));
         await secureStorage.store(
-            _ssssSecretNameForDehydratedDevice, pickleDeviceKey);
+          _ssssSecretNameForDehydratedDevice,
+          pickleDeviceKey,
+        );
       }
 
       // Generate a new olm account for the dehydrated device.
-      await encryption.init(null,
-          deviceId: null, isDehydratedDevice: true, pickleKey: pickleDeviceKey);
+      await encryption.init(
+        null,
+        deviceId: null,
+        isDehydratedDevice: true,
+        pickleKey: pickleDeviceKey,
+      );
       String device;
       try {
         device = await uploadDehydratedDevice(
-            initialDeviceDisplayName: 'Dehydrated Device',
-            deviceData: {
-              'algorithm': _dehydratedDeviceAlgorithm,
-              'device': encryption.olmManager
-                  .pickleOlmAccountWithKey(pickleDeviceKey),
-            });
+          initialDeviceDisplayName: 'Dehydrated Device',
+          deviceData: {
+            'algorithm': _dehydratedDeviceAlgorithm,
+            'device':
+                encryption.olmManager.pickleOlmAccountWithKey(pickleDeviceKey),
+          },
+        );
       } on MatrixException catch (_) {
         // dehydrated devices unsupported, do noting.
         Logs().i('Dehydrated devices unsupported, skipping upload.');
         await encryption.dispose();
+
         return;
       }
 
@@ -159,9 +179,10 @@ extension DehydratedDeviceHandler on Client {
       encryption.olmManager.ourDeviceId = device;
 
       await encryption.olmManager.uploadKeys(
-          uploadDeviceKeys: true,
-          updateDatabase: false,
-          unusedFallbackKey: true);
+        uploadDeviceKeys: true,
+        updateDatabase: false,
+        unusedFallbackKey: true,
+      );
 
       // cross sign the device from our currently signed in device
       await updateUserDeviceKeys(additionalUsers: {userID!});

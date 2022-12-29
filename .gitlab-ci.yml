@@ -12,9 +12,25 @@ workflow:
 variables:
   FLUTTER_IMAGE_TAG: "3.0.5"
 
+dart_code_metrics:
+  stage: test
+  image:
+    name: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable:${FLUTTER_IMAGE_TAG}
+    pull_policy: if-not-present
+  dependencies: []
+  script:
+    - dart pub get
+    - dart run dart_code_metrics:metrics analyze lib test test_driver --fatal-style --fatal-performance --fatal-warnings
+    - dart run dart_code_metrics:metrics check-unnecessary-nullable lib test test_driver --fatal-found
+    - dart run dart_code_metrics:metrics check-unused-files lib test test_driver --fatal-unused
+    - dart run dart_code_metrics:metrics check-unused-l10n lib test test_driver --fatal-unused
+    - dart run dart_code_metrics:metrics check-unused-code lib test test_driver --fatal-unused
+
 coverage:
   stage: test
-  image: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable:${FLUTTER_IMAGE_TAG}
+  image:
+    name: registry.gitlab.com/famedly/company/frontend/flutter-dockerimages/flutter-linux/stable:${FLUTTER_IMAGE_TAG}
+    pull_policy: if-not-present
   dependencies: []
   script:
     - sed -i 's/#\([^ ]\)/\1/g' pubspec.yaml

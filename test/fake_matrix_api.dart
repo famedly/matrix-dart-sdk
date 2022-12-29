@@ -26,18 +26,19 @@ import 'package:http/http.dart';
 import 'package:matrix/matrix.dart' as sdk;
 import 'package:matrix/matrix.dart';
 
-Map<String, dynamic> decodeJson(dynamic data) {
+Map<String, Object?> decodeJson(dynamic data) {
   if (data is String) {
     return json.decode(data);
   }
   if (data.isEmpty) {
-    return <String, dynamic>{};
+    return <String, Object?>{};
   }
+
   return data;
 }
 
 class FakeMatrixApi extends BaseClient {
-  static Map<String, List<dynamic>> get calledEndpoints =>
+  static Map<String, List<Object?>> get calledEndpoints =>
       currentApi!._calledEndpoints;
   static int get eventCounter => currentApi!._eventCounter;
   static set eventCounter(int c) {
@@ -56,7 +57,7 @@ class FakeMatrixApi extends BaseClient {
     currentApi?._trace = t;
   }
 
-  final _calledEndpoints = <String, List<dynamic>>{};
+  final _calledEndpoints = <String, List<Object?>>{};
   int _eventCounter = 0;
   sdk.Client? _client;
   bool _failToDevice = false;
@@ -84,6 +85,7 @@ class FakeMatrixApi extends BaseClient {
         completer.complete(action);
       }
     });
+
     return completer.future;
   }
 
@@ -118,20 +120,22 @@ class FakeMatrixApi extends BaseClient {
     //print('\$method request to $action with Data: $data');
 
     // Sync requests with timeout
-    if (data is Map<String, dynamic> && data['timeout'] is String) {
+    if (data is Map<String, Object?> && data['timeout'] is String) {
       await Future.delayed(Duration(seconds: 5));
     }
 
     if (request.url.origin != 'https://fakeserver.notexisting') {
       return Response(
-          '<html><head></head><body>Not found...</body></html>', 404);
+        '<html><head></head><body>Not found...</body></html>',
+        404,
+      );
     }
 
     // Call API
-    (_calledEndpoints[action] ??= <dynamic>[]).add(data);
-    final act = api[method]?[action];
+    (_calledEndpoints[action] ??= <Object?>[]).add(data);
+    final act = api[method]?[action] as Function?;
     if (act != null) {
-      res = act(data);
+      res = act.call(data);
       if (res is Map && res.containsKey('errcode')) {
         if (res['errcode'] == 'M_NOT_FOUND') {
           statusCode = 404;
@@ -151,11 +155,13 @@ class FakeMatrixApi extends BaseClient {
       res = {'displayname': ''};
     } else if (method == 'PUT' &&
         action.contains(
-            '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/')) {
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/',
+        )) {
       res = {'event_id': '\$event${_eventCounter++}'};
     } else if (method == 'PUT' &&
         action.contains(
-            '/client/v3/rooms/!1234%3AfakeServer.notExisting/state/')) {
+          '/client/v3/rooms/!1234%3AfakeServer.notExisting/state/',
+        )) {
       res = {'event_id': '\$event${_eventCounter++}'};
     } else if (action.contains('/client/v3/sync')) {
       res = {
@@ -189,10 +195,15 @@ class FakeMatrixApi extends BaseClient {
         nextBatch: '',
         rooms: RoomsUpdate(
           join: {
-            roomId: JoinedRoomUpdate(accountData: [
-              sdk.BasicRoomEvent(
-                  content: decodeJson(data), type: type, roomId: roomId)
-            ])
+            roomId: JoinedRoomUpdate(
+              accountData: [
+                sdk.BasicRoomEvent(
+                  content: decodeJson(data),
+                  type: type,
+                  roomId: roomId,
+                )
+              ],
+            )
           },
         ),
       );
@@ -209,9 +220,12 @@ class FakeMatrixApi extends BaseClient {
       statusCode = 405;
     }
 
-    unawaited(Future.delayed(Duration(milliseconds: 1)).then((_) async {
-      _apiCallStream.add(action);
-    }));
+    unawaited(
+      Future.delayed(Duration(milliseconds: 1)).then((_) async {
+        _apiCallStream.add(action);
+      }),
+    );
+
     return Response.bytes(utf8.encode(json.encode(res)), statusCode);
   }
 
@@ -228,14 +242,17 @@ class FakeMatrixApi extends BaseClient {
       ..finalize();
 
     final response = await mockIntercept(request);
+
     return StreamedResponse(
-        ByteStream.fromBytes(response.bodyBytes), response.statusCode,
-        contentLength: response.contentLength,
-        request: baseRequest,
-        headers: response.headers,
-        isRedirect: response.isRedirect,
-        persistentConnection: response.persistentConnection,
-        reasonPhrase: response.reasonPhrase);
+      ByteStream.fromBytes(response.bodyBytes),
+      response.statusCode,
+      contentLength: response.contentLength,
+      request: baseRequest,
+      headers: response.headers,
+      isRedirect: response.isRedirect,
+      persistentConnection: response.persistentConnection,
+      reasonPhrase: response.reasonPhrase,
+    );
   }
 
   FakeMatrixApi() {
@@ -249,8 +266,10 @@ class FakeMatrixApi extends BaseClient {
           'user_signing_key'
         }) {
           if (jsonBody[keyType] != null) {
-            final key =
-                sdk.CrossSigningKey.fromJson(jsonBody[keyType], _client!);
+            final key = sdk.CrossSigningKey.fromJson(
+              jsonBody[keyType] as Map<String, Object?>,
+              _client!,
+            );
             _client!.userDeviceKeys[_client!.userID!]?.crossSigningKeys
                 .removeWhere((k, v) => v.usage.contains(key.usage.first));
             _client!.userDeviceKeys[_client!.userID!]
@@ -260,11 +279,12 @@ class FakeMatrixApi extends BaseClient {
         // and generate a fake sync
         _client!.handleSync(sdk.SyncUpdate(nextBatch: ''));
       }
+
       return {};
     };
   }
 
-  static const Map<String, dynamic> messagesResponsePast = {
+  static const Map<String, Object?> messagesResponsePast = {
     'start': 't47429-4392820_219380_26003_2265',
     'end': 't47409-4357353_219380_26003_2265',
     'chunk': [
@@ -322,7 +342,7 @@ class FakeMatrixApi extends BaseClient {
     ],
     'state': [],
   };
-  static const Map<String, dynamic> messagesResponseFuture = {
+  static const Map<String, Object?> messagesResponseFuture = {
     'start': 't456',
     'end': 't789',
     'chunk': [
@@ -380,14 +400,14 @@ class FakeMatrixApi extends BaseClient {
     ],
     'state': [],
   };
-  static const Map<String, dynamic> messagesResponseFutureEnd = {
+  static const Map<String, Object?> messagesResponseFutureEnd = {
     'start': 't789',
     'end': null,
     'chunk': [],
     'state': [],
   };
 
-  static Map<String, dynamic> archivesMessageResponse = {
+  static const Map<String, Object?> archivesMessageResponse = {
     'start': 't47429-4392820_219380_26003_2265',
     'end': 't47409-4357353_219380_26003_2265',
     'chunk': [
@@ -446,7 +466,7 @@ class FakeMatrixApi extends BaseClient {
     'state': [],
   };
 
-  static Map<String, dynamic> syncResponse = {
+  static final Map<String, Object?> syncResponse = {
     'next_batch': Random().nextDouble().toString(),
     'rooms': {
       'join': {
@@ -959,7 +979,7 @@ class FakeMatrixApi extends BaseClient {
     'device_one_time_keys_count': {'curve25519': 10, 'signed_curve25519': 20},
   };
 
-  static Map<String, dynamic> archiveSyncResponse = {
+  static final Map<String, Object?> archiveSyncResponse = {
     'next_batch': Random().nextDouble().toString(),
     'presence': {'events': []},
     'account_data': {'events': []},
@@ -1049,7 +1069,7 @@ class FakeMatrixApi extends BaseClient {
     }
   };
 
-  final Map<String, Map<String, dynamic>> api = {
+  final Map<String, Map<String, Object?>> api = {
     'GET': {
       '/path/to/auth/error': (var req) => {
             'errcode': 'M_FORBIDDEN',
@@ -2112,7 +2132,8 @@ class FakeMatrixApi extends BaseClient {
       '/client/v3/keys/claim': (var req) => {
             'failures': {},
             'one_time_keys': {
-              if (decodeJson(req)['one_time_keys']['@alice:example.com'] !=
+              if ((decodeJson(req)['one_time_keys']
+                      as Map<String, Object?>)['@alice:example.com'] !=
                   null)
                 '@alice:example.com': {
                   'JLAFKJWSCS': {
@@ -2127,8 +2148,8 @@ class FakeMatrixApi extends BaseClient {
                     }
                   }
                 },
-              if (decodeJson(req)['one_time_keys']
-                      ['@test:fakeServer.notExisting'] !=
+              if ((decodeJson(req)['one_time_keys'] as Map<String, Object?>)[
+                      '@test:fakeServer.notExisting'] !=
                   null)
                 '@test:fakeServer.notExisting': {
                   'GHTYAJCE': {
@@ -2167,7 +2188,10 @@ class FakeMatrixApi extends BaseClient {
             'one_time_key_counts': {
               'curve25519': 10,
               'signed_curve25519':
-                  decodeJson(req)['one_time_keys']?.keys?.length ?? 0,
+                  (decodeJson(req)['one_time_keys'] as Map<String, Object?>)
+                          .keys
+                          .length ??
+                      0,
             }
           },
       '/client/v3/keys/query': (var req) => {

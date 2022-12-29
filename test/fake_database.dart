@@ -41,6 +41,7 @@ Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
     testHivePath,
   );
   await db.open();
+
   return db;
 }
 
@@ -57,5 +58,6 @@ Future<FamedlySdkHiveDatabase> getHiveDatabase(Client? c) async {
   // ignore: deprecated_member_use_from_same_package
   final db = FamedlySdkHiveDatabase('unit_test.${c?.hashCode}');
   await db.open();
+
   return db;
 }

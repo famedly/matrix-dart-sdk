@@ -65,6 +65,7 @@ class Timeline {
     final requestedEvent = await room.getEventById(id);
     if (requestedEvent == null) return null;
     _eventCache[id] = requestedEvent;
+
     return _eventCache[id];
   }
 
@@ -76,11 +77,13 @@ class Timeline {
 
   bool get canRequestHistory {
     if (events.isEmpty) return true;
+
     return events.last.type != EventTypes.RoomCreate;
   }
 
-  Future<void> requestHistory(
-      {int historyCount = Room.defaultHistoryCount}) async {
+  Future<void> requestHistory({
+    int historyCount = Room.defaultHistoryCount,
+  }) async {
     if (isRequestingHistory) {
       return;
     }
@@ -92,8 +95,9 @@ class Timeline {
 
   bool get canRequestFuture => !allowNewEvent;
 
-  Future<void> requestFuture(
-      {int historyCount = Room.defaultHistoryCount}) async {
+  Future<void> requestFuture({
+    int historyCount = Room.defaultHistoryCount,
+  }) async {
     if (allowNewEvent) {
       return; // we shouldn't force to add new events if they will autatically be added
     }
@@ -104,9 +108,10 @@ class Timeline {
     isRequestingFuture = false;
   }
 
-  Future<void> _requestEvents(
-      {int historyCount = Room.defaultHistoryCount,
-      required Direction direction}) async {
+  Future<void> _requestEvents({
+    int historyCount = Room.defaultHistoryCount,
+    required Direction direction,
+  }) async {
     onUpdate?.call();
 
     try {
@@ -172,10 +177,11 @@ class Timeline {
   /// Request more previous events from the server. [historyCount] defines how much events should
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
   /// the historical events will be published in the onEvent stream.
-  /// Returns the actual count of received timeline events.
-  Future<int> getRoomEvents(
-      {int historyCount = Room.defaultHistoryCount,
-      direction = Direction.b}) async {
+  /// returns the actual count of received timeline events.
+  Future<int> getRoomEvents({
+    int historyCount = Room.defaultHistoryCount,
+    direction = Direction.b,
+  }) async {
     final resp = await room.client.getRoomEvents(
       room.id,
       direction,
@@ -201,10 +207,12 @@ class Timeline {
         newNextBatch != null) {
       if (type == EventUpdateType.history) {
         Logs().w(
-            '[nav] we can still request history prevBatch: $type $newPrevBatch');
+          '[nav] we can still request history prevBatch: $type $newPrevBatch',
+        );
       } else {
         Logs().w(
-            '[nav] we can still request timeline nextBatch: $type $newNextBatch');
+          '[nav] we can still request timeline nextBatch: $type $newNextBatch',
+        );
       }
     }
 
@@ -218,8 +226,9 @@ class Timeline {
       if (allowNewEvent) {
         Logs().d('We now allow sync update into the timeline.');
         newEvents.addAll(
-            await room.client.database?.getEventList(room, onlySending: true) ??
-                []);
+          await room.client.database?.getEventList(room, onlySending: true) ??
+              [],
+        );
       }
     }
 
@@ -256,17 +265,19 @@ class Timeline {
     if (onUpdate != null) {
       onUpdate!();
     }
+
     return resp.chunk.length;
   }
 
-  Timeline(
-      {required this.room,
-      this.onUpdate,
-      this.onChange,
-      this.onInsert,
-      this.onRemove,
-      this.onNewEvent,
-      required this.chunk}) {
+  Timeline({
+    required this.room,
+    this.onUpdate,
+    this.onChange,
+    this.onInsert,
+    this.onRemove,
+    this.onNewEvent,
+    required this.chunk,
+  }) {
     sub = room.client.onEvent.stream.listen(_handleEventUpdate);
 
     // If the timeline is limited we want to clear our events cache
@@ -314,8 +325,11 @@ class Timeline {
         if (events[i].type == EventTypes.Encrypted &&
             events[i].messageType == MessageTypes.BadEncrypted &&
             events[i].content['session_id'] == sessionId) {
-          events[i] = await encryption.decryptRoomEvent(room.id, events[i],
-              store: true);
+          events[i] = await encryption.decryptRoomEvent(
+            room.id,
+            events[i],
+            store: true,
+          );
           onChange?.call(i);
           if (events[i].type != EventTypes.Encrypted) {
             decryptAtLeastOneEvent = true;
@@ -361,6 +375,7 @@ class Timeline {
     eventId ??=
         events.firstWhereOrNull((event) => event.status.isSynced)?.eventId;
     if (eventId == null) return;
+
     return room.setReadMarker(eventId, mRead: eventId);
   }
 
@@ -389,14 +404,17 @@ class Timeline {
         break;
       }
     }
+
     return i;
   }
 
   void _removeEventFromSet(Set<Event> eventSet, Event event) {
-    eventSet.removeWhere((e) =>
-        e.matchesEventOrTransactionId(event.eventId) ||
-        (event.unsigned != null &&
-            e.matchesEventOrTransactionId(event.unsigned?['transaction_id'])));
+    eventSet.removeWhere(
+      (e) =>
+          e.matchesEventOrTransactionId(event.eventId) ||
+          (event.unsigned != null &&
+              e.matchesEventOrTransactionId(event.unsigned?['transaction_id'])),
+    );
   }
 
   void addAggregatedEvent(Event event) {
@@ -445,14 +463,18 @@ class Timeline {
 
       if (!allowNewEvent) return;
 
-      final status = eventStatusFromInt(eventUpdate.content['status'] ??
-          (eventUpdate.content['unsigned'] is Map<String, dynamic>
-              ? eventUpdate.content['unsigned'][messageSendingStatusKey]
-              : null) ??
-          EventStatus.synced.intValue);
+      final status = eventStatusFromInt(
+        eventUpdate.content['status'] as int? ??
+            (eventUpdate.content['unsigned'] is Map<String, Object?>
+                ? (eventUpdate.content['unsigned']
+                    as Map<String, Object?>)[messageSendingStatusKey] as int?
+                : null) ??
+            EventStatus.synced.intValue,
+      );
 
       if (status.isRemoved) {
-        final i = _findEvent(event_id: eventUpdate.content['event_id']);
+        final i =
+            _findEvent(event_id: eventUpdate.content['event_id'] as String?);
         if (i < events.length) {
           removeAggregatedEvent(events[i]);
           events.removeAt(i);
@@ -460,10 +482,12 @@ class Timeline {
         }
       } else {
         final i = _findEvent(
-            event_id: eventUpdate.content['event_id'],
-            unsigned_txid: eventUpdate.content['unsigned'] is Map
-                ? eventUpdate.content['unsigned']['transaction_id']
-                : null);
+          event_id: eventUpdate.content['event_id'] as String?,
+          unsigned_txid: eventUpdate.content['unsigned'] is Map
+              ? (eventUpdate.content['unsigned']
+                  as Map<String, Object?>)['transaction_id'] as String?
+              : null,
+        );
 
         if (i < events.length) {
           // if the old status is larger than the new one, we also want to preserve the old status
@@ -487,7 +511,8 @@ class Timeline {
 
           if (eventUpdate.type == EventUpdateType.history &&
               events.indexWhere(
-                      (e) => e.eventId == eventUpdate.content['event_id']) !=
+                    (e) => e.eventId == eventUpdate.content['event_id'],
+                  ) !=
                   -1) return;
           var index = events.length;
           if (eventUpdate.type == EventUpdateType.history) {
@@ -515,14 +540,17 @@ class Timeline {
             final relationshipEventId = events[index].relationshipEventId;
             if (relationshipEventId != null) {
               onChange?.call(_findEvent(event_id: relationshipEventId));
+
               return;
             }
           }
 
-          events[index].setRedactionEvent(Event.fromJson(
-            eventUpdate.content,
-            room,
-          ));
+          events[index].setRedactionEvent(
+            Event.fromJson(
+              eventUpdate.content,
+              room,
+            ),
+          );
           onChange?.call(index);
         }
       }
@@ -613,6 +641,7 @@ class Timeline {
         rethrow;
       }
     }
+
     return;
   }
 }
@@ -622,6 +651,7 @@ extension on List<Event> {
     if (isEmpty) return 0;
     final index = indexWhere((event) => !event.status.isError);
     if (index == -1) return length;
+
     return index;
   }
 }

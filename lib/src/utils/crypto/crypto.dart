@@ -25,5 +25,6 @@ Uint8List secureRandomBytes(int len) {
   final rng = Random.secure();
   final list = Uint8List(len);
   list.setAll(0, Iterable.generate(list.length, (i) => rng.nextInt(256)));
+
   return list;
 }

@@ -27,6 +27,7 @@ extension MatrixIdExtension on String {
     if (ix == -1) {
       return [substring(1)];
     }
+
     return [s.substring(0, ix), s.substring(ix + 1)];
   }
 
@@ -46,6 +47,7 @@ extension MatrixIdExtension on String {
     if (parts.length != 2 || parts[1].isEmpty) {
       return false;
     }
+
     return true;
   }
 
@@ -79,17 +81,20 @@ extension MatrixIdExtension on String {
         }
         identifiers.add(thisSigil + pathSegments[i + 1]);
       }
+
       return uri.replace(pathSegments: identifiers);
     } else if (toLowerCase().startsWith(matrixToPrefix)) {
       return Uri.tryParse(
-          '//${substring(matrixToPrefix.length - 1).replaceAllMapped(RegExp(r'(?<=/)[#!@+][^:]*:|(\?.*$)'), (m) => m[0]!.replaceAllMapped(RegExp(m.group(1) != null ? '' : '[/?]'), (m) => Uri.encodeComponent(m.group(0)!))).replaceAll('#', '%23')}');
+        '//${substring(matrixToPrefix.length - 1).replaceAllMapped(RegExp(r'(?<=/)[#!@+][^:]*:|(\?.*$)'), (m) => m[0]!.replaceAllMapped(RegExp(m.group(1) != null ? '' : '[/?]'), (m) => Uri.encodeComponent(m.group(0)!))).replaceAll('#', '%23')}',
+      );
     } else {
       return Uri(
-          pathSegments: RegExp(r'/((?:[#!@+][^:]*:)?[^/?]*)(?:\?.*$)?')
-              .allMatches('/$this')
-              .map((m) => m[1]!),
-          query: RegExp(r'(?:/(?:[#!@+][^:]*:)?[^/?]*)*\?(.*$)')
-              .firstMatch('/$this')?[1]);
+        pathSegments: RegExp(r'/((?:[#!@+][^:]*:)?[^/?]*)(?:\?.*$)?')
+            .allMatches('/$this')
+            .map((m) => m[1]!),
+        query: RegExp(r'(?:/(?:[#!@+][^:]*:)?[^/?]*)*\?(.*$)')
+            .firstMatch('/$this')?[1],
+      );
     }
   }
 
@@ -121,10 +126,11 @@ class MatrixIdentifierStringExtensionResults {
   final Set<String> via;
   final String? action;
 
-  MatrixIdentifierStringExtensionResults(
-      {required this.primaryIdentifier,
-      this.secondaryIdentifier,
-      this.queryString,
-      this.via = const {},
-      this.action});
+  MatrixIdentifierStringExtensionResults({
+    required this.primaryIdentifier,
+    this.secondaryIdentifier,
+    this.queryString,
+    this.via = const {},
+    this.action,
+  });
 }

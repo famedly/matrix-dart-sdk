@@ -42,6 +42,7 @@ Future<bool> olmEnabled() async {
   } catch (e) {
     olmEnabled = false;
   }
+
   return olmEnabled;
 }
 
@@ -83,7 +84,10 @@ void testDatabase(
   });
   test('storeFile', () async {
     await database.storeFile(
-        Uri.parse('mxc://test'), Uint8List.fromList([0]), 0);
+      Uri.parse('mxc://test'),
+      Uint8List.fromList([0]),
+      0,
+    );
     final file = await database.getFile(Uri.parse('mxc://test'));
     expect(file != null, database.supportsFileStoring);
   });
@@ -186,32 +190,35 @@ void testDatabase(
   });
   test('storeEventUpdate', () async {
     await database.storeEventUpdate(
-        EventUpdate(
-          roomID: '!testroom:example.com',
-          type: EventUpdateType.timeline,
-          content: {
-            'type': EventTypes.Message,
-            'content': {
-              'body': '* edit 3',
+      EventUpdate(
+        roomID: '!testroom:example.com',
+        type: EventUpdateType.timeline,
+        content: {
+          'type': EventTypes.Message,
+          'content': {
+            'body': '* edit 3',
+            'msgtype': 'm.text',
+            'm.new_content': {
+              'body': 'edit 3',
               'msgtype': 'm.text',
-              'm.new_content': {
-                'body': 'edit 3',
-                'msgtype': 'm.text',
-              },
-              'm.relates_to': {
-                'event_id': '\$source',
-                'rel_type': RelationshipTypes.edit,
-              },
             },
-            'event_id': '\$event:example.com',
-            'sender': '@bob:example.org',
+            'm.relates_to': {
+              'event_id': '\$source',
+              'rel_type': RelationshipTypes.edit,
+            },
           },
-        ),
-        Client('testclient'));
+          'event_id': '\$event:example.com',
+          'sender': '@bob:example.org',
+        },
+      ),
+      Client('testclient'),
+    );
   });
   test('getEventById', () async {
-    final event = await database.getEventById('\$event:example.com',
-        Room(id: '!testroom:example.com', client: Client('testclient')));
+    final event = await database.getEventById(
+      '\$event:example.com',
+      Room(id: '!testroom:example.com', client: Client('testclient')),
+    );
     expect(event?.type, EventTypes.Message);
   });
   test('getEventList', () async {
@@ -221,19 +228,24 @@ void testDatabase(
     expect(events.single.type, EventTypes.Message);
   });
   test('getUser', () async {
-    final user = await database.getUser('@bob:example.org',
-        Room(id: '!testroom:example.com', client: Client('testclient')));
+    final user = await database.getUser(
+      '@bob:example.org',
+      Room(id: '!testroom:example.com', client: Client('testclient')),
+    );
     expect(user, null);
   });
   test('getUsers', () async {
     final users = await database.getUsers(
-        Room(id: '!testroom:example.com', client: Client('testclient')));
+      Room(id: '!testroom:example.com', client: Client('testclient')),
+    );
     expect(users.isEmpty, true);
   });
   test('removeEvent', () async {
     await database.removeEvent('\$event:example.com', '!testroom:example.com');
-    final event = await database.getEventById('\$event:example.com',
-        Room(id: '!testroom:example.com', client: Client('testclient')));
+    final event = await database.getEventById(
+      '\$event:example.com',
+      Room(id: '!testroom:example.com', client: Client('testclient')),
+    );
     expect(event, null);
   });
   test('getAllInboundGroupSessions', () async {
@@ -265,7 +277,9 @@ void testDatabase(
   });
   test('markInboundGroupSessionAsUploaded', () async {
     await database.markInboundGroupSessionAsUploaded(
-        '!testroom:example.com', 'sessionId');
+      '!testroom:example.com',
+      'sessionId',
+    );
   });
   test('markInboundGroupSessionsAsNeedingUpload', () async {
     await database.markInboundGroupSessionsAsNeedingUpload();
@@ -471,5 +485,6 @@ void testDatabase(
   test('Close', () async {
     await database.close();
   });
+
   return;
 }

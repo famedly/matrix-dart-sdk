@@ -28,7 +28,7 @@ import 'package:matrix/src/utils/queued_to_device_event.dart';
 abstract class DatabaseApi {
   int get maxFileSize => 1 * 1024 * 1024;
   bool get supportsFileStoring => false;
-  Future<Map<String, dynamic>?> getClient(String name);
+  Future<Map<String, Object?>?> getClient(String name);
 
   Future updateClient(
     String homeserverUrl,
@@ -53,15 +53,21 @@ abstract class DatabaseApi {
 
   Future<List<Room>> getRoomList(Client client);
 
-  Future<Room?> getSingleRoom(Client client, String roomId,
-      {bool loadImportantStates = true});
+  Future<Room?> getSingleRoom(
+    Client client,
+    String roomId, {
+    bool loadImportantStates = true,
+  });
 
   Future<Map<String, BasicEvent>> getAccountData();
 
   /// Stores a RoomUpdate object in the database. Must be called inside of
   /// [transaction].
   Future<void> storeRoomUpdate(
-      String roomId, SyncRoomUpdate roomUpdate, Client client);
+    String roomId,
+    SyncRoomUpdate roomUpdate,
+    Client client,
+  );
 
   /// Stores an EventUpdate object in the database. Must be called inside of
   /// [transaction].
@@ -298,7 +304,10 @@ abstract class DatabaseApi {
   Future<List<StoredInboundGroupSession>> getInboundGroupSessionsToUpload();
 
   Future<void> addSeenDeviceId(
-      String userId, String deviceId, String publicKeys);
+    String userId,
+    String deviceId,
+    String publicKeys,
+  );
 
   Future<void> addSeenPublicKey(String publicKey, String deviceId);
 
@@ -306,7 +315,7 @@ abstract class DatabaseApi {
 
   Future<String?> publicKeySeen(String publicKey);
 
-  Future<dynamic> close();
+  Future<Object?> close();
 
   Future<void> transaction(Future<void> Function() action);
 

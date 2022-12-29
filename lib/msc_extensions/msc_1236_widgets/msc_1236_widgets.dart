@@ -5,7 +5,7 @@ import 'package:matrix/matrix.dart';
 export 'src/widget.dart';
 
 extension MatrixWidgets on Room {
-  /// Returns all present Widgets in the room.
+  /// returns all present Widgets in the room.
   List<MatrixWidget> get widgets => {
         ...states['m.widget'] ?? states['im.vector.modular.widgets'] ?? {},
       }.values.expand((e) {
@@ -24,6 +24,7 @@ extension MatrixWidgets on Room {
     final json = widget.toJson();
     json['creatorUserId'] = user;
     json['id'] = widgetId;
+
     return client.setRoomStateWithKey(
       id,
       'im.vector.modular.widgets',

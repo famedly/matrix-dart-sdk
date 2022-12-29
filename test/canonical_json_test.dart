@@ -25,7 +25,7 @@ void main() {
   /// All Tests related to the ChatTime
   group('Canonical Json', () {
     Logs().level = Level.error;
-    final textMap = <String, Map<String, dynamic>>{
+    final textMap = <String, Map<String, Object?>>{
       '{}': {},
       '{"one":1,"two":"Two"}': {'one': 1, 'two': 'Two'},
       '{"a":"1","b":"2"}': {'b': '2', 'a': '1'},
@@ -48,7 +48,9 @@ void main() {
     for (final entry in textMap.entries) {
       test(entry.key, () async {
         expect(
-            entry.key, String.fromCharCodes(canonicalJson.encode(entry.value)));
+          entry.key,
+          String.fromCharCodes(canonicalJson.encode(entry.value)),
+        );
       });
     }
   });

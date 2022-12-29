@@ -39,5 +39,6 @@ Future<T> runBenchmarked<T>(
         ' ($itemCount items, ${itemCount > 0 ? milliseconds / itemCount : milliseconds} ms/item)';
   }
   Logs().d(message);
+
   return result;
 }

@@ -22,11 +22,11 @@ import 'package:test/test.dart';
 void main() {
   group('Try-get-map-extension', () {
     test('it should work', () {
-      final data = <String, dynamic>{
+      final data = <String, Object?>{
         'str': 'foxies',
         'int': 42,
         'list': [2, 3, 4],
-        'map': <String, dynamic>{
+        'map': <String, Object?>{
           'beep': 'boop',
         },
       };
@@ -34,12 +34,18 @@ void main() {
       expect(data.tryGet<int>('str'), null);
       expect(data.tryGet<int>('int'), 42);
       expect(data.tryGet<List>('list'), [2, 3, 4]);
-      expect(data.tryGet<Map<String, dynamic>>('map')?.tryGet<String>('beep'),
-          'boop');
-      expect(data.tryGet<Map<String, dynamic>>('map')?.tryGet<String>('meep'),
-          null);
-      expect(data.tryGet<Map<String, dynamic>>('pam')?.tryGet<String>('beep'),
-          null);
+      expect(
+        data.tryGet<Map<String, Object?>>('map')?.tryGet<String>('beep'),
+        'boop',
+      );
+      expect(
+        data.tryGet<Map<String, Object?>>('map')?.tryGet<String>('meep'),
+        null,
+      );
+      expect(
+        data.tryGet<Map<String, Object?>>('pam')?.tryGet<String>('beep'),
+        null,
+      );
     });
   });
 }

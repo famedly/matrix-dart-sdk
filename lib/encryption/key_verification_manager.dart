@@ -90,26 +90,34 @@ class KeyVerificationManager {
 
   Future<void> handleEventUpdate(EventUpdate update) async {
     final event = update.content;
-    final type = event['type'].startsWith('m.key.verification.')
+    final type = (event['type'] as String).startsWith('m.key.verification.')
         ? event['type']
-        : event['content']['msgtype'];
+        : (event['content'] as Map<String, Object?>)['msgtype'];
     if (type == null ||
-        !type.startsWith('m.key.verification.') ||
+        !(type as String).startsWith('m.key.verification.') ||
         client.verificationMethods.isEmpty) {
       return;
     }
     if (type == EventTypes.KeyVerificationRequest) {
-      event['content']['timestamp'] = event['origin_server_ts'];
+      (event['content'] as Map<String, Object?>)['timestamp'] =
+          event['origin_server_ts'];
     }
 
-    final transactionId =
-        KeyVerification.getTransactionId(event['content']) ?? event['event_id'];
+    final transactionId = KeyVerification.getTransactionId(
+          event['content'] as Map<String, Object?>,
+        ) ??
+        event['event_id'];
 
     final req = _requests[transactionId];
     if (req != null) {
-      final otherDeviceId = event['content']['from_device'];
+      final otherDeviceId =
+          (event['content'] as Map<String, Object?>)['from_device'];
       if (event['sender'] != client.userID) {
-        await req.handlePayload(type, event['content'], event['event_id']);
+        await req.handlePayload(
+          type,
+          event['content'] as Map<String, Object?>,
+          event['event_id'] as String?,
+        );
       } else if (event['sender'] == client.userID &&
           otherDeviceId != null &&
           otherDeviceId != client.deviceID) {
@@ -126,15 +134,21 @@ class KeyVerificationManager {
       final room = client.getRoomById(update.roomID) ??
           Room(id: update.roomID, client: client);
       final newKeyRequest = KeyVerification(
-          encryption: encryption, userId: event['sender'], room: room);
+        encryption: encryption,
+        userId: event['sender'] as String,
+        room: room,
+      );
       await newKeyRequest.handlePayload(
-          type, event['content'], event['event_id']);
+        type,
+        event['content'] as Map<String, Object?>,
+        event['event_id'] as String?,
+      );
       if (newKeyRequest.state != KeyVerificationState.askAccept) {
         // something went wrong, let's just dispose the request
         newKeyRequest.dispose();
       } else {
         // new request! Let's notify it and stuff
-        _requests[transactionId] = newKeyRequest;
+        _requests[transactionId as String] = newKeyRequest;
         client.onKeyVerificationRequest.add(newKeyRequest);
       }
     }

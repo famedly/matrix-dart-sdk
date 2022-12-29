@@ -8,7 +8,7 @@ void main() {
   group('Push Notification', () {
     Logs().level = Level.error;
 
-    const json = <String, dynamic>{
+    const json = <String, Object?>{
       'content': {
         'body': "I'm floating in a most peculiar way.",
         'msgtype': 'm.text'

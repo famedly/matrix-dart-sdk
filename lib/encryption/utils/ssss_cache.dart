@@ -24,14 +24,14 @@ class SSSSCache {
 
   const SSSSCache({this.type, this.keyId, this.ciphertext, this.content});
 
-  factory SSSSCache.fromJson(Map<String, dynamic> json) => SSSSCache(
-        type: json['type'],
-        keyId: json['key_id'],
-        ciphertext: json['ciphertext'],
-        content: json['content'],
+  factory SSSSCache.fromJson(Map<String, Object?> json) => SSSSCache(
+        type: json['type'] as String?,
+        keyId: json['key_id'] as String?,
+        ciphertext: json['ciphertext'] as String?,
+        content: json['content'] as String?,
       );
 
-  Map<String, dynamic> toJson() => {
+  Map<String, Object?> toJson() => {
         'type': type,
         'key_id': keyId,
         'ciphertext': ciphertext,

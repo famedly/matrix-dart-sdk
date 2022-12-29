@@ -46,14 +46,18 @@ Future<void> startWebWorker() async {
           switch (operation.name) {
             case WebWorkerOperations.shrinkImage:
               final result = MatrixImageFile.resizeImplementation(
-                  MatrixImageFileResizeArguments.fromJson(
-                      Map.from(operation.data as Map)));
+                MatrixImageFileResizeArguments.fromJson(
+                  Map.from(operation.data as Map),
+                ),
+              );
               sendResponse(operation.label as double, result?.toJson());
               break;
             case WebWorkerOperations.calcImageMetadata:
               final result = MatrixImageFile.calcMetadataImplementation(
-                  Uint8List.fromList(
-                      (operation.data as JsArray).whereType<int>().toList()));
+                Uint8List.fromList(
+                  (operation.data as JsArray).whereType<int>().toList(),
+                ),
+              );
               sendResponse(operation.label as double, result?.toJson());
               break;
             default:

@@ -29,30 +29,35 @@ class CrossSigning {
   final Encryption encryption;
   Client get client => encryption.client;
   CrossSigning(this.encryption) {
-    encryption.ssss.setValidator(EventTypes.CrossSigningSelfSigning,
-        (String secret) async {
-      final keyObj = olm.PkSigning();
-      try {
-        return keyObj.init_with_seed(base64decodeUnpadded(secret)) ==
-            client.userDeviceKeys[client.userID]!.selfSigningKey!.ed25519Key;
-      } catch (_) {
-        return false;
-      } finally {
-        keyObj.free();
-      }
-    });
-    encryption.ssss.setValidator(EventTypes.CrossSigningUserSigning,
-        (String secret) async {
-      final keyObj = olm.PkSigning();
-      try {
-        return keyObj.init_with_seed(base64decodeUnpadded(secret)) ==
-            client.userDeviceKeys[client.userID]!.userSigningKey!.ed25519Key;
-      } catch (_) {
-        return false;
-      } finally {
-        keyObj.free();
-      }
-    });
+    encryption.ssss.setValidator(
+      EventTypes.CrossSigningSelfSigning,
+      (String secret) async {
+        final keyObj = olm.PkSigning();
+        try {
+          return keyObj.init_with_seed(base64decodeUnpadded(secret)) ==
+              // ignore: avoid-non-null-assertion
+              client.userDeviceKeys[client.userID]!.selfSigningKey!.ed25519Key;
+        } catch (_) {
+          return false;
+        } finally {
+          keyObj.free();
+        }
+      },
+    );
+    encryption.ssss.setValidator(
+      EventTypes.CrossSigningUserSigning,
+      (String secret) async {
+        final keyObj = olm.PkSigning();
+        try {
+          return keyObj.init_with_seed(base64decodeUnpadded(secret)) ==
+              client.userDeviceKeys[client.userID]!.userSigningKey!.ed25519Key;
+        } catch (_) {
+          return false;
+        } finally {
+          keyObj.free();
+        }
+      },
+    );
   }
 
   bool get enabled =>
@@ -64,6 +69,7 @@ class CrossSigning {
     if (!enabled) {
       return false;
     }
+
     return (await encryption.ssss
                 .getCached(EventTypes.CrossSigningSelfSigning)) !=
             null &&
@@ -71,11 +77,12 @@ class CrossSigning {
             null;
   }
 
-  Future<void> selfSign(
-      {String? passphrase,
-      String? recoveryKey,
-      String? keyOrPassphrase,
-      OpenSSSS? openSsss}) async {
+  Future<void> selfSign({
+    String? passphrase,
+    String? recoveryKey,
+    String? keyOrPassphrase,
+    OpenSSSS? openSsss,
+  }) async {
     var handle = openSsss;
     if (handle == null) {
       handle = encryption.ssss.open(EventTypes.CrossSigningMasterKey);
@@ -88,7 +95,8 @@ class CrossSigning {
       await handle.maybeCacheAll();
     }
     final masterPrivateKey = base64decodeUnpadded(
-        await handle.getStored(EventTypes.CrossSigningMasterKey));
+      await handle.getStored(EventTypes.CrossSigningMasterKey),
+    );
     final keyObj = olm.PkSigning();
     String? masterPubkey;
     try {
@@ -116,11 +124,13 @@ class CrossSigning {
     ]);
   }
 
-  bool signable(List<SignableKey> keys) => keys.any((key) =>
-      key is CrossSigningKey && key.usage.contains('master') ||
-      key is DeviceKeys &&
-          key.userId == client.userID &&
-          key.identifier != client.deviceID);
+  bool signable(List<SignableKey> keys) => keys.any(
+        (key) =>
+            key is CrossSigningKey && key.usage.contains('master') ||
+            key is DeviceKeys &&
+                key.userId == client.userID &&
+                key.identifier != client.deviceID,
+      );
 
   Future<void> sign(List<SignableKey> keys) async {
     final signedKeys = <MatrixSignableKey>[];
@@ -132,7 +142,10 @@ class CrossSigning {
     }
 
     void addSignature(
-        SignableKey key, SignableKey signedWith, String signature) {
+      SignableKey key,
+      SignableKey signedWith,
+      String signature,
+    ) {
       final signedKey = key.cloneForSigning();
       ((signedKey.signatures ??=
               <String, Map<String, String>>{})[signedWith.userId] ??=
@@ -153,9 +166,11 @@ class CrossSigning {
           // we don't care about signing other cross-signing keys
         } else {
           // okay, we'll sign a device key with our self signing key
-          selfSigningKey ??= base64decodeUnpadded(await encryption.ssss
-                  .getCached(EventTypes.CrossSigningSelfSigning) ??
-              '');
+          selfSigningKey ??= base64decodeUnpadded(
+            await encryption.ssss
+                    .getCached(EventTypes.CrossSigningSelfSigning) ??
+                '',
+          );
           if (selfSigningKey.isNotEmpty) {
             final signature = _sign(key.signingContent, selfSigningKey);
             addSignature(key, userKeys.selfSigningKey!, signature);
@@ -163,9 +178,10 @@ class CrossSigning {
         }
       } else if (key is CrossSigningKey && key.usage.contains('master')) {
         // we are signing someone elses master key
-        userSigningKey ??= base64decodeUnpadded(await encryption.ssss
-                .getCached(EventTypes.CrossSigningUserSigning) ??
-            '');
+        userSigningKey ??= base64decodeUnpadded(
+          await encryption.ssss.getCached(EventTypes.CrossSigningUserSigning) ??
+              '',
+        );
         if (userSigningKey.isNotEmpty) {
           final signature = _sign(key.signingContent, userSigningKey);
           addSignature(key, userKeys.userSigningKey!, signature);
@@ -174,7 +190,7 @@ class CrossSigning {
     }
     if (signedKeys.isNotEmpty) {
       // post our new keys!
-      final payload = <String, Map<String, Map<String, dynamic>>>{};
+      final payload = <String, Map<String, Map<String, Object?>>>{};
       for (final key in signedKeys) {
         if (key.identifier == null ||
             key.signatures == null ||
@@ -182,12 +198,12 @@ class CrossSigning {
           continue;
         }
         if (!payload.containsKey(key.userId)) {
-          payload[key.userId] = <String, Map<String, dynamic>>{};
+          payload[key.userId] = <String, Map<String, Object?>>{};
         }
         if (payload[key.userId]?[key.identifier]?['signatures'] != null) {
           // we need to merge signature objects
-          payload[key.userId]![key.identifier]!['signatures']
-              .addAll(key.signatures);
+          (payload[key.userId]![key.identifier]!['signatures'] as Map)
+              .addAll(key.signatures!);
         } else {
           // we can just add signatures
           payload[key.userId]![key.identifier!] = key.toJson();
@@ -202,6 +218,7 @@ class CrossSigning {
     final keyObj = olm.PkSigning();
     try {
       keyObj.init_with_seed(key);
+
       return keyObj.sign(canonicalJson);
     } finally {
       keyObj.free();

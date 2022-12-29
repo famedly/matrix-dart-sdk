@@ -23,18 +23,18 @@ import 'package:matrix/src/utils/map_copy_extension.dart';
 void main() {
   group('Map-copy-extension', () {
     test('it should work', () {
-      final original = <String, dynamic>{
+      final original = <String, Object?>{
         'attr': 'fox',
-        'child': <String, dynamic>{
+        'child': <String, Object?>{
           'attr': 'bunny',
           'list': [1, 2],
         },
       };
       final copy = original.copy();
-      original['child']['attr'] = 'raccoon';
-      expect(copy['child']['attr'], 'bunny');
-      original['child']['list'].add(3);
-      expect(copy['child']['list'], [1, 2]);
+      (original['child'] as Map<String, Object?>)['attr'] = 'raccoon';
+      expect((copy['child'] as Map<String, Object?>)['attr'], 'bunny');
+      ((original['child'] as Map<String, Object?>)['list'] as List).add(3);
+      expect((copy['child'] as Map<String, Object?>)['list'], [1, 2]);
     });
   });
 }
