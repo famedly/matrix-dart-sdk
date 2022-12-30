@@ -229,6 +229,17 @@ class VoIP {
       content['offer']['type'],
     );
 
+    /// play ringtone. We decided to play the ringtone before adding the call to
+    /// the incoming call stream because getUserMedia from initWithInvite fails
+    /// on firefox unless the tab is in focus. We should atleast be able to notify
+    /// the user about an incoming call
+    ///
+    /// Autoplay on firefox still needs interaction, without which all notifications
+    /// could be blocked.
+    if (confId == null) {
+      delegate.playRingtone();
+    }
+
     await newCall.initWithInvite(
         callType, offer, sdpStreamMetadata, lifetime, confId != null);
 
@@ -246,10 +257,6 @@ class VoIP {
       client.backgroundSync = true;
 
       ///TODO: notify the callkeep that the call is incoming.
-    }
-    // Play ringtone
-    if (confId == null) {
-      delegate.playRingtone();
     }
   }
 
