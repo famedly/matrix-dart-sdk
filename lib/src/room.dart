@@ -1509,7 +1509,7 @@ class Room {
     // Do not request users from the server if we have already done it
     // in this session or have a complete list locally.
     if (_requestedParticipants || participantListComplete) {
-      return getParticipants();
+      return getParticipants(membershipFilter);
     }
 
     final matrixEvents = await client.getMembersByRoom(id);
