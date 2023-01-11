@@ -658,6 +658,13 @@ class CallSession {
         json['sdpMLineIndex']?.round() ?? 0,
       );
 
+      if (direction == CallDirection.kOutgoing &&
+          pc != null &&
+          await pc!.getRemoteDescription() == null) {
+        remoteCandidates.add(candidate);
+        continue;
+      }
+
       if (pc != null && inviteOrAnswerSent && remotePartyId != null) {
         try {
           await pc!.addCandidate(candidate);
