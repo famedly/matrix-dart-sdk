@@ -233,29 +233,45 @@ class Room {
   /// of just 'Alice' to make it different to a direct chat.
   /// Empty chats will become the localized version of 'Empty Chat'.
   /// This method requires a localization class which implements [MatrixLocalizations]
-  String getLocalizedDisplayname(MatrixLocalizations i18n) {
-    if (name.isEmpty &&
-        canonicalAlias.isEmpty &&
-        !isDirectChat &&
-        (summary.mHeroes != null && summary.mHeroes?.isNotEmpty == true)) {
-      return i18n.groupWith(displayname);
+  String getLocalizedDisplayname([
+    MatrixLocalizations i18n = const MatrixDefaultLocalizations(),
+  ]) {
+    if (name.isNotEmpty) return name;
+
+    final canonicalAlias = this.canonicalAlias.localpart;
+    if (canonicalAlias != null && canonicalAlias.isNotEmpty) {
+      return canonicalAlias;
     }
-    if (displayname.isNotEmpty) {
-      if (directChatMatrixID != null) {
-        final displayName =
-            unsafeGetUserFromMemoryOrFallback(directChatMatrixID!)
-                .calcDisplayname();
-        final dmPartnerMembership =
-            getState(EventTypes.RoomMember, directChatMatrixID!)
-                ?.asUser
-                .membership;
-        if (dmPartnerMembership == null ||
-            dmPartnerMembership == Membership.leave) {
-          return i18n.wasDirectChatDisplayName(displayName);
-        }
-        return displayName;
+
+    final directChatMatrixID = this.directChatMatrixID;
+    final heroes = summary.mHeroes ??
+        (directChatMatrixID == null ? [] : [directChatMatrixID]);
+    if (heroes.isNotEmpty) {
+      final result = heroes
+          .where((hero) => hero.isNotEmpty)
+          .map((hero) =>
+              unsafeGetUserFromMemoryOrFallback(hero).calcDisplayname())
+          .join(', ');
+      if (isAbandonedDMRoom) {
+        return i18n.wasDirectChatDisplayName(result);
       }
-      return displayname;
+
+      return isDirectChat ? result : i18n.groupWith(result);
+    }
+    if (membership == Membership.invite) {
+      final sender = getState(EventTypes.RoomMember, client.userID!)
+          ?.senderFromMemoryOrFallback
+          .calcDisplayname();
+      if (sender != null) return sender;
+    }
+    if (membership == Membership.leave) {
+      final invitation = getState(EventTypes.RoomMember, client.userID!);
+      if (invitation != null && invitation.unsigned?['prev_sender'] != null) {
+        final name = unsafeGetUserFromMemoryOrFallback(
+                invitation.unsigned?['prev_sender'])
+            .calcDisplayname();
+        return i18n.wasDirectChatDisplayName(name);
+      }
     }
     return i18n.emptyChat;
   }
@@ -416,67 +432,24 @@ class Room {
   /// history of this room.
   static const int defaultHistoryCount = 30;
 
+  /// Checks if this is an abandoned DM room where the other participant has
+  /// left the room. This is false when there are still other users in the room
+  /// or the room is not marked as a DM room.
+  bool get isAbandonedDMRoom {
+    final directChatMatrixID = this.directChatMatrixID;
+
+    if (directChatMatrixID == null) return false;
+    final dmPartnerMembership =
+        unsafeGetUserFromMemoryOrFallback(directChatMatrixID).membership;
+    return dmPartnerMembership == Membership.leave &&
+        summary.mJoinedMemberCount == 1 &&
+        summary.mInvitedMemberCount == 0;
+  }
+
   /// Calculates the displayname. First checks if there is a name, then checks for a canonical alias and
   /// then generates a name from the heroes.
-  String get displayname {
-    if (name.isNotEmpty) return name;
-
-    final canonicalAlias = this.canonicalAlias.localpart;
-    if (canonicalAlias != null && canonicalAlias.isNotEmpty) {
-      return canonicalAlias;
-    }
-    final heroes = summary.mHeroes;
-    if (heroes != null && heroes.isNotEmpty) {
-      final result = heroes
-          .where((hero) => hero.isNotEmpty)
-          .map((hero) =>
-              unsafeGetUserFromMemoryOrFallback(hero).calcDisplayname())
-          .join(', ');
-      if (directChatMatrixID != null) {
-        final dmPartnerMembership = getState(
-          EventTypes.RoomMember,
-          directChatMatrixID!,
-        )?.asUser.membership;
-        if (dmPartnerMembership == null ||
-            dmPartnerMembership == Membership.leave) {
-          return leavedDirectChatName(result);
-        }
-        return result;
-      } else {
-        return result;
-      }
-    }
-    if (isDirectChat) {
-      final user = directChatMatrixID;
-      if (user != null) {
-        final displayName =
-            unsafeGetUserFromMemoryOrFallback(user).calcDisplayname();
-        return membership == Membership.leave
-            ? leavedDirectChatName(displayName)
-            : displayName;
-      }
-    }
-    if (membership == Membership.invite) {
-      final sender = getState(EventTypes.RoomMember, client.userID!)
-          ?.senderFromMemoryOrFallback
-          .calcDisplayname();
-      if (sender != null) return sender;
-    }
-    if (membership == Membership.leave) {
-      final invitation = getState(EventTypes.RoomMember, client.userID!);
-      if (invitation != null && invitation.unsigned?['prev_sender'] != null) {
-        final name = unsafeGetUserFromMemoryOrFallback(
-                invitation.unsigned?['prev_sender'])
-            .calcDisplayname();
-        return leavedDirectChatName(name);
-      }
-    }
-    return emptyRoomName;
-  }
-
-  String leavedDirectChatName(String prevName) {
-    return '$emptyRoomName (was $prevName)';
-  }
+  @Deprecated('Use `getLocalizedDisplayname()` instead')
+  String get displayname => getLocalizedDisplayname();
 
   /// When the last message received.
   DateTime get timeCreated => lastEvent?.originServerTs ?? DateTime.now();
@@ -1581,7 +1554,7 @@ class Room {
     Map<String, dynamic>? resp;
     try {
       Logs().v(
-          'Request missing user $mxID in room $displayname from the server...');
+          'Request missing user $mxID in room ${getLocalizedDisplayname()} from the server...');
       resp = await client.getRoomStateWithKey(
         id,
         EventTypes.RoomMember,

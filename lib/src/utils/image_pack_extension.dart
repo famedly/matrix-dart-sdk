@@ -47,7 +47,7 @@ extension ImagePackRoomExtension on Room {
                 finalSlug,
                 () => ImagePackContent.fromJson({})
                   ..pack.displayName = imagePack.pack.displayName ??
-                      room?.displayname ??
+                      room?.getLocalizedDisplayname() ??
                       finalSlug
                   ..pack.avatarUrl = imagePack.pack.avatarUrl ?? room?.avatar
                   ..pack.attribution = imagePack.pack.attribution)
@@ -68,7 +68,7 @@ extension ImagePackRoomExtension on Room {
           for (final stateKeyEntry in roomEntry.value.entries) {
             final stateKey = stateKeyEntry.key;
             final fallbackSlug =
-                '${room.displayname}-${stateKey.isNotEmpty ? '$stateKey-' : ''}${room.id}';
+                '${room.getLocalizedDisplayname()}-${stateKey.isNotEmpty ? '$stateKey-' : ''}${room.id}';
             addImagePack(room.getState('im.ponies.room_emotes', stateKey),
                 room: room, slug: fallbackSlug);
           }
