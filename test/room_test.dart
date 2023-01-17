@@ -90,7 +90,7 @@ void main() {
       expect(room.summary.mJoinedMemberCount, notificationCount);
       expect(room.summary.mInvitedMemberCount, notificationCount);
       expect(room.summary.mHeroes, heroes);
-      expect(room.displayname, 'Alice, Bob, Charley');
+      expect(room.getLocalizedDisplayname(), 'Group with Alice, Bob, Charley');
       expect(
           room.getState('m.room.join_rules')?.content['join_rule'], 'public');
       expect(room.roomAccountData['com.test.foo']?.content['foo'], 'bar');
@@ -106,7 +106,7 @@ void main() {
             originServerTs: DateTime.now(),
             stateKey: ''),
       );
-      expect(room.displayname, 'testalias');
+      expect(room.getLocalizedDisplayname(), 'testalias');
       expect(room.canonicalAlias, '#testalias:example.com');
 
       room.setState(
@@ -119,7 +119,7 @@ void main() {
             originServerTs: DateTime.now(),
             stateKey: ''),
       );
-      expect(room.displayname, 'testname');
+      expect(room.getLocalizedDisplayname(), 'testname');
 
       expect(room.topic, '');
       room.setState(

@@ -305,6 +305,7 @@ class CallSession {
   String? get groupCallId => opts.groupCallId;
   String get callId => opts.callId;
   String get localPartyId => opts.localPartyId;
+  @Deprecated('Use room.getLocalizedDisplayname() instead')
   String? get displayName => room.displayname;
   CallDirection get direction => opts.dir;
   CallState state = CallState.kFledgling;
