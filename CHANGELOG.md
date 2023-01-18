@@ -1,3 +1,15 @@
+## [0.15.12] - 18th Jan 2023
+This deprecates `room.displayname` is favor of `room.getLocalizedDisplayname()`.
+For migration you can just replace it everywhere. It will use the
+MatrixDefaultLocalizations if you don't set one.
+
+- Fix the timing error when the candidate arrives before the answer sdp. (Duan Weiwei)
+- chore: use proper matchers in integration tests (Nicolas Werner)
+- fix: Last message set incorrectly on all session key received (Krille)
+- fix: play ringtone for incoming calls before trying to getUserMedia (td)
+- fix: propogate filter to getParticipants in requestParticipants (td)
+- refactor: room displayname calculation (Krille)
+
 ## [0.15.11] - 27th Dec 2022
 
 - fix: Fix the called party not sending screensharing correctly. (cloudwebrtc)
