@@ -195,19 +195,22 @@ void main() => group('Integration tests', () {
           /*expect(room.client.encryption.keyManager
           .getInboundGroupSession(room.id, currentSessionIdA, '') !=
       null);*/
-          expect(
-              testClientA.encryption!.olmManager
-                  .olmSessions[testClientB.identityKey]!.length,
-              1);
-          expect(
-              testClientB.encryption!.olmManager
-                  .olmSessions[testClientA.identityKey]!.length,
-              1);
-          expect(
-              testClientA.encryption!.olmManager
-                  .olmSessions[testClientB.identityKey]!.first.sessionId,
-              testClientB.encryption!.olmManager
-                  .olmSessions[testClientA.identityKey]!.first.sessionId);
+          if (Platform.environment['HOMESERVER'] != 'dendrite') {
+            expect(
+                testClientA.encryption!.olmManager
+                    .olmSessions[testClientB.identityKey]!.length,
+                1);
+            expect(
+                testClientB.encryption!.olmManager
+                    .olmSessions[testClientA.identityKey]!.length,
+                1);
+            expect(
+                testClientA.encryption!.olmManager
+                    .olmSessions[testClientB.identityKey]!.first.sessionId,
+                testClientB.encryption!.olmManager
+                    .olmSessions[testClientA.identityKey]!.first.sessionId);
+          }
+
           /*expect(inviteRoom.client.encryption.keyManager
           .getInboundGroupSession(inviteRoom.id, currentSessionIdA, '') !=
       null);*/

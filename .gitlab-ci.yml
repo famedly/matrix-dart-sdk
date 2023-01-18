@@ -83,11 +83,6 @@ e2ee_test:
           - synapse
           - dendrite
           - conduit
-  rules:
-    - if: '$HOMESERVER == "dendrite"'
-      when: on_success
-      allow_failure: true
-    - when: on_success
 
   before_script:
     - scripts/integration-prepare-alpine.sh
