@@ -76,23 +76,26 @@ e2ee_test:
     DOCKER_DRIVER: overlay2
     # Disable TLS since we're running inside local network.
     DOCKER_TLS_CERTDIR: ""
+    HOMESERVER: docker
   dependencies: []
   parallel:
     matrix:
-      - HOMESERVER:
+      - HOMESERVER_IMPLEMENTATION:
           - synapse
           - dendrite
           - conduit
   before_script:
     - scripts/integration-prepare-alpine.sh
-    # create Synapse instance
-    - scripts/integration-server-$HOMESERVER.sh
+    # deploy homeserver instance
+    - scripts/integration-server-$HOMESERVER_IMPLEMENTATION.sh
+  script:
+    # create test user environment variables
+    - source scripts/integration-create-environment-variables.sh
     # properly set the homeserver IP and create test users
     - scripts/integration-prepare-homeserver.sh
     # setup OLM
     - scripts/prepare.sh
-  script:
-    - ./scripts/test_driver.sh
+    - scripts/test_driver.sh
   timeout: 10m
 
 dry-run:
