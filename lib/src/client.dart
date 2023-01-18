@@ -872,8 +872,11 @@ class Client extends MatrixApi {
           // Try to decrypt encrypted events but don't update the database.
           if (leftRoom.encrypted && leftRoom.client.encryptionEnabled) {
             if (timeline.events[i].type == EventTypes.Encrypted) {
-              timeline.events[i] = await leftRoom.client.encryption!
-                  .decryptRoomEvent(leftRoom.id, timeline.events[i]);
+              timeline.events[i] =
+                  await leftRoom.client.encryption!.decryptRoomEvent(
+                leftRoom.id,
+                timeline.events[i],
+              );
             }
           }
         }
