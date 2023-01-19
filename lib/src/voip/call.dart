@@ -951,17 +951,13 @@ class CallSession {
         if (localUserMediaStream != null)
           localUserMediaStream!.stream!.id: SDPStreamPurpose(
               purpose: SDPStreamMetadataPurpose.Usermedia,
-              audio_muted:
-                  localUserMediaStream!.stream!.getAudioTracks().isEmpty,
-              video_muted:
-                  localUserMediaStream!.stream!.getVideoTracks().isEmpty),
+              audio_muted: localUserMediaStream!.audioMuted,
+              video_muted: localUserMediaStream!.videoMuted),
         if (localScreenSharingStream != null)
           localScreenSharingStream!.stream!.id: SDPStreamPurpose(
               purpose: SDPStreamMetadataPurpose.Screenshare,
-              audio_muted:
-                  localScreenSharingStream!.stream!.getAudioTracks().isEmpty,
-              video_muted:
-                  localScreenSharingStream!.stream!.getVideoTracks().isEmpty),
+              audio_muted: localScreenSharingStream!.audioMuted,
+              video_muted: localScreenSharingStream!.videoMuted),
       });
 
       await pc!.setLocalDescription(answer);

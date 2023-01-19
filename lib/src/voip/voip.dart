@@ -604,13 +604,18 @@ class VoIP {
 
   Future<GroupCall?> fetchOrCreateGroupCall(String roomId) async {
     final groupCall = getGroupCallForRoom(roomId);
-    if (groupCall != null) return groupCall;
-
     final room = client.getRoomById(roomId);
-
     if (room == null) {
       Logs().w('Not found room id = $roomId');
       return null;
+    }
+
+    if (groupCall != null) {
+      if (!room.canJoinGroupCall) {
+        Logs().w('No permission to join group calls in room $roomId');
+        return null;
+      }
+      return groupCall;
     }
 
     if (!room.groupCallsEnabled) {
@@ -619,13 +624,13 @@ class VoIP {
 
     if (room.canCreateGroupCall) {
       // The call doesn't exist, but we can create it
-      return await newGroupCall(
-          roomId, GroupCallType.Video, GroupCallIntent.Prompt);
-    }
 
-    if (room.canJoinGroupCall) {
-      Logs().w('No permission to join group calls in room $roomId');
-      return null;
+      final groupCall = await newGroupCall(
+          roomId, GroupCallType.Video, GroupCallIntent.Prompt);
+      if (groupCall != null) {
+        await groupCall.sendMemberStateEvent();
+      }
+      return groupCall;
     }
 
     final completer = Completer<GroupCall?>();
