@@ -1,9 +1,36 @@
-class TestUser {
-  static const String homeserver = 'http://localhost';
-  static const String username = '@alice:famedlysdk.test';
-  static const String username2 = '@bob:famedlysdk.test';
-  static const String displayname = 'Alice';
-  static const String displayname2 = 'Bob';
-  static const String password = 'AliceInWonderland';
-  static const String password2 = 'JoWirSchaffenDas';
+abstract class Users {
+  const Users._();
+
+  static const user1 = User(
+    String.fromEnvironment(
+      'USER1_NAME',
+      defaultValue: 'alice',
+    ),
+    String.fromEnvironment(
+      'USER1_PW',
+      defaultValue: 'AliceInWonderland',
+    ),
+  );
+  static const user2 = User(
+    String.fromEnvironment(
+      'USER2_NAME',
+      defaultValue: 'bob',
+    ),
+    String.fromEnvironment(
+      'USER2_PW',
+      defaultValue: 'JoWirSchaffenDas',
+    ),
+  );
 }
+
+class User {
+  final String name;
+  final String password;
+
+  const User(this.name, this.password);
+}
+
+const homeserver = 'http://${const String.fromEnvironment(
+  'HOMESERVER',
+  defaultValue: 'localhost',
+)}';
