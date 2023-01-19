@@ -313,13 +313,15 @@ void main() => group('Integration tests', () {
           await room.sendTextEvent(testMessage4);
           await Future.delayed(Duration(seconds: 7));
           expect(
-              testClientA.encryption!.olmManager
-                  .olmSessions[testClientB.identityKey]!.length,
-              1);
+            testClientA.encryption!.olmManager
+                .olmSessions[testClientB.identityKey]!.length,
+            olmLengthMatcher,
+          );
           expect(
-              testClientB.encryption!.olmManager
-                  .olmSessions[testClientA.identityKey]!.length,
-              1);
+            testClientB.encryption!.olmManager
+                .olmSessions[testClientA.identityKey]!.length,
+            olmLengthMatcher,
+          );
           expect(
               testClientA.encryption!.olmManager
                   .olmSessions[testClientB.identityKey]!.first.sessionId,
