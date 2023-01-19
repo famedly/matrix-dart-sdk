@@ -2149,6 +2149,63 @@ class Room {
     return;
   }
 
+  /// Generates a matrix.to link with appropriate routing info to share the room
+  Future<Uri> matrixToInviteLink() async {
+    if (canonicalAlias.isNotEmpty) {
+      return Uri.parse(
+          'https://matrix.to/#/${Uri.encodeComponent(canonicalAlias)}');
+    }
+    final List queryParameters = [];
+    final users = await requestParticipants();
+    final currentPowerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
+
+    final temp = List<User>.from(users);
+    temp.removeWhere((user) => user.powerLevel < 50);
+    if (currentPowerLevelsMap != null) {
+      // just for weird rooms
+      temp.removeWhere((user) =>
+          user.powerLevel < getDefaultPowerLevel(currentPowerLevelsMap));
+    }
+
+    if (temp.isNotEmpty) {
+      temp.sort((a, b) => a.powerLevel.compareTo(b.powerLevel));
+      if (temp.last.id.domain != null) {
+        queryParameters.add(temp.last.id.domain!);
+      }
+    }
+
+    final Map<String, int> servers = {};
+    users.forEach((user) {
+      if (user.id.domain != null) {
+        if (servers.containsKey(user.id.domain!)) {
+          servers[user.id.domain!] = servers[user.id.domain!]! + 1;
+        } else {
+          servers[user.id.domain!] = 1;
+        }
+      }
+    });
+    final sortedServers = Map.fromEntries(servers.entries.toList()
+      ..sort((e1, e2) => e1.value.compareTo(e2.value)));
+    for (var i = 0; i <= 2; i++) {
+      if (!queryParameters.contains(sortedServers.keys.last)) {
+        queryParameters.add(sortedServers.keys.last);
+      }
+      sortedServers.remove(sortedServers.keys.last);
+    }
+
+    var queryString = '?';
+    for (var i = 0;
+        i <= (queryParameters.length > 2 ? 2 : queryParameters.length);
+        i++) {
+      if (i != 0) {
+        queryString += '&';
+      }
+      queryString += 'via=${queryParameters[i]}';
+    }
+    return Uri.parse(
+        'https://matrix.to/#/${Uri.encodeComponent(id)}$queryString');
+  }
+
   /// Remove a child from this space by setting the `via` to an empty list.
   Future<void> removeSpaceChild(String roomId) => !isSpace
       ? throw Exception('Room is not a space!')

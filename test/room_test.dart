@@ -1341,7 +1341,24 @@ void main() {
       expect(room.getMention('@[Alice Margatroid]'), '@alice:example.org');
       expect(room.getMention('@[Alice Margatroid]#1754'), '@alice:example.org');
     });
-
+    test('inviteLink', () async {
+      var matrixToLink = await room.matrixToInviteLink();
+      expect(matrixToLink.toString(),
+          'https://matrix.to/#/%23testalias%3Aexample.com');
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.canonical_alias',
+            room: room,
+            eventId: '123',
+            content: {'alias': ''},
+            originServerTs: DateTime.now(),
+            stateKey: ''),
+      );
+      matrixToLink = await room.matrixToInviteLink();
+      expect(matrixToLink.toString(),
+          'https://matrix.to/#/!localpart%3Aserver.abc?via=example.org&via=example.com&via=test.abc');
+    });
     test('logout', () async {
       await matrix.logout();
     });
