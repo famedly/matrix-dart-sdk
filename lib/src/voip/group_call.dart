@@ -468,10 +468,6 @@ class GroupCall {
       localDesktopCapturerSourceId = null;
     }
 
-    if (state != GroupCallState.Entered) {
-      return;
-    }
-
     _removeParticipant(client.userID!);
 
     removeMemberStateEvent();
