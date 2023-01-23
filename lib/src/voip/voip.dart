@@ -23,6 +23,10 @@ abstract class WebRTCDelegate {
   void handleGroupCallEnded(GroupCall groupCall);
   bool get isBackgroud;
   bool get isWeb;
+
+  /// This should be set to false if any calls in the client are in kConnected
+  /// state. If another room tries to call you during a connected call this fires
+  /// a handleMissedCall
   bool get canHandleNewCall => true;
 }
 
@@ -38,12 +42,12 @@ class VoIP {
   final Client client;
   final WebRTCDelegate delegate;
   final StreamController<GroupCall> onIncomingGroupCall = StreamController();
-
   void _handleEvent(
           Event event,
           Function(String roomId, String senderId, Map<String, dynamic> content)
               func) =>
       func(event.roomId!, event.senderId, event.content);
+  Map<String, String> incomingCallRoomId = {};
 
   VoIP(this.client, this.delegate) : super() {
     client.onCallInvite.stream
@@ -163,6 +167,9 @@ class VoIP {
     final String? deviceId = content['device_id'];
     final call = calls[callId];
 
+    Logs().d(
+        '[glare] got new call ${content.tryGet('call_id')} and currently room id is mapped to ${incomingCallRoomId.tryGet(roomId)}');
+
     if (call != null && call.state == CallState.kEnded) {
       // Session already exist.
       Logs().v('[VOIP] onCallInvite: Session [$callId] already exist.');
@@ -214,11 +221,10 @@ class VoIP {
     newCall.remoteUser = await room.requestUser(senderId);
     newCall.opponentDeviceId = deviceId;
     newCall.opponentSessionId = content['sender_session_id'];
-
     if (!delegate.canHandleNewCall &&
         (confId == null || confId != currentGroupCID)) {
       Logs().v(
-          '[VOIP] onCallInvite: Unable to handle new calls, maybe user is busy.');
+          '[glare] [VOIP] onCallInvite: Unable to handle new calls, maybe user is busy.');
       await newCall.reject(reason: 'busy', shouldEmit: false);
       delegate.handleMissedCall(newCall);
       return;
@@ -246,7 +252,7 @@ class VoIP {
     currentCID = callId;
 
     // Popup CallingPage for incoming call.
-    if (!delegate.isBackgroud && confId == null) {
+    if (!delegate.isBackgroud && confId == null && !newCall.callHasEnded) {
       delegate.handleNewCall(newCall);
     }
 
@@ -341,7 +347,9 @@ class VoIP {
     } else {
       Logs().v('[VOIP] onCallHangup: Session [$callId] not found!');
     }
-    currentCID = null;
+    if (callId == currentCID) {
+      currentCID = null;
+    }
   }
 
   Future<void> onCallReject(
@@ -537,6 +545,7 @@ class VoIP {
       return Null as CallSession;
     }
     final callId = 'cid${DateTime.now().millisecondsSinceEpoch}';
+    incomingCallRoomId[roomId] = callId;
     final opts = CallOptions()
       ..callId = callId
       ..type = type

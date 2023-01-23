@@ -173,3 +173,9 @@ Usually there are four media streams in a 1v1 call, which are
 They can be get by the methods of `CallSession`. the `newCall.onCallStreamsChanged` event is fired when these streams are added or removed.
 When the media stream changes, we can change the UI display according to the priority.
 `remoteScreenSharingStream` always needs to be displayed first, followed by `remoteUserMediaStream`
+
+### Glare
+
+Short note on a difference between canHandleNewCall and glare stuff - 
+- canHandleNewCall should be set to false only if the client can see a connected call. This prevents any other user's call and fires a handleMissedCall. 
+- glare stuff on the other hand tries to handle collision of invites, if both clients get a invite from one another at the same time, one of the invites should be discarded. (Ideally the other one should be answered by default, but for now we just decided to let it ring to avoid unexpected answers.)
