@@ -1,3 +1,12 @@
+## [0.15.13] - 23rd Jan 2023
+
+- fix: glare (td)
+- fix: update groupCalls state stream (td)
+- fix: tweak some stuff in group calls code for group calls onboarding feat (td)
+- feat: add method to generate the matrix.to link (td)
+- fix: follow-up OLM matcher (The one with the braid)
+- refactor: migrate integration tests to more stable setup (TheOneWithTheBraid)
+
 ## [0.15.12] - 18th Jan 2023
 This deprecates `room.displayname` is favor of `room.getLocalizedDisplayname()`.
 For migration you can just replace it everywhere. It will use the
