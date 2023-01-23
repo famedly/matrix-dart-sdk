@@ -422,6 +422,38 @@ class CallSession {
 
   Future<void> initWithInvite(CallType type, RTCSessionDescription offer,
       SDPStreamMetadata? metadata, int lifetime, bool isGroupCall) async {
+    // glare fixes
+    final prevCallId = voip.incomingCallRoomId[room.id];
+    if (prevCallId != null) {
+      // This is probably an outbound call, but we already have a incoming invite, so let's terminate it.
+      final prevCall = voip.calls[prevCallId];
+      if (prevCall != null) {
+        if (prevCall.inviteOrAnswerSent) {
+          Logs().d('[glare] invite or answer sent, lex compare now');
+          if (callId.compareTo(prevCall.callId) > 0) {
+            Logs().d(
+                '[glare] new call $callId needs to be canceled because the older one ${prevCall.callId} has a smaller lex');
+            await hangup();
+            return;
+          } else {
+            Logs().d(
+                '[glare] nice, lex of newer call $callId is smaller auto accept this here');
+
+            /// These fixes do not work all the time because sometimes the code
+            /// is at an unrecoverable stage (invite already sent when we were
+            /// checking if we want to send a invite), so commented out answering
+            /// automatically to prevent unknown cases
+            // await answer();
+            // return;
+          }
+        } else {
+          Logs().d(
+              '[glare] ${prevCall.callId} was still preparing prev call, nvm now cancel it');
+          await prevCall.hangup();
+        }
+      }
+    }
+
     await _preparePeerConnection();
     if (metadata != null) {
       _updateRemoteSDPStreamMetadata(metadata);
@@ -1039,8 +1071,10 @@ class CallSession {
     if (shouldEmit) {
       setCallState(CallState.kEnded);
     }
+    if (callId != voip.currentCID) return;
     voip.currentCID = null;
     voip.calls.remove(callId);
+    voip.incomingCallRoomId.removeWhere((key, value) => value == callId);
     await cleanUp();
     if (shouldEmit) {
       onCallHangup.add(this);
@@ -1099,10 +1133,20 @@ class CallSession {
       ..transferee = false;
     final metadata = _getLocalSDPStreamMetadata();
     if (state == CallState.kCreateOffer) {
+      Logs().d('[glare] new invite sent about to be called');
+
       await sendInviteToCall(
           room, callId, Timeouts.lifetimeMs, localPartyId, null, offer.sdp!,
           capabilities: callCapabilities, metadata: metadata);
+      // just incase we ended the call but already sent the invite
+      if (state == CallState.kEnded) {
+        await hangup(CallErrorCode.Replaced, false);
+        setCallState(CallState.kEnded);
+        return;
+      }
       inviteOrAnswerSent = true;
+      Logs().d('[glare] set callid because new invite sent');
+      voip.incomingCallRoomId[room.id] = callId;
       setCallState(CallState.kInviteSent);
 
       inviteTimer = Timer(Duration(seconds: Timeouts.callTimeoutSec), () {
