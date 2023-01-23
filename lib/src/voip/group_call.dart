@@ -211,7 +211,7 @@ class GroupCall {
   final CachedStreamController<GroupCall> onGroupCallFeedsChanged =
       CachedStreamController();
 
-  final CachedStreamController<GroupCallState> onGroupCallState =
+  final CachedStreamController<String> onGroupCallState =
       CachedStreamController();
 
   final CachedStreamController<String> onGroupCallEvent =
@@ -294,6 +294,7 @@ class GroupCall {
 
   void setState(String newState) {
     state = newState;
+    onGroupCallState.add(newState);
     onGroupCallEvent.add(GroupCallEvent.GroupCallStateChanged);
   }
 

@@ -1201,13 +1201,17 @@ class CallSession {
   }
 
   Future<void> cleanUp() async {
-    for (final stream in streams) {
-      await stream.dispose();
-    }
-    streams.clear();
-    if (pc != null) {
-      await pc!.close();
-      await pc!.dispose();
+    try {
+      for (final stream in streams) {
+        await stream.dispose();
+      }
+      streams.clear();
+      if (pc != null) {
+        await pc!.close();
+        await pc!.dispose();
+      }
+    } catch (e) {
+      Logs().e('cleaning up streams failed', e);
     }
   }
 
