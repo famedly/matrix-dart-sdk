@@ -20,33 +20,35 @@ import 'package:matrix/matrix.dart';
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
 class User extends Event {
-  factory User(String id,
-      {String? membership,
-      String? displayName,
-      String? avatarUrl,
-      required Room room}) {
+  factory User(
+    String id, {
+    String? membership,
+    String? displayName,
+    String? avatarUrl,
+    required Room room,
+  }) {
     return User.fromState(
       stateKey: id,
+      senderId: id,
+      eventId: 'fake_event',
       content: {
         if (membership != null) 'membership': membership,
         if (displayName != null) 'displayname': displayName,
         if (avatarUrl != null) 'avatar_url': avatarUrl,
       },
       typeKey: EventTypes.RoomMember,
-      roomId: room.id,
       room: room,
       originServerTs: DateTime.now(),
     );
   }
 
   User.fromState({
-    dynamic prevContent,
+    Map<String, dynamic>? prevContent,
     required String stateKey,
-    dynamic content,
+    Map<String, dynamic> content = const {},
     required String typeKey,
-    String eventId = 'fakevent',
-    String? roomId,
-    String senderId = 'fakesender',
+    required String eventId,
+    required String senderId,
     required DateTime originServerTs,
     dynamic unsigned,
     required Room room,
