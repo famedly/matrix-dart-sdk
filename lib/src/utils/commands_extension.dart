@@ -220,6 +220,13 @@ extension CommandsClientExtension on Client {
       return '';
     });
     addCommand('markasdm', (CommandArgs args) async {
+      final mxid = args.msg;
+      if (!mxid.isValidMatrixId) {
+        throw Exception('You must enter a valid mxid when using /maskasdm');
+      }
+      if (await args.room.requestUser(mxid, requestProfile: false) == null) {
+        throw Exception('User $mxid is not in this room');
+      }
       await args.room.addToDirectChat(args.msg);
       return;
     });
