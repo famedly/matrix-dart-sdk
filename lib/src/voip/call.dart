@@ -809,9 +809,7 @@ class CallSession {
 
     if (purpose == SDPStreamMetadataPurpose.Usermedia) {
       speakerOn = type == CallType.kVideo;
-      if (!voip.delegate.isWeb &&
-          !voip.delegate.isBackgroud &&
-          stream.getAudioTracks().isNotEmpty) {
+      if (!voip.delegate.isWeb && stream.getAudioTracks().isNotEmpty) {
         final audioTrack = stream.getAudioTracks()[0];
         audioTrack.enableSpeakerphone(speakerOn);
       }

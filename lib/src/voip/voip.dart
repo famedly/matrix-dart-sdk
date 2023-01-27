@@ -21,7 +21,6 @@ abstract class WebRTCDelegate {
   void handleMissedCall(CallSession session);
   void handleNewGroupCall(GroupCall groupCall);
   void handleGroupCallEnded(GroupCall groupCall);
-  bool get isBackgroud;
   bool get isWeb;
 
   /// This should be set to false if any calls in the client are in kConnected
@@ -252,18 +251,11 @@ class VoIP {
     currentCID = callId;
 
     // Popup CallingPage for incoming call.
-    if (!delegate.isBackgroud && confId == null && !newCall.callHasEnded) {
+    if (confId == null && !newCall.callHasEnded) {
       delegate.handleNewCall(newCall);
     }
 
     onIncomingCall.add(newCall);
-
-    if (delegate.isBackgroud) {
-      /// Forced to enable signaling synchronization until the end of the call.
-      client.backgroundSync = true;
-
-      ///TODO: notify the callkeep that the call is incoming.
-    }
   }
 
   Future<void> onCallAnswer(
@@ -329,9 +321,7 @@ class VoIP {
   Future<void> onCallHangup(String roomId, String _ /*senderId unused*/,
       Map<String, dynamic> content) async {
     // stop play ringtone, if this is an incoming call
-    if (!delegate.isBackgroud) {
-      delegate.stopRingtone();
-    }
+    delegate.stopRingtone();
     Logs().v('[VOIP] onCallHangup => ${content.toString()}');
     final String callId = content['call_id'];
     final call = calls[callId];
@@ -523,6 +513,7 @@ class VoIP {
     if (_turnServerCredentials == null) {
       return [];
     }
+
     return [
       {
         'username': _turnServerCredentials!.username,
@@ -557,9 +548,7 @@ class VoIP {
     final newCall = createNewCall(opts);
     currentCID = callId;
     await newCall.initOutboundCall(type).then((_) {
-      if (!delegate.isBackgroud) {
-        delegate.handleNewCall(newCall);
-      }
+      delegate.handleNewCall(newCall);
     });
     currentCID = callId;
     return newCall;
