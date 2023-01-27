@@ -1065,6 +1065,13 @@ class CallSession {
     ringingTimer?.cancel();
     ringingTimer = null;
 
+    try {
+      voip.delegate.stopRingtone();
+    } catch (e) {
+      // maybe rigntone never started (group calls) or has been stopped already
+      Logs().d('stopping ringtone failed ', e);
+    }
+
     hangupParty = party;
     hangupReason = reason;
 
