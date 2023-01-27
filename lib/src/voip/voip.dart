@@ -224,8 +224,8 @@ class VoIP {
     if (!delegate.canHandleNewCall &&
         (confId == null || confId != currentGroupCID)) {
       Logs().v(
-          '[glare] [VOIP] onCallInvite: Unable to handle new calls, maybe user is busy.');
-      await newCall.reject(reason: 'busy', shouldEmit: false);
+          '[VOIP] onCallInvite: Unable to handle new calls, maybe user is busy.');
+      await newCall.reject(reason: CallErrorCode.UserBusy, shouldEmit: false);
       delegate.handleMissedCall(newCall);
       return;
     }
