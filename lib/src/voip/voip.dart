@@ -535,7 +535,9 @@ class VoIP {
       return Null as CallSession;
     }
     final callId = 'cid${DateTime.now().millisecondsSinceEpoch}';
-    incomingCallRoomId[roomId] = callId;
+    if (currentGroupCID == null) {
+      incomingCallRoomId[roomId] = callId;
+    }
     final opts = CallOptions()
       ..callId = callId
       ..type = type
