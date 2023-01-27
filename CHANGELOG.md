@@ -1,3 +1,12 @@
+## [0.15.14] - 27th Jan 2023
+
+- chore: deprecate isBackground (td)
+- fix: try to stop ringtone on call termination (td)
+- fix: Fix can't correctly remove/cleanup call in group call. (Duan Weiwei)
+- fix: send all servers for getIceServers (td)
+- fix: only send call reject event when needed (td)
+- fix: use tagged dart images in ci (td)
+
 ## [0.15.13] - 23rd Jan 2023
 
 - fix: glare (td)
