@@ -1,3 +1,6 @@
+## [1.1.10] - 27th Jan 2023
+- chore: Update enhanced_enum to 0.2.4
+
 ## [1.1.9] - 7th Nov 2022
 - feat: Allow converting of stacktraces in logs
 
