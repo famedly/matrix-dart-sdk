@@ -133,6 +133,8 @@ newCall.answer();
 newCall.reject();
 ```
 
+To reject a call locally but not send a event, use `newCall.reject(shouldEmit: false)`
+
 ### 5.Render media stream
 
 The basic process of rendering a video stream is as follow code.

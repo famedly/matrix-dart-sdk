@@ -1022,8 +1022,10 @@ class CallSession {
     }
     Logs().d('[VOIP] Rejecting call: $callId');
     await terminate(CallParty.kLocal, CallErrorCode.UserHangup, shouldEmit);
-    await sendCallReject(
-        room, callId, Timeouts.lifetimeMs, localPartyId, reason);
+    if (shouldEmit) {
+      await sendCallReject(
+          room, callId, Timeouts.lifetimeMs, localPartyId, reason);
+    }
   }
 
   Future<void> hangup([String? reason, bool suppressEvent = false]) async {
