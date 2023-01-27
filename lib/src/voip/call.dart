@@ -1071,8 +1071,12 @@ class CallSession {
     if (shouldEmit) {
       setCallState(CallState.kEnded);
     }
-    if (callId != voip.currentCID) return;
-    voip.currentCID = null;
+
+    if (!isGroupCall) {
+      if (callId != voip.currentCID) return;
+      voip.currentCID = null;
+    }
+
     voip.calls.remove(callId);
     voip.incomingCallRoomId.removeWhere((key, value) => value == callId);
     await cleanUp();
