@@ -176,10 +176,8 @@ class GroupCall {
 
   static const updateExpireTsTimerDuration = Duration(seconds: 15);
   static const expireTsBumpDuration = Duration(seconds: 45);
+  static const activeSpeakerInterval = Duration(seconds: 5);
 
-  var activeSpeakerInterval = 1000;
-  var retryCallInterval = 5000;
-  var participantTimeout = 1000 * 15;
   final Client client;
   final VoIP voip;
   final Room room;
@@ -189,7 +187,7 @@ class GroupCall {
   final RTCDataChannelInit? dataChannelOptions;
   String state = GroupCallState.LocalCallFeedUninitialized;
   StreamSubscription<CallSession>? _callSubscription;
-
+  final Map<String, double> audioLevelsMap = {};
   String? activeSpeaker; // userId
   WrappedMediaStream? localUserMediaStream;
   WrappedMediaStream? localScreenshareStream;
@@ -373,18 +371,18 @@ class GroupCall {
     }
 
     final userId = client.userID;
-
     final newStream = WrappedMediaStream(
-        renderer: voip.delegate.createRenderer(),
-        stream: stream,
-        userId: userId!,
-        room: room,
-        client: client,
-        purpose: SDPStreamMetadataPurpose.Usermedia,
-        audioMuted: stream.getAudioTracks().isEmpty,
-        videoMuted: stream.getVideoTracks().isEmpty,
-        isWeb: voip.delegate.isWeb,
-        isGroupCall: true);
+      renderer: voip.delegate.createRenderer(),
+      stream: stream,
+      userId: userId!,
+      room: room,
+      client: client,
+      purpose: SDPStreamMetadataPurpose.Usermedia,
+      audioMuted: stream.getAudioTracks().isEmpty,
+      videoMuted: stream.getVideoTracks().isEmpty,
+      isWeb: voip.delegate.isWeb,
+      isGroupCall: true,
+    );
 
     localUserMediaStream = newStream;
     await localUserMediaStream!.initialize();
@@ -597,16 +595,17 @@ class GroupCall {
             'Screensharing permissions granted. Setting screensharing enabled on all calls');
         localDesktopCapturerSourceId = desktopCapturerSourceId;
         localScreenshareStream = WrappedMediaStream(
-            renderer: voip.delegate.createRenderer(),
-            stream: stream,
-            userId: client.userID!,
-            room: room,
-            client: client,
-            purpose: SDPStreamMetadataPurpose.Screenshare,
-            audioMuted: stream.getAudioTracks().isEmpty,
-            videoMuted: stream.getVideoTracks().isEmpty,
-            isWeb: voip.delegate.isWeb,
-            isGroupCall: true);
+          renderer: voip.delegate.createRenderer(),
+          stream: stream,
+          userId: client.userID!,
+          room: room,
+          client: client,
+          purpose: SDPStreamMetadataPurpose.Screenshare,
+          audioMuted: stream.getAudioTracks().isEmpty,
+          videoMuted: stream.getVideoTracks().isEmpty,
+          isWeb: voip.delegate.isWeb,
+          isGroupCall: true,
+        );
 
         addScreenshareStream(localScreenshareStream!);
         await localScreenshareStream!.initialize();
@@ -1123,7 +1122,7 @@ class GroupCall {
     }
 
     userMediaStreams.removeWhere((element) => element.userId == stream.userId);
-
+    audioLevelsMap.remove(stream.userId);
     onStreamRemoved.add(stream);
 
     if (stream.isLocal()) {
@@ -1139,41 +1138,50 @@ class GroupCall {
     }
   }
 
-  void onActiveSpeakerLoop() {
-    /* TODO(duan):
-    var topAvg = 0.0;
+  void onActiveSpeakerLoop() async {
     String? nextActiveSpeaker;
-
-    userMediaFeeds.forEach((callFeed) {
-      if (callFeed.userId == client.userID && userMediaFeeds.length > 1) {
-        return;
+    // idc about screen sharing atm.
+    for (final callFeed in userMediaStreams) {
+      if (callFeed.userId == client.userID && callFeed.pc == null) {
+        activeSpeakerLoopTimeout?.cancel();
+        activeSpeakerLoopTimeout =
+            Timer(activeSpeakerInterval, onActiveSpeakerLoop);
+        continue;
       }
-      
-            var total = 0;
 
-            for (var i = 0; i < callFeed.speakingVolumeSamples.length; i++) {
-                final volume = callFeed.speakingVolumeSamples[i];
-                total += max(volume, SPEAKING_THRESHOLD);
-            }
+      final List<StatsReport> statsReport = await callFeed.pc!.getStats();
+      statsReport
+          .removeWhere((element) => !element.values.containsKey('audioLevel'));
 
-            final avg = total / callFeed.speakingVolumeSamples.length;
+      // https://www.w3.org/TR/webrtc-stats/#dom-rtcstatstype-media-source
+      // firefox does not seem to have this though. Works on chrome and android
+      audioLevelsMap[client.userID!] = statsReport
+          .lastWhere((element) =>
+              element.type == 'media-source' &&
+              element.values['kind'] == 'audio')
+          .values['audioLevel'];
+      // works everywhere?
+      audioLevelsMap[callFeed.userId] = statsReport
+          .lastWhere((element) => element.type == 'inbound-rtp')
+          .values['audioLevel'];
+    }
 
-            if (topAvg != 0 || avg > topAvg) {
-                topAvg = avg;
-                nextActiveSpeaker = callFeed.userId;
-            }
+    double maxAudioLevel = double.negativeInfinity;
+    // TODO: we probably want a threshold here?
+    audioLevelsMap.forEach((key, value) {
+      if (value > maxAudioLevel) {
+        nextActiveSpeaker = key;
+        maxAudioLevel = value;
+      }
     });
 
-    if (nextActiveSpeaker != null &&
-        activeSpeaker != nextActiveSpeaker &&
-        topAvg > SPEAKING_THRESHOLD) {
+    if (nextActiveSpeaker != null && activeSpeaker != nextActiveSpeaker) {
       activeSpeaker = nextActiveSpeaker;
       onGroupCallEvent.add(GroupCallEvent.ActiveSpeakerChanged);
     }
-
+    activeSpeakerLoopTimeout?.cancel();
     activeSpeakerLoopTimeout =
-        Timer(Duration(seconds: activeSpeakerInterval), onActiveSpeakerLoop);
-    */
+        Timer(activeSpeakerInterval, onActiveSpeakerLoop);
   }
 
   WrappedMediaStream? getScreenshareStreamByUserId(String userId) {

@@ -58,6 +58,7 @@ class WrappedMediaStream {
   VideoRenderer renderer;
   final bool isWeb;
   final bool isGroupCall;
+  final RTCPeerConnection? pc;
 
   /// for debug
   String get title => '$displayName:$purpose:a[$audioMuted]:v[$videoMuted]';
@@ -70,6 +71,7 @@ class WrappedMediaStream {
 
   WrappedMediaStream(
       {this.stream,
+      this.pc,
       required this.renderer,
       required this.room,
       required this.userId,
@@ -780,16 +782,18 @@ class CallSession {
       existingStream.first.setNewStream(stream);
     } else {
       final newStream = WrappedMediaStream(
-          renderer: voip.delegate.createRenderer(),
-          userId: client.userID!,
-          room: opts.room,
-          stream: stream,
-          purpose: purpose,
-          client: client,
-          audioMuted: stream.getAudioTracks().isEmpty,
-          videoMuted: stream.getVideoTracks().isEmpty,
-          isWeb: voip.delegate.isWeb,
-          isGroupCall: groupCallId != null);
+        renderer: voip.delegate.createRenderer(),
+        userId: client.userID!,
+        room: opts.room,
+        stream: stream,
+        purpose: purpose,
+        client: client,
+        audioMuted: stream.getAudioTracks().isEmpty,
+        videoMuted: stream.getVideoTracks().isEmpty,
+        isWeb: voip.delegate.isWeb,
+        isGroupCall: groupCallId != null,
+        pc: pc,
+      );
       await newStream.initialize();
       streams.add(newStream);
       onStreamAdd.add(newStream);
@@ -841,16 +845,18 @@ class CallSession {
       existingStream.first.setNewStream(stream);
     } else {
       final newStream = WrappedMediaStream(
-          renderer: voip.delegate.createRenderer(),
-          userId: remoteUser!.id,
-          room: opts.room,
-          stream: stream,
-          purpose: purpose,
-          client: client,
-          audioMuted: audioMuted,
-          videoMuted: videoMuted,
-          isWeb: voip.delegate.isWeb,
-          isGroupCall: groupCallId != null);
+        renderer: voip.delegate.createRenderer(),
+        userId: remoteUser!.id,
+        room: opts.room,
+        stream: stream,
+        purpose: purpose,
+        client: client,
+        audioMuted: audioMuted,
+        videoMuted: videoMuted,
+        isWeb: voip.delegate.isWeb,
+        isGroupCall: groupCallId != null,
+        pc: pc,
+      );
       await newStream.initialize();
       streams.add(newStream);
       onStreamAdd.add(newStream);

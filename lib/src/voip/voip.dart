@@ -858,8 +858,7 @@ class VoIP {
                   final Map<String, int> participants = {};
                   final callMemberEvents = room.states.tryGetMap<String, Event>(
                       EventTypes.GroupCallMemberPrefix);
-                  Logs().e(
-                      'callmemeberEvents length ${callMemberEvents?.length}');
+
                   if (callMemberEvents != null) {
                     callMemberEvents.forEach((userId, memberEvent) async {
                       final callMemberEvent = groupCallEvent.room.getState(
@@ -874,7 +873,6 @@ class VoIP {
                     });
                   }
 
-                  Logs().e(participants.toString());
                   if (!participants.values.any((expire_ts) =>
                       expire_ts > DateTime.now().millisecondsSinceEpoch)) {
                     Logs().i(
