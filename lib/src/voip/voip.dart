@@ -344,10 +344,6 @@ class VoIP {
 
   Future<void> onCallReject(
       String roomId, String senderId, Map<String, dynamic> content) async {
-    if (senderId == client.userID) {
-      // Ignore messages to yourself.
-      return;
-    }
     final String callId = content['call_id'];
     Logs().d('Reject received for call ID $callId');
 
