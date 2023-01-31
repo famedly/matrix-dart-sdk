@@ -19,6 +19,7 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:collection/collection.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
@@ -92,10 +93,14 @@ class IGroupCallRoomMemberFeed {
 class IGroupCallRoomMemberDevice {
   String? device_id;
   String? session_id;
+  int? expires_ts;
+
   List<IGroupCallRoomMemberFeed> feeds = [];
   IGroupCallRoomMemberDevice.fromJson(Map<String, dynamic> json) {
     device_id = json['device_id'];
     session_id = json['session_id'];
+    expires_ts = json['expires_ts'];
+
     if (json['feeds'] != null) {
       feeds = (json['feeds'] as List<dynamic>)
           .map((feed) => IGroupCallRoomMemberFeed.fromJson(feed))
@@ -107,6 +112,7 @@ class IGroupCallRoomMemberDevice {
     final data = <String, dynamic>{};
     data['device_id'] = device_id;
     data['session_id'] = session_id;
+    data['expires_ts'] = expires_ts;
     data['feeds'] = feeds.map((feed) => feed.toJson()).toList();
     return data;
   }
@@ -116,7 +122,7 @@ class IGroupCallRoomMemberCallState {
   String? call_id;
   List<String>? foci;
   List<IGroupCallRoomMemberDevice> devices = [];
-  IGroupCallRoomMemberCallState.formJson(Map<String, dynamic> json) {
+  IGroupCallRoomMemberCallState.fromJson(Map<String, dynamic> json) {
     call_id = json['m.call_id'];
     if (json['m.foci'] != null) {
       foci = (json['m.foci'] as List<dynamic>).cast<String>();
@@ -141,17 +147,12 @@ class IGroupCallRoomMemberCallState {
 }
 
 class IGroupCallRoomMemberState {
-  final DEFAULT_EXPIRE_TS = Duration(seconds: 300);
-  late int expireTs;
   List<IGroupCallRoomMemberCallState> calls = [];
   IGroupCallRoomMemberState.fromJson(MatrixEvent event) {
     if (event.content['m.calls'] != null) {
       (event.content['m.calls'] as List<dynamic>).forEach(
-          (call) => calls.add(IGroupCallRoomMemberCallState.formJson(call)));
+          (call) => calls.add(IGroupCallRoomMemberCallState.fromJson(call)));
     }
-
-    expireTs = event.content['m.expires_ts'] ??
-        event.originServerTs.add(DEFAULT_EXPIRE_TS).millisecondsSinceEpoch;
   }
 }
 
@@ -264,15 +265,10 @@ class GroupCall {
     return room.unsafeGetUserFromMemoryOrFallback(client.userID!);
   }
 
-  bool callMemberStateIsExpired(MatrixEvent event) {
-    final callMemberState = IGroupCallRoomMemberState.fromJson(event);
-    return callMemberState.expireTs < DateTime.now().millisecondsSinceEpoch;
-  }
-
   Event? getMemberStateEvent(String userId) {
     final event = room.getState(EventTypes.GroupCallMemberPrefix, userId);
     if (event != null) {
-      return callMemberStateIsExpired(event) ? null : event;
+      return voip.callMemberStateIsExpired(event, groupCallId) ? null : event;
     }
     return null;
   }
@@ -283,7 +279,7 @@ class GroupCall {
     roomStates.sort((a, b) => a.originServerTs.compareTo(b.originServerTs));
     roomStates.forEach((value) {
       if (value.type == EventTypes.GroupCallMemberPrefix &&
-          !callMemberStateIsExpired(value)) {
+          !voip.callMemberStateIsExpired(value, groupCallId)) {
         events.add(value);
       }
     });
@@ -685,22 +681,29 @@ class GroupCall {
 
   Future<void> sendMemberStateEvent() async {
     final deviceId = client.deviceID;
-    await updateMemberCallState(IGroupCallRoomMemberCallState.formJson({
-      'm.call_id': groupCallId,
-      'm.devices': [
+    await updateMemberCallState(
+      IGroupCallRoomMemberCallState.fromJson(
         {
-          'device_id': deviceId,
-          'session_id': client.groupCallSessionId,
-          'feeds': getLocalStreams()
-              .map((feed) => ({
-                    'purpose': feed.purpose,
-                  }))
-              .toList(),
-          // TODO: Add data channels
+          'm.call_id': groupCallId,
+          'm.devices': [
+            {
+              'device_id': deviceId,
+              'session_id': client.groupCallSessionId,
+              'expires_ts': DateTime.now()
+                  .add(expireTsBumpDuration)
+                  .millisecondsSinceEpoch,
+              'feeds': getLocalStreams()
+                  .map((feed) => ({
+                        'purpose': feed.purpose,
+                      }))
+                  .toList(),
+              // TODO: Add data channels
+            },
+          ],
+          // TODO 'm.foci'
         },
-      ],
-      // TODO 'm.foci'
-    }));
+      ),
+    );
 
     if (resendMemberStateEventTimer != null) {
       resendMemberStateEventTimer!.cancel();
@@ -726,7 +729,6 @@ class GroupCall {
     final localUserId = client.userID;
 
     final currentStateEvent = getMemberStateEvent(localUserId!);
-    final eventContent = currentStateEvent?.content ?? {};
     var calls = <IGroupCallRoomMemberCallState>[];
 
     if (currentStateEvent != null) {
@@ -750,9 +752,6 @@ class GroupCall {
     }
     final content = {
       'm.calls': calls.map((e) => e.toJson()).toList(),
-      'm.expires_ts': calls.isEmpty
-          ? eventContent.tryGet('m.expires_ts')
-          : DateTime.now().add(expireTsBumpDuration).millisecondsSinceEpoch
     };
 
     await client.setRoomStateWithKey(
@@ -1153,17 +1152,27 @@ class GroupCall {
       statsReport
           .removeWhere((element) => !element.values.containsKey('audioLevel'));
 
+      // https://www.w3.org/TR/webrtc-stats/#summary
+      final otherPartyAudioLevel = statsReport
+          .singleWhereOrNull((element) =>
+              element.type == 'inbound-rtp' &&
+              element.values['kind'] == 'audio')
+          ?.values['audioLevel'];
+      if (otherPartyAudioLevel != null) {
+        audioLevelsMap[callFeed.userId] = otherPartyAudioLevel;
+      }
+
       // https://www.w3.org/TR/webrtc-stats/#dom-rtcstatstype-media-source
       // firefox does not seem to have this though. Works on chrome and android
-      audioLevelsMap[client.userID!] = statsReport
-          .lastWhere((element) =>
+      final ownAudioLevel = statsReport
+          .singleWhereOrNull((element) =>
               element.type == 'media-source' &&
               element.values['kind'] == 'audio')
-          .values['audioLevel'];
-      // works everywhere?
-      audioLevelsMap[callFeed.userId] = statsReport
-          .lastWhere((element) => element.type == 'inbound-rtp')
-          .values['audioLevel'];
+          ?.values['audioLevel'];
+      if (ownAudioLevel != null &&
+          audioLevelsMap[client.userID] != ownAudioLevel) {
+        audioLevelsMap[client.userID!] = ownAudioLevel;
+      }
     }
 
     double maxAudioLevel = double.negativeInfinity;

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:collection/collection.dart';
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 import 'package:webrtc_interface/webrtc_interface.dart';
 
@@ -832,6 +833,23 @@ class VoIP {
 
   static const staleCallCheckerDuration = Duration(seconds: 30);
 
+  bool callMemberStateIsExpired(
+      MatrixEvent groupCallMemberStateEvent, String groupCallId) {
+    final callMemberState =
+        IGroupCallRoomMemberState.fromJson(groupCallMemberStateEvent);
+    final calls = callMemberState.calls;
+    if (calls.isNotEmpty) {
+      final call =
+          calls.singleWhereOrNull((call) => call.call_id == groupCallId);
+      if (call != null) {
+        return call.devices.where((device) => device.expires_ts != null).every(
+            (device) =>
+                device.expires_ts! < DateTime.now().millisecondsSinceEpoch);
+      }
+    }
+    return true;
+  }
+
   /// checks for stale calls in a room and sends `m.terminated` if all the
   /// expires_ts are expired. Call when opening a room
   void startStaleCallsChecker(String roomId) async {
@@ -855,28 +873,26 @@ class VoIP {
                       'found non terminated group call with id $groupCallId');
                   // call is not empty but check for stale participants (gone offline)
                   // with expire_ts
-                  final Map<String, int> participants = {};
+                  bool callExpired = true; // assume call is expired
                   final callMemberEvents = room.states.tryGetMap<String, Event>(
                       EventTypes.GroupCallMemberPrefix);
 
                   if (callMemberEvents != null) {
-                    callMemberEvents.forEach((userId, memberEvent) async {
-                      final callMemberEvent = groupCallEvent.room.getState(
-                        EventTypes.GroupCallMemberPrefix,
-                        userId,
-                      );
-                      if (callMemberEvent != null) {
-                        final event =
-                            IGroupCallRoomMemberState.fromJson(callMemberEvent);
-                        participants[userId] = event.expireTs;
-                      }
-                    });
-                  }
+                    for (var i = 0; i < callMemberEvents.length; i++) {
+                      final groupCallMemberEventMap =
+                          callMemberEvents.entries.toList()[i];
 
-                  if (!participants.values.any((expire_ts) =>
-                      expire_ts > DateTime.now().millisecondsSinceEpoch)) {
+                      final groupCallMemberEvent =
+                          groupCallMemberEventMap.value;
+                      callExpired = callMemberStateIsExpired(
+                          groupCallMemberEvent, groupCallId);
+                      // no need to iterate further even if one participant says call isn't expired
+                      if (!callExpired) break;
+                    }
+                  }
+                  if (callExpired) {
                     Logs().i(
-                        'Group call with expired timestamps detected, terminating');
+                        'Group call with only expired timestamps detected, terminating');
                     await sendGroupCallTerminateEvent(room, groupCallId);
                   }
                 }
