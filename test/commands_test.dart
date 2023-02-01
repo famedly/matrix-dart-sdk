@@ -36,7 +36,7 @@ void main() {
       final state = stateKey != null;
       return json.decode(FakeMatrixApi.calledEndpoints.entries
           .firstWhere((e) => e.key.startsWith(
-              '/client/v3/rooms/${Uri.encodeComponent(room.id)}/${state ? 'state' : 'send'}/${Uri.encodeComponent(type)}${state && stateKey?.isNotEmpty == true ? '/${Uri.encodeComponent(stateKey!)}' : ''}'))
+              '/client/v3/rooms/${Uri.encodeComponent(room.id)}/${state ? 'state' : 'send'}/${Uri.encodeComponent(type)}${state && stateKey.isNotEmpty == true ? '/${Uri.encodeComponent(stateKey)}' : ''}'))
           .value
           .first);
     }
