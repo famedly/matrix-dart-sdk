@@ -1,5 +1,12 @@
-## [0.15.14] - 27th Jan 2023
+## [0.16.0] - 1st Feb 2023
 
+- chore: bump flutter and dart images (td)
+- fix: move expires_ts according to spec (breaks group call compatibility with older sdks) (td)
+- fix: reject call on own device if you get a call reject (td)
+- feat: active speaker in group calls (td)
+- fix: missed incomingCallRoomId case in removing glare stuff during group calls (td)
+- fix: fix glare side effects for group calls. (Duan Weiwei)
+- chore: bump version (td)
 - chore: deprecate isBackground (td)
 - fix: try to stop ringtone on call termination (td)
 - fix: Fix can't correctly remove/cleanup call in group call. (Duan Weiwei)
