@@ -57,7 +57,7 @@ Future<void> startWebWorker() async {
               sendResponse(operation.label as double, result?.toJson());
               break;
             default:
-              throw NullThrownError();
+              throw TypeError();
           }
         } on Event catch (e, s) {
           allowInterop(_replyError)

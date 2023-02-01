@@ -10,8 +10,8 @@ workflow:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 variables:
-  FLUTTER_IMAGE_TAG: "3.3.10"
-  DART_IMAGE_TAG: "2.18.6"
+  FLUTTER_IMAGE_TAG: "3.7.0"
+  DART_IMAGE_TAG: "2.19.0"
 
 coverage:
   stage: test
