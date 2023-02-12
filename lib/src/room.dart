@@ -697,12 +697,6 @@ class Room {
     MatrixImageFile? thumbnail,
     Map<String, dynamic>? extraContent,
   }) async {
-    final mediaConfig = await client.getConfig();
-    final maxMediaSize = mediaConfig.mUploadSize;
-    if (maxMediaSize != null && maxMediaSize < file.bytes.lengthInBytes) {
-      throw FileTooBigMatrixException(file.bytes.lengthInBytes, maxMediaSize);
-    }
-
     txid ??= client.generateUniqueTransactionId();
     sendingFilePlaceholders[txid] = file;
     if (thumbnail != null) {
@@ -744,6 +738,22 @@ class Room {
         },
       ),
     );
+
+    // Check media config of the server before sending the file. Stop if the
+    // Media config is unreachable or the file is bigger than the given maxsize.
+    try {
+      final mediaConfig = await client.getConfig();
+      final maxMediaSize = mediaConfig.mUploadSize;
+      if (maxMediaSize != null && maxMediaSize < file.bytes.lengthInBytes) {
+        throw FileTooBigMatrixException(file.bytes.lengthInBytes, maxMediaSize);
+      }
+    } catch (e) {
+      Logs().d('Config error while sending file', e);
+      syncUpdate.rooms!.join!.values.first.timeline!.events!.first
+          .unsigned![messageSendingStatusKey] = EventStatus.error.intValue;
+      await _handleFakeSync(syncUpdate);
+      rethrow;
+    }
 
     MatrixFile uploadFile = file; // ignore: omit_local_variable_types
     // computing the thumbnail in case we can
@@ -958,7 +968,7 @@ class Room {
     String? editEventId,
   }) async {
     // Create new transaction id
-    String messageID;
+    final String messageID;
     if (txid == null) {
       messageID = client.generateUniqueTransactionId();
     } else {
