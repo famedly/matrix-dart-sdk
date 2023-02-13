@@ -599,8 +599,8 @@ class Timeline {
           var event = Event.fromMatrixEvent(matrixEvent, room);
           if (event.type == EventTypes.Encrypted && encryption != null) {
             event = await encryption.decryptRoomEvent(room.id, event);
-            if (event.type == EventTypes.Encrypted ||
-                event.messageType == MessageTypes.BadEncrypted ||
+            if (event.type == EventTypes.Encrypted &&
+                event.messageType == MessageTypes.BadEncrypted &&
                 event.content['can_request_session'] == true) {
               // Await requestKey() here to ensure decrypted message bodies
               await event.requestKey();
