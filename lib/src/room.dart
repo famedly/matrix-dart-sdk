@@ -91,6 +91,9 @@ class Room {
   /// Key-Value store for private account data only visible for this user.
   Map<String, BasicRoomEvent> roomAccountData = {};
 
+  /// stores stale group call checking timers for rooms.
+  Map<String, Timer> staleGroupCallsTimer = {};
+
   final _sendingQueue = <Completer>[];
 
   Map<String, dynamic> toJson() => {
@@ -140,6 +143,7 @@ class Room {
       }
     }
     partial = false;
+    startStaleCallsChecker(id);
   }
 
   /// Returns the [Event] for the given [typeKey] and optional [stateKey].

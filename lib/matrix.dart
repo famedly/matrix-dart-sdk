@@ -34,6 +34,7 @@ export 'src/voip/voip.dart';
 export 'src/voip/voip_content.dart';
 export 'src/voip/conn_tester.dart';
 export 'src/voip/utils.dart';
+export 'src/voip/voip_room_extension.dart';
 export 'src/room.dart';
 export 'src/timeline.dart';
 export 'src/user.dart';

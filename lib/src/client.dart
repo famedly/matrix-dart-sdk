@@ -1417,7 +1417,8 @@ class Client extends MatrixApi {
         await olm.init();
         olm.get_library_version();
         encryption = Encryption(client: this);
-      } catch (_) {
+      } catch (e) {
+        Logs().e('Error initializing encryption $e');
         await encryption?.dispose();
         encryption = null;
       }
