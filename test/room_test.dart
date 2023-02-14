@@ -494,7 +494,7 @@ void main() {
           room: room,
           eventId: '123a',
           content: {
-            'events': {'org.matrix.msc3401.call.member': 100},
+            'events': {EventTypes.GroupCallMemberPrefix: 100},
             'state_default': 50,
             'users_default': 0
           },
@@ -512,7 +512,7 @@ void main() {
           room: room,
           eventId: '123a',
           content: {
-            'events': {'org.matrix.msc3401.call.member': 27},
+            'events': {EventTypes.GroupCallMemberPrefix: 27},
             'state_default': 50,
             'users_default': 49
           },
@@ -532,8 +532,8 @@ void main() {
           eventId: '123a',
           content: {
             'events': {
-              'org.matrix.msc3401.call.member': 27,
-              'org.matrix.msc3401.call': 0
+              EventTypes.GroupCallMemberPrefix: 27,
+              EventTypes.GroupCallPrefix: 0
             },
             'state_default': 50,
             'users_default': 2
@@ -555,8 +555,8 @@ void main() {
           eventId: '123a',
           content: {
             'events': {
-              'org.matrix.msc3401.call.member': 25,
-              'org.matrix.msc3401.call': 25
+              EventTypes.GroupCallMemberPrefix: 25,
+              EventTypes.GroupCallPrefix: 25
             },
             'state_default': 50,
             'users_default': 26

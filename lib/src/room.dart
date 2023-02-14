@@ -1740,10 +1740,10 @@ class Room {
   }
 
   bool get canCreateGroupCall =>
-      canChangeStateEvent('org.matrix.msc3401.call') && groupCallsEnabled;
+      canChangeStateEvent(EventTypes.GroupCallPrefix) && groupCallsEnabled;
 
   bool get canJoinGroupCall =>
-      canChangeStateEvent('org.matrix.msc3401.call.member') &&
+      canChangeStateEvent(EventTypes.GroupCallMemberPrefix) &&
       groupCallsEnabled;
 
   /// if returned value is not null `org.matrix.msc3401.call.member` is present
@@ -1751,9 +1751,9 @@ class Room {
   bool get groupCallsEnabled {
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
     if (powerLevelMap == null) return false;
-    return powerForChangingStateEvent('org.matrix.msc3401.call.member') <=
+    return powerForChangingStateEvent(EventTypes.GroupCallMemberPrefix) <=
             getDefaultPowerLevel(powerLevelMap) &&
-        powerForChangingStateEvent('org.matrix.msc3401.call') <=
+        powerForChangingStateEvent(EventTypes.GroupCallPrefix) <=
             getDefaultPowerLevel(powerLevelMap);
   }
 
@@ -1766,8 +1766,8 @@ class Room {
       final newPowerLevelMap = currentPowerLevelsMap;
       final eventsMap = newPowerLevelMap['events'] ?? {};
       eventsMap.addAll({
-        'org.matrix.msc3401.call': getDefaultPowerLevel(currentPowerLevelsMap),
-        'org.matrix.msc3401.call.member':
+        EventTypes.GroupCallPrefix: getDefaultPowerLevel(currentPowerLevelsMap),
+        EventTypes.GroupCallMemberPrefix:
             getDefaultPowerLevel(currentPowerLevelsMap)
       });
       newPowerLevelMap.addAll({'events': eventsMap});

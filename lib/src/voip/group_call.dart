@@ -733,7 +733,31 @@ class GroupCall {
     if (currentStateEvent != null) {
       final memberStateEvent =
           IGroupCallRoomMemberState.fromJson(currentStateEvent);
-      calls = memberStateEvent.calls;
+      final unCheckedCalls = memberStateEvent.calls;
+
+      // don't keep pushing stale devices every update
+      final validCalls = <IGroupCallRoomMemberCallState>[];
+      for (final call in unCheckedCalls) {
+        final validDevices = [];
+        for (final device in call.devices) {
+          if (device.expires_ts != null &&
+              device.expires_ts! >
+                  DateTime.now()
+                      // safety buffer just incase we were slow to process a
+                      // call event, if the device is actually dead it should
+                      // get removed pretty soon
+                      .add(Duration(seconds: 10))
+                      .millisecondsSinceEpoch) {
+            validDevices.add(device);
+          }
+        }
+        if (validDevices.isNotEmpty) {
+          validCalls.add(call);
+        }
+      }
+
+      calls = validCalls;
+
       final existingCallIndex =
           calls.indexWhere((element) => groupCallId == element.call_id);
 
