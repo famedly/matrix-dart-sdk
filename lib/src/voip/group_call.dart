@@ -184,8 +184,6 @@ class GroupCall {
   final Room room;
   final String intent;
   final String type;
-  final bool dataChannelsEnabled;
-  final RTCDataChannelInit? dataChannelOptions;
   String state = GroupCallState.LocalCallFeedUninitialized;
   StreamSubscription<CallSession>? _callSubscription;
   final Map<String, double> audioLevelsMap = {};
@@ -229,8 +227,6 @@ class GroupCall {
     required this.room,
     required this.type,
     required this.intent,
-    required this.dataChannelsEnabled,
-    required this.dataChannelOptions,
   }) {
     this.groupCallId = groupCallId ?? genCallID();
   }
@@ -246,15 +242,18 @@ class GroupCall {
       {
         'm.intent': intent,
         'm.type': type,
-        // TODO: Specify datachannels
-        'dataChannelsEnabled': dataChannelsEnabled,
-        'dataChannelOptions': dataChannelOptions?.toMap() ?? {},
-        'groupCallId': groupCallId,
       },
     );
 
     return this;
   }
+
+  bool get terminated =>
+      room
+          .getState(EventTypes.GroupCallPrefix, groupCallId)
+          ?.content
+          .containsKey('m.terminated') ??
+      false;
 
   String get avatarName =>
       getUser().calcDisplayname(mxidLocalPartFallback: false);
@@ -268,7 +267,7 @@ class GroupCall {
   Event? getMemberStateEvent(String userId) {
     final event = room.getState(EventTypes.GroupCallMemberPrefix, userId);
     if (event != null) {
-      return voip.callMemberStateIsExpired(event, groupCallId) ? null : event;
+      return room.callMemberStateIsExpired(event, groupCallId) ? null : event;
     }
     return null;
   }
@@ -279,7 +278,7 @@ class GroupCall {
     roomStates.sort((a, b) => a.originServerTs.compareTo(b.originServerTs));
     roomStates.forEach((value) {
       if (value.type == EventTypes.GroupCallMemberPrefix &&
-          !voip.callMemberStateIsExpired(value, groupCallId)) {
+          !room.callMemberStateIsExpired(value, groupCallId)) {
         events.add(value);
       }
     });
@@ -867,10 +866,6 @@ class GroupCall {
 
     await newCall.placeCallWithStreams(
         getLocalStreams(), requestScreenshareFeed);
-
-    if (dataChannelsEnabled) {
-      newCall.createDataChannel('datachannel', dataChannelOptions!);
-    }
 
     addCall(newCall);
   }

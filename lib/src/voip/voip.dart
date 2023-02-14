@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:core';
 
-import 'package:collection/collection.dart';
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 import 'package:webrtc_interface/webrtc_interface.dart';
 
@@ -71,15 +70,17 @@ class VoIP {
     client.onAssertedIdentityReceived.stream
         .listen((event) => _handleEvent(event, onAssertedIdentityReceived));
 
-    client.onRoomState.stream.listen((event) {
-      if ([
-        EventTypes.GroupCallPrefix,
-        EventTypes.GroupCallMemberPrefix,
-      ].contains(event.type)) {
-        Logs().v('[VOIP] onRoomState: type ${event.toJson()}.');
-        onRoomStateChanged(event);
-      }
-    });
+    client.onRoomState.stream.listen(
+      (event) {
+        if ([
+          EventTypes.GroupCallPrefix,
+          EventTypes.GroupCallMemberPrefix,
+        ].contains(event.type)) {
+          Logs().v('[VOIP] onRoomState: type ${event.toJson()}.');
+          onRoomStateChanged(event);
+        }
+      },
+    );
 
     client.onToDeviceEvent.stream.listen((event) {
       Logs().v('[VOIP] onToDeviceEvent: type ${event.toJson()}.');
@@ -134,6 +135,16 @@ class VoIP {
     });
 
     delegate.mediaDevices.ondevicechange = _onDeviceChange;
+
+    // to populate groupCalls with already present calls
+    client.rooms.forEach((room) {
+      if (room.activeGroupCallEvents.isNotEmpty) {
+        room.activeGroupCallEvents.forEach((element) {
+          createGroupCallFromRoomStateEvent(element,
+              emitHandleNewGroupCall: false);
+        });
+      }
+    });
   }
 
   Future<void> _onDeviceChange(dynamic _) async {
@@ -566,13 +577,8 @@ class VoIP {
   /// [type] The type of call to be made.
   ///
   /// [intent] The intent of the call.
-  ///
-  /// [dataChannelsEnabled] Whether data channels are enabled.
-  ///
-  /// [dataChannelOptions] The data channel options.
-  Future<GroupCall?> newGroupCall(String roomId, String type, String intent,
-      [bool? dataChannelsEnabled,
-      RTCDataChannelInit? dataChannelOptions]) async {
+  Future<GroupCall?> newGroupCall(
+      String roomId, String type, String intent) async {
     if (getGroupCallForRoom(roomId) != null) {
       Logs().e('[VOIP] [$roomId] already has an existing group call.');
       return null;
@@ -590,8 +596,6 @@ class VoIP {
       room: room,
       type: type,
       intent: intent,
-      dataChannelsEnabled: dataChannelsEnabled ?? false,
-      dataChannelOptions: dataChannelOptions ?? RTCDataChannelInit(),
     ).create();
     groupCalls[groupId] = groupCall;
     groupCalls[roomId] = groupCall;
@@ -684,8 +688,8 @@ class VoIP {
   }
 
   /// Create a new group call from a room state event.
-  Future<GroupCall?> createGroupCallFromRoomStateEvent(
-      MatrixEvent event) async {
+  Future<GroupCall?> createGroupCallFromRoomStateEvent(MatrixEvent event,
+      {bool emitHandleNewGroupCall = true}) async {
     final roomId = event.roomId;
     final content = event.content;
 
@@ -715,36 +719,22 @@ class VoIP {
       return null;
     }
 
-    final dataChannelOptionsMap = content['m.data_channel_options'];
-
-    var dataChannelsEnabled = false;
-    final dataChannelOptions = RTCDataChannelInit();
-
-    if (dataChannelOptionsMap != null) {
-      dataChannelsEnabled =
-          dataChannelOptionsMap['dataChannelsEnabled'] as bool;
-      dataChannelOptions.ordered = dataChannelOptionsMap['ordered'] as bool;
-      dataChannelOptions.maxRetransmits =
-          dataChannelOptionsMap['maxRetransmits'] as int;
-      dataChannelOptions.maxRetransmits =
-          dataChannelOptionsMap['maxRetransmits'] as int;
-      dataChannelOptions.protocol = dataChannelOptionsMap['protocol'] as String;
-    }
-
     final groupCall = GroupCall(
-        client: client,
-        voip: this,
-        room: room,
-        groupCallId: groupCallId,
-        type: callType,
-        intent: callIntent,
-        dataChannelsEnabled: dataChannelsEnabled,
-        dataChannelOptions: dataChannelOptions);
+      client: client,
+      voip: this,
+      room: room,
+      groupCallId: groupCallId,
+      type: callType,
+      intent: callIntent,
+    );
 
     groupCalls[groupCallId!] = groupCall;
     groupCalls[room.id] = groupCall;
+
     onIncomingGroupCall.add(groupCall);
-    delegate.handleNewGroupCall(groupCall);
+    if (emitHandleNewGroupCall) {
+      delegate.handleNewGroupCall(groupCall);
+    }
     return groupCall;
   }
 
@@ -752,7 +742,7 @@ class VoIP {
     final eventType = event.type;
     final roomId = event.roomId;
     if (eventType == EventTypes.GroupCallPrefix) {
-      final groupCallId = event.content['groupCallId'];
+      final groupCallId = event.stateKey;
       final content = event.content;
       final currentGroupCall = groupCalls[groupCallId];
       if (currentGroupCall == null && content['m.terminated'] == null) {
@@ -781,122 +771,6 @@ class VoIP {
     }
   }
 
-  bool hasActiveCall(Room room) {
-    final groupCallStates =
-        room.states.tryGetMap<dynamic, Event>(EventTypes.GroupCallPrefix);
-    if (groupCallStates != null) {
-      groupCallStates.values
-          .toList()
-          .sort((a, b) => a.originServerTs.compareTo(b.originServerTs));
-      final latestGroupCallEvent = groupCallStates.values.last;
-      if (!latestGroupCallEvent.content.containsKey('m.terminated')) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  Future sendGroupCallTerminateEvent(Room room, String groupCallId) async {
-    try {
-      Logs().d('[VOIP] running sendterminator');
-      final existingStateEvent =
-          room.getState(EventTypes.GroupCallPrefix, groupCallId);
-      if (existingStateEvent == null) {
-        Logs().e('could not find group call with id $groupCallId');
-        return;
-      }
-      await client.setRoomStateWithKey(
-          room.id, EventTypes.GroupCallPrefix, groupCallId, {
-        ...existingStateEvent.content,
-        'm.terminated': GroupCallTerminationReason.CallEnded,
-      });
-      Logs().d('[VOIP] Group call $groupCallId was killed uwu');
-    } catch (e) {
-      Logs().i('killing stale call $groupCallId failed. reason: $e');
-    }
-  }
-
-  Map<String, Timer> staleGroupCallsTimer = {};
-
-  /// stops the stale call checker timer
-  void stopStaleCallsChecker(String roomId) {
-    if (staleGroupCallsTimer.tryGet(roomId) != null) {
-      staleGroupCallsTimer[roomId]!.cancel();
-    } else {
-      Logs().w('[VOIP] no stale call checker for room found');
-    }
-  }
-
-  static const staleCallCheckerDuration = Duration(seconds: 30);
-
-  bool callMemberStateIsExpired(
-      MatrixEvent groupCallMemberStateEvent, String groupCallId) {
-    final callMemberState =
-        IGroupCallRoomMemberState.fromJson(groupCallMemberStateEvent);
-    final calls = callMemberState.calls;
-    if (calls.isNotEmpty) {
-      final call =
-          calls.singleWhereOrNull((call) => call.call_id == groupCallId);
-      if (call != null) {
-        return call.devices.where((device) => device.expires_ts != null).every(
-            (device) =>
-                device.expires_ts! < DateTime.now().millisecondsSinceEpoch);
-      }
-    }
-    return true;
-  }
-
-  /// checks for stale calls in a room and sends `m.terminated` if all the
-  /// expires_ts are expired. Call when opening a room
-  void startStaleCallsChecker(String roomId) async {
-    staleGroupCallsTimer[roomId] = Timer.periodic(
-      staleCallCheckerDuration,
-      (timer) {
-        final room = client.getRoomById(roomId);
-        if (room == null) {
-          Logs().w('[VOIP] stale call checker got incorrect room id');
-        } else {
-          Logs().d('checking for stale group calls.');
-          final copyGroupCallIds =
-              room.states.tryGetMap<dynamic, Event>(EventTypes.GroupCallPrefix);
-          if (copyGroupCallIds == null) return;
-          copyGroupCallIds.forEach(
-            (groupCallId, groupCallEvent) async {
-              if (groupCallEvent.content.tryGet('m.intent') == 'm.room') return;
-              if (!groupCallEvent.content.containsKey('m.terminated')) {
-                if (groupCallId != null) {
-                  Logs().i(
-                      'found non terminated group call with id $groupCallId');
-                  // call is not empty but check for stale participants (gone offline)
-                  // with expire_ts
-                  bool callExpired = true; // assume call is expired
-                  final callMemberEvents = room.states.tryGetMap<String, Event>(
-                      EventTypes.GroupCallMemberPrefix);
-
-                  if (callMemberEvents != null) {
-                    for (var i = 0; i < callMemberEvents.length; i++) {
-                      final groupCallMemberEventMap =
-                          callMemberEvents.entries.toList()[i];
-
-                      final groupCallMemberEvent =
-                          groupCallMemberEventMap.value;
-                      callExpired = callMemberStateIsExpired(
-                          groupCallMemberEvent, groupCallId);
-                      // no need to iterate further even if one participant says call isn't expired
-                      if (!callExpired) break;
-                    }
-                  }
-                  if (callExpired) {
-                    Logs().i(
-                        'Group call with only expired timestamps detected, terminating');
-                    await sendGroupCallTerminateEvent(room, groupCallId);
-                  }
-                }
-              }
-            },
-          );
-        }
-      },
-    );
-  }
+  @Deprecated('Call `hasActiveGroupCall` on the room directly instead')
+  bool hasActiveCall(Room room) => room.hasActiveGroupCall;
 }
