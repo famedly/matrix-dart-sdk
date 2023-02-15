@@ -667,8 +667,8 @@ class Client extends MatrixApi {
     if (groupCall) {
       powerLevelContentOverride ??= {};
       powerLevelContentOverride['events'] = <String, dynamic>{
-        'org.matrix.msc3401.call.member': 0,
-        'org.matrix.msc3401.call': 0,
+        EventTypes.GroupCallMemberPrefix: 0,
+        EventTypes.GroupCallPrefix: 0,
       };
     }
     final roomId = await createRoom(
