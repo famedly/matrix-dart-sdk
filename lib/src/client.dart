@@ -755,9 +755,31 @@ class Client extends MatrixApi {
   Future<Profile> get ownProfile => fetchOwnProfile();
 
   /// Returns the user's own displayname and avatar url. In Matrix it is possible that
-  /// one user can have different displaynames and avatar urls in different rooms. So
-  /// this endpoint first checks if the profile is the same in all rooms. If not, the
-  /// profile will be requested from the homserver.
+  /// one user can have different displaynames and avatar urls in different rooms.
+  /// Tries to get the profile from homeserver first, if failed, falls back to a profile
+  /// from a room where the user exists.
+  Future<Profile> fetchOwnProfileFromServer() async {
+    try {
+      return getProfileFromUserId(
+        userID!,
+        getFromRooms: false,
+        cache: false,
+      );
+    } catch (e) {
+      Logs().w(
+          '[Matrix] getting profile from homeserver failed, falling back to first room with required profile');
+      return getProfileFromUserId(
+        userID!,
+        getFromRooms: true,
+        cache: false,
+      );
+    }
+  }
+
+  /// Returns the user's own displayname and avatar url. In Matrix it is possible that
+  /// one user can have different displaynames and avatar urls in different rooms.
+  /// This returns the profile from the first room by default, override `getFromRooms`
+  /// to false to fetch from homeserver.
   Future<Profile> fetchOwnProfile({
     bool getFromRooms = true,
     bool cache = true,
