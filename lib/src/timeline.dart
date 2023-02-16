@@ -551,42 +551,52 @@ class Timeline {
     String? searchTerm,
     int requestHistoryCount = 100,
     int maxHistoryRequests = 10,
+    String? sinceEventId,
+    int? limit,
     bool Function(Event)? searchFunc,
   }) async* {
     assert(searchTerm != null || searchFunc != null);
     searchFunc ??= (event) =>
         event.body.toLowerCase().contains(searchTerm?.toLowerCase() ?? '');
     final found = <Event>[];
-    // Search locally
-    for (final event in events) {
-      if (searchFunc(event)) {
-        yield found..add(event);
-      }
-    }
 
-    // Search in database
-    var start = events.length;
-    while (true) {
-      final eventsFromStore = await room.client.database?.getEventList(
-            room,
-            start: start,
-            limit: requestHistoryCount,
-          ) ??
-          [];
-      if (eventsFromStore.isEmpty) break;
-      start += eventsFromStore.length;
+    if (sinceEventId == null) {
+      // Search locally
       for (final event in events) {
         if (searchFunc(event)) {
           yield found..add(event);
+        }
+      }
+
+      // Search in database
+      var start = events.length;
+      while (true) {
+        final eventsFromStore = await room.client.database?.getEventList(
+              room,
+              start: start,
+              limit: requestHistoryCount,
+            ) ??
+            [];
+        if (eventsFromStore.isEmpty) break;
+        start += eventsFromStore.length;
+        for (final event in eventsFromStore) {
+          if (searchFunc(event)) {
+            yield found..add(event);
+          }
         }
       }
     }
 
     // Search on the server
     var prevBatch = room.prev_batch;
+    if (sinceEventId != null) {
+      prevBatch =
+          (await room.client.getEventContext(room.id, sinceEventId)).end;
+    }
     final encryption = room.client.encryption;
     for (var i = 0; i < maxHistoryRequests; i++) {
       if (prevBatch == null) break;
+      if (limit != null && found.length >= limit) break;
       try {
         final resp = await room.client.getRoomEvents(
           room.id,
@@ -608,9 +618,12 @@ class Timeline {
           }
           if (searchFunc(event)) {
             yield found..add(event);
+            if (limit != null && found.length >= limit) break;
           }
         }
         prevBatch = resp.end;
+        // We are at the beginning of the room
+        if (resp.chunk.length < requestHistoryCount) break;
       } on MatrixException catch (e) {
         // We have no permission anymore to request the history
         if (e.error == MatrixError.M_FORBIDDEN) {
