@@ -1,3 +1,19 @@
+## [0.17.0] - 17th Feb 2023
+- fix: ability to upgrade audio calls to video calls (td)
+- chore: add a fetchOwnProfileFromServer method which tries to get ownProfile from server first, disk then (td)
+- fix: clean expired member state events in group calls (td)
+- fix: hasActiveGroup call now checks all group calls (td)
+- fix: Check if argument is valid mxid in /maskasdm command (Christian Pauly)
+- fix: Fake User object (Christian Pauly)
+- fix: Request key in searchEvent method crashes because of wrong preconditions (Christian Pauly)
+- refactor: Check config at file sending after placing fake event and add error handling (Krille)
+- chore: bump dart to 2.18 (Nicolas Werner)
+- fix: setMicrophoneMuted is now async to match setVideoMuted (td)
+- fix: implement activeGroupCallEvents to get all active group call state events in a room (td)
+- refactor: (BREAKING CHANGE) move staleCallChecker and expires_Ts stuff to an extension on Room, instead of Voip because it makes much more sense per room rather than on voip, also makes testing easier (td)
+- fix: populate local groupCalls list on instantiating VOIP() (td)
+- fix: starting stale call checker is now handled by the sdk itself because clients can forget to do so (td)
+
 ## [0.16.0] - 1st Feb 2023
 
 - chore: bump flutter and dart images (td)
