@@ -410,6 +410,20 @@ class CallSession {
     return null;
   }
 
+  /// returns whether a 1:1 call sender has video tracks
+  Future<bool> hasVideoToSend() async {
+    final transceivers = await pc!.getTransceivers();
+    final localUserMediaVideoTrack = localUserMediaStream?.stream
+        ?.getTracks()
+        .singleWhereOrNull((track) => track.kind == 'video');
+
+    // check if we have a video track locally and have transceivers setup correctly.
+    return localUserMediaVideoTrack != null &&
+        transceivers.singleWhereOrNull((transceiver) =>
+                transceiver.sender.track?.id == localUserMediaVideoTrack.id) !=
+            null;
+  }
+
   Timer? inviteTimer;
   Timer? ringingTimer;
 
@@ -622,8 +636,15 @@ class CallSession {
 
     try {
       await pc!.setRemoteDescription(description);
+      RTCSessionDescription? answer;
       if (description.type == 'offer') {
-        final answer = await pc!.createAnswer({});
+        try {
+          answer = await pc!.createAnswer({});
+        } catch (e) {
+          await terminate(CallParty.kLocal, CallErrorCode.CreateAnswer, true);
+          return;
+        }
+
         await sendCallNegotiate(
             room, callId, Timeouts.lifetimeMs, localPartyId, answer.sdp!,
             type: answer.type!);
@@ -747,7 +768,9 @@ class CallSession {
         if (stream == null) {
           return false;
         }
-        stream.getVideoTracks().forEach((track) {
+        stream.getTracks().forEach((track) {
+          // screen sharing should only have 1 video track anyway, so this only
+          // fires once
           track.onEnded = () {
             setScreensharingEnabled(false);
           };
@@ -761,16 +784,21 @@ class CallSession {
         return false;
       }
     } else {
-      for (final sender in screensharingSenders) {
-        await pc!.removeTrack(sender);
+      try {
+        for (final sender in screensharingSenders) {
+          await pc!.removeTrack(sender);
+        }
+        for (final track in localScreenSharingStream!.stream!.getTracks()) {
+          await track.stop();
+        }
+        localScreenSharingStream!.stopped = true;
+        await _removeStream(localScreenSharingStream!.stream!);
+        fireCallEvent(CallEvent.kFeedsChanged);
+        return false;
+      } catch (e) {
+        Logs().e('[VOIP] stopping screen sharing track failed', e);
+        return false;
       }
-      for (final track in localScreenSharingStream!.stream!.getTracks()) {
-        await track.stop();
-      }
-      localScreenSharingStream!.stopped = true;
-      await _removeStream(localScreenSharingStream!.stream!);
-      fireCallEvent(CallEvent.kFeedsChanged);
-      return false;
     }
   }
 
@@ -918,16 +946,85 @@ class CallSession {
     fireCallEvent(CallEvent.kState);
   }
 
-  void setLocalVideoMuted(bool muted) {
+  Future<void> setLocalVideoMuted(bool muted) async {
+    if (!muted) {
+      final videoToSend = await hasVideoToSend();
+      if (!videoToSend) {
+        if (remoteSDPStreamMetadata == null) return;
+        await insertVideoTrackToAudioOnlyStream();
+      }
+    }
     localUserMediaStream?.setVideoMuted(muted);
-    _updateMuteStatus();
+    await _updateMuteStatus();
+  }
+
+  // used for upgrading 1:1 calls
+  Future<void> insertVideoTrackToAudioOnlyStream() async {
+    if (localUserMediaStream != null && localUserMediaStream!.stream != null) {
+      final stream = await _getUserMedia(CallType.kVideo);
+      if (stream != null) {
+        Logs().e('[VOIP] running replaceTracks() on stream: ${stream.id}');
+        _setTracksEnabled(stream.getVideoTracks(), true);
+        // replace local tracks
+        for (final track in localUserMediaStream!.stream!.getTracks()) {
+          try {
+            await localUserMediaStream!.stream!.removeTrack(track);
+            await track.stop();
+          } catch (e) {
+            Logs().w('failed to stop track');
+          }
+        }
+        final streamTracks = stream.getTracks();
+        for (final newTrack in streamTracks) {
+          await localUserMediaStream!.stream!.addTrack(newTrack);
+        }
+
+        // remove any screen sharing or remote transceivers, these don't need
+        // to be replaced anyway.
+        final transceivers = await pc!.getTransceivers();
+        transceivers.removeWhere((transceiver) =>
+            transceiver.sender.track == null ||
+            (localScreenSharingStream != null &&
+                localScreenSharingStream!.stream != null &&
+                localScreenSharingStream!.stream!
+                    .getTracks()
+                    .map((e) => e.id)
+                    .contains(transceiver.sender.track?.id)));
+
+        // in an ideal case the following should happen
+        // - audio track gets replaced
+        // - new video track gets added
+        for (final newTrack in streamTracks) {
+          final transceiver = transceivers.singleWhereOrNull(
+              (transceiver) => transceiver.sender.track!.kind == newTrack.kind);
+          if (transceiver != null) {
+            Logs().d(
+                '[VOIP] replacing ${transceiver.sender.track} in transceiver');
+            final oldSender = transceiver.sender;
+            await oldSender.replaceTrack(newTrack);
+            await transceiver.setDirection(
+              await transceiver.getDirection() ==
+                      TransceiverDirection.Inactive // upgrade, send now
+                  ? TransceiverDirection.SendOnly
+                  : TransceiverDirection.SendRecv,
+            );
+          } else {
+            // adding transceiver
+            Logs().d('[VOIP] adding track $newTrack to pc');
+            await pc!.addTrack(newTrack, localUserMediaStream!.stream!);
+          }
+        }
+        // for renderer to be able to show new video track
+        localUserMediaStream?.renderer.srcObject = stream;
+      }
+    }
   }
 
   bool get isLocalVideoMuted => localUserMediaStream?.isVideoMuted() ?? false;
 
-  void setMicrophoneMuted(bool muted) {
+  Future<void> setMicrophoneMuted(bool muted) async {
     localUserMediaStream?.setAudioMuted(muted);
-    _updateMuteStatus();
+    await _updateMuteStatus();
   }
 
   bool get isMicrophoneMuted => localUserMediaStream?.isAudioMuted() ?? false;
@@ -1375,9 +1472,12 @@ class CallSession {
       if (event.streams.isNotEmpty) {
         final stream = event.streams[0];
         _addRemoteStream(stream);
-        stream.getVideoTracks().forEach((track) {
+        stream.getTracks().forEach((track) {
           track.onEnded = () {
-            _removeStream(stream);
+            if (stream.getTracks().isEmpty) {
+              Logs().d('[VOIP] detected a empty stream, removing it');
+              _removeStream(stream);
+            }
           };
         });
       }
