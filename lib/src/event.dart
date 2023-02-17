@@ -243,17 +243,17 @@ class Event extends MatrixEvent {
   }
 
   User get asUser => User.fromState(
-      // state key should always be set for member events
-      stateKey: stateKey!,
-      prevContent: prevContent,
-      content: content,
-      typeKey: type,
-      eventId: eventId,
-      roomId: roomId,
-      senderId: senderId,
-      originServerTs: originServerTs,
-      unsigned: unsigned,
-      room: room);
+        // state key should always be set for member events
+        stateKey: stateKey!,
+        prevContent: prevContent,
+        content: content,
+        typeKey: type,
+        eventId: eventId,
+        senderId: senderId,
+        originServerTs: originServerTs,
+        unsigned: unsigned,
+        room: room,
+      );
 
   String get messageType => type == EventTypes.Sticker
       ? MessageTypes.Sticker

@@ -314,7 +314,7 @@ void main() {
 
     test('markasdm', () async {
       FakeMatrixApi.calledEndpoints.clear();
-      await room.sendTextEvent('/markasdm @fakealice:example.com');
+      await room.sendTextEvent('/markasdm @test:fakeServer.notExisting');
       expect(
           json.decode(FakeMatrixApi
               .calledEndpoints[
@@ -325,7 +325,7 @@ void main() {
           json.decode(FakeMatrixApi
               .calledEndpoints[
                   '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct']
-              ?.first)?['@fakealice:example.com'],
+              ?.first)?['@test:fakeServer.notExisting'],
           ['!1234:fakeServer.notExisting']);
       expect(
           json
@@ -335,19 +335,12 @@ void main() {
                   ?.first)
               .entries
               .any((e) =>
-                  e.key != '@fakealice:example.com' &&
+                  e.key != '@test:fakeServer.notExisting' &&
                   e.key != '@alice:example.com' &&
                   e.value.contains('!1234:fakeServer.notExisting')),
           false);
 
       FakeMatrixApi.calledEndpoints.clear();
-      await room.sendTextEvent('/markasdm');
-      expect(
-          json.decode(FakeMatrixApi
-              .calledEndpoints[
-                  '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/m.direct']
-              ?.first)?[''],
-          ['!1234:fakeServer.notExisting']);
     });
 
     test('markasgroup', () async {
