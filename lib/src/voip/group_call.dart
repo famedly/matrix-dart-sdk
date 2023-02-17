@@ -582,8 +582,9 @@ class GroupCall {
         final stream = await _getDisplayMedia();
         stream.getTracks().forEach((track) {
           track.onEnded = () {
+            // screen sharing should only have 1 video track anyway, so this only
+            // fires once
             setScreensharingEnabled(false, '');
-            track.onEnded = null;
           };
         });
         Logs().v(
@@ -1159,15 +1160,12 @@ class GroupCall {
   void onActiveSpeakerLoop() async {
     String? nextActiveSpeaker;
     // idc about screen sharing atm.
-    for (final callFeed in userMediaStreams) {
-      if (callFeed.userId == client.userID && callFeed.pc == null) {
-        activeSpeakerLoopTimeout?.cancel();
-        activeSpeakerLoopTimeout =
-            Timer(activeSpeakerInterval, onActiveSpeakerLoop);
+    for (final stream in userMediaStreams) {
+      if (stream.userId == client.userID && stream.pc == null) {
         continue;
       }
 
-      final List<StatsReport> statsReport = await callFeed.pc!.getStats();
+      final List<StatsReport> statsReport = await stream.pc!.getStats();
       statsReport
           .removeWhere((element) => !element.values.containsKey('audioLevel'));
 
@@ -1178,7 +1176,7 @@ class GroupCall {
               element.values['kind'] == 'audio')
           ?.values['audioLevel'];
       if (otherPartyAudioLevel != null) {
-        audioLevelsMap[callFeed.userId] = otherPartyAudioLevel;
+        audioLevelsMap[stream.userId] = otherPartyAudioLevel;
       }
 
       // https://www.w3.org/TR/webrtc-stats/#dom-rtcstatstype-media-source
