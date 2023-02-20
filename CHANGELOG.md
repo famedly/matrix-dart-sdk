@@ -1,3 +1,7 @@
+## [0.17.1] - 20th Feb 2023
+- chore: add missing awaits in group call enter and leave funcs (td)
+- chore: add useServerCache option to fetchOwnProfileFromServer and fix missing awaits (td)
+
 ## [0.17.0] - 17th Feb 2023
 - fix: ability to upgrade audio calls to video calls (td)
 - chore: add a fetchOwnProfileFromServer method which tries to get ownProfile from server first, disk then (td)
