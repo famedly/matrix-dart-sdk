@@ -406,7 +406,7 @@ class GroupCall {
   }
 
   /// enter the group call.
-  void enter() async {
+  Future<void> enter() async {
     if (!(state == GroupCallState.LocalCallFeedUninitialized ||
         state == GroupCallState.LocalCallFeedInitialized)) {
       throw Exception('Cannot enter call in the $state state');
@@ -449,14 +449,14 @@ class GroupCall {
     voip.delegate.handleNewGroupCall(this);
   }
 
-  void dispose() {
+  Future<void> dispose() async {
     if (localUserMediaStream != null) {
       removeUserMediaStream(localUserMediaStream!);
       localUserMediaStream = null;
     }
 
     if (localScreenshareStream != null) {
-      stopMediaStream(localScreenshareStream!.stream);
+      await stopMediaStream(localScreenshareStream!.stream);
       removeScreenshareStream(localScreenshareStream!);
       localScreenshareStream = null;
       localDesktopCapturerSourceId = null;
@@ -464,7 +464,7 @@ class GroupCall {
 
     _removeParticipant(client.userID!);
 
-    removeMemberStateEvent();
+    await removeMemberStateEvent();
 
     final callsCopy = calls.toList();
     callsCopy.forEach((element) {
@@ -473,11 +473,11 @@ class GroupCall {
 
     activeSpeaker = null;
     activeSpeakerLoopTimeout?.cancel();
-    _callSubscription?.cancel();
+    await _callSubscription?.cancel();
   }
 
-  void leave() {
-    dispose();
+  Future<void> leave() async {
+    await dispose();
     setState(GroupCallState.LocalCallFeedUninitialized);
     voip.currentGroupCID = null;
     voip.delegate.handleGroupCallEnded(this);
@@ -487,7 +487,7 @@ class GroupCall {
         justLeftGroupCall.intent != 'm.room' &&
         justLeftGroupCall.participants.isEmpty &&
         room.canCreateGroupCall) {
-      terminate();
+      await terminate();
     } else {
       Logs().d(
           '[VOIP] left group call but cannot terminate. participants: ${participants.length}, pl: ${room.canCreateGroupCall}');
@@ -495,10 +495,10 @@ class GroupCall {
   }
 
   /// terminate group call.
-  void terminate({bool emitStateEvent = true}) async {
+  Future<void> terminate({bool emitStateEvent = true}) async {
     final existingStateEvent =
         room.getState(EventTypes.GroupCallPrefix, groupCallId);
-    dispose();
+    await dispose();
     participants = [];
     voip.groupCalls.remove(room.id);
     voip.groupCalls.remove(groupCallId);
@@ -1116,8 +1116,8 @@ class GroupCall {
     onGroupCallEvent.add(GroupCallEvent.UserMediaStreamsChanged);
   }
 
-  void replaceUserMediaStream(
-      WrappedMediaStream existingStream, WrappedMediaStream replacementStream) {
+  Future<void> replaceUserMediaStream(WrappedMediaStream existingStream,
+      WrappedMediaStream replacementStream) async {
     final streamIndex = userMediaStreams
         .indexWhere((stream) => stream.userId == existingStream.userId);
 
@@ -1127,7 +1127,7 @@ class GroupCall {
 
     userMediaStreams.replaceRange(streamIndex, 1, [replacementStream]);
 
-    existingStream.dispose();
+    await existingStream.dispose();
     //replacementStream.measureVolumeActivity(true);
     onGroupCallEvent.add(GroupCallEvent.UserMediaStreamsChanged);
   }
@@ -1225,8 +1225,8 @@ class GroupCall {
     onGroupCallEvent.add(GroupCallEvent.ScreenshareStreamsChanged);
   }
 
-  void replaceScreenshareStream(
-      WrappedMediaStream existingStream, WrappedMediaStream replacementStream) {
+  Future<void> replaceScreenshareStream(WrappedMediaStream existingStream,
+      WrappedMediaStream replacementStream) async {
     final streamIndex = screenshareStreams
         .indexWhere((stream) => stream.userId == existingStream.userId);
 
@@ -1236,7 +1236,7 @@ class GroupCall {
 
     screenshareStreams.replaceRange(streamIndex, 1, [replacementStream]);
 
-    existingStream.dispose();
+    await existingStream.dispose();
     onGroupCallEvent.add(GroupCallEvent.ScreenshareStreamsChanged);
   }
 

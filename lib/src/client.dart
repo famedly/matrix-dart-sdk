@@ -757,21 +757,23 @@ class Client extends MatrixApi {
   /// Returns the user's own displayname and avatar url. In Matrix it is possible that
   /// one user can have different displaynames and avatar urls in different rooms.
   /// Tries to get the profile from homeserver first, if failed, falls back to a profile
-  /// from a room where the user exists.
-  Future<Profile> fetchOwnProfileFromServer() async {
+  /// from a room where the user exists. Set `useServerCache` to true to get any
+  /// prior value from this function
+  Future<Profile> fetchOwnProfileFromServer(
+      {bool useServerCache = false}) async {
     try {
-      return getProfileFromUserId(
+      return await getProfileFromUserId(
         userID!,
         getFromRooms: false,
-        cache: false,
+        cache: useServerCache,
       );
     } catch (e) {
       Logs().w(
           '[Matrix] getting profile from homeserver failed, falling back to first room with required profile');
-      return getProfileFromUserId(
+      return await getProfileFromUserId(
         userID!,
         getFromRooms: true,
-        cache: false,
+        cache: true,
       );
     }
   }
@@ -790,7 +792,8 @@ class Client extends MatrixApi {
         cache: cache,
       );
 
-  final Map<String, ProfileInformation> _profileCache = {};
+  final Map<String, ProfileInformation> _profileRoomsCache = {};
+  final Map<String, ProfileInformation> _profileServerCache = {};
 
   /// Get the combined profile information for this user.
   /// If [getFromRooms] is true then the profile will first be searched from the
@@ -801,12 +804,14 @@ class Client extends MatrixApi {
   /// become outdated if the user changes the displayname or avatar in this session.
   Future<Profile> getProfileFromUserId(String userId,
       {bool cache = true, bool getFromRooms = true}) async {
-    var profile = _profileCache[userId];
+    var profile =
+        getFromRooms ? _profileRoomsCache[userId] : _profileServerCache[userId];
     if (cache && profile != null) {
       return Profile(
-          userId: userId,
-          displayName: profile.displayname,
-          avatarUrl: profile.avatarUrl);
+        userId: userId,
+        displayName: profile.displayname,
+        avatarUrl: profile.avatarUrl,
+      );
     }
 
     if (getFromRooms) {
@@ -816,20 +821,27 @@ class Client extends MatrixApi {
       if (room != null) {
         final user =
             room.getParticipants().firstWhere((User user) => user.id == userId);
-        return Profile(
-            userId: userId,
-            displayName: user.displayName,
-            avatarUrl: user.avatarUrl);
+        final profileFromRooms = Profile(
+          userId: userId,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+        );
+        _profileRoomsCache[userId] = ProfileInformation(
+          avatarUrl: profileFromRooms.avatarUrl,
+          displayname: profileFromRooms.displayName,
+        );
+        return profileFromRooms;
       }
     }
     profile = await getUserProfile(userId);
-    if (cache || _profileCache.containsKey(userId)) {
-      _profileCache[userId] = profile;
+    if (cache || _profileServerCache.containsKey(userId)) {
+      _profileServerCache[userId] = profile;
     }
     return Profile(
-        userId: userId,
-        displayName: profile.displayname,
-        avatarUrl: profile.avatarUrl);
+      userId: userId,
+      displayName: profile.displayname,
+      avatarUrl: profile.avatarUrl,
+    );
   }
 
   final List<ArchivedRoom> _archivedRooms = [];

@@ -660,15 +660,15 @@ class VoIP {
 
   Future<void> startGroupCalls() async {
     final rooms = client.rooms;
-    rooms.forEach((element) {
-      createGroupCallForRoom(element);
-    });
+    for (final room in rooms) {
+      await createGroupCallForRoom(room);
+    }
   }
 
-  void stopGroupCalls() {
-    groupCalls.forEach((_, groupCall) {
-      groupCall.terminate();
-    });
+  Future<void> stopGroupCalls() async {
+    for (final groupCall in groupCalls.values) {
+      await groupCall.terminate();
+    }
     groupCalls.clear();
   }
 
