@@ -14,13 +14,13 @@ abstract class WebRTCDelegate {
       Map<String, dynamic> configuration,
       [Map<String, dynamic> constraints = const {}]);
   VideoRenderer createRenderer();
-  void playRingtone();
-  void stopRingtone();
-  void handleNewCall(CallSession session);
-  void handleCallEnded(CallSession session);
-  void handleMissedCall(CallSession session);
-  void handleNewGroupCall(GroupCall groupCall);
-  void handleGroupCallEnded(GroupCall groupCall);
+  Future<void> playRingtone();
+  Future<void> stopRingtone();
+  Future<void> handleNewCall(CallSession session);
+  Future<void> handleCallEnded(CallSession session);
+  Future<void> handleMissedCall(CallSession session);
+  Future<void> handleNewGroupCall(GroupCall groupCall);
+  Future<void> handleGroupCallEnded(GroupCall groupCall);
   bool get isWeb;
 
   /// This should be set to false if any calls in the client are in kConnected
@@ -71,13 +71,13 @@ class VoIP {
         .listen((event) => _handleEvent(event, onAssertedIdentityReceived));
 
     client.onRoomState.stream.listen(
-      (event) {
+      (event) async {
         if ([
           EventTypes.GroupCallPrefix,
           EventTypes.GroupCallMemberPrefix,
         ].contains(event.type)) {
           Logs().v('[VOIP] onRoomState: type ${event.toJson()}.');
-          onRoomStateChanged(event);
+          await onRoomStateChanged(event);
         }
       },
     );
@@ -237,7 +237,7 @@ class VoIP {
       Logs().v(
           '[VOIP] onCallInvite: Unable to handle new calls, maybe user is busy.');
       await newCall.reject(reason: CallErrorCode.UserBusy, shouldEmit: false);
-      delegate.handleMissedCall(newCall);
+      await delegate.handleMissedCall(newCall);
       return;
     }
 
@@ -254,7 +254,7 @@ class VoIP {
     /// Autoplay on firefox still needs interaction, without which all notifications
     /// could be blocked.
     if (confId == null) {
-      delegate.playRingtone();
+      await delegate.playRingtone();
     }
 
     await newCall.initWithInvite(
@@ -264,7 +264,7 @@ class VoIP {
 
     // Popup CallingPage for incoming call.
     if (confId == null && !newCall.callHasEnded) {
-      delegate.handleNewCall(newCall);
+      await delegate.handleNewCall(newCall);
     }
 
     onIncomingCall.add(newCall);
@@ -281,7 +281,7 @@ class VoIP {
       if (senderId == client.userID) {
         // Ignore messages to yourself.
         if (!call.answeredByUs) {
-          delegate.stopRingtone();
+          await delegate.stopRingtone();
         }
         if (call.state == CallState.kRinging) {
           call.onAnsweredElsewhere();
@@ -333,7 +333,7 @@ class VoIP {
   Future<void> onCallHangup(String roomId, String _ /*senderId unused*/,
       Map<String, dynamic> content) async {
     // stop play ringtone, if this is an incoming call
-    delegate.stopRingtone();
+    await delegate.stopRingtone();
     Logs().v('[VOIP] onCallHangup => ${content.toString()}');
     final String callId = content['call_id'];
     final call = calls[callId];
@@ -676,14 +676,16 @@ class VoIP {
   Future<void> createGroupCallForRoom(Room room) async {
     final events = await client.getRoomState(room.id);
     events.sort((a, b) => a.originServerTs.compareTo(b.originServerTs));
-    events.forEach((element) async {
-      if (element.type == EventTypes.GroupCallPrefix) {
-        if (element.content['m.terminated'] != null) {
+
+    for (final event in events) {
+      if (event.type == EventTypes.GroupCallPrefix) {
+        if (event.content['m.terminated'] != null) {
           return;
         }
-        await createGroupCallFromRoomStateEvent(element);
+        await createGroupCallFromRoomStateEvent(event);
       }
-    });
+    }
+
     return;
   }
 
@@ -733,12 +735,12 @@ class VoIP {
 
     onIncomingGroupCall.add(groupCall);
     if (emitHandleNewGroupCall) {
-      delegate.handleNewGroupCall(groupCall);
+      await delegate.handleNewGroupCall(groupCall);
     }
     return groupCall;
   }
 
-  void onRoomStateChanged(MatrixEvent event) {
+  Future<void> onRoomStateChanged(MatrixEvent event) async {
     final eventType = event.type;
     final roomId = event.roomId;
     if (eventType == EventTypes.GroupCallPrefix) {
@@ -746,11 +748,11 @@ class VoIP {
       final content = event.content;
       final currentGroupCall = groupCalls[groupCallId];
       if (currentGroupCall == null && content['m.terminated'] == null) {
-        createGroupCallFromRoomStateEvent(event);
+        await createGroupCallFromRoomStateEvent(event);
       } else if (currentGroupCall != null &&
           currentGroupCall.groupCallId == groupCallId) {
         if (content['m.terminated'] != null) {
-          currentGroupCall.terminate(emitStateEvent: false);
+          await currentGroupCall.terminate(emitStateEvent: false);
         } else if (content['m.type'] != currentGroupCall.type) {
           // TODO: Handle the callType changing when the room state changes
           Logs().w(
@@ -767,7 +769,7 @@ class VoIP {
       if (groupCall == null) {
         return;
       }
-      groupCall.onMemberStateChanged(event);
+      await groupCall.onMemberStateChanged(event);
     }
   }
 

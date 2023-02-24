@@ -1,13 +1,24 @@
 import 'dart:async';
 
+import 'package:matrix/matrix.dart';
 import 'package:random_string/random_string.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 Future<void> stopMediaStream(MediaStream? stream) async {
-  stream?.getTracks().forEach((element) async {
-    await element.stop();
-  });
-  await stream?.dispose();
+  if (stream != null) {
+    for (final track in stream.getTracks()) {
+      try {
+        await track.stop();
+      } catch (e) {
+        Logs().e('[VOIP] stopping track ${track.id} failed', e);
+      }
+    }
+    try {
+      await stream.dispose();
+    } catch (e) {
+      Logs().e('[VOIP] disposing stream ${stream.id} failed', e);
+    }
+  }
 }
 
 void setTracksEnabled(List<MediaStreamTrack> tracks, bool enabled) {

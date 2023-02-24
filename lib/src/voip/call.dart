@@ -500,10 +500,10 @@ class CallSession {
     });
   }
 
-  void answerWithStreams(List<WrappedMediaStream> callFeeds) {
+  Future<void> answerWithStreams(List<WrappedMediaStream> callFeeds) async {
     if (inviteOrAnswerSent) return;
     Logs().d('nswering call $callId');
-    gotCallFeedsForAnswer(callFeeds);
+    await gotCallFeedsForAnswer(callFeeds);
   }
 
   void replacedBy(CallSession newCall) {
@@ -768,13 +768,14 @@ class CallSession {
         if (stream == null) {
           return false;
         }
-        stream.getTracks().forEach((track) {
+        for (final track in stream.getTracks()) {
           // screen sharing should only have 1 video track anyway, so this only
           // fires once
-          track.onEnded = () {
-            setScreensharingEnabled(false);
+          track.onEnded = () async {
+            await setScreensharingEnabled(false);
           };
-        });
+        }
+
         await addLocalStream(stream, SDPStreamMetadataPurpose.Screenshare);
         return true;
       } catch (err) {
@@ -1068,7 +1069,7 @@ class CallSession {
       return;
     }
     // stop play ringtone
-    voip.delegate.stopRingtone();
+    await voip.delegate.stopRingtone();
 
     if (direction == CallDirection.kIncoming) {
       setCallState(CallState.kCreateAnswer);
@@ -1118,7 +1119,7 @@ class CallSession {
   ///
   Future<void> reject({String? reason, bool shouldEmit = true}) async {
     // stop play ringtone
-    voip.delegate.stopRingtone();
+    await voip.delegate.stopRingtone();
     if (state != CallState.kRinging && state != CallState.kFledgling) {
       Logs().e('[VOIP] Call must be in \'ringing|fledgling\' state to reject!');
       return;
@@ -1133,7 +1134,7 @@ class CallSession {
 
   Future<void> hangup([String? reason, bool suppressEvent = false]) async {
     // stop play ringtone
-    voip.delegate.stopRingtone();
+    await voip.delegate.stopRingtone();
 
     await terminate(
         CallParty.kLocal, reason ?? CallErrorCode.UserHangup, !suppressEvent);
@@ -1171,7 +1172,7 @@ class CallSession {
     ringingTimer = null;
 
     try {
-      voip.delegate.stopRingtone();
+      await voip.delegate.stopRingtone();
     } catch (e) {
       // maybe rigntone never started (group calls) or has been stopped already
       Logs().d('stopping ringtone failed ', e);
@@ -1195,10 +1196,10 @@ class CallSession {
     await cleanUp();
     if (shouldEmit) {
       onCallHangup.add(this);
-      voip.delegate.handleCallEnded(this);
+      await voip.delegate.handleCallEnded(this);
       fireCallEvent(CallEvent.kHangup);
       if ((party == CallParty.kRemote && missedCall)) {
-        voip.delegate.handleMissedCall(this);
+        await voip.delegate.handleMissedCall(this);
       }
     }
   }
@@ -1388,9 +1389,9 @@ class CallSession {
             localUserMediaStream!.isVideoMuted()) ||
         remoteOnHold;
 
-    _setTracksEnabled(localUserMediaStream?.stream!.getAudioTracks() ?? [],
+    _setTracksEnabled(localUserMediaStream?.stream?.getAudioTracks() ?? [],
         !micShouldBeMuted);
-    _setTracksEnabled(localUserMediaStream?.stream!.getVideoTracks() ?? [],
+    _setTracksEnabled(localUserMediaStream?.stream?.getVideoTracks() ?? [],
         !vidShouldBeMuted);
 
     await sendSDPStreamMetadataChanged(
@@ -1406,10 +1407,12 @@ class CallSession {
   SDPStreamMetadata _getLocalSDPStreamMetadata() {
     final sdpStreamMetadatas = <String, SDPStreamPurpose>{};
     for (final wpstream in getLocalStreams) {
-      sdpStreamMetadatas[wpstream.stream!.id] = SDPStreamPurpose(
-          purpose: wpstream.purpose,
-          audio_muted: wpstream.audioMuted,
-          video_muted: wpstream.videoMuted);
+      if (wpstream.stream != null) {
+        sdpStreamMetadatas[wpstream.stream!.id] = SDPStreamPurpose(
+            purpose: wpstream.purpose,
+            audio_muted: wpstream.audioMuted,
+            video_muted: wpstream.videoMuted);
+      }
     }
     final metadata = SDPStreamMetadata(sdpStreamMetadatas);
     Logs().v('Got local SDPStreamMetadata ${metadata.toJson().toString()}');
@@ -1468,18 +1471,18 @@ class CallSession {
       'sdpSemantics': 'unified-plan'
     };
     final pc = await voip.delegate.createPeerConnection(configuration);
-    pc.onTrack = (RTCTrackEvent event) {
+    pc.onTrack = (RTCTrackEvent event) async {
       if (event.streams.isNotEmpty) {
         final stream = event.streams[0];
-        _addRemoteStream(stream);
-        stream.getTracks().forEach((track) {
-          track.onEnded = () {
+        await _addRemoteStream(stream);
+        for (final track in stream.getTracks()) {
+          track.onEnded = () async {
             if (stream.getTracks().isEmpty) {
               Logs().d('[VOIP] detected a empty stream, removing it');
-              _removeStream(stream);
+              await _removeStream(stream);
             }
           };
-        });
+        }
       }
     };
     return pc;
