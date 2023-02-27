@@ -49,7 +49,6 @@ extension RTCIceCandidateExt on RTCIceCandidate {
       sdpMLineIndex != null &&
       sdpMid != null &&
       candidate != null &&
-      sdpMid!.isNotEmpty &&
       candidate!.isNotEmpty;
 }
 
