@@ -47,6 +47,7 @@ extension GroupCallUtils on Room {
   void stopStaleCallsChecker(String roomId) {
     if (staleGroupCallsTimer.tryGet(roomId) != null) {
       staleGroupCallsTimer[roomId]!.cancel();
+      staleGroupCallsTimer.remove(roomId);
       Logs().d('stopped stale group calls checker for room $id');
     } else {
       Logs().w('[VOIP] no stale call checker for room found');
