@@ -44,6 +44,14 @@ class Timeouts {
   static const delayBeforeOfferMs = 100;
 }
 
+extension RTCIceCandidateExt on RTCIceCandidate {
+  bool get isValid =>
+      sdpMLineIndex != null &&
+      sdpMid != null &&
+      candidate != null &&
+      candidate!.isNotEmpty;
+}
+
 /// Wrapped MediaStream, used to adapt Widget to display
 class WrappedMediaStream {
   MediaStream? stream;
@@ -715,6 +723,12 @@ class CallSession {
         json['sdpMid'] ?? '',
         json['sdpMLineIndex']?.round() ?? 0,
       );
+
+      if (!candidate.isValid) {
+        Logs().w(
+            '[VOIP] onCandidatesReceived => skip invalid candidate $candidate');
+        continue;
+      }
 
       if (direction == CallDirection.kOutgoing &&
           pc != null &&
