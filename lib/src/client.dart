@@ -870,14 +870,25 @@ class Client extends MatrixApi {
     return (await loadArchiveWithTimeline()).map((e) => e.room).toList();
   }
 
+  // Synapse caches sync responses. Documentation:
+  // https://matrix-org.github.io/synapse/latest/usage/configuration/config_documentation.html#caches-and-associated-values
+  // At the time of writing, the cache key consists of the following fields:  user, timeout, since, filter_id,
+  // full_state, device_id, last_ignore_accdata_streampos.
+  // Since we can't pass a since token, the easiest field to vary is the timeout to bust through the synapse cache and
+  // give us the actual currently left rooms. Since the timeout doesn't matter for initial sync, this should actually
+  // not make any visible difference apart from properly fetching the cached rooms.
+  int _archiveCacheBusterTimeout = 0;
+
   /// Fetch the archived rooms from the server and return them as a list of
   /// [ArchivedRoom] objects containing the [Room] and the associated [Timeline].
   Future<List<ArchivedRoom>> loadArchiveWithTimeline() async {
     _archivedRooms.clear();
     final syncResp = await sync(
       filter: '{"room":{"include_leave":true,"timeline":{"limit":10}}}',
-      timeout: 0,
+      timeout: _archiveCacheBusterTimeout,
     );
+    // wrap around and hope there are not more than 30 leaves in 2 minutes :)
+    _archiveCacheBusterTimeout = (_archiveCacheBusterTimeout + 1) % 30;
 
     final leave = syncResp.rooms?.leave;
     if (leave != null) {
