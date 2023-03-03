@@ -876,7 +876,7 @@ class Client extends MatrixApi {
     _archivedRooms.clear();
     final syncResp = await sync(
       filter: '{"room":{"include_leave":true,"timeline":{"limit":10}}}',
-      timeout: 0,
+      timeout: Random().nextInt(100),
     );
 
     final leave = syncResp.rooms?.leave;
