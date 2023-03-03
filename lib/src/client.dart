@@ -362,7 +362,7 @@ class Client extends MatrixApi {
     String MatrixIdOrDomain,
   ) async {
     try {
-      final response = await http.get(Uri.https(
+      final response = await httpClient.get(Uri.https(
           MatrixIdOrDomain.domain ?? '', '/.well-known/matrix/client'));
       var respBody = response.body;
       try {

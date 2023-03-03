@@ -21,7 +21,6 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:html/parser.dart';
-import 'package:http/http.dart' as http;
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/event_localizations.dart';
@@ -607,7 +606,9 @@ class Event extends MatrixEvent {
 
     // Download the file
     if (uint8list == null) {
-      downloadCallback ??= (Uri url) async => (await http.get(url)).bodyBytes;
+      final httpClient = room.client.httpClient;
+      downloadCallback ??=
+          (Uri url) async => (await httpClient.get(url)).bodyBytes;
       uint8list = await downloadCallback(mxcUrl.getDownloadLink(room.client));
       storeable = database != null &&
           storeable &&
