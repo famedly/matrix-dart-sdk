@@ -47,6 +47,8 @@ extension GroupCallUtils on Room {
   void stopStaleCallsChecker(String roomId) {
     if (staleGroupCallsTimer.tryGet(roomId) != null) {
       staleGroupCallsTimer[roomId]!.cancel();
+      staleGroupCallsTimer.remove(roomId);
+      Logs().d('stopped stale group calls checker for room $id');
     } else {
       Logs().w('[VOIP] no stale call checker for room found');
     }
@@ -137,10 +139,10 @@ extension GroupCallUtils on Room {
         'm.terminated': GroupCallTerminationReason.CallEnded,
       });
 
-      Logs().d('[VOIP] Group call $groupCallId was killed uwu');
+      Logs().i('[VOIP] Group call $groupCallId was killed uwu');
       return req;
     } catch (e) {
-      Logs().i('killing stale call $groupCallId failed. reason: $e');
+      Logs().e('killing stale call $groupCallId failed. reason: $e');
       return null;
     }
   }

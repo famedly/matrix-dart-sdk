@@ -142,8 +142,8 @@ class Room {
         setState(state);
       }
     }
-    partial = false;
     startStaleCallsChecker(id);
+    partial = false;
   }
 
   /// Returns the [Event] for the given [typeKey] and optional [stateKey].

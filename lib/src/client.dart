@@ -2147,6 +2147,9 @@ class Client extends MatrixApi {
     }
     // If the membership is "leave" then remove the item and stop here
     else if (found && membership == Membership.leave) {
+      // stop stale group call checker for left room.
+      room.stopStaleCallsChecker(room.id);
+
       rooms.removeAt(roomIndex);
     }
     // Update notification, highlight count and/or additional informations
