@@ -89,37 +89,38 @@ extension GroupCallUtils on Room {
     final copyGroupCallIds =
         states.tryGetMap<String, Event>(EventTypes.GroupCallPrefix);
     if (copyGroupCallIds == null) return;
-    copyGroupCallIds.forEach(
-      (groupCallId, groupCallEvent) async {
-        if (groupCallEvent.content.tryGet('m.intent') == 'm.room') return;
-        if (!groupCallEvent.content.containsKey('m.terminated')) {
-          Logs().i('found non terminated group call with id $groupCallId');
-          // call is not empty but check for stale participants (gone offline)
-          // with expire_ts
-          bool callExpired = true; // assume call is expired
-          final callMemberEvents =
-              states.tryGetMap<String, Event>(EventTypes.GroupCallMemberPrefix);
-          if (callMemberEvents != null) {
-            for (var i = 0; i < callMemberEvents.length; i++) {
-              final groupCallMemberEventMap =
-                  callMemberEvents.entries.toList()[i];
+    for (final groupCall in copyGroupCallIds.entries) {
+      final groupCallId = groupCall.key;
+      final groupCallEvent = groupCall.value;
 
-              final groupCallMemberEvent = groupCallMemberEventMap.value;
-              callExpired =
-                  callMemberStateIsExpired(groupCallMemberEvent, groupCallId);
-              // no need to iterate further even if one participant says call isn't expired
-              if (!callExpired) break;
-            }
-          }
+      if (groupCallEvent.content.tryGet('m.intent') == 'm.room') return;
+      if (!groupCallEvent.content.containsKey('m.terminated')) {
+        Logs().i('found non terminated group call with id $groupCallId');
+        // call is not empty but check for stale participants (gone offline)
+        // with expire_ts
+        bool callExpired = true; // assume call is expired
+        final callMemberEvents =
+            states.tryGetMap<String, Event>(EventTypes.GroupCallMemberPrefix);
+        if (callMemberEvents != null) {
+          for (var i = 0; i < callMemberEvents.length; i++) {
+            final groupCallMemberEventMap =
+                callMemberEvents.entries.toList()[i];
 
-          if (callExpired) {
-            Logs().i(
-                'Group call with only expired timestamps detected, terminating');
-            await sendGroupCallTerminateEvent(groupCallId);
+            final groupCallMemberEvent = groupCallMemberEventMap.value;
+            callExpired =
+                callMemberStateIsExpired(groupCallMemberEvent, groupCallId);
+            // no need to iterate further even if one participant says call isn't expired
+            if (!callExpired) break;
           }
         }
-      },
-    );
+
+        if (callExpired) {
+          Logs().i(
+              'Group call with only expired timestamps detected, terminating');
+          await sendGroupCallTerminateEvent(groupCallId);
+        }
+      }
+    }
   }
 
   /// returns the event_id if successful

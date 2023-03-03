@@ -381,7 +381,7 @@ class GroupCall {
 
     localUserMediaStream = newStream;
     await localUserMediaStream!.initialize();
-    addUserMediaStream(newStream);
+    await addUserMediaStream(newStream);
 
     setState(GroupCallState.LocalCallFeedInitialized);
 
@@ -430,7 +430,7 @@ class GroupCall {
     _callSubscription = voip.onIncomingCall.stream.listen(onIncomingCall);
 
     for (final call in calls) {
-      onIncomingCall(call);
+      await onIncomingCall(call);
     }
 
     // Set up participants for the members currently in the room.
@@ -438,26 +438,26 @@ class GroupCall {
 
     final memberStateEvents = await getAllMemberStateEvents();
 
-    memberStateEvents.forEach((stateEvent) {
-      onMemberStateChanged(stateEvent);
-    });
+    for (final memberState in memberStateEvents) {
+      await onMemberStateChanged(memberState);
+    }
 
     onActiveSpeakerLoop();
 
     voip.currentGroupCID = groupCallId;
 
-    voip.delegate.handleNewGroupCall(this);
+    await voip.delegate.handleNewGroupCall(this);
   }
 
   Future<void> dispose() async {
     if (localUserMediaStream != null) {
-      removeUserMediaStream(localUserMediaStream!);
+      await removeUserMediaStream(localUserMediaStream!);
       localUserMediaStream = null;
     }
 
     if (localScreenshareStream != null) {
       await stopMediaStream(localScreenshareStream!.stream);
-      removeScreenshareStream(localScreenshareStream!);
+      await removeScreenshareStream(localScreenshareStream!);
       localScreenshareStream = null;
       localDesktopCapturerSourceId = null;
     }
@@ -467,9 +467,10 @@ class GroupCall {
     await removeMemberStateEvent();
 
     final callsCopy = calls.toList();
-    callsCopy.forEach((element) {
-      removeCall(element, CallErrorCode.UserHangup);
-    });
+
+    for (final call in callsCopy) {
+      await removeCall(call, CallErrorCode.UserHangup);
+    }
 
     activeSpeaker = null;
     activeSpeakerLoopTimeout?.cancel();
@@ -480,7 +481,7 @@ class GroupCall {
     await dispose();
     setState(GroupCallState.LocalCallFeedUninitialized);
     voip.currentGroupCID = null;
-    voip.delegate.handleGroupCallEnded(this);
+    await voip.delegate.handleGroupCallEnded(this);
     final justLeftGroupCall = voip.groupCalls.tryGet<GroupCall>(room.id);
     // terminate group call if empty
     if (justLeftGroupCall != null &&
@@ -510,7 +511,7 @@ class GroupCall {
       });
       Logs().d('[VOIP] Group call $groupCallId was killed');
     }
-    voip.delegate.handleGroupCallEnded(this);
+    await voip.delegate.handleGroupCallEnded(this);
     setState(GroupCallState.Ended);
   }
 
@@ -540,9 +541,9 @@ class GroupCall {
       setTracksEnabled(localUserMediaStream!.stream!.getAudioTracks(), !muted);
     }
 
-    calls.forEach((call) {
-      call.setMicrophoneMuted(muted);
-    });
+    for (final call in calls) {
+      await call.setMicrophoneMuted(muted);
+    }
 
     onGroupCallEvent.add(GroupCallEvent.LocalMuteStateChanged);
     return true;
@@ -558,9 +559,9 @@ class GroupCall {
       setTracksEnabled(localUserMediaStream!.stream!.getVideoTracks(), !muted);
     }
 
-    calls.forEach((call) {
-      call.setLocalVideoMuted(muted);
-    });
+    for (final call in calls) {
+      await call.setLocalVideoMuted(muted);
+    }
 
     onGroupCallEvent.add(GroupCallEvent.LocalMuteStateChanged);
     return true;
@@ -580,13 +581,13 @@ class GroupCall {
       try {
         Logs().v('Asking for screensharing permissions...');
         final stream = await _getDisplayMedia();
-        stream.getTracks().forEach((track) {
-          track.onEnded = () {
-            // screen sharing should only have 1 video track anyway, so this only
-            // fires once
-            setScreensharingEnabled(false, '');
+        for (final track in stream.getTracks()) {
+          // screen sharing should only have 1 video track anyway, so this only
+          // fires once
+          track.onEnded = () async {
+            await setScreensharingEnabled(false, '');
           };
-        });
+        }
         Logs().v(
             'Screensharing permissions granted. Setting screensharing enabled on all calls');
         localDesktopCapturerSourceId = desktopCapturerSourceId;
@@ -607,12 +608,11 @@ class GroupCall {
         await localScreenshareStream!.initialize();
 
         onGroupCallEvent.add(GroupCallEvent.LocalScreenshareStateChanged);
-
-        calls.forEach((call) async {
+        for (final call in calls) {
           await call.addLocalStream(
               await localScreenshareStream!.stream!.clone(),
               localScreenshareStream!.purpose);
-        });
+        }
 
         await sendMemberStateEvent();
 
@@ -625,11 +625,12 @@ class GroupCall {
         return false;
       }
     } else {
-      calls.forEach((call) {
-        call.removeLocalStream(call.localScreenSharingStream!);
-      });
+      for (final call in calls) {
+        await call.removeLocalStream(call.localScreenSharingStream!);
+      }
+
       await stopMediaStream(localScreenshareStream?.stream);
-      removeScreenshareStream(localScreenshareStream!);
+      await removeScreenshareStream(localScreenshareStream!);
       localScreenshareStream = null;
       localDesktopCapturerSourceId = null;
       await sendMemberStateEvent();
@@ -642,7 +643,7 @@ class GroupCall {
     return localScreenshareStream != null;
   }
 
-  void onIncomingCall(CallSession newCall) {
+  Future<void> onIncomingCall(CallSession newCall) async {
     // The incoming calls may be for another room, which we will ignore.
     if (newCall.room.id != room.id) {
       return;
@@ -656,7 +657,7 @@ class GroupCall {
     if (newCall.groupCallId == null || newCall.groupCallId != groupCallId) {
       Logs().v(
           'Incoming call with groupCallId ${newCall.groupCallId} ignored because it doesn\'t match the current group call');
-      newCall.reject();
+      await newCall.reject();
       return;
     }
 
@@ -671,12 +672,12 @@ class GroupCall {
 
     // Check if the user calling has an existing call and use this call instead.
     if (existingCall != null) {
-      replaceCall(existingCall, newCall);
+      await replaceCall(existingCall, newCall);
     } else {
-      addCall(newCall);
+      await addCall(newCall);
     }
 
-    newCall.answerWithStreams(getLocalStreams());
+    await newCall.answerWithStreams(getLocalStreams());
   }
 
   Future<void> sendMemberStateEvent() async {
@@ -782,7 +783,7 @@ class GroupCall {
         room.id, EventTypes.GroupCallMemberPrefix, localUserId, content);
   }
 
-  void onMemberStateChanged(MatrixEvent event) async {
+  Future<void> onMemberStateChanged(MatrixEvent event) async {
     // The member events may be received for another room, which we will ignore.
     if (event.roomId != room.id) {
       return;
@@ -892,7 +893,7 @@ class GroupCall {
     await newCall.placeCallWithStreams(
         getLocalStreams(), requestScreenshareFeed);
 
-    addCall(newCall);
+    await addCall(newCall);
   }
 
   Future<IGroupCallRoomMemberDevice?> getDeviceForMember(String userId) async {
@@ -929,13 +930,14 @@ class GroupCall {
     return null;
   }
 
-  void addCall(CallSession call) {
+  Future<void> addCall(CallSession call) async {
     calls.add(call);
-    initCall(call);
+    await initCall(call);
     onGroupCallEvent.add(GroupCallEvent.CallsChanged);
   }
 
-  void replaceCall(CallSession existingCall, CallSession replacementCall) {
+  Future<void> replaceCall(
+      CallSession existingCall, CallSession replacementCall) async {
     final existingCallIndex =
         calls.indexWhere((element) => element == existingCall);
 
@@ -946,15 +948,15 @@ class GroupCall {
     calls.removeAt(existingCallIndex);
     calls.add(replacementCall);
 
-    disposeCall(existingCall, CallErrorCode.Replaced);
-    initCall(replacementCall);
+    await disposeCall(existingCall, CallErrorCode.Replaced);
+    await initCall(replacementCall);
 
     onGroupCallEvent.add(GroupCallEvent.CallsChanged);
   }
 
   /// Removes a peer call from group calls.
-  void removeCall(CallSession call, String hangupReason) {
-    disposeCall(call, hangupReason);
+  Future<void> removeCall(CallSession call, String hangupReason) async {
+    await disposeCall(call, hangupReason);
 
     calls.removeWhere((element) => call.callId == element.callId);
 
@@ -962,7 +964,7 @@ class GroupCall {
   }
 
   /// init a peer call from group calls.
-  void initCall(CallSession call) {
+  Future<void> initCall(CallSession call) async {
     final opponentMemberId = call.opponentDeviceId;
 
     if (opponentMemberId == null) {
@@ -972,17 +974,17 @@ class GroupCall {
     call.onCallStateChanged.stream
         .listen(((event) => onCallStateChanged(call, event)));
 
-    call.onCallReplaced.stream.listen((CallSession newCall) {
-      replaceCall(call, newCall);
+    call.onCallReplaced.stream.listen((CallSession newCall) async {
+      await replaceCall(call, newCall);
     });
 
-    call.onCallStreamsChanged.stream.listen((call) {
-      call.tryRemoveStopedStreams();
-      onStreamsChanged(call);
+    call.onCallStreamsChanged.stream.listen((call) async {
+      await call.tryRemoveStopedStreams();
+      await onStreamsChanged(call);
     });
 
-    call.onCallHangup.stream.listen((event) {
-      onCallHangup(call);
+    call.onCallHangup.stream.listen((event) async {
+      await onCallHangup(call);
     });
 
     call.onStreamAdd.stream.listen((stream) {
@@ -998,7 +1000,7 @@ class GroupCall {
     });
   }
 
-  void disposeCall(CallSession call, String hangupReason) {
+  Future<void> disposeCall(CallSession call, String hangupReason) async {
     final opponentMemberId = call.opponentDeviceId;
 
     if (opponentMemberId == null) {
@@ -1012,19 +1014,19 @@ class GroupCall {
     }
 
     if (call.state != CallState.kEnded) {
-      call.hangup(hangupReason, false);
+      await call.hangup(hangupReason, false);
     }
 
     final usermediaStream = getUserMediaStreamByUserId(opponentMemberId);
 
     if (usermediaStream != null) {
-      removeUserMediaStream(usermediaStream);
+      await removeUserMediaStream(usermediaStream);
     }
 
     final screenshareStream = getScreenshareStreamByUserId(opponentMemberId);
 
     if (screenshareStream != null) {
-      removeScreenshareStream(screenshareStream);
+      await removeScreenshareStream(screenshareStream);
     }
   }
 
@@ -1032,7 +1034,7 @@ class GroupCall {
     return call.remoteUser?.id ?? call.invitee;
   }
 
-  void onStreamsChanged(CallSession call) {
+  Future<void> onStreamsChanged(CallSession call) async {
     final opponentMemberId = getCallUserId(call);
 
     if (opponentMemberId == null) {
@@ -1045,13 +1047,14 @@ class GroupCall {
 
     if (remoteStreamChanged) {
       if (currentUserMediaStream == null && remoteUsermediaStream != null) {
-        addUserMediaStream(remoteUsermediaStream);
+        await addUserMediaStream(remoteUsermediaStream);
       } else if (currentUserMediaStream != null &&
           remoteUsermediaStream != null) {
-        replaceUserMediaStream(currentUserMediaStream, remoteUsermediaStream);
+        await replaceUserMediaStream(
+            currentUserMediaStream, remoteUsermediaStream);
       } else if (currentUserMediaStream != null &&
           remoteUsermediaStream == null) {
-        removeUserMediaStream(currentUserMediaStream);
+        await removeUserMediaStream(currentUserMediaStream);
       }
     }
 
@@ -1067,38 +1070,38 @@ class GroupCall {
         addScreenshareStream(remoteScreensharingStream);
       } else if (currentScreenshareStream != null &&
           remoteScreensharingStream != null) {
-        replaceScreenshareStream(
+        await replaceScreenshareStream(
             currentScreenshareStream, remoteScreensharingStream);
       } else if (currentScreenshareStream != null &&
           remoteScreensharingStream == null) {
-        removeScreenshareStream(currentScreenshareStream);
+        await removeScreenshareStream(currentScreenshareStream);
       }
     }
 
     onGroupCallFeedsChanged.add(this);
   }
 
-  void onCallStateChanged(CallSession call, CallState state) {
+  Future<void> onCallStateChanged(CallSession call, CallState state) async {
     final audioMuted = localUserMediaStream?.isAudioMuted() ?? true;
     if (call.localUserMediaStream != null &&
         call.isMicrophoneMuted != audioMuted) {
-      call.setMicrophoneMuted(audioMuted);
+      await call.setMicrophoneMuted(audioMuted);
     }
 
     final videoMuted = localUserMediaStream?.isVideoMuted() ?? true;
 
     if (call.localUserMediaStream != null &&
         call.isLocalVideoMuted != videoMuted) {
-      call.setLocalVideoMuted(videoMuted);
+      await call.setLocalVideoMuted(videoMuted);
     }
   }
 
-  void onCallHangup(CallSession call) {
+  Future<void> onCallHangup(CallSession call) async {
     if (call.hangupReason == CallErrorCode.Replaced) {
       return;
     }
-    onStreamsChanged(call);
-    removeCall(call, call.hangupReason!);
+    await onStreamsChanged(call);
+    await removeCall(call, call.hangupReason!);
   }
 
   WrappedMediaStream? getUserMediaStreamByUserId(String userId) {
@@ -1109,7 +1112,7 @@ class GroupCall {
     return null;
   }
 
-  void addUserMediaStream(WrappedMediaStream stream) {
+  Future<void> addUserMediaStream(WrappedMediaStream stream) async {
     userMediaStreams.add(stream);
     //callFeed.measureVolumeActivity(true);
     onStreamAdd.add(stream);
@@ -1132,7 +1135,7 @@ class GroupCall {
     onGroupCallEvent.add(GroupCallEvent.UserMediaStreamsChanged);
   }
 
-  void removeUserMediaStream(WrappedMediaStream stream) {
+  Future<void> removeUserMediaStream(WrappedMediaStream stream) async {
     final streamIndex =
         userMediaStreams.indexWhere((stream) => stream.userId == stream.userId);
 
@@ -1145,8 +1148,8 @@ class GroupCall {
     onStreamRemoved.add(stream);
 
     if (stream.isLocal()) {
-      stream.disposeRenderer();
-      stopMediaStream(stream.stream);
+      await stream.disposeRenderer();
+      await stopMediaStream(stream.stream);
     }
 
     onGroupCallEvent.add(GroupCallEvent.UserMediaStreamsChanged);
@@ -1240,7 +1243,7 @@ class GroupCall {
     onGroupCallEvent.add(GroupCallEvent.ScreenshareStreamsChanged);
   }
 
-  void removeScreenshareStream(WrappedMediaStream stream) {
+  Future<void> removeScreenshareStream(WrappedMediaStream stream) async {
     final streamIndex = screenshareStreams
         .indexWhere((stream) => stream.userId == stream.userId);
 
@@ -1254,8 +1257,8 @@ class GroupCall {
     onStreamRemoved.add(stream);
 
     if (stream.isLocal()) {
-      stream.disposeRenderer();
-      stopMediaStream(stream.stream);
+      await stream.disposeRenderer();
+      await stopMediaStream(stream.stream);
     }
 
     onGroupCallEvent.add(GroupCallEvent.ScreenshareStreamsChanged);
