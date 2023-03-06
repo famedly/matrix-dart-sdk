@@ -1,3 +1,13 @@
+
+## [0.18.0] - 6th March 2023
+- chore: remove checker from local list (td)
+- chore: stop stale group call checker on room leave (td)
+- chore: update. (cloudwebrtc)
+- feat: Implement pagination for searchEvent endpoint (Christian Pauly)
+- fix: archive takes 2 minutes to update (Nicolas Werner)
+- fix: http api call replaced with httpClient (m_kushal)
+- fix: BREAKING CHANGE make group call stuff async, let clients await what they need (voip callbacks like handleNewCall, handleCallEnded need to be Future<void> now) (td)
+- fix: skip invalid candidate. (cloudwebrtc)
 ## [0.17.1] - 20th Feb 2023
 - chore: add missing awaits in group call enter and leave funcs (td)
 - chore: add useServerCache option to fetchOwnProfileFromServer and fix missing awaits (td)
