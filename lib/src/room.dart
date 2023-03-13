@@ -253,8 +253,8 @@ class Room {
     if (heroes.isNotEmpty) {
       final result = heroes
           .where((hero) => hero.isNotEmpty)
-          .map((hero) =>
-              unsafeGetUserFromMemoryOrFallback(hero).calcDisplayname())
+          .map((hero) => unsafeGetUserFromMemoryOrFallback(hero)
+              .calcDisplayname(i18n: i18n))
           .join(', ');
       if (isAbandonedDMRoom) {
         return i18n.wasDirectChatDisplayName(result);
@@ -265,7 +265,7 @@ class Room {
     if (membership == Membership.invite) {
       final sender = getState(EventTypes.RoomMember, client.userID!)
           ?.senderFromMemoryOrFallback
-          .calcDisplayname();
+          .calcDisplayname(i18n: i18n);
       if (sender != null) return sender;
     }
     if (membership == Membership.leave) {
@@ -273,7 +273,7 @@ class Room {
       if (invitation != null && invitation.unsigned?['prev_sender'] != null) {
         final name = unsafeGetUserFromMemoryOrFallback(
                 invitation.unsigned?['prev_sender'])
-            .calcDisplayname();
+            .calcDisplayname(i18n: i18n);
         return i18n.wasDirectChatDisplayName(name);
       }
     }

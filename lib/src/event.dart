@@ -702,9 +702,9 @@ class Event extends MatrixEvent {
       bool plaintextBody = false,
       bool removeMarkdown = false}) {
     if (redacted) {
-      return i18n.removedBy(
-          (redactedBecause?.senderFromMemoryOrFallback)?.calcDisplayname() ??
-              senderId);
+      return i18n.removedBy((redactedBecause?.senderFromMemoryOrFallback)
+              ?.calcDisplayname(i18n: i18n) ??
+          senderId);
     }
 
     var body = plaintextBody ? this.plaintextBody : this.body;
@@ -759,7 +759,7 @@ class Event extends MatrixEvent {
         textOnlyMessageTypes.contains(messageType)) {
       final senderNameOrYou = senderId == room.client.userID
           ? i18n.you
-          : senderFromMemoryOrFallback.calcDisplayname();
+          : senderFromMemoryOrFallback.calcDisplayname(i18n: i18n);
       localizedBody = '$senderNameOrYou: $localizedBody';
     }
 

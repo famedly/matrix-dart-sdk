@@ -105,10 +105,10 @@ class User extends Event {
   /// the first character of each word becomes uppercase.
   /// If [mxidLocalPartFallback] is true, then the local part of the mxid will be shown
   /// if there is no other displayname available. If not then this will return "Unknown user".
-  String calcDisplayname({
-    bool? formatLocalpart,
-    bool? mxidLocalPartFallback,
-  }) {
+  String calcDisplayname(
+      {bool? formatLocalpart,
+      bool? mxidLocalPartFallback,
+      MatrixLocalizations i18n = const MatrixDefaultLocalizations()}) {
     formatLocalpart ??= room.client.formatLocalpart;
     mxidLocalPartFallback ??= room.client.mxidLocalPartFallback;
     final displayName = this.displayName;
@@ -128,7 +128,7 @@ class User extends Event {
       }
       return words.join(' ').trim();
     }
-    return 'Unknown user';
+    return i18n.unknownUser;
   }
 
   /// Call the Matrix API to kick this user from this room.
