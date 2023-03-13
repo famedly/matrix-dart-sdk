@@ -58,6 +58,8 @@ abstract class MatrixLocalizations {
 
   String get youJoinedTheChat;
 
+  String get unknownUser;
+
   String youInvitedBy(String senderName);
 
   String youInvitedUser(String targetName);

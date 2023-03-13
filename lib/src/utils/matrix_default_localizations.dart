@@ -269,4 +269,7 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
   @override
   String wasDirectChatDisplayName(String oldDisplayName) =>
       'Empty chat (was $oldDisplayName)';
+
+  @override
+  String get unknownUser => 'Unknown user';
 }
