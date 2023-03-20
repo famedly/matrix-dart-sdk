@@ -278,6 +278,9 @@ room_server:
   database:
     connection_string: file:room_server.db
   
+relay_api:
+  database:
+    connection_string: file:relay_api.db
 
 # Configuration for the User API.
 user_api:
