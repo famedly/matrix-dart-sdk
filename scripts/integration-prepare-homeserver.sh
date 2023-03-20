@@ -31,8 +31,11 @@ fi
 
 echo "Waiting for homeserver to be available... (GET http://$HOMESERVER/_matrix/client/v3/login)"
 
-while ! curl -XGET "http://$HOMESERVER/_matrix/client/v3/login" >/dev/null 2>/dev/null; do
-  sleep 2
+sleep 5
+
+while ! curl -XGET "http://$HOMESERVER/_matrix/client/v3/login" >/dev/null; do
+  docker logs "$HOMESERVER_IMPLEMENTATION"
+  sleep 5
 done
 
 echo "Homeserver is up."
