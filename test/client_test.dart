@@ -21,6 +21,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
+import 'package:collection/collection.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
@@ -1014,6 +1015,38 @@ void main() {
       final storedEvent2 = await client.database
           ?.getEventById('143273582443PhrSn:example.org', event!.room);
       expect(storedEvent2?.eventId, event?.eventId);
+    });
+
+    test('Rooms and archived rooms getter', () async {
+      final client = await getClient();
+      await Future.delayed(Duration(milliseconds: 50));
+
+      expect(client.rooms.length, 2,
+          reason:
+              'Count of invited+joined before loadArchive() rooms does not match');
+      expect(client.archivedRooms.length, 0,
+          reason:
+              'Count of archived rooms before loadArchive() does not match');
+
+      await client.loadArchive();
+
+      expect(client.rooms.length, 2,
+          reason: 'Count of invited+joined rooms does not match');
+      expect(client.archivedRooms.length, 2,
+          reason: 'Count of archived rooms does not match');
+
+      expect(
+          client.archivedRooms.firstWhereOrNull(
+                  (r) => r.room.id == '!5345234234:example.com') !=
+              null,
+          true,
+          reason: '!5345234234:example.com not found as archived room');
+      expect(
+          client.archivedRooms.firstWhereOrNull(
+                  (r) => r.room.id == '!5345234235:example.com') !=
+              null,
+          true,
+          reason: '!5345234235:example.com not found as archived room');
     });
 
     tearDown(() {

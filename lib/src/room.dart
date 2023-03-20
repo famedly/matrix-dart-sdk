@@ -1393,6 +1393,17 @@ class Room {
     } else {
       final archive = client.getArchiveRoomFromCache(id);
       events = archive?.timeline.events.toList() ?? [];
+      for (var i = 0; i < events.length; i++) {
+        // Try to decrypt encrypted events but don't update the database.
+        if (encrypted && client.encryptionEnabled) {
+          if (events[i].type == EventTypes.Encrypted) {
+            events[i] = await client.encryption!.decryptRoomEvent(
+              id,
+              events[i],
+            );
+          }
+        }
+      }
     }
 
     var chunk = TimelineChunk(events: events);
