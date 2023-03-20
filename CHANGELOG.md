@@ -1,5 +1,11 @@
+## [0.18.1] - 20th March 2023
+
+- feat: Allow accessing cached archive rooms as well as request keys for them (Philipp Grieshofer)
+- feat: Make possible to overwrite boxcollection opener in Hive Collections Database (Krille)
+- fix: Use MatrixLocalizations to calculate fallback user displayname (Philipp Grieshofer)
 
 ## [0.18.0] - 6th March 2023
+
 - chore: remove checker from local list (td)
 - chore: stop stale group call checker on room leave (td)
 - chore: update. (cloudwebrtc)
@@ -8,11 +14,14 @@
 - fix: http api call replaced with httpClient (m_kushal)
 - fix: BREAKING CHANGE make group call stuff async, let clients await what they need (voip callbacks like handleNewCall, handleCallEnded need to be Future<void> now) (td)
 - fix: skip invalid candidate. (cloudwebrtc)
+
 ## [0.17.1] - 20th Feb 2023
+
 - chore: add missing awaits in group call enter and leave funcs (td)
 - chore: add useServerCache option to fetchOwnProfileFromServer and fix missing awaits (td)
 
 ## [0.17.0] - 17th Feb 2023
+
 - fix: ability to upgrade audio calls to video calls (td)
 - chore: add a fetchOwnProfileFromServer method which tries to get ownProfile from server first, disk then (td)
 - fix: clean expired member state events in group calls (td)
@@ -54,6 +63,7 @@
 - refactor: migrate integration tests to more stable setup (TheOneWithTheBraid)
 
 ## [0.15.12] - 18th Jan 2023
+
 This deprecates `room.displayname` is favor of `room.getLocalizedDisplayname()`.
 For migration you can just replace it everywhere. It will use the
 MatrixDefaultLocalizations if you don't set one.
