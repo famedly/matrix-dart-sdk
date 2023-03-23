@@ -259,7 +259,7 @@ class MatrixImageFile extends MatrixFile {
         height: image.height > image.width ? arguments.maxDimension : null,
         width: image.width >= image.height ? arguments.maxDimension : null);
 
-    final encoded = encodeNamedImage(resized, arguments.fileName);
+    final encoded = encodeNamedImage(arguments.fileName, resized);
     if (encoded == null) return null;
     final bytes = Uint8List.fromList(encoded);
     return MatrixImageFileResizedResponse(
