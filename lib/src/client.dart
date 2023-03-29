@@ -1386,6 +1386,9 @@ class Client extends MatrixApi {
     String? newOlmAccount,
     bool waitForFirstSync = true,
     bool waitUntilLoadCompletedLoaded = true,
+
+    /// Will be called if the app performs a migration task from the [legacyDatabaseBuilder]
+    void Function()? onMigration,
   }) async {
     if ((newToken != null ||
             newUserID != null ||
@@ -1450,7 +1453,7 @@ class Client extends MatrixApi {
 
       if (accessToken == null || homeserver == null || userID == null) {
         if (legacyDatabaseBuilder != null) {
-          await _migrateFromLegacyDatabase();
+          await _migrateFromLegacyDatabase(onMigration: onMigration);
           if (isLogged()) return;
         }
         // we aren't logged in
@@ -2912,7 +2915,9 @@ class Client extends MatrixApi {
     return;
   }
 
-  Future<void> _migrateFromLegacyDatabase() async {
+  Future<void> _migrateFromLegacyDatabase({
+    void Function()? onMigration,
+  }) async {
     Logs().i('Check legacy database for migration data...');
     final legacyDatabase = await legacyDatabaseBuilder?.call(this);
     final migrateClient = await legacyDatabase?.getClient(clientName);
@@ -2920,6 +2925,7 @@ class Client extends MatrixApi {
 
     if (migrateClient != null && legacyDatabase != null && database != null) {
       Logs().i('Found data in the legacy database!');
+      onMigration?.call();
       _id = migrateClient['client_id'];
       await database.insertClient(
         clientName,
