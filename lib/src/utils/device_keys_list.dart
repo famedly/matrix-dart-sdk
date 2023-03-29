@@ -36,8 +36,8 @@ class DeviceKeysList {
 
   SignableKey? getKey(String id) => deviceKeys[id] ?? crossSigningKeys[id];
 
-  CrossSigningKey? getCrossSigningKey(String type) =>
-      crossSigningKeys.values.firstWhereOrNull((k) => k.usage.contains(type));
+  CrossSigningKey? getCrossSigningKey(String type) => crossSigningKeys.values
+      .firstWhereOrNull((key) => key.usage.contains(type));
 
   CrossSigningKey? get masterKey => getCrossSigningKey('master');
   CrossSigningKey? get selfSigningKey => getCrossSigningKey('self_signing');
@@ -106,9 +106,8 @@ class DeviceKeysList {
       Map<String, dynamic> dbEntry,
       List<Map<String, dynamic>> childEntries,
       List<Map<String, dynamic>> crossSigningEntries,
-      Client cl)
-      : client = cl,
-        userId = dbEntry['user_id'] ?? '' {
+      this.client)
+      : userId = dbEntry['user_id'] ?? '' {
     outdated = dbEntry['outdated'];
     deviceKeys = {};
     for (final childEntry in childEntries) {
@@ -149,7 +148,7 @@ abstract class SignableKey extends MatrixSignableKey {
   bool get verified =>
       identifier != null && (directVerified || crossVerified) && !(blocked);
   bool get blocked => _blocked ?? false;
-  set blocked(bool b) => _blocked = b;
+  set blocked(bool isBlocked) => _blocked = isBlocked;
 
   bool get encryptToDevice {
     if (blocked) return false;
@@ -159,17 +158,16 @@ abstract class SignableKey extends MatrixSignableKey {
     return client.shareKeysWithUnverifiedDevices || verified;
   }
 
-  void setDirectVerified(bool v) {
-    _verified = v;
+  void setDirectVerified(bool isVerified) {
+    _verified = isVerified;
   }
 
   bool get directVerified => _verified ?? false;
   bool get crossVerified => hasValidSignatureChain();
   bool get signed => hasValidSignatureChain(verifiedOnly: false);
 
-  SignableKey.fromJson(Map<String, dynamic> json, Client cl)
-      : client = cl,
-        super.fromJson(json) {
+  SignableKey.fromJson(Map<String, dynamic> json, this.client)
+      : super.fromJson(json) {
     _verified = false;
     _blocked = false;
   }
@@ -392,15 +390,16 @@ class CrossSigningKey extends SignableKey {
         ?.setBlockedUserCrossSigningKey(newBlocked, userId, publicKey!);
   }
 
-  CrossSigningKey.fromMatrixCrossSigningKey(MatrixCrossSigningKey k, Client cl)
-      : super.fromJson(k.toJson().copy(), cl) {
+  CrossSigningKey.fromMatrixCrossSigningKey(
+      MatrixCrossSigningKey key, Client client)
+      : super.fromJson(key.toJson().copy(), client) {
     final json = toJson();
-    identifier = k.publicKey;
+    identifier = key.publicKey;
     usage = json['usage'].cast<String>();
   }
 
-  CrossSigningKey.fromDbJson(Map<String, dynamic> dbEntry, Client cl)
-      : super.fromJson(Event.getMapFromPayload(dbEntry['content']), cl) {
+  CrossSigningKey.fromDbJson(Map<String, dynamic> dbEntry, Client client)
+      : super.fromJson(Event.getMapFromPayload(dbEntry['content']), client) {
     final json = toJson();
     identifier = dbEntry['public_key'];
     usage = json['usage'].cast<String>();
@@ -408,8 +407,8 @@ class CrossSigningKey extends SignableKey {
     _blocked = dbEntry['blocked'];
   }
 
-  CrossSigningKey.fromJson(Map<String, dynamic> json, Client cl)
-      : super.fromJson(json.copy(), cl) {
+  CrossSigningKey.fromJson(Map<String, dynamic> json, Client client)
+      : super.fromJson(json.copy(), client) {
     final json = toJson();
     usage = json['usage'].cast<String>();
     if (keys.isNotEmpty) {
@@ -476,17 +475,17 @@ class DeviceKeys extends SignableKey {
         ?.setBlockedUserDeviceKey(newBlocked, userId, deviceId!);
   }
 
-  DeviceKeys.fromMatrixDeviceKeys(MatrixDeviceKeys k, Client cl,
+  DeviceKeys.fromMatrixDeviceKeys(MatrixDeviceKeys keys, Client client,
       [DateTime? lastActiveTs])
-      : super.fromJson(k.toJson().copy(), cl) {
+      : super.fromJson(keys.toJson().copy(), client) {
     final json = toJson();
-    identifier = k.deviceId;
+    identifier = keys.deviceId;
     algorithms = json['algorithms'].cast<String>();
     lastActive = lastActiveTs ?? DateTime.now();
   }
 
-  DeviceKeys.fromDb(Map<String, dynamic> dbEntry, Client cl)
-      : super.fromJson(Event.getMapFromPayload(dbEntry['content']), cl) {
+  DeviceKeys.fromDb(Map<String, dynamic> dbEntry, Client client)
+      : super.fromJson(Event.getMapFromPayload(dbEntry['content']), client) {
     final json = toJson();
     identifier = dbEntry['device_id'];
     algorithms = json['algorithms'].cast<String>();
@@ -496,8 +495,8 @@ class DeviceKeys extends SignableKey {
         DateTime.fromMillisecondsSinceEpoch(dbEntry['last_active'] ?? 0);
   }
 
-  DeviceKeys.fromJson(Map<String, dynamic> json, Client cl)
-      : super.fromJson(json.copy(), cl) {
+  DeviceKeys.fromJson(Map<String, dynamic> json, Client client)
+      : super.fromJson(json.copy(), client) {
     final json = toJson();
     identifier = json['device_id'];
     algorithms = json['algorithms'].cast<String>();
