@@ -50,7 +50,7 @@ extension GroupCallUtils on Room {
       staleGroupCallsTimer.remove(roomId);
       Logs().d('stopped stale group calls checker for room $id');
     } else {
-      Logs().w('[VOIP] no stale call checker for room found');
+      Logs().d('[VOIP] no stale call checker for room found');
     }
   }
 
