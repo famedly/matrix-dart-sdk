@@ -142,7 +142,9 @@ class Room {
         setState(state);
       }
     }
-    startStaleCallsChecker(id);
+    if (!isArchived) {
+      startStaleCallsChecker(id);
+    }
     partial = false;
   }
 
