@@ -242,28 +242,28 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> clear() => Future.wait([
-        _clientBox.clear(),
-        _accountDataBox.clear(),
-        _roomsBox.clear(),
-        _roomStateBox.clear(),
-        _roomMembersBox.clear(),
-        _toDeviceQueueBox.clear(),
-        _roomAccountDataBox.clear(),
-        _inboundGroupSessionsBox.clear(),
-        _outboundGroupSessionsBox.clear(),
-        _olmSessionsBox.clear(),
-        _userDeviceKeysBox.clear(),
-        _userDeviceKeysOutdatedBox.clear(),
-        _userCrossSigningKeysBox.clear(),
-        _ssssCacheBox.clear(),
-        _presencesBox.clear(),
-        _timelineFragmentsBox.clear(),
-        _eventsBox.clear(),
-        _seenDeviceIdsBox.clear(),
-        _seenDeviceKeysBox.clear(),
-        _collection.deleteFromDisk(),
-      ]);
+  Future<void> clear() => transaction(() async {
+        await _clientBox.clear();
+        await _accountDataBox.clear();
+        await _roomsBox.clear();
+        await _roomStateBox.clear();
+        await _roomMembersBox.clear();
+        await _toDeviceQueueBox.clear();
+        await _roomAccountDataBox.clear();
+        await _inboundGroupSessionsBox.clear();
+        await _outboundGroupSessionsBox.clear();
+        await _olmSessionsBox.clear();
+        await _userDeviceKeysBox.clear();
+        await _userDeviceKeysOutdatedBox.clear();
+        await _userCrossSigningKeysBox.clear();
+        await _ssssCacheBox.clear();
+        await _presencesBox.clear();
+        await _timelineFragmentsBox.clear();
+        await _eventsBox.clear();
+        await _seenDeviceIdsBox.clear();
+        await _seenDeviceKeysBox.clear();
+        await _collection.deleteFromDisk();
+      });
 
   @override
   Future<void> clearCache() => transaction(() async {
