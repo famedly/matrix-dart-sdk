@@ -1,3 +1,11 @@
+## [0.18.2] - 31th March 2023
+- chore: Update to flutter image 3.7.8 (Krille)
+- chore: Workaround for broken test dependency (Krille)
+- chore: ignore stale call checking for archived rooms (td)
+- feat: Implement onMigration callback to Client.init() method (Krille)
+- fix: Clear HiveCollection boxes inside of transaction in order (Krille)
+- refactor: Rename one-character-variables in device_keys_list.dart (Malin Errenst)
+
 ## [0.18.1] - 20th March 2023
 
 - feat: Allow accessing cached archive rooms as well as request keys for them (Philipp Grieshofer)
