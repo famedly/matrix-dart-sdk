@@ -416,7 +416,7 @@ class GroupCall {
       await initLocalStream();
     }
 
-    _addParticipant(
+    await _addParticipant(
         (await room.requestUser(client.userID!, ignoreErrors: true))!);
 
     await sendMemberStateEvent();
@@ -462,7 +462,7 @@ class GroupCall {
       localDesktopCapturerSourceId = null;
     }
 
-    _removeParticipant(client.userID!);
+    await _removeParticipant(client.userID!);
 
     await removeMemberStateEvent();
 
@@ -800,7 +800,7 @@ class GroupCall {
     if (callsState is List) {
       Logs()
           .w('Ignoring member state from ${user.id} member not in any calls.');
-      _removeParticipant(user.id);
+      await _removeParticipant(user.id);
       return;
     }
 
@@ -818,7 +818,7 @@ class GroupCall {
     if (callState == null) {
       Logs().w(
           'Room member ${user.id} does not have a valid m.call_id set. Ignoring.');
-      _removeParticipant(user.id);
+      await _removeParticipant(user.id);
       return;
     }
 
@@ -826,11 +826,11 @@ class GroupCall {
     if (callId != null && callId != groupCallId) {
       Logs().w(
           'Call id $callId does not match group call id $groupCallId, ignoring.');
-      _removeParticipant(user.id);
+      await _removeParticipant(user.id);
       return;
     }
 
-    _addParticipant(user);
+    await _addParticipant(user);
 
     // Don't process your own member.
     final localUserId = client.userID;
@@ -1264,7 +1264,7 @@ class GroupCall {
     onGroupCallEvent.add(GroupCallEvent.ScreenshareStreamsChanged);
   }
 
-  void _addParticipant(User user) {
+  Future<void> _addParticipant(User user) async {
     if (participants.indexWhere((m) => m.id == user.id) != -1) {
       return;
     }
@@ -1272,9 +1272,12 @@ class GroupCall {
     participants.add(user);
 
     onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
+    for (final call in calls) {
+      await call.updateMuteStatus();
+    }
   }
 
-  void _removeParticipant(String userid) {
+  Future<void> _removeParticipant(String userid) async {
     final index = participants.indexWhere((m) => m.id == userid);
 
     if (index == -1) {
@@ -1284,5 +1287,8 @@ class GroupCall {
     participants.removeAt(index);
 
     onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
+    for (final call in calls) {
+      await call.updateMuteStatus();
+    }
   }
 }
