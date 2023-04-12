@@ -102,15 +102,15 @@ class WrappedMediaStream {
 
   Future<void> dispose() async {
     renderer.srcObject = null;
-    if (isLocal()) {
-      if (isWeb) {
-        await stopMediaStream(stream);
-      } else {
-        if (!isGroupCall) {
-          await stopMediaStream(stream);
-        }
-      }
+
+    /// libwebrtc does not provide a way to clone MediaStreams. So stopping the
+    /// local stream here would break calls with all other participants if anyone
+    /// leaves. The local stream is manually disposed when user leaves. On web
+    /// streams are actually cloned.
+    if (!isGroupCall || isWeb) {
+      await stopMediaStream(stream);
     }
+
     stream = null;
     await renderer.dispose();
   }
@@ -1386,12 +1386,17 @@ class CallSession {
         await stream.dispose();
       }
       streams.clear();
+    } catch (e) {
+      Logs().e('[VOIP] cleaning up streams failed', e);
+    }
+
+    try {
       if (pc != null) {
         await pc!.close();
         await pc!.dispose();
       }
     } catch (e) {
-      Logs().e('cleaning up streams failed', e);
+      Logs().e('[VOIP] removing pc failed', e);
     }
   }
 
