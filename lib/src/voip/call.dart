@@ -970,7 +970,7 @@ class CallSession {
       }
     }
     localUserMediaStream?.setVideoMuted(muted);
-    await _updateMuteStatus();
+    await updateMuteStatus();
   }
 
   // used for upgrading 1:1 calls
@@ -1039,7 +1039,7 @@ class CallSession {
 
   Future<void> setMicrophoneMuted(bool muted) async {
     localUserMediaStream?.setAudioMuted(muted);
-    await _updateMuteStatus();
+    await updateMuteStatus();
   }
 
   bool get isMicrophoneMuted => localUserMediaStream?.isAudioMuted() ?? false;
@@ -1053,7 +1053,7 @@ class CallSession {
           ? TransceiverDirection.SendOnly
           : TransceiverDirection.SendRecv);
     }
-    await _updateMuteStatus();
+    await updateMuteStatus();
     fireCallEvent(CallEvent.kRemoteHoldUnhold);
   }
 
@@ -1400,7 +1400,7 @@ class CallSession {
     }
   }
 
-  Future<void> _updateMuteStatus() async {
+  Future<void> updateMuteStatus() async {
     final micShouldBeMuted = (localUserMediaStream != null &&
             localUserMediaStream!.isAudioMuted()) ||
         remoteOnHold;
