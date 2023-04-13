@@ -1,3 +1,7 @@
+## [0.18.3] - 13th April 2023
+- chore: stopMediaStream on all streams and make sure dispose runs everytime (td)
+- fix: test if setting track enabled on participants changed helps with the media not working randomly issue (td)
+
 ## [0.18.2] - 31th March 2023
 - chore: Update to flutter image 3.7.8 (Krille)
 - chore: Workaround for broken test dependency (Krille)
