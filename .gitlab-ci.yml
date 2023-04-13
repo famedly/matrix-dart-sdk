@@ -2,16 +2,20 @@ include:
   - project: "famedly/company/frontend/ci-templates"
     ref: main
     file: "/all.yml"
-
-workflow:
-  rules:
-    - if: $CI_MERGE_REQUEST_IID
-    - if: $CI_COMMIT_TAG
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    rules:
+      - if: $OVERRIDE_INCLUDE_BRANCH == null || $OVERRIDE_INCLUDE_BRANCH == ""
+  - project: "famedly/company/frontend/ci-templates"
+    ref: $OVERRIDE_INCLUDE_BRANCH
+    file: "/all.yml"
+    rules:
+      - if: $OVERRIDE_INCLUDE_BRANCH
 
 variables:
   FLUTTER_IMAGE_TAG: "3.7.8"
   DART_IMAGE_TAG: "2.19.0"
+  OVERRIDE_INCLUDE_BRANCH:
+    description: "Change the branch used to include the CI template"
+    value: "main"
 
 coverage:
   stage: test
