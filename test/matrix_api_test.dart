@@ -979,7 +979,6 @@ void main() {
         '!localpart:example.com',
         ReceiptType.mRead,
         '\$1234:example.com',
-        {},
       );
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -990,7 +989,7 @@ void main() {
 
       await matrixApi.setReadMarker(
         '!localpart:example.com',
-        '\$1234:example.com',
+        mFullyRead: '\$1234:example.com',
         mRead: '\$1234:example.com',
       );
 

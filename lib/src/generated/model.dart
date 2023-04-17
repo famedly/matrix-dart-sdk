@@ -95,6 +95,7 @@ class PublicRoomsChunk {
     this.name,
     required this.numJoinedMembers,
     required this.roomId,
+    this.roomType,
     this.topic,
     required this.worldReadable,
   });
@@ -109,6 +110,7 @@ class PublicRoomsChunk {
         name = ((v) => v != null ? v as String : null)(json['name']),
         numJoinedMembers = json['num_joined_members'] as int,
         roomId = json['room_id'] as String,
+        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
         topic = ((v) => v != null ? v as String : null)(json['topic']),
         worldReadable = json['world_readable'] as bool;
   Map<String, dynamic> toJson() {
@@ -116,6 +118,7 @@ class PublicRoomsChunk {
     final canonicalAlias = this.canonicalAlias;
     final joinRule = this.joinRule;
     final name = this.name;
+    final roomType = this.roomType;
     final topic = this.topic;
     return {
       if (avatarUrl != null) 'avatar_url': avatarUrl.toString(),
@@ -125,6 +128,7 @@ class PublicRoomsChunk {
       if (name != null) 'name': name,
       'num_joined_members': numJoinedMembers,
       'room_id': roomId,
+      if (roomType != null) 'room_type': roomType,
       if (topic != null) 'topic': topic,
       'world_readable': worldReadable,
     };
@@ -154,6 +158,9 @@ class PublicRoomsChunk {
   /// The ID of the room.
   String roomId;
 
+  /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
+  String? roomType;
+
   /// The topic of the room, if any.
   String? topic;
 
@@ -161,14 +168,14 @@ class PublicRoomsChunk {
   bool worldReadable;
 }
 
-@_NameSource('rule override generated')
-class SpaceRoomsChunkBase {
-  SpaceRoomsChunkBase({
+@_NameSource('spec')
+class ChildRoomsChunk {
+  ChildRoomsChunk({
     required this.childrenState,
     this.roomType,
   });
 
-  SpaceRoomsChunkBase.fromJson(Map<String, dynamic> json)
+  ChildRoomsChunk.fromJson(Map<String, dynamic> json)
       : childrenState = (json['children_state'] as List)
             .map((v) => ChildrenState.fromJson(v))
             .toList(),
@@ -192,7 +199,7 @@ class SpaceRoomsChunkBase {
 }
 
 @_NameSource('rule override generated')
-class SpaceRoomsChunk implements PublicRoomsChunk, SpaceRoomsChunkBase {
+class SpaceRoomsChunk implements PublicRoomsChunk, ChildRoomsChunk {
   SpaceRoomsChunk({
     this.avatarUrl,
     this.canonicalAlias,
@@ -201,10 +208,10 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceRoomsChunkBase {
     this.name,
     required this.numJoinedMembers,
     required this.roomId,
+    this.roomType,
     this.topic,
     required this.worldReadable,
     required this.childrenState,
-    this.roomType,
   });
 
   SpaceRoomsChunk.fromJson(Map<String, dynamic> json)
@@ -217,19 +224,19 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceRoomsChunkBase {
         name = ((v) => v != null ? v as String : null)(json['name']),
         numJoinedMembers = json['num_joined_members'] as int,
         roomId = json['room_id'] as String,
+        roomType = ((v) => v != null ? v as String : null)(json['room_type']),
         topic = ((v) => v != null ? v as String : null)(json['topic']),
         worldReadable = json['world_readable'] as bool,
         childrenState = (json['children_state'] as List)
             .map((v) => ChildrenState.fromJson(v))
-            .toList(),
-        roomType = ((v) => v != null ? v as String : null)(json['room_type']);
+            .toList();
   Map<String, dynamic> toJson() {
     final avatarUrl = this.avatarUrl;
     final canonicalAlias = this.canonicalAlias;
     final joinRule = this.joinRule;
     final name = this.name;
-    final topic = this.topic;
     final roomType = this.roomType;
+    final topic = this.topic;
     return {
       if (avatarUrl != null) 'avatar_url': avatarUrl.toString(),
       if (canonicalAlias != null) 'canonical_alias': canonicalAlias,
@@ -238,10 +245,10 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceRoomsChunkBase {
       if (name != null) 'name': name,
       'num_joined_members': numJoinedMembers,
       'room_id': roomId,
+      if (roomType != null) 'room_type': roomType,
       if (topic != null) 'topic': topic,
       'world_readable': worldReadable,
       'children_state': childrenState.map((v) => v.toJson()).toList(),
-      if (roomType != null) 'room_type': roomType,
     };
   }
 
@@ -269,6 +276,9 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceRoomsChunkBase {
   /// The ID of the room.
   String roomId;
 
+  /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
+  String? roomType;
+
   /// The topic of the room, if any.
   String? topic;
 
@@ -280,9 +290,6 @@ class SpaceRoomsChunk implements PublicRoomsChunk, SpaceRoomsChunkBase {
   ///
   /// If the room is not a space-room, this should be empty.
   List<ChildrenState> childrenState;
-
-  /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
-  String? roomType;
 }
 
 @_NameSource('generated')
@@ -311,6 +318,195 @@ class GetSpaceHierarchyResponse {
 
   /// The rooms for the current page, with the current filters.
   List<SpaceRoomsChunk> rooms;
+}
+
+@_NameSource('rule override generated')
+@EnhancedEnum()
+enum Direction {
+  @EnhancedEnumValue(name: 'b')
+  b,
+  @EnhancedEnumValue(name: 'f')
+  f
+}
+
+@_NameSource('generated')
+class GetRelatingEventsResponse {
+  GetRelatingEventsResponse({
+    required this.chunk,
+    this.nextBatch,
+    this.prevBatch,
+  });
+
+  GetRelatingEventsResponse.fromJson(Map<String, dynamic> json)
+      : chunk = (json['chunk'] as List)
+            .map((v) => MatrixEvent.fromJson(v))
+            .toList(),
+        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']);
+  Map<String, dynamic> toJson() {
+    final nextBatch = this.nextBatch;
+    final prevBatch = this.prevBatch;
+    return {
+      'chunk': chunk.map((v) => v.toJson()).toList(),
+      if (nextBatch != null) 'next_batch': nextBatch,
+      if (prevBatch != null) 'prev_batch': prevBatch,
+    };
+  }
+
+  /// The child events of the requested event, ordered topologically most-recent first.
+  List<MatrixEvent> chunk;
+
+  /// An opaque string representing a pagination token. The absence of this token
+  /// means there are no more results to fetch and the client should stop paginating.
+  String? nextBatch;
+
+  /// An opaque string representing a pagination token. The absence of this token
+  /// means this is the start of the result set, i.e. this is the first batch/page.
+  String? prevBatch;
+}
+
+@_NameSource('generated')
+class GetRelatingEventsWithRelTypeResponse {
+  GetRelatingEventsWithRelTypeResponse({
+    required this.chunk,
+    this.nextBatch,
+    this.prevBatch,
+  });
+
+  GetRelatingEventsWithRelTypeResponse.fromJson(Map<String, dynamic> json)
+      : chunk = (json['chunk'] as List)
+            .map((v) => MatrixEvent.fromJson(v))
+            .toList(),
+        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']);
+  Map<String, dynamic> toJson() {
+    final nextBatch = this.nextBatch;
+    final prevBatch = this.prevBatch;
+    return {
+      'chunk': chunk.map((v) => v.toJson()).toList(),
+      if (nextBatch != null) 'next_batch': nextBatch,
+      if (prevBatch != null) 'prev_batch': prevBatch,
+    };
+  }
+
+  /// The child events of the requested event, ordered topologically
+  /// most-recent first. The events returned will match the `relType`
+  /// supplied in the URL.
+  List<MatrixEvent> chunk;
+
+  /// An opaque string representing a pagination token. The absence of this token
+  /// means there are no more results to fetch and the client should stop paginating.
+  String? nextBatch;
+
+  /// An opaque string representing a pagination token. The absence of this token
+  /// means this is the start of the result set, i.e. this is the first batch/page.
+  String? prevBatch;
+}
+
+@_NameSource('generated')
+class GetRelatingEventsWithRelTypeAndEventTypeResponse {
+  GetRelatingEventsWithRelTypeAndEventTypeResponse({
+    required this.chunk,
+    this.nextBatch,
+    this.prevBatch,
+  });
+
+  GetRelatingEventsWithRelTypeAndEventTypeResponse.fromJson(
+      Map<String, dynamic> json)
+      : chunk = (json['chunk'] as List)
+            .map((v) => MatrixEvent.fromJson(v))
+            .toList(),
+        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']),
+        prevBatch = ((v) => v != null ? v as String : null)(json['prev_batch']);
+  Map<String, dynamic> toJson() {
+    final nextBatch = this.nextBatch;
+    final prevBatch = this.prevBatch;
+    return {
+      'chunk': chunk.map((v) => v.toJson()).toList(),
+      if (nextBatch != null) 'next_batch': nextBatch,
+      if (prevBatch != null) 'prev_batch': prevBatch,
+    };
+  }
+
+  /// The child events of the requested event, ordered topologically most-recent
+  /// first. The events returned will match the `relType` and `eventType` supplied
+  /// in the URL.
+  List<MatrixEvent> chunk;
+
+  /// An opaque string representing a pagination token. The absence of this token
+  /// means there are no more results to fetch and the client should stop paginating.
+  String? nextBatch;
+
+  /// An opaque string representing a pagination token. The absence of this token
+  /// means this is the start of the result set, i.e. this is the first batch/page.
+  String? prevBatch;
+}
+
+@_NameSource('generated')
+@EnhancedEnum()
+enum Include {
+  @EnhancedEnumValue(name: 'all')
+  all,
+  @EnhancedEnumValue(name: 'participated')
+  participated
+}
+
+@_NameSource('generated')
+class GetThreadRootsResponse {
+  GetThreadRootsResponse({
+    required this.chunk,
+    this.nextBatch,
+  });
+
+  GetThreadRootsResponse.fromJson(Map<String, dynamic> json)
+      : chunk = (json['chunk'] as List)
+            .map((v) => MatrixEvent.fromJson(v))
+            .toList(),
+        nextBatch = ((v) => v != null ? v as String : null)(json['next_batch']);
+  Map<String, dynamic> toJson() {
+    final nextBatch = this.nextBatch;
+    return {
+      'chunk': chunk.map((v) => v.toJson()).toList(),
+      if (nextBatch != null) 'next_batch': nextBatch,
+    };
+  }
+
+  /// The thread roots, ordered by the `latest_event` in each event's aggregation bundle. All events
+  /// returned include bundled [aggregations](https://spec.matrix.org/unstable/client-server-api/#aggregations).
+  ///
+  /// If the thread root event was sent by an [ignored user](https://spec.matrix.org/unstable/client-server-api/#ignoring-users), the
+  /// event is returned redacted to the caller. This is to simulate the same behaviour of a client doing
+  /// aggregation locally on the thread.
+  List<MatrixEvent> chunk;
+
+  /// A token to supply to `from` to keep paginating the responses. Not present when there are
+  /// no further results.
+  String? nextBatch;
+}
+
+@_NameSource('generated')
+class GetEventByTimestampResponse {
+  GetEventByTimestampResponse({
+    required this.eventId,
+    required this.originServerTs,
+  });
+
+  GetEventByTimestampResponse.fromJson(Map<String, dynamic> json)
+      : eventId = json['event_id'] as String,
+        originServerTs = json['origin_server_ts'] as int;
+  Map<String, dynamic> toJson() => {
+        'event_id': eventId,
+        'origin_server_ts': originServerTs,
+      };
+
+  /// The ID of the event found
+  String eventId;
+
+  /// The event's timestamp, in milliseconds since the Unix epoch.
+  /// This makes it easy to do a quick comparison to see if the
+  /// `event_id` fetched is too far out of range to be useful for your
+  /// use case.
+  int originServerTs;
 }
 
 @_NameSource('rule override generated')
@@ -734,7 +930,8 @@ class Invite3pid {
   /// The hostname+port of the identity server which should be used for third party identifier lookups.
   String idServer;
 
-  /// The kind of address being passed in the address field, for example `email`.
+  /// The kind of address being passed in the address field, for example `email`
+  /// (see [the list of recognised values](https://spec.matrix.org/unstable/appendices/#3pid-types)).
   String medium;
 }
 
@@ -996,7 +1193,7 @@ class ClaimKeysResponse {
             (k, v) => MapEntry(
                 k,
                 (v as Map<String, dynamic>)
-                    .map((k, v) => MapEntry(k, v as dynamic))));
+                    .map((k, v) => MapEntry(k, v as Map<String, dynamic>))));
   Map<String, dynamic> toJson() {
     final failures = this.failures;
     return {
@@ -1023,7 +1220,7 @@ class ClaimKeysResponse {
   ///
   /// If necessary, the claimed key might be a fallback key. Fallback
   /// keys are re-used by the server until replaced by the device.
-  Map<String, Map<String, dynamic>> oneTimeKeys;
+  Map<String, Map<String, Map<String, dynamic>>> oneTimeKeys;
 }
 
 @_NameSource('generated')
@@ -1151,45 +1348,59 @@ enum LoginType {
 @_NameSource('generated')
 class LoginResponse {
   LoginResponse({
-    this.accessToken,
-    this.deviceId,
+    required this.accessToken,
+    required this.deviceId,
+    this.expiresInMs,
     this.homeServer,
-    this.userId,
+    this.refreshToken,
+    required this.userId,
     this.wellKnown,
   });
 
   LoginResponse.fromJson(Map<String, dynamic> json)
-      : accessToken =
-            ((v) => v != null ? v as String : null)(json['access_token']),
-        deviceId = ((v) => v != null ? v as String : null)(json['device_id']),
+      : accessToken = json['access_token'] as String,
+        deviceId = json['device_id'] as String,
+        expiresInMs =
+            ((v) => v != null ? v as int : null)(json['expires_in_ms']),
         homeServer =
             ((v) => v != null ? v as String : null)(json['home_server']),
-        userId = ((v) => v != null ? v as String : null)(json['user_id']),
+        refreshToken =
+            ((v) => v != null ? v as String : null)(json['refresh_token']),
+        userId = json['user_id'] as String,
         wellKnown = ((v) => v != null
             ? DiscoveryInformation.fromJson(v)
             : null)(json['well_known']);
   Map<String, dynamic> toJson() {
-    final accessToken = this.accessToken;
-    final deviceId = this.deviceId;
+    final expiresInMs = this.expiresInMs;
     final homeServer = this.homeServer;
-    final userId = this.userId;
+    final refreshToken = this.refreshToken;
     final wellKnown = this.wellKnown;
     return {
-      if (accessToken != null) 'access_token': accessToken,
-      if (deviceId != null) 'device_id': deviceId,
+      'access_token': accessToken,
+      'device_id': deviceId,
+      if (expiresInMs != null) 'expires_in_ms': expiresInMs,
       if (homeServer != null) 'home_server': homeServer,
-      if (userId != null) 'user_id': userId,
+      if (refreshToken != null) 'refresh_token': refreshToken,
+      'user_id': userId,
       if (wellKnown != null) 'well_known': wellKnown.toJson(),
     };
   }
 
   /// An access token for the account.
   /// This access token can then be used to authorize other requests.
-  String? accessToken;
+  String accessToken;
 
   /// ID of the logged-in device. Will be the same as the
   /// corresponding parameter in the request, if one was specified.
-  String? deviceId;
+  String deviceId;
+
+  /// The lifetime of the access token, in milliseconds. Once
+  /// the access token has expired a new access token can be
+  /// obtained by using the provided refresh token. If no
+  /// refresh token is provided, the client will need to re-log in
+  /// to obtain a new access token. If not given, the client can
+  /// assume that the access token will not expire.
+  int? expiresInMs;
 
   /// The server_name of the homeserver on which the account has
   /// been registered.
@@ -1199,8 +1410,13 @@ class LoginResponse {
   /// it. Note also that `homeserver` is not spelt this way.
   String? homeServer;
 
+  /// A refresh token for the account. This token can be used to
+  /// obtain a new access token when it expires by calling the
+  /// `/refresh` endpoint.
+  String? refreshToken;
+
   /// The fully-qualified Matrix ID for the account.
-  String? userId;
+  String userId;
 
   /// Optional client configuration provided by the server. If present,
   /// clients SHOULD use the provided object to reconfigure themselves,
@@ -1425,21 +1641,33 @@ class GetPublicRoomsResponse {
 class PublicRoomQueryFilter {
   PublicRoomQueryFilter({
     this.genericSearchTerm,
+    this.roomTypes,
   });
 
   PublicRoomQueryFilter.fromJson(Map<String, dynamic> json)
       : genericSearchTerm = ((v) =>
-            v != null ? v as String : null)(json['generic_search_term']);
+            v != null ? v as String : null)(json['generic_search_term']),
+        roomTypes = ((v) => v != null
+            ? (v as List).map((v) => v as String).toList()
+            : null)(json['room_types']);
   Map<String, dynamic> toJson() {
     final genericSearchTerm = this.genericSearchTerm;
+    final roomTypes = this.roomTypes;
     return {
       if (genericSearchTerm != null) 'generic_search_term': genericSearchTerm,
+      if (roomTypes != null) 'room_types': roomTypes.map((v) => v).toList(),
     };
   }
 
-  /// A string to search for in the room metadata, e.g. name,
-  /// topic, canonical alias etc. (Optional).
+  /// An optional string to search for in the room metadata, e.g. name,
+  /// topic, canonical alias, etc.
   String? genericSearchTerm;
+
+  /// An optional list of [room types](https://spec.matrix.org/unstable/client-server-api/#types) to search
+  /// for. To include rooms without a room type, specify `null` within this
+  /// list. When not specified, all applicable rooms (regardless of type)
+  /// are returned.
+  List<String>? roomTypes;
 }
 
 /// A list of the rooms on the server.
@@ -1797,6 +2025,44 @@ enum PushRuleKind {
   underride
 }
 
+@_NameSource('generated')
+class RefreshResponse {
+  RefreshResponse({
+    required this.accessToken,
+    this.expiresInMs,
+    this.refreshToken,
+  });
+
+  RefreshResponse.fromJson(Map<String, dynamic> json)
+      : accessToken = json['access_token'] as String,
+        expiresInMs =
+            ((v) => v != null ? v as int : null)(json['expires_in_ms']),
+        refreshToken =
+            ((v) => v != null ? v as String : null)(json['refresh_token']);
+  Map<String, dynamic> toJson() {
+    final expiresInMs = this.expiresInMs;
+    final refreshToken = this.refreshToken;
+    return {
+      'access_token': accessToken,
+      if (expiresInMs != null) 'expires_in_ms': expiresInMs,
+      if (refreshToken != null) 'refresh_token': refreshToken,
+    };
+  }
+
+  /// The new access token to use.
+  String accessToken;
+
+  /// The lifetime of the access token, in milliseconds. If not
+  /// given, the client can assume that the access token will not
+  /// expire.
+  int? expiresInMs;
+
+  /// The new refresh token to use when the access token needs to
+  /// be refreshed again. If not given, the old refresh token can
+  /// be re-used.
+  String? refreshToken;
+}
+
 @_NameSource('rule override generated')
 @EnhancedEnum()
 enum AccountKind {
@@ -1811,7 +2077,9 @@ class RegisterResponse {
   RegisterResponse({
     this.accessToken,
     this.deviceId,
+    this.expiresInMs,
     this.homeServer,
+    this.refreshToken,
     required this.userId,
   });
 
@@ -1819,17 +2087,25 @@ class RegisterResponse {
       : accessToken =
             ((v) => v != null ? v as String : null)(json['access_token']),
         deviceId = ((v) => v != null ? v as String : null)(json['device_id']),
+        expiresInMs =
+            ((v) => v != null ? v as int : null)(json['expires_in_ms']),
         homeServer =
             ((v) => v != null ? v as String : null)(json['home_server']),
+        refreshToken =
+            ((v) => v != null ? v as String : null)(json['refresh_token']),
         userId = json['user_id'] as String;
   Map<String, dynamic> toJson() {
     final accessToken = this.accessToken;
     final deviceId = this.deviceId;
+    final expiresInMs = this.expiresInMs;
     final homeServer = this.homeServer;
+    final refreshToken = this.refreshToken;
     return {
       if (accessToken != null) 'access_token': accessToken,
       if (deviceId != null) 'device_id': deviceId,
+      if (expiresInMs != null) 'expires_in_ms': expiresInMs,
       if (homeServer != null) 'home_server': homeServer,
+      if (refreshToken != null) 'refresh_token': refreshToken,
       'user_id': userId,
     };
   }
@@ -1844,6 +2120,16 @@ class RegisterResponse {
   /// Required if the `inhibit_login` option is false.
   String? deviceId;
 
+  /// The lifetime of the access token, in milliseconds. Once
+  /// the access token has expired a new access token can be
+  /// obtained by using the provided refresh token. If no
+  /// refresh token is provided, the client will need to re-log in
+  /// to obtain a new access token. If not given, the client can
+  /// assume that the access token will not expire.
+  ///
+  /// Omitted if the `inhibit_login` option is true.
+  int? expiresInMs;
+
   /// The server_name of the homeserver on which the account has
   /// been registered.
   ///
@@ -1851,6 +2137,13 @@ class RegisterResponse {
   /// `user_id` (by splitting at the first colon) if they require
   /// it. Note also that `homeserver` is not spelt this way.
   String? homeServer;
+
+  /// A refresh token for the account. This token can be used to
+  /// obtain a new access token when it expires by calling the
+  /// `/refresh` endpoint.
+  ///
+  /// Omitted if the `inhibit_login` option is true.
+  String? refreshToken;
 
   /// The fully-qualified Matrix user ID (MXID) that has been registered.
   ///
@@ -2161,15 +2454,6 @@ enum Membership {
   leave
 }
 
-@_NameSource('rule override generated')
-@EnhancedEnum()
-enum Direction {
-  @EnhancedEnumValue(name: 'b')
-  b,
-  @EnhancedEnumValue(name: 'f')
-  f
-}
-
 /// A list of messages with a new token to request more.
 @_NameSource('generated')
 class GetRoomEventsResponse {
@@ -2237,8 +2521,12 @@ class GetRoomEventsResponse {
 @_NameSource('generated')
 @EnhancedEnum()
 enum ReceiptType {
+  @EnhancedEnumValue(name: 'm.fully_read')
+  mFullyRead,
   @EnhancedEnumValue(name: 'm.read')
-  mRead
+  mRead,
+  @EnhancedEnumValue(name: 'm.read.private')
+  mReadPrivate
 }
 
 @_NameSource('spec')
@@ -2344,6 +2632,7 @@ class RoomEventFilter {
     this.lazyLoadMembers,
     this.notRooms,
     this.rooms,
+    this.unreadThreadNotifications,
   });
 
   RoomEventFilter.fromJson(Map<String, dynamic> json)
@@ -2358,13 +2647,16 @@ class RoomEventFilter {
             : null)(json['not_rooms']),
         rooms = ((v) => v != null
             ? (v as List).map((v) => v as String).toList()
-            : null)(json['rooms']);
+            : null)(json['rooms']),
+        unreadThreadNotifications = ((v) =>
+            v != null ? v as bool : null)(json['unread_thread_notifications']);
   Map<String, dynamic> toJson() {
     final containsUrl = this.containsUrl;
     final includeRedundantMembers = this.includeRedundantMembers;
     final lazyLoadMembers = this.lazyLoadMembers;
     final notRooms = this.notRooms;
     final rooms = this.rooms;
+    final unreadThreadNotifications = this.unreadThreadNotifications;
     return {
       if (containsUrl != null) 'contains_url': containsUrl,
       if (includeRedundantMembers != null)
@@ -2372,6 +2664,8 @@ class RoomEventFilter {
       if (lazyLoadMembers != null) 'lazy_load_members': lazyLoadMembers,
       if (notRooms != null) 'not_rooms': notRooms.map((v) => v).toList(),
       if (rooms != null) 'rooms': rooms.map((v) => v).toList(),
+      if (unreadThreadNotifications != null)
+        'unread_thread_notifications': unreadThreadNotifications,
     };
   }
 
@@ -2395,6 +2689,10 @@ class RoomEventFilter {
 
   /// A list of room IDs to include. If this list is absent then all rooms are included.
   List<String>? rooms;
+
+  /// If `true`, enables per-[thread](https://spec.matrix.org/unstable/client-server-api/#threading) notification
+  /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
+  bool? unreadThreadNotifications;
 }
 
 @_NameSource('rule override generated')
@@ -2410,6 +2708,7 @@ class SearchFilter implements EventFilter, RoomEventFilter {
     this.lazyLoadMembers,
     this.notRooms,
     this.rooms,
+    this.unreadThreadNotifications,
   });
 
   SearchFilter.fromJson(Map<String, dynamic> json)
@@ -2437,7 +2736,9 @@ class SearchFilter implements EventFilter, RoomEventFilter {
             : null)(json['not_rooms']),
         rooms = ((v) => v != null
             ? (v as List).map((v) => v as String).toList()
-            : null)(json['rooms']);
+            : null)(json['rooms']),
+        unreadThreadNotifications = ((v) =>
+            v != null ? v as bool : null)(json['unread_thread_notifications']);
   Map<String, dynamic> toJson() {
     final limit = this.limit;
     final notSenders = this.notSenders;
@@ -2449,6 +2750,7 @@ class SearchFilter implements EventFilter, RoomEventFilter {
     final lazyLoadMembers = this.lazyLoadMembers;
     final notRooms = this.notRooms;
     final rooms = this.rooms;
+    final unreadThreadNotifications = this.unreadThreadNotifications;
     return {
       if (limit != null) 'limit': limit,
       if (notSenders != null) 'not_senders': notSenders.map((v) => v).toList(),
@@ -2461,6 +2763,8 @@ class SearchFilter implements EventFilter, RoomEventFilter {
       if (lazyLoadMembers != null) 'lazy_load_members': lazyLoadMembers,
       if (notRooms != null) 'not_rooms': notRooms.map((v) => v).toList(),
       if (rooms != null) 'rooms': rooms.map((v) => v).toList(),
+      if (unreadThreadNotifications != null)
+        'unread_thread_notifications': unreadThreadNotifications,
     };
   }
 
@@ -2499,6 +2803,10 @@ class SearchFilter implements EventFilter, RoomEventFilter {
 
   /// A list of room IDs to include. If this list is absent then all rooms are included.
   List<String>? rooms;
+
+  /// If `true`, enables per-[thread](https://spec.matrix.org/unstable/client-server-api/#threading) notification
+  /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
+  bool? unreadThreadNotifications;
 }
 
 @_NameSource('rule override generated')
@@ -3145,6 +3453,7 @@ class StateFilter implements EventFilter, RoomEventFilter {
     this.lazyLoadMembers,
     this.notRooms,
     this.rooms,
+    this.unreadThreadNotifications,
   });
 
   StateFilter.fromJson(Map<String, dynamic> json)
@@ -3172,7 +3481,9 @@ class StateFilter implements EventFilter, RoomEventFilter {
             : null)(json['not_rooms']),
         rooms = ((v) => v != null
             ? (v as List).map((v) => v as String).toList()
-            : null)(json['rooms']);
+            : null)(json['rooms']),
+        unreadThreadNotifications = ((v) =>
+            v != null ? v as bool : null)(json['unread_thread_notifications']);
   Map<String, dynamic> toJson() {
     final limit = this.limit;
     final notSenders = this.notSenders;
@@ -3184,6 +3495,7 @@ class StateFilter implements EventFilter, RoomEventFilter {
     final lazyLoadMembers = this.lazyLoadMembers;
     final notRooms = this.notRooms;
     final rooms = this.rooms;
+    final unreadThreadNotifications = this.unreadThreadNotifications;
     return {
       if (limit != null) 'limit': limit,
       if (notSenders != null) 'not_senders': notSenders.map((v) => v).toList(),
@@ -3196,6 +3508,8 @@ class StateFilter implements EventFilter, RoomEventFilter {
       if (lazyLoadMembers != null) 'lazy_load_members': lazyLoadMembers,
       if (notRooms != null) 'not_rooms': notRooms.map((v) => v).toList(),
       if (rooms != null) 'rooms': rooms.map((v) => v).toList(),
+      if (unreadThreadNotifications != null)
+        'unread_thread_notifications': unreadThreadNotifications,
     };
   }
 
@@ -3234,6 +3548,10 @@ class StateFilter implements EventFilter, RoomEventFilter {
 
   /// A list of room IDs to include. If this list is absent then all rooms are included.
   List<String>? rooms;
+
+  /// If `true`, enables per-[thread](https://spec.matrix.org/unstable/client-server-api/#threading) notification
+  /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
+  bool? unreadThreadNotifications;
 }
 
 @_NameSource('spec')
@@ -3287,7 +3605,7 @@ class RoomFilter {
   /// The per user account data to include for rooms.
   StateFilter? accountData;
 
-  /// The events that aren't recorded in the room history, e.g. typing and receipts, to include for rooms.
+  /// The ephemeral events to include for rooms. These are the events that appear in the `ephemeral` property in the `/sync` response.
   StateFilter? ephemeral;
 
   /// Include rooms that the user has left in the sync, default false

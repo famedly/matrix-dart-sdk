@@ -119,6 +119,277 @@ class Api {
     return GetSpaceHierarchyResponse.fromJson(json);
   }
 
+  /// Retrieve all of the child events for a given parent event.
+  ///
+  /// Note that when paginating the `from` token should be "after" the `to` token in
+  /// terms of topological ordering, because it is only possible to paginate "backwards"
+  /// through events, starting at `from`.
+  ///
+  /// For example, passing a `from` token from page 2 of the results, and a `to` token
+  /// from page 1, would return the empty set. The caller can use a `from` token from
+  /// page 1 and a `to` token from page 2 to paginate over the same range, however.
+  ///
+  /// [roomId] The ID of the room containing the parent event.
+  ///
+  /// [eventId] The ID of the parent event whose child events are to be returned.
+  ///
+  /// [from] The pagination token to start returning results from. If not supplied, results
+  /// start at the most recent topological event known to the server.
+  ///
+  /// Can be a `next_batch` or `prev_batch` token from a previous call, or a returned
+  /// `start` token from [`/messages`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3roomsroomidmessages),
+  /// or a `next_batch` token from [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3sync).
+  ///
+  /// [to] The pagination token to stop returning results at. If not supplied, results
+  /// continue up to `limit` or until there are no more events.
+  ///
+  /// Like `from`, this can be a previous token from a prior call to this endpoint
+  /// or from `/messages` or `/sync`.
+  ///
+  /// [limit] The maximum number of results to return in a single `chunk`. The server can
+  /// and should apply a maximum value to this parameter to avoid large responses.
+  ///
+  /// Similarly, the server should apply a default value when not supplied.
+  ///
+  /// [dir] Optional (default `b`) direction to return events from. If this is set to `f`, events
+  /// will be returned in chronological order starting at `from`. If it
+  /// is set to `b`, events will be returned in *reverse* chronological
+  /// order, again starting at `from`.
+  Future<GetRelatingEventsResponse> getRelatingEvents(
+      String roomId, String eventId,
+      {String? from, String? to, int? limit, Direction? dir}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/v1/rooms/${Uri.encodeComponent(roomId)}/relations/${Uri.encodeComponent(eventId)}',
+        queryParameters: {
+          if (from != null) 'from': from,
+          if (to != null) 'to': to,
+          if (limit != null) 'limit': limit.toString(),
+          if (dir != null) 'dir': dir.name,
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetRelatingEventsResponse.fromJson(json);
+  }
+
+  /// Retrieve all of the child events for a given parent event which relate to the parent
+  /// using the given `relType`.
+  ///
+  /// Note that when paginating the `from` token should be "after" the `to` token in
+  /// terms of topological ordering, because it is only possible to paginate "backwards"
+  /// through events, starting at `from`.
+  ///
+  /// For example, passing a `from` token from page 2 of the results, and a `to` token
+  /// from page 1, would return the empty set. The caller can use a `from` token from
+  /// page 1 and a `to` token from page 2 to paginate over the same range, however.
+  ///
+  /// [roomId] The ID of the room containing the parent event.
+  ///
+  /// [eventId] The ID of the parent event whose child events are to be returned.
+  ///
+  /// [relType] The [relationship type](https://spec.matrix.org/unstable/client-server-api/#relationship-types) to search for.
+  ///
+  /// [from] The pagination token to start returning results from. If not supplied, results
+  /// start at the most recent topological event known to the server.
+  ///
+  /// Can be a `next_batch` or `prev_batch` token from a previous call, or a returned
+  /// `start` token from [`/messages`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3roomsroomidmessages),
+  /// or a `next_batch` token from [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3sync).
+  ///
+  /// [to] The pagination token to stop returning results at. If not supplied, results
+  /// continue up to `limit` or until there are no more events.
+  ///
+  /// Like `from`, this can be a previous token from a prior call to this endpoint
+  /// or from `/messages` or `/sync`.
+  ///
+  /// [limit] The maximum number of results to return in a single `chunk`. The server can
+  /// and should apply a maximum value to this parameter to avoid large responses.
+  ///
+  /// Similarly, the server should apply a default value when not supplied.
+  ///
+  /// [dir] Optional (default `b`) direction to return events from. If this is set to `f`, events
+  /// will be returned in chronological order starting at `from`. If it
+  /// is set to `b`, events will be returned in *reverse* chronological
+  /// order, again starting at `from`.
+  Future<GetRelatingEventsWithRelTypeResponse> getRelatingEventsWithRelType(
+      String roomId, String eventId, String relType,
+      {String? from, String? to, int? limit, Direction? dir}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/v1/rooms/${Uri.encodeComponent(roomId)}/relations/${Uri.encodeComponent(eventId)}/${Uri.encodeComponent(relType)}',
+        queryParameters: {
+          if (from != null) 'from': from,
+          if (to != null) 'to': to,
+          if (limit != null) 'limit': limit.toString(),
+          if (dir != null) 'dir': dir.name,
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetRelatingEventsWithRelTypeResponse.fromJson(json);
+  }
+
+  /// Retrieve all of the child events for a given parent event which relate to the parent
+  /// using the given `relType` and have the given `eventType`.
+  ///
+  /// Note that when paginating the `from` token should be "after" the `to` token in
+  /// terms of topological ordering, because it is only possible to paginate "backwards"
+  /// through events, starting at `from`.
+  ///
+  /// For example, passing a `from` token from page 2 of the results, and a `to` token
+  /// from page 1, would return the empty set. The caller can use a `from` token from
+  /// page 1 and a `to` token from page 2 to paginate over the same range, however.
+  ///
+  /// [roomId] The ID of the room containing the parent event.
+  ///
+  /// [eventId] The ID of the parent event whose child events are to be returned.
+  ///
+  /// [relType] The [relationship type](https://spec.matrix.org/unstable/client-server-api/#relationship-types) to search for.
+  ///
+  /// [eventType] The event type of child events to search for.
+  ///
+  /// Note that in encrypted rooms this will typically always be `m.room.encrypted`
+  /// regardless of the event type contained within the encrypted payload.
+  ///
+  /// [from] The pagination token to start returning results from. If not supplied, results
+  /// start at the most recent topological event known to the server.
+  ///
+  /// Can be a `next_batch` or `prev_batch` token from a previous call, or a returned
+  /// `start` token from [`/messages`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3roomsroomidmessages),
+  /// or a `next_batch` token from [`/sync`](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3sync).
+  ///
+  /// [to] The pagination token to stop returning results at. If not supplied, results
+  /// continue up to `limit` or until there are no more events.
+  ///
+  /// Like `from`, this can be a previous token from a prior call to this endpoint
+  /// or from `/messages` or `/sync`.
+  ///
+  /// [limit] The maximum number of results to return in a single `chunk`. The server can
+  /// and should apply a maximum value to this parameter to avoid large responses.
+  ///
+  /// Similarly, the server should apply a default value when not supplied.
+  ///
+  /// [dir] Optional (default `b`) direction to return events from. If this is set to `f`, events
+  /// will be returned in chronological order starting at `from`. If it
+  /// is set to `b`, events will be returned in *reverse* chronological
+  /// order, again starting at `from`.
+  Future<GetRelatingEventsWithRelTypeAndEventTypeResponse>
+      getRelatingEventsWithRelTypeAndEventType(
+          String roomId, String eventId, String relType, String eventType,
+          {String? from, String? to, int? limit, Direction? dir}) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/v1/rooms/${Uri.encodeComponent(roomId)}/relations/${Uri.encodeComponent(eventId)}/${Uri.encodeComponent(relType)}/${Uri.encodeComponent(eventType)}',
+        queryParameters: {
+          if (from != null) 'from': from,
+          if (to != null) 'to': to,
+          if (limit != null) 'limit': limit.toString(),
+          if (dir != null) 'dir': dir.name,
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetRelatingEventsWithRelTypeAndEventTypeResponse.fromJson(json);
+  }
+
+  /// Paginates over the thread roots in a room, ordered by the `latest_event` of each thread root
+  /// in its bundle.
+  ///
+  /// [roomId] The room ID where the thread roots are located.
+  ///
+  /// [include] Optional (default `all`) flag to denote which thread roots are of interest to the caller.
+  /// When `all`, all thread roots found in the room are returned. When `participated`, only
+  /// thread roots for threads the user has [participated in](https://spec.matrix.org/unstable/client-server-api/#server-side-aggregation-of-mthread-relationships)
+  /// will be returned.
+  ///
+  /// [limit] Optional limit for the maximum number of thread roots to include per response. Must be an integer
+  /// greater than zero.
+  ///
+  /// Servers should apply a default value, and impose a maximum value to avoid resource exhaustion.
+  ///
+  /// [from] A pagination token from a previous result. When not provided, the server starts paginating from
+  /// the most recent event visible to the user (as per history visibility rules; topologically).
+  Future<GetThreadRootsResponse> getThreadRoots(String roomId,
+      {Include? include, int? limit, String? from}) async {
+    final requestUri = Uri(
+        path: '_matrix/client/v1/rooms/${Uri.encodeComponent(roomId)}/threads',
+        queryParameters: {
+          if (include != null) 'include': include.name,
+          if (limit != null) 'limit': limit.toString(),
+          if (from != null) 'from': from,
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetThreadRootsResponse.fromJson(json);
+  }
+
+  /// Get the ID of the event closest to the given timestamp, in the
+  /// direction specified by the `dir` parameter.
+  ///
+  /// If the server does not have all of the room history and does not have
+  /// an event suitably close to the requested timestamp, it can use the
+  /// corresponding [federation endpoint](https://spec.matrix.org/unstable/server-server-api/#get_matrixfederationv1timestamp_to_eventroomid)
+  /// to ask other servers for a suitable event.
+  ///
+  /// After calling this endpoint, clients can call
+  /// [`/rooms/{roomId}/context/{eventId}`](#get_matrixclientv3roomsroomidcontexteventid)
+  /// to obtain a pagination token to retrieve the events around the returned event.
+  ///
+  /// The event returned by this endpoint could be an event that the client
+  /// cannot render, and so may need to paginate in order to locate an event
+  /// that it can display, which may end up being outside of the client's
+  /// suitable range.  Clients can employ different strategies to display
+  /// something reasonable to the user.  For example, the client could try
+  /// paginating in one direction for a while, while looking at the
+  /// timestamps of the events that it is paginating through, and if it
+  /// exceeds a certain difference from the target timestamp, it can try
+  /// paginating in the opposite direction.  The client could also simply
+  /// paginate in one direction and inform the user that the closest event
+  /// found in that direction is outside of the expected range.
+  ///
+  /// [roomId] The ID of the room to search
+  ///
+  /// [ts] The timestamp to search from, as given in milliseconds
+  /// since the Unix epoch.
+  ///
+  /// [dir] The direction in which to search.  `f` for forwards, `b` for backwards.
+  Future<GetEventByTimestampResponse> getEventByTimestamp(
+      String roomId, int ts, Direction dir) async {
+    final requestUri = Uri(
+        path:
+            '_matrix/client/v1/rooms/${Uri.encodeComponent(roomId)}/timestamp_to_event',
+        queryParameters: {
+          'ts': ts.toString(),
+          'dir': dir.name,
+        });
+    final request = Request('GET', baseUri!.resolveUri(requestUri));
+    request.headers['authorization'] = 'Bearer ${bearerToken!}';
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return GetEventByTimestampResponse.fromJson(json);
+  }
+
   /// Gets a list of the third party identifiers that the homeserver has
   /// associated with the user's account.
   ///
@@ -1134,7 +1405,9 @@ class Api {
   /// checks, delete the alias and return a successful response even if the user does not
   /// have permission to update the `m.room.canonical_alias` event.
   ///
-  /// [roomAlias] The room alias to remove.
+  /// [roomAlias] The room alias to remove. Its format is defined
+  /// [in the appendices](https://spec.matrix.org/unstable/appendices/#room-aliases).
+  ///
   Future<void> deleteRoomAlias(String roomAlias) async {
     final requestUri = Uri(
         path:
@@ -1155,7 +1428,9 @@ class Api {
   /// domain part of the alias does not correspond to the server's own
   /// domain.
   ///
-  /// [roomAlias] The room alias.
+  /// [roomAlias] The room alias. Its format is defined
+  /// [in the appendices](https://spec.matrix.org/unstable/appendices/#room-aliases).
+  ///
   Future<GetRoomIdByAliasResponse> getRoomIdByAlias(String roomAlias) async {
     final requestUri = Uri(
         path:
@@ -1171,7 +1446,9 @@ class Api {
 
   /// setRoomAlias
   ///
-  /// [roomAlias] The room alias to set.
+  /// [roomAlias] The room alias to set. Its format is defined
+  /// [in the appendices](https://spec.matrix.org/unstable/appendices/#room-aliases).
+  ///
   ///
   /// [roomId] The room ID to set.
   Future<void> setRoomAlias(String roomAlias, String roomId) async {
@@ -1277,7 +1554,7 @@ class Api {
     return MatrixEvent.fromJson(json);
   }
 
-  /// *Note that this API takes either a room ID or alias, unlike* `/room/{roomId}/join`.
+  /// *Note that this API takes either a room ID or alias, unlike* `/rooms/{roomId}/join`.
   ///
   /// This API starts a user participating in a particular room, if that user
   /// is allowed to participate in that room. After this call, the client is
@@ -1609,6 +1886,8 @@ class Api {
   /// [password] Required when `type` is `m.login.password`. The user's
   /// password.
   ///
+  /// [refreshToken] If true, the client supports refresh tokens.
+  ///
   /// [token] Required when `type` is `m.login.token`. Part of Token-based login.
   ///
   /// [type] The login type being used.
@@ -1621,6 +1900,7 @@ class Api {
       String? initialDeviceDisplayName,
       String? medium,
       String? password,
+      bool? refreshToken,
       String? token,
       String? user}) async {
     final requestUri = Uri(path: '_matrix/client/v3/login');
@@ -1634,6 +1914,7 @@ class Api {
         'initial_device_display_name': initialDeviceDisplayName,
       if (medium != null) 'medium': medium,
       if (password != null) 'password': password,
+      if (refreshToken != null) 'refresh_token': refreshToken,
       if (token != null) 'token': token,
       'type': type.name,
       if (user != null) 'user': user,
@@ -2037,9 +2318,20 @@ class Api {
     return PushRule.fromJson(json);
   }
 
-  /// This endpoint allows the creation, modification and deletion of pushers
-  /// for this user ID. The behaviour of this endpoint varies depending on the
-  /// values in the JSON body.
+  /// This endpoint allows the creation and modification of user defined push
+  /// rules.
+  ///
+  /// If a rule with the same `rule_id` already exists among rules of the same
+  /// kind, it is updated with the new parameters, otherwise a new rule is
+  /// created.
+  ///
+  /// If both `after` and `before` are provided, the new or updated rule must
+  /// be the next most important rule with respect to the rule identified by
+  /// `before`.
+  ///
+  /// If neither `after` nor `before` are provided and the rule is created, it
+  /// should be added as the most important user defined rule among rules of
+  /// the same kind.
   ///
   /// When creating push rules, they MUST be enabled by default.
   ///
@@ -2048,7 +2340,9 @@ class Api {
   /// [kind] The kind of rule
   ///
   ///
-  /// [ruleId] The identifier for the rule.
+  /// [ruleId] The identifier for the rule. If the string starts with a dot ("."),
+  /// the request MUST be rejected as this is reserved for server-default
+  /// rules. Slashes ("/") and backslashes ("\\") are also not allowed.
   ///
   ///
   /// [before] Use 'before' with a `rule_id` as its value to make the new rule the
@@ -2213,6 +2507,40 @@ class Api {
     return ignore(json);
   }
 
+  /// Refresh an access token. Clients should use the returned access token
+  /// when making subsequent API calls, and store the returned refresh token
+  /// (if given) in order to refresh the new access token when necessary.
+  ///
+  /// After an access token has been refreshed, a server can choose to
+  /// invalidate the old access token immediately, or can choose not to, for
+  /// example if the access token would expire soon anyways. Clients should
+  /// not make any assumptions about the old access token still being valid,
+  /// and should use the newly provided access token instead.
+  ///
+  /// The old refresh token remains valid until the new access token or refresh token
+  /// is used, at which point the old refresh token is revoked.
+  ///
+  /// Note that this endpoint does not require authentication via an
+  /// access token. Authentication is provided via the refresh token.
+  ///
+  /// Application Service identity assertion is disabled for this endpoint.
+  ///
+  /// [refreshToken] The refresh token
+  Future<RefreshResponse> refresh(String refreshToken) async {
+    final requestUri = Uri(path: '_matrix/client/v3/refresh');
+    final request = Request('POST', baseUri!.resolveUri(requestUri));
+    request.headers['content-type'] = 'application/json';
+    request.bodyBytes = utf8.encode(jsonEncode({
+      'refresh_token': refreshToken,
+    }));
+    final response = await httpClient.send(request);
+    final responseBody = await response.stream.toBytes();
+    if (response.statusCode != 200) unexpectedResponse(response, responseBody);
+    final responseString = utf8.decode(responseBody);
+    final json = jsonDecode(responseString);
+    return RefreshResponse.fromJson(json);
+  }
+
   /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api), except in
   /// the cases where a guest account is being registered.
   ///
@@ -2274,6 +2602,8 @@ class Api {
   ///
   /// [password] The desired password for the account.
   ///
+  /// [refreshToken] If true, the client supports refresh tokens.
+  ///
   /// [username] The basis for the localpart of the desired Matrix ID. If omitted,
   /// the homeserver MUST generate a Matrix ID local part.
   Future<RegisterResponse> register(
@@ -2283,6 +2613,7 @@ class Api {
       bool? inhibitLogin,
       String? initialDeviceDisplayName,
       String? password,
+      bool? refreshToken,
       String? username}) async {
     final requestUri =
         Uri(path: '_matrix/client/v3/register', queryParameters: {
@@ -2297,6 +2628,7 @@ class Api {
       if (initialDeviceDisplayName != null)
         'initial_device_display_name': initialDeviceDisplayName,
       if (password != null) 'password': password,
+      if (refreshToken != null) 'refresh_token': refreshToken,
       if (username != null) 'username': username,
     }));
     final response = await httpClient.send(request);
@@ -2861,7 +3193,10 @@ class Api {
   ///
   /// [eventId] The event to get context around.
   ///
-  /// [limit] The maximum number of events to return. Default: 10.
+  /// [limit] The maximum number of context events to return. The limit applies
+  /// to the sum of the `events_before` and `events_after` arrays. The
+  /// requested event ID is always returned in `event` even if `limit` is
+  /// 0. Defaults to 10.
   ///
   /// [filter] A JSON `RoomEventFilter` to filter the returned events with. The
   /// filter is only applied to `events_before`, `events_after`, and
@@ -2984,7 +3319,8 @@ class Api {
   ///
   /// [idServer] The hostname+port of the identity server which should be used for third party identifier lookups.
   ///
-  /// [medium] The kind of address being passed in the address field, for example `email`.
+  /// [medium] The kind of address being passed in the address field, for example
+  /// `email` (see [the list of recognised values](https://spec.matrix.org/unstable/appendices/#3pid-types)).
   Future<void> inviteBy3PID(String roomId, String address, String idAccessToken,
       String idServer, String medium) async {
     final requestUri = Uri(
@@ -3008,8 +3344,8 @@ class Api {
 
   /// *Note that there are two forms of this API, which are documented separately.
   /// This version of the API requires that the inviter knows the Matrix
-  /// identifier of the invitee. The other is documented in the*
-  /// [third party invites section](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3roomsroomidinvite-1).
+  /// identifier of the invitee. The other is documented in the
+  /// [third party invites](https://spec.matrix.org/unstable/client-server-api/#third-party-invites) section.*
   ///
   /// This API invites a user to participate in a particular room.
   /// They do not start participating in the room until they actually join the
@@ -3280,8 +3616,12 @@ class Api {
   /// [mRead] The event ID to set the read receipt location at. This is
   /// equivalent to calling `/receipt/m.read/$elsewhere:example.org`
   /// and is provided here to save that extra call.
-  Future<void> setReadMarker(String roomId, String mFullyRead,
-      {String? mRead}) async {
+  ///
+  /// [mReadPrivate] The event ID to set the *private* read receipt location at. This
+  /// equivalent to calling `/receipt/m.read.private/$elsewhere:example.org`
+  /// and is provided here to save that extra call.
+  Future<void> setReadMarker(String roomId,
+      {String? mFullyRead, String? mRead, String? mReadPrivate}) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/read_markers');
@@ -3289,8 +3629,9 @@ class Api {
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode({
-      'm.fully_read': mFullyRead,
+      if (mFullyRead != null) 'm.fully_read': mFullyRead,
       if (mRead != null) 'm.read': mRead,
+      if (mReadPrivate != null) 'm.read.private': mReadPrivate,
     }));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
@@ -3305,21 +3646,31 @@ class Api {
   ///
   /// [roomId] The room in which to send the event.
   ///
-  /// [receiptType] The type of receipt to send.
+  /// [receiptType] The type of receipt to send. This can also be `m.fully_read` as an
+  /// alternative to [`/read_markers`](https://spec.matrix.org/unstable/client-server-api/#post_matrixclientv3roomsroomidread_markers).
+  ///
+  /// Note that `m.fully_read` does not appear under `m.receipt`: this endpoint
+  /// effectively calls `/read_markers` internally when presented with a receipt
+  /// type of `m.fully_read`.
   ///
   /// [eventId] The event ID to acknowledge up to.
   ///
-  /// [receipt] Extra receipt information to attach to `content` if any. The
-  /// server will automatically set the `ts` field.
-  Future<void> postReceipt(String roomId, ReceiptType receiptType,
-      String eventId, Map<String, dynamic> receipt) async {
+  /// [threadId] The root thread event's ID (or `main`) for which
+  /// thread this receipt is intended to be under. If
+  /// not specified, the read receipt is *unthreaded*
+  /// (default).
+  Future<void> postReceipt(
+      String roomId, ReceiptType receiptType, String eventId,
+      {String? threadId}) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/receipt/${Uri.encodeComponent(receiptType.name)}/${Uri.encodeComponent(eventId)}');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
-    request.bodyBytes = utf8.encode(jsonEncode(receipt));
+    request.bodyBytes = utf8.encode(jsonEncode({
+      if (threadId != null) 'thread_id': threadId,
+    }));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
@@ -3344,7 +3695,7 @@ class Api {
   ///
   /// [eventId] The ID of the event to redact
   ///
-  /// [txnId] The transaction ID for this event. Clients should generate a
+  /// [txnId] The [transaction ID](https://spec.matrix.org/unstable/client-server-api/#transaction-identifiers) for this event. Clients should generate a
   /// unique ID; it will be used by the server to ensure idempotency of requests.
   ///
   /// [reason] The reason for the event being redacted.
@@ -3413,7 +3764,7 @@ class Api {
   ///
   /// [eventType] The type of event to send.
   ///
-  /// [txnId] The transaction ID for this event. Clients should generate an
+  /// [txnId] The [transaction ID](https://spec.matrix.org/unstable/client-server-api/#transaction-identifiers) for this event. Clients should generate an
   /// ID unique across requests with the same access token; it will be
   /// used by the server to ensure idempotency of requests.
   ///
@@ -3640,7 +3991,7 @@ class Api {
   ///
   /// [eventType] The type of event to send.
   ///
-  /// [txnId] The transaction ID for this event. Clients should generate an
+  /// [txnId] The [transaction ID](https://spec.matrix.org/unstable/client-server-api/#transaction-identifiers) for this event. Clients should generate an
   /// ID unique across requests with the same access token; it will be
   /// used by the server to ensure idempotency of requests.
   ///
@@ -3877,13 +4228,13 @@ class Api {
     return (json as List).map((v) => ThirdPartyUser.fromJson(v)).toList();
   }
 
-  /// Get some account_data for the client. This config is only visible to the user
-  /// that set the account_data.
+  /// Get some account data for the client. This config is only visible to the user
+  /// that set the account data.
   ///
-  /// [userId] The ID of the user to get account_data for. The access token must be
+  /// [userId] The ID of the user to get account data for. The access token must be
   /// authorized to make requests for this user ID.
   ///
-  /// [type] The event type of the account_data to get. Custom types should be
+  /// [type] The event type of the account data to get. Custom types should be
   /// namespaced to avoid clashes.
   Future<Map<String, dynamic>> getAccountData(
       String userId, String type) async {
@@ -3900,17 +4251,18 @@ class Api {
     return json as Map<String, dynamic>;
   }
 
-  /// Set some account_data for the client. This config is only visible to the user
-  /// that set the account_data. The config will be synced to clients in the
-  /// top-level `account_data`.
+  /// Set some account data for the client. This config is only visible to the user
+  /// that set the account data. The config will be available to clients through the
+  /// top-level `account_data` field in the homeserver response to
+  /// [/sync](#get_matrixclientv3sync).
   ///
-  /// [userId] The ID of the user to set account_data for. The access token must be
+  /// [userId] The ID of the user to set account data for. The access token must be
   /// authorized to make requests for this user ID.
   ///
-  /// [type] The event type of the account_data to set. Custom types should be
+  /// [type] The event type of the account data to set. Custom types should be
   /// namespaced to avoid clashes.
   ///
-  /// [content] The content of the account_data
+  /// [content] The content of the account data.
   Future<void> setAccountData(
       String userId, String type, Map<String, dynamic> content) async {
     final requestUri = Uri(
@@ -3984,7 +4336,7 @@ class Api {
   /// be used to request another OpenID access token or call `/sync`, for
   /// example.
   ///
-  /// [userId] The user to request and OpenID token for. Should be the user who
+  /// [userId] The user to request an OpenID token for. Should be the user who
   /// is authenticated for the request.
   ///
   /// [body] An empty object. Reserved for future expansion.
@@ -4005,15 +4357,15 @@ class Api {
     return OpenIdCredentials.fromJson(json);
   }
 
-  /// Get some account_data for the client on a given room. This config is only
-  /// visible to the user that set the account_data.
+  /// Get some account data for the client on a given room. This config is only
+  /// visible to the user that set the account data.
   ///
-  /// [userId] The ID of the user to set account_data for. The access token must be
+  /// [userId] The ID of the user to get account data for. The access token must be
   /// authorized to make requests for this user ID.
   ///
-  /// [roomId] The ID of the room to get account_data for.
+  /// [roomId] The ID of the room to get account data for.
   ///
-  /// [type] The event type of the account_data to get. Custom types should be
+  /// [type] The event type of the account data to get. Custom types should be
   /// namespaced to avoid clashes.
   Future<Map<String, dynamic>> getAccountDataPerRoom(
       String userId, String roomId, String type) async {
@@ -4030,19 +4382,19 @@ class Api {
     return json as Map<String, dynamic>;
   }
 
-  /// Set some account_data for the client on a given room. This config is only
-  /// visible to the user that set the account_data. The config will be synced to
-  /// clients in the per-room `account_data`.
+  /// Set some account data for the client on a given room. This config is only
+  /// visible to the user that set the account data. The config will be delivered to
+  /// clients in the per-room entries via [/sync](#get_matrixclientv3sync).
   ///
-  /// [userId] The ID of the user to set account_data for. The access token must be
+  /// [userId] The ID of the user to set account data for. The access token must be
   /// authorized to make requests for this user ID.
   ///
-  /// [roomId] The ID of the room to set account_data on.
+  /// [roomId] The ID of the room to set account data on.
   ///
-  /// [type] The event type of the account_data to set. Custom types should be
+  /// [type] The event type of the account data to set. Custom types should be
   /// namespaced to avoid clashes.
   ///
-  /// [content] The content of the account_data
+  /// [content] The content of the account data.
   Future<void> setAccountDataPerRoom(String userId, String roomId, String type,
       Map<String, dynamic> content) async {
     final requestUri = Uri(
