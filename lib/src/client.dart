@@ -450,6 +450,7 @@ class Client extends MatrixApi {
     String? deviceId,
     String? initialDeviceDisplayName,
     bool? inhibitLogin,
+    bool? refreshToken,
     AuthenticationData? auth,
     AccountKind? kind,
   }) async {
@@ -496,6 +497,7 @@ class Client extends MatrixApi {
     String? token,
     String? deviceId,
     String? initialDeviceDisplayName,
+    bool? refreshToken,
     @Deprecated('Deprecated in favour of identifier.') String? user,
     @Deprecated('Deprecated in favour of identifier.') String? medium,
     @Deprecated('Deprecated in favour of identifier.') String? address,
@@ -530,11 +532,8 @@ class Client extends MatrixApi {
     final deviceId_ = response.deviceId;
     final userId = response.userId;
     final homeserver_ = homeserver;
-    if (accessToken == null ||
-        deviceId_ == null ||
-        userId == null ||
-        homeserver_ == null) {
-      throw Exception('Registered but token, device ID or user ID is null.');
+    if (homeserver_ == null) {
+      throw Exception('Registered but homerserver is null.');
     }
     await init(
       newToken: accessToken,
