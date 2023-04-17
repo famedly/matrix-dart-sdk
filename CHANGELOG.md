@@ -1,3 +1,10 @@
+## [1.6.1] - 17th Apr 2023
+
+Fixes a small issue in the last release, where some enhanced enums were not
+updated and as such missing a few members.
+
+- fix: Update the generated enum files
+
 ## [1.6.0] - 17th Apr 2023
 
 This release updates to version 1.6 of the Matrix specification. Users might

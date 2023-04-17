@@ -6,6 +6,88 @@ part of 'model.dart';
 // EnhancedEnumGenerator
 // **************************************************************************
 
+extension DirectionFromStringExtension on Iterable<Direction> {
+  Direction? fromString(String val) {
+    final override = {
+      'b': Direction.b,
+      'f': Direction.f,
+    }[val];
+// ignore: unnecessary_this
+    return this.contains(override) ? override : null;
+  }
+}
+
+extension DirectionEnhancedEnum on Direction {
+  @override
+// ignore: override_on_non_overriding_member
+  String get name => {
+        Direction.b: 'b',
+        Direction.f: 'f',
+      }[this]!;
+  bool get isB => this == Direction.b;
+  bool get isF => this == Direction.f;
+  T when<T>({
+    required T Function() b,
+    required T Function() f,
+  }) =>
+      {
+        Direction.b: b,
+        Direction.f: f,
+      }[this]!();
+  T maybeWhen<T>({
+    T? Function()? b,
+    T? Function()? f,
+    required T Function() orElse,
+  }) =>
+      {
+        Direction.b: b,
+        Direction.f: f,
+      }[this]
+          ?.call() ??
+      orElse();
+}
+
+extension IncludeFromStringExtension on Iterable<Include> {
+  Include? fromString(String val) {
+    final override = {
+      'all': Include.all,
+      'participated': Include.participated,
+    }[val];
+// ignore: unnecessary_this
+    return this.contains(override) ? override : null;
+  }
+}
+
+extension IncludeEnhancedEnum on Include {
+  @override
+// ignore: override_on_non_overriding_member
+  String get name => {
+        Include.all: 'all',
+        Include.participated: 'participated',
+      }[this]!;
+  bool get isAll => this == Include.all;
+  bool get isParticipated => this == Include.participated;
+  T when<T>({
+    required T Function() all,
+    required T Function() participated,
+  }) =>
+      {
+        Include.all: all,
+        Include.participated: participated,
+      }[this]!();
+  T maybeWhen<T>({
+    T? Function()? all,
+    T? Function()? participated,
+    required T Function() orElse,
+  }) =>
+      {
+        Include.all: all,
+        Include.participated: participated,
+      }[this]
+          ?.call() ??
+      orElse();
+}
+
 extension ThirdPartyIdentifierMediumFromStringExtension
     on Iterable<ThirdPartyIdentifierMedium> {
   ThirdPartyIdentifierMedium? fromString(String val) {
@@ -514,51 +596,12 @@ extension MembershipEnhancedEnum on Membership {
       orElse();
 }
 
-extension DirectionFromStringExtension on Iterable<Direction> {
-  Direction? fromString(String val) {
-    final override = {
-      'b': Direction.b,
-      'f': Direction.f,
-    }[val];
-// ignore: unnecessary_this
-    return this.contains(override) ? override : null;
-  }
-}
-
-extension DirectionEnhancedEnum on Direction {
-  @override
-// ignore: override_on_non_overriding_member
-  String get name => {
-        Direction.b: 'b',
-        Direction.f: 'f',
-      }[this]!;
-  bool get isB => this == Direction.b;
-  bool get isF => this == Direction.f;
-  T when<T>({
-    required T Function() b,
-    required T Function() f,
-  }) =>
-      {
-        Direction.b: b,
-        Direction.f: f,
-      }[this]!();
-  T maybeWhen<T>({
-    T? Function()? b,
-    T? Function()? f,
-    required T Function() orElse,
-  }) =>
-      {
-        Direction.b: b,
-        Direction.f: f,
-      }[this]
-          ?.call() ??
-      orElse();
-}
-
 extension ReceiptTypeFromStringExtension on Iterable<ReceiptType> {
   ReceiptType? fromString(String val) {
     final override = {
+      'm.fully_read': ReceiptType.mFullyRead,
       'm.read': ReceiptType.mRead,
+      'm.read.private': ReceiptType.mReadPrivate,
     }[val];
 // ignore: unnecessary_this
     return this.contains(override) ? override : null;
@@ -569,21 +612,33 @@ extension ReceiptTypeEnhancedEnum on ReceiptType {
   @override
 // ignore: override_on_non_overriding_member
   String get name => {
+        ReceiptType.mFullyRead: 'm.fully_read',
         ReceiptType.mRead: 'm.read',
+        ReceiptType.mReadPrivate: 'm.read.private',
       }[this]!;
+  bool get isMFullyRead => this == ReceiptType.mFullyRead;
   bool get isMRead => this == ReceiptType.mRead;
+  bool get isMReadPrivate => this == ReceiptType.mReadPrivate;
   T when<T>({
+    required T Function() mFullyRead,
     required T Function() mRead,
+    required T Function() mReadPrivate,
   }) =>
       {
+        ReceiptType.mFullyRead: mFullyRead,
         ReceiptType.mRead: mRead,
+        ReceiptType.mReadPrivate: mReadPrivate,
       }[this]!();
   T maybeWhen<T>({
+    T? Function()? mFullyRead,
     T? Function()? mRead,
+    T? Function()? mReadPrivate,
     required T Function() orElse,
   }) =>
       {
+        ReceiptType.mFullyRead: mFullyRead,
         ReceiptType.mRead: mRead,
+        ReceiptType.mReadPrivate: mReadPrivate,
       }[this]
           ?.call() ??
       orElse();
