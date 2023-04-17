@@ -32,6 +32,7 @@ abstract class RelationshipTypes {
   static const String reply = 'm.in_reply_to';
   static const String edit = 'm.replace';
   static const String reaction = 'm.annotation';
+  static const String thread = 'm.thread';
 }
 
 /// All data exchanged over Matrix is expressed as an "event". Typically each client action (e.g. sending a message) correlates with exactly one event.
@@ -45,6 +46,7 @@ class Event extends MatrixEvent {
   @Deprecated(
       'Use eventSender instead or senderFromMemoryOrFallback for a synchronous alternative')
   User get sender => senderFromMemoryOrFallback;
+
   User get senderFromMemoryOrFallback =>
       room.unsafeGetUserFromMemoryOrFallback(senderId);
 
@@ -72,6 +74,7 @@ class Event extends MatrixEvent {
       : null;
 
   MatrixEvent? _originalSource;
+
   MatrixEvent? get originalSource => _originalSource;
 
   Event({
@@ -788,6 +791,14 @@ class Event extends MatrixEvent {
   String? get relationshipType {
     if (content.tryGet<Map<String, dynamic>>('m.relates_to') == null) {
       return null;
+    }
+    if (content['m.relates_to'].containsKey('rel_type')) {
+      if (content
+              .tryGet<Map<String, dynamic>>('m.relates_to')
+              ?.tryGet<String>('rel_type') ==
+          RelationshipTypes.thread) {
+        return RelationshipTypes.thread;
+      }
     }
     if (content['m.relates_to'].containsKey('m.in_reply_to')) {
       return RelationshipTypes.reply;

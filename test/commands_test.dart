@@ -17,6 +17,7 @@
  */
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
@@ -160,6 +161,105 @@ void main() {
           'rel_type': 'm.annotation',
           'event_id': '\$event',
           'key': '🦊',
+        },
+      });
+    });
+
+    test('thread', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent(
+        'thread',
+        threadRootEventId: '\$parent_event',
+        threadLastEventId: '\$parent_event',
+      );
+      final sent = getLastMessagePayload();
+      expect(sent, {
+        'msgtype': 'm.text',
+        'body': 'thread',
+        'm.relates_to': {
+          'rel_type': 'm.thread',
+          'event_id': '\$parent_event',
+          'is_falling_back': true,
+          'm.in_reply_to': {'event_id': '\$parent_event'}
+        },
+      });
+    });
+
+    test('thread_image', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      final testImage = MatrixFile(bytes: Uint8List(0), name: 'file.jpeg');
+      await room.sendFileEvent(
+        testImage,
+        threadRootEventId: '\$parent_event',
+        threadLastEventId: '\$parent_event',
+      );
+      final sent = getLastMessagePayload();
+      expect(sent, {
+        'msgtype': 'm.image',
+        'body': 'file.jpeg',
+        'filename': 'file.jpeg',
+        'url': 'mxc://example.com/AQwafuaFswefuhsfAFAgsw',
+        'info': {
+          'mimetype': 'image/jpeg',
+          'size': 0,
+        },
+        'm.relates_to': {
+          'rel_type': 'm.thread',
+          'event_id': '\$parent_event',
+          'is_falling_back': true,
+          'm.in_reply_to': {'event_id': '\$parent_event'}
+        },
+      });
+    });
+
+    test('thread_reply', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent('reply',
+          inReplyTo: Event(
+            eventId: '\$parent_event',
+            type: 'm.room.message',
+            content: {
+              'msgtype': 'm.text',
+              'body': 'reply',
+            },
+            originServerTs: DateTime.now(),
+            senderId: client.userID!,
+            room: room,
+          ),
+          threadRootEventId: '\$parent_event',
+          threadLastEventId: '\$parent_event');
+      final sent = getLastMessagePayload();
+      expect(sent, {
+        'msgtype': 'm.text',
+        'body': '> <@test:fakeServer.notExisting> reply\n\nreply',
+        'format': 'org.matrix.custom.html',
+        'formatted_body':
+            '<mx-reply><blockquote><a href="https://matrix.to/#/!1234:fakeServer.notExisting/\$parent_event">In reply to</a> <a href="https://matrix.to/#/@test:fakeServer.notExisting">@test:fakeServer.notExisting</a><br>reply</blockquote></mx-reply>reply',
+        'm.relates_to': {
+          'rel_type': 'm.thread',
+          'event_id': '\$parent_event',
+          'is_falling_back': false,
+          'm.in_reply_to': {'event_id': '\$parent_event'}
+        },
+      });
+    });
+
+    test('thread_different_event_ids', () async {
+      FakeMatrixApi.calledEndpoints.clear();
+      await room.sendTextEvent(
+        'thread',
+        threadRootEventId: '\$parent_event',
+        threadLastEventId: '\$last_event',
+      );
+      final sent = getLastMessagePayload();
+      expect(sent, {
+        'msgtype': 'm.text',
+        'body': 'thread',
+        'm.relates_to': {
+          'rel_type': 'm.thread',
+          'event_id': '\$parent_event',
+          'is_falling_back': true,
+          'm.in_reply_to': {'event_id': '\$last_event'}
         },
       });
     });
