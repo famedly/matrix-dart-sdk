@@ -349,7 +349,7 @@ void main() {
           identifier: AuthenticationUserIdentifier(user: 'test'),
           password: '1234');
 
-      expect(loginResp.userId != null, true);
+      expect(loginResp.userId.isNotEmpty, true);
     });
 
     test('setAvatar', () async {

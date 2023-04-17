@@ -1315,7 +1315,7 @@ class Room {
     }
     await client.setReadMarker(
       id,
-      eventId,
+      mFullyRead: eventId,
       mRead: mRead,
     );
     return;
@@ -1361,7 +1361,6 @@ class Room {
       id,
       ReceiptType.mRead,
       eventId,
-      {},
     );
     return;
   }
