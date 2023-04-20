@@ -16,6 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:matrix/encryption/utils/olm_session.dart';
@@ -313,4 +314,12 @@ abstract class DatabaseApi {
   Future<String> exportDump();
 
   Future<bool> importDump(String export);
+
+  Future getValue(String key);
+
+  Future<Map> getAll();
+
+  Future<void> setValue(String key, dynamic value);
+
+  Future<void> deleteValue(String key);
 }

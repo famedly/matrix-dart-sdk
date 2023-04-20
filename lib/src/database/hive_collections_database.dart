@@ -86,6 +86,8 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   late CollectionBox<String> _seenDeviceKeysBox;
 
+  late CollectionBox _localStorageBox;
+
   String get _clientBoxName => 'box_client';
 
   String get _accountDataBoxName => 'box_account_data';
@@ -124,6 +126,8 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   String get _seenDeviceKeysBoxName => 'box_seen_device_keys';
 
+  String get _localStorageBoxName => 'local_storage';
+
   HiveCollectionsDatabase(
     this.name,
     this.path, {
@@ -157,6 +161,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
         _eventsBoxName,
         _seenDeviceIdsBoxName,
         _seenDeviceKeysBoxName,
+        _localStorageBoxName,
       },
       key: key,
       path: path,
@@ -223,7 +228,9 @@ class HiveCollectionsDatabase extends DatabaseApi {
     _seenDeviceKeysBox = await _collection.openBox(
       _seenDeviceKeysBoxName,
     );
-
+    _localStorageBox = await _collection.openBox(
+      _localStorageBoxName,
+    );
     // Check version and check if we need a migration
     final currentVersion = int.tryParse(await _clientBox.get('version') ?? '');
     if (currentVersion == null) {
@@ -262,6 +269,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
         await _eventsBox.clear();
         await _seenDeviceIdsBox.clear();
         await _seenDeviceKeysBox.clear();
+        await _localStorageBox.clear();
         await _collection.deleteFromDisk();
       });
 
@@ -1475,6 +1483,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
       _eventsBoxName: await _eventsBox.getAllValues(),
       _seenDeviceIdsBoxName: await _seenDeviceIdsBox.getAllValues(),
       _seenDeviceKeysBoxName: await _seenDeviceKeysBox.getAllValues(),
+      _localStorageBoxName: await _localStorageBox.getAllValues()
     };
     final json = jsonEncode(dataMap);
     await clear();
@@ -1546,11 +1555,34 @@ class HiveCollectionsDatabase extends DatabaseApi {
       for (final key in json[_seenDeviceKeysBoxName]!.keys) {
         await _seenDeviceKeysBox.put(key, json[_seenDeviceKeysBoxName]![key]);
       }
+      for (final key in json[_localStorageBoxName]!.keys) {
+        await _localStorageBox.put(key, json[_localStorageBoxName]![key]);
+      }
       return true;
     } catch (e, s) {
       Logs().e('Database import error: ', e, s);
       return false;
     }
+  }
+
+  @override
+  Future getValue(key) async {
+    return await _localStorageBox.get(key);
+  }
+
+  @override
+  Future<Map> getAll() async {
+    return await _localStorageBox.getAllValues();
+  }
+
+  @override
+  Future setValue(key, value) async {
+    return await _localStorageBox.put(key, value);
+  }
+
+  @override
+  Future deleteValue(key) async {
+    return await _localStorageBox.delete(key);
   }
 }
 

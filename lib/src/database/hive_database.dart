@@ -82,6 +82,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
   late LazyBox _seenDeviceKeysBox;
 
+  late Box _localStorageBox;
+
   String get _clientBoxName => '$name.box.client';
 
   String get _accountDataBoxName => '$name.box.account_data';
@@ -122,6 +124,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
   String get _seenDeviceKeysBoxName => '$name.box.seen_device_keys';
 
+  String get _localStorageBoxName => '$name.box.local_storage';
+
   final HiveCipher? encryptionCipher;
 
   FamedlySdkHiveDatabase(this.name, {this.encryptionCipher});
@@ -150,6 +154,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         action(_eventsBox),
         action(_seenDeviceIdsBox),
         action(_seenDeviceKeysBox),
+        action(_localStorageBox),
       ]);
 
   Future<void> open() async {
@@ -230,6 +235,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       encryptionCipher: encryptionCipher,
     );
 
+    _localStorageBox = await Hive.openBox(
+      _localStorageBoxName,
+      encryptionCipher: encryptionCipher,
+    );
     // Check version and check if we need a migration
     final currentVersion = (await _clientBox.get('version') as int?);
     if (currentVersion == null) {
@@ -1418,6 +1427,26 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   Future<bool> importDump(String export) {
     // see no need to implement this in a deprecated part
     throw UnimplementedError();
+  }
+
+  @override
+  Future getValue(key) async {
+    return await _localStorageBox.get(key);
+  }
+
+  @override
+  Future<Map> getAll() async {
+    return Map.fromIterables(_localStorageBox.keys, _localStorageBox.values);
+  }
+
+  @override
+  Future setValue(key, value) async {
+    await _localStorageBox.put(key, value);
+  }
+
+  @override
+  Future deleteValue(key) async {
+    await _localStorageBox.delete(key);
   }
 }
 

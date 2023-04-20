@@ -2893,6 +2893,34 @@ class Client extends MatrixApi {
     _aborted = false;
   }
 
+  Future getValueFromLocalStorage(key) async {
+    final db = _database ??= await databaseBuilder?.call(this);
+    if (db != null) {
+      return db.getValue(key);
+    }
+  }
+
+  Future getAllEntriesFromLocalStorage() async {
+    final db = _database ??= await databaseBuilder?.call(this);
+    if (db != null) {
+      return db.getAll();
+    }
+  }
+
+  Future setValueToLocalStorage(key, value) async {
+    final db = _database ??= await databaseBuilder?.call(this);
+    if (db != null) {
+      return db.setValue(key, value);
+    }
+  }
+
+  Future deleteValueFromLocalStorage(key) async {
+    final db = _database ??= await databaseBuilder?.call(this);
+    if (db != null) {
+      return db.deleteValue(key);
+    }
+  }
+
   /// Stops the synchronization and closes the database. After this
   /// you can safely make this Client instance null.
   Future<void> dispose({bool closeDatabase = true}) async {
@@ -3027,6 +3055,16 @@ class Client extends MatrixApi {
         }
       } catch (e, s) {
         Logs().e('Unable to migrate inbound group sessions!', e, s);
+      }
+
+      Logs().d('Migrate local storage...');
+      try {
+        final allData = await legacyDatabase.getAll();
+        for (final data in allData.entries) {
+          await database.setValue(data.key, data.value);
+        }
+      } catch (e, s) {
+        Logs().e('Unable to migrate local storage!', e, s);
       }
 
       await legacyDatabase.clear();

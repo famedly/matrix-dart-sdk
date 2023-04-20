@@ -1049,6 +1049,18 @@ void main() {
           reason: '!5345234235:example.com not found as archived room');
     });
 
+    test('Local storage', () async {
+      final client = await getClient();
+      await client.setValueToLocalStorage('key', 'value');
+      expect(await client.getValueFromLocalStorage('key'), 'value');
+      await client.setValueToLocalStorage('key2', 'value2');
+      expect(await client.getAllEntriesFromLocalStorage(),
+          {'key': 'value', 'key2': 'value2'});
+
+      await client.deleteValueFromLocalStorage('key');
+      expect(await client.getAllEntriesFromLocalStorage(), {'key2': 'value2'});
+    });
+
     tearDown(() {
       matrix.dispose(closeDatabase: true);
     });
