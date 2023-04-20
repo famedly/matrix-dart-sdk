@@ -1,3 +1,9 @@
+## [0.18.4] - 21st April 2023
+- chore: bump api_lite to 16.1 (td)
+- feat: allow sending messages inside threads (Dmitriy Bragin)
+- chore: Upgrade to matrix_api_lite 1.6 (Nicolas Werner)
+- ci: Allow overriding the template in a manual or triggered pipeline (Nicolas Werner)
+
 ## [0.18.3] - 13th April 2023
 - chore: stopMediaStream on all streams and make sure dispose runs everytime (td)
 - fix: test if setting track enabled on participants changed helps with the media not working randomly issue (td)
