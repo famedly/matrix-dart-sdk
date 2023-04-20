@@ -1566,22 +1566,22 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
-  Future getValue(key) async {
+  Future getValueFromLocalStorage(key) async {
     return await _localStorageBox.get(key);
   }
 
   @override
-  Future<Map> getAll() async {
+  Future<Map> getAllEntriesFromLocalStorage() async {
     return await _localStorageBox.getAllValues();
   }
 
   @override
-  Future setValue(key, value) async {
+  Future setValueToLocalStorage(key, value) async {
     return await _localStorageBox.put(key, value);
   }
 
   @override
-  Future deleteValue(key) async {
+  Future deleteValueFromLocalStorage(key) async {
     return await _localStorageBox.delete(key);
   }
 }

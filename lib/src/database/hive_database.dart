@@ -1430,22 +1430,22 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future getValue(key) async {
+  Future getValueFromLocalStorage(key) async {
     return await _localStorageBox.get(key);
   }
 
   @override
-  Future<Map> getAll() async {
+  Future<Map> getAllEntriesFromLocalStorage() async {
     return Map.fromIterables(_localStorageBox.keys, _localStorageBox.values);
   }
 
   @override
-  Future setValue(key, value) async {
+  Future setValueToLocalStorage(key, value) async {
     await _localStorageBox.put(key, value);
   }
 
   @override
-  Future deleteValue(key) async {
+  Future deleteValueFromLocalStorage(key) async {
     await _localStorageBox.delete(key);
   }
 }

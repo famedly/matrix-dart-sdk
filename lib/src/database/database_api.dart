@@ -315,11 +315,11 @@ abstract class DatabaseApi {
 
   Future<bool> importDump(String export);
 
-  Future getValue(String key);
+  Future getValueFromLocalStorage(String key);
 
-  Future<Map> getAll();
+  Future<Map> getAllEntriesFromLocalStorage();
 
-  Future<void> setValue(String key, dynamic value);
+  Future<void> setValueToLocalStorage(String key, dynamic value);
 
-  Future<void> deleteValue(String key);
+  Future<void> deleteValueFromLocalStorage(String key);
 }

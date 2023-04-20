@@ -2896,28 +2896,28 @@ class Client extends MatrixApi {
   Future getValueFromLocalStorage(key) async {
     final db = _database ??= await databaseBuilder?.call(this);
     if (db != null) {
-      return db.getValue(key);
+      return db.getValueFromLocalStorage(key);
     }
   }
 
   Future getAllEntriesFromLocalStorage() async {
     final db = _database ??= await databaseBuilder?.call(this);
     if (db != null) {
-      return db.getAll();
+      return db.getAllEntriesFromLocalStorage();
     }
   }
 
   Future setValueToLocalStorage(key, value) async {
     final db = _database ??= await databaseBuilder?.call(this);
     if (db != null) {
-      return db.setValue(key, value);
+      return db.setValueToLocalStorage(key, value);
     }
   }
 
   Future deleteValueFromLocalStorage(key) async {
     final db = _database ??= await databaseBuilder?.call(this);
     if (db != null) {
-      return db.deleteValue(key);
+      return db.deleteValueFromLocalStorage(key);
     }
   }
 
@@ -3059,9 +3059,9 @@ class Client extends MatrixApi {
 
       Logs().d('Migrate local storage...');
       try {
-        final allData = await legacyDatabase.getAll();
+        final allData = await legacyDatabase.getAllEntriesFromLocalStorage();
         for (final data in allData.entries) {
-          await database.setValue(data.key, data.value);
+          await database.setValueToLocalStorage(data.key, data.value);
         }
       } catch (e, s) {
         Logs().e('Unable to migrate local storage!', e, s);
