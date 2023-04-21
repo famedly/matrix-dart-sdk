@@ -1,14 +1,28 @@
+## [0.19.0] - 21st April 2023
+
+This includes some breaking changes to read receipts. You won't be able to
+access the `m.receipt` account data pseudo event anymore. This has been replaces
+with a per room `receiptsState`, that also supports private and threaded
+receipts. Additionally you can now toggle if receipts are sent as public or
+private receipts on the client level.
+
+- chore: Update image dependency to 4.0.15 (Kristian Grønås)
+- feat: Support private read receipts (Nicolas Werner)
+
 ## [0.18.4] - 21st April 2023
+
 - chore: bump api_lite to 16.1 (td)
 - feat: allow sending messages inside threads (Dmitriy Bragin)
 - chore: Upgrade to matrix_api_lite 1.6 (Nicolas Werner)
 - ci: Allow overriding the template in a manual or triggered pipeline (Nicolas Werner)
 
 ## [0.18.3] - 13th April 2023
+
 - chore: stopMediaStream on all streams and make sure dispose runs everytime (td)
 - fix: test if setting track enabled on participants changed helps with the media not working randomly issue (td)
 
 ## [0.18.2] - 31th March 2023
+
 - chore: Update to flutter image 3.7.8 (Krille)
 - chore: Workaround for broken test dependency (Krille)
 - chore: ignore stale call checking for archived rooms (td)
