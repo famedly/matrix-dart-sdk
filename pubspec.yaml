@@ -19,7 +19,7 @@ dependencies:
   html: ^0.15.0
   html_unescape: ^2.0.0
   http: ^0.13.0
-  image: ^3.1.1
+  image: ^4.0.15
   js: ^0.6.3
   markdown: ^4.0.0
   matrix_api_lite: ^1.6.1
