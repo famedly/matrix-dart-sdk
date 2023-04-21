@@ -515,7 +515,7 @@ class FakeMatrixApi extends BaseClient {
                 'content': {'membership': 'join'},
                 'prev_content': {'membership': 'invite'},
                 'origin_server_ts': 1417731086795,
-                'event_id': '7365636s6r6432:example.com',
+                'event_id': '\$7365636s6r6432:example.com',
                 'unsigned': {'foo': 'bar'}
               },
               {
@@ -539,7 +539,7 @@ class FakeMatrixApi extends BaseClient {
               },
               {
                 'content': {
-                  '7365636s6r6432:example.com': {
+                  '\$7365636s6r6432:example.com': {
                     'm.read': {
                       '@alice:example.com': {'ts': 1436451550453}
                     }

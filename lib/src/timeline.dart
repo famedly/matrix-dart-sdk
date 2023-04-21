@@ -363,11 +363,11 @@ class Timeline {
   }
 
   /// Set the read marker to the last synced event in this timeline.
-  Future<void> setReadMarker([String? eventId]) async {
+  Future<void> setReadMarker(String? eventId, {bool? public}) async {
     eventId ??=
         events.firstWhereOrNull((event) => event.status.isSynced)?.eventId;
     if (eventId == null) return;
-    return room.setReadMarker(eventId, mRead: eventId);
+    return room.setReadMarker(eventId, mRead: eventId, public: public);
   }
 
   int _findEvent({String? event_id, String? unsigned_txid}) {

@@ -22,7 +22,7 @@ dependencies:
   image: ^3.1.1
   js: ^0.6.3
   markdown: ^4.0.0
-  matrix_api_lite: ^1.6.0
+  matrix_api_lite: ^1.6.1
   mime: ^1.0.0
   olm: ^2.0.2
   random_string: ^2.3.1

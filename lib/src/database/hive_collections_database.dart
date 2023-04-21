@@ -416,6 +416,40 @@ class HiveCollectionsDatabase extends DatabaseApi {
       });
 
   @override
+  Future<List<String>> getEventIdList(
+    Room room, {
+    int start = 0,
+    bool includeSending = false,
+    int? limit,
+  }) =>
+      runBenchmarked<List<String>>('Get event id list', () async {
+        // Get the synced event IDs from the store
+        final timelineKey = TupleKey(room.id, '').toString();
+        final timelineEventIds =
+            (await _timelineFragmentsBox.get(timelineKey) as List<String>? ??
+                []);
+
+        // Get the local stored SENDING events from the store
+        late final List<String> sendingEventIds;
+        if (!includeSending) {
+          sendingEventIds = [];
+        } else {
+          final sendingTimelineKey = TupleKey(room.id, 'SENDING').toString();
+          sendingEventIds = (await _timelineFragmentsBox.get(sendingTimelineKey)
+                  as List<String>? ??
+              []);
+        }
+
+        // Combine those two lists while respecting the start and limit parameters.
+        final eventIds = sendingEventIds + timelineEventIds;
+        if (limit != null && eventIds.length > limit) {
+          eventIds.removeRange(limit, eventIds.length);
+        }
+
+        return eventIds;
+      });
+
+  @override
   Future<Uint8List?> getFile(Uri mxcUri) async {
     return null;
   }

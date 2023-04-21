@@ -324,14 +324,22 @@ class Event extends MatrixEvent {
   /// Returns a list of [Receipt] instances for this event.
   List<Receipt> get receipts {
     final room = this.room;
-    final receipt = room.roomAccountData['m.receipt'];
-    if (receipt == null) return [];
-    return receipt.content.entries
-        .where((entry) => entry.value['event_id'] == eventId)
+    final receipts = room.receiptState;
+    final receiptsList = receipts.global.otherUsers.entries
+        .where((entry) => entry.value.eventId == eventId)
         .map((entry) => Receipt(
             room.unsafeGetUserFromMemoryOrFallback(entry.key),
-            DateTime.fromMillisecondsSinceEpoch(entry.value['ts'])))
+            entry.value.timestamp))
         .toList();
+
+    final own = receipts.global.latestOwnReceipt;
+    if (own != null) {
+      receiptsList.add(Receipt(
+          room.unsafeGetUserFromMemoryOrFallback(room.client.userID!),
+          own.timestamp));
+    }
+
+    return receiptsList;
   }
 
   /// Removes this event if the status is [sending], [error] or [removed].
