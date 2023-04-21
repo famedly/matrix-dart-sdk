@@ -132,13 +132,13 @@ void main() {
       expect(matrix.rooms[1].encryptionAlgorithm,
           Client.supportedGroupEncryptionAlgorithms.first);
       expect(
-          matrix.rooms[1].roomAccountData['m.receipt']
-              ?.content['@alice:example.com']['ts'],
+          matrix.rooms[1].receiptState.global.otherUsers['@alice:example.com']
+              ?.ts,
           1436451550453);
       expect(
-          matrix.rooms[1].roomAccountData['m.receipt']
-              ?.content['@alice:example.com']['event_id'],
-          '7365636s6r6432:example.com');
+          matrix.rooms[1].receiptState.global.otherUsers['@alice:example.com']
+              ?.eventId,
+          '\$7365636s6r6432:example.com');
 
       final inviteRoom = matrix.rooms
           .singleWhere((room) => room.membership == Membership.invite);
@@ -241,7 +241,7 @@ void main() {
       expect(eventUpdateList[7].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[7].type, EventUpdateType.ephemeral);
 
-      expect(eventUpdateList[8].content['type'], 'm.receipt');
+      expect(eventUpdateList[8].content['type'], LatestReceiptState.eventType);
       expect(eventUpdateList[8].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[8].type, EventUpdateType.accountData);
 

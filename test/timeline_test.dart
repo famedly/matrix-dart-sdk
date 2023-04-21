@@ -94,6 +94,7 @@ void main() {
         onChange: changeList.add,
         onRemove: removeList.add,
       );
+      client.rooms.add(room);
 
       await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
@@ -131,7 +132,7 @@ void main() {
           'content': {'msgtype': 'm.text', 'body': 'Testcase'},
           'sender': '@alice:example.com',
           'status': EventStatus.synced.intValue,
-          'event_id': '1',
+          'event_id': '\$1',
           'origin_server_ts': testTimeStamp
         },
       ));
@@ -146,7 +147,7 @@ void main() {
       expect(changeList, []);
       expect(removeList, []);
       expect(timeline.events.length, 2);
-      expect(timeline.events[0].eventId, '1');
+      expect(timeline.events[0].eventId, '\$1');
       expect(timeline.events[0].senderFromMemoryOrFallback.id,
           '@alice:example.com');
       expect(timeline.events[0].originServerTs.millisecondsSinceEpoch,
@@ -158,16 +159,24 @@ void main() {
           true);
       expect(timeline.events[0].receipts, []);
 
-      room.roomAccountData['m.receipt'] = BasicRoomEvent.fromJson({
-        'type': 'm.receipt',
-        'content': {
-          '@alice:example.com': {
-            'event_id': '1',
-            'ts': 1436451550453,
-          }
-        },
-        'room_id': roomID,
-      });
+      await client.handleSync(SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(join: {
+            timeline.room.id: JoinedRoomUpdate(ephemeral: [
+              BasicRoomEvent.fromJson({
+                'type': 'm.receipt',
+                'content': {
+                  timeline.events.first.eventId: {
+                    'm.read': {
+                      '@alice:example.com': {
+                        'ts': 1436451550453,
+                      }
+                    },
+                  },
+                },
+              })
+            ])
+          })));
 
       await Future.delayed(Duration(milliseconds: 50));
 
@@ -196,6 +205,230 @@ void main() {
       expect(removeList, []);
       expect(timeline.events.length, 3);
       expect(timeline.events[2].redacted, true);
+    });
+
+    test('Receipt updates', () async {
+      await client.handleSync(SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(join: {
+            timeline.room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(events: [
+              MatrixEvent.fromJson({
+                'type': 'm.room.message',
+                'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                'sender': '@alice:example.com',
+                'status': EventStatus.synced.intValue,
+                'event_id': '\$2',
+                'origin_server_ts': testTimeStamp - 1000,
+              }),
+              MatrixEvent.fromJson({
+                'type': 'm.room.message',
+                'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                'sender': '@alice:example.com',
+                'status': EventStatus.synced.intValue,
+                'event_id': '\$1',
+                'origin_server_ts': testTimeStamp,
+              }),
+              MatrixEvent.fromJson({
+                'type': 'm.room.message',
+                'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                'sender': '@bob:example.com',
+                'status': EventStatus.synced.intValue,
+                'event_id': '\$0',
+                'origin_server_ts': testTimeStamp + 50,
+              }),
+            ]))
+          })));
+
+      expect(timeline.sub != null, true);
+
+      await waitForCount(3);
+
+      expect(updateCount, 3);
+      expect(insertList, [0, 0, 0]);
+      expect(insertList.length, timeline.events.length);
+      expect(timeline.events[1].senderFromMemoryOrFallback.id,
+          '@alice:example.com');
+      expect(
+          timeline.events[0].senderFromMemoryOrFallback.id, '@bob:example.com');
+      expect(timeline.events[0].receipts, []);
+      expect(timeline.events[1].receipts, []);
+      expect(timeline.events[2].receipts, []);
+
+      await client.handleSync(SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(join: {
+            timeline.room.id: JoinedRoomUpdate(ephemeral: [
+              BasicRoomEvent.fromJson({
+                'type': 'm.receipt',
+                'content': {
+                  '\$2': {
+                    'm.read': {
+                      '@alice:example.com': {
+                        'ts': 1436451550453,
+                      }
+                    },
+                  },
+                },
+              })
+            ])
+          })));
+
+      expect(room.receiptState.global.latestOwnReceipt?.eventId, null);
+      expect(room.receiptState.global.otherUsers['@alice:example.com']?.eventId,
+          '\$2');
+      expect(timeline.events[2].receipts.length, 1);
+      expect(timeline.events[2].receipts[0].user.id, '@alice:example.com');
+
+      await client.handleSync(SyncUpdate(
+          nextBatch: 'something2',
+          rooms: RoomsUpdate(join: {
+            timeline.room.id: JoinedRoomUpdate(ephemeral: [
+              BasicRoomEvent.fromJson({
+                'type': 'm.receipt',
+                'content': {
+                  '\$2': {
+                    'm.read': {
+                      client.userID: {
+                        'ts': 1436451550453,
+                      },
+                      '@bob:example.com': {
+                        'ts': 1436451550453,
+                      },
+                    },
+                  },
+                },
+              })
+            ])
+          })));
+
+      expect(room.receiptState.global.latestOwnReceipt?.eventId, '\$2');
+      expect(room.receiptState.global.ownPublic?.eventId, '\$2');
+      expect(room.receiptState.global.ownPrivate?.eventId, null);
+      expect(room.receiptState.global.otherUsers['@alice:example.com']?.eventId,
+          '\$2');
+      expect(room.receiptState.global.otherUsers['@bob:example.com']?.eventId,
+          '\$2');
+      expect(timeline.events[2].receipts.length, 3);
+      expect(timeline.events[2].receipts[0].user.id, '@alice:example.com');
+
+      await client.handleSync(SyncUpdate(
+          nextBatch: 'something3',
+          rooms: RoomsUpdate(join: {
+            timeline.room.id: JoinedRoomUpdate(ephemeral: [
+              BasicRoomEvent.fromJson({
+                'type': 'm.receipt',
+                'content': {
+                  '\$2': {
+                    'm.read.private': {
+                      client.userID: {
+                        'ts': 1436451550453,
+                      },
+                      '@alice:example.com': {
+                        'ts': 1436451550453,
+                      },
+                    },
+                    'm.read': {
+                      '@bob:example.com': {
+                        'ts': 1436451550453,
+                        'thread_id': '\$734'
+                      },
+                    },
+                  },
+                },
+              })
+            ])
+          })));
+
+      expect(room.receiptState.global.latestOwnReceipt?.eventId, '\$2');
+      expect(room.receiptState.global.ownPublic?.eventId, '\$2');
+      expect(room.receiptState.global.ownPrivate?.eventId, '\$2');
+      expect(room.receiptState.global.otherUsers['@alice:example.com']?.eventId,
+          '\$2');
+      expect(room.receiptState.global.otherUsers['@bob:example.com']?.eventId,
+          '\$2');
+      expect(room.receiptState.byThread.length, 1);
+      expect(timeline.events[2].receipts.length, 3);
+      expect(timeline.events[2].receipts[0].user.id, '@alice:example.com');
+
+      await client.handleSync(SyncUpdate(
+          nextBatch: 'something4',
+          rooms: RoomsUpdate(join: {
+            timeline.room.id: JoinedRoomUpdate(ephemeral: [
+              BasicRoomEvent.fromJson({
+                'type': 'm.receipt',
+                'content': {
+                  '\$1': {
+                    'm.read.private': {
+                      client.userID: {
+                        'ts': 1436451550453,
+                      },
+                      '@bob:example.com': {
+                        'ts': 1436451550453,
+                      },
+                    },
+                  },
+                },
+              })
+            ])
+          })));
+
+      expect(room.receiptState.global.latestOwnReceipt?.eventId, '\$1');
+      expect(room.receiptState.global.ownPublic?.eventId, '\$2');
+      expect(room.receiptState.global.ownPrivate?.eventId, '\$1');
+      expect(room.receiptState.global.otherUsers['@alice:example.com']?.eventId,
+          '\$2');
+      expect(room.receiptState.global.otherUsers['@bob:example.com']?.eventId,
+          '\$1');
+      expect(room.receiptState.byThread.length, 1);
+      expect(timeline.events[1].receipts.length, 2);
+      expect(timeline.events[1].receipts[0].user.id, '@bob:example.com');
+    });
+
+    test('Sending both receipts at the same time sets the latest receipt',
+        () async {
+      await client.handleSync(SyncUpdate(
+          nextBatch: 'something',
+          rooms: RoomsUpdate(join: {
+            timeline.room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(events: [
+                  MatrixEvent.fromJson({
+                    'type': 'm.room.message',
+                    'content': {'msgtype': 'm.text', 'body': 'Testcase'},
+                    'sender': '@alice:example.com',
+                    'status': EventStatus.synced.intValue,
+                    'event_id': '\$2',
+                    'origin_server_ts': testTimeStamp - 1000,
+                  }),
+                ]),
+                ephemeral: [
+                  BasicRoomEvent.fromJson({
+                    'type': 'm.receipt',
+                    'content': {
+                      '\$2': {
+                        'm.read': {
+                          client.userID: {
+                            'ts': 1436451550453,
+                          },
+                        },
+                        'm.read.private': {
+                          client.userID: {
+                            'ts': 1436451550453,
+                          },
+                        },
+                      },
+                    },
+                  })
+                ])
+          })));
+
+      expect(timeline.sub != null, true);
+
+      await waitForCount(1);
+
+      expect(room.receiptState.global.latestOwnReceipt?.eventId, '\$2');
+      expect(room.receiptState.global.ownPublic?.eventId, '\$2');
+      expect(room.receiptState.global.ownPrivate?.eventId, '\$2');
     });
 
     test('Send message', () async {
@@ -473,8 +706,8 @@ void main() {
       ));
       await Future.delayed(Duration(milliseconds: 50));
       room.notificationCount = 1;
-      await timeline.setReadMarker();
-      expect(room.notificationCount, 0);
+      await timeline.setReadMarker(null);
+      //expect(room.notificationCount, 0);
     });
     test('sending an event and the http request finishes first, 0 -> 1 -> 2',
         () async {

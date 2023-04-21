@@ -175,6 +175,7 @@ class Client extends MatrixApi {
     this.customImageResizer,
     this.shareKeysWithUnverifiedDevices = true,
     this.enableDehydratedDevices = false,
+    this.receiptsPublicByDefault = true,
   })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
@@ -259,6 +260,9 @@ class Client extends MatrixApi {
   List<ArchivedRoom> get archivedRooms => _archivedRooms;
 
   bool enableDehydratedDevices = false;
+
+  /// Wether read receipts are sent as public receipts by default or just as private receipts.
+  bool receiptsPublicByDefault = true;
 
   /// Whether this client supports end-to-end encryption using olm.
   bool get encryptionEnabled => encryption?.enabled == true;
@@ -1924,9 +1928,8 @@ class Client extends MatrixApi {
   }
 
   Future<void> _handleEphemerals(Room room, List<BasicRoomEvent> events) async {
-    var updateReceipts = false;
-    final receiptStateContent =
-        room.roomAccountData['m.receipt']?.content ?? {};
+    final List<ReceiptEventContent> receipts = [];
+
     for (final event in events) {
       await _handleRoomEvents(room, [event], EventUpdateType.ephemeral);
 
@@ -1934,49 +1937,24 @@ class Client extends MatrixApi {
       // fake room account data event for this and store the difference
       // there.
       if (event.type != 'm.receipt') continue;
-      updateReceipts = true;
-      for (final entry in event.content.entries) {
-        final eventId = entry.key;
-        final value = entry.value;
 
-        final userTimestampMap =
-            (value is Map ? Map<String, dynamic>.from(value) : null)
-                ?.tryGetMap<String, dynamic>('m.read');
-
-        if (userTimestampMap == null) continue;
-
-        for (final userTimestampMapEntry in userTimestampMap.entries) {
-          final mxid = userTimestampMapEntry.key;
-
-          // Remove previous receipt event from this user
-          if (receiptStateContent
-                  .tryGetMap<String, dynamic>(eventId)
-                  ?.tryGetMap<String, dynamic>('m.read')
-                  ?.containsKey(mxid) ??
-              false) {
-            receiptStateContent[eventId]['m.read'].remove(mxid);
-          }
-          if (userTimestampMap
-                  .tryGetMap<String, dynamic>(mxid)
-                  ?.containsKey('ts') ??
-              false) {
-            receiptStateContent[mxid] = {
-              'event_id': eventId,
-              'ts': userTimestampMap[mxid]['ts'],
-            };
-          }
-        }
-      }
+      receipts.add(ReceiptEventContent.fromJson(event.content));
     }
 
-    if (updateReceipts) {
+    if (receipts.isNotEmpty) {
+      final receiptStateContent = room.receiptState;
+
+      for (final e in receipts) {
+        await receiptStateContent.update(e, room);
+      }
+
       await _handleRoomEvents(
           room,
           [
             BasicRoomEvent(
-              type: 'm.receipt',
+              type: LatestReceiptState.eventType,
               roomId: room.id,
-              content: receiptStateContent,
+              content: receiptStateContent.toJson(),
             )
           ],
           EventUpdateType.accountData);

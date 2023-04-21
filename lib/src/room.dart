@@ -545,13 +545,13 @@ class Room {
     if (lastEvent.senderId == client.userID) return false;
 
     // Get the timestamp of read marker and compare
-    final readAtMilliseconds = roomAccountData['m.receipt']
-            ?.content
-            .tryGetMap<String, dynamic>(client.userID!)
-            ?.tryGet<int>('ts') ??
-        0;
+    final readAtMilliseconds = receiptState.global.latestOwnReceipt?.ts ?? 0;
     return readAtMilliseconds < lastEvent.originServerTs.millisecondsSinceEpoch;
   }
+
+  LatestReceiptState get receiptState => LatestReceiptState.fromJson(
+      roomAccountData[LatestReceiptState.eventType]?.content ??
+          <String, dynamic>{});
 
   /// Returns true if this room is unread. To check if there are new messages
   /// in muted rooms, use [hasNewMessages].
@@ -1343,15 +1343,16 @@ class Room {
 
   /// Sets the position of the read marker for a given room, and optionally the
   /// read receipt's location.
-  Future<void> setReadMarker(String eventId, {String? mRead}) async {
-    if (mRead != null) {
-      notificationCount = 0;
-      await client.database?.resetNotificationCount(id);
-    }
+  /// If you set `public` to false, only a private receipt will be sent. A private receipt is always sent if `mRead` is set. If no value is provided, the default from the `client` is used.
+  /// You can leave out the `eventId`, which will not update the read marker but just send receipts, but there are few cases where that makes sense.
+  Future<void> setReadMarker(String? eventId,
+      {String? mRead, bool? public}) async {
     await client.setReadMarker(
       id,
       mFullyRead: eventId,
-      mRead: mRead,
+      mRead: (public ?? client.receiptsPublicByDefault) ? mRead : null,
+      // we always send the private receipt, because there is no reason not to.
+      mReadPrivate: mRead,
     );
     return;
   }
@@ -1388,10 +1389,12 @@ class Room {
   }
 
   /// This API updates the marker for the given receipt type to the event ID
-  /// specified.
-  Future<void> postReceipt(String eventId) async {
-    notificationCount = 0;
-    await client.database?.resetNotificationCount(id);
+  /// specified. In general you want to use `setReadMarker` instead to set private
+  /// and public receipt as well as the marker at the same time.
+  @Deprecated(
+      'Use setReadMarker with mRead set instead. That allows for more control and there are few cases to not send a marker at the same time.')
+  Future<void> postReceipt(String eventId,
+      {ReceiptType type = ReceiptType.mRead}) async {
     await client.postReceipt(
       id,
       ReceiptType.mRead,
