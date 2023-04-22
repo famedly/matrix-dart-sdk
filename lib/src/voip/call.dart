@@ -510,7 +510,7 @@ class CallSession {
 
   Future<void> answerWithStreams(List<WrappedMediaStream> callFeeds) async {
     if (inviteOrAnswerSent) return;
-    Logs().d('nswering call $callId');
+    Logs().d('answering call $callId');
     await gotCallFeedsForAnswer(callFeeds);
   }
 
@@ -856,7 +856,7 @@ class CallSession {
       }
     }
 
-    if (purpose == SDPStreamMetadataPurpose.Usermedia) {
+    if (purpose == SDPStreamMetadataPurpose.Usermedia && !isGroupCall) {
       speakerOn = type == CallType.kVideo;
       if (!voip.delegate.isWeb && stream.getAudioTracks().isNotEmpty) {
         final audioTrack = stream.getAudioTracks()[0];

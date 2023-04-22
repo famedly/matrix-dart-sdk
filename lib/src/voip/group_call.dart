@@ -1272,8 +1272,14 @@ class GroupCall {
     participants.add(user);
 
     onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
-    for (final call in calls) {
-      await call.updateMuteStatus();
+    try {
+      final callsCopy = calls.toList();
+
+      for (final call in callsCopy) {
+        await call.updateMuteStatus();
+      }
+    } catch (e) {
+      Logs().e('[_addParticipant] failed to updateMuteStatus', e);
     }
   }
 
@@ -1287,8 +1293,15 @@ class GroupCall {
     participants.removeAt(index);
 
     onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
-    for (final call in calls) {
-      await call.updateMuteStatus();
+
+    try {
+      final callsCopy = calls.toList();
+
+      for (final call in callsCopy) {
+        await call.updateMuteStatus();
+      }
+    } catch (e) {
+      Logs().e('[_removeParticipant] failed to updateMuteStatus', e);
     }
   }
 }
