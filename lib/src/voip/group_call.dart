@@ -348,44 +348,55 @@ class GroupCall {
 
   /// Initializes the local user media stream.
   /// The media stream must be prepared before the group call enters.
-  Future<WrappedMediaStream> initLocalStream() async {
+  /// if you allow the user to configure their camera and such ahead of time,
+  /// you can pass that `stream` on to this function.
+  /// This allows you to configure the camera before joining the call without
+  ///  having to reopen the stream and possibly losing settings.
+  Future<WrappedMediaStream> initLocalStream(
+      {WrappedMediaStream? stream}) async {
     if (state != GroupCallState.LocalCallFeedUninitialized) {
       throw Exception('Cannot initialize local call feed in the $state state.');
     }
 
     setState(GroupCallState.InitializingLocalCallFeed);
 
-    MediaStream stream;
+    WrappedMediaStream localWrappedMediaStream;
 
-    try {
-      stream = await _getUserMedia(
-          type == GroupCallType.Video ? CallType.kVideo : CallType.kVoice);
-    } catch (error) {
-      setState(GroupCallState.LocalCallFeedUninitialized);
-      rethrow;
+    if (stream == null) {
+      MediaStream stream;
+
+      try {
+        stream = await _getUserMedia(
+            type == GroupCallType.Video ? CallType.kVideo : CallType.kVoice);
+      } catch (error) {
+        setState(GroupCallState.LocalCallFeedUninitialized);
+        rethrow;
+      }
+
+      final userId = client.userID;
+      localWrappedMediaStream = WrappedMediaStream(
+        renderer: voip.delegate.createRenderer(),
+        stream: stream,
+        userId: userId!,
+        room: room,
+        client: client,
+        purpose: SDPStreamMetadataPurpose.Usermedia,
+        audioMuted: stream.getAudioTracks().isEmpty,
+        videoMuted: stream.getVideoTracks().isEmpty,
+        isWeb: voip.delegate.isWeb,
+        isGroupCall: true,
+      );
+    } else {
+      localWrappedMediaStream = stream;
     }
 
-    final userId = client.userID;
-    final newStream = WrappedMediaStream(
-      renderer: voip.delegate.createRenderer(),
-      stream: stream,
-      userId: userId!,
-      room: room,
-      client: client,
-      purpose: SDPStreamMetadataPurpose.Usermedia,
-      audioMuted: stream.getAudioTracks().isEmpty,
-      videoMuted: stream.getVideoTracks().isEmpty,
-      isWeb: voip.delegate.isWeb,
-      isGroupCall: true,
-    );
-
-    localUserMediaStream = newStream;
+    localUserMediaStream = localWrappedMediaStream;
     await localUserMediaStream!.initialize();
-    await addUserMediaStream(newStream);
+    await addUserMediaStream(localWrappedMediaStream);
 
     setState(GroupCallState.LocalCallFeedInitialized);
 
-    return newStream;
+    return localWrappedMediaStream;
   }
 
   Future<void> updateAudioDevice() async {
@@ -406,16 +417,15 @@ class GroupCall {
   }
 
   /// enter the group call.
-  Future<void> enter() async {
+  Future<void> enter({WrappedMediaStream? stream}) async {
     if (!(state == GroupCallState.LocalCallFeedUninitialized ||
         state == GroupCallState.LocalCallFeedInitialized)) {
       throw Exception('Cannot enter call in the $state state');
     }
 
     if (state == GroupCallState.LocalCallFeedUninitialized) {
-      await initLocalStream();
+      await initLocalStream(stream: stream);
     }
-
     await _addParticipant(
         (await room.requestUser(client.userID!, ignoreErrors: true))!);
 
