@@ -208,6 +208,29 @@ void main() {
       testNotMatch(override_ruleset2, event);
     });
 
+    test('invalid push condition', () async {
+      final invalid_ruleset = PushRuleSet(override: [
+        PushRule(ruleId: 'my.rule', default$: false, enabled: true, actions: [
+          'notify',
+          {'set_tweak': 'highlight', 'value': true},
+          {'set_tweak': 'sound', 'value': 'goose.wav'},
+        ], conditions: [
+          PushCondition(
+              kind: 'invalidcondition', pattern: 'fox', key: 'content.body'),
+        ])
+      ]);
+
+      expect(() => PushruleEvaluator.fromRuleset(invalid_ruleset),
+          returnsNormally);
+
+      final evaluator = PushruleEvaluator.fromRuleset(invalid_ruleset);
+      final event = Event.fromJson(jsonObj, room);
+      final actions = evaluator.match(event);
+      expect(actions.highlight, false);
+      expect(actions.sound, null);
+      expect(actions.notify, false);
+    });
+
     test('match_display_name rule', () async {
       final event = Event.fromJson(jsonObj, room);
       (event.room.states[EventTypes.RoomMember] ??= {})[client.userID!] =
