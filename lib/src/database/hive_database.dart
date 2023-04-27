@@ -393,18 +393,16 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       runBenchmarked<List<Event>>('Get event list', () async {
         // Get the synced event IDs from the store
         final timelineKey = MultiKey(room.id, '').toString();
-        final timelineEventIds =
-            (await _timelineFragmentsBox.get(timelineKey) as List? ?? []);
-
+        final timelineEventIds = List<String>.from(
+            (await _timelineFragmentsBox.get(timelineKey)) ?? []);
         // Get the local stored SENDING events from the store
         late final List sendingEventIds;
         if (start != 0) {
           sendingEventIds = [];
         } else {
           final sendingTimelineKey = MultiKey(room.id, 'SENDING').toString();
-          sendingEventIds =
-              (await _timelineFragmentsBox.get(sendingTimelineKey) as List? ??
-                  []);
+          sendingEventIds = List<String>.from(
+              (await _timelineFragmentsBox.get(sendingTimelineKey)) ?? []);
         }
 
         // Combine those two lists while respecting the start and limit parameters.
@@ -428,9 +426,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       runBenchmarked<List<String>>('Get event id list', () async {
         // Get the synced event IDs from the store
         final timelineKey = MultiKey(room.id, '').toString();
-        final timelineEventIds =
-            (await _timelineFragmentsBox.get(timelineKey) as List<String>? ??
-                []);
+
+        final timelineEventIds = List<String>.from(
+            (await _timelineFragmentsBox.get(timelineKey)) ?? []);
 
         // Get the local stored SENDING events from the store
         late final List<String> sendingEventIds;
@@ -438,9 +436,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
           sendingEventIds = [];
         } else {
           final sendingTimelineKey = MultiKey(room.id, 'SENDING').toString();
-          sendingEventIds = (await _timelineFragmentsBox.get(sendingTimelineKey)
-                  as List<String>? ??
-              []);
+          sendingEventIds = List<String>.from(
+              (await _timelineFragmentsBox.get(sendingTimelineKey)) ?? []);
         }
 
         // Combine those two lists while respecting the start and limit parameters.
