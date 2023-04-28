@@ -429,8 +429,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         // Get the synced event IDs from the store
         final timelineKey = MultiKey(room.id, '').toString();
         final timelineEventIds =
-            (await _timelineFragmentsBox.get(timelineKey) as List<String>? ??
-                []);
+            (await _timelineFragmentsBox.get(timelineKey) ?? [])
+                .whereType<String>()
+                .toList();
 
         // Get the local stored SENDING events from the store
         late final List<String> sendingEventIds;
@@ -438,9 +439,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
           sendingEventIds = [];
         } else {
           final sendingTimelineKey = MultiKey(room.id, 'SENDING').toString();
-          sendingEventIds = (await _timelineFragmentsBox.get(sendingTimelineKey)
-                  as List<String>? ??
-              []);
+          sendingEventIds =
+              (await _timelineFragmentsBox.get(sendingTimelineKey) ?? [])
+                  .whereType<String>()
+                  .toList();
         }
 
         // Combine those two lists while respecting the start and limit parameters.
