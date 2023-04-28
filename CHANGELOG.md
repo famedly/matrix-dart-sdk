@@ -1,3 +1,11 @@
+## [0.20.0] - 28th April 2023
+
+- refactor: Make optional eventId a named parameter (Krille)
+- fix: Check the max server file size after shrinking not before (Krille)
+- fix: casting of a List<dynamic> to List<String> in getEventList and getEventIdList (td)
+- fix: Skip rules with unknown conditions (Nicolas Werner)
+- fix: allow passing a WrappedMediaStream to GroupCall.enter() to use as the local user media stream (td)
+
 ## [0.19.0] - 21st April 2023
 
 This includes some breaking changes to read receipts. You won't be able to
