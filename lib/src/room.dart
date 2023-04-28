@@ -757,22 +757,6 @@ class Room {
       ),
     );
 
-    // Check media config of the server before sending the file. Stop if the
-    // Media config is unreachable or the file is bigger than the given maxsize.
-    try {
-      final mediaConfig = await client.getConfig();
-      final maxMediaSize = mediaConfig.mUploadSize;
-      if (maxMediaSize != null && maxMediaSize < file.bytes.lengthInBytes) {
-        throw FileTooBigMatrixException(file.bytes.lengthInBytes, maxMediaSize);
-      }
-    } catch (e) {
-      Logs().d('Config error while sending file', e);
-      syncUpdate.rooms!.join!.values.first.timeline!.events!.first
-          .unsigned![messageSendingStatusKey] = EventStatus.error.intValue;
-      await _handleFakeSync(syncUpdate);
-      rethrow;
-    }
-
     MatrixFile uploadFile = file; // ignore: omit_local_variable_types
     // computing the thumbnail in case we can
     if (file is MatrixImageFile &&
@@ -798,6 +782,22 @@ class Room {
       if (thumbnail != null && file.size < thumbnail.size) {
         thumbnail = null; // in this case, the thumbnail is not usefull
       }
+    }
+
+    // Check media config of the server before sending the file. Stop if the
+    // Media config is unreachable or the file is bigger than the given maxsize.
+    try {
+      final mediaConfig = await client.getConfig();
+      final maxMediaSize = mediaConfig.mUploadSize;
+      if (maxMediaSize != null && maxMediaSize < file.bytes.lengthInBytes) {
+        throw FileTooBigMatrixException(file.bytes.lengthInBytes, maxMediaSize);
+      }
+    } catch (e) {
+      Logs().d('Config error while sending file', e);
+      syncUpdate.rooms!.join!.values.first.timeline!.events!.first
+          .unsigned![messageSendingStatusKey] = EventStatus.error.intValue;
+      await _handleFakeSync(syncUpdate);
+      rethrow;
     }
 
     MatrixFile? uploadThumbnail =
