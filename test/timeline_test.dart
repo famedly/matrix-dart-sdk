@@ -706,7 +706,7 @@ void main() {
       ));
       await Future.delayed(Duration(milliseconds: 50));
       room.notificationCount = 1;
-      await timeline.setReadMarker(null);
+      await timeline.setReadMarker();
       //expect(room.notificationCount, 0);
     });
     test('sending an event and the http request finishes first, 0 -> 1 -> 2',
