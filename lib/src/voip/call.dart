@@ -1359,15 +1359,17 @@ class CallSession {
           }
         }
       };
-      pc!.onIceConnectionState = (RTCIceConnectionState state) {
+      pc!.onIceConnectionState = (RTCIceConnectionState state) async {
         Logs().v('[VOIP] RTCIceConnectionState => ${state.toString()}');
         if (state == RTCIceConnectionState.RTCIceConnectionStateConnected) {
           localCandidates.clear();
           remoteCandidates.clear();
           setCallState(CallState.kConnected);
+          // fix any state/race issues we had with sdp packets and cloned streams
+          await updateMuteStatus();
           missedCall = false;
         } else if (state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
-          hangup(CallErrorCode.IceFailed, false);
+          await hangup(CallErrorCode.IceFailed, false);
         }
       };
     } catch (e) {

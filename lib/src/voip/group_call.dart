@@ -981,8 +981,9 @@ class GroupCall {
       throw Exception('Cannot init call without user id');
     }
 
-    call.onCallStateChanged.stream
-        .listen(((event) => onCallStateChanged(call, event)));
+    call.onCallStateChanged.stream.listen(((event) async {
+      await onCallStateChanged(call, event);
+    }));
 
     call.onCallReplaced.stream.listen((CallSession newCall) async {
       await replaceCall(call, newCall);
@@ -1173,7 +1174,8 @@ class GroupCall {
   void onActiveSpeakerLoop() async {
     String? nextActiveSpeaker;
     // idc about screen sharing atm.
-    for (final stream in userMediaStreams) {
+    final userMediaStreamsCopyList = List.from(userMediaStreams);
+    for (final stream in userMediaStreamsCopyList) {
       if (stream.userId == client.userID && stream.pc == null) {
         continue;
       }
@@ -1282,7 +1284,10 @@ class GroupCall {
     participants.add(user);
 
     onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
-    for (final call in calls) {
+
+    final callsCopylist = List.from(calls);
+
+    for (final call in callsCopylist) {
       await call.updateMuteStatus();
     }
   }
@@ -1297,7 +1302,10 @@ class GroupCall {
     participants.removeAt(index);
 
     onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
-    for (final call in calls) {
+
+    final callsCopylist = List.from(calls);
+
+    for (final call in callsCopylist) {
       await call.updateMuteStatus();
     }
   }
