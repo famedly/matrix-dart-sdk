@@ -292,14 +292,16 @@ class SSSS {
     if (keys == null) {
       return null;
     }
-    bool isValid(dbEntry) =>
+    bool isValid(SSSSCache dbEntry) =>
         keys.contains(dbEntry.keyId) &&
         dbEntry.ciphertext != null &&
         client.accountData[type]?.content['encrypted'][dbEntry.keyId]
                 ['ciphertext'] ==
             dbEntry.ciphertext;
-    if (_cache.containsKey(type) && isValid(_cache[type])) {
-      return _cache[type]?.content;
+
+    final fromCache = _cache[type];
+    if (fromCache != null && isValid(fromCache)) {
+      return fromCache.content;
     }
     final ret = await client.database?.getSSSSCache(type);
     if (ret == null) {

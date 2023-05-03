@@ -603,10 +603,10 @@ class KeyManager {
   }
 
   Future<bool> isCached() async {
+    await client.accountDataLoading;
     if (!enabled) {
       return false;
     }
-    await client.accountDataLoading;
     await client.userDeviceKeysLoading;
     return (await encryption.ssss.getCached(megolmKey)) != null;
   }
