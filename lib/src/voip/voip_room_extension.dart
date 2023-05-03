@@ -86,6 +86,8 @@ extension GroupCallUtils on Room {
 
   Future<void> singleShotStaleCallCheckerOnRoom() async {
     Logs().d('checking for stale group calls in room $id');
+    // make sure we have all the to-device messages we are supposed to have
+    await client.oneShotSync();
     final copyGroupCallIds =
         states.tryGetMap<String, Event>(EventTypes.GroupCallPrefix);
     if (copyGroupCallIds == null) return;
