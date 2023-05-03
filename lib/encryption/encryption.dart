@@ -354,8 +354,9 @@ class Encryption {
   Future<Map<String, dynamic>> encryptGroupMessagePayload(
       String roomId, Map<String, dynamic> payload,
       {String type = EventTypes.Message}) async {
-    final Map<String, dynamic>? mRelatesTo =
-        Map.from(payload).remove('m.relates_to');
+    payload = copyMap(payload);
+    final Map<String, dynamic>? mRelatesTo = payload.remove('m.relates_to');
+
     // Events which only contain a m.relates_to like reactions don't need to
     // be encrypted.
     if (payload.isEmpty && mRelatesTo != null) {
