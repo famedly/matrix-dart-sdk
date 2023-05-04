@@ -61,6 +61,7 @@ class CrossSigning {
       encryption.ssss.isSecret(EventTypes.CrossSigningMasterKey);
 
   Future<bool> isCached() async {
+    await client.accountDataLoading;
     if (!enabled) {
       return false;
     }
