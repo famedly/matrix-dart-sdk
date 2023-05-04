@@ -23,7 +23,6 @@ import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
-import '../test/fake_database.dart';
 import 'test_config.dart';
 
 const String testMessage = 'Hello world';
@@ -48,7 +47,10 @@ void main() => group('Integration tests', () {
           Logs().i('++++ Using homeserver $homeserverUri ++++');
 
           Logs().i('++++ Login Alice at ++++');
-          testClientA = Client('TestClientA', databaseBuilder: getDatabase);
+          testClientA = Client(
+            'TestClientA',
+            databaseBuilder: HiveCollectionsDatabase.inMemoryBuilder,
+          );
           await testClientA.checkHomeserver(homeserverUri);
           await testClientA.login(
             LoginType.mLoginPassword,
@@ -58,7 +60,10 @@ void main() => group('Integration tests', () {
           expect(testClientA.encryptionEnabled, true);
 
           Logs().i('++++ Login Bob ++++');
-          testClientB = Client('TestClientB', databaseBuilder: getDatabase);
+          testClientB = Client(
+            'TestClientB',
+            databaseBuilder: HiveCollectionsDatabase.inMemoryBuilder,
+          );
           await testClientB.checkHomeserver(homeserverUri);
           await testClientB.login(
             LoginType.mLoginPassword,
@@ -297,8 +302,10 @@ void main() => group('Integration tests', () {
               "++++ (Alice) Received decrypted message: '${room.lastEvent!.body}' ++++");
 
           Logs().i('++++ Login Bob in another client ++++');
-          final testClientC =
-              Client('TestClientC', databaseBuilder: getDatabase);
+          final testClientC = Client(
+            'TestClientC',
+            databaseBuilder: HiveCollectionsDatabase.inMemoryBuilder,
+          );
           await testClientC.checkHomeserver(homeserverUri);
           // We can't sign in using the displayname, since that breaks e2ee on dendrite: https://github.com/matrix-org/dendrite/issues/2914
           await testClientC.login(

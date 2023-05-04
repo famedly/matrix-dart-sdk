@@ -18,9 +18,11 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:file/memory.dart';
 import 'package:hive/hive.dart';
 
 import 'package:matrix/encryption/utils/olm_session.dart';
@@ -1434,6 +1436,17 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   Future<bool> importDump(String export) {
     // see no need to implement this in a deprecated part
     throw UnimplementedError();
+  }
+
+  static Future<FamedlySdkHiveDatabase> inMemoryBuilder(Client? c) async {
+    final fileSystem = MemoryFileSystem();
+    final testHivePath =
+        '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
+    Directory(testHivePath).createSync(recursive: true);
+    Hive.init(testHivePath);
+    final db = FamedlySdkHiveDatabase('unit_test.${c?.hashCode}');
+    await db.open();
+    return db;
   }
 }
 

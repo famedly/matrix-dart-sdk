@@ -21,7 +21,6 @@ import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
-import '../fake_database.dart';
 import '../fake_matrix_api.dart';
 
 void main() {
@@ -34,8 +33,7 @@ void main() {
     var olmEnabled = true;
 
     late Client client;
-    final otherClient = Client('othertestclient',
-        httpClient: FakeMatrixApi(), databaseBuilder: getDatabase);
+    final otherClient = Client('othertestclient', httpClient: FakeMatrixApi());
     late DeviceKeys device;
     late Map<String, dynamic> payload;
 

@@ -27,7 +27,6 @@ import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
-import 'fake_database.dart';
 import 'fake_matrix_api.dart';
 
 void main() {
@@ -55,7 +54,6 @@ void main() {
       matrix = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
       );
       final eventUpdateListFuture = matrix.onEvent.stream.toList();
       final toDeviceUpdateListFuture = matrix.onToDeviceEvent.stream.toList();
@@ -339,7 +337,6 @@ void main() {
       matrix = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
       );
 
       await matrix.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
@@ -800,7 +797,7 @@ void main() {
       await matrix.createGroupChat(groupName: 'Testgroup', waitForSync: false);
     });
     test('Test the fake store api', () async {
-      final database = await getDatabase(null);
+      final database = await HiveCollectionsDatabase.inMemoryBuilder(null);
       final client1 = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
@@ -926,7 +923,7 @@ void main() {
     });
 
     test('Database Migration', () async {
-      final database = await getDatabase(null);
+      final database = await HiveCollectionsDatabase.inMemoryBuilder(null);
       final moorClient = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
@@ -950,7 +947,6 @@ void main() {
       final hiveClient = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
         legacyDatabaseBuilder: (_) => database,
       );
       await hiveClient.init();
@@ -962,7 +958,6 @@ void main() {
       final client = Client(
         'testclient',
         httpClient: FakeMatrixApi(),
-        databaseBuilder: getDatabase,
       )
         ..accessToken = '1234'
         ..baseUri = Uri.parse('https://fakeserver.notexisting');

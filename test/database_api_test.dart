@@ -24,13 +24,10 @@ import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
-import 'fake_database.dart';
 
 void main() {
   group('HiveCollections Database Test', () {
-    testDatabase(
-      getHiveCollectionsDatabase(null),
-    );
+    testDatabase(HiveCollectionsDatabase.inMemoryBuilder(null));
   });
 }
 

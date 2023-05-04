@@ -25,7 +25,6 @@ import 'package:test/test.dart';
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
-import '../fake_database.dart';
 import '../fake_matrix_api.dart';
 
 class MockSSSS extends SSSS {
@@ -88,7 +87,6 @@ void main() async {
       client2 = Client(
         'othertestclient',
         httpClient: FakeMatrixApi.currentApi!,
-        databaseBuilder: getDatabase,
       );
       await client2.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);

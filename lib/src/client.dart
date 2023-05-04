@@ -61,7 +61,7 @@ class Client extends MatrixApi {
 
   int? get id => _id;
 
-  final FutureOr<DatabaseApi> Function(Client)? databaseBuilder;
+  final FutureOr<DatabaseApi> Function(Client) databaseBuilder;
   final FutureOr<DatabaseApi> Function(Client)? legacyDatabaseBuilder;
   DatabaseApi? _database;
 
@@ -154,7 +154,7 @@ class Client extends MatrixApi {
   /// Set [enableDehydratedDevices] to enable experimental support for enabling MSC3814 dehydrated devices.
   Client(
     this.clientName, {
-    this.databaseBuilder,
+    this.databaseBuilder = HiveCollectionsDatabase.inMemoryBuilder,
     this.legacyDatabaseBuilder,
     Set<KeyVerificationMethod>? verificationMethods,
     http.Client? httpClient,
@@ -1024,7 +1024,7 @@ class Client extends MatrixApi {
       // Client was probably not initialized yet.
     }
 
-    _database ??= await databaseBuilder!.call(this);
+    _database ??= await databaseBuilder.call(this);
 
     final success = await database!.importDump(export);
 
@@ -1208,12 +1208,8 @@ class Client extends MatrixApi {
     bool returnNullIfSeen = true,
   }) async {
     // Get access token if necessary:
-    final database = _database ??= await databaseBuilder?.call(this);
+    final database = _database ??= await databaseBuilder.call(this);
     if (!isLogged()) {
-      if (database == null) {
-        throw Exception(
-            'Can not execute getEventByPushNotification() without a database');
-      }
       final clientInfoMap = await database.getClient(clientName);
       final token = clientInfoMap?.tryGet<String>('token');
       if (token == null) {
@@ -1229,7 +1225,7 @@ class Client extends MatrixApi {
 
     // Create the room object:
     final room = getRoomById(roomId) ??
-        await database?.getSingleRoom(this, roomId) ??
+        await database.getSingleRoom(this, roomId) ??
         Room(
           id: roomId,
           client: this,
@@ -1275,7 +1271,7 @@ class Client extends MatrixApi {
       );
     }
     matrixEvent ??= await database
-        ?.getEventById(eventId, room)
+        .getEventById(eventId, room)
         .timeout(timeoutForServerRequests);
 
     try {
@@ -1302,7 +1298,7 @@ class Client extends MatrixApi {
         return null;
       }
       final readMarkerEvent = await database
-          ?.getEventById(room.fullyRead, room)
+          .getEventById(room.fullyRead, room)
           .timeout(timeoutForServerRequests);
       if (readMarkerEvent != null &&
           readMarkerEvent.originServerTs.isAfter(
@@ -1349,7 +1345,7 @@ class Client extends MatrixApi {
     }
 
     if (storeInDatabase) {
-      await database?.transaction(() async {
+      await database.transaction(() async {
         await database.storeEventUpdate(
             EventUpdate(
               roomID: roomId,
@@ -1414,12 +1410,10 @@ class Client extends MatrixApi {
       }
 
       final databaseBuilder = this.databaseBuilder;
-      if (databaseBuilder != null) {
-        _database ??= await runBenchmarked<DatabaseApi>(
-          'Build database',
-          () async => await databaseBuilder(this),
-        );
-      }
+      _database ??= await runBenchmarked<DatabaseApi>(
+        'Build database',
+        () async => await databaseBuilder(this),
+      );
 
       _groupCallSessionId = randomAlpha(12);
 

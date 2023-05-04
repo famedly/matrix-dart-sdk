@@ -17,7 +17,6 @@
  */
 
 import 'package:matrix/matrix.dart';
-import 'fake_database.dart';
 import 'fake_matrix_api.dart';
 
 const ssssPassphrase = 'nae7ahDiequ7ohniufah3ieS2je1thohX4xeeka7aixohsho9O';
@@ -31,7 +30,6 @@ Future<Client> getClient() async {
   final client = Client(
     'testclient',
     httpClient: FakeMatrixApi(),
-    databaseBuilder: getDatabase,
   );
   FakeMatrixApi.client = client;
   await client.checkHomeserver(Uri.parse('https://fakeServer.notExisting'),

@@ -18,10 +18,12 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
+import 'package:file/memory.dart';
 import 'package:hive/hive.dart';
 
 import 'package:matrix/encryption/utils/olm_session.dart';
@@ -1560,6 +1562,20 @@ class HiveCollectionsDatabase extends DatabaseApi {
       Logs().e('Database import error: ', e, s);
       return false;
     }
+  }
+
+  static Future<HiveCollectionsDatabase> inMemoryBuilder(Client? c) async {
+    final fileSystem = MemoryFileSystem();
+    final testHivePath =
+        '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
+    Directory(testHivePath).createSync(recursive: true);
+    Hive.init(testHivePath);
+    final db = HiveCollectionsDatabase(
+      'unit_test.${c?.hashCode}',
+      testHivePath,
+    );
+    await db.open();
+    return db;
   }
 }
 

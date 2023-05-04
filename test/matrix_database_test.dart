@@ -20,14 +20,14 @@
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
-import 'fake_database.dart';
 
 void main() {
   group('Databse', () {
     Logs().level = Level.error;
     final room = Room(id: '!room:blubb', client: Client('testclient'));
     test('setupDatabase', () async {
-      final database = await getDatabase(null);
+      final database =
+          await HiveCollectionsDatabase.inMemoryBuilder(room.client);
       await database.insertClient(
         'testclient',
         'https://example.org',
@@ -42,7 +42,7 @@ void main() {
 
     test('storeEventUpdate', () async {
       final client = Client('testclient');
-      final database = await getDatabase(client);
+      final database = await HiveCollectionsDatabase.inMemoryBuilder(client);
       // store a simple update
       var update = EventUpdate(
         type: EventUpdateType.timeline,
