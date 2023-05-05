@@ -1,3 +1,12 @@
+## [0.20.1] - 5th May 2023
+- fix: cast issues in getEventList (td)
+- refactor: Make parameters more clear and remove unused methods (Krille)
+- fix: Only request users which are valid mxid (Krille)
+- fix: Always wait for account data to load before returning SSSS status (Nicolas Werner)
+- fix: Reactions are sent encrypted (Krille)
+- chore: oneShotSync before staleCallChecker (td)
+- fix: updateMuteStatus after kConnected (td)
+
 ## [0.20.0] - 28th April 2023
 
 - refactor: Make optional eventId a named parameter (Krille)
