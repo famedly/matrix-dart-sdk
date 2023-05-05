@@ -894,15 +894,6 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> resetNotificationCount(String roomId) async {
-    final raw = await _roomsBox.get(roomId);
-    if (raw == null) return;
-    raw['notification_count'] = raw['highlight_count'] = 0;
-    await _roomsBox.put(roomId, raw);
-    return;
-  }
-
-  @override
   Future<void> setBlockedUserCrossSigningKey(
       bool blocked, String userId, String publicKey) async {
     final raw = await _userCrossSigningKeysBox
@@ -1427,17 +1418,6 @@ class HiveCollectionsDatabase extends DatabaseApi {
     final json = copyMap(raw);
     json['indexes'] = indexes;
     await _inboundGroupSessionsBox.put(sessionId, json);
-    return;
-  }
-
-  @override
-  Future<void> updateRoomSortOrder(
-      double oldestSortOrder, double newestSortOrder, String roomId) async {
-    final raw = await _roomsBox.get(roomId);
-    if (raw == null) throw ('Room not found');
-    raw['oldest_sort_order'] = oldestSortOrder;
-    raw['newest_sort_order'] = newestSortOrder;
-    await _roomsBox.put(roomId, raw);
     return;
   }
 

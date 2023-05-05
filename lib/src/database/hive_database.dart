@@ -830,15 +830,6 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> resetNotificationCount(String roomId) async {
-    final raw = await _roomsBox.get(roomId.toHiveKey);
-    if (raw == null) return;
-    raw['notification_count'] = raw['highlight_count'] = 0;
-    await _roomsBox.put(roomId.toHiveKey, raw);
-    return;
-  }
-
-  @override
   Future<void> setBlockedUserCrossSigningKey(
       bool blocked, String userId, String publicKey) async {
     final raw = await _userCrossSigningKeysBox
@@ -1387,16 +1378,6 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     }
     raw['indexes'] = indexes;
     await _inboundGroupSessionsBox.put(sessionId.toHiveKey, raw);
-    return;
-  }
-
-  @override
-  Future<void> updateRoomSortOrder(
-      double oldestSortOrder, double newestSortOrder, String roomId) async {
-    final raw = await _roomsBox.get(roomId.toHiveKey);
-    raw['oldest_sort_order'] = oldestSortOrder;
-    raw['newest_sort_order'] = newestSortOrder;
-    await _roomsBox.put(roomId.toHiveKey, raw);
     return;
   }
 
