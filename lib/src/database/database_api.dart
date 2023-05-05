@@ -82,15 +82,15 @@ abstract class DatabaseApi {
   Future<List<Event>> getEventList(
     Room room, {
     int start = 0,
-    bool onlySending,
-    int limit,
+    bool onlySending = false,
+    int? limit,
   });
 
   Future<List<String>> getEventIdList(
     Room room, {
     int start = 0,
     bool includeSending = false,
-    int limit,
+    int? limit,
   });
 
   Future<Uint8List?> getFile(Uri mxcUri);
@@ -232,19 +232,11 @@ abstract class DatabaseApi {
 
   Future removeEvent(String eventId, String roomId);
 
-  Future updateRoomSortOrder(
-    double oldestSortOrder,
-    double newestSortOrder,
-    String roomId,
-  );
-
   Future setRoomPrevBatch(
     String prevBatch,
     String roomId,
     Client client,
   );
-
-  Future resetNotificationCount(String roomId);
 
   Future setVerifiedUserCrossSigningKey(
     bool verified,
