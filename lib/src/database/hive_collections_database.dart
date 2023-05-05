@@ -402,13 +402,12 @@ class HiveCollectionsDatabase extends DatabaseApi {
         // Combine those two lists while respecting the start and limit parameters.
         final end = min(timelineEventIds.length,
             start + (limit ?? timelineEventIds.length));
-        final eventIds = <String>[
+        final eventIds = List<String>.from([
           ...sendingEventIds,
           ...(start < timelineEventIds.length && !onlySending
-                  ? timelineEventIds.getRange(start, end).toList()
-                  : [])
-              .whereType<String>()
-        ];
+              ? timelineEventIds.getRange(start, end).toList()
+              : [])
+        ]);
 
         return await _getEventsByIds(eventIds, room);
       });
