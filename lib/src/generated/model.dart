@@ -1,13 +1,14 @@
+import 'package:enhanced_enum/enhanced_enum.dart';
+
 import '../model/auth/authentication_data.dart';
-import '../model/auth/authentication_types.dart';
 import '../model/auth/authentication_identifier.dart';
+import '../model/auth/authentication_types.dart';
+import '../model/children_state.dart';
+import '../model/matrix_event.dart';
 import '../model/matrix_keys.dart';
 import '../model/sync_update.dart';
-import '../model/matrix_event.dart';
-import '../model/children_state.dart';
-
 import 'internal.dart';
-import 'package:enhanced_enum/enhanced_enum.dart';
+
 part 'model.g.dart';
 
 class _NameSource {

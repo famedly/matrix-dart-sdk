@@ -22,7 +22,6 @@
 */
 
 import 'package:matrix_api_lite/src/utils/logs.dart';
-
 import '../../utils/filter_map_extension.dart';
 import '../../utils/try_get_map_extension.dart';
 import '../basic_event.dart';

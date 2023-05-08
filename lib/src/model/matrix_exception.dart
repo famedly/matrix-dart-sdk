@@ -24,6 +24,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+
 import 'package:matrix_api_lite/matrix_api_lite.dart';
 
 enum MatrixError {

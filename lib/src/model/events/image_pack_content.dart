@@ -21,9 +21,9 @@
 * SOFTWARE.
 */
 
-import '../basic_event.dart';
 import '../../utils/filter_map_extension.dart';
 import '../../utils/try_get_map_extension.dart';
+import '../basic_event.dart';
 
 extension ImagePackContentBasicEventExtension on BasicEvent {
   ImagePackContent get parsedImagePackContent =>

@@ -16,5 +16,6 @@ dependencies:
 dev_dependencies:
   build_runner: ^2.1.8
   enhanced_enum_generator: ^0.2.4
+  import_sorter: ^4.6.0
   lints: ^2.0.0
   test: ^1.14.4

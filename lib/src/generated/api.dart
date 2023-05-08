@@ -1,18 +1,18 @@
-import '../model/auth/authentication_data.dart';
-import '../model/auth/authentication_types.dart';
-import '../model/auth/authentication_identifier.dart';
-import '../model/matrix_keys.dart';
-import '../model/sync_update.dart';
-import '../model/matrix_event.dart';
-import '../model/children_state.dart';
-
-import 'model.dart';
-import 'fixed_model.dart';
-import 'internal.dart';
-
-import 'package:http/http.dart';
 import 'dart:convert';
 import 'dart:typed_data';
+
+import 'package:http/http.dart';
+
+import '../model/auth/authentication_data.dart';
+import '../model/auth/authentication_identifier.dart';
+import '../model/auth/authentication_types.dart';
+import '../model/children_state.dart';
+import '../model/matrix_event.dart';
+import '../model/matrix_keys.dart';
+import '../model/sync_update.dart';
+import 'fixed_model.dart';
+import 'internal.dart';
+import 'model.dart';
 
 class Api {
   Client httpClient;

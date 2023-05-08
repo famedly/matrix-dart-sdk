@@ -23,8 +23,9 @@
 
 import 'dart:convert';
 
-import 'package:matrix_api_lite/matrix_api_lite.dart';
 import 'package:test/test.dart';
+
+import 'package:matrix_api_lite/matrix_api_lite.dart';
 
 void main() {
   group('Event Content tests', () {

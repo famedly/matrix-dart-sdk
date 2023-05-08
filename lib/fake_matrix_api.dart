@@ -27,6 +27,7 @@ import 'dart:math';
 
 import 'package:http/http.dart';
 import 'package:http/testing.dart';
+
 import 'package:matrix_api_lite/matrix_api_lite.dart';
 
 Map<String, dynamic> decodeJson(dynamic data) {

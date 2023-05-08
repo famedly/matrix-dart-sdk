@@ -23,9 +23,10 @@
 
 import 'dart:typed_data';
 
+import 'package:test/test.dart';
+
 import 'package:matrix_api_lite/fake_matrix_api.dart';
 import 'package:matrix_api_lite/matrix_api_lite.dart';
-import 'package:test/test.dart';
 
 const emptyRequest = <String, dynamic>{};
 
