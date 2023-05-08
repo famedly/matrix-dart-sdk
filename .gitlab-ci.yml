@@ -1,28 +1,18 @@
-stages:
-  - coverage
-  - publish
+include:
+  project: "famedly/company/frontend/ci-templates"
+  file: "all.yml"
 
 test:
   tags:
     - linux
-  stage: coverage
+  stage: test
   image: dart
   script:
     - dart pub get
     - dart pub run test
-  
-code_analyze:
-  tags:
-    - docker
-  stage: coverage
-  image: cirrusci/flutter
-  dependencies: []
-  script:
-    - flutter format lib/ test/ --set-exit-if-changed
-    - flutter analyze
 
 dry-run:
-  stage: publish
+  stage: deploy
   image: dart
   script:
     - rm -rf ./docs
@@ -30,7 +20,7 @@ dry-run:
     - dart pub publish --dry-run
 
 pub-dev:
-  stage: publish
+  stage: deploy
   image: dart
   dependencies: [dry-run]
   script:
