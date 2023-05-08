@@ -79,6 +79,26 @@ void main() {
       expect(decryptedEvent.originalSource?.toJson(), encryptedEvent.toJson());
     });
 
+    test('decrypt payload without device_id', () async {
+      if (!olmEnabled) return;
+      payload.remove('device_id');
+      payload.remove('sender_key');
+      final encryptedEvent = Event(
+        type: EventTypes.Encrypted,
+        content: payload,
+        room: room,
+        originServerTs: now,
+        eventId: '\$event',
+        senderId: client.userID!,
+      );
+      final decryptedEvent =
+          await client.encryption!.decryptRoomEvent(roomId, encryptedEvent);
+      expect(decryptedEvent.type, 'm.room.message');
+      expect(decryptedEvent.content['msgtype'], 'm.text');
+      expect(decryptedEvent.content['text'], 'Hello foxies!');
+      expect(decryptedEvent.originalSource?.toJson(), encryptedEvent.toJson());
+    });
+
     test('decrypt payload nocache', () async {
       if (!olmEnabled) return;
       client.encryption!.keyManager.clearInboundGroupSessions();

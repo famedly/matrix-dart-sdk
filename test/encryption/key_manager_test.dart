@@ -69,7 +69,7 @@ void main() {
       await client.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
           client.encryption!.keyManager.getInboundGroupSession(
-                  '!726s6s6q:example.com', validSessionId, validSenderKey) !=
+                  '!726s6s6q:example.com', validSessionId) !=
               null,
           true);
 
@@ -89,7 +89,7 @@ void main() {
       await client.encryption!.keyManager.handleToDeviceEvent(event);
       expect(
           client.encryption!.keyManager.getInboundGroupSession(
-                  '!726s6s6q:example.com', validSessionId, validSenderKey) !=
+                  '!726s6s6q:example.com', validSessionId) !=
               null,
           false);
     });
@@ -111,7 +111,7 @@ void main() {
           client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
           true);
       var inbound = client.encryption!.keyManager.getInboundGroupSession(
-          roomId, sess.outboundGroupSession!.session_id(), client.identityKey);
+          roomId, sess.outboundGroupSession!.session_id());
       expect(inbound != null, true);
       expect(
           inbound!.allowedAtIndex['@alice:example.com']
@@ -220,7 +220,7 @@ void main() {
           client.encryption!.keyManager.getOutboundGroupSession(roomId) != null,
           true);
       inbound = client.encryption!.keyManager.getInboundGroupSession(
-          roomId, sess.outboundGroupSession!.session_id(), client.identityKey);
+          roomId, sess.outboundGroupSession!.session_id());
       expect(
           inbound!.allowedAtIndex['@alice:example.com']
               ?['L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8'],
@@ -284,68 +284,41 @@ void main() {
       client.encryption!.keyManager.clearInboundGroupSessions();
       expect(
           client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId, senderKey) !=
+                  .getInboundGroupSession(roomId, sessionId) !=
               null,
           false);
       await client.encryption!.keyManager
           .setInboundGroupSession(roomId, sessionId, senderKey, sessionContent);
       expect(
           client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId, senderKey) !=
+                  .getInboundGroupSession(roomId, sessionId) !=
               null,
           true);
-      expect(
-          client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId, 'invalid') !=
-              null,
-          false);
 
       expect(
           client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId, senderKey) !=
-              null,
-          true);
-      expect(
-          client.encryption!.keyManager
-                  .getInboundGroupSession('otherroom', sessionId, senderKey) !=
-              null,
-          true);
-      expect(
-          client.encryption!.keyManager
-                  .getInboundGroupSession('otherroom', sessionId, 'invalid') !=
-              null,
-          false);
-      expect(
-          client.encryption!.keyManager
-                  .getInboundGroupSession('otherroom', 'invalid', senderKey) !=
-              null,
-          false);
-
-      client.encryption!.keyManager.clearInboundGroupSessions();
-      expect(
-          client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId, senderKey) !=
-              null,
-          false);
-      await client.encryption!.keyManager
-          .loadInboundGroupSession(roomId, sessionId, senderKey);
-      expect(
-          client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId, senderKey) !=
+                  .getInboundGroupSession(roomId, sessionId) !=
               null,
           true);
 
       client.encryption!.keyManager.clearInboundGroupSessions();
       expect(
           client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId, senderKey) !=
+                  .getInboundGroupSession(roomId, sessionId) !=
               null,
           false);
       await client.encryption!.keyManager
-          .loadInboundGroupSession(roomId, sessionId, 'invalid');
+          .loadInboundGroupSession(roomId, sessionId);
       expect(
           client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId, 'invalid') !=
+                  .getInboundGroupSession(roomId, sessionId) !=
+              null,
+          true);
+
+      client.encryption!.keyManager.clearInboundGroupSessions();
+      expect(
+          client.encryption!.keyManager
+                  .getInboundGroupSession(roomId, sessionId) !=
               null,
           false);
     });
@@ -398,13 +371,13 @@ void main() {
           forwarded: true);
       expect(
           client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .getInboundGroupSession(roomId, sessionId)
               ?.inboundGroupSession
               ?.first_known_index(),
           1);
       expect(
           client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .getInboundGroupSession(roomId, sessionId)
               ?.forwardingCurve25519KeyChain
               .length,
           1);
@@ -424,13 +397,13 @@ void main() {
           forwarded: true);
       expect(
           client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .getInboundGroupSession(roomId, sessionId)
               ?.inboundGroupSession
               ?.first_known_index(),
           1);
       expect(
           client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .getInboundGroupSession(roomId, sessionId)
               ?.forwardingCurve25519KeyChain
               .length,
           1);
@@ -450,13 +423,13 @@ void main() {
           forwarded: true);
       expect(
           client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .getInboundGroupSession(roomId, sessionId)
               ?.inboundGroupSession
               ?.first_known_index(),
           0);
       expect(
           client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .getInboundGroupSession(roomId, sessionId)
               ?.forwardingCurve25519KeyChain
               .length,
           1);
@@ -476,13 +449,13 @@ void main() {
           forwarded: true);
       expect(
           client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .getInboundGroupSession(roomId, sessionId)
               ?.inboundGroupSession
               ?.first_known_index(),
           0);
       expect(
           client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .getInboundGroupSession(roomId, sessionId)
               ?.forwardingCurve25519KeyChain
               .length,
           1);
@@ -502,13 +475,13 @@ void main() {
           forwarded: true);
       expect(
           client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .getInboundGroupSession(roomId, sessionId)
               ?.inboundGroupSession
               ?.first_known_index(),
           0);
       expect(
           client.encryption!.keyManager
-              .getInboundGroupSession(roomId, sessionId, senderKey)
+              .getInboundGroupSession(roomId, sessionId)
               ?.forwardingCurve25519KeyChain
               .length,
           0);
