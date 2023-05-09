@@ -1133,13 +1133,15 @@ class Room {
   /// automatically be set.
   Future<void> join({bool leaveIfNotFound = true}) async {
     try {
-      await client.joinRoomById(id);
-      final invitation = getState(EventTypes.RoomMember, client.userID!);
-      if (invitation != null &&
-          invitation.content['is_direct'] is bool &&
-          invitation.content['is_direct']) {
-        await addToDirectChat(invitation.senderId);
+      // If this is a DM, mark it as a DM first, because otherwise the current member
+      // event might be the join event already and there is also a race condition there for SDK users.
+      final dmId = directChatMatrixID;
+      if (dmId != null) {
+        await addToDirectChat(dmId);
       }
+
+      // now join
+      await client.joinRoomById(id);
     } on MatrixException catch (exception) {
       if (leaveIfNotFound &&
           [MatrixError.M_NOT_FOUND, MatrixError.M_UNKNOWN]
