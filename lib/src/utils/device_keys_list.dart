@@ -404,8 +404,8 @@ class CrossSigningKey extends SignableKey {
     final json = toJson();
     identifier = dbEntry['public_key'];
     usage = json['usage'].cast<String>();
-    _verified = dbEntry['verified'];
-    _blocked = dbEntry['blocked'];
+    _verified = dbEntry['verified'] == 'true' || dbEntry['verified'] == true;
+    _blocked = dbEntry['blocked'] == 'true' || dbEntry['blocked'] == true;
   }
 
   CrossSigningKey.fromJson(Map<String, dynamic> json, Client client)
@@ -490,8 +490,8 @@ class DeviceKeys extends SignableKey {
     final json = toJson();
     identifier = dbEntry['device_id'];
     algorithms = json['algorithms'].cast<String>();
-    _verified = dbEntry['verified'];
-    _blocked = dbEntry['blocked'];
+    _verified = dbEntry['verified'] == 'true' || dbEntry['verified'] == true;
+    _blocked = dbEntry['blocked'] == 'true' || dbEntry['blocked'] == true;
     lastActive =
         DateTime.fromMillisecondsSinceEpoch(dbEntry['last_active'] ?? 0);
   }

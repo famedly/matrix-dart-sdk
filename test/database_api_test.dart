@@ -18,20 +18,23 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:file/memory.dart';
 import 'package:olm/olm.dart' as olm;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
 import 'fake_database.dart';
 
 void main() {
-  group('HiveCollections Database Test', () {
+  group('Database Test', () {
     late DatabaseApi database;
     late int toDeviceQueueIndex;
     test('Open', () async {
-      database = await getHiveCollectionsDatabase(null);
+      database = await getDatabase(null);
     });
     test('transaction', () async {
       var counter = 0;
@@ -473,6 +476,23 @@ void main() {
       await database.close();
     });
   });
+}
+
+Future<SqfliteDatabase> openInMemoryFfiSqfliteDatabase(Client? _) async {
+  final fileSystem = MemoryFileSystem();
+  final path = '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
+  final database = await databaseFactoryFfi.openDatabase(
+    path,
+    options: OpenDatabaseOptions(
+      version: 1,
+      onCreate: DbTablesExtension.create,
+    ),
+  );
+  return SqfliteDatabase(
+    database,
+    fileStoragePath: null,
+    maxFileSize: 0,
+  );
 }
 
 Future<bool> olmEnabled() async {

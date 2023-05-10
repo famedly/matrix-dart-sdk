@@ -25,6 +25,8 @@ export 'src/client.dart';
 export 'src/database/database_api.dart';
 export 'src/database/hive_database.dart';
 export 'src/database/hive_collections_database.dart';
+export 'src/database/sqflite_database.dart';
+export 'src/database/sqflite_tables.dart';
 export 'src/event.dart';
 export 'src/presence.dart';
 export 'src/event_status.dart';

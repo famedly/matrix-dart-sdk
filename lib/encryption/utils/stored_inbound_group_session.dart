@@ -47,7 +47,9 @@ class StoredInboundGroupSession {
         content: json['content'],
         indexes: json['indexes'],
         allowedAtIndex: json['allowed_at_index'],
-        uploaded: json['uploaded'],
+        uploaded: json['uploaded'] is String
+            ? json['uploaded'] == 'true'
+            : json['uploaded'],
         senderKey: json['sender_key'],
         senderClaimedKeys: json['sender_claimed_keys'],
       );

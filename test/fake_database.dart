@@ -23,8 +23,10 @@ import 'package:file/memory.dart';
 import 'package:hive/hive.dart';
 
 import 'package:matrix/matrix.dart';
+import 'database_api_test.dart';
 
-Future<DatabaseApi> getDatabase(Client? _) => getHiveCollectionsDatabase(_);
+Future<DatabaseApi> getDatabase(Client? _) =>
+    openInMemoryFfiSqfliteDatabase(null);
 
 bool hiveInitialized = false;
 

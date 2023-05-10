@@ -105,7 +105,7 @@ class Room {
         client: client,
         id: json['id'],
         membership: Membership.values.singleWhere(
-          (m) => m.toString() == 'Membership.${json['membership']}',
+          (m) => m.name == json['membership'],
           orElse: () => Membership.join,
         ),
         notificationCount: json['notification_count'],
