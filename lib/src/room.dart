@@ -58,7 +58,6 @@ const String messageSendingStatusKey =
 const String fileSendingStatusKey =
     'com.famedly.famedlysdk.file_sending_status';
 
-const String sortOrderKey = 'com.famedly.famedlysdk.sort_order';
 const String emptyRoomName = 'Empty chat';
 
 /// Represents a Matrix room.
@@ -103,8 +102,6 @@ class Room {
         'notification_count': notificationCount,
         'prev_batch': prev_batch,
         'summary': summary.toJson(),
-        'newest_sort_order': 0,
-        'oldest_sort_order': 0,
       };
 
   factory Room.fromJson(Map<String, dynamic> json, Client client) => Room(
@@ -119,8 +116,6 @@ class Room {
         prev_batch: json['prev_batch'],
         summary:
             RoomSummary.fromJson(Map<String, dynamic>.from(json['summary'])),
-        newestSortOrder: json['newest_sort_order'].toDouble(),
-        oldestSortOrder: json['oldest_sort_order'].toDouble(),
       );
 
   /// Flag if the room is partial, meaning not all state events have been loaded yet
@@ -425,8 +420,6 @@ class Room {
     required this.client,
     this.notificationSettings,
     Map<String, BasicRoomEvent>? roomAccountData,
-    double newestSortOrder = 0.0,
-    double oldestSortOrder = 0.0,
     RoomSummary? summary,
   })  : roomAccountData = roomAccountData ?? <String, BasicRoomEvent>{},
         summary = summary ??

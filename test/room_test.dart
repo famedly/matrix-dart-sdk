@@ -54,8 +54,6 @@ void main() {
         highlightCount: highlightCount,
         notificationCount: notificationCount,
         prev_batch: '',
-        newestSortOrder: 0.0,
-        oldestSortOrder: 0.0,
         summary: RoomSummary.fromJson({
           'm.joined_member_count': 2,
           'm.invited_member_count': 2,
