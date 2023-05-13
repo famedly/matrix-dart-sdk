@@ -49,7 +49,6 @@ class VoIP {
   Map<String, String> incomingCallRoomId = {};
 
   VoIP(this.client, this.delegate) : super() {
-    Logs().e('11111');
     // to populate groupCalls with already present calls
     for (final room in client.rooms) {
       if (room.activeGroupCallEvents.isNotEmpty) {
@@ -58,9 +57,7 @@ class VoIP {
               emitHandleNewGroupCall: false);
         }
       }
-      Logs().e('doneeeeee');
     }
-    Logs().e('222222');
 
     client.onCallInvite.stream
         .listen((event) => _handleEvent(event, onCallInvite));
