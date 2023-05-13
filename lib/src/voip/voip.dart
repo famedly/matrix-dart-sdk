@@ -49,6 +49,19 @@ class VoIP {
   Map<String, String> incomingCallRoomId = {};
 
   VoIP(this.client, this.delegate) : super() {
+    Logs().e('11111');
+    // to populate groupCalls with already present calls
+    for (final room in client.rooms) {
+      if (room.activeGroupCallEvents.isNotEmpty) {
+        for (final groupCall in room.activeGroupCallEvents) {
+          createGroupCallFromRoomStateEvent(groupCall,
+              emitHandleNewGroupCall: false);
+        }
+      }
+      Logs().e('doneeeeee');
+    }
+    Logs().e('222222');
+
     client.onCallInvite.stream
         .listen((event) => _handleEvent(event, onCallInvite));
     client.onCallAnswer.stream
@@ -82,7 +95,7 @@ class VoIP {
       },
     );
 
-    client.onToDeviceEvent.stream.listen((event) {
+    client.onToDeviceEvent.stream.listen((event) async {
       Logs().v('[VOIP] onToDeviceEvent: type ${event.toJson()}.');
 
       if (event.type == 'org.matrix.call_duplicate_session') {
@@ -101,50 +114,40 @@ class VoIP {
       final content = event.content;
       switch (event.type) {
         case EventTypes.CallInvite:
-          onCallInvite(roomId, senderId, content);
+          await onCallInvite(roomId, senderId, content);
           break;
         case EventTypes.CallAnswer:
-          onCallAnswer(roomId, senderId, content);
+          await onCallAnswer(roomId, senderId, content);
           break;
         case EventTypes.CallCandidates:
-          onCallCandidates(roomId, senderId, content);
+          await onCallCandidates(roomId, senderId, content);
           break;
         case EventTypes.CallHangup:
-          onCallHangup(roomId, senderId, content);
+          await onCallHangup(roomId, senderId, content);
           break;
         case EventTypes.CallReject:
-          onCallReject(roomId, senderId, content);
+          await onCallReject(roomId, senderId, content);
           break;
         case EventTypes.CallNegotiate:
-          onCallNegotiate(roomId, senderId, content);
+          await onCallNegotiate(roomId, senderId, content);
           break;
         case EventTypes.CallReplaces:
-          onCallReplaces(roomId, senderId, content);
+          await onCallReplaces(roomId, senderId, content);
           break;
         case EventTypes.CallSelectAnswer:
-          onCallSelectAnswer(roomId, senderId, content);
+          await onCallSelectAnswer(roomId, senderId, content);
           break;
         case EventTypes.CallSDPStreamMetadataChanged:
         case EventTypes.CallSDPStreamMetadataChangedPrefix:
-          onSDPStreamMetadataChangedReceived(roomId, senderId, content);
+          await onSDPStreamMetadataChangedReceived(roomId, senderId, content);
           break;
         case EventTypes.CallAssertedIdentity:
-          onAssertedIdentityReceived(roomId, senderId, content);
+          await onAssertedIdentityReceived(roomId, senderId, content);
           break;
       }
     });
 
     delegate.mediaDevices.ondevicechange = _onDeviceChange;
-
-    // to populate groupCalls with already present calls
-    client.rooms.forEach((room) {
-      if (room.activeGroupCallEvents.isNotEmpty) {
-        room.activeGroupCallEvents.forEach((element) {
-          createGroupCallFromRoomStateEvent(element,
-              emitHandleNewGroupCall: false);
-        });
-      }
-    });
   }
 
   Future<void> _onDeviceChange(dynamic _) async {
