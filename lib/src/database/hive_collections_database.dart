@@ -990,7 +990,8 @@ class HiveCollectionsDatabase extends DatabaseApi {
   Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client) async {
     // Ephemerals should not be stored
     if (eventUpdate.type == EventUpdateType.ephemeral) return;
-    final tmpRoom = Room(id: eventUpdate.roomID, client: client);
+    final tmpRoom = client.getRoomById(eventUpdate.roomID) ??
+        Room(id: eventUpdate.roomID, client: client);
 
     // In case of this is a redaction event
     if (eventUpdate.content['type'] == EventTypes.Redaction) {
@@ -1002,6 +1003,13 @@ class HiveCollectionsDatabase extends DatabaseApi {
         await _eventsBox.put(
             TupleKey(eventUpdate.roomID, event.eventId).toString(),
             event.toJson());
+
+        if (tmpRoom.lastEvent?.eventId == event.eventId) {
+          await _roomStateBox.put(
+            TupleKey(eventUpdate.roomID, event.type).toString(),
+            {'': event.toJson()},
+          );
+        }
       }
     }
 
