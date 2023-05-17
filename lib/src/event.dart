@@ -718,6 +718,41 @@ class Event extends MatrixEvent {
           senderId);
     }
 
+    final body = calcUnlocalizedBody(
+      hideReply: hideReply,
+      hideEdit: hideEdit,
+      plaintextBody: plaintextBody,
+      removeMarkdown: removeMarkdown,
+    );
+
+    final callback = EventLocalizations.localizationsMap[type];
+    var localizedBody = i18n.unknownEvent(type);
+    if (callback != null) {
+      localizedBody = callback(this, i18n, body);
+    }
+
+    // Add the sender name prefix
+    if (withSenderNamePrefix &&
+        type == EventTypes.Message &&
+        textOnlyMessageTypes.contains(messageType)) {
+      final senderNameOrYou = senderId == room.client.userID
+          ? i18n.you
+          : senderFromMemoryOrFallback.calcDisplayname(i18n: i18n);
+      localizedBody = '$senderNameOrYou: $localizedBody';
+    }
+
+    return localizedBody;
+  }
+
+  /// Calculating the body of an event regardless of localization.
+  String calcUnlocalizedBody(
+      {bool hideReply = false,
+      bool hideEdit = false,
+      bool plaintextBody = false,
+      bool removeMarkdown = false}) {
+    if (redacted) {
+      return 'Removed by ${senderFromMemoryOrFallback.displayName ?? senderId}';
+    }
     var body = plaintextBody ? this.plaintextBody : this.body;
 
     // we need to know if the message is an html message to be able to determine
@@ -757,24 +792,7 @@ class Event extends MatrixEvent {
       );
       body = document.documentElement?.text ?? body;
     }
-
-    final callback = EventLocalizations.localizationsMap[type];
-    var localizedBody = i18n.unknownEvent(type);
-    if (callback != null) {
-      localizedBody = callback(this, i18n, body);
-    }
-
-    // Add the sender name prefix
-    if (withSenderNamePrefix &&
-        type == EventTypes.Message &&
-        textOnlyMessageTypes.contains(messageType)) {
-      final senderNameOrYou = senderId == room.client.userID
-          ? i18n.you
-          : senderFromMemoryOrFallback.calcDisplayname(i18n: i18n);
-      localizedBody = '$senderNameOrYou: $localizedBody';
-    }
-
-    return localizedBody;
+    return body;
   }
 
   static const Set<String> textOnlyMessageTypes = {
