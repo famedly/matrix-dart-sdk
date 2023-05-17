@@ -1,4 +1,16 @@
+## [0.20.2] - 17th May 2023
+
+- builds: Update to flutter container 3.7.12 (Krille)
+- chore: add missing awaits to to_device call events listener (td)
+- chore: add missing awaits to to_device call events listener (td)
+- chore: calculate unlocalized body (Reza)
+- fix: mark DMs as DMs properly when joining (Nicolas Werner)
+- fix: remove deprecated sender_key occurrences (Malin Errenst)
+- refactor: Check correct if null (Krille)
+- refactor: Remove unused parameters (Krille)
+
 ## [0.20.1] - 5th May 2023
+
 - fix: cast issues in getEventList (td)
 - refactor: Make parameters more clear and remove unused methods (Krille)
 - fix: Only request users which are valid mxid (Krille)
