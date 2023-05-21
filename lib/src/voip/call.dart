@@ -352,6 +352,12 @@ class CallSession {
   bool get isGroupCall => groupCallId != null;
   bool missedCall = true;
 
+  final CachedStreamController<RTCRtpSender> onNewRtpSender =
+      CachedStreamController();
+
+  final CachedStreamController<RTCRtpReceiver> onNewRtpReceiever =
+      CachedStreamController();
+
   final CachedStreamController<CallSession> onCallStreamsChanged =
       CachedStreamController();
 
@@ -848,10 +854,16 @@ class CallSession {
         for (final track in stream.getTracks()) {
           screensharingSenders.add(await pc!.addTrack(track, stream));
         }
+        for (final sender in screensharingSenders) {
+          onNewRtpSender.add(sender);
+        }
       } else if (purpose == SDPStreamMetadataPurpose.Usermedia) {
         usermediaSenders.clear();
         for (final track in stream.getTracks()) {
           usermediaSenders.add(await pc!.addTrack(track, stream));
+        }
+        for (final sender in usermediaSenders) {
+          onNewRtpSender.add(sender);
         }
       }
     }
@@ -1026,7 +1038,9 @@ class CallSession {
           } else {
             // adding transceiver
             Logs().d('[VOIP] adding track $newTrack to pc');
-            await pc!.addTrack(newTrack, localUserMediaStream!.stream!);
+            final sender =
+                await pc!.addTrack(newTrack, localUserMediaStream!.stream!);
+            onNewRtpSender.add(sender);
           }
         }
         // for renderer to be able to show new video track
@@ -1504,6 +1518,7 @@ class CallSession {
             }
           };
         }
+        onNewRtpReceiever.add(event.receiver!);
       }
     };
     return pc;
