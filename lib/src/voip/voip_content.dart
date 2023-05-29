@@ -77,15 +77,19 @@ const String sdpStreamMetadataKey = 'org.matrix.msc3077.sdp_stream_metadata';
 class CallCapabilities {
   bool transferee;
   bool dtmf;
-  CallCapabilities({this.transferee = false, this.dtmf = false});
+  bool sframe;
+  CallCapabilities(
+      {this.transferee = false, this.dtmf = false, this.sframe = false});
   factory CallCapabilities.fromJson(Map<String, dynamic> json) =>
       CallCapabilities(
         dtmf: json['m.call.dtmf'] as bool? ?? false,
         transferee: json['m.call.transferee'] as bool? ?? false,
+        sframe: json['m.call.sframe'] as bool? ?? false,
       );
   Map<String, dynamic> toJson() => {
         'm.call.transferee': transferee,
         'm.call.dtmf': dtmf,
+        'm.call.sframe': sframe,
       };
 }
 
@@ -104,22 +108,26 @@ class SDPStreamPurpose {
   String purpose;
   bool audio_muted;
   bool video_muted;
+  String? sframeKey;
 
   SDPStreamPurpose(
       {required this.purpose,
       this.audio_muted = false,
-      this.video_muted = false});
+      this.video_muted = false,
+      this.sframeKey});
   factory SDPStreamPurpose.fromJson(Map<String, dynamic> json) =>
       SDPStreamPurpose(
         audio_muted: json['audio_muted'] as bool? ?? false,
         video_muted: json['video_muted'] as bool? ?? false,
         purpose: json['purpose'] as String,
+        sframeKey: json['sframe_key'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
         'purpose': purpose,
         'audio_muted': audio_muted,
         'video_muted': video_muted,
+        if (sframeKey != null) 'sframe_key': sframeKey,
       };
 }
 

@@ -303,6 +303,8 @@ class CallOptions {
   late VoIP voip;
   late Room room;
   late List<Map<String, dynamic>> iceServers;
+  bool? sframe;
+  String? sframeKey;
 }
 
 /// A call session object
@@ -537,11 +539,13 @@ class CallSession {
   Future<void> sendAnswer(RTCSessionDescription answer) async {
     final callCapabilities = CallCapabilities()
       ..dtmf = false
-      ..transferee = false;
+      ..transferee = false
+      ..sframe = opts.sframe ?? false;
 
     final metadata = SDPStreamMetadata({
       localUserMediaStream!.stream!.id: SDPStreamPurpose(
           purpose: SDPStreamMetadataPurpose.Usermedia,
+          sframeKey: opts.sframeKey,
           audio_muted: localUserMediaStream!.stream!.getAudioTracks().isEmpty,
           video_muted: localUserMediaStream!.stream!.getVideoTracks().isEmpty)
     });
@@ -1276,7 +1280,9 @@ class CallSession {
 
     final callCapabilities = CallCapabilities()
       ..dtmf = false
-      ..transferee = false;
+      ..transferee = false
+      ..sframe = opts.sframe ?? false;
+
     final metadata = _getLocalSDPStreamMetadata();
     if (state == CallState.kCreateOffer) {
       Logs().d('[glare] new invite sent about to be called');
@@ -1446,7 +1452,8 @@ class CallSession {
         sdpStreamMetadatas[wpstream.stream!.id] = SDPStreamPurpose(
             purpose: wpstream.purpose,
             audio_muted: wpstream.audioMuted,
-            video_muted: wpstream.videoMuted);
+            video_muted: wpstream.videoMuted,
+            sframeKey: opts.sframeKey);
       }
     }
     final metadata = SDPStreamMetadata(sdpStreamMetadatas);
