@@ -132,17 +132,17 @@ class SSSS {
 
     final parity = result.fold<int>(0, (a, b) => a ^ b);
     if (parity != 0) {
-      throw Exception('Incorrect parity');
+      throw InvalidPassphraseException('Incorrect parity');
     }
 
     for (var i = 0; i < olmRecoveryKeyPrefix.length; i++) {
       if (result[i] != olmRecoveryKeyPrefix[i]) {
-        throw Exception('Incorrect prefix');
+        throw InvalidPassphraseException('Incorrect prefix');
       }
     }
 
     if (result.length != olmRecoveryKeyPrefix.length + ssssKeyLength + 1) {
-      throw Exception('Incorrect length');
+      throw InvalidPassphraseException('Incorrect length');
     }
 
     return Uint8List.fromList(result.sublist(olmRecoveryKeyPrefix.length,
@@ -163,13 +163,13 @@ class SSSS {
   static Future<Uint8List> keyFromPassphrase(
       String passphrase, PassphraseInfo info) async {
     if (info.algorithm != AlgorithmTypes.pbkdf2) {
-      throw Exception('Unknown algorithm');
+      throw InvalidPassphraseException('Unknown algorithm');
     }
     if (info.iterations == null) {
-      throw Exception('Passphrase info without iterations');
+      throw InvalidPassphraseException('Passphrase info without iterations');
     }
     if (info.salt == null) {
-      throw Exception('Passphrase info without salt');
+      throw InvalidPassphraseException('Passphrase info without salt');
     }
     return await uc.pbkdf2(
         Uint8List.fromList(utf8.encode(passphrase)),
@@ -275,7 +275,7 @@ class SSSS {
         return true;
       }
     } else {
-      throw Exception('Unknown Algorithm');
+      throw InvalidPassphraseException('Unknown Algorithm');
     }
   }
 
@@ -380,7 +380,7 @@ class SSSS {
     // now remove all other keys
     final content = client.accountData[type]?.content.copy();
     if (content == null) {
-      throw Exception('Key has no content!');
+      throw InvalidPassphraseException('Key has no content!');
     }
 
     final otherKeys =
@@ -666,7 +666,7 @@ class OpenSSSS {
       return;
     } else if (passphrase != null) {
       if (!hasPassphrase) {
-        throw Exception(
+        throw InvalidPassphraseException(
             'Tried to unlock with passphrase while key does not have a passphrase');
       }
       privateKey = await Future.value(
@@ -680,12 +680,12 @@ class OpenSSSS {
     } else if (recoveryKey != null) {
       privateKey = SSSS.decodeRecoveryKey(recoveryKey);
     } else {
-      throw Exception('Nothing specified');
+      throw InvalidPassphraseException('Nothing specified');
     }
     // verify the validity of the key
     if (!await ssss.checkKey(privateKey!, keyData)) {
       privateKey = null;
-      throw Exception('Inalid key');
+      throw InvalidPassphraseException('Inalid key');
     }
     if (postUnlock) {
       await runInRoot(() => _postUnlock());
@@ -765,4 +765,9 @@ class KeyFromPassphraseArgs {
 /// [Client.nativeImplementations] instead
 Future<Uint8List> generateKeyFromPassphrase(KeyFromPassphraseArgs args) async {
   return await SSSS.keyFromPassphrase(args.passphrase, args.info);
+}
+
+class InvalidPassphraseException implements Exception {
+  String cause;
+  InvalidPassphraseException(this.cause);
 }
