@@ -935,7 +935,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
 
     // In case of this is a redaction event
     if (eventUpdate.content['type'] == EventTypes.Redaction) {
-      final tmpRoom = Room(id: eventUpdate.roomID, client: client);
+      final tmpRoom = client.getRoomById(eventUpdate.roomID) ??
+          Room(id: eventUpdate.roomID, client: client);
       final eventId = eventUpdate.content.tryGet<String>('redacts');
       final event =
           eventId != null ? await getEventById(eventId, tmpRoom) : null;
@@ -944,6 +945,13 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
         await _eventsBox.put(
             MultiKey(eventUpdate.roomID, event.eventId).toString(),
             event.toJson());
+
+        if (tmpRoom.lastEvent?.eventId == event.eventId) {
+          await _roomStateBox.put(
+            MultiKey(eventUpdate.roomID, event.type).toString(),
+            {'': event.toJson()},
+          );
+        }
       }
     }
 
