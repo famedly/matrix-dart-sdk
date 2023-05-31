@@ -1598,7 +1598,13 @@ class Room {
     if (user != null) {
       return user.asUser;
     } else {
-      if (mxID.isValidMatrixId) requestUser(mxID, ignoreErrors: true);
+      if (mxID.isValidMatrixId) {
+        requestUser(
+          mxID,
+          ignoreErrors: true,
+          requestProfile: false,
+        );
+      }
       return User(mxID, room: this);
     }
   }
@@ -1652,10 +1658,14 @@ class Room {
     if (resp == null && requestProfile) {
       try {
         final profile = await client.getUserProfile(mxID);
-        resp = {
-          'displayname': profile.displayname,
-          'avatar_url': profile.avatarUrl.toString(),
-        };
+        _requestingMatrixIds.remove(mxID);
+        return User(
+          mxID,
+          displayName: profile.displayname,
+          avatarUrl: profile.avatarUrl?.toString(),
+          membership: Membership.leave.name,
+          room: this,
+        );
       } catch (e, s) {
         _requestingMatrixIds.remove(mxID);
         if (!ignoreErrors) {
