@@ -70,7 +70,9 @@ class User extends Event {
   /// The displayname of the user if the user has set one.
   String? get displayName =>
       content.tryGet<String>('displayname') ??
-      prevContent?.tryGet<String>('displayname');
+      (membership == Membership.join
+          ? null
+          : prevContent?.tryGet<String>('displayname'));
 
   /// Returns the power level of this user.
   int get powerLevel => room.getPowerLevelByUserId(id);
@@ -89,14 +91,11 @@ class User extends Event {
 
   /// The avatar if the user has one.
   Uri? get avatarUrl {
-    final prevContent = this.prevContent;
-    return content.containsKey('avatar_url')
-        ? (content['avatar_url'] is String
-            ? Uri.tryParse(content['avatar_url'])
-            : null)
-        : (prevContent != null && prevContent['avatar_url'] is String
-            ? Uri.tryParse(prevContent['avatar_url'])
-            : null);
+    final uri = content.tryGet<String>('avatar_url') ??
+        (membership == Membership.join
+            ? null
+            : prevContent?.tryGet<String>('avatar_url'));
+    return uri == null ? null : Uri.tryParse(uri);
   }
 
   /// Returns the displayname or the local part of the Matrix ID if the user
