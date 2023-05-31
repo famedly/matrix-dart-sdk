@@ -1,3 +1,6 @@
+## [0.20.4] - 31th May 2023
+- fix: Do not store global profiles in room states as members (Krille)
+
 ## [0.20.3] - 30th May 2023
 - feat: Display performance warning when requesting more than 100 participants (Krille)
 - fix: Also update last event on redaction in store (Krille)
