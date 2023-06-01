@@ -1049,12 +1049,17 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
       }
     }
 
+    final stateKey =
+        client.roomPreviewLastEvents.contains(eventUpdate.content['type'])
+            ? ''
+            : eventUpdate.content['state_key'];
     // Store a common state event
     if ({
-      EventUpdateType.timeline,
-      EventUpdateType.state,
-      EventUpdateType.inviteState
-    }.contains(eventUpdate.type)) {
+          EventUpdateType.timeline,
+          EventUpdateType.state,
+          EventUpdateType.inviteState
+        }.contains(eventUpdate.type) &&
+        stateKey != null) {
       if (eventUpdate.content['type'] == EventTypes.RoomMember) {
         await _roomMembersBox.put(
             MultiKey(
@@ -1068,30 +1073,43 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
           eventUpdate.content['type'],
         ).toString();
         final Map stateMap = await _roomStateBox.get(key) ?? {};
+
         // store state events and new messages, that either are not an edit or an edit of the lastest message
         // An edit is an event, that has an edit relation to the latest event. In some cases for the second edit, we need to compare if both have an edit relation to the same event instead.
         if (eventUpdate.content
                 .tryGetMap<String, dynamic>('content')
                 ?.tryGetMap<String, dynamic>('m.relates_to') ==
             null) {
-          stateMap[eventUpdate.content['state_key']] = eventUpdate.content;
+          stateMap[stateKey] = eventUpdate.content;
           await _roomStateBox.put(key, stateMap);
         } else {
           final editedEventRelationshipEventId = eventUpdate.content
               .tryGetMap<String, dynamic>('content')
               ?.tryGetMap<String, dynamic>('m.relates_to')
               ?.tryGet<String>('event_id');
-          if (eventUpdate.content['type'] != EventTypes.Message ||
-              eventUpdate.content
-                      .tryGetMap<String, dynamic>('content')
-                      ?.tryGetMap<String, dynamic>('m.relates_to')
-                      ?.tryGet<String>('rel_type') !=
-                  RelationshipTypes.edit ||
-              editedEventRelationshipEventId == stateMap['']?.eventId ||
-              ((stateMap['']?.relationshipType == RelationshipTypes.edit &&
+
+          final tmpRoom = client.getRoomById(eventUpdate.roomID) ??
+              Room(id: eventUpdate.roomID, client: client);
+
+          if (eventUpdate.content['type'] !=
+                      EventTypes
+                          .Message || // send anything other than a message
+                  eventUpdate.content
+                          .tryGetMap<String, dynamic>('content')
+                          ?.tryGetMap<String, dynamic>('m.relates_to')
+                          ?.tryGet<String>('rel_type') !=
+                      RelationshipTypes
+                          .edit || // replies are always latest anyway
                   editedEventRelationshipEventId ==
-                      stateMap['']?.relationshipEventId))) {
-            stateMap[eventUpdate.content['state_key']] = eventUpdate.content;
+                      tmpRoom.lastEvent
+                          ?.eventId || // edit of latest (original event) event
+                  (tmpRoom.lastEvent?.relationshipType ==
+                          RelationshipTypes.edit &&
+                      editedEventRelationshipEventId ==
+                          tmpRoom.lastEvent
+                              ?.relationshipEventId) // edit of latest (edited event) event
+              ) {
+            stateMap[stateKey] = eventUpdate.content;
             await _roomStateBox.put(key, stateMap);
           }
         }
