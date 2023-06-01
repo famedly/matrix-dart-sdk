@@ -37,5 +37,4 @@ dev_dependencies:
   import_sorter: ^4.6.0
   lints: ^2.0.0
   test: ^1.15.7
-  test_api: 0.4.16 # pinned because of https://github.com/dart-lang/test/issues/1977
   #flutter_test: {sdk: flutter}
