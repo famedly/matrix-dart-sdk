@@ -1,3 +1,6 @@
+## [0.20.5] - 2th June 2023
+- chore: fix edited last events breaking db (td)
+
 ## [0.20.4] - 31th May 2023
 - fix: Do not store global profiles in room states as members (Krille)
 
