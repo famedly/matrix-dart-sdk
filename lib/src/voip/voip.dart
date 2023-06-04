@@ -28,9 +28,13 @@ abstract class WebRTCDelegate {
   /// a handleMissedCall
   bool get canHandleNewCall => true;
 
+  /// for frame cryptor
   bool get sFrameEnabled => false;
-
   String? getSFrameKey(String callId) => null;
+  Future<void> handleAddRtpSender(
+      String callId, RTCRtpSender sender, String sFrameKey);
+  Future<void> handleAddRtpReceiver(
+      String callId, RTCRtpReceiver receiver, String sFrameKey);
 }
 
 class VoIP {

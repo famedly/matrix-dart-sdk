@@ -78,12 +78,6 @@ class WrappedMediaStream {
   final CachedStreamController<WrappedMediaStream> onMuteStateChanged =
       CachedStreamController();
 
-  final CachedStreamController<RTCRtpSender> onAddRtpSender =
-      CachedStreamController();
-
-  final CachedStreamController<RTCRtpReceiver> onAddRtpReceiver =
-      CachedStreamController();
-
   void Function(MediaStream stream)? onNewStream;
 
   WrappedMediaStream({
@@ -869,16 +863,18 @@ class CallSession {
       for (final track in stream.getTracks()) {
         final sender = await pc!.addTrack(track, stream);
         newStream.senders.add(sender);
-        newStream.onAddRtpSender.add(sender);
         screensharingSenders.add(sender);
+        await voip.delegate
+            .handleAddRtpSender(callId, sender, newStream.sframeKey!);
       }
     } else if (purpose == SDPStreamMetadataPurpose.Usermedia) {
       usermediaSenders.clear();
       for (final track in stream.getTracks()) {
         final sender = await pc!.addTrack(track, stream);
         newStream.senders.add(sender);
-        newStream.onAddRtpSender.add(sender);
         usermediaSenders.add(sender);
+        await voip.delegate
+            .handleAddRtpSender(callId, sender, newStream.sframeKey!);
       }
     }
 
@@ -915,7 +911,8 @@ class CallSession {
     if (existingStream.isNotEmpty) {
       existingStream.first.setNewStream(stream);
       existingStream.first.receivers.add(receiver);
-      existingStream.first.onAddRtpReceiver.add(receiver);
+      await voip.delegate.handleAddRtpReceiver(
+          callId, receiver, existingStream.first.sframeKey!);
     } else {
       final newStream = WrappedMediaStream(
         renderer: voip.delegate.createRenderer(),
@@ -935,7 +932,8 @@ class CallSession {
       streams.add(newStream);
       newStream.receivers.add(receiver);
       onStreamAdd.add(newStream);
-      newStream.onAddRtpReceiver.add(receiver);
+      await voip.delegate
+          .handleAddRtpReceiver(callId, receiver, newStream.sframeKey!);
     }
     fireCallEvent(CallEvent.kFeedsChanged);
     Logs().i('Pushed remote stream (id="${stream.id}", purpose=$purpose)');
@@ -1062,7 +1060,8 @@ class CallSession {
             final sender =
                 await pc!.addTrack(newTrack, localUserMediaStream!.stream!);
             localUserMediaStream!.senders.add(sender);
-            localUserMediaStream!.onAddRtpSender.add(sender);
+            await voip.delegate.handleAddRtpSender(
+                callId, sender, localUserMediaStream!.sframeKey!);
           }
         }
         // for renderer to be able to show new video track
