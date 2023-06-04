@@ -84,12 +84,12 @@ class CallCapabilities {
       CallCapabilities(
         dtmf: json['m.call.dtmf'] as bool? ?? false,
         transferee: json['m.call.transferee'] as bool? ?? false,
-        sframe: json['m.call.sframe'] as bool? ?? false,
+        sframe: json['com.famedly.sframe'] as bool? ?? false,
       );
   Map<String, dynamic> toJson() => {
         'm.call.transferee': transferee,
         'm.call.dtmf': dtmf,
-        'm.call.sframe': sframe,
+        'com.famedly.sframe': sframe,
       };
 }
 
@@ -120,14 +120,14 @@ class SDPStreamPurpose {
         audio_muted: json['audio_muted'] as bool? ?? false,
         video_muted: json['video_muted'] as bool? ?? false,
         purpose: json['purpose'] as String,
-        sframeKey: json['sframe_key'] as String?,
+        sframeKey: json['com.famedly.sframe.key'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
         'purpose': purpose,
         'audio_muted': audio_muted,
         'video_muted': video_muted,
-        if (sframeKey != null) 'sframe_key': sframeKey,
+        if (sframeKey != null) 'com.famedly.sframe.key': sframeKey,
       };
 }
 
