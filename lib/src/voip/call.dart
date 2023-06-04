@@ -258,6 +258,9 @@ class CallErrorCode {
 
   /// We transferred the call off to somewhere else
   static String Transfered = 'transferred';
+
+  /// Both parties need to enable sframe to establish a call
+  static String SFrameRequired = 'sframe_required';
 }
 
 class CallError extends Error {
@@ -903,6 +906,7 @@ class CallSession {
     final purpose = metadata.purpose;
     final audioMuted = metadata.audio_muted;
     final videoMuted = metadata.video_muted;
+    final sFrameKey = metadata.sframeKey;
 
     // Try to find a feed with the same purpose as the new stream,
     // if we find it replace the old stream with the new one
@@ -924,6 +928,7 @@ class CallSession {
         videoMuted: videoMuted,
         isWeb: voip.delegate.isWeb,
         isGroupCall: groupCallId != null,
+        sframeKey: sFrameKey,
         pc: pc,
       );
       await newStream.initialize();
@@ -1126,17 +1131,20 @@ class CallSession {
 
       final callCapabilities = CallCapabilities()
         ..dtmf = false
+        ..sframe = opts.sframe ?? false
         ..transferee = false;
 
       final metadata = SDPStreamMetadata({
         if (localUserMediaStream != null)
           localUserMediaStream!.stream!.id: SDPStreamPurpose(
               purpose: SDPStreamMetadataPurpose.Usermedia,
+              sframeKey: opts.sframeKey,
               audio_muted: localUserMediaStream!.audioMuted,
               video_muted: localUserMediaStream!.videoMuted),
         if (localScreenSharingStream != null)
           localScreenSharingStream!.stream!.id: SDPStreamPurpose(
               purpose: SDPStreamMetadataPurpose.Screenshare,
+              sframeKey: opts.sframeKey,
               audio_muted: localScreenSharingStream!.audioMuted,
               video_muted: localScreenSharingStream!.videoMuted),
       });

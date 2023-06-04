@@ -27,6 +27,10 @@ abstract class WebRTCDelegate {
   /// state. If another room tries to call you during a connected call this fires
   /// a handleMissedCall
   bool get canHandleNewCall => true;
+
+  bool get sFrameEnabled => false;
+
+  String? getSFrameKey(String callId) => null;
 }
 
 class VoIP {
@@ -191,10 +195,11 @@ class VoIP {
       return; // This invite was meant for another user in the room
     }
 
+    CallCapabilities? capabilities;
     if (content['capabilities'] != null) {
-      final capabilities = CallCapabilities.fromJson(content['capabilities']);
+      capabilities = CallCapabilities.fromJson(content['capabilities']);
       Logs().v(
-          '[VOIP] CallCapabilities: dtmf => ${capabilities.dtmf}, transferee => ${capabilities.transferee}');
+          '[VOIP] onCallInvite CallCapabilities: dtmf => ${capabilities.dtmf}, transferee => ${capabilities.transferee} , sframe => ${capabilities.sframe}');
     }
 
     var callType = CallType.kVoice;
@@ -224,6 +229,8 @@ class VoIP {
       ..dir = CallDirection.kIncoming
       ..type = callType
       ..room = room!
+      ..sframe = delegate.sFrameEnabled
+      ..sframeKey = delegate.getSFrameKey(callId)
       ..localPartyId = localPartyId!
       ..iceServers = await getIceSevers();
 
@@ -232,6 +239,15 @@ class VoIP {
     newCall.remoteUser = await room.requestUser(senderId);
     newCall.opponentDeviceId = deviceId;
     newCall.opponentSessionId = content['sender_session_id'];
+
+    if ((delegate.sFrameEnabled && !(capabilities?.sframe ?? false))) {
+      Logs().v(
+          '[VOIP] onCallInvite: SFrame is enabled but the other party does not support it.');
+      await newCall.reject(
+          reason: CallErrorCode.SFrameRequired, shouldEmit: false);
+      await delegate.handleMissedCall(newCall);
+    }
+
     if (!delegate.canHandleNewCall &&
         (confId == null || confId != currentGroupCID)) {
       Logs().v(
@@ -303,6 +319,30 @@ class VoIP {
       if (content[sdpStreamMetadataKey] != null) {
         metadata = SDPStreamMetadata.fromJson(content[sdpStreamMetadataKey]);
       }
+
+      CallCapabilities? capabilities;
+      if (content['capabilities'] != null) {
+        capabilities = CallCapabilities.fromJson(content['capabilities']);
+        Logs().v(
+            '[VOIP] onCallAnswer CallCapabilities: dtmf => ${capabilities.dtmf}, transferee => ${capabilities.transferee} , sframe => ${capabilities.sframe}');
+      }
+
+      if ((delegate.sFrameEnabled && !(capabilities?.sframe ?? false))) {
+        Logs().v(
+            '[VOIP] onCallAnswer: SFrame is enabled but the other party does not support it.');
+        try {
+          final res = await call.sendHangupCall(call.room, callId,
+              call.localPartyId, CallErrorCode.SFrameRequired);
+          Logs().v('[VOIP] hangup res => $res');
+        } catch (e) {
+          Logs().v('[VOIP] hangup error => ${e.toString()}');
+        }
+        await call.terminate(
+            CallParty.kLocal, CallErrorCode.SFrameRequired, true);
+        await delegate.handleMissedCall(call);
+        return;
+      }
+
       await call.onAnswerReceived(answer, metadata);
     } else {
       Logs().v('[VOIP] onCallAnswer: Session [$callId] not found!');
@@ -549,6 +589,8 @@ class VoIP {
     final opts = CallOptions()
       ..callId = callId
       ..type = type
+      ..sframe = delegate.sFrameEnabled
+      ..sframeKey = delegate.getSFrameKey(callId)
       ..dir = CallDirection.kOutgoing
       ..room = room
       ..voip = this
