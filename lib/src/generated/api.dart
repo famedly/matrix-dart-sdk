@@ -40,7 +40,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return DiscoveryInformation.fromJson(json);
+    return DiscoveryInformation.fromJson(json as Map<String, Object?>);
   }
 
   /// Queries the server to determine if a given registration token is still
@@ -116,7 +116,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetSpaceHierarchyResponse.fromJson(json);
+    return GetSpaceHierarchyResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Retrieve all of the child events for a given parent event.
@@ -174,7 +174,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetRelatingEventsResponse.fromJson(json);
+    return GetRelatingEventsResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Retrieve all of the child events for a given parent event which relate to the parent
@@ -235,7 +235,8 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetRelatingEventsWithRelTypeResponse.fromJson(json);
+    return GetRelatingEventsWithRelTypeResponse.fromJson(
+        json as Map<String, Object?>);
   }
 
   /// Retrieve all of the child events for a given parent event which relate to the parent
@@ -302,7 +303,8 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetRelatingEventsWithRelTypeAndEventTypeResponse.fromJson(json);
+    return GetRelatingEventsWithRelTypeAndEventTypeResponse.fromJson(
+        json as Map<String, Object?>);
   }
 
   /// Paginates over the thread roots in a room, ordered by the `latest_event` of each thread root
@@ -338,7 +340,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetThreadRootsResponse.fromJson(json);
+    return GetThreadRootsResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Get the ID of the event closest to the given timestamp, in the
@@ -387,7 +389,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetEventByTimestampResponse.fromJson(json);
+    return GetEventByTimestampResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Gets a list of the third party identifiers that the homeserver has
@@ -399,7 +401,8 @@ class Api {
   /// Identifiers in this list may be used by the homeserver as, for example,
   /// identifiers that it will accept to reset the user's account password.
   ///
-  /// returns `threepids`
+  /// returns `threepids`:
+  ///
   Future<List<ThirdPartyIdentifier>?> getAccount3PIDs() async {
     final requestUri = Uri(path: '_matrix/client/v3/account/3pid');
     final request = Request('GET', baseUri!.resolveUri(requestUri));
@@ -410,7 +413,10 @@ class Api {
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
     return ((v) => v != null
-        ? (v as List).map((v) => ThirdPartyIdentifier.fromJson(v)).toList()
+        ? (v as List)
+            .map(
+                (v) => ThirdPartyIdentifier.fromJson(v as Map<String, Object?>))
+            .toList()
         : null)(json['threepids']);
   }
 
@@ -454,7 +460,8 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return ((v) => v != null ? Uri.parse(v) : null)(json['submit_url']);
+    return ((v) =>
+        v != null ? Uri.parse(v as String) : null)(json['submit_url']);
   }
 
   /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api).
@@ -566,7 +573,7 @@ class Api {
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
     return IdServerUnbindResult.values
-        .fromString(json['id_server_unbind_result'])!;
+        .fromString(json['id_server_unbind_result'] as String)!;
   }
 
   /// The homeserver must check that the given email address is **not**
@@ -631,7 +638,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RequestTokenResponse.fromJson(json);
+    return RequestTokenResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// The homeserver must check that the given phone number is **not**
@@ -699,7 +706,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RequestTokenResponse.fromJson(json);
+    return RequestTokenResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Removes a user's third party identifier from the provided identity server
@@ -742,7 +749,7 @@ class Api {
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
     return IdServerUnbindResult.values
-        .fromString(json['id_server_unbind_result'])!;
+        .fromString(json['id_server_unbind_result'] as String)!;
   }
 
   /// Deactivate the user's account, removing all ability for the user to
@@ -794,7 +801,7 @@ class Api {
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
     return IdServerUnbindResult.values
-        .fromString(json['id_server_unbind_result'])!;
+        .fromString(json['id_server_unbind_result'] as String)!;
   }
 
   /// Changes the password for an account on this homeserver.
@@ -908,7 +915,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RequestTokenResponse.fromJson(json);
+    return RequestTokenResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// The homeserver must check that the given phone number **is
@@ -983,7 +990,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RequestTokenResponse.fromJson(json);
+    return RequestTokenResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Gets information about the owner of a given access token.
@@ -1003,7 +1010,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return TokenOwnerInfo.fromJson(json);
+    return TokenOwnerInfo.fromJson(json as Map<String, Object?>);
   }
 
   /// Gets information about a particular user.
@@ -1023,7 +1030,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return WhoIsInfo.fromJson(json);
+    return WhoIsInfo.fromJson(json as Map<String, Object?>);
   }
 
   /// Gets information about the server's supported feature set
@@ -1041,7 +1048,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return Capabilities.fromJson(json['capabilities']);
+    return Capabilities.fromJson(json['capabilities'] as Map<String, Object?>);
   }
 
   /// Create a new room with various configuration options.
@@ -1157,13 +1164,13 @@ class Api {
   /// returns `room_id`:
   /// The created room's ID.
   Future<String> createRoom(
-      {Map<String, dynamic>? creationContent,
+      {Map<String, Object?>? creationContent,
       List<StateEvent>? initialState,
       List<String>? invite,
       List<Invite3pid>? invite3pid,
       bool? isDirect,
       String? name,
-      Map<String, dynamic>? powerLevelContentOverride,
+      Map<String, Object?>? powerLevelContentOverride,
       CreateRoomPreset? preset,
       String? roomAliasName,
       String? roomVersion,
@@ -1238,7 +1245,9 @@ class Api {
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
     return ((v) => v != null
-        ? (v as List).map((v) => Device.fromJson(v)).toList()
+        ? (v as List)
+            .map((v) => Device.fromJson(v as Map<String, Object?>))
+            .toList()
         : null)(json['devices']);
   }
 
@@ -1280,7 +1289,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return Device.fromJson(json);
+    return Device.fromJson(json as Map<String, Object?>);
   }
 
   /// Updates the metadata on the given device.
@@ -1324,7 +1333,7 @@ class Api {
   ///
   /// [visibility] Whether the room should be visible (public) in the directory
   /// or not (private).
-  Future<Map<String, dynamic>> updateAppserviceRoomDirectoryVisibility(
+  Future<Map<String, Object?>> updateAppserviceRoomDirectoryVisibility(
       String networkId, String roomId, Visibility visibility) async {
     final requestUri = Uri(
         path:
@@ -1340,7 +1349,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return json as Map<String, dynamic>;
+    return json as Map<String, Object?>;
   }
 
   /// Gets the visibility of a given room on the server's public room directory.
@@ -1359,8 +1368,9 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return ((v) => v != null ? Visibility.values.fromString(v)! : null)(
-        json['visibility']);
+    return ((v) => v != null
+        ? Visibility.values.fromString(v as String)!
+        : null)(json['visibility']);
   }
 
   /// Sets the visibility of a given room in the server's public room
@@ -1441,10 +1451,10 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetRoomIdByAliasResponse.fromJson(json);
+    return GetRoomIdByAliasResponse.fromJson(json as Map<String, Object?>);
   }
 
-  /// setRoomAlias
+  ///
   ///
   /// [roomAlias] The room alias to set. Its format is defined
   /// [in the appendices](https://spec.matrix.org/unstable/appendices/#room-aliases).
@@ -1494,7 +1504,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetEventsResponse.fromJson(json);
+    return GetEventsResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// This will listen for new events related to a particular room and return
@@ -1528,7 +1538,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return PeekEventsResponse.fromJson(json);
+    return PeekEventsResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Get a single event based on `event_id`. You must have permission to
@@ -1551,7 +1561,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return MatrixEvent.fromJson(json);
+    return MatrixEvent.fromJson(json as Map<String, Object?>);
   }
 
   /// *Note that this API takes either a room ID or alias, unlike* `/rooms/{roomId}/join`.
@@ -1654,7 +1664,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetKeysChangesResponse.fromJson(json);
+    return GetKeysChangesResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Claims one-time keys for use in pre-key messages.
@@ -1681,7 +1691,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return ClaimKeysResponse.fromJson(json);
+    return ClaimKeysResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Publishes cross-signing keys for the user.
@@ -1756,7 +1766,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return QueryKeysResponse.fromJson(json);
+    return QueryKeysResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Publishes cross-signing signatures for the user.  The request body is a
@@ -1768,9 +1778,9 @@ class Api {
   /// A map from user ID to key ID to an error for any signatures
   /// that failed.  If a signature was invalid, the `errcode` will
   /// be set to `M_INVALID_SIGNATURE`.
-  Future<Map<String, Map<String, Map<String, dynamic>>>?>
+  Future<Map<String, Map<String, Map<String, Object?>>>?>
       uploadCrossSigningSignatures(
-          Map<String, Map<String, Map<String, dynamic>>> signatures) async {
+          Map<String, Map<String, Map<String, Object?>>> signatures) async {
     final requestUri = Uri(path: '_matrix/client/v3/keys/signatures/upload');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -1783,10 +1793,10 @@ class Api {
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
     return ((v) => v != null
-        ? (v as Map<String, dynamic>).map((k, v) => MapEntry(
+        ? (v as Map<String, Object?>).map((k, v) => MapEntry(
             k,
-            (v as Map<String, dynamic>)
-                .map((k, v) => MapEntry(k, v as Map<String, dynamic>))))
+            (v as Map<String, Object?>)
+                .map((k, v) => MapEntry(k, v as Map<String, Object?>))))
         : null)(json['failures']);
   }
 
@@ -1852,7 +1862,9 @@ class Api {
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
     return ((v) => v != null
-        ? (v as List).map((v) => LoginFlow.fromJson(v)).toList()
+        ? (v as List)
+            .map((v) => LoginFlow.fromJson(v as Map<String, Object?>))
+            .toList()
         : null)(json['flows']);
   }
 
@@ -1924,7 +1936,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return LoginResponse.fromJson(json);
+    return LoginResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Invalidates an existing access token, so that it can no longer be used for
@@ -1991,7 +2003,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetNotificationsResponse.fromJson(json);
+    return GetNotificationsResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Get the given user's presence state.
@@ -2008,7 +2020,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetPresenceResponse.fromJson(json);
+    return GetPresenceResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// This API sets the given user's presence state. When setting the status,
@@ -2056,7 +2068,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return ProfileInformation.fromJson(json);
+    return ProfileInformation.fromJson(json as Map<String, Object?>);
   }
 
   /// Get the user's avatar URL. This API may be used to fetch the user's
@@ -2077,7 +2089,8 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return ((v) => v != null ? Uri.parse(v) : null)(json['avatar_url']);
+    return ((v) =>
+        v != null ? Uri.parse(v as String) : null)(json['avatar_url']);
   }
 
   /// This API sets the given user's avatar URL. You must have permission to
@@ -2177,7 +2190,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetPublicRoomsResponse.fromJson(json);
+    return GetPublicRoomsResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Lists the public rooms on the server, with optional filter.
@@ -2230,7 +2243,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return QueryPublicRoomsResponse.fromJson(json);
+    return QueryPublicRoomsResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Gets all currently active pushers for the authenticated user.
@@ -2247,7 +2260,9 @@ class Api {
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
     return ((v) => v != null
-        ? (v as List).map((v) => Pusher.fromJson(v)).toList()
+        ? (v as List)
+            .map((v) => Pusher.fromJson(v as Map<String, Object?>))
+            .toList()
         : null)(json['pushers']);
   }
 
@@ -2267,7 +2282,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return PushRuleSet.fromJson(json['global']);
+    return PushRuleSet.fromJson(json['global'] as Map<String, Object?>);
   }
 
   /// This endpoint removes the push rule defined in the path.
@@ -2315,7 +2330,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return PushRule.fromJson(json);
+    return PushRule.fromJson(json as Map<String, Object?>);
   }
 
   /// This endpoint allows the creation and modification of user defined push
@@ -2361,7 +2376,7 @@ class Api {
   ///
   /// [pattern] Only applicable to `content` rules. The glob-style pattern to match against.
   Future<void> setPushRule(
-      String scope, PushRuleKind kind, String ruleId, List<dynamic> actions,
+      String scope, PushRuleKind kind, String ruleId, List<Object?> actions,
       {String? before,
       String? after,
       List<PushCondition>? conditions,
@@ -2403,7 +2418,7 @@ class Api {
   ///
   /// returns `actions`:
   /// The action(s) to perform for this rule.
-  Future<List<dynamic>> getPushRuleActions(
+  Future<List<Object?>> getPushRuleActions(
       String scope, PushRuleKind kind, String ruleId) async {
     final requestUri = Uri(
         path:
@@ -2415,7 +2430,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return (json['actions'] as List).map((v) => v as dynamic).toList();
+    return (json['actions'] as List).map((v) => v as Object?).toList();
   }
 
   /// This endpoint allows clients to change the actions of a push rule.
@@ -2431,7 +2446,7 @@ class Api {
   ///
   /// [actions] The action(s) to perform for this rule.
   Future<void> setPushRuleActions(String scope, PushRuleKind kind,
-      String ruleId, List<dynamic> actions) async {
+      String ruleId, List<Object?> actions) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/pushrules/${Uri.encodeComponent(scope)}/${Uri.encodeComponent(kind.name)}/${Uri.encodeComponent(ruleId)}/actions');
@@ -2538,7 +2553,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RefreshResponse.fromJson(json);
+    return RefreshResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// This API endpoint uses the [User-Interactive Authentication API](https://spec.matrix.org/unstable/client-server-api/#user-interactive-authentication-api), except in
@@ -2636,7 +2651,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RegisterResponse.fromJson(json);
+    return RegisterResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Checks to see if a username is available, and valid, for the server.
@@ -2729,7 +2744,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RequestTokenResponse.fromJson(json);
+    return RequestTokenResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// The homeserver must check that the given phone number is **not**
@@ -2793,7 +2808,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RequestTokenResponse.fromJson(json);
+    return RequestTokenResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Delete the keys from the backup.
@@ -2811,7 +2826,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RoomKeysUpdateResponse.fromJson(json);
+    return RoomKeysUpdateResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Retrieve the keys from the backup.
@@ -2829,7 +2844,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RoomKeys.fromJson(json);
+    return RoomKeys.fromJson(json as Map<String, Object?>);
   }
 
   /// Store several keys in the backup.
@@ -2852,7 +2867,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RoomKeysUpdateResponse.fromJson(json);
+    return RoomKeysUpdateResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Delete the keys from the backup for a given room.
@@ -2874,7 +2889,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RoomKeysUpdateResponse.fromJson(json);
+    return RoomKeysUpdateResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Retrieve the keys from the backup for a given room.
@@ -2896,7 +2911,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RoomKeyBackup.fromJson(json);
+    return RoomKeyBackup.fromJson(json as Map<String, Object?>);
   }
 
   /// Store several keys in the backup for a given room.
@@ -2922,7 +2937,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RoomKeysUpdateResponse.fromJson(json);
+    return RoomKeysUpdateResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Delete a key from the backup.
@@ -2947,7 +2962,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RoomKeysUpdateResponse.fromJson(json);
+    return RoomKeysUpdateResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Retrieve a key from the backup.
@@ -2972,7 +2987,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return KeyBackupData.fromJson(json);
+    return KeyBackupData.fromJson(json as Map<String, Object?>);
   }
 
   /// Store a key in the backup.
@@ -3001,7 +3016,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return RoomKeysUpdateResponse.fromJson(json);
+    return RoomKeysUpdateResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Get information about the latest backup version.
@@ -3014,7 +3029,8 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetRoomKeysVersionCurrentResponse.fromJson(json);
+    return GetRoomKeysVersionCurrentResponse.fromJson(
+        json as Map<String, Object?>);
   }
 
   /// Creates a new backup.
@@ -3028,7 +3044,7 @@ class Api {
   /// returns `version`:
   /// The backup version. This is an opaque string.
   Future<String> postRoomKeysVersion(
-      BackupAlgorithm algorithm, Map<String, dynamic> authData) async {
+      BackupAlgorithm algorithm, Map<String, Object?> authData) async {
     final requestUri = Uri(path: '_matrix/client/v3/room_keys/version');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
@@ -3083,7 +3099,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetRoomKeysVersionResponse.fromJson(json);
+    return GetRoomKeysVersionResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Update information about an existing backup.  Only `auth_data` can be modified.
@@ -3099,8 +3115,8 @@ class Api {
   /// [authData] Algorithm-dependent data. See the documentation for the backup
   /// algorithms in [Server-side key backups](https://spec.matrix.org/unstable/client-server-api/#server-side-key-backups) for more information on the
   /// expected format of the data.
-  Future<Map<String, dynamic>> putRoomKeysVersion(String version,
-      BackupAlgorithm algorithm, Map<String, dynamic> authData) async {
+  Future<Map<String, Object?>> putRoomKeysVersion(String version,
+      BackupAlgorithm algorithm, Map<String, Object?> authData) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/room_keys/version/${Uri.encodeComponent(version)}');
@@ -3116,7 +3132,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return json as Map<String, dynamic>;
+    return json as Map<String, Object?>;
   }
 
   /// Get a list of aliases maintained by the local server for the
@@ -3221,7 +3237,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return EventContext.fromJson(json);
+    return EventContext.fromJson(json as Map<String, Object?>);
   }
 
   /// Get a single event based on `roomId/eventId`. You must have permission to
@@ -3241,7 +3257,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return MatrixEvent.fromJson(json);
+    return MatrixEvent.fromJson(json as Map<String, Object?>);
   }
 
   /// This API stops a user remembering about a particular room.
@@ -3443,8 +3459,8 @@ class Api {
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
     return ((v) => v != null
-        ? (v as Map<String, dynamic>)
-            .map((k, v) => MapEntry(k, RoomMember.fromJson(v)))
+        ? (v as Map<String, Object?>).map((k, v) =>
+            MapEntry(k, RoomMember.fromJson(v as Map<String, Object?>)))
         : null)(json['joined']);
   }
 
@@ -3530,7 +3546,8 @@ class Api {
   /// [notMembership] The kind of membership to exclude from the results. Defaults to no
   /// filtering if unspecified.
   ///
-  /// returns `chunk`
+  /// returns `chunk`:
+  ///
   Future<List<MatrixEvent>?> getMembersByRoom(String roomId,
       {String? at, Membership? membership, Membership? notMembership}) async {
     final requestUri = Uri(
@@ -3548,7 +3565,9 @@ class Api {
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
     return ((v) => v != null
-        ? (v as List).map((v) => MatrixEvent.fromJson(v)).toList()
+        ? (v as List)
+            .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
+            .toList()
         : null)(json['chunk']);
   }
 
@@ -3602,7 +3621,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetRoomEventsResponse.fromJson(json);
+    return GetRoomEventsResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Sets the position of the read marker for a given room, and optionally
@@ -3768,10 +3787,12 @@ class Api {
   /// ID unique across requests with the same access token; it will be
   /// used by the server to ensure idempotency of requests.
   ///
+  /// [body]
+  ///
   /// returns `event_id`:
   /// A unique identifier for the event.
   Future<String> sendMessage(String roomId, String eventType, String txnId,
-      Map<String, dynamic> body) async {
+      Map<String, Object?> body) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/send/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(txnId)}');
@@ -3800,7 +3821,9 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return (json as List).map((v) => MatrixEvent.fromJson(v)).toList();
+    return (json as List)
+        .map((v) => MatrixEvent.fromJson(v as Map<String, Object?>))
+        .toList();
   }
 
   /// Looks up the contents of a state event in a room. If the user is
@@ -3814,7 +3837,7 @@ class Api {
   ///
   /// [stateKey] The key of the state to look up. Defaults to an empty string. When
   /// an empty string, the trailing slash on this endpoint is optional.
-  Future<Map<String, dynamic>> getRoomStateWithKey(
+  Future<Map<String, Object?>> getRoomStateWithKey(
       String roomId, String eventType, String stateKey) async {
     final requestUri = Uri(
         path:
@@ -3826,7 +3849,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return json as Map<String, dynamic>;
+    return json as Map<String, Object?>;
   }
 
   /// State events can be sent using this endpoint.  These events will be
@@ -3855,10 +3878,12 @@ class Api {
   /// [stateKey] The state_key for the state to send. Defaults to the empty string. When
   /// an empty string, the trailing slash on this endpoint is optional.
   ///
+  /// [body]
+  ///
   /// returns `event_id`:
   /// A unique identifier for the event.
   Future<String> setRoomStateWithKey(String roomId, String eventType,
-      String stateKey, Map<String, dynamic> body) async {
+      String stateKey, Map<String, Object?> body) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/rooms/${Uri.encodeComponent(roomId)}/state/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(stateKey)}');
@@ -3983,7 +4008,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return SearchResults.fromJson(json);
+    return SearchResults.fromJson(json as Map<String, Object?>);
   }
 
   /// This endpoint is used to send send-to-device events to a set of
@@ -3999,7 +4024,7 @@ class Api {
   /// device ID to message body. The device ID may also be `*`,
   /// meaning all known devices for the user.
   Future<void> sendToDevice(String eventType, String txnId,
-      Map<String, Map<String, Map<String, dynamic>>> messages) async {
+      Map<String, Map<String, Map<String, Object?>>> messages) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/sendToDevice/${Uri.encodeComponent(eventType)}/${Uri.encodeComponent(txnId)}');
@@ -4100,7 +4125,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return SyncUpdate.fromJson(json);
+    return SyncUpdate.fromJson(json as Map<String, Object?>);
   }
 
   /// Retrieve an array of third party network locations from a Matrix room
@@ -4119,7 +4144,9 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return (json as List).map((v) => Location.fromJson(v)).toList();
+    return (json as List)
+        .map((v) => Location.fromJson(v as Map<String, Object?>))
+        .toList();
   }
 
   /// Requesting this endpoint with a valid protocol name results in a list
@@ -4150,7 +4177,9 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return (json as List).map((v) => Location.fromJson(v)).toList();
+    return (json as List)
+        .map((v) => Location.fromJson(v as Map<String, Object?>))
+        .toList();
   }
 
   /// Fetches the metadata from the homeserver about a particular third party protocol.
@@ -4167,7 +4196,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return Protocol.fromJson(json);
+    return Protocol.fromJson(json as Map<String, Object?>);
   }
 
   /// Fetches the overall metadata about protocols supported by the
@@ -4182,8 +4211,8 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return (json as Map<String, dynamic>)
-        .map((k, v) => MapEntry(k, Protocol.fromJson(v)));
+    return (json as Map<String, Object?>).map(
+        (k, v) => MapEntry(k, Protocol.fromJson(v as Map<String, Object?>)));
   }
 
   /// Retrieve an array of third party users from a Matrix User ID.
@@ -4201,7 +4230,9 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return (json as List).map((v) => ThirdPartyUser.fromJson(v)).toList();
+    return (json as List)
+        .map((v) => ThirdPartyUser.fromJson(v as Map<String, Object?>))
+        .toList();
   }
 
   /// Retrieve a Matrix User ID linked to a user on the third party service, given
@@ -4225,7 +4256,9 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return (json as List).map((v) => ThirdPartyUser.fromJson(v)).toList();
+    return (json as List)
+        .map((v) => ThirdPartyUser.fromJson(v as Map<String, Object?>))
+        .toList();
   }
 
   /// Get some account data for the client. This config is only visible to the user
@@ -4236,7 +4269,7 @@ class Api {
   ///
   /// [type] The event type of the account data to get. Custom types should be
   /// namespaced to avoid clashes.
-  Future<Map<String, dynamic>> getAccountData(
+  Future<Map<String, Object?>> getAccountData(
       String userId, String type) async {
     final requestUri = Uri(
         path:
@@ -4248,7 +4281,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return json as Map<String, dynamic>;
+    return json as Map<String, Object?>;
   }
 
   /// Set some account data for the client. This config is only visible to the user
@@ -4264,7 +4297,7 @@ class Api {
   ///
   /// [content] The content of the account data.
   Future<void> setAccountData(
-      String userId, String type, Map<String, dynamic> content) async {
+      String userId, String type, Map<String, Object?> content) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/account_data/${Uri.encodeComponent(type)}');
@@ -4308,7 +4341,7 @@ class Api {
     return json['filter_id'] as String;
   }
 
-  /// getFilter
+  ///
   ///
   /// [userId] The user ID to download a filter for.
   ///
@@ -4324,7 +4357,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return Filter.fromJson(json);
+    return Filter.fromJson(json as Map<String, Object?>);
   }
 
   /// Gets an OpenID token object that the requester may supply to another
@@ -4341,7 +4374,7 @@ class Api {
   ///
   /// [body] An empty object. Reserved for future expansion.
   Future<OpenIdCredentials> requestOpenIdToken(
-      String userId, Map<String, dynamic> body) async {
+      String userId, Map<String, Object?> body) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/openid/request_token');
@@ -4354,7 +4387,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return OpenIdCredentials.fromJson(json);
+    return OpenIdCredentials.fromJson(json as Map<String, Object?>);
   }
 
   /// Get some account data for the client on a given room. This config is only
@@ -4367,7 +4400,7 @@ class Api {
   ///
   /// [type] The event type of the account data to get. Custom types should be
   /// namespaced to avoid clashes.
-  Future<Map<String, dynamic>> getAccountDataPerRoom(
+  Future<Map<String, Object?>> getAccountDataPerRoom(
       String userId, String roomId, String type) async {
     final requestUri = Uri(
         path:
@@ -4379,7 +4412,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return json as Map<String, dynamic>;
+    return json as Map<String, Object?>;
   }
 
   /// Set some account data for the client on a given room. This config is only
@@ -4396,7 +4429,7 @@ class Api {
   ///
   /// [content] The content of the account data.
   Future<void> setAccountDataPerRoom(String userId, String roomId, String type,
-      Map<String, dynamic> content) async {
+      Map<String, Object?> content) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/account_data/${Uri.encodeComponent(type)}');
@@ -4419,7 +4452,8 @@ class Api {
   ///
   /// [roomId] The ID of the room to get tags for.
   ///
-  /// returns `tags`
+  /// returns `tags`:
+  ///
   Future<Map<String, Tag>?> getRoomTags(String userId, String roomId) async {
     final requestUri = Uri(
         path:
@@ -4432,8 +4466,8 @@ class Api {
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
     return ((v) => v != null
-        ? (v as Map<String, dynamic>)
-            .map((k, v) => MapEntry(k, Tag.fromJson(v)))
+        ? (v as Map<String, Object?>)
+            .map((k, v) => MapEntry(k, Tag.fromJson(v as Map<String, Object?>)))
         : null)(json['tags']);
   }
 
@@ -4472,7 +4506,7 @@ class Api {
   /// position of the room under the given tag.
   Future<void> setRoomTag(String userId, String roomId, String tag,
       {double? order,
-      Map<String, dynamic> additionalProperties = const {}}) async {
+      Map<String, Object?> additionalProperties = const {}}) async {
     final requestUri = Uri(
         path:
             '_matrix/client/v3/user/${Uri.encodeComponent(userId)}/rooms/${Uri.encodeComponent(roomId)}/tags/${Uri.encodeComponent(tag)}');
@@ -4520,7 +4554,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return SearchUserDirectoryResponse.fromJson(json);
+    return SearchUserDirectoryResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// This API provides credentials for the client to use when initiating
@@ -4534,7 +4568,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return TurnServerCredentials.fromJson(json);
+    return TurnServerCredentials.fromJson(json as Map<String, Object?>);
   }
 
   /// Gets the versions of the specification supported by the server.
@@ -4563,7 +4597,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetVersionsResponse.fromJson(json);
+    return GetVersionsResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// This endpoint allows clients to retrieve the configuration of the content
@@ -4585,10 +4619,10 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return ServerConfig.fromJson(json);
+    return ServerConfig.fromJson(json as Map<String, Object?>);
   }
 
-  /// getContent
+  ///
   ///
   /// [serverName] The server name from the `mxc://` URI (the authoritory component)
   ///
@@ -4678,7 +4712,7 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return GetUrlPreviewResponse.fromJson(json);
+    return GetUrlPreviewResponse.fromJson(json as Map<String, Object?>);
   }
 
   /// Download a thumbnail of content from the content repository.
@@ -4723,7 +4757,7 @@ class Api {
         contentType: response.headers['content-type'], data: responseBody);
   }
 
-  /// uploadContent
+  ///
   ///
   /// [filename] The name of the file being uploaded
   ///
@@ -4747,6 +4781,6 @@ class Api {
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
     final responseString = utf8.decode(responseBody);
     final json = jsonDecode(responseString);
-    return Uri.parse(json['content_uri']);
+    return Uri.parse(json['content_uri'] as String);
   }
 }
