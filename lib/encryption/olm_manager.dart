@@ -597,34 +597,36 @@ class OlmManager {
             client.userDeviceKeys[userId]!.deviceKeys[deviceId]!.ed25519Key;
         final identityKey =
             client.userDeviceKeys[userId]!.deviceKeys[deviceId]!.curve25519Key;
-        for (final Map<String, dynamic> deviceKey
-            in deviceKeysEntry.value.values) {
-          if (fingerprintKey == null ||
-              identityKey == null ||
-              !deviceKey.checkJsonSignature(fingerprintKey, userId, deviceId)) {
-            Logs().w(
-              'Skipping invalid device key from $userId:$deviceId',
-              deviceKey,
-            );
-            continue;
-          }
-          Logs().v('[OlmManager] Starting session with $userId:$deviceId');
-          final session = olm.Session();
-          try {
-            session.create_outbound(
-                _olmAccount!, identityKey, deviceKey['key']);
-            await storeOlmSession(OlmSession(
-              key: client.userID!,
-              identityKey: identityKey,
-              sessionId: session.session_id(),
-              session: session,
-              lastReceived:
-                  DateTime.now(), // we want to use a newly created session
-            ));
-          } catch (e, s) {
-            session.free();
-            Logs()
-                .e('[LibOlm] Could not create new outbound olm session', e, s);
+        for (final deviceKey in deviceKeysEntry.value.values) {
+          if (deviceKey is Map<String, Object?>) {
+            if (fingerprintKey == null ||
+                identityKey == null ||
+                !deviceKey.checkJsonSignature(
+                    fingerprintKey, userId, deviceId)) {
+              Logs().w(
+                'Skipping invalid device key from $userId:$deviceId',
+                deviceKey,
+              );
+              continue;
+            }
+            Logs().v('[OlmManager] Starting session with $userId:$deviceId');
+            final session = olm.Session();
+            try {
+              session.create_outbound(
+                  _olmAccount!, identityKey, deviceKey['key'] as String);
+              await storeOlmSession(OlmSession(
+                key: client.userID!,
+                identityKey: identityKey,
+                sessionId: session.session_id(),
+                session: session,
+                lastReceived:
+                    DateTime.now(), // we want to use a newly created session
+              ));
+            } catch (e, s) {
+              session.free();
+              Logs().e(
+                  '[LibOlm] Could not create new outbound olm session', e, s);
+            }
           }
         }
       }
