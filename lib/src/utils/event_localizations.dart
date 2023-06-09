@@ -204,11 +204,11 @@ abstract class EventLocalizations {
             event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
     EventTypes.RoomName: (event, i18n, body) => i18n.changedTheChatNameTo(
         event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
-        event.content['name']),
+        event.content['name'] as String),
     EventTypes.RoomTopic: (event, i18n, body) =>
         i18n.changedTheChatDescriptionTo(
             event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
-            event.content['topic']),
+            event.content['topic'] as String),
     EventTypes.RoomAvatar: (event, i18n, body) => i18n.changedTheChatAvatar(
         event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
     EventTypes.GuestAccess: (event, i18n, body) {

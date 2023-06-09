@@ -350,8 +350,8 @@ class Timeline {
         try {
           room.client.encryption?.keyManager.maybeAutoRequest(
             room.id,
-            event.content['session_id'],
-            event.content['sender_key'],
+            event.content['session_id'] as String,
+            event.content['sender_key'] as String,
             tryOnlineBackup: tryOnlineBackup,
             onlineKeyBackupOnly: onlineKeyBackupOnly,
           );
@@ -389,7 +389,7 @@ class Timeline {
 
       final txnid = events[i].unsigned?['transaction_id'];
       if (txnid != null) {
-        searchHaystack.add(txnid);
+        searchHaystack.add(txnid as String);
       }
       if (searchNeedle.intersection(searchHaystack).isNotEmpty) {
         break;
@@ -402,7 +402,10 @@ class Timeline {
     eventSet.removeWhere((e) =>
         e.matchesEventOrTransactionId(event.eventId) ||
         (event.unsigned != null &&
-            e.matchesEventOrTransactionId(event.unsigned?['transaction_id'])));
+            e.matchesEventOrTransactionId(
+                (event.unsigned?['transaction_id'] is String)
+                    ? (event.unsigned?['transaction_id'] as String)
+                    : null)));
   }
 
   void addAggregatedEvent(Event event) {

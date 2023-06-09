@@ -61,11 +61,13 @@ extension ImagePackRoomExtension on Room {
     // next we add all the external image packs
     final packRooms = client.accountData['im.ponies.emote_rooms'];
     if (packRooms != null && packRooms.content['rooms'] is Map) {
-      for (final roomEntry in packRooms.content['rooms'].entries) {
+      for (final roomEntry
+          in (packRooms.content['rooms'] as Map<String, Object?>).entries) {
         final roomId = roomEntry.key;
         final room = client.getRoomById(roomId);
         if (room != null && roomEntry.value is Map) {
-          for (final stateKeyEntry in roomEntry.value.entries) {
+          for (final stateKeyEntry
+              in (roomEntry.value as Map<String, Object?>).entries) {
             final stateKey = stateKeyEntry.key;
             final fallbackSlug =
                 '${room.getLocalizedDisplayname()}-${stateKey.isNotEmpty ? '$stateKey-' : ''}${room.id}';

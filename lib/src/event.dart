@@ -259,7 +259,9 @@ class Event extends MatrixEvent {
 
   String get messageType => type == EventTypes.Sticker
       ? MessageTypes.Sticker
-      : (content['msgtype'] is String ? content['msgtype'] : MessageTypes.Text);
+      : (content['msgtype'] is String
+          ? content['msgtype'] as String
+          : MessageTypes.Text);
 
   void setRedactionEvent(Event redactedBecause) {
     unsigned = {
@@ -301,11 +303,12 @@ class Event extends MatrixEvent {
   }
 
   /// Returns the body of this event if it has a body.
-  String get text => content['body'] is String ? content['body'] : '';
+  String get text => content['body'] is String ? content['body'] as String : '';
 
   /// Returns the formatted boy of this event if it has a formatted body.
-  String get formattedText =>
-      content['formatted_body'] is String ? content['formatted_body'] : '';
+  String get formattedText => content['formatted_body'] is String
+      ? content['formatted_body'] as String
+      : '';
 
   /// Use this to get the body.
   String get body {
@@ -398,11 +401,16 @@ class Event extends MatrixEvent {
       );
     }
 
+    String transactionId = eventId;
+    if (unsigned?['transaction_id'] is String) {
+      transactionId = unsigned?['transaction_id'] as String;
+    }
+
     // we do not remove the event here. It will automatically be updated
     // in the `sendEvent` method to transition -1 -> 0 -> 1 -> 2
     return await room.sendEvent(
       content,
-      txid: txid ?? unsigned?['transaction_id'] ?? eventId,
+      txid: txid ?? transactionId,
     );
   }
 
@@ -432,13 +440,15 @@ class Event extends MatrixEvent {
         content['can_request_session'] != true) {
       throw ('Session key not requestable');
     }
-    await room.requestSessionKey(content['session_id'], content['sender_key']);
+    await room.requestSessionKey(
+        content['session_id'] as String, content['sender_key'] as String);
     return;
   }
 
   /// Gets the info map of file events, or a blank map if none present
-  Map get infoMap =>
-      content['info'] is Map ? content['info'] : <String, dynamic>{};
+  Map get infoMap => content['info'] is Map
+      ? content['info'] as Map<String, Object?>
+      : <String, Object?>{};
 
   /// Gets the thumbnail info map of file events, or a blank map if nonepresent
   Map get thumbnailInfoMap => infoMap['thumbnail_info'] is Map
@@ -461,8 +471,9 @@ class Event extends MatrixEvent {
   /// Gets the mimetype of the attachment of a file event, or a blank string if not present
   String get attachmentMimetype => infoMap['mimetype'] is String
       ? infoMap['mimetype'].toLowerCase()
-      : (content['file'] is Map && content['file']['mimetype'] is String
-          ? content['file']['mimetype']
+      : (content['file'] is Map &&
+              (content['file'] as Map<String, Object?>)['mimetype'] is String
+          ? (content['file'] as Map<String, Object?>)['mimetype']
           : '');
 
   /// Gets the mimetype of the thumbnail of a file event, or a blank string if not present
@@ -475,7 +486,9 @@ class Event extends MatrixEvent {
 
   /// Gets the underlying mxc url of an attachment of a file event, or null if not present
   Uri? get attachmentMxcUrl {
-    final url = isAttachmentEncrypted ? content['file']['url'] : content['url'];
+    final url = isAttachmentEncrypted
+        ? (content['file'] as Map<String, Object?>)['url']
+        : content['url'];
     return url is String ? Uri.tryParse(url) : null;
   }
 
@@ -763,7 +776,8 @@ class Event extends MatrixEvent {
         relationshipType == RelationshipTypes.edit &&
         content.tryGet<Map<String, dynamic>>('m.new_content') != null) {
       if (plaintextBody &&
-          content['m.new_content']['format'] == 'org.matrix.custom.html') {
+          (content['m.new_content'] as Map<String, Object?>)['format'] ==
+              'org.matrix.custom.html') {
         htmlMessage = true;
         body = HtmlToText.convert(
             (content['m.new_content'] as Map<String, dynamic>)
@@ -818,7 +832,8 @@ class Event extends MatrixEvent {
     if (content.tryGet<Map<String, dynamic>>('m.relates_to') == null) {
       return null;
     }
-    if (content['m.relates_to'].containsKey('rel_type')) {
+    if ((content['m.relates_to'] as Map<String, Object?>)
+        .containsKey('rel_type')) {
       if (content
               .tryGet<Map<String, dynamic>>('m.relates_to')
               ?.tryGet<String>('rel_type') ==
@@ -826,7 +841,8 @@ class Event extends MatrixEvent {
         return RelationshipTypes.thread;
       }
     }
-    if (content['m.relates_to'].containsKey('m.in_reply_to')) {
+    if ((content['m.relates_to'] as Map<String, Object?>)
+        .containsKey('m.in_reply_to')) {
       return RelationshipTypes.reply;
     }
     return content

@@ -426,7 +426,7 @@ class DeviceKeys extends SignableKey {
   late DateTime lastActive;
 
   String? get curve25519Key => keys['curve25519:$deviceId'];
-  String? get deviceDisplayName => unsigned?['device_display_name'];
+  String? get deviceDisplayName => unsigned?['device_display_name'] as String;
 
   bool? _validSelfSignature;
   bool get selfSigned =>

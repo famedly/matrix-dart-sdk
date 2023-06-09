@@ -1042,8 +1042,10 @@ void main() {
 
     test('pushRuleState', () async {
       expect(room.pushRuleState, PushRuleState.mentionsOnly);
-      matrix.accountData['m.push_rules']?.content['global']['override'].add(
-          matrix.accountData['m.push_rules']?.content['global']['room'][0]);
+      ((matrix.accountData['m.push_rules']?.content['global']
+              as Map<String, Object?>)['override'] as List)
+          .add(((matrix.accountData['m.push_rules']?.content['global']
+              as Map<String, Object?>)['room'] as List)[0]);
       expect(room.pushRuleState, PushRuleState.dontNotify);
     });
 

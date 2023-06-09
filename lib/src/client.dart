@@ -2731,12 +2731,16 @@ class Client extends MatrixApi {
   /// Whether all push notifications are muted using the [.m.rule.master]
   /// rule of the push rules: https://matrix.org/docs/spec/client_server/r0.6.0#m-rule-master
   bool get allPushNotificationsMuted {
-    final Map<String, dynamic>? globalPushRules =
-        _accountData[EventTypes.PushRules]?.content['global'];
+    final Map<String, Object?>? globalPushRules =
+        _accountData[EventTypes.PushRules]?.content['global']
+                is Map<String, Object?>?
+            ? _accountData[EventTypes.PushRules]?.content['global']
+                as Map<String, Object?>?
+            : null;
     if (globalPushRules == null) return false;
 
     if (globalPushRules['override'] is List) {
-      for (final pushRule in globalPushRules['override']) {
+      for (final pushRule in globalPushRules['override'] as List) {
         if (pushRule['rule_id'] == '.m.rule.master') {
           return pushRule['enabled'];
         }
@@ -2816,8 +2820,9 @@ class Client extends MatrixApi {
   List<String> get ignoredUsers => (_accountData
               .containsKey('m.ignored_user_list') &&
           _accountData['m.ignored_user_list']?.content['ignored_users'] is Map)
-      ? List<String>.from(
-          _accountData['m.ignored_user_list']?.content['ignored_users'].keys)
+      ? List<String>.from((_accountData['m.ignored_user_list']
+              ?.content['ignored_users'] as Map<String, Object?>)
+          .keys)
       : [];
 
   /// Ignore another user. This will clear the local cached messages to

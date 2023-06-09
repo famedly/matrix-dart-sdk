@@ -726,8 +726,8 @@ class VoIP {
       voip: this,
       room: room,
       groupCallId: groupCallId,
-      type: callType,
-      intent: callIntent,
+      type: callType as String,
+      intent: callIntent as String,
     );
 
     groupCalls[groupCallId!] = groupCall;

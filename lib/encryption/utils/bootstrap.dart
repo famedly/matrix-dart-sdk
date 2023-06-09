@@ -109,7 +109,8 @@ class Bootstrap {
       }
       final validKeys = <String>{};
       final invalidKeys = <String>{};
-      for (final keyEntry in event.content['encrypted'].entries) {
+      for (final keyEntry
+          in (event.content['encrypted'] as Map<String, Object?>).entries) {
         final key = keyEntry.key;
         final value = keyEntry.value;
         if (value is! Map) {
