@@ -30,12 +30,12 @@ class AuthenticationUserIdentifier extends AuthenticationIdentifier {
   AuthenticationUserIdentifier({required this.user})
       : super(type: AuthenticationIdentifierTypes.userId);
 
-  AuthenticationUserIdentifier.fromJson(Map<String, dynamic> json)
+  AuthenticationUserIdentifier.fromJson(Map<String, Object?> json)
       : user = json['user'] as String,
         super.fromJson(json);
 
   @override
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     final data = super.toJson();
     data['user'] = user;
     return data;

@@ -21,9 +21,9 @@
 * SOFTWARE.
 */
 
-extension MapCopyExtension on Map<String, dynamic> {
+extension MapCopyExtension on Map<String, Object?> {
   dynamic _copyValue(dynamic value) {
-    if (value is Map<String, dynamic>) {
+    if (value is Map<String, Object?>) {
       return value.copy();
     }
     if (value is List) {
@@ -33,8 +33,8 @@ extension MapCopyExtension on Map<String, dynamic> {
   }
 
   /// Deep-copies a given json map
-  Map<String, dynamic> copy() {
-    final copy = Map<String, dynamic>.from(this);
+  Map<String, Object?> copy() {
+    final copy = Map<String, Object?>.from(this);
     for (final entry in copy.entries) {
       copy[entry.key] = _copyValue(entry.value);
     }

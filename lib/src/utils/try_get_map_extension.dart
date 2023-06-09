@@ -59,7 +59,7 @@ class _SilentLog implements TryGet {
   void call(String key, Type expected, Type actual) {}
 }
 
-extension TryGetMapExtension on Map<String, dynamic> {
+extension TryGetMapExtension on Map<String, Object?> {
   T? tryGet<T extends Object>(String key, [TryGet log = TryGet.optional]) {
     final Object? value = this[key];
     if (value is! T) {
@@ -101,9 +101,9 @@ extension TryGetMapExtension on Map<String, dynamic> {
     }
   }
 
-  A? tryGetFromJson<A>(String key, A Function(Map<String, dynamic>) fromJson,
+  A? tryGetFromJson<A>(String key, A Function(Map<String, Object?>) fromJson,
       [TryGet log = TryGet.optional]) {
-    final value = tryGetMap<String, dynamic>(key, log);
+    final value = tryGetMap<String, Object?>(key, log);
 
     return value != null ? fromJson(value) : null;
   }

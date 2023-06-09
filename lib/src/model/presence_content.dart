@@ -29,15 +29,15 @@ class PresenceContent {
   String? statusMsg;
   bool? currentlyActive;
 
-  PresenceContent.fromJson(Map<String, dynamic> json)
+  PresenceContent.fromJson(Map<String, Object?> json)
       : presence = PresenceType.values.firstWhere(
             (p) => p.toString().split('.').last == json['presence']),
         lastActiveAgo = json.tryGet<int>('last_active_ago'),
         statusMsg = json.tryGet<String>('status_msg'),
         currentlyActive = json.tryGet<bool>('currently_active');
 
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
     data['presence'] = presence.toString().split('.').last;
     if (lastActiveAgo != null) {
       data['last_active_ago'] = lastActiveAgo;

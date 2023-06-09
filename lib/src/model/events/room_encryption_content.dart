@@ -34,13 +34,13 @@ class RoomEncryptionContent {
   int? rotationPeriodMs;
   int? rotationPeriodMsgs;
 
-  RoomEncryptionContent.fromJson(Map<String, dynamic> json)
+  RoomEncryptionContent.fromJson(Map<String, Object?> json)
       : algorithm = json.tryGet('algorithm', TryGet.required) ?? '',
         rotationPeriodMs = json.tryGet('rotation_period_ms'),
         rotationPeriodMsgs = json.tryGet('rotation_period_msgs');
 
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
     data['algorithm'] = algorithm;
     if (rotationPeriodMs != null) {
       data['rotation_period_ms'] = rotationPeriodMs;

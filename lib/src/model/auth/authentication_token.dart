@@ -36,13 +36,13 @@ class AuthenticationToken extends AuthenticationData {
           session: session,
         );
 
-  AuthenticationToken.fromJson(Map<String, dynamic> json)
+  AuthenticationToken.fromJson(Map<String, Object?> json)
       : token = json['token'] as String,
         txnId = json['txn_id'] as String?,
         super.fromJson(json);
 
   @override
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     final data = super.toJson();
     data['token'] = token;
     data['txn_id'] = txnId;

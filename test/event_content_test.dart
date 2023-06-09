@@ -30,7 +30,7 @@ import 'package:matrix_api_lite/matrix_api_lite.dart';
 void main() {
   group('Event Content tests', () {
     test('Room Encryption Content', () {
-      Map<String, dynamic>? json = <String, dynamic>{
+      Map<String, Object?>? json = <String, Object?>{
         'content': {
           'algorithm': 'm.megolm.v1.aes-sha2',
           'rotation_period_ms': 604800000,
@@ -44,12 +44,12 @@ void main() {
         'type': 'm.room.encryption',
         'unsigned': {'age': 1234}
       };
-      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
+      json = jsonDecode(jsonEncode(json)) as Map<String, Object?>?;
       expect(MatrixEvent.fromJson(json!).parsedRoomEncryptionContent.toJson(),
           json['content']);
     });
     test('Room Encrypted Content', () {
-      Map<String, dynamic>? json = <String, dynamic>{
+      Map<String, Object?>? json = <String, Object?>{
         'content': {
           'algorithm': 'm.megolm.v1.aes-sha2',
           'ciphertext': 'AwgAEnACgAkLmt6qF84IK++J7UDH2Za1YVchHyprqTqsg...',
@@ -64,10 +64,10 @@ void main() {
         'type': 'm.room.encrypted',
         'unsigned': {'age': 1234}
       };
-      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
+      json = jsonDecode(jsonEncode(json)) as Map<String, Object?>?;
       expect(MatrixEvent.fromJson(json!).parsedRoomEncryptedContent.toJson(),
           json['content']);
-      json = <String, dynamic>{
+      json = <String, Object?>{
         'content': {
           'algorithm': 'm.olm.v1.curve25519-aes-sha2',
           'ciphertext': {
@@ -85,12 +85,12 @@ void main() {
         'type': 'm.room.encrypted',
         'unsigned': {'age': 1234}
       };
-      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
+      json = jsonDecode(jsonEncode(json)) as Map<String, Object?>?;
       expect(MatrixEvent.fromJson(json!).parsedRoomEncryptedContent.toJson(),
           json['content']);
     });
     test('Room Key Content', () {
-      Map<String, dynamic>? json = <String, dynamic>{
+      Map<String, Object?>? json = <String, Object?>{
         'content': {
           'algorithm': 'm.megolm.v1.aes-sha2',
           'room_id': '!Cuyf34gef24t:localhost',
@@ -99,12 +99,12 @@ void main() {
         },
         'type': 'm.room_key'
       };
-      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
+      json = jsonDecode(jsonEncode(json)) as Map<String, Object?>?;
       expect(BasicEvent.fromJson(json!).parsedRoomKeyContent.toJson(),
           json['content']);
     });
     test('Room Key Request Content', () {
-      Map<String, dynamic>? json = <String, dynamic>{
+      Map<String, Object?>? json = <String, Object?>{
         'content': {
           'action': 'request_cancellation',
           'request_id': '1495474790150.19',
@@ -112,10 +112,10 @@ void main() {
         },
         'type': 'm.room_key_request'
       };
-      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
+      json = jsonDecode(jsonEncode(json)) as Map<String, Object?>?;
       expect(BasicEvent.fromJson(json!).parsedRoomKeyRequestContent.toJson(),
           json['content']);
-      json = <String, dynamic>{
+      json = <String, Object?>{
         'content': {
           'action': 'request',
           'body': {
@@ -129,12 +129,12 @@ void main() {
         },
         'type': 'm.room_key_request'
       };
-      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
+      json = jsonDecode(jsonEncode(json)) as Map<String, Object?>?;
       expect(BasicEvent.fromJson(json!).parsedRoomKeyRequestContent.toJson(),
           json['content']);
     });
     test('Forwarded Room Key Content', () {
-      Map<String, dynamic>? json = <String, dynamic>{
+      Map<String, Object?>? json = <String, Object?>{
         'content': {
           'algorithm': 'm.megolm.v1.aes-sha2',
           'forwarding_curve25519_key_chain': [
@@ -149,14 +149,14 @@ void main() {
         },
         'type': 'm.forwarded_room_key'
       };
-      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
+      json = jsonDecode(jsonEncode(json)) as Map<String, Object?>?;
       expect(BasicEvent.fromJson(json!).parsedForwardedRoomKeyContent.toJson(),
           json['content']);
     });
     test('OLM Plaintext Payload', () {
-      Map<String, dynamic>? json = <String, dynamic>{
+      Map<String, Object?>? json = <String, Object?>{
         'type': '<type of the plaintext event>',
-        'content': <String, dynamic>{
+        'content': <String, Object?>{
           'msgtype': 'm.text',
           'body': 'Hello world',
         },
@@ -165,12 +165,12 @@ void main() {
         'recipient_keys': {'ed25519': '<our_ed25519_key>'},
         'keys': {'ed25519': '<sender_ed25519_key>'}
       };
-      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>?;
+      json = jsonDecode(jsonEncode(json)) as Map<String, Object?>?;
       expect(OlmPlaintextPayload.fromJson(json!).toJson(), json);
     });
     test('Image Pack Content', () {
       // basic parse / unparse
-      var json = <String, dynamic>{
+      var json = <String, Object?>{
         'type': 'some type',
         'content': {
           'images': {
@@ -191,12 +191,12 @@ void main() {
           'org.custom': 'blah',
         },
       };
-      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>;
+      json = jsonDecode(jsonEncode(json)) as Map<String, Object?>;
       expect(BasicEvent.fromJson(json).parsedImagePackContent.toJson(),
           json['content']);
 
       // emoticons migration
-      json = <String, dynamic>{
+      json = <String, Object?>{
         'type': 'some type',
         'content': {
           'emoticons': {
@@ -206,7 +206,7 @@ void main() {
           },
         },
       };
-      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>;
+      json = jsonDecode(jsonEncode(json)) as Map<String, Object?>;
       expect(
           BasicEvent.fromJson(json)
               .parsedImagePackContent
@@ -216,7 +216,7 @@ void main() {
             'url': 'mxc://example.org/beep',
           });
 
-      json = <String, dynamic>{
+      json = <String, Object?>{
         'type': 'some type',
         'content': {
           'short': {
@@ -224,7 +224,7 @@ void main() {
           },
         },
       };
-      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>;
+      json = jsonDecode(jsonEncode(json)) as Map<String, Object?>;
       expect(
           BasicEvent.fromJson(json)
               .parsedImagePackContent
@@ -235,15 +235,15 @@ void main() {
           });
 
       // invalid url for image
-      json = <String, dynamic>{
+      json = <String, Object?>{
         'type': 'some type',
         'content': {
           'images': {
-            'emote': <String, dynamic>{},
+            'emote': <String, Object?>{},
           },
         },
       };
-      json = jsonDecode(jsonEncode(json)) as Map<String, dynamic>;
+      json = jsonDecode(jsonEncode(json)) as Map<String, Object?>;
       expect(BasicEvent.fromJson(json).parsedImagePackContent.images['emote'],
           null);
     });

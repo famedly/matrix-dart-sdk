@@ -35,7 +35,7 @@ class ForwardedRoomKeyContent extends RoomKeyContent {
   String senderClaimedEd25519Key;
   List<String> forwardingCurve25519KeyChain;
 
-  ForwardedRoomKeyContent.fromJson(Map<String, dynamic> json)
+  ForwardedRoomKeyContent.fromJson(Map<String, Object?> json)
       : senderKey = json.tryGet('sender_key', TryGet.required) ?? '',
         senderClaimedEd25519Key =
             json.tryGet('sender_claimed_ed25519_key', TryGet.required) ?? '',
@@ -45,7 +45,7 @@ class ForwardedRoomKeyContent extends RoomKeyContent {
         super.fromJson(json);
 
   @override
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     final data = super.toJson();
     data['sender_key'] = senderKey;
     data['sender_claimed_ed25519_key'] = senderClaimedEd25519Key;

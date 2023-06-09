@@ -48,7 +48,7 @@ class MatrixApi extends Api {
   Never unexpectedResponse(http.BaseResponse response, Uint8List body) {
     if (response.statusCode >= 400 && response.statusCode < 500) {
       final resp = json.decode(utf8.decode(body));
-      if (resp is Map<String, dynamic>) {
+      if (resp is Map<String, Object?>) {
         throw MatrixException.fromJson(resp);
       }
     }
@@ -82,12 +82,12 @@ class MatrixApi extends Api {
   ///  );
   /// ```
   ///
-  Future<Map<String, dynamic>> request(
+  Future<Map<String, Object?>> request(
     RequestType type,
     String action, {
     dynamic data = '',
     String contentType = 'application/json',
-    Map<String, dynamic>? query,
+    Map<String, Object?>? query,
   }) async {
     if (homeserver == null) {
       throw ('No homeserver specified.');
@@ -108,7 +108,7 @@ class MatrixApi extends Api {
     }
 
     late http.Response resp;
-    Map<String, dynamic>? jsonResp = <String, dynamic>{};
+    Map<String, Object?>? jsonResp = <String, Object?>{};
     try {
       switch (type) {
         case RequestType.GET:
@@ -138,7 +138,7 @@ class MatrixApi extends Api {
         jsonString = '{"chunk":$jsonString}';
       }
       jsonResp = jsonDecode(jsonString)
-          as Map<String, dynamic>?; // May throw FormatException
+          as Map<String, Object?>?; // May throw FormatException
     } catch (e, s) {
       throw MatrixConnectionException(e, s);
     }
@@ -153,8 +153,8 @@ class MatrixApi extends Api {
   /// https://matrix.org/docs/spec/client_server/r0.6.1#post-matrix-client-r0-keys-query
   Future<Map<String, int>> uploadKeys(
       {MatrixDeviceKeys? deviceKeys,
-      Map<String, dynamic>? oneTimeKeys,
-      Map<String, dynamic>? fallbackKeys}) async {
+      Map<String, Object?>? oneTimeKeys,
+      Map<String, Object?>? fallbackKeys}) async {
     final response = await request(
       RequestType.POST,
       '/client/v3/keys/upload',

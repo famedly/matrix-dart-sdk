@@ -28,7 +28,7 @@ import 'package:test/test.dart';
 import 'package:matrix_api_lite/fake_matrix_api.dart';
 import 'package:matrix_api_lite/matrix_api_lite.dart';
 
-const emptyRequest = <String, dynamic>{};
+const emptyRequest = <String, Object?>{};
 
 void main() {
   /// All Tests related to device keys
@@ -435,8 +435,8 @@ void main() {
             'types': ['type1'],
           },
           'include_leave': true,
-          'state': <String, dynamic>{},
-          'timeline': <String, dynamic>{},
+          'state': <String, Object?>{},
+          'timeline': <String, Object?>{},
         },
         'presence': {
           'limit': 10,
@@ -1082,7 +1082,7 @@ void main() {
       final devices = await matrixApi.getDevices();
       expect(
           (FakeMatrixApi.api['GET']!['/client/v3/devices']!.call(emptyRequest)
-              as Map<String, dynamic>?)?['devices'],
+              as Map<String, Object?>?)?['devices'],
           devices?.map((i) => i.toJson()).toList());
 
       matrixApi.homeserver = matrixApi.accessToken = null;
@@ -1229,7 +1229,7 @@ void main() {
       final response = await matrixApi.getPushers();
       expect(
         FakeMatrixApi.api['GET']!['/client/v3/pushers']!
-            .call(<String, dynamic>{}),
+            .call(<String, Object?>{}),
         {'pushers': response?.map((i) => i.toJson()).toList()},
       );
 
@@ -1268,7 +1268,7 @@ void main() {
       expect(
         FakeMatrixApi.api['GET']![
                 '/client/v3/notifications?from=1234&limit=10&only=1234']!
-            .call(<String, dynamic>{}),
+            .call(<String, Object?>{}),
         response.toJson(),
       );
 
@@ -1281,7 +1281,7 @@ void main() {
       final response = await matrixApi.getPushRules();
       expect(
         FakeMatrixApi.api['GET']!['/client/v3/pushrules']!
-            .call(<String, dynamic>{}),
+            .call(<String, Object?>{}),
         {'global': response.toJson()},
       );
 
@@ -1295,7 +1295,7 @@ void main() {
           await matrixApi.getPushRule('global', PushRuleKind.content, 'nocake');
       expect(
         FakeMatrixApi.api['GET']!['/client/v3/pushrules/global/content/nocake']!
-            .call(<String, dynamic>{}),
+            .call(<String, Object?>{}),
         response.toJson(),
       );
 
@@ -1396,7 +1396,7 @@ void main() {
       expect(
         FakeMatrixApi.api['GET']![
                 '/client/v3/events?from=1234&timeout=10&room_id=%211234']!
-            .call(<String, dynamic>{}),
+            .call(<String, Object?>{}),
         response.toJson(),
       );
 
@@ -1411,7 +1411,7 @@ void main() {
       expect(
         FakeMatrixApi.api['GET']![
                 '/client/v3/user/%40alice%3Aexample.com/rooms/!localpart%3Aexample.com/tags']!
-            .call(<String, dynamic>{}),
+            .call(<String, Object?>{}),
         {'tags': response?.map((k, v) => MapEntry(k, v.toJson()))},
       );
 
@@ -1636,14 +1636,14 @@ void main() {
       matrixApi.accessToken = '1234';
 
       final algorithm = BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2;
-      final authData = <String, dynamic>{
+      final authData = <String, Object?>{
         'public_key': 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM',
         'signatures': <String, Map<String, String>>{},
       };
       final ret = await matrixApi.postRoomKeysVersion(algorithm, authData);
       expect(
           (FakeMatrixApi.api['POST']!['/client/v3/room_keys/version']!
-              .call(emptyRequest) as Map<String, dynamic>)['version'],
+              .call(emptyRequest) as Map<String, Object?>)['version'],
           ret);
     });
     test('getRoomKeysVersionCurrent', () async {
@@ -1661,7 +1661,7 @@ void main() {
       matrixApi.accessToken = '1234';
 
       final algorithm = BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2;
-      final authData = <String, dynamic>{
+      final authData = <String, Object?>{
         'public_key': 'GXYaxqhNhUK28zUdxOmEsFRguz+PzBsDlTLlF0O0RkM',
         'signatures': <String, Map<String, String>>{},
       };

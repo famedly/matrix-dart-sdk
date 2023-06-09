@@ -63,7 +63,7 @@ enum MatrixError {
 
 /// Represents a special response from the Homeserver for errors.
 class MatrixException implements Exception {
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// The unique identifier for this error.
   String get errcode =>
@@ -81,9 +81,9 @@ class MatrixException implements Exception {
   http.Response? response;
 
   MatrixException(http.Response this.response)
-      : raw = json.decode(response.body) as Map<String, dynamic>;
+      : raw = json.decode(response.body) as Map<String, Object?>;
 
-  MatrixException.fromJson(Map<String, dynamic> content) : raw = content;
+  MatrixException.fromJson(Map<String, Object?> content) : raw = content;
 
   @override
   String toString() => '$errcode: $errorMessage';
@@ -110,7 +110,7 @@ class MatrixException implements Exception {
   /// doesn't need additional authentication, then this is null.
   List<AuthenticationFlow>? get authenticationFlows => raw
       .tryGet<List<dynamic>>('flows')
-      ?.whereType<Map<String, dynamic>>()
+      ?.whereType<Map<String, Object?>>()
       .map((flow) => flow['stages'])
       .whereType<List<dynamic>>()
       .map((stages) =>
@@ -120,8 +120,8 @@ class MatrixException implements Exception {
   /// This section contains any information that the client will need to know in order to use a given type
   /// of authentication. For each authentication type presented, that type may be present as a key in this
   /// dictionary. For example, the public part of an OAuth client ID could be given here.
-  Map<String, dynamic>? get authenticationParams =>
-      raw.tryGetMap<String, dynamic>('params');
+  Map<String, Object?>? get authenticationParams =>
+      raw.tryGetMap<String, Object?>('params');
 
   /// Returns the list of already completed authentication flows from previous requests.
   List<String> get completedAuthenticationFlows =>

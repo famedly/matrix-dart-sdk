@@ -31,13 +31,13 @@ class AuthenticationPhoneIdentifier extends AuthenticationIdentifier {
   AuthenticationPhoneIdentifier({required this.country, required this.phone})
       : super(type: AuthenticationIdentifierTypes.phone);
 
-  AuthenticationPhoneIdentifier.fromJson(Map<String, dynamic> json)
+  AuthenticationPhoneIdentifier.fromJson(Map<String, Object?> json)
       : country = json['country'] as String,
         phone = json['phone'] as String,
         super.fromJson(json);
 
   @override
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     final data = super.toJson();
     data['country'] = country;
     data['phone'] = phone;

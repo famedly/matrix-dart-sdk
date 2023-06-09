@@ -28,19 +28,19 @@ class BasicRoomEvent extends BasicEvent {
 
   BasicRoomEvent({
     this.roomId,
-    required Map<String, dynamic> content,
+    required Map<String, Object?> content,
     required String type,
   }) : super(
           content: content,
           type: type,
         );
 
-  BasicRoomEvent.fromJson(Map<String, dynamic> json)
+  BasicRoomEvent.fromJson(Map<String, Object?> json)
       : roomId = json['room_id'] as String?,
         super.fromJson(json);
 
   @override
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     final data = super.toJson();
     if (roomId != null) data['room_id'] = roomId;
     return data;

@@ -66,31 +66,31 @@ List<String> imagePackUsageToJson(
 
 class ImagePackContent {
   // we want to preserve potential custom keys in this object
-  final Map<String, dynamic> _json;
+  final Map<String, Object?> _json;
 
   Map<String, ImagePackImageContent> images;
   ImagePackPackContent pack;
 
   ImagePackContent({required this.images, required this.pack}) : _json = {};
 
-  ImagePackContent.fromJson(Map<String, dynamic> json)
+  ImagePackContent.fromJson(Map<String, Object?> json)
       : _json = Map.fromEntries(json.entries.where(
             (e) => !['images', 'pack', 'emoticons', 'short'].contains(e.key))),
         pack = ImagePackPackContent.fromJson(
-            json.tryGetMap<String, dynamic>('pack') ?? {}),
-        images = json.tryGetMap<String, dynamic>('images')?.catchMap((k, v) =>
+            json.tryGetMap<String, Object?>('pack') ?? {}),
+        images = json.tryGetMap<String, Object?>('images')?.catchMap((k, v) =>
                 MapEntry(
                     k,
                     ImagePackImageContent.fromJson(
-                        v as Map<String, dynamic>))) ??
+                        v as Map<String, Object?>))) ??
             // the "emoticons" key needs a small migration on the key, ":string:" --> "string"
-            json.tryGetMap<String, dynamic>('emoticons')?.catchMap((k, v) =>
+            json.tryGetMap<String, Object?>('emoticons')?.catchMap((k, v) =>
                 MapEntry(
                     k.startsWith(':') && k.endsWith(':')
                         ? k.substring(1, k.length - 1)
                         : k,
                     ImagePackImageContent.fromJson(
-                        v as Map<String, dynamic>))) ??
+                        v as Map<String, Object?>))) ??
             // the "short" key was still just a map from shortcode to mxc uri
             json.tryGetMap<String, String>('short')?.catchMap((k, v) =>
                 MapEntry(
@@ -100,7 +100,7 @@ class ImagePackContent {
                     ImagePackImageContent(url: Uri.parse(v)))) ??
             {};
 
-  Map<String, dynamic> toJson() => {
+  Map<String, Object?> toJson() => {
         ..._json,
         'images': images.map((k, v) => MapEntry(k, v.toJson())),
         'pack': pack.toJson(),
@@ -109,25 +109,25 @@ class ImagePackContent {
 
 class ImagePackImageContent {
   // we want to preserve potential custom keys in this object
-  final Map<String, dynamic> _json;
+  final Map<String, Object?> _json;
 
   Uri url;
   String? body;
-  Map<String, dynamic>? info;
+  Map<String, Object?>? info;
   List<ImagePackUsage>? usage;
 
   ImagePackImageContent({required this.url, this.body, this.info, this.usage})
       : _json = {};
 
-  ImagePackImageContent.fromJson(Map<String, dynamic> json)
+  ImagePackImageContent.fromJson(Map<String, Object?> json)
       : _json = Map.fromEntries(json.entries
             .where((e) => !['url', 'body', 'info'].contains(e.key))),
         url = Uri.parse(json['url'] as String),
         body = json.tryGet('body'),
-        info = json.tryGetMap<String, dynamic>('info'),
+        info = json.tryGetMap<String, Object?>('info'),
         usage = imagePackUsageFromJson(json.tryGetList<String>('usage'));
 
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     return {
       ...Map.from(_json)..remove('usage'),
       'url': url.toString(),
@@ -141,7 +141,7 @@ class ImagePackImageContent {
 
 class ImagePackPackContent {
   // we want to preserve potential custom keys in this object
-  final Map<String, dynamic> _json;
+  final Map<String, Object?> _json;
 
   String? displayName;
   Uri? avatarUrl;
@@ -152,7 +152,7 @@ class ImagePackPackContent {
       {this.displayName, this.avatarUrl, this.usage, this.attribution})
       : _json = {};
 
-  ImagePackPackContent.fromJson(Map<String, dynamic> json)
+  ImagePackPackContent.fromJson(Map<String, Object?> json)
       : _json = Map.fromEntries(json.entries.where((e) =>
             !['display_name', 'avatar_url', 'attribution'].contains(e.key))),
         displayName = json.tryGet('display_name'),
@@ -161,7 +161,7 @@ class ImagePackPackContent {
         usage = imagePackUsageFromJson(json.tryGetList<String>('usage')),
         attribution = json.tryGet('attribution');
 
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     return {
       ...Map.from(_json)..remove('usage'),
       if (displayName != null) 'display_name': displayName,

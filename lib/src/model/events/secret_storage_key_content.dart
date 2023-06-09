@@ -37,16 +37,16 @@ class SecretStorageKeyContent {
 
   SecretStorageKeyContent();
 
-  SecretStorageKeyContent.fromJson(Map<String, dynamic> json)
-      : passphrase = ((Map<String, dynamic>? x) => x != null
+  SecretStorageKeyContent.fromJson(Map<String, Object?> json)
+      : passphrase = ((Map<String, Object?>? x) => x != null
             ? PassphraseInfo.fromJson(x)
             : null)(json.tryGet('passphrase')),
         iv = json.tryGet('iv'),
         mac = json.tryGet('mac'),
         algorithm = json.tryGet('algorithm');
 
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
     if (passphrase != null) data['passphrase'] = passphrase!.toJson();
     if (iv != null) data['iv'] = iv;
     if (mac != null) data['mac'] = mac;
@@ -69,14 +69,14 @@ class PassphraseInfo {
       required this.iterations,
       this.bits});
 
-  PassphraseInfo.fromJson(Map<String, dynamic> json)
+  PassphraseInfo.fromJson(Map<String, Object?> json)
       : algorithm = json.tryGet('algorithm', TryGet.required),
         salt = json.tryGet('salt', TryGet.required),
         iterations = json.tryGet('iterations', TryGet.required),
         bits = json.tryGet('bits');
 
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
     data['algorithm'] = algorithm;
     data['salt'] = salt;
     data['iterations'] = iterations;

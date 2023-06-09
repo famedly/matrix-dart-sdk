@@ -28,17 +28,17 @@ class StrippedStateEvent extends BasicEventWithSender {
 
   StrippedStateEvent(
       {required String type,
-      required Map<String, dynamic> content,
+      required Map<String, Object?> content,
       required String senderId,
       this.stateKey})
       : super(type: type, content: content, senderId: senderId);
 
-  StrippedStateEvent.fromJson(Map<String, dynamic> json)
+  StrippedStateEvent.fromJson(Map<String, Object?> json)
       : stateKey = json.tryGet<String>('state_key'),
         super.fromJson(json);
 
   @override
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     final data = super.toJson();
     data['state_key'] = stateKey;
     return data;

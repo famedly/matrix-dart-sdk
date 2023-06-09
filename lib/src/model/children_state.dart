@@ -28,7 +28,7 @@ class ChildrenState extends StrippedStateEvent {
 
   ChildrenState({
     required String type,
-    required Map<String, dynamic> content,
+    required Map<String, Object?> content,
     required String senderId,
     required String stateKey,
     required this.originServerTs,
@@ -38,13 +38,13 @@ class ChildrenState extends StrippedStateEvent {
             senderId: senderId,
             stateKey: stateKey);
 
-  ChildrenState.fromJson(Map<String, dynamic> json)
+  ChildrenState.fromJson(Map<String, Object?> json)
       : originServerTs = DateTime.fromMillisecondsSinceEpoch(
             json['origin_server_ts'] as int),
         super.fromJson(json);
 
   @override
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     final data = super.toJson();
     data['origin_server_ts'] = originServerTs.millisecondsSinceEpoch;
     return data;

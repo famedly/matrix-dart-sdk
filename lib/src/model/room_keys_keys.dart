@@ -27,7 +27,7 @@ class RoomKeysSingleKey {
   int firstMessageIndex;
   int forwardedCount;
   bool isVerified;
-  Map<String, dynamic> sessionData;
+  Map<String, Object?> sessionData;
 
   RoomKeysSingleKey(
       {required this.firstMessageIndex,
@@ -35,14 +35,14 @@ class RoomKeysSingleKey {
       required this.isVerified,
       required this.sessionData});
 
-  RoomKeysSingleKey.fromJson(Map<String, dynamic> json)
+  RoomKeysSingleKey.fromJson(Map<String, Object?> json)
       : firstMessageIndex = json['first_message_index'] as int,
         forwardedCount = json['forwarded_count'] as int,
         isVerified = json['is_verified'] as bool,
-        sessionData = json['session_data'] as Map<String, dynamic>;
+        sessionData = json['session_data'] as Map<String, Object?>;
 
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
     data['first_message_index'] = firstMessageIndex;
     data['forwarded_count'] = forwardedCount;
     data['is_verified'] = isVerified;
@@ -56,12 +56,12 @@ class RoomKeysRoom {
 
   RoomKeysRoom({required this.sessions});
 
-  RoomKeysRoom.fromJson(Map<String, dynamic> json)
-      : sessions = (json['sessions'] as Map<String, dynamic>).map((k, v) =>
-            MapEntry(k, RoomKeysSingleKey.fromJson(v as Map<String, dynamic>)));
+  RoomKeysRoom.fromJson(Map<String, Object?> json)
+      : sessions = (json['sessions'] as Map<String, Object?>).map((k, v) =>
+            MapEntry(k, RoomKeysSingleKey.fromJson(v as Map<String, Object?>)));
 
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
     data['sessions'] = sessions.map((k, v) => MapEntry(k, v.toJson()));
     return data;
   }
@@ -71,13 +71,13 @@ class RoomKeysUpdateResponse {
   String etag;
   int count;
 
-  RoomKeysUpdateResponse.fromJson(Map<String, dynamic> json)
+  RoomKeysUpdateResponse.fromJson(Map<String, Object?> json)
       : etag = json.tryGet<String>('etag') ??
             '', // synapse replies an int but docs say string?
         count = json.tryGet<int>('count') ?? 0;
 
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
     data['etag'] = etag;
     data['count'] = count;
     return data;

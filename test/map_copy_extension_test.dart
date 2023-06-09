@@ -28,21 +28,21 @@ import 'package:matrix_api_lite/matrix_api_lite.dart';
 void main() {
   group('Map-copy-extension', () {
     test('it should work', () {
-      final original = <String, dynamic>{
+      final original = <String, Object?>{
         'attr': 'fox',
-        'child': <String, dynamic>{
+        'child': <String, Object?>{
           'attr': 'bunny',
           'list': [1, 2],
         },
       };
       final copy = original.copy();
-      (original['child'] as Map<String, dynamic>)['attr'] = 'raccoon';
-      expect((copy['child'] as Map<String, dynamic>)['attr'], 'bunny');
-      ((original['child'] as Map<String, dynamic>)['list'] as List<int>).add(3);
-      expect((copy['child'] as Map<String, dynamic>)['list'], [1, 2]);
+      (original['child'] as Map<String, Object?>)['attr'] = 'raccoon';
+      expect((copy['child'] as Map<String, Object?>)['attr'], 'bunny');
+      ((original['child'] as Map<String, Object?>)['list'] as List<int>).add(3);
+      expect((copy['child'] as Map<String, Object?>)['list'], [1, 2]);
     });
     test('should do arrays', () {
-      final original = <String, dynamic>{
+      final original = <String, Object?>{
         'arr': [
           [1, 2],
           {'beep': 'boop'},
@@ -51,9 +51,9 @@ void main() {
       final copy = original.copy();
       ((original['arr'] as List)[0] as List<int>).add(3);
       expect((copy['arr'] as List)[0], [1, 2]);
-      ((original['arr'] as List)[1] as Map<String, dynamic>)['beep'] = 'blargh';
+      ((original['arr'] as List)[1] as Map<String, Object?>)['beep'] = 'blargh';
       expect(
-          ((copy['arr'] as List)[1] as Map<String, dynamic>)['beep'], 'boop');
+          ((copy['arr'] as List)[1] as Map<String, Object?>)['beep'], 'boop');
     });
   });
 }

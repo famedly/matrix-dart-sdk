@@ -37,16 +37,16 @@ class AuthenticationThreePidCreds extends AuthenticationData {
           session: session,
         );
 
-  AuthenticationThreePidCreds.fromJson(Map<String, dynamic> json)
+  AuthenticationThreePidCreds.fromJson(Map<String, Object?> json)
       : super.fromJson(json) {
     final creds = json['threepid_creds'];
-    if (creds is Map<String, dynamic>) {
+    if (creds is Map<String, Object?>) {
       threepidCreds = ThreepidCreds.fromJson(creds);
     }
   }
 
   @override
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     final data = super.toJson();
     data['threepid_creds'] = threepidCreds.toJson();
     return data;
@@ -65,14 +65,14 @@ class ThreepidCreds {
       this.idServer,
       this.idAccessToken});
 
-  ThreepidCreds.fromJson(Map<String, dynamic> json)
+  ThreepidCreds.fromJson(Map<String, Object?> json)
       : sid = json['sid'] as String,
         clientSecret = json['client_secret'] as String,
         idServer = json['id_server'] as String?,
         idAccessToken = json['id_access_token'] as String?;
 
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
     data['sid'] = sid;
     data['client_secret'] = clientSecret;
     if (idServer != null) data['id_server'] = idServer;

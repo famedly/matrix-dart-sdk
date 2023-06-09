@@ -35,11 +35,11 @@ class SecretStorageDefaultKeyContent {
 
   SecretStorageDefaultKeyContent({required this.key});
 
-  SecretStorageDefaultKeyContent.fromJson(Map<String, dynamic> json)
+  SecretStorageDefaultKeyContent.fromJson(Map<String, Object?> json)
       : key = json.tryGet('key', TryGet.required);
 
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
     if (key != null) data['key'] = key;
     return data;
   }

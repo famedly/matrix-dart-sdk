@@ -40,14 +40,14 @@ class AuthenticationPassword extends AuthenticationData {
           session: session,
         );
 
-  AuthenticationPassword.fromJson(Map<String, dynamic> json)
+  AuthenticationPassword.fromJson(Map<String, Object?> json)
       : password = json['password'] as String,
         identifier = AuthenticationIdentifier.subFromJson(
-            json['identifier'] as Map<String, dynamic>),
+            json['identifier'] as Map<String, Object?>),
         super.fromJson(json);
 
   @override
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     final data = super.toJson();
     data['password'] = password;
     data['identifier'] = identifier.toJson();

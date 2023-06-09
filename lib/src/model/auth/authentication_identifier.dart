@@ -31,10 +31,10 @@ class AuthenticationIdentifier {
 
   AuthenticationIdentifier({required this.type});
 
-  AuthenticationIdentifier.fromJson(Map<String, dynamic> json)
+  AuthenticationIdentifier.fromJson(Map<String, Object?> json)
       : type = json['type'] as String;
 
-  factory AuthenticationIdentifier.subFromJson(Map<String, dynamic> json) {
+  factory AuthenticationIdentifier.subFromJson(Map<String, Object?> json) {
     switch (json['type']) {
       case AuthenticationIdentifierTypes.userId:
         return AuthenticationUserIdentifier.fromJson(json);
@@ -47,8 +47,8 @@ class AuthenticationIdentifier {
     }
   }
 
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
     data['type'] = type;
     return data;
   }

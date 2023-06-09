@@ -29,11 +29,11 @@ void main() {
   group('Try-get-map-extension', () {
     Logs().level = Level.verbose;
     test('it should work', () {
-      final data = <String, dynamic>{
+      final data = <String, Object?>{
         'str': 'foxies',
         'int': 42,
         'list': [2, 3, 4],
-        'map': <String, dynamic>{
+        'map': <String, Object?>{
           'beep': 'boop',
         },
       };
@@ -41,12 +41,12 @@ void main() {
       expect(data.tryGet<int>('str'), null);
       expect(data.tryGet<int>('int'), 42);
       expect(data.tryGet<List<int>>('list'), [2, 3, 4]);
-      expect(data.tryGetMap<String, dynamic>('map')?.tryGet<String>('beep'),
+      expect(data.tryGetMap<String, Object?>('map')?.tryGet<String>('beep'),
           'boop');
       expect(
-          data.tryGetMap<String, dynamic>('map')?.tryGet<String>('meep'), null);
+          data.tryGetMap<String, Object?>('map')?.tryGet<String>('meep'), null);
       expect(
-          data.tryGetMap<String, dynamic>('pam')?.tryGet<String>('beep'), null);
+          data.tryGetMap<String, Object?>('pam')?.tryGet<String>('beep'), null);
     });
   });
 }

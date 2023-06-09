@@ -25,7 +25,7 @@ import '../../utils/try_get_map_extension.dart';
 
 class OlmPlaintextPayload {
   String? type;
-  Map<String, dynamic>? content;
+  Map<String, Object?>? content;
   String? sender;
   String? recipient;
   Map<String, String>? recipientKeys;
@@ -40,7 +40,7 @@ class OlmPlaintextPayload {
     this.keys,
   }) : super();
 
-  factory OlmPlaintextPayload.fromJson(Map<String, dynamic> json) =>
+  factory OlmPlaintextPayload.fromJson(Map<String, Object?> json) =>
       OlmPlaintextPayload(
         sender: json.tryGet('sender', TryGet.required),
         type: json.tryGet('type', TryGet.required),
@@ -50,8 +50,8 @@ class OlmPlaintextPayload {
         keys: json.tryGetMap('keys', TryGet.required),
       );
 
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
     if (type != null) data['type'] = type;
     if (sender != null) data['sender'] = sender;
     if (content != null) data['content'] = content;

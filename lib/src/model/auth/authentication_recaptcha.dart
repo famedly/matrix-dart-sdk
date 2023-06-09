@@ -33,12 +33,12 @@ class AuthenticationRecaptcha extends AuthenticationData {
           session: session,
         );
 
-  AuthenticationRecaptcha.fromJson(Map<String, dynamic> json)
+  AuthenticationRecaptcha.fromJson(Map<String, Object?> json)
       : response = json['response'] as String,
         super.fromJson(json);
 
   @override
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     final data = super.toJson();
     data['response'] = response;
     return data;
