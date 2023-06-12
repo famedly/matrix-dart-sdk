@@ -3,8 +3,6 @@ include:
   file: "all.yml"
 
 test:
-  tags:
-    - linux
   stage: test
   image: dart
   script:
