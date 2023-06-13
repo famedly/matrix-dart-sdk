@@ -44,7 +44,7 @@ T? tryCast<T>(dynamic object) => object is T ? object : null;
 
 /// A mock http client for testing purposes.
 class FakeMatrixApi extends MockClient {
-  static final calledEndpoints = <String, List<dynamic>>{};
+  static final calledEndpoints = <String, List<Object?>>{};
   static int eventCounter = 0;
 
   FakeMatrixApi()
@@ -82,7 +82,7 @@ class FakeMatrixApi extends MockClient {
 
           // Call API
           if (!calledEndpoints.containsKey(action)) {
-            calledEndpoints[action] = <dynamic>[];
+            calledEndpoints[action] = [];
           }
           calledEndpoints[action]!.add(data);
           if (api.containsKey(method) && api[method]!.containsKey(action)) {

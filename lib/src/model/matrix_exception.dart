@@ -109,10 +109,10 @@ class MatrixException implements Exception {
   /// to authenticate itself. Each flow comprises a series of stages. If this request
   /// doesn't need additional authentication, then this is null.
   List<AuthenticationFlow>? get authenticationFlows => raw
-      .tryGet<List<dynamic>>('flows')
+      .tryGet<List<Object?>>('flows')
       ?.whereType<Map<String, Object?>>()
       .map((flow) => flow['stages'])
-      .whereType<List<dynamic>>()
+      .whereType<List<Object?>>()
       .map((stages) =>
           AuthenticationFlow(List<String>.from(stages.whereType<String>())))
       .toList();

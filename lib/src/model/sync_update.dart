@@ -51,15 +51,15 @@ class SyncUpdate {
           return temp != null ? RoomsUpdate.fromJson(temp) : null;
         }()),
         presence = json
-            .tryGetMap<String, List<dynamic>>('presence')?['events']
+            .tryGetMap<String, List<Object?>>('presence')?['events']
             ?.map((i) => Presence.fromJson(i as Map<String, Object?>))
             .toList(),
         accountData = json
-            .tryGetMap<String, List<dynamic>>('account_data')?['events']
+            .tryGetMap<String, List<Object?>>('account_data')?['events']
             ?.map((i) => BasicEvent.fromJson(i as Map<String, Object?>))
             .toList(),
         toDevice = json
-            .tryGetMap<String, List<dynamic>>('to_device')?['events']
+            .tryGetMap<String, List<Object?>>('to_device')?['events']
             ?.map(
                 (i) => BasicEventWithSender.fromJson(i as Map<String, Object?>))
             .toList(),
@@ -167,16 +167,16 @@ class JoinedRoomUpdate extends SyncRoomUpdate {
   JoinedRoomUpdate.fromJson(Map<String, Object?> json)
       : summary = json.tryGetFromJson('summary', RoomSummary.fromJson),
         state = json
-            .tryGetMap<String, List<dynamic>>('state')?['events']
+            .tryGetMap<String, List<Object?>>('state')?['events']
             ?.map((i) => MatrixEvent.fromJson(i as Map<String, Object?>))
             .toList(),
         timeline = json.tryGetFromJson('timeline', TimelineUpdate.fromJson),
         ephemeral = json
-            .tryGetMap<String, List<dynamic>>('ephemeral')?['events']
+            .tryGetMap<String, List<Object?>>('ephemeral')?['events']
             ?.map((i) => BasicRoomEvent.fromJson(i as Map<String, Object?>))
             .toList(),
         accountData = json
-            .tryGetMap<String, List<dynamic>>('account_data')?['events']
+            .tryGetMap<String, List<Object?>>('account_data')?['events']
             ?.map((i) => BasicRoomEvent.fromJson(i as Map<String, Object?>))
             .toList(),
         unreadNotifications = json.tryGetFromJson(
@@ -219,7 +219,7 @@ class InvitedRoomUpdate extends SyncRoomUpdate {
 
   InvitedRoomUpdate.fromJson(Map<String, Object?> json)
       : inviteState = json
-            .tryGetMap<String, List<dynamic>>('invite_state')?['events']
+            .tryGetMap<String, List<Object?>>('invite_state')?['events']
             ?.map((i) => StrippedStateEvent.fromJson(i as Map<String, Object?>))
             .toList();
 
@@ -247,12 +247,12 @@ class LeftRoomUpdate extends SyncRoomUpdate {
 
   LeftRoomUpdate.fromJson(Map<String, Object?> json)
       : state = json
-            .tryGetMap<String, List<dynamic>>('state')?['events']
+            .tryGetMap<String, List<Object?>>('state')?['events']
             ?.map((i) => MatrixEvent.fromJson(i as Map<String, Object?>))
             .toList(),
         timeline = json.tryGetFromJson('timeline', TimelineUpdate.fromJson),
         accountData = json
-            .tryGetMap<String, List<dynamic>>('account_data')?['events']
+            .tryGetMap<String, List<Object?>>('account_data')?['events']
             ?.map((i) => BasicRoomEvent.fromJson(i as Map<String, Object?>))
             .toList();
 
