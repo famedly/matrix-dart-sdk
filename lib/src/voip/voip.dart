@@ -32,9 +32,16 @@ abstract class WebRTCDelegate {
   bool get sFrameEnabled => false;
   String? getSFrameKey(String callId) => null;
   Future<void> handleAddRtpSender(
-      String callId, RTCRtpSender sender, String sFrameKey);
+      String callId, RTCRtpSender sender, String sFrameKey) async {
+    Logs().v(
+        '[VOIP] handleAddRtpSender: sFrame not implemented. please implement it in your delegate.');
+  }
+
   Future<void> handleAddRtpReceiver(
-      String callId, RTCRtpReceiver receiver, String sFrameKey);
+      String callId, RTCRtpReceiver receiver, String sFrameKey) async {
+    Logs().v(
+        '[VOIP] handleAddRtpReceiver: sFrame not implemented. please implement it in your delegate.');
+  }
 }
 
 class VoIP {
