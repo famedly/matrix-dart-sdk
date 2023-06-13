@@ -1,6 +1,6 @@
 name: matrix_api_lite
 description: Dead simple data model for the matrix.org client-server API.
-version: 1.6.1
+version: 1.7.0
 homepage: https://famedly.com
 repository: https://gitlab.com/famedly/company/frontend/libraries/matrix_api_lite/
 issues: https://gitlab.com/famedly/company/frontend/libraries/matrix_api_lite/-/issues

@@ -1,3 +1,19 @@
+## [1.7.0] - 12th Jun 2023
+
+Breaking Change: 
+Refactoring from Map<String, dynamic> to Map<String, Object?> makes some 
+type casts neccessary
+
+- chore: add qr releated eventTypes (td)
+- refactor: Get rid of dynamic lists (Krille)
+- chore: bump version (Malin Errenst)
+- docs: Add regenerate code instructions to readme (Krille)
+- chore: Remove tags for CI test stage (Malin Errenst)
+- refactor: Changed Map<String, dynamic> to Map<String, Object?> (Malin Errenst)
+- chore: generated folder from recent dart_openapi_codegen (Malin Errenst)
+- chore: sort imports (Nicolas Werner)
+- ci: Use the ci template (Nicolas Werner)
+
 ## [1.6.1] - 17th Apr 2023
 
 Fixes a small issue in the last release, where some enhanced enums were not
