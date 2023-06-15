@@ -704,18 +704,20 @@ class VoIP {
 
     final groupCallId = event.stateKey;
 
-    final callType = content['m.type'];
+    final callType = content.tryGet<String>('m.type');
 
-    if (callType != GroupCallType.Video && callType != GroupCallType.Voice) {
+    if (callType == null ||
+        callType != GroupCallType.Video && callType != GroupCallType.Voice) {
       Logs().w('Received invalid group call type $callType for room $roomId.');
       return null;
     }
 
-    final callIntent = content['m.intent'];
+    final callIntent = content.tryGet<String>('m.intent');
 
-    if (callIntent != GroupCallIntent.Prompt &&
-        callIntent != GroupCallIntent.Room &&
-        callIntent != GroupCallIntent.Ring) {
+    if (callIntent == null ||
+        callIntent != GroupCallIntent.Prompt &&
+            callIntent != GroupCallIntent.Room &&
+            callIntent != GroupCallIntent.Ring) {
       Logs()
           .w('Received invalid group call intent $callType for room $roomId.');
       return null;
@@ -726,8 +728,8 @@ class VoIP {
       voip: this,
       room: room,
       groupCallId: groupCallId,
-      type: callType as String,
-      intent: callIntent as String,
+      type: callType,
+      intent: callIntent,
     );
 
     groupCalls[groupCallId!] = groupCall;

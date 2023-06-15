@@ -104,13 +104,14 @@ class Bootstrap {
     for (final entry in client.accountData.entries) {
       final type = entry.key;
       final event = entry.value;
-      if (event.content['encrypted'] is! Map) {
+      final encryptedContent =
+          event.content.tryGetMap<String, Object?>('encrypted');
+      if (encryptedContent == null) {
         continue;
       }
       final validKeys = <String>{};
       final invalidKeys = <String>{};
-      for (final keyEntry
-          in (event.content['encrypted'] as Map<String, Object?>).entries) {
+      for (final keyEntry in encryptedContent.entries) {
         final key = keyEntry.key;
         final value = keyEntry.value;
         if (value is! Map) {

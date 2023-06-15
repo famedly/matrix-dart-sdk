@@ -275,7 +275,7 @@ abstract class SignableKey extends MatrixSignableKey {
         var haveValidSignature = false;
         var gotSignatureFromCache = false;
         final fullKeyIdBool = validSignatures
-            ?.tryGetMap<String, dynamic>(otherUserId)
+            ?.tryGetMap<String, Object?>(otherUserId)
             ?.tryGet<bool>(fullKeyId);
         if (fullKeyIdBool == true) {
           haveValidSignature = true;
@@ -426,14 +426,15 @@ class DeviceKeys extends SignableKey {
   late DateTime lastActive;
 
   String? get curve25519Key => keys['curve25519:$deviceId'];
-  String? get deviceDisplayName => unsigned?['device_display_name'] as String;
+  String? get deviceDisplayName =>
+      unsigned?.tryGet<String>('device_display_name');
 
   bool? _validSelfSignature;
   bool get selfSigned =>
       _validSelfSignature ??
       (_validSelfSignature = (deviceId != null &&
               signatures
-                      ?.tryGetMap<String, dynamic>(userId)
+                      ?.tryGetMap<String, Object?>(userId)
                       ?.tryGet<String>('ed25519:$deviceId') ==
                   null
           ? false

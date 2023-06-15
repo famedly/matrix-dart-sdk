@@ -298,7 +298,7 @@ class Client extends MatrixApi {
     final ruleset = TryGetPushRule.tryFromJson(
         _accountData[EventTypes.PushRules]
                 ?.content
-                .tryGetMap<String, dynamic>('global') ??
+                .tryGetMap<String, Object?>('global') ??
             {});
     _pushruleEvaluator = PushruleEvaluator.fromRuleset(ruleset);
   }
@@ -1068,7 +1068,7 @@ class Client extends MatrixApi {
   PushRuleSet? get globalPushRules {
     final pushrules = _accountData['m.push_rules']
         ?.content
-        .tryGetMap<String, dynamic>('global');
+        .tryGetMap<String, Object?>('global');
     return pushrules != null ? TryGetPushRule.tryFromJson(pushrules) : null;
   }
 
@@ -1076,7 +1076,7 @@ class Client extends MatrixApi {
   PushRuleSet? get devicePushRules {
     final pushrules = _accountData['m.push_rules']
         ?.content
-        .tryGetMap<String, dynamic>('device');
+        .tryGetMap<String, Object?>('device');
     return pushrules != null ? TryGetPushRule.tryFromJson(pushrules) : null;
   }
 
@@ -2732,15 +2732,14 @@ class Client extends MatrixApi {
   /// rule of the push rules: https://matrix.org/docs/spec/client_server/r0.6.0#m-rule-master
   bool get allPushNotificationsMuted {
     final Map<String, Object?>? globalPushRules =
-        _accountData[EventTypes.PushRules]?.content['global']
-                is Map<String, Object?>?
-            ? _accountData[EventTypes.PushRules]?.content['global']
-                as Map<String, Object?>?
-            : null;
+        _accountData[EventTypes.PushRules]
+            ?.content
+            .tryGetMap<String, Object?>('global');
     if (globalPushRules == null) return false;
 
-    if (globalPushRules['override'] is List) {
-      for (final pushRule in globalPushRules['override'] as List) {
+    final globalPushRulesOverride = globalPushRules.tryGetList('override');
+    if (globalPushRulesOverride != null) {
+      for (final pushRule in globalPushRulesOverride) {
         if (pushRule['rule_id'] == '.m.rule.master') {
           return pushRule['enabled'];
         }
@@ -2817,13 +2816,12 @@ class Client extends MatrixApi {
   }
 
   /// A list of mxids of users who are ignored.
-  List<String> get ignoredUsers => (_accountData
-              .containsKey('m.ignored_user_list') &&
-          _accountData['m.ignored_user_list']?.content['ignored_users'] is Map)
-      ? List<String>.from((_accountData['m.ignored_user_list']
-              ?.content['ignored_users'] as Map<String, Object?>)
-          .keys)
-      : [];
+  List<String> get ignoredUsers =>
+      List<String>.from(_accountData['m.ignored_user_list']
+              ?.content
+              .tryGetMap<String, Object?>('ignored_users')
+              ?.keys ??
+          <String>[]);
 
   /// Ignore another user. This will clear the local cached messages to
   /// hide all previous messages from this user.

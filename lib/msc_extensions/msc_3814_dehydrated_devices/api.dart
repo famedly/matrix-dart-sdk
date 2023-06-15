@@ -48,7 +48,8 @@ extension DehydratedDeviceMatrixApi on MatrixApi {
       },
     );
     return Map<String, int>.from(
-        response['one_time_key_counts'] as Map<String, Object?>);
+        response.tryGetMap<String, Object?>('one_time_key_counts') ??
+            <String, int>{});
   }
 
   /// uploads a dehydrated device.
