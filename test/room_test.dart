@@ -332,6 +332,99 @@ void main() {
       );
       expect(room.lastEvent?.body, 'B');
     });
+
+    test('lastEvent with deleted message', () async {
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          room: room,
+          eventId: '8',
+          originServerTs: DateTime.now(),
+          content: {'msgtype': 'm.text', 'body': 'AA'},
+          stateKey: '',
+        ),
+      );
+      expect(room.lastEvent?.body, 'AA');
+
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          room: room,
+          eventId: '9',
+          originServerTs: DateTime.now(),
+          content: {
+            'msgtype': 'm.text',
+            'body': 'B',
+            'm.relates_to': {'rel_type': 'm.in_reply_to', 'event_id': '8'}
+          },
+          stateKey: '',
+        ),
+      );
+      expect(room.lastEvent?.body, 'B');
+
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          room: room,
+          eventId: '10',
+          originServerTs: DateTime.now(),
+          content: {
+            'type': 'm.room.redaction',
+            'content': {'reason': 'test'},
+            'sender': '@test:example.com',
+            'redacts': '9',
+            'event_id': '10',
+            'origin_server_ts': DateTime.now(),
+          },
+          stateKey: '',
+        ),
+      );
+      expect(room.lastEvent?.eventId, '10');
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          room: room,
+          eventId: '11',
+          originServerTs: DateTime.now(),
+          content: {'msgtype': 'm.text', 'body': 'BB'},
+          stateKey: '',
+        ),
+      );
+      expect(room.lastEvent?.body, 'BB');
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          room: room,
+          eventId: '12',
+          originServerTs: DateTime.now(),
+          content: {
+            'm.new_content': {'msgtype': 'm.text', 'body': 'BBB'},
+            'm.relates_to': {'rel_type': 'm.replace', 'event_id': '11'},
+            'msgtype': 'm.text',
+            'body': '* BBB',
+          },
+          stateKey: '',
+        ),
+      );
+      expect(room.lastEvent?.body, '* BBB');
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.name',
+          room: room,
+          eventId: '12',
+          originServerTs: DateTime.now(),
+          content: {'body': 'brainfarts'},
+        ),
+      );
+      expect(room.lastEvent?.body, '* BBB');
+    });
+
     test('sendReadMarker', () async {
       await room.setReadMarker('§1234:fakeServer.notExisting');
     });

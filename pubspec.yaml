@@ -1,11 +1,11 @@
 name: matrix
 description: Matrix Dart SDK
-version: 0.20.2
+version: 0.20.5
 homepage: https://famedly.com
 repository: https://gitlab.com/famedly/company/frontend/famedlysdk.git
 
 environment:
-  sdk: ">=2.18.0 <3.0.0"
+  sdk: ">=2.18.0 <4.0.0"
 
 dependencies:
   async: ^2.8.0
@@ -22,7 +22,7 @@ dependencies:
   image: ^4.0.15
   js: ^0.6.3
   markdown: ^4.0.0
-  matrix_api_lite: ^1.6.1
+  matrix_api_lite: ">=1.6.0 <1.7.0" # Pinned until compatible with 1.7.x
   mime: ^1.0.0
   olm: ^2.0.2
   random_string: ^2.3.1
@@ -37,5 +37,4 @@ dev_dependencies:
   import_sorter: ^4.6.0
   lints: ^2.0.0
   test: ^1.15.7
-  test_api: 0.4.16 # pinned because of https://github.com/dart-lang/test/issues/1977
   #flutter_test: {sdk: flutter}

@@ -1,3 +1,14 @@
+## [0.20.5] - 2th June 2023
+- chore: fix edited last events breaking db (td)
+
+## [0.20.4] - 31th May 2023
+- fix: Do not store global profiles in room states as members (Krille)
+
+## [0.20.3] - 30th May 2023
+- feat: Display performance warning when requesting more than 100 participants (Krille)
+- fix: Also update last event on redaction in store (Krille)
+- refactor: Let bootstrap throw custom Exception InvalidPassphraseException so it is easier to catch (Krille)
+
 ## [0.20.2] - 17th May 2023
 
 - builds: Update to flutter container 3.7.12 (Krille)

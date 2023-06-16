@@ -1537,7 +1537,8 @@ class Room {
         Membership.join,
         Membership.invite,
         Membership.knock,
-      ]]) async {
+      ],
+      bool suppressWarning = false]) async {
     if (!participantListComplete && partial) {
       // we aren't fully loaded, maybe the users are in the database
       final users = await client.database?.getUsers(this) ?? [];
@@ -1550,6 +1551,15 @@ class Room {
     // in this session or have a complete list locally.
     if (_requestedParticipants || participantListComplete) {
       return getParticipants(membershipFilter);
+    }
+
+    final memberCount = summary.mJoinedMemberCount;
+    if (!suppressWarning && memberCount != null && memberCount > 100) {
+      Logs().w('''
+        Loading a list of $memberCount participants for the room $id.
+        This may affect the performance. Please make sure to not unnecessary
+        request so many participants or suppress this warning.
+      ''');
     }
 
     final matrixEvents = await client.getMembersByRoom(id);
@@ -1588,7 +1598,13 @@ class Room {
     if (user != null) {
       return user.asUser;
     } else {
-      if (mxID.isValidMatrixId) requestUser(mxID, ignoreErrors: true);
+      if (mxID.isValidMatrixId) {
+        requestUser(
+          mxID,
+          ignoreErrors: true,
+          requestProfile: false,
+        );
+      }
       return User(mxID, room: this);
     }
   }
@@ -1642,10 +1658,14 @@ class Room {
     if (resp == null && requestProfile) {
       try {
         final profile = await client.getUserProfile(mxID);
-        resp = {
-          'displayname': profile.displayname,
-          'avatar_url': profile.avatarUrl.toString(),
-        };
+        _requestingMatrixIds.remove(mxID);
+        return User(
+          mxID,
+          displayName: profile.displayname,
+          avatarUrl: profile.avatarUrl?.toString(),
+          membership: Membership.leave.name,
+          room: this,
+        );
       } catch (e, s) {
         _requestingMatrixIds.remove(mxID);
         if (!ignoreErrors) {
