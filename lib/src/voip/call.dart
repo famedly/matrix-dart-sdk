@@ -322,6 +322,7 @@ class CallSession {
   CallType get type => opts.type;
   Room get room => opts.room;
   VoIP get voip => opts.voip;
+  bool get sframe => opts.sframe ?? false;
   String? get groupCallId => opts.groupCallId;
   String get callId => opts.callId;
   String get localPartyId => opts.localPartyId;
