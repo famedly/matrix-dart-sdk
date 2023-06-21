@@ -2299,7 +2299,8 @@ class FakeMatrixApi extends BaseClient {
                 'user_id': '@othertest:fakeServer.notExisting',
                 'usage': ['master'],
                 'keys': {
-                  'ed25519:master': 'master',
+                  'ed25519:92mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8':
+                      '92mAXjsmbTbrE6zyShpR869jnrANO75H8nYY0nDLoJ8',
                 },
                 'signatures': {},
               },

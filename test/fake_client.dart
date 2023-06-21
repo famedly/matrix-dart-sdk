@@ -47,3 +47,23 @@ Future<Client> getClient() async {
   await Future.delayed(Duration(milliseconds: 10));
   return client;
 }
+
+Future<Client> getOtherClient() async {
+  final client = Client(
+    'othertestclient',
+    httpClient: FakeMatrixApi(),
+    databaseBuilder: getDatabase,
+  );
+  FakeMatrixApi.client = client;
+  await client.checkHomeserver(Uri.parse('https://fakeServer.notExisting'),
+      checkWellKnown: false);
+  await client.init(
+    newToken: '1234',
+    newUserID: '@test:fakeServer.notExisting',
+    newHomeserver: client.homeserver,
+    newDeviceName: 'Text Matrix Client',
+    newDeviceID: 'OTHERDEVICE',
+  );
+  await Future.delayed(Duration(milliseconds: 10));
+  return client;
+}
