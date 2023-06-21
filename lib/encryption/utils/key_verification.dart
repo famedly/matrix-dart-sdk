@@ -17,13 +17,17 @@
  */
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:olm/olm.dart' as olm;
+import 'package:typed_data/typed_data.dart';
 
 import 'package:matrix/encryption/encryption.dart';
+import 'package:matrix/encryption/utils/base64_unpadded.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/utils/crypto/crypto.dart' as uc;
 
 /*
     +-------------+                    +-----------+
@@ -61,20 +65,114 @@ import 'package:matrix/matrix.dart';
           |                                 |
 */
 
+/// QR key verification
+/// You create possible methods from `client.verificationMethods` on device A
+/// and send a request using `request.start()` which calls `sendRequest()` your client
+/// now is in `waitingAccept` state, where ideally your client would now show some
+/// waiting indicator.
+///
+/// On device B you now get a `m.key.verification.request`, you check the
+/// `methods` from the request payload and see if anything is possible.
+/// If not you cancel the request. (should this be cancelled? couldn't another device handle this?)
+/// you the set the state to `askAccept`.
+///
+/// Your client would now show a button to accept/decline the request.
+/// The user can then use `acceptVerification()`to accept the verification which
+/// then sends a `m.key.verification.ready`. This also calls `generateQrCode()`
+/// in it which populates the `request.qrData` depending on the qr mode.
+/// B now sets the state `askChoice`
+///
+/// On device A you now get the ready event, which setups the `possibleMethods`
+/// and `qrData` on A's side. Similarly A now sets their state to `askChoice`
+///
+/// At his point both sides are on the `askChoice` state.
+///
+/// BACKWARDS COMPATIBILITY HACK:
+/// To work well with sdks prior to QR verification (0.20.5 and older), start will
+/// be sent with ready itself if only sas is supported. This avoids weird glare
+/// issues faced with start from both sides if clients are not on the same sdk
+/// version (0.20.5 vs next)
+/// https://matrix.to/#/!KBwfdofYJUmnsVoqwn:famedly.de/$wlHXlLQJdfrqKAF5KkuQrXydwOhY_uyqfH4ReasZqnA?via=neko.dev&via=famedly.de&via=lihotzki.de
+
+/// Here your clients would ideally show a list of the `possibleMethods` and the
+/// user can choose one. For QR specifically, you can show the QR code on the
+/// device which supports showing the qr code and the device which supports
+/// scanning can scan this code.
+///
+/// Assuming device A scans device B's code, device A would now send a `m.key.verification.start`,
+/// you do this using the `continueVerificatio()` method. You can pass
+/// `m.reciprocate.v1` or `m.sas.v1` here, and also attach the qrData here.
+/// This then calls `verifyQrData()` internally, which sets the `randomSharedSecretForQRCode`
+/// to the one from the QR code. Device A is now set to `showQRSuccess` state and shows
+/// a green sheild. (Maybe add a text below saying tell device B you scanned the
+/// code successfully.)
+///
+/// (some keys magic happens here, check `verifyQrData()`, `verifyKeysQR()` to know more)
+///
+/// On device B you get the `m.key.verification.start` event. The secret sent in
+/// the start request is then verified, device B is then set to the `confirmQRScan`
+/// state. Your device should show a dialog to confirm from B that A's device shows
+/// the green shield (is in the done state). Once B confirms this physically, you
+/// call the `acceptQRScanConfirmation()` function, which then does some keys
+/// magic and sets B's state to `done`.
+///
+/// A gets the `m.key.verification.done` messsage and sends a done back, both
+/// users can now dismiss the verification dialog safely.
+
 enum KeyVerificationState {
+  askChoice,
   askAccept,
   askSSSS,
   waitingAccept,
   askSas,
+  showQRSuccess, // scanner after QR scan was successfull
+  confirmQRScan, // shower after getting start
   waitingSas,
   done,
   error
 }
 
-enum KeyVerificationMethod { emoji, numbers }
+enum KeyVerificationMethod { emoji, numbers, qrShow, qrScan, reciprocate }
+
+bool isQrSupported(List knownVerificationMethods, List possibleMethods) {
+  return knownVerificationMethods.contains(EventTypes.QRShow) &&
+          possibleMethods.contains(EventTypes.QRScan) ||
+      knownVerificationMethods.contains(EventTypes.QRScan) &&
+          possibleMethods.contains(EventTypes.QRShow);
+}
 
 List<String> _intersect(List<String>? a, List<dynamic>? b) =>
     (b == null || a == null) ? [] : a.where(b.contains).toList();
+
+List<String> _calculatePossibleMethods(
+    List<String> knownMethods, List<dynamic> payloadMethods) {
+  final output = <String>[];
+  final copyKnownMethods = List<String>.from(knownMethods);
+  final copyPayloadMethods = List.from(payloadMethods);
+
+  copyKnownMethods
+      .removeWhere((element) => !copyPayloadMethods.contains(element));
+
+  // remove qr modes for now, check if they are possible and add later
+  copyKnownMethods.removeWhere((element) => element.startsWith('m.qr_code'));
+  output.addAll(copyKnownMethods);
+
+  if (isQrSupported(knownMethods, payloadMethods)) {
+    // scan/show combo found, add whichever is known to us to our possible methods.
+    if (payloadMethods.contains(EventTypes.QRScan) &&
+        knownMethods.contains(EventTypes.QRShow)) {
+      output.add(EventTypes.QRShow);
+    }
+    if (payloadMethods.contains(EventTypes.QRShow) &&
+        knownMethods.contains(EventTypes.QRScan)) {
+      output.add(EventTypes.QRScan);
+    }
+  } else {
+    output.remove(EventTypes.Reciprocate);
+  }
+
+  return output;
+}
 
 List<int> _bytesToInt(Uint8List bytes, int totalBits) {
   final ret = <int>[];
@@ -96,8 +194,11 @@ List<int> _bytesToInt(Uint8List bytes, int totalBits) {
 
 _KeyVerificationMethod _makeVerificationMethod(
     String type, KeyVerification request) {
-  if (type == 'm.sas.v1') {
+  if (type == EventTypes.Sas) {
     return _KeyVerificationMethodSas(request: request);
+  }
+  if (type == EventTypes.Reciprocate) {
+    return _KeyVerificationMethodQRReciprocate(request: request);
   }
   throw Exception('Unkown method type');
 }
@@ -113,7 +214,10 @@ class KeyVerification {
   String? _deviceId;
   bool startedVerification = false;
   _KeyVerificationMethod? _method;
+
   List<String> possibleMethods = [];
+  List<String> oppositePossibleMethods = [];
+
   Map<String, dynamic>? startPayload;
   String? _nextAction;
   List<SignableKey> _verifiedDevices = [];
@@ -129,6 +233,11 @@ class KeyVerification {
       canceled ||
       {KeyVerificationState.error, KeyVerificationState.done}.contains(state);
 
+  String? chosenMethod;
+  // qr stuff
+  QRCode? qrCode;
+  String? randomSharedSecretForQRCode;
+  SignableKey? keyToVerify;
   KeyVerification(
       {required this.encryption,
       this.room,
@@ -140,6 +249,7 @@ class KeyVerification {
 
   void dispose() {
     Logs().i('[Key Verification] disposing object...');
+    randomSharedSecretForQRCode = null;
     _method?.dispose();
   }
 
@@ -151,15 +261,63 @@ class KeyVerification {
   }
 
   List<String> get knownVerificationMethods {
-    final methods = <String>[];
+    final methods = <String>{};
     if (client.verificationMethods.contains(KeyVerificationMethod.numbers) ||
         client.verificationMethods.contains(KeyVerificationMethod.emoji)) {
-      methods.add('m.sas.v1');
+      methods.add(EventTypes.Sas);
     }
-    return methods;
+
+    /// `qrCanWork` -  qr cannot work if we are verifying another master key but our own is unverified
+    final qrCanWork = (userId != client.userID)
+        ? ((client.userDeviceKeys[client.userID]?.masterKey?.verified ?? false)
+            ? true
+            : false)
+        : true;
+
+    if (client.verificationMethods.contains(KeyVerificationMethod.qrShow) &&
+        qrCanWork) {
+      methods.add(EventTypes.QRShow);
+      methods.add(EventTypes.Reciprocate);
+    }
+    if (client.verificationMethods.contains(KeyVerificationMethod.qrScan) &&
+        qrCanWork) {
+      methods.add(EventTypes.QRScan);
+      methods.add(EventTypes.Reciprocate);
+    }
+
+    return methods.toList();
   }
 
-  Future<void> sendStart() async {
+  /// Once you get a ready event, i.e both sides are in a `askChoice` state,
+  /// send either `m.reciprocate.v1` or `m.sas.v1` here. If you continue with
+  /// qr, send the qrData you just scanned
+  Future<void> continueVerification(String type,
+      {Uint8List? qrDataRawBytes}) async {
+    chosenMethod = type;
+    bool qrChecksOut = false;
+    if (possibleMethods.contains(type)) {
+      if (qrDataRawBytes != null) {
+        qrChecksOut = await verifyQrData(qrDataRawBytes);
+        // after this scanners state is done
+      }
+      if (type != EventTypes.Reciprocate || qrChecksOut) {
+        final method = _method = _makeVerificationMethod(type, this);
+        await method.sendStart();
+        if (type == EventTypes.Sas) {
+          setState(KeyVerificationState.waitingAccept);
+        }
+      } else if (type == EventTypes.Reciprocate && !qrChecksOut) {
+        Logs().e('[KeyVerification] qr did not check out');
+        await cancel('m.invalid_key');
+      }
+    } else {
+      Logs().e(
+          '[KeyVerification] tried to continue verification with a unknown method');
+      await cancel('m.unknown_method');
+    }
+  }
+
+  Future<void> sendRequest() async {
     await send(
       EventTypes.KeyVerificationRequest,
       {
@@ -182,11 +340,26 @@ class KeyVerification {
       setState(KeyVerificationState.askSSSS);
       _nextAction = 'request';
     } else {
-      await sendStart();
+      await sendRequest();
     }
   }
 
   bool _handlePayloadLock = false;
+
+  QRMode getOurQRMode() {
+    QRMode mode = QRMode.verifyOtherUser;
+    if (client.userID == userId) {
+      if (client.encryption != null &&
+          client.encryption!.enabled &&
+          (client.userDeviceKeys[client.userID]?.masterKey?.directVerified ??
+              false)) {
+        mode = QRMode.verifySelfTrusted;
+      } else {
+        mode = QRMode.verifySelfUntrusted;
+      }
+    }
+    return mode;
+  }
 
   Future<void> handlePayload(String type, Map<String, dynamic> payload,
       [String? eventId]) async {
@@ -216,14 +389,6 @@ class KeyVerification {
                 now.subtract(Duration(minutes: 20)).isAfter(verifyTime));
             return;
           }
-          // verify it has a method we can use
-          possibleMethods =
-              _intersect(knownVerificationMethods, payload['methods']);
-          if (possibleMethods.isEmpty) {
-            // reject it outright
-            await cancel('m.unknown_method');
-            return;
-          }
 
           // ensure we have the other sides keys
           if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
@@ -234,11 +399,22 @@ class KeyVerification {
             }
           }
 
+          oppositePossibleMethods = List<String>.from(payload['methods']);
+          // verify it has a method we can use
+          possibleMethods = _calculatePossibleMethods(
+              knownVerificationMethods, payload['methods']);
+          if (possibleMethods.isEmpty) {
+            // reject it outright
+            await cancel('m.unknown_method');
+            return;
+          }
+
           setState(KeyVerificationState.askAccept);
           break;
         case 'm.key.verification.ready':
           if (deviceId == '*') {
             _deviceId = payload['from_device']; // gotta set the real device id
+            transactionId ??= eventId ?? payload['transaction_id'];
             // and broadcast the cancel to the other devices
             final devices = List<DeviceKeys>.from(
                 client.userDeviceKeys[userId]?.deviceKeys.values ??
@@ -254,13 +430,6 @@ class KeyVerification {
                 devices, EventTypes.KeyVerificationCancel, cancelPayload);
           }
           _deviceId ??= payload['from_device'];
-          possibleMethods =
-              _intersect(knownVerificationMethods, payload['methods']);
-          if (possibleMethods.isEmpty) {
-            // reject it outright
-            await cancel('m.unknown_method');
-            return;
-          }
 
           // ensure we have the other sides keys
           if (client.userDeviceKeys[userId]?.deviceKeys[deviceId!] == null) {
@@ -271,14 +440,35 @@ class KeyVerification {
             }
           }
 
+          oppositePossibleMethods = List<String>.from(payload['methods']);
+          possibleMethods = _calculatePossibleMethods(
+              knownVerificationMethods, payload['methods']);
+          if (possibleMethods.isEmpty) {
+            // reject it outright
+            await cancel('m.unknown_method');
+            return;
+          }
           // as both parties can send a start, the last step being "ready" is race-condition prone
           // as such, we better set it *before* we send our start
           lastStep = type;
-          // TODO: Pick method?
-          final method =
-              _method = _makeVerificationMethod(possibleMethods.first, this);
-          await method.sendStart();
-          setState(KeyVerificationState.waitingAccept);
+
+          // setup QRData from outgoing request (incoming ready)
+          qrCode = await generateQrCode();
+
+          // play nice with sdks < 0.20.5
+          // https://matrix.to/#/!KBwfdofYJUmnsVoqwn:famedly.de/$wlHXlLQJdfrqKAF5KkuQrXydwOhY_uyqfH4ReasZqnA?via=neko.dev&via=famedly.de&via=lihotzki.de
+          if (!isQrSupported(knownVerificationMethods, payload['methods'])) {
+            if (knownVerificationMethods.contains(EventTypes.Sas)) {
+              final method = _method =
+                  _makeVerificationMethod(possibleMethods.first, this);
+              await method.sendStart();
+              setState(KeyVerificationState.waitingAccept);
+            }
+          } else {
+            // allow user to choose
+            setState(KeyVerificationState.askChoice);
+          }
+
           break;
         case EventTypes.KeyVerificationStart:
           _deviceId ??= payload['from_device'];
@@ -306,13 +496,22 @@ class KeyVerification {
               return;
             }
           }
-          if (!(await verifyLastStep(
-              [EventTypes.KeyVerificationRequest, null]))) {
+          if (!(await verifyLastStep([
+            EventTypes.KeyVerificationRequest,
+            'm.key.verification.ready',
+          ]))) {
             return; // abort
           }
           if (!knownVerificationMethods.contains(payload['method'])) {
             await cancel('m.unknown_method');
             return;
+          }
+
+          if (lastStep == EventTypes.KeyVerificationRequest) {
+            if (!possibleMethods.contains(payload['method'])) {
+              await cancel('m.unknown_method');
+              return;
+            }
           }
 
           // ensure we have the other sides keys
@@ -345,7 +544,10 @@ class KeyVerification {
           }
           break;
         case EventTypes.KeyVerificationDone:
-          // do nothing
+          if (state == KeyVerificationState.showQRSuccess) {
+            await send(EventTypes.KeyVerificationDone, {});
+            setState(KeyVerificationState.done);
+          }
           break;
         case EventTypes.KeyVerificationCancel:
           canceled = true;
@@ -387,11 +589,13 @@ class KeyVerification {
       bool skip = false}) async {
     Future<void> next() async {
       if (_nextAction == 'request') {
-        await sendStart();
+        await sendRequest();
       } else if (_nextAction == 'done') {
         // and now let's sign them all in the background
         unawaited(encryption.crossSigning.sign(_verifiedDevices));
         setState(KeyVerificationState.done);
+      } else if (_nextAction == 'showQRSuccess') {
+        setState(KeyVerificationState.showQRSuccess);
       }
     }
 
@@ -418,10 +622,32 @@ class KeyVerification {
     }
     setState(KeyVerificationState.waitingAccept);
     if (lastStep == EventTypes.KeyVerificationRequest) {
+      final copyKnownVerificationMethods =
+          List<String>.from(knownVerificationMethods);
+      // qr code only works when atleast one side has verified master key
+      if (userId == client.userID) {
+        if (!(client.userDeviceKeys[client.userID]?.deviceKeys[deviceId]
+                    ?.hasValidSignatureChain(verifiedByTheirMasterKey: true) ??
+                false) &&
+            !(client.userDeviceKeys[client.userID]?.masterKey?.verified ??
+                false)) {
+          copyKnownVerificationMethods
+              .removeWhere((element) => element.startsWith('m.qr_code'));
+          copyKnownVerificationMethods.remove(EventTypes.Reciprocate);
+
+          // we are removing stuff only using the old possibleMethods should be ok here.
+          final copyPossibleMethods = List<String>.from(possibleMethods);
+          possibleMethods = _calculatePossibleMethods(
+              copyKnownVerificationMethods, copyPossibleMethods);
+        }
+      }
       // we need to send a ready event
       await send('m.key.verification.ready', {
-        'methods': possibleMethods,
+        'methods': copyKnownVerificationMethods,
       });
+      // setup QRData from incoming request (outgoing ready)
+      qrCode = await generateQrCode();
+      setState(KeyVerificationState.askChoice);
     } else {
       // we need to send an accept event
       await _method!
@@ -441,6 +667,16 @@ class KeyVerification {
       return;
     }
     await cancel('m.user');
+  }
+
+  /// call this to confirm that your other device has shown a shield and is in
+  /// `done` state.
+  Future<void> acceptQRScanConfirmation() async {
+    if (_method is _KeyVerificationMethodQRReciprocate &&
+        state == KeyVerificationState.confirmQRScan) {
+      await (_method as _KeyVerificationMethodQRReciprocate)
+          .acceptQRScanConfirmation();
+    }
   }
 
   Future<void> acceptSas() async {
@@ -501,7 +737,7 @@ class KeyVerification {
         () => maybeRequestSSSSSecrets(i + 1));
   }
 
-  Future<void> verifyKeys(Map<String, String> keys,
+  Future<void> verifyKeysSAS(Map<String, String> keys,
       Future<bool> Function(String, SignableKey) verifier) async {
     _verifiedDevices = <SignableKey>[];
 
@@ -561,6 +797,56 @@ class KeyVerification {
     }
   }
 
+  /// shower is true only for reciprocated verifications (shower side)
+  Future<void> verifyKeysQR(SignableKey key, {bool shower = true}) async {
+    var verifiedMasterKey = false;
+    final wasUnknownSession = client.isUnknownSession;
+
+    key.setDirectVerified(true);
+    if (key is CrossSigningKey && key.usage.contains('master')) {
+      verifiedMasterKey = true;
+    }
+
+    if (verifiedMasterKey && userId == client.userID) {
+      // it was our own master key, let's request the cross signing keys
+      // we do it in the background, thus no await needed here
+      // ignore: unawaited_futures
+      maybeRequestSSSSSecrets();
+    }
+    if (shower) {
+      await send(EventTypes.KeyVerificationDone, {});
+    }
+    final keyList = List<SignableKey>.from([key]);
+    var askingSSSS = false;
+    if (encryption.crossSigning.enabled &&
+        encryption.crossSigning.signable(keyList)) {
+      // these keys can be signed! Let's do so
+      if (await encryption.crossSigning.isCached()) {
+        // we want to make sure the verification state is correct for the other party after this event is handled.
+        // Otherwise the verification dialog might be stuck in an unverified but done state for a bit.
+        await encryption.crossSigning.sign(keyList);
+      } else if (!wasUnknownSession) {
+        askingSSSS = true;
+      }
+    }
+    if (askingSSSS) {
+      // no need to worry about shower/scanner here because if scanner was
+      // verified, ssss is already
+      setState(KeyVerificationState.askSSSS);
+      if (shower) {
+        _nextAction = 'done';
+      } else {
+        _nextAction = 'showQRSuccess';
+      }
+    } else {
+      if (shower) {
+        setState(KeyVerificationState.done);
+      } else {
+        setState(KeyVerificationState.showQRSuccess);
+      }
+    }
+  }
+
   Future<bool> verifyActivity() async {
     if (lastActivity.add(Duration(minutes: 10)).isAfter(DateTime.now())) {
       lastActivity = DateTime.now();
@@ -577,6 +863,8 @@ class KeyVerification {
     if (checkLastStep.contains(lastStep)) {
       return true;
     }
+    Logs().e(
+        '[KeyVerificaton] lastStep mismatch cancelling, expected from ${checkLastStep.toString()} was ${lastStep.toString()}');
     await cancel('m.unexpected_message');
     return false;
   }
@@ -668,6 +956,138 @@ class KeyVerification {
 
     onUpdate?.call();
   }
+
+  static const String prefix = 'MATRIX';
+  static const int version = 0x02;
+
+  Future<bool> verifyQrData(Uint8List qrDataRawBytes) async {
+    final data = qrDataRawBytes;
+    // hardcoded stuff + 2 keys + secret
+    if (data.length < 10 + 32 + 32 + 8 + utf8.encode(transactionId!).length) {
+      return false;
+    }
+    if (data[6] != version) return false;
+    final remoteQrMode =
+        QRMode.values.singleWhere((mode) => mode.code == data[7]);
+    if (ascii.decode(data.sublist(0, 6)) != prefix) return false;
+    if (data[6] != version) return false;
+    final tmpBuf = Uint8List.fromList([data[8], data[9]]);
+    final encodedTxnLen = ByteData.view(tmpBuf.buffer).getUint16(0);
+    if (utf8.decode(data.sublist(10, 10 + encodedTxnLen)) != transactionId) {
+      return false;
+    }
+    final keys = client.userDeviceKeys;
+
+    final ownKeys = keys[client.userID];
+    final otherUserKeys = keys[userId];
+    final ownMasterKey = ownKeys?.getCrossSigningKey('master');
+    final ownDeviceKey = ownKeys?.getKey(client.deviceID!);
+    final ownOtherDeviceKey = ownKeys?.getKey(deviceId!);
+    final otherUserMasterKey = otherUserKeys?.masterKey;
+
+    final secondKey = encodeBase64Unpadded(
+        data.sublist(10 + encodedTxnLen + 32, 10 + encodedTxnLen + 32 + 32));
+    final randomSharedSecret =
+        encodeBase64Unpadded(data.sublist(10 + encodedTxnLen + 32 + 32));
+
+    /// `request.randomSharedSecretForQRCode` is overwritten below to send with `sendStart`
+    if ({QRMode.verifyOtherUser, QRMode.verifySelfUntrusted}
+        .contains(remoteQrMode)) {
+      if (!(ownMasterKey?.verified ?? false)) {
+        Logs().e(
+            '[KeyVerification] verifyQrData because you were in mode 0/2 and had untrusted msk');
+        return false;
+      }
+    }
+
+    if (remoteQrMode == QRMode.verifyOtherUser &&
+        otherUserMasterKey != null &&
+        ownMasterKey != null) {
+      if (secondKey == ownMasterKey.ed25519Key) {
+        randomSharedSecretForQRCode = randomSharedSecret;
+        await verifyKeysQR(otherUserMasterKey, shower: false);
+        return true;
+      }
+    } else if (remoteQrMode == QRMode.verifySelfTrusted &&
+        ownMasterKey != null &&
+        ownDeviceKey != null) {
+      if (secondKey == ownDeviceKey.ed25519Key) {
+        randomSharedSecretForQRCode = randomSharedSecret;
+        await verifyKeysQR(ownMasterKey, shower: false);
+        return true;
+      }
+    } else if (remoteQrMode == QRMode.verifySelfUntrusted &&
+        ownOtherDeviceKey != null &&
+        ownMasterKey != null) {
+      if (secondKey == ownMasterKey.ed25519Key) {
+        randomSharedSecretForQRCode = randomSharedSecret;
+        await verifyKeysQR(ownOtherDeviceKey, shower: false);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  Future<(String, String)?> getKeys(QRMode mode) async {
+    final keys = client.userDeviceKeys;
+
+    final ownKeys = keys[client.userID];
+    final otherUserKeys = keys[userId];
+    final ownDeviceKey = ownKeys?.getKey(client.deviceID!);
+    final ownMasterKey = ownKeys?.getCrossSigningKey('master');
+    final otherDeviceKey = otherUserKeys?.getKey(deviceId!);
+    final otherMasterKey = otherUserKeys?.getCrossSigningKey('master');
+
+    if (mode == QRMode.verifyOtherUser &&
+        ownMasterKey != null &&
+        otherMasterKey != null) {
+      // we already have this check when sending `knownVerificationMethods`, but
+      // just to be safe anyway
+      if (ownMasterKey.verified) {
+        return (ownMasterKey.ed25519Key!, otherMasterKey.ed25519Key!);
+      }
+    } else if (mode == QRMode.verifySelfTrusted &&
+        ownMasterKey != null &&
+        otherDeviceKey != null) {
+      if (ownMasterKey.verified) {
+        return (ownMasterKey.ed25519Key!, otherDeviceKey.ed25519Key!);
+      }
+    } else if (mode == QRMode.verifySelfUntrusted &&
+        ownMasterKey != null &&
+        ownDeviceKey != null) {
+      return (ownDeviceKey.ed25519Key!, ownMasterKey.ed25519Key!);
+    }
+    return null;
+  }
+
+  Future<QRCode?> generateQrCode() async {
+    final data = Uint8Buffer();
+    // why 11? https://github.com/matrix-org/matrix-js-sdk/commit/275ea6aacbfc6623e7559a7649ca5cab207903d9
+    randomSharedSecretForQRCode =
+        encodeBase64Unpadded(uc.secureRandomBytes(11));
+
+    final mode = getOurQRMode();
+    data.addAll(ascii.encode(prefix));
+    data.add(version);
+    data.add(mode.code);
+    final encodedTxnId = utf8.encode(transactionId!);
+    final txnIdLen = encodedTxnId.length;
+    final tmpBuf = Uint8List(2);
+    ByteData.view(tmpBuf.buffer).setUint16(0, txnIdLen);
+    data.addAll(tmpBuf);
+    data.addAll(encodedTxnId);
+    final keys = await getKeys(mode);
+    if (keys != null) {
+      data.addAll(base64decodeUnpadded(keys.$1));
+      data.addAll(base64decodeUnpadded(keys.$2));
+    } else {
+      return null;
+    }
+
+    data.addAll(base64decodeUnpadded(randomSharedSecretForQRCode!));
+    return QRCode(randomSharedSecretForQRCode!, data);
+  }
 }
 
 abstract class _KeyVerificationMethod {
@@ -688,6 +1108,99 @@ abstract class _KeyVerificationMethod {
   void dispose() {}
 }
 
+class _KeyVerificationMethodQRReciprocate extends _KeyVerificationMethod {
+  _KeyVerificationMethodQRReciprocate({required super.request});
+
+  @override
+  // ignore: overridden_fields
+  final _type = EventTypes.Reciprocate;
+
+  @override
+  bool validateStart(Map<String, dynamic> payload) {
+    if (payload['method'] != type) return false;
+    if (payload['secret'] != request.randomSharedSecretForQRCode) return false;
+    return true;
+  }
+
+  @override
+  Future<void> handlePayload(String type, Map<String, dynamic> payload) async {
+    try {
+      switch (type) {
+        case EventTypes.KeyVerificationStart:
+          if (!(await request.verifyLastStep([
+            'm.key.verification.ready',
+            EventTypes.KeyVerificationRequest,
+          ]))) {
+            return; // abort
+          }
+          if (!validateStart(payload)) {
+            await request.cancel('m.invalid_message');
+            return;
+          }
+          request.setState(KeyVerificationState.confirmQRScan);
+          break;
+      }
+    } catch (e, s) {
+      Logs().e('[Key Verification Reciprocate] An error occured', e, s);
+      if (request.deviceId != null) {
+        await request.cancel('m.invalid_message');
+      }
+    }
+  }
+
+  Future<void> acceptQRScanConfirmation() async {
+    // secret validation already done in validateStart
+
+    final ourQRMode = request.getOurQRMode();
+    SignableKey? keyToVerify;
+
+    if (ourQRMode == QRMode.verifyOtherUser) {
+      keyToVerify = client.userDeviceKeys[request.userId]?.masterKey;
+    } else if (ourQRMode == QRMode.verifySelfTrusted) {
+      keyToVerify =
+          client.userDeviceKeys[client.userID]?.deviceKeys[request.deviceId];
+    } else if (ourQRMode == QRMode.verifySelfUntrusted) {
+      keyToVerify = client.userDeviceKeys[client.userID]?.masterKey;
+    }
+    if (keyToVerify != null) {
+      await request.verifyKeysQR(keyToVerify, shower: true);
+    } else {
+      Logs().e('[KeyVerification], verifying keys failed');
+      await request.cancel('m.invalid_key');
+    }
+  }
+
+  @override
+  Future<void> sendStart() async {
+    final payload = <String, dynamic>{
+      'method': type,
+      'secret': request.randomSharedSecretForQRCode,
+    };
+    request.makePayload(payload);
+    await request.send(EventTypes.KeyVerificationStart, payload);
+  }
+
+  @override
+  void dispose() {}
+}
+
+enum QRMode {
+  verifyOtherUser(0x00),
+  verifySelfTrusted(0x01),
+  verifySelfUntrusted(0x02);
+
+  const QRMode(this.code);
+  final int code;
+}
+
+class QRCode {
+  /// You actually never need this when implementing in a client, its just to
+  /// make tests easier. Just pass `qrDataRawBytes` in `continueVerifcation()`
+  final String randomSharedSecret;
+  final Uint8Buffer qrDataRawBytes;
+  QRCode(this.randomSharedSecret, this.qrDataRawBytes);
+}
+
 const knownKeyAgreementProtocols = ['curve25519-hkdf-sha256', 'curve25519'];
 const knownHashes = ['sha256'];
 const knownHashesAuthentificationCodes = ['hkdf-hmac-sha256'];
@@ -698,7 +1211,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
 
   @override
   // ignore: overridden_fields
-  final _type = 'm.sas.v1';
+  final _type = EventTypes.Sas;
 
   String? keyAgreementProtocol;
   String? hash;
@@ -734,6 +1247,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
       switch (type) {
         case EventTypes.KeyVerificationStart:
           if (!(await request.verifyLastStep([
+            'm.key.verification.ready',
             EventTypes.KeyVerificationRequest,
             EventTypes.KeyVerificationStart
           ]))) {
@@ -746,7 +1260,10 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
           await _sendAccept();
           break;
         case EventTypes.KeyVerificationAccept:
-          if (!(await request.verifyLastStep(['m.key.verification.ready']))) {
+          if (!(await request.verifyLastStep([
+            'm.key.verification.ready',
+            EventTypes.KeyVerificationRequest
+          ]))) {
             return;
           }
           if (!_handleAccept(payload)) {
@@ -982,7 +1499,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
         mac[entry.key] = entry.value;
       }
     }
-    await request.verifyKeys(mac, (String mac, SignableKey key) async {
+    await request.verifyKeysSAS(mac, (String mac, SignableKey key) async {
       return mac ==
           _calculateMac(
               key.ed25519Key!, '${baseInfo}ed25519:${key.identifier!}');
