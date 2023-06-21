@@ -597,11 +597,12 @@ class OlmManager {
             client.userDeviceKeys[userId]!.deviceKeys[deviceId]!.ed25519Key;
         final identityKey =
             client.userDeviceKeys[userId]!.deviceKeys[deviceId]!.curve25519Key;
-        for (final Map<String, dynamic> deviceKey
-            in deviceKeysEntry.value.values) {
+        for (final deviceKey in deviceKeysEntry.value.values) {
           if (fingerprintKey == null ||
               identityKey == null ||
-              !deviceKey.checkJsonSignature(fingerprintKey, userId, deviceId)) {
+              deviceKey is! Map<String, Object?> ||
+              !deviceKey.checkJsonSignature(fingerprintKey, userId, deviceId) ||
+              deviceKey['key'] is! String) {
             Logs().w(
               'Skipping invalid device key from $userId:$deviceId',
               deviceKey,
@@ -612,7 +613,7 @@ class OlmManager {
           final session = olm.Session();
           try {
             session.create_outbound(
-                _olmAccount!, identityKey, deviceKey['key']);
+                _olmAccount!, identityKey, deviceKey.tryGet<String>('key')!);
             await storeOlmSession(OlmSession(
               key: client.userID!,
               identityKey: identityKey,
