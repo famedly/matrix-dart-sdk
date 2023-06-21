@@ -1,3 +1,14 @@
+## [0.21.0] - 21st June 2023
+- feat: qr key verification (td)
+- refactor: Use tryGet for type casts whenever possible (Malin Errenst)
+- chore: Update matrix_api_lite to 1.7.0 (Malin Errenst)
+- refactor: Added type casts to match refactored matrix_api_lite (Malin Errenst)
+- refactor: Added type casts for refactored dart_openapi_codegen (Malin Errenst)
+- builds: Pin matrix api lite (Krille)
+- fix: Do not display prevContent displayname and avatar for joined users (Krille)
+- builds: Update dart and flutter ci containers (Krille)
+- fix: canRequestHistory should return false if prev_batch is null (Krille)
+
 ## [0.20.5] - 2th June 2023
 - chore: fix edited last events breaking db (td)
 
