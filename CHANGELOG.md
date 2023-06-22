@@ -1,4 +1,9 @@
+## [0.21.1] - 22nd June 2023
+
+- fix: Assign correct type to signedOneTimeKeys (Malin Errenst)
+
 ## [0.21.0] - 21st June 2023
+
 - feat: qr key verification (td)
 - refactor: Use tryGet for type casts whenever possible (Malin Errenst)
 - chore: Update matrix_api_lite to 1.7.0 (Malin Errenst)
@@ -10,12 +15,15 @@
 - fix: canRequestHistory should return false if prev_batch is null (Krille)
 
 ## [0.20.5] - 2th June 2023
+
 - chore: fix edited last events breaking db (td)
 
 ## [0.20.4] - 31th May 2023
+
 - fix: Do not store global profiles in room states as members (Krille)
 
 ## [0.20.3] - 30th May 2023
+
 - feat: Display performance warning when requesting more than 100 participants (Krille)
 - fix: Also update last event on redaction in store (Krille)
 - refactor: Let bootstrap throw custom Exception InvalidPassphraseException so it is easier to catch (Krille)
