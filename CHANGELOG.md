@@ -1,3 +1,8 @@
+## [1.7.1] - 22nd Jun 2023
+
+- fix: Fixed fake_matrix_api.dart signedOneTimeKeys upload (Malin Errenst)
+- fix: Fix type cast to fix test in matrix-fhir-dart-sdk (Malin Errenst)
+
 ## [1.7.0] - 12th Jun 2023
 
 Breaking Change: 
