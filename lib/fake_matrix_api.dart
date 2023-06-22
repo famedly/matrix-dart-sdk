@@ -2006,11 +2006,12 @@ class FakeMatrixApi extends MockClient {
       '/client/v3/keys/upload': (var req) => {
             'one_time_key_counts': {
               'curve25519': 10,
-              'signed_curve25519': tryCast<Map<String, Map<String, Object?>>>(
-                          decodeJson(req))?['one_time_keys']
-                      ?.keys
-                      .length ??
-                  0,
+              'signed_curve25519':
+                  tryCast<Map<String, Object?>>(decodeJson(req))
+                          ?.tryGetMap<String, Object?>('one_time_keys')
+                          ?.keys
+                          .length ??
+                      0,
             }
           },
       '/client/v3/keys/query': (var req) => {
