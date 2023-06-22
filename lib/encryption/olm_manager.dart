@@ -144,7 +144,7 @@ class OlmManager {
     }
     _uploadKeysLock = true;
 
-    final signedOneTimeKeys = <String, dynamic>{};
+    final signedOneTimeKeys = <String, Map<String, Object?>>{};
     try {
       int? uploadedOneTimeKeysCount;
       if (oldKeyCount != null) {
@@ -287,8 +287,11 @@ class OlmManager {
           try {
             final String identity =
                 json.decode(olmAccount.identity_keys())['curve25519'];
-            session.create_outbound(_olmAccount!, identity, otk['key']);
-            olmAccount.remove_one_time_keys(session);
+            final key = otk.tryGet<String>('key');
+            if (key != null) {
+              session.create_outbound(_olmAccount!, identity, key);
+              olmAccount.remove_one_time_keys(session);
+            }
           } finally {
             session.free();
           }

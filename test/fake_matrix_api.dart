@@ -26,6 +26,8 @@ import 'package:http/http.dart';
 import 'package:matrix/matrix.dart' as sdk;
 import 'package:matrix/matrix.dart';
 
+T? tryCast<T>(dynamic object) => object is T ? object : null;
+
 Map<String, dynamic> decodeJson(dynamic data) {
   if (data is String) {
     return json.decode(data);
@@ -2167,7 +2169,11 @@ class FakeMatrixApi extends BaseClient {
             'one_time_key_counts': {
               'curve25519': 10,
               'signed_curve25519':
-                  decodeJson(req)['one_time_keys']?.keys?.length ?? 0,
+                  tryCast<Map<String, Object?>>(decodeJson(req))
+                          ?.tryGetMap<String, Object?>('one_time_keys')
+                          ?.keys
+                          .length ??
+                      0,
             }
           },
       '/client/v3/keys/query': (var req) => {
