@@ -45,7 +45,7 @@ class SyncUpdate {
   });
 
   SyncUpdate.fromJson(Map<String, Object?> json)
-      : nextBatch = json['next_batch'] as String,
+      : nextBatch = json.tryGet<String>('next_batch') ?? '',
         rooms = (() {
           final temp = json.tryGetMap<String, Object?>('rooms');
           return temp != null ? RoomsUpdate.fromJson(temp) : null;
