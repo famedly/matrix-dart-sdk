@@ -938,13 +938,14 @@ class KeyVerification {
               '[Key Verification] Tried to broadcast and un-broadcastable type: $type');
         }
       } else {
-        if (client.userDeviceKeys[userId]?.deviceKeys[deviceId] == null) {
+        if (client.userDeviceKeys[userId]?.deviceKeys[deviceId] != null) {
+          await client.sendToDeviceEncrypted(
+              [client.userDeviceKeys[userId]!.deviceKeys[deviceId]!],
+              type,
+              payload);
+        } else {
           Logs().e('[Key Verification] Unknown device');
         }
-        await client.sendToDeviceEncrypted(
-            [client.userDeviceKeys[userId]!.deviceKeys[deviceId]!],
-            type,
-            payload);
       }
     }
   }
