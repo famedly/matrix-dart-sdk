@@ -51,7 +51,7 @@ void main() async {
     }
     await req1.client.encryption!.keyVerificationManager.handleToDeviceEvent(
       ToDeviceEvent(
-        type: 'm.key.verification.ready',
+        type: EventTypes.KeyVerificationReady,
         sender: req2.client.userID!,
         content: {
           'from_device': req2.client.deviceID,

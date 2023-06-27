@@ -518,7 +518,7 @@ void main() async {
           .handleEventUpdate(EventUpdate(
         content: {
           'event_id': req2.transactionId,
-          'type': 'm.key.verification.ready',
+          'type': EventTypes.KeyVerificationReady,
           'content': {
             'methods': [EventTypes.Sas],
             'from_device': 'SOMEOTHERDEVICE',
