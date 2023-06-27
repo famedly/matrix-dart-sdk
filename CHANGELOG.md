@@ -1,3 +1,8 @@
+## [0.21.2] - 27th June 2023
+
+- chore: cleanup some eventTypes and unused variables (td)
+- chore: fix unexpected null when device is not known (td)
+
 ## [0.21.1] - 22nd June 2023
 
 - fix: Assign correct type to signedOneTimeKeys (Malin Errenst)
