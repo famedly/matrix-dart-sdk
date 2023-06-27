@@ -233,7 +233,6 @@ class KeyVerification {
       canceled ||
       {KeyVerificationState.error, KeyVerificationState.done}.contains(state);
 
-  String? chosenMethod;
   // qr stuff
   QRCode? qrCode;
   String? randomSharedSecretForQRCode;
@@ -293,7 +292,6 @@ class KeyVerification {
   /// qr, send the qrData you just scanned
   Future<void> continueVerification(String type,
       {Uint8List? qrDataRawBytes}) async {
-    chosenMethod = type;
     bool qrChecksOut = false;
     if (possibleMethods.contains(type)) {
       if (qrDataRawBytes != null) {
@@ -411,7 +409,7 @@ class KeyVerification {
 
           setState(KeyVerificationState.askAccept);
           break;
-        case 'm.key.verification.ready':
+        case EventTypes.KeyVerificationReady:
           if (deviceId == '*') {
             _deviceId = payload['from_device']; // gotta set the real device id
             transactionId ??= eventId ?? payload['transaction_id'];
@@ -498,7 +496,7 @@ class KeyVerification {
           }
           if (!(await verifyLastStep([
             EventTypes.KeyVerificationRequest,
-            'm.key.verification.ready',
+            EventTypes.KeyVerificationReady,
           ]))) {
             return; // abort
           }
@@ -642,7 +640,7 @@ class KeyVerification {
         }
       }
       // we need to send a ready event
-      await send('m.key.verification.ready', {
+      await send(EventTypes.KeyVerificationReady, {
         'methods': copyKnownVerificationMethods,
       });
       // setup QRData from incoming request (outgoing ready)
@@ -1129,7 +1127,7 @@ class _KeyVerificationMethodQRReciprocate extends _KeyVerificationMethod {
       switch (type) {
         case EventTypes.KeyVerificationStart:
           if (!(await request.verifyLastStep([
-            'm.key.verification.ready',
+            EventTypes.KeyVerificationReady,
             EventTypes.KeyVerificationRequest,
           ]))) {
             return; // abort
@@ -1248,7 +1246,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
       switch (type) {
         case EventTypes.KeyVerificationStart:
           if (!(await request.verifyLastStep([
-            'm.key.verification.ready',
+            EventTypes.KeyVerificationReady,
             EventTypes.KeyVerificationRequest,
             EventTypes.KeyVerificationStart
           ]))) {
@@ -1262,7 +1260,7 @@ class _KeyVerificationMethodSas extends _KeyVerificationMethod {
           break;
         case EventTypes.KeyVerificationAccept:
           if (!(await request.verifyLastStep([
-            'm.key.verification.ready',
+            EventTypes.KeyVerificationReady,
             EventTypes.KeyVerificationRequest
           ]))) {
             return;
