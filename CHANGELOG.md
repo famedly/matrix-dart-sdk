@@ -1,3 +1,7 @@
+## [0.22.0] - 4th July 2023
+
+- chore: pass event to redactedAnEvent and removedBy (td)
+
 ## [0.21.2] - 27th June 2023
 
 - chore: cleanup some eventTypes and unused variables (td)

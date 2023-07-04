@@ -85,8 +85,7 @@ abstract class EventLocalizations {
       localizationsMap = {
     EventTypes.Sticker: (event, i18n, body) => i18n.sentASticker(
         event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
-    EventTypes.Redaction: (event, i18n, body) => i18n.redactedAnEvent(
-        event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
+    EventTypes.Redaction: (event, i18n, body) => i18n.redactedAnEvent(event),
     EventTypes.RoomAliases: (event, i18n, body) => i18n.changedTheRoomAliases(
         event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
     EventTypes.RoomCanonicalAlias: (event, i18n, body) =>
