@@ -259,7 +259,7 @@ class Event extends MatrixEvent {
 
   String get messageType => type == EventTypes.Sticker
       ? MessageTypes.Sticker
-      : (content['msgtype'] is String ? content['msgtype'] : MessageTypes.Text);
+      : (content.tryGet<String>('msgtype') ?? MessageTypes.Text);
 
   void setRedactionEvent(Event redactedBecause) {
     unsigned = {
@@ -301,11 +301,10 @@ class Event extends MatrixEvent {
   }
 
   /// Returns the body of this event if it has a body.
-  String get text => content['body'] is String ? content['body'] : '';
+  String get text => content.tryGet<String>('body') ?? '';
 
   /// Returns the formatted boy of this event if it has a formatted body.
-  String get formattedText =>
-      content['formatted_body'] is String ? content['formatted_body'] : '';
+  String get formattedText => content.tryGet<String>('formatted_body') ?? '';
 
   /// Use this to get the body.
   String get body {
@@ -402,7 +401,7 @@ class Event extends MatrixEvent {
     // in the `sendEvent` method to transition -1 -> 0 -> 1 -> 2
     return await room.sendEvent(
       content,
-      txid: txid ?? unsigned?['transaction_id'] ?? eventId,
+      txid: txid ?? unsigned?.tryGet<String>('transaction_id') ?? eventId,
     );
   }
 
@@ -432,13 +431,19 @@ class Event extends MatrixEvent {
         content['can_request_session'] != true) {
       throw ('Session key not requestable');
     }
-    await room.requestSessionKey(content['session_id'], content['sender_key']);
+
+    final sessionId = content.tryGet<String>('session_id');
+    final senderKey = content.tryGet<String>('sender_key');
+    if (sessionId == null || senderKey == null) {
+      throw ('Unknown session_id or sender_key');
+    }
+    await room.requestSessionKey(sessionId, senderKey);
     return;
   }
 
   /// Gets the info map of file events, or a blank map if none present
   Map get infoMap =>
-      content['info'] is Map ? content['info'] : <String, dynamic>{};
+      content.tryGetMap<String, Object?>('info') ?? <String, Object?>{};
 
   /// Gets the thumbnail info map of file events, or a blank map if nonepresent
   Map get thumbnailInfoMap => infoMap['thumbnail_info'] is Map
@@ -461,9 +466,10 @@ class Event extends MatrixEvent {
   /// Gets the mimetype of the attachment of a file event, or a blank string if not present
   String get attachmentMimetype => infoMap['mimetype'] is String
       ? infoMap['mimetype'].toLowerCase()
-      : (content['file'] is Map && content['file']['mimetype'] is String
-          ? content['file']['mimetype']
-          : '');
+      : (content
+              .tryGetMap<String, Object?>('file')
+              ?.tryGet<String>('mimetype') ??
+          '');
 
   /// Gets the mimetype of the thumbnail of a file event, or a blank string if not present
   String get thumbnailMimetype => thumbnailInfoMap['mimetype'] is String
@@ -475,7 +481,9 @@ class Event extends MatrixEvent {
 
   /// Gets the underlying mxc url of an attachment of a file event, or null if not present
   Uri? get attachmentMxcUrl {
-    final url = isAttachmentEncrypted ? content['file']['url'] : content['url'];
+    final url = isAttachmentEncrypted
+        ? (content.tryGetMap<String, Object?>('file')?['url'])
+        : content['url'];
     return url is String ? Uri.tryParse(url) : null;
   }
 
@@ -759,21 +767,17 @@ class Event extends MatrixEvent {
     // if we need to strip the reply fallback.
     var htmlMessage = content['format'] != 'org.matrix.custom.html';
     // If we have an edit, we want to operate on the new content
+    final newContent = content.tryGetMap<String, Object?>('m.new_content');
     if (hideEdit &&
         relationshipType == RelationshipTypes.edit &&
-        content.tryGet<Map<String, dynamic>>('m.new_content') != null) {
-      if (plaintextBody &&
-          content['m.new_content']['format'] == 'org.matrix.custom.html') {
+        newContent != null) {
+      if (plaintextBody && newContent['format'] == 'org.matrix.custom.html') {
         htmlMessage = true;
         body = HtmlToText.convert(
-            (content['m.new_content'] as Map<String, dynamic>)
-                    .tryGet<String>('formatted_body') ??
-                formattedText);
+            newContent.tryGet<String>('formatted_body') ?? formattedText);
       } else {
         htmlMessage = false;
-        body = (content['m.new_content'] as Map<String, dynamic>)
-                .tryGet<String>('body') ??
-            body;
+        body = newContent.tryGet<String>('body') ?? body;
       }
     }
     // Hide reply fallback
@@ -815,31 +819,27 @@ class Event extends MatrixEvent {
 
   /// Get the relationship type of an event. `null` if there is none
   String? get relationshipType {
-    if (content.tryGet<Map<String, dynamic>>('m.relates_to') == null) {
+    final mRelatesTo = content.tryGetMap<String, Object?>('m.relates_to');
+    if (mRelatesTo == null) {
       return null;
     }
-    if (content['m.relates_to'].containsKey('rel_type')) {
-      if (content
-              .tryGet<Map<String, dynamic>>('m.relates_to')
-              ?.tryGet<String>('rel_type') ==
-          RelationshipTypes.thread) {
-        return RelationshipTypes.thread;
-      }
+    final relType = mRelatesTo.tryGet<String>('rel_type');
+    if (relType == RelationshipTypes.thread) {
+      return RelationshipTypes.thread;
     }
-    if (content['m.relates_to'].containsKey('m.in_reply_to')) {
+
+    if (mRelatesTo.containsKey('m.in_reply_to')) {
       return RelationshipTypes.reply;
     }
-    return content
-        .tryGet<Map<String, dynamic>>('m.relates_to')
-        ?.tryGet<String>('rel_type');
+    return relType;
   }
 
   /// Get the event ID that this relationship will reference. `null` if there is none
   String? get relationshipEventId {
-    final relatesToMap = content.tryGetMap<String, dynamic>('m.relates_to');
+    final relatesToMap = content.tryGetMap<String, Object?>('m.relates_to');
     return relatesToMap?.tryGet<String>('event_id') ??
         relatesToMap
-            ?.tryGetMap<String, dynamic>('m.in_reply_to')
+            ?.tryGetMap<String, Object?>('m.in_reply_to')
             ?.tryGet<String>('event_id');
   }
 

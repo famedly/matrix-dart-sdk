@@ -347,16 +347,16 @@ class Timeline {
       if (event.type == EventTypes.Encrypted &&
           event.messageType == MessageTypes.BadEncrypted &&
           event.content['can_request_session'] == true) {
-        try {
+        final sessionId = event.content.tryGet<String>('session_id');
+        final senderKey = event.content.tryGet<String>('sender_key');
+        if (sessionId != null && senderKey != null) {
           room.client.encryption?.keyManager.maybeAutoRequest(
             room.id,
-            event.content['session_id'],
-            event.content['sender_key'],
+            sessionId,
+            senderKey,
             tryOnlineBackup: tryOnlineBackup,
             onlineKeyBackupOnly: onlineKeyBackupOnly,
           );
-        } catch (_) {
-          // dispose
         }
       }
     }
@@ -387,7 +387,7 @@ class Timeline {
     for (i = 0; i < events.length; i++) {
       final searchHaystack = <String>{events[i].eventId};
 
-      final txnid = events[i].unsigned?['transaction_id'];
+      final txnid = events[i].unsigned?.tryGet<String>('transaction_id');
       if (txnid != null) {
         searchHaystack.add(txnid);
       }
@@ -401,8 +401,9 @@ class Timeline {
   void _removeEventFromSet(Set<Event> eventSet, Event event) {
     eventSet.removeWhere((e) =>
         e.matchesEventOrTransactionId(event.eventId) ||
-        (event.unsigned != null &&
-            e.matchesEventOrTransactionId(event.unsigned?['transaction_id'])));
+        event.unsigned != null &&
+            e.matchesEventOrTransactionId(
+                event.unsigned?.tryGet<String>('transaction_id')));
   }
 
   void addAggregatedEvent(Event event) {

@@ -69,11 +69,14 @@ class KeyManager {
         if (lastEvent != null &&
             lastEvent.type == EventTypes.Encrypted &&
             lastEvent.content['can_request_session'] == true) {
-          try {
-            maybeAutoRequest(room.id, lastEvent.content['session_id'],
-                lastEvent.content['sender_key']);
-          } catch (_) {
-            // dispose
+          final sessionId = lastEvent.content.tryGet<String>('session_id');
+          final senderKey = lastEvent.content.tryGet<String>('sender_key');
+          if (sessionId != null && senderKey != null) {
+            maybeAutoRequest(
+              room.id,
+              sessionId,
+              senderKey,
+            );
           }
         }
       }
@@ -638,23 +641,25 @@ class KeyManager {
           final sessionId = sessionEntry.key;
           final session = sessionEntry.value;
           final sessionData = session.sessionData;
-          Map<String, dynamic>? decrypted;
+          Map<String, Object?>? decrypted;
           try {
-            decrypted = json.decode(decryption.decrypt(sessionData['ephemeral'],
-                sessionData['mac'], sessionData['ciphertext']));
+            decrypted = json.decode(decryption.decrypt(
+                sessionData['ephemeral'] as String,
+                sessionData['mac'] as String,
+                sessionData['ciphertext'] as String));
           } catch (e, s) {
             Logs().e('[LibOlm] Error decrypting room key', e, s);
           }
-          if (decrypted != null) {
+          final senderKey = decrypted?.tryGet<String>('sender_key');
+          if (decrypted != null && senderKey != null) {
             decrypted['session_id'] = sessionId;
             decrypted['room_id'] = roomId;
             await setInboundGroupSession(
-                roomId, sessionId, decrypted['sender_key'], decrypted,
+                roomId, sessionId, senderKey, decrypted,
                 forwarded: true,
-                senderClaimedKeys: decrypted['sender_claimed_keys'] != null
-                    ? Map<String, String>.from(
-                        decrypted['sender_claimed_keys']!)
-                    : <String, String>{},
+                senderClaimedKeys: decrypted
+                        .tryGetMap<String, String>('sender_claimed_keys') ??
+                    <String, String>{},
                 uploaded: true);
           }
         }
@@ -831,13 +836,24 @@ class KeyManager {
         Logs().i(
             '[KeyManager] Received key sharing request from ${event.sender}:${event.content['requesting_device_id']}...');
         if (!event.content.containsKey('body')) {
-          Logs().i('[KeyManager] No body, doing nothing');
+          Logs().w('[KeyManager] No body, doing nothing');
           return; // no body
+        }
+        final body = event.content.tryGetMap<String, Object?>('body');
+        if (body == null) {
+          Logs().w('[KeyManager] Wrong type for body, doing nothing');
+          return; // wrong type for body
+        }
+        final roomId = body.tryGet<String>('room_id');
+        if (roomId == null) {
+          Logs().w(
+              '[KeyManager] Wrong type for room_id or no room_id, doing nothing');
+          return; // wrong type for roomId or no roomId found
         }
         final device = client.userDeviceKeys[event.sender]
             ?.deviceKeys[event.content['requesting_device_id']];
         if (device == null) {
-          Logs().i('[KeyManager] Device not found, doing nothing');
+          Logs().w('[KeyManager] Device not found, doing nothing');
           return; // device not found
         }
         if (device.userId == client.userID &&
@@ -845,20 +861,30 @@ class KeyManager {
           Logs().i('[KeyManager] Request is by ourself, ignoring');
           return; // ignore requests by ourself
         }
-        final room = client.getRoomById(event.content['body']['room_id']);
+        final room = client.getRoomById(roomId);
         if (room == null) {
           Logs().i('[KeyManager] Unknown room, ignoring');
           return; // unknown room
         }
-        final sessionId = event.content['body']['session_id'];
+        final sessionId = body.tryGet<String>('session_id');
+        if (sessionId == null) {
+          Logs().w(
+              '[KeyManager] Wrong type for session_id or no session_id, doing nothing');
+          return; // wrong type for session_id
+        }
         // okay, let's see if we have this session at all
         final session = await loadInboundGroupSession(room.id, sessionId);
         if (session == null) {
           Logs().i('[KeyManager] Unknown session, ignoring');
           return; // we don't have this session anyways
         }
+        if (event.content['request_id'] is! String) {
+          Logs().w(
+              '[KeyManager] Wrong type for request_id or no request_id, doing nothing');
+          return; // wrong type for request_id
+        }
         final request = KeyManagerKeyShareRequest(
-          requestId: event.content['request_id'],
+          requestId: event.content.tryGet<String>('request_id')!,
           devices: [device],
           room: room,
           sessionId: sessionId,
@@ -878,7 +904,7 @@ class KeyManager {
           await roomKeyRequest.forwardKey();
         } else if (device.encryptToDevice &&
             session.allowedAtIndex
-                    .tryGet<Map<String, dynamic>>(device.userId)
+                    .tryGet<Map<String, Object?>>(device.userId)
                     ?.tryGet(device.curve25519Key!) !=
                 null) {
           // if we know the user may see the message, then we can just forward the key.
@@ -931,15 +957,19 @@ class KeyManager {
       if (event.content['forwarding_curve25519_key_chain'] is! List) {
         event.content['forwarding_curve25519_key_chain'] = <String>[];
       }
-      event.content['forwarding_curve25519_key_chain']
+      (event.content['forwarding_curve25519_key_chain'] as List)
           .add(encryptedContent['sender_key']);
+      if (event.content['sender_claimed_ed25519_key'] is! String) {
+        Logs().w('sender_claimed_ed255519_key has wrong type');
+        return; // wrong type
+      }
       // TODO: verify that the keys work to decrypt a message
       // alright, all checks out, let's go ahead and store this session
       await setInboundGroupSession(request.room.id, request.sessionId,
           device.curve25519Key!, event.content,
           forwarded: true,
           senderClaimedKeys: {
-            'ed25519': event.content['sender_claimed_ed25519_key'],
+            'ed25519': event.content['sender_claimed_ed25519_key'] as String,
           });
       request.devices.removeWhere(
           (k) => k.userId == device.userId && k.deviceId == device.deviceId);
@@ -972,8 +1002,13 @@ class KeyManager {
         Logs().v('[KeyManager] not encrypted, ignoring...');
         return; // the event wasn't encrypted, this is a security risk;
       }
-      final String roomId = event.content['room_id'];
-      final String sessionId = event.content['session_id'];
+      final roomId = event.content.tryGet<String>('room_id');
+      final sessionId = event.content.tryGet<String>('session_id');
+      if (roomId == null || sessionId == null) {
+        Logs().w(
+            'Either room_id or session_id are not the expected type or missing');
+        return;
+      }
       final sender_ed25519 = client.userDeviceKeys[event.sender]
           ?.deviceKeys[event.content['requesting_device_id']]?.ed25519Key;
       if (sender_ed25519 != null) {

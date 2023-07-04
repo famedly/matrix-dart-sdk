@@ -144,7 +144,7 @@ class OlmManager {
     }
     _uploadKeysLock = true;
 
-    final signedOneTimeKeys = <String, dynamic>{};
+    final signedOneTimeKeys = <String, Map<String, Object?>>{};
     try {
       int? uploadedOneTimeKeysCount;
       if (oldKeyCount != null) {
@@ -287,8 +287,11 @@ class OlmManager {
           try {
             final String identity =
                 json.decode(olmAccount.identity_keys())['curve25519'];
-            session.create_outbound(_olmAccount!, identity, otk['key']);
-            olmAccount.remove_one_time_keys(session);
+            final key = otk.tryGet<String>('key');
+            if (key != null) {
+              session.create_outbound(_olmAccount!, identity, key);
+              olmAccount.remove_one_time_keys(session);
+            }
           } finally {
             session.free();
           }
@@ -597,11 +600,12 @@ class OlmManager {
             client.userDeviceKeys[userId]!.deviceKeys[deviceId]!.ed25519Key;
         final identityKey =
             client.userDeviceKeys[userId]!.deviceKeys[deviceId]!.curve25519Key;
-        for (final Map<String, dynamic> deviceKey
-            in deviceKeysEntry.value.values) {
+        for (final deviceKey in deviceKeysEntry.value.values) {
           if (fingerprintKey == null ||
               identityKey == null ||
-              !deviceKey.checkJsonSignature(fingerprintKey, userId, deviceId)) {
+              deviceKey is! Map<String, Object?> ||
+              !deviceKey.checkJsonSignature(fingerprintKey, userId, deviceId) ||
+              deviceKey['key'] is! String) {
             Logs().w(
               'Skipping invalid device key from $userId:$deviceId',
               deviceKey,
@@ -612,7 +616,7 @@ class OlmManager {
           final session = olm.Session();
           try {
             session.create_outbound(
-                _olmAccount!, identityKey, deviceKey['key']);
+                _olmAccount!, identityKey, deviceKey.tryGet<String>('key')!);
             await storeOlmSession(OlmSession(
               key: client.userID!,
               identityKey: identityKey,

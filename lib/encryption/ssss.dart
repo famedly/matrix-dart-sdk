@@ -280,8 +280,7 @@ class SSSS {
   }
 
   bool isSecret(String type) =>
-      client.accountData[type] != null &&
-      client.accountData[type]!.content['encrypted'] is Map;
+      client.accountData[type]?.content['encrypted'] is Map;
 
   Future<String?> getCached(String type) async {
     if (client.database == null) {
@@ -295,8 +294,11 @@ class SSSS {
     bool isValid(SSSSCache dbEntry) =>
         keys.contains(dbEntry.keyId) &&
         dbEntry.ciphertext != null &&
-        client.accountData[type]?.content['encrypted'][dbEntry.keyId]
-                ['ciphertext'] ==
+        dbEntry.keyId != null &&
+        client.accountData[type]?.content
+                .tryGetMap<String, Object?>('encrypted')
+                ?.tryGetMap<String, Object?>(dbEntry.keyId!)
+                ?.tryGet<String>('ciphertext') ==
             dbEntry.ciphertext;
 
     final fromCache = _cache[type];
@@ -319,20 +321,31 @@ class SSSS {
     if (secretInfo == null) {
       throw Exception('Not found');
     }
-    if (secretInfo.content['encrypted'] is! Map) {
+    final encryptedContent =
+        secretInfo.content.tryGetMap<String, Object?>('encrypted');
+    if (encryptedContent == null) {
       throw Exception('Content is not encrypted');
     }
-    if (secretInfo.content['encrypted'][keyId] is! Map) {
+    final enc = encryptedContent.tryGetMap<String, Object?>(keyId);
+    if (enc == null) {
       throw Exception('Wrong / unknown key');
     }
-    final enc = secretInfo.content['encrypted'][keyId];
+    final ciphertext = enc.tryGet<String>('ciphertext');
+    final iv = enc.tryGet<String>('iv');
+    final mac = enc.tryGet<String>('mac');
+    if (ciphertext == null || iv == null || mac == null) {
+      throw Exception('Wrong types for encrypted content or missing keys.');
+    }
     final encryptInfo = EncryptedContent(
-        iv: enc['iv'], ciphertext: enc['ciphertext'], mac: enc['mac']);
+      iv: iv,
+      ciphertext: ciphertext,
+      mac: mac,
+    );
     final decrypted = await decryptAes(encryptInfo, key, type);
     final db = client.database;
     if (cacheTypes.contains(type) && db != null) {
       // cache the thing
-      await db.storeSSSSCache(type, keyId, enc['ciphertext'], decrypted);
+      await db.storeSSSSCache(type, keyId, ciphertext, decrypted);
       onSecretStored.add(keyId);
       if (_cacheCallbacks.containsKey(type) && await getCached(type) == null) {
         _cacheCallbacks[type]!(decrypted);
@@ -382,10 +395,14 @@ class SSSS {
     if (content == null) {
       throw InvalidPassphraseException('Key has no content!');
     }
+    final encryptedContent = content.tryGetMap<String, Object?>('encrypted');
+    if (encryptedContent == null) {
+      throw Exception('Wrong type for encrypted content!');
+    }
 
     final otherKeys =
-        Set<String>.from(content['encrypted'].keys.where((k) => k != keyId));
-    content['encrypted'].removeWhere((k, v) => otherKeys.contains(k));
+        Set<String>.from(encryptedContent.keys.where((k) => k != keyId));
+    encryptedContent.removeWhere((k, v) => otherKeys.contains(k));
     // yes, we are paranoid...
     if (await getStored(type, keyId, key) != secret) {
       throw Exception('Secrets do not match up!');
@@ -394,8 +411,13 @@ class SSSS {
     await client.setAccountData(client.userID!, type, content);
     if (cacheTypes.contains(type)) {
       // cache the thing
-      await client.database?.storeSSSSCache(
-          type, keyId, content['encrypted'][keyId]['ciphertext'], secret);
+      final ciphertext = encryptedContent
+          .tryGetMap<String, Object?>(keyId)
+          ?.tryGet<String>('ciphertext');
+      if (ciphertext == null) {
+        throw Exception('Wrong type for ciphertext!');
+      }
+      await client.database?.storeSSSSCache(type, keyId, ciphertext, secret);
       onSecretStored.add(keyId);
     }
   }
@@ -501,7 +523,11 @@ class SSSS {
         return; // nope....unknown or untrusted device
       }
       // alright, all seems fine...let's check if we actually have the secret they are asking for
-      final type = event.content['name'];
+      final type = event.content.tryGet<String>('name');
+      if (type == null) {
+        Logs().i('[SSSS] Wrong data type for type param, ignoring');
+        return;
+      }
       final secret = await getCached(type);
       if (secret == null) {
         Logs()
@@ -536,8 +562,8 @@ class SSSS {
         Logs().i('[SSSS] Someone else replied?');
         return; // someone replied whom we didn't send the share request to
       }
-      final secret = event.content['secret'];
-      if (event.content['secret'] is! String) {
+      final secret = event.content.tryGet<String>('secret');
+      if (secret == null) {
         Logs().i('[SSSS] Secret wasn\'t a string');
         return; // the secret wasn't a string....wut?
       }
@@ -557,8 +583,14 @@ class SSSS {
       if (db != null) {
         final keyId = keyIdFromType(request.type);
         if (keyId != null) {
-          final ciphertext = client.accountData[request.type]!
-              .content['encrypted'][keyId]['ciphertext'];
+          final ciphertext = (client.accountData[request.type]!.content
+                  .tryGetMap<String, Object?>('encrypted'))
+              ?.tryGetMap<String, Object?>(keyId)
+              ?.tryGet<String>('ciphertext');
+          if (ciphertext == null) {
+            Logs().i('[SSSS] Ciphertext is empty or not a String');
+            return;
+          }
           await db.storeSSSSCache(request.type, keyId, ciphertext, secret);
           if (_cacheCallbacks.containsKey(request.type)) {
             _cacheCallbacks[request.type]!(secret);
@@ -574,8 +606,10 @@ class SSSS {
     if (data == null) {
       return null;
     }
-    if (data.content['encrypted'] is Map) {
-      return data.content['encrypted'].keys.toSet();
+    final contentEncrypted =
+        data.content.tryGetMap<String, Object?>('encrypted');
+    if (contentEncrypted != null) {
+      return contentEncrypted.keys.toSet();
     }
     return null;
   }

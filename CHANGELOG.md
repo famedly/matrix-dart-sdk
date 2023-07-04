@@ -1,10 +1,34 @@
+## [0.21.2] - 27th June 2023
+
+- chore: cleanup some eventTypes and unused variables (td)
+- chore: fix unexpected null when device is not known (td)
+
+## [0.21.1] - 22nd June 2023
+
+- fix: Assign correct type to signedOneTimeKeys (Malin Errenst)
+
+## [0.21.0] - 21st June 2023
+
+- feat: qr key verification (td)
+- refactor: Use tryGet for type casts whenever possible (Malin Errenst)
+- chore: Update matrix_api_lite to 1.7.0 (Malin Errenst)
+- refactor: Added type casts to match refactored matrix_api_lite (Malin Errenst)
+- refactor: Added type casts for refactored dart_openapi_codegen (Malin Errenst)
+- builds: Pin matrix api lite (Krille)
+- fix: Do not display prevContent displayname and avatar for joined users (Krille)
+- builds: Update dart and flutter ci containers (Krille)
+- fix: canRequestHistory should return false if prev_batch is null (Krille)
+
 ## [0.20.5] - 2th June 2023
+
 - chore: fix edited last events breaking db (td)
 
 ## [0.20.4] - 31th May 2023
+
 - fix: Do not store global profiles in room states as members (Krille)
 
 ## [0.20.3] - 30th May 2023
+
 - feat: Display performance warning when requesting more than 100 participants (Krille)
 - fix: Also update last event on redaction in store (Krille)
 - refactor: Let bootstrap throw custom Exception InvalidPassphraseException so it is easier to catch (Krille)
