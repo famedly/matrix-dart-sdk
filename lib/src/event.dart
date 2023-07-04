@@ -721,9 +721,7 @@ class Event extends MatrixEvent {
       bool plaintextBody = false,
       bool removeMarkdown = false}) {
     if (redacted) {
-      return i18n.removedBy((redactedBecause?.senderFromMemoryOrFallback)
-              ?.calcDisplayname(i18n: i18n) ??
-          senderId);
+      return i18n.removedBy(this);
     }
 
     final body = calcUnlocalizedBody(
