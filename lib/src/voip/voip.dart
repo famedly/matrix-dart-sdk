@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:matrix/src/voip/sframe.dart';
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 import 'package:webrtc_interface/webrtc_interface.dart';
 
@@ -28,20 +29,14 @@ abstract class WebRTCDelegate {
   /// a handleMissedCall
   bool get canHandleNewCall => true;
 
-  /// for frame cryptor
+  /// for Sframe
   bool get sFrameEnabled => false;
-  String? getSFrameKey(String callId) => null;
-  Future<void> handleAddRtpSender(
-      String callId, RTCRtpSender sender, String sFrameKey) async {
-    Logs().v(
-        '[VOIP] handleAddRtpSender: sFrame not implemented. please implement it in your delegate.');
-  }
 
-  Future<void> handleAddRtpReceiver(
-      String callId, RTCRtpReceiver receiver, String sFrameKey) async {
-    Logs().v(
-        '[VOIP] handleAddRtpReceiver: sFrame not implemented. please implement it in your delegate.');
-  }
+  /// get the SFrame key for a callId from a dart-web or flutter app.
+  String? getSFrameKey(String callId) => null;
+
+  /// get the frameCryptorFactory for SFrame from dart-web or flutter app.
+  FrameCryptorFactory? get frameCryptorFactory => null;
 }
 
 class VoIP {
@@ -56,6 +51,7 @@ class VoIP {
   final Client client;
   final WebRTCDelegate delegate;
   final StreamController<GroupCall> onIncomingGroupCall = StreamController();
+  final Map<String, FrameCryptorWrapper> frameCryptors = {};
   void _handleEvent(
           Event event,
           Function(String roomId, String senderId, Map<String, dynamic> content)

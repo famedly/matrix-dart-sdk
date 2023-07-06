@@ -21,6 +21,7 @@ import 'dart:core';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:matrix/src/voip/sframe.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
@@ -866,8 +867,7 @@ class CallSession {
         newStream.senders.add(sender);
         screensharingSenders.add(sender);
         if (opts.sframe ?? false) {
-          await voip.delegate
-              .handleAddRtpSender(callId, sender, newStream.sframeKey!);
+          await voip.handleAddRtpSender(callId, sender, newStream.sframeKey!);
         }
       }
     } else if (purpose == SDPStreamMetadataPurpose.Usermedia) {
@@ -877,8 +877,7 @@ class CallSession {
         newStream.senders.add(sender);
         usermediaSenders.add(sender);
         if (opts.sframe ?? false) {
-          await voip.delegate
-              .handleAddRtpSender(callId, sender, newStream.sframeKey!);
+          await voip.handleAddRtpSender(callId, sender, newStream.sframeKey!);
         }
       }
     }
@@ -917,7 +916,7 @@ class CallSession {
       existingStream.first.setNewStream(stream);
       existingStream.first.receivers.add(receiver);
       if (opts.sframe ?? false) {
-        await voip.delegate.handleAddRtpReceiver(
+        await voip.handleAddRtpReceiver(
             callId, receiver, existingStream.first.sframeKey!);
       }
     } else {
@@ -940,8 +939,7 @@ class CallSession {
       newStream.receivers.add(receiver);
       onStreamAdd.add(newStream);
       if (opts.sframe ?? false) {
-        await voip.delegate
-            .handleAddRtpReceiver(callId, receiver, newStream.sframeKey!);
+        await voip.handleAddRtpReceiver(callId, receiver, newStream.sframeKey!);
       }
     }
     fireCallEvent(CallEvent.kFeedsChanged);
@@ -1070,7 +1068,7 @@ class CallSession {
                 await pc!.addTrack(newTrack, localUserMediaStream!.stream!);
             localUserMediaStream!.senders.add(sender);
             if (opts.sframe ?? false) {
-              await voip.delegate.handleAddRtpSender(
+              await voip.handleAddRtpSender(
                   callId, sender, localUserMediaStream!.sframeKey!);
             }
           }
@@ -1259,6 +1257,7 @@ class CallSession {
     await cleanUp();
     if (shouldEmit) {
       onCallHangup.add(this);
+      await voip.disposesFrame(callId);
       await voip.delegate.handleCallEnded(this);
       fireCallEvent(CallEvent.kHangup);
       if ((party == CallParty.kRemote && missedCall)) {
