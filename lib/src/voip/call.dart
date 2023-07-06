@@ -1257,7 +1257,7 @@ class CallSession {
     await cleanUp();
     if (shouldEmit) {
       onCallHangup.add(this);
-      await voip.disposesFrame(callId);
+      await voip.disposeSFrame(callId);
       await voip.delegate.handleCallEnded(this);
       fireCallEvent(CallEvent.kHangup);
       if ((party == CallParty.kRemote && missedCall)) {
@@ -1415,6 +1415,7 @@ class CallSession {
           localCandidates.clear();
           remoteCandidates.clear();
           setCallState(CallState.kConnected);
+          await voip.setSframeEnabled(callId, opts.sframe ?? false);
           // fix any state/race issues we had with sdp packets and cloned streams
           await updateMuteStatus();
           missedCall = false;

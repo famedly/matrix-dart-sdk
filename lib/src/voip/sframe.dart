@@ -23,7 +23,15 @@ extension SframeExt on VoIP {
     );
   }
 
-  Future<void> disposesFrame(String callId) async {
+  Future<void> setSframeEnabled(String callId, bool enabled) async {
+    frameCryptors.forEach((key, fc) async {
+      if (key.startsWith(callId)) {
+        await fc.frameCryptor.setEnabled(enabled);
+      }
+    });
+  }
+
+  Future<void> disposeSFrame(String callId) async {
     frameCryptors.removeWhere((key, fc) {
       if (key.startsWith(callId)) {
         fc.frameCryptor.dispose();
