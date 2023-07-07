@@ -16,7 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:matrix/src/room.dart';
+import 'package:matrix/matrix.dart';
 
 abstract class MatrixLocalizations {
   const MatrixLocalizations();
@@ -76,11 +76,11 @@ abstract class MatrixLocalizations {
 
   String groupWith(String displayname);
 
-  String removedBy(String calcDisplayname);
+  String removedBy(Event redactedEvent);
 
   String sentASticker(String senderName);
 
-  String redactedAnEvent(String senderName);
+  String redactedAnEvent(Event redactedEvent);
 
   String changedTheRoomAliases(String senderName);
 
