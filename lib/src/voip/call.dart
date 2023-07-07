@@ -21,11 +21,11 @@ import 'dart:core';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:matrix/src/voip/sframe.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
+import 'package:matrix/src/voip/sframe.dart';
 
 /// https://github.com/matrix-org/matrix-doc/pull/2746
 /// version 1
