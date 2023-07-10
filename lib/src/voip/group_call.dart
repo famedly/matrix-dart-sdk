@@ -340,8 +340,8 @@ class GroupCall {
     };
     try {
       return await voip.delegate.mediaDevices.getDisplayMedia(mediaConstraints);
-    } catch (e) {
-      setState(GroupCallState.LocalCallFeedUninitialized);
+    } catch (e, s) {
+      Logs().e('[VOIP] _getDisplayMedia failed because,', e, s);
     }
     return Null as MediaStream;
   }
@@ -627,10 +627,10 @@ class GroupCall {
         await sendMemberStateEvent();
 
         return true;
-      } catch (error) {
-        Logs().e('Enabling screensharing error', error);
+      } catch (e, s) {
+        Logs().e('Enabling screensharing error', e, s);
         lastError = GroupCallError(GroupCallErrorCode.NoUserMedia,
-            'Failed to get screen-sharing stream: ', error);
+            'Failed to get screen-sharing stream: ', e);
         onGroupCallEvent.add(GroupCallEvent.Error);
         return false;
       }
@@ -994,7 +994,7 @@ class GroupCall {
       await onStreamsChanged(call);
     });
 
-    call.onCallHangup.stream.listen((event) async {
+    call.onCallHangupNotifierForGroupCalls.stream.listen((event) async {
       await onCallHangup(call);
     });
 

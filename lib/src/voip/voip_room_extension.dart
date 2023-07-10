@@ -48,7 +48,7 @@ extension GroupCallUtils on Room {
     if (staleGroupCallsTimer.tryGet(roomId) != null) {
       staleGroupCallsTimer[roomId]!.cancel();
       staleGroupCallsTimer.remove(roomId);
-      Logs().d('stopped stale group calls checker for room $id');
+      Logs().d('[VOIP] stopped stale group calls checker for room $id');
     } else {
       Logs().d('[VOIP] no stale call checker for room found');
     }
@@ -70,7 +70,22 @@ extension GroupCallUtils on Room {
                 device.expires_ts! < DateTime.now().millisecondsSinceEpoch);
       }
     }
-    return true;
+
+    // Last 30 seconds to get yourself together.
+    // This saves us from accidentally killing calls which were just created and
+    // whose state event we haven't recieved yet in sync.
+    // (option 2 was local echo member state events, but reverting them if anything
+    // fails sounds pain)
+
+    final expiredfr = groupCallMemberStateEvent.originServerTs
+            .add(staleCallCheckerDuration)
+            .millisecondsSinceEpoch <
+        DateTime.now().millisecondsSinceEpoch;
+    if (!expiredfr) {
+      Logs().d(
+          '[VOIP] Last 30 seconds for state event from ${groupCallMemberStateEvent.senderId}');
+    }
+    return expiredfr;
   }
 
   /// checks for stale calls in a room and sends `m.terminated` if all the
@@ -85,7 +100,7 @@ extension GroupCallUtils on Room {
   }
 
   Future<void> singleShotStaleCallCheckerOnRoom() async {
-    Logs().d('checking for stale group calls in room $id');
+    Logs().d('[VOIP] checking for stale group calls in room $id');
     // make sure we have all the to-device messages we are supposed to have
     await client.oneShotSync();
     final copyGroupCallIds =
@@ -97,7 +112,7 @@ extension GroupCallUtils on Room {
 
       if (groupCallEvent.content.tryGet('m.intent') == 'm.room') return;
       if (!groupCallEvent.content.containsKey('m.terminated')) {
-        Logs().i('found non terminated group call with id $groupCallId');
+        Logs().i('[VOIP] found non terminated group call with id $groupCallId');
         // call is not empty but check for stale participants (gone offline)
         // with expire_ts
         bool callExpired = true; // assume call is expired
@@ -118,7 +133,7 @@ extension GroupCallUtils on Room {
 
         if (callExpired) {
           Logs().i(
-              'Group call with only expired timestamps detected, terminating');
+              '[VOIP] Group call with only expired timestamps detected, terminating');
           await sendGroupCallTerminateEvent(groupCallId);
         }
       }
@@ -132,7 +147,7 @@ extension GroupCallUtils on Room {
       final existingStateEvent =
           getState(EventTypes.GroupCallPrefix, groupCallId);
       if (existingStateEvent == null) {
-        Logs().e('could not find group call with id $groupCallId');
+        Logs().e('[VOIP] could not find group call with id $groupCallId');
         return null;
       }
 
@@ -144,8 +159,8 @@ extension GroupCallUtils on Room {
 
       Logs().i('[VOIP] Group call $groupCallId was killed uwu');
       return req;
-    } catch (e) {
-      Logs().e('killing stale call $groupCallId failed. reason: $e');
+    } catch (e, s) {
+      Logs().e('[VOIP] killing stale call $groupCallId failed', e, s);
       return null;
     }
   }
