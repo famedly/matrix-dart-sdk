@@ -10,14 +10,14 @@ Future<void> stopMediaStream(MediaStream? stream) async {
     for (final track in stream.getTracks()) {
       try {
         await track.stop();
-      } catch (e) {
-        Logs().e('[VOIP] stopping track ${track.id} failed', e);
+      } catch (e, s) {
+        Logs().e('[VOIP] stopping track ${track.id} failed', e, s);
       }
     }
     try {
       await stream.dispose();
-    } catch (e) {
-      Logs().e('[VOIP] disposing stream ${stream.id} failed', e);
+    } catch (e, s) {
+      Logs().e('[VOIP] disposing stream ${stream.id} failed', e, s);
     }
   }
 }

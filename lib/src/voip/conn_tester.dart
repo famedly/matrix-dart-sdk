@@ -64,8 +64,9 @@ class ConnectionTester {
         }
         return false;
       });
-    } catch (e) {
-      Logs().e('[VOIP] ConnectionTester Error while testing TURN server: $e');
+    } catch (e, s) {
+      Logs()
+          .e('[VOIP] ConnectionTester Error while testing TURN server: ', e, s);
     }
 
     dispose();

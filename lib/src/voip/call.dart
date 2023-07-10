@@ -358,7 +358,7 @@ class CallSession {
   final CachedStreamController<CallSession> onCallReplaced =
       CachedStreamController();
 
-  final CachedStreamController<CallSession> onCallHangup =
+  final CachedStreamController<CallSession> onCallHangupNotifierForGroupCalls =
       CachedStreamController();
 
   final CachedStreamController<CallState> onCallStateChanged =
@@ -435,6 +435,7 @@ class CallSession {
   Timer? inviteTimer;
   Timer? ringingTimer;
 
+  // outgoing call
   Future<void> initOutboundCall(CallType type) async {
     await _preparePeerConnection();
     setCallState(CallState.kCreateOffer);
@@ -444,6 +445,7 @@ class CallSession {
     }
   }
 
+  // incoming call
   Future<void> initWithInvite(CallType type, RTCSessionDescription offer,
       SDPStreamMetadata? metadata, int lifetime, bool isGroupCall) async {
     if (!isGroupCall) {
@@ -491,6 +493,12 @@ class CallSession {
       final stream = await _getUserMedia(type);
       if (stream != null) {
         await addLocalStream(stream, SDPStreamMetadataPurpose.Usermedia);
+      } else {
+        // we don't have a localstream, call probably crashed
+        // for sanity
+        if (state == CallState.kEnded) {
+          return;
+        }
       }
     }
 
@@ -597,10 +605,6 @@ class CallSession {
     // Now we wait for the negotiationneeded event
   }
 
-  void initWithHangup() {
-    setCallState(CallState.kEnded);
-  }
-
   Future<void> onAnswerReceived(
       RTCSessionDescription answer, SDPStreamMetadata? metadata) async {
     if (metadata != null) {
@@ -658,9 +662,9 @@ class CallSession {
             type: answer.type!);
         await pc!.setLocalDescription(answer);
       }
-    } catch (e) {
-      _getLocalOfferFailed(e);
-      Logs().e('[VOIP] onNegotiateReceived => ${e.toString()}');
+    } catch (e, s) {
+      Logs().e('[VOIP] onNegotiateReceived => ', e, s);
+      await _getLocalOfferFailed(e);
       return;
     }
 
@@ -740,8 +744,8 @@ class CallSession {
       if (pc != null && inviteOrAnswerSent && remotePartyId != null) {
         try {
           await pc!.addCandidate(candidate);
-        } catch (e) {
-          Logs().e('[VOIP] onCandidatesReceived => ${e.toString()}');
+        } catch (e, s) {
+          Logs().e('[VOIP] onCandidatesReceived => ', e, s);
         }
       } else {
         remoteCandidates.add(candidate);
@@ -810,8 +814,8 @@ class CallSession {
         await _removeStream(localScreenSharingStream!.stream!);
         fireCallEvent(CallEvent.kFeedsChanged);
         return false;
-      } catch (e) {
-        Logs().e('[VOIP] stopping screen sharing track failed', e);
+      } catch (e, s) {
+        Logs().e('[VOIP] stopping screen sharing track failed', e, s);
         return false;
       }
     }
@@ -1130,12 +1134,11 @@ class CallSession {
   /// Reject a call
   /// This used to be done by calling hangup, but is a separate method and protocol
   /// event as of MSC2746.
-  ///
   Future<void> reject({String? reason, bool shouldEmit = true}) async {
-    // stop play ringtone
-    await voip.delegate.stopRingtone();
     if (state != CallState.kRinging && state != CallState.kFledgling) {
-      Logs().e('[VOIP] Call must be in \'ringing|fledgling\' state to reject!');
+      Logs().e(
+          '[VOIP] Call must be in \'ringing|fledgling\' state to reject! (current state was: ${state.toString()}) Calling hangup instead');
+      await hangup(reason, shouldEmit);
       return;
     }
     Logs().d('[VOIP] Rejecting call: $callId');
@@ -1146,12 +1149,9 @@ class CallSession {
     }
   }
 
-  Future<void> hangup([String? reason, bool suppressEvent = false]) async {
-    // stop play ringtone
-    await voip.delegate.stopRingtone();
-
+  Future<void> hangup([String? reason, bool shouldEmit = true]) async {
     await terminate(
-        CallParty.kLocal, reason ?? CallErrorCode.UserHangup, !suppressEvent);
+        CallParty.kLocal, reason ?? CallErrorCode.UserHangup, shouldEmit);
 
     try {
       final res =
@@ -1174,11 +1174,11 @@ class CallSession {
   }
 
   Future<void> terminate(
-      CallParty party, String reason, bool shouldEmit) async {
-    if (state == CallState.kEnded) {
-      return;
-    }
-
+    CallParty party,
+    String reason,
+    bool shouldEmit,
+  ) async {
+    Logs().d('[VOIP] terminating call');
     inviteTimer?.cancel();
     inviteTimer = null;
 
@@ -1195,9 +1195,9 @@ class CallSession {
     hangupParty = party;
     hangupReason = reason;
 
-    if (shouldEmit) {
-      setCallState(CallState.kEnded);
-    }
+    // don't see any reason to wrap this with shouldEmit atm,
+    // looks like a local state change only
+    setCallState(CallState.kEnded);
 
     if (!isGroupCall) {
       if (callId != voip.currentCID) return;
@@ -1209,7 +1209,7 @@ class CallSession {
 
     await cleanUp();
     if (shouldEmit) {
-      onCallHangup.add(this);
+      onCallHangupNotifierForGroupCalls.add(this);
       await voip.delegate.handleCallEnded(this);
       fireCallEvent(CallEvent.kHangup);
       if ((party == CallParty.kRemote && missedCall)) {
@@ -1273,7 +1273,6 @@ class CallSession {
       // just incase we ended the call but already sent the invite
       if (state == CallState.kEnded) {
         await hangup(CallErrorCode.Replaced, false);
-        setCallState(CallState.kEnded);
         return;
       }
       inviteOrAnswerSent = true;
@@ -1313,7 +1312,7 @@ class CallSession {
       final offer = await pc!.createOffer({});
       await _gotLocalOffer(offer);
     } catch (e) {
-      _getLocalOfferFailed(e);
+      await _getLocalOfferFailed(e);
       return;
     } finally {
       makingOffer = false;
@@ -1377,9 +1376,9 @@ class CallSession {
     }
   }
 
-  void onAnsweredElsewhere() {
+  Future<void> onAnsweredElsewhere() async {
     Logs().d('Call ID $callId answered elsewhere');
-    terminate(CallParty.kRemote, CallErrorCode.AnsweredElsewhere, true);
+    await terminate(CallParty.kRemote, CallErrorCode.AnsweredElsewhere, true);
   }
 
   Future<void> cleanUp() async {
@@ -1388,8 +1387,8 @@ class CallSession {
         await stream.dispose();
       }
       streams.clear();
-    } catch (e) {
-      Logs().e('[VOIP] cleaning up streams failed', e);
+    } catch (e, s) {
+      Logs().e('[VOIP] cleaning up streams failed', e, s);
     }
 
     try {
@@ -1397,8 +1396,8 @@ class CallSession {
         await pc!.close();
         await pc!.dispose();
       }
-    } catch (e) {
-      Logs().e('[VOIP] removing pc failed', e);
+    } catch (e, s) {
+      Logs().e('[VOIP] removing pc failed', e, s);
     }
   }
 
@@ -1468,7 +1467,7 @@ class CallSession {
     try {
       return await voip.delegate.mediaDevices.getUserMedia(mediaConstraints);
     } catch (e) {
-      _getUserMediaFailed(e);
+      await _getUserMediaFailed(e);
     }
     return null;
   }
@@ -1481,7 +1480,7 @@ class CallSession {
     try {
       return await voip.delegate.mediaDevices.getDisplayMedia(mediaConstraints);
     } catch (e) {
-      _getUserMediaFailed(e);
+      await _getUserMediaFailed(e);
     }
     return null;
   }
@@ -1614,15 +1613,15 @@ class CallSession {
     }
   }
 
-  void _getLocalOfferFailed(dynamic err) {
+  Future<void> _getLocalOfferFailed(dynamic err) async {
     Logs().e('Failed to get local offer ${err.toString()}');
     fireCallEvent(CallEvent.kError);
     lastError = CallError(
         CallErrorCode.LocalOfferFailed, 'Failed to get local offer!', err);
-    terminate(CallParty.kLocal, CallErrorCode.LocalOfferFailed, false);
+    await terminate(CallParty.kLocal, CallErrorCode.LocalOfferFailed, false);
   }
 
-  void _getUserMediaFailed(dynamic err) {
+  Future<void> _getUserMediaFailed(dynamic err) async {
     if (state != CallState.kConnected) {
       Logs().w('Failed to get user media - ending call ${err.toString()}');
       fireCallEvent(CallEvent.kError);
@@ -1630,11 +1629,11 @@ class CallSession {
           CallErrorCode.NoUserMedia,
           'Couldn\'t start capturing media! Is your microphone set up and does this app have permission?',
           err);
-      terminate(CallParty.kLocal, CallErrorCode.NoUserMedia, false);
+      await terminate(CallParty.kLocal, CallErrorCode.NoUserMedia, false);
     }
   }
 
-  void onSelectAnswerReceived(String? selectedPartyId) {
+  Future<void> onSelectAnswerReceived(String? selectedPartyId) async {
     if (direction != CallDirection.kIncoming) {
       Logs().w('Got select_answer for an outbound call: ignoring');
       return;
@@ -1649,7 +1648,7 @@ class CallSession {
       Logs().w(
           'Got select_answer for party ID $selectedPartyId: we are party ID $localPartyId.');
       // The other party has picked somebody else's answer
-      terminate(CallParty.kRemote, CallErrorCode.AnsweredElsewhere, true);
+      await terminate(CallParty.kRemote, CallErrorCode.AnsweredElsewhere, true);
     }
   }
 
