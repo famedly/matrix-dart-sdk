@@ -332,6 +332,16 @@ class Room {
     });
   }
 
+  /// Checks if the `m.room.create` state has a `type` with no value
+  /// The spec does not require rooms to be typed, but we can be sure
+  /// that if the type is set, it's not a regular chat room.
+  bool get isChat =>
+      getState(EventTypes.RoomCreate)
+          ?.content
+          .tryGet<String>('type')
+          ?.isEmpty ??
+      true;
+
   /// If this room is a direct chat, this is the matrix ID of the user.
   /// Returns null otherwise.
   String? get directChatMatrixID {
@@ -354,7 +364,7 @@ class Room {
   }
 
   /// Wheither this is a direct chat or not
-  bool get isDirectChat => directChatMatrixID != null;
+  bool get isDirectChat => isChat && (directChatMatrixID != null);
 
   /// Must be one of [all, mention]
   String? notificationSettings;
