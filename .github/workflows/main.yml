@@ -1,18 +1,35 @@
-name: Add issues to Product Management Project.
+name: CI
 
 on:
-  issues:
-    types:
-      - opened
+  push:
+    branches:
+      - main
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  add-to-project:
-    name: Add issue to project
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/add-to-project@v0.5.0
-        with:
-          # You can target a repository in a different organization
-          # to the issue
-          project-url: https://github.com/orgs/famedly/projects/4
-          github-token: ${{ secrets.ADD_ISSUE_TO_PROJECT_PAT }}
+  dart:
+    permissions:
+      contents: read
+    uses: famedly/frontend-ci-templates/.github/workflows/dart.yml@main
+    with:
+      flutter_version: 3.10.4
+      dart_version: 3.0.0
+    secrets:
+      ssh_key: "${{ secrets.CI_SSH_PRIVATE_KEY }}"
+
+  general:
+    permissions:
+      contents: read
+    uses: famedly/frontend-ci-templates/.github/workflows/general.yml@main
+
+  app_jobs:
+    secrets: inherit
+    uses: ./.github/workflows/app.yml
+    with:
+      flutter_version: 3.10.4
+      dart_version: 3.0.3
