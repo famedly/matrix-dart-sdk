@@ -36,6 +36,8 @@ jobs:
           scripts/prepare.sh
           scripts/test_driver.sh"
 
+# coverage is done on the flutter image because we setup olm there
+# coverage_without_olm is done on dart images because why not :D
   coverage:
     runs-on: ubuntu-latest
     container:
@@ -44,7 +46,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Run tests
         run: |
-          sed -i 's/#\([^ ]\)/\1/g' pubspec.yaml
+          sed -i 's/#flutter_test/flutter_test/g' pubspec.yaml
           rm -r example
           ./scripts/prepare.sh
           ./scripts/test.sh
@@ -70,7 +72,27 @@ jobs:
       image: dart:${{inputs.dart_version}}
     steps:
       - uses: actions/checkout@v3
-      - name: Run tests
+      - name: pub.dev publish dry run
         run: |
           dart pub get
           dart pub publish --dry-run
+
+  pub-dev:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    container:
+      image: dart:${{inputs.dart_version}}
+    steps:
+      - uses: actions/checkout@v3
+      - name: pub.dev publish
+        run: |
+          if [ -z ${{ secrets.PUB_DEV_CREDENTIALS }}" ]; then
+            echo "Missing PUB_DEV_CREDENTIALS environment variable"
+            exit 1
+          fi
+          
+          mkdir -p ~/.config/dart/
+          cp "${{ secrets.PUB_DEV_CREDENTIALS }}" ~/.config/dart/pub-credentials.json
+
+          dart pub get
+          dart pub publish --force

@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+
   pull_request:
   merge_group:
 
@@ -11,14 +13,31 @@ concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FLUTTER_VERSION:  3.10.6
+  DART_VERSION: 3.0.6
+
 jobs:
+  # because there is no easy way to pass env variables to jobs
+  versions:
+    runs-on: ubuntu-latest
+    outputs:
+      flutter_version: ${{ steps.flutterver.outputs.FLUTTER_VERSION }}
+      dart_version: ${{ steps.dartver.outputs.DART_VERSION }}
+    steps:
+      - id: flutterver
+        run: echo "FLUTTER_VERSION=${{ env.FLUTTER_VERSION }}" >> "$GITHUB_OUTPUT"
+      - id: dartver
+        run: echo "DART_VERSION=${{ env.DART_VERSION }}" >> "$GITHUB_OUTPUT"
+
   dart:
     permissions:
       contents: read
     uses: famedly/frontend-ci-templates/.github/workflows/dart.yml@main
+    needs: [versions]
     with:
-      flutter_version: 3.10.4
-      dart_version: 3.0.0
+      flutter_version: ${{ needs.versions.outputs.flutter_version }}
+      dart_version: ${{ needs.versions.outputs.dart_version }}
     secrets:
       ssh_key: "${{ secrets.CI_SSH_PRIVATE_KEY }}"
 
@@ -30,6 +49,7 @@ jobs:
   app_jobs:
     secrets: inherit
     uses: ./.github/workflows/app.yml
+    needs: [versions]
     with:
-      flutter_version: 3.10.4
-      dart_version: 3.0.3
+      flutter_version: ${{ needs.versions.outputs.flutter_version }}
+      dart_version: ${{ needs.versions.outputs.dart_version }}
