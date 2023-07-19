@@ -76,23 +76,3 @@ jobs:
         run: |
           dart pub get
           dart pub publish --dry-run
-
-  pub-dev:
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    container:
-      image: dart:${{inputs.dart_version}}
-    steps:
-      - uses: actions/checkout@v3
-      - name: pub.dev publish
-        run: |
-          if [ -z "${{ secrets.PUB_DEV_CREDENTIALS }}" ]; then
-            echo "Missing PUB_DEV_CREDENTIALS environment variable"
-            exit 1
-          fi
-          
-          mkdir -p ~/.config/dart/
-          cp "${{ secrets.PUB_DEV_CREDENTIALS }}" ~/.config/dart/pub-credentials.json
-
-          dart pub get
-          dart pub publish --force
