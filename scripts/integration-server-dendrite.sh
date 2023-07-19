@@ -11,4 +11,4 @@ docker run --rm --entrypoint="" \
   -tls-key /mnt/server.key
 
 docker run -d --volume="$(pwd)/test_driver/dendrite/data":/etc/dendrite:rw \
-  --name dendrite -p 80:8008 matrixdotorg/dendrite-monolith:latest -really-enable-open-registration
+  --name dendrite $NETWORK -p 80:8008 matrixdotorg/dendrite-monolith:latest -really-enable-open-registration

@@ -6,7 +6,6 @@
 #
 # [1] https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html
 
-
 ## Modules ##
 
 # Server admins can expand Synapse's functionality with external modules.
@@ -20,7 +19,6 @@ modules:
   #    do_thing: true
   #- module: my_other_super_module.SomeClass
   #  config: {}
-
 
 ## Server ##
 
@@ -350,7 +348,6 @@ manhole_settings:
 #
 #dummy_events_threshold: 5
 
-
 ## Homeserver blocking ##
 
 # How to reach the server admin, used in ResourceLimitError
@@ -528,7 +525,6 @@ templates:
 #exclude_rooms_from_sync:
 #    - !foo:example.com
 
-
 # Message retention policy at the server level.
 #
 # Room admins and mods can define a retention period for their rooms using the
@@ -598,7 +594,6 @@ retention:
   #  - shortest_max_lifetime: 3d
   #    interval: 1d
 
-
 ## TLS ##
 
 # PEM-encoded X509 certificate for TLS.
@@ -658,7 +653,6 @@ retention:
 #  - myCA2.pem
 #  - myCA3.pem
 
-
 ## Federation ##
 
 # Restrict federation to the following whitelist of domains.
@@ -694,7 +688,6 @@ retention:
 # user devices on this homeserver. Defaults to 'false'.
 #
 #allow_device_name_lookup_over_federation: true
-
 
 ## Caching ##
 
@@ -760,7 +753,6 @@ caches:
   #
   #sync_response_cache_duration: 2m
 
-
 ## Database ##
 
 # The 'database' setting defines the database that synapse uses to store all of
@@ -816,14 +808,12 @@ database:
   args:
     database: /data/homeserver.db
 
-
 ## Logging ##
 
 # A yaml python logging config file as described by
 # https://docs.python.org/3.7/library/logging.config.html#configuration-dictionary-schema
 #
 log_config: "/data/localhost.log.config"
-
 
 ## Ratelimiting ##
 
@@ -943,8 +933,6 @@ log_config: "/data/localhost.log.config"
 # into fewer transactions.
 #
 #federation_rr_transactions_per_room_per_second: 50
-
-
 
 ## Media Store ##
 
@@ -1126,7 +1114,6 @@ media_store_path: "/data/media_store"
 url_preview_accept_language:
 #   - en
 
-
 # oEmbed allows for easier embedding content from a website. It can be
 # used for generating URLs previews of services which support it.
 #
@@ -1146,7 +1133,6 @@ oembed:
   #
   #additional_providers:
   #  - oembed/my_providers.json
-
 
 ## Captcha ##
 # See docs/CAPTCHA_SETUP.md for full details of configuring this.
@@ -1171,7 +1157,6 @@ oembed:
 # Defaults to "https://www.recaptcha.net/recaptcha/api/siteverify".
 #
 #recaptcha_siteverify_api: "https://my.recaptcha.site"
-
 
 ## TURN ##
 
@@ -1200,7 +1185,6 @@ oembed:
 # valid account (e.g. by passing a CAPTCHA).
 #
 #turn_allow_guests: true
-
 
 ## Registration ##
 #
@@ -1358,8 +1342,8 @@ registration_shared_secret: "*_854H=YMj.QsE;~~3S,+785vsc#f9f=~nw8aa0Da&~Ye=24=l"
 # https://matrix.org/docs/spec/identity_service/latest
 #
 account_threepid_delegates:
-    #email: https://example.com     # Delegate email sending to example.com
-    #msisdn: http://localhost:8090  # Delegate SMS sending to this local process
+  #email: https://example.com     # Delegate email sending to example.com
+  #msisdn: http://localhost:8090  # Delegate SMS sending to this local process
 
 # Whether users are allowed to change their displayname after it has
 # been initially set. Useful when provisioning users based on the
@@ -1473,7 +1457,6 @@ account_threepid_delegates:
 #
 #inhibit_user_in_use_error: true
 
-
 ## Metrics ###
 
 # Enable collection and rendering of performance metrics
@@ -1494,11 +1477,11 @@ account_threepid_delegates:
 # enabled by default, either for performance reasons or limited use.
 #
 metrics_flags:
-    # Publish synapse_federation_known_servers, a gauge of the number of
-    # servers this homeserver knows about, including itself. May cause
-    # performance problems on large homeservers.
-    #
-    #known_servers: true
+  # Publish synapse_federation_known_servers, a gauge of the number of
+  # servers this homeserver knows about, including itself. May cause
+  # performance problems on large homeservers.
+  #
+  #known_servers: true
 
 # Whether or not to report anonymized homeserver usage statistics.
 #
@@ -1509,36 +1492,35 @@ report_stats: false
 #
 #report_stats_endpoint: https://example.com/report-usage-stats/push
 
-
 ## API Configuration ##
 
 # Controls for the state that is shared with users who receive an invite
 # to a room
 #
 room_prejoin_state:
-   # By default, the following state event types are shared with users who
-   # receive invites to the room:
-   #
-   # - m.room.join_rules
-   # - m.room.canonical_alias
-   # - m.room.avatar
-   # - m.room.encryption
-   # - m.room.name
-   # - m.room.create
-   # - m.room.topic
-   #
-   # Uncomment the following to disable these defaults (so that only the event
-   # types listed in 'additional_event_types' are shared). Defaults to 'false'.
-   #
-   #disable_default_event_types: true
+  # By default, the following state event types are shared with users who
+  # receive invites to the room:
+  #
+  # - m.room.join_rules
+  # - m.room.canonical_alias
+  # - m.room.avatar
+  # - m.room.encryption
+  # - m.room.name
+  # - m.room.create
+  # - m.room.topic
+  #
+  # Uncomment the following to disable these defaults (so that only the event
+  # types listed in 'additional_event_types' are shared). Defaults to 'false'.
+  #
+  #disable_default_event_types: true
 
-   # Additional state event types to share with users when they are invited
-   # to a room.
-   #
-   # By default, this list is empty (so only the default event types are shared).
-   #
-   #additional_event_types:
-   #  - org.example.custom.event.type
+  # Additional state event types to share with users when they are invited
+  # to a room.
+  #
+  # By default, this list is empty (so only the default event types are shared).
+  #
+  #additional_event_types:
+  #  - org.example.custom.event.type
 
 # We record the IP address of clients used to access the API for various
 # reasons, including displaying it to the user in the "Where you're signed in"
@@ -1555,7 +1537,6 @@ room_prejoin_state:
 #
 #track_puppeted_user_ips: true
 
-
 # A list of application service config files to use
 #
 #app_service_config_files:
@@ -1566,7 +1547,6 @@ room_prejoin_state:
 # enables MAU tracking for application service users.
 #
 #track_appservice_user_ips: true
-
 
 # a secret which is used to sign access tokens. If none is specified,
 # the registration_shared_secret is used, if one is given; otherwise,
@@ -1661,7 +1641,6 @@ trusted_key_servers:
 # Can contain multiple keys, one per line.
 #
 #key_server_signing_keys_path: "key_server_signing_keys.key"
-
 
 ## Single sign-on integration ##
 
@@ -1840,7 +1819,6 @@ saml2_config:
   # option.
   #
   #idp_entityid: 'https://our_idp/entityid'
-
 
 # List of OpenID Connect (OIDC) / OAuth 2.0 identity providers, for registration
 # and login.
@@ -2034,7 +2012,6 @@ oidc_providers:
   #    - attribute: userGroup
   #      value: "synapseUsers"
 
-
 # Enable Central Authentication Service (CAS) for registration and login.
 #
 cas_config:
@@ -2063,7 +2040,6 @@ cas_config:
   #  userGroup: "staff"
   #  department: None
 
-
 # Additional settings to use with single-sign on systems such as OpenID Connect,
 # SAML2 and CAS.
 #
@@ -2071,36 +2047,35 @@ cas_config:
 # https://matrix-org.github.io/synapse/latest/templates.html for more information.
 #
 sso:
-    # A list of client URLs which are whitelisted so that the user does not
-    # have to confirm giving access to their account to the URL. Any client
-    # whose URL starts with an entry in the following list will not be subject
-    # to an additional confirmation step after the SSO login is completed.
-    #
-    # WARNING: An entry such as "https://my.client" is insecure, because it
-    # will also match "https://my.client.evil.site", exposing your users to
-    # phishing attacks from evil.site. To avoid this, include a slash after the
-    # hostname: "https://my.client/".
-    #
-    # The login fallback page (used by clients that don't natively support the
-    # required login flows) is whitelisted in addition to any URLs in this list.
-    #
-    # By default, this list contains only the login fallback page.
-    #
-    #client_whitelist:
-    #  - https://riot.im/develop
-    #  - https://my.custom.client/
+  # A list of client URLs which are whitelisted so that the user does not
+  # have to confirm giving access to their account to the URL. Any client
+  # whose URL starts with an entry in the following list will not be subject
+  # to an additional confirmation step after the SSO login is completed.
+  #
+  # WARNING: An entry such as "https://my.client" is insecure, because it
+  # will also match "https://my.client.evil.site", exposing your users to
+  # phishing attacks from evil.site. To avoid this, include a slash after the
+  # hostname: "https://my.client/".
+  #
+  # The login fallback page (used by clients that don't natively support the
+  # required login flows) is whitelisted in addition to any URLs in this list.
+  #
+  # By default, this list contains only the login fallback page.
+  #
+  #client_whitelist:
+  #  - https://riot.im/develop
+  #  - https://my.custom.client/
 
-    # Uncomment to keep a user's profile fields in sync with information from
-    # the identity provider. Currently only syncing the displayname is
-    # supported. Fields are checked on every SSO login, and are updated
-    # if necessary.
-    #
-    # Note that enabling this option will override user profile information,
-    # regardless of whether users have opted-out of syncing that
-    # information when first signing in. Defaults to false.
-    #
-    #update_profile_information: true
-
+  # Uncomment to keep a user's profile fields in sync with information from
+  # the identity provider. Currently only syncing the displayname is
+  # supported. Fields are checked on every SSO login, and are updated
+  # if necessary.
+  #
+  # Note that enabling this option will override user profile information,
+  # regardless of whether users have opted-out of syncing that
+  # information when first signing in. Defaults to false.
+  #
+  #update_profile_information: true
 
 # JSON web token integration. The following settings can be used to make
 # Synapse JSON web tokens for authentication, instead of its internal
@@ -2118,122 +2093,120 @@ sso:
 # See https://matrix-org.github.io/synapse/latest/jwt.html.
 #
 #jwt_config:
-    # Uncomment the following to enable authorization using JSON web
-    # tokens. Defaults to false.
+# Uncomment the following to enable authorization using JSON web
+# tokens. Defaults to false.
+#
+#enabled: true
+
+# This is either the private shared secret or the public key used to
+# decode the contents of the JSON web token.
+#
+# Required if 'enabled' is true.
+#
+#secret: "provided-by-your-issuer"
+
+# The algorithm used to sign the JSON web token.
+#
+# Supported algorithms are listed at
+# https://pyjwt.readthedocs.io/en/latest/algorithms.html
+#
+# Required if 'enabled' is true.
+#
+#algorithm: "provided-by-your-issuer"
+
+# Name of the claim containing a unique identifier for the user.
+#
+# Optional, defaults to `sub`.
+#
+#subject_claim: "sub"
+
+# The issuer to validate the "iss" claim against.
+#
+# Optional, if provided the "iss" claim will be required and
+# validated for all JSON web tokens.
+#
+#issuer: "provided-by-your-issuer"
+
+# A list of audiences to validate the "aud" claim against.
+#
+# Optional, if provided the "aud" claim will be required and
+# validated for all JSON web tokens.
+#
+# Note that if the "aud" claim is included in a JSON web token then
+# validation will fail without configuring audiences.
+#
+#audiences:
+#    - "provided-by-your-issuer"
+
+password_config:
+  # Uncomment to disable password login
+  #
+  #enabled: false
+
+  # Uncomment to disable authentication against the local password
+  # database. This is ignored if `enabled` is false, and is only useful
+  # if you have other password_providers.
+  #
+  #localdb_enabled: false
+
+  # Uncomment and change to a secret random string for extra security.
+  # DO NOT CHANGE THIS AFTER INITIAL SETUP!
+  #
+  #pepper: "EVEN_MORE_SECRET"
+
+  # Define and enforce a password policy. Each parameter is optional.
+  # This is an implementation of MSC2000.
+  #
+  policy:
+    # Whether to enforce the password policy.
+    # Defaults to 'false'.
     #
     #enabled: true
 
-    # This is either the private shared secret or the public key used to
-    # decode the contents of the JSON web token.
+    # Minimum accepted length for a password.
+    # Defaults to 0.
     #
-    # Required if 'enabled' is true.
+    #minimum_length: 15
+
+    # Whether a password must contain at least one digit.
+    # Defaults to 'false'.
     #
-    #secret: "provided-by-your-issuer"
+    #require_digit: true
 
-    # The algorithm used to sign the JSON web token.
+    # Whether a password must contain at least one symbol.
+    # A symbol is any character that's not a number or a letter.
+    # Defaults to 'false'.
     #
-    # Supported algorithms are listed at
-    # https://pyjwt.readthedocs.io/en/latest/algorithms.html
+    #require_symbol: true
+
+    # Whether a password must contain at least one lowercase letter.
+    # Defaults to 'false'.
     #
-    # Required if 'enabled' is true.
+    #require_lowercase: true
+
+    # Whether a password must contain at least one uppercase letter.
+    # Defaults to 'false'.
     #
-    #algorithm: "provided-by-your-issuer"
-
-    # Name of the claim containing a unique identifier for the user.
-    #
-    # Optional, defaults to `sub`.
-    #
-    #subject_claim: "sub"
-
-    # The issuer to validate the "iss" claim against.
-    #
-    # Optional, if provided the "iss" claim will be required and
-    # validated for all JSON web tokens.
-    #
-    #issuer: "provided-by-your-issuer"
-
-    # A list of audiences to validate the "aud" claim against.
-    #
-    # Optional, if provided the "aud" claim will be required and
-    # validated for all JSON web tokens.
-    #
-    # Note that if the "aud" claim is included in a JSON web token then
-    # validation will fail without configuring audiences.
-    #
-    #audiences:
-    #    - "provided-by-your-issuer"
-
-
-password_config:
-   # Uncomment to disable password login
-   #
-   #enabled: false
-
-   # Uncomment to disable authentication against the local password
-   # database. This is ignored if `enabled` is false, and is only useful
-   # if you have other password_providers.
-   #
-   #localdb_enabled: false
-
-   # Uncomment and change to a secret random string for extra security.
-   # DO NOT CHANGE THIS AFTER INITIAL SETUP!
-   #
-   #pepper: "EVEN_MORE_SECRET"
-
-   # Define and enforce a password policy. Each parameter is optional.
-   # This is an implementation of MSC2000.
-   #
-   policy:
-      # Whether to enforce the password policy.
-      # Defaults to 'false'.
-      #
-      #enabled: true
-
-      # Minimum accepted length for a password.
-      # Defaults to 0.
-      #
-      #minimum_length: 15
-
-      # Whether a password must contain at least one digit.
-      # Defaults to 'false'.
-      #
-      #require_digit: true
-
-      # Whether a password must contain at least one symbol.
-      # A symbol is any character that's not a number or a letter.
-      # Defaults to 'false'.
-      #
-      #require_symbol: true
-
-      # Whether a password must contain at least one lowercase letter.
-      # Defaults to 'false'.
-      #
-      #require_lowercase: true
-
-      # Whether a password must contain at least one uppercase letter.
-      # Defaults to 'false'.
-      #
-      #require_uppercase: true
+    #require_uppercase: true
 
 ui_auth:
-    # The amount of time to allow a user-interactive authentication session
-    # to be active.
-    #
-    # This defaults to 0, meaning the user is queried for their credentials
-    # before every action, but this can be overridden to allow a single
-    # validation to be re-used.  This weakens the protections afforded by
-    # the user-interactive authentication process, by allowing for multiple
-    # (and potentially different) operations to use the same validation session.
-    #
-    # This is ignored for potentially "dangerous" operations (including
-    # deactivating an account, modifying an account password, and
-    # adding a 3PID).
-    #
-    # Uncomment below to allow for credential validation to last for 15
-    # seconds.
-    #
-    #session_timeout: "15s"
-
+  # The amount of time to allow a user-interactive authentication session
+  # to be active.
+  #
+  # This defaults to 0, meaning the user is queried for their credentials
+  # before every action, but this can be overridden to allow a single
+  # validation to be re-used.  This weakens the protections afforded by
+  # the user-interactive authentication process, by allowing for multiple
+  # (and potentially different) operations to use the same validation session.
+  #
+  # This is ignored for potentially "dangerous" operations (including
+  # deactivating an account, modifying an account password, and
+  # adding a 3PID).
+  #
+  # Uncomment below to allow for credential validation to last for 15
+  # seconds.
+  #
+  #session_timeout: "15s"
 
 # Configuration for sending emails from Synapse.
 #
@@ -2326,64 +2299,62 @@ email:
   #
   #subjects:
 
-    # Subjects for notification emails.
-    #
-    # On top of the '%(app)s' placeholder, these can use the following
-    # placeholders:
-    #
-    #   * '%(person)s', which will be replaced by the display name of the user(s)
-    #      that sent the message(s), e.g. "Alice and Bob".
-    #   * '%(room)s', which will be replaced by the name of the room the
-    #      message(s) have been sent to, e.g. "My super room".
-    #
-    # See the example provided for each setting to see which placeholder can be
-    # used and how to use them.
-    #
-    # Subject to use to notify about one message from one or more user(s) in a
-    # room which has a name.
-    #message_from_person_in_room: "[%(app)s] You have a message on %(app)s from %(person)s in the %(room)s room..."
-    #
-    # Subject to use to notify about one message from one or more user(s) in a
-    # room which doesn't have a name.
-    #message_from_person: "[%(app)s] You have a message on %(app)s from %(person)s..."
-    #
-    # Subject to use to notify about multiple messages from one or more users in
-    # a room which doesn't have a name.
-    #messages_from_person: "[%(app)s] You have messages on %(app)s from %(person)s..."
-    #
-    # Subject to use to notify about multiple messages in a room which has a
-    # name.
-    #messages_in_room: "[%(app)s] You have messages on %(app)s in the %(room)s room..."
-    #
-    # Subject to use to notify about multiple messages in multiple rooms.
-    #messages_in_room_and_others: "[%(app)s] You have messages on %(app)s in the %(room)s room and others..."
-    #
-    # Subject to use to notify about multiple messages from multiple persons in
-    # multiple rooms. This is similar to the setting above except it's used when
-    # the room in which the notification was triggered has no name.
-    #messages_from_person_and_others: "[%(app)s] You have messages on %(app)s from %(person)s and others..."
-    #
-    # Subject to use to notify about an invite to a room which has a name.
-    #invite_from_person_to_room: "[%(app)s] %(person)s has invited you to join the %(room)s room on %(app)s..."
-    #
-    # Subject to use to notify about an invite to a room which doesn't have a
-    # name.
-    #invite_from_person: "[%(app)s] %(person)s has invited you to chat on %(app)s..."
+  # Subjects for notification emails.
+  #
+  # On top of the '%(app)s' placeholder, these can use the following
+  # placeholders:
+  #
+  #   * '%(person)s', which will be replaced by the display name of the user(s)
+  #      that sent the message(s), e.g. "Alice and Bob".
+  #   * '%(room)s', which will be replaced by the name of the room the
+  #      message(s) have been sent to, e.g. "My super room".
+  #
+  # See the example provided for each setting to see which placeholder can be
+  # used and how to use them.
+  #
+  # Subject to use to notify about one message from one or more user(s) in a
+  # room which has a name.
+  #message_from_person_in_room: "[%(app)s] You have a message on %(app)s from %(person)s in the %(room)s room..."
+  #
+  # Subject to use to notify about one message from one or more user(s) in a
+  # room which doesn't have a name.
+  #message_from_person: "[%(app)s] You have a message on %(app)s from %(person)s..."
+  #
+  # Subject to use to notify about multiple messages from one or more users in
+  # a room which doesn't have a name.
+  #messages_from_person: "[%(app)s] You have messages on %(app)s from %(person)s..."
+  #
+  # Subject to use to notify about multiple messages in a room which has a
+  # name.
+  #messages_in_room: "[%(app)s] You have messages on %(app)s in the %(room)s room..."
+  #
+  # Subject to use to notify about multiple messages in multiple rooms.
+  #messages_in_room_and_others: "[%(app)s] You have messages on %(app)s in the %(room)s room and others..."
+  #
+  # Subject to use to notify about multiple messages from multiple persons in
+  # multiple rooms. This is similar to the setting above except it's used when
+  # the room in which the notification was triggered has no name.
+  #messages_from_person_and_others: "[%(app)s] You have messages on %(app)s from %(person)s and others..."
+  #
+  # Subject to use to notify about an invite to a room which has a name.
+  #invite_from_person_to_room: "[%(app)s] %(person)s has invited you to join the %(room)s room on %(app)s..."
+  #
+  # Subject to use to notify about an invite to a room which doesn't have a
+  # name.
+  #invite_from_person: "[%(app)s] %(person)s has invited you to chat on %(app)s..."
 
-    # Subject for emails related to account administration.
-    #
-    # On top of the '%(app)s' placeholder, these one can use the
-    # '%(server_name)s' placeholder, which will be replaced by the value of the
-    # 'server_name' setting in your Synapse configuration.
-    #
-    # Subject to use when sending a password reset email.
-    #password_reset: "[%(server_name)s] Password reset"
-    #
-    # Subject to use when sending a verification email to assert an address's
-    # ownership.
-    #email_validation: "[%(server_name)s] Validate your email"
-
-
+  # Subject for emails related to account administration.
+  #
+  # On top of the '%(app)s' placeholder, these one can use the
+  # '%(server_name)s' placeholder, which will be replaced by the value of the
+  # 'server_name' setting in your Synapse configuration.
+  #
+  # Subject to use when sending a password reset email.
+  #password_reset: "[%(server_name)s] Password reset"
+  #
+  # Subject to use when sending a verification email to assert an address's
+  # ownership.
+  #email_validation: "[%(server_name)s] Validate your email"
 
 ## Push ##
 
@@ -2415,7 +2386,6 @@ push:
   #
   #group_unread_count_by_room: false
 
-
 ## Rooms ##
 
 # Controls whether locally-created rooms should be end-to-end encrypted by
@@ -2435,7 +2405,6 @@ push:
 #
 #encryption_enabled_by_default_for_room_type: invite
 
-
 # Uncomment to allow non-server-admin users to create groups on this server
 #
 #enable_group_creation: true
@@ -2445,44 +2414,41 @@ push:
 #
 #group_creation_prefix: "unofficial_"
 
-
-
 # User Directory configuration
 #
 user_directory:
-    # Defines whether users can search the user directory. If false then
-    # empty responses are returned to all queries. Defaults to true.
-    #
-    # Uncomment to disable the user directory.
-    #
-    #enabled: false
+  # Defines whether users can search the user directory. If false then
+  # empty responses are returned to all queries. Defaults to true.
+  #
+  # Uncomment to disable the user directory.
+  #
+  #enabled: false
 
-    # Defines whether to search all users visible to your HS when searching
-    # the user directory. If false, search results will only contain users
-    # visible in public rooms and users sharing a room with the requester.
-    # Defaults to false.
-    #
-    # NB. If you set this to true, and the last time the user_directory search
-    # indexes were (re)built was before Synapse 1.44, you'll have to
-    # rebuild the indexes in order to search through all known users.
-    # These indexes are built the first time Synapse starts; admins can
-    # manually trigger a rebuild via API following the instructions at
-    #     https://matrix-org.github.io/synapse/latest/usage/administration/admin_api/background_updates.html#run
-    #
-    # Uncomment to return search results containing all known users, even if that
-    # user does not share a room with the requester.
-    #
-    #search_all_users: true
+  # Defines whether to search all users visible to your HS when searching
+  # the user directory. If false, search results will only contain users
+  # visible in public rooms and users sharing a room with the requester.
+  # Defaults to false.
+  #
+  # NB. If you set this to true, and the last time the user_directory search
+  # indexes were (re)built was before Synapse 1.44, you'll have to
+  # rebuild the indexes in order to search through all known users.
+  # These indexes are built the first time Synapse starts; admins can
+  # manually trigger a rebuild via API following the instructions at
+  #     https://matrix-org.github.io/synapse/latest/usage/administration/admin_api/background_updates.html#run
+  #
+  # Uncomment to return search results containing all known users, even if that
+  # user does not share a room with the requester.
+  #
+  #search_all_users: true
 
-    # Defines whether to prefer local users in search query results.
-    # If True, local users are more likely to appear above remote users
-    # when searching the user directory. Defaults to false.
-    #
-    # Uncomment to prefer local over remote users in user directory search
-    # results.
-    #
-    #prefer_local_users: true
-
+  # Defines whether to prefer local users in search query results.
+  # If True, local users are more likely to appear above remote users
+  # when searching the user directory. Defaults to false.
+  #
+  # Uncomment to prefer local over remote users in user directory search
+  # results.
+  #
+  #prefer_local_users: true
 
 # User Consent configuration
 #
@@ -2534,8 +2500,6 @@ user_directory:
 #  policy_name: Privacy Policy
 #
 
-
-
 # Settings for local room and user statistics collection. See
 # https://matrix-org.github.io/synapse/latest/room_and_user_statistics.html.
 #
@@ -2545,7 +2509,6 @@ stats:
   # correctly.
   #
   #enabled: false
-
 
 # Server Notices room configuration
 #
@@ -2565,8 +2528,6 @@ stats:
 #  system_mxid_display_name: "Server Notices"
 #  system_mxid_avatar_url: "mxc://server.com/oumMVlgDnLYFaPVkExemNVVZ"
 #  room_name: "Server Notices"
-
-
 
 # Uncomment to disable searching the public room list. When disabled
 # blocks searching local and remote room lists for local and remote
@@ -2631,7 +2592,6 @@ stats:
 #    room_id: "*"
 #    action: allow
 
-
 ## Opentracing ##
 
 # These settings enable opentracing, which implements distributed tracing.
@@ -2641,44 +2601,43 @@ stats:
 # (specifically those implemented with Jaeger).
 #
 opentracing:
-    # tracing is disabled by default. Uncomment the following line to enable it.
-    #
-    #enabled: true
+  # tracing is disabled by default. Uncomment the following line to enable it.
+  #
+  #enabled: true
 
-    # The list of homeservers we wish to send and receive span contexts and span baggage.
-    # See https://matrix-org.github.io/synapse/latest/opentracing.html.
-    #
-    # This is a list of regexes which are matched against the server_name of the
-    # homeserver.
-    #
-    # By default, it is empty, so no servers are matched.
-    #
-    #homeserver_whitelist:
-    #  - ".*"
+  # The list of homeservers we wish to send and receive span contexts and span baggage.
+  # See https://matrix-org.github.io/synapse/latest/opentracing.html.
+  #
+  # This is a list of regexes which are matched against the server_name of the
+  # homeserver.
+  #
+  # By default, it is empty, so no servers are matched.
+  #
+  #homeserver_whitelist:
+  #  - ".*"
 
-    # A list of the matrix IDs of users whose requests will always be traced,
-    # even if the tracing system would otherwise drop the traces due to
-    # probabilistic sampling.
-    #
-    # By default, the list is empty.
-    #
-    #force_tracing_for_users:
-    #  - "@user1:server_name"
-    #  - "@user2:server_name"
+  # A list of the matrix IDs of users whose requests will always be traced,
+  # even if the tracing system would otherwise drop the traces due to
+  # probabilistic sampling.
+  #
+  # By default, the list is empty.
+  #
+  #force_tracing_for_users:
+  #  - "@user1:server_name"
+  #  - "@user2:server_name"
 
-    # Jaeger can be configured to sample traces at different rates.
-    # All configuration options provided by Jaeger can be set here.
-    # Jaeger's configuration is mostly related to trace sampling which
-    # is documented here:
-    # https://www.jaegertracing.io/docs/latest/sampling/.
-    #
-    #jaeger_config:
-    #  sampler:
-    #    type: const
-    #    param: 1
-    #  logging:
-    #    false
-
+  # Jaeger can be configured to sample traces at different rates.
+  # All configuration options provided by Jaeger can be set here.
+  # Jaeger's configuration is mostly related to trace sampling which
+  # is documented here:
+  # https://www.jaegertracing.io/docs/latest/sampling/.
+  #
+  #jaeger_config:
+  #  sampler:
+  #    type: const
+  #    param: 1
+  #  logging:
+  #    false
 
 ## Workers ##
 
@@ -2726,7 +2685,6 @@ opentracing:
 #
 #worker_replication_secret: ""
 
-
 # Configuration for Redis when using workers. This *must* be enabled when
 # using workers (unless using old style direct TCP configuration).
 #
@@ -2745,7 +2703,6 @@ redis:
   #
   #password: <secret_password>
 
-
 ## Background Updates ##
 
 # Background updates are database updates that are run in the background in batches.
@@ -2753,29 +2710,27 @@ redis:
 # sleep can all be configured. This is helpful to speed up or slow down the updates.
 #
 background_updates:
-    # How long in milliseconds to run a batch of background updates for. Defaults to 100. Uncomment and set
-    # a time to change the default.
-    #
-    #background_update_duration_ms: 500
+  # How long in milliseconds to run a batch of background updates for. Defaults to 100. Uncomment and set
+  # a time to change the default.
+  #
+  #background_update_duration_ms: 500
 
-    # Whether to sleep between updates. Defaults to True. Uncomment to change the default.
-    #
-    #sleep_enabled: false
+  # Whether to sleep between updates. Defaults to True. Uncomment to change the default.
+  #
+  #sleep_enabled: false
 
-    # If sleeping between updates, how long in milliseconds to sleep for. Defaults to 1000. Uncomment
-    # and set a duration to change the default.
-    #
-    #sleep_duration_ms: 300
+  # If sleeping between updates, how long in milliseconds to sleep for. Defaults to 1000. Uncomment
+  # and set a duration to change the default.
+  #
+  #sleep_duration_ms: 300
 
-    # Minimum size a batch of background updates can be. Must be greater than 0. Defaults to 1. Uncomment and
-    # set a size to change the default.
-    #
-    #min_batch_size: 10
+  # Minimum size a batch of background updates can be. Must be greater than 0. Defaults to 1. Uncomment and
+  # set a size to change the default.
+  #
+  #min_batch_size: 10
 
-    # The batch size to use for the first iteration of a new background update. The default is 100.
-    # Uncomment and set a size to change the default.
-    #
-    #default_batch_size: 50
-
-
+  # The batch size to use for the first iteration of a new background update. The default is 100.
+  # Uncomment and set a size to change the default.
+  #
+  #default_batch_size: 50
 # vim:ft=yaml

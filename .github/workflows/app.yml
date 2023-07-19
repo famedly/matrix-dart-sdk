@@ -1,0 +1,98 @@
+name: "All the sdk specific jobs"
+
+on:
+  workflow_call:
+    inputs:
+      flutter_version:
+        description: "The flutter version used for tests and builds"
+        type: string
+        required: true
+      dart_version:
+        description: "The dart version used for tests and builds"
+        type: string
+        required: true
+
+jobs:
+  e2ee_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        homeserver: [synapse, dendrite, conduit]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run tests
+        run: |
+          export NETWORK='--network mynet'
+          docker network create mynet
+          # deploy homeserver instance
+          scripts/integration-server-${{matrix.homeserver}}.sh
+          docker run $NETWORK --env GITHUB_ACTIONS="${GITHUB_ACTIONS}" --env HOMESERVER_IMPLEMENTATION="${{matrix.homeserver}}" --env HOMESERVER="${{startsWith('dendrite', matrix.homeserver) && format('{0}:8008', matrix.homeserver) || matrix.homeserver }}" --volume="$(pwd):/workdir" --workdir /workdir ghcr.io/famedly/container-image-flutter/flutter:${{inputs.flutter_version}} /bin/bash -c "set -e
+          scripts/integration-prepare-alpine.sh
+          # create test user environment variables
+          source scripts/integration-create-environment-variables.sh
+          # properly set the homeserver IP and create test users
+          scripts/integration-prepare-homeserver.sh 
+          # setup OLM
+          scripts/prepare.sh
+          scripts/test_driver.sh"
+
+# coverage is done on the flutter image because we setup olm there
+# coverage_without_olm is done on dart images because why not :D
+  coverage:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/famedly/container-image-flutter/flutter:${{inputs.flutter_version}}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run tests
+        run: |
+          sed -i 's/#flutter_test/flutter_test/g' pubspec.yaml
+          rm -r example
+          ./scripts/prepare.sh
+          ./scripts/test.sh
+
+  coverage_without_olm:
+    runs-on: ubuntu-latest
+    container:
+      image: dart:${{inputs.dart_version}}
+    env:
+      NO_OLM: 1
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run tests
+        run: |
+          apt-get update && apt-get install --no-install-recommends --no-install-suggests -y curl lcov python3 python3-distutils
+          curl -o /bin/lcov_cobertura.py https://raw.githubusercontent.com/eriwen/lcov-to-cobertura-xml/master/lcov_cobertura/lcov_cobertura.py && sed 's/env python/env python3/' -i /bin/lcov_cobertura.py && chmod +x /bin/lcov_cobertura.py
+          dart pub get
+          ./scripts/test.sh
+
+  pub-dev-dry-run:
+    runs-on: ubuntu-latest
+    container:
+      image: dart:${{inputs.dart_version}}
+    steps:
+      - uses: actions/checkout@v3
+      - name: pub.dev publish dry run
+        run: |
+          dart pub get
+          dart pub publish --dry-run
+
+  pub-dev:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    container:
+      image: dart:${{inputs.dart_version}}
+    steps:
+      - uses: actions/checkout@v3
+      - name: pub.dev publish
+        run: |
+          if [ -z ${{ secrets.PUB_DEV_CREDENTIALS }}" ]; then
+            echo "Missing PUB_DEV_CREDENTIALS environment variable"
+            exit 1
+          fi
+          
+          mkdir -p ~/.config/dart/
+          cp "${{ secrets.PUB_DEV_CREDENTIALS }}" ~/.config/dart/pub-credentials.json
+
+          dart pub get
+          dart pub publish --force
