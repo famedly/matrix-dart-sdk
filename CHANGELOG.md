@@ -1,3 +1,10 @@
+## [0.22.1] - 19th July 2023
+
+- chore: add pub release job (td)
+- chore: add dependabot (Niklas Zender)
+- feat: Use github actions (Nicolas Werner)
+- fix: do not proceed call if getUserMedia fails (td)
+
 ## [0.22.0] - 4th July 2023
 
 - chore: pass event to redactedAnEvent and removedBy (td)
