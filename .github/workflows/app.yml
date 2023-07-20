@@ -41,7 +41,7 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/famedly/container-image-flutter/flutter:${{inputs.flutter_version}}
+      image: ghcr.io/famedly/container-image-flutter/flutter-linux:${{inputs.flutter_version}}
     steps:
       - uses: actions/checkout@v3
       - name: Run tests
