@@ -36,12 +36,13 @@ jobs:
           scripts/prepare.sh
           scripts/test_driver.sh"
 
-# coverage is done on the flutter image because we setup olm there
+# coverage is done on the flutter-linux image because we setup olm there
 # coverage_without_olm is done on dart images because why not :D
   coverage:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/famedly/container-image-flutter/flutter-linux:${{inputs.flutter_version}}
+      options: --user root
     steps:
       - uses: actions/checkout@v3
       - name: Run tests
