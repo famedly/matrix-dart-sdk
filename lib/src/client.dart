@@ -176,6 +176,7 @@ class Client extends MatrixApi {
     this.shareKeysWithUnverifiedDevices = true,
     this.enableDehydratedDevices = false,
     this.receiptsPublicByDefault = true,
+    this.enableStaleCallChecker = true,
   })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
@@ -263,6 +264,9 @@ class Client extends MatrixApi {
 
   /// Wether read receipts are sent as public receipts by default or just as private receipts.
   bool receiptsPublicByDefault = true;
+
+  /// Whether this client should should check for stale group calls by default.
+  bool enableStaleCallChecker = true;
 
   /// Whether this client supports end-to-end encryption using olm.
   bool get encryptionEnabled => encryption?.enabled == true;

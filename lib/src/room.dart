@@ -137,7 +137,7 @@ class Room {
         setState(state);
       }
     }
-    if (!isArchived) {
+    if (!isArchived && client.enableStaleCallChecker) {
       startStaleCallsChecker(id);
     }
     partial = false;
