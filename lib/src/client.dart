@@ -1109,8 +1109,11 @@ class Client extends MatrixApi {
       // https://gitlab.com/famedly/company/frontend/famedlysdk/-/issues/254
       return setAvatarUrl(userID!, Uri.parse(''));
     }
+    if (file.bytes == null) {
+      return ;
+    }
     final uploadResp = await uploadContent(
-      file.bytes,
+      file.bytes!,
       filename: file.name,
       contentType: file.mimeType,
     );
