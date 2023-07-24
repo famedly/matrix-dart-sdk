@@ -369,50 +369,50 @@ class Event extends MatrixEvent {
   }
 
   /// Try to send this event again. Only works with events of status -1.
-  Future<String?> sendAgain({String? txid}) async {
-    if (!status.isError) return null;
+  // Future<String?> sendAgain({String? txid}) async {
+  //   if (!status.isError) return null;
 
-    // Retry sending a file:
-    if ({
-      MessageTypes.Image,
-      MessageTypes.Video,
-      MessageTypes.Audio,
-      MessageTypes.File,
-    }.contains(messageType)) {
-      final file = room.sendingFilePlaceholders[eventId];
-      if (file == null) {
-        await remove();
-        throw Exception('Can not try to send again. File is no longer cached.');
-      }
-      final thumbnail = room.sendingFileThumbnails[eventId];
-      final credentials = FileSendRequestCredentials.fromJson(unsigned ?? {});
-      final inReplyTo = credentials.inReplyTo == null
-          ? null
-          : await room.getEventById(credentials.inReplyTo!);
-      txid ??= unsigned?.tryGet<String>('transaction_id');
-      return await room.sendFileEvent(
-        file,
-        txid: txid,
-        thumbnail: thumbnail,
-        inReplyTo: inReplyTo,
-        editEventId: credentials.editEventId,
-        shrinkImageMaxDimension: credentials.shrinkImageMaxDimension,
-        extraContent: credentials.extraContent,
-      );
-    }
+  //   // Retry sending a file:
+  //   if ({
+  //     MessageTypes.Image,
+  //     MessageTypes.Video,
+  //     MessageTypes.Audio,
+  //     MessageTypes.File,
+  //   }.contains(messageType)) {
+  //     final file = room.sendingFilePlaceholders[eventId];
+  //     if (file == null) {
+  //       await remove();
+  //       throw Exception('Can not try to send again. File is no longer cached.');
+  //     }
+  //     final thumbnail = room.sendingFileThumbnails[eventId];
+  //     final credentials = FileSendRequestCredentials.fromJson(unsigned ?? {});
+  //     final inReplyTo = credentials.inReplyTo == null
+  //         ? null
+  //         : await room.getEventById(credentials.inReplyTo!);
+  //     txid ??= unsigned?.tryGet<String>('transaction_id');
+  //     return await room.sendFileEvent(
+  //       file,
+  //       txid: txid,
+  //       thumbnail: thumbnail,
+  //       inReplyTo: inReplyTo,
+  //       editEventId: credentials.editEventId,
+  //       shrinkImageMaxDimension: credentials.shrinkImageMaxDimension,
+  //       extraContent: credentials.extraContent,
+  //     );
+  //   }
 
-    String transactionId = eventId;
-    if (unsigned?['transaction_id'] is String) {
-      transactionId = unsigned?['transaction_id'] as String;
-    }
+  //   String transactionId = eventId;
+  //   if (unsigned?['transaction_id'] is String) {
+  //     transactionId = unsigned?['transaction_id'] as String;
+  //   }
 
-    // we do not remove the event here. It will automatically be updated
-    // in the `sendEvent` method to transition -1 -> 0 -> 1 -> 2
-    return await room.sendEvent(
-      content,
-      txid: txid ?? transactionId,
-    );
-  }
+  //   // we do not remove the event here. It will automatically be updated
+  //   // in the `sendEvent` method to transition -1 -> 0 -> 1 -> 2
+  //   return await room.sendEvent(
+  //     content,
+  //     txid: txid ?? transactionId,
+  //   );
+  // }
 
   /// Whether the client is allowed to redact this event.
   bool get canRedact => senderId == room.client.userID || room.canRedact;
