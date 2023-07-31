@@ -182,8 +182,6 @@ class KeyManager {
       if (uploaded) {
         await client.database
             ?.markInboundGroupSessionAsUploaded(roomId, sessionId);
-      } else {
-        _haveKeysToUpload = true;
       }
     });
     final room = client.getRoomById(roomId);
@@ -750,7 +748,6 @@ class KeyManager {
   }
 
   bool _isUploadingKeys = false;
-  bool _haveKeysToUpload = true;
 
   Future<void> backgroundTasks() async {
     final database = client.database;
@@ -760,12 +757,11 @@ class KeyManager {
     }
     _isUploadingKeys = true;
     try {
-      if (!_haveKeysToUpload || !(await isCached())) {
+      if (!(await isCached())) {
         return; // we can't backup anyways
       }
       final dbSessions = await database.getInboundGroupSessionsToUpload();
       if (dbSessions.isEmpty) {
-        _haveKeysToUpload = false;
         return; // nothing to do
       }
       final privateKey =
