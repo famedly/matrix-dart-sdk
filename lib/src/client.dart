@@ -2245,12 +2245,21 @@ class Client extends MatrixApi {
   /// The compare function how the rooms should be sorted internally. By default
   /// rooms are sorted by timestamp of the last m.room.message event or the last
   /// event if there is no known message.
-  RoomSorter get sortRoomsBy => (a, b) => (a.isFavourite != b.isFavourite)
-      ? (a.isFavourite ? -1 : 1)
-      : (pinUnreadRooms && a.notificationCount != b.notificationCount)
-          ? b.notificationCount.compareTo(a.notificationCount)
-          : b.timeCreated.millisecondsSinceEpoch
+  RoomSorter get sortRoomsBy => (a, b) {
+        if (pinInvitedRooms &&
+            a.membership != b.membership &&
+            [a.membership, b.membership].any((m) => m == Membership.invite)) {
+          return a.membership == Membership.invite ? -1 : 1;
+        } else if (a.isFavourite != b.isFavourite) {
+          return a.isFavourite ? -1 : 1;
+        } else if (pinUnreadRooms &&
+            a.notificationCount != b.notificationCount) {
+          return b.notificationCount.compareTo(a.notificationCount);
+        } else {
+          return b.timeCreated.millisecondsSinceEpoch
               .compareTo(a.timeCreated.millisecondsSinceEpoch);
+        }
+      };
 
   void _sortRooms() {
     if (_sortLock || rooms.length < 2) return;
