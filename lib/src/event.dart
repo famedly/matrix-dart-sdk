@@ -332,7 +332,7 @@ class Event extends MatrixEvent {
         .toList();
 
     final own = receipts.global.latestOwnReceipt;
-    if (own != null) {
+    if (own != null && own.eventId == eventId) {
       receiptsList.add(Receipt(
           room.unsafeGetUserFromMemoryOrFallback(room.client.userID!),
           own.timestamp));
