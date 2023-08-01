@@ -102,17 +102,11 @@ class UiaRequest<T> {
       List<AuthenticationFlow> flows, List<String> completed) {
     final nextStages = <String>{};
     for (final flow in flows) {
-      final stages = flow.stages;
-      final nextStage = stages[completed.length];
-      var stagesValid = true;
-      for (var i = 0; i < completed.length; i++) {
-        if (stages[i] != completed[i]) {
-          stagesValid = false;
-          break;
-        }
-      }
-      if (stagesValid) {
-        nextStages.add(nextStage);
+      // check the flow starts with the completed stages
+      if (flow.stages.length >= completed.length &&
+          flow.stages.take(completed.length).toSet().containsAll(completed)) {
+        final stages = flow.stages.skip(completed.length);
+        if (stages.isNotEmpty) nextStages.add(stages.first);
       }
     }
     return nextStages;
