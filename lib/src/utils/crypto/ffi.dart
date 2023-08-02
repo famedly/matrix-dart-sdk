@@ -19,6 +19,8 @@
 import 'dart:ffi';
 import 'dart:io';
 
+import 'package:ffi/ffi.dart';
+
 final libcrypto = () {
   if (Platform.isIOS) {
     return DynamicLibrary.process();
@@ -81,13 +83,13 @@ final EVP_CIPHER_CTX_new = libcrypto.lookupFunction<
     Pointer<NativeType> Function()>('EVP_CIPHER_CTX_new');
 
 final EVP_EncryptInit_ex = libcrypto.lookupFunction<
-    Pointer<NativeType> Function(
+    IntPtr Function(
         Pointer<NativeType> ctx,
         Pointer<NativeType> alg,
         Pointer<NativeType> some,
         Pointer<Uint8> key,
         Pointer<Uint8> iv),
-    Pointer<NativeType> Function(
+    int Function(
         Pointer<NativeType> ctx,
         Pointer<NativeType> alg,
         Pointer<NativeType> some,
@@ -95,9 +97,9 @@ final EVP_EncryptInit_ex = libcrypto.lookupFunction<
         Pointer<Uint8> iv)>('EVP_EncryptInit_ex');
 
 final EVP_EncryptUpdate = libcrypto.lookupFunction<
-    Pointer<NativeType> Function(Pointer<NativeType> ctx, Pointer<Uint8> output,
+    IntPtr Function(Pointer<NativeType> ctx, Pointer<Uint8> output,
         Pointer<IntPtr> outputLen, Pointer<Uint8> input, IntPtr inputLen),
-    Pointer<NativeType> Function(
+    int Function(
         Pointer<NativeType> ctx,
         Pointer<Uint8> output,
         Pointer<IntPtr> outputLen,
@@ -130,6 +132,50 @@ final EVP_Digest = libcrypto.lookupFunction<
         Pointer<IntPtr> hsize,
         Pointer<NativeType> alg,
         Pointer<NativeType> engine)>('EVP_Digest');
+
+final EVP_MD_CTX_new = libcrypto.lookupFunction<
+    Pointer<NativeType> Function(),
+    Pointer<NativeType> Function()>('EVP_MD_CTX_new');
+
+final EVP_get_digestbyname = libcrypto.lookupFunction<
+    Pointer<NativeType> Function(Pointer<Utf8> name),
+    Pointer<NativeType> Function(Pointer<Utf8> name)
+  >('EVP_get_digestbyname');
+
+final EVP_DigestInit_ex = libcrypto.lookupFunction<
+  IntPtr Function(
+    Pointer<NativeType> ctx,
+    Pointer<NativeType> type,
+    Pointer<NativeType> engine),
+  int Function(
+    Pointer<NativeType> ctx,
+    Pointer<NativeType> type,
+    Pointer<NativeType> engine)>('EVP_DigestInit_ex');
+
+final EVP_DigestUpdate = libcrypto.lookupFunction<
+  IntPtr Function(
+    Pointer<NativeType> ctx,
+    Pointer<NativeType> d,
+    IntPtr cnt),
+  int Function(
+    Pointer<NativeType> ctx,
+    Pointer<NativeType> d,
+    int cnt)>('EVP_DigestUpdate');
+
+final EVP_DigestFinal_ex = libcrypto.lookupFunction<
+  IntPtr Function(
+    Pointer<NativeType> ctx,
+    Pointer<Uint8> md,
+    Pointer<Uint8> s
+  ),
+  int Function(
+    Pointer<NativeType> ctx,
+    Pointer<Uint8> md,
+    Pointer<Uint8> s)>('EVP_DigestFinal_ex');
+
+final EVP_MD_CTX_free = libcrypto.lookupFunction<
+  Pointer<NativeType> Function(Pointer<NativeType> ctx),
+  Pointer<NativeType> Function(Pointer<NativeType> ctx)>('EVP_MD_CTX_free');
 
 final EVP_MD_size = () {
   // EVP_MD_size was renamed to EVP_MD_get_size in Openssl3.0.
