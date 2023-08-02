@@ -1,10 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
+import 'package:matrix/encryption/utils/base64_unpadded.dart';
+import 'package:matrix/src/utils/crypto/base64.dart';
 
 import 'package:matrix/src/utils/crypto/ffi.dart';
+import 'package:matrix/src/utils/models/encrypted_file_info.dart';
+import 'package:matrix/src/utils/models/encrypted_file_key.dart';
 
 abstract class Hash {
   Hash._(this.ptr);
@@ -41,6 +47,14 @@ class _Sha512 extends Hash {
 }
 
 abstract class Cipher {
+
+  static const String keyType = 'oct';
+  static const String algorithmName = 'A256CTR';
+  static const String messageDigestAlgorithm = 'sha256';
+  static const String version = 'v2';
+  static const int maxHashSize = 32;
+  static const int memorySizeForHashSizePointer = 1;
+
   Cipher._();
   Pointer<NativeType> getAlg(int keysize);
   FutureOr<Uint8List> encrypt(Uint8List input, Uint8List key, Uint8List iv) {
@@ -64,6 +78,211 @@ abstract class Cipher {
     } finally {
       malloc.free(mem);
     }
+  }
+
+  Future<EncryptedFileInfo> encryptStream({
+    required Stream<List<int>> inputStream,
+    required File outputFile,
+    required Uint8List key, 
+    required Uint8List initialVector,
+  }) async {
+    final algorithm = getAlg(key.length * 8);
+
+    final memSize = sizeOf<IntPtr>() + key.length + initialVector.length + maxHashSize + memorySizeForHashSizePointer;
+    final memNeeded = malloc.call<Uint8>(memSize);
+
+    final intPointer = memNeeded.cast<IntPtr>();
+    final keyPointer = memNeeded.elementAt(sizeOf<IntPtr>());
+    final initialVectorPointer = keyPointer.elementAt(key.length);
+    final hashValuePointer = initialVectorPointer.elementAt(initialVector.length);
+    final hashSizePointer = hashValuePointer.elementAt(maxHashSize);
+    
+    IOSink? outIoSink;
+    final cipherContext = EVP_CIPHER_CTX_new();
+    final mdHashContext = EVP_MD_CTX_new();
+    final digestName = getDigestName();
+    try {
+      outIoSink = outputFile.openWrite();
+      keyPointer.asTypedList(key.length).setAll(0, key);
+      initialVectorPointer.asTypedList(initialVector.length).setAll(0, initialVector);
+      
+      if (EVP_EncryptInit_ex(cipherContext, algorithm, nullptr, keyPointer, initialVectorPointer) == 0) {
+        throw Exception('encryptStream::EVP_EncryptInit_ex Failed');
+      }
+      if (EVP_DigestInit_ex(mdHashContext, digestName, nullptr) == 0) {
+        throw Exception('encryptStream::EVP_DigestInit_ex Failed');
+      }
+      
+      await encryptAndHashData(
+        inputStream: inputStream,
+        cipherContext: cipherContext,
+        mDHashContext: mdHashContext,
+        outIoSink: outIoSink,
+        intPointer: intPointer,
+      );
+      
+      final hashBase64Encoded = getHashBase64Encoded(hashSizePointer, mdHashContext, hashValuePointer);
+
+      return EncryptedFileInfo(
+        key: createEncryptedFileKey(algorithmName, key),
+        version: version,
+        initialVector: base64.encode(initialVector),
+        hashes: {
+          messageDigestAlgorithm: hashBase64Encoded,  
+        }
+      );
+    } catch (e) {
+      throw Exception(e);
+    } finally {
+      malloc.free(memNeeded);
+      freeContexts(mdHashContext, cipherContext);
+      await outIoSink?.close();
+    }
+  }
+
+  Pointer<NativeType> getDigestName() {
+    final digestAlgo = messageDigestAlgorithm.toNativeUtf8();
+    final digestName = EVP_get_digestbyname(digestAlgo);
+    if (digestName == nullptr) {
+      throw Exception('getDigestName():: EVP_get_digestbyname failed');
+    }
+    calloc.free(digestAlgo);
+    return digestName;
+  }
+
+  Future<void> encryptAndHashData({
+    required Stream<List<int>> inputStream,
+    required Pointer<NativeType> cipherContext,
+    required Pointer<IntPtr> intPointer,
+    required IOSink? outIoSink,
+    required Pointer<NativeType> mDHashContext,
+  }) async {
+    await inputStream.forEach((bytes) {
+      final memData = malloc.call<Uint8>(bytes.length);
+      final dataPointer = memData.elementAt(0);
+      dataPointer.asTypedList(bytes.length).setAll(0, bytes);
+
+      if (EVP_EncryptUpdate(cipherContext, dataPointer, intPointer, dataPointer, bytes.length) == 0) {
+        malloc.free(memData);
+        throw Exception('encryptStream::EVP_EncryptUpdate Failed');
+      }
+
+      outIoSink!.add(Uint8List.fromList(dataPointer.asTypedList(bytes.length)));
+      if (EVP_DigestUpdate(mDHashContext, dataPointer, bytes.length) == 0) {
+        malloc.free(memData);
+        throw Exception('encryptStream::EVP_DigestUpdate Failed');
+      }
+      malloc.free(memData);
+    });
+  }
+
+  String getHashBase64Encoded(Pointer<Uint8> hashSize, Pointer<NativeType> mdHashContext, Pointer<Uint8> hashValue) {
+    final maxHashLengthSize = EVP_MD_size(EVP_sha256());
+    hashSize.asTypedList(1).setAll(0, [maxHashLengthSize]);
+    if (EVP_DigestFinal_ex(mdHashContext, hashValue, hashSize) == 0) {
+      throw Exception('encryptStream::EVP_DigestFinal_ex Failed');
+    }
+    
+    final hashValueBytes = Uint8List.fromList(hashValue.asTypedList(maxHashLengthSize));
+    return base64.encode(hashValueBytes).toUnpaddedBase64();
+  }
+
+  EncryptedFileKey createEncryptedFileKey(String algorithmName, Uint8List keyBytes) {
+    return EncryptedFileKey(
+      algorithrm: algorithmName,
+      key: base64Url.encode(keyBytes).toBase64Url(),
+      extractable: true,
+      keyOperations: [KeyOperation.encrypt, KeyOperation.decrypt],
+      keyType: keyType,
+    );
+  }
+
+  void freeContexts(Pointer<NativeType> mdHashContext, Pointer<NativeType> cipherContext) {
+    EVP_MD_CTX_free(mdHashContext);
+    EVP_CIPHER_CTX_free(cipherContext);
+  }
+
+  Future<bool> decryptStream({
+    required Stream<List<int>> inputStream,
+    required File outputFile,
+    required EncryptedFileInfo encryptedFileInfo,
+  }) async {
+    final keyDecoded = _base64decodeUnpadded(encryptedFileInfo.key.key);
+    final initialVectorDecoded = _base64decodeUnpadded(encryptedFileInfo.initialVector);
+    final algorithm = getAlg(keyDecoded.length * 8);
+
+    final memSize = sizeOf<IntPtr>() + keyDecoded.length + initialVectorDecoded.length + maxHashSize + memorySizeForHashSizePointer;
+    final memNeeded = malloc.call<Uint8>(memSize);
+    
+    final intPointer = memNeeded.cast<IntPtr>();
+    final keyPointer = memNeeded.elementAt(sizeOf<IntPtr>());
+    final initialVectorPointer = keyPointer.elementAt(keyDecoded.length);
+    final hashValuePointer = initialVectorPointer.elementAt(maxHashSize);
+    final hashSizePointer = hashValuePointer.elementAt(maxHashSize);
+
+    IOSink? outIoSink;
+    final cipherContext = EVP_CIPHER_CTX_new();
+    final mDHashContext = EVP_MD_CTX_new();
+    final digestName = getDigestName();
+    try {
+      outIoSink = outputFile.openWrite();
+      keyPointer.asTypedList(keyDecoded.length).setAll(0, keyDecoded);
+      initialVectorPointer.asTypedList(initialVectorDecoded.length).setAll(0, initialVectorDecoded);
+      
+      if (EVP_EncryptInit_ex(cipherContext, algorithm, nullptr, keyPointer, initialVectorPointer) == 0) {
+        throw Exception('decryptStream::EVP_EncryptInit_ex failed');
+      }
+
+      if (EVP_DigestInit_ex(mDHashContext, digestName, nullptr) == 0) {
+        throw Exception('decryptStream::EVP_DigestInit_ex failed');
+      }
+
+      await decryptAndHashData(
+        inputStream: inputStream,
+        cipherContext: cipherContext,
+        mDHashContext: mDHashContext,
+        outIoSink: outIoSink,
+        intPointer: intPointer,
+      );
+
+      final hashBase64Encoded = getHashBase64Encoded(hashSizePointer, mDHashContext, hashValuePointer);
+
+      return hashBase64Encoded == encryptedFileInfo.hashes[messageDigestAlgorithm];
+    } catch (e) {
+      throw Exception(e);
+    } finally {
+      malloc.free(memNeeded);
+      freeContexts(mDHashContext, cipherContext);
+      await outIoSink?.close();
+    }
+  }
+
+  Future<void> decryptAndHashData({
+    required Stream<List<int>> inputStream,
+    required Pointer<NativeType> cipherContext,
+    required Pointer<IntPtr> intPointer,
+    required IOSink? outIoSink,
+    required Pointer<NativeType> mDHashContext,
+  }) async {
+    await inputStream.forEach((bytes) {
+      final memData = malloc.call<Uint8>(sizeOf<IntPtr>() + bytes.length);
+      final dataPointer = memData.elementAt(sizeOf<IntPtr>());
+      dataPointer.asTypedList(bytes.length).setAll(0, bytes);
+      if (EVP_DigestUpdate(mDHashContext, dataPointer, bytes.length) == 0) {
+        malloc.free(memData);
+        throw Exception('decryptAndHashData::EVP_DigestUpdate failed');
+      }
+      if (EVP_EncryptUpdate(cipherContext, dataPointer, intPointer, dataPointer, bytes.length) == 0) {
+        malloc.free(memData);
+        throw Exception('decryptAndHashData::EVP_EncryptUpdate failed');
+      }
+      outIoSink!.add(Uint8List.fromList(dataPointer.asTypedList(bytes.length)));
+      malloc.free(memData);
+    });
+  }
+
+  Uint8List _base64decodeUnpadded(String value) {
+    return base64decodeUnpadded(base64.normalize(value));
   }
 }
 
