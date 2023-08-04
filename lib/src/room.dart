@@ -249,7 +249,10 @@ class Room {
         (directChatMatrixID == null ? [] : [directChatMatrixID]);
     if (heroes.isNotEmpty) {
       final result = heroes
-          .where((hero) => hero.isNotEmpty)
+          .where(
+            // removing oneself from the hero list
+            (hero) => hero.isNotEmpty && hero != client.userID,
+          )
           .map((hero) => unsafeGetUserFromMemoryOrFallback(hero)
               .calcDisplayname(i18n: i18n))
           .join(', ');
