@@ -274,6 +274,7 @@ class FluffyBoxDatabase extends DatabaseApi {
     }
     final entities = await dir.list().toList();
     for (final file in entities) {
+      if (file is! File) continue;
       final stat = await file.stat();
       if (DateTime.now().difference(stat.modified) > deleteFilesAfterDuration) {
         Logs().v('Delete old file', file.path);
@@ -858,7 +859,7 @@ class FluffyBoxDatabase extends DatabaseApi {
 
   @override
   Future<void> setRoomPrevBatch(
-      String prevBatch, String roomId, Client client) async {
+      String? prevBatch, String roomId, Client client) async {
     final raw = await _roomsBox.get(roomId);
     if (raw == null) return;
     final room = Room.fromJson(copyMap(raw), client);
@@ -1020,12 +1021,17 @@ class FluffyBoxDatabase extends DatabaseApi {
       }
     }
 
+    final stateKey =
+        client.roomPreviewLastEvents.contains(eventUpdate.content['type'])
+            ? ''
+            : eventUpdate.content['state_key'];
     // Store a common state event
     if ({
-      EventUpdateType.timeline,
-      EventUpdateType.state,
-      EventUpdateType.inviteState
-    }.contains(eventUpdate.type)) {
+          EventUpdateType.timeline,
+          EventUpdateType.state,
+          EventUpdateType.inviteState
+        }.contains(eventUpdate.type) &&
+        stateKey != null) {
       if (eventUpdate.content['type'] == EventTypes.RoomMember) {
         await _roomMembersBox.put(
             TupleKey(
@@ -1045,29 +1051,36 @@ class FluffyBoxDatabase extends DatabaseApi {
                 .tryGetMap<String, dynamic>('content')
                 ?.tryGetMap<String, dynamic>('m.relates_to') ==
             null) {
-          stateMap[eventUpdate.content['state_key'] ?? ''] =
-              eventUpdate.content;
+          stateMap[stateKey] = eventUpdate.content;
           await _roomStateBox.put(key, stateMap);
         } else {
           final editedEventRelationshipEventId = eventUpdate.content
               .tryGetMap<String, dynamic>('content')
               ?.tryGetMap<String, dynamic>('m.relates_to')
               ?.tryGet<String>('event_id');
-          final state = stateMap[''] == null
-              ? null
-              : Event.fromJson(stateMap[''] as Map<String, dynamic>, tmpRoom);
-          if (eventUpdate.content['type'] != EventTypes.Message ||
-              eventUpdate.content
-                      .tryGetMap<String, dynamic>('content')
-                      ?.tryGetMap<String, dynamic>('m.relates_to')
-                      ?.tryGet<String>('rel_type') !=
-                  RelationshipTypes.edit ||
-              editedEventRelationshipEventId == state?.eventId ||
-              ((state?.relationshipType == RelationshipTypes.edit &&
+
+          final tmpRoom = client.getRoomById(eventUpdate.roomID) ??
+              Room(id: eventUpdate.roomID, client: client);
+
+          if (eventUpdate.content['type'] !=
+                      EventTypes
+                          .Message || // send anything other than a message
+                  eventUpdate.content
+                          .tryGetMap<String, dynamic>('content')
+                          ?.tryGetMap<String, dynamic>('m.relates_to')
+                          ?.tryGet<String>('rel_type') !=
+                      RelationshipTypes
+                          .edit || // replies are always latest anyway
                   editedEventRelationshipEventId ==
-                      state?.relationshipEventId))) {
-            stateMap[eventUpdate.content['state_key'] ?? ''] =
-                eventUpdate.content;
+                      tmpRoom.lastEvent
+                          ?.eventId || // edit of latest (original event) event
+                  (tmpRoom.lastEvent?.relationshipType ==
+                          RelationshipTypes.edit &&
+                      editedEventRelationshipEventId ==
+                          tmpRoom.lastEvent
+                              ?.relationshipEventId) // edit of latest (edited event) event
+              ) {
+            stateMap[stateKey] = eventUpdate.content;
             await _roomStateBox.put(key, stateMap);
           }
         }
@@ -1520,4 +1533,16 @@ class FluffyBoxDatabase extends DatabaseApi {
 
         return eventIds;
       });
+
+  @override
+  Future<void> storePresence(String userId, CachedPresence presence) =>
+      _presencesBox.put(userId, presence.toJson());
+
+  @override
+  Future<CachedPresence?> getPresence(String userId) async {
+    final rawPresence = await _presencesBox.get(userId);
+    if (rawPresence == null) return null;
+
+    return CachedPresence.fromJson(copyMap(rawPresence));
+  }
 }
