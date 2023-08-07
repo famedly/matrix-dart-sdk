@@ -1,3 +1,11 @@
+## [0.22.2] - 6 August 2023
+
+- fix: direct message room name computation (The one with the braid)
+- refactor: simplify UIA stage selection logic (Nicolas Werner)
+- feat: Upload keys on OKB reset (Nicolas Werner)
+- fix: fix upload of old session after reset (Nicolas Werner)
+- refactor: Simplify room sorting logic to make invite sorting more obvious (Nicolas Werner)
+
 ## [0.22.1] - 19th July 2023
 
 - chore: add pub release job (td)
