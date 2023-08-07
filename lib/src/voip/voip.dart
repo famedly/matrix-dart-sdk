@@ -311,6 +311,7 @@ class VoIP {
 
   Future<void> onCallCandidates(
       String roomId, String senderId, Map<String, dynamic> content) async {
+    await Future.delayed(Duration(seconds: 2));
     if (senderId == client.userID) {
       // Ignore messages to yourself.
       return;
