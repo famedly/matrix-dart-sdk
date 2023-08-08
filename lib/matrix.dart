@@ -60,6 +60,8 @@ export 'src/utils/encrypted_service.dart';
 export 'src/utils/models/encrypted_file_info.dart';
 export 'src/utils/models/encrypted_file_key.dart';
 export 'src/utils/models/file_info.dart';
+export 'src/utils/models/image_file_info.dart';
+export 'src/utils/models/video_file_info.dart';
 
 export 'msc_extensions/extension_recent_emoji/recent_emoji.dart';
 export 'msc_extensions/msc_3935_cute_events/msc_3935_cute_events.dart';
