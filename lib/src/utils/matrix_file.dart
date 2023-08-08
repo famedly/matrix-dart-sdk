@@ -95,8 +95,9 @@ class MatrixFile {
 
 class MatrixImageFile extends MatrixFile {
   MatrixImageFile({
-    required Uint8List bytes,
+    Uint8List? bytes,
     required String name,
+    super.filePath,
     String? mimeType,
     int? width,
     int? height,
@@ -110,6 +111,7 @@ class MatrixImageFile extends MatrixFile {
     required Uint8List bytes,
     required String name,
     String? mimeType,
+    String? filePath,
     @Deprecated('Use [nativeImplementations] instead') ComputeRunner? compute,
     NativeImplementations nativeImplementations = NativeImplementations.dummy,
   }) async {
@@ -122,6 +124,7 @@ class MatrixImageFile extends MatrixFile {
     return MatrixImageFile(
       bytes: metaData?.bytes ?? bytes,
       name: name,
+      filePath: filePath,
       mimeType: mimeType,
       width: metaData?.width,
       height: metaData?.height,
@@ -362,9 +365,10 @@ class MatrixVideoFile extends MatrixFile {
   final int? duration;
 
   MatrixVideoFile(
-      {required Uint8List bytes,
+      {Uint8List? bytes,
       required String name,
       String? mimeType,
+      super.filePath,
       this.width,
       this.height,
       this.duration})
@@ -389,6 +393,7 @@ class MatrixAudioFile extends MatrixFile {
       {required Uint8List bytes,
       required String name,
       String? mimeType,
+      super.filePath,
       this.duration})
       : super(bytes: bytes, name: name, mimeType: mimeType);
 
