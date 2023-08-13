@@ -1535,13 +1535,16 @@ class Room {
   /// List `membershipFilter` defines with what membership do you want the
   /// participants, default set to
   /// [[Membership.join, Membership.invite, Membership.knock]]
+  /// Set [cache] to `false` if you do not want to cache the users in memory
+  /// for this session which is highly recommended for large public rooms.
   Future<List<User>> requestParticipants(
       [List<Membership> membershipFilter = const [
         Membership.join,
         Membership.invite,
         Membership.knock,
       ],
-      bool suppressWarning = false]) async {
+      bool suppressWarning = false,
+      bool cache = true]) async {
     if (!participantListComplete && partial) {
       // we aren't fully loaded, maybe the users are in the database
       final users = await client.database?.getUsers(this) ?? [];
@@ -1557,7 +1560,7 @@ class Room {
     }
 
     final memberCount = summary.mJoinedMemberCount;
-    if (!suppressWarning && memberCount != null && memberCount > 100) {
+    if (!suppressWarning && cache && memberCount != null && memberCount > 100) {
       Logs().w('''
         Loading a list of $memberCount participants for the room $id.
         This may affect the performance. Please make sure to not unnecessary
@@ -1570,10 +1573,14 @@ class Room {
             ?.map((e) => Event.fromMatrixEvent(e, this).asUser)
             .toList() ??
         [];
-    for (final user in users) {
-      setState(user); // at *least* cache this in-memory
+
+    if (cache) {
+      for (final user in users) {
+        setState(user); // at *least* cache this in-memory
+      }
     }
-    _requestedParticipants = true;
+
+    _requestedParticipants = cache;
     users.removeWhere((u) => !membershipFilter.contains(u.membership));
     return users;
   }
