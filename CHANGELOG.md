@@ -1,3 +1,7 @@
+## [0.22.3] - 23th August 2023
+- feat: Add option to not cache users in memory when requesting all of a room (krille-chan)
+- fix: Has new messages is never true (Krille)
+
 ## [0.22.2] - 6 August 2023
 
 - fix: direct message room name computation (The one with the braid)
