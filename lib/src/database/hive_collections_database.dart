@@ -399,17 +399,24 @@ class HiveCollectionsDatabase extends DatabaseApi {
               (await _timelineFragmentsBox.get(sendingTimelineKey)) ?? []);
         }
 
-        // Combine those two lists while respecting the start and limit parameters.
+        final sendingEvents = await _getEventsByIds(sendingEventIds, room);
+        if (start >= timelineEventIds.length || onlySending) {
+          return sendingEvents;
+        }
+
         final end = min(timelineEventIds.length,
             start + (limit ?? timelineEventIds.length));
-        final eventIds = List<String>.from([
-          ...sendingEventIds,
-          ...(start < timelineEventIds.length && !onlySending
-              ? timelineEventIds.getRange(start, end).toList()
-              : [])
-        ]);
+        final syncedEvents =
+            await _getEventsByIds(timelineEventIds.sublist(start, end), room);
 
-        return await _getEventsByIds(eventIds, room);
+        for (final sendingEvent in sendingEvents) {
+          final index = syncedEvents.indexWhere((event) =>
+              event.originServerTs.isBefore(sendingEvent.originServerTs));
+          if (index >= 0) {
+            syncedEvents.insert(index, sendingEvent);
+          }
+        }
+        return syncedEvents;
       });
 
   @override
