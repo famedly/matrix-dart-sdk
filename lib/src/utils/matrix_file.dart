@@ -53,20 +53,20 @@ class MatrixFile {
   /// derivatives the MIME type from the [bytes] and correspondingly creates a
   /// [MatrixFile], [MatrixImageFile], [MatrixAudioFile] or a [MatrixVideoFile]
   factory MatrixFile.fromMimeType(
-      {required Uint8List bytes, required String name, String? mimeType}) {
+      { Uint8List? bytes, required String name, String? mimeType, String? filePath}) {
     final msgType = msgTypeFromMime(mimeType ??
         lookupMimeType(name, headerBytes: bytes) ??
         'application/octet-stream');
     if (msgType == MessageTypes.Image) {
-      return MatrixImageFile(bytes: bytes, name: name, mimeType: mimeType);
+      return MatrixImageFile(name: name, mimeType: mimeType, filePath: filePath);
     }
     if (msgType == MessageTypes.Video) {
-      return MatrixVideoFile(bytes: bytes, name: name, mimeType: mimeType);
+      return MatrixVideoFile(bytes: bytes, name: name, mimeType: mimeType, filePath: filePath);
     }
-    if (msgType == MessageTypes.Audio) {
-      return MatrixAudioFile(bytes: bytes, name: name, mimeType: mimeType);
+    if (msgType == MessageTypes.Audio && bytes != null) {
+      return MatrixAudioFile(bytes: bytes, name: name, mimeType: mimeType, filePath: filePath);
     }
-    return MatrixFile(bytes: bytes, name: name, mimeType: mimeType);
+    return MatrixFile(bytes: bytes, name: name, mimeType: mimeType, filePath: filePath);
   }
 
   int get size => bytes?.length ?? 0;
