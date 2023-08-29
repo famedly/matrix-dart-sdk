@@ -1,6 +1,6 @@
 name: matrix
 description: Matrix Dart SDK
-version: 0.22.2
+version: 0.22.3
 homepage: https://famedly.com
 repository: https://github.com/famedly/matrix-dart-sdk.git
 
@@ -39,7 +39,6 @@ dev_dependencies:
   lints: ^2.0.0
   test: ^1.15.7
   #flutter_test: {sdk: flutter}
-
 #dependency_overrides:
 #  matrix_api_lite:
 #    path: ../matrix_api_lite
