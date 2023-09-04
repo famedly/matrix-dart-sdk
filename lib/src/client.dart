@@ -611,7 +611,29 @@ class Client extends MatrixApi {
   }) async {
     // Try to find an existing direct chat
     final directChatRoomId = getDirectChatFromUserId(mxid);
-    if (directChatRoomId != null) return directChatRoomId;
+    if (directChatRoomId != null) {
+      final room = getRoomById(directChatRoomId);
+      if (room != null) {
+        if (room.membership == Membership.join) {
+          return directChatRoomId;
+        } else if (room.membership == Membership.invite) {
+          // we might already have an invite into a DM room. If that is the case, we should try to join. If the room is
+          // unjoinable, that will automatically leave the room, so in that case we need to continue creating a new
+          // room. (This implicitly also prevents the room from being returned as a DM room by getDirectChatFromUserId,
+          // because it only returns joined or invited rooms atm.)
+          await room.join();
+          if (room.membership != Membership.leave) {
+            if (waitForSync) {
+              if (room.membership != Membership.join) {
+                // Wait for room actually appears in sync with the right membership
+                await waitForRoomInSync(directChatRoomId, join: true);
+              }
+            }
+            return directChatRoomId;
+          }
+        }
+      }
+    }
 
     enableEncryption ??=
         encryptionEnabled && await userOwnsEncryptionKeys(mxid);
@@ -636,9 +658,12 @@ class Client extends MatrixApi {
       powerLevelContentOverride: powerLevelContentOverride,
     );
 
-    if (waitForSync && getRoomById(roomId) == null) {
-      // Wait for room actually appears in sync
-      await waitForRoomInSync(roomId, join: true);
+    if (waitForSync) {
+      final room = getRoomById(roomId);
+      if (room == null || room.membership != Membership.join) {
+        // Wait for room actually appears in sync
+        await waitForRoomInSync(roomId, join: true);
+      }
     }
 
     await Room(id: roomId, client: this).addToDirectChat(mxid);
