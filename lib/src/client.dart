@@ -87,6 +87,12 @@ class Client extends MatrixApi {
 
   bool shareKeysWithUnverifiedDevices;
 
+  bool useLivekitForGroupCalls = false;
+
+  bool useE2eForGroupCall = true;
+
+  String? livekitServiceURL;
+
   // For CommandsClientExtension
   final Map<String, FutureOr<String?> Function(CommandArgs)> commands = {};
   final Filter syncFilter;
@@ -176,6 +182,9 @@ class Client extends MatrixApi {
     this.shareKeysWithUnverifiedDevices = true,
     this.enableDehydratedDevices = false,
     this.receiptsPublicByDefault = true,
+    this.useE2eForGroupCall = true,
+    this.useLivekitForGroupCalls = false,
+    this.livekitServiceURL,
   })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(

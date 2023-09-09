@@ -730,6 +730,9 @@ class VoIP {
       groupCallId: groupCallId,
       type: callType,
       intent: callIntent,
+      useLivekit: client.useLivekitForGroupCalls,
+      livekitServiceURL:
+          content.tryGet<String>('io.element.livekit_service_url'),
     );
 
     groupCalls[groupCallId!] = groupCall;

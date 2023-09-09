@@ -184,6 +184,8 @@ class GroupCall {
   final Room room;
   final String intent;
   final String type;
+  bool useLivekit = false;
+  String? _livekitServiceURL;
   String state = GroupCallState.LocalCallFeedUninitialized;
   StreamSubscription<CallSession>? _callSubscription;
   final Map<String, double> audioLevelsMap = {};
@@ -227,8 +229,11 @@ class GroupCall {
     required this.room,
     required this.type,
     required this.intent,
+    this.useLivekit = false,
+    String? livekitServiceURL,
   }) {
     this.groupCallId = groupCallId ?? genCallID();
+    _livekitServiceURL = livekitServiceURL;
   }
 
   GroupCall create() {
@@ -242,6 +247,8 @@ class GroupCall {
       {
         'm.intent': intent,
         'm.type': type,
+        if (_livekitServiceURL != null)
+          'io.element.livekit_service_url': _livekitServiceURL,
       },
     );
 
@@ -262,6 +269,12 @@ class GroupCall {
 
   User getUser() {
     return room.unsafeGetUserFromMemoryOrFallback(client.userID!);
+  }
+
+  String? get livekitServiceURL => _livekitServiceURL;
+
+  Future<void> updateLivekitServiceURL(String url) async {
+    _livekitServiceURL = url;
   }
 
   Event? getMemberStateEvent(String userId) {
@@ -352,8 +365,12 @@ class GroupCall {
   /// you can pass that `stream` on to this function.
   /// This allows you to configure the camera before joining the call without
   ///  having to reopen the stream and possibly losing settings.
-  Future<WrappedMediaStream> initLocalStream(
+  Future<WrappedMediaStream?> initLocalStream(
       {WrappedMediaStream? stream}) async {
+    if (useLivekit) {
+      Logs().i('Livekit group call: not starting local call feed.');
+      return null;
+    }
     if (state != GroupCallState.LocalCallFeedUninitialized) {
       throw Exception('Cannot initialize local call feed in the $state state.');
     }
@@ -452,7 +469,9 @@ class GroupCall {
       await onMemberStateChanged(memberState);
     }
 
-    onActiveSpeakerLoop();
+    if (!useLivekit) {
+      onActiveSpeakerLoop();
+    }
 
     voip.currentGroupCID = groupCallId;
 
@@ -671,6 +690,11 @@ class GroupCall {
       return;
     }
 
+    if (useLivekit) {
+      Logs.i('Received incoming call whilst in signaling-only mode! Ignoring.');
+      return;
+    }
+
     final opponentMemberId = newCall.remoteUser!.id;
     final existingCall = getCallByUserId(opponentMemberId);
 
@@ -849,7 +873,7 @@ class GroupCall {
       return;
     }
 
-    if (state != GroupCallState.Entered) {
+    if (state != GroupCallState.Entered || useLivekit) {
       return;
     }
 
