@@ -48,8 +48,8 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
       '$senderName changed the chat name to $content';
 
   @override
-  String changedTheChatPermissions(String senderName) =>
-      '$senderName changed the chat permissions';
+  String setMeAsAdmin(String senderName) =>
+      '$senderName have been set as admin';
 
   @override
   String changedTheDisplaynameTo(String targetName, String newDisplayname) =>

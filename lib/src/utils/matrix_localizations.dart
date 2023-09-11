@@ -116,7 +116,7 @@ abstract class MatrixLocalizations {
 
   String changedTheDisplaynameTo(String targetName, String newDisplayname);
 
-  String changedTheChatPermissions(String senderName);
+  String setMeAsAdmin(String senderName);
 
   String changedTheChatNameTo(String senderName, String content);
 

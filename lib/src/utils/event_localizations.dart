@@ -199,7 +199,7 @@ abstract class EventLocalizations {
       return text;
     },
     EventTypes.RoomPowerLevels: (event, i18n, body) =>
-        i18n.changedTheChatPermissions(
+        i18n.setMeAsAdmin(
             event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
     EventTypes.RoomName: (event, i18n, body) => i18n.changedTheChatNameTo(
         event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n),
