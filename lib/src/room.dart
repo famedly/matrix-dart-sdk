@@ -29,6 +29,8 @@ import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/utils/markdown.dart';
 import 'package:matrix/src/utils/marked_unread.dart';
+import 'package:matrix/src/utils/push_rule_key_const.dart';
+import 'package:matrix/src/utils/push_rule_pattern_const.dart';
 import 'package:matrix/src/utils/space_child.dart';
 
 enum PushRuleState { notify, mentionsOnly, dontNotify }
@@ -466,6 +468,13 @@ class Room {
         '',
         {'name': newName},
       );
+  
+  Future<String> changeName(String newName) => client.setRoomStateWithKey(
+        id,
+        EventTypes.RoomName,
+        '',
+        {'name': newName, PushRuleKeyConst.roomState: PushRulePatternConst.roomCreated},
+      );
 
   /// Call the Matrix API to change the topic of this room.
   Future<String> setDescription(String newName) => client.setRoomStateWithKey(
@@ -763,6 +772,9 @@ class Room {
     String? threadRootEventId,
     String? threadLastEventId,
   }) async {
+    content[PushRuleKeyConst.ChatType] = isDirectChat 
+      ? PushRulePatternConst.directChat 
+      : PushRulePatternConst.groupChat;
     // Create new transaction id
     final String messageID;
     if (txid == null) {
@@ -1559,6 +1571,7 @@ class Room {
       EventTypes.RoomAvatar,
       '',
       {
+        PushRuleKeyConst.roomState: PushRulePatternConst.roomCreated,
         if (uploadResp != null) 'url': uploadResp.toString(),
       },
     );
