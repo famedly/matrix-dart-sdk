@@ -743,7 +743,7 @@ class Client extends MatrixApi {
   /// server to answer this.
   Future<bool> userOwnsEncryptionKeys(String userId) async {
     if (userId == userID) return encryptionEnabled;
-    if (_userDeviceKeys.containsKey(userId)) {
+    if (_userDeviceKeys[userId]?.deviceKeys.isNotEmpty ?? false) {
       return true;
     }
     final keys = await queryKeys({userId: []});
