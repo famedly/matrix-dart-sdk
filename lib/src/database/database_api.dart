@@ -233,7 +233,7 @@ abstract class DatabaseApi {
   Future removeEvent(String eventId, String roomId);
 
   Future setRoomPrevBatch(
-    String prevBatch,
+    String? prevBatch,
     String roomId,
     Client client,
   );
