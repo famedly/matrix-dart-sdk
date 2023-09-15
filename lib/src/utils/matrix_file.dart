@@ -57,7 +57,7 @@ class MatrixFile {
         lookupMimeType(name, headerBytes: bytes) ??
         'application/octet-stream');
     if (msgType == MessageTypes.Image) {
-      return MatrixImageFile(name: name, mimeType: mimeType, filePath: filePath);
+      return MatrixImageFile(name: name, mimeType: mimeType, filePath: filePath, bytes: bytes);
     }
     if (msgType == MessageTypes.Video) {
       return MatrixVideoFile(bytes: bytes, name: name, mimeType: mimeType, filePath: filePath);
