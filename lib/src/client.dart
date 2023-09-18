@@ -947,6 +947,21 @@ class Client extends MatrixApi {
                         .toList() ??
                     []));
 
+        leftRoom.prev_batch = room.timeline?.prevBatch;
+        room.state?.forEach((event) {
+          leftRoom.setState(Event.fromMatrixEvent(
+            event,
+            leftRoom,
+          ));
+        });
+
+        room.timeline?.events?.forEach((event) {
+          leftRoom.setState(Event.fromMatrixEvent(
+            event,
+            leftRoom,
+          ));
+        });
+
         for (var i = 0; i < timeline.events.length; i++) {
           // Try to decrypt encrypted events but don't update the database.
           if (leftRoom.encrypted && leftRoom.client.encryptionEnabled) {
@@ -959,21 +974,6 @@ class Client extends MatrixApi {
             }
           }
         }
-
-        room.timeline?.events?.forEach((event) {
-          leftRoom.setState(Event.fromMatrixEvent(
-            event,
-            leftRoom,
-          ));
-        });
-
-        leftRoom.prev_batch = room.timeline?.prevBatch;
-        room.state?.forEach((event) {
-          leftRoom.setState(Event.fromMatrixEvent(
-            event,
-            leftRoom,
-          ));
-        });
 
         _archivedRooms.add(ArchivedRoom(room: leftRoom, timeline: timeline));
       }
