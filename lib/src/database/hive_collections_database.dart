@@ -944,7 +944,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   @override
   Future<void> setRoomPrevBatch(
-      String prevBatch, String roomId, Client client) async {
+      String? prevBatch, String roomId, Client client) async {
     final raw = await _roomsBox.get(roomId);
     if (raw == null) return;
     final room = Room.fromJson(copyMap(raw), client);
