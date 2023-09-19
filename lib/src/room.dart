@@ -1281,7 +1281,7 @@ class Room {
     if (client.database != null) {
       await client.database?.transaction(() async {
         if (storeInDatabase) {
-          await client.database?.setRoomPrevBatch(resp.end!, id, client);
+          await client.database?.setRoomPrevBatch(resp.end, id, client);
         }
         await loadFn();
       });
