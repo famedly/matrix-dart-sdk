@@ -15,5 +15,13 @@ class ImageFileInfo extends FileInfo {
   final int? height;
 
   @override
+  Map<String, dynamic> get metadata => ({
+        'mimetype': mimeType,
+        'size': fileSize,
+        'w': width?.toDouble(),
+        'h': height?.toDouble(),
+      });
+
+  @override
   List<Object?> get props => [width, height, ...super.props];
 }
