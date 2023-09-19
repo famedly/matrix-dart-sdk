@@ -584,12 +584,10 @@ class Bootstrap {
       Logs().v('Wait for secret to come down sync');
 
       if (!await encryption.keyManager.isCached()) {
-        await client.onSync.stream
-            .firstWhere((syncUpdate) =>
-                syncUpdate.accountData != null &&
-                syncUpdate.accountData!
-                    .any((accountData) => accountData.type == megolmKey))
-            .then((_) => Logs().v('New backup key was created'));
+        await client.onSync.stream.firstWhere((syncUpdate) =>
+            syncUpdate.accountData != null &&
+            syncUpdate.accountData!
+                .any((accountData) => accountData.type == megolmKey));
       }
 
       Logs().v(
