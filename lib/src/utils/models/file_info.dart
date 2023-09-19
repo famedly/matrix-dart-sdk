@@ -1,5 +1,6 @@
 
 import 'package:equatable/equatable.dart';
+import 'package:mime/mime.dart';
 
 class FileInfo with EquatableMixin {
   final String fileName;
@@ -12,6 +13,16 @@ class FileInfo with EquatableMixin {
   factory FileInfo.empty() {
     return FileInfo('', '', 0);
   }
+
+  String get mimeType =>
+      lookupMimeType(filePath) ?? 
+      lookupMimeType(fileName) ??
+      'application/octet-stream';
+
+  Map<String, dynamic> get metadata => ({
+        'mimetype': mimeType,
+        'size': fileSize,
+      });
 
   @override
   List<Object?> get props => [fileName, filePath, fileSize, readStream];
