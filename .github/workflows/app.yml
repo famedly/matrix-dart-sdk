@@ -18,6 +18,8 @@ jobs:
     strategy:
       matrix:
         homeserver: [synapse, dendrite, conduit]
+      # since the dendrite job is optional, actually run all tests to the end instead of failing on first error.
+      fail-fast: false
     steps:
       - uses: actions/checkout@v3
       - name: Run tests
@@ -36,8 +38,8 @@ jobs:
           scripts/prepare.sh
           scripts/test_driver.sh"
 
-# coverage is done on the flutter-linux image because we setup olm there
-# coverage_without_olm is done on dart images because why not :D
+  # coverage is done on the flutter-linux image because we setup olm there
+  # coverage_without_olm is done on dart images because why not :D
   coverage:
     runs-on: ubuntu-latest
     container:
