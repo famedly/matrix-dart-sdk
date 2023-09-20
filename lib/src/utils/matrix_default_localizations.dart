@@ -274,4 +274,7 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
 
   @override
   String get unknownUser => 'Unknown user';
+
+  @override
+  String hasKnocked(String targetName) => '$targetName has knocked';
 }
