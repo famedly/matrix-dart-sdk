@@ -21,7 +21,7 @@ dependencies:
   http: ^0.13.0
   image: ^4.0.15
   js: ^0.6.3
-  markdown: ^4.0.0
+  markdown: ^7.1.1
   matrix_api_lite: ^1.7.0
   mime: ^1.0.0
   olm: ^2.0.2
