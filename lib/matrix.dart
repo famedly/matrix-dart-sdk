@@ -49,6 +49,7 @@ export 'src/utils/matrix_file.dart';
 export 'src/utils/matrix_id_string_extension.dart';
 export 'src/utils/matrix_localizations.dart';
 export 'src/utils/native_implementations.dart';
+export 'src/utils/room_member_change_type.dart';
 export 'src/utils/push_notification.dart';
 export 'src/utils/pushrule_evaluator.dart';
 export 'src/models/receipts.dart';

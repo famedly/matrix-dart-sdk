@@ -161,6 +161,8 @@ abstract class MatrixLocalizations {
   String sentCallInformations(String senderName);
 
   String wasDirectChatDisplayName(String oldDisplayName);
+
+  String hasKnocked(String targetName);
 }
 
 extension HistoryVisibilityDisplayString on HistoryVisibility {
