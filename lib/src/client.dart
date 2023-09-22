@@ -261,7 +261,7 @@ class Client extends MatrixApi {
 
   bool enableDehydratedDevices = false;
 
-  /// Wether read receipts are sent as public receipts by default or just as private receipts.
+  /// Whether read receipts are sent as public receipts by default or just as private receipts.
   bool receiptsPublicByDefault = true;
 
   /// Whether this client supports end-to-end encryption using olm.
@@ -933,58 +933,64 @@ class Client extends MatrixApi {
     final leave = syncResp.rooms?.leave;
     if (leave != null) {
       for (final entry in leave.entries) {
-        final id = entry.key;
-        final room = entry.value;
-        final leftRoom = Room(
-          id: id,
-          membership: Membership.leave,
-          client: this,
-          roomAccountData:
-              room.accountData?.asMap().map((k, v) => MapEntry(v.type, v)) ??
-                  <String, BasicRoomEvent>{},
-        );
-
-        final timeline = Timeline(
-            room: leftRoom,
-            chunk: TimelineChunk(
-                events: room.timeline?.events?.reversed
-                        .toList() // we display the event in the other sence
-                        .map((e) => Event.fromMatrixEvent(e, leftRoom))
-                        .toList() ??
-                    []));
-
-        leftRoom.prev_batch = room.timeline?.prevBatch;
-        room.state?.forEach((event) {
-          leftRoom.setState(Event.fromMatrixEvent(
-            event,
-            leftRoom,
-          ));
-        });
-
-        room.timeline?.events?.forEach((event) {
-          leftRoom.setState(Event.fromMatrixEvent(
-            event,
-            leftRoom,
-          ));
-        });
-
-        for (var i = 0; i < timeline.events.length; i++) {
-          // Try to decrypt encrypted events but don't update the database.
-          if (leftRoom.encrypted && leftRoom.client.encryptionEnabled) {
-            if (timeline.events[i].type == EventTypes.Encrypted) {
-              timeline.events[i] =
-                  await leftRoom.client.encryption!.decryptRoomEvent(
-                leftRoom.id,
-                timeline.events[i],
-              );
-            }
-          }
-        }
-
-        _archivedRooms.add(ArchivedRoom(room: leftRoom, timeline: timeline));
+        await _storeArchivedRoom(entry.key, entry.value);
       }
     }
     return _archivedRooms;
+  }
+
+  Future<void> _storeArchivedRoom(String id, LeftRoomUpdate update) async {
+    final room = update;
+    final leftRoom = Room(
+      id: id,
+      membership: Membership.leave,
+      client: this,
+      roomAccountData:
+          room.accountData?.asMap().map((k, v) => MapEntry(v.type, v)) ??
+              <String, BasicRoomEvent>{},
+    );
+
+    final timeline = Timeline(
+        room: leftRoom,
+        chunk: TimelineChunk(
+            events: room.timeline?.events?.reversed
+                    .toList() // we display the event in the other sence
+                    .map((e) => Event.fromMatrixEvent(e, leftRoom))
+                    .toList() ??
+                []));
+
+    leftRoom.prev_batch = room.timeline?.prevBatch;
+    room.state?.forEach((event) {
+      leftRoom.setState(Event.fromMatrixEvent(
+        event,
+        leftRoom,
+      ));
+    });
+
+    room.timeline?.events?.forEach((event) {
+      leftRoom.setState(Event.fromMatrixEvent(
+        event,
+        leftRoom,
+      ));
+    });
+
+    for (var i = 0; i < timeline.events.length; i++) {
+      // Try to decrypt encrypted events but don't update the database.
+      if (leftRoom.encrypted && leftRoom.client.encryptionEnabled) {
+        if (timeline.events[i].type == EventTypes.Encrypted) {
+          await leftRoom.client.encryption!
+              .decryptRoomEvent(
+                leftRoom.id,
+                timeline.events[i],
+              )
+              .then(
+                (decrypted) => timeline.events[i] = decrypted,
+              );
+        }
+      }
+    }
+
+    _archivedRooms.add(ArchivedRoom(room: leftRoom, timeline: timeline));
   }
 
   /// Uploads a file and automatically caches it in the database, if it is small enough
@@ -1885,7 +1891,7 @@ class Client extends MatrixApi {
       final syncRoomUpdate = entry.value;
 
       await database?.storeRoomUpdate(id, syncRoomUpdate, this);
-      final room = _updateRoomsByRoomUpdate(id, syncRoomUpdate);
+      final room = await _updateRoomsByRoomUpdate(id, syncRoomUpdate);
 
       final timelineUpdateType = direction != null
           ? (direction == Direction.b
@@ -2125,7 +2131,8 @@ class Client extends MatrixApi {
     }
   }
 
-  Room _updateRoomsByRoomUpdate(String roomId, SyncRoomUpdate chatUpdate) {
+  Future<Room> _updateRoomsByRoomUpdate(
+      String roomId, SyncRoomUpdate chatUpdate) async {
     // Update the chat list item.
     // Search the room in the rooms
     final roomIndex = rooms.indexWhere((r) => r.id == roomId);
@@ -2169,7 +2176,7 @@ class Client extends MatrixApi {
 
       rooms.removeAt(roomIndex);
     }
-    // Update notification, highlight count and/or additional informations
+    // Update notification, highlight count and/or additional information
     else if (found &&
         chatUpdate is JoinedRoomUpdate &&
         (rooms[roomIndex].membership != membership ||
@@ -2201,6 +2208,10 @@ class Client extends MatrixApi {
             'Limited timeline for ${rooms[roomIndex].id} request history now');
         runInRoot(rooms[roomIndex].requestHistory);
       }
+    }
+    // in order to keep the archive in sync, add left room to archive
+    if (chatUpdate is LeftRoomUpdate) {
+      await _storeArchivedRoom(room.id, chatUpdate);
     }
     return room;
   }
