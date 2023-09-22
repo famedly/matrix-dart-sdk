@@ -1,0 +1,71 @@
+name: 🐛 Bug Report
+description: Report a bug to the product team
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! This will help us to improve the product :)
+  - type: checkboxes
+    attributes:
+      label: Checklist
+      description: Please search to see if an issue already exists for the bug you encountered.
+      options:
+      - label: I could not find a solution in the documentation, the existing issues or discussions.
+        required: true
+      - label: I already asked for help in the chat
+  - type: dropdown
+    attributes:
+      label: In which Project did the bug appear?
+      multiple: true
+      options:
+        - Famedly App
+        - Pharmacy Portal
+        - Flutter Admin Interface
+        - Other
+  - type: input
+    attributes:
+      label: If you selected \"Other\" as Project, please enter in which project the bug occurred.
+  - type: dropdown
+    attributes:
+      label: On which platform did the bug appear?
+      multiple: true
+      options:
+        - Android
+        - iOS
+        - Chrome
+        - Safari
+        - Firefox
+        - Edge
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Matrix API Version
+      description: Which version of the Matrix Api (this Repo) are you using?
+  - type: textarea
+    attributes:
+      label: Describe the problem caused by this bug
+      description: |
+        A clear and concise description of the problem you have and what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps To Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. In this step...
+        1. With this device...
+        1. Run '...'
+        1. See error...
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Screenshots or Logs
+      description: If applicable, add screenshots or Logs to help explain your problem.
+  - type: textarea
+    attributes:
+      label: Security related
+      description: If there is something related to security, please add it here
