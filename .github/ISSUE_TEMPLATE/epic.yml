@@ -1,0 +1,32 @@
+name: 🥸 [Product only] Create epic
+description: "Creates a new epic which is used to build the Famedly Roadmap"
+labels: ["epic"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This should be filled out by product.
+  - type: textarea
+    id: summary
+    attributes:
+      label: summary
+      description: Please write a summary
+    validations:
+      required: true
+  - type: textarea
+    id: intended-outcome
+    attributes:
+      label: Intended Outcome
+      description: What is the outcome for the user?
+    validations:
+      required: true
+  - type: textarea
+    id: technical-solution
+    attributes:
+      label: How will it work?
+      description: Please write down, how it will work
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Please add any other infos that could be useful.
