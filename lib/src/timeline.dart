@@ -568,7 +568,7 @@ class Timeline {
           yield found..add(event);
         }
       }
-
+      sinceEventId = events.isNotEmpty ? events.last.eventId : null;
       // Search in database
       var start = events.length;
       while (true) {
@@ -580,6 +580,7 @@ class Timeline {
             [];
         if (eventsFromStore.isEmpty) break;
         start += eventsFromStore.length;
+        sinceEventId = eventsFromStore.last.eventId;
         for (final event in eventsFromStore) {
           if (searchFunc(event)) {
             yield found..add(event);
