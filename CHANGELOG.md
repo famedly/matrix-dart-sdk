@@ -1,3 +1,14 @@
+## [0.22.4] - 21 September 2023
+- feat: Implement member change type (Krille)
+- fix: apply state event before decryption on leaved room (Mohammad Reza Moradi)
+- fix: startDirectChat might return an unjoined room (Nicolas Werner)
+- fix: storing the end of history pagination (Nicolas Werner)
+- fix: userOwnsEncryptionKeys returns true for empty device lists (Nicolas Werner)
+- fix: wait for online key backup key to be cached on reset (Nicolas Werner)
+- refactor: Remove deprecated dart code metrics (Krille)
+- chore: remove redundant log message (Nicolas Werner)
+- ci: don't fail fast on dendrite failure (Nicolas Werner)
+
 ## [0.22.3] - 23th August 2023
 - feat: Add option to not cache users in memory when requesting all of a room (krille-chan)
 - fix: Has new messages is never true (Krille)
