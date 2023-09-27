@@ -8,28 +8,28 @@ environment:
   sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
-  async: ^2.8.0
+  async: ^2.11.0
   base58check: ^2.0.0
-  blurhash_dart: ^1.1.0
-  canonical_json: ^1.1.0
-  collection: ^1.15.0
-  crypto: ^3.0.0
-  ffi: ^2.0.0
+  blurhash_dart: ^1.2.1
+  canonical_json: ^1.1.2
+  collection: ^1.18.0
+  crypto: ^3.0.3
+  ffi: ^2.1.0
   hive: ^2.2.3
-  html: ^0.15.0
+  html: ^0.15.4
   html_unescape: ^2.0.0
   http: ^0.13.0
-  image: ^4.0.15
-  js: ^0.6.3
+  image: ^4.0.17
+  js: ^0.6.7
   markdown: ^4.0.0
-  matrix_api_lite: ^1.7.0
-  mime: ^1.0.0
-  olm: ^2.0.2
+  matrix_api_lite: ^1.7.1
+  mime: ^1.0.4
+  olm: ^2.0.3
   random_string: ^2.3.1
   sdp_transform: ^0.3.2
   slugify: ^2.0.0
   typed_data: ^1.3.2
-  webrtc_interface: ^1.0.13
+  webrtc_interface: ^1.1.2
 
 dev_dependencies:
   coverage: ">=0.15.0 <2.0.0"
