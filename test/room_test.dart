@@ -883,7 +883,7 @@ void main() {
         'msgtype': 'm.text',
         'format': 'org.matrix.custom.html',
         'formatted_body':
-            '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>&lt;b&gt;Blah&lt;&#47;b&gt;<br>beep</blockquote></mx-reply>Hello world<br>fox',
+            '<mx-reply><blockquote><a href="https://matrix.to/#/!localpart:server.abc/\$replyEvent">In reply to</a> <a href="https://matrix.to/#/@alice:example.org">@alice:example.org</a><br>&lt;b&gt;Blah&lt;&#47;b&gt;<br>beep</blockquote></mx-reply>Hello world<br/>fox',
         'm.relates_to': {
           'm.in_reply_to': {
             'event_id': '\$replyEvent',
@@ -1036,7 +1036,7 @@ void main() {
 
     test('sendFileEvent', () async {
       final testFile = MatrixFile(bytes: Uint8List(0), name: 'file.jpeg');
-      final dynamic resp = await room.sendFileEvent(testFile, txid: 'testtxid');
+      final resp = await room.sendFileEvent(testFile, txid: 'testtxid');
       expect(resp.toString(), '\$event10');
     });
 

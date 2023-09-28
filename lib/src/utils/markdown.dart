@@ -22,18 +22,13 @@ import 'package:markdown/markdown.dart';
 
 const htmlAttrEscape = HtmlEscape(HtmlEscapeMode.attribute);
 
-class LinebreakSyntax extends InlineSyntax {
-  LinebreakSyntax() : super(r'\n');
-
-  @override
-  bool onMatch(InlineParser parser, Match match) {
-    parser.addNode(Element.empty('br'));
-    return true;
-  }
-}
-
 class SpoilerSyntax extends DelimiterSyntax {
-  SpoilerSyntax() : super(r'\|\|', requiresDelimiterRun: true);
+  SpoilerSyntax()
+      : super(
+          r'\|\|',
+          requiresDelimiterRun: true,
+          tags: [DelimiterTag('span', 2)],
+        );
 
   @override
   Iterable<Node>? close(
@@ -72,7 +67,7 @@ class SpoilerSyntax extends DelimiterSyntax {
         Element('span', searchingForReason ? children : newChildren);
     element.attributes['data-mx-spoiler'] =
         searchingForReason ? '' : htmlAttrEscape.convert(reason);
-    return [element];
+    return <Node>[element];
   }
 }
 
@@ -213,6 +208,7 @@ String markdown(
   String text, {
   Map<String, Map<String, String>> Function()? getEmotePacks,
   String? Function(String)? getMention,
+  bool convertLinebreaks = true,
 }) {
   var ret = markdownToHtml(
     text,
@@ -222,7 +218,6 @@ String markdown(
     ],
     inlineSyntaxes: [
       StrikethroughSyntax(),
-      LinebreakSyntax(),
       SpoilerSyntax(),
       EmoteSyntax(getEmotePacks),
       PillSyntax(),
@@ -258,5 +253,13 @@ String markdown(
   if (stripPTags) {
     ret = ret.replaceAll('<p>', '').replaceAll('</p>', '');
   }
-  return ret.trim().replaceAll(RegExp(r'(<br />)+$'), '');
+  ret = ret
+      .trim()
+      // Remove trailing linebreaks
+      .replaceAll(RegExp(r'(<br />)+$'), '');
+  if (convertLinebreaks) {
+    ret = ret.replaceAll('\n', '<br/>');
+  }
+
+  return ret;
 }
