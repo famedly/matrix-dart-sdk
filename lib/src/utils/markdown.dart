@@ -32,12 +32,17 @@ class LinebreakSyntax extends InlineSyntax {
   }
 }
 
-class SpoilerSyntax extends TagSyntax {
+class SpoilerSyntax extends DelimiterSyntax {
   SpoilerSyntax() : super(r'\|\|', requiresDelimiterRun: true);
 
   @override
-  Node close(InlineParser parser, Delimiter opener, Delimiter closer,
-      {required List<Node> Function() getChildren}) {
+  Iterable<Node>? close(
+    InlineParser parser,
+    Delimiter opener,
+    Delimiter closer, {
+    required String tag,
+    required List<Node> Function() getChildren,
+  }) {
     final children = getChildren();
     final newChildren = <Node>[];
     var searchingForReason = true;
@@ -67,7 +72,7 @@ class SpoilerSyntax extends TagSyntax {
         Element('span', searchingForReason ? children : newChildren);
     element.attributes['data-mx-spoiler'] =
         searchingForReason ? '' : htmlAttrEscape.convert(reason);
-    return element;
+    return [element];
   }
 }
 
@@ -110,7 +115,7 @@ class EmoteSyntax extends InlineSyntax {
   }
 }
 
-class InlineLatexSyntax extends TagSyntax {
+class InlineLatexSyntax extends DelimiterSyntax {
   InlineLatexSyntax() : super(r'\$([^\s$]([^\$]*[^\s$])?)\$');
 
   @override
@@ -131,16 +136,16 @@ class BlockLatexSyntax extends BlockSyntax {
   final endPattern = RegExp(r'^(.*)\$\$\s*$');
 
   @override
-  List<String> parseChildLines(BlockParser parser) {
-    final childLines = <String>[];
+  List<Line?> parseChildLines(BlockParser parser) {
+    final childLines = <Line>[];
     var first = true;
     while (!parser.isDone) {
-      final match = endPattern.firstMatch(parser.current);
+      final match = endPattern.firstMatch(parser.current.content);
       if (match == null || (first && match[1]!.trim().isEmpty)) {
         childLines.add(parser.current);
         parser.advance();
       } else {
-        childLines.add(match[1]!);
+        childLines.add(Line(match[1]!));
         parser.advance();
         break;
       }
