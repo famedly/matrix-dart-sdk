@@ -109,6 +109,8 @@ class Client extends MatrixApi {
 
   final Duration sendTimelineEventTimeout;
 
+  bool _supportDeleteCollections = false;
+
   Future<MatrixImageFileResizedResponse?> Function(
       MatrixImageFileResizeArguments)? customImageResizer;
 
@@ -1062,7 +1064,7 @@ class Client extends MatrixApi {
       await abortSync();
       await dispose(closeDatabase: false);
 
-      final export = await database!.exportDump();
+      final export = await database!.exportDump(supportDeleteCollections: _supportDeleteCollections);
 
       await clear();
       return export;
@@ -1083,7 +1085,7 @@ class Client extends MatrixApi {
 
     _database ??= await databaseBuilder!.call(this);
 
-    final success = await database!.importDump(export);
+    final success = await database!.importDump(export, supportDeleteCollections: _supportDeleteCollections);
 
     if (success) {
       // closing including DB
@@ -1617,7 +1619,7 @@ class Client extends MatrixApi {
     Logs().outputEvents.clear();
     try {
       await abortSync();
-      await database?.clear();
+      await database?.clear(supportDeleteCollections: _supportDeleteCollections);
       _backgroundSync = true;
     } catch (e, s) {
       Logs().e('Unable to clear database', e, s);
@@ -3088,7 +3090,7 @@ class Client extends MatrixApi {
         Logs().e('Unable to migrate inbound group sessions!', e, s);
       }
 
-      await legacyDatabase.clear();
+      await legacyDatabase.clear(supportDeleteCollections: _supportDeleteCollections);
     }
     await legacyDatabase?.close();
     _initLock = false;
@@ -3098,6 +3100,10 @@ class Client extends MatrixApi {
         waitUntilLoadCompletedLoaded: false,
       );
     }
+  }
+
+  set isSupportDeleteCollections(bool supportDeleteCollections) {
+    _supportDeleteCollections = supportDeleteCollections;
   }
 }
 
