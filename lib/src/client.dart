@@ -1584,11 +1584,11 @@ class Client extends MatrixApi {
   }
 
   /// Resets all settings and stops the synchronisation.
-  Future<void> clear() async {
+  Future<void> clear({bool isWeb = false}) async {
     Logs().outputEvents.clear();
     try {
       await abortSync();
-      await database?.clear();
+      await database?.clear(isWeb: isWeb);
       _backgroundSync = true;
     } catch (e, s) {
       Logs().e('Unable to clear database', e, s);
@@ -2940,6 +2940,7 @@ class Client extends MatrixApi {
 
   Future<void> _migrateFromLegacyDatabase({
     void Function()? onMigration,
+    bool isWeb = false,
   }) async {
     Logs().i('Check legacy database for migration data...');
     final legacyDatabase = await legacyDatabaseBuilder?.call(this);
@@ -3053,7 +3054,7 @@ class Client extends MatrixApi {
         Logs().e('Unable to migrate inbound group sessions!', e, s);
       }
 
-      await legacyDatabase.clear();
+      await legacyDatabase.clear(isWeb: isWeb);
     }
     await legacyDatabase?.close();
     _initLock = false;

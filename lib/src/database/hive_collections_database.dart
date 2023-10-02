@@ -242,7 +242,9 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> clear() => transaction(() async {
+  Future<void> clear({
+    bool isWeb = false,
+  }) => transaction(() async {
         await _clientBox.clear();
         await _accountDataBox.clear();
         await _roomsBox.clear();
@@ -1486,7 +1488,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
-  Future<String> exportDump() async {
+  Future<String> exportDump({bool isWeb = false}) async {
     final dataMap = {
       _clientBoxName: await _clientBox.getAllValues(),
       _accountDataBoxName: await _accountDataBox.getAllValues(),
@@ -1513,14 +1515,17 @@ class HiveCollectionsDatabase extends DatabaseApi {
       _seenDeviceKeysBoxName: await _seenDeviceKeysBox.getAllValues(),
     };
     final json = jsonEncode(dataMap);
-    await clear();
+    await clear(isWeb: isWeb);
     return json;
   }
 
   @override
-  Future<bool> importDump(String export) async {
+  Future<bool> importDump(
+    String export, {
+    bool isWeb = false,
+  }) async {
     try {
-      await clear();
+      await clear(isWeb: isWeb);
       await open();
       final json = Map.from(jsonDecode(export)).cast<String, Map>();
       for (final key in json[_clientBoxName]!.keys) {
