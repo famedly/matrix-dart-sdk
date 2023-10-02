@@ -73,7 +73,9 @@ abstract class DatabaseApi {
 
   Future<void> clearCache();
 
-  Future<void> clear();
+  Future<void> clear({
+    bool supportDeleteCollections = false,
+  });
 
   Future<User?> getUser(String userId, Room room);
 
@@ -309,7 +311,10 @@ abstract class DatabaseApi {
 
   Future<void> transaction(Future<void> Function() action);
 
-  Future<String> exportDump();
+  Future<String> exportDump({bool supportDeleteCollections = false});
 
-  Future<bool> importDump(String export);
+  Future<bool> importDump(
+    String export, {
+    bool supportDeleteCollections = false,
+  });
 }

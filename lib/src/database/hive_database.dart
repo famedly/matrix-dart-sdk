@@ -267,7 +267,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> clear() async {
+  Future<void> clear({
+    bool supportDeleteCollections = false,
+  }) async {
     Logs().i('Clear and close hive database...');
     await _actionOnAllBoxes((box) async {
       try {
@@ -1451,13 +1453,16 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<String> exportDump() {
+  Future<String> exportDump({bool supportDeleteCollections = false}) {
     // see no need to implement this in a deprecated part
     throw UnimplementedError();
   }
 
   @override
-  Future<bool> importDump(String export) {
+  Future<bool> importDump(
+    String export, {
+    bool supportDeleteCollections = false,
+  }) {
     // see no need to implement this in a deprecated part
     throw UnimplementedError();
   }
