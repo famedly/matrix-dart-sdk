@@ -1,0 +1,13 @@
+name: Publish CI
+
+on:
+  push:
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+
+
+jobs:
+  publish:
+    permissions:
+      contents: read
+      id-token: write
+    uses: famedly/frontend-ci-templates/.github/workflows/publish-pub.yml@main

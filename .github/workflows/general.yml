@@ -1,0 +1,25 @@
+name: General CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dart:
+    permissions:
+      contents: read
+    uses: famedly/frontend-ci-templates/.github/workflows/dart.yml@main
+    with:
+      env_file: ".github/workflows/versions.env"
+
+  general:
+    permissions:
+      contents: read
+    uses: famedly/frontend-ci-templates/.github/workflows/general.yml@main
