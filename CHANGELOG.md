@@ -1,3 +1,10 @@
+## [1.7.2] - 4th Oct 2023
+
+- chore: add general and publish ci (td)
+- chore: Add adjusted issue templates from product-management (Malin Errenst)
+- chore: make dependencies compatible with dart 3 (Nicolas Werner)
+- chore: add github action (Niklas Zender)
+
 ## [1.7.1] - 22nd Jun 2023
 
 - fix: Fixed fake_matrix_api.dart signedOneTimeKeys upload (Malin Errenst)
