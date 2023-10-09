@@ -18,7 +18,7 @@ dependencies:
   hive: ^2.2.3
   html: ^0.15.0
   html_unescape: ^2.0.0
-  http: ^0.13.0
+  http: ">=0.13.0 <2.0.0"
   image: ^4.0.15
   js: ^0.6.3
   markdown: ^7.1.1
