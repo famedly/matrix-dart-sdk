@@ -939,48 +939,58 @@ class Client extends MatrixApi {
     return _archivedRooms;
   }
 
-  Future<void> _storeArchivedRoom(String id, LeftRoomUpdate update) async {
-    final room = update;
-    final leftRoom = Room(
-      id: id,
-      membership: Membership.leave,
-      client: this,
-      roomAccountData:
-          room.accountData?.asMap().map((k, v) => MapEntry(v.type, v)) ??
+  /// [_storeArchivedRoom]
+  /// @leftRoom we can pass a room which was left so that we don't loose states
+  Future<void> _storeArchivedRoom(
+    String id,
+    LeftRoomUpdate update, {
+    Room? leftRoom,
+  }) async {
+    final roomUpdate = update;
+    final archivedRoom = leftRoom ??
+        Room(
+          id: id,
+          membership: Membership.leave,
+          client: this,
+          roomAccountData: roomUpdate.accountData
+                  ?.asMap()
+                  .map((k, v) => MapEntry(v.type, v)) ??
               <String, BasicRoomEvent>{},
-    );
-
+        );
+    // Set membership of room to leave, in the case we got a left room passed, otherwise
+    // the left room would have still membership join, which would be wrong for the setState later
+    archivedRoom.membership = Membership.leave;
     final timeline = Timeline(
-        room: leftRoom,
+        room: archivedRoom,
         chunk: TimelineChunk(
-            events: room.timeline?.events?.reversed
+            events: roomUpdate.timeline?.events?.reversed
                     .toList() // we display the event in the other sence
-                    .map((e) => Event.fromMatrixEvent(e, leftRoom))
+                    .map((e) => Event.fromMatrixEvent(e, archivedRoom))
                     .toList() ??
                 []));
 
-    leftRoom.prev_batch = room.timeline?.prevBatch;
-    room.state?.forEach((event) {
-      leftRoom.setState(Event.fromMatrixEvent(
+    archivedRoom.prev_batch = update.timeline?.prevBatch;
+    update.state?.forEach((event) {
+      archivedRoom.setState(Event.fromMatrixEvent(
         event,
-        leftRoom,
+        archivedRoom,
       ));
     });
 
-    room.timeline?.events?.forEach((event) {
-      leftRoom.setState(Event.fromMatrixEvent(
+    update.timeline?.events?.forEach((event) {
+      archivedRoom.setState(Event.fromMatrixEvent(
         event,
-        leftRoom,
+        archivedRoom,
       ));
     });
 
     for (var i = 0; i < timeline.events.length; i++) {
       // Try to decrypt encrypted events but don't update the database.
-      if (leftRoom.encrypted && leftRoom.client.encryptionEnabled) {
+      if (archivedRoom.encrypted && archivedRoom.client.encryptionEnabled) {
         if (timeline.events[i].type == EventTypes.Encrypted) {
-          await leftRoom.client.encryption!
+          await archivedRoom.client.encryption!
               .decryptRoomEvent(
-                leftRoom.id,
+                archivedRoom.id,
                 timeline.events[i],
               )
               .then(
@@ -990,7 +1000,7 @@ class Client extends MatrixApi {
       }
     }
 
-    _archivedRooms.add(ArchivedRoom(room: leftRoom, timeline: timeline));
+    _archivedRooms.add(ArchivedRoom(room: archivedRoom, timeline: timeline));
   }
 
   /// Uploads a file and automatically caches it in the database, if it is small enough
@@ -2175,6 +2185,11 @@ class Client extends MatrixApi {
       room.stopStaleCallsChecker(room.id);
 
       rooms.removeAt(roomIndex);
+
+      // in order to keep the archive in sync, add left room to archive
+      if (chatUpdate is LeftRoomUpdate) {
+        await _storeArchivedRoom(room.id, chatUpdate, leftRoom: room);
+      }
     }
     // Update notification, highlight count and/or additional information
     else if (found &&
@@ -2208,10 +2223,6 @@ class Client extends MatrixApi {
             'Limited timeline for ${rooms[roomIndex].id} request history now');
         runInRoot(rooms[roomIndex].requestHistory);
       }
-    }
-    // in order to keep the archive in sync, add left room to archive
-    if (chatUpdate is LeftRoomUpdate) {
-      await _storeArchivedRoom(room.id, chatUpdate);
     }
     return room;
   }
