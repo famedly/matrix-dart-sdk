@@ -28,27 +28,31 @@ class FileInfo with EquatableMixin {
       });
   
 
-  FileInfo fromMatrixFile(MatrixFile file) {
+  factory FileInfo.fromMatrixFile(MatrixFile file) {
     if (file.msgType == MessageTypes.Image) {
       return ImageFileInfo(
-        fileName,
-        filePath,
-        fileSize,
+        file.name,
+        file.filePath ?? '',
+        file.size,
         width: file.info['w'],
         height: file.info['h'],
       );
     } else if (file.msgType == MessageTypes.Video) {
       return VideoFileInfo(
-        fileName,
-        filePath,
-        fileSize,
+        file.name,
+        file.filePath ?? '',
+        file.size,
         imagePlaceholderBytes: file.bytes ?? Uint8List(0),
         width: file.info['w'],
         height: file.info['h'],
-        duration: file.info['duration'],
+        duration: Duration(milliseconds: file.info['duration']),
       );
     }
-    return FileInfo(fileName, filePath, fileSize, readStream: readStream);
+    return FileInfo(
+      file.name,
+      file.filePath ?? '',
+      file.size
+    );
   }
 
   @override

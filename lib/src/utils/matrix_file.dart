@@ -69,6 +69,49 @@ class MatrixFile {
     return MatrixFile(bytes: bytes, name: name, mimeType: mimeType, filePath: filePath);
   }
 
+  factory MatrixFile.fromFileInfo(
+      {required FileInfo fileInfo}) {
+    final msgType = msgTypeFromMime(fileInfo.mimeType);
+    if (msgType == MessageTypes.Image) {
+      return MatrixImageFile(
+        name: fileInfo.fileName,
+        mimeType: fileInfo.mimeType,
+        filePath: fileInfo.filePath,
+        bytes: null,
+        width: (fileInfo.metadata['w'] as double?)?.toInt(),
+        height: (fileInfo.metadata['h'] as double?)?.toInt(),
+      );
+    }
+    if (msgType == MessageTypes.Video) {
+      return MatrixVideoFile(
+        bytes: fileInfo is VideoFileInfo 
+          ? fileInfo.imagePlaceholderBytes
+          : null,
+        name: fileInfo.fileName,
+        mimeType: fileInfo.mimeType,
+        filePath: fileInfo.filePath,
+        width: (fileInfo.metadata['w'] as double?)?.toInt(),
+        height: (fileInfo.metadata['h'] as double?)?.toInt(),
+        duration: fileInfo.metadata['duration'], 
+      );
+    }
+    if (msgType == MessageTypes.Audio) {
+      return MatrixAudioFile(
+        bytes: Uint8List.fromList([]),
+        name: fileInfo.fileName,
+        mimeType: fileInfo.mimeType,
+        filePath: fileInfo.filePath,
+        duration: fileInfo.metadata['duration'],
+      );
+    }
+    return MatrixFile(
+      bytes: null,
+      name: fileInfo.fileName,
+      mimeType: fileInfo.mimeType,
+      filePath: fileInfo.filePath,
+    );
+  }
+
   int get size => bytes?.length ?? 0;
 
   String get msgType {
