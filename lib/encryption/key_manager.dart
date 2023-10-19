@@ -747,15 +747,34 @@ class KeyManager {
     }
   }
 
-  bool _isUploadingKeys = false;
+  Future<void>? _uploadingFuture;
 
-  Future<void> backgroundTasks() async {
+  void startAutoUploadKeys() {
+    _uploadKeysOnSync = encryption.client.onSync.stream
+        .listen((_) => uploadInboundGroupSessions(skipIfInProgress: true));
+  }
+
+  /// This task should be performed after sync processing but should not block
+  /// the sync. To make sure that it never gets executed multiple times, it is
+  /// skipped when an upload task is already in progress. Set `skipIfInProgress`
+  /// to `false` to await the pending upload task instead.
+  Future<void> uploadInboundGroupSessions(
+      {bool skipIfInProgress = false}) async {
     final database = client.database;
     final userID = client.userID;
-    if (_isUploadingKeys || database == null || userID == null) {
+    if (database == null || userID == null) {
       return;
     }
-    _isUploadingKeys = true;
+
+    // Make sure to not run in parallel
+    if (_uploadingFuture != null) {
+      if (skipIfInProgress) return;
+      await _uploadingFuture;
+    }
+    final completer = Completer<void>();
+    _uploadingFuture = completer.future;
+
+    await client.userDeviceKeysLoading;
     try {
       if (!(await isCached())) {
         return; // we can't backup anyways
@@ -817,7 +836,7 @@ class KeyManager {
     } catch (e, s) {
       Logs().e('[Key Manager] Error uploading room keys', e, s);
     } finally {
-      _isUploadingKeys = false;
+      completer.complete();
     }
   }
 
@@ -1017,7 +1036,10 @@ class KeyManager {
     }
   }
 
+  StreamSubscription<SyncUpdate>? _uploadKeysOnSync;
+
   void dispose() {
+    _uploadKeysOnSync?.cancel();
     for (final sess in _outboundGroupSessions.values) {
       sess.dispose();
     }

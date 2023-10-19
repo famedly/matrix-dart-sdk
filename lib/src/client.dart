@@ -553,6 +553,9 @@ class Client extends MatrixApi {
   /// including all persistent data from the store.
   @override
   Future<void> logout() async {
+    // Upload keys to make sure all are cached on the next login.
+    await encryption?.keyManager.uploadInboundGroupSessions();
+
     try {
       await super.logout();
     } catch (e, s) {
@@ -567,6 +570,9 @@ class Client extends MatrixApi {
   /// including all persistent data from the store.
   @override
   Future<void> logoutAll() async {
+    // Upload keys to make sure all are cached on the next login.
+    await encryption?.keyManager.uploadInboundGroupSessions();
+
     final futures = <Future>[];
     futures.add(super.logoutAll());
     futures.add(clear());

@@ -97,7 +97,7 @@ void main() {
           forwarded: true);
       var dbSessions = await client.database!.getInboundGroupSessionsToUpload();
       expect(dbSessions.isNotEmpty, true);
-      await client.encryption!.keyManager.backgroundTasks();
+      await client.encryption!.keyManager.uploadInboundGroupSessions();
       await FakeMatrixApi.firstWhereValue(
           '/client/v3/room_keys/keys?version=5');
       final payload = FakeMatrixApi
