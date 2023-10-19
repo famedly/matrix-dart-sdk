@@ -667,6 +667,31 @@ class KeyManager {
     }
   }
 
+  /// Loads and stores all keys from the online key backup. This may take a
+  /// while for older and big accounts.
+  Future<void> loadAllKeys() async {
+    final info = await getRoomKeysBackupInfo();
+    final ret = await client.getRoomKeys(info.version);
+    await loadFromResponse(ret);
+  }
+
+  /// Loads all room keys for a single room and stores them. This may take a
+  /// while for older and big rooms.
+  Future<void> loadAllKeysFromRoom(String roomId) async {
+    final info = await getRoomKeysBackupInfo();
+    final ret = await client.getRoomKeysByRoomId(roomId, info.version);
+    final keys = RoomKeys.fromJson({
+      'rooms': {
+        roomId: {
+          'sessions': ret.sessions.map((k, s) => MapEntry(k, s.toJson())),
+        },
+      },
+    });
+    await loadFromResponse(keys);
+  }
+
+  /// Loads a single key for the specified room from the online key backup
+  /// and stores it.
   Future<void> loadSingleKey(String roomId, String sessionId) async {
     final info = await getRoomKeysBackupInfo();
     final ret =
