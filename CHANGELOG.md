@@ -1,3 +1,11 @@
+## [0.22.5] - 20 October 2023
+- build(deps): bump http from 0.13.6 to 1.1.0 (dependabot[bot])
+- feat: Add methods to load all room keys from online key backup (Krille)
+- fix: Convert linebreaks into br tags on markdown parsing (Krille)
+- fix: fixed hardcoded historyCount (Ray)
+- refactor: Trigger upload keys on sync and not in background job and upload them before logout (Krille)
+- refactor: Update markdown (Krille)
+
 ## [0.22.4] - 21 September 2023
 - feat: Implement member change type (Krille)
 - fix: apply state event before decryption on leaved room (Mohammad Reza Moradi)
