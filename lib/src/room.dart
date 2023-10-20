@@ -1190,7 +1190,7 @@ class Room {
     // Update archived rooms, otherwise an archived room may still be in the
     // list after a forget room call
     final roomIndex = client.archivedRooms.indexWhere((r) => r.room.id == id);
-    if(roomIndex != -1){
+    if (roomIndex != -1) {
       client.archivedRooms.removeAt(roomIndex);
     }
     return;

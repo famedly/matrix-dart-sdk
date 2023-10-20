@@ -2221,7 +2221,7 @@ class Client extends MatrixApi {
           requestHistoryOnLimitedTimeline) {
         Logs().v(
             'Limited timeline for ${rooms[roomIndex].id} request history now');
-        runInRoot(rooms[roomIndex].requestHistory);
+        unawaited(runInRoot(rooms[roomIndex].requestHistory));
       }
     }
     return room;
