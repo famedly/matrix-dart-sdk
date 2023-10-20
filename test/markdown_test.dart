@@ -123,5 +123,11 @@ void main() {
       expect(markdown('meep `\$\\frac{2}{3}\$`'),
           'meep <code>\$\\frac{2}{3}\$</code>');
     });
+    test('Code blocks', () {
+      expect(
+          markdown('```dart\nvoid main(){\nprint(something);\n}\n```',
+              convertLinebreaks: false),
+          '<pre><code class="language-dart">void main(){\nprint(something);\n}\n</code></pre>');
+    });
   });
 }
