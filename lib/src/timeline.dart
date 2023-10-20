@@ -116,7 +116,7 @@ class Timeline {
           : await room.client.database?.getEventList(
               room,
               start: events.length,
-              limit: Room.defaultHistoryCount,
+              limit: historyCount,
             );
 
       if (eventsFromStore != null && eventsFromStore.isNotEmpty) {
