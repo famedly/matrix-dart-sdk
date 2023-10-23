@@ -1,3 +1,7 @@
+## [0.22.6] - 23 October 2023
+- fix: Do not convert linebreaks in pre blocks on markdown parsing (Krille)
+- refactor: Wait for room in sync until sync process and trigger cleanup call not before actually start clean up. (Krille)
+
 ## [0.22.5] - 20 October 2023
 - build(deps): bump http from 0.13.6 to 1.1.0 (dependabot[bot])
 - feat: Add methods to load all room keys from online key backup (Krille)
