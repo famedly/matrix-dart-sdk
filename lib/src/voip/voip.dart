@@ -596,6 +596,8 @@ class VoIP {
       room: room,
       type: type,
       intent: intent,
+      useLivekit: client.useLivekitForGroupCalls,
+      livekitServiceURL: client.livekitServiceURL,
     ).create();
     groupCalls[groupId] = groupCall;
     groupCalls[roomId] = groupCall;

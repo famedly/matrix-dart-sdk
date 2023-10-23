@@ -691,7 +691,8 @@ class GroupCall {
     }
 
     if (useLivekit) {
-      Logs.i('Received incoming call whilst in signaling-only mode! Ignoring.');
+      Logs()
+          .i('Received incoming call whilst in signaling-only mode! Ignoring.');
       return;
     }
 
@@ -1175,7 +1176,8 @@ class GroupCall {
         userMediaStreams.indexWhere((stream) => stream.userId == stream.userId);
 
     if (streamIndex == -1) {
-      throw Exception('Couldn\'t find user media stream to remove');
+      Logs().w('Couldn\'t find user media stream to remove');
+      return;
     }
 
     userMediaStreams.removeWhere((element) => element.userId == stream.userId);
