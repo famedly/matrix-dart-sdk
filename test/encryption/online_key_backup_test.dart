@@ -67,9 +67,35 @@ void main() {
           .request(client.getRoomById(roomId)!, sessionId, senderKey);
       expect(
           client.encryption!.keyManager
-                  .getInboundGroupSession(roomId, sessionId) !=
-              null,
-          true);
+              .getInboundGroupSession(roomId, sessionId)
+              ?.sessionId,
+          sessionId);
+    });
+
+    test('Load all Room Keys', () async {
+      if (!olmEnabled) return;
+      final keyManager = client.encryption!.keyManager;
+      const roomId = '!getroomkeys726s6s6q:example.com';
+      const sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
+      expect(keyManager.getInboundGroupSession(roomId, sessionId), null);
+      await client.encryption!.keyManager.loadAllKeysFromRoom(roomId);
+      expect(
+        keyManager.getInboundGroupSession(roomId, sessionId)?.sessionId,
+        sessionId,
+      );
+    });
+
+    test('Load all Keys', () async {
+      if (!olmEnabled) return;
+      final keyManager = client.encryption!.keyManager;
+      const roomId = '!getallkeys726s6s6q:example.com';
+      const sessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
+      expect(keyManager.getInboundGroupSession(roomId, sessionId), null);
+      await client.encryption!.keyManager.loadAllKeys();
+      expect(
+        keyManager.getInboundGroupSession(roomId, sessionId)?.sessionId,
+        sessionId,
+      );
     });
 
     test('upload key', () async {
@@ -97,7 +123,7 @@ void main() {
           forwarded: true);
       var dbSessions = await client.database!.getInboundGroupSessionsToUpload();
       expect(dbSessions.isNotEmpty, true);
-      await client.encryption!.keyManager.backgroundTasks();
+      await client.encryption!.keyManager.uploadInboundGroupSessions();
       await FakeMatrixApi.firstWhereValue(
           '/client/v3/room_keys/keys?version=5');
       final payload = FakeMatrixApi

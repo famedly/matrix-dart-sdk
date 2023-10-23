@@ -77,9 +77,8 @@ class Encryption {
         olmAccount: olmAccount,
         deviceId: isDehydratedDevice ? deviceId : ourDeviceId,
         pickleKey: pickleKey);
-    _backgroundTasksRunning = ourDeviceId ==
-        client.deviceID; // Don't run tasks for dehydrated devices
-    _backgroundTasks(); // start the background tasks
+
+    if (!isDehydratedDevice) keyManager.startAutoUploadKeys();
   }
 
   bool isMinOlmVersion(int major, int minor, int patch) {
@@ -420,24 +419,7 @@ class Encryption {
     }
   }
 
-  // this method is responsible for all background tasks, such as uploading online key backups
-  bool _backgroundTasksRunning = true;
-  void _backgroundTasks() {
-    if (!_backgroundTasksRunning || !client.isLogged()) {
-      return;
-    }
-
-    keyManager.backgroundTasks();
-
-//    autovalidateMasterOwnKey();
-
-    if (_backgroundTasksRunning) {
-      Timer(Duration(seconds: 10), _backgroundTasks);
-    }
-  }
-
   Future<void> dispose() async {
-    _backgroundTasksRunning = false;
     keyManager.dispose();
     await olmManager.dispose();
     keyVerificationManager.dispose();

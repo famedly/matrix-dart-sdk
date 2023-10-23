@@ -114,89 +114,59 @@ abstract class EventLocalizations {
       final userIsTarget = event.stateKey == event.room.client.userID;
       final userIsSender = event.senderId == event.room.client.userID;
 
-      // Fallback message if just nothing has changed:
-      var text = i18n.joinedTheChat(targetName);
-
-      // Has the membership changed?
-      final newMembership = event.content['membership'] ?? '';
-      final oldMembership = event.prevContent?['membership'] ?? '';
-
-      if (newMembership != oldMembership) {
-        if (oldMembership == 'invite' && newMembership == 'join') {
-          text = userIsTarget
-              ? i18n.youAcceptedTheInvitation
-              : i18n.acceptedTheInvitation(targetName);
-        } else if (oldMembership == 'invite' && newMembership == 'leave') {
-          if (event.stateKey == event.senderId) {
-            text = userIsTarget
-                ? i18n.youRejectedTheInvitation
-                : i18n.rejectedTheInvitation(targetName);
-          } else {
-            text = userIsSender
-                ? i18n.youHaveWithdrawnTheInvitationFor(targetName)
-                : i18n.hasWithdrawnTheInvitationFor(senderName, targetName);
-          }
-        } else if (oldMembership == 'leave' && newMembership == 'join') {
-          text = userIsTarget
+      switch (event.roomMemberChangeType) {
+        case RoomMemberChangeType.avatar:
+          return i18n.changedTheProfileAvatar(targetName);
+        case RoomMemberChangeType.displayname:
+          final newDisplayname =
+              event.content.tryGet<String>('displayname') ?? '';
+          final oldDisplayname =
+              event.prevContent?.tryGet<String>('displayname') ?? '';
+          return i18n.changedTheDisplaynameTo(oldDisplayname, newDisplayname);
+        case RoomMemberChangeType.join:
+          return userIsTarget
               ? i18n.youJoinedTheChat
               : i18n.joinedTheChat(targetName);
-        } else if (oldMembership == 'join' && newMembership == 'ban') {
-          text = userIsSender
-              ? i18n.youKickedAndBanned(targetName)
-              : i18n.kickedAndBanned(senderName, targetName);
-        } else if (oldMembership == 'join' &&
-            newMembership == 'leave' &&
-            event.stateKey != event.senderId) {
-          text = userIsSender
+        case RoomMemberChangeType.acceptInvite:
+          return userIsTarget
+              ? i18n.youAcceptedTheInvitation
+              : i18n.acceptedTheInvitation(targetName);
+        case RoomMemberChangeType.rejectInvite:
+          return userIsTarget
+              ? i18n.youRejectedTheInvitation
+              : i18n.rejectedTheInvitation(targetName);
+        case RoomMemberChangeType.withdrawInvitation:
+          return userIsSender
+              ? i18n.youHaveWithdrawnTheInvitationFor(targetName)
+              : i18n.hasWithdrawnTheInvitationFor(senderName, targetName);
+        case RoomMemberChangeType.leave:
+          return i18n.userLeftTheChat(targetName);
+        case RoomMemberChangeType.kick:
+          return userIsSender
               ? i18n.youKicked(targetName)
               : i18n.kicked(senderName, targetName);
-        } else if (oldMembership == 'join' &&
-            newMembership == 'leave' &&
-            event.stateKey == event.senderId) {
-          text = i18n.userLeftTheChat(targetName);
-        } else if (oldMembership == 'invite' && newMembership == 'ban') {
-          text = userIsSender
-              ? i18n.youBannedUser(targetName)
-              : i18n.bannedUser(senderName, targetName);
-        } else if (oldMembership == 'leave' && newMembership == 'ban') {
-          text = userIsSender
-              ? i18n.youBannedUser(targetName)
-              : i18n.bannedUser(senderName, targetName);
-        } else if (oldMembership == 'ban' && newMembership == 'leave') {
-          text = userIsSender
-              ? i18n.youUnbannedUser(targetName)
-              : i18n.unbannedUser(senderName, targetName);
-        } else if (newMembership == 'invite') {
-          text = userIsSender
+        case RoomMemberChangeType.invite:
+          return userIsSender
               ? i18n.youInvitedUser(targetName)
               : userIsTarget
                   ? i18n.youInvitedBy(senderName)
                   : i18n.invitedUser(senderName, targetName);
-        } else if (newMembership == 'join') {
-          text = userIsTarget
+        case RoomMemberChangeType.ban:
+          return userIsSender
+              ? i18n.youBannedUser(targetName)
+              : i18n.bannedUser(senderName, targetName);
+        case RoomMemberChangeType.unban:
+          return userIsSender
+              ? i18n.youUnbannedUser(targetName)
+              : i18n.unbannedUser(senderName, targetName);
+        case RoomMemberChangeType.knock:
+          return i18n.hasKnocked(targetName);
+        case RoomMemberChangeType.other:
+        default:
+          return userIsTarget
               ? i18n.youJoinedTheChat
               : i18n.joinedTheChat(targetName);
-        }
-      } else if (newMembership == 'join') {
-        final newAvatar = event.content.tryGet<String>('avatar_url') ?? '';
-        final oldAvatar = event.prevContent?.tryGet<String>('avatar_url') ?? '';
-
-        final newDisplayname =
-            event.content.tryGet<String>('displayname') ?? '';
-        final oldDisplayname =
-            event.prevContent?.tryGet<String>('displayname') ?? '';
-        final stateKey = event.stateKey;
-
-        // Has the user avatar changed?
-        if (newAvatar != oldAvatar) {
-          text = i18n.changedTheProfileAvatar(targetName);
-        }
-        // Has the user displayname changed?
-        else if (newDisplayname != oldDisplayname && stateKey != null) {
-          text = i18n.changedTheDisplaynameTo(oldDisplayname, newDisplayname);
-        }
       }
-      return text;
     },
     EventTypes.RoomPowerLevels: (event, i18n, body) =>
         i18n.changedTheChatPermissions(

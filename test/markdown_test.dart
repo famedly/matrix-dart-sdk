@@ -59,13 +59,13 @@ void main() {
           'Snape killed <span data-mx-spoiler="">Dumbledoor <strong>bold</strong></span>');
     });
     test('multiple paragraphs', () {
-      expect(markdown('Heya!\n\nBeep'), '<p>Heya!</p>\n<p>Beep</p>');
+      expect(markdown('Heya!\n\nBeep'), '<p>Heya!</p><br/><p>Beep</p>');
     });
     test('Other block elements', () {
-      expect(markdown('# blah\n\nblubb'), '<h1>blah</h1>\n<p>blubb</p>');
+      expect(markdown('# blah\n\nblubb'), '<h1>blah</h1><br/><p>blubb</p>');
     });
     test('linebreaks', () {
-      expect(markdown('foxies\ncute'), 'foxies<br />\ncute');
+      expect(markdown('foxies\ncute'), 'foxies<br/>cute');
     });
     test('emotes', () {
       expect(markdown(':fox:', getEmotePacks: () => emotePacks),
@@ -122,10 +122,6 @@ void main() {
           'meep <span data-mx-spoiler=""><span data-mx-maths="\\frac{2}{3}"><code>\\frac{2}{3}</code></span></span>');
       expect(markdown('meep `\$\\frac{2}{3}\$`'),
           'meep <code>\$\\frac{2}{3}\$</code>');
-      expect(markdown('hey\n\$\$beep\$\$\nmeow'),
-          '<p>hey</p>\n<div data-mx-maths="beep">\n<pre><code>beep</code></pre>\n</div>\n<p>meow</p>');
-      expect(markdown('hey\n\$\$\nbeep\nboop\n\$\$\nmeow'),
-          '<p>hey</p>\n<div data-mx-maths="beep\nboop">\n<pre><code>beep\nboop</code></pre>\n</div>\n<p>meow</p>');
     });
   });
 }

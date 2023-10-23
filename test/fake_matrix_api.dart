@@ -1936,7 +1936,7 @@ class FakeMatrixApi extends BaseClient {
                   'mac': 'QzKV/fgAs4U',
                 },
               },
-      '/client/v3/room_keys/keys/${Uri.encodeComponent('!726s6s6q:example.com')}?version=5':
+      '/client/v3/room_keys/keys/${Uri.encodeComponent('!getroomkeys726s6s6q:example.com')}?version=5':
           (var req) => {
                 'sessions': {
                   'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU': {
@@ -1955,7 +1955,7 @@ class FakeMatrixApi extends BaseClient {
               },
       '/client/v3/room_keys/keys?version=5': (var req) => {
             'rooms': {
-              '!726s6s6q:example.com': {
+              '!getallkeys726s6s6q:example.com': {
                 'sessions': {
                   'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU': {
                     'first_message_index': 0,

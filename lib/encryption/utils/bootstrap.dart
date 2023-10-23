@@ -581,11 +581,20 @@ class Bootstrap {
       );
       Logs().v('Store the secret...');
       await newSsssKey?.store(megolmKey, base64.encode(privKey));
+      Logs().v('Wait for secret to come down sync');
+
+      if (!await encryption.keyManager.isCached()) {
+        await client.onSync.stream.firstWhere((syncUpdate) =>
+            syncUpdate.accountData != null &&
+            syncUpdate.accountData!
+                .any((accountData) => accountData.type == megolmKey));
+      }
+
       Logs().v(
           'And finally set all megolm keys as needing to be uploaded again...');
       await client.database?.markInboundGroupSessionsAsNeedingUpload();
       Logs().v('And uploading keys...');
-      await client.encryption?.keyManager.backgroundTasks();
+      await client.encryption?.keyManager.uploadInboundGroupSessions();
     } catch (e, s) {
       Logs().e('[Bootstrapping] Error setting up online key backup', e, s);
       state = BootstrapState.error;

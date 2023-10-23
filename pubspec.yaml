@@ -1,6 +1,6 @@
 name: matrix
 description: Matrix Dart SDK
-version: 0.22.3
+version: 0.22.5
 homepage: https://famedly.com
 repository: https://github.com/famedly/matrix-dart-sdk.git
 
@@ -18,10 +18,10 @@ dependencies:
   hive: ^2.2.3
   html: ^0.15.0
   html_unescape: ^2.0.0
-  http: ^0.13.0
+  http: ">=0.13.0 <2.0.0"
   image: ^4.0.15
   js: ^0.6.3
-  markdown: ^4.0.0
+  markdown: ^7.1.1
   matrix_api_lite: ^1.7.0
   mime: ^1.0.0
   olm: ^2.0.2
@@ -33,7 +33,6 @@ dependencies:
 
 dev_dependencies:
   coverage: ">=0.15.0 <2.0.0"
-  dart_code_metrics: ^4.10.1
   file: ^6.1.1
   import_sorter: ^4.6.0
   lints: ^2.0.0

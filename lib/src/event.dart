@@ -788,7 +788,7 @@ class Event extends MatrixEvent {
 
     // return the html tags free body
     if (removeMarkdown == true) {
-      final html = markdown(body);
+      final html = markdown(body, convertLinebreaks: false);
       final document = parse(
         html,
       );

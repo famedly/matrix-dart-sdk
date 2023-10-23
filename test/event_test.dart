@@ -569,6 +569,7 @@ void main() {
         'type': 'm.room.member',
         'unsigned': {'age': 1234}
       }, room);
+      expect(event.roomMemberChangeType, RoomMemberChangeType.join);
       expect(await event.calcLocalizedBody(MatrixDefaultLocalizations()),
           'Alice joined the chat');
       expect(event.isEventTypeKnown, true);
@@ -582,6 +583,7 @@ void main() {
         'state_key': '@alice:example.org',
         'type': 'm.room.member'
       }, room);
+      expect(event.roomMemberChangeType, RoomMemberChangeType.invite);
       expect(await event.calcLocalizedBody(MatrixDefaultLocalizations()),
           'Example has invited Alice');
       expect(event.isEventTypeKnown, true);
@@ -598,6 +600,7 @@ void main() {
           'prev_content': {'membership': 'join'},
         }
       }, room);
+      expect(event.roomMemberChangeType, RoomMemberChangeType.kick);
       expect(await event.calcLocalizedBody(MatrixDefaultLocalizations()),
           'Example kicked Alice');
       expect(event.isEventTypeKnown, true);
@@ -614,6 +617,7 @@ void main() {
           'prev_content': {'membership': 'join'},
         }
       }, room);
+      expect(event.roomMemberChangeType, RoomMemberChangeType.ban);
       expect(await event.calcLocalizedBody(MatrixDefaultLocalizations()),
           'Example banned Alice');
       expect(event.isEventTypeKnown, true);
@@ -630,6 +634,7 @@ void main() {
           'prev_content': {'membership': 'invite'},
         }
       }, room);
+      expect(event.roomMemberChangeType, RoomMemberChangeType.acceptInvite);
       expect(await event.calcLocalizedBody(MatrixDefaultLocalizations()),
           'Alice accepted the invitation');
       expect(event.isEventTypeKnown, true);
@@ -646,6 +651,7 @@ void main() {
           'prev_content': {'membership': 'join'},
         }
       }, room);
+      expect(event.roomMemberChangeType, RoomMemberChangeType.invite);
       expect(await event.calcLocalizedBody(MatrixDefaultLocalizations()),
           'Example has invited Alice');
       expect(event.isEventTypeKnown, true);
@@ -662,6 +668,8 @@ void main() {
           'prev_content': {'membership': 'invite'},
         }
       }, room);
+      expect(
+          event.roomMemberChangeType, RoomMemberChangeType.withdrawInvitation);
       expect(await event.calcLocalizedBody(MatrixDefaultLocalizations()),
           'Example has withdrawn the invitation for Alice');
       expect(event.isEventTypeKnown, true);
@@ -678,6 +686,7 @@ void main() {
           'prev_content': {'membership': 'invite'},
         }
       }, room);
+      expect(event.roomMemberChangeType, RoomMemberChangeType.rejectInvite);
       expect(await event.calcLocalizedBody(MatrixDefaultLocalizations()),
           'Alice rejected the invitation');
       expect(event.isEventTypeKnown, true);

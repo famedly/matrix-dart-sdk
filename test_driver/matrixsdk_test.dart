@@ -420,6 +420,96 @@ void main() => group('Integration tests', () {
         }
         return;
       });
+
+      test('dm creation', () async {
+        Client? testClientA, testClientB;
+
+        try {
+          Hive.init(null);
+
+          await olm.init();
+          olm.Account();
+          Logs().i('[LibOlm] Enabled');
+
+          final homeserverUri = Uri.parse(homeserver);
+          Logs().i('++++ Using homeserver $homeserverUri ++++');
+
+          Logs().i('++++ Login Alice at ++++');
+          testClientA = Client('TestClientA', databaseBuilder: getDatabase);
+          await testClientA.checkHomeserver(homeserverUri);
+          await testClientA.login(
+            LoginType.mLoginPassword,
+            identifier: AuthenticationUserIdentifier(user: Users.user1.name),
+            password: Users.user1.password,
+          );
+          expect(testClientA.encryptionEnabled, true);
+
+          Logs().i('++++ Login Bob ++++');
+          testClientB = Client('TestClientB', databaseBuilder: getDatabase);
+          await testClientB.checkHomeserver(homeserverUri);
+          await testClientB.login(
+            LoginType.mLoginPassword,
+            identifier: AuthenticationUserIdentifier(user: Users.user2.name),
+            password: Users.user2.password,
+          );
+          expect(testClientB.encryptionEnabled, true);
+
+          Logs().i('++++ (Alice) Leave all rooms ++++');
+          while (testClientA.rooms.isNotEmpty) {
+            final room = testClientA.rooms.first;
+            if (room.canonicalAlias.isNotEmpty) {
+              break;
+            }
+            try {
+              await room.leave();
+              await room.forget();
+            } catch (_) {}
+          }
+
+          Logs().i('++++ (Bob) Leave all rooms ++++');
+          for (var i = 0; i < 3; i++) {
+            if (testClientB.rooms.isNotEmpty) {
+              final room = testClientB.rooms.first;
+              try {
+                await room.leave();
+                await room.forget();
+              } catch (_) {}
+            }
+          }
+
+          Logs().i('++++ (Alice) Create DM ++++');
+          final dmRoom = await testClientA.startDirectChat(testClientB.userID!);
+          // conduit returns the room on sync first, so we check if it has already been returned first.
+          if (testClientB.getRoomById(dmRoom)?.membership !=
+              Membership.invite) {
+            await testClientB.waitForRoomInSync(dmRoom, invite: true);
+          }
+
+          Logs().i('++++ (Bob) Create DM ++++');
+          final dmRoomFromB =
+              await testClientB.startDirectChat(testClientA.userID!);
+
+          expect(dmRoom, dmRoomFromB,
+              reason:
+                  "Bob should join alice's DM room instead of creating a new one");
+          expect(testClientB.getRoomById(dmRoom)?.membership, Membership.join,
+              reason: 'Room should actually be in the join state now.');
+          expect(testClientA.getRoomById(dmRoom)?.membership, Membership.join,
+              reason: 'Room should actually be in the join state now.');
+        } catch (e, s) {
+          Logs().e('Test failed', e, s);
+          rethrow;
+        } finally {
+          Logs().i('++++ Logout Alice and Bob ++++');
+          if (testClientA?.isLogged() ?? false) await testClientA!.logoutAll();
+          if (testClientA?.isLogged() ?? false) await testClientB!.logoutAll();
+          await testClientA?.dispose(closeDatabase: false);
+          await testClientB?.dispose(closeDatabase: false);
+          testClientA = null;
+          testClientB = null;
+        }
+        return;
+      });
     }, timeout: Timeout(Duration(minutes: 6)));
 
 Object get olmLengthMatcher {

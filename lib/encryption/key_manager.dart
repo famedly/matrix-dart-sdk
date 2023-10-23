@@ -667,6 +667,31 @@ class KeyManager {
     }
   }
 
+  /// Loads and stores all keys from the online key backup. This may take a
+  /// while for older and big accounts.
+  Future<void> loadAllKeys() async {
+    final info = await getRoomKeysBackupInfo();
+    final ret = await client.getRoomKeys(info.version);
+    await loadFromResponse(ret);
+  }
+
+  /// Loads all room keys for a single room and stores them. This may take a
+  /// while for older and big rooms.
+  Future<void> loadAllKeysFromRoom(String roomId) async {
+    final info = await getRoomKeysBackupInfo();
+    final ret = await client.getRoomKeysByRoomId(roomId, info.version);
+    final keys = RoomKeys.fromJson({
+      'rooms': {
+        roomId: {
+          'sessions': ret.sessions.map((k, s) => MapEntry(k, s.toJson())),
+        },
+      },
+    });
+    await loadFromResponse(keys);
+  }
+
+  /// Loads a single key for the specified room from the online key backup
+  /// and stores it.
   Future<void> loadSingleKey(String roomId, String sessionId) async {
     final info = await getRoomKeysBackupInfo();
     final ret =
@@ -747,15 +772,34 @@ class KeyManager {
     }
   }
 
-  bool _isUploadingKeys = false;
+  Future<void>? _uploadingFuture;
 
-  Future<void> backgroundTasks() async {
+  void startAutoUploadKeys() {
+    _uploadKeysOnSync = encryption.client.onSync.stream
+        .listen((_) => uploadInboundGroupSessions(skipIfInProgress: true));
+  }
+
+  /// This task should be performed after sync processing but should not block
+  /// the sync. To make sure that it never gets executed multiple times, it is
+  /// skipped when an upload task is already in progress. Set `skipIfInProgress`
+  /// to `false` to await the pending upload task instead.
+  Future<void> uploadInboundGroupSessions(
+      {bool skipIfInProgress = false}) async {
     final database = client.database;
     final userID = client.userID;
-    if (_isUploadingKeys || database == null || userID == null) {
+    if (database == null || userID == null) {
       return;
     }
-    _isUploadingKeys = true;
+
+    // Make sure to not run in parallel
+    if (_uploadingFuture != null) {
+      if (skipIfInProgress) return;
+      await _uploadingFuture;
+    }
+    final completer = Completer<void>();
+    _uploadingFuture = completer.future;
+
+    await client.userDeviceKeysLoading;
     try {
       if (!(await isCached())) {
         return; // we can't backup anyways
@@ -817,7 +861,7 @@ class KeyManager {
     } catch (e, s) {
       Logs().e('[Key Manager] Error uploading room keys', e, s);
     } finally {
-      _isUploadingKeys = false;
+      completer.complete();
     }
   }
 
@@ -1017,7 +1061,10 @@ class KeyManager {
     }
   }
 
+  StreamSubscription<SyncUpdate>? _uploadKeysOnSync;
+
   void dispose() {
+    _uploadKeysOnSync?.cancel();
     for (final sess in _outboundGroupSessions.values) {
       sess.dispose();
     }
