@@ -739,10 +739,17 @@ class Client extends MatrixApi {
       leave = true;
     }
 
-    return await onSync.stream.firstWhere((sync) =>
+    // Wait for the next sync where this room appears.
+    final syncUpdate = await onSync.stream.firstWhere((sync) =>
         invite && (sync.rooms?.invite?.containsKey(roomId) ?? false) ||
         join && (sync.rooms?.join?.containsKey(roomId) ?? false) ||
         leave && (sync.rooms?.leave?.containsKey(roomId) ?? false));
+
+    // Wait for this sync to be completely processed.
+    await onSyncStatus.stream.firstWhere(
+      (syncStatus) => syncStatus.status == SyncStatus.finished,
+    );
+    return syncUpdate;
   }
 
   /// Checks if the given user has encryption keys. May query keys from the
@@ -1659,7 +1666,7 @@ class Client extends MatrixApi {
         Logs().d('Running sync while init isn\'t done yet, dropping request');
         return;
       }
-      dynamic syncError;
+      Object? syncError;
       await _checkSyncFilter();
       timeout ??= const Duration(seconds: 30);
       final syncRequest = sync(
@@ -1699,12 +1706,12 @@ class Client extends MatrixApi {
           () async => await _currentTransaction,
           syncResp.itemCount,
         );
-        onSyncStatus.add(SyncStatusUpdate(SyncStatus.cleaningUp));
       } else {
         await _handleSync(syncResp, direction: Direction.f);
       }
       if (_disposed || _aborted) return;
       prevBatch = syncResp.nextBatch;
+      onSyncStatus.add(SyncStatusUpdate(SyncStatus.cleaningUp));
       // ignore: unawaited_futures
       database?.deleteOldFiles(
           DateTime.now().subtract(Duration(days: 30)).millisecondsSinceEpoch);
