@@ -18,6 +18,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -458,6 +459,11 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   @override
   Future<Uint8List?> getFile(Uri mxcUri) async {
+    return null;
+  }
+
+  @override
+  Future<File?> getFileEntity(Uri mxcUri) async {
     return null;
   }
 
@@ -1200,6 +1206,11 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   @override
   Future<void> storeFile(Uri mxcUri, Uint8List bytes, int time) async {
+    return;
+  }
+
+  @override
+  Future<void> storeFileEntity(Uri mxcUri, File file, int time) async {
     return;
   }
 

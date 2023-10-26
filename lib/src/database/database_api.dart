@@ -16,6 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:matrix/encryption/utils/olm_session.dart';
@@ -97,7 +98,11 @@ abstract class DatabaseApi {
 
   Future<Uint8List?> getFile(Uri mxcUri);
 
+  Future<File?> getFileEntity(Uri mxcUri);
+
   Future storeFile(Uri mxcUri, Uint8List bytes, int time);
+
+  Future<void> storeFileEntity(Uri mxcUri, File file, int time);
 
   Future storeSyncFilterId(
     String syncFilterId,

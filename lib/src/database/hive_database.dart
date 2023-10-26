@@ -18,6 +18,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -1136,6 +1137,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
+  Future<void> storeFileEntity(Uri mxcUri, File file, int time) async {
+    
+  }
+
+  @override
   Future<void> storeInboundGroupSession(
       String roomId,
       String sessionId,
@@ -1464,6 +1470,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     bool supportDeleteCollections = false,
   }) {
     // see no need to implement this in a deprecated part
+    throw UnimplementedError();
+  }
+  
+  @override
+  Future<File?> getFileEntity(Uri mxcUri) {
     throw UnimplementedError();
   }
 }
