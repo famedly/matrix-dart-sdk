@@ -3,8 +3,10 @@ import 'package:matrix/matrix.dart';
 class ImageFileInfo extends FileInfo {
   ImageFileInfo(
     super.fileName, 
-    super.filePath, 
+    super.filePath,
     super.fileSize, {
+      super.readStream,
+      super.progressCallback,
       this.width,
       this.height,
     }
