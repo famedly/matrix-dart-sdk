@@ -75,7 +75,6 @@ class Timeline {
   bool _collectHistoryUpdates = false;
 
   bool get canRequestHistory {
-    if (events.isEmpty) return true;
     return room.prev_batch != null && events.last.type != EventTypes.RoomCreate;
   }
 
