@@ -5,21 +5,17 @@ import 'package:equatable/equatable.dart';
 import 'package:matrix/matrix.dart';
 import 'package:mime/mime.dart';
 
-typedef ProgressCallback = void Function(int count, int total);
-
 class FileInfo with EquatableMixin {
   final String fileName;
   final String filePath;
   final int fileSize;
   final Stream<List<int>>? readStream;
-  final ProgressCallback? progressCallback;
 
   FileInfo(
     this.fileName,
     this.filePath,
     this.fileSize,{
     this.readStream,
-    this.progressCallback,
   });
 
   factory FileInfo.empty() {
