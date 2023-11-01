@@ -1210,11 +1210,6 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> storeFileEntity(Uri mxcUri, File file, int time) async {
-    return;
-  }
-
-  @override
   Future<void> storeInboundGroupSession(
       String roomId,
       String sessionId,

@@ -1137,11 +1137,6 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> storeFileEntity(Uri mxcUri, File file, int time) async {
-    
-  }
-
-  @override
   Future<void> storeInboundGroupSession(
       String roomId,
       String sessionId,
