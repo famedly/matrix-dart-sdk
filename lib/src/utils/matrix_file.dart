@@ -78,8 +78,8 @@ class MatrixFile {
         mimeType: fileInfo.mimeType,
         filePath: fileInfo.filePath,
         bytes: null,
-        width: (fileInfo.metadata['w'] as double?)?.toInt(),
-        height: (fileInfo.metadata['h'] as double?)?.toInt(),
+        width: fileInfo.metadata['w'],
+        height: fileInfo.metadata['h'],
       );
     }
     if (msgType == MessageTypes.Video) {
@@ -90,8 +90,8 @@ class MatrixFile {
         name: fileInfo.fileName,
         mimeType: fileInfo.mimeType,
         filePath: fileInfo.filePath,
-        width: (fileInfo.metadata['w'] as double?)?.toInt(),
-        height: (fileInfo.metadata['h'] as double?)?.toInt(),
+        width: fileInfo.metadata['w'],
+        height: fileInfo.metadata['h'],
         duration: fileInfo.metadata['duration'], 
       );
     }

@@ -27,8 +27,8 @@ class VideoFileInfo extends FileInfo {
   Map<String, dynamic> get metadata => ({
         'mimetype': mimeType,
         'size': fileSize,
-        'w': width?.toDouble(),
-        'h': height?.toDouble(),
+        'w': width,
+        'h': height,
         if (duration != null) 'duration': duration!.inMilliseconds,
       });
 
