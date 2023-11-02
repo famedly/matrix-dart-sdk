@@ -698,7 +698,7 @@ class CallSession {
       Logs().i(
           'Stream purpose update: \nid = "$streamId", \npurpose = "${sdpStreamMetadata.purpose}",  \naudio_muted = ${sdpStreamMetadata.audio_muted}, \nvideo_muted = ${sdpStreamMetadata.video_muted}');
     });
-    getRemoteStreams.forEach((wpstream) {
+    for (final wpstream in getRemoteStreams) {
       final streamId = wpstream.stream!.id;
       final purpose = metadata.sdpStreamMetadatas[streamId];
       if (purpose != null) {
@@ -712,7 +712,7 @@ class CallSession {
         wpstream.stopped = true;
         fireCallEvent(CallEvent.kFeedsChanged);
       }
-    });
+    }
   }
 
   Future<void> onSDPStreamMetadataReceived(SDPStreamMetadata metadata) async {
@@ -1516,11 +1516,11 @@ class CallSession {
 
   Future<void> tryRemoveStopedStreams() async {
     final removedStreams = <String, WrappedMediaStream>{};
-    streams.forEach((stream) {
+    for (final stream in streams) {
       if (stream.stopped) {
         removedStreams[stream.stream!.id] = stream;
       }
-    });
+    }
     streams
         .removeWhere((stream) => removedStreams.containsKey(stream.stream!.id));
     for (final element in removedStreams.entries) {
@@ -1561,9 +1561,9 @@ class CallSession {
     try {
       if (candidatesQueue.isNotEmpty) {
         final candidates = <Map<String, dynamic>>[];
-        candidatesQueue.forEach((element) {
+        for (final element in candidatesQueue) {
           candidates.add(element.toMap());
-        });
+        }
         localCandidates = [];
         final res = await sendCallCandidates(
             opts.room, callId, localPartyId, candidates);

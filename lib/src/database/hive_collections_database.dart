@@ -612,7 +612,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
               // post-load the heroes
               final heroes = room.summary.mHeroes;
               if (heroes != null) {
-                heroes.forEach((hero) => membersToPostload.add(hero));
+                membersToPostload.addAll(heroes);
               }
             }
             // Load members
@@ -771,9 +771,9 @@ class HiveCollectionsDatabase extends DatabaseApi {
         .toList();
     final states = await _roomMembersBox.getAll(keys);
     states.removeWhere((state) => state == null);
-    states.forEach(
-      (state) => users.add(Event.fromJson(copyMap(state!), room).asUser),
-    );
+    for (final state in states) {
+      users.add(Event.fromJson(copyMap(state!), room).asUser);
+    }
 
     return users;
   }
