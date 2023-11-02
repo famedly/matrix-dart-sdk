@@ -43,25 +43,17 @@ class User extends Event {
   }
 
   User.fromState({
-    Map<String, dynamic>? prevContent,
-    required String stateKey,
-    Map<String, dynamic> content = const {},
+    super.prevContent,
+    required String super.stateKey,
+    super.content = const {},
     required String typeKey,
-    required String eventId,
-    required String senderId,
-    required DateTime originServerTs,
-    dynamic unsigned,
-    required Room room,
+    required super.eventId,
+    required super.senderId,
+    required super.originServerTs,
+    super.unsigned,
+    required super.room,
   }) : super(
-          stateKey: stateKey,
-          prevContent: prevContent,
-          content: content,
           type: typeKey,
-          eventId: eventId,
-          senderId: senderId,
-          originServerTs: originServerTs,
-          unsigned: unsigned,
-          room: room,
         );
 
   /// The full qualified Matrix ID in the format @username:server.abc.

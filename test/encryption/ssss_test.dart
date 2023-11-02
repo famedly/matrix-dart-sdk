@@ -36,7 +36,7 @@ Uint8List secureRandomBytes(int len) {
 }
 
 class MockSSSS extends SSSS {
-  MockSSSS(Encryption encryption) : super(encryption);
+  MockSSSS(super.encryption);
 
   bool requestedSecrets = false;
   @override
