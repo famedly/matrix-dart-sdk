@@ -522,17 +522,18 @@ class CallSession {
     await gotCallFeedsForAnswer(callFeeds);
   }
 
-  void replacedBy(CallSession newCall) {
+  Future<void> replacedBy(CallSession newCall) async {
     if (state == CallState.kWaitLocalMedia) {
       Logs().v('Telling new call to wait for local media');
       newCall.waitForLocalAVStream = true;
     } else if (state == CallState.kCreateOffer ||
         state == CallState.kInviteSent) {
       Logs().v('Handing local stream to new call');
-      newCall.gotCallFeedsForAnswer(getLocalStreams);
+      await newCall.gotCallFeedsForAnswer(getLocalStreams);
     }
     successor = newCall;
     onCallReplaced.add(newCall);
+    // ignore: unawaited_futures
     hangup(CallErrorCode.Replaced, true);
   }
 
@@ -1510,8 +1511,9 @@ class CallSession {
     return pc;
   }
 
-  void createDataChannel(String label, RTCDataChannelInit dataChannelDict) {
-    pc?.createDataChannel(label, dataChannelDict);
+  Future<void> createDataChannel(
+      String label, RTCDataChannelInit dataChannelDict) async {
+    await pc?.createDataChannel(label, dataChannelDict);
   }
 
   Future<void> tryRemoveStopedStreams() async {

@@ -504,7 +504,7 @@ class DeviceKeys extends SignableKey {
     lastActive = DateTime.fromMillisecondsSinceEpoch(0);
   }
 
-  KeyVerification startVerification() {
+  Future<KeyVerification> startVerification() async {
     if (!isValid) {
       throw Exception('setVerification called on invalid key');
     }
@@ -516,7 +516,7 @@ class DeviceKeys extends SignableKey {
     final request = KeyVerification(
         encryption: encryption, userId: userId, deviceId: deviceId!);
 
-    request.start();
+    await request.start();
     encryption.keyVerificationManager.addRequest(request);
     return request;
   }

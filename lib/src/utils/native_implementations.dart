@@ -50,10 +50,9 @@ abstract class NativeImplementations {
     bool retryInDummy = false,
   });
 
-  @override
-
   /// this implementation will catch any non-implemented method
-  dynamic noSuchMethod(Invocation invocation) {
+  @override
+  dynamic noSuchMethod(Invocation invocation) async {
     final dynamic argument = invocation.positionalArguments.single;
     final memberName = invocation.memberName.toString().split('"')[1];
 

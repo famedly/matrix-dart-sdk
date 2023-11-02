@@ -6,6 +6,8 @@ linter:
     always_use_package_imports: true
     avoid_bool_literals_in_conditional_expressions: true
     avoid_print: true
+    cancel_subscriptions: true
+    discarded_futures: true
     non_constant_identifier_names: false # seems to wrongly diagnose static const variables
     prefer_final_in_for_each: true
     prefer_final_locals: true

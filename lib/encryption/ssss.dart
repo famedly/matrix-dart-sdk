@@ -31,7 +31,6 @@ import 'package:matrix/encryption/utils/ssss_cache.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart' as uc;
-import 'package:matrix/src/utils/run_in_root.dart';
 
 const cacheTypes = <String>{
   EventTypes.CrossSigningSelfSigning,
@@ -722,7 +721,11 @@ class OpenSSSS {
       throw InvalidPassphraseException('Inalid key');
     }
     if (postUnlock) {
-      await runInRoot(() => _postUnlock());
+      try {
+        await _postUnlock();
+      } catch (e, s) {
+        Logs().e('Error during post unlock', e, s);
+      }
     }
   }
 

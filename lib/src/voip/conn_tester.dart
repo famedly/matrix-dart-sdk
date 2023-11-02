@@ -45,11 +45,15 @@ class ConnectionTester {
 
     await pc1!.setRemoteDescription(answer);
 
-    void dispose() {
-      pc1!.close();
-      pc1!.dispose();
-      pc2!.close();
-      pc2!.dispose();
+    Future<void> dispose() async {
+      await Future.wait([
+        pc1!.close(),
+        pc2!.close(),
+      ]);
+      await Future.wait([
+        pc1!.dispose(),
+        pc2!.dispose(),
+      ]);
     }
 
     bool connected = false;
@@ -69,6 +73,7 @@ class ConnectionTester {
           .e('[VOIP] ConnectionTester Error while testing TURN server: ', e, s);
     }
 
+    // ignore: unawaited_futures
     dispose();
     return connected;
   }

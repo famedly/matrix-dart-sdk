@@ -300,8 +300,11 @@ class Timeline {
 
   /// Don't forget to call this before you dismiss this object!
   void cancelSubscriptions() {
+    // ignore: discarded_futures
     sub?.cancel();
+    // ignore: discarded_futures
     roomSub?.cancel();
+    // ignore: discarded_futures
     sessionIdReceivedSub?.cancel();
   }
 

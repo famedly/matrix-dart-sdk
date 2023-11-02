@@ -53,6 +53,7 @@ class VoIP {
     for (final room in client.rooms) {
       if (room.activeGroupCallEvents.isNotEmpty) {
         for (final groupCall in room.activeGroupCallEvents) {
+          // ignore: discarded_futures
           createGroupCallFromRoomStateEvent(groupCall,
               emitHandleNewGroupCall: false);
         }
@@ -589,7 +590,7 @@ class VoIP {
       return null;
     }
     final groupId = genCallID();
-    final groupCall = GroupCall(
+    final groupCall = await GroupCall(
       groupCallId: groupId,
       client: client,
       voip: this,

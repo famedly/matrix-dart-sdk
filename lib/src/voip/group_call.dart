@@ -232,11 +232,11 @@ class GroupCall {
     this.groupCallId = groupCallId ?? genCallID();
   }
 
-  GroupCall create() {
+  Future<GroupCall> create() async {
     voip.groupCalls[groupCallId] = this;
     voip.groupCalls[room.id] = this;
 
-    client.setRoomStateWithKey(
+    await client.setRoomStateWithKey(
       room.id,
       EventTypes.GroupCallPrefix,
       groupCallId,
@@ -413,6 +413,7 @@ class GroupCall {
     if (localUserMediaStream != null) {
       final oldStream = localUserMediaStream!.stream;
       localUserMediaStream!.setNewStream(stream.stream!);
+      // ignore: discarded_futures
       stopMediaStream(oldStream);
     }
   }

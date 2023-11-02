@@ -39,7 +39,7 @@ void main() {
     var currentPoison = 0;
 
     final countStream = StreamController<int>.broadcast();
-    Future<int> waitForCount(int count) {
+    Future<int> waitForCount(int count) async {
       if (updateCount == count) {
         return Future.value(updateCount);
       }
@@ -47,9 +47,9 @@ void main() {
       final completer = Completer<int>();
 
       StreamSubscription<int>? sub;
-      sub = countStream.stream.listen((newCount) {
+      sub = countStream.stream.listen((newCount) async {
         if (newCount == count) {
-          sub?.cancel();
+          await sub?.cancel();
           completer.complete(count);
         }
       });
@@ -109,7 +109,8 @@ void main() {
       testTimeStamp = DateTime.now().millisecondsSinceEpoch;
     });
 
-    tearDown(() => client.dispose(closeDatabase: true).onError((e, s) {}));
+    tearDown(
+        () async => client.dispose(closeDatabase: true).onError((e, s) {}));
 
     test('Create', () async {
       client.onEvent.add(EventUpdate(

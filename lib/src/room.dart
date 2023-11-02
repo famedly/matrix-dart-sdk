@@ -1620,6 +1620,7 @@ class Room {
       return user.asUser;
     } else {
       if (mxID.isValidMatrixId) {
+        // ignore: discarded_futures
         requestUser(
           mxID,
           ignoreErrors: true,

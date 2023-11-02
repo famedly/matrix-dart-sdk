@@ -128,6 +128,7 @@ class Event extends MatrixEvent {
         final json = toJson();
         json['unsigned'] ??= <String, dynamic>{};
         json['unsigned'][messageSendingStatusKey] = EventStatus.error.intValue;
+        // ignore: discarded_futures
         room.client.handleSync(
           SyncUpdate(
             nextBatch: '',
@@ -154,6 +155,7 @@ class Event extends MatrixEvent {
           MessageTypes.File,
         }.contains(messageType) &&
         !room.sendingFilePlaceholders.containsKey(eventId)) {
+      // ignore: discarded_futures
       remove();
     }
   }

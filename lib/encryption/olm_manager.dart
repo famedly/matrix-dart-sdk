@@ -396,20 +396,24 @@ class OlmManager {
     final device = client.userDeviceKeys[event.sender]?.deviceKeys.values
         .firstWhereOrNull((d) => d.curve25519Key == senderKey);
     final existingSessions = olmSessions[senderKey];
-    Future<void> updateSessionUsage([OlmSession? session]) =>
-        runInRoot(() async {
-          if (session != null) {
-            session.lastReceived = DateTime.now();
-            await storeOlmSession(session);
-          }
-          if (device != null) {
-            device.lastActive = DateTime.now();
-            await encryption.olmDatabase?.setLastActiveUserDeviceKey(
-                device.lastActive.millisecondsSinceEpoch,
-                device.userId,
-                device.deviceId!);
-          }
-        });
+    Future<void> updateSessionUsage([OlmSession? session]) async {
+      try {
+        if (session != null) {
+          session.lastReceived = DateTime.now();
+          await storeOlmSession(session);
+        }
+        if (device != null) {
+          device.lastActive = DateTime.now();
+          await encryption.olmDatabase?.setLastActiveUserDeviceKey(
+              device.lastActive.millisecondsSinceEpoch,
+              device.userId,
+              device.deviceId!);
+        }
+      } catch (e, s) {
+        Logs().e('Error while updating olm session timestamp', e, s);
+      }
+    }
+
     if (existingSessions != null) {
       for (final session in existingSessions) {
         if (session.session == null) {
@@ -446,14 +450,16 @@ class OlmManager {
         newSession.create_inbound_from(_olmAccount!, senderKey, body);
         _olmAccount!.remove_one_time_keys(newSession);
         await encryption.olmDatabase?.updateClientKeys(pickledOlmAccount!);
+
         plaintext = newSession.decrypt(type, body);
-        await runInRoot(() => storeOlmSession(OlmSession(
-              key: client.userID!,
-              identityKey: senderKey,
-              sessionId: newSession.session_id(),
-              session: newSession,
-              lastReceived: DateTime.now(),
-            )));
+
+        await storeOlmSession(OlmSession(
+          key: client.userID!,
+          identityKey: senderKey,
+          sessionId: newSession.session_id(),
+          session: newSession,
+          lastReceived: DateTime.now(),
+        ));
         await updateSessionUsage();
       } catch (e) {
         newSession.free();
@@ -570,8 +576,6 @@ class OlmManager {
       return _decryptToDeviceEvent(event);
     } catch (_) {
       // okay, the thing errored while decrypting. It is safe to assume that the olm session is corrupt and we should generate a new one
-
-      // ignore: unawaited_futures
       runInRoot(() => restoreOlmSession(event.senderId, senderKey));
 
       rethrow;
@@ -658,14 +662,18 @@ class OlmManager {
     final encryptResult = sess.first.session!.encrypt(json.encode(fullPayload));
     await storeOlmSession(sess.first);
     if (encryption.olmDatabase != null) {
-      await runInRoot(
-          () async => encryption.olmDatabase?.setLastSentMessageUserDeviceKey(
-              json.encode({
-                'type': type,
-                'content': payload,
-              }),
-              device.userId,
-              device.deviceId!));
+      try {
+        await encryption.olmDatabase?.setLastSentMessageUserDeviceKey(
+            json.encode({
+              'type': type,
+              'content': payload,
+            }),
+            device.userId,
+            device.deviceId!);
+      } catch (e, s) {
+        // we can ignore this error, since it would just make us use a different olm session possibly
+        Logs().w('Error while updating olm usage timestamp', e, s);
+      }
     }
     final encryptedBody = <String, dynamic>{
       'algorithm': AlgorithmTypes.olmV1Curve25519AesSha2,

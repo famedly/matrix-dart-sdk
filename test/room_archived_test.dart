@@ -50,7 +50,7 @@ void main() {
       insertList.clear();
     });
 
-    tearDown(() => client.dispose().onError((e, s) {}));
+    tearDown(() async => client.dispose().onError((e, s) {}));
 
     test('archive room not loaded', () async {
       final archiveRoom =
