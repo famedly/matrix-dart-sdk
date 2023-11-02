@@ -433,17 +433,16 @@ class DeviceKeys extends SignableKey {
   bool? _validSelfSignature;
   bool get selfSigned =>
       _validSelfSignature ??
-      (_validSelfSignature = (deviceId != null &&
-              signatures
-                      ?.tryGetMap<String, Object?>(userId)
-                      ?.tryGet<String>('ed25519:$deviceId') ==
-                  null
-          ? false
+      (_validSelfSignature = deviceId != null &&
+          signatures
+                  ?.tryGetMap<String, Object?>(userId)
+                  ?.tryGet<String>('ed25519:$deviceId') !=
+              null &&
           // without libolm we still want to be able to add devices. In that case we ofc just can't
           // verify the signature
-          : _verifySignature(
+          _verifySignature(
               ed25519Key!, signatures![userId]!['ed25519:$deviceId']!,
-              isSignatureWithoutLibolmValid: true)));
+              isSignatureWithoutLibolmValid: true));
 
   @override
   bool get blocked => super.blocked || !selfSigned;

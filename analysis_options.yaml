@@ -2,17 +2,18 @@ include: package:lints/recommended.yaml
 
 linter:
   rules:
-    avoid_print: true
-    prefer_final_locals: true
-    prefer_final_in_for_each: true
-    sort_pub_dependencies: true
-    always_use_package_imports: true
     always_declare_return_types: true
+    always_use_package_imports: true
+    avoid_bool_literals_in_conditional_expressions: true
+    avoid_print: true
+    non_constant_identifier_names: false # seems to wrongly diagnose static const variables
+    prefer_final_in_for_each: true
+    prefer_final_locals: true
     prefer_single_quotes: true
     sort_child_properties_last: true
+    sort_pub_dependencies: true
     unawaited_futures: true
     unsafe_html: true
-    non_constant_identifier_names: false # seems to wrongly diagnose static const variables
 
 analyzer:
   errors:
