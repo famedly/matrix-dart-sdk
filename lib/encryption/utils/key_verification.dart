@@ -1205,8 +1205,7 @@ const knownHashes = ['sha256'];
 const knownHashesAuthentificationCodes = ['hkdf-hmac-sha256'];
 
 class _KeyVerificationMethodSas extends _KeyVerificationMethod {
-  _KeyVerificationMethodSas({required KeyVerification request})
-      : super(request: request);
+  _KeyVerificationMethodSas({required super.request});
 
   @override
   // ignore: overridden_fields

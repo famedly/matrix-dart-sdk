@@ -1381,7 +1381,7 @@ class Room {
         );
 
     final events = [
-      if (resp.eventsAfter != null) ...resp.eventsAfter!.reversed.toList(),
+      if (resp.eventsAfter != null) ...resp.eventsAfter!.reversed,
       if (resp.event != null) resp.event!,
       if (resp.eventsBefore != null) ...resp.eventsBefore!
     ].map((e) => Event.fromMatrixEvent(e, this)).toList();
