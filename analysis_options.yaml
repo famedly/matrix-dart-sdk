@@ -8,14 +8,19 @@ linter:
     avoid_print: true
     cancel_subscriptions: true
     discarded_futures: true
-    non_constant_identifier_names: false # seems to wrongly diagnose static const variables
+    no_adjacent_strings_in_list: true
     prefer_final_in_for_each: true
     prefer_final_locals: true
     prefer_single_quotes: true
     sort_child_properties_last: true
     sort_pub_dependencies: true
+    test_types_in_equals: true
+    throw_in_finally: true
     unawaited_futures: true
+    unnecessary_statements: true
     unsafe_html: true
+
+    non_constant_identifier_names: false # seems to wrongly diagnose static const variables
 
 analyzer:
   errors:
