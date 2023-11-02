@@ -123,5 +123,22 @@ void main() {
       expect(markdown('meep `\$\\frac{2}{3}\$`'),
           'meep <code>\$\\frac{2}{3}\$</code>');
     });
+    test('Code blocks', () {
+      expect(
+        markdown(
+          '```dart\nvoid main(){\nprint(something);\n}\n```',
+          convertLinebreaks: true,
+        ),
+        '<pre><code class="language-dart">void main(){\nprint(something);\n}\n</code></pre>',
+      );
+
+      expect(
+        markdown(
+          'The first \n codeblock\n```dart\nvoid main(){\nprint(something);\n}\n```\nAnd the second code block\n```js\nmeow\nmeow\n```',
+          convertLinebreaks: true,
+        ),
+        '<p>The first<br/>codeblock</p><br/><pre><code class="language-dart">void main(){\nprint(something);\n}\n</code></pre><br/><p>And the second code block</p><br/><pre><code class="language-js">meow\nmeow\n</code></pre>',
+      );
+    });
   });
 }
