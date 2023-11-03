@@ -72,3 +72,12 @@ await client.login(
 ```dart
 await client.getRoomById('your_room_id').sendTextEvent('Hello world');
 ```
+
+# Folked supported
+This is a forked repository. We are trying to maintain this repo for our vision of our project, but we still need to contribute to the upstream repository, which is a problem that also impacts the community. And we try to keep track of the updates of the upstream repository version to version.
+
+It is the process to keep track with the `main` branch in upstream repository
+
+1. Sync folk `main` branch here with upstream `main`
+2. Checkout new branch `twake-supported-0.x.x` from latest main
+3. Cherry pick and resolve confliction from the previous `twake-supported-0.y.z`
