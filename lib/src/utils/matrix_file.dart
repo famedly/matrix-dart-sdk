@@ -17,6 +17,7 @@
  */
 
 /// Workaround until [File] in dart:io and dart:html is unified
+library;
 
 import 'dart:async';
 import 'dart:typed_data';
@@ -91,15 +92,14 @@ class MatrixFile {
 
 class MatrixImageFile extends MatrixFile {
   MatrixImageFile({
-    required Uint8List bytes,
-    required String name,
-    String? mimeType,
+    required super.bytes,
+    required super.name,
+    super.mimeType,
     int? width,
     int? height,
     this.blurhash,
   })  : _width = width,
-        _height = height,
-        super(bytes: bytes, name: name, mimeType: mimeType);
+        _height = height;
 
   /// Creates a new image file and calculates the width, height and blurhash.
   static Future<MatrixImageFile> create({
@@ -355,13 +355,12 @@ class MatrixVideoFile extends MatrixFile {
   final int? duration;
 
   MatrixVideoFile(
-      {required Uint8List bytes,
-      required String name,
-      String? mimeType,
+      {required super.bytes,
+      required super.name,
+      super.mimeType,
       this.width,
       this.height,
-      this.duration})
-      : super(bytes: bytes, name: name, mimeType: mimeType);
+      this.duration});
 
   @override
   String get msgType => 'm.video';
@@ -379,11 +378,10 @@ class MatrixAudioFile extends MatrixFile {
   final int? duration;
 
   MatrixAudioFile(
-      {required Uint8List bytes,
-      required String name,
-      String? mimeType,
-      this.duration})
-      : super(bytes: bytes, name: name, mimeType: mimeType);
+      {required super.bytes,
+      required super.name,
+      super.mimeType,
+      this.duration});
 
   @override
   String get msgType => 'm.audio';

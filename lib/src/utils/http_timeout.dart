@@ -50,7 +50,7 @@ abstract class TimeoutHttpClient extends http.BaseClient {
 }
 
 class FixedTimeoutHttpClient extends TimeoutHttpClient {
-  FixedTimeoutHttpClient(http.Client inner, this.timeout) : super(inner);
+  FixedTimeoutHttpClient(super.inner, this.timeout);
   @override
   Duration timeout;
 }

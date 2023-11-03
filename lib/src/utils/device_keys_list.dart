@@ -135,7 +135,8 @@ class SimpleSignableKey extends MatrixSignableKey {
   @override
   String? identifier;
 
-  SimpleSignableKey.fromJson(Map<String, dynamic> json) : super.fromJson(json);
+  SimpleSignableKey.fromJson(Map<String, dynamic> super.json)
+      : super.fromJson();
 }
 
 abstract class SignableKey extends MatrixSignableKey {
@@ -166,8 +167,8 @@ abstract class SignableKey extends MatrixSignableKey {
   bool get crossVerified => hasValidSignatureChain();
   bool get signed => hasValidSignatureChain(verifiedOnly: false);
 
-  SignableKey.fromJson(Map<String, dynamic> json, this.client)
-      : super.fromJson(json) {
+  SignableKey.fromJson(Map<String, dynamic> super.json, this.client)
+      : super.fromJson() {
     _verified = false;
     _blocked = false;
   }

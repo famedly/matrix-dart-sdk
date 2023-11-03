@@ -1187,6 +1187,12 @@ class Room {
   Future<void> forget() async {
     await client.database?.forgetRoom(id);
     await client.forgetRoom(id);
+    // Update archived rooms, otherwise an archived room may still be in the
+    // list after a forget room call
+    final roomIndex = client.archivedRooms.indexWhere((r) => r.room.id == id);
+    if (roomIndex != -1) {
+      client.archivedRooms.removeAt(roomIndex);
+    }
     return;
   }
 
@@ -1375,7 +1381,7 @@ class Room {
         );
 
     final events = [
-      if (resp.eventsAfter != null) ...resp.eventsAfter!.reversed.toList(),
+      if (resp.eventsAfter != null) ...resp.eventsAfter!.reversed,
       if (resp.event != null) resp.event!,
       if (resp.eventsBefore != null) ...resp.eventsBefore!
     ].map((e) => Event.fromMatrixEvent(e, this)).toList();
