@@ -27,7 +27,6 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
-import 'package:matrix/src/utils/file_send_request_credentials.dart';
 import 'package:matrix/src/utils/markdown.dart';
 import 'package:matrix/src/utils/marked_unread.dart';
 import 'package:matrix/src/utils/space_child.dart';
@@ -1574,7 +1573,7 @@ class Room {
   /// Uploads a new user avatar for this room. Returns the event ID of the new
   /// m.room.avatar event. Leave empty to remove the current avatar.
   Future<String> setAvatar(MatrixFile? file) async {
-    final uploadResp = file == null && file!.bytes != null
+    final uploadResp = file == null || file.bytes?.isNotEmpty != true
         ? null
         : await client.uploadContent(file.bytes!, filename: file.name);
     return await client.setRoomStateWithKey(
