@@ -1286,7 +1286,7 @@ class CallSession {
 
       inviteTimer = Timer(Duration(seconds: Timeouts.callTimeoutSec), () {
         if (state == CallState.kInviteSent) {
-          hangup(CallErrorCode.InviteTimeout, false);
+          hangup(CallErrorCode.InviteTimeout);
         }
         inviteTimer?.cancel();
         inviteTimer = null;
