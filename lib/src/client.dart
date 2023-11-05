@@ -19,6 +19,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -1750,8 +1751,8 @@ class Client extends MatrixApi {
         Logs().w('The user has been logged out!');
         await clear();
       }
-    } on MatrixConnectionException catch (e, s) {
-      Logs().w('Synchronization connection failed');
+    } on IOException catch (e, s) {
+      Logs().w('Syncloop failed: Client has not connection to the server');
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.error,
           error: SdkError(exception: e, stackTrace: s)));
     } catch (e, s) {
