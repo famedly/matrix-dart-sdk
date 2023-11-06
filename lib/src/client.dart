@@ -1741,6 +1741,8 @@ class Client extends MatrixApi {
         await processToDeviceQueue();
       } catch (_) {} // we want to dispose any errors this throws
 
+      await singleShotStaleCallChecker();
+
       _retryDelay = Future.value();
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.finished));
     } on MatrixException catch (e, s) {
@@ -2148,6 +2150,9 @@ class Client extends MatrixApi {
     }
   }
 
+  /// stores when we last checked for stale calls
+  DateTime lastStaleCallRun = DateTime(0);
+
   Future<Room> _updateRoomsByRoomUpdate(
       String roomId, SyncRoomUpdate chatUpdate) async {
     // Update the chat list item.
@@ -2188,9 +2193,6 @@ class Client extends MatrixApi {
     }
     // If the membership is "leave" then remove the item and stop here
     else if (found && membership == Membership.leave) {
-      // stop stale group call checker for left room.
-      room.stopStaleCallsChecker(room.id);
-
       rooms.removeAt(roomIndex);
 
       // in order to keep the archive in sync, add left room to archive
