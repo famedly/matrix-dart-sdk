@@ -1051,7 +1051,7 @@ class FakeMatrixApi extends BaseClient {
     }
   };
 
-  final Map<String, Map<String, dynamic>> api = {
+  Map<String, Map<String, dynamic>> api = {
     'GET': {
       '/path/to/auth/error': (var req) => {
             'errcode': 'M_FORBIDDEN',

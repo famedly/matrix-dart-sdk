@@ -335,6 +335,94 @@ void main() {
       expect(loginState, LoginState.loggedOut);
     });
 
+    test('Login again but break server when trying to logout', () async {
+      matrix = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        databaseBuilder: getDatabase,
+      );
+
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().w('[LibOlm] Enabled: $olmEnabled');
+
+      expect(matrix.homeserver, null);
+
+      try {
+        await matrix
+            .checkHomeserver(Uri.parse('https://fakeserver.wrongaddress'));
+      } catch (exception) {
+        expect(exception.toString().isNotEmpty, true);
+      }
+      await matrix.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
+          checkWellKnown: false);
+      expect(matrix.homeserver.toString(), 'https://fakeserver.notexisting');
+
+      final available = await matrix.checkUsernameAvailability('testuser');
+      expect(available, true);
+
+      final loginStateFuture = matrix.onLoginStateChanged.stream.first;
+      final syncFuture = matrix.onSync.stream.first;
+
+      await matrix.init(
+        newToken: 'abcd',
+        newUserID: '@test:fakeServer.notExisting',
+        newHomeserver: matrix.homeserver,
+        newDeviceName: 'Text Matrix Client',
+        newDeviceID: 'GHTYAJCE',
+        newOlmAccount: pickledOlmAccount,
+      );
+
+      await Future.delayed(Duration(milliseconds: 50));
+
+      final loginState = await loginStateFuture;
+      final sync = await syncFuture;
+
+      expect(loginState, LoginState.loggedIn);
+      expect(matrix.onSync.value != null, true);
+      expect(matrix.encryptionEnabled, olmEnabled);
+      if (olmEnabled) {
+        expect(matrix.identityKey, identityKey);
+        expect(matrix.fingerprintKey, fingerprintKey);
+      }
+      expect(sync.nextBatch == matrix.prevBatch, true);
+    });
+
+    test('Logout but this time server is dead', () async {
+      final oldapi = FakeMatrixApi.currentApi?.api;
+      expect(
+          (FakeMatrixApi.currentApi?.api['PUT']?.keys.where((element) =>
+              element.startsWith('/client/v3/room_keys/keys?version')))?.length,
+          1);
+      // not a huge fan, open to ideas
+      FakeMatrixApi.currentApi?.api = {};
+      // random sanity test to test if the test to test the breaking server hack works.
+      expect(
+          (FakeMatrixApi.currentApi?.api['PUT']?.keys.where((element) =>
+              element.startsWith('/client/v3/room_keys/keys?version')))?.length,
+          null);
+      try {
+        await matrix.logout();
+      } catch (e) {
+        Logs().w(
+            'Ignore red warnings for this test, test is to check if database is cleared even if server breaks ');
+      }
+
+      expect(matrix.accessToken == null, true);
+      expect(matrix.homeserver == null, true);
+      expect(matrix.userID == null, true);
+      expect(matrix.deviceID == null, true);
+      expect(matrix.deviceName == null, true);
+      expect(matrix.prevBatch == null, true);
+
+      FakeMatrixApi.currentApi?.api = oldapi!;
+    });
+
     test('Login', () async {
       matrix = Client(
         'testclient',
