@@ -1618,7 +1618,11 @@ class CallSession {
     fireCallEvent(CallEvent.kError);
     lastError = CallError(
         CallErrorCode.LocalOfferFailed, 'Failed to get local offer!', err);
-    await terminate(CallParty.kLocal, CallErrorCode.LocalOfferFailed, false);
+    await terminate(
+      CallParty.kLocal,
+      CallErrorCode.LocalOfferFailed,
+      true,
+    );
   }
 
   Future<void> _getUserMediaFailed(dynamic err) async {
@@ -1629,7 +1633,11 @@ class CallSession {
           CallErrorCode.NoUserMedia,
           'Couldn\'t start capturing media! Is your microphone set up and does this app have permission?',
           err);
-      await terminate(CallParty.kLocal, CallErrorCode.NoUserMedia, false);
+      await terminate(
+        CallParty.kLocal,
+        CallErrorCode.NoUserMedia,
+        true,
+      );
     }
   }
 
