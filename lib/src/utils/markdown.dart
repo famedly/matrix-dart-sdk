@@ -204,6 +204,16 @@ class MentionSyntax extends InlineSyntax {
   }
 }
 
+class MultipleLinebreaksSyntax extends InlineSyntax {
+  MultipleLinebreaksSyntax() : super(r'\n{2,}');
+
+  @override
+  bool onMatch(InlineParser parser, Match match) {
+    parser.addNode(Element.empty('br'));
+    return true;
+  }
+}
+
 String markdown(
   String text, {
   Map<String, Map<String, String>> Function()? getEmotePacks,
@@ -218,12 +228,14 @@ String markdown(
     ],
     inlineSyntaxes: [
       StrikethroughSyntax(),
+      MultipleLinebreaksSyntax(),
       SpoilerSyntax(),
       EmoteSyntax(getEmotePacks),
       PillSyntax(),
       MentionSyntax(getMention),
       InlineLatexSyntax(),
     ],
+    inlineOnly: true,
   );
 
   var stripPTags = '<p>'.allMatches(ret).length <= 1;
