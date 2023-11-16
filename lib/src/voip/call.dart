@@ -1200,7 +1200,9 @@ class CallSession {
     setCallState(CallState.kEnded);
 
     if (!isGroupCall) {
-      if (callId != voip.currentCID) return;
+      // when a call crash and this call is already terminated the currentCId is null.
+      // So don't return bc the hangup or reject will not proceed anymore.
+      if (callId != voip.currentCID && voip.currentCID != null) return;
       voip.currentCID = null;
       voip.incomingCallRoomId.removeWhere((key, value) => value == callId);
     }
@@ -1286,7 +1288,7 @@ class CallSession {
 
       inviteTimer = Timer(Duration(seconds: Timeouts.callTimeoutSec), () {
         if (state == CallState.kInviteSent) {
-          hangup(CallErrorCode.InviteTimeout, false);
+          hangup(CallErrorCode.InviteTimeout);
         }
         inviteTimer?.cancel();
         inviteTimer = null;

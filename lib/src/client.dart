@@ -554,10 +554,9 @@ class Client extends MatrixApi {
   /// including all persistent data from the store.
   @override
   Future<void> logout() async {
-    // Upload keys to make sure all are cached on the next login.
-    await encryption?.keyManager.uploadInboundGroupSessions();
-
     try {
+      // Upload keys to make sure all are cached on the next login.
+      await encryption?.keyManager.uploadInboundGroupSessions();
       await super.logout();
     } catch (e, s) {
       Logs().e('Logout failed', e, s);
@@ -934,6 +933,7 @@ class Client extends MatrixApi {
     final syncResp = await sync(
       filter: '{"room":{"include_leave":true,"timeline":{"limit":10}}}',
       timeout: _archiveCacheBusterTimeout,
+      setPresence: syncPresence,
     );
     // wrap around and hope there are not more than 30 leaves in 2 minutes :)
     _archiveCacheBusterTimeout = (_archiveCacheBusterTimeout + 1) % 30;
@@ -1742,6 +1742,8 @@ class Client extends MatrixApi {
         await processToDeviceQueue();
       } catch (_) {} // we want to dispose any errors this throws
 
+      await singleShotStaleCallChecker();
+
       _retryDelay = Future.value();
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.finished));
     } on MatrixException catch (e, s) {
@@ -1791,12 +1793,13 @@ class Client extends MatrixApi {
         await _handleRooms(leave, direction: direction);
       }
     }
-    for (final newPresence in sync.presence ?? []) {
+    for (final newPresence in sync.presence ?? <Presence>[]) {
       final cachedPresence = CachedPresence.fromMatrixEvent(newPresence);
       presences[newPresence.senderId] = cachedPresence;
       // ignore: deprecated_member_use_from_same_package
       onPresence.add(newPresence);
       onPresenceChanged.add(cachedPresence);
+      await database?.storePresence(newPresence.senderId, cachedPresence);
     }
     for (final newAccountData in sync.accountData ?? []) {
       await database?.storeAccountData(
@@ -2149,6 +2152,9 @@ class Client extends MatrixApi {
     }
   }
 
+  /// stores when we last checked for stale calls
+  DateTime lastStaleCallRun = DateTime(0);
+
   Future<Room> _updateRoomsByRoomUpdate(
       String roomId, SyncRoomUpdate chatUpdate) async {
     // Update the chat list item.
@@ -2189,9 +2195,6 @@ class Client extends MatrixApi {
     }
     // If the membership is "leave" then remove the item and stop here
     else if (found && membership == Membership.leave) {
-      // stop stale group call checker for left room.
-      room.stopStaleCallsChecker(room.id);
-
       rooms.removeAt(roomIndex);
 
       // in order to keep the archive in sync, add left room to archive
@@ -2922,6 +2925,25 @@ class Client extends MatrixApi {
     });
     await clearCache();
     return;
+  }
+
+  /// The newest presence of this user if there is any. Fetches it from the
+  /// database first and then from the server if necessary or returns offline.
+  Future<CachedPresence> fetchCurrentPresence(String userId) async {
+    final cachedPresence = presences[userId];
+    if (cachedPresence != null) {
+      return cachedPresence;
+    }
+
+    final dbPresence = await database?.getPresence(userId);
+    if (dbPresence != null) return presences[userId] = dbPresence;
+
+    try {
+      final newPresence = await getPresence(userId);
+      return CachedPresence.fromPresenceResponse(newPresence, userId);
+    } catch (e) {
+      return CachedPresence.neverSeen(userId);
+    }
   }
 
   bool _disposed = false;

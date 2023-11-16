@@ -1479,6 +1479,18 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
+  Future<void> storePresence(String userId, CachedPresence presence) =>
+      _presencesBox.put(userId, presence.toJson());
+
+  @override
+  Future<CachedPresence?> getPresence(String userId) async {
+    final rawPresence = await _presencesBox.get(userId);
+    if (rawPresence == null) return null;
+
+    return CachedPresence.fromJson(copyMap(rawPresence));
+  }
+
+  @override
   Future<String> exportDump() async {
     final dataMap = {
       _clientBoxName: await _clientBox.getAllValues(),
