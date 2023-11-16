@@ -1,3 +1,15 @@
+## [0.22.7] - 16 November 2023
+- chore: incrementally add left rooms to archive (The one with the braid)
+- chore: remove archived room on forget (#2) (Clemens-Toegel)
+- chore: store states to archived rooms (#1) (Clemens-Toegel)
+- chore: upgrade lints (Nicolas Werner)
+- chore: use our custom reusable workflow to avoid manually configuring each publish job (td)
+- fix: Code style (The one with the braid)
+- fix: call hangup on timeout race condition (Karthikeyan S)
+- fix: clear local database on logout even if server timesout (td)
+- fix: hangup on call crash (Mohammad Reza Moradi)
+- fix: stale call checker leaks memory (Nicolas Werner)
+
 ## [0.22.6] - 23 October 2023
 - fix: Do not convert linebreaks in pre blocks on markdown parsing (Krille)
 - refactor: Wait for room in sync until sync process and trigger cleanup call not before actually start clean up. (Krille)
