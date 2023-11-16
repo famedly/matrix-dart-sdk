@@ -1792,12 +1792,13 @@ class Client extends MatrixApi {
         await _handleRooms(leave, direction: direction);
       }
     }
-    for (final newPresence in sync.presence ?? []) {
+    for (final newPresence in sync.presence ?? <Presence>[]) {
       final cachedPresence = CachedPresence.fromMatrixEvent(newPresence);
       presences[newPresence.senderId] = cachedPresence;
       // ignore: deprecated_member_use_from_same_package
       onPresence.add(newPresence);
       onPresenceChanged.add(cachedPresence);
+      await database?.storePresence(newPresence.senderId, cachedPresence);
     }
     for (final newAccountData in sync.accountData ?? []) {
       await database?.storeAccountData(
@@ -2923,6 +2924,25 @@ class Client extends MatrixApi {
     });
     await clearCache();
     return;
+  }
+
+  /// The newest presence of this user if there is any. Fetches it from the
+  /// database first and then from the server if necessary or returns offline.
+  Future<CachedPresence> fetchCurrentPresence(String userId) async {
+    final cachedPresence = presences[userId];
+    if (cachedPresence != null) {
+      return cachedPresence;
+    }
+
+    final dbPresence = await database?.getPresence(userId);
+    if (dbPresence != null) return presences[userId] = dbPresence;
+
+    try {
+      final newPresence = await getPresence(userId);
+      return CachedPresence.fromPresenceResponse(newPresence, userId);
+    } catch (e) {
+      return CachedPresence.neverSeen(userId);
+    }
   }
 
   bool _disposed = false;

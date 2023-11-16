@@ -457,6 +457,25 @@ void testDatabase(
       'deviceId',
     );
   });
+  test('getStorePresences', () async {
+    const userId = '@alice:example.com';
+    final presence = CachedPresence(
+      PresenceType.online,
+      100,
+      'test message',
+      true,
+      '@alice:example.com',
+    );
+    await database.storePresence(
+      userId,
+      presence,
+    );
+    final storedPresence = await database.getPresence(userId);
+    expect(
+      presence.toJson(),
+      storedPresence?.toJson(),
+    );
+  });
 
   // Clearing up from here
   test('clearSSSSCache', () async {
