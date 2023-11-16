@@ -932,6 +932,7 @@ class Client extends MatrixApi {
     final syncResp = await sync(
       filter: '{"room":{"include_leave":true,"timeline":{"limit":10}}}',
       timeout: _archiveCacheBusterTimeout,
+      setPresence: syncPresence,
     );
     // wrap around and hope there are not more than 30 leaves in 2 minutes :)
     _archiveCacheBusterTimeout = (_archiveCacheBusterTimeout + 1) % 30;
