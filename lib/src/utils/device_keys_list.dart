@@ -433,17 +433,16 @@ class DeviceKeys extends SignableKey {
   bool? _validSelfSignature;
   bool get selfSigned =>
       _validSelfSignature ??
-      (_validSelfSignature = (deviceId != null &&
-              signatures
-                      ?.tryGetMap<String, Object?>(userId)
-                      ?.tryGet<String>('ed25519:$deviceId') ==
-                  null
-          ? false
+      (_validSelfSignature = deviceId != null &&
+          signatures
+                  ?.tryGetMap<String, Object?>(userId)
+                  ?.tryGet<String>('ed25519:$deviceId') !=
+              null &&
           // without libolm we still want to be able to add devices. In that case we ofc just can't
           // verify the signature
-          : _verifySignature(
+          _verifySignature(
               ed25519Key!, signatures![userId]!['ed25519:$deviceId']!,
-              isSignatureWithoutLibolmValid: true)));
+              isSignatureWithoutLibolmValid: true));
 
   @override
   bool get blocked => super.blocked || !selfSigned;
@@ -505,7 +504,7 @@ class DeviceKeys extends SignableKey {
     lastActive = DateTime.fromMillisecondsSinceEpoch(0);
   }
 
-  KeyVerification startVerification() {
+  Future<KeyVerification> startVerification() async {
     if (!isValid) {
       throw Exception('setVerification called on invalid key');
     }
@@ -517,7 +516,7 @@ class DeviceKeys extends SignableKey {
     final request = KeyVerification(
         encryption: encryption, userId: userId, deviceId: deviceId!);
 
-    request.start();
+    await request.start();
     encryption.keyVerificationManager.addRequest(request);
     return request;
   }

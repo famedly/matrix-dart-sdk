@@ -267,11 +267,8 @@ class KeyVerification {
     }
 
     /// `qrCanWork` -  qr cannot work if we are verifying another master key but our own is unverified
-    final qrCanWork = (userId != client.userID)
-        ? ((client.userDeviceKeys[client.userID]?.masterKey?.verified ?? false)
-            ? true
-            : false)
-        : true;
+    final qrCanWork = (userId == client.userID) ||
+        ((client.userDeviceKeys[client.userID]?.masterKey?.verified ?? false));
 
     if (client.verificationMethods.contains(KeyVerificationMethod.qrShow) &&
         qrCanWork) {

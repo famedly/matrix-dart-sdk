@@ -1137,8 +1137,8 @@ void main() {
           reason: '!5345234235:example.com not found as archived room');
     });
 
-    tearDown(() {
-      matrix.dispose(closeDatabase: true);
+    tearDown(() async {
+      await matrix.dispose(closeDatabase: true);
     });
   });
 }

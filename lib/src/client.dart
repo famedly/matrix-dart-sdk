@@ -1636,7 +1636,7 @@ class Client extends MatrixApi {
   set backgroundSync(bool enabled) {
     _backgroundSync = enabled;
     if (_backgroundSync) {
-      _sync();
+      runInRoot(() async => _sync());
     }
   }
 
@@ -2232,7 +2232,7 @@ class Client extends MatrixApi {
           requestHistoryOnLimitedTimeline) {
         Logs().v(
             'Limited timeline for ${rooms[roomIndex].id} request history now');
-        unawaited(runInRoot(rooms[roomIndex].requestHistory));
+        runInRoot(rooms[roomIndex].requestHistory);
       }
     }
     return room;

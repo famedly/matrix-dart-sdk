@@ -2,19 +2,44 @@ include: package:lints/recommended.yaml
 
 linter:
   rules:
-    camel_case_types: true
-    avoid_print: true
-    constant_identifier_names: true
-    prefer_final_locals: true
+    # We enable a few additional rules not in the default and recommended sets.
+    # Those in general have low impact on correct code apart from possibly requiring an additional keyword (like async,
+    # await, final) or asking you to move a statement to a different line.  However many of these linter rules make the
+    # code either more uniform or avoid bug prone behaviour. For example not awaiting a future usually is a mistake.
+    # You can always disable a linter warning with a comment like `// ignore: unawaited_futures`. Please add reasoning,
+    # why you disable the rule in such cases. This helps others understand, that you explicitly want a behaviour, that
+    # usually would be considered a mistake.
+
+    # Performance (or potential bugs)
+    # Fixing these warnings makes code easier to optimize for the compiler or prevents leaks.
+    cancel_subscriptions: true
     prefer_final_in_for_each: true
-    sort_pub_dependencies: true
-    always_use_package_imports: true
+    prefer_final_locals: true
+
+    # Warn about possible bugs
+    # Usually code with these warnings indicates a bug.
+    # Please document if your code explicitly wants such a behaviour.
     always_declare_return_types: true
+    discarded_futures: true
+    no_adjacent_strings_in_list: true
+    test_types_in_equals: true
+    throw_in_finally: true
+    unawaited_futures: true
+    unnecessary_statements: true
+    unsafe_html: true
+
+    # Readability & Style
+    # These are opinionated choices, where Dart gives us 2 ways to express the same thing.
+    # This avoids mental overhead by not having to make a choice and making code more uniform to read.
+    always_use_package_imports: true
+    avoid_bool_literals_in_conditional_expressions: true
     prefer_single_quotes: true
     sort_child_properties_last: true
-    unawaited_futures: true
-    unsafe_html: true
-    avoid_function_literals_in_foreach_calls: false
+    sort_pub_dependencies: true
+
+    # Be nice to our users and allow them to configure what gets logged.
+    avoid_print: true
+
     non_constant_identifier_names: false # seems to wrongly diagnose static const variables
 
 analyzer:
@@ -22,6 +47,4 @@ analyzer:
     todo: ignore
   exclude:
     - example/main.dart
-    # needed until crypto packages upgrade
-    - lib/src/database/database.g.dart
   plugins:

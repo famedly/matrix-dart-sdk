@@ -150,8 +150,9 @@ class IGroupCallRoomMemberState {
   List<IGroupCallRoomMemberCallState> calls = [];
   IGroupCallRoomMemberState.fromJson(MatrixEvent event) {
     if (event.content['m.calls'] != null) {
-      (event.content['m.calls'] as List<dynamic>).forEach(
-          (call) => calls.add(IGroupCallRoomMemberCallState.fromJson(call)));
+      for (final call in (event.content['m.calls'] as List<dynamic>)) {
+        calls.add(IGroupCallRoomMemberCallState.fromJson(call));
+      }
     }
   }
 }
@@ -231,11 +232,11 @@ class GroupCall {
     this.groupCallId = groupCallId ?? genCallID();
   }
 
-  GroupCall create() {
+  Future<GroupCall> create() async {
     voip.groupCalls[groupCallId] = this;
     voip.groupCalls[room.id] = this;
 
-    client.setRoomStateWithKey(
+    await client.setRoomStateWithKey(
       room.id,
       EventTypes.GroupCallPrefix,
       groupCallId,
@@ -276,12 +277,12 @@ class GroupCall {
     final List<MatrixEvent> events = [];
     final roomStates = await client.getRoomState(room.id);
     roomStates.sort((a, b) => a.originServerTs.compareTo(b.originServerTs));
-    roomStates.forEach((value) {
+    for (final value in roomStates) {
       if (value.type == EventTypes.GroupCallMemberPrefix &&
           !room.callMemberStateIsExpired(value, groupCallId)) {
         events.add(value);
       }
-    });
+    }
     return events;
   }
 
@@ -412,6 +413,7 @@ class GroupCall {
     if (localUserMediaStream != null) {
       final oldStream = localUserMediaStream!.stream;
       localUserMediaStream!.setNewStream(stream.stream!);
+      // ignore: discarded_futures
       stopMediaStream(oldStream);
     }
   }

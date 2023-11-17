@@ -37,7 +37,7 @@ class NativeImplementationsWebWorker extends NativeImplementations {
     return completer.future.timeout(timeout);
   }
 
-  void _handleIncomingMessage(MessageEvent event) {
+  Future<void> _handleIncomingMessage(MessageEvent event) async {
     final data = event.data;
     // don't forget handling errors of our second thread...
     if (data['label'] == 'stacktrace') {
@@ -46,12 +46,10 @@ class NativeImplementationsWebWorker extends NativeImplementations {
 
       final error = event.data['error']!;
 
-      Future.value(
-        onStackTrace.call(event.data['stacktrace'] as String),
-      ).then(
-        (stackTrace) => completer?.completeError(
-          WebWorkerError(error: error, stackTrace: stackTrace),
-        ),
+      final stackTrace =
+          await onStackTrace.call(event.data['stacktrace'] as String);
+      completer?.completeError(
+        WebWorkerError(error: error, stackTrace: stackTrace),
       );
     } else {
       final response = WebWorkerData.fromJson(event.data);

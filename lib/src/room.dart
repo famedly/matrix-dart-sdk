@@ -1620,6 +1620,7 @@ class Room {
       return user.asUser;
     } else {
       if (mxID.isValidMatrixId) {
+        // ignore: discarded_futures
         requestUser(
           mxID,
           ignoreErrors: true,
@@ -2280,7 +2281,7 @@ class Room {
     }
 
     final Map<String, int> servers = {};
-    users.forEach((user) {
+    for (final user in users) {
       if (user.id.domain != null) {
         if (servers.containsKey(user.id.domain!)) {
           servers[user.id.domain!] = servers[user.id.domain!]! + 1;
@@ -2288,7 +2289,7 @@ class Room {
           servers[user.id.domain!] = 1;
         }
       }
-    });
+    }
     final sortedServers = Map.fromEntries(servers.entries.toList()
       ..sort((e1, e2) => e1.value.compareTo(e2.value)));
     for (var i = 0; i <= 2; i++) {

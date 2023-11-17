@@ -522,17 +522,18 @@ class CallSession {
     await gotCallFeedsForAnswer(callFeeds);
   }
 
-  void replacedBy(CallSession newCall) {
+  Future<void> replacedBy(CallSession newCall) async {
     if (state == CallState.kWaitLocalMedia) {
       Logs().v('Telling new call to wait for local media');
       newCall.waitForLocalAVStream = true;
     } else if (state == CallState.kCreateOffer ||
         state == CallState.kInviteSent) {
       Logs().v('Handing local stream to new call');
-      newCall.gotCallFeedsForAnswer(getLocalStreams);
+      await newCall.gotCallFeedsForAnswer(getLocalStreams);
     }
     successor = newCall;
     onCallReplaced.add(newCall);
+    // ignore: unawaited_futures
     hangup(CallErrorCode.Replaced, true);
   }
 
@@ -698,7 +699,7 @@ class CallSession {
       Logs().i(
           'Stream purpose update: \nid = "$streamId", \npurpose = "${sdpStreamMetadata.purpose}",  \naudio_muted = ${sdpStreamMetadata.audio_muted}, \nvideo_muted = ${sdpStreamMetadata.video_muted}');
     });
-    getRemoteStreams.forEach((wpstream) {
+    for (final wpstream in getRemoteStreams) {
       final streamId = wpstream.stream!.id;
       final purpose = metadata.sdpStreamMetadatas[streamId];
       if (purpose != null) {
@@ -712,7 +713,7 @@ class CallSession {
         wpstream.stopped = true;
         fireCallEvent(CallEvent.kFeedsChanged);
       }
-    });
+    }
   }
 
   Future<void> onSDPStreamMetadataReceived(SDPStreamMetadata metadata) async {
@@ -1510,17 +1511,18 @@ class CallSession {
     return pc;
   }
 
-  void createDataChannel(String label, RTCDataChannelInit dataChannelDict) {
-    pc?.createDataChannel(label, dataChannelDict);
+  Future<void> createDataChannel(
+      String label, RTCDataChannelInit dataChannelDict) async {
+    await pc?.createDataChannel(label, dataChannelDict);
   }
 
   Future<void> tryRemoveStopedStreams() async {
     final removedStreams = <String, WrappedMediaStream>{};
-    streams.forEach((stream) {
+    for (final stream in streams) {
       if (stream.stopped) {
         removedStreams[stream.stream!.id] = stream;
       }
-    });
+    }
     streams
         .removeWhere((stream) => removedStreams.containsKey(stream.stream!.id));
     for (final element in removedStreams.entries) {
@@ -1561,9 +1563,9 @@ class CallSession {
     try {
       if (candidatesQueue.isNotEmpty) {
         final candidates = <Map<String, dynamic>>[];
-        candidatesQueue.forEach((element) {
+        for (final element in candidatesQueue) {
           candidates.add(element.toMap());
-        });
+        }
         localCandidates = [];
         final res = await sendCallCandidates(
             opts.room, callId, localPartyId, candidates);

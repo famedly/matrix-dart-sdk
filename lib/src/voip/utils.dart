@@ -23,9 +23,9 @@ Future<void> stopMediaStream(MediaStream? stream) async {
 }
 
 void setTracksEnabled(List<MediaStreamTrack> tracks, bool enabled) {
-  tracks.forEach((element) {
+  for (final element in tracks) {
     element.enabled = enabled;
-  });
+  }
 }
 
 Future<bool> hasAudioDevice() async {

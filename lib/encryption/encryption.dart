@@ -100,11 +100,12 @@ class Encryption {
 
   void handleDeviceOneTimeKeysCount(
       Map<String, int>? countJson, List<String>? unusedFallbackKeyTypes) {
-    runInRoot(() => olmManager.handleDeviceOneTimeKeysCount(
+    runInRoot(() async => olmManager.handleDeviceOneTimeKeysCount(
         countJson, unusedFallbackKeyTypes));
   }
 
   void onSync() {
+    // ignore: discarded_futures
     keyVerificationManager.cleanup();
   }
 
@@ -118,30 +119,25 @@ class Encryption {
         .contains(event.type)) {
       // "just" room key request things. We don't need these asap, so we handle
       // them in the background
-      // ignore: unawaited_futures
       runInRoot(() => keyManager.handleToDeviceEvent(event));
     }
     if (event.type == EventTypes.Dummy) {
       // the previous device just had to create a new olm session, due to olm session
       // corruption. We want to try to send it the last message we just sent it, if possible
-      // ignore: unawaited_futures
       runInRoot(() => olmManager.handleToDeviceEvent(event));
     }
     if (event.type.startsWith('m.key.verification.')) {
       // some key verification event. No need to handle it now, we can easily
       // do this in the background
 
-      // ignore: unawaited_futures
       runInRoot(() => keyVerificationManager.handleToDeviceEvent(event));
     }
     if (event.type.startsWith('m.secret.')) {
       // some ssss thing. We can do this in the background
-      // ignore: unawaited_futures
       runInRoot(() => ssss.handleToDeviceEvent(event));
     }
     if (event.sender == client.userID) {
       // maybe we need to re-try SSSS secrets
-      // ignore: unawaited_futures
       runInRoot(() => ssss.periodicallyRequestMissingCache());
     }
   }
@@ -157,14 +153,11 @@ class Encryption {
             update.content['content']['msgtype']
                 .startsWith('m.key.verification.'))) {
       // "just" key verification, no need to do this in sync
-
-      // ignore: unawaited_futures
       runInRoot(() => keyVerificationManager.handleEventUpdate(update));
     }
     if (update.content['sender'] == client.userID &&
         update.content['unsigned']?['transaction_id'] == null) {
       // maybe we need to re-try SSSS secrets
-      // ignore: unawaited_futures
       runInRoot(() => ssss.periodicallyRequestMissingCache());
     }
   }
@@ -239,6 +232,7 @@ class Encryption {
         // the entry should always exist. In the case it doesn't, the following
         // line *could* throw an error. As that is a future, though, and we call
         // it un-awaited here, nothing happens, which is exactly the result we want
+        // ignore: discarded_futures
         client.database?.updateInboundGroupSessionIndexes(
             json.encode(inboundGroupSession.indexes), roomId, sessionId);
       }
@@ -252,7 +246,7 @@ class Encryption {
                       ?.session_id() ??
                   '') ==
               content.sessionId) {
-        runInRoot(() =>
+        runInRoot(() async =>
             keyManager.clearOrUseOutboundGroupSession(roomId, wipe: true));
       }
       if (canRequestSession) {
