@@ -337,11 +337,17 @@ class VoIP {
     await delegate.stopRingtone();
     Logs().v('[VOIP] onCallHangup => ${content.toString()}');
     final String callId = content['call_id'];
+    final String partyId = content['party_id'];
     final call = calls[callId];
     if (call != null) {
       if (call.room.id != roomId) {
         Logs().w(
             'Ignoring call hangup for room $roomId claiming to be for call in room ${call.room.id}');
+        return;
+      }
+      if (call.remotePartyId != partyId) {
+        Logs().w(
+            'Ignoring call hangup from sender with a different party_id $partyId for call in room ${call.room.id}');
         return;
       }
       // hangup in any case, either if the other party hung up or we did on another device
@@ -358,6 +364,7 @@ class VoIP {
   Future<void> onCallReject(
       String roomId, String senderId, Map<String, dynamic> content) async {
     final String callId = content['call_id'];
+    final String partyId = content['party_id'];
     Logs().d('Reject received for call ID $callId');
 
     final call = calls[callId];
@@ -365,6 +372,11 @@ class VoIP {
       if (call.room.id != roomId) {
         Logs().w(
             'Ignoring call reject for room $roomId claiming to be for call in room ${call.room.id}');
+        return;
+      }
+      if (call.remotePartyId != partyId) {
+        Logs().w(
+            'Ignoring call reject from sender with a different party_id $partyId for call in room ${call.room.id}');
         return;
       }
       await call.onRejectReceived(content['reason']);
