@@ -345,7 +345,7 @@ class VoIP {
             'Ignoring call hangup for room $roomId claiming to be for call in room ${call.room.id}');
         return;
       }
-      if (call.remotePartyId != partyId) {
+      if (call.remotePartyId != null && call.remotePartyId != partyId) {
         Logs().w(
             'Ignoring call hangup from sender with a different party_id $partyId for call in room ${call.room.id}');
         return;
@@ -374,7 +374,7 @@ class VoIP {
             'Ignoring call reject for room $roomId claiming to be for call in room ${call.room.id}');
         return;
       }
-      if (call.remotePartyId != partyId) {
+      if (call.remotePartyId != null && call.remotePartyId != partyId) {
         Logs().w(
             'Ignoring call reject from sender with a different party_id $partyId for call in room ${call.room.id}');
         return;
