@@ -16,10 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'dart:io';
-import 'dart:math';
-
-import 'package:file/memory.dart';
+import 'package:file/local.dart';
 import 'package:hive/hive.dart';
 
 import 'package:matrix/matrix.dart';
@@ -29,16 +26,15 @@ Future<DatabaseApi> getDatabase(Client? _) => getHiveCollectionsDatabase(_);
 bool hiveInitialized = false;
 
 Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
-  final fileSystem = MemoryFileSystem();
-  final testHivePath =
-      '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
+  final testHivePath = await LocalFileSystem()
+      .systemTempDirectory
+      .createTemp('dart-sdk-tests-database');
   if (!hiveInitialized) {
-    Directory(testHivePath).createSync(recursive: true);
-    Hive.init(testHivePath);
+    Hive.init(testHivePath.path);
   }
   final db = HiveCollectionsDatabase(
     'unit_test.${c?.hashCode}',
-    testHivePath,
+    testHivePath.path,
   );
   await db.open();
   return db;
@@ -47,11 +43,10 @@ Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
 // ignore: deprecated_member_use_from_same_package
 Future<FamedlySdkHiveDatabase> getHiveDatabase(Client? c) async {
   if (!hiveInitialized) {
-    final fileSystem = MemoryFileSystem();
-    final testHivePath =
-        '${fileSystem.path}/build/.test_store/${Random().nextDouble()}';
-    Directory(testHivePath).createSync(recursive: true);
-    Hive.init(testHivePath);
+    final testHivePath = await LocalFileSystem()
+        .systemTempDirectory
+        .createTemp('dart-sdk-tests-database');
+    Hive.init(testHivePath.path);
     hiveInitialized = true;
   }
   // ignore: deprecated_member_use_from_same_package
