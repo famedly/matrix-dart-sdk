@@ -17,6 +17,7 @@
  */
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:matrix/matrix.dart';
 
@@ -275,6 +276,14 @@ extension CommandsClientExtension on Client {
         editEventId: args.editEventId,
         txid: args.txid,
       );
+    });
+    addCommand('sendRaw', (args) async {
+      await args.room.sendEvent(
+        jsonDecode(args.msg),
+        inReplyTo: args.inReplyTo,
+        txid: args.txid,
+      );
+      return null;
     });
   }
 }
