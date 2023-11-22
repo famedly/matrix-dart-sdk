@@ -59,13 +59,19 @@ void main() {
           'Snape killed <span data-mx-spoiler="">Dumbledoor <strong>bold</strong></span>');
     });
     test('multiple paragraphs', () {
-      expect(markdown('Heya!\n\nBeep'), '<p>Heya!</p><br/><p>Beep</p>');
+      expect(markdown('Heya!\n\nBeep'), '<p>Heya!</p><p>Beep</p>');
     });
     test('Other block elements', () {
-      expect(markdown('# blah\n\nblubb'), '<h1>blah</h1><br/><p>blubb</p>');
+      expect(markdown('# blah\n\nblubb'), '<h1>blah</h1><p>blubb</p>');
     });
     test('linebreaks', () {
       expect(markdown('foxies\ncute'), 'foxies<br/>cute');
+    });
+    test('lists', () {
+      expect(
+        markdown('So we have:\n- foxies\n- cats\n- dogs'),
+        '<p>So we have:</p><ul><li>foxies</li><li>cats</li><li>dogs</li></ul>',
+      );
     });
     test('emotes', () {
       expect(markdown(':fox:', getEmotePacks: () => emotePacks),
@@ -137,7 +143,7 @@ void main() {
           'The first \n codeblock\n```dart\nvoid main(){\nprint(something);\n}\n```\nAnd the second code block\n```js\nmeow\nmeow\n```',
           convertLinebreaks: true,
         ),
-        '<p>The first<br/>codeblock</p><br/><pre><code class="language-dart">void main(){\nprint(something);\n}\n</code></pre><br/><p>And the second code block</p><br/><pre><code class="language-js">meow\nmeow\n</code></pre>',
+        '<p>The first<br/>codeblock</p><pre><code class="language-dart">void main(){\nprint(something);\n}\n</code></pre><p>And the second code block</p><pre><code class="language-js">meow\nmeow\n</code></pre>',
       );
     });
   });
