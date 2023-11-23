@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:matrix/src/voip/sframe_key_provider.dart';
 import 'package:matrix/src/voip/types.dart';
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 import 'package:webrtc_interface/webrtc_interface.dart';
@@ -28,6 +29,8 @@ abstract class WebRTCDelegate {
   /// state. If another room tries to call you during a connected call this fires
   /// a handleMissedCall
   bool get canHandleNewCall => true;
+
+  SframeKeyProvider? get sframeKeyProvider;
 }
 
 class VoIP {
@@ -83,9 +86,14 @@ class VoIP {
     client.onSFrameKeysReceived.stream.listen((event) {
       final SframeKeysEventContent content =
           SframeKeysEventContent.fromJson(event.content);
-      Logs().v('[VOIP] onSFrameKeysReceived => ${content.toJson()}');
 
-      /// forwards the event to the group call key provider.
+      /// forwards the event to the sframe key provider.
+      final participantId = '${event.senderId}:${content.deviceId}';
+      for (final key in content.keys) {
+        Logs().v('[VOIP] onSFrameKeysReceived => ${key.toJson()}');
+        delegate.sframeKeyProvider
+            ?.onSetSframeKey(participantId, key.key, key.index);
+      }
     });
     client.onRoomState.stream.listen(
       (event) async {
