@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:core';
 
+import 'package:matrix/src/voip/types.dart';
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 import 'package:webrtc_interface/webrtc_interface.dart';
 
@@ -79,7 +80,13 @@ class VoIP {
         (event) => _handleEvent(event, onSDPStreamMetadataChangedReceived));
     client.onAssertedIdentityReceived.stream
         .listen((event) => _handleEvent(event, onAssertedIdentityReceived));
+    client.onSFrameKeysReceived.stream.listen((event) {
+      final SframeKeysEventContent content =
+          SframeKeysEventContent.fromJson(event.content);
+      Logs().v('[VOIP] onSFrameKeysReceived => ${content.toJson()}');
 
+      /// forwards the event to the group call key provider.
+    });
     client.onRoomState.stream.listen(
       (event) async {
         if ([
