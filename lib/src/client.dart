@@ -1753,7 +1753,7 @@ class Client extends MatrixApi {
         await clear();
       }
     } on MatrixConnectionException catch (e, s) {
-      Logs().w('Synchronization connection failed');
+      Logs().w('Sync loop failed: Client has not connection to the server');
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.error,
           error: SdkError(exception: e, stackTrace: s)));
     } catch (e, s) {
