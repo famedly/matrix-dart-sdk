@@ -114,6 +114,12 @@ extension DehydratedDeviceHandler on Client {
           }
         } while (events.events?.isNotEmpty == true);
 
+        // make sure the sessions we just received get uploaded before we upload a new device (which deletes the old device).
+        await this
+            .encryption
+            ?.keyManager
+            .uploadInboundGroupSessions(skipIfInProgress: false);
+
         await _uploadNewDevice(secureStorage);
       } finally {
         await encryption.dispose();
