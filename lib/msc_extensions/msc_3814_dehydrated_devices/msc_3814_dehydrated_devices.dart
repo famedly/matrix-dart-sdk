@@ -169,6 +169,7 @@ extension DehydratedDeviceHandler on Client {
         userDeviceKeys[userID]!.deviceKeys[device]!,
       ];
       await this.encryption?.crossSigning.sign(keysToSign);
+      encryption.keyManager.startAutoUploadKeys();
     } finally {
       await encryption.dispose();
     }
