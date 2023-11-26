@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:core';
 
-import 'package:matrix/src/voip/sframe_key_provider.dart';
-import 'package:matrix/src/voip/types.dart';
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 import 'package:webrtc_interface/webrtc_interface.dart';
 
@@ -30,7 +28,7 @@ abstract class WebRTCDelegate {
   /// a handleMissedCall
   bool get canHandleNewCall => true;
 
-  SframeKeyProvider? get sframeKeyProvider;
+  EncryptionKeyProvider? get sframeKeyProvider;
 }
 
 class VoIP {
@@ -83,16 +81,16 @@ class VoIP {
         (event) => _handleEvent(event, onSDPStreamMetadataChangedReceived));
     client.onAssertedIdentityReceived.stream
         .listen((event) => _handleEvent(event, onAssertedIdentityReceived));
-    client.onSFrameKeysReceived.stream.listen((event) {
-      final SframeKeysEventContent content =
-          SframeKeysEventContent.fromJson(event.content);
+    client.onEncryptionKeysReceived.stream.listen((event) {
+      final EncryptionKeysEventContent content =
+          EncryptionKeysEventContent.fromJson(event.content);
 
       /// forwards the event to the sframe key provider.
       final participantId = '${event.senderId}:${content.deviceId}';
       for (final key in content.keys) {
         Logs().v('[VOIP] onSFrameKeysReceived => ${key.toJson()}');
         delegate.sframeKeyProvider
-            ?.onSetSframeKey(participantId, key.key, key.index);
+            ?.onSetEncryptionKey(participantId, key.key, key.index);
       }
     });
     client.onRoomState.stream.listen(

@@ -1208,7 +1208,7 @@ class Client extends MatrixApi {
       CachedStreamController();
 
   /// Will be called on sframe keys received.
-  final CachedStreamController<Event> onSFrameKeysReceived =
+  final CachedStreamController<Event> onEncryptionKeysReceived =
       CachedStreamController();
 
   /// Will be called when another device is requesting session keys for a room.
@@ -2134,8 +2134,8 @@ class Client extends MatrixApi {
       onSDPStreamMetadataChangedReceived.add(event);
       // TODO(duan): Only used (org.matrix.msc3401.call) during the current test,
       // need to add GroupCallPrefix in matrix_api_lite
-    } else if (event.type == VoipEventTypes.sFrameKeysPrefix) {
-      onSFrameKeysReceived.add(event);
+    } else if (event.type == VoipEventTypes.EncryptionKeysPrefix) {
+      onEncryptionKeysReceived.add(event);
     } else if (event.type == EventTypes.GroupCallPrefix) {
       onGroupCallRequest.add(event);
     }

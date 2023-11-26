@@ -1,13 +1,14 @@
-abstract class SframeKeyProvider {
-  Future<void> onSetSframeKey(String participant, String key, int index);
+abstract class EncryptionKeyProvider {
+  Future<void> onSetEncryptionKey(String participant, String key, int index);
 }
 
-class SframeKeyEntry {
+class EncryptionKeyEntry {
   final int index;
   final String key;
-  SframeKeyEntry(this.index, this.key);
+  EncryptionKeyEntry(this.index, this.key);
 
-  factory SframeKeyEntry.fromJson(Map<String, dynamic> json) => SframeKeyEntry(
+  factory EncryptionKeyEntry.fromJson(Map<String, dynamic> json) =>
+      EncryptionKeyEntry(
         json['index'] as int,
         json['key'] as String,
       );
@@ -18,16 +19,16 @@ class SframeKeyEntry {
       };
 }
 
-class SframeKeysEventContent {
-  final List<SframeKeyEntry> keys;
+class EncryptionKeysEventContent {
+  final List<EncryptionKeyEntry> keys;
   final String deviceId;
   final String callId;
-  SframeKeysEventContent(this.keys, this.deviceId, this.callId);
+  EncryptionKeysEventContent(this.keys, this.deviceId, this.callId);
 
-  factory SframeKeysEventContent.fromJson(Map<String, dynamic> json) =>
-      SframeKeysEventContent(
+  factory EncryptionKeysEventContent.fromJson(Map<String, dynamic> json) =>
+      EncryptionKeysEventContent(
         (json['keys'] as List<dynamic>)
-            .map((e) => SframeKeyEntry.fromJson(e as Map<String, dynamic>))
+            .map((e) => EncryptionKeyEntry.fromJson(e as Map<String, dynamic>))
             .toList(),
         json['device_id'] as String,
         json['call_id'] as String,
