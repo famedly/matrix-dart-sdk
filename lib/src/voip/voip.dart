@@ -28,7 +28,7 @@ abstract class WebRTCDelegate {
   /// a handleMissedCall
   bool get canHandleNewCall => true;
 
-  EncryptionKeyProvider? get sframeKeyProvider;
+  EncryptionKeyProvider? get keyProvider;
 }
 
 class VoIP {
@@ -89,7 +89,7 @@ class VoIP {
       final participantId = '${event.senderId}:${content.deviceId}';
       for (final key in content.keys) {
         Logs().v('[VOIP] onSFrameKeysReceived => ${key.toJson()}');
-        delegate.sframeKeyProvider
+        delegate.keyProvider
             ?.onSetEncryptionKey(participantId, key.key, key.index);
       }
     });

@@ -1,3 +1,9 @@
+enum E2EEKeyMode {
+  kNone,
+  kSharedKey,
+  kPerParticipant,
+}
+
 abstract class EncryptionKeyProvider {
   Future<void> onSetEncryptionKey(String participant, String key, int index);
 }
