@@ -304,6 +304,7 @@ class Client extends MatrixApi {
   }
 
   /// Presences of users by a given matrix ID
+  @Deprecated('Use `fetchCurrentPresence(userId)` instead.')
   Map<String, CachedPresence> presences = {};
 
   int _transactionCounter = 0;
@@ -1570,6 +1571,7 @@ class Client extends MatrixApi {
           _accountData = data;
           _updatePushrules();
         });
+        // ignore: deprecated_member_use_from_same_package
         presences.clear();
         if (waitUntilLoadCompletedLoaded) {
           await userDeviceKeysLoading;
@@ -1794,6 +1796,7 @@ class Client extends MatrixApi {
     }
     for (final newPresence in sync.presence ?? <Presence>[]) {
       final cachedPresence = CachedPresence.fromMatrixEvent(newPresence);
+      // ignore: deprecated_member_use_from_same_package
       presences[newPresence.senderId] = cachedPresence;
       // ignore: deprecated_member_use_from_same_package
       onPresence.add(newPresence);
@@ -2929,17 +2932,22 @@ class Client extends MatrixApi {
   /// The newest presence of this user if there is any. Fetches it from the
   /// database first and then from the server if necessary or returns offline.
   Future<CachedPresence> fetchCurrentPresence(String userId) async {
+    // ignore: deprecated_member_use_from_same_package
     final cachedPresence = presences[userId];
     if (cachedPresence != null) {
       return cachedPresence;
     }
 
     final dbPresence = await database?.getPresence(userId);
+    // ignore: deprecated_member_use_from_same_package
     if (dbPresence != null) return presences[userId] = dbPresence;
 
     try {
-      final newPresence = await getPresence(userId);
-      return CachedPresence.fromPresenceResponse(newPresence, userId);
+      final result = await getPresence(userId);
+      final presence = CachedPresence.fromPresenceResponse(result, userId);
+      await database?.storePresence(userId, presence);
+      // ignore: deprecated_member_use_from_same_package
+      return presences[userId] = presence;
     } catch (e) {
       return CachedPresence.neverSeen(userId);
     }
