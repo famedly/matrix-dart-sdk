@@ -123,6 +123,7 @@ void main() {
           '!726s6s6q:example.com');
       expect(matrix.rooms[1].directChatMatrixID, '@bob:example.com');
       expect(matrix.directChats, matrix.accountData['m.direct']?.content);
+      // ignore: deprecated_member_use_from_same_package
       expect(matrix.presences.length, 1);
       expect(matrix.rooms[1].ephemerals.length, 2);
       expect(matrix.rooms[1].typingUsers.length, 1);
@@ -147,6 +148,7 @@ void main() {
       expect(matrix.rooms.length, 2);
       expect(matrix.rooms[1].canonicalAlias,
           "#famedlyContactDiscovery:${matrix.userID!.split(":")[1]}");
+      // ignore: deprecated_member_use_from_same_package
       expect(matrix.presences['@alice:example.com']?.presence,
           PresenceType.online);
       expect(presenceCounter, 1);
