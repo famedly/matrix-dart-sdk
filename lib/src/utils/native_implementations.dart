@@ -52,7 +52,7 @@ abstract class NativeImplementations {
 
   /// this implementation will catch any non-implemented method
   @override
-  dynamic noSuchMethod(Invocation invocation) async {
+  dynamic noSuchMethod(Invocation invocation) {
     final dynamic argument = invocation.positionalArguments.single;
     final memberName = invocation.memberName.toString().split('"')[1];
 
@@ -62,11 +62,15 @@ abstract class NativeImplementations {
       'Fallback from NativeImplementations.dummy used.',
     );
     switch (memberName) {
+      // we need to pass the futures right through or we will run into type errors later!
       case 'generateUploadKeys':
+        // ignore: discarded_futures
         return dummy.generateUploadKeys(argument);
       case 'keyFromPassphrase':
+        // ignore: discarded_futures
         return dummy.keyFromPassphrase(argument);
       case 'decryptFile':
+        // ignore: discarded_futures
         return dummy.decryptFile(argument);
       case 'shrinkImage':
         return dummy.shrinkImage(argument);

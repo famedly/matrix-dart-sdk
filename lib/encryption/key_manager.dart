@@ -795,74 +795,86 @@ class KeyManager {
     // Make sure to not run in parallel
     if (_uploadingFuture != null) {
       if (skipIfInProgress) return;
-      await _uploadingFuture;
-    }
-    final completer = Completer<void>();
-    _uploadingFuture = completer.future;
-
-    await client.userDeviceKeysLoading;
-    try {
-      if (!(await isCached())) {
-        return; // we can't backup anyways
-      }
-      final dbSessions = await database.getInboundGroupSessionsToUpload();
-      if (dbSessions.isEmpty) {
-        return; // nothing to do
-      }
-      final privateKey =
-          base64decodeUnpadded((await encryption.ssss.getCached(megolmKey))!);
-      // decryption is needed to calculate the public key and thus see if the claimed information is in fact valid
-      final decryption = olm.PkDecryption();
-      final info = await getRoomKeysBackupInfo(false);
-      String backupPubKey;
       try {
-        backupPubKey = decryption.init_with_private_key(privateKey);
-
-        if (info.algorithm !=
-                BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2 ||
-            info.authData['public_key'] != backupPubKey) {
-          return;
-        }
-        final args = GenerateUploadKeysArgs(
-          pubkey: backupPubKey,
-          dbSessions: <DbInboundGroupSessionBundle>[],
-          userId: userID,
-        );
-        // we need to calculate verified beforehand, as else we pass a closure to an isolate
-        // with 500 keys they do, however, noticably block the UI, which is why we give brief async suspentions in here
-        // so that the event loop can progress
-        var i = 0;
-        for (final dbSession in dbSessions) {
-          final device =
-              client.getUserDeviceKeysByCurve25519Key(dbSession.senderKey);
-          args.dbSessions.add(DbInboundGroupSessionBundle(
-            dbSession: dbSession,
-            verified: device?.verified ?? false,
-          ));
-          i++;
-          if (i > 10) {
-            await Future.delayed(Duration(milliseconds: 1));
-            i = 0;
-          }
-        }
-        final roomKeys =
-            await client.nativeImplementations.generateUploadKeys(args);
-        Logs().i('[Key Manager] Uploading ${dbSessions.length} room keys...');
-        // upload the payload...
-        await client.putRoomKeys(info.version, roomKeys);
-        // and now finally mark all the keys as uploaded
-        // no need to optimze this, as we only run it so seldomly and almost never with many keys at once
-        for (final dbSession in dbSessions) {
-          await database.markInboundGroupSessionAsUploaded(
-              dbSession.roomId, dbSession.sessionId);
-        }
+        await _uploadingFuture;
       } finally {
-        decryption.free();
+        // shouldn't be necessary, since it will be unset already by the other process that started it, but just to be safe, also unset the future here
+        _uploadingFuture = null;
       }
-    } catch (e, s) {
-      Logs().e('[Key Manager] Error uploading room keys', e, s);
+    }
+
+    Future<void> uploadInternal() async {
+      try {
+        await client.userDeviceKeysLoading;
+
+        if (!(await isCached())) {
+          return; // we can't backup anyways
+        }
+        final dbSessions = await database.getInboundGroupSessionsToUpload();
+        if (dbSessions.isEmpty) {
+          return; // nothing to do
+        }
+        final privateKey =
+            base64decodeUnpadded((await encryption.ssss.getCached(megolmKey))!);
+        // decryption is needed to calculate the public key and thus see if the claimed information is in fact valid
+        final decryption = olm.PkDecryption();
+        final info = await getRoomKeysBackupInfo(false);
+        String backupPubKey;
+        try {
+          backupPubKey = decryption.init_with_private_key(privateKey);
+
+          if (info.algorithm !=
+                  BackupAlgorithm.mMegolmBackupV1Curve25519AesSha2 ||
+              info.authData['public_key'] != backupPubKey) {
+            decryption.free();
+            return;
+          }
+          final args = GenerateUploadKeysArgs(
+            pubkey: backupPubKey,
+            dbSessions: <DbInboundGroupSessionBundle>[],
+            userId: userID,
+          );
+          // we need to calculate verified beforehand, as else we pass a closure to an isolate
+          // with 500 keys they do, however, noticably block the UI, which is why we give brief async suspentions in here
+          // so that the event loop can progress
+          var i = 0;
+          for (final dbSession in dbSessions) {
+            final device =
+                client.getUserDeviceKeysByCurve25519Key(dbSession.senderKey);
+            args.dbSessions.add(DbInboundGroupSessionBundle(
+              dbSession: dbSession,
+              verified: device?.verified ?? false,
+            ));
+            i++;
+            if (i > 10) {
+              await Future.delayed(Duration(milliseconds: 1));
+              i = 0;
+            }
+          }
+          final roomKeys =
+              await client.nativeImplementations.generateUploadKeys(args);
+          Logs().i('[Key Manager] Uploading ${dbSessions.length} room keys...');
+          // upload the payload...
+          await client.putRoomKeys(info.version, roomKeys);
+          // and now finally mark all the keys as uploaded
+          // no need to optimze this, as we only run it so seldomly and almost never with many keys at once
+          for (final dbSession in dbSessions) {
+            await database.markInboundGroupSessionAsUploaded(
+                dbSession.roomId, dbSession.sessionId);
+          }
+        } finally {
+          decryption.free();
+        }
+      } catch (e, s) {
+        Logs().e('[Key Manager] Error uploading room keys', e, s);
+      }
+    }
+
+    _uploadingFuture = uploadInternal();
+    try {
+      await _uploadingFuture;
     } finally {
-      completer.complete();
+      _uploadingFuture = null;
     }
   }
 
@@ -1187,12 +1199,12 @@ RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
         },
       );
     }
+    enc.free();
     return roomKeys;
   } catch (e, s) {
     Logs().e('[Key Manager] Error generating payload', e, s);
-    rethrow;
-  } finally {
     enc.free();
+    rethrow;
   }
 }
 
