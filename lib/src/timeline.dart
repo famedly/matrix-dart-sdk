@@ -325,6 +325,7 @@ class Timeline {
             store: true,
             updateType: EventUpdateType.history,
           );
+          addAggregatedEvent(events[i]);
           onChange?.call(i);
           if (events[i].type != EventTypes.Encrypted) {
             decryptAtLeastOneEvent = true;
