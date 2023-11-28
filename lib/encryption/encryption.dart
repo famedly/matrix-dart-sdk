@@ -68,15 +68,20 @@ class Encryption {
   }
 
   // initial login passes null to init a new olm account
-  Future<void> init(String? olmAccount,
-      {String? deviceId,
-      String? pickleKey,
-      bool isDehydratedDevice = false}) async {
+  Future<void> init(
+    String? olmAccount, {
+    String? deviceId,
+    String? pickleKey,
+    String? dehydratedDeviceAlgorithm,
+  }) async {
     ourDeviceId = deviceId ?? client.deviceID!;
+    final isDehydratedDevice = dehydratedDeviceAlgorithm != null;
     await olmManager.init(
-        olmAccount: olmAccount,
-        deviceId: isDehydratedDevice ? deviceId : ourDeviceId,
-        pickleKey: pickleKey);
+      olmAccount: olmAccount,
+      deviceId: isDehydratedDevice ? deviceId : ourDeviceId,
+      pickleKey: pickleKey,
+      dehydratedDeviceAlgorithm: dehydratedDeviceAlgorithm,
+    );
 
     if (!isDehydratedDevice) keyManager.startAutoUploadKeys();
   }

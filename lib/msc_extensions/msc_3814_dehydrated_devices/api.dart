@@ -29,41 +29,29 @@ import 'package:matrix/msc_extensions/msc_3814_dehydrated_devices/model/dehydrat
 /// Endpoints related to MSC3814, dehydrated devices v2 aka shrivelled sessions
 /// https://github.com/matrix-org/matrix-spec-proposals/pull/3814
 extension DehydratedDeviceMatrixApi on MatrixApi {
-  /// Publishes end-to-end encryption keys for the specified device.
-  /// https://github.com/matrix-org/matrix-spec-proposals/pull/3814
-  Future<Map<String, int>> uploadKeysForDevice(String device,
-      {MatrixDeviceKeys? deviceKeys,
-      Map<String, dynamic>? oneTimeKeys,
-      Map<String, dynamic>? fallbackKeys}) async {
-    final response = await request(
-      RequestType.POST,
-      '/client/v3/keys/upload/${Uri.encodeComponent(device)}',
-      data: {
-        if (deviceKeys != null) 'device_keys': deviceKeys.toJson(),
-        if (oneTimeKeys != null) 'one_time_keys': oneTimeKeys,
-        if (fallbackKeys != null) ...{
-          'fallback_keys': fallbackKeys,
-          'org.matrix.msc2732.fallback_keys': fallbackKeys,
-        },
-      },
-    );
-    return Map<String, int>.from(
-        response.tryGetMap<String, Object?>('one_time_key_counts') ??
-            <String, int>{});
-  }
-
   /// uploads a dehydrated device.
   /// https://github.com/matrix-org/matrix-spec-proposals/pull/3814
-  Future<String> uploadDehydratedDevice(
-      {String? initialDeviceDisplayName,
-      Map<String, dynamic>? deviceData}) async {
+  Future<String> uploadDehydratedDevice({
+    required String deviceId,
+    String? initialDeviceDisplayName,
+    Map<String, dynamic>? deviceData,
+    MatrixDeviceKeys? deviceKeys,
+    Map<String, dynamic>? oneTimeKeys,
+    Map<String, dynamic>? fallbackKeys,
+  }) async {
     final response = await request(
       RequestType.PUT,
       '/client/unstable/org.matrix.msc3814.v1/dehydrated_device',
       data: {
+        'device_id': deviceId,
         if (initialDeviceDisplayName != null)
           'initial_device_display_name': initialDeviceDisplayName,
         if (deviceData != null) 'device_data': deviceData,
+        if (deviceKeys != null) 'device_keys': deviceKeys.toJson(),
+        if (oneTimeKeys != null) 'one_time_keys': oneTimeKeys,
+        if (fallbackKeys != null) ...{
+          'fallback_keys': fallbackKeys,
+        },
       },
     );
     return response['device_id'] as String;
@@ -82,15 +70,15 @@ extension DehydratedDeviceMatrixApi on MatrixApi {
   /// fetch events sent to a dehydrated device.
   /// https://github.com/matrix-org/matrix-spec-proposals/pull/3814
   Future<DehydratedDeviceEvents> getDehydratedDeviceEvents(String deviceId,
-      {String? from, int limit = 100}) async {
-    final response = await request(
-      RequestType.GET,
-      '/client/unstable/org.matrix.msc3814.v1/dehydrated_device/$deviceId/events',
-      query: {
-        if (from != null) 'from': from,
-        'limit': limit.toString(),
-      },
-    );
+      {String? nextBatch, int limit = 100}) async {
+    final response = await request(RequestType.POST,
+        '/client/unstable/org.matrix.msc3814.v1/dehydrated_device/$deviceId/events',
+        query: {
+          'limit': limit.toString(),
+        },
+        data: {
+          if (nextBatch != null) 'next_batch': nextBatch,
+        });
     return DehydratedDeviceEvents.fromJson(response);
   }
 }
