@@ -1,3 +1,16 @@
+## [0.24.0] - 29th November 2023
+
+This release deprecates `client.presences` in favor of `client.fetchCurrentPresence(userId)` as part of our journey to a more database centric memory management. However, `client.presences` is still functional and tested at least until the next major release.
+
+Breaking change for users of dehydrated devices feature. This feature now implements the latest version of the MSC. It has been adapted to the current recent Synapse version and will from now on be incompatible with previous versions.
+
+- chore: add null check for remotePartyId before ignoring reject/hangup (Karthikeyan S)
+- feat: Update dehydrated devices implementation to current MSC (Nicolas Werner)
+- fix: Delayed encrypted event in timeline not added to aggregated events (Krille)
+- fix: don't delete the dehydrated device before we are sure the keys got saved (Nicolas Werner)
+- fix: ignore reject/hangup events for a live call from a different device (Karthikeyan S)
+- refactor: Store fetched presence in db and deprecate own cache (Krille)
+
 ## [0.23.0] - 27th November 2023
 
 This release includes a small breaking change. Starting a verification request now always returns a future. Specifically
