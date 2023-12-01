@@ -724,7 +724,7 @@ class Room {
     return EncryptionHealthState.allVerified;
   }
 
-  Future<String?> _sendContent(
+  Future<String?> sendMessageContent(
     String type,
     Map<String, dynamic> content, {
     String? txid,
@@ -886,7 +886,7 @@ class Room {
 
     while (res == null) {
       try {
-        res = await _sendContent(
+        res = await sendMessageContent(
           type,
           content,
           txid: messageID,
