@@ -25,6 +25,7 @@ import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
+import 'package:matrix/src/voip/sframe.dart';
 
 /// https://github.com/matrix-org/matrix-doc/pull/2746
 /// version 1
@@ -60,10 +61,13 @@ class WrappedMediaStream {
 
   /// Current stream type, usermedia or screen-sharing
   String purpose;
+  String? sframeKey;
   bool audioMuted;
   bool videoMuted;
   final Client client;
   VideoRenderer renderer;
+  List<RTCRtpSender> senders = [];
+  List<RTCRtpReceiver> receivers = [];
   final bool isWeb;
   final bool isGroupCall;
   final RTCPeerConnection? pc;
@@ -77,18 +81,20 @@ class WrappedMediaStream {
 
   void Function(MediaStream stream)? onNewStream;
 
-  WrappedMediaStream(
-      {this.stream,
-      this.pc,
-      required this.renderer,
-      required this.room,
-      required this.userId,
-      required this.purpose,
-      required this.client,
-      required this.audioMuted,
-      required this.videoMuted,
-      required this.isWeb,
-      required this.isGroupCall});
+  WrappedMediaStream({
+    this.stream,
+    this.pc,
+    required this.renderer,
+    required this.room,
+    required this.userId,
+    required this.purpose,
+    required this.client,
+    required this.audioMuted,
+    required this.videoMuted,
+    required this.isWeb,
+    required this.isGroupCall,
+    this.sframeKey,
+  });
 
   /// Initialize the video renderer
   Future<void> initialize() async {
@@ -247,6 +253,9 @@ class CallErrorCode {
 
   /// We transferred the call off to somewhere else
   static String Transfered = 'transferred';
+
+  /// Both parties need to enable sframe to establish a call
+  static String SFrameRequired = 'sframe_required';
 }
 
 class CallError extends Error {
@@ -303,6 +312,8 @@ class CallOptions {
   late VoIP voip;
   late Room room;
   late List<Map<String, dynamic>> iceServers;
+  bool? sframe;
+  String? sframeKey;
 }
 
 /// A call session object
@@ -312,6 +323,7 @@ class CallSession {
   CallType get type => opts.type;
   Room get room => opts.room;
   VoIP get voip => opts.voip;
+  bool get sframe => opts.sframe ?? false;
   String? get groupCallId => opts.groupCallId;
   String get callId => opts.callId;
   String get localPartyId => opts.localPartyId;
@@ -540,11 +552,13 @@ class CallSession {
   Future<void> sendAnswer(RTCSessionDescription answer) async {
     final callCapabilities = CallCapabilities()
       ..dtmf = false
-      ..transferee = false;
+      ..transferee = false
+      ..sframe = opts.sframe ?? false;
 
     final metadata = SDPStreamMetadata({
       localUserMediaStream!.stream!.id: SDPStreamPurpose(
           purpose: SDPStreamMetadataPurpose.Usermedia,
+          sframeKey: opts.sframeKey,
           audio_muted: localUserMediaStream!.stream!.getAudioTracks().isEmpty,
           video_muted: localUserMediaStream!.stream!.getVideoTracks().isEmpty)
     });
@@ -708,6 +722,7 @@ class CallSession {
         wpstream
             .setVideoMuted(metadata.sdpStreamMetadatas[streamId]!.video_muted);
         wpstream.purpose = metadata.sdpStreamMetadatas[streamId]!.purpose;
+        wpstream.sframeKey = metadata.sdpStreamMetadatas[streamId]!.sframeKey;
       } else {
         Logs().i('Not found purpose for remote stream $streamId, remove it?');
         wpstream.stopped = true;
@@ -822,14 +837,16 @@ class CallSession {
     }
   }
 
-  Future<void> addLocalStream(MediaStream stream, String purpose,
-      {bool addToPeerConnection = true}) async {
+  Future<void> addLocalStream(MediaStream stream, String purpose) async {
     final existingStream =
         getLocalStreams.where((element) => element.purpose == purpose);
+
+    WrappedMediaStream? newStream;
     if (existingStream.isNotEmpty) {
       existingStream.first.setNewStream(stream);
+      newStream = existingStream.first;
     } else {
-      final newStream = WrappedMediaStream(
+      newStream = WrappedMediaStream(
         renderer: voip.delegate.createRenderer(),
         userId: client.userID!,
         room: opts.room,
@@ -841,22 +858,31 @@ class CallSession {
         isWeb: voip.delegate.isWeb,
         isGroupCall: groupCallId != null,
         pc: pc,
+        sframeKey: opts.sframeKey,
       );
       await newStream.initialize();
       streams.add(newStream);
-      onStreamAdd.add(newStream);
     }
+    onStreamAdd.add(newStream);
 
-    if (addToPeerConnection) {
-      if (purpose == SDPStreamMetadataPurpose.Screenshare) {
-        screensharingSenders.clear();
-        for (final track in stream.getTracks()) {
-          screensharingSenders.add(await pc!.addTrack(track, stream));
+    if (purpose == SDPStreamMetadataPurpose.Screenshare) {
+      screensharingSenders.clear();
+      for (final track in stream.getTracks()) {
+        final sender = await pc!.addTrack(track, stream);
+        newStream.senders.add(sender);
+        screensharingSenders.add(sender);
+        if (opts.sframe ?? false) {
+          await voip.handleAddRtpSender(callId, sender, newStream.sframeKey!);
         }
-      } else if (purpose == SDPStreamMetadataPurpose.Usermedia) {
-        usermediaSenders.clear();
-        for (final track in stream.getTracks()) {
-          usermediaSenders.add(await pc!.addTrack(track, stream));
+      }
+    } else if (purpose == SDPStreamMetadataPurpose.Usermedia) {
+      usermediaSenders.clear();
+      for (final track in stream.getTracks()) {
+        final sender = await pc!.addTrack(track, stream);
+        newStream.senders.add(sender);
+        usermediaSenders.add(sender);
+        if (opts.sframe ?? false) {
+          await voip.handleAddRtpSender(callId, sender, newStream.sframeKey!);
         }
       }
     }
@@ -872,7 +898,8 @@ class CallSession {
     fireCallEvent(CallEvent.kFeedsChanged);
   }
 
-  Future<void> _addRemoteStream(MediaStream stream) async {
+  Future<void> _addRemoteStream(
+      MediaStream stream, RTCRtpReceiver receiver) async {
     //final userId = remoteUser.id;
     final metadata = remoteSDPStreamMetadata!.sdpStreamMetadatas[stream.id];
     if (metadata == null) {
@@ -884,6 +911,7 @@ class CallSession {
     final purpose = metadata.purpose;
     final audioMuted = metadata.audio_muted;
     final videoMuted = metadata.video_muted;
+    final sFrameKey = metadata.sframeKey;
 
     // Try to find a feed with the same purpose as the new stream,
     // if we find it replace the old stream with the new one
@@ -891,6 +919,11 @@ class CallSession {
         getRemoteStreams.where((element) => element.purpose == purpose);
     if (existingStream.isNotEmpty) {
       existingStream.first.setNewStream(stream);
+      existingStream.first.receivers.add(receiver);
+      if (opts.sframe ?? false) {
+        await voip.handleAddRtpReceiver(
+            callId, receiver, existingStream.first.sframeKey!);
+      }
     } else {
       final newStream = WrappedMediaStream(
         renderer: voip.delegate.createRenderer(),
@@ -903,11 +936,16 @@ class CallSession {
         videoMuted: videoMuted,
         isWeb: voip.delegate.isWeb,
         isGroupCall: groupCallId != null,
+        sframeKey: sFrameKey,
         pc: pc,
       );
       await newStream.initialize();
       streams.add(newStream);
+      newStream.receivers.add(receiver);
       onStreamAdd.add(newStream);
+      if (opts.sframe ?? false) {
+        await voip.handleAddRtpReceiver(callId, receiver, newStream.sframeKey!);
+      }
     }
     fireCallEvent(CallEvent.kFeedsChanged);
     Logs().i('Pushed remote stream (id="${stream.id}", purpose=$purpose)');
@@ -1031,7 +1069,13 @@ class CallSession {
           } else {
             // adding transceiver
             Logs().d('[VOIP] adding track $newTrack to pc');
-            await pc!.addTrack(newTrack, localUserMediaStream!.stream!);
+            final sender =
+                await pc!.addTrack(newTrack, localUserMediaStream!.stream!);
+            localUserMediaStream!.senders.add(sender);
+            if (opts.sframe ?? false) {
+              await voip.handleAddRtpSender(
+                  callId, sender, localUserMediaStream!.sframeKey!);
+            }
           }
         }
         // for renderer to be able to show new video track
@@ -1100,17 +1144,20 @@ class CallSession {
 
       final callCapabilities = CallCapabilities()
         ..dtmf = false
+        ..sframe = opts.sframe ?? false
         ..transferee = false;
 
       final metadata = SDPStreamMetadata({
         if (localUserMediaStream != null)
           localUserMediaStream!.stream!.id: SDPStreamPurpose(
               purpose: SDPStreamMetadataPurpose.Usermedia,
+              sframeKey: opts.sframeKey,
               audio_muted: localUserMediaStream!.audioMuted,
               video_muted: localUserMediaStream!.videoMuted),
         if (localScreenSharingStream != null)
           localScreenSharingStream!.stream!.id: SDPStreamPurpose(
               purpose: SDPStreamMetadataPurpose.Screenshare,
+              sframeKey: opts.sframeKey,
               audio_muted: localScreenSharingStream!.audioMuted,
               video_muted: localScreenSharingStream!.videoMuted),
       });
@@ -1213,6 +1260,7 @@ class CallSession {
     await cleanUp();
     if (shouldEmit) {
       onCallHangupNotifierForGroupCalls.add(this);
+      await voip.disposeSFrame(callId);
       await voip.delegate.handleCallEnded(this);
       fireCallEvent(CallEvent.kHangup);
       if ((party == CallParty.kRemote && missedCall)) {
@@ -1265,7 +1313,9 @@ class CallSession {
 
     final callCapabilities = CallCapabilities()
       ..dtmf = false
-      ..transferee = false;
+      ..transferee = false
+      ..sframe = opts.sframe ?? false;
+
     final metadata = _getLocalSDPStreamMetadata();
     if (state == CallState.kCreateOffer) {
       Logs().d('[glare] new invite sent about to be called');
@@ -1367,6 +1417,7 @@ class CallSession {
           localCandidates.clear();
           remoteCandidates.clear();
           setCallState(CallState.kConnected);
+          await voip.setSframeEnabled(callId, opts.sframe ?? false);
           // fix any state/race issues we had with sdp packets and cloned streams
           await updateMuteStatus();
           missedCall = false;
@@ -1434,7 +1485,8 @@ class CallSession {
         sdpStreamMetadatas[wpstream.stream!.id] = SDPStreamPurpose(
             purpose: wpstream.purpose,
             audio_muted: wpstream.audioMuted,
-            video_muted: wpstream.videoMuted);
+            video_muted: wpstream.videoMuted,
+            sframeKey: opts.sframeKey);
       }
     }
     final metadata = SDPStreamMetadata(sdpStreamMetadatas);
@@ -1497,7 +1549,7 @@ class CallSession {
     pc.onTrack = (RTCTrackEvent event) async {
       if (event.streams.isNotEmpty) {
         final stream = event.streams[0];
-        await _addRemoteStream(stream);
+        await _addRemoteStream(stream, event.receiver!);
         for (final track in stream.getTracks()) {
           track.onEnded = () async {
             if (stream.getTracks().isEmpty) {
