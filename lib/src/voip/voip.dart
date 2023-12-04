@@ -258,10 +258,14 @@ class VoIP {
       await delegate.playRingtone();
     }
 
+    // When getUserMedia throws an exception, we handle it by terminating the call,
+    // and all this happens inside initWithInvite. If we set currentCID after
+    // initWithInvite, we might set it to callId even after it was reset to null
+    // by terminate.
+    currentCID = callId;
+
     await newCall.initWithInvite(
         callType, offer, sdpStreamMetadata, lifetime, confId != null);
-
-    currentCID = callId;
 
     // Popup CallingPage for incoming call.
     if (confId == null && !newCall.callHasEnded) {
