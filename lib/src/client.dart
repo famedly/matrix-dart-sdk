@@ -1684,7 +1684,7 @@ class Client extends MatrixApi {
         Logs().d('Running sync while init isn\'t done yet, dropping request');
         return;
       }
-      SyncConnectionException? syncError;
+      Object? syncError;
       await _checkSyncFilter();
       timeout ??= const Duration(seconds: 30);
       final syncRequest = sync(
@@ -1693,7 +1693,11 @@ class Client extends MatrixApi {
         timeout: timeout.inMilliseconds,
         setPresence: syncPresence,
       ).then((v) => Future<SyncUpdate?>.value(v)).catchError((e) {
-        syncError = SyncConnectionException(e);
+        if (e is MatrixException) {
+          syncError = e;
+        } else {
+          syncError = SyncConnectionException(e);
+        }
         return null;
       });
       _currentSyncId = syncRequest.hashCode;
