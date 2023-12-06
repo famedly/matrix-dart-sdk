@@ -18,6 +18,7 @@
 
 import 'package:file/local.dart';
 import 'package:hive/hive.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:matrix/matrix.dart';
 
@@ -36,6 +37,14 @@ Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
     'unit_test.${c?.hashCode}',
     testHivePath.path,
   );
+  await db.open();
+  return db;
+}
+
+// ignore: deprecated_member_use_from_same_package
+Future<MatrixSdkDatabase> getMatrixSdkDatabase(Client? c) async {
+  final database = await databaseFactoryFfi.openDatabase(':memory:');
+  final db = MatrixSdkDatabase('unit_test.${c?.hashCode}', database: database);
   await db.open();
   return db;
 }
