@@ -18,7 +18,7 @@ class BoxCollection {
     dynamic idbFactory,
   }) async {
     if (sqfliteDatabase is! Database) {
-      throw ('You must provide a Database `sqfliteDatabase` for FluffyBox on native.');
+      throw ('You must provide a Database `sqfliteDatabase` for use on native.');
     }
     final batch = sqfliteDatabase.batch();
     for (final name in boxNames) {

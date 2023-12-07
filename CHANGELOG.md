@@ -1,3 +1,21 @@
+## [0.24.1] - 7th December 2023
+
+This release brings a new **experimental** database based on SQFlite and IndexedDB as a *Drop-In-Replacement* for Hive and HiveCollections. You can already test it out (on your own risk) by using it as the new databaseBuilder and migrate your current users by using the legacyDatabaseBuilder with your current Database:
+
+```dart
+final client = Client('Client Name',
+  databaseBuilder: (client) => MatrixSdkDatabase(
+    'Database Name',
+    database: await databaseFactory.openDatabase(':memory:'),
+  ),
+  legacyDatabaseBuilder: yourPreviousDatabase,
+);
+```
+
+- feat: Implement new Matrix Dart SDK Database (Christian Pauly)
+- fix: Do not hide matrix exceptions in sync (Krille)
+- fix: set cid before initWithInvite to handle getUserMedia exception correctly (Karthikeyan S)
+
 ## [0.24.0] - 29th November 2023
 
 This release deprecates `client.presences` in favor of `client.fetchCurrentPresence(userId)` as part of our journey to a more database centric memory management. However, `client.presences` is still functional and tested at least until the next major release.
