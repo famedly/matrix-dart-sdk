@@ -36,6 +36,20 @@ import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/database/indexeddb_box.dart'
     if (dart.library.io) 'package:matrix/src/database/sqflite_box.dart';
 
+/// Database based on SQlite3 on native and IndexedDB on web. For native you
+/// have to pass a `Database` object, which can be created with the sqflite
+/// package like this:
+/// ```dart
+/// final database = await openDatabase('path/to/your/database');
+/// ```
+///
+/// **WARNING**: For android it seems like that the CursorWindow is too small for
+/// large amounts of data if you are using SQFlite. Consider using a different
+///  package to open the database like
+/// [sqflite_sqlcipher](https://pub.dev/packages/sqflite_sqlcipher) or
+/// [sqflite_common_ffi](https://pub.dev/packages/sqflite_common_ffi).
+/// Learn more at:
+/// https://github.com/famedly/matrix-dart-sdk/issues/1642#issuecomment-1865827227
 class MatrixSdkDatabase extends DatabaseApi {
   static const int version = 7;
   final String name;
