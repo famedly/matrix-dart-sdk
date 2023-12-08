@@ -29,6 +29,7 @@ import 'package:matrix/encryption/utils/outbound_group_session.dart';
 import 'package:matrix/encryption/utils/ssss_cache.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/utils/copy_map.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 
@@ -1620,23 +1621,4 @@ class TupleKey {
   int get hashCode => Object.hashAll(parts);
 }
 
-dynamic _castValue(dynamic value) {
-  if (value is Map) {
-    return copyMap(value);
-  }
-  if (value is List) {
-    return value.map(_castValue).toList();
-  }
-  return value;
-}
-
-/// The store always gives back an `_InternalLinkedHasMap<dynamic, dynamic>`. This
-/// creates a deep copy of the json and makes sure that the format is always
-/// `Map<String, dynamic>`.
-Map<String, dynamic> copyMap(Map map) {
-  final copy = Map<String, dynamic>.from(map);
-  for (final entry in copy.entries) {
-    copy[entry.key] = _castValue(entry.value);
-  }
-  return copy;
-}
+Map<String, dynamic> copyMap(Map map) => map.copy;
