@@ -607,6 +607,7 @@ class Client extends MatrixApi {
   /// Returns an existing direct room ID with this user or creates a new one.
   /// By default encryption will be enabled if the client supports encryption
   /// and the other user has uploaded any encryption keys.
+  /// If there is an **abandoned DM** with this user, the user gets reinvited.
   Future<String> startDirectChat(
     String mxid, {
     bool? enableEncryption,
@@ -621,6 +622,9 @@ class Client extends MatrixApi {
       final room = getRoomById(directChatRoomId);
       if (room != null) {
         if (room.membership == Membership.join) {
+          if (room.isAbandonedDMRoom) {
+            await room.invite(mxid);
+          }
           return directChatRoomId;
         } else if (room.membership == Membership.invite) {
           // we might already have an invite into a DM room. If that is the case, we should try to join. If the room is
