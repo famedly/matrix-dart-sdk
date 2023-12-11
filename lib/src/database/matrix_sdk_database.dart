@@ -29,6 +29,7 @@ import 'package:matrix/encryption/utils/outbound_group_session.dart';
 import 'package:matrix/encryption/utils/ssss_cache.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/utils/copy_map.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 
@@ -353,7 +354,7 @@ class MatrixSdkDatabase extends DatabaseApi {
         for (final entry in raws.entries) {
           accountData[entry.key] = BasicEvent(
             type: entry.key,
-            content: makeJson(entry.value),
+            content: entry.value.copy,
           );
         }
         return accountData;
@@ -377,7 +378,7 @@ class MatrixSdkDatabase extends DatabaseApi {
   Future<Event?> getEventById(String eventId, Room room) async {
     final raw = await _eventsBox.get(TupleKey(room.id, eventId).toString());
     if (raw == null) return null;
-    return Event.fromJson(makeJson(raw), room);
+    return Event.fromJson(raw.copy, room);
   }
 
   /// Loads a whole list of events at once from the store for a specific room
@@ -390,7 +391,7 @@ class MatrixSdkDatabase extends DatabaseApi {
     final rawEvents = await _eventsBox.getAll(keys);
     return rawEvents
         .whereType<Map>()
-        .map((rawEvent) => Event.fromJson(makeJson(rawEvent), room))
+        .map((rawEvent) => Event.fromJson(rawEvent.copy, room))
         .toList();
   }
 
@@ -447,7 +448,7 @@ class MatrixSdkDatabase extends DatabaseApi {
   ) async {
     final raw = await _inboundGroupSessionsBox.get(sessionId);
     if (raw == null) return null;
-    return StoredInboundGroupSession.fromJson(makeJson(raw));
+    return StoredInboundGroupSession.fromJson(raw.copy);
   }
 
   @override
@@ -459,7 +460,7 @@ class MatrixSdkDatabase extends DatabaseApi {
         .take(50)
         .map(
           (json) => StoredInboundGroupSession.fromJson(
-            makeJson(json),
+            json.copy,
           ),
         )
         .toList();
@@ -478,8 +479,7 @@ class MatrixSdkDatabase extends DatabaseApi {
   @override
   Future<void> storeOlmSession(String identityKey, String sessionId,
       String pickle, int lastReceived) async {
-    final rawSessions =
-        makeJson((await _olmSessionsBox.get(identityKey)) ?? {}, true);
+    final rawSessions = (await _olmSessionsBox.get(identityKey))?.copy ?? {};
     rawSessions[sessionId] = {
       'identity_key': identityKey,
       'pickle': pickle,
@@ -496,7 +496,7 @@ class MatrixSdkDatabase extends DatabaseApi {
     final rawSessions = await _olmSessionsBox.get(identityKey);
     if (rawSessions == null || rawSessions.isEmpty) return <OlmSession>[];
     return rawSessions.values
-        .map((json) => OlmSession.fromJson(makeJson(json), userId))
+        .map((json) => OlmSession.fromJson(json, userId))
         .toList();
   }
 
@@ -517,7 +517,7 @@ class MatrixSdkDatabase extends DatabaseApi {
       String roomId, String userId) async {
     final raw = await _outboundGroupSessionsBox.get(roomId);
     if (raw == null) return null;
-    return OutboundGroupSession.fromJson(makeJson(raw), userId);
+    return OutboundGroupSession.fromJson(raw.copy, userId);
   }
 
   @override
@@ -526,7 +526,7 @@ class MatrixSdkDatabase extends DatabaseApi {
     // Get raw room from database:
     final roomData = await _roomsBox.get(roomId);
     if (roomData == null) return null;
-    final room = Room.fromJson(makeJson(roomData), client);
+    final room = Room.fromJson(roomData.copy, client);
 
     // Get important states:
     if (loadImportantStates) {
@@ -536,7 +536,7 @@ class MatrixSdkDatabase extends DatabaseApi {
       final rawStates = await _preloadRoomStateBox.getAll(dbKeys);
       for (final rawState in rawStates) {
         if (rawState == null || rawState[''] == null) continue;
-        room.setState(Event.fromJson(makeJson(rawState['']), room));
+        room.setState(Event.fromJson(rawState[''].copy, room));
       }
     }
 
@@ -552,7 +552,7 @@ class MatrixSdkDatabase extends DatabaseApi {
 
         for (final raw in rawRooms.values) {
           // Get the room
-          final room = Room.fromJson(makeJson(raw), client);
+          final room = Room.fromJson(raw.copy, client);
 
           // Add to the list and continue.
           rooms[room.id] = room;
@@ -569,7 +569,7 @@ class MatrixSdkDatabase extends DatabaseApi {
           }
           final states = entry.value;
           final stateEvents = states.values
-              .map((raw) => Event.fromJson(makeJson(raw), room))
+              .map((raw) => Event.fromJson(raw.copy, room))
               .toList();
           for (final state in stateEvents) {
             room.setState(state);
@@ -581,7 +581,7 @@ class MatrixSdkDatabase extends DatabaseApi {
         for (final entry in roomAccountDataRaws.entries) {
           final keys = TupleKey.fromString(entry.key);
           final basicRoomEvent = BasicRoomEvent.fromJson(
-            makeJson(entry.value),
+            entry.value.copy,
           );
           final roomId = keys.parts.first;
           if (rooms.containsKey(roomId)) {
@@ -602,14 +602,14 @@ class MatrixSdkDatabase extends DatabaseApi {
   Future<SSSSCache?> getSSSSCache(String type) async {
     final raw = await _ssssCacheBox.get(type);
     if (raw == null) return null;
-    return SSSSCache.fromJson(makeJson(raw));
+    return SSSSCache.fromJson(raw.copy);
   }
 
   @override
   Future<List<QueuedToDeviceEvent>> getToDeviceEventQueue() async {
     final raws = await _toDeviceQueueBox.getAllValues();
     final copiedRaws = raws.entries.map((entry) {
-      final copiedRaw = makeJson(entry.value, true);
+      final copiedRaw = entry.value.copy;
       copiedRaw['id'] = int.parse(entry.key);
       copiedRaw['content'] = jsonDecode(copiedRaw['content'] as String);
       return copiedRaw;
@@ -629,8 +629,8 @@ class MatrixSdkDatabase extends DatabaseApi {
     for (final key in keys) {
       final states = await _nonPreloadRoomStateBox.get(key);
       if (states == null) continue;
-      unimportantEvents.addAll(
-          states.values.map((raw) => Event.fromJson(makeJson(raw), room)));
+      unimportantEvents
+          .addAll(states.values.map((raw) => Event.fromJson(raw.copy, room)));
     }
     return unimportantEvents;
   }
@@ -640,7 +640,7 @@ class MatrixSdkDatabase extends DatabaseApi {
     final state =
         await _roomMembersBox.get(TupleKey(room.id, userId).toString());
     if (state == null) return null;
-    return Event.fromJson(makeJson(state), room).asUser;
+    return Event.fromJson(state.copy, room).asUser;
   }
 
   @override
@@ -670,14 +670,14 @@ class MatrixSdkDatabase extends DatabaseApi {
             (key) {
               final userDeviceKey = userDeviceKeys[key];
               if (userDeviceKey == null) return null;
-              return makeJson(userDeviceKey);
+              return userDeviceKey.copy;
             },
           );
           final crossSigningEntries = crossSigningKeysBoxKeys.map(
             (key) {
               final crossSigningKey = userCrossSigningKeys[key];
               if (crossSigningKey == null) return null;
-              return makeJson(crossSigningKey);
+              return crossSigningKey.copy;
             },
           );
           res[userId] = DeviceKeysList.fromDbJson(
@@ -708,7 +708,7 @@ class MatrixSdkDatabase extends DatabaseApi {
     final states = await _roomMembersBox.getAll(keys);
     states.removeWhere((state) => state == null);
     for (final state in states) {
-      users.add(Event.fromJson(makeJson(state!), room).asUser);
+      users.add(Event.fromJson(state!.copy, room).asUser);
     }
 
     return users;
@@ -768,10 +768,7 @@ class MatrixSdkDatabase extends DatabaseApi {
   @override
   Future<void> markInboundGroupSessionAsUploaded(
       String roomId, String sessionId) async {
-    final raw = makeJson(
-      await _inboundGroupSessionsBox.get(sessionId) ?? {},
-      true,
-    );
+    final raw = (await _inboundGroupSessionsBox.get(sessionId) ?? {}).copy;
     if (raw.isEmpty) {
       Logs().w(
           'Tried to mark inbound group session as uploaded which was not found in the database!');
@@ -786,10 +783,7 @@ class MatrixSdkDatabase extends DatabaseApi {
   Future<void> markInboundGroupSessionsAsNeedingUpload() async {
     final keys = await _inboundGroupSessionsBox.getAllKeys();
     for (final sessionId in keys) {
-      final raw = makeJson(
-        await _inboundGroupSessionsBox.get(sessionId) ?? {},
-        true,
-      );
+      final raw = (await _inboundGroupSessionsBox.get(sessionId) ?? {}).copy;
       if (raw.isEmpty) continue;
       raw['uploaded'] = false;
       await _inboundGroupSessionsBox.put(sessionId, raw);
@@ -837,12 +831,10 @@ class MatrixSdkDatabase extends DatabaseApi {
   @override
   Future<void> setBlockedUserCrossSigningKey(
       bool blocked, String userId, String publicKey) async {
-    final raw = makeJson(
-      await _userCrossSigningKeysBox
-              .get(TupleKey(userId, publicKey).toString()) ??
-          {},
-      true,
-    );
+    final raw = (await _userCrossSigningKeysBox
+                .get(TupleKey(userId, publicKey).toString()) ??
+            {})
+        .copy;
     raw['blocked'] = blocked;
     await _userCrossSigningKeysBox.put(
       TupleKey(userId, publicKey).toString(),
@@ -854,10 +846,10 @@ class MatrixSdkDatabase extends DatabaseApi {
   @override
   Future<void> setBlockedUserDeviceKey(
       bool blocked, String userId, String deviceId) async {
-    final raw = makeJson(
-        await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ??
-            {},
-        true);
+    final raw =
+        (await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ??
+                {})
+            .copy;
     raw['blocked'] = blocked;
     await _userDeviceKeysBox.put(
       TupleKey(userId, deviceId).toString(),
@@ -869,10 +861,10 @@ class MatrixSdkDatabase extends DatabaseApi {
   @override
   Future<void> setLastActiveUserDeviceKey(
       int lastActive, String userId, String deviceId) async {
-    final raw = makeJson(
-        await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ??
-            {},
-        true);
+    final raw =
+        (await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ??
+                {})
+            .copy;
 
     raw['last_active'] = lastActive;
     await _userDeviceKeysBox.put(
@@ -884,10 +876,10 @@ class MatrixSdkDatabase extends DatabaseApi {
   @override
   Future<void> setLastSentMessageUserDeviceKey(
       String lastSentMessage, String userId, String deviceId) async {
-    final raw = makeJson(
-      await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ?? {},
-      true,
-    );
+    final raw =
+        (await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ??
+                {})
+            .copy;
     raw['last_sent_message'] = lastSentMessage;
     await _userDeviceKeysBox.put(
       TupleKey(userId, deviceId).toString(),
@@ -900,7 +892,7 @@ class MatrixSdkDatabase extends DatabaseApi {
       String? prevBatch, String roomId, Client client) async {
     final raw = await _roomsBox.get(roomId);
     if (raw == null) return;
-    final room = Room.fromJson(makeJson(raw), client);
+    final room = Room.fromJson(raw.copy, client);
     room.prev_batch = prevBatch;
     await _roomsBox.put(roomId, room.toJson());
     return;
@@ -909,12 +901,10 @@ class MatrixSdkDatabase extends DatabaseApi {
   @override
   Future<void> setVerifiedUserCrossSigningKey(
       bool verified, String userId, String publicKey) async {
-    final raw = makeJson(
-      (await _userCrossSigningKeysBox
-              .get(TupleKey(userId, publicKey).toString())) ??
-          {},
-      true,
-    );
+    final raw = ((await _userCrossSigningKeysBox
+                .get(TupleKey(userId, publicKey).toString())) ??
+            {})
+        .copy;
     raw['verified'] = verified;
     await _userCrossSigningKeysBox.put(
       TupleKey(userId, publicKey).toString(),
@@ -926,10 +916,10 @@ class MatrixSdkDatabase extends DatabaseApi {
   @override
   Future<void> setVerifiedUserDeviceKey(
       bool verified, String userId, String deviceId) async {
-    final raw = makeJson(
-      await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ?? {},
-      true,
-    );
+    final raw =
+        (await _userDeviceKeysBox.get(TupleKey(userId, deviceId).toString()) ??
+                {})
+            .copy;
     raw['verified'] = verified;
     await _userDeviceKeysBox.put(
       TupleKey(userId, deviceId).toString(),
@@ -940,7 +930,7 @@ class MatrixSdkDatabase extends DatabaseApi {
 
   @override
   Future<void> storeAccountData(String type, String content) async {
-    await _accountDataBox.put(type, makeJson(jsonDecode(content)));
+    await _accountDataBox.put(type, jsonDecode(content));
     return;
   }
 
@@ -988,7 +978,7 @@ class MatrixSdkDatabase extends DatabaseApi {
       final prevStatus = prevEvent == null
           ? null
           : () {
-              final json = makeJson(prevEvent);
+              final json = prevEvent.copy;
               final statusInt = json.tryGet<int>('status') ??
                   json
                       .tryGetMap<String, dynamic>('unsigned')
@@ -1097,7 +1087,7 @@ class MatrixSdkDatabase extends DatabaseApi {
           eventUpdate.roomID,
           type,
         ).toString();
-        final stateMap = makeJson(await roomStateBox.get(key) ?? {}, true);
+        final stateMap = (await roomStateBox.get(key) ?? {}).copy;
         // store state events and new messages, that either are not an edit or an edit of the lastest message
         // An edit is an event, that has an edit relation to the latest event. In some cases for the second edit, we need to compare if both have an edit relation to the same event instead.
         if (eventUpdate.content
@@ -1250,7 +1240,7 @@ class MatrixSdkDatabase extends DatabaseApi {
                   membership: membership,
                 ).toJson());
     } else if (roomUpdate is JoinedRoomUpdate) {
-      final currentRoom = Room.fromJson(makeJson(currentRawRoom), client);
+      final currentRoom = Room.fromJson((currentRawRoom).copy, client);
       await _roomsBox.put(
           roomId,
           Room(
@@ -1407,7 +1397,7 @@ class MatrixSdkDatabase extends DatabaseApi {
           'Tried to update inbound group session indexes of a session which was not found in the database!');
       return;
     }
-    final json = makeJson(raw, true);
+    final json = raw.copy;
     json['indexes'] = indexes;
     await _inboundGroupSessionsBox.put(sessionId, json);
     return;
@@ -1417,7 +1407,7 @@ class MatrixSdkDatabase extends DatabaseApi {
   Future<List<StoredInboundGroupSession>> getAllInboundGroupSessions() async {
     final rawSessions = await _inboundGroupSessionsBox.getAllValues();
     return rawSessions.values
-        .map((raw) => StoredInboundGroupSession.fromJson(makeJson(raw)))
+        .map((raw) => StoredInboundGroupSession.fromJson(raw.copy))
         .toList();
   }
 
@@ -1602,9 +1592,6 @@ class MatrixSdkDatabase extends DatabaseApi {
     final rawPresence = await _presencesBox.get(userId);
     if (rawPresence == null) return null;
 
-    return CachedPresence.fromJson(makeJson(rawPresence));
+    return CachedPresence.fromJson(rawPresence.copy);
   }
 }
-
-Map<String, Object?> makeJson(Map json, [bool copy = false]) =>
-    copy ? copyMap(json) : json.cast<String, Object?>();
