@@ -1,6 +1,6 @@
 name: matrix
 description: Matrix Dart SDK
-version: 0.24.1
+version: 0.24.2
 homepage: https://famedly.com
 repository: https://github.com/famedly/matrix-dart-sdk.git
 issue_tracker: https://github.com/famedly/matrix-dart-sdk/issues

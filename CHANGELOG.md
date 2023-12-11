@@ -1,3 +1,7 @@
+## [0.24.2] - 11th December 2023
+- docs: Add issue tracker to pub.dev (Krille)
+- fix: Copy all maps got from database (Krille)
+
 ## [0.24.1] - 7th December 2023
 
 This release brings a new **experimental** database based on SQFlite and IndexedDB as a *Drop-In-Replacement* for Hive and HiveCollections. You can already test it out (on your own risk) by using it as the new databaseBuilder and migrate your current users by using the legacyDatabaseBuilder with your current Database:
