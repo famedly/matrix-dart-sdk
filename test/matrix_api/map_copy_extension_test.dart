@@ -18,7 +18,7 @@
 
 import 'package:test/test.dart';
 
-import 'package:matrix/src/utils/map_copy_extension.dart';
+import 'package:matrix/src/utils/copy_map.dart';
 
 void main() {
   group('Map-copy-extension', () {
@@ -30,11 +30,11 @@ void main() {
           'list': [1, 2],
         },
       };
-      final copy = original.copy();
+      final copy = copyMap(original);
       original['child']['attr'] = 'raccoon';
-      expect(copy['child']['attr'], 'bunny');
+      expect((copy['child'] as Map)['attr'], 'bunny');
       original['child']['list'].add(3);
-      expect(copy['child']['list'], [1, 2]);
+      expect((copy['child'] as Map)['list'], [1, 2]);
     });
   });
 }

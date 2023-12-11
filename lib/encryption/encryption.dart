@@ -28,6 +28,7 @@ import 'package:matrix/encryption/olm_manager.dart';
 import 'package:matrix/encryption/ssss.dart';
 import 'package:matrix/encryption/utils/bootstrap.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/utils/copy_map.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 
 class Encryption {

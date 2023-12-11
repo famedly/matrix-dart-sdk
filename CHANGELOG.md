@@ -1,3 +1,7 @@
+## [0.24.3] - 11th December 2023
+Small hotfix for the new database.
+- refactor: Remove duplicated copyMap method and fix type error (Krille)
+
 ## [0.24.2] - 11th December 2023
 - docs: Add issue tracker to pub.dev (Krille)
 - fix: Copy all maps got from database (Krille)

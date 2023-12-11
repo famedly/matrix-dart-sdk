@@ -672,7 +672,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
     final copiedRaws = raws.entries.map((entry) {
       final copiedRaw = copyMap(entry.value);
       copiedRaw['id'] = int.parse(entry.key);
-      copiedRaw['content'] = jsonDecode(copiedRaw['content']);
+      copiedRaw['content'] = jsonDecode(copiedRaw['content'] as String);
       return copiedRaw;
     }).toList();
     return copiedRaws.map((raw) => QueuedToDeviceEvent.fromJson(raw)).toList();
@@ -1620,5 +1620,3 @@ class TupleKey {
   @override
   int get hashCode => Object.hashAll(parts);
 }
-
-Map<String, dynamic> copyMap(Map map) => map.copy;
