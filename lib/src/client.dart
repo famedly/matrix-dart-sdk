@@ -3006,123 +3006,123 @@ class Client extends MatrixApi {
     final migrateClient = await legacyDatabase?.getClient(clientName);
     final database = this.database;
 
-    if (migrateClient != null && legacyDatabase != null && database != null) {
-      Logs().i('Found data in the legacy database!');
-      onMigration?.call();
-      _id = migrateClient['client_id'];
-      await database.insertClient(
-        clientName,
-        migrateClient['homeserver_url'],
-        migrateClient['token'],
-        migrateClient['user_id'],
-        migrateClient['device_id'],
-        migrateClient['device_name'],
-        null,
-        migrateClient['olm_account'],
-      );
-      Logs().d('Migrate SSSSCache...');
-      for (final type in cacheTypes) {
-        final ssssCache = await legacyDatabase.getSSSSCache(type);
-        if (ssssCache != null) {
-          Logs().d('Migrate $type...');
-          await database.storeSSSSCache(
-            type,
-            ssssCache.keyId ?? '',
-            ssssCache.ciphertext ?? '',
-            ssssCache.content ?? '',
+    if (migrateClient == null || legacyDatabase == null || database == null) {
+      await legacyDatabase?.close();
+      _initLock = false;
+      return;
+    }
+    Logs().i('Found data in the legacy database!');
+    onMigration?.call();
+    _id = migrateClient['client_id'];
+    await database.insertClient(
+      clientName,
+      migrateClient['homeserver_url'],
+      migrateClient['token'],
+      migrateClient['user_id'],
+      migrateClient['device_id'],
+      migrateClient['device_name'],
+      null,
+      migrateClient['olm_account'],
+    );
+    Logs().d('Migrate SSSSCache...');
+    for (final type in cacheTypes) {
+      final ssssCache = await legacyDatabase.getSSSSCache(type);
+      if (ssssCache != null) {
+        Logs().d('Migrate $type...');
+        await database.storeSSSSCache(
+          type,
+          ssssCache.keyId ?? '',
+          ssssCache.ciphertext ?? '',
+          ssssCache.content ?? '',
+        );
+      }
+    }
+    Logs().d('Migrate OLM sessions...');
+    try {
+      final olmSessions = await legacyDatabase.getAllOlmSessions();
+      for (final identityKey in olmSessions.keys) {
+        final sessions = olmSessions[identityKey]!;
+        for (final sessionId in sessions.keys) {
+          final session = sessions[sessionId]!;
+          await database.storeOlmSession(
+            identityKey,
+            session['session_id'] as String,
+            session['pickle'] as String,
+            session['last_received'] as int,
           );
         }
       }
-      Logs().d('Migrate OLM sessions...');
-      try {
-        final olmSessions = await legacyDatabase.getAllOlmSessions();
-        for (final identityKey in olmSessions.keys) {
-          final sessions = olmSessions[identityKey]!;
-          for (final sessionId in sessions.keys) {
-            final session = sessions[sessionId]!;
-            await database.storeOlmSession(
-              identityKey,
-              session['session_id'] as String,
-              session['pickle'] as String,
-              session['last_received'] as int,
-            );
-          }
+    } catch (e, s) {
+      Logs().e('Unable to migrate OLM sessions!', e, s);
+    }
+    Logs().d('Migrate Device Keys...');
+    final userDeviceKeys = await legacyDatabase.getUserDeviceKeys(this);
+    for (final userId in userDeviceKeys.keys) {
+      Logs().d('Migrate Device Keys of user $userId...');
+      final deviceKeysList = userDeviceKeys[userId];
+      for (final crossSigningKey
+          in deviceKeysList?.crossSigningKeys.values ?? <CrossSigningKey>[]) {
+        final pubKey = crossSigningKey.publicKey;
+        if (pubKey != null) {
+          Logs().d(
+              'Migrate cross signing key with usage ${crossSigningKey.usage} and verified ${crossSigningKey.directVerified}...');
+          await database.storeUserCrossSigningKey(
+            userId,
+            pubKey,
+            jsonEncode(crossSigningKey.toJson()),
+            crossSigningKey.directVerified,
+            crossSigningKey.blocked,
+          );
         }
-      } catch (e, s) {
-        Logs().e('Unable to migrate OLM sessions!', e, s);
       }
-      Logs().d('Migrate Device Keys...');
-      final userDeviceKeys = await legacyDatabase.getUserDeviceKeys(this);
-      for (final userId in userDeviceKeys.keys) {
-        Logs().d('Migrate Device Keys of user $userId...');
-        final deviceKeysList = userDeviceKeys[userId];
-        for (final crossSigningKey
-            in deviceKeysList?.crossSigningKeys.values ?? <CrossSigningKey>[]) {
-          final pubKey = crossSigningKey.publicKey;
-          if (pubKey != null) {
-            Logs().d(
-                'Migrate cross signing key with usage ${crossSigningKey.usage} and verified ${crossSigningKey.directVerified}...');
-            await database.storeUserCrossSigningKey(
+
+      if (deviceKeysList != null) {
+        for (final deviceKeys in deviceKeysList.deviceKeys.values) {
+          final deviceId = deviceKeys.deviceId;
+          if (deviceId != null) {
+            Logs().d('Migrate device keys for ${deviceKeys.deviceId}...');
+            await database.storeUserDeviceKey(
               userId,
-              pubKey,
-              jsonEncode(crossSigningKey.toJson()),
-              crossSigningKey.directVerified,
-              crossSigningKey.blocked,
+              deviceId,
+              jsonEncode(deviceKeys.toJson()),
+              deviceKeys.directVerified,
+              deviceKeys.blocked,
+              deviceKeys.lastActive.millisecondsSinceEpoch,
             );
           }
         }
-
-        if (deviceKeysList != null) {
-          for (final deviceKeys in deviceKeysList.deviceKeys.values) {
-            final deviceId = deviceKeys.deviceId;
-            if (deviceId != null) {
-              Logs().d('Migrate device keys for ${deviceKeys.deviceId}...');
-              await database.storeUserDeviceKey(
-                userId,
-                deviceId,
-                jsonEncode(deviceKeys.toJson()),
-                deviceKeys.directVerified,
-                deviceKeys.blocked,
-                deviceKeys.lastActive.millisecondsSinceEpoch,
-              );
-            }
-          }
-          Logs().d('Migrate user device keys info...');
-          await database.storeUserDeviceKeysInfo(
-              userId, deviceKeysList.outdated);
-        }
+        Logs().d('Migrate user device keys info...');
+        await database.storeUserDeviceKeysInfo(userId, deviceKeysList.outdated);
       }
-      Logs().d('Migrate inbound group sessions...');
-      try {
-        final sessions = await legacyDatabase.getAllInboundGroupSessions();
-        for (var i = 0; i < sessions.length; i++) {
-          Logs().d('$i / ${sessions.length}');
-          final session = sessions[i];
-          await database.storeInboundGroupSession(
-            session.roomId,
-            session.sessionId,
-            session.pickle,
-            session.content,
-            session.indexes,
-            session.allowedAtIndex,
-            session.senderKey,
-            session.senderClaimedKeys,
-          );
-        }
-      } catch (e, s) {
-        Logs().e('Unable to migrate inbound group sessions!', e, s);
-      }
-
-      await legacyDatabase.clear();
     }
-    await legacyDatabase?.close();
+    Logs().d('Migrate inbound group sessions...');
+    try {
+      final sessions = await legacyDatabase.getAllInboundGroupSessions();
+      for (var i = 0; i < sessions.length; i++) {
+        Logs().d('$i / ${sessions.length}');
+        final session = sessions[i];
+        await database.storeInboundGroupSession(
+          session.roomId,
+          session.sessionId,
+          session.pickle,
+          session.content,
+          session.indexes,
+          session.allowedAtIndex,
+          session.senderKey,
+          session.senderClaimedKeys,
+        );
+      }
+    } catch (e, s) {
+      Logs().e('Unable to migrate inbound group sessions!', e, s);
+    }
+
+    await legacyDatabase.delete();
+
     _initLock = false;
-    if (migrateClient != null) {
-      return init(
-        waitForFirstSync: false,
-        waitUntilLoadCompletedLoaded: false,
-      );
-    }
+    return init(
+      waitForFirstSync: false,
+      waitUntilLoadCompletedLoaded: false,
+    );
   }
 }
 

@@ -1474,6 +1474,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     // see no need to implement this in a deprecated part
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> delete() => Hive.deleteFromDisk();
 }
 
 dynamic _castValue(dynamic value) {

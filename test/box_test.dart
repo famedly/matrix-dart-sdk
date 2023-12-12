@@ -15,6 +15,7 @@ void main() {
         'testbox',
         boxNames,
         sqfliteDatabase: db,
+        sqfliteFactory: databaseFactoryFfi,
       );
     });
 
@@ -75,6 +76,10 @@ void main() {
       await box.clear();
       expect(await box.get('fluffy'), null);
       expect(await box.get('loki'), null);
+    });
+
+    test('Box.delete', () async {
+      await collection.delete();
     });
   });
 }

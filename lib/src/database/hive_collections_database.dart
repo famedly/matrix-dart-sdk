@@ -1594,6 +1594,9 @@ class HiveCollectionsDatabase extends DatabaseApi {
       return false;
     }
   }
+
+  @override
+  Future<void> delete() => _collection.deleteFromDisk();
 }
 
 class TupleKey {

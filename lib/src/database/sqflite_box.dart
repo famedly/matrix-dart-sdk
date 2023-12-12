@@ -1,20 +1,22 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:sqflite_common/sqlite_api.dart';
+import 'package:sqflite_common/sqflite.dart';
 
 /// Key-Value store abstraction over Sqflite so that the sdk database can use
 /// a single interface for all platforms. API is inspired by Hive.
 class BoxCollection {
   final Database _db;
   final Set<String> boxNames;
+  final DatabaseFactory? _factory;
 
-  BoxCollection(this._db, this.boxNames);
+  BoxCollection(this._db, this.boxNames, this._factory);
 
   static Future<BoxCollection> open(
     String name,
     Set<String> boxNames, {
     Object? sqfliteDatabase,
+    DatabaseFactory? sqfliteFactory,
     dynamic idbFactory,
   }) async {
     if (sqfliteDatabase is! Database) {
@@ -28,7 +30,7 @@ class BoxCollection {
       batch.execute('CREATE INDEX IF NOT EXISTS k_index ON $name (k)');
     }
     await batch.commit(noResult: true);
-    return BoxCollection(sqfliteDatabase, boxNames);
+    return BoxCollection(sqfliteDatabase, boxNames, sqfliteFactory);
   }
 
   Box<V> openBox<V>(String name) {
@@ -110,6 +112,9 @@ class BoxCollection {
       );
 
   Future<void> close() => _db.close();
+
+  Future<void> delete() =>
+      (_factory ?? databaseFactory).deleteDatabase(_db.path);
 }
 
 class Box<V> {

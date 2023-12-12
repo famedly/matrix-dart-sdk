@@ -44,7 +44,11 @@ Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
 // ignore: deprecated_member_use_from_same_package
 Future<MatrixSdkDatabase> getMatrixSdkDatabase(Client? c) async {
   final database = await databaseFactoryFfi.openDatabase(':memory:');
-  final db = MatrixSdkDatabase('unit_test.${c?.hashCode}', database: database);
+  final db = MatrixSdkDatabase(
+    'unit_test.${c?.hashCode}',
+    database: database,
+    sqfliteFactory: databaseFactoryFfi,
+  );
   await db.open();
   return db;
 }
