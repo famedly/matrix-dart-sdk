@@ -472,6 +472,19 @@ void main() {
     test('Close', () async {
       await database.close();
     });
+    test('Delete', () async {
+      final database = await getMatrixSdkDatabase(null);
+      await database.storeAccountData(
+        'm.test.data',
+        jsonEncode({'foo': 'bar'}),
+      );
+      await database.delete();
+
+      // Check if previously stored data is gone:
+      final reopenedDatabase = await getMatrixSdkDatabase(null);
+      final dump = await reopenedDatabase.getAccountData();
+      expect(dump.isEmpty, true);
+    });
   });
 }
 

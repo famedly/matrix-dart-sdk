@@ -144,10 +144,15 @@ class MatrixSdkDatabase extends DatabaseApi {
   /// typed.
   final dynamic idbFactory;
 
+  /// Custom SQFlite Database Factory used for high level operations on IO
+  /// like delete. Set it if you want to use sqlite FFI.
+  final DatabaseFactory? sqfliteFactory;
+
   MatrixSdkDatabase(
     this.name, {
     this.database,
     this.idbFactory,
+    this.sqfliteFactory,
     this.maxFileSize = 0,
     this.fileStoragePath,
     this.deleteFilesAfterDuration,
@@ -179,6 +184,7 @@ class MatrixSdkDatabase extends DatabaseApi {
         _seenDeviceKeysBoxName,
       },
       sqfliteDatabase: database,
+      sqfliteFactory: sqfliteFactory,
       idbFactory: idbFactory,
     );
     _clientBox = _collection.openBox<String>(
@@ -1596,4 +1602,7 @@ class MatrixSdkDatabase extends DatabaseApi {
 
     return CachedPresence.fromJson(copyMap(rawPresence));
   }
+
+  @override
+  Future<void> delete() => _collection.delete();
 }

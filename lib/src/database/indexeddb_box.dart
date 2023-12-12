@@ -7,13 +7,16 @@ import 'dart:indexed_db';
 class BoxCollection {
   final Database _db;
   final Set<String> boxNames;
+  final String _name;
+  final IdbFactory _idbFactory;
 
-  BoxCollection(this._db, this.boxNames);
+  BoxCollection(this._db, this.boxNames, this._name, this._idbFactory);
 
   static Future<BoxCollection> open(
     String name,
     Set<String> boxNames, {
     Object? sqfliteDatabase,
+    Object? sqfliteFactory,
     IdbFactory? idbFactory,
   }) async {
     idbFactory ??= window.indexedDB!;
@@ -24,7 +27,7 @@ class BoxCollection {
         db.createObjectStore(name, autoIncrement: true);
       }
     });
-    return BoxCollection(db, boxNames);
+    return BoxCollection(db, boxNames, name, idbFactory);
   }
 
   Box<V> openBox<V>(String name) {
@@ -61,15 +64,19 @@ class BoxCollection {
   }
 
   Future<void> clear() async {
+    final txn = _db.transaction(boxNames, 'readwrite');
     for (final name in boxNames) {
-      _db.deleteObjectStore(name);
+      unawaited(txn.objectStore(name).clear());
     }
+    await txn.completed;
   }
 
   Future<void> close() async {
     assert(_txnCache == null, 'Database closed while in transaction!');
     return _db.close();
   }
+
+  Future<void> delete() => _idbFactory.deleteDatabase(_name);
 }
 
 class Box<V> {
