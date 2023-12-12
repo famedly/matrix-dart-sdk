@@ -1356,8 +1356,28 @@ class Room {
   /// read receipt's location.
   /// If you set `public` to false, only a private receipt will be sent. A private receipt is always sent if `mRead` is set. If no value is provided, the default from the `client` is used.
   /// You can leave out the `eventId`, which will not update the read marker but just send receipts, but there are few cases where that makes sense.
-  Future<void> setReadMarker(String? eventId,
-      {String? mRead, bool? public}) async {
+  Future<void> setReadMarker(
+    String? eventId, {
+    String? mRead,
+    bool? public,
+    bool resetUnreadCountLocally = false,
+  }) async {
+    if (resetUnreadCountLocally) {
+      await _handleFakeSync(
+        SyncUpdate(
+          nextBatch: '',
+          rooms: RoomsUpdate(
+            join: {
+              id: JoinedRoomUpdate(
+                  unreadNotifications: UnreadNotificationCounts(
+                notificationCount: 0,
+                highlightCount: 0,
+              ))
+            },
+          ),
+        ),
+      );
+    }
     await client.setReadMarker(
       id,
       mFullyRead: eventId,

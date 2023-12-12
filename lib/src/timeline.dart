@@ -366,12 +366,27 @@ class Timeline {
     }
   }
 
-  /// Set the read marker to the last synced event in this timeline.
-  Future<void> setReadMarker({String? eventId, bool? public}) async {
-    eventId ??=
+  /// Set the read marker to the last synced event in this timeline. By
+  /// default this resets the unread count locally when the read marker is set
+  /// on the last event in this timeline.
+  Future<void> setReadMarker({
+    String? eventId,
+    bool? public,
+    bool? resetUnreadCountLocally,
+  }) async {
+    final lastEventId =
         events.firstWhereOrNull((event) => event.status.isSynced)?.eventId;
+    eventId ??= lastEventId;
+
+    resetUnreadCountLocally ??= eventId == lastEventId;
+
     if (eventId == null) return;
-    return room.setReadMarker(eventId, mRead: eventId, public: public);
+    return room.setReadMarker(
+      eventId,
+      mRead: eventId,
+      public: public,
+      resetUnreadCountLocally: resetUnreadCountLocally,
+    );
   }
 
   int _findEvent({String? event_id, String? unsigned_txid}) {
