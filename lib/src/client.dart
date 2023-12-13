@@ -22,6 +22,7 @@ import 'dart:core';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:async/async.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
@@ -1011,6 +1012,13 @@ class Client extends MatrixApi {
     _archivedRooms.add(ArchivedRoom(room: archivedRoom, timeline: timeline));
   }
 
+  final _serverConfigCache = AsyncCache<ServerConfig>(const Duration(hours: 1));
+
+  /// Gets the config of the content repository, such as upload limit.
+  @override
+  Future<ServerConfig> getConfig() =>
+      _serverConfigCache.fetch(() => super.getConfig());
+
   /// Uploads a file and automatically caches it in the database, if it is small enough
   /// and returns the mxc url.
   @override
@@ -1477,6 +1485,7 @@ class Client extends MatrixApi {
       }
 
       _groupCallSessionId = randomAlpha(12);
+      _serverConfigCache.invalidate();
 
       String? olmAccount;
       String? accessToken;
