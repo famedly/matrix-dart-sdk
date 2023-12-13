@@ -1586,9 +1586,9 @@ class Client extends MatrixApi {
       );
 
       /// Timeout of 0, so that we don't see a spinner for 30 seconds.
-      final syncFuture = _sync(timeout: Duration.zero);
+      firstSyncReceived = _sync(timeout: Duration.zero);
       if (waitForFirstSync) {
-        await syncFuture;
+        await firstSyncReceived;
       }
       return;
     } catch (e, s) {
@@ -2341,6 +2341,7 @@ class Client extends MatrixApi {
   Future? userDeviceKeysLoading;
   Future? roomsLoading;
   Future? _accountDataLoading;
+  Future? firstSyncReceived;
 
   Future? get accountDataLoading => _accountDataLoading;
 
