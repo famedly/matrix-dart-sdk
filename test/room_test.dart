@@ -81,6 +81,9 @@ void main() {
         stateKey: '',
       ));
 
+      final heroUsers = await room.loadHeroUsers();
+      expect(heroUsers.length, 3);
+
       expect(room.id, id);
       expect(room.membership, membership);
       expect(room.notificationCount, notificationCount);
