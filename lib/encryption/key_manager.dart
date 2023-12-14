@@ -502,6 +502,7 @@ class KeyManager {
   Future<OutboundGroupSession> _createOutboundGroupSession(
       String roomId) async {
     await clearOrUseOutboundGroupSession(roomId, wipe: true);
+    await client.firstSyncReceived;
     final room = client.getRoomById(roomId);
     if (room == null) {
       throw Exception(

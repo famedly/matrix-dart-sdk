@@ -223,6 +223,29 @@ class Room {
     return pinned is Iterable ? pinned.map((e) => e.toString()).toList() : [];
   }
 
+  /// Returns the heroes as `User` objects.
+  /// This is very useful if you want to make sure that all users are loaded
+  /// from the database, that you need to correctly calculate the displayname
+  /// and the avatar of the room.
+  Future<List<User>> loadHeroUsers() async {
+    var heroes = summary.mHeroes;
+    if (heroes == null) {
+      final directChatMatrixID = this.directChatMatrixID;
+      if (directChatMatrixID != null) {
+        heroes = [directChatMatrixID];
+      }
+    }
+
+    if (heroes == null) return [];
+
+    return await Future.wait(heroes.map((hero) async =>
+        (await requestUser(
+          hero,
+          ignoreErrors: true,
+        )) ??
+        User(hero, room: this)));
+  }
+
   /// Returns a localized displayname for this server. If the room is a groupchat
   /// without a name, then it will return the localized version of 'Group with Alice' instead
   /// of just 'Alice' to make it different to a direct chat.
