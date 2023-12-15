@@ -30,18 +30,18 @@ import 'package:matrix/src/utils/cached_stream_controller.dart';
 /// version 1
 const String voipProtoVersion = '1';
 
-class Timeouts {
+class CallTimeouts {
   /// The default life time for call events, in millisecond.
-  static const lifetimeMs = 10 * 1000;
+  static const defaultCallEventLifetime = Duration(seconds: 10);
 
   /// The length of time a call can be ringing for.
-  static const callTimeoutSec = 60;
+  static const callInviteLifetime = Duration(seconds: 60);
 
   /// The delay for ice gathering.
-  static const iceGatheringDelayMs = 200;
+  static const iceGatheringDelay = Duration(milliseconds: 200);
 
   /// Delay before createOffer.
-  static const delayBeforeOfferMs = 100;
+  static const delayBeforeOffer = Duration(milliseconds: 100);
 }
 
 extension RTCIceCandidateExt on RTCIceCandidate {
@@ -504,7 +504,7 @@ class CallSession {
 
     setCallState(CallState.kRinging);
 
-    ringingTimer = Timer(Duration(seconds: 30), () {
+    ringingTimer = Timer(CallTimeouts.callInviteLifetime, () {
       if (state == CallState.kRinging) {
         Logs().v('[VOIP] Call invite has expired. Hanging up.');
         hangupParty = CallParty.kRemote; // effectively
@@ -621,8 +621,7 @@ class CallSession {
     }
 
     /// Send select_answer event.
-    await sendSelectCallAnswer(
-        opts.room, callId, Timeouts.lifetimeMs, localPartyId, remotePartyId!);
+    await sendSelectCallAnswer(opts.room, callId, localPartyId, remotePartyId!);
   }
 
   Future<void> onNegotiateReceived(
@@ -659,7 +658,11 @@ class CallSession {
         }
 
         await sendCallNegotiate(
-            room, callId, Timeouts.lifetimeMs, localPartyId, answer.sdp!,
+            room,
+            callId,
+            CallTimeouts.defaultCallEventLifetime.inMilliseconds,
+            localPartyId,
+            answer.sdp!,
             type: answer.type!);
         await pc!.setLocalDescription(answer);
       }
@@ -983,7 +986,7 @@ class CallSession {
     if (localUserMediaStream != null && localUserMediaStream!.stream != null) {
       final stream = await _getUserMedia(CallType.kVideo);
       if (stream != null) {
-        Logs().e('[VOIP] running replaceTracks() on stream: ${stream.id}');
+        Logs().d('[VOIP] running replaceTracks() on stream: ${stream.id}');
         _setTracksEnabled(stream.getVideoTracks(), true);
         // replace local tracks
         for (final track in localUserMediaStream!.stream!.getTracks()) {
@@ -1145,8 +1148,7 @@ class CallSession {
     Logs().d('[VOIP] Rejecting call: $callId');
     await terminate(CallParty.kLocal, CallErrorCode.UserHangup, shouldEmit);
     if (shouldEmit) {
-      await sendCallReject(
-          room, callId, Timeouts.lifetimeMs, localPartyId, reason);
+      await sendCallReject(room, callId, localPartyId, reason);
     }
   }
 
@@ -1257,8 +1259,7 @@ class CallSession {
     if (pc!.iceGatheringState ==
         RTCIceGatheringState.RTCIceGatheringStateGathering) {
       // Allow a short time for initial candidates to be gathered
-      await Future.delayed(
-          Duration(milliseconds: Timeouts.iceGatheringDelayMs));
+      await Future.delayed(CallTimeouts.iceGatheringDelay);
     }
 
     if (callHasEnded) return;
@@ -1271,8 +1272,14 @@ class CallSession {
       Logs().d('[glare] new invite sent about to be called');
 
       await sendInviteToCall(
-          room, callId, Timeouts.lifetimeMs, localPartyId, null, offer.sdp!,
-          capabilities: callCapabilities, metadata: metadata);
+          room,
+          callId,
+          CallTimeouts.callInviteLifetime.inMilliseconds,
+          localPartyId,
+          null,
+          offer.sdp!,
+          capabilities: callCapabilities,
+          metadata: metadata);
       // just incase we ended the call but already sent the invite
       if (state == CallState.kEnded) {
         await hangup(CallErrorCode.Replaced, false);
@@ -1287,7 +1294,7 @@ class CallSession {
 
       setCallState(CallState.kInviteSent);
 
-      inviteTimer = Timer(Duration(seconds: Timeouts.callTimeoutSec), () {
+      inviteTimer = Timer(CallTimeouts.callInviteLifetime, () {
         if (state == CallState.kInviteSent) {
           hangup(CallErrorCode.InviteTimeout);
         }
@@ -1296,7 +1303,11 @@ class CallSession {
       });
     } else {
       await sendCallNegotiate(
-          room, callId, Timeouts.lifetimeMs, localPartyId, offer.sdp!,
+          room,
+          callId,
+          CallTimeouts.defaultCallEventLifetime.inMilliseconds,
+          localPartyId,
+          offer.sdp!,
           type: offer.type!,
           capabilities: callCapabilities,
           metadata: metadata);
@@ -1311,7 +1322,7 @@ class CallSession {
       // onNegotiationNeeded, which causes creatOffer to only include
       // audio m-line, add delay and wait for video track to be added,
       // then createOffer can get audio/video m-line correctly.
-      await Future.delayed(Duration(milliseconds: Timeouts.delayBeforeOfferMs));
+      await Future.delayed(CallTimeouts.delayBeforeOffer);
       final offer = await pc!.createOffer({});
       await _gotLocalOffer(offer);
     } catch (e) {
@@ -1703,8 +1714,8 @@ class CallSession {
   /// [version] is the version of the VoIP specification this message adheres to. This specification is version 1.
   /// [party_id] The party ID for call, Can be set to client.deviceId.
   /// [selected_party_id] The party ID for the selected answer.
-  Future<String?> sendSelectCallAnswer(Room room, String callId, int lifetime,
-      String party_id, String selected_party_id,
+  Future<String?> sendSelectCallAnswer(
+      Room room, String callId, String party_id, String selected_party_id,
       {String version = voipProtoVersion, String? txid}) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
 
@@ -1713,7 +1724,6 @@ class CallSession {
       'party_id': party_id,
       if (groupCallId != null) 'conf_id': groupCallId,
       'version': version,
-      'lifetime': lifetime,
       'selected_party_id': selected_party_id,
     };
 
@@ -1730,7 +1740,7 @@ class CallSession {
   /// [version] is the version of the VoIP specification this message adheres to. This specification is version 1.
   /// [party_id] The party ID for call, Can be set to client.deviceId.
   Future<String?> sendCallReject(
-      Room room, String callId, int lifetime, String party_id, String? reason,
+      Room room, String callId, String party_id, String? reason,
       {String version = voipProtoVersion, String? txid}) async {
     txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
 
@@ -1740,7 +1750,6 @@ class CallSession {
       if (groupCallId != null) 'conf_id': groupCallId,
       if (reason != null) 'reason': reason,
       'version': version,
-      'lifetime': lifetime,
     };
 
     return await _sendContent(
@@ -1972,6 +1981,9 @@ class CallSession {
   }) async {
     txid ??= client.generateUniqueTransactionId();
     final mustEncrypt = room.encrypted && client.encryptionEnabled;
+
+    // opponentDeviceId is only set for a few events during group calls,
+    // therefore only group calls use to-device messages for some events
     if (opponentDeviceId != null) {
       final toDeviceSeq = this.toDeviceSeq++;
 
