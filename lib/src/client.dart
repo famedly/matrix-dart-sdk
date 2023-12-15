@@ -1695,7 +1695,12 @@ class Client extends MatrixApi {
       }
       Object? syncError;
       await _checkSyncFilter();
+
+      // The timeout we send to the server for the sync loop. It says to the
+      // server that we want to receive an empty sync response after this
+      // amount of time if nothing happens.
       timeout ??= const Duration(seconds: 30);
+
       final syncRequest = sync(
         filter: syncFilterId,
         since: prevBatch,
@@ -1711,8 +1716,15 @@ class Client extends MatrixApi {
       });
       _currentSyncId = syncRequest.hashCode;
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.waitingForResponse));
-      final syncResp =
-          await syncRequest.timeout(timeout + const Duration(seconds: 10));
+
+      // The timeout for the response from the server. If we do not set a sync
+      // timeout (for initial sync) we give the server a longer time to
+      // responde.
+      final responseTimeout = timeout == Duration.zero
+          ? const Duration(minutes: 2)
+          : timeout + const Duration(seconds: 10);
+
+      final syncResp = await syncRequest.timeout(responseTimeout);
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.processing));
       if (syncResp == null) throw syncError ?? 'Unknown sync error';
       if (_currentSyncId != syncRequest.hashCode) {
