@@ -1788,14 +1788,18 @@ class Room {
   /// level of 100, and all other users have a power level of 0.
   int getPowerLevelByUserId(String userId) {
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
-    if (powerLevelMap == null) {
-      return getState(EventTypes.RoomCreate)?.senderId == userId ? 100 : 0;
-    }
-    return powerLevelMap
-            .tryGetMap<String, Object?>('users')
-            ?.tryGet<int>(userId) ??
-        powerLevelMap.tryGet<int>('users_default') ??
-        0;
+
+    final userSpecificPowerLevel =
+        powerLevelMap?.tryGetMap<String, Object?>('users')?.tryGet<int>(userId);
+
+    final defaultUserPowerLevel = powerLevelMap?.tryGet<int>('users_default');
+
+    final fallbackPowerLevel =
+        getState(EventTypes.RoomCreate)?.senderId == userId ? 100 : 0;
+
+    return userSpecificPowerLevel ??
+        defaultUserPowerLevel ??
+        fallbackPowerLevel;
   }
 
   /// Returns the user's own power level.
@@ -1900,14 +1904,17 @@ class Room {
     return powerLevelMap.tryGet('users_default') ?? 0;
   }
 
-  /// The default level required to send message events. Can be overridden by the events key.
-  bool get canSendDefaultMessages =>
-      (getState(EventTypes.RoomPowerLevels)
-                  ?.content
-                  .tryGet<int>('events_default') ??
-              0) <=
-          ownPowerLevel &&
-      (!encrypted || client.encryptionEnabled);
+  /// The default level required to send message events. This checks if the
+  /// user is capable of sending `m.room.message` events.
+  /// Please be aware that this also returns false
+  /// if the room is encrypted but the client is not able to use encryption.
+  /// If you do not want this check or want to check other events like
+  /// `m.sticker` use `canSendEvent('<event-type>')`.
+  bool get canSendDefaultMessages {
+    if (encrypted && !client.encryptionEnabled) return false;
+
+    return canSendEvent(encrypted ? EventTypes.Encrypted : EventTypes.Message);
+  }
 
   /// The level required to invite a user.
   bool get canInvite =>
@@ -1945,12 +1952,13 @@ class Room {
   /// events_default set or there is no power level state in the room.
   bool canSendEvent(String eventType) {
     final powerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
-    if (powerLevelsMap == null) return 0 <= ownPowerLevel;
+
     final pl = powerLevelsMap
-            .tryGetMap<String, Object?>('events')
+            ?.tryGetMap<String, Object?>('events')
             ?.tryGet<int>(eventType) ??
-        powerLevelsMap.tryGet<int>('events_default') ??
+        powerLevelsMap?.tryGet<int>('events_default') ??
         0;
+
     return ownPowerLevel >= pl;
   }
 
