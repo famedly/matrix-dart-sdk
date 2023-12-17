@@ -19,6 +19,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
@@ -336,6 +337,81 @@ class GroupCall {
     return feeds;
   }
 
+  List<Uint8List>? getKeysForParticipant(String userId, String deviceId) {
+    return encryptionKeys[getParticipantId(userId, deviceId)];
+  }
+
+  int getNewEncryptionKeyIndex() {
+    final userId = client.userID;
+    final deviceId = client.deviceID;
+
+    if (userId == null) throw Exception('No userId');
+    if (deviceId == null) throw Exception('No deviceId');
+
+    return (getKeysForParticipant(userId, deviceId)?.length ?? 0) % 16;
+  }
+
+  String generateRandomKey(int len) {
+    final r = Random();
+    const chars =
+        'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
+    return List.generate(len, (index) => chars[r.nextInt(chars.length)]).join();
+  }
+
+  void makeNewSenderKey(bool delayBeforeUse) {
+    final userId = client.userID;
+    final deviceId = client.deviceID;
+
+    if (userId == null) throw Exception('No userId');
+    if (deviceId == null) throw Exception('No deviceId');
+
+    final encryptionKey = generateRandomKey(16);
+    final encryptionKeyIndex = getNewEncryptionKeyIndex();
+    Logs().i('Generated new key at index $encryptionKeyIndex');
+
+    setEncryptionKey(userId, deviceId, encryptionKeyIndex, encryptionKey,
+        delayBeforeuse: delayBeforeUse);
+  }
+
+  Future<void> sendEncryptionKeysEvent() async {
+    Logs().i('Sending encryption keys event');
+
+    if (state != GroupCallState.Entered) return;
+
+    final userId = client.userID;
+    final deviceId = client.deviceID;
+
+    if (userId == null) throw Exception('No userId');
+    if (deviceId == null) throw Exception('No deviceId');
+
+    final myKeys = getKeysForParticipant(userId, deviceId);
+
+    if (myKeys == null) {
+      Logs().w('Tried to send encryption keys event but no keys found!');
+      return;
+    }
+
+    try {
+      final List<EncryptionKeyEntry> keys = [];
+      for (int i = 0; i < myKeys.length; i++) {
+        keys.add(EncryptionKeyEntry(i, base64UrlEncode(myKeys[i])));
+      }
+      final content = EncryptionKeysEventContent(
+        keys,
+        deviceId,
+        '',
+      );
+      final txid = client.generateUniqueTransactionId();
+      await client.sendMessage(
+          room.id, VoipEventTypes.EncryptionKeysPrefix, txid, content.toJson());
+
+      Logs().d(
+          'Embedded-E2EE-LOG updateEncryptionKeyEvent participantId=$userId:$deviceId numSent=${myKeys.length}');
+    } catch (error) {
+      // TODO: resend keys.
+    }
+  }
+
   Future<void> onTimeLineUpdate() async {
     final events = timeLine.events;
     for (final event in events) {
@@ -571,6 +647,11 @@ class GroupCall {
 
     for (final memberState in memberStateEvents) {
       await onMemberStateChanged(memberState);
+    }
+
+    if (useLivekit) {
+      makeNewSenderKey(false);
+      await sendEncryptionKeysEvent();
     }
 
     if (!useLivekit) {
