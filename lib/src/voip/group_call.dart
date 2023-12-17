@@ -17,7 +17,9 @@
  */
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:core';
+import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
@@ -27,6 +29,15 @@ import 'package:matrix/src/utils/cached_stream_controller.dart';
 
 /// TODO(@duan): Need to add voice activity detection mechanism
 /// const int SPEAKING_THRESHOLD = -60; // dB
+
+// A delay after a member leaves before we create and publish a new key, because people
+// tend to leave calls at the same time
+const MAKE_KEY_DELAY = 3000;
+// The delay between creating and sending a new key and starting to encrypt with it. This gives others
+// a chance to receive the new key to minimise the chance they don't get media they can't decrypt.
+// The total time between a member leaving and the call switching to new keys is therefore
+// MAKE_KEY_DELAY + SEND_KEY_DELAY
+const USE_KEY_DELAY = 5000;
 
 class GroupCallIntent {
   static String Ring = 'm.ring';
@@ -207,6 +218,12 @@ class GroupCall {
 
   Timer? resendMemberStateEventTimer;
 
+  Timeline timeLine;
+
+  Map<String, List<Uint8List>> encryptionKeys = {};
+
+  List<Timer> setNewKeyTimeouts = [];
+
   final CachedStreamController<GroupCall> onGroupCallFeedsChanged =
       CachedStreamController();
 
@@ -229,6 +246,7 @@ class GroupCall {
     required this.room,
     required this.type,
     required this.intent,
+    required this.timeLine,
     this.useLivekit = false,
     String? livekitServiceURL,
   }) {
@@ -316,6 +334,92 @@ class GroupCall {
     }
 
     return feeds;
+  }
+
+  Future<void> onTimeLineUpdate() async {
+    final events = timeLine.events;
+    for (final event in events) {
+      if (event.type != VoipEventTypes.EncryptionKeysPrefix) {
+        continue;
+      }
+    }
+  }
+
+  void onCallEncryption(Event event) {
+    final userId = event.senderId;
+    final content = EncryptionKeysEventContent.fromJson(event.content);
+
+    final deviceId = content.deviceId;
+    final callId = content.callId;
+
+    if (userId == '') {
+      Logs()
+          .w('Received m.call.encryption_keys with no userId: callId=$callId');
+      return;
+    }
+
+    // We currently only handle callId = ""
+    if (callId != '') {
+      Logs().w(
+          'Received m.call.encryption_keys with unsupported callId: userId=$userId, deviceId=$deviceId, callId=$callId');
+      return;
+    }
+
+    if (content.keys.isEmpty) {
+      Logs().w(
+          'Received m.call.encryption_keys where keys is empty: callId=$callId');
+      return;
+    }
+
+    if (userId == client.userID && deviceId == client.deviceID) {
+      // We store our own sender key in the same set along with keys from others, so it's
+      // important we don't allow our own keys to be set by one of these events (apart from
+      // the fact that we don't need it anyway because we already know our own keys).
+      Logs().i('Ignoring our own keys event');
+      return;
+    }
+
+    for (final key in content.keys) {
+      final encryptionKey = key.key;
+      final encryptionKeyIndex = key.index;
+      Logs().d(
+          'Embedded-E2EE-LOG onCallEncryption userId=$userId:$deviceId encryptionKeyIndex=$encryptionKeyIndex');
+      setEncryptionKey(userId, deviceId, encryptionKeyIndex, encryptionKey);
+    }
+  }
+
+  String getParticipantId(String userId, String deviceId) =>
+      '$userId:$deviceId';
+
+  void setEncryptionKey(String userId, String deviceId, int encryptionKeyIndex,
+      String encryptionKeyString,
+      {bool delayBeforeuse = false}) {
+    final keyBin = base64.decode(encryptionKeyString);
+
+    final participantId = getParticipantId(userId, deviceId);
+    final encryptionKeys = this.encryptionKeys[participantId] ?? [];
+
+    if (encryptionKeys[encryptionKeyIndex] == keyBin) return;
+
+    encryptionKeys[encryptionKeyIndex] = keyBin;
+
+    this.encryptionKeys[participantId] = encryptionKeys;
+
+    if (delayBeforeuse) {
+      final useKeyTimeout =
+          Timer.periodic(Duration(milliseconds: USE_KEY_DELAY), (Timer timer) {
+        setNewKeyTimeouts.remove(timer);
+        timer.cancel();
+        Logs().i(
+            'Delayed-emitting key changed event for $participantId idx $encryptionKeyIndex');
+        voip.delegate.keyProvider?.onSetEncryptionKey(
+            participantId, encryptionKeyString, encryptionKeyIndex);
+      });
+      setNewKeyTimeouts.add(useKeyTimeout);
+    } else {
+      voip.delegate.keyProvider?.onSetEncryptionKey(
+          participantId, encryptionKeyString, encryptionKeyIndex);
+    }
   }
 
   bool hasLocalParticipant() {
