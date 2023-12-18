@@ -267,12 +267,9 @@ class VoIP {
     // initWithInvite, we might set it to callId even after it was reset to null
     // by terminate.
     currentCID = callId;
-    try {
-      await newCall.initWithInvite(
-          callType, offer, sdpStreamMetadata, lifetime, confId != null);
-    } catch (e, s) {
-      Logs().e('[VOIP] initWithInvite failed', e, s);
-    }
+
+    await newCall.initWithInvite(
+        callType, offer, sdpStreamMetadata, lifetime, confId != null);
 
     // Popup CallingPage for incoming call.
     if (confId == null && !newCall.callHasEnded) {

@@ -1086,7 +1086,7 @@ class CallSession {
     return callOnHold;
   }
 
-  Future<void> answer() async {
+  Future<void> answer({String? txid}) async {
     if (inviteOrAnswerSent) {
       return;
     }
@@ -1124,10 +1124,16 @@ class CallSession {
       // Allow a short time for initial candidates to be gathered
       await Future.delayed(Duration(milliseconds: 200));
 
-      final res = await sendAnswerCall(room, callId, answer.sdp!, localPartyId,
-          type: answer.type!,
-          capabilities: callCapabilities,
-          metadata: metadata);
+      final res = await sendAnswerCall(
+        room,
+        callId,
+        answer.sdp!,
+        localPartyId,
+        type: answer.type!,
+        capabilities: callCapabilities,
+        metadata: metadata,
+        txid: txid,
+      );
       Logs().v('[VOIP] answer res => $res');
 
       inviteOrAnswerSent = true;
