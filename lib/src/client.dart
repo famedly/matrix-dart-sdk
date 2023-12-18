@@ -2142,6 +2142,22 @@ class Client extends MatrixApi {
               return false;
             });
           }
+
+          final age = callEvent.unsigned?.tryGet<int>('age') ??
+              (DateTime.now().millisecondsSinceEpoch -
+                  callEvent.originServerTs.millisecondsSinceEpoch);
+
+          callEvents.removeWhere((element) {
+            if (callEvent.type == EventTypes.CallInvite &&
+                age >
+                    (callEvent.content.tryGet<int>('lifetime') ??
+                        CallTimeouts.callInviteLifetime.inMilliseconds)) {
+              Logs().v(
+                  'Ommiting invite event ${callEvent.eventId} as age was older than lifetime');
+              return true;
+            }
+            return false;
+          });
         }
       }
     }
