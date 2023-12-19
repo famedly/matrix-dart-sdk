@@ -177,6 +177,7 @@ class Client extends MatrixApi {
     this.shareKeysWithUnverifiedDevices = true,
     this.enableDehydratedDevices = false,
     this.receiptsPublicByDefault = true,
+    this.maxStoreReadReceiptsPerRoom = 100,
   })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
@@ -216,6 +217,13 @@ class Client extends MatrixApi {
     // register all the default commands
     registerDefaultCommands();
   }
+
+  /// Sets a maximum amount of stored read receipts per room. Own read receipts
+  /// will always be excluded from this. This will stop persisting receipts
+  /// after the maximum is reached. For each user and thread there is one
+  /// read receipt stored.
+  /// Workaround for Workaround for https://github.com/famedly/matrix-dart-sdk/issues/1642
+  final int maxStoreReadReceiptsPerRoom;
 
   /// The required name for this client.
   final String clientName;

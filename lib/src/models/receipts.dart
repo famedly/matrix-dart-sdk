@@ -219,6 +219,15 @@ class LatestReceiptState {
     this.byThread = const {},
   });
 
+  int get receiptCount {
+    var count = global.otherUsers.length;
+    count += (mainThread?.otherUsers.length ?? 0);
+    for (final thread in byThread.values) {
+      count += thread.otherUsers.length;
+    }
+    return count;
+  }
+
   factory LatestReceiptState.fromJson(Map<String, dynamic> json) {
     final global = json['global'] ?? <String, dynamic>{};
     final Map<String, dynamic> main = json['main'] ?? <String, dynamic>{};
@@ -246,6 +255,8 @@ class LatestReceiptState {
   ) async {
     final List<LatestReceiptStateForTimeline> updatedTimelines = [];
     final ownUserid = room.client.userID!;
+    var count = receiptCount;
+    final receiptsMaxLength = room.client.maxStoreReadReceiptsPerRoom;
 
     content.receipts.forEach((eventId, receiptsByType) {
       receiptsByType.forEach((receiptType, receiptsByUser) {
@@ -271,7 +282,16 @@ class LatestReceiptState {
             }
             updatedTimelines.add(timeline);
           } else {
-            timeline.otherUsers[user] = receiptData;
+            if (count > receiptsMaxLength) {
+              // Workaround for https://github.com/famedly/matrix-dart-sdk/issues/1642
+              Logs().w(
+                'Reached maximum amount of storable read receipts',
+                receiptsMaxLength,
+              );
+            } else {
+              count++;
+              timeline.otherUsers[user] = receiptData;
+            }
           }
         });
       });
