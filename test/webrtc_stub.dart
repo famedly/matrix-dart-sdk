@@ -150,7 +150,9 @@ class MockRTCPeerConnection implements RTCPeerConnection {
   }
 
   @override
-  RTCIceGatheringState? get iceGatheringState => throw UnimplementedError();
+  // value doesn't matter we do onIceConnectionState.call manually
+  RTCIceGatheringState? get iceGatheringState =>
+      RTCIceGatheringState.RTCIceGatheringStateComplete;
 
   @override
   Future<RTCIceGatheringState?> getIceGatheringState() async {
@@ -158,7 +160,9 @@ class MockRTCPeerConnection implements RTCPeerConnection {
   }
 
   @override
-  RTCIceConnectionState? get iceConnectionState => throw UnimplementedError();
+  // value doesn't matter we do onIceConnectionState.call manually
+  RTCIceConnectionState? get iceConnectionState =>
+      RTCIceConnectionState.RTCIceConnectionStateNew;
 
   @override
   Future<RTCIceConnectionState?> getIceConnectionState() async {

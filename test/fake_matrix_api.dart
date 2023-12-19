@@ -572,7 +572,37 @@ class FakeMatrixApi extends BaseClient {
               }
             ]
           }
-        }
+        },
+        '!calls:example.com': {
+          'state': {
+            'events': [
+              {
+                'sender': '@test:fakeServer.notExisting',
+                'type': 'm.room.member',
+                'state_key': '@test:fakeServer.notExisting',
+                'content': {
+                  'membership': 'join',
+                  'avatar_url': 'mxc://example.org/SEsfnsuifSDFSSEF',
+                  'displayname': 'Test User',
+                },
+                'origin_server_ts': 1417731086795,
+                'event_id': 'calls_1:example.com'
+              },
+              {
+                'sender': '@alice:example.com',
+                'type': 'm.room.member',
+                'state_key': '@alice:example.com',
+                'content': {
+                  'membership': 'join',
+                  'avatar_url': 'mxc://example.org/SEsfnsuifSDFSSEF',
+                  'displayname': 'Alice Margatroid',
+                },
+                'origin_server_ts': 1417731086795,
+                'event_id': 'calls_2:example.com'
+              },
+            ]
+          },
+        },
       },
       'invite': {
         '!696r7674:example.com': {
@@ -2430,29 +2460,29 @@ class FakeMatrixApi extends BaseClient {
           (var req) => {'event_id': '1234'},
       '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.guest_access':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.invite/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.invite/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.answer/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.answer/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.select_answer/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.select_answer/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.reject/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.reject/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.negotiate/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.negotiate/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.candidates/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.candidates/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.hangup/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.hangup/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.replaces/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.replaces/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.asserted_identity/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.asserted_identity/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.sdp_stream_metadata_changed/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.sdp_stream_metadata_changed/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/org.matrix.call.sdp_stream_metadata_changed/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/org.matrix.call.sdp_stream_metadata_changed/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/org.matrix.call.asserted_identity/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/org.matrix.call.asserted_identity/1234':
           (var req) => {'event_id': '1234'},
       '/client/v3/rooms/!1234%3Aexample.com/redact/1143273582443PhrSn%3Aexample.org/1234':
           (var req) => {'event_id': '1234'},
