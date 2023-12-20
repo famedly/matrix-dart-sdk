@@ -30,6 +30,9 @@ abstract class WebRTCDelegate {
 }
 
 class VoIP {
+  // used only for internal tests, all txids for call events will be overwritten to this
+  static String? customTxid;
+
   TurnServerCredentials? _turnServerCredentials;
   Map<String, CallSession> calls = <String, CallSession>{};
   Map<String, GroupCall> groupCalls = <String, GroupCall>{};

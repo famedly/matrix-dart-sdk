@@ -461,6 +461,7 @@ class CallSession {
               Logs().d(
                   '[glare] new call $callId needs to be canceled because the older one ${prevCall.callId} has a smaller lex');
               await hangup();
+              voip.currentCID = prevCall.callId;
               return;
             } else {
               Logs().d(
@@ -1690,8 +1691,6 @@ class CallSession {
       String? txid,
       CallCapabilities? capabilities,
       SDPStreamMetadata? metadata}) async {
-    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
-
     final content = {
       'call_id': callId,
       'party_id': party_id,
@@ -1723,8 +1722,6 @@ class CallSession {
   Future<String?> sendSelectCallAnswer(
       Room room, String callId, String party_id, String selected_party_id,
       {String version = voipProtoVersion, String? txid}) async {
-    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
-
     final content = {
       'call_id': callId,
       'party_id': party_id,
@@ -1748,8 +1745,6 @@ class CallSession {
   Future<String?> sendCallReject(
       Room room, String callId, String party_id, String? reason,
       {String version = voipProtoVersion, String? txid}) async {
-    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
-
     final content = {
       'call_id': callId,
       'party_id': party_id,
@@ -1778,7 +1773,6 @@ class CallSession {
       String? txid,
       CallCapabilities? capabilities,
       SDPStreamMetadata? metadata}) async {
-    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
     final content = {
       'call_id': callId,
       'party_id': party_id,
@@ -1825,7 +1819,6 @@ class CallSession {
     String version = voipProtoVersion,
     String? txid,
   }) async {
-    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
     final content = {
       'call_id': callId,
       'party_id': party_id,
@@ -1854,7 +1847,6 @@ class CallSession {
       String? txid,
       CallCapabilities? capabilities,
       SDPStreamMetadata? metadata}) async {
-    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
     final content = {
       'call_id': callId,
       'party_id': party_id,
@@ -1879,8 +1871,6 @@ class CallSession {
   Future<String?> sendHangupCall(
       Room room, String callId, String party_id, String? hangupCause,
       {String version = voipProtoVersion, String? txid}) async {
-    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
-
     final content = {
       'call_id': callId,
       'party_id': party_id,
@@ -1913,7 +1903,6 @@ class CallSession {
   Future<String?> sendSDPStreamMetadataChanged(
       Room room, String callId, String party_id, SDPStreamMetadata metadata,
       {String version = voipProtoVersion, String? txid}) async {
-    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
     final content = {
       'call_id': callId,
       'party_id': party_id,
@@ -1938,7 +1927,6 @@ class CallSession {
   Future<String?> sendCallReplaces(
       Room room, String callId, String party_id, CallReplaces callReplaces,
       {String version = voipProtoVersion, String? txid}) async {
-    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
     final content = {
       'call_id': callId,
       'party_id': party_id,
@@ -1963,7 +1951,6 @@ class CallSession {
   Future<String?> sendAssertedIdentity(Room room, String callId,
       String party_id, AssertedIdentity assertedIdentity,
       {String version = voipProtoVersion, String? txid}) async {
-    txid ??= 'txid${DateTime.now().millisecondsSinceEpoch}';
     final content = {
       'call_id': callId,
       'party_id': party_id,
@@ -1985,7 +1972,7 @@ class CallSession {
     Map<String, dynamic> content, {
     String? txid,
   }) async {
-    txid ??= client.generateUniqueTransactionId();
+    txid ??= VoIP.customTxid ?? client.generateUniqueTransactionId();
     final mustEncrypt = room.encrypted && client.encryptionEnabled;
 
     // opponentDeviceId is only set for a few events during group calls,
