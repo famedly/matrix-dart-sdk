@@ -1,15 +1,17 @@
 #!/bin/bash
+
+thread_count=$(getconf _NPROCESSORS_ONLN)
+
 if which flutter >/dev/null; then
     flutter pub global activate junitreport
-    flutter test --coverage
+    flutter test --concurrency=$thread_count --coverage
     TEST_CODE=$?
     
     # coverage
     flutter pub global activate remove_from_coverage
     flutter pub global run remove_from_coverage:remove_from_coverage -f coverage/lcov.info -r '\.g\.dart$'
 else
-    dart test --coverage=coverage
-    dart test --file-reporter='json:TEST-report.json'
+    dart test --concurrency=$thread_count --coverage=coverage
     TEST_CODE=$?
     
     # coverage -> broken see https://github.com/dart-lang/test/issues/1698
