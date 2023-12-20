@@ -107,9 +107,12 @@ void main() {
       await handle.unlock(recoveryKey: ssssKey);
       expect(handle.isUnlocked, true);
       FakeMatrixApi.calledEndpoints.clear();
-      await handle.store('best animal', 'foxies');
-      // alright, since we don't properly sync we will manually have to update
-      // account_data for this test
+
+      // OpenSSSS store waits for accountdata to be updated before returning
+      // but we can't update that before the below endpoint is not hit.
+      await handle.ssss
+          .store('best animal', 'foxies', handle.keyId, handle.privateKey!);
+
       final content = FakeMatrixApi
           .calledEndpoints[
               '/client/v3/user/%40test%3AfakeServer.notExisting/account_data/best%20animal']!
