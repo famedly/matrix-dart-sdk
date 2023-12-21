@@ -1367,21 +1367,6 @@ class Client extends MatrixApi {
     Duration timeoutForServerRequests = const Duration(seconds: 8),
     bool returnNullIfSeen = true,
   }) async {
-    // Get access token if necessary:
-    final database = _database ??= await databaseBuilder?.call(this);
-    if (!isLogged()) {
-      if (database == null) {
-        throw Exception(
-            'Can not execute getEventByPushNotification() without a database');
-      }
-      final clientInfoMap = await database.getClient(clientName);
-      final token = clientInfoMap?.tryGet<String>('token');
-      if (token == null) {
-        throw Exception('Client is not logged in.');
-      }
-      accessToken = token;
-    }
-
     // Check if the notification contains an event at all:
     final eventId = notification.eventId;
     final roomId = notification.roomId;
@@ -1394,6 +1379,7 @@ class Client extends MatrixApi {
           id: roomId,
           client: this,
         );
+    await room.loadHeroUsers();
     final roomName = notification.roomName;
     final roomAlias = notification.roomAlias;
     if (roomName != null) {
@@ -1510,7 +1496,7 @@ class Client extends MatrixApi {
 
     if (storeInDatabase) {
       await database?.transaction(() async {
-        await database.storeEventUpdate(
+        await database?.storeEventUpdate(
             EventUpdate(
               roomID: roomId,
               type: EventUpdateType.timeline,
@@ -1551,6 +1537,7 @@ class Client extends MatrixApi {
     String? newOlmAccount,
     bool waitForFirstSync = true,
     bool waitUntilLoadCompletedLoaded = true,
+    bool isBackgroundClient = false,
 
     /// Will be called if the app performs a migration task from the [legacyDatabaseBuilder]
     void Function()? onMigration,
@@ -1707,13 +1694,15 @@ class Client extends MatrixApi {
             encryption?.pickledOlmAccount,
           );
         }
-        userDeviceKeysLoading = database
-            .getUserDeviceKeys(this)
-            .then((keys) => _userDeviceKeys = keys);
-        roomsLoading = database.getRoomList(this).then((rooms) {
-          _rooms = rooms;
-          _sortRooms();
-        });
+        if (!isBackgroundClient) {
+          userDeviceKeysLoading = database
+              .getUserDeviceKeys(this)
+              .then((keys) => _userDeviceKeys = keys);
+          roomsLoading = database.getRoomList(this).then((rooms) {
+            _rooms = rooms;
+            _sortRooms();
+          });
+        }
         _accountDataLoading = database.getAccountData().then((data) {
           _accountData = data;
           _updatePushrules();
@@ -1733,7 +1722,10 @@ class Client extends MatrixApi {
       );
 
       /// Timeout of 0, so that we don't see a spinner for 30 seconds.
-      firstSyncReceived = _sync(timeout: Duration.zero);
+      if (!isBackgroundClient) {
+        firstSyncReceived = _sync(timeout: Duration.zero);
+      }
+
       if (waitForFirstSync) {
         await firstSyncReceived;
       }
@@ -1803,7 +1795,7 @@ class Client extends MatrixApi {
   /// Immediately start a sync and wait for completion.
   /// If there is an active sync already, wait for the active sync instead.
   Future<void> oneShotSync() {
-    return _sync();
+    return _currentSync ??= _innerSync();
   }
 
   /// Pass a timeout to set how long the server waits before sending an empty response.
