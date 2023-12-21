@@ -1,3 +1,17 @@
+## [0.25.0] - 21st December 2023
+- feat: add tests for calls (td)
+- feat: cache getConfig request (Karthikeyan S)
+- fix: canSendDefaultMessage ignores overwritten events (Krille)
+- fix: check negotiate party and call ids (td)
+- fix: ignore calls with age older than lifetime (td)
+- fix: Increase timeout for initial sync from 10 seconds to 2 minutes (Krille)
+- fix: validate account_data values instead of checking them in syncUpdates (td)
+- refactor: Add delete database method (Krille)
+- refactor: Add loadHeroUsers method (Krille)
+- refactor: Connect timeline to event updates earlier (Krille)
+- refactor: Make possible to wait for first sync and await first sync before create megolm session (Krille)
+- ci: Test all databases in unit tests (Krille)
+
 ## [0.24.3] - 11th December 2023
 Small hotfix for the new database.
 - refactor: Remove duplicated copyMap method and fix type error (Krille)
