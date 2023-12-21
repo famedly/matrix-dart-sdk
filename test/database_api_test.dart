@@ -26,6 +26,16 @@ import 'package:test/test.dart';
 import 'package:matrix/matrix.dart';
 import 'fake_database.dart';
 
+String createLargeString(String character, int desiredSize) {
+  final buffer = StringBuffer();
+
+  while (buffer.length < desiredSize) {
+    buffer.write(character);
+  }
+
+  return buffer.toString();
+}
+
 void main() {
   final databaseBuilders = {
     'Matrix SDK Database': getMatrixSdkDatabase,
@@ -172,6 +182,21 @@ void main() {
         final events2 = await database.getAccountData();
         expect(
             events2.values.any((element) => element.type == 'm.abc+de'), true);
+      });
+      test('Database can write and read 5MB data', () async {
+        final hugeDataObject = {'foo': createLargeString('A', 5 * 1024 * 1024)};
+
+        await database.storeAccountData(
+          'm.huge_data_test',
+          jsonEncode(hugeDataObject),
+        );
+
+        final events = await database.getAccountData();
+
+        expect(
+          events.values.any((data) => data.type == 'm.huge_data_test'),
+          true,
+        );
       });
       test('storeEventUpdate', () async {
         await database.storeEventUpdate(
