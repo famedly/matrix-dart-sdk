@@ -272,6 +272,7 @@ class MatrixSdkDatabase extends DatabaseApi {
   Future<void> clearCache() => transaction(() async {
         await _roomsBox.clear();
         await _accountDataBox.clear();
+        await _roomAccountDataBox.clear();
         await _preloadRoomStateBox.clear();
         await _nonPreloadRoomStateBox.clear();
         await _roomMembersBox.clear();
