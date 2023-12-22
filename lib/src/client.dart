@@ -2973,7 +2973,10 @@ class Client extends MatrixApi {
 
   /// The newest presence of this user if there is any. Fetches it from the
   /// database first and then from the server if necessary or returns offline.
-  Future<CachedPresence> fetchCurrentPresence(String userId) async {
+  Future<CachedPresence> fetchCurrentPresence(
+    String userId, {
+    bool fetchOnlyFromCached = false,
+  }) async {
     // ignore: deprecated_member_use_from_same_package
     final cachedPresence = presences[userId];
     if (cachedPresence != null) {
@@ -2984,6 +2987,8 @@ class Client extends MatrixApi {
     // ignore: deprecated_member_use_from_same_package
     if (dbPresence != null) return presences[userId] = dbPresence;
 
+    if (fetchOnlyFromCached) return CachedPresence.neverSeen(userId);
+
     try {
       final result = await getPresence(userId);
       final presence = CachedPresence.fromPresenceResponse(result, userId);
@@ -2991,7 +2996,10 @@ class Client extends MatrixApi {
       // ignore: deprecated_member_use_from_same_package
       return presences[userId] = presence;
     } catch (e) {
-      return CachedPresence.neverSeen(userId);
+      final presence = CachedPresence.neverSeen(userId);
+      await database?.storePresence(userId, presence);
+      // ignore: deprecated_member_use_from_same_package
+      return presences[userId] = presence;
     }
   }
 
