@@ -221,7 +221,7 @@ class GroupCall {
 
   Timeline timeLine;
 
-  Map<String, List<Uint8List>> encryptionKeys = {};
+  Map<String, Map<int, Uint8List>> encryptionKeys = {};
 
   List<Timer> setNewKeyTimeouts = [];
 
@@ -337,7 +337,7 @@ class GroupCall {
     return feeds;
   }
 
-  List<Uint8List>? getKeysForParticipant(String userId, String deviceId) {
+  Map<int, Uint8List>? getKeysForParticipant(String userId, String deviceId) {
     return encryptionKeys[getParticipantId(userId, deviceId)];
   }
 
@@ -394,7 +394,9 @@ class GroupCall {
     try {
       final List<EncryptionKeyEntry> keys = [];
       for (int i = 0; i < myKeys.length; i++) {
-        keys.add(EncryptionKeyEntry(i, base64UrlEncode(myKeys[i])));
+        if (myKeys[i] != null) {
+          keys.add(EncryptionKeyEntry(i, base64UrlEncode(myKeys[i]!)));
+        }
       }
       final content = EncryptionKeysEventContent(
         keys,
@@ -406,7 +408,7 @@ class GroupCall {
           room.id, VoipEventTypes.EncryptionKeysPrefix, txid, content.toJson());
 
       Logs().d(
-          'Embedded-E2EE-LOG updateEncryptionKeyEvent participantId=$userId:$deviceId numSent=${myKeys.length}');
+          'E2EE: updateEncryptionKeyEvent participantId=$userId:$deviceId numSent=${myKeys.length}');
     } catch (error) {
       // TODO: resend keys.
     }
@@ -418,6 +420,7 @@ class GroupCall {
       if (event.type != VoipEventTypes.EncryptionKeysPrefix) {
         continue;
       }
+      onCallEncryption(event);
     }
   }
 
@@ -459,7 +462,7 @@ class GroupCall {
       final encryptionKey = key.key;
       final encryptionKeyIndex = key.index;
       Logs().d(
-          'Embedded-E2EE-LOG onCallEncryption userId=$userId:$deviceId encryptionKeyIndex=$encryptionKeyIndex');
+          'E2EE: onCallEncryption userId=$userId:$deviceId encryptionKeyIndex=$encryptionKeyIndex');
       setEncryptionKey(userId, deviceId, encryptionKeyIndex, encryptionKey);
     }
   }
@@ -473,9 +476,14 @@ class GroupCall {
     final keyBin = base64.decode(encryptionKeyString);
 
     final participantId = getParticipantId(userId, deviceId);
-    final encryptionKeys = this.encryptionKeys[participantId] ?? [];
+    final encryptionKeys =
+        this.encryptionKeys[participantId] ?? <int, Uint8List>{};
 
-    if (encryptionKeys[encryptionKeyIndex] == keyBin) return;
+    if (encryptionKeys[encryptionKeyIndex] != null &&
+        listEquals(encryptionKeys[encryptionKeyIndex]!, keyBin)) {
+      Logs().i('Ignoring duplicate key');
+      return;
+    }
 
     encryptionKeys[encryptionKeyIndex] = keyBin;
 

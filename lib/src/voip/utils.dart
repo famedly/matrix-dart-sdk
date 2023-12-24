@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:random_string/random_string.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
@@ -44,4 +45,22 @@ String roomAliasFromRoomName(String roomName) {
 
 String genCallID() {
   return '${DateTime.now().millisecondsSinceEpoch}${randomAlphaNumeric(16)}';
+}
+
+bool listEquals<E>(List<E> list1, List<E> list2) {
+  if (identical(list1, list2)) {
+    return true;
+  }
+
+  if (list1.length != list2.length) {
+    return false;
+  }
+
+  for (var i = 0; i < list1.length; i += 1) {
+    if (list1[i] != list2[i]) {
+      return false;
+    }
+  }
+
+  return true;
 }
