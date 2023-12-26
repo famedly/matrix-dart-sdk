@@ -497,7 +497,7 @@ class Client extends MatrixApi {
   /// older server versions.
   @override
   Future<LoginResponse> login(
-    LoginType type, {
+    String type, {
     AuthenticationIdentifier? identifier,
     String? password,
     String? token,

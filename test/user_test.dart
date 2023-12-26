@@ -46,7 +46,7 @@ void main() {
     setUp(() async {
       await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
-      await client.login(LoginType.mLoginPassword,
+      await client.login(LoginType.mLoginPassword.name,
           identifier: AuthenticationUserIdentifier(user: 'test'),
           password: '1234');
     });

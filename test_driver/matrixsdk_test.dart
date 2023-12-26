@@ -51,7 +51,7 @@ void main() => group('Integration tests', () {
           testClientA = Client('TestClientA', databaseBuilder: getDatabase);
           await testClientA.checkHomeserver(homeserverUri);
           await testClientA.login(
-            LoginType.mLoginPassword,
+            LoginType.mLoginPassword.name,
             identifier: AuthenticationUserIdentifier(user: Users.user1.name),
             password: Users.user1.password,
           );
@@ -61,7 +61,7 @@ void main() => group('Integration tests', () {
           testClientB = Client('TestClientB', databaseBuilder: getDatabase);
           await testClientB.checkHomeserver(homeserverUri);
           await testClientB.login(
-            LoginType.mLoginPassword,
+            LoginType.mLoginPassword.name,
             identifier: AuthenticationUserIdentifier(user: Users.user2.name),
             password: Users.user2.password,
           );
@@ -302,7 +302,7 @@ void main() => group('Integration tests', () {
           await testClientC.checkHomeserver(homeserverUri);
           // We can't sign in using the displayname, since that breaks e2ee on dendrite: https://github.com/matrix-org/dendrite/issues/2914
           await testClientC.login(
-            LoginType.mLoginPassword,
+            LoginType.mLoginPassword.name,
             identifier: AuthenticationUserIdentifier(user: Users.user2.name),
             password: Users.user2.password,
           );
@@ -438,7 +438,7 @@ void main() => group('Integration tests', () {
           testClientA = Client('TestClientA', databaseBuilder: getDatabase);
           await testClientA.checkHomeserver(homeserverUri);
           await testClientA.login(
-            LoginType.mLoginPassword,
+            LoginType.mLoginPassword.name,
             identifier: AuthenticationUserIdentifier(user: Users.user1.name),
             password: Users.user1.password,
           );
@@ -448,7 +448,7 @@ void main() => group('Integration tests', () {
           testClientB = Client('TestClientB', databaseBuilder: getDatabase);
           await testClientB.checkHomeserver(homeserverUri);
           await testClientB.login(
-            LoginType.mLoginPassword,
+            LoginType.mLoginPassword.name,
             identifier: AuthenticationUserIdentifier(user: Users.user2.name),
             password: Users.user2.password,
           );

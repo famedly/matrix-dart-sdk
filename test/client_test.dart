@@ -435,7 +435,7 @@ void main() {
       await matrix.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
 
-      final loginResp = await matrix.login(LoginType.mLoginPassword,
+      final loginResp = await matrix.login(LoginType.mLoginPassword.name,
           identifier: AuthenticationUserIdentifier(user: 'test'),
           password: '1234');
 

@@ -23,7 +23,10 @@ dependencies:
   image: ^4.0.15
   js: ^0.6.3
   markdown: ^7.1.1
-  matrix_api_lite: ^1.7.0
+  matrix_api_lite:
+    git: # Will be replace with the new api lite version after it merged
+      url: git@github.com:famedly/dart_matrix_api_lite.git
+      ref: reza/oidc-login-flow
   mime: ^1.0.0
   olm: ^2.0.2
   random_string: ^2.3.1
@@ -41,6 +44,6 @@ dev_dependencies:
   sqflite_common_ffi: ^2.2.5
   test: ^1.15.7
   #flutter_test: {sdk: flutter}
-#dependency_overrides:
-#  matrix_api_lite:
-#    path: ../matrix_api_lite
+# dependency_overrides: # easy uncomment for dev purposes
+#   matrix_api_lite:
+#     path: ../dart_matrix_api_lite
