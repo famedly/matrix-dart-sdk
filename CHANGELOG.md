@@ -1,3 +1,6 @@
+## [0.25.2] - 27th December 2023
+- fix: Add missing copy map in matrix sdk database (Krille)
+
 ## [0.25.1] - 27th December 2023
 - ci: Test that database can write and read at least 5mb of data (Krille)
 - feat: Make possible to fetch presence from database only (krille-chan)
