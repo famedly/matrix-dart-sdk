@@ -1,3 +1,9 @@
+## [0.25.1] - 27th December 2023
+- ci: Test that database can write and read at least 5mb of data (Krille)
+- feat: Make possible to fetch presence from database only (krille-chan)
+- fix: clearCache does not clear room account data (Krille)
+- fix: typerror in removeEvent method from new database (Krille)
+
 ## [0.25.0] - 21st December 2023
 - feat: add tests for calls (td)
 - feat: cache getConfig request (Karthikeyan S)
