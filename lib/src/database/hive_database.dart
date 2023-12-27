@@ -286,6 +286,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   Future<void> clearCache() async {
     await _roomsBox.deleteAll(_roomsBox.keys);
     await _accountDataBox.deleteAll(_accountDataBox.keys);
+    await _roomAccountDataBox.deleteAll(_roomAccountDataBox.keys);
     await _roomStateBox.deleteAll(_roomStateBox.keys);
     await _roomMembersBox.deleteAll(_roomMembersBox.keys);
     await _eventsBox.deleteAll(_eventsBox.keys);

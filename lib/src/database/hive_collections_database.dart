@@ -270,6 +270,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
   Future<void> clearCache() => transaction(() async {
         await _roomsBox.clear();
         await _accountDataBox.clear();
+        await _roomAccountDataBox.clear();
         await _roomStateBox.clear();
         await _roomMembersBox.clear();
         await _eventsBox.clear();
