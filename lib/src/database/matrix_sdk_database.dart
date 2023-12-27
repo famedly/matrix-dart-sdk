@@ -503,7 +503,7 @@ class MatrixSdkDatabase extends DatabaseApi {
     final rawSessions = await _olmSessionsBox.get(identityKey);
     if (rawSessions == null || rawSessions.isEmpty) return <OlmSession>[];
     return rawSessions.values
-        .map((json) => OlmSession.fromJson(json, userId))
+        .map((json) => OlmSession.fromJson(copyMap(json), userId))
         .toList();
   }
 
