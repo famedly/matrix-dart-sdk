@@ -809,7 +809,8 @@ class MatrixSdkDatabase extends DatabaseApi {
     for (final key in keys) {
       final multiKey = TupleKey.fromString(key);
       if (multiKey.parts.first != roomId) continue;
-      final eventIds = await _timelineFragmentsBox.get(key) ?? [];
+      final eventIds =
+          List<String>.from(await _timelineFragmentsBox.get(key) ?? []);
       final prevLength = eventIds.length;
       eventIds.removeWhere((id) => id == eventId);
       if (eventIds.length < prevLength) {
