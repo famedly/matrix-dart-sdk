@@ -28,17 +28,17 @@ from [matrix-spec](https://github.com/matrix-org/matrix-spec/).
 To regenerate the code, follow these steps:
 
 1. Clone both repositories next to each other
-  1.1 `git clone git@gitlab.com:famedly/company/frontend/dart_openapi_codegen.git`
-  1.2 `git clone git@gitlab.com:famedly/company/frontend/libraries/matrix_api_lite.git`
+  1.1 `git clone git@github.com:famedly/dart_openapi_codegen.git`
+  1.2 `git clone git@github.com:famedly/dart_matrix_api_lite.git`
 2. Execute the script in the dart_openapi_codegen directory:
 ```sh
 cd dart_openapi_codegen
-./scripts/matrix.sh ../matrix_api_lite/lib/src/generated
+./scripts/matrix.sh ../dart_matrix_api_lite/lib/src/generated
 cd ..
 ```
 3. Run the build_runner in the matrix_api_lite directory:
 ```sh
-cd matrix_api_lite
+cd dart_matrix_api_lite
 dart pub get
 dart run build_runner build
 ```
