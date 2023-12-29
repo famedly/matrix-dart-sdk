@@ -1,8 +1,8 @@
-import 'dart:async';
-
 import 'package:collection/collection.dart';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/voip/models/group_call_events.dart';
+import 'package:matrix/src/voip/utils/types.dart';
 
 extension GroupCallUtils on Room {
   /// returns the user count (not sessions, yet) for the group call with id: `groupCallId`.

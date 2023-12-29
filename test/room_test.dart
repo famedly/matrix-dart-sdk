@@ -22,6 +22,7 @@ import 'dart:typed_data';
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/voip/utils/group_call_extension.dart';
 import 'fake_client.dart';
 import 'fake_matrix_api.dart';
 

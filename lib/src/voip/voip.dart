@@ -6,36 +6,22 @@ import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
+import 'package:matrix/src/voip/models/call_options.dart';
+import 'package:matrix/src/voip/models/group_call_events.dart';
+import 'package:matrix/src/voip/models/webrtc_delegate.dart';
+import 'package:matrix/src/voip/utils/group_call_extension.dart';
+import 'package:matrix/src/voip/utils/stream_helper.dart';
+import 'package:matrix/src/voip/utils/types.dart';
 
-/// Delegate WebRTC basic functionality.
-abstract class WebRTCDelegate {
-  MediaDevices get mediaDevices;
-  Future<RTCPeerConnection> createPeerConnection(
-      Map<String, dynamic> configuration,
-      [Map<String, dynamic> constraints = const {}]);
-  VideoRenderer createRenderer();
-  Future<void> playRingtone();
-  Future<void> stopRingtone();
-  Future<void> handleNewCall(CallSession session);
-  Future<void> handleCallEnded(CallSession session);
-  Future<void> handleMissedCall(CallSession session);
-  Future<void> handleNewGroupCall(GroupCall groupCall);
-  Future<void> handleGroupCallEnded(GroupCall groupCall);
-  bool get isWeb;
-
-  /// This should be set to false if any calls in the client are in kConnected
-  /// state. If another room tries to call you during a connected call this fires
-  /// a handleMissedCall
-  bool get canHandleNewCall => true;
-}
-
+/// The parent highlevel voip class, this trnslates matrix events to webrtc methods via
+/// `CallSession` or `GroupCallSession` methods
 class VoIP {
   // used only for internal tests, all txids for call events will be overwritten to this
   static String? customTxid;
 
   TurnServerCredentials? _turnServerCredentials;
   Map<String, CallSession> calls = <String, CallSession>{};
-  Map<String, GroupCall> groupCalls = <String, GroupCall>{};
+  Map<String, GroupCallSession> groupCalls = <String, GroupCallSession>{};
   final CachedStreamController<CallSession> onIncomingCall =
       CachedStreamController();
   String? currentCID;
@@ -43,7 +29,8 @@ class VoIP {
   String? get localPartyId => client.deviceID;
   final Client client;
   final WebRTCDelegate delegate;
-  final StreamController<GroupCall> onIncomingGroupCall = StreamController();
+  final StreamController<GroupCallSession> onIncomingGroupCall =
+      StreamController();
   void _handleEvent(
           Event event,
           Function(String roomId, String senderId, Map<String, dynamic> content)
@@ -225,15 +212,16 @@ class VoIP {
 
     final room = client.getRoomById(roomId);
 
-    final opts = CallOptions()
-      ..voip = this
-      ..callId = callId
-      ..groupCallId = confId
-      ..dir = CallDirection.kIncoming
-      ..type = callType
-      ..room = room!
-      ..localPartyId = localPartyId!
-      ..iceServers = await getIceSevers();
+    final opts = CallOptions(
+      voip: this,
+      callId: callId,
+      groupCallId: confId,
+      dir: CallDirection.kIncoming,
+      type: callType,
+      room: room!,
+      localPartyId: localPartyId!,
+      iceServers: await getIceSevers(),
+    );
 
     final newCall = createNewCall(opts);
     newCall.remotePartyId = partyId;
@@ -586,14 +574,15 @@ class VoIP {
     if (currentGroupCID == null) {
       incomingCallRoomId[roomId] = callId;
     }
-    final opts = CallOptions()
-      ..callId = callId
-      ..type = type
-      ..dir = CallDirection.kOutgoing
-      ..room = room
-      ..voip = this
-      ..localPartyId = localPartyId!
-      ..iceServers = await getIceSevers();
+    final opts = CallOptions(
+      callId: callId,
+      type: type,
+      dir: CallDirection.kOutgoing,
+      room: room,
+      voip: this,
+      localPartyId: localPartyId!,
+      iceServers: await getIceSevers(),
+    );
 
     final newCall = createNewCall(opts);
     currentCID = callId;
@@ -617,7 +606,7 @@ class VoIP {
   /// [type] The type of call to be made.
   ///
   /// [intent] The intent of the call.
-  Future<GroupCall?> newGroupCall(
+  Future<GroupCallSession?> newGroupCall(
       String roomId, String type, String intent) async {
     if (getGroupCallForRoom(roomId) != null) {
       Logs().e('[VOIP] [$roomId] already has an existing group call.');
@@ -629,7 +618,7 @@ class VoIP {
       return null;
     }
     final groupId = genCallID();
-    final groupCall = await GroupCall(
+    final groupCall = await GroupCallSession(
       groupCallId: groupId,
       client: client,
       voip: this,
@@ -642,7 +631,7 @@ class VoIP {
     return groupCall;
   }
 
-  Future<GroupCall?> fetchOrCreateGroupCall(String roomId) async {
+  Future<GroupCallSession?> fetchOrCreateGroupCall(String roomId) async {
     final groupCall = getGroupCallForRoom(roomId);
     final room = client.getRoomById(roomId);
     if (room == null) {
@@ -673,9 +662,10 @@ class VoIP {
       return groupCall;
     }
 
-    final completer = Completer<GroupCall?>();
+    final completer = Completer<GroupCallSession?>();
     Timer? timer;
-    final subscription = onIncomingGroupCall.stream.listen((GroupCall call) {
+    final subscription =
+        onIncomingGroupCall.stream.listen((GroupCallSession call) {
       if (call.room.id == roomId) {
         timer?.cancel();
         completer.complete(call);
@@ -690,11 +680,11 @@ class VoIP {
     return completer.future;
   }
 
-  GroupCall? getGroupCallForRoom(String roomId) {
+  GroupCallSession? getGroupCallForRoom(String roomId) {
     return groupCalls[roomId];
   }
 
-  GroupCall? getGroupCallById(String groupCallId) {
+  GroupCallSession? getGroupCallById(String groupCallId) {
     return groupCalls[groupCallId];
   }
 
@@ -730,7 +720,7 @@ class VoIP {
   }
 
   /// Create a new group call from a room state event.
-  Future<GroupCall?> createGroupCallFromRoomStateEvent(MatrixEvent event,
+  Future<GroupCallSession?> createGroupCallFromRoomStateEvent(MatrixEvent event,
       {bool emitHandleNewGroupCall = true}) async {
     final roomId = event.roomId;
     final content = event.content;
@@ -738,7 +728,7 @@ class VoIP {
     final room = client.getRoomById(roomId!);
 
     if (room == null) {
-      Logs().w('Couldn\'t find room $roomId for GroupCall');
+      Logs().w('Couldn\'t find room $roomId for GroupCallSession');
       return null;
     }
 
@@ -763,7 +753,7 @@ class VoIP {
       return null;
     }
 
-    final groupCall = GroupCall(
+    final groupCall = GroupCallSession(
       client: client,
       voip: this,
       room: room,

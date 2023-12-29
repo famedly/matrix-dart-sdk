@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/voip/models/webrtc_delegate.dart';
 
 class ConnectionTester {
   Client client;

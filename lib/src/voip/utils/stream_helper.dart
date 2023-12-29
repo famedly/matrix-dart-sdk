@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:random_string/random_string.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
@@ -29,13 +27,11 @@ void setTracksEnabled(List<MediaStreamTrack> tracks, bool enabled) {
 }
 
 Future<bool> hasAudioDevice() async {
-  //TODO(duan): implement this, check if there is any audio device
-  return true;
+  throw UnimplementedError();
 }
 
 Future<bool> hasVideoDevice() async {
-  //TODO(duan): implement this, check if there is any video device
-  return true;
+  throw UnimplementedError();
 }
 
 String roomAliasFromRoomName(String roomName) {

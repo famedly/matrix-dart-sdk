@@ -1,4 +1,4 @@
-# VOIP for Matrix SDK
+# VOIP for Matrix SDK (TODO TD THIS PROBABLY NEEDS A UPDATE AFTER THE REWRITE)
 
 1:1 and group calls
 
@@ -8,7 +8,7 @@
 
 `CallSession` objects are created by calling `inviteToCall` and `onCallInvite`.
 
-`GroupCall` objects are created by calling `createGroupCall`.
+`GroupCallSession` objects are created by calling `createGroupCall`.
 
 ## 1:1 calls
 

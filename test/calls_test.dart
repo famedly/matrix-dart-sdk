@@ -2,6 +2,8 @@ import 'package:test/test.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/voip/models/call_options.dart';
+import 'package:matrix/src/voip/utils/types.dart';
 import 'fake_client.dart';
 import 'webrtc_stub.dart';
 
@@ -21,7 +23,17 @@ void main() {
     });
 
     test('Test call methods', () async {
-      final call = CallSession(CallOptions()..room = room);
+      final call = CallSession(
+        CallOptions(
+          callId: '1234',
+          type: CallType.kVoice,
+          dir: CallDirection.kOutgoing,
+          localPartyId: '4567',
+          voip: voip,
+          room: room,
+          iceServers: [],
+        ),
+      );
       await call.sendInviteToCall(room, '1234', 1234, '4567', '7890', 'sdp',
           txid: '1234');
       await call.sendAnswerCall(room, '1234', 'sdp', '4567', txid: '1234');

@@ -39,6 +39,8 @@ import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
 import 'package:matrix/src/utils/try_get_push_rule.dart';
+import 'package:matrix/src/voip/utils/constants.dart';
+import 'package:matrix/src/voip/utils/group_call_extension.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 

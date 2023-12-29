@@ -24,158 +24,17 @@ import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
+import 'package:matrix/src/voip/models/call_options.dart';
+import 'package:matrix/src/voip/models/group_call_events.dart';
+import 'package:matrix/src/voip/utils/group_call_extension.dart';
+import 'package:matrix/src/voip/utils/stream_helper.dart';
+import 'package:matrix/src/voip/utils/types.dart';
+import 'package:matrix/src/voip/utils/wrapped_media_stream.dart';
 
-/// TODO(@duan): Need to add voice activity detection mechanism
-/// const int SPEAKING_THRESHOLD = -60; // dB
-
-class GroupCallIntent {
-  static String Ring = 'm.ring';
-  static String Prompt = 'm.prompt';
-  static String Room = 'm.room';
-}
-
-class GroupCallType {
-  static String Video = 'm.video';
-  static String Voice = 'm.voice';
-}
-
-class GroupCallTerminationReason {
-  static String CallEnded = 'call_ended';
-}
-
-class GroupCallEvent {
-  static String GroupCallStateChanged = 'group_call_state_changed';
-  static String ActiveSpeakerChanged = 'active_speaker_changed';
-  static String CallsChanged = 'calls_changed';
-  static String UserMediaStreamsChanged = 'user_media_feeds_changed';
-  static String ScreenshareStreamsChanged = 'screenshare_feeds_changed';
-  static String LocalScreenshareStateChanged =
-      'local_screenshare_state_changed';
-  static String LocalMuteStateChanged = 'local_mute_state_changed';
-  static String ParticipantsChanged = 'participants_changed';
-  static String Error = 'error';
-}
-
-class GroupCallErrorCode {
-  static String NoUserMedia = 'no_user_media';
-  static String UnknownDevice = 'unknown_device';
-}
-
-class GroupCallError extends Error {
-  final String code;
-  final String msg;
-  final dynamic err;
-  GroupCallError(this.code, this.msg, this.err);
-
-  @override
-  String toString() {
-    return 'Group Call Error: [$code] $msg, err: ${err.toString()}';
-  }
-}
-
-abstract class ISendEventResponse {
-  String? event_id;
-}
-
-class IGroupCallRoomMemberFeed {
-  String? purpose;
-  // TODO: Sources for adaptive bitrate
-  IGroupCallRoomMemberFeed.fromJson(Map<String, dynamic> json) {
-    purpose = json['purpose'];
-  }
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    data['purpose'] = purpose;
-    return data;
-  }
-}
-
-class IGroupCallRoomMemberDevice {
-  String? device_id;
-  String? session_id;
-  int? expires_ts;
-
-  List<IGroupCallRoomMemberFeed> feeds = [];
-  IGroupCallRoomMemberDevice.fromJson(Map<String, dynamic> json) {
-    device_id = json['device_id'];
-    session_id = json['session_id'];
-    expires_ts = json['expires_ts'];
-
-    if (json['feeds'] != null) {
-      feeds = (json['feeds'] as List<dynamic>)
-          .map((feed) => IGroupCallRoomMemberFeed.fromJson(feed))
-          .toList();
-    }
-  }
-
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    data['device_id'] = device_id;
-    data['session_id'] = session_id;
-    data['expires_ts'] = expires_ts;
-    data['feeds'] = feeds.map((feed) => feed.toJson()).toList();
-    return data;
-  }
-}
-
-class IGroupCallRoomMemberCallState {
-  String? call_id;
-  List<String>? foci;
-  List<IGroupCallRoomMemberDevice> devices = [];
-  IGroupCallRoomMemberCallState.fromJson(Map<String, dynamic> json) {
-    call_id = json['m.call_id'];
-    if (json['m.foci'] != null) {
-      foci = (json['m.foci'] as List<dynamic>).cast<String>();
-    }
-    if (json['m.devices'] != null) {
-      devices = (json['m.devices'] as List<dynamic>)
-          .map((device) => IGroupCallRoomMemberDevice.fromJson(device))
-          .toList();
-    }
-  }
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    data['m.call_id'] = call_id;
-    if (foci != null) {
-      data['m.foci'] = foci;
-    }
-    if (devices.isNotEmpty) {
-      data['m.devices'] = devices.map((e) => e.toJson()).toList();
-    }
-    return data;
-  }
-}
-
-class IGroupCallRoomMemberState {
-  List<IGroupCallRoomMemberCallState> calls = [];
-  IGroupCallRoomMemberState.fromJson(MatrixEvent event) {
-    if (event.content['m.calls'] != null) {
-      for (final call in (event.content['m.calls'] as List<dynamic>)) {
-        calls.add(IGroupCallRoomMemberCallState.fromJson(call));
-      }
-    }
-  }
-}
-
-class GroupCallState {
-  static String LocalCallFeedUninitialized = 'local_call_feed_uninitialized';
-  static String InitializingLocalCallFeed = 'initializing_local_call_feed';
-  static String LocalCallFeedInitialized = 'local_call_feed_initialized';
-  static String Entering = 'entering';
-  static String Entered = 'entered';
-  static String Ended = 'ended';
-}
-
-abstract class ICallHandlers {
-  Function(List<WrappedMediaStream> feeds)? onCallFeedsChanged;
-  Function(CallState state, CallState oldState)? onCallStateChanged;
-  Function(CallSession call)? onCallHangup;
-  Function(CallSession newCall)? onCallReplaced;
-}
-
-class GroupCall {
+/// Holds methods for managing a group call. This class is also responsible for
+/// holding and managing the individual `CallSession`s in a group call.
+class GroupCallSession {
   // Config
-
   static const updateExpireTsTimerDuration = Duration(seconds: 15);
   static const expireTsBumpDuration = Duration(seconds: 45);
   static const activeSpeakerInterval = Duration(seconds: 5);
@@ -206,7 +65,7 @@ class GroupCall {
 
   Timer? resendMemberStateEventTimer;
 
-  final CachedStreamController<GroupCall> onGroupCallFeedsChanged =
+  final CachedStreamController<GroupCallSession> onGroupCallFeedsChanged =
       CachedStreamController();
 
   final CachedStreamController<String> onGroupCallState =
@@ -221,7 +80,7 @@ class GroupCall {
   final CachedStreamController<WrappedMediaStream> onStreamRemoved =
       CachedStreamController();
 
-  GroupCall({
+  GroupCallSession({
     String? groupCallId,
     required this.client,
     required this.voip,
@@ -232,7 +91,7 @@ class GroupCall {
     this.groupCallId = groupCallId ?? genCallID();
   }
 
-  Future<GroupCall> create() async {
+  Future<GroupCallSession> create() async {
     voip.groupCalls[groupCallId] = this;
     voip.groupCalls[room.id] = this;
 
@@ -494,7 +353,7 @@ class GroupCall {
     setState(GroupCallState.LocalCallFeedUninitialized);
     voip.currentGroupCID = null;
     await voip.delegate.handleGroupCallEnded(this);
-    final justLeftGroupCall = voip.groupCalls.tryGet<GroupCall>(room.id);
+    final justLeftGroupCall = voip.groupCalls.tryGet<GroupCallSession>(room.id);
     // terminate group call if empty
     if (justLeftGroupCall != null &&
         justLeftGroupCall.intent != 'm.room' &&
@@ -680,7 +539,7 @@ class GroupCall {
       return;
     }
 
-    Logs().v('GroupCall: incoming call from: $opponentMemberId');
+    Logs().v('GroupCallSession: incoming call from: $opponentMemberId');
 
     // Check if the user calling has an existing call and use this call instead.
     if (existingCall != null) {
@@ -881,15 +740,16 @@ class GroupCall {
       return;
     }
 
-    final opts = CallOptions()
-      ..callId = genCallID()
-      ..room = room
-      ..voip = voip
-      ..dir = CallDirection.kOutgoing
-      ..localPartyId = client.deviceID!
-      ..groupCallId = groupCallId
-      ..type = CallType.kVideo
-      ..iceServers = await voip.getIceSevers();
+    final opts = CallOptions(
+      callId: genCallID(),
+      room: room,
+      voip: voip,
+      dir: CallDirection.kOutgoing,
+      localPartyId: client.deviceID!,
+      groupCallId: groupCallId,
+      type: CallType.kVideo,
+      iceServers: await voip.getIceSevers(),
+    );
 
     final newCall = voip.createNewCall(opts);
     newCall.opponentDeviceId = opponentDevice.device_id;
