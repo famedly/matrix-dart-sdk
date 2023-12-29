@@ -33,12 +33,15 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 
+typedef OnStartMigrating = Function(int oldVersion, int newVersion);
+
 /// This database does not support file caching!
 class HiveCollectionsDatabase extends DatabaseApi {
   static const int version = 6;
   final String name;
   final String? path;
   final HiveCipher? key;
+  final OnStartMigrating? onStartMigrating;
   final Future<BoxCollection> Function(
     String name,
     Set<String> boxNames, {
@@ -127,7 +130,8 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   HiveCollectionsDatabase(
     this.name,
-    this.path, {
+    this.path,{
+    this.onStartMigrating,
     this.key,
     this.collectionFactory = BoxCollection.open,
   });
@@ -238,6 +242,12 @@ class HiveCollectionsDatabase extends DatabaseApi {
 
   Future<void> _migrateFromVersion(int currentVersion) async {
     Logs().i('Migrate store database from version $currentVersion to $version');
+    if (onStartMigrating != null) {
+      onStartMigrating?.call(
+        currentVersion,
+        version,
+      );
+    }
     await clearCache();
     await _clientBox.put('version', version.toString());
   }
