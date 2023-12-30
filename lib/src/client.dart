@@ -33,6 +33,7 @@ import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
+import 'package:matrix/src/utils/client_init_exception.dart';
 import 'package:matrix/src/utils/compute_callback.dart';
 import 'package:matrix/src/utils/multilock.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
@@ -1464,16 +1465,26 @@ class Client extends MatrixApi {
             newUserID == null ||
             newDeviceID == null ||
             newDeviceName == null)) {
-      throw Exception(
-          'If one of [newToken, newUserID, newDeviceID, newDeviceName] is set then all of them must be set!');
+      throw ClientInitPreconditionError(
+        'If one of [newToken, newUserID, newDeviceID, newDeviceName] is set then all of them must be set!',
+      );
     }
 
-    if (_initLock) throw Exception('[init()] has been called multiple times!');
+    if (_initLock) {
+      throw ClientInitPreconditionError(
+        '[init()] has been called multiple times!',
+      );
+    }
     _initLock = true;
+    String? olmAccount;
+    String? accessToken;
+    String? userID;
     try {
       Logs().i('Initialize client $clientName');
       if (isLogged()) {
-        throw Exception('User is already logged in! Call [logout()] first!');
+        throw ClientInitPreconditionError(
+          'User is already logged in! Call [logout()] first!',
+        );
       }
 
       final databaseBuilder = this.databaseBuilder;
@@ -1487,9 +1498,6 @@ class Client extends MatrixApi {
       _groupCallSessionId = randomAlpha(12);
       _serverConfigCache.invalidate();
 
-      String? olmAccount;
-      String? accessToken;
-      String? userID;
       final account = await this.database?.getClient(clientName);
       if (account != null) {
         _id = account['client_id'];
@@ -1600,12 +1608,24 @@ class Client extends MatrixApi {
         await firstSyncReceived;
       }
       return;
-    } catch (e, s) {
-      Logs().e('Initialization failed', e, s);
-      await logout().catchError((_) => null);
-      onLoginStateChanged.addError(e, s);
-      _initLock = false;
+    } on ClientInitPreconditionError {
       rethrow;
+    } catch (e, s) {
+      Logs().wtf('Client initialization failed', e, s);
+      onLoginStateChanged.addError(e, s);
+      final clientInitException = ClientInitException(
+        e,
+        homeserver: homeserver,
+        accessToken: accessToken,
+        userId: userID,
+        deviceId: deviceID,
+        deviceName: deviceName,
+        olmAccount: olmAccount,
+      );
+      await clear();
+      throw clientInitException;
+    } finally {
+      _initLock = false;
     }
   }
 
