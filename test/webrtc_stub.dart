@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/voip/models/webrtc_delegate.dart';
+import 'package:matrix/src/rtc/models/webrtc_delegate.dart';
 
 class MockWebRTCDelegate implements WebRTCDelegate {
   @override

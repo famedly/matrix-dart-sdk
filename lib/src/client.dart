@@ -25,6 +25,7 @@ import 'dart:typed_data';
 import 'package:async/async.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
+import 'package:matrix/src/rtc/rtc_session_manager.dart';
 import 'package:mime/mime.dart';
 import 'package:olm/olm.dart' as olm;
 import 'package:random_string/random_string.dart';
@@ -39,8 +40,8 @@ import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
 import 'package:matrix/src/utils/try_get_push_rule.dart';
-import 'package:matrix/src/voip/utils/constants.dart';
-import 'package:matrix/src/voip/utils/group_call_extension.dart';
+import 'package:matrix/src/rtc/utils/constants.dart';
+import 'package:matrix/src/rtc/utils/group_call_extension.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -236,14 +237,6 @@ class Client extends MatrixApi {
   /// The device name is a human readable identifier for this device.
   String? get deviceName => _deviceName;
   String? _deviceName;
-
-  // for group calls
-  // A unique identifier used for resolving duplicate group call
-  // sessions from a given device. When the session_id field changes from
-  // an incoming m.call.member event, any existing calls from this device in
-  // this call should be terminated. The id is generated once per client load.
-  String? get groupCallSessionId => _groupCallSessionId;
-  String? _groupCallSessionId;
 
   /// Returns the current login state.
   @Deprecated('Use [onLoginStateChanged.value] instead')
@@ -711,7 +704,6 @@ class Client extends MatrixApi {
       powerLevelContentOverride ??= {};
       powerLevelContentOverride['events'] = <String, dynamic>{
         EventTypes.GroupCallMemberPrefix: 0,
-        EventTypes.GroupCallPrefix: 0,
       };
     }
     final roomId = await createRoom(
@@ -1165,6 +1157,11 @@ class Client extends MatrixApi {
   final CachedStreamController<ToDeviceEvent> onToDeviceEvent =
       CachedStreamController();
 
+  /// The onToDeviceEventChunk is called after the whole the whole sync response
+  /// is calculated. It is already decrypted if necessary.
+  final CachedStreamController<List<ToDeviceEvent>> onToDeviceEventChunk =
+      CachedStreamController();
+
   /// Called when the login state e.g. user gets logged out.
   final CachedStreamController<LoginState> onLoginStateChanged =
       CachedStreamController();
@@ -1196,40 +1193,43 @@ class Client extends MatrixApi {
   final CachedStreamController<BasicEvent> onAccountData =
       CachedStreamController();
 
-  /// Will be called on call invites.
-  final CachedStreamController<Event> onCallInvite = CachedStreamController();
-
-  /// Will be called on call hangups.
-  final CachedStreamController<Event> onCallHangup = CachedStreamController();
-
-  /// Will be called on call candidates.
-  final CachedStreamController<Event> onCallCandidates =
+  /// Callback will be called on `com.famedly.call.` room event
+  final CachedStreamController<FamedlyCallEvent> onFamedlyCallEvent =
       CachedStreamController();
+  // /// Will be called on call invites.
+  // final CachedStreamController<Event> onCallInvite = CachedStreamController();
 
-  /// Will be called on call answers.
-  final CachedStreamController<Event> onCallAnswer = CachedStreamController();
+  // /// Will be called on call hangups.
+  // final CachedStreamController<Event> onCallHangup = CachedStreamController();
 
-  /// Will be called on call replaces.
-  final CachedStreamController<Event> onCallReplaces = CachedStreamController();
+  // /// Will be called on call candidates.
+  // final CachedStreamController<Event> onCallCandidates =
+  //     CachedStreamController();
 
-  /// Will be called on select answers.
-  final CachedStreamController<Event> onCallSelectAnswer =
-      CachedStreamController();
+  // /// Will be called on call answers.
+  // final CachedStreamController<Event> onCallAnswer = CachedStreamController();
 
-  /// Will be called on rejects.
-  final CachedStreamController<Event> onCallReject = CachedStreamController();
+  // /// Will be called on call replaces.
+  // final CachedStreamController<Event> onCallReplaces = CachedStreamController();
 
-  /// Will be called on negotiates.
-  final CachedStreamController<Event> onCallNegotiate =
-      CachedStreamController();
+  // /// Will be called on select answers.
+  // final CachedStreamController<Event> onCallSelectAnswer =
+  //     CachedStreamController();
 
-  /// Will be called on Asserted Identity received.
-  final CachedStreamController<Event> onAssertedIdentityReceived =
-      CachedStreamController();
+  // /// Will be called on rejects.
+  // final CachedStreamController<Event> onCallReject = CachedStreamController();
 
-  /// Will be called on SDPStream Metadata changed.
-  final CachedStreamController<Event> onSDPStreamMetadataChangedReceived =
-      CachedStreamController();
+  // /// Will be called on negotiates.
+  // final CachedStreamController<Event> onCallNegotiate =
+  //     CachedStreamController();
+
+  // /// Will be called on Asserted Identity received.
+  // final CachedStreamController<Event> onAssertedIdentityReceived =
+  //     CachedStreamController();
+
+  // /// Will be called on SDPStream Metadata changed.
+  // final CachedStreamController<Event> onSDPStreamMetadataChangedReceived =
+  //     CachedStreamController();
 
   /// Will be called when another device is requesting session keys for a room.
   final CachedStreamController<RoomKeyRequest> onRoomKeyRequest =
@@ -1244,10 +1244,8 @@ class Client extends MatrixApi {
   final CachedStreamController<UiaRequest> onUiaRequest =
       CachedStreamController();
 
-  final CachedStreamController<Event> onGroupCallRequest =
-      CachedStreamController();
-
-  final CachedStreamController<Event> onGroupMember = CachedStreamController();
+  // final CachedStreamController<Event> onGroupCallRequest =
+  //     CachedStreamController();
 
   final CachedStreamController<Event> onRoomState = CachedStreamController();
 
@@ -1486,7 +1484,6 @@ class Client extends MatrixApi {
         );
       }
 
-      _groupCallSessionId = randomAlpha(12);
       _serverConfigCache.invalidate();
 
       String? olmAccount;
@@ -1896,6 +1893,8 @@ class Client extends MatrixApi {
       }
       onToDeviceEvent.add(toDeviceEvent);
     }
+    onToDeviceEventChunk
+        .add(events.map((e) => ToDeviceEvent.fromJson(e.toJson())).toList());
 
     // emit updates for all events in the queue
     for (final entry in roomsWithNewKeyToSessionId.entries) {
@@ -2054,10 +2053,6 @@ class Client extends MatrixApi {
   Future<void> _handleRoomEvents(
       Room room, List<BasicEvent> events, EventUpdateType type,
       {bool store = true}) async {
-    // Calling events can be omitted if they are outdated from the same sync. So
-    // we collect them first before we handle them.
-    final callEvents = <Event>{};
-
     for (final event in events) {
       // The client must ignore any new m.room.encryption event to prevent
       // man-in-the-middle attacks!
@@ -2107,95 +2102,50 @@ class Client extends MatrixApi {
       if (prevBatch != null &&
           (type == EventUpdateType.timeline ||
               type == EventUpdateType.decryptedTimelineQueue)) {
-        if ((update.content.tryGet<String>('type')?.startsWith('m.call.') ??
-                false) ||
-            (update.content
-                    .tryGet<String>('type')
-                    ?.startsWith('org.matrix.call.') ??
-                false)) {
-          final callEvent = Event.fromJson(update.content, room);
-          final callId = callEvent.content.tryGet<String>('call_id');
-          callEvents.add(callEvent);
-
-          // Call Invites should be omitted for a call that is already answered,
-          // has ended, is rejectd or replaced.
-          const callEndedEventTypes = {
-            EventTypes.CallAnswer,
-            EventTypes.CallHangup,
-            EventTypes.CallReject,
-            EventTypes.CallReplaces,
-          };
-          const ommitWhenCallEndedTypes = {
-            EventTypes.CallInvite,
-            EventTypes.CallCandidates,
-            EventTypes.CallNegotiate,
-            EventTypes.CallSDPStreamMetadataChanged,
-            EventTypes.CallSDPStreamMetadataChangedPrefix,
-          };
-
-          if (callEndedEventTypes.contains(callEvent.type)) {
-            callEvents.removeWhere((event) {
-              if (ommitWhenCallEndedTypes.contains(event.type) &&
-                  event.content.tryGet<String>('call_id') == callId) {
-                Logs().v(
-                    'Ommit "${event.type}" event for an already terminated call');
-                return true;
-              }
-              return false;
-            });
-          }
-
-          final age = callEvent.unsigned?.tryGet<int>('age') ??
-              (DateTime.now().millisecondsSinceEpoch -
-                  callEvent.originServerTs.millisecondsSinceEpoch);
-
-          callEvents.removeWhere((element) {
-            if (callEvent.type == EventTypes.CallInvite &&
-                age >
-                    (callEvent.content.tryGet<int>('lifetime') ??
-                        CallTimeouts.callInviteLifetime.inMilliseconds)) {
-              Logs().v(
-                  'Ommiting invite event ${callEvent.eventId} as age was older than lifetime');
-              return true;
-            }
-            return false;
-          });
+        if ((update.content
+                .tryGet<String>('type')
+                ?.startsWith(famedlyCallMembershipStateEventType) ??
+            false)) {
+          onFamedlyCallEvent.add(
+            FamedlyCallEvent(
+              event: event,
+              room: room,
+            ),
+          );
         }
       }
     }
-
-    callEvents.forEach(_callStreamByCallEvent);
   }
 
-  void _callStreamByCallEvent(Event event) {
-    if (event.type == EventTypes.CallInvite) {
-      onCallInvite.add(event);
-    } else if (event.type == EventTypes.CallHangup) {
-      onCallHangup.add(event);
-    } else if (event.type == EventTypes.CallAnswer) {
-      onCallAnswer.add(event);
-    } else if (event.type == EventTypes.CallCandidates) {
-      onCallCandidates.add(event);
-    } else if (event.type == EventTypes.CallSelectAnswer) {
-      onCallSelectAnswer.add(event);
-    } else if (event.type == EventTypes.CallReject) {
-      onCallReject.add(event);
-    } else if (event.type == EventTypes.CallNegotiate) {
-      onCallNegotiate.add(event);
-    } else if (event.type == EventTypes.CallReplaces) {
-      onCallReplaces.add(event);
-    } else if (event.type == EventTypes.CallAssertedIdentity ||
-        event.type == EventTypes.CallAssertedIdentityPrefix) {
-      onAssertedIdentityReceived.add(event);
-    } else if (event.type == EventTypes.CallSDPStreamMetadataChanged ||
-        event.type == EventTypes.CallSDPStreamMetadataChangedPrefix) {
-      onSDPStreamMetadataChangedReceived.add(event);
-      // TODO(duan): Only used (org.matrix.msc3401.call) during the current test,
-      // need to add GroupCallPrefix in matrix_api_lite
-    } else if (event.type == EventTypes.GroupCallPrefix) {
-      onGroupCallRequest.add(event);
-    }
-  }
+  // void _callStreamByCallEvent(Event event) {
+  //   if (event.type == EventTypes.CallInvite) {
+  //     onCallInvite.add(event);
+  //   } else if (event.type == EventTypes.CallHangup) {
+  //     onCallHangup.add(event);
+  //   } else if (event.type == EventTypes.CallAnswer) {
+  //     onCallAnswer.add(event);
+  //   } else if (event.type == EventTypes.CallCandidates) {
+  //     onCallCandidates.add(event);
+  //   } else if (event.type == EventTypes.CallSelectAnswer) {
+  //     onCallSelectAnswer.add(event);
+  //   } else if (event.type == EventTypes.CallReject) {
+  //     onCallReject.add(event);
+  //   } else if (event.type == EventTypes.CallNegotiate) {
+  //     onCallNegotiate.add(event);
+  //   } else if (event.type == EventTypes.CallReplaces) {
+  //     onCallReplaces.add(event);
+  //   } else if (event.type == EventTypes.CallAssertedIdentity ||
+  //       event.type == EventTypes.CallAssertedIdentityPrefix) {
+  //     onAssertedIdentityReceived.add(event);
+  //   } else if (event.type == EventTypes.CallSDPStreamMetadataChanged ||
+  //       event.type == EventTypes.CallSDPStreamMetadataChangedPrefix) {
+  //     onSDPStreamMetadataChangedReceived.add(event);
+  //     // TODO(duan): Only used (org.matrix.msc3401.call) during the current test,
+  //     // need to add GroupCallPrefix in matrix_api_lite
+  //   } else if (event.type == EventTypes.GroupCallPrefix) {
+  //     onGroupCallRequest.add(event);
+  //   }
+  // }
 
   /// stores when we last checked for stale calls
   DateTime lastStaleCallRun = DateTime(0);

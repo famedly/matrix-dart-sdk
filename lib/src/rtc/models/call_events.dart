@@ -78,7 +78,7 @@ class CallCapabilities {
   bool transferee;
   bool dtmf;
   CallCapabilities({this.transferee = false, this.dtmf = false});
-  factory CallCapabilities.fromJson(Map<String, dynamic> json) =>
+  factory CallCapabilities.fromJson(Map<String, Object> json) =>
       CallCapabilities(
         dtmf: json['m.call.dtmf'] as bool? ?? false,
         transferee: json['m.call.transferee'] as bool? ?? false,
@@ -109,7 +109,7 @@ class SDPStreamPurpose {
       {required this.purpose,
       this.audio_muted = false,
       this.video_muted = false});
-  factory SDPStreamPurpose.fromJson(Map<String, dynamic> json) =>
+  factory SDPStreamPurpose.fromJson(Map<String, Object> json) =>
       SDPStreamPurpose(
         audio_muted: json['audio_muted'] as bool? ?? false,
         video_muted: json['video_muted'] as bool? ?? false,
@@ -132,7 +132,7 @@ class SDPStreamMetadata {
   Map<String, SDPStreamPurpose> sdpStreamMetadatas;
   SDPStreamMetadata(this.sdpStreamMetadatas);
 
-  factory SDPStreamMetadata.fromJson(Map<String, dynamic> json) =>
+  factory SDPStreamMetadata.fromJson(Map<String, Map<String, Object>> json) =>
       SDPStreamMetadata(json.map(
           (key, value) => MapEntry(key, SDPStreamPurpose.fromJson(value))));
   Map<String, dynamic> toJson() =>
@@ -146,7 +146,7 @@ class AssertedIdentity {
   String? displayName;
   String? avatarUrl;
   AssertedIdentity({this.id, this.displayName, this.avatarUrl});
-  factory AssertedIdentity.fromJson(Map<String, dynamic> json) =>
+  factory AssertedIdentity.fromJson(Map<String, Object> json) =>
       AssertedIdentity(
         displayName: json['display_name'] as String?,
         id: json['id'] as String?,

@@ -1,8 +1,8 @@
 import 'package:collection/collection.dart';
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/voip/models/group_call_events.dart';
-import 'package:matrix/src/voip/utils/types.dart';
+import 'package:matrix/src/rtc/models/group_call_events.dart';
+import 'package:matrix/src/rtc/utils/types.dart';
 
 extension GroupCallUtils on Room {
   /// returns the user count (not sessions, yet) for the group call with id: `groupCallId`.
@@ -44,38 +44,6 @@ extension GroupCallUtils on Room {
   }
 
   static const staleCallCheckerDuration = Duration(seconds: 30);
-
-  bool callMemberStateIsExpired(
-      MatrixEvent groupCallMemberStateEvent, String groupCallId) {
-    final callMemberState =
-        IGroupCallRoomMemberState.fromJson(groupCallMemberStateEvent);
-    final calls = callMemberState.calls;
-    if (calls.isNotEmpty) {
-      final call =
-          calls.singleWhereOrNull((call) => call.call_id == groupCallId);
-      if (call != null) {
-        return call.devices.where((device) => device.expires_ts != null).every(
-            (device) =>
-                device.expires_ts! < DateTime.now().millisecondsSinceEpoch);
-      }
-    }
-
-    // Last 30 seconds to get yourself together.
-    // This saves us from accidentally killing calls which were just created and
-    // whose state event we haven't recieved yet in sync.
-    // (option 2 was local echo member state events, but reverting them if anything
-    // fails sounds pain)
-
-    final expiredfr = groupCallMemberStateEvent.originServerTs
-            .add(staleCallCheckerDuration)
-            .millisecondsSinceEpoch <
-        DateTime.now().millisecondsSinceEpoch;
-    if (!expiredfr) {
-      Logs().d(
-          '[VOIP] Last 30 seconds for state event from ${groupCallMemberStateEvent.senderId}');
-    }
-    return expiredfr;
-  }
 
   /// checks for stale calls in a room and sends `m.terminated` if all the
   /// expires_ts are expired. Called regularly on sync.

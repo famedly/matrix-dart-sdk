@@ -1,22 +1,27 @@
+import 'package:matrix/src/rtc/models/call_membership.dart';
+import 'package:matrix/src/rtc/rtc_session_manager.dart';
 import 'package:test/test.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/voip/models/call_options.dart';
-import 'package:matrix/src/voip/utils/types.dart';
+import 'package:matrix/src/rtc/models/call_options.dart';
+import 'package:matrix/src/rtc/utils/types.dart';
 import 'fake_client.dart';
 import 'webrtc_stub.dart';
 
 void main() {
   late Client matrix;
   late Room room;
-  late VoIP voip;
+  late RTCSessionManager rtcSessionManager;
+  late RTCSessionManager rtcSession;
+
   group('Call tests', () {
     Logs().level = Level.info;
     setUp(() async {
       matrix = await getClient();
-      voip = VoIP(matrix, MockWebRTCDelegate());
-      VoIP.customTxid = '1234';
+      rtcSessionManager =
+          RTCSessionManager(client: matrix, delegate: MockWebRTCDelegate());
+      CallSession.customTxid = '1234';
       final id = '!calls:example.com';
 
       room = matrix.getRoomById(id)!;
@@ -29,7 +34,7 @@ void main() {
           type: CallType.kVoice,
           dir: CallDirection.kOutgoing,
           localPartyId: '4567',
-          voip: voip,
+          rtcSession: ,
           room: room,
           iceServers: [],
         ),

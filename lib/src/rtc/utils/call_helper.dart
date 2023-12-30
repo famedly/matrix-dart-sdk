@@ -1,7 +1,10 @@
+import 'package:matrix/src/rtc/utils/types.dart';
 import 'package:random_string/random_string.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
+
+import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 
 Future<void> stopMediaStream(MediaStream? stream) async {
   if (stream != null) {
@@ -40,4 +43,17 @@ String roomAliasFromRoomName(String roomName) {
 
 String genCallID() {
   return '${DateTime.now().millisecondsSinceEpoch}${randomAlphaNumeric(16)}';
+}
+
+CallType getCallType(String sdp) {
+  try {
+    final session = sdp_transform.parse(sdp);
+    if (session['media'].indexWhere((e) => e['type'] == 'video') != -1) {
+      return CallType.kVideo;
+    }
+  } catch (e, s) {
+    Logs().e('Failed to getCallType', e, s);
+  }
+
+  return CallType.kVoice;
 }
