@@ -1,3 +1,5 @@
+import 'package:matrix/matrix.dart';
+
 /// https://github.com/matrix-org/matrix-doc/pull/2746
 /// version 1
 const String voipProtoVersion = '1';
@@ -14,4 +16,27 @@ class CallTimeouts {
 
   /// Delay before createOffer.
   static const delayBeforeOffer = Duration(milliseconds: 100);
+
+  /// Update the expiresTs.
+  static const updateExpireTsTimerDuration = Duration(seconds: 15);
+
+  /// How often to update the expiresTs
+  static const expireTsBumpDuration = Duration(seconds: 45);
+
+  /// Update the active speaker value
+  static const activeSpeakerInterval = Duration(seconds: 5);
 }
+
+const callEndedEventTypes = {
+  EventTypes.CallAnswer,
+  EventTypes.CallHangup,
+  EventTypes.CallReject,
+  EventTypes.CallReplaces,
+};
+const ommitWhenCallEndedTypes = {
+  EventTypes.CallInvite,
+  EventTypes.CallCandidates,
+  EventTypes.CallNegotiate,
+  EventTypes.CallSDPStreamMetadataChanged,
+  EventTypes.CallSDPStreamMetadataChangedPrefix,
+};

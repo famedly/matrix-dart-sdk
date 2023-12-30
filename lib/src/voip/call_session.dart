@@ -69,7 +69,6 @@ class CallSession {
   Client get client => opts.room.client;
   String? remotePartyId;
   String? opponentDeviceId;
-  String? opponentSessionId;
   String? invitee;
   User? remoteUser;
   late CallParty hangupParty;
@@ -297,18 +296,16 @@ class CallSession {
     await answer();
   }
 
-  Future<void> placeCallWithStreams(List<WrappedMediaStream> callFeeds,
-      [bool requestScreenshareFeed = false]) async {
+  Future<void> placeCallWithStreams(List<WrappedMediaStream> callFeeds) async {
     voip.calls[callId] = this;
 
     // create the peer connection now so it can be gathering candidates while we get user
     // media (assuming a candidate pool size is configured)
     await _preparePeerConnection();
-    await gotCallFeedsForInvite(callFeeds, requestScreenshareFeed);
+    await gotCallFeedsForInvite(callFeeds);
   }
 
-  Future<void> gotCallFeedsForInvite(List<WrappedMediaStream> callFeeds,
-      [bool requestScreenshareFeed = false]) async {
+  Future<void> gotCallFeedsForInvite(List<WrappedMediaStream> callFeeds) async {
     if (successor != null) {
       await successor!.gotCallFeedsForAnswer(callFeeds);
       return;
@@ -322,12 +319,9 @@ class CallSession {
       await addLocalStream(await element.stream!.clone(), element.purpose);
     }
 
-    if (requestScreenshareFeed) {
-      await pc!.addTransceiver(
-          kind: RTCRtpMediaType.RTCRtpMediaTypeVideo,
-          init:
-              RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly));
-    }
+    await pc!.addTransceiver(
+        kind: RTCRtpMediaType.RTCRtpMediaTypeVideo,
+        init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly));
 
     setCallState(CallState.kCreateOffer);
 
@@ -1719,8 +1713,8 @@ class CallSession {
               ...content,
               'device_id': client.deviceID!,
               'seq': toDeviceSeq,
-              'dest_session_id': opponentSessionId,
-              'sender_session_id': client.groupCallSessionId,
+              'dest_device_id': opponentDeviceId,
+              'sender_device_id': client.deviceID,
             });
       } else {
         final data = <String, Map<String, Map<String, dynamic>>>{};
@@ -1729,8 +1723,8 @@ class CallSession {
             ...content,
             'device_id': client.deviceID!,
             'seq': toDeviceSeq,
-            'dest_session_id': opponentSessionId,
-            'sender_session_id': client.groupCallSessionId,
+            'dest_device_id': opponentDeviceId,
+            'sender_device_id': client.deviceID,
           }
         };
         await client.sendToDevice(type, txid, data);

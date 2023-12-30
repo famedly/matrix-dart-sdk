@@ -710,8 +710,7 @@ class Client extends MatrixApi {
     if (groupCall) {
       powerLevelContentOverride ??= {};
       powerLevelContentOverride['events'] = <String, dynamic>{
-        EventTypes.GroupCallMemberPrefix: 0,
-        EventTypes.GroupCallPrefix: 0,
+        famedlyCallMemberEventType: 0,
       };
     }
     final roomId = await createRoom(
@@ -1242,9 +1241,6 @@ class Client extends MatrixApi {
   /// When the library calls an endpoint that needs UIA the `UiaRequest` is passed down this screen.
   /// The client can open a UIA prompt based on this.
   final CachedStreamController<UiaRequest> onUiaRequest =
-      CachedStreamController();
-
-  final CachedStreamController<Event> onGroupCallRequest =
       CachedStreamController();
 
   final CachedStreamController<Event> onGroupMember = CachedStreamController();
@@ -2192,8 +2188,6 @@ class Client extends MatrixApi {
       onSDPStreamMetadataChangedReceived.add(event);
       // TODO(duan): Only used (org.matrix.msc3401.call) during the current test,
       // need to add GroupCallPrefix in matrix_api_lite
-    } else if (event.type == EventTypes.GroupCallPrefix) {
-      onGroupCallRequest.add(event);
     }
   }
 

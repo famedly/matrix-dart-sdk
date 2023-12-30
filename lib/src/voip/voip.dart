@@ -6,12 +6,14 @@ import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
+import 'package:matrix/src/voip/models/call_membership.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
 import 'package:matrix/src/voip/models/group_call_events.dart';
 import 'package:matrix/src/voip/models/webrtc_delegate.dart';
 import 'package:matrix/src/voip/utils/group_call_extension.dart';
-import 'package:matrix/src/voip/utils/stream_helper.dart';
 import 'package:matrix/src/voip/utils/types.dart';
+
+final famedlyCallMemberEventType = 'com.famedly.call.member';
 
 /// The parent highlevel voip class, this trnslates matrix events to webrtc methods via
 /// `CallSession` or `GroupCallSession` methods
@@ -19,9 +21,12 @@ class VoIP {
   // used only for internal tests, all txids for call events will be overwritten to this
   static String? customTxid;
 
+  /// cached turn creds
   TurnServerCredentials? _turnServerCredentials;
+
   Map<String, CallSession> calls = <String, CallSession>{};
   Map<String, GroupCallSession> groupCalls = <String, GroupCallSession>{};
+
   final CachedStreamController<CallSession> onIncomingCall =
       CachedStreamController();
   String? currentCID;
@@ -41,13 +46,21 @@ class VoIP {
   VoIP(this.client, this.delegate) : super() {
     // to populate groupCalls with already present calls
     for (final room in client.rooms) {
-      if (room.activeGroupCallEvents.isNotEmpty) {
-        for (final groupCall in room.activeGroupCallEvents) {
-          // ignore: discarded_futures
-          createGroupCallFromRoomStateEvent(groupCall,
-              emitHandleNewGroupCall: false);
+      final memsList = room.getCallMembershipsFromRoom();
+      for (final mems in memsList.values) {
+        for (final mem in mems) {
+          if (!mem.isExpired) {
+            unawaited(createGroupCallFromRoomStateEvent(mem));
+          }
         }
       }
+
+      // if (room.activeGroupCallEvents.isNotEmpty) {
+      //   for (final groupCall in room.activeGroupCallEvents) {
+      //     unawaited(createGroupCallFromRoomStateEvent(groupCall,
+      //         emitHandleNewGroupCall: false));
+      //   }
+      // }
     }
 
     client.onCallInvite.stream
@@ -74,8 +87,7 @@ class VoIP {
     client.onRoomState.stream.listen(
       (event) async {
         if ([
-          EventTypes.GroupCallPrefix,
-          EventTypes.GroupCallMemberPrefix,
+          famedlyCallMemberEventType,
         ].contains(event.type)) {
           Logs().v('[VOIP] onRoomState: type ${event.toJson()}.');
           await onRoomStateChanged(event);
@@ -86,10 +98,10 @@ class VoIP {
     client.onToDeviceEvent.stream.listen((event) async {
       Logs().v('[VOIP] onToDeviceEvent: type ${event.toJson()}.');
 
-      if (event.type == 'org.matrix.call_duplicate_session') {
-        Logs().v('[VOIP] onToDeviceEvent: duplicate session.');
-        return;
-      }
+      // if (event.type == 'org.matrix.call_duplicate_session') {
+      //   Logs().v('[VOIP] onToDeviceEvent: duplicate session.');
+      //   return;
+      // }
 
       final confId = event.content['conf_id'];
       final groupCall = groupCalls[confId];
@@ -227,7 +239,6 @@ class VoIP {
     newCall.remotePartyId = partyId;
     newCall.remoteUser = await room.requestUser(senderId);
     newCall.opponentDeviceId = deviceId;
-    newCall.opponentSessionId = senderSessionId;
     if (!delegate.canHandleNewCall &&
         (confId == null || confId != currentGroupCID)) {
       Logs().v(
@@ -601,38 +612,51 @@ class VoIP {
 
   /// Create a new group call in an existing room.
   ///
-  /// [roomId] The room id to call
+  /// [groupCallId] The room id to call
   ///
-  /// [type] The type of call to be made.
+  /// [application] normal group call, thrirdroom, etc
   ///
-  /// [intent] The intent of the call.
-  Future<GroupCallSession?> newGroupCall(
-      String roomId, String type, String intent) async {
-    if (getGroupCallForRoom(roomId) != null) {
-      Logs().e('[VOIP] [$roomId] already has an existing group call.');
-      return null;
+  /// [scope] room, between specifc users, etc.
+  Future<GroupCallSession> _newGroupCall(
+    String groupCallId,
+    Room room,
+    String? application,
+    String? scope,
+  ) async {
+    if (getGroupCallById(groupCallId) != null) {
+      Logs().e('[VOIP] [$groupCallId] already exists.');
+      return getGroupCallById(groupCallId)!;
     }
-    final room = client.getRoomById(roomId);
-    if (room == null) {
-      Logs().v('[VOIP] Invalid room id [$roomId].');
-      return null;
-    }
-    final groupId = genCallID();
-    final groupCall = await GroupCallSession(
-      groupCallId: groupId,
+
+    final groupCall = GroupCallSession(
+      groupCallId: groupCallId,
       client: client,
-      voip: this,
       room: room,
-      type: type,
-      intent: intent,
-    ).create();
-    groupCalls[groupId] = groupCall;
-    groupCalls[roomId] = groupCall;
+      voip: this,
+      application: application,
+      scope: scope,
+    );
+
+    groupCalls[groupCallId] = groupCall;
+
     return groupCall;
   }
 
-  Future<GroupCallSession?> fetchOrCreateGroupCall(String roomId) async {
-    final groupCall = getGroupCallForRoom(roomId);
+  /// Create a new group call in an existing room.
+  ///
+  /// [groupCallId] The room id to call
+  ///
+  /// [application] normal group call, thrirdroom, etc
+  ///
+  /// [scope] room, between specifc users, etc.
+
+  Future<GroupCallSession?> fetchOrCreateGroupCall(
+    String groupCallId,
+    String roomId,
+    String? application,
+    String? scope,
+  ) async {
+    final groupCall = getGroupCallById(groupCallId);
     final room = client.getRoomById(roomId);
     if (room == null) {
       Logs().w('Not found room id = $roomId');
@@ -651,105 +675,38 @@ class VoIP {
       await room.enableGroupCalls();
     }
 
-    if (room.canCreateGroupCall) {
+    if (room.canJoinGroupCall) {
       // The call doesn't exist, but we can create it
+      final groupCall = await _newGroupCall(
+        groupCallId,
+        room,
+        application,
+        scope,
+      );
+      await groupCall.sendMemberStateEvent();
 
-      final groupCall = await newGroupCall(
-          roomId, GroupCallType.Video, GroupCallIntent.Prompt);
-      if (groupCall != null) {
-        await groupCall.sendMemberStateEvent();
-      }
       return groupCall;
     }
-
-    final completer = Completer<GroupCallSession?>();
-    Timer? timer;
-    final subscription =
-        onIncomingGroupCall.stream.listen((GroupCallSession call) {
-      if (call.room.id == roomId) {
-        timer?.cancel();
-        completer.complete(call);
-      }
-    });
-
-    timer = Timer(Duration(seconds: 30), () {
-      subscription.cancel();
-      completer.completeError('timeout');
-    });
-
-    return completer.future;
-  }
-
-  GroupCallSession? getGroupCallForRoom(String roomId) {
-    return groupCalls[roomId];
+    return null;
   }
 
   GroupCallSession? getGroupCallById(String groupCallId) {
     return groupCalls[groupCallId];
   }
 
-  Future<void> startGroupCalls() async {
-    final rooms = client.rooms;
-    for (final room in rooms) {
-      await createGroupCallForRoom(room);
-    }
-  }
-
-  Future<void> stopGroupCalls() async {
-    for (final groupCall in groupCalls.values) {
-      await groupCall.terminate();
-    }
-    groupCalls.clear();
-  }
-
-  /// Create a new group call in an existing room.
-  Future<void> createGroupCallForRoom(Room room) async {
-    final events = await client.getRoomState(room.id);
-    events.sort((a, b) => a.originServerTs.compareTo(b.originServerTs));
-
-    for (final event in events) {
-      if (event.type == EventTypes.GroupCallPrefix) {
-        if (event.content['m.terminated'] != null) {
-          return;
-        }
-        await createGroupCallFromRoomStateEvent(event);
-      }
-    }
-
-    return;
-  }
-
   /// Create a new group call from a room state event.
-  Future<GroupCallSession?> createGroupCallFromRoomStateEvent(MatrixEvent event,
+  Future<GroupCallSession?> createGroupCallFromRoomStateEvent(
+      CallMembership membership,
       {bool emitHandleNewGroupCall = true}) async {
-    final roomId = event.roomId;
-    final content = event.content;
-
-    final room = client.getRoomById(roomId!);
+    final room = client.getRoomById(membership.roomId);
 
     if (room == null) {
-      Logs().w('Couldn\'t find room $roomId for GroupCallSession');
+      Logs().w('Couldn\'t find room ${membership.roomId} for GroupCallSession');
       return null;
     }
 
-    final groupCallId = event.stateKey;
-
-    final callType = content.tryGet<String>('m.type');
-
-    if (callType == null ||
-        callType != GroupCallType.Video && callType != GroupCallType.Voice) {
-      Logs().w('Received invalid group call type $callType for room $roomId.');
-      return null;
-    }
-
-    final callIntent = content.tryGet<String>('m.intent');
-
-    if (callIntent == null ||
-        callIntent != GroupCallIntent.Prompt &&
-            callIntent != GroupCallIntent.Room &&
-            callIntent != GroupCallIntent.Ring) {
-      Logs()
-          .w('Received invalid group call intent $callType for room $roomId.');
+    if (membership.application != 'm.call' && membership.scope != 'm.room') {
+      Logs().w('Received invalid group call application or scope.');
       return null;
     }
 
@@ -757,13 +714,12 @@ class VoIP {
       client: client,
       voip: this,
       room: room,
-      groupCallId: groupCallId,
-      type: callType,
-      intent: callIntent,
+      groupCallId: membership.roomId,
+      application: membership.application,
+      scope: membership.scope,
     );
 
-    groupCalls[groupCallId!] = groupCall;
-    groupCalls[room.id] = groupCall;
+    groupCalls[membership.callId] = groupCall;
 
     onIncomingGroupCall.add(groupCall);
     if (emitHandleNewGroupCall) {
@@ -776,27 +732,27 @@ class VoIP {
     final eventType = event.type;
     final roomId = event.roomId;
     if (eventType == EventTypes.GroupCallPrefix) {
-      final groupCallId = event.stateKey;
-      final content = event.content;
-      final currentGroupCall = groupCalls[groupCallId];
-      if (currentGroupCall == null && content['m.terminated'] == null) {
-        await createGroupCallFromRoomStateEvent(event);
-      } else if (currentGroupCall != null &&
-          currentGroupCall.groupCallId == groupCallId) {
-        if (content['m.terminated'] != null) {
-          await currentGroupCall.terminate(emitStateEvent: false);
-        } else if (content['m.type'] != currentGroupCall.type) {
-          // TODO: Handle the callType changing when the room state changes
-          Logs().w(
-              'The group call type changed for room: $roomId. Changing the group call type is currently unsupported.');
-        }
-      } else if (currentGroupCall != null &&
-          currentGroupCall.groupCallId != groupCallId) {
-        // TODO: Handle new group calls and multiple group calls
-        Logs().w(
-            'Multiple group calls detected for room: $roomId. Multiple group calls are currently unsupported.');
-      }
-    } else if (eventType == EventTypes.GroupCallMemberPrefix) {
+      // final groupCallId = event.stateKey;
+      // final content = event.content;
+      // final currentGroupCall = groupCalls[groupCallId];
+      // if (currentGroupCall == null && content['m.terminated'] == null) {
+      //   await createGroupCallFromRoomStateEvent(event);
+      // } else if (currentGroupCall != null &&
+      //     currentGroupCall.groupCallId == groupCallId) {
+      //   if (content['m.terminated'] != null) {
+      //     await currentGroupCall.terminate(emitStateEvent: false);
+      //   } else if (content['m.type'] != currentGroupCall.type) {
+      //     // TODO: Handle the callType changing when the room state changes
+      //     Logs().w(
+      //         'The group call type changed for room: $roomId. Changing the group call type is currently unsupported.');
+      //   }
+      // } else if (currentGroupCall != null &&
+      //     currentGroupCall.groupCallId != groupCallId) {
+      //   // TODO: Handle new group calls and multiple group calls
+      //   Logs().w(
+      //       'Multiple group calls detected for room: $roomId. Multiple group calls are currently unsupported.');
+      // }
+    } else if (eventType == famedlyCallMemberEventType) {
       final groupCall = groupCalls[roomId];
       if (groupCall == null) {
         return;
