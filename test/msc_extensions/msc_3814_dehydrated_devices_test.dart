@@ -34,6 +34,7 @@ void main() {
       final client = await getClient();
 
       final ret = await client.uploadDehydratedDevice(
+          deviceId: 'DEHYDDEV',
           initialDeviceDisplayName: 'DehydratedDevice',
           deviceData: {'algorithm': 'some.famedly.proprietary.algorith'});
       expect(

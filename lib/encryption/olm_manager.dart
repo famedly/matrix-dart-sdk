@@ -57,10 +57,12 @@ class OlmManager {
   final Map<String, List<OlmSession>> _olmSessions = {};
 
   // NOTE(Nico): On initial login we pass null to create a new account
-  Future<void> init(
-      {String? olmAccount,
-      required String? deviceId,
-      String? pickleKey}) async {
+  Future<void> init({
+    String? olmAccount,
+    required String? deviceId,
+    String? pickleKey,
+    String? dehydratedDeviceAlgorithm,
+  }) async {
     ourDeviceId = deviceId;
     if (olmAccount == null) {
       try {
@@ -68,10 +70,12 @@ class OlmManager {
         _olmAccount = olm.Account();
         _olmAccount!.create();
         if (!await uploadKeys(
-            uploadDeviceKeys: true,
-            updateDatabase: false,
-            // dehydrated devices don't have a device id when created, so skip upload in that case.
-            skipAllUploads: deviceId == null)) {
+          uploadDeviceKeys: true,
+          updateDatabase: false,
+          dehydratedDeviceAlgorithm: dehydratedDeviceAlgorithm,
+          dehydratedDevicePickleKey:
+              dehydratedDeviceAlgorithm != null ? pickleKey : null,
+        )) {
           throw ('Upload key failed');
         }
       } catch (_) {
@@ -131,7 +135,8 @@ class OlmManager {
     int? oldKeyCount = 0,
     bool updateDatabase = true,
     bool? unusedFallbackKey = false,
-    bool skipAllUploads = false,
+    String? dehydratedDeviceAlgorithm,
+    String? dehydratedDevicePickleKey,
     int retry = 1,
   }) async {
     final olmAccount = _olmAccount;
@@ -177,11 +182,6 @@ class OlmManager {
       // we can still re-try later
       if (updateDatabase) {
         await encryption.olmDatabase?.updateClientKeys(pickledOlmAccount!);
-      }
-
-      if (skipAllUploads) {
-        _uploadKeysLock = false;
-        return true;
       }
 
       // and now generate the payload to upload
@@ -239,23 +239,36 @@ class OlmManager {
 
       // Workaround: Make sure we stop if we got logged out in the meantime.
       if (!client.isLogged()) return true;
-      final currentUpload = this.currentUpload =
-          CancelableOperation.fromFuture(ourDeviceId == client.deviceID
-              ? client.uploadKeys(
-                  deviceKeys: uploadDeviceKeys
-                      ? MatrixDeviceKeys.fromJson(deviceKeys)
-                      : null,
-                  oneTimeKeys: signedOneTimeKeys,
-                  fallbackKeys: signedFallbackKeys,
-                )
-              : client.uploadKeysForDevice(
-                  ourDeviceId!,
-                  deviceKeys: uploadDeviceKeys
-                      ? MatrixDeviceKeys.fromJson(deviceKeys)
-                      : null,
-                  oneTimeKeys: signedOneTimeKeys,
-                  fallbackKeys: signedFallbackKeys,
-                ));
+
+      if (ourDeviceId != client.deviceID) {
+        if (dehydratedDeviceAlgorithm == null ||
+            dehydratedDevicePickleKey == null) {
+          throw Exception(
+              'You need to provide both the pickle key and the algorithm to use dehydrated devices!');
+        }
+
+        await client.uploadDehydratedDevice(
+          deviceId: ourDeviceId!,
+          initialDeviceDisplayName: 'Dehydrated Device',
+          deviceKeys:
+              uploadDeviceKeys ? MatrixDeviceKeys.fromJson(deviceKeys) : null,
+          oneTimeKeys: signedOneTimeKeys,
+          fallbackKeys: signedFallbackKeys,
+          deviceData: {
+            'algorithm': dehydratedDeviceAlgorithm,
+            'device': encryption.olmManager
+                .pickleOlmAccountWithKey(dehydratedDevicePickleKey),
+          },
+        );
+        return true;
+      }
+      final currentUpload =
+          this.currentUpload = CancelableOperation.fromFuture(client.uploadKeys(
+        deviceKeys:
+            uploadDeviceKeys ? MatrixDeviceKeys.fromJson(deviceKeys) : null,
+        oneTimeKeys: signedOneTimeKeys,
+        fallbackKeys: signedFallbackKeys,
+      ));
       final response = await currentUpload.valueOrCancellation();
       if (response == null) {
         _uploadKeysLock = false;
@@ -276,8 +289,8 @@ class OlmManager {
       // we failed to upload the keys. If we only tried to upload one time keys, try to recover by removing them and generating new ones.
       if (!uploadDeviceKeys &&
           unusedFallbackKey != false &&
-          !skipAllUploads &&
           retry > 0 &&
+          dehydratedDeviceAlgorithm != null &&
           signedOneTimeKeys.isNotEmpty &&
           exception.error == MatrixError.M_UNKNOWN) {
         Logs().w('Rotating otks because upload failed', exception);
@@ -302,7 +315,6 @@ class OlmManager {
             oldKeyCount: oldKeyCount,
             updateDatabase: updateDatabase,
             unusedFallbackKey: unusedFallbackKey,
-            skipAllUploads: skipAllUploads,
             retry: retry - 1);
       }
     } finally {
@@ -396,20 +408,24 @@ class OlmManager {
     final device = client.userDeviceKeys[event.sender]?.deviceKeys.values
         .firstWhereOrNull((d) => d.curve25519Key == senderKey);
     final existingSessions = olmSessions[senderKey];
-    Future<void> updateSessionUsage([OlmSession? session]) =>
-        runInRoot(() async {
-          if (session != null) {
-            session.lastReceived = DateTime.now();
-            await storeOlmSession(session);
-          }
-          if (device != null) {
-            device.lastActive = DateTime.now();
-            await encryption.olmDatabase?.setLastActiveUserDeviceKey(
-                device.lastActive.millisecondsSinceEpoch,
-                device.userId,
-                device.deviceId!);
-          }
-        });
+    Future<void> updateSessionUsage([OlmSession? session]) async {
+      try {
+        if (session != null) {
+          session.lastReceived = DateTime.now();
+          await storeOlmSession(session);
+        }
+        if (device != null) {
+          device.lastActive = DateTime.now();
+          await encryption.olmDatabase?.setLastActiveUserDeviceKey(
+              device.lastActive.millisecondsSinceEpoch,
+              device.userId,
+              device.deviceId!);
+        }
+      } catch (e, s) {
+        Logs().e('Error while updating olm session timestamp', e, s);
+      }
+    }
+
     if (existingSessions != null) {
       for (final session in existingSessions) {
         if (session.session == null) {
@@ -446,14 +462,16 @@ class OlmManager {
         newSession.create_inbound_from(_olmAccount!, senderKey, body);
         _olmAccount!.remove_one_time_keys(newSession);
         await encryption.olmDatabase?.updateClientKeys(pickledOlmAccount!);
+
         plaintext = newSession.decrypt(type, body);
-        await runInRoot(() => storeOlmSession(OlmSession(
-              key: client.userID!,
-              identityKey: senderKey,
-              sessionId: newSession.session_id(),
-              session: newSession,
-              lastReceived: DateTime.now(),
-            )));
+
+        await storeOlmSession(OlmSession(
+          key: client.userID!,
+          identityKey: senderKey,
+          sessionId: newSession.session_id(),
+          session: newSession,
+          lastReceived: DateTime.now(),
+        ));
         await updateSessionUsage();
       } catch (e) {
         newSession.free();
@@ -570,8 +588,6 @@ class OlmManager {
       return _decryptToDeviceEvent(event);
     } catch (_) {
       // okay, the thing errored while decrypting. It is safe to assume that the olm session is corrupt and we should generate a new one
-
-      // ignore: unawaited_futures
       runInRoot(() => restoreOlmSession(event.senderId, senderKey));
 
       rethrow;
@@ -658,14 +674,18 @@ class OlmManager {
     final encryptResult = sess.first.session!.encrypt(json.encode(fullPayload));
     await storeOlmSession(sess.first);
     if (encryption.olmDatabase != null) {
-      await runInRoot(
-          () async => encryption.olmDatabase?.setLastSentMessageUserDeviceKey(
-              json.encode({
-                'type': type,
-                'content': payload,
-              }),
-              device.userId,
-              device.deviceId!));
+      try {
+        await encryption.olmDatabase?.setLastSentMessageUserDeviceKey(
+            json.encode({
+              'type': type,
+              'content': payload,
+            }),
+            device.userId,
+            device.deviceId!);
+      } catch (e, s) {
+        // we can ignore this error, since it would just make us use a different olm session possibly
+        Logs().w('Error while updating olm usage timestamp', e, s);
+      }
     }
     final encryptedBody = <String, dynamic>{
       'algorithm': AlgorithmTypes.olmV1Curve25519AesSha2,

@@ -26,10 +26,10 @@ class ToDeviceEvent extends BasicEventWithSender {
 
   ToDeviceEvent({
     required String sender,
-    required String type,
-    required Map<String, dynamic> content,
+    required super.type,
+    required Map<String, dynamic> super.content,
     this.encryptedContent,
-  }) : super(senderId: sender, type: type, content: content);
+  }) : super(senderId: sender);
 
   factory ToDeviceEvent.fromJson(Map<String, dynamic> json) {
     final event = BasicEventWithSender.fromJson(json);

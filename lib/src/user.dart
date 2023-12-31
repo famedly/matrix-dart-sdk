@@ -43,25 +43,17 @@ class User extends Event {
   }
 
   User.fromState({
-    Map<String, dynamic>? prevContent,
-    required String stateKey,
-    Map<String, dynamic> content = const {},
+    super.prevContent,
+    required String super.stateKey,
+    super.content = const {},
     required String typeKey,
-    required String eventId,
-    required String senderId,
-    required DateTime originServerTs,
-    dynamic unsigned,
-    required Room room,
+    required super.eventId,
+    required super.senderId,
+    required super.originServerTs,
+    super.unsigned,
+    required super.room,
   }) : super(
-          stateKey: stateKey,
-          prevContent: prevContent,
-          content: content,
           type: typeKey,
-          eventId: eventId,
-          senderId: senderId,
-          originServerTs: originServerTs,
-          unsigned: unsigned,
-          room: room,
         );
 
   /// The full qualified Matrix ID in the format @username:server.abc.
@@ -163,20 +155,10 @@ class User extends Event {
   @Deprecated('Use fetchCurrentPresence() instead')
   Future<CachedPresence> get currentPresence => fetchCurrentPresence();
 
-  /// The newest presence of this user if there is any. Fetches it from the server if necessary or returns offline.
-  Future<CachedPresence> fetchCurrentPresence() async {
-    final cachedPresence = room.client.presences[id];
-    if (cachedPresence != null) {
-      return cachedPresence;
-    }
-
-    try {
-      final newPresence = await room.client.getPresence(id);
-      return CachedPresence.fromPresenceResponse(newPresence, id);
-    } catch (e) {
-      return CachedPresence.neverSeen(id);
-    }
-  }
+  /// The newest presence of this user if there is any. Fetches it from the
+  /// database first and then from the server if necessary or returns offline.
+  Future<CachedPresence> fetchCurrentPresence() =>
+      room.client.fetchCurrentPresence(id);
 
   /// Whether the client is able to ban/unban this user.
   bool get canBan => room.canBan && powerLevel < room.ownPowerLevel;

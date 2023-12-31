@@ -1,4 +1,108 @@
+## [0.25.2] - 27th December 2023
+- fix: Add missing copy map in matrix sdk database (Krille)
+
+## [0.25.1] - 27th December 2023
+- ci: Test that database can write and read at least 5mb of data (Krille)
+- feat: Make possible to fetch presence from database only (krille-chan)
+- fix: clearCache does not clear room account data (Krille)
+- fix: typerror in removeEvent method from new database (Krille)
+
+## [0.25.0] - 21st December 2023
+- feat: add tests for calls (td)
+- feat: cache getConfig request (Karthikeyan S)
+- fix: canSendDefaultMessage ignores overwritten events (Krille)
+- fix: check negotiate party and call ids (td)
+- fix: ignore calls with age older than lifetime (td)
+- fix: Increase timeout for initial sync from 10 seconds to 2 minutes (Krille)
+- fix: validate account_data values instead of checking them in syncUpdates (td)
+- refactor: Add delete database method (Krille)
+- refactor: Add loadHeroUsers method (Krille)
+- refactor: Connect timeline to event updates earlier (Krille)
+- refactor: Make possible to wait for first sync and await first sync before create megolm session (Krille)
+- ci: Test all databases in unit tests (Krille)
+
+## [0.24.3] - 11th December 2023
+Small hotfix for the new database.
+- refactor: Remove duplicated copyMap method and fix type error (Krille)
+
+## [0.24.2] - 11th December 2023
+- docs: Add issue tracker to pub.dev (Krille)
+- fix: Copy all maps got from database (Krille)
+
+## [0.24.1] - 7th December 2023
+
+This release brings a new **experimental** database based on SQFlite and IndexedDB as a *Drop-In-Replacement* for Hive and HiveCollections. You can already test it out (on your own risk) by using it as the new databaseBuilder and migrate your current users by using the legacyDatabaseBuilder with your current Database:
+
+```dart
+final client = Client('Client Name',
+  databaseBuilder: (client) => MatrixSdkDatabase(
+    'Database Name',
+    database: await databaseFactory.openDatabase(':memory:'),
+  ),
+  legacyDatabaseBuilder: yourPreviousDatabase,
+);
+```
+
+- feat: Implement new Matrix Dart SDK Database (Christian Pauly)
+- fix: Do not hide matrix exceptions in sync (Krille)
+- fix: set cid before initWithInvite to handle getUserMedia exception correctly (Karthikeyan S)
+
+## [0.24.0] - 29th November 2023
+
+This release deprecates `client.presences` in favor of `client.fetchCurrentPresence(userId)` as part of our journey to a more database centric memory management. However, `client.presences` is still functional and tested at least until the next major release.
+
+Breaking change for users of dehydrated devices feature. This feature now implements the latest version of the MSC. It has been adapted to the current recent Synapse version and will from now on be incompatible with previous versions.
+
+- chore: add null check for remotePartyId before ignoring reject/hangup (Karthikeyan S)
+- feat: Update dehydrated devices implementation to current MSC (Nicolas Werner)
+- fix: Delayed encrypted event in timeline not added to aggregated events (Krille)
+- fix: don't delete the dehydrated device before we are sure the keys got saved (Nicolas Werner)
+- fix: ignore reject/hangup events for a live call from a different device (Karthikeyan S)
+- refactor: Store fetched presence in db and deprecate own cache (Krille)
+
+## [0.23.0] - 27th November 2023
+
+This release includes a small breaking change. Starting a verification request now always returns a future. Specifically
+this changes the DeviceKeys startVerification method to also return a future.
+
+Additionally this release fixes a severe regression in the online key backup (keys only got uploaded once after startup
+or before logout), excessive linebreaks in markdown messages and a few edge cases around when presence is sent.
+
+- feat: Add sendRaw command (Krille)
+- feat: Store presences in database (Krille)
+- fix: Do only convert linebreaks to br tags in p blocks (Krille)
+- fix: Set presence when loading archive (Krille)
+- fix: key uploads only running once (Nicolas Werner)
+- fix: catch correct exception type for connection problems (krille-chan)
+- fix: database tests group can't be async (Nicolas Werner)
+- fix: in memory database is not actually in memory (Nicolas Werner)
+- chore: don't manually enable default rules (Nicolas Werner)
+- chore: enable avoid_bool_literals_in_conditional_expressions (Nicolas Werner)
+- chore: enable discarded_futures lint (Nicolas Werner)
+- chore: enable remaining easy lints (Nicolas Werner)
+- docs: Document and group our linter rules (Nicolas Werner)
+- refactor: Add SyncConnectionException to syncloop (Krille)
+
+## [0.22.7] - 16 November 2023
+
+- chore: incrementally add left rooms to archive (The one with the braid)
+- chore: remove archived room on forget (#2) (Clemens-Toegel)
+- chore: store states to archived rooms (#1) (Clemens-Toegel)
+- chore: upgrade lints (Nicolas Werner)
+- chore: use our custom reusable workflow to avoid manually configuring each publish job (td)
+- fix: Code style (The one with the braid)
+- fix: call hangup on timeout race condition (Karthikeyan S)
+- fix: clear local database on logout even if server timesout (td)
+- fix: hangup on call crash (Mohammad Reza Moradi)
+- fix: stale call checker leaks memory (Nicolas Werner)
+
+## [0.22.6] - 23 October 2023
+
+- fix: Do not convert linebreaks in pre blocks on markdown parsing (Krille)
+- refactor: Wait for room in sync until sync process and trigger cleanup call not before actually start clean up. (Krille)
+
 ## [0.22.5] - 20 October 2023
+
 - build(deps): bump http from 0.13.6 to 1.1.0 (dependabot[bot])
 - feat: Add methods to load all room keys from online key backup (Krille)
 - fix: Convert linebreaks into br tags on markdown parsing (Krille)
@@ -7,6 +111,7 @@
 - refactor: Update markdown (Krille)
 
 ## [0.22.4] - 21 September 2023
+
 - feat: Implement member change type (Krille)
 - fix: apply state event before decryption on leaved room (Mohammad Reza Moradi)
 - fix: startDirectChat might return an unjoined room (Nicolas Werner)
@@ -18,6 +123,7 @@
 - ci: don't fail fast on dendrite failure (Nicolas Werner)
 
 ## [0.22.3] - 23th August 2023
+
 - feat: Add option to not cache users in memory when requesting all of a room (krille-chan)
 - fix: Has new messages is never true (Krille)
 

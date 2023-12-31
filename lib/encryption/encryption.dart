@@ -28,6 +28,7 @@ import 'package:matrix/encryption/olm_manager.dart';
 import 'package:matrix/encryption/ssss.dart';
 import 'package:matrix/encryption/utils/bootstrap.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/utils/copy_map.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 
 class Encryption {
@@ -68,15 +69,20 @@ class Encryption {
   }
 
   // initial login passes null to init a new olm account
-  Future<void> init(String? olmAccount,
-      {String? deviceId,
-      String? pickleKey,
-      bool isDehydratedDevice = false}) async {
+  Future<void> init(
+    String? olmAccount, {
+    String? deviceId,
+    String? pickleKey,
+    String? dehydratedDeviceAlgorithm,
+  }) async {
     ourDeviceId = deviceId ?? client.deviceID!;
+    final isDehydratedDevice = dehydratedDeviceAlgorithm != null;
     await olmManager.init(
-        olmAccount: olmAccount,
-        deviceId: isDehydratedDevice ? deviceId : ourDeviceId,
-        pickleKey: pickleKey);
+      olmAccount: olmAccount,
+      deviceId: isDehydratedDevice ? deviceId : ourDeviceId,
+      pickleKey: pickleKey,
+      dehydratedDeviceAlgorithm: dehydratedDeviceAlgorithm,
+    );
 
     if (!isDehydratedDevice) keyManager.startAutoUploadKeys();
   }
@@ -100,11 +106,12 @@ class Encryption {
 
   void handleDeviceOneTimeKeysCount(
       Map<String, int>? countJson, List<String>? unusedFallbackKeyTypes) {
-    runInRoot(() => olmManager.handleDeviceOneTimeKeysCount(
+    runInRoot(() async => olmManager.handleDeviceOneTimeKeysCount(
         countJson, unusedFallbackKeyTypes));
   }
 
   void onSync() {
+    // ignore: discarded_futures
     keyVerificationManager.cleanup();
   }
 
@@ -118,30 +125,25 @@ class Encryption {
         .contains(event.type)) {
       // "just" room key request things. We don't need these asap, so we handle
       // them in the background
-      // ignore: unawaited_futures
       runInRoot(() => keyManager.handleToDeviceEvent(event));
     }
     if (event.type == EventTypes.Dummy) {
       // the previous device just had to create a new olm session, due to olm session
       // corruption. We want to try to send it the last message we just sent it, if possible
-      // ignore: unawaited_futures
       runInRoot(() => olmManager.handleToDeviceEvent(event));
     }
     if (event.type.startsWith('m.key.verification.')) {
       // some key verification event. No need to handle it now, we can easily
       // do this in the background
 
-      // ignore: unawaited_futures
       runInRoot(() => keyVerificationManager.handleToDeviceEvent(event));
     }
     if (event.type.startsWith('m.secret.')) {
       // some ssss thing. We can do this in the background
-      // ignore: unawaited_futures
       runInRoot(() => ssss.handleToDeviceEvent(event));
     }
     if (event.sender == client.userID) {
       // maybe we need to re-try SSSS secrets
-      // ignore: unawaited_futures
       runInRoot(() => ssss.periodicallyRequestMissingCache());
     }
   }
@@ -157,14 +159,11 @@ class Encryption {
             update.content['content']['msgtype']
                 .startsWith('m.key.verification.'))) {
       // "just" key verification, no need to do this in sync
-
-      // ignore: unawaited_futures
       runInRoot(() => keyVerificationManager.handleEventUpdate(update));
     }
     if (update.content['sender'] == client.userID &&
         update.content['unsigned']?['transaction_id'] == null) {
       // maybe we need to re-try SSSS secrets
-      // ignore: unawaited_futures
       runInRoot(() => ssss.periodicallyRequestMissingCache());
     }
   }
@@ -239,8 +238,12 @@ class Encryption {
         // the entry should always exist. In the case it doesn't, the following
         // line *could* throw an error. As that is a future, though, and we call
         // it un-awaited here, nothing happens, which is exactly the result we want
-        client.database?.updateInboundGroupSessionIndexes(
-            json.encode(inboundGroupSession.indexes), roomId, sessionId);
+        client.database
+            // ignore: discarded_futures
+            ?.updateInboundGroupSessionIndexes(
+                json.encode(inboundGroupSession.indexes), roomId, sessionId)
+            // ignore: discarded_futures
+            .onError((e, _) => Logs().e('Ignoring error for updating indexes'));
       }
       decryptedPayload = json.decode(decryptResult.plaintext);
     } catch (exception) {
@@ -252,7 +255,7 @@ class Encryption {
                       ?.session_id() ??
                   '') ==
               content.sessionId) {
-        runInRoot(() =>
+        runInRoot(() async =>
             keyManager.clearOrUseOutboundGroupSession(roomId, wipe: true));
       }
       if (canRequestSession) {

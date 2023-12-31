@@ -81,6 +81,9 @@ void main() {
         stateKey: '',
       ));
 
+      final heroUsers = await room.loadHeroUsers();
+      expect(heroUsers.length, 3);
+
       expect(room.id, id);
       expect(room.membership, membership);
       expect(room.notificationCount, notificationCount);
@@ -1047,35 +1050,6 @@ void main() {
           .add(((matrix.accountData['m.push_rules']?.content['global']
               as Map<String, Object?>)['room'] as List)[0]);
       expect(room.pushRuleState, PushRuleState.dontNotify);
-    });
-
-    test('Test call methods', () async {
-      final call = CallSession(CallOptions()..room = room);
-      await call.sendInviteToCall(room, '1234', 1234, '4567', '7890', 'sdp',
-          txid: '1234');
-      await call.sendAnswerCall(room, '1234', 'sdp', '4567', txid: '1234');
-      await call.sendCallCandidates(room, '1234', '4567', [], txid: '1234');
-      await call.sendSelectCallAnswer(room, '1234', 1234, '4567', '6789',
-          txid: '1234');
-      await call.sendCallReject(room, '1234', 1234, '4567', 'busy',
-          txid: '1234');
-      await call.sendCallNegotiate(room, '1234', 1234, '4567', 'sdp',
-          txid: '1234');
-      await call.sendHangupCall(room, '1234', '4567', 'user_hangup',
-          txid: '1234');
-      await call.sendAssertedIdentity(
-          room,
-          '1234',
-          '4567',
-          AssertedIdentity()
-            ..displayName = 'name'
-            ..id = 'some_id',
-          txid: '1234');
-      await call.sendCallReplaces(room, '1234', '4567', CallReplaces(),
-          txid: '1234');
-      await call.sendSDPStreamMetadataChanged(
-          room, '1234', '4567', SDPStreamMetadata({}),
-          txid: '1234');
     });
 
     test('enableEncryption', () async {

@@ -90,6 +90,8 @@ class Bootstrap {
 
   // cache the secret analyzing so that we don't drop stuff a different client sets during bootstrapping
   Map<String, Set<String>>? _secretsCache;
+
+  /// returns ssss from accountdata, eg: m.megolm_backup.v1, or your m.cross_signing stuff
   Map<String, Set<String>> analyzeSecrets() {
     final secretsCache = _secretsCache;
     if (secretsCache != null) {
@@ -292,12 +294,12 @@ class Bootstrap {
         }
         // alright, we re-encrypted all the secrets. We delete the dead weight only *after* we set our key to the default key
       }
-      final updatedAccountData = client.onSync.stream.firstWhere((syncUpdate) =>
-          syncUpdate.accountData != null &&
-          syncUpdate.accountData!.any((accountData) =>
-              accountData.type == EventTypes.SecretStorageDefaultKey));
       await encryption.ssss.setDefaultKeyId(newSsssKey!.keyId);
-      await updatedAccountData;
+      while (encryption.ssss.defaultKeyId != newSsssKey!.keyId) {
+        Logs().v(
+            'Waiting accountData to have the correct m.secret_storage.default_key');
+        await client.oneShotSync();
+      }
       if (oldSsssKeys != null) {
         for (final entry in secretMap!.entries) {
           Logs().v('Validate and stripe other keys ${entry.key}...');
@@ -479,33 +481,23 @@ class Bootstrap {
               ));
       Logs().v('Device signing keys have been uploaded.');
       // aaaand set the SSSS secrets
-      final futures = <Future<void>>[];
       if (masterKey != null) {
-        futures.add(
-          client.onSync.stream
-              .firstWhere((syncUpdate) =>
-                  masterKey?.publicKey != null &&
-                  client.userDeviceKeys[client.userID]?.masterKey?.ed25519Key ==
-                      masterKey?.publicKey)
-              .then((_) => Logs().v('New Master Key was created')),
-        );
+        while (!(masterKey.publicKey != null &&
+            client.userDeviceKeys[client.userID]?.masterKey?.ed25519Key ==
+                masterKey.publicKey)) {
+          Logs().v('Waiting for master to be created');
+          await client.oneShotSync();
+        }
       }
-      for (final entry in secretsToStore.entries) {
-        futures.add(
-          client.onSync.stream
-              .firstWhere((syncUpdate) =>
-                  syncUpdate.accountData != null &&
-                  syncUpdate.accountData!
-                      .any((accountData) => accountData.type == entry.key))
-              .then((_) =>
-                  Logs().v('New Key with type ${entry.key} was created')),
-        );
-        Logs().v('Store new SSSS key ${entry.key}...');
-        await newSsssKey?.store(entry.key, entry.value);
+      if (newSsssKey != null) {
+        final storeFutures = <Future<void>>[];
+        for (final entry in secretsToStore.entries) {
+          storeFutures.add(newSsssKey!.store(entry.key, entry.value));
+        }
+        Logs().v('Store new SSSS key entries...');
+        await Future.wait(storeFutures);
       }
-      Logs().v(
-          'Wait for MasterKey and ${secretsToStore.entries.length} keys to be created');
-      await Future.wait<void>(futures);
+
       final keysToSign = <SignableKey>[];
       if (masterKey != null) {
         if (client.userDeviceKeys[client.userID]?.masterKey?.ed25519Key !=
@@ -581,14 +573,6 @@ class Bootstrap {
       );
       Logs().v('Store the secret...');
       await newSsssKey?.store(megolmKey, base64.encode(privKey));
-      Logs().v('Wait for secret to come down sync');
-
-      if (!await encryption.keyManager.isCached()) {
-        await client.onSync.stream.firstWhere((syncUpdate) =>
-            syncUpdate.accountData != null &&
-            syncUpdate.accountData!
-                .any((accountData) => accountData.type == megolmKey));
-      }
 
       Logs().v(
           'And finally set all megolm keys as needing to be uploaded again...');

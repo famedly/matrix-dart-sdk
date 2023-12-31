@@ -207,7 +207,10 @@ class FakeMatrixApi extends BaseClient {
       }
       res = {};
     } else {
-      res = {'errcode': 'M_UNRECOGNIZED', 'error': 'Unrecognized request'};
+      res = {
+        'errcode': 'M_UNRECOGNIZED',
+        'error': 'Unrecognized request: $action'
+      };
       statusCode = 405;
     }
 
@@ -260,6 +263,7 @@ class FakeMatrixApi extends BaseClient {
           }
         }
         // and generate a fake sync
+        // ignore: discarded_futures
         _client!.handleSync(sdk.SyncUpdate(nextBatch: ''));
       }
       return {};
@@ -568,7 +572,37 @@ class FakeMatrixApi extends BaseClient {
               }
             ]
           }
-        }
+        },
+        '!calls:example.com': {
+          'state': {
+            'events': [
+              {
+                'sender': '@test:fakeServer.notExisting',
+                'type': 'm.room.member',
+                'state_key': '@test:fakeServer.notExisting',
+                'content': {
+                  'membership': 'join',
+                  'avatar_url': 'mxc://example.org/SEsfnsuifSDFSSEF',
+                  'displayname': 'Test User',
+                },
+                'origin_server_ts': 1417731086795,
+                'event_id': 'calls_1:example.com'
+              },
+              {
+                'sender': '@alice:example.com',
+                'type': 'm.room.member',
+                'state_key': '@alice:example.com',
+                'content': {
+                  'membership': 'join',
+                  'avatar_url': 'mxc://example.org/SEsfnsuifSDFSSEF',
+                  'displayname': 'Alice Margatroid',
+                },
+                'origin_server_ts': 1417731086795,
+                'event_id': 'calls_2:example.com'
+              },
+            ]
+          },
+        },
       },
       'invite': {
         '!696r7674:example.com': {
@@ -1051,7 +1085,7 @@ class FakeMatrixApi extends BaseClient {
     }
   };
 
-  final Map<String, Map<String, dynamic>> api = {
+  Map<String, Map<String, dynamic>> api = {
     'GET': {
       '/path/to/auth/error': (var req) => {
             'errcode': 'M_FORBIDDEN',
@@ -1977,29 +2011,6 @@ class FakeMatrixApi extends BaseClient {
             'device_id': 'DEHYDDEV',
             'device_data': {'algorithm': 'some.famedly.proprietary.algorithm'},
           },
-      '/client/unstable/org.matrix.msc3814.v1/dehydrated_device/DEHYDDEV/events?limit=100':
-          (var _) => {
-                'events': [
-                  {
-                    // this is the commented out m.room_key event - only encrypted
-                    'sender': '@othertest:fakeServer.notExisting',
-                    'content': {
-                      'algorithm': AlgorithmTypes.olmV1Curve25519AesSha2,
-                      'sender_key':
-                          'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg',
-                      'ciphertext': {
-                        '7rvl3jORJkBiK4XX1e5TnGnqz068XfYJ0W++Ml63rgk': {
-                          'type': 0,
-                          'body':
-                              'Awogyh7K4iLUQjcOxIfi7q7LhBBqv9w0mQ6JI9+U9tv7iF4SIHC6xb5YFWf9voRnmDBbd+0vxD/xDlVNRDlPIKliLGkYGiAkEbtlo+fng4ELtO4gSLKVbcFn7tZwZCEUE8H2miBsCCKABgMKIFrKDJwB7gM3lXPt9yVoh6gQksafKt7VFCNRN5KLKqsDEAAi0AX5EfTV7jJ1ZWAbxftjoSN6kCVIxzGclbyg1HjchmNCX7nxNCHWl+q5ZgqHYZVu2n2mCVmIaKD0kvoEZeY3tV1Itb6zf67BLaU0qgW/QzHCHg5a44tNLjucvL2mumHjIG8k0BY2uh+52HeiMCvSOvtDwHg7nzCASGdqPVCj9Kzw6z7F6nL4e3mYim8zvJd7f+mD9z3ARrypUOLGkTGYbB2PQOovf0Do8WzcaRzfaUCnuu/YVZWKK7DPgG8uhw/TjR6XtraAKZysF+4DJYMG9SQWx558r6s7Z5EUOF5CU2M35w1t1Xxllb3vrS83dtf9LPCrBhLsEBeYEUBE2+bTBfl0BDKqLiB0Cc0N0ixOcHIt6e40wAvW622/gMgHlpNSx8xG12u0s6h6EMWdCXXLWd9fy2q6glFUHvA67A35q7O+M8DVml7Y9xG55Y3DHkMDc9cwgwFkBDCAYQe6pQF1nlKytcVCGREpBs/gq69gHAStMQ8WEg38Lf8u8eBr2DFexrN4U+QAk+S//P3fJgf0bQx/Eosx4fvWSz9En41iC+ADCsWQpMbwHn4JWvtAbn3oW0XmL/OgThTkJMLiCymduYAa1Hnt7a3tP0KTL2/x11F02ggQHL28cCjq5W4zUGjWjl5wo2PsKB6t8aAvMg2ujGD2rCjb4yrv5VIzAKMOZLyj7K0vSK9gwDLQ/4vq+QnKUBG5zrcOze0hX+kz2909/tmAdeCH61Ypw7gbPUJAKnmKYUiB/UgwkJvzMJSsk/SEs5SXosHDI+HsJHJp4Mp4iKD0xRMst+8f9aTjaWwh8ZvELE1ZOhhCbF3RXhxi3x2Nu8ORIz+vhEQ1NOlMc7UIo98Fk/96T36vL/fviowT4C/0AlaapZDJBmKwhmwqisMjY2n1vY29oM2p5BzY1iwP7q9BYdRFst6xwo57TNSuRwQw7IhFsf0k+ABuPEZy5xB5nPHyIRTf/pr3Hw',
-                        },
-                      },
-                    },
-                    'type': 'm.room.encrypted',
-                  },
-                ],
-                'next_batch': 'd1',
-              },
     },
     'POST': {
       '/client/v3/delete_devices': (var req) => {},
@@ -2408,6 +2419,29 @@ class FakeMatrixApi extends BaseClient {
       '/client/v3/rooms/!localpart%3Aserver.abc/invite': (var reqI) => {},
       '/client/v3/keys/signatures/upload': (var reqI) => {'failures': {}},
       '/client/v3/room_keys/version': (var reqI) => {'version': '5'},
+      '/client/unstable/org.matrix.msc3814.v1/dehydrated_device/DEHYDDEV/events?limit=100':
+          (var _) => {
+                'events': [
+                  {
+                    // this is the commented out m.room_key event - only encrypted
+                    'sender': '@othertest:fakeServer.notExisting',
+                    'content': {
+                      'algorithm': AlgorithmTypes.olmV1Curve25519AesSha2,
+                      'sender_key':
+                          'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg',
+                      'ciphertext': {
+                        '7rvl3jORJkBiK4XX1e5TnGnqz068XfYJ0W++Ml63rgk': {
+                          'type': 0,
+                          'body':
+                              'Awogyh7K4iLUQjcOxIfi7q7LhBBqv9w0mQ6JI9+U9tv7iF4SIHC6xb5YFWf9voRnmDBbd+0vxD/xDlVNRDlPIKliLGkYGiAkEbtlo+fng4ELtO4gSLKVbcFn7tZwZCEUE8H2miBsCCKABgMKIFrKDJwB7gM3lXPt9yVoh6gQksafKt7VFCNRN5KLKqsDEAAi0AX5EfTV7jJ1ZWAbxftjoSN6kCVIxzGclbyg1HjchmNCX7nxNCHWl+q5ZgqHYZVu2n2mCVmIaKD0kvoEZeY3tV1Itb6zf67BLaU0qgW/QzHCHg5a44tNLjucvL2mumHjIG8k0BY2uh+52HeiMCvSOvtDwHg7nzCASGdqPVCj9Kzw6z7F6nL4e3mYim8zvJd7f+mD9z3ARrypUOLGkTGYbB2PQOovf0Do8WzcaRzfaUCnuu/YVZWKK7DPgG8uhw/TjR6XtraAKZysF+4DJYMG9SQWx558r6s7Z5EUOF5CU2M35w1t1Xxllb3vrS83dtf9LPCrBhLsEBeYEUBE2+bTBfl0BDKqLiB0Cc0N0ixOcHIt6e40wAvW622/gMgHlpNSx8xG12u0s6h6EMWdCXXLWd9fy2q6glFUHvA67A35q7O+M8DVml7Y9xG55Y3DHkMDc9cwgwFkBDCAYQe6pQF1nlKytcVCGREpBs/gq69gHAStMQ8WEg38Lf8u8eBr2DFexrN4U+QAk+S//P3fJgf0bQx/Eosx4fvWSz9En41iC+ADCsWQpMbwHn4JWvtAbn3oW0XmL/OgThTkJMLiCymduYAa1Hnt7a3tP0KTL2/x11F02ggQHL28cCjq5W4zUGjWjl5wo2PsKB6t8aAvMg2ujGD2rCjb4yrv5VIzAKMOZLyj7K0vSK9gwDLQ/4vq+QnKUBG5zrcOze0hX+kz2909/tmAdeCH61Ypw7gbPUJAKnmKYUiB/UgwkJvzMJSsk/SEs5SXosHDI+HsJHJp4Mp4iKD0xRMst+8f9aTjaWwh8ZvELE1ZOhhCbF3RXhxi3x2Nu8ORIz+vhEQ1NOlMc7UIo98Fk/96T36vL/fviowT4C/0AlaapZDJBmKwhmwqisMjY2n1vY29oM2p5BzY1iwP7q9BYdRFst6xwo57TNSuRwQw7IhFsf0k+ABuPEZy5xB5nPHyIRTf/pr3Hw',
+                        },
+                      },
+                    },
+                    'type': 'm.room.encrypted',
+                  },
+                ],
+                'next_batch': 'd1',
+              },
     },
     'PUT': {
       '/client/v3/user/${Uri.encodeComponent('@alice:example.com')}/account_data/io.element.recent_emoji}':
@@ -2426,29 +2460,29 @@ class FakeMatrixApi extends BaseClient {
           (var req) => {'event_id': '1234'},
       '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.guest_access':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.invite/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.invite/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.answer/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.answer/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.select_answer/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.select_answer/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.reject/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.reject/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.negotiate/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.negotiate/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.candidates/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.candidates/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.hangup/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.hangup/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.replaces/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.replaces/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.asserted_identity/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.asserted_identity/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/m.call.sdp_stream_metadata_changed/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/m.call.sdp_stream_metadata_changed/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/org.matrix.call.sdp_stream_metadata_changed/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/org.matrix.call.sdp_stream_metadata_changed/1234':
           (var req) => {'event_id': '1234'},
-      '/client/v3/rooms/!localpart%3Aserver.abc/send/org.matrix.call.asserted_identity/1234':
+      '/client/v3/rooms/!calls%3Aexample.com/send/org.matrix.call.asserted_identity/1234':
           (var req) => {'event_id': '1234'},
       '/client/v3/rooms/!1234%3Aexample.com/redact/1143273582443PhrSn%3Aexample.org/1234':
           (var req) => {'event_id': '1234'},

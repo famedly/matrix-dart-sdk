@@ -121,22 +121,23 @@ void main() {
       expect(matrix.accountData.length, 10);
       expect(matrix.getDirectChatFromUserId('@bob:example.com'),
           '!726s6s6q:example.com');
-      expect(matrix.rooms[1].directChatMatrixID, '@bob:example.com');
+      expect(matrix.rooms[2].directChatMatrixID, '@bob:example.com');
       expect(matrix.directChats, matrix.accountData['m.direct']?.content);
+      // ignore: deprecated_member_use_from_same_package
       expect(matrix.presences.length, 1);
-      expect(matrix.rooms[1].ephemerals.length, 2);
-      expect(matrix.rooms[1].typingUsers.length, 1);
-      expect(matrix.rooms[1].typingUsers[0].id, '@alice:example.com');
-      expect(matrix.rooms[1].roomAccountData.length, 3);
-      expect(matrix.rooms[1].encrypted, true);
-      expect(matrix.rooms[1].encryptionAlgorithm,
+      expect(matrix.rooms[2].ephemerals.length, 2);
+      expect(matrix.rooms[2].typingUsers.length, 1);
+      expect(matrix.rooms[2].typingUsers[0].id, '@alice:example.com');
+      expect(matrix.rooms[2].roomAccountData.length, 3);
+      expect(matrix.rooms[2].encrypted, true);
+      expect(matrix.rooms[2].encryptionAlgorithm,
           Client.supportedGroupEncryptionAlgorithms.first);
       expect(
-          matrix.rooms[1].receiptState.global.otherUsers['@alice:example.com']
+          matrix.rooms[2].receiptState.global.otherUsers['@alice:example.com']
               ?.ts,
           1436451550453);
       expect(
-          matrix.rooms[1].receiptState.global.otherUsers['@alice:example.com']
+          matrix.rooms[2].receiptState.global.otherUsers['@alice:example.com']
               ?.eventId,
           '\$7365636s6r6432:example.com');
 
@@ -144,9 +145,10 @@ void main() {
           .singleWhere((room) => room.membership == Membership.invite);
       expect(inviteRoom.name, 'My Room Name');
       expect(inviteRoom.states[EventTypes.RoomMember]?.length, 1);
-      expect(matrix.rooms.length, 2);
-      expect(matrix.rooms[1].canonicalAlias,
+      expect(matrix.rooms.length, 3);
+      expect(matrix.rooms[2].canonicalAlias,
           "#famedlyContactDiscovery:${matrix.userID!.split(":")[1]}");
+      // ignore: deprecated_member_use_from_same_package
       expect(matrix.presences['@alice:example.com']?.presence,
           PresenceType.online);
       expect(presenceCounter, 1);
@@ -207,7 +209,7 @@ void main() {
 
       final eventUpdateList = await eventUpdateListFuture;
 
-      expect(eventUpdateList.length, 18);
+      expect(eventUpdateList.length, 20);
 
       expect(eventUpdateList[0].content['type'], 'm.room.member');
       expect(eventUpdateList[0].roomID, '!726s6s6q:example.com');
@@ -254,13 +256,13 @@ void main() {
       expect(eventUpdateList[10].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[10].type, EventUpdateType.accountData);
 
-      expect(eventUpdateList[11].content['type'], 'm.room.name');
-      expect(eventUpdateList[11].roomID, '!696r7674:example.com');
-      expect(eventUpdateList[11].type, EventUpdateType.inviteState);
+      expect(eventUpdateList[11].content['type'], 'm.room.member');
+      expect(eventUpdateList[11].roomID, '!calls:example.com');
+      expect(eventUpdateList[11].type, EventUpdateType.state);
 
       expect(eventUpdateList[12].content['type'], 'm.room.member');
-      expect(eventUpdateList[12].roomID, '!696r7674:example.com');
-      expect(eventUpdateList[12].type, EventUpdateType.inviteState);
+      expect(eventUpdateList[12].roomID, '!calls:example.com');
+      expect(eventUpdateList[12].type, EventUpdateType.state);
 
       await matrix.onToDeviceEvent.close();
 
@@ -333,6 +335,94 @@ void main() {
 
       final loginState = await loginStateFuture;
       expect(loginState, LoginState.loggedOut);
+    });
+
+    test('Login again but break server when trying to logout', () async {
+      matrix = Client(
+        'testclient',
+        httpClient: FakeMatrixApi(),
+        databaseBuilder: getDatabase,
+      );
+
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().w('[LibOlm] Enabled: $olmEnabled');
+
+      expect(matrix.homeserver, null);
+
+      try {
+        await matrix
+            .checkHomeserver(Uri.parse('https://fakeserver.wrongaddress'));
+      } catch (exception) {
+        expect(exception.toString().isNotEmpty, true);
+      }
+      await matrix.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
+          checkWellKnown: false);
+      expect(matrix.homeserver.toString(), 'https://fakeserver.notexisting');
+
+      final available = await matrix.checkUsernameAvailability('testuser');
+      expect(available, true);
+
+      final loginStateFuture = matrix.onLoginStateChanged.stream.first;
+      final syncFuture = matrix.onSync.stream.first;
+
+      await matrix.init(
+        newToken: 'abcd',
+        newUserID: '@test:fakeServer.notExisting',
+        newHomeserver: matrix.homeserver,
+        newDeviceName: 'Text Matrix Client',
+        newDeviceID: 'GHTYAJCE',
+        newOlmAccount: pickledOlmAccount,
+      );
+
+      await Future.delayed(Duration(milliseconds: 50));
+
+      final loginState = await loginStateFuture;
+      final sync = await syncFuture;
+
+      expect(loginState, LoginState.loggedIn);
+      expect(matrix.onSync.value != null, true);
+      expect(matrix.encryptionEnabled, olmEnabled);
+      if (olmEnabled) {
+        expect(matrix.identityKey, identityKey);
+        expect(matrix.fingerprintKey, fingerprintKey);
+      }
+      expect(sync.nextBatch == matrix.prevBatch, true);
+    });
+
+    test('Logout but this time server is dead', () async {
+      final oldapi = FakeMatrixApi.currentApi?.api;
+      expect(
+          (FakeMatrixApi.currentApi?.api['PUT']?.keys.where((element) =>
+              element.startsWith('/client/v3/room_keys/keys?version')))?.length,
+          1);
+      // not a huge fan, open to ideas
+      FakeMatrixApi.currentApi?.api = {};
+      // random sanity test to test if the test to test the breaking server hack works.
+      expect(
+          (FakeMatrixApi.currentApi?.api['PUT']?.keys.where((element) =>
+              element.startsWith('/client/v3/room_keys/keys?version')))?.length,
+          null);
+      try {
+        await matrix.logout();
+      } catch (e) {
+        Logs().w(
+            'Ignore red warnings for this test, test is to check if database is cleared even if server breaks ');
+      }
+
+      expect(matrix.accessToken == null, true);
+      expect(matrix.homeserver == null, true);
+      expect(matrix.userID == null, true);
+      expect(matrix.deviceID == null, true);
+      expect(matrix.deviceName == null, true);
+      expect(matrix.prevBatch == null, true);
+
+      FakeMatrixApi.currentApi?.api = oldapi!;
     });
 
     test('Login', () async {
@@ -819,7 +909,7 @@ void main() {
       await Future.delayed(Duration(milliseconds: 500));
 
       expect(client1.isLogged(), true);
-      expect(client1.rooms.length, 2);
+      expect(client1.rooms.length, 3);
 
       final client2 = Client(
         'testclient',
@@ -836,7 +926,7 @@ void main() {
       expect(client2.homeserver, client1.homeserver);
       expect(client2.deviceID, client1.deviceID);
       expect(client2.deviceName, client1.deviceName);
-      expect(client2.rooms.length, 2);
+      expect(client2.rooms.length, 3);
       if (client2.encryptionEnabled) {
         expect(client2.encryption?.fingerprintKey,
             client1.encryption?.fingerprintKey);
@@ -1021,7 +1111,7 @@ void main() {
       final client = await getClient();
       await Future.delayed(Duration(milliseconds: 50));
 
-      expect(client.rooms.length, 2,
+      expect(client.rooms.length, 3,
           reason:
               'Count of invited+joined before loadArchive() rooms does not match');
       expect(client.archivedRooms.length, 0,
@@ -1030,7 +1120,7 @@ void main() {
 
       await client.loadArchive();
 
-      expect(client.rooms.length, 2,
+      expect(client.rooms.length, 3,
           reason: 'Count of invited+joined rooms does not match');
       expect(client.archivedRooms.length, 2,
           reason: 'Count of archived rooms does not match');
@@ -1049,8 +1139,8 @@ void main() {
           reason: '!5345234235:example.com not found as archived room');
     });
 
-    tearDown(() {
-      matrix.dispose(closeDatabase: true);
+    tearDown(() async {
+      await matrix.dispose(closeDatabase: true);
     });
   });
 }

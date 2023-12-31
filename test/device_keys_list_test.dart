@@ -249,7 +249,7 @@ void main() {
 
     test('start verification', () async {
       if (!olmEnabled) return;
-      var req = client
+      var req = await client
           .userDeviceKeys['@alice:example.com']?.deviceKeys['JLAFKJWSCS']
           ?.startVerification();
       expect(req != null, true);

@@ -312,4 +312,12 @@ abstract class DatabaseApi {
   Future<String> exportDump();
 
   Future<bool> importDump(String export);
+
+  Future<void> storePresence(String userId, CachedPresence presence);
+
+  Future<CachedPresence?> getPresence(String userId);
+
+  /// Deletes the whole database. The database needs to be created again after
+  /// this. Used for migration only.
+  Future<void> delete();
 }

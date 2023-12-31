@@ -52,6 +52,7 @@ class UiaRequest<T> {
   }
 
   UiaRequest({this.onUpdate, required this.request}) {
+    // ignore: discarded_futures
     _run();
   }
 

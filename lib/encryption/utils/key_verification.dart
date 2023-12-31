@@ -267,11 +267,8 @@ class KeyVerification {
     }
 
     /// `qrCanWork` -  qr cannot work if we are verifying another master key but our own is unverified
-    final qrCanWork = (userId != client.userID)
-        ? ((client.userDeviceKeys[client.userID]?.masterKey?.verified ?? false)
-            ? true
-            : false)
-        : true;
+    final qrCanWork = (userId == client.userID) ||
+        ((client.userDeviceKeys[client.userID]?.masterKey?.verified ?? false));
 
     if (client.verificationMethods.contains(KeyVerificationMethod.qrShow) &&
         qrCanWork) {
@@ -1205,8 +1202,7 @@ const knownHashes = ['sha256'];
 const knownHashesAuthentificationCodes = ['hkdf-hmac-sha256'];
 
 class _KeyVerificationMethodSas extends _KeyVerificationMethod {
-  _KeyVerificationMethodSas({required KeyVerification request})
-      : super(request: request);
+  _KeyVerificationMethodSas({required super.request});
 
   @override
   // ignore: overridden_fields

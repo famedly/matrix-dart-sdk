@@ -79,10 +79,10 @@ class Event extends MatrixEvent {
 
   Event({
     this.status = defaultStatus,
-    required Map<String, dynamic> content,
-    required String type,
+    required Map<String, dynamic> super.content,
+    required super.type,
     required String eventId,
-    required String senderId,
+    required super.senderId,
     required DateTime originServerTs,
     Map<String, dynamic>? unsigned,
     Map<String, dynamic>? prevContent,
@@ -91,10 +91,7 @@ class Event extends MatrixEvent {
     MatrixEvent? originalSource,
   })  : _originalSource = originalSource,
         super(
-          content: content,
-          type: type,
           eventId: eventId,
-          senderId: senderId,
           originServerTs: originServerTs,
           roomId: room.id,
         ) {
@@ -131,6 +128,7 @@ class Event extends MatrixEvent {
         final json = toJson();
         json['unsigned'] ??= <String, dynamic>{};
         json['unsigned'][messageSendingStatusKey] = EventStatus.error.intValue;
+        // ignore: discarded_futures
         room.client.handleSync(
           SyncUpdate(
             nextBatch: '',
@@ -157,6 +155,7 @@ class Event extends MatrixEvent {
           MessageTypes.File,
         }.contains(messageType) &&
         !room.sendingFilePlaceholders.containsKey(eventId)) {
+      // ignore: discarded_futures
       remove();
     }
   }

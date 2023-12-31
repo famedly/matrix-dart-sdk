@@ -250,16 +250,33 @@ String markdown(
       }
     }
   }
-  if (stripPTags) {
-    ret = ret.replaceAll('<p>', '').replaceAll('</p>', '');
-  }
   ret = ret
       .trim()
       // Remove trailing linebreaks
       .replaceAll(RegExp(r'(<br />)+$'), '');
   if (convertLinebreaks) {
-    ret = ret.replaceAll('\n', '<br/>');
+    // Only convert linebreaks which are not in <pre> blocks
+    ret = ret.convertLinebreaksToBr('p');
+    // Delete other linebreaks except for pre blocks:
+    ret = ret.convertLinebreaksToBr('pre', exclude: true, replaceWith: '');
+  }
+
+  if (stripPTags) {
+    ret = ret.replaceAll('<p>', '').replaceAll('</p>', '');
   }
 
   return ret;
+}
+
+extension on String {
+  String convertLinebreaksToBr(String tagName,
+      {bool exclude = false, String replaceWith = '<br/>'}) {
+    final parts = split('$tagName>');
+    var convertLinebreaks = exclude;
+    for (var i = 0; i < parts.length; i++) {
+      if (convertLinebreaks) parts[i] = parts[i].replaceAll('\n', replaceWith);
+      convertLinebreaks = !convertLinebreaks;
+    }
+    return parts.join('$tagName>');
+  }
 }

@@ -43,17 +43,6 @@ extension GroupCallUtils on Room {
     return [];
   }
 
-  /// stops the stale call checker timer
-  void stopStaleCallsChecker(String roomId) {
-    if (staleGroupCallsTimer.tryGet(roomId) != null) {
-      staleGroupCallsTimer[roomId]!.cancel();
-      staleGroupCallsTimer.remove(roomId);
-      Logs().d('[VOIP] stopped stale group calls checker for room $id');
-    } else {
-      Logs().d('[VOIP] no stale call checker for room found');
-    }
-  }
-
   static const staleCallCheckerDuration = Duration(seconds: 30);
 
   bool callMemberStateIsExpired(
@@ -89,23 +78,16 @@ extension GroupCallUtils on Room {
   }
 
   /// checks for stale calls in a room and sends `m.terminated` if all the
-  /// expires_ts are expired. Call when opening a room
-  void startStaleCallsChecker(String roomId) async {
-    stopStaleCallsChecker(roomId);
-    await singleShotStaleCallCheckerOnRoom();
-    staleGroupCallsTimer[roomId] = Timer.periodic(
-      staleCallCheckerDuration,
-      (timer) async => await singleShotStaleCallCheckerOnRoom(),
-    );
-  }
-
+  /// expires_ts are expired. Called regularly on sync.
   Future<void> singleShotStaleCallCheckerOnRoom() async {
-    Logs().d('[VOIP] checking for stale group calls in room $id');
-    // make sure we have all the to-device messages we are supposed to have
-    await client.oneShotSync();
+    if (partial) return;
+
     final copyGroupCallIds =
         states.tryGetMap<String, Event>(EventTypes.GroupCallPrefix);
     if (copyGroupCallIds == null) return;
+
+    Logs().d('[VOIP] checking for stale group calls in room $id');
+
     for (final groupCall in copyGroupCallIds.entries) {
       final groupCallId = groupCall.key;
       final groupCallEvent = groupCall.value;
@@ -162,6 +144,19 @@ extension GroupCallUtils on Room {
     } catch (e, s) {
       Logs().e('[VOIP] killing stale call $groupCallId failed', e, s);
       return null;
+    }
+  }
+}
+
+extension GroupCallClientUtils on Client {
+  // call after sync
+  Future<void> singleShotStaleCallChecker() async {
+    if (lastStaleCallRun
+        .add(GroupCallUtils.staleCallCheckerDuration)
+        .isBefore(DateTime.now())) {
+      await Future.wait(rooms
+          .where((r) => r.membership == Membership.join)
+          .map((r) => r.singleShotStaleCallCheckerOnRoom()));
     }
   }
 }

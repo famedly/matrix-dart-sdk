@@ -28,6 +28,7 @@ import 'package:matrix/encryption/utils/outbound_group_session.dart';
 import 'package:matrix/encryption/utils/ssss_cache.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/utils/copy_map.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 
@@ -285,6 +286,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   Future<void> clearCache() async {
     await _roomsBox.deleteAll(_roomsBox.keys);
     await _accountDataBox.deleteAll(_accountDataBox.keys);
+    await _roomAccountDataBox.deleteAll(_roomAccountDataBox.keys);
     await _roomStateBox.deleteAll(_roomStateBox.keys);
     await _roomMembersBox.deleteAll(_roomMembersBox.keys);
     await _eventsBox.deleteAll(_eventsBox.keys);
@@ -1451,6 +1453,18 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
 
   @override
+  Future<void> storePresence(String userId, CachedPresence presence) =>
+      _presencesBox.put(userId, presence.toJson());
+
+  @override
+  Future<CachedPresence?> getPresence(String userId) async {
+    final rawPresence = await _presencesBox.get(userId);
+    if (rawPresence == null) return null;
+
+    return CachedPresence.fromJson(copyMap(rawPresence));
+  }
+
+  @override
   Future<String> exportDump() {
     // see no need to implement this in a deprecated part
     throw UnimplementedError();
@@ -1461,6 +1475,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
     // see no need to implement this in a deprecated part
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> delete() => Hive.deleteFromDisk();
 }
 
 dynamic _castValue(dynamic value) {

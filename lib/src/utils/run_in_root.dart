@@ -20,13 +20,13 @@ import 'dart:async';
 
 import 'package:matrix/matrix.dart';
 
-Future<T?> runInRoot<T>(FutureOr<T> Function() fn) async {
-  return await Zone.root.run(() async {
+void runInRoot<T>(FutureOr<T> Function() fn) {
+  // ignore: discarded_futures
+  Zone.root.run(() async {
     try {
-      return await fn();
+      await fn();
     } catch (e, s) {
       Logs().e('Error thrown in root zone', e, s);
     }
-    return null;
   });
 }

@@ -31,7 +31,6 @@ import 'package:matrix/encryption/utils/ssss_cache.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart' as uc;
-import 'package:matrix/src/utils/run_in_root.dart';
 
 const cacheTypes = <String>{
   EventTypes.CrossSigningSelfSigning,
@@ -249,15 +248,16 @@ class SSSS {
     }()
         .firstWhere((keyId) => getKey(keyId) == null);
 
-    final accountDataType = EventTypes.secretStorageKey(keyId);
+    final accountDataTypeKeyId = EventTypes.secretStorageKey(keyId);
     // noooow we set the account data
-    final waitForAccountData = client.onSync.stream.firstWhere((syncUpdate) =>
-        syncUpdate.accountData != null &&
-        syncUpdate.accountData!
-            .any((accountData) => accountData.type == accountDataType));
+
     await client.setAccountData(
-        client.userID!, accountDataType, content.toJson());
-    await waitForAccountData;
+        client.userID!, accountDataTypeKeyId, content.toJson());
+
+    while (!client.accountData.containsKey(accountDataTypeKeyId)) {
+      Logs().v('Waiting accountData to have $accountDataTypeKeyId');
+      await client.oneShotSync();
+    }
 
     final key = open(keyId);
     await key.setPrivateKey(privateKey);
@@ -328,7 +328,7 @@ class SSSS {
     }
     final enc = encryptedContent.tryGetMap<String, Object?>(keyId);
     if (enc == null) {
-      throw Exception('Wrong / unknown key');
+      throw Exception('Wrong / unknown key: $type, $keyId');
     }
     final ciphertext = enc.tryGet<String>('ciphertext');
     final iv = enc.tryGet<String>('iv');
@@ -722,7 +722,11 @@ class OpenSSSS {
       throw InvalidPassphraseException('Inalid key');
     }
     if (postUnlock) {
-      await runInRoot(() => _postUnlock());
+      try {
+        await _postUnlock();
+      } catch (e, s) {
+        Logs().e('Error during post unlock', e, s);
+      }
     }
   }
 
@@ -747,6 +751,14 @@ class OpenSSSS {
       throw Exception('SSSS not unlocked');
     }
     await ssss.store(type, secret, keyId, privateKey, add: add);
+    while (!ssss.client.accountData.containsKey(type) ||
+        !(ssss.client.accountData[type]!.content
+            .tryGetMap<String, Object?>('encrypted')!
+            .containsKey(keyId)) ||
+        await getStored(type) != secret) {
+      Logs().d('Wait for secret of $type to match in accountdata');
+      await ssss.client.oneShotSync();
+    }
   }
 
   Future<void> validateAndStripOtherKeys(String type, String secret) async {

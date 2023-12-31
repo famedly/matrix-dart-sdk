@@ -90,9 +90,6 @@ class Room {
   /// Key-Value store for private account data only visible for this user.
   Map<String, BasicRoomEvent> roomAccountData = {};
 
-  /// stores stale group call checking timers for rooms.
-  Map<String, Timer> staleGroupCallsTimer = {};
-
   final _sendingQueue = <Completer>[];
 
   Map<String, dynamic> toJson() => {
@@ -136,9 +133,6 @@ class Room {
       for (final state in allStates) {
         setState(state);
       }
-    }
-    if (!isArchived) {
-      startStaleCallsChecker(id);
     }
     partial = false;
   }
@@ -227,6 +221,29 @@ class Room {
   List<String> get pinnedEventIds {
     final pinned = getState(EventTypes.RoomPinnedEvents)?.content['pinned'];
     return pinned is Iterable ? pinned.map((e) => e.toString()).toList() : [];
+  }
+
+  /// Returns the heroes as `User` objects.
+  /// This is very useful if you want to make sure that all users are loaded
+  /// from the database, that you need to correctly calculate the displayname
+  /// and the avatar of the room.
+  Future<List<User>> loadHeroUsers() async {
+    var heroes = summary.mHeroes;
+    if (heroes == null) {
+      final directChatMatrixID = this.directChatMatrixID;
+      if (directChatMatrixID != null) {
+        heroes = [directChatMatrixID];
+      }
+    }
+
+    if (heroes == null) return [];
+
+    return await Future.wait(heroes.map((hero) async =>
+        (await requestUser(
+          hero,
+          ignoreErrors: true,
+        )) ??
+        User(hero, room: this)));
   }
 
   /// Returns a localized displayname for this server. If the room is a groupchat
@@ -1187,6 +1204,12 @@ class Room {
   Future<void> forget() async {
     await client.database?.forgetRoom(id);
     await client.forgetRoom(id);
+    // Update archived rooms, otherwise an archived room may still be in the
+    // list after a forget room call
+    final roomIndex = client.archivedRooms.indexWhere((r) => r.room.id == id);
+    if (roomIndex != -1) {
+      client.archivedRooms.removeAt(roomIndex);
+    }
     return;
   }
 
@@ -1375,7 +1398,7 @@ class Room {
         );
 
     final events = [
-      if (resp.eventsAfter != null) ...resp.eventsAfter!.reversed.toList(),
+      if (resp.eventsAfter != null) ...resp.eventsAfter!.reversed,
       if (resp.event != null) resp.event!,
       if (resp.eventsBefore != null) ...resp.eventsBefore!
     ].map((e) => Event.fromMatrixEvent(e, this)).toList();
@@ -1465,6 +1488,15 @@ class Room {
       }
     }
 
+    final timeline = Timeline(
+        room: this,
+        chunk: chunk,
+        onChange: onChange,
+        onRemove: onRemove,
+        onInsert: onInsert,
+        onNewEvent: onNewEvent,
+        onUpdate: onUpdate);
+
     // Fetch all users from database we have got here.
     if (eventContextId == null) {
       for (final event in events) {
@@ -1505,14 +1537,6 @@ class Room {
       }
     }
 
-    final timeline = Timeline(
-        room: this,
-        chunk: chunk,
-        onChange: onChange,
-        onRemove: onRemove,
-        onInsert: onInsert,
-        onNewEvent: onNewEvent,
-        onUpdate: onUpdate);
     return timeline;
   }
 
@@ -1620,6 +1644,7 @@ class Room {
       return user.asUser;
     } else {
       if (mxID.isValidMatrixId) {
+        // ignore: discarded_futures
         requestUser(
           mxID,
           ignoreErrors: true,
@@ -1764,14 +1789,18 @@ class Room {
   /// level of 100, and all other users have a power level of 0.
   int getPowerLevelByUserId(String userId) {
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
-    if (powerLevelMap == null) {
-      return getState(EventTypes.RoomCreate)?.senderId == userId ? 100 : 0;
-    }
-    return powerLevelMap
-            .tryGetMap<String, Object?>('users')
-            ?.tryGet<int>(userId) ??
-        powerLevelMap.tryGet<int>('users_default') ??
-        0;
+
+    final userSpecificPowerLevel =
+        powerLevelMap?.tryGetMap<String, Object?>('users')?.tryGet<int>(userId);
+
+    final defaultUserPowerLevel = powerLevelMap?.tryGet<int>('users_default');
+
+    final fallbackPowerLevel =
+        getState(EventTypes.RoomCreate)?.senderId == userId ? 100 : 0;
+
+    return userSpecificPowerLevel ??
+        defaultUserPowerLevel ??
+        fallbackPowerLevel;
   }
 
   /// Returns the user's own power level.
@@ -1876,14 +1905,17 @@ class Room {
     return powerLevelMap.tryGet('users_default') ?? 0;
   }
 
-  /// The default level required to send message events. Can be overridden by the events key.
-  bool get canSendDefaultMessages =>
-      (getState(EventTypes.RoomPowerLevels)
-                  ?.content
-                  .tryGet<int>('events_default') ??
-              0) <=
-          ownPowerLevel &&
-      (!encrypted || client.encryptionEnabled);
+  /// The default level required to send message events. This checks if the
+  /// user is capable of sending `m.room.message` events.
+  /// Please be aware that this also returns false
+  /// if the room is encrypted but the client is not able to use encryption.
+  /// If you do not want this check or want to check other events like
+  /// `m.sticker` use `canSendEvent('<event-type>')`.
+  bool get canSendDefaultMessages {
+    if (encrypted && !client.encryptionEnabled) return false;
+
+    return canSendEvent(encrypted ? EventTypes.Encrypted : EventTypes.Message);
+  }
 
   /// The level required to invite a user.
   bool get canInvite =>
@@ -1921,12 +1953,13 @@ class Room {
   /// events_default set or there is no power level state in the room.
   bool canSendEvent(String eventType) {
     final powerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
-    if (powerLevelsMap == null) return 0 <= ownPowerLevel;
+
     final pl = powerLevelsMap
-            .tryGetMap<String, Object?>('events')
+            ?.tryGetMap<String, Object?>('events')
             ?.tryGet<int>(eventType) ??
-        powerLevelsMap.tryGet<int>('events_default') ??
+        powerLevelsMap?.tryGet<int>('events_default') ??
         0;
+
     return ownPowerLevel >= pl;
   }
 
@@ -2280,7 +2313,7 @@ class Room {
     }
 
     final Map<String, int> servers = {};
-    users.forEach((user) {
+    for (final user in users) {
       if (user.id.domain != null) {
         if (servers.containsKey(user.id.domain!)) {
           servers[user.id.domain!] = servers[user.id.domain!]! + 1;
@@ -2288,7 +2321,7 @@ class Room {
           servers[user.id.domain!] = 1;
         }
       }
-    });
+    }
     final sortedServers = Map.fromEntries(servers.entries.toList()
       ..sort((e1, e2) => e1.value.compareTo(e2.value)));
     for (var i = 0; i <= 2; i++) {

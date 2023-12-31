@@ -22,6 +22,7 @@ import 'dart:core';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:async/async.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
 import 'package:matrix/src/voip/types.dart';
@@ -271,7 +272,7 @@ class Client extends MatrixApi {
 
   bool enableDehydratedDevices = false;
 
-  /// Wether read receipts are sent as public receipts by default or just as private receipts.
+  /// Whether read receipts are sent as public receipts by default or just as private receipts.
   bool receiptsPublicByDefault = true;
 
   /// Whether this client supports end-to-end encryption using olm.
@@ -314,6 +315,7 @@ class Client extends MatrixApi {
   }
 
   /// Presences of users by a given matrix ID
+  @Deprecated('Use `fetchCurrentPresence(userId)` instead.')
   Map<String, CachedPresence> presences = {};
 
   int _transactionCounter = 0;
@@ -563,10 +565,9 @@ class Client extends MatrixApi {
   /// including all persistent data from the store.
   @override
   Future<void> logout() async {
-    // Upload keys to make sure all are cached on the next login.
-    await encryption?.keyManager.uploadInboundGroupSessions();
-
     try {
+      // Upload keys to make sure all are cached on the next login.
+      await encryption?.keyManager.uploadInboundGroupSessions();
       await super.logout();
     } catch (e, s) {
       Logs().e('Logout failed', e, s);
@@ -749,10 +750,17 @@ class Client extends MatrixApi {
       leave = true;
     }
 
-    return await onSync.stream.firstWhere((sync) =>
+    // Wait for the next sync where this room appears.
+    final syncUpdate = await onSync.stream.firstWhere((sync) =>
         invite && (sync.rooms?.invite?.containsKey(roomId) ?? false) ||
         join && (sync.rooms?.join?.containsKey(roomId) ?? false) ||
         leave && (sync.rooms?.leave?.containsKey(roomId) ?? false));
+
+    // Wait for this sync to be completely processed.
+    await onSyncStatus.stream.firstWhere(
+      (syncStatus) => syncStatus.status == SyncStatus.finished,
+    );
+    return syncUpdate;
   }
 
   /// Checks if the given user has encryption keys. May query keys from the
@@ -936,6 +944,7 @@ class Client extends MatrixApi {
     final syncResp = await sync(
       filter: '{"room":{"include_leave":true,"timeline":{"limit":10}}}',
       timeout: _archiveCacheBusterTimeout,
+      setPresence: syncPresence,
     );
     // wrap around and hope there are not more than 30 leaves in 2 minutes :)
     _archiveCacheBusterTimeout = (_archiveCacheBusterTimeout + 1) % 30;
@@ -943,59 +952,82 @@ class Client extends MatrixApi {
     final leave = syncResp.rooms?.leave;
     if (leave != null) {
       for (final entry in leave.entries) {
-        final id = entry.key;
-        final room = entry.value;
-        final leftRoom = Room(
-          id: id,
-          membership: Membership.leave,
-          client: this,
-          roomAccountData:
-              room.accountData?.asMap().map((k, v) => MapEntry(v.type, v)) ??
-                  <String, BasicRoomEvent>{},
-        );
-
-        final timeline = Timeline(
-            room: leftRoom,
-            chunk: TimelineChunk(
-                events: room.timeline?.events?.reversed
-                        .toList() // we display the event in the other sence
-                        .map((e) => Event.fromMatrixEvent(e, leftRoom))
-                        .toList() ??
-                    []));
-
-        leftRoom.prev_batch = room.timeline?.prevBatch;
-        room.state?.forEach((event) {
-          leftRoom.setState(Event.fromMatrixEvent(
-            event,
-            leftRoom,
-          ));
-        });
-
-        room.timeline?.events?.forEach((event) {
-          leftRoom.setState(Event.fromMatrixEvent(
-            event,
-            leftRoom,
-          ));
-        });
-
-        for (var i = 0; i < timeline.events.length; i++) {
-          // Try to decrypt encrypted events but don't update the database.
-          if (leftRoom.encrypted && leftRoom.client.encryptionEnabled) {
-            if (timeline.events[i].type == EventTypes.Encrypted) {
-              timeline.events[i] =
-                  await leftRoom.client.encryption!.decryptRoomEvent(
-                leftRoom.id,
-                timeline.events[i],
-              );
-            }
-          }
-        }
-
-        _archivedRooms.add(ArchivedRoom(room: leftRoom, timeline: timeline));
+        await _storeArchivedRoom(entry.key, entry.value);
       }
     }
     return _archivedRooms;
   }
+
+  /// [_storeArchivedRoom]
+  /// @leftRoom we can pass a room which was left so that we don't loose states
+  Future<void> _storeArchivedRoom(
+    String id,
+    LeftRoomUpdate update, {
+    Room? leftRoom,
+  }) async {
+    final roomUpdate = update;
+    final archivedRoom = leftRoom ??
+        Room(
+          id: id,
+          membership: Membership.leave,
+          client: this,
+          roomAccountData: roomUpdate.accountData
+                  ?.asMap()
+                  .map((k, v) => MapEntry(v.type, v)) ??
+              <String, BasicRoomEvent>{},
+        );
+    // Set membership of room to leave, in the case we got a left room passed, otherwise
+    // the left room would have still membership join, which would be wrong for the setState later
+    archivedRoom.membership = Membership.leave;
+    final timeline = Timeline(
+        room: archivedRoom,
+        chunk: TimelineChunk(
+            events: roomUpdate.timeline?.events?.reversed
+                    .toList() // we display the event in the other sence
+                    .map((e) => Event.fromMatrixEvent(e, archivedRoom))
+                    .toList() ??
+                []));
+
+    archivedRoom.prev_batch = update.timeline?.prevBatch;
+    update.state?.forEach((event) {
+      archivedRoom.setState(Event.fromMatrixEvent(
+        event,
+        archivedRoom,
+      ));
+    });
+
+    update.timeline?.events?.forEach((event) {
+      archivedRoom.setState(Event.fromMatrixEvent(
+        event,
+        archivedRoom,
+      ));
+    });
+
+    for (var i = 0; i < timeline.events.length; i++) {
+      // Try to decrypt encrypted events but don't update the database.
+      if (archivedRoom.encrypted && archivedRoom.client.encryptionEnabled) {
+        if (timeline.events[i].type == EventTypes.Encrypted) {
+          await archivedRoom.client.encryption!
+              .decryptRoomEvent(
+                archivedRoom.id,
+                timeline.events[i],
+              )
+              .then(
+                (decrypted) => timeline.events[i] = decrypted,
+              );
+        }
+      }
+    }
+
+    _archivedRooms.add(ArchivedRoom(room: archivedRoom, timeline: timeline));
+  }
+
+  final _serverConfigCache = AsyncCache<ServerConfig>(const Duration(hours: 1));
+
+  /// Gets the config of the content repository, such as upload limit.
+  @override
+  Future<ServerConfig> getConfig() =>
+      _serverConfigCache.fetch(() => super.getConfig());
 
   /// Uploads a file and automatically caches it in the database, if it is small enough
   /// and returns the mxc url.
@@ -1467,6 +1499,7 @@ class Client extends MatrixApi {
       }
 
       _groupCallSessionId = randomAlpha(12);
+      _serverConfigCache.invalidate();
 
       String? olmAccount;
       String? accessToken;
@@ -1561,6 +1594,7 @@ class Client extends MatrixApi {
           _accountData = data;
           _updatePushrules();
         });
+        // ignore: deprecated_member_use_from_same_package
         presences.clear();
         if (waitUntilLoadCompletedLoaded) {
           await userDeviceKeysLoading;
@@ -1575,9 +1609,9 @@ class Client extends MatrixApi {
       );
 
       /// Timeout of 0, so that we don't see a spinner for 30 seconds.
-      final syncFuture = _sync(timeout: Duration.zero);
+      firstSyncReceived = _sync(timeout: Duration.zero);
       if (waitForFirstSync) {
-        await syncFuture;
+        await firstSyncReceived;
       }
       return;
     } catch (e, s) {
@@ -1626,7 +1660,7 @@ class Client extends MatrixApi {
   set backgroundSync(bool enabled) {
     _backgroundSync = enabled;
     if (_backgroundSync) {
-      _sync();
+      runInRoot(() async => _sync());
     }
   }
 
@@ -1673,22 +1707,38 @@ class Client extends MatrixApi {
         Logs().d('Running sync while init isn\'t done yet, dropping request');
         return;
       }
-      dynamic syncError;
+      Object? syncError;
       await _checkSyncFilter();
+
+      // The timeout we send to the server for the sync loop. It says to the
+      // server that we want to receive an empty sync response after this
+      // amount of time if nothing happens.
       timeout ??= const Duration(seconds: 30);
+
       final syncRequest = sync(
         filter: syncFilterId,
         since: prevBatch,
         timeout: timeout.inMilliseconds,
         setPresence: syncPresence,
       ).then((v) => Future<SyncUpdate?>.value(v)).catchError((e) {
-        syncError = e;
+        if (e is MatrixException) {
+          syncError = e;
+        } else {
+          syncError = SyncConnectionException(e);
+        }
         return null;
       });
       _currentSyncId = syncRequest.hashCode;
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.waitingForResponse));
-      final syncResp =
-          await syncRequest.timeout(timeout + const Duration(seconds: 10));
+
+      // The timeout for the response from the server. If we do not set a sync
+      // timeout (for initial sync) we give the server a longer time to
+      // responde.
+      final responseTimeout = timeout == Duration.zero
+          ? const Duration(minutes: 2)
+          : timeout + const Duration(seconds: 10);
+
+      final syncResp = await syncRequest.timeout(responseTimeout);
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.processing));
       if (syncResp == null) throw syncError ?? 'Unknown sync error';
       if (_currentSyncId != syncRequest.hashCode) {
@@ -1713,12 +1763,12 @@ class Client extends MatrixApi {
           () async => await _currentTransaction,
           syncResp.itemCount,
         );
-        onSyncStatus.add(SyncStatusUpdate(SyncStatus.cleaningUp));
       } else {
         await _handleSync(syncResp, direction: Direction.f);
       }
       if (_disposed || _aborted) return;
       prevBatch = syncResp.nextBatch;
+      onSyncStatus.add(SyncStatusUpdate(SyncStatus.cleaningUp));
       // ignore: unawaited_futures
       database?.deleteOldFiles(
           DateTime.now().subtract(Duration(days: 30)).millisecondsSinceEpoch);
@@ -1732,6 +1782,8 @@ class Client extends MatrixApi {
         await processToDeviceQueue();
       } catch (_) {} // we want to dispose any errors this throws
 
+      await singleShotStaleCallChecker();
+
       _retryDelay = Future.value();
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.finished));
     } on MatrixException catch (e, s) {
@@ -1741,8 +1793,8 @@ class Client extends MatrixApi {
         Logs().w('The user has been logged out!');
         await clear();
       }
-    } on MatrixConnectionException catch (e, s) {
-      Logs().w('Synchronization connection failed');
+    } on SyncConnectionException catch (e, s) {
+      Logs().w('Syncloop failed: Client has not connection to the server');
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.error,
           error: SdkError(exception: e, stackTrace: s)));
     } catch (e, s) {
@@ -1781,12 +1833,14 @@ class Client extends MatrixApi {
         await _handleRooms(leave, direction: direction);
       }
     }
-    for (final newPresence in sync.presence ?? []) {
+    for (final newPresence in sync.presence ?? <Presence>[]) {
       final cachedPresence = CachedPresence.fromMatrixEvent(newPresence);
+      // ignore: deprecated_member_use_from_same_package
       presences[newPresence.senderId] = cachedPresence;
       // ignore: deprecated_member_use_from_same_package
       onPresence.add(newPresence);
       onPresenceChanged.add(cachedPresence);
+      await database?.storePresence(newPresence.senderId, cachedPresence);
     }
     for (final newAccountData in sync.accountData ?? []) {
       await database?.storeAccountData(
@@ -1899,7 +1953,7 @@ class Client extends MatrixApi {
       final syncRoomUpdate = entry.value;
 
       await database?.storeRoomUpdate(id, syncRoomUpdate, this);
-      final room = _updateRoomsByRoomUpdate(id, syncRoomUpdate);
+      final room = await _updateRoomsByRoomUpdate(id, syncRoomUpdate);
 
       final timelineUpdateType = direction != null
           ? (direction == Direction.b
@@ -2102,6 +2156,22 @@ class Client extends MatrixApi {
               return false;
             });
           }
+
+          final age = callEvent.unsigned?.tryGet<int>('age') ??
+              (DateTime.now().millisecondsSinceEpoch -
+                  callEvent.originServerTs.millisecondsSinceEpoch);
+
+          callEvents.removeWhere((element) {
+            if (callEvent.type == EventTypes.CallInvite &&
+                age >
+                    (callEvent.content.tryGet<int>('lifetime') ??
+                        CallTimeouts.callInviteLifetime.inMilliseconds)) {
+              Logs().v(
+                  'Ommiting invite event ${callEvent.eventId} as age was older than lifetime');
+              return true;
+            }
+            return false;
+          });
         }
       }
     }
@@ -2141,7 +2211,11 @@ class Client extends MatrixApi {
     }
   }
 
-  Room _updateRoomsByRoomUpdate(String roomId, SyncRoomUpdate chatUpdate) {
+  /// stores when we last checked for stale calls
+  DateTime lastStaleCallRun = DateTime(0);
+
+  Future<Room> _updateRoomsByRoomUpdate(
+      String roomId, SyncRoomUpdate chatUpdate) async {
     // Update the chat list item.
     // Search the room in the rooms
     final roomIndex = rooms.indexWhere((r) => r.id == roomId);
@@ -2180,12 +2254,14 @@ class Client extends MatrixApi {
     }
     // If the membership is "leave" then remove the item and stop here
     else if (found && membership == Membership.leave) {
-      // stop stale group call checker for left room.
-      room.stopStaleCallsChecker(room.id);
-
       rooms.removeAt(roomIndex);
+
+      // in order to keep the archive in sync, add left room to archive
+      if (chatUpdate is LeftRoomUpdate) {
+        await _storeArchivedRoom(room.id, chatUpdate, leftRoom: room);
+      }
     }
-    // Update notification, highlight count and/or additional informations
+    // Update notification, highlight count and/or additional information
     else if (found &&
         chatUpdate is JoinedRoomUpdate &&
         (rooms[roomIndex].membership != membership ||
@@ -2318,6 +2394,7 @@ class Client extends MatrixApi {
   Future? userDeviceKeysLoading;
   Future? roomsLoading;
   Future? _accountDataLoading;
+  Future? firstSyncReceived;
 
   Future? get accountDataLoading => _accountDataLoading;
 
@@ -2910,6 +2987,38 @@ class Client extends MatrixApi {
     return;
   }
 
+  /// The newest presence of this user if there is any. Fetches it from the
+  /// database first and then from the server if necessary or returns offline.
+  Future<CachedPresence> fetchCurrentPresence(
+    String userId, {
+    bool fetchOnlyFromCached = false,
+  }) async {
+    // ignore: deprecated_member_use_from_same_package
+    final cachedPresence = presences[userId];
+    if (cachedPresence != null) {
+      return cachedPresence;
+    }
+
+    final dbPresence = await database?.getPresence(userId);
+    // ignore: deprecated_member_use_from_same_package
+    if (dbPresence != null) return presences[userId] = dbPresence;
+
+    if (fetchOnlyFromCached) return CachedPresence.neverSeen(userId);
+
+    try {
+      final result = await getPresence(userId);
+      final presence = CachedPresence.fromPresenceResponse(result, userId);
+      await database?.storePresence(userId, presence);
+      // ignore: deprecated_member_use_from_same_package
+      return presences[userId] = presence;
+    } catch (e) {
+      final presence = CachedPresence.neverSeen(userId);
+      await database?.storePresence(userId, presence);
+      // ignore: deprecated_member_use_from_same_package
+      return presences[userId] = presence;
+    }
+  }
+
   bool _disposed = false;
   bool _aborted = false;
   Future _currentTransaction = Future.sync(() => {});
@@ -2959,123 +3068,123 @@ class Client extends MatrixApi {
     final migrateClient = await legacyDatabase?.getClient(clientName);
     final database = this.database;
 
-    if (migrateClient != null && legacyDatabase != null && database != null) {
-      Logs().i('Found data in the legacy database!');
-      onMigration?.call();
-      _id = migrateClient['client_id'];
-      await database.insertClient(
-        clientName,
-        migrateClient['homeserver_url'],
-        migrateClient['token'],
-        migrateClient['user_id'],
-        migrateClient['device_id'],
-        migrateClient['device_name'],
-        null,
-        migrateClient['olm_account'],
-      );
-      Logs().d('Migrate SSSSCache...');
-      for (final type in cacheTypes) {
-        final ssssCache = await legacyDatabase.getSSSSCache(type);
-        if (ssssCache != null) {
-          Logs().d('Migrate $type...');
-          await database.storeSSSSCache(
-            type,
-            ssssCache.keyId ?? '',
-            ssssCache.ciphertext ?? '',
-            ssssCache.content ?? '',
+    if (migrateClient == null || legacyDatabase == null || database == null) {
+      await legacyDatabase?.close();
+      _initLock = false;
+      return;
+    }
+    Logs().i('Found data in the legacy database!');
+    onMigration?.call();
+    _id = migrateClient['client_id'];
+    await database.insertClient(
+      clientName,
+      migrateClient['homeserver_url'],
+      migrateClient['token'],
+      migrateClient['user_id'],
+      migrateClient['device_id'],
+      migrateClient['device_name'],
+      null,
+      migrateClient['olm_account'],
+    );
+    Logs().d('Migrate SSSSCache...');
+    for (final type in cacheTypes) {
+      final ssssCache = await legacyDatabase.getSSSSCache(type);
+      if (ssssCache != null) {
+        Logs().d('Migrate $type...');
+        await database.storeSSSSCache(
+          type,
+          ssssCache.keyId ?? '',
+          ssssCache.ciphertext ?? '',
+          ssssCache.content ?? '',
+        );
+      }
+    }
+    Logs().d('Migrate OLM sessions...');
+    try {
+      final olmSessions = await legacyDatabase.getAllOlmSessions();
+      for (final identityKey in olmSessions.keys) {
+        final sessions = olmSessions[identityKey]!;
+        for (final sessionId in sessions.keys) {
+          final session = sessions[sessionId]!;
+          await database.storeOlmSession(
+            identityKey,
+            session['session_id'] as String,
+            session['pickle'] as String,
+            session['last_received'] as int,
           );
         }
       }
-      Logs().d('Migrate OLM sessions...');
-      try {
-        final olmSessions = await legacyDatabase.getAllOlmSessions();
-        for (final identityKey in olmSessions.keys) {
-          final sessions = olmSessions[identityKey]!;
-          for (final sessionId in sessions.keys) {
-            final session = sessions[sessionId]!;
-            await database.storeOlmSession(
-              identityKey,
-              session['session_id'] as String,
-              session['pickle'] as String,
-              session['last_received'] as int,
-            );
-          }
+    } catch (e, s) {
+      Logs().e('Unable to migrate OLM sessions!', e, s);
+    }
+    Logs().d('Migrate Device Keys...');
+    final userDeviceKeys = await legacyDatabase.getUserDeviceKeys(this);
+    for (final userId in userDeviceKeys.keys) {
+      Logs().d('Migrate Device Keys of user $userId...');
+      final deviceKeysList = userDeviceKeys[userId];
+      for (final crossSigningKey
+          in deviceKeysList?.crossSigningKeys.values ?? <CrossSigningKey>[]) {
+        final pubKey = crossSigningKey.publicKey;
+        if (pubKey != null) {
+          Logs().d(
+              'Migrate cross signing key with usage ${crossSigningKey.usage} and verified ${crossSigningKey.directVerified}...');
+          await database.storeUserCrossSigningKey(
+            userId,
+            pubKey,
+            jsonEncode(crossSigningKey.toJson()),
+            crossSigningKey.directVerified,
+            crossSigningKey.blocked,
+          );
         }
-      } catch (e, s) {
-        Logs().e('Unable to migrate OLM sessions!', e, s);
       }
-      Logs().d('Migrate Device Keys...');
-      final userDeviceKeys = await legacyDatabase.getUserDeviceKeys(this);
-      for (final userId in userDeviceKeys.keys) {
-        Logs().d('Migrate Device Keys of user $userId...');
-        final deviceKeysList = userDeviceKeys[userId];
-        for (final crossSigningKey
-            in deviceKeysList?.crossSigningKeys.values ?? <CrossSigningKey>[]) {
-          final pubKey = crossSigningKey.publicKey;
-          if (pubKey != null) {
-            Logs().d(
-                'Migrate cross signing key with usage ${crossSigningKey.usage} and verified ${crossSigningKey.directVerified}...');
-            await database.storeUserCrossSigningKey(
+
+      if (deviceKeysList != null) {
+        for (final deviceKeys in deviceKeysList.deviceKeys.values) {
+          final deviceId = deviceKeys.deviceId;
+          if (deviceId != null) {
+            Logs().d('Migrate device keys for ${deviceKeys.deviceId}...');
+            await database.storeUserDeviceKey(
               userId,
-              pubKey,
-              jsonEncode(crossSigningKey.toJson()),
-              crossSigningKey.directVerified,
-              crossSigningKey.blocked,
+              deviceId,
+              jsonEncode(deviceKeys.toJson()),
+              deviceKeys.directVerified,
+              deviceKeys.blocked,
+              deviceKeys.lastActive.millisecondsSinceEpoch,
             );
           }
         }
-
-        if (deviceKeysList != null) {
-          for (final deviceKeys in deviceKeysList.deviceKeys.values) {
-            final deviceId = deviceKeys.deviceId;
-            if (deviceId != null) {
-              Logs().d('Migrate device keys for ${deviceKeys.deviceId}...');
-              await database.storeUserDeviceKey(
-                userId,
-                deviceId,
-                jsonEncode(deviceKeys.toJson()),
-                deviceKeys.directVerified,
-                deviceKeys.blocked,
-                deviceKeys.lastActive.millisecondsSinceEpoch,
-              );
-            }
-          }
-          Logs().d('Migrate user device keys info...');
-          await database.storeUserDeviceKeysInfo(
-              userId, deviceKeysList.outdated);
-        }
+        Logs().d('Migrate user device keys info...');
+        await database.storeUserDeviceKeysInfo(userId, deviceKeysList.outdated);
       }
-      Logs().d('Migrate inbound group sessions...');
-      try {
-        final sessions = await legacyDatabase.getAllInboundGroupSessions();
-        for (var i = 0; i < sessions.length; i++) {
-          Logs().d('$i / ${sessions.length}');
-          final session = sessions[i];
-          await database.storeInboundGroupSession(
-            session.roomId,
-            session.sessionId,
-            session.pickle,
-            session.content,
-            session.indexes,
-            session.allowedAtIndex,
-            session.senderKey,
-            session.senderClaimedKeys,
-          );
-        }
-      } catch (e, s) {
-        Logs().e('Unable to migrate inbound group sessions!', e, s);
-      }
-
-      await legacyDatabase.clear();
     }
-    await legacyDatabase?.close();
+    Logs().d('Migrate inbound group sessions...');
+    try {
+      final sessions = await legacyDatabase.getAllInboundGroupSessions();
+      for (var i = 0; i < sessions.length; i++) {
+        Logs().d('$i / ${sessions.length}');
+        final session = sessions[i];
+        await database.storeInboundGroupSession(
+          session.roomId,
+          session.sessionId,
+          session.pickle,
+          session.content,
+          session.indexes,
+          session.allowedAtIndex,
+          session.senderKey,
+          session.senderClaimedKeys,
+        );
+      }
+    } catch (e, s) {
+      Logs().e('Unable to migrate inbound group sessions!', e, s);
+    }
+
+    await legacyDatabase.delete();
+
     _initLock = false;
-    if (migrateClient != null) {
-      return init(
-        waitForFirstSync: false,
-        waitUntilLoadCompletedLoaded: false,
-      );
-    }
+    return init(
+      waitForFirstSync: false,
+      waitUntilLoadCompletedLoaded: false,
+    );
   }
 }
 
@@ -3084,6 +3193,11 @@ class SdkError {
   StackTrace? stackTrace;
 
   SdkError({this.exception, this.stackTrace});
+}
+
+class SyncConnectionException implements Exception {
+  final Object originalException;
+  SyncConnectionException(this.originalException);
 }
 
 class SyncStatusUpdate {

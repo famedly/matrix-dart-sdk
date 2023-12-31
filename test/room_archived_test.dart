@@ -50,7 +50,7 @@ void main() {
       insertList.clear();
     });
 
-    tearDown(() => client.dispose().onError((e, s) {}));
+    tearDown(() async => client.dispose().onError((e, s) {}));
 
     test('archive room not loaded', () async {
       final archiveRoom =
@@ -62,7 +62,7 @@ void main() {
       final archive = await client.loadArchiveWithTimeline();
 
       expect(archive.length, 2);
-      expect(client.rooms.length, 2);
+      expect(client.rooms.length, 3);
       expect(archive[0].room.id, '!5345234234:example.com');
       expect(archive[0].room.membership, Membership.leave);
       expect(archive[0].room.name, 'The room name');
