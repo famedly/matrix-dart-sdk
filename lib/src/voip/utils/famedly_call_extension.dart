@@ -34,7 +34,7 @@ extension FamedlyCallMemberEventsExtension on Room {
 
   /// returns a list of memberships from a famedly call matrix event
   List<CallMembership> getCallMembershipsFromEvent(MatrixEvent event) {
-    final mems = event.content.tryGetList<Map<String, Object>>('memberships');
+    final mems = event.content.tryGetList('memberships');
     return mems
             ?.map((e) =>
                 CallMembership.fromJson(e, event.senderId, event.roomId!))

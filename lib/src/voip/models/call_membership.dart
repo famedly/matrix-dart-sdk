@@ -12,9 +12,8 @@ class FamedlyCallMemberEvent {
 
   factory FamedlyCallMemberEvent.fromJson(Event event) {
     final List<CallMembership> callMemberships = [];
-    final memberships =
-        event.content.tryGetList<Map<String, Object>>('memberships');
-    if (memberships != null) {
+    final memberships = event.content.tryGetList('memberships');
+    if (memberships != null && memberships.isNotEmpty) {
       for (final mem in memberships) {
         callMemberships
             .add(CallMembership.fromJson(mem, event.senderId, event.room.id));
@@ -52,13 +51,12 @@ class CallMembership {
       'application': application,
       'scope': scope,
       'backend': backend.toJson(),
-      'deviceId': deviceId,
+      'device_id': deviceId,
       'expires_ts': expiresTs,
     };
   }
 
-  factory CallMembership.fromJson(
-      Map<String, dynamic> json, String userId, String roomId) {
+  factory CallMembership.fromJson(Map json, String userId, String roomId) {
     return CallMembership(
       userId: userId,
       roomId: roomId,
@@ -99,5 +97,7 @@ class CallMembership {
   // get removed pretty soon
   bool get isExpired =>
       expiresTs <
-      DateTime.now().add(Duration(minutes: 1)).millisecondsSinceEpoch;
+      DateTime.now()
+          .subtract(CallTimeouts.expireTsBumpDuration)
+          .millisecondsSinceEpoch;
 }

@@ -29,7 +29,7 @@ import 'package:matrix/src/voip/models/call_membership.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
 import 'package:matrix/src/voip/models/group_call_events.dart';
 import 'package:matrix/src/voip/utils/constants.dart';
-import 'package:matrix/src/voip/utils/group_call_extension.dart';
+import 'package:matrix/src/voip/utils/famedly_call_extension.dart';
 import 'package:matrix/src/voip/utils/stream_helper.dart';
 import 'package:matrix/src/voip/utils/types.dart';
 import 'package:matrix/src/voip/utils/wrapped_media_stream.dart';
@@ -518,7 +518,7 @@ class GroupCallSession {
         callId: groupCallId,
         application: 'm.call',
         scope: 'm.room',
-        backend: MeshBackend.fromJson({'type': 'mesh'}),
+        backend: CallBackend.fromJson({'type': 'mesh'}),
         deviceId: client.deviceID!,
         expiresTs: DateTime.now()
             .add(CallTimeouts.expireTsBumpDuration)
@@ -616,12 +616,16 @@ class GroupCallSession {
     }
 
     final mem = room.getCallMembershipsFromEvent(event);
-
-    final memForGroupId = mem.singleWhereOrNull((element) =>
-        element.callId == groupCallId && element.deviceId == client.deviceID!);
-
+    Logs().e(mem.map((e) => e.userId).toString());
+    final memForGroupId = mem.singleWhereOrNull((element) {
+      return element.callId == groupCallId &&
+          element.userId == user.id && // sanity checks
+          element.roomId == room.id;
+    });
+    Logs().e(user.displayName.toString());
     if (memForGroupId == null || memForGroupId.isExpired) {
-      Logs().e('removed user');
+      Logs().e(
+          'removed user ${user.displayName}, ${memForGroupId?.isExpired}, ${memForGroupId?.expiresTs}');
       await _removeParticipant(user.id);
       return;
     } else {

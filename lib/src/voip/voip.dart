@@ -10,7 +10,7 @@ import 'package:matrix/src/voip/models/call_membership.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
 import 'package:matrix/src/voip/models/group_call_events.dart';
 import 'package:matrix/src/voip/models/webrtc_delegate.dart';
-import 'package:matrix/src/voip/utils/group_call_extension.dart';
+import 'package:matrix/src/voip/utils/famedly_call_extension.dart';
 import 'package:matrix/src/voip/utils/types.dart';
 
 final famedlyCallMemberEventType = 'com.famedly.call.member';
