@@ -26,10 +26,7 @@ import 'package:webrtc_interface/webrtc_interface.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
-import 'package:matrix/src/voip/utils/constants.dart';
 import 'package:matrix/src/voip/utils/stream_helper.dart';
-import 'package:matrix/src/voip/utils/types.dart';
-import 'package:matrix/src/voip/utils/wrapped_media_stream.dart';
 
 /// Parses incoming matrix events to the apropriate webrtc layer underneath using
 /// a `WebRTCDelegate`. This class is also responsible for sending any outgoing
@@ -67,10 +64,36 @@ class CallSession {
   String facingMode = 'user';
   bool get answeredByUs => _answeredByUs;
   Client get client => opts.room.client;
+
+  /// The device id of the remote user. Very important that this is the deviceId
+  /// of the remote party. We use this to setup call between multiple devices
+  /// between the same user. See setting up `remoteParticipant` in voip.dart
+  ///
+  /// Again could have used `remoteParticipant` but welp spec
   String? remotePartyId;
+
+  /// Is set to `sender_device_id`, we use this to select between todevice and
+  /// normal events in `_sendContent`
+  ///
+  /// Could probably use `remoteParticipant` here but welp spec
   String? opponentDeviceId;
-  String? invitee;
-  User? remoteUser;
+
+  /// The local participant in the call, with id userId + deviceId
+  Participant get localParticipant =>
+      Participant(userId: client.userID!, deviceId: client.deviceID!);
+
+  /// The remote participant in the call, with id userId + deviceId
+  ///
+  /// This is used internally so that you can have calls between 2 devices of the
+  /// same userId
+  Participant? remoteParticipant;
+
+  /// The ID of the user being called. If omitted, any user in the room can answer.
+  String? inviteeUserId;
+
+  /// The ID of the device being called. If omitted, any device for the inviteeUserId in the room can answer.
+  String? inviteeDeviceId;
+
   late CallParty hangupParty;
   String? hangupReason;
   late CallError lastError;
@@ -402,20 +425,17 @@ class CallSession {
     }
   }
 
-  Future<void> updateAudioDevice([MediaStreamTrack? track]) async {
-    final sender = usermediaSenders
-        .firstWhereOrNull((element) => element.track!.kind == 'audio');
-    await sender?.track?.stop();
-    if (track != null) {
-      await sender?.replaceTrack(track);
-    } else {
-      final stream =
-          await voip.delegate.mediaDevices.getUserMedia({'audio': true});
-      final audioTrack = stream.getAudioTracks().firstOrNull;
-      if (audioTrack != null) {
-        await sender?.replaceTrack(audioTrack);
-      }
-    }
+  Future<void> updateMediaDeviceForCall() async {
+    await updateMediaDevice(
+      voip.delegate,
+      MediaKind.audio,
+      usermediaSenders,
+    );
+    await updateMediaDevice(
+      voip.delegate,
+      MediaKind.video,
+      usermediaSenders,
+    );
   }
 
   void _updateRemoteSDPStreamMetadata(SDPStreamMetadata metadata) {
@@ -557,7 +577,7 @@ class CallSession {
     } else {
       final newStream = WrappedMediaStream(
         renderer: voip.delegate.createRenderer(),
-        userId: client.userID!,
+        participant: localParticipant,
         room: opts.room,
         stream: stream,
         purpose: purpose,
@@ -620,7 +640,7 @@ class CallSession {
     } else {
       final newStream = WrappedMediaStream(
         renderer: voip.delegate.createRenderer(),
-        userId: remoteUser!.id,
+        participant: remoteParticipant!,
         room: opts.room,
         stream: stream,
         purpose: purpose,
@@ -902,7 +922,7 @@ class CallSession {
         return;
       }
     }
-    Logs().e('Unable to find a track to send DTMF on');
+    Logs().e('[VOIP] Unable to find a track to send DTMF on');
   }
 
   Future<void> terminate(
@@ -965,7 +985,7 @@ class CallSession {
       await terminate(
           CallParty.kRemote, reason ?? CallErrorCode.UserHangup, true);
     } else {
-      Logs().e('Call is in state: ${state.toString()}: ignoring reject');
+      Logs().e('[VOIP] Call is in state: ${state.toString()}: ignoring reject');
     }
   }
 
@@ -998,14 +1018,13 @@ class CallSession {
       ..transferee = false;
     final metadata = _getLocalSDPStreamMetadata();
     if (state == CallState.kCreateOffer) {
-      Logs().d('[glare] new invite sent about to be called');
-
       await sendInviteToCall(
           room,
           callId,
           CallTimeouts.callInviteLifetime.inMilliseconds,
           localPartyId,
-          null,
+          inviteeUserId,
+          inviteeDeviceId,
           offer.sdp!,
           capabilities: callCapabilities,
           metadata: metadata);
@@ -1286,10 +1305,12 @@ class CallSession {
   }
 
   Map<String, dynamic> _getOfferAnswerConstraints({bool iceRestart = false}) {
-    return {
-      'mandatory': {if (iceRestart) 'IceRestart': true},
-      'optional': [],
-    };
+    return iceRestart
+        ? {
+            'mandatory': {'iceRestart': true},
+            'optional': [],
+          }
+        : {};
   }
 
   Future<void> _sendCandidateQueue() async {
@@ -1406,8 +1427,14 @@ class CallSession {
   /// [invitee] The user ID of the person who is being invited. Invites without an invitee field are defined to be
   /// intended for any member of the room other than the sender of the event.
   /// [party_id] The party ID for call, Can be set to client.deviceId.
-  Future<String?> sendInviteToCall(Room room, String callId, int lifetime,
-      String party_id, String? invitee, String sdp,
+  Future<String?> sendInviteToCall(
+      Room room,
+      String callId,
+      int lifetime,
+      String party_id,
+      String? inviteeUserId,
+      String? inviteeDeviceId,
+      String sdp,
       {String type = 'offer',
       String version = voipProtoVersion,
       String? txid,
@@ -1416,11 +1443,12 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId,
+      if (groupCallId != null) 'conf_id': groupCallId!,
       'version': version,
       'lifetime': lifetime,
       'offer': {'sdp': sdp, 'type': type},
-      if (invitee != null) 'invitee': invitee,
+      if (inviteeUserId != null) 'invitee_user_id': inviteeUserId,
+      if (inviteeDeviceId != null) 'invitee_device_id': inviteeDeviceId,
       if (capabilities != null) 'capabilities': capabilities.toJson(),
       if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
     };
@@ -1447,7 +1475,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId,
+      if (groupCallId != null) 'conf_id': groupCallId!,
       'version': version,
       'selected_party_id': selected_party_id,
     };
@@ -1470,7 +1498,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId,
+      if (groupCallId != null) 'conf_id': groupCallId!,
       if (reason != null) 'reason': reason,
       'version': version,
     };
@@ -1498,7 +1526,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId,
+      if (groupCallId != null) 'conf_id': groupCallId!,
       'version': version,
       'lifetime': lifetime,
       'description': {'sdp': sdp, 'type': type},
@@ -1544,7 +1572,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId,
+      if (groupCallId != null) 'conf_id': groupCallId!,
       'version': version,
       'candidates': candidates,
     };
@@ -1572,7 +1600,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId,
+      if (groupCallId != null) 'conf_id': groupCallId!,
       'version': version,
       'answer': {'sdp': sdp, 'type': type},
       if (capabilities != null) 'capabilities': capabilities.toJson(),
@@ -1596,7 +1624,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId,
+      if (groupCallId != null) 'conf_id': groupCallId!,
       'version': version,
       if (hangupCause != null) 'reason': hangupCause,
     };
@@ -1628,7 +1656,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId,
+      if (groupCallId != null) 'conf_id': groupCallId!,
       'version': version,
       sdpStreamMetadataKey: metadata.toJson(),
     };
@@ -1652,7 +1680,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId,
+      if (groupCallId != null) 'conf_id': groupCallId!,
       'version': version,
       ...callReplaces.toJson(),
     };
@@ -1676,7 +1704,7 @@ class CallSession {
     final content = {
       'call_id': callId,
       'party_id': party_id,
-      if (groupCallId != null) 'conf_id': groupCallId,
+      if (groupCallId != null) 'conf_id': groupCallId!,
       'version': version,
       'asserted_identity': assertedIdentity.toJson(),
     };
@@ -1691,43 +1719,39 @@ class CallSession {
   Future<String?> _sendContent(
     Room room,
     String type,
-    Map<String, dynamic> content, {
+    Map<String, Object> content, {
     String? txid,
   }) async {
+    Logs().d('[VOIP] sending content type $type, with conf: $content');
     txid ??= VoIP.customTxid ?? client.generateUniqueTransactionId();
     final mustEncrypt = room.encrypted && client.encryptionEnabled;
 
     // opponentDeviceId is only set for a few events during group calls,
-    // therefore only group calls use to-device messages for some events
+    // therefore only group calls use to-device messages for call events
     if (opponentDeviceId != null) {
       final toDeviceSeq = this.toDeviceSeq++;
+      final Map<String, Object> data = {
+        ...content,
+        'seq': toDeviceSeq,
+        'dest_device_id': opponentDeviceId!,
+        'sender_device_id': client.deviceID!,
+      };
 
       if (mustEncrypt) {
-        await client.sendToDeviceEncrypted(
-            [
-              client.userDeviceKeys[invitee ?? remoteUser!.id]!
-                  .deviceKeys[opponentDeviceId]!
-            ],
-            type,
-            {
-              ...content,
-              'device_id': client.deviceID!,
-              'seq': toDeviceSeq,
-              'dest_device_id': opponentDeviceId,
-              'sender_device_id': client.deviceID,
-            });
+        await client.sendToDeviceEncrypted([
+          client.userDeviceKeys[inviteeUserId ?? remoteParticipant!.userId]!
+              .deviceKeys[opponentDeviceId]!
+        ], type, data);
       } else {
-        final data = <String, Map<String, Map<String, dynamic>>>{};
-        data[invitee ?? remoteUser!.id] = {
-          opponentDeviceId!: {
-            ...content,
-            'device_id': client.deviceID!,
-            'seq': toDeviceSeq,
-            'dest_device_id': opponentDeviceId,
-            'sender_device_id': client.deviceID,
-          }
-        };
-        await client.sendToDevice(type, txid, data);
+        await client.sendToDevice(
+          type,
+          txid,
+          {
+            inviteeUserId ?? remoteParticipant!.userId: {
+              opponentDeviceId!: data
+            }
+          },
+        );
       }
       return '';
     } else {

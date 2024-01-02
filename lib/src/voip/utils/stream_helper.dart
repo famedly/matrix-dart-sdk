@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:random_string/random_string.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
@@ -26,12 +27,38 @@ void setTracksEnabled(List<MediaStreamTrack> tracks, bool enabled) {
   }
 }
 
-Future<bool> hasAudioDevice() async {
-  throw UnimplementedError();
+Future<bool> hasMediaDevice(
+    WebRTCDelegate delegate, MediaInputKind mediaInputKind) async {
+  final devices = await delegate.mediaDevices.enumerateDevices();
+  Logs().e(devices.map((e) => e.kind).toString());
+  return devices
+      .where((device) => device.kind == mediaInputKind.name)
+      .isNotEmpty;
 }
 
-Future<bool> hasVideoDevice() async {
-  throw UnimplementedError();
+Future<void> updateMediaDevice(
+  WebRTCDelegate delegate,
+  MediaKind kind,
+  List<RTCRtpSender> userRtpSenders, [
+  MediaStreamTrack? track,
+]) async {
+  final sender = userRtpSenders
+      .firstWhereOrNull((element) => element.track!.kind == kind.name);
+  await sender?.track?.stop();
+  if (track != null) {
+    await sender?.replaceTrack(track);
+  } else {
+    final stream = await delegate.mediaDevices.getUserMedia({kind.name: true});
+    MediaStreamTrack? track;
+    if (kind == MediaKind.audio) {
+      track = stream.getAudioTracks().firstOrNull;
+    } else if (kind == MediaKind.video) {
+      track = stream.getVideoTracks().firstOrNull;
+    }
+    if (track != null) {
+      await sender?.replaceTrack(track);
+    }
+  }
 }
 
 String roomAliasFromRoomName(String roomName) {
@@ -40,4 +67,8 @@ String roomAliasFromRoomName(String roomName) {
 
 String genCallID() {
   return '${DateTime.now().millisecondsSinceEpoch}${randomAlphaNumeric(16)}';
+}
+
+String getParticipantId(String userId, String deviceId) {
+  return userId + deviceId;
 }

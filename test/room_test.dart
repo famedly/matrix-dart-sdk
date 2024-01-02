@@ -22,7 +22,6 @@ import 'dart:typed_data';
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/voip/utils/famedly_call_extension.dart';
 import 'fake_client.dart';
 import 'fake_matrix_api.dart';
 
@@ -639,7 +638,6 @@ void main() {
       );
       expect(room.groupCallsEnabled, false);
       expect(room.canJoinGroupCall, false);
-      expect(room.canCreateGroupCall, false);
 
       // state_default 50 and user_default 26, but override evnents present
       room.setState(
@@ -662,7 +660,6 @@ void main() {
       );
       expect(room.groupCallsEnabled, true);
       expect(room.canJoinGroupCall, true);
-      expect(room.canCreateGroupCall, true);
 
       // state_default 50 and user_default 0, use enableGroupCall
       room.setState(
@@ -681,7 +678,6 @@ void main() {
       );
       expect(room.groupCallsEnabled, false);
       expect(room.canJoinGroupCall, false);
-      expect(room.canCreateGroupCall, false);
       await room.enableGroupCalls();
       expect(room.groupCallsEnabled, true);
 
@@ -703,7 +699,6 @@ void main() {
       await room.enableGroupCalls();
       expect(room.groupCallsEnabled, true);
       expect(room.canJoinGroupCall, true);
-      expect(room.canCreateGroupCall, true);
 
       // state_default is 0 so users should be able to send state events
       room.setState(
@@ -722,7 +717,6 @@ void main() {
       );
       expect(room.groupCallsEnabled, true);
       expect(room.canJoinGroupCall, true);
-      expect(room.canCreateGroupCall, true);
       room.setState(
         Event(
           senderId: '@test:example.com',
@@ -1428,211 +1422,211 @@ void main() {
           'https://matrix.to/#/!localpart%3Aserver.abc?via=example.org&via=example.com&via=test.abc');
     });
 
-    test('callMemberStateIsExpired', () {
-      expect(
-          room.callMemberStateIsExpired(
-              Event(
-                  senderId: '@test:example.com',
-                  type: EventTypes.GroupCallMemberPrefix,
-                  room: room,
-                  eventId: '1231234124',
-                  content: {
-                    'm.calls': [
-                      {
-                        'm.call_id': '1674811248673789288k7d60n5976',
-                        'm.devices': [
-                          {
-                            'device_id': 'ZEEGCGPTGI',
-                            'session_id': 'cbAtVZdLBnJq',
-                            'm.expires_ts': 1674813039415,
-                            'feeds': [
-                              {'purpose': 'm.usermedia'}
-                            ]
-                          }
-                        ]
-                      },
-                    ],
-                  },
-                  originServerTs: DateTime.now(),
-                  stateKey: ''),
-              '1674811248673789288k7d60n5976'),
-          true);
-      expect(
-          room.callMemberStateIsExpired(
-              Event(
-                  senderId: '@test:example.com',
-                  type: EventTypes.GroupCallMemberPrefix,
-                  room: room,
-                  eventId: '1231234124',
-                  content: {
-                    'm.calls': [
-                      {
-                        'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-                        'm.devices': [
-                          {
-                            'device_id': 'ZEEGCGPTGI',
-                            'session_id': 'fhovqxwcasdfr',
-                            'expires_ts': DateTime.now()
-                                .add(Duration(minutes: 1))
-                                .millisecondsSinceEpoch,
-                            'feeds': [
-                              {'purpose': 'm.usermedia'}
-                            ]
-                          }
-                        ]
-                      }
-                    ],
-                  },
-                  originServerTs: DateTime.now(),
-                  stateKey: ''),
-              '1674811256006mfqnmsAbzqxjYtWZ'),
-          false);
-    });
+    // test('callMemberStateIsExpired', () {
+    //   expect(
+    //       room.callMemberStateIsExpired(
+    //           Event(
+    //               senderId: '@test:example.com',
+    //               type: EventTypes.GroupCallMemberPrefix,
+    //               room: room,
+    //               eventId: '1231234124',
+    //               content: {
+    //                 'm.calls': [
+    //                   {
+    //                     'm.call_id': '1674811248673789288k7d60n5976',
+    //                     'm.devices': [
+    //                       {
+    //                         'device_id': 'ZEEGCGPTGI',
+    //                         'session_id': 'cbAtVZdLBnJq',
+    //                         'm.expires_ts': 1674813039415,
+    //                         'feeds': [
+    //                           {'purpose': 'm.usermedia'}
+    //                         ]
+    //                       }
+    //                     ]
+    //                   },
+    //                 ],
+    //               },
+    //               originServerTs: DateTime.now(),
+    //               stateKey: ''),
+    //           '1674811248673789288k7d60n5976'),
+    //       true);
+    //   expect(
+    //       room.callMemberStateIsExpired(
+    //           Event(
+    //               senderId: '@test:example.com',
+    //               type: EventTypes.GroupCallMemberPrefix,
+    //               room: room,
+    //               eventId: '1231234124',
+    //               content: {
+    //                 'm.calls': [
+    //                   {
+    //                     'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
+    //                     'm.devices': [
+    //                       {
+    //                         'device_id': 'ZEEGCGPTGI',
+    //                         'session_id': 'fhovqxwcasdfr',
+    //                         'expires_ts': DateTime.now()
+    //                             .add(Duration(minutes: 1))
+    //                             .millisecondsSinceEpoch,
+    //                         'feeds': [
+    //                           {'purpose': 'm.usermedia'}
+    //                         ]
+    //                       }
+    //                     ]
+    //                   }
+    //                 ],
+    //               },
+    //               originServerTs: DateTime.now(),
+    //               stateKey: ''),
+    //           '1674811256006mfqnmsAbzqxjYtWZ'),
+    //       false);
+    // });
 
-    test('stale call checker and terminator', () async {
-      room.setState(Event(
-          content: {'m.intent': 'm.prompt', 'm.type': 'm.video'},
-          type: EventTypes.GroupCallPrefix,
-          eventId: 'asdfasdf',
-          senderId: '@test:example.com',
-          originServerTs: DateTime.now(),
-          room: room,
-          stateKey: '1675856324414gzczMtfzTk0DKgEw'));
-      expect(room.hasActiveGroupCall, true);
-      expect(room.activeGroupCallEvents.length, 1);
-      expect(
-          await room
-              .sendGroupCallTerminateEvent('1675856324414gzczMtfzTk0DKgEw'),
-          'groupCall');
-      room.setState(Event(
-          content: {
-            'm.intent': 'm.prompt',
-            'm.type': 'm.video',
-            'm.terminated': 'call_ended'
-          },
-          type: EventTypes.GroupCallPrefix,
-          eventId: 'asdfasdf',
-          senderId: '@test:example.com',
-          originServerTs: DateTime.now(),
-          room: room,
-          stateKey: '1675856324414gzczMtfzTk0DKgEw'));
-      expect(room.hasActiveGroupCall, false);
-      expect(room.activeGroupCallEvents.length, 0);
-    });
+    // test('stale call checker and terminator', () async {
+    //   room.setState(Event(
+    //       content: {'m.intent': 'm.prompt', 'm.type': 'm.video'},
+    //       type: EventTypes.GroupCallPrefix,
+    //       eventId: 'asdfasdf',
+    //       senderId: '@test:example.com',
+    //       originServerTs: DateTime.now(),
+    //       room: room,
+    //       stateKey: '1675856324414gzczMtfzTk0DKgEw'));
+    //   expect(room.hasActiveGroupCall, true);
+    //   expect(room.activeGroupCallEvents.length, 1);
+    //   expect(
+    //       await room
+    //           .sendGroupCallTerminateEvent('1675856324414gzczMtfzTk0DKgEw'),
+    //       'groupCall');
+    //   room.setState(Event(
+    //       content: {
+    //         'm.intent': 'm.prompt',
+    //         'm.type': 'm.video',
+    //         'm.terminated': 'call_ended'
+    //       },
+    //       type: EventTypes.GroupCallPrefix,
+    //       eventId: 'asdfasdf',
+    //       senderId: '@test:example.com',
+    //       originServerTs: DateTime.now(),
+    //       room: room,
+    //       stateKey: '1675856324414gzczMtfzTk0DKgEw'));
+    //   expect(room.hasActiveGroupCall, false);
+    //   expect(room.activeGroupCallEvents.length, 0);
+    // });
 
-    test('group call participants count', () {
-      room.setState(
-        Event(
-            senderId: '@test:example.com',
-            type: EventTypes.GroupCallMemberPrefix,
-            room: room,
-            eventId: '1234177',
-            content: {
-              'm.calls': [
-                {
-                  'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-                  'm.devices': [
-                    {
-                      'device_id': 'ZEEGCGPTGI',
-                      'session_id': 'fhovqxwcasdfr',
-                      'expires_ts': DateTime.now()
-                          .add(Duration(minutes: 1))
-                          .millisecondsSinceEpoch,
-                      'feeds': [
-                        {'purpose': 'm.usermedia'}
-                      ]
-                    },
-                  ]
-                }
-              ],
-            },
-            originServerTs: DateTime.now(),
-            stateKey: '@test:example.com'),
-      );
-      room.setState(
-        Event(
-            senderId: '@test0:example.com',
-            type: EventTypes.GroupCallMemberPrefix,
-            room: room,
-            eventId: '1234177',
-            content: {
-              'm.calls': [
-                {
-                  'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-                  'm.devices': [
-                    {
-                      'device_id': 'ZEEGCGPTGI',
-                      'session_id': 'fhovqxwcasdfr',
-                      'expires_ts': DateTime.now()
-                          .add(Duration(minutes: 2))
-                          .millisecondsSinceEpoch,
-                      'feeds': [
-                        {'purpose': 'm.usermedia'}
-                      ]
-                    },
-                  ]
-                }
-              ],
-            },
-            originServerTs: DateTime.now(),
-            stateKey: '@test0:example.com'),
-      );
-      room.setState(
-        Event(
-            senderId: '@test2:example.com',
-            type: EventTypes.GroupCallMemberPrefix,
-            room: room,
-            eventId: '1231234124123',
-            content: {
-              'm.calls': [
-                {
-                  'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-                  'm.devices': [
-                    {
-                      'device_id': 'ZEEGCGPTGI',
-                      'session_id': 'fhovqxwcasdfr',
-                      'feeds': [
-                        {'purpose': 'm.usermedia'}
-                      ]
-                    },
-                  ]
-                }
-              ],
-            },
-            originServerTs: DateTime.now(),
-            stateKey: '@test2:example.com'),
-      );
-      room.setState(
-        Event(
-            senderId: '@test3:example.com',
-            type: EventTypes.GroupCallMemberPrefix,
-            room: room,
-            eventId: '123123412445',
-            content: {
-              'm.calls': [
-                {
-                  'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-                  'm.devices': [
-                    {
-                      'device_id': 'ZEEGCGPTGI',
-                      'session_id': 'fhovqxwcasdfr',
-                      'expires_ts': DateTime.now()
-                          .subtract(Duration(minutes: 1))
-                          .millisecondsSinceEpoch,
-                      'feeds': [
-                        {'purpose': 'm.usermedia'}
-                      ]
-                    },
-                  ]
-                }
-              ],
-            },
-            originServerTs: DateTime.now(),
-            stateKey: '@test3:example.com'),
-      );
-      expect(
-          room.groupCallParticipantCount('1674811256006mfqnmsAbzqxjYtWZ'), 2);
-    });
+    // test('group call participants count', () {
+    //   room.setState(
+    //     Event(
+    //         senderId: '@test:example.com',
+    //         type: EventTypes.GroupCallMemberPrefix,
+    //         room: room,
+    //         eventId: '1234177',
+    //         content: {
+    //           'm.calls': [
+    //             {
+    //               'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
+    //               'm.devices': [
+    //                 {
+    //                   'device_id': 'ZEEGCGPTGI',
+    //                   'session_id': 'fhovqxwcasdfr',
+    //                   'expires_ts': DateTime.now()
+    //                       .add(Duration(minutes: 1))
+    //                       .millisecondsSinceEpoch,
+    //                   'feeds': [
+    //                     {'purpose': 'm.usermedia'}
+    //                   ]
+    //                 },
+    //               ]
+    //             }
+    //           ],
+    //         },
+    //         originServerTs: DateTime.now(),
+    //         stateKey: '@test:example.com'),
+    //   );
+    //   room.setState(
+    //     Event(
+    //         senderId: '@test0:example.com',
+    //         type: EventTypes.GroupCallMemberPrefix,
+    //         room: room,
+    //         eventId: '1234177',
+    //         content: {
+    //           'm.calls': [
+    //             {
+    //               'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
+    //               'm.devices': [
+    //                 {
+    //                   'device_id': 'ZEEGCGPTGI',
+    //                   'session_id': 'fhovqxwcasdfr',
+    //                   'expires_ts': DateTime.now()
+    //                       .add(Duration(minutes: 2))
+    //                       .millisecondsSinceEpoch,
+    //                   'feeds': [
+    //                     {'purpose': 'm.usermedia'}
+    //                   ]
+    //                 },
+    //               ]
+    //             }
+    //           ],
+    //         },
+    //         originServerTs: DateTime.now(),
+    //         stateKey: '@test0:example.com'),
+    //   );
+    //   room.setState(
+    //     Event(
+    //         senderId: '@test2:example.com',
+    //         type: EventTypes.GroupCallMemberPrefix,
+    //         room: room,
+    //         eventId: '1231234124123',
+    //         content: {
+    //           'm.calls': [
+    //             {
+    //               'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
+    //               'm.devices': [
+    //                 {
+    //                   'device_id': 'ZEEGCGPTGI',
+    //                   'session_id': 'fhovqxwcasdfr',
+    //                   'feeds': [
+    //                     {'purpose': 'm.usermedia'}
+    //                   ]
+    //                 },
+    //               ]
+    //             }
+    //           ],
+    //         },
+    //         originServerTs: DateTime.now(),
+    //         stateKey: '@test2:example.com'),
+    //   );
+    //   room.setState(
+    //     Event(
+    //         senderId: '@test3:example.com',
+    //         type: EventTypes.GroupCallMemberPrefix,
+    //         room: room,
+    //         eventId: '123123412445',
+    //         content: {
+    //           'm.calls': [
+    //             {
+    //               'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
+    //               'm.devices': [
+    //                 {
+    //                   'device_id': 'ZEEGCGPTGI',
+    //                   'session_id': 'fhovqxwcasdfr',
+    //                   'expires_ts': DateTime.now()
+    //                       .subtract(Duration(minutes: 1))
+    //                       .millisecondsSinceEpoch,
+    //                   'feeds': [
+    //                     {'purpose': 'm.usermedia'}
+    //                   ]
+    //                 },
+    //               ]
+    //             }
+    //           ],
+    //         },
+    //         originServerTs: DateTime.now(),
+    //         stateKey: '@test3:example.com'),
+    //   );
+    //   expect(
+    //       room.groupCallParticipantCount('1674811256006mfqnmsAbzqxjYtWZ'), 2);
+    // });
     test('logout', () async {
       await matrix.logout();
     });

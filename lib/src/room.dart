@@ -1858,11 +1858,11 @@ class Room {
         50;
   }
 
-  bool get canJoinGroupCall =>
-      canChangeStateEvent(famedlyCallMemberEventType) && groupCallsEnabled;
+  bool get canJoinGroupCall => canChangeStateEvent(famedlyCallMemberEventType);
 
   /// if returned value is not null `org.matrix.msc3401.call.member` is present
   /// and group calls can be used
+  @Deprecated('User canJoinGroupCall')
   bool get groupCallsEnabled {
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
     if (powerLevelMap == null) return false;

@@ -129,6 +129,10 @@ enum CallDirection { kIncoming, kOutgoing }
 
 enum CallParty { kLocal, kRemote }
 
+enum MediaInputKind { videoinput, audioinput }
+
+enum MediaKind { video, audio }
+
 class GroupCallIntent {
   static String Ring = 'm.ring';
   static String Prompt = 'm.prompt';

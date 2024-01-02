@@ -26,8 +26,8 @@ class FamedlyCallMemberEvent {
 class CallMembership {
   final String userId;
   final String callId;
-  final String application;
-  final String scope;
+  final String? application;
+  final String? scope;
   final CallBackend backend;
   final String deviceId;
   final int expiresTs;
@@ -37,12 +37,12 @@ class CallMembership {
   CallMembership({
     required this.userId,
     required this.callId,
-    required this.application,
-    required this.scope,
     required this.backend,
     required this.deviceId,
     required this.expiresTs,
     required this.roomId,
+    this.application = 'm.call',
+    this.scope = 'm.room',
   });
 
   Map<String, dynamic> toJson() {
@@ -70,7 +70,7 @@ class CallMembership {
   }
 
   @override
-  bool operator ==(Object other) =>
+  bool operator ==(other) =>
       identical(this, other) ||
       other is CallMembership &&
           runtimeType == other.runtimeType &&

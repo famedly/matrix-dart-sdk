@@ -27,16 +27,18 @@ class CallTimeouts {
   static const activeSpeakerInterval = Duration(seconds: 5);
 }
 
-const callEndedEventTypes = {
-  EventTypes.CallAnswer,
-  EventTypes.CallHangup,
-  EventTypes.CallReject,
-  EventTypes.CallReplaces,
-};
-const ommitWhenCallEndedTypes = {
-  EventTypes.CallInvite,
-  EventTypes.CallCandidates,
-  EventTypes.CallNegotiate,
-  EventTypes.CallSDPStreamMetadataChanged,
-  EventTypes.CallSDPStreamMetadataChangedPrefix,
-};
+class CallConstants {
+  static const callEndedEventTypes = {
+    EventTypes.CallAnswer,
+    EventTypes.CallHangup,
+    EventTypes.CallReject,
+    EventTypes.CallReplaces,
+  };
+  static const ommitWhenCallEndedTypes = {
+    EventTypes.CallInvite,
+    EventTypes.CallCandidates,
+    EventTypes.CallNegotiate,
+    EventTypes.CallSDPStreamMetadataChanged,
+    EventTypes.CallSDPStreamMetadataChangedPrefix,
+  };
+}

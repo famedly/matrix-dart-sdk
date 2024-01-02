@@ -34,6 +34,7 @@ extension FamedlyCallMemberEventsExtension on Room {
 
   /// returns a list of memberships from a famedly call matrix event
   List<CallMembership> getCallMembershipsFromEvent(MatrixEvent event) {
+    if (event.roomId != id) return [];
     final mems = event.content.tryGetList('memberships');
     return mems
             ?.map((e) =>
@@ -93,48 +94,82 @@ extension FamedlyCallMemberEventsExtension on Room {
 
   static const staleCallCheckerDuration = Duration(seconds: 30);
 
-  /// checks for stale calls in a room and sends `m.terminated` if all the
-  /// expires_ts are expired. Called regularly on sync.
-  Future<void> singleShotStaleCallCheckerOnRoom() async {
-    if (partial) return;
-    await updateFamedlyCallMemberStateEvent(null);
-  }
-
   /// passing no `CallMembership` removes it from the state event.
   Future<void> updateFamedlyCallMemberStateEvent(
-      CallMembership? newCallMembership) async {
+      CallMembership callMembership) async {
     final ownMemberships = getCallMembershipsForUser(client.userID!);
 
     ownMemberships.removeWhere((element) => element.isExpired);
 
-    ownMemberships.removeWhere((e) => e == newCallMembership);
+    ownMemberships.removeWhere((e) => e == callMembership);
 
-    if (newCallMembership != null) {
-      ownMemberships.add(newCallMembership);
-    }
+    ownMemberships.add(callMembership);
 
     final newContent = {
       'memberships': List.from(ownMemberships.map((e) => e.toJson()))
     };
 
-    await client.setRoomStateWithKey(
-      id,
-      famedlyCallMemberEventType,
-      client.userID!,
-      newContent,
-    );
+    await setFamedlyCallMemberEvent(newContent);
+  }
+
+  Future<void> removeExpiredFamedlyCallMemberEvents() async {
+    if (partial) return;
+    final ownMemberships = getCallMembershipsForUser(client.userID!);
+    ownMemberships.removeWhere((element) => element.isExpired);
+
+    final newContent = {
+      'memberships': List.from(ownMemberships.map((e) => e.toJson()))
+    };
+
+    await setFamedlyCallMemberEvent(newContent);
+  }
+
+  Future<void> removeFamedlyCallMemberEvent(
+    String groupCallId,
+    String deviceId, {
+    String? application = 'm.call',
+    String? scope = 'm.room',
+  }) async {
+    final ownMemberships = getCallMembershipsForUser(client.userID!);
+
+    ownMemberships.removeWhere((mem) =>
+        mem.callId == groupCallId &&
+        mem.deviceId == deviceId &&
+        mem.application == application &&
+        mem.scope == scope);
+
+    final newContent = {
+      'memberships': List.from(ownMemberships.map((e) => e.toJson()))
+    };
+
+    await setFamedlyCallMemberEvent(newContent);
+  }
+
+  Future<void> setFamedlyCallMemberEvent(Map<String, List> newContent) async {
+    if (canJoinGroupCall) {
+      await client.setRoomStateWithKey(
+        id,
+        famedlyCallMemberEventType,
+        client.userID!,
+        newContent,
+      );
+    } else {
+      throw Exception(
+          '[VOIP] cannot send $famedlyCallMemberEventType events in room: $id, fix your PLs');
+    }
   }
 }
 
 extension GroupCallClientUtils on Client {
-  // call after sync
+  /// checks for stale calls in a room and sends `m.terminated` if all the
+  /// expires_ts are expired. Called regularly on sync.
   Future<void> singleShotStaleCallChecker() async {
     if (lastStaleCallRun
         .add(FamedlyCallMemberEventsExtension.staleCallCheckerDuration)
         .isBefore(DateTime.now())) {
       await Future.wait(rooms
           .where((r) => r.membership == Membership.join)
-          .map((r) => r.singleShotStaleCallCheckerOnRoom()));
+          .map((r) => r.removeExpiredFamedlyCallMemberEvents()));
     }
   }
 }

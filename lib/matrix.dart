@@ -35,6 +35,7 @@ export 'src/voip/voip.dart';
 export 'src/voip/models/call_events.dart';
 export 'src/voip/models/group_call_events.dart';
 export 'src/voip/models/webrtc_delegate.dart';
+export 'src/voip/models/participant.dart';
 export 'src/voip/utils/conn_tester.dart';
 export 'src/voip/utils/constants.dart';
 export 'src/voip/utils/rtc_candidate_extension.dart';

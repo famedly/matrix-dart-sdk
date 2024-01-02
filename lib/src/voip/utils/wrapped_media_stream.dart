@@ -7,7 +7,7 @@ import 'package:matrix/src/voip/utils/stream_helper.dart';
 /// Wrapped MediaStream, used to adapt Widget to display
 class WrappedMediaStream {
   MediaStream? stream;
-  final String userId;
+  final Participant participant;
   final Room room;
 
   /// Current stream type, usermedia or screen-sharing
@@ -34,7 +34,7 @@ class WrappedMediaStream {
       this.pc,
       required this.renderer,
       required this.room,
-      required this.userId,
+      required this.participant,
       required this.purpose,
       required this.client,
       required this.audioMuted,
@@ -80,11 +80,11 @@ class WrappedMediaStream {
   String? get displayName => getUser().displayName;
 
   User getUser() {
-    return room.unsafeGetUserFromMemoryOrFallback(userId);
+    return room.unsafeGetUserFromMemoryOrFallback(participant.userId);
   }
 
   bool isLocal() {
-    return userId == client.userID;
+    return participant.id == client.userID! + client.deviceID!;
   }
 
   bool isAudioMuted() {

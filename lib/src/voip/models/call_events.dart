@@ -60,12 +60,12 @@ class CallReplaces {
         target_user: CallReplacesTarget.fromJson(json['target_user']),
       );
 
-  Map<String, dynamic> toJson() => {
-        if (replacement_id != null) 'replacement_id': replacement_id,
+  Map<String, Object> toJson() => {
+        if (replacement_id != null) 'replacement_id': replacement_id!,
         if (target_user != null) 'target_user': target_user!.toJson(),
-        if (create_call != null) 'create_call': create_call,
-        if (await_call != null) 'await_call': await_call,
-        if (target_room != null) 'target_room': target_room,
+        if (create_call != null) 'create_call': create_call!,
+        if (await_call != null) 'await_call': await_call!,
+        if (target_room != null) 'target_room': target_room!,
       };
 }
 

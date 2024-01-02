@@ -1,6 +1,4 @@
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/voip/utils/types.dart';
-import 'package:matrix/src/voip/utils/wrapped_media_stream.dart';
 
 class GroupCallError extends Error {
   final String code;

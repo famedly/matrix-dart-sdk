@@ -1,5 +1,4 @@
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/voip/utils/types.dart';
 
 /// Initialization parameters of the call session.
 class CallOptions {
