@@ -166,7 +166,10 @@ class Box<V> {
     txn ??= boxCollection._db.transaction(name, 'readwrite');
     final store = txn.objectStore(name);
     await store.delete(key);
-    _cache.remove(key);
+
+    // Set to null instead remove() so that inside of transactions null is
+    // returned.
+    _cache[key] = null;
     _cachedKeys?.remove(key);
     return;
   }
@@ -183,7 +186,7 @@ class Box<V> {
     final store = txn.objectStore(name);
     for (final key in keys) {
       await store.delete(key);
-      _cache.remove(key);
+      _cache[key] = null;
       _cachedKeys?.remove(key);
     }
     return;

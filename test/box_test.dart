@@ -59,6 +59,18 @@ void main() {
       await box.clear();
     });
 
+    test('Box.delete in transaction', () async {
+      final box = collection.openBox<Map>('cats');
+      await box.put('fluffy', data);
+      await box.put('loki', data2);
+      await collection.transaction(() async {
+        await box.delete('fluffy');
+        expect(await box.get('fluffy'), null);
+      });
+      expect(await box.get('fluffy'), null);
+      await box.clear();
+    });
+
     test('Box.deleteAll', () async {
       final box = collection.openBox<Map>('cats');
       await box.put('fluffy', data);
