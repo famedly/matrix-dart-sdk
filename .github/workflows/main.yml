@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FLUTTER_VERSION:  3.10.6
-  DART_VERSION: 3.0.6
+  FLUTTER_VERSION:  3.16.3
+  DART_VERSION: 3.2.3
 
 jobs:
   # because there is no easy way to pass env variables to jobs
