@@ -329,6 +329,19 @@ class Event extends MatrixEvent {
             room.unsafeGetUserFromMemoryOrFallback(entry.key),
             entry.value.timestamp))
         .toList();
+    if (receipts.mainThread?.otherUsers.entries != null) {
+      receipts.mainThread!.otherUsers.entries
+          .where((entry) => entry.value.eventId == eventId)
+          .forEach((entry) {
+        if (receiptsList
+                .indexWhere((element) => element.user.stateKey == entry.key) ==
+            -1) {
+          receiptsList.add(Receipt(
+              room.unsafeGetUserFromMemoryOrFallback(entry.key),
+              entry.value.timestamp));
+        }
+      });
+    }
 
     final own = receipts.global.latestOwnReceipt;
     if (own != null && own.eventId == eventId) {
