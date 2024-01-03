@@ -37,7 +37,6 @@ typedef OnStartMigrating = Function(int oldVersion, int newVersion);
 
 /// This database does not support file caching!
 class HiveCollectionsDatabase extends DatabaseApi {
-  static const int version = 6;
   final String name;
   final String? path;
   final HiveCipher? key;
@@ -89,6 +88,8 @@ class HiveCollectionsDatabase extends DatabaseApi {
   late CollectionBox<String> _seenDeviceIdsBox;
 
   late CollectionBox<String> _seenDeviceKeysBox;
+
+  int get version => 6;
 
   String get _clientBoxName => 'box_client';
 
