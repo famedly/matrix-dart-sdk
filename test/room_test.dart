@@ -578,7 +578,7 @@ void main() {
     });
 
     test('Enabling group calls', () async {
-      expect(room.groupCallsEnabled, false);
+      expect(room.canJoinGroupCall, false);
 
       // users default is 0 and so group calls not enabled
       room.setState(
@@ -588,7 +588,7 @@ void main() {
           room: room,
           eventId: '123a',
           content: {
-            'events': {EventTypes.GroupCallMemberPrefix: 100},
+            'events': {VoIPEventTypes.FamedlyCallMemberEvent: 100},
             'state_default': 50,
             'users_default': 0
           },
@@ -596,7 +596,7 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.groupCallsEnabled, false);
+      expect(room.canJoinGroupCall, false);
 
       // one of the group call permissions is unspecified in events override
       room.setState(
@@ -606,7 +606,7 @@ void main() {
           room: room,
           eventId: '123a',
           content: {
-            'events': {EventTypes.GroupCallMemberPrefix: 27},
+            'events': {VoIPEventTypes.FamedlyCallMemberEvent: 27},
             'state_default': 50,
             'users_default': 49
           },
@@ -614,29 +614,6 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.groupCallsEnabled, false);
-
-      // only override one of the group calls permission, other one still less
-      // than users_default and state_default
-      room.setState(
-        Event(
-          senderId: '@test:example.com',
-          type: 'm.room.power_levels',
-          room: room,
-          eventId: '123a',
-          content: {
-            'events': {
-              EventTypes.GroupCallMemberPrefix: 27,
-              EventTypes.GroupCallPrefix: 0
-            },
-            'state_default': 50,
-            'users_default': 2
-          },
-          originServerTs: DateTime.now(),
-          stateKey: '',
-        ),
-      );
-      expect(room.groupCallsEnabled, false);
       expect(room.canJoinGroupCall, false);
 
       // state_default 50 and user_default 26, but override evnents present
@@ -648,8 +625,7 @@ void main() {
           eventId: '123a',
           content: {
             'events': {
-              EventTypes.GroupCallMemberPrefix: 25,
-              EventTypes.GroupCallPrefix: 25
+              VoIPEventTypes.FamedlyCallMemberEvent: 25,
             },
             'state_default': 50,
             'users_default': 26
@@ -658,7 +634,6 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.groupCallsEnabled, true);
       expect(room.canJoinGroupCall, true);
 
       // state_default 50 and user_default 0, use enableGroupCall
@@ -676,10 +651,9 @@ void main() {
             originServerTs: DateTime.now(),
             stateKey: ''),
       );
-      expect(room.groupCallsEnabled, false);
       expect(room.canJoinGroupCall, false);
       await room.enableGroupCalls();
-      expect(room.groupCallsEnabled, true);
+      expect(room.canJoinGroupCall, true);
 
       // state_default 50 and user_default unspecified, use enableGroupCall
       room.setState(
@@ -697,7 +671,6 @@ void main() {
         ),
       );
       await room.enableGroupCalls();
-      expect(room.groupCallsEnabled, true);
       expect(room.canJoinGroupCall, true);
 
       // state_default is 0 so users should be able to send state events
@@ -715,7 +688,6 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.groupCallsEnabled, true);
       expect(room.canJoinGroupCall, true);
       room.setState(
         Event(

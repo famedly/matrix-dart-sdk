@@ -10,8 +10,6 @@ import 'package:matrix/src/voip/models/call_membership.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
 import 'package:matrix/src/voip/utils/stream_helper.dart';
 
-final famedlyCallMemberEventType = 'com.famedly.call.member';
-
 /// The parent highlevel voip class, this trnslates matrix events to webrtc methods via
 /// `CallSession` or `GroupCallSession` methods
 class VoIP {
@@ -91,7 +89,7 @@ class VoIP {
     client.onRoomState.stream.listen(
       (event) async {
         if ([
-          famedlyCallMemberEventType,
+          VoIPEventTypes.FamedlyCallMemberEvent,
         ].contains(event.type)) {
           Logs().v('[VOIP] onRoomState: type ${event.toJson()}.');
           await onRoomStateChanged(event);
@@ -275,6 +273,11 @@ class VoIP {
       case EventTypes.CallAssertedIdentity:
         await onAssertedIdentityReceived(roomId, remoteParticipant, content);
         break;
+      case VoIPEventTypes.EncryptionKeysEvent:
+        if (groupCall != null) {
+          await groupCall.onCallEncryption(roomId, remoteParticipant, content);
+          break;
+        }
     }
   }
 
@@ -744,6 +747,7 @@ class VoIP {
   Future<GroupCallSession> _newGroupCall(
     String groupCallId,
     Room room,
+    CallBackend backend,
     String? application,
     String? scope,
   ) async {
@@ -757,6 +761,7 @@ class VoIP {
       client: client,
       room: room,
       voip: this,
+      backend: backend,
       application: application,
       scope: scope,
     );
@@ -777,6 +782,7 @@ class VoIP {
   Future<GroupCallSession> fetchOrCreateGroupCall(
     String groupCallId,
     Room room,
+    CallBackend backend,
     String? application,
     String? scope,
   ) async {
@@ -803,6 +809,7 @@ class VoIP {
       final groupCall = await _newGroupCall(
         groupCallId,
         room,
+        backend,
         application,
         scope,
       );
@@ -838,6 +845,7 @@ class VoIP {
       client: client,
       voip: this,
       room: room,
+      backend: membership.backend,
       groupCallId: membership.roomId,
       application: membership.application,
       scope: membership.scope,
@@ -876,7 +884,7 @@ class VoIP {
       //   Logs().w(
       //       'Multiple group calls detected for room: $roomId. Multiple group calls are currently unsupported.');
       // }
-    } else if (eventType == famedlyCallMemberEventType) {
+    } else if (eventType == VoIPEventTypes.FamedlyCallMemberEvent) {
       final groupCall = groupCalls[roomId];
       if (groupCall == null) {
         return;

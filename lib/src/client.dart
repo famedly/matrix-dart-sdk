@@ -708,7 +708,7 @@ class Client extends MatrixApi {
     if (groupCall) {
       powerLevelContentOverride ??= {};
       powerLevelContentOverride['events'] = <String, dynamic>{
-        famedlyCallMemberEventType: 0,
+        VoIPEventTypes.FamedlyCallMemberEvent: 0,
       };
     }
     final roomId = await createRoom(

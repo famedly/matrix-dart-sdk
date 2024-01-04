@@ -25,6 +25,17 @@ class CallTimeouts {
 
   /// Update the active speaker value
   static const activeSpeakerInterval = Duration(seconds: 5);
+
+  // source: element call?
+  /// A delay after a member leaves before we create and publish a new key, because people
+  /// tend to leave calls at the same time
+  static const makeKeyDelay = Duration(milliseconds: 3000);
+
+  /// The delay between creating and sending a new key and starting to encrypt with it. This gives others
+  /// a chance to receive the new key to minimise the chance they don't get media they can't decrypt.
+  /// The total time between a member leaving and the call switching to new keys is therefore
+  /// makeKeyDelay + useKeyDelay
+  static const useKeyDelay = Duration(milliseconds: 5000);
 }
 
 class CallConstants {

@@ -1858,7 +1858,8 @@ class Room {
         50;
   }
 
-  bool get canJoinGroupCall => canChangeStateEvent(famedlyCallMemberEventType);
+  bool get canJoinGroupCall =>
+      canChangeStateEvent(VoIPEventTypes.FamedlyCallMemberEvent);
 
   /// if returned value is not null `org.matrix.msc3401.call.member` is present
   /// and group calls can be used
@@ -1866,7 +1867,7 @@ class Room {
   bool get groupCallsEnabled {
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
     if (powerLevelMap == null) return false;
-    return powerForChangingStateEvent(famedlyCallMemberEventType) <=
+    return powerForChangingStateEvent(VoIPEventTypes.FamedlyCallMemberEvent) <=
         getDefaultPowerLevel(powerLevelMap);
   }
 
@@ -1880,7 +1881,8 @@ class Room {
       final eventsMap = newPowerLevelMap.tryGetMap<String, Object?>('events') ??
           <String, Object?>{};
       eventsMap.addAll({
-        famedlyCallMemberEventType: getDefaultPowerLevel(currentPowerLevelsMap)
+        VoIPEventTypes.FamedlyCallMemberEvent:
+            getDefaultPowerLevel(currentPowerLevelsMap)
       });
       newPowerLevelMap.addAll({'events': eventsMap});
       await client.setRoomStateWithKey(

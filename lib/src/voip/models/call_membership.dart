@@ -1,5 +1,4 @@
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/voip/models/call_backend.dart';
 
 class FamedlyCallMemberEvent {
   final List<CallMembership> memberships;

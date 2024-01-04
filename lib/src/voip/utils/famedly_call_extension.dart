@@ -6,7 +6,7 @@ extension FamedlyCallMemberEventsExtension on Room {
   Map<String, FamedlyCallMemberEvent> getFamedlyCallEvents() {
     final Map<String, FamedlyCallMemberEvent> mappedEvents = {};
     final famedlyCallMemberStates =
-        states.tryGetMap<String, Event>(famedlyCallMemberEventType);
+        states.tryGetMap<String, Event>(VoIPEventTypes.FamedlyCallMemberEvent);
 
     for (final element in famedlyCallMemberStates?.entries.toList() ?? []) {
       mappedEvents.addAll(
@@ -48,7 +48,8 @@ extension FamedlyCallMemberEventsExtension on Room {
     final roomStates = await client.getRoomState(id);
     roomStates.sort((a, b) => a.originServerTs.compareTo(b.originServerTs));
     return roomStates
-        .where((element) => element.type == famedlyCallMemberEventType)
+        .where(
+            (element) => element.type == VoIPEventTypes.FamedlyCallMemberEvent)
         .toList();
   }
 
@@ -149,13 +150,13 @@ extension FamedlyCallMemberEventsExtension on Room {
     if (canJoinGroupCall) {
       await client.setRoomStateWithKey(
         id,
-        famedlyCallMemberEventType,
+        VoIPEventTypes.FamedlyCallMemberEvent,
         client.userID!,
         newContent,
       );
     } else {
       throw Exception(
-          '[VOIP] cannot send $famedlyCallMemberEventType events in room: $id, fix your PLs');
+          '[VOIP] cannot send $VoIPEventTypes.FamedlyCallMemberEvent events in room: $id, fix your PLs');
     }
   }
 }

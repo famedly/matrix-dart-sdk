@@ -1,3 +1,12 @@
+class VoIPEventTypes {
+  // ignore: constant_identifier_names
+  static const String FamedlyCallMemberEvent = 'com.famedly.call.member';
+  // ignore: constant_identifier_names
+  static const String EncryptionKeysEvent = 'io.element.call.encryption_keys';
+}
+
+enum EncryptionKeyTypes { remote, local }
+
 // Call state
 enum CallState {
   /// The call is inilalized but not yet started

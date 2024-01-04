@@ -6,9 +6,13 @@ abstract class CallBackend {
   factory CallBackend.fromJson(Map<String, Object?> json) {
     final String type = json['type'] as String;
     if (type == 'mesh') {
-      return MeshBackend.fromJson(json);
+      return MeshBackend(type: type);
     } else if (type == 'livekit') {
-      return LiveKit.fromJson(json);
+      return LiveKitBackend(
+        livekitAlias: json['livekit_alias'] as String,
+        livekitServiceUrl: json['livekit_service_url'] as String,
+        type: type,
+      );
     } else {
       throw ArgumentError('Invalid type: $type');
     }
@@ -17,12 +21,8 @@ abstract class CallBackend {
   Map<String, Object?> toJson();
 }
 
-class MeshBackend implements CallBackend {
-  @override
-  String type = 'mesh';
-
-  MeshBackend.fromJson(Map<String, Object?> json)
-      : type = json['type'] as String;
+class MeshBackend extends CallBackend {
+  MeshBackend({super.type = 'mesh'});
 
   @override
   Map<String, Object?> toJson() {
@@ -32,22 +32,22 @@ class MeshBackend implements CallBackend {
   }
 }
 
-class LiveKit implements CallBackend {
-  @override
-  String type = 'livekit';
-
+class LiveKitBackend extends CallBackend {
   final String livekitServiceUrl;
   final String livekitAlias;
 
-  LiveKit.fromJson(Map<String, Object?> json)
-      : type = json['type'] as String,
-        livekitServiceUrl = json['livekit_service_url'] as String,
-        livekitAlias = json['livekit_alias'] as String;
+  LiveKitBackend({
+    required this.livekitServiceUrl,
+    required this.livekitAlias,
+    super.type = 'livekit',
+  });
 
   @override
   Map<String, Object?> toJson() {
     return {
       'type': type,
+      'livekit_service_url': livekitServiceUrl,
+      'livekit_alias': livekitAlias,
     };
   }
 }
