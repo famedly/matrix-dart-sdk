@@ -142,7 +142,6 @@ extension FamedlyCallMemberEventsExtension on Room {
     final newContent = {
       'memberships': List.from(ownMemberships.map((e) => e.toJson()))
     };
-
     await setFamedlyCallMemberEvent(newContent);
   }
 
@@ -168,8 +167,9 @@ extension GroupCallClientUtils on Client {
     if (lastStaleCallRun
         .add(FamedlyCallMemberEventsExtension.staleCallCheckerDuration)
         .isBefore(DateTime.now())) {
+      lastStaleCallRun = DateTime.now();
       await Future.wait(rooms
-          .where((r) => r.membership == Membership.join)
+          .where((r) => r.membership == Membership.join && r.canJoinGroupCall)
           .map((r) => r.removeExpiredFamedlyCallMemberEvents()));
     }
   }
