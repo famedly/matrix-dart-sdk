@@ -26,6 +26,7 @@ import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/utils/client_init_exception.dart';
 import 'fake_client.dart';
 import 'fake_database.dart';
 import 'fake_matrix_api.dart';
@@ -1137,6 +1138,41 @@ void main() {
               null,
           true,
           reason: '!5345234235:example.com not found as archived room');
+    });
+
+    test('Client Init Exception', () async {
+      try {
+        await olm.init();
+        olm.get_library_version();
+      } catch (e) {
+        olmEnabled = false;
+        Logs().w('[LibOlm] Failed to load LibOlm', e);
+      }
+      Logs().w('[LibOlm] Enabled: $olmEnabled');
+      if (!olmEnabled) return;
+      final customClient = Client(
+        'failclient',
+        databaseBuilder: getMatrixSdkDatabase,
+      );
+      try {
+        await customClient.init(
+          newToken: 'testtoken',
+          newDeviceID: 'testdeviceid',
+          newDeviceName: 'testdevicename',
+          newHomeserver: Uri.parse('https://test.server'),
+          newOlmAccount: 'abcd',
+          newUserID: '@user:server',
+        );
+        throw Exception('No exception?');
+      } on ClientInitException catch (error) {
+        expect(error.accessToken, 'testtoken');
+        expect(error.deviceId, 'testdeviceid');
+        expect(error.deviceName, 'testdevicename');
+        expect(error.homeserver, Uri.parse('https://test.server'));
+        expect(error.olmAccount, 'abcd');
+        expect(error.userId, '@user:server');
+        expect(error.toString(), 'Exception: BAD_ACCOUNT_KEY');
+      }
     });
 
     tearDown(() async {
