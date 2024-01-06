@@ -1136,7 +1136,7 @@ class GroupCallSession {
   }
 
   Future<void> makeNewSenderKey(bool delayBeforeUse) async {
-    final encryptionKey = secureRandomBytes(16).toString();
+    final encryptionKey = base64Encode(secureRandomBytes(16));
     final encryptionKeyIndex = getNewEncryptionKeyIndex();
     Logs().i('Generated new key at index $encryptionKeyIndex');
 
