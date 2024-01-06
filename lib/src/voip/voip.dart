@@ -27,6 +27,8 @@ abstract class WebRTCDelegate {
   /// state. If another room tries to call you during a connected call this fires
   /// a handleMissedCall
   bool get canHandleNewCall => true;
+
+  EncryptionKeyProvider? get keyProvider;
 }
 
 class VoIP {
@@ -83,7 +85,18 @@ class VoIP {
         (event) => _handleEvent(event, onSDPStreamMetadataChangedReceived));
     client.onAssertedIdentityReceived.stream
         .listen((event) => _handleEvent(event, onAssertedIdentityReceived));
+    client.onEncryptionKeysReceived.stream.listen((event) {
+      final EncryptionKeysEventContent content =
+          EncryptionKeysEventContent.fromJson(event.content);
 
+      /// forwards the event to the sframe key provider.
+      final participantId = '${event.senderId}:${content.deviceId}';
+      for (final key in content.keys) {
+        Logs().v('[VOIP] onSFrameKeysReceived => ${key.toJson()}');
+        delegate.keyProvider
+            ?.onSetEncryptionKey(participantId, key.key, key.index);
+      }
+    });
     client.onRoomState.stream.listen(
       (event) async {
         if ([
@@ -610,6 +623,13 @@ class VoIP {
     return call;
   }
 
+  Future<void> onTimeLineUpdate(String groupCallId) async {
+    final groupCall = groupCalls[groupCallId];
+    if (groupCall != null) {
+      await groupCall.onTimeLineUpdate();
+    }
+  }
+
   /// Create a new group call in an existing room.
   ///
   /// [roomId] The room id to call
@@ -628,6 +648,18 @@ class VoIP {
       Logs().v('[VOIP] Invalid room id [$roomId].');
       return null;
     }
+
+    final groupCallId = genCallID();
+
+    final Timeline timeline = await room.getTimeline(
+      onUpdate: () async {
+        await onTimeLineUpdate(groupCallId);
+      },
+      onNewEvent: () async {
+        await onTimeLineUpdate(groupCallId);
+      },
+    );
+
     final groupId = genCallID();
     final groupCall = await GroupCall(
       groupCallId: groupId,
@@ -636,8 +668,11 @@ class VoIP {
       room: room,
       type: type,
       intent: intent,
+      timeLine: timeline,
+      useLivekit: client.useLivekitForGroupCalls,
+      livekitServiceURL: client.livekitServiceURL,
     ).create();
-    groupCalls[groupId] = groupCall;
+    groupCalls[groupCallId] = groupCall;
     groupCalls[roomId] = groupCall;
     return groupCall;
   }
@@ -763,6 +798,15 @@ class VoIP {
       return null;
     }
 
+    final Timeline timeline = await room.getTimeline(
+      onUpdate: () async {
+        await onTimeLineUpdate(groupCallId!);
+      },
+      onNewEvent: () async {
+        await onTimeLineUpdate(groupCallId!);
+      },
+    );
+
     final groupCall = GroupCall(
       client: client,
       voip: this,
@@ -770,6 +814,10 @@ class VoIP {
       groupCallId: groupCallId,
       type: callType,
       intent: callIntent,
+      timeLine: timeline,
+      useLivekit: client.useLivekitForGroupCalls,
+      livekitServiceURL:
+          content.tryGet<String>('io.element.livekit_service_url'),
     );
 
     groupCalls[groupCallId!] = groupCall;
