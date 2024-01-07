@@ -4,11 +4,11 @@ class Participant {
 
   Participant({required this.userId, required this.deviceId});
 
-  String get id => userId + deviceId;
+  String get id => '$userId:$deviceId';
 
   @override
   String toString() {
-    return userId + deviceId;
+    return id;
   }
 
   @override
