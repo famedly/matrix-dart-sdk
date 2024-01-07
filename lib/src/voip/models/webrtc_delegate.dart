@@ -1,7 +1,6 @@
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/voip/models/key_provider.dart';
 
 /// Delegate WebRTC basic functionality.
 abstract class WebRTCDelegate {

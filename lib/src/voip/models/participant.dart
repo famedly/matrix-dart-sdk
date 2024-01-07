@@ -21,4 +21,14 @@ class Participant {
 
   @override
   int get hashCode => userId.hashCode ^ deviceId.hashCode;
+
+  factory Participant.fromJson(Map<String, dynamic> json) => Participant(
+        userId: json['userId'] as String,
+        deviceId: json['deviceId'] as String,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'userId': userId,
+        'deviceId': deviceId,
+      };
 }

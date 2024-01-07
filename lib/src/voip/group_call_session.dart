@@ -29,7 +29,6 @@ import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/voip/models/call_membership.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
-import 'package:matrix/src/voip/models/key_provider.dart';
 import 'package:matrix/src/voip/utils/stream_helper.dart';
 
 /// Holds methods for managing a group call. This class is also responsible for
@@ -618,7 +617,7 @@ class GroupCallSession {
 
     for (final mem in memsForCurrentGroupCall) {
       Logs().e(
-          '[VOIP] onMemberStateChanged, handling mem ${mem.userId + mem.deviceId}');
+          '[VOIP] onMemberStateChanged, handling mem ${mem.userId}:${mem.deviceId}');
       final rp = Participant(userId: mem.userId, deviceId: mem.deviceId);
       // TODO: check why a member refresh won't send a new invite
       if (mem.isExpired) {
@@ -667,7 +666,7 @@ class GroupCallSession {
 
       if (mem.userId == client.userID! && mem.deviceId == client.deviceID!) {
         Logs().e(
-            '[VOIP] onMemberStateChanged Not updating participants list, looks like our own user and device');
+            '[VOIP] onMemberStateChanged ${mem.userId}:${mem.deviceId} Not updating participants list, looks like our own user and device');
         continue;
       }
 
@@ -1090,6 +1089,8 @@ class GroupCallSession {
   }
 
   Future<void> _addParticipant(Participant participant) async {
+    await sendEncryptionKeysEvent();
+
     if (participants.contains(participant)) return;
 
     participants.add(participant);
@@ -1202,6 +1203,7 @@ class GroupCallSession {
       final keyContent = EncryptionKeysEventContent(
         keys,
         groupCallId,
+        localParticipant,
       );
       final txid = VoIP.customTxid ?? client.generateUniqueTransactionId();
       final mustEncrypt = room.encrypted && client.encryptionEnabled;

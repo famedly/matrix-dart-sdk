@@ -32,7 +32,8 @@ class EncryptionKeysEventContent {
   // Get the participant info from todevice message params
   final List<EncryptionKeyEntry> keys;
   final String callId;
-  EncryptionKeysEventContent(this.keys, this.callId);
+  final Participant participant;
+  EncryptionKeysEventContent(this.keys, this.callId, this.participant);
 
   factory EncryptionKeysEventContent.fromJson(Map<String, dynamic> json) =>
       EncryptionKeysEventContent(
@@ -40,10 +41,12 @@ class EncryptionKeysEventContent {
             .map((e) => EncryptionKeyEntry.fromJson(e as Map<String, dynamic>))
             .toList(),
         json['call_id'] as String,
+        Participant.fromJson(json['participant'] as Map<String, dynamic>),
       );
 
   Map<String, dynamic> toJson() => {
         'keys': keys.map((e) => e.toJson()).toList(),
         'call_id': callId,
+        'participant': participant.toJson(),
       };
 }

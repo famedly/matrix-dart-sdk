@@ -97,6 +97,13 @@ class VoIP {
       },
     );
 
+    client.onToDeviceEvent.stream.listen((event) async {
+      if (event.type == VoIPEventTypes.EncryptionKeysEvent) {
+        Logs().v('[VOIP] onToDeviceEvent: type ${event.toJson()}.');
+        await _callStreamByCallEvent(event);
+      }
+    });
+
     // client.onToDeviceEventChunk.stream.listen((events) async {
     //   final callEvents = <Event>{};
     //   Logs().v('[VOIP] onToDeviceEvent: type ${event.toJson()}.');
@@ -203,7 +210,9 @@ class VoIP {
   Future<void> _callStreamByCallEvent(BasicEventWithSender event) async {
     Logs().v('[VOIP] Handling event: content ${event.content}.');
     final String roomId;
-    final confId = event.content['conf_id'];
+    final confId = event is ToDeviceEvent
+        ? event.content['call_id']
+        : event.content['conf_id'];
     final groupCall = groupCalls[confId];
     if (event is Event) {
       roomId = event.room.id;
@@ -229,10 +238,15 @@ class VoIP {
     /// does calls between userIds, we use partyId as a deviceId here. It is very
     /// important that you partyId is set to the sender device id for this to work
     /// As of Jan 2024 both dart sdk and element do this so it's probably fine.
-    final remoteParticipant = Participant(
+    var remoteParticipant = Participant(
       userId: senderId,
       deviceId: event.content['party_id'].toString(),
     );
+
+    if (event is ToDeviceEvent) {
+      final content = EncryptionKeysEventContent.fromJson(event.content);
+      remoteParticipant = content.participant;
+    }
 
     if (remoteParticipant == localParticipant) {
       Logs().d(
