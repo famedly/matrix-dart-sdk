@@ -2,6 +2,7 @@ import 'package:test/test.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/voip/models/call_options.dart';
 import 'fake_client.dart';
 import 'webrtc_stub.dart';
 
@@ -21,8 +22,19 @@ void main() {
     });
 
     test('Test call methods', () async {
-      final call = CallSession(CallOptions()..room = room);
-      await call.sendInviteToCall(room, '1234', 1234, '4567', '7890', 'sdp',
+      final call = CallSession(
+        CallOptions(
+          callId: '1234',
+          type: CallType.kVoice,
+          dir: CallDirection.kOutgoing,
+          localPartyId: '4567',
+          voip: voip,
+          room: room,
+          iceServers: [],
+        ),
+      );
+      await call.sendInviteToCall(
+          room, '1234', 1234, '4567', 'inviteeUserId', 'inviteeDeviceId', 'sdp',
           txid: '1234');
       await call.sendAnswerCall(room, '1234', 'sdp', '4567', txid: '1234');
       await call.sendCallCandidates(room, '1234', '4567', [], txid: '1234');
@@ -386,7 +398,11 @@ void main() {
 
     test('Glare after invite was sent', () async {
       expect(voip.currentCID, null);
-      final firstCall = await voip.inviteToCall(room.id, CallType.kVoice);
+      final firstCall = await voip.inviteToCall(
+        room.id,
+        CallType.kVoice,
+        '@alice:testing.com',
+      );
       await firstCall.pc!.onRenegotiationNeeded!.call();
       expect(firstCall.state, CallState.kInviteSent);
       // KABOOM YOU JUST GLARED
@@ -417,7 +433,11 @@ void main() {
     });
     test('Glare before invite was sent', () async {
       expect(voip.currentCID, null);
-      final firstCall = await voip.inviteToCall(room.id, CallType.kVoice);
+      final firstCall = await voip.inviteToCall(
+        room.id,
+        CallType.kVoice,
+        '@alice:testing.com',
+      );
       expect(firstCall.state, CallState.kCreateOffer);
       // KABOOM YOU JUST GLARED, but this tiem you were still preparing your call
       // so just cancel that instead

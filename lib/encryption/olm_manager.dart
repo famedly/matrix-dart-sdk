@@ -559,6 +559,8 @@ class OlmManager {
         DateTime.now()
             .subtract(Duration(hours: 1))
             .isBefore(_restoredOlmSessionsTime[mapKey]!)) {
+      Logs().w(
+          '[OlmManager] Skipping restore session, one was restored in the past hour');
       return;
     }
     _restoredOlmSessionsTime[mapKey] = DateTime.now();
@@ -734,7 +736,7 @@ class OlmManager {
 
   Future<void> handleToDeviceEvent(ToDeviceEvent event) async {
     if (event.type == EventTypes.Dummy) {
-      // We receive dan encrypted m.dummy. This means that the other end was not able to
+      // We received an encrypted m.dummy. This means that the other end was not able to
       // decrypt our last message. So, we re-send it.
       final encryptedContent = event.encryptedContent;
       if (encryptedContent == null || encryption.olmDatabase == null) {
