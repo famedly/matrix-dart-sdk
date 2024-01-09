@@ -2,8 +2,8 @@ name: matrix_api_lite
 description: Dead simple data model for the matrix.org client-server API.
 version: 1.7.2
 homepage: https://famedly.com
-repository: https://gitlab.com/famedly/company/frontend/libraries/matrix_api_lite/
-issues: https://gitlab.com/famedly/company/frontend/libraries/matrix_api_lite/-/issues
+repository: https://github.com/famedly/dart_matrix_api_lite
+issues: https://github.com/famedly/dart_matrix_api_lite/issues
 
 environment:
   sdk: ">=2.17.0 <4.0.0"
@@ -19,8 +19,6 @@ dev_dependencies:
   import_sorter: ^4.6.0
   lints: ^2.0.0
   test: ^1.14.4
-
-dependency_overrides:
-# uncomment for local development
-#  matrix:
-#    path: '../famedlysdk'
+# dependency_overrides: # uncomment for local development
+#   matrix:
+#     path: "../matrix-dart-sdk"
