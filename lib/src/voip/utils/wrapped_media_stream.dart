@@ -52,6 +52,9 @@ class WrappedMediaStream {
     };
   }
 
+  Participant get localParticipant =>
+      Participant(userId: client.userID!, deviceId: client.deviceID!);
+
   Future<void> dispose() async {
     renderer.srcObject = null;
 
@@ -84,7 +87,7 @@ class WrappedMediaStream {
   }
 
   bool isLocal() {
-    return participant.id == client.userID! + client.deviceID!;
+    return participant == localParticipant;
   }
 
   bool isAudioMuted() {

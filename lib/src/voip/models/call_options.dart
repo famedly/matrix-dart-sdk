@@ -5,6 +5,8 @@ class CallOptions {
   final String callId;
   final CallType type;
   final CallDirection dir;
+
+  /// client.deviceID
   final String localPartyId;
   final VoIP voip;
   final Room room;

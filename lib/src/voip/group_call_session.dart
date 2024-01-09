@@ -57,8 +57,7 @@ class GroupCallSession {
   String? localDesktopCapturerSourceId;
   List<CallSession> callSessions = [];
 
-  Participant get localParticipant =>
-      Participant(userId: client.userID!, deviceId: client.deviceID!);
+  Participant get localParticipant => voip.localParticipant;
 
   /// userId:deviceId
   List<Participant> participants = [];
@@ -73,6 +72,7 @@ class GroupCallSession {
   Timer? activeSpeakerLoopTimeout;
 
   Timer? resendMemberStateEventTimer;
+  Timer? memberLeaveEncKeyRotateDebounceTimer;
 
   final CachedStreamController<GroupCallSession> onGroupCallFeedsChanged =
       CachedStreamController();
@@ -289,7 +289,6 @@ class GroupCallSession {
 
     if (isLivekitCall) {
       await makeNewSenderKey(false);
-      await sendEncryptionKeysEvent();
     } else {
       onActiveSpeakerLoop();
     }
@@ -334,6 +333,8 @@ class GroupCallSession {
     participants.clear();
     voip.groupCalls.remove(groupCallId);
     await voip.delegate.handleGroupCallEnded(this);
+    resendMemberStateEventTimer?.cancel();
+    memberLeaveEncKeyRotateDebounceTimer?.cancel();
     setState(GroupCallState.Ended);
   }
 
@@ -529,8 +530,10 @@ class GroupCallSession {
     }
     resendMemberStateEventTimer = Timer.periodic(
         CallTimeouts.updateExpireTsTimerDuration, ((timer) async {
-      Logs().d('updating member event with timer');
-      return await sendMemberStateEvent();
+      Logs().d('sendMemberStateEvent updating member event with timer');
+      if (state == GroupCallState.Ended) {
+        await sendMemberStateEvent();
+      }
     }));
   }
 
@@ -664,16 +667,24 @@ class GroupCallSession {
 
       // await _addParticipant(user);
 
+      if (isLivekitCall) {
+        Logs().w(
+            '[VOIP] onMemberStateChanged deteceted livekit call, skipping native webrtc stuff for member update');
+        continue;
+      }
+
+      if (state != GroupCallState.Entered) {
+        Logs().w(
+            '[VOIP] onMemberStateChanged groupCall state is currently $state, skipping member update');
+        continue;
+      }
+
       if (mem.userId == client.userID! && mem.deviceId == client.deviceID!) {
         Logs().e(
             '[VOIP] onMemberStateChanged ${mem.userId}:${mem.deviceId} Not updating participants list, looks like our own user and device');
         continue;
       }
 
-      if (state != GroupCallState.Entered || isLivekitCall) {
-        Logs().d('[VOIP] group call state is currently $state');
-        return;
-      }
       // Only initiate a call with a participant who has a id that is lexicographically
       // less than your own. Otherwise, that user will call you.
       if (localParticipant.id.compareTo(rp.id) > 0) {
@@ -1089,21 +1100,21 @@ class GroupCallSession {
   }
 
   Future<void> _addParticipant(Participant participant) async {
-    await sendEncryptionKeysEvent();
-
     if (participants.contains(participant)) return;
 
     participants.add(participant);
 
     onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
 
-    final callsCopylist = List<CallSession>.from(callSessions);
+    // final callsCopylist = List<CallSession>.from(callSessions);
 
-    for (final call in callsCopylist) {
-      await call.updateMuteStatus();
-    }
+    // for (final call in callsCopylist) {
+    //   await call.updateMuteStatus();
+    // }
     Logs().d(
         '[VOIP] participant added, current list: ${participants.map((e) => e.id).toString()}');
+    // yes reuse the same key because why not?
+    await sendEncryptionKeysEvent(remoteParticipants: [participant]);
   }
 
   Future<void> _removeParticipant(Participant participant) async {
@@ -1113,14 +1124,23 @@ class GroupCallSession {
 
     onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
 
-    final callsCopylist = List<CallSession>.from(callSessions);
+    // final callsCopylist = List<CallSession>.from(callSessions);
 
-    for (final call in callsCopylist) {
-      await call.updateMuteStatus();
-    }
+    // for (final call in callsCopylist) {
+    //   await call.updateMuteStatus();
+    // }
 
     Logs().d(
         '[VOIP] participant removed, current list: ${participants.map((e) => e.id).toString()}');
+    // debounce it because people leave at the same time
+
+    if (memberLeaveEncKeyRotateDebounceTimer != null) {
+      memberLeaveEncKeyRotateDebounceTimer!.cancel();
+    }
+    memberLeaveEncKeyRotateDebounceTimer =
+        Timer(CallTimeouts.makeKeyDelay, () async {
+      await makeNewSenderKey(true);
+    });
   }
 
   /// participant:keyIndex:keyBin
@@ -1136,22 +1156,27 @@ class GroupCallSession {
     return (getKeysForParticipant(localParticipant)?.length ?? 0) % 16;
   }
 
-  Future<void> makeNewSenderKey(bool delayBeforeUse) async {
+  /// makes a new e2ee key for local user and sets it with a delay if specified
+  Future<void> makeNewSenderKey(bool delayBeforeUsingKeyOurself) async {
     final encryptionKey = base64Encode(secureRandomBytes(16));
     final encryptionKeyIndex = getNewEncryptionKeyIndex();
     Logs().i('Generated new key at index $encryptionKeyIndex');
 
-    await setEncryptionKey(
+    await _setEncryptionKey(
       localParticipant,
       encryptionKeyIndex,
       encryptionKey,
-      delayBeforeuse: delayBeforeUse,
+      delayBeforeUsingKeyOurself: delayBeforeUsingKeyOurself,
     );
+
+    // we are about to set new keys for ourselves, time to update the users about it
+    await sendEncryptionKeysEvent();
   }
 
-  Future<void> setEncryptionKey(Participant participant, int encryptionKeyIndex,
-      String encryptionKeyString,
-      {bool delayBeforeuse = false}) async {
+  /// sets incoming keys and also sends the key if it was for the local user
+  Future<void> _setEncryptionKey(Participant participant,
+      int encryptionKeyIndex, String encryptionKeyString,
+      {bool delayBeforeUsingKeyOurself = false}) async {
     final keyBin = base64Decode(encryptionKeyString);
 
     final encryptionKeys = encryptionKeysMap[participant] ?? <int, Uint8List>{};
@@ -1166,13 +1191,12 @@ class GroupCallSession {
 
     encryptionKeysMap[participant] = encryptionKeys;
 
-    if (delayBeforeuse) {
-      final useKeyTimeout =
-          Timer.periodic(CallTimeouts.useKeyDelay, (Timer timer) async {
-        setNewKeyTimeouts.remove(timer);
-        timer.cancel();
+    if (delayBeforeUsingKeyOurself) {
+      // now wait for the key to propogate and then set it, hopefully users can
+      // stil decrypt everything
+      final useKeyTimeout = Timer(CallTimeouts.useKeyDelay, () async {
         Logs().i(
-            'Delayed-emitting key changed event for ${participant.id} idx $encryptionKeyIndex');
+            'Delayed-emitting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyString');
         await voip.delegate.keyProvider?.onSetEncryptionKey(
             participant, encryptionKeyString, encryptionKeyIndex);
       });
@@ -1183,11 +1207,15 @@ class GroupCallSession {
     }
   }
 
-  Future<void> sendEncryptionKeysEvent() async {
+  /// sends the enc key to the devices using todevice, passing a list of
+  /// remoteParticipants only sends events to them
+  Future<void> sendEncryptionKeysEvent(
+      {List<Participant>? remoteParticipants}) async {
     Logs().i('Sending encryption keys event');
 
     final myKeys = getKeysForParticipant(localParticipant);
-
+    final sendKeysTo =
+        remoteParticipants ?? participants.where((p) => p != localParticipant);
     if (myKeys == null) {
       Logs().w('Tried to send encryption keys event but no keys found!');
       return;
@@ -1197,37 +1225,44 @@ class GroupCallSession {
       final List<EncryptionKeyEntry> keys = [];
       for (int i = 0; i < myKeys.length; i++) {
         if (myKeys[i] != null) {
-          keys.add(EncryptionKeyEntry(i, base64UrlEncode(myKeys[i]!)));
+          keys.add(EncryptionKeyEntry(i, base64Encode(myKeys[i]!)));
         }
       }
       final keyContent = EncryptionKeysEventContent(
         keys,
         groupCallId,
-        localParticipant,
       );
       final txid = VoIP.customTxid ?? client.generateUniqueTransactionId();
       final mustEncrypt = room.encrypted && client.encryptionEnabled;
 
-      for (final participant in participants) {
+      for (final participant in remoteParticipants ?? sendKeysTo) {
+        final Map<String, Object> data = {
+          ...keyContent.toJson(),
+          // used to find group call in groupCalls when ToDeviceEvent happens,
+          // plays nicely with backwards compatibility for mesh calls
+          'conf_id': groupCallId,
+          'party_id': client.deviceID!,
+        };
         if (mustEncrypt) {
           await client.sendToDeviceEncrypted([
             client.userDeviceKeys[participant.userId]!
                 .deviceKeys[participant.deviceId]!
-          ], VoIPEventTypes.EncryptionKeysEvent, keyContent.toJson());
+          ], VoIPEventTypes.EncryptionKeysEvent, data);
         } else {
           await client.sendToDevice(
             VoIPEventTypes.EncryptionKeysEvent,
             txid,
             {
-              participant.userId: {participant.deviceId: keyContent.toJson()}
+              participant.userId: {participant.deviceId: data}
             },
           );
         }
-        Logs().d(
-            'E2EE: updateEncryptionKeyEvent participantId=${participant.id} numSent=${myKeys.length}');
+        Logs().i(
+            'E2EE: updateEncryptionKeyEvent participantId=${participant.id} numSent=${myKeys.length} data=$data');
       }
-    } catch (error) {
-      // TODO: resend keys.
+    } catch (e, s) {
+      Logs().e('Failed to send e2ee keys, retrying', e, s);
+      await sendEncryptionKeysEvent(remoteParticipants: remoteParticipants);
     }
   }
 
@@ -1246,9 +1281,9 @@ class GroupCallSession {
     for (final key in keyContent.keys) {
       final encryptionKey = key.key;
       final encryptionKeyIndex = key.index;
-      Logs().d(
-          'E2EE: onCallEncryption ${remoteParticipant.id} encryptionKeyIndex=$encryptionKeyIndex');
-      await setEncryptionKey(
+      Logs().i(
+          'E2EE: onCallEncryption, got key from ${remoteParticipant.id} encryptionKeyIndex=$encryptionKeyIndex key=$encryptionKey');
+      await _setEncryptionKey(
           remoteParticipant, encryptionKeyIndex, encryptionKey);
     }
   }

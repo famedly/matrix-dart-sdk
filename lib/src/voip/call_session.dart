@@ -79,8 +79,7 @@ class CallSession {
   String? opponentDeviceId;
 
   /// The local participant in the call, with id userId + deviceId
-  Participant get localParticipant =>
-      Participant(userId: client.userID!, deviceId: client.deviceID!);
+  Participant get localParticipant => voip.localParticipant;
 
   /// The remote participant in the call, with id userId + deviceId
   ///
