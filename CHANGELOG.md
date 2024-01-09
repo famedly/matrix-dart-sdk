@@ -1,3 +1,6 @@
+## [1.7.3] - 9th Jan 2023
+Mark package as discontinued.
+
 ## [1.7.2] - 4th Oct 2023
 
 - chore: add general and publish ci (td)
