@@ -257,7 +257,7 @@ String markdown(
   ret = ret
       .trim()
       // Remove trailing linebreaks
-      .replaceAll(RegExp(r'(<br />)+$'), '');
+      .replaceAll(RegExp(r'(<br/>)+$'), '');
   if (convertLinebreaks) {
     // Only convert linebreaks which are not in <pre> blocks
     ret = ret.convertLinebreaksToBr();
