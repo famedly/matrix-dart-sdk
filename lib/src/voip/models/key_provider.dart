@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:matrix/matrix.dart';
 
 enum E2EEKeyMode {
@@ -9,6 +11,10 @@ enum E2EEKeyMode {
 abstract class EncryptionKeyProvider {
   Future<void> onSetEncryptionKey(
       Participant participant, String key, int index);
+
+  Future<Uint8List> onRatchetKey(Participant participant, int index);
+
+  Future<Uint8List> onExportKey(Participant participant, int index);
 }
 
 class EncryptionKeyEntry {
