@@ -35,10 +35,16 @@ extension FamedlyCallMemberEventsExtension on Room {
   /// returns a list of memberships from a famedly call matrix event
   List<CallMembership> getCallMembershipsFromEvent(MatrixEvent event) {
     if (event.roomId != id) return [];
-    final mems = event.content.tryGetList('memberships');
+    return getCallMembershipsFromEventContent(
+        event.content, event.senderId, event.roomId!);
+  }
+
+  /// returns a list of memberships from a famedly call matrix event
+  List<CallMembership> getCallMembershipsFromEventContent(
+      Map<String, Object?> content, String senderId, String roomId) {
+    final mems = content.tryGetList('memberships');
     return mems
-            ?.map((e) =>
-                CallMembership.fromJson(e, event.senderId, event.roomId!))
+            ?.map((e) => CallMembership.fromJson(e, senderId, roomId))
             .toList() ??
         [];
   }

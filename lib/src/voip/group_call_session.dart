@@ -612,11 +612,19 @@ class GroupCallSession {
   Future<void> onMemberStateChanged(MatrixEvent event) async {
     // The member events may be received for another room, which we will ignore.
     final mems = room.getCallMembershipsFromEvent(event);
-
     final memsForCurrentGroupCall = mems.where((element) {
       return element.callId == groupCallId &&
           element.roomId == room.id; // sanity checks
     }).toList();
+
+    if (memsForCurrentGroupCall.isEmpty &&
+        participants
+            .where((element) => element.userId == event.senderId)
+            .isNotEmpty) {
+      // someone just made their mem list empty, remove them from participants list
+      // only place where we manually update participants
+      participants.removeWhere((element) => element.userId == event.senderId);
+    }
 
     for (final mem in memsForCurrentGroupCall) {
       Logs().e(
@@ -1217,7 +1225,8 @@ class GroupCallSession {
     final sendKeysTo =
         remoteParticipants ?? participants.where((p) => p != localParticipant);
     if (myKeys == null) {
-      Logs().w('Tried to send encryption keys event but no keys found!');
+      Logs().w(
+          '[VOIP] sendEncryptionKeysEvent Tried to send encryption keys event but no keys found!');
       return;
     }
 
@@ -1244,10 +1253,18 @@ class GroupCallSession {
           'party_id': client.deviceID!,
         };
         if (mustEncrypt) {
-          await client.sendToDeviceEncrypted([
-            client.userDeviceKeys[participant.userId]!
-                .deviceKeys[participant.deviceId]!
-          ], VoIPEventTypes.EncryptionKeysEvent, data);
+          await client.userDeviceKeysLoading;
+          if (client.userDeviceKeys[participant.userId]
+                  ?.deviceKeys[participant.deviceId] !=
+              null) {
+            await client.sendToDeviceEncrypted([
+              client.userDeviceKeys[participant.userId]!
+                  .deviceKeys[participant.deviceId]!
+            ], VoIPEventTypes.EncryptionKeysEvent, data);
+          } else {
+            Logs().w(
+                '[VOIP] sendEncryptionKeysEvent missing device keys for ${participant.id}');
+          }
         } else {
           await client.sendToDevice(
             VoIPEventTypes.EncryptionKeysEvent,

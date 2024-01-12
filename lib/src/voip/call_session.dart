@@ -1737,10 +1737,18 @@ class CallSession {
       };
 
       if (mustEncrypt) {
-        await client.sendToDeviceEncrypted([
-          client.userDeviceKeys[inviteeUserId ?? remoteParticipant!.userId]!
-              .deviceKeys[opponentDeviceId]!
-        ], type, data);
+        await client.userDeviceKeysLoading;
+        if (client.userDeviceKeys[inviteeUserId ?? remoteParticipant!.userId]
+                ?.deviceKeys[opponentDeviceId] !=
+            null) {
+          await client.sendToDeviceEncrypted([
+            client.userDeviceKeys[inviteeUserId ?? remoteParticipant!.userId]!
+                .deviceKeys[opponentDeviceId]!
+          ], VoIPEventTypes.EncryptionKeysEvent, data);
+        } else {
+          Logs().w(
+              '[VOIP] _sendContent missing device keys for ${inviteeUserId ?? remoteParticipant!.userId}');
+        }
       } else {
         await client.sendToDevice(
           type,
