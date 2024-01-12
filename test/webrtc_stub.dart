@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
-import 'package:matrix/src/voip/models/key_provider.dart';
 
 class MockWebRTCDelegate implements WebRTCDelegate {
   @override
@@ -72,6 +71,18 @@ class MockEncryptionKeyProvider implements EncryptionKeyProvider {
   Future<void> onSetEncryptionKey(
       Participant participant, String key, int index) async {
     Logs().i('Mock onSetEncryptionKey called for ${participant.id} ');
+  }
+
+  @override
+  Future<Uint8List> onExportKey(Participant participant, int index) {
+    // TODO: implement onExportKey
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Uint8List> onRatchetKey(Participant participant, int index) {
+    // TODO: implement onRatchetKey
+    throw UnimplementedError();
   }
 }
 
