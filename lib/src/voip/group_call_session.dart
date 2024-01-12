@@ -531,8 +531,11 @@ class GroupCallSession {
     resendMemberStateEventTimer = Timer.periodic(
         CallTimeouts.updateExpireTsTimerDuration, ((timer) async {
       Logs().d('sendMemberStateEvent updating member event with timer');
-      if (state == GroupCallState.Ended) {
+      if (state != GroupCallState.Ended ||
+          state != GroupCallState.LocalCallFeedUninitialized) {
         await sendMemberStateEvent();
+      } else {
+        await removeMemberStateEvent();
       }
     }));
   }
