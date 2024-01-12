@@ -274,13 +274,12 @@ class VoIP {
         await onAssertedIdentityReceived(roomId, remoteParticipant, content);
         break;
       case VoIPEventTypes.EncryptionKeysEvent:
-        if (groupCall != null) {
-          await groupCall.onCallEncryption(roomId, remoteParticipant, content);
-          break;
-        } else {
-          Logs().w(
-              '[VOIP] got enrcryption keys but found no group call with id: $confId');
-        }
+        await groupCall!.onCallEncryption(roomId, remoteParticipant, content);
+        break;
+      case VoIPEventTypes.RequestEncryptionKeysEvent:
+        await groupCall!
+            .onCallEncryptionKeyRequest(roomId, remoteParticipant, content);
+        break;
     }
   }
 

@@ -1,3 +1,5 @@
+import 'package:matrix/matrix.dart';
+
 class Participant {
   final String userId;
   final String deviceId;
@@ -22,12 +24,16 @@ class Participant {
   int get hashCode => userId.hashCode ^ deviceId.hashCode;
 
   factory Participant.fromId(String id) {
-    final List<String> parts = id.split(':');
-    if (parts.length == 2) {
-      return Participant(userId: parts[0], deviceId: parts[1]);
-    } else {
-      throw FormatException('Invalid format: $id. Use "userId:deviceId"');
+    final int lastIndex = id.lastIndexOf(':');
+    final userId = id.substring(0, lastIndex);
+    final deviceId = id.substring(lastIndex + 1);
+    if (!userId.isValidMatrixId) {
+      throw FormatException('[Participant] $userId is not a valid matrixId');
     }
+    return Participant(
+      userId: userId,
+      deviceId: deviceId,
+    );
   }
 
   factory Participant.fromJson(Map<String, dynamic> json) => Participant(

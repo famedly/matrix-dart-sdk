@@ -1171,7 +1171,7 @@ class GroupCallSession {
   Future<void> makeNewSenderKey(bool delayBeforeUsingKeyOurself) async {
     final encryptionKey = base64Encode(secureRandomBytes(16));
     final encryptionKeyIndex = getNewEncryptionKeyIndex();
-    Logs().i('Generated new key at index $encryptionKeyIndex');
+    Logs().i('[VOIP E2EE] Generated new key at index $encryptionKeyIndex');
 
     await _setEncryptionKey(
       localParticipant,
@@ -1194,7 +1194,7 @@ class GroupCallSession {
 
     if (encryptionKeys[encryptionKeyIndex] != null &&
         listEquals(encryptionKeys[encryptionKeyIndex]!, keyBin)) {
-      Logs().i('Ignoring duplicate key');
+      Logs().i('[VOIP E2EE] Ignoring duplicate key');
       return;
     }
 
@@ -1207,7 +1207,7 @@ class GroupCallSession {
       // stil decrypt everything
       final useKeyTimeout = Timer(CallTimeouts.useKeyDelay, () async {
         Logs().i(
-            'Delayed-emitting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyString');
+            '[VOIP E2EE] Delayed-emitting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyString');
         await voip.delegate.keyProvider?.onSetEncryptionKey(
             participant, encryptionKeyString, encryptionKeyIndex);
       });
@@ -1229,7 +1229,7 @@ class GroupCallSession {
         remoteParticipants ?? participants.where((p) => p != localParticipant);
     if (myKeys == null) {
       Logs().w(
-          '[VOIP] sendEncryptionKeysEvent Tried to send encryption keys event but no keys found!');
+          '[VOIP E2EE] sendEncryptionKeysEvent Tried to send encryption keys event but no keys found!');
       return;
     }
 
@@ -1244,42 +1244,18 @@ class GroupCallSession {
         keys,
         groupCallId,
       );
-      final txid = VoIP.customTxid ?? client.generateUniqueTransactionId();
-      final mustEncrypt = room.encrypted && client.encryptionEnabled;
-
-      for (final participant in remoteParticipants ?? sendKeysTo) {
-        final Map<String, Object> data = {
-          ...keyContent.toJson(),
-          // used to find group call in groupCalls when ToDeviceEvent happens,
-          // plays nicely with backwards compatibility for mesh calls
-          'conf_id': groupCallId,
-          'party_id': client.deviceID!,
-        };
-        if (mustEncrypt) {
-          await client.userDeviceKeysLoading;
-          if (client.userDeviceKeys[participant.userId]
-                  ?.deviceKeys[participant.deviceId] !=
-              null) {
-            await client.sendToDeviceEncrypted([
-              client.userDeviceKeys[participant.userId]!
-                  .deviceKeys[participant.deviceId]!
-            ], VoIPEventTypes.EncryptionKeysEvent, data);
-          } else {
-            Logs().w(
-                '[VOIP] sendEncryptionKeysEvent missing device keys for ${participant.id}');
-          }
-        } else {
-          await client.sendToDevice(
-            VoIPEventTypes.EncryptionKeysEvent,
-            txid,
-            {
-              participant.userId: {participant.deviceId: data}
-            },
-          );
-        }
-        Logs().i(
-            'E2EE: updateEncryptionKeyEvent participantId=${participant.id} numSent=${myKeys.length} data=$data');
-      }
+      final Map<String, Object> data = {
+        ...keyContent.toJson(),
+        // used to find group call in groupCalls when ToDeviceEvent happens,
+        // plays nicely with backwards compatibility for mesh calls
+        'conf_id': groupCallId,
+        'party_id': client.deviceID!,
+      };
+      await _sendToDeviceEvent(
+        remoteParticipants ?? sendKeysTo.toList(),
+        data,
+        VoIPEventTypes.EncryptionKeysEvent,
+      );
     } catch (e, s) {
       Logs().e('Failed to send e2ee keys, retrying', e, s);
       await sendEncryptionKeysEvent(remoteParticipants: remoteParticipants);
@@ -1294,7 +1270,7 @@ class GroupCallSession {
 
     if (keyContent.keys.isEmpty) {
       Logs().w(
-          'Received m.call.encryption_keys where keys is empty: callId=$callId');
+          '[VOIP E2EE] Received m.call.encryption_keys where keys is empty: callId=$callId');
       return;
     }
 
@@ -1302,9 +1278,71 @@ class GroupCallSession {
       final encryptionKey = key.key;
       final encryptionKeyIndex = key.index;
       Logs().i(
-          'E2EE: onCallEncryption, got key from ${remoteParticipant.id} encryptionKeyIndex=$encryptionKeyIndex key=$encryptionKey');
+          '[VOIP E2EE]: onCallEncryption, got key from ${remoteParticipant.id} encryptionKeyIndex=$encryptionKeyIndex key=$encryptionKey');
       await _setEncryptionKey(
           remoteParticipant, encryptionKeyIndex, encryptionKey);
+    }
+  }
+
+  Future<void> requestEncrytionKey(List<Participant> remoteParticipants) async {
+    final Map<String, Object> data = {
+      'conf_id': groupCallId,
+      'party_id': client.deviceID!,
+    };
+
+    await _sendToDeviceEvent(
+      remoteParticipants,
+      data,
+      VoIPEventTypes.RequestEncryptionKeysEvent,
+    );
+  }
+
+  Future<void> onCallEncryptionKeyRequest(String roomId,
+      Participant remoteParticipant, Map<String, dynamic> content) async {
+    if (roomId != room.id) return;
+    final mems = room.getCallMembershipsForUser(remoteParticipant.userId);
+    if (mems
+        .where((mem) =>
+            mem.callId == groupCallId &&
+            mem.userId == remoteParticipant.userId &&
+            mem.deviceId == remoteParticipant.deviceId &&
+            !mem.isExpired &&
+            // sanity checks
+            mem.backend.type == backend.type &&
+            mem.roomId == room.id &&
+            mem.application == application)
+        .isNotEmpty) {
+      await sendEncryptionKeysEvent(remoteParticipants: [remoteParticipant]);
+    }
+  }
+
+  Future<void> _sendToDeviceEvent(List<Participant> remoteParticipants,
+      Map<String, Object> data, String eventType) async {
+    final txid = VoIP.customTxid ?? client.generateUniqueTransactionId();
+    final mustEncrypt = room.encrypted && client.encryptionEnabled;
+    for (final participant in remoteParticipants) {
+      if (mustEncrypt) {
+        await client.userDeviceKeysLoading;
+        if (client.userDeviceKeys[participant.userId]
+                ?.deviceKeys[participant.deviceId] !=
+            null) {
+          await client.sendToDeviceEncrypted([
+            client.userDeviceKeys[participant.userId]!
+                .deviceKeys[participant.deviceId]!
+          ], eventType, data);
+        } else {
+          Logs().w(
+              '[VOIP E2EE] _sendToDeviceEvent missing device keys for ${participant.id}');
+        }
+      } else {
+        await client.sendToDevice(
+          eventType,
+          txid,
+          {
+            participant.userId: {participant.deviceId: data}
+          },
+        );
+      }
     }
   }
 }

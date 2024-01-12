@@ -3,6 +3,9 @@ class VoIPEventTypes {
   static const String FamedlyCallMemberEvent = 'com.famedly.call.member';
   // ignore: constant_identifier_names
   static const String EncryptionKeysEvent = 'com.famedly.call.encryption_keys';
+  // ignore: constant_identifier_names
+  static const String RequestEncryptionKeysEvent =
+      'com.famedly.call.encryption_keys.request';
 }
 
 enum EncryptionKeyTypes { remote, local }
