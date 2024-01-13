@@ -1585,7 +1585,12 @@ class MatrixSdkDatabase extends DatabaseApi {
         }
 
         // Combine those two lists while respecting the start and limit parameters.
-        final eventIds = sendingEventIds + timelineEventIds;
+        // Create a new list object instead of concatonating list to prevent
+        // random type errors.
+        final eventIds = [
+          ...sendingEventIds,
+          ...timelineEventIds,
+        ];
         if (limit != null && eventIds.length > limit) {
           eventIds.removeRange(limit, eventIds.length);
         }

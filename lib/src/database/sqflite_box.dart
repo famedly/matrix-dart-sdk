@@ -302,7 +302,9 @@ class Box<V> {
       txn.delete(name, where: 'k = ?', whereArgs: [key]);
     }
 
-    _cache.remove(key);
+    // Set to null instead remove() so that inside of transactions null is
+    // returned.
+    _cache[key] = null;
     _cachedKeys?.remove(key);
     return;
   }
@@ -326,7 +328,7 @@ class Box<V> {
     }
 
     for (final key in keys) {
-      _cache.remove(key);
+      _cache[key] = null;
       _cachedKeys?.removeAll(keys);
     }
     return;

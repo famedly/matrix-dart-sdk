@@ -1,3 +1,10 @@
+## [0.25.4] - 5th January 2023
+- fix: Type error when combining dynamic lists (Krille)
+- refactor: Throw client init exception on client init fail (krille-chan)
+
+## [0.25.3] - 2nd January 2023
+- fix: Delete in transaction on new store does not clear cache correctly (Krille)
+
 ## [0.25.2] - 27th December 2023
 - fix: Add missing copy map in matrix sdk database (Krille)
 
