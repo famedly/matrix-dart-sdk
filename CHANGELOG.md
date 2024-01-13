@@ -1,3 +1,6 @@
+## [0.25.5] - 13th January 2023
+- fix: Another type error when combining lists (Krille)
+
 ## [0.25.4] - 5th January 2023
 - fix: Type error when combining dynamic lists (Krille)
 - refactor: Throw client init exception on client init fail (krille-chan)
