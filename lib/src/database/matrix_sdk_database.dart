@@ -86,6 +86,7 @@ class MatrixSdkDatabase extends DatabaseApi {
   late Box<String> _seenDeviceIdsBox;
 
   late Box<String> _seenDeviceKeysBox;
+
   @override
   bool get supportsFileStoring => fileStoragePath != null;
   @override
@@ -412,17 +413,17 @@ class MatrixSdkDatabase extends DatabaseApi {
       runBenchmarked<List<Event>>('Get event list', () async {
         // Get the synced event IDs from the store
         final timelineKey = TupleKey(room.id, '').toString();
-        final timelineEventIds =
-            (await _timelineFragmentsBox.get(timelineKey) ?? []);
+        final timelineEventIds = List<String>.from(
+            await _timelineFragmentsBox.get(timelineKey) ?? []);
 
         // Get the local stored SENDING events from the store
-        late final List sendingEventIds;
+        final List<String> sendingEventIds;
         if (start != 0) {
           sendingEventIds = [];
         } else {
           final sendingTimelineKey = TupleKey(room.id, 'SENDING').toString();
-          sendingEventIds =
-              (await _timelineFragmentsBox.get(sendingTimelineKey) ?? []);
+          sendingEventIds = List<String>.from(
+              await _timelineFragmentsBox.get(sendingTimelineKey) ?? []);
         }
 
         // Combine those two lists while respecting the start and limit parameters.
@@ -433,7 +434,7 @@ class MatrixSdkDatabase extends DatabaseApi {
                 ? timelineEventIds.getRange(start, end).toList()
                 : []);
 
-        return await _getEventsByIds(eventIds.cast<String>(), room);
+        return await _getEventsByIds(eventIds, room);
       });
 
   @override
@@ -693,14 +694,10 @@ class MatrixSdkDatabase extends DatabaseApi {
                 'user_id': userId,
                 'outdated': deviceKeysOutdated[userId],
               },
-              childEntries
-                  .where((c) => c != null)
-                  .toList()
-                  .cast<Map<String, dynamic>>(),
-              crossSigningEntries
-                  .where((c) => c != null)
-                  .toList()
-                  .cast<Map<String, dynamic>>(),
+              List<Map<String, dynamic>>.from(
+                  childEntries.whereType<Map<String, dynamic>>()),
+              List<Map<String, dynamic>>.from(
+                  crossSigningEntries.whereType<Map<String, dynamic>>()),
               client);
         }
         return res;
@@ -1489,7 +1486,7 @@ class MatrixSdkDatabase extends DatabaseApi {
     try {
       await clear();
       await open();
-      final json = Map.from(jsonDecode(export)).cast<String, Map>();
+      final json = Map<String, Map>.from(jsonDecode(export));
       for (final key in json[_clientBoxName]!.keys) {
         await _clientBox.put(key, json[_clientBoxName]![key]);
       }
