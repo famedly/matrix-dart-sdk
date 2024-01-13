@@ -1854,7 +1854,7 @@ class Client extends MatrixApi {
 
   Future<void> _handleToDeviceEvents(List<BasicEventWithSender> events) async {
     final Map<String, List<String>> roomsWithNewKeyToSessionId = {};
-    final List<ToDeviceEvent> toDeviceEvents = [];
+    final List<ToDeviceEvent> callToDeviceEvents = [];
     for (final event in events) {
       var toDeviceEvent = ToDeviceEvent.fromJson(event.toJson());
       Logs().v('Got to_device event of type ${toDeviceEvent.type}');
@@ -1877,13 +1877,13 @@ class Client extends MatrixApi {
       }
       if (toDeviceEvent.type
           .startsWith(RegExp(r'm.call.|org.matrix.call.|com.famedly.call'))) {
-        toDeviceEvents.add(toDeviceEvent);
+        callToDeviceEvents.add(toDeviceEvent);
       }
       onToDeviceEvent.add(toDeviceEvent);
     }
 
-    if (toDeviceEvents.isNotEmpty) {
-      onCallEvents.add(toDeviceEvents);
+    if (callToDeviceEvents.isNotEmpty) {
+      onCallEvents.add(callToDeviceEvents);
     }
 
     // emit updates for all events in the queue
