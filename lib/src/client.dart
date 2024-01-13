@@ -2109,33 +2109,6 @@ class Client extends MatrixApi {
     }
   }
 
-  // // probably move this whole thing to voip.dart
-  // void _callStreamByCallEvent(Event event) {
-  //   if (event.type == EventTypes.CallInvite) {
-  //     onCallInvite.add(event);
-  //   } else if (event.type == EventTypes.CallHangup) {
-  //     onCallHangup.add(event);
-  //   } else if (event.type == EventTypes.CallAnswer) {
-  //     onCallAnswer.add(event);
-  //   } else if (event.type == EventTypes.CallCandidates) {
-  //     onCallCandidates.add(event);
-  //   } else if (event.type == EventTypes.CallSelectAnswer) {
-  //     onCallSelectAnswer.add(event);
-  //   } else if (event.type == EventTypes.CallReject) {
-  //     onCallReject.add(event);
-  //   } else if (event.type == EventTypes.CallNegotiate) {
-  //     onCallNegotiate.add(event);
-  //   } else if (event.type == EventTypes.CallReplaces) {
-  //     onCallReplaces.add(event);
-  //   } else if (event.type == EventTypes.CallAssertedIdentity ||
-  //       event.type == EventTypes.CallAssertedIdentityPrefix) {
-  //     onAssertedIdentityReceived.add(event);
-  //   } else if (event.type == EventTypes.CallSDPStreamMetadataChanged ||
-  //       event.type == EventTypes.CallSDPStreamMetadataChangedPrefix) {
-  //     onSDPStreamMetadataChangedReceived.add(event);
-  //   }
-  // }
-
   /// stores when we last checked for stale calls
   DateTime lastStaleCallRun = DateTime(0);
 
