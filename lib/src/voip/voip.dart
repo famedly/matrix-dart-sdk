@@ -50,40 +50,12 @@ class VoIP {
           }
         }
       }
-
-      // if (room.activeGroupCallEvents.isNotEmpty) {
-      //   for (final groupCall in room.activeGroupCallEvents) {
-      //     unawaited(createGroupCallFromRoomStateEvent(groupCall,
-      //         emitHandleNewGroupCall: false));
-      //   }
-      // }
     }
 
     /// handles events todevice and matrix events for invite, candidates, hangup, etc.
     client.onCallEvents.stream.listen((events) async {
       await _handleCallEvents(events);
     });
-
-    // client.onCallInvite.stream
-    //     .listen((event) => _handleEvent(event, onCallInvite));
-    // client.onCallAnswer.stream
-    //     .listen((event) => _handleEvent(event, onCallAnswer));
-    // client.onCallCandidates.stream
-    //     .listen((event) => _handleEvent(event, onCallCandidates));
-    // client.onCallHangup.stream
-    //     .listen((event) => _handleEvent(event, onCallHangup));
-    // client.onCallReject.stream
-    //     .listen((event) => _handleEvent(event, onCallReject));
-    // client.onCallNegotiate.stream
-    //     .listen((event) => _handleEvent(event, onCallNegotiate));
-    // client.onCallReplaces.stream
-    //     .listen((event) => _handleEvent(event, onCallReplaces));
-    // client.onCallSelectAnswer.stream
-    //     .listen((event) => _handleEvent(event, onCallSelectAnswer));
-    // client.onSDPStreamMetadataChangedReceived.stream.listen(
-    //     (event) => _handleEvent(event, onSDPStreamMetadataChangedReceived));
-    // client.onAssertedIdentityReceived.stream
-    //     .listen((event) => _handleEvent(event, onAssertedIdentityReceived));
 
     /// handles the com.famedly.call events.
     client.onRoomState.stream.listen(
@@ -96,59 +68,6 @@ class VoIP {
         }
       },
     );
-
-    // client.onToDeviceEventChunk.stream.listen((events) async {
-    //   final callEvents = <Event>{};
-    //   Logs().v('[VOIP] onToDeviceEvent: type ${event.toJson()}.');
-
-    //   // if (event.type == 'org.matrix.call_duplicate_session') {
-    //   //   Logs().v('[VOIP] onToDeviceEvent: duplicate session.');
-    //   //   return;
-    //   // }
-
-    //   final confId = event.content['conf_id'];
-    //   final groupCall = groupCalls[confId];
-    //   if (groupCall == null) {
-    //     Logs().d('[VOIP] onToDeviceEvent: groupCall is null.');
-    //     return;
-    //   }
-    //   final roomId = groupCall.room.id;
-    //   final senderId = event.senderId;
-    //   final content = event.content;
-    //   switch (event.type) {
-    //     case EventTypes.CallInvite:
-    //       await onCallInvite(roomId, senderId, content);
-    //       break;
-    //     case EventTypes.CallAnswer:
-    //       await onCallAnswer(roomId, senderId, content);
-    //       break;
-    //     case EventTypes.CallCandidates:
-    //       await onCallCandidates(roomId, senderId, content);
-    //       break;
-    //     case EventTypes.CallHangup:
-    //       await onCallHangup(roomId, senderId, content);
-    //       break;
-    //     case EventTypes.CallReject:
-    //       await onCallReject(roomId, senderId, content);
-    //       break;
-    //     case EventTypes.CallNegotiate:
-    //       await onCallNegotiate(roomId, senderId, content);
-    //       break;
-    //     case EventTypes.CallReplaces:
-    //       await onCallReplaces(roomId, senderId, content);
-    //       break;
-    //     case EventTypes.CallSelectAnswer:
-    //       await onCallSelectAnswer(roomId, senderId, content);
-    //       break;
-    //     case EventTypes.CallSDPStreamMetadataChanged:
-    //     case EventTypes.CallSDPStreamMetadataChangedPrefix:
-    //       await onSDPStreamMetadataChangedReceived(roomId, senderId, content);
-    //       break;
-    //     case EventTypes.CallAssertedIdentity:
-    //       await onAssertedIdentityReceived(roomId, senderId, content);
-    //       break;
-    //   }
-    // });
 
     delegate.mediaDevices.ondevicechange = _onDeviceChange;
   }
@@ -815,7 +734,6 @@ class VoIP {
         application,
         scope,
       );
-      //await groupCall.sendMemberStateEvent();
 
       return groupCall;
     } else {
@@ -865,28 +783,7 @@ class VoIP {
   Future<void> onRoomStateChanged(MatrixEvent event) async {
     final eventType = event.type;
     final roomId = event.roomId;
-    if (eventType == EventTypes.GroupCallPrefix) {
-      // final groupCallId = event.stateKey;
-      // final content = event.content;
-      // final currentGroupCall = groupCalls[groupCallId];
-      // if (currentGroupCall == null && content['m.terminated'] == null) {
-      //   await createGroupCallFromRoomStateEvent(event);
-      // } else if (currentGroupCall != null &&
-      //     currentGroupCall.groupCallId == groupCallId) {
-      //   if (content['m.terminated'] != null) {
-      //     await currentGroupCall.terminate(emitStateEvent: false);
-      //   } else if (content['m.type'] != currentGroupCall.type) {
-      //     // TODO: Handle the callType changing when the room state changes
-      //     Logs().w(
-      //         'The group call type changed for room: $roomId. Changing the group call type is currently unsupported.');
-      //   }
-      // } else if (currentGroupCall != null &&
-      //     currentGroupCall.groupCallId != groupCallId) {
-      //   // TODO: Handle new group calls and multiple group calls
-      //   Logs().w(
-      //       'Multiple group calls detected for room: $roomId. Multiple group calls are currently unsupported.');
-      // }
-    } else if (eventType == VoIPEventTypes.FamedlyCallMemberEvent) {
+    if (eventType == VoIPEventTypes.FamedlyCallMemberEvent) {
       final groupCall = groupCalls[roomId];
       if (groupCall == null) {
         return;

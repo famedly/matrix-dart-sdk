@@ -67,8 +67,6 @@ class GroupCallSession {
 
   GroupCallError? lastError;
 
-  // Map<String, ICallHandlers> callHandlers = {};
-
   Timer? activeSpeakerLoopTimeout;
 
   Timer? resendMemberStateEventTimer;
@@ -111,14 +109,6 @@ class GroupCallSession {
   User getUser() {
     return room.unsafeGetUserFromMemoryOrFallback(client.userID!);
   }
-
-  // Event? getMemberStateEvent(String userId) {
-  //   final event = room.getCallMembershipsForUser(userId);
-  //   if (event != null) {
-  //     return room.callMemberStateIsExpired(event, groupCallId) ? null : event;
-  //   }
-  //   return null;
-  // }
 
   void setState(String newState) {
     state = newState;
@@ -554,64 +544,6 @@ class GroupCallSession {
     );
   }
 
-  // Future<void> updateMemberCallState(
-  //     [IGroupCallRoomMemberCallState? memberCallState]) async {
-  //   final localUserId = client.userID;
-
-  //   final currentStateEvent = getMemberStateEvent(localUserId!);
-  //   var calls = <IGroupCallRoomMemberCallState>[];
-
-  //   if (currentStateEvent != null) {
-  //     final memberStateEvent =
-  //         IGroupCallRoomMemberState.fromJson(currentStateEvent);
-  //     final unCheckedCalls = memberStateEvent.calls;
-
-  //     // don't keep pushing stale devices every update
-  //     final validCalls = <IGroupCallRoomMemberCallState>[];
-  //     for (final call in unCheckedCalls) {
-  //       final validDevices = [];
-  //       for (final device in call.devices) {
-  //         if (device.expires_ts != null &&
-  //             device.expires_ts! >
-  //                 DateTime.now()
-  //                     // safety buffer just incase we were slow to process a
-  //                     // call event, if the device is actually dead it should
-  //                     // get removed pretty soon
-  //                     .add(Duration(seconds: 10))
-  //                     .millisecondsSinceEpoch) {
-  //           validDevices.add(device);
-  //         }
-  //       }
-  //       if (validDevices.isNotEmpty) {
-  //         validCalls.add(call);
-  //       }
-  //     }
-
-  //     calls = validCalls;
-
-  //     final existingCallIndex =
-  //         calls.indexWhere((element) => groupCallId == element.call_id);
-
-  //     if (existingCallIndex != -1) {
-  //       if (memberCallState != null) {
-  //         calls[existingCallIndex] = memberCallState;
-  //       } else {
-  //         calls.removeAt(existingCallIndex);
-  //       }
-  //     } else if (memberCallState != null) {
-  //       calls.add(memberCallState);
-  //     }
-  //   } else if (memberCallState != null) {
-  //     calls.add(memberCallState);
-  //   }
-  //   final content = {
-  //     'm.calls': calls.map((e) => e.toJson()).toList(),
-  //   };
-
-  //   await client.setRoomStateWithKey(
-  //       room.id, EventTypes.GroupCallMemberPrefix, localUserId, content);
-  // }
-
   Future<void> onMemberStateChanged(MatrixEvent event) async {
     // The member events may be received for another room, which we will ignore.
     final mems = room.getCallMembershipsFromEvent(event);
@@ -640,43 +572,6 @@ class GroupCallSession {
       } else {
         await _addParticipant(rp);
       }
-
-      // final callsState = IGroupCallRoomMemberState.fromJson(event);
-
-      // if (callsState is List) {
-      //   Logs()
-      //       .w('Ignoring member state from ${user.id} member not in any calls.');
-      //   await _removeParticipant(user.id);
-      //   return;
-      // }
-
-      // Currently we only support a single call per room. So grab the first call.
-      // IGroupCallRoomMemberCallState? callState;
-
-      // if (callsState.calls.isNotEmpty) {
-      //   final index = callsState.calls
-      //       .indexWhere((element) => element.call_id == groupCallId);
-      //   if (index != -1) {
-      //     callState = callsState.calls[index];
-      //   }
-      // }
-
-      // if (callState == null) {
-      //   Logs().w(
-      //       'Room member ${user.id} does not have a valid m.call_id set. Ignoring.');
-      //   await _removeParticipant(user.id);
-      //   return;
-      // }
-
-      // final callId = callState.call_id;
-      // if (callId != null && callId != groupCallId) {
-      //   Logs().w(
-      //       'Call id $callId does not match group call id $groupCallId, ignoring.');
-      //   await _removeParticipant(user.id);
-      //   return;
-      // }
-
-      // await _addParticipant(user);
 
       if (isLivekitCall) {
         Logs().w(
@@ -709,17 +604,6 @@ class GroupCallSession {
         continue;
       }
 
-      // if (memForGroupId?.deviceId == null) {
-      //   Logs().w('No opponent device found for ${user.id}, ignoring.');
-      //   lastError = GroupCallError(
-      //     '400',
-      //     GroupCallErrorCode.UnknownDevice,
-      //     'Outgoing Call: No opponent device found for ${user.id}, ignoring.',
-      //   );
-      //   onGroupCallEvent.add(GroupCallEvent.Error);
-      //   return;
-      // }
-
       final opts = CallOptions(
         callId: genCallID(),
         room: room,
@@ -744,32 +628,6 @@ class GroupCallSession {
       await addCall(newCall);
     }
   }
-
-  // Future<IGroupCallRoomMemberDevice?> getDeviceForMember(String userId) async {
-  //   final memberStateEvent = getMemberStateEvent(userId);
-  //   if (memberStateEvent == null) {
-  //     return null;
-  //   }
-
-  //   final memberState = IGroupCallRoomMemberState.fromJson(memberStateEvent);
-
-  //   final memberGroupCallState =
-  //       memberState.calls.where(((call) => call.call_id == groupCallId));
-
-  //   if (memberGroupCallState.isEmpty) {
-  //     return null;
-  //   }
-
-  //   final memberDevices = memberGroupCallState.first.devices;
-
-  //   if (memberDevices.isEmpty) {
-  //     return null;
-  //   }
-
-  //   /// NOTE: For now we only support one device so we use the device id in
-  //   /// the first source.
-  //   return memberDevices[0];
-  // }
 
   CallSession? getCallForParticipant(Participant participant) {
     return callSessions.singleWhereOrNull((call) =>
@@ -1117,11 +975,6 @@ class GroupCallSession {
 
     onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
 
-    // final callsCopylist = List<CallSession>.from(callSessions);
-
-    // for (final call in callsCopylist) {
-    //   await call.updateMuteStatus();
-    // }
     Logs().d(
         '[VOIP] participant added, current list: ${participants.map((e) => e.id).toString()}');
     // yes reuse the same key because why not?
@@ -1136,12 +989,6 @@ class GroupCallSession {
     participants.remove(participant);
 
     onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
-
-    // final callsCopylist = List<CallSession>.from(callSessions);
-
-    // for (final call in callsCopylist) {
-    //   await call.updateMuteStatus();
-    // }
 
     Logs().d(
         '[VOIP] participant removed, current list: ${participants.map((e) => e.id).toString()}');

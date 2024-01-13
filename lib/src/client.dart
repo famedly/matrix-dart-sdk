@@ -1194,41 +1194,6 @@ class Client extends MatrixApi {
   final CachedStreamController<BasicEvent> onAccountData =
       CachedStreamController();
 
-  // /// Will be called on call invites.
-  // final CachedStreamController<Event> onCallInvite = CachedStreamController();
-
-  // /// Will be called on call hangups.
-  // final CachedStreamController<Event> onCallHangup = CachedStreamController();
-
-  // /// Will be called on call candidates.
-  // final CachedStreamController<Event> onCallCandidates =
-  //     CachedStreamController();
-
-  // /// Will be called on call answers.
-  // final CachedStreamController<Event> onCallAnswer = CachedStreamController();
-
-  // /// Will be called on call replaces.
-  // final CachedStreamController<Event> onCallReplaces = CachedStreamController();
-
-  // /// Will be called on select answers.
-  // final CachedStreamController<Event> onCallSelectAnswer =
-  //     CachedStreamController();
-
-  // /// Will be called on rejects.
-  // final CachedStreamController<Event> onCallReject = CachedStreamController();
-
-  // /// Will be called on negotiates.
-  // final CachedStreamController<Event> onCallNegotiate =
-  //     CachedStreamController();
-
-  // /// Will be called on Asserted Identity received.
-  // final CachedStreamController<Event> onAssertedIdentityReceived =
-  //     CachedStreamController();
-
-  // /// Will be called on SDPStream Metadata changed.
-  // final CachedStreamController<Event> onSDPStreamMetadataChangedReceived =
-  //     CachedStreamController();
-
   /// Will be called when another device is requesting session keys for a room.
   final CachedStreamController<RoomKeyRequest> onRoomKeyRequest =
       CachedStreamController();
