@@ -1125,7 +1125,9 @@ class GroupCallSession {
     Logs().d(
         '[VOIP] participant added, current list: ${participants.map((e) => e.id).toString()}');
     // yes reuse the same key because why not?
-    await sendEncryptionKeysEvent(remoteParticipants: [participant]);
+    if (isLivekitCall) {
+      await sendEncryptionKeysEvent(remoteParticipants: [participant]);
+    }
   }
 
   Future<void> _removeParticipant(Participant participant) async {
@@ -1144,14 +1146,15 @@ class GroupCallSession {
     Logs().d(
         '[VOIP] participant removed, current list: ${participants.map((e) => e.id).toString()}');
     // debounce it because people leave at the same time
-
-    if (memberLeaveEncKeyRotateDebounceTimer != null) {
-      memberLeaveEncKeyRotateDebounceTimer!.cancel();
+    if (isLivekitCall) {
+      if (memberLeaveEncKeyRotateDebounceTimer != null) {
+        memberLeaveEncKeyRotateDebounceTimer!.cancel();
+      }
+      memberLeaveEncKeyRotateDebounceTimer =
+          Timer(CallTimeouts.makeKeyDelay, () async {
+        await makeNewSenderKey(true);
+      });
     }
-    memberLeaveEncKeyRotateDebounceTimer =
-        Timer(CallTimeouts.makeKeyDelay, () async {
-      await makeNewSenderKey(true);
-    });
   }
 
   /// participant:keyIndex:keyBin

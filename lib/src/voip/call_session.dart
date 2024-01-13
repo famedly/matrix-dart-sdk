@@ -1744,7 +1744,7 @@ class CallSession {
           await client.sendToDeviceEncrypted([
             client.userDeviceKeys[inviteeUserId ?? remoteParticipant!.userId]!
                 .deviceKeys[opponentDeviceId]!
-          ], VoIPEventTypes.EncryptionKeysEvent, data);
+          ], type, data);
         } else {
           Logs().w(
               '[VOIP] _sendContent missing device keys for ${inviteeUserId ?? remoteParticipant!.userId}');
