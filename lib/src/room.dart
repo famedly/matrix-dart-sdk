@@ -1370,6 +1370,21 @@ class Room {
       return getParticipants(membershipFilter);
     }
 
+    return await requestParticipantsFromServer(
+      membershipFilter,
+      suppressWarning,
+      cache,
+    );
+  }
+
+  Future<List<User>> requestParticipantsFromServer(
+      [List<Membership> membershipFilter = const [
+        Membership.join,
+        Membership.invite,
+        Membership.knock,
+      ],
+      bool suppressWarning = false,
+      bool cache = true]) async {
     final memberCount = summary.mJoinedMemberCount;
     if (!suppressWarning && cache && memberCount != null && memberCount > 100) {
       Logs().w('''
