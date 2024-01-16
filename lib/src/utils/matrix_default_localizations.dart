@@ -277,4 +277,28 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
 
   @override
   String hasKnocked(String targetName) => '$targetName has knocked';
+
+  @override
+  String acceptedKeyVerification(String senderName) =>
+      '$senderName accepted key verification request';
+
+  @override
+  String canceledKeyVerification(String senderName) =>
+      '$senderName canceled key verification';
+
+  @override
+  String completedKeyVerification(String senderName) =>
+      '$senderName completed key verification';
+
+  @override
+  String isReadyForKeyVerification(String senderName) =>
+      '$senderName is ready for key verification';
+
+  @override
+  String requestedKeyVerification(String senderName) =>
+      '$senderName requested key verification';
+
+  @override
+  String startedKeyVerification(String senderName) =>
+      '$senderName started key verification';
 }

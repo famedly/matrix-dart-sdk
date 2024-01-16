@@ -50,6 +50,24 @@ abstract class EventLocalizations {
             event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
       case MessageTypes.Emote:
         return '* $body';
+      case EventTypes.KeyVerificationRequest:
+        return i18n.requestedKeyVerification(
+            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+      case EventTypes.KeyVerificationCancel:
+        return i18n.canceledKeyVerification(
+            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+      case EventTypes.KeyVerificationDone:
+        return i18n.completedKeyVerification(
+            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+      case EventTypes.KeyVerificationReady:
+        return i18n.isReadyForKeyVerification(
+            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+      case EventTypes.KeyVerificationAccept:
+        return i18n.acceptedKeyVerification(
+            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
+      case EventTypes.KeyVerificationStart:
+        return i18n.startedKeyVerification(
+            event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n));
       case MessageTypes.BadEncrypted:
         String errorText;
         switch (event.body) {
