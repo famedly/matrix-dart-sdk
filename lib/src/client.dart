@@ -1815,7 +1815,9 @@ class Client extends MatrixApi {
   /// Use this method only for testing utilities!
   Future<void> handleSync(SyncUpdate sync, {Direction? direction}) async {
     // ensure we don't upload keys because someone forgot to set a key count
-    sync.deviceOneTimeKeysCount ??= {'signed_curve25519': 100};
+    sync.deviceOneTimeKeysCount ??= {
+      'signed_curve25519': encryption?.olmManager.maxNumberOfOneTimeKeys ?? 100,
+    };
     await _handleSync(sync, direction: direction);
   }
 
