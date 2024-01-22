@@ -1089,6 +1089,57 @@ void main() {
               plaintextBody: true,
               withSenderNamePrefix: true),
           'Example: Title\nsome text and 🔗link\nokay and this is important');
+
+      event = Event.fromJson({
+        'content': {
+          'body':
+              'Alice is requesting to verify your device, but your client does not support verification, so you may need to use a different verification method.',
+          'from_device': 'AliceDevice2',
+          'methods': ['m.sas.v1'],
+          'msgtype': 'm.key.verification.request',
+          'to': '@bob:example.org'
+        },
+        'event_id': '\$143273582443PhrSn:example.org',
+        'origin_server_ts': 1432735824653,
+        'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+        'sender': '@example:example.org',
+        'type': 'm.room.message',
+        'unsigned': {'age': 1234}
+      }, room);
+      expect(
+        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        'Example requested key verification',
+      );
+
+      event.content['msgtype'] = 'm.key.verification.ready';
+      expect(
+        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        'Example is ready for key verification',
+      );
+
+      event.content['msgtype'] = 'm.key.verification.start';
+      expect(
+        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        'Example started key verification',
+      );
+
+      event.content['msgtype'] = 'm.key.verification.cancel';
+      expect(
+        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        'Example canceled key verification',
+      );
+
+      event.content['msgtype'] = 'm.key.verification.done';
+      expect(
+        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        'Example completed key verification',
+      );
+
+      event.content['msgtype'] = 'm.key.verification.accept';
+      expect(
+        await event.calcLocalizedBody(MatrixDefaultLocalizations()),
+        'Example accepted key verification request',
+      );
     });
 
     test('aggregations', () {
