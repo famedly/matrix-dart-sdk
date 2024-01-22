@@ -428,10 +428,11 @@ class MatrixSdkDatabase extends DatabaseApi {
         // Combine those two lists while respecting the start and limit parameters.
         final end = min(timelineEventIds.length,
             start + (limit ?? timelineEventIds.length));
-        final eventIds = sendingEventIds +
-            (start < timelineEventIds.length && !onlySending
-                ? timelineEventIds.getRange(start, end).toList()
-                : []);
+        final eventIds = [
+          ...sendingEventIds,
+          if (!onlySending && start < timelineEventIds.length)
+            ...timelineEventIds.getRange(start, end),
+        ];
 
         return await _getEventsByIds(eventIds.cast<String>(), room);
       });

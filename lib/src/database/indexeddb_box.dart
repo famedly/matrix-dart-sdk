@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:html';
 import 'dart:indexed_db';
 
+import 'package:matrix/src/database/zone_transaction_mixin.dart';
+
 /// Key-Value store abstraction over IndexedDB so that the sdk database can use
 /// a single interface for all platforms. API is inspired by Hive.
-class BoxCollection {
+class BoxCollection with ZoneTransactionMixin {
   final Database _db;
   final Set<String> boxNames;
   final String _name;
@@ -43,25 +45,28 @@ class BoxCollection {
     Future<void> Function() action, {
     List<String>? boxNames,
     bool readOnly = false,
-  }) async {
-    boxNames ??= _db.objectStoreNames!.toList();
-    _txnCache = [];
-    await action();
-    final cache = List<Future<void> Function(Transaction txn)>.from(_txnCache!);
-    _txnCache = null;
-    if (cache.isEmpty) return;
-    final txn = _db.transaction(boxNames, readOnly ? 'readonly' : 'readwrite');
-    for (final fun in cache) {
-      // The IDB methods return a Future in Dart but must not be awaited in
-      // order to have an actual transaction. They must only be performed and
-      // then the transaction object must call `txn.completed;` which then
-      // returns the actual future.
-      // https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction
-      unawaited(fun(txn));
-    }
-    await txn.completed;
-    return;
-  }
+  }) =>
+      zoneTransaction(() async {
+        boxNames ??= _db.objectStoreNames!.toList();
+        final txnCache = _txnCache = [];
+        await action();
+        final cache =
+            List<Future<void> Function(Transaction txn)>.from(txnCache);
+        _txnCache = null;
+        if (cache.isEmpty) return;
+        final txn =
+            _db.transaction(boxNames, readOnly ? 'readonly' : 'readwrite');
+        for (final fun in cache) {
+          // The IDB methods return a Future in Dart but must not be awaited in
+          // order to have an actual transaction. They must only be performed and
+          // then the transaction object must call `txn.completed;` which then
+          // returns the actual future.
+          // https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction
+          unawaited(fun(txn));
+        }
+        await txn.completed;
+        return;
+      });
 
   Future<void> clear() async {
     final txn = _db.transaction(boxNames, 'readwrite');
@@ -158,7 +163,7 @@ class Box<V> {
   Future<void> delete(String key, [Transaction? txn]) async {
     if (boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => delete(key, txn));
-      _cache.remove(key);
+      _cache[key] = null;
       _cachedKeys?.remove(key);
       return;
     }
@@ -177,7 +182,9 @@ class Box<V> {
   Future<void> deleteAll(List<String> keys, [Transaction? txn]) async {
     if (boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => deleteAll(keys, txn));
-      keys.forEach(_cache.remove);
+      for (final key in keys) {
+        _cache[key] = null;
+      }
       _cachedKeys?.removeAll(keys);
       return;
     }

@@ -1499,9 +1499,10 @@ class Room {
 
     // Fetch all users from database we have got here.
     if (eventContextId == null) {
-      for (final event in events) {
-        if (getState(EventTypes.RoomMember, event.senderId) != null) continue;
-        final dbUser = await client.database?.getUser(event.senderId, this);
+      final userIds = events.map((event) => event.senderId).toSet();
+      for (final userId in userIds) {
+        if (getState(EventTypes.RoomMember, userId) != null) continue;
+        final dbUser = await client.database?.getUser(userId, this);
         if (dbUser != null) setState(dbUser);
       }
     }

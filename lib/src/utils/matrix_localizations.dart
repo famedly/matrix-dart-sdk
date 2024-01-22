@@ -163,6 +163,18 @@ abstract class MatrixLocalizations {
   String wasDirectChatDisplayName(String oldDisplayName);
 
   String hasKnocked(String targetName);
+
+  String requestedKeyVerification(String senderName);
+
+  String startedKeyVerification(String senderName);
+
+  String acceptedKeyVerification(String senderName);
+
+  String isReadyForKeyVerification(String senderName);
+
+  String completedKeyVerification(String senderName);
+
+  String canceledKeyVerification(String senderName);
 }
 
 extension HistoryVisibilityDisplayString on HistoryVisibility {

@@ -128,6 +128,8 @@ class OlmManager {
   bool _uploadKeysLock = false;
   CancelableOperation<Map<String, int>>? currentUpload;
 
+  int? get maxNumberOfOneTimeKeys => _olmAccount?.max_number_of_one_time_keys();
+
   /// Generates new one time keys, signs everything and upload it to the server.
   /// If `retry` is > 0, the request will be retried with new OTKs on upload failure.
   Future<bool> uploadKeys({
