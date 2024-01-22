@@ -1,3 +1,10 @@
+## [0.25.6] - 22nd January 2023
+- feat: Add missing localizations for key verification messages (Krille)
+- fix: Correctly null cache in transactions for indexeddb (Krille)
+- fix: Transactions on web by doing them in the same way as on io (krille-chan)
+- refactor: Improve getTimeline senders (krille-chan)
+- refactor: Use maxnumberofotk from olm instead hardcode 100 (Krille)
+
 ## [0.25.5] - 13th January 2023
 - fix: Another type error when combining lists (Krille)
 
