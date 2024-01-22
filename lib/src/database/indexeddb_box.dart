@@ -158,7 +158,7 @@ class Box<V> {
   Future<void> delete(String key, [Transaction? txn]) async {
     if (boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => delete(key, txn));
-      _cache.remove(key);
+      _cache[key] = null;
       _cachedKeys?.remove(key);
       return;
     }
@@ -177,7 +177,9 @@ class Box<V> {
   Future<void> deleteAll(List<String> keys, [Transaction? txn]) async {
     if (boxCollection._txnCache != null) {
       boxCollection._txnCache!.add((txn) => deleteAll(keys, txn));
-      keys.forEach(_cache.remove);
+      for (final key in keys) {
+        _cache[key] = null;
+      }
       _cachedKeys?.removeAll(keys);
       return;
     }
