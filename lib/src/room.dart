@@ -675,7 +675,7 @@ class Room {
           getEmotePacks: () => getImagePacksFlat(ImagePackUsage.emoticon),
           getMention: getMention);
       // if the decoded html is the same as the body, there is no need in sending a formatted message
-      if (HtmlUnescape().convert(html.replaceAll(RegExp(r'<br/>\n?'), '\n')) !=
+      if (HtmlUnescape().convert(html.replaceAll(RegExp(r'<br />\n?'), '\n')) !=
           event['body']) {
         event['format'] = 'org.matrix.custom.html';
         event['formatted_body'] = html;
