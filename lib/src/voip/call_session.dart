@@ -26,6 +26,7 @@ import 'package:webrtc_interface/webrtc_interface.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
+import 'package:matrix/src/voip/models/voip_id.dart';
 import 'package:matrix/src/voip/utils/stream_helper.dart';
 
 /// Parses incoming matrix events to the apropriate webrtc layer underneath using
@@ -204,7 +205,7 @@ class CallSession {
       final prevCallId = voip.incomingCallRoomId[room.id];
       if (prevCallId != null) {
         // This is probably an outbound call, but we already have a incoming invite, so let's terminate it.
-        final prevCall = voip.calls[prevCallId];
+        final prevCall = voip.calls[VoipId(roomId: room.id, callId: callId)];
         if (prevCall != null) {
           if (prevCall.inviteOrAnswerSent) {
             Logs().d('[glare] invite or answer sent, lex compare now');
@@ -212,7 +213,7 @@ class CallSession {
               Logs().d(
                   '[glare] new call $callId needs to be canceled because the older one ${prevCall.callId} has a smaller lex');
               await hangup();
-              voip.currentCID = prevCall.callId;
+              voip.currentCID = VoipId(roomId: room.id, callId: callId);
               return;
             } else {
               Logs().d(
@@ -319,8 +320,6 @@ class CallSession {
   }
 
   Future<void> placeCallWithStreams(List<WrappedMediaStream> callFeeds) async {
-    voip.calls[callId] = this;
-
     // create the peer connection now so it can be gathering candidates while we get user
     // media (assuming a candidate pool size is configured)
     await _preparePeerConnection();
@@ -953,12 +952,12 @@ class CallSession {
     if (!isGroupCall) {
       // when a call crash and this call is already terminated the currentCId is null.
       // So don't return bc the hangup or reject will not proceed anymore.
-      if (callId != voip.currentCID && voip.currentCID != null) return;
+      if (callId != voip.currentCID?.callId && voip.currentCID != null) return;
       voip.currentCID = null;
       voip.incomingCallRoomId.removeWhere((key, value) => value == callId);
     }
 
-    voip.calls.remove(callId);
+    voip.calls.removeWhere((key, value) => key.callId == callId);
 
     await cleanUp();
     if (shouldEmit) {

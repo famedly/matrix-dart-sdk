@@ -1,11 +1,12 @@
+// ignore_for_file: constant_identifier_names
+
 class VoIPEventTypes {
-  // ignore: constant_identifier_names
-  static const String FamedlyCallMemberEvent = 'com.famedly.call.member';
-  // ignore: constant_identifier_names
-  static const String EncryptionKeysEvent = 'com.famedly.call.encryption_keys';
-  // ignore: constant_identifier_names
+  // static const String Prefix = 'com.famedly.call';
+  static const String Prefix = 'org.matrix.msc3401.call';
+  static const String FamedlyCallMemberEvent = '$Prefix.member';
+  static const String EncryptionKeysEvent = '$Prefix.encryption_keys';
   static const String RequestEncryptionKeysEvent =
-      'com.famedly.call.encryption_keys.request';
+      '$EncryptionKeysEvent.request';
 }
 
 enum EncryptionKeyTypes { remote, local }

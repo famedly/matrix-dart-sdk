@@ -14,8 +14,11 @@ class FamedlyCallMemberEvent {
     final memberships = event.content.tryGetList('memberships');
     if (memberships != null && memberships.isNotEmpty) {
       for (final mem in memberships) {
-        callMemberships
-            .add(CallMembership.fromJson(mem, event.senderId, event.room.id));
+        if (isValidMemEvent(mem)) {
+          final callMem =
+              CallMembership.fromJson(mem, event.senderId, event.room.id);
+          if (callMem != null) callMemberships.add(callMem);
+        }
       }
     }
     return FamedlyCallMemberEvent(memberships: callMemberships);
@@ -27,7 +30,7 @@ class CallMembership {
   final String callId;
   final String? application;
   final String? scope;
-  final CallBackend backend;
+  final List<CallBackend> backends;
   final String deviceId;
   final int expiresTs;
 
@@ -36,7 +39,7 @@ class CallMembership {
   CallMembership({
     required this.userId,
     required this.callId,
-    required this.backend,
+    required this.backends,
     required this.deviceId,
     required this.expiresTs,
     required this.roomId,
@@ -49,23 +52,31 @@ class CallMembership {
       'call_id': callId,
       'application': application,
       'scope': scope,
-      'backend': backend.toJson(),
+      'foci_active': backends.map((e) => e.toJson()).toList(),
       'device_id': deviceId,
       'expires_ts': expiresTs,
+      'expires': 720000 // element compatibiltiy remove asap
     };
   }
 
-  factory CallMembership.fromJson(Map json, String userId, String roomId) {
-    return CallMembership(
-      userId: userId,
-      roomId: roomId,
-      callId: json['call_id'],
-      application: json['application'],
-      scope: json['scope'],
-      backend: CallBackend.fromJson(json['backend']),
-      deviceId: json['device_id'],
-      expiresTs: json['expires_ts'],
-    );
+  static CallMembership? fromJson(Map json, String userId, String roomId) {
+    try {
+      return CallMembership(
+        userId: userId,
+        roomId: roomId,
+        callId: json['call_id'],
+        application: json['application'],
+        scope: json['scope'],
+        backends: (json['foci_active'] as List)
+            .map((e) => CallBackend.fromJson(e))
+            .toList(),
+        deviceId: json['device_id'],
+        expiresTs: json['expires_ts'],
+      );
+    } catch (e, s) {
+      Logs().e('[VOIP] call membership parsing failed', e, s);
+      return null;
+    }
   }
 
   @override
@@ -78,7 +89,7 @@ class CallMembership {
           callId == other.callId &&
           application == other.application &&
           scope == other.scope &&
-          backend.type == other.backend.type &&
+          backends.first.type == other.backends.first.type &&
           deviceId == other.deviceId;
 
   @override
@@ -88,7 +99,7 @@ class CallMembership {
       callId.hashCode ^
       application.hashCode ^
       scope.hashCode ^
-      backend.type.hashCode ^
+      backends.first.type.hashCode ^
       deviceId.hashCode;
 
   // with a buffer of 1 minute just incase we were slow to process a

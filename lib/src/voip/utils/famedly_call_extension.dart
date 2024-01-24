@@ -7,8 +7,8 @@ extension FamedlyCallMemberEventsExtension on Room {
     final Map<String, FamedlyCallMemberEvent> mappedEvents = {};
     final famedlyCallMemberStates =
         states.tryGetMap<String, Event>(VoIPEventTypes.FamedlyCallMemberEvent);
-
-    for (final element in famedlyCallMemberStates?.entries.toList() ?? []) {
+    if (famedlyCallMemberStates == null) return {};
+    for (final element in famedlyCallMemberStates.entries) {
       mappedEvents.addAll(
           {element.key: FamedlyCallMemberEvent.fromJson(element.value)});
     }
@@ -32,22 +32,22 @@ extension FamedlyCallMemberEventsExtension on Room {
     return mem ?? [];
   }
 
-  /// returns a list of memberships from a famedly call matrix event
-  List<CallMembership> getCallMembershipsFromEvent(MatrixEvent event) {
-    if (event.roomId != id) return [];
-    return getCallMembershipsFromEventContent(
-        event.content, event.senderId, event.roomId!);
-  }
+  // /// returns a list of memberships from a famedly call matrix event
+  // List<CallMembership> getCallMembershipsFromEvent(MatrixEvent event) {
+  //   if (event.roomId != id) return [];
+  //   return getCallMembershipsFromEventContent(
+  //       event.content, event.senderId, event.roomId!);
+  // }
 
-  /// returns a list of memberships from a famedly call matrix event
-  List<CallMembership> getCallMembershipsFromEventContent(
-      Map<String, Object?> content, String senderId, String roomId) {
-    final mems = content.tryGetList('memberships');
-    return mems
-            ?.map((e) => CallMembership.fromJson(e, senderId, roomId))
-            .toList() ??
-        [];
-  }
+  // /// returns a list of memberships from a famedly call matrix event
+  // List<CallMembership> getCallMembershipsFromEventContent(
+  //     Map<String, Object?> content, String senderId, String roomId) {
+  //   final mems = content.tryGetList('memberships');
+  //   return mems
+  //           ?.map((e) => CallMembership.fromJson(e, senderId, roomId))
+  //           .toList() ??
+  //       [];
+  // }
 
   /// Gets the states from the server
   Future<List<MatrixEvent>> getAllFamedlyCallMemberStateEvents() async {
@@ -178,5 +178,18 @@ extension GroupCallClientUtils on Client {
           .where((r) => r.membership == Membership.join && r.canJoinGroupCall)
           .map((r) => r.removeExpiredFamedlyCallMemberEvents()));
     }
+  }
+}
+
+bool isValidMemEvent(Map<String, Object?> event) {
+  if (event['call_id'] is String &&
+      event['device_id'] is String &&
+      event['expires_ts'] is num &&
+      event['foci_active'] is List) {
+    return true;
+  } else {
+    Logs()
+        .w('[VOIP] FamedlyCallMemberEvent ignoring unclean membership $event');
+    return false;
   }
 }

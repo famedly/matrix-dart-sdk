@@ -29,6 +29,7 @@ import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/voip/models/call_membership.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
+import 'package:matrix/src/voip/models/voip_id.dart';
 import 'package:matrix/src/voip/utils/stream_helper.dart';
 
 /// Holds methods for managing a group call. This class is also responsible for
@@ -42,7 +43,10 @@ class GroupCallSession {
   final Client client;
   final VoIP voip;
   final Room room;
-  final CallBackend backend;
+
+  /// is a list of backend to allow passing multiple backends in the future
+  /// we use the first backend everywhere as of now
+  final List<CallBackend> backends;
   final String? application;
   final String? scope;
 
@@ -87,14 +91,14 @@ class GroupCallSession {
   final CachedStreamController<WrappedMediaStream> onStreamRemoved =
       CachedStreamController();
 
-  bool get isLivekitCall => backend is LiveKitBackend;
+  bool get isLivekitCall => backends.first is LiveKitBackend;
 
   GroupCallSession({
     String? groupCallId,
     required this.client,
     required this.room,
     required this.voip,
-    required this.backend,
+    required this.backends,
     this.application = 'm.call',
     this.scope = 'm.room',
   }) {
@@ -262,10 +266,7 @@ class GroupCallSession {
     // Set up participants for the members currently in the call.
     // Other members will be picked up by the RoomState.members event.
 
-    final memberStateEvents = await room.getAllFamedlyCallMemberStateEvents();
-    for (final memberState in memberStateEvents) {
-      await onMemberStateChanged(memberState);
-    }
+    await onMemberStateChanged();
 
     if (!isLivekitCall) {
       _callSubscription = voip.onIncomingCall.stream.listen(onIncomingCall);
@@ -277,7 +278,7 @@ class GroupCallSession {
       onActiveSpeakerLoop();
     }
 
-    voip.currentGroupCID = groupCallId;
+    voip.currentGroupCID = VoipId(roomId: room.id, callId: groupCallId);
 
     await voip.delegate.handleNewGroupCall(this);
   }
@@ -315,7 +316,7 @@ class GroupCallSession {
     voip.currentGroupCID = null;
     participants.clear();
     encryptionKeysMap.clear();
-    voip.groupCalls.remove(groupCallId);
+    voip.groupCalls.remove(VoipId(roomId: room.id, callId: groupCallId));
     await voip.delegate.handleGroupCallEnded(this);
     resendMemberStateEventTimer?.cancel();
     memberLeaveEncKeyRotateDebounceTimer?.cancel();
@@ -501,7 +502,7 @@ class GroupCallSession {
         callId: groupCallId,
         application: application,
         scope: scope,
-        backend: backend,
+        backends: backends,
         deviceId: client.deviceID!,
         expiresTs: DateTime.now()
             .add(CallTimeouts.expireTsBumpDuration)
@@ -539,7 +540,7 @@ class GroupCallSession {
   }
 
   /// compltetely rebuilds the local participants list
-  Future<void> onMemberStateChanged(_) async {
+  Future<void> onMemberStateChanged() async {
     // The member events may be received for another room, which we will ignore.
     final mems =
         room.getCallMembershipsFromRoom().values.expand((element) => element);
@@ -1139,6 +1140,7 @@ class GroupCallSession {
         // plays nicely with backwards compatibility for mesh calls
         'conf_id': groupCallId,
         'party_id': client.deviceID!,
+        'room_id': room.id,
       };
       await _sendToDeviceEvent(
         remoteParticipants ?? sendKeysTo.toList(),
@@ -1151,7 +1153,7 @@ class GroupCallSession {
     }
   }
 
-  Future<void> onCallEncryption(String roomId, Participant remoteParticipant,
+  Future<void> onCallEncryption(Room room, Participant remoteParticipant,
       Map<String, dynamic> content) async {
     final keyContent = EncryptionKeysEventContent.fromJson(content);
 
@@ -1182,6 +1184,7 @@ class GroupCallSession {
     final Map<String, Object> data = {
       'conf_id': groupCallId,
       'party_id': client.deviceID!,
+      'room_id': room.id,
     };
 
     await _sendToDeviceEvent(
@@ -1191,9 +1194,9 @@ class GroupCallSession {
     );
   }
 
-  Future<void> onCallEncryptionKeyRequest(String roomId,
+  Future<void> onCallEncryptionKeyRequest(Room room,
       Participant remoteParticipant, Map<String, dynamic> content) async {
-    if (roomId != room.id) return;
+    if (room.id != room.id) return;
     final mems = room.getCallMembershipsForUser(remoteParticipant.userId);
     if (mems
         .where((mem) =>
@@ -1202,7 +1205,7 @@ class GroupCallSession {
             mem.deviceId == remoteParticipant.deviceId &&
             !mem.isExpired &&
             // sanity checks
-            mem.backend.type == backend.type &&
+            mem.backends.first.type == backends.first.type &&
             mem.roomId == room.id &&
             mem.application == application)
         .isNotEmpty) {
