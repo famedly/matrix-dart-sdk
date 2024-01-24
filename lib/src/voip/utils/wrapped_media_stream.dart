@@ -52,6 +52,8 @@ class WrappedMediaStream {
     };
   }
 
+  String get id => '${stream?.id}: $title';
+
   Participant get localParticipant =>
       Participant(userId: client.userID!, deviceId: client.deviceID!);
 
