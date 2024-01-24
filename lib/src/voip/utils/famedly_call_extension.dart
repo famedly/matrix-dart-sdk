@@ -61,7 +61,7 @@ extension FamedlyCallMemberEventsExtension on Room {
 
   /// returns the user count (not sessions, yet) for the group call with id: `groupCallId`.
   /// returns 0 if group call not found
-  int? groupCallParticipantCount(String groupCallId) {
+  int groupCallParticipantCount(String groupCallId) {
     int participantCount = 0;
     // userid:membership
     final memberships = getCallMembershipsFromRoom();

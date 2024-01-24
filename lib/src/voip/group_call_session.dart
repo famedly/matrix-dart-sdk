@@ -57,7 +57,7 @@ class GroupCallSession {
   String? localDesktopCapturerSourceId;
   List<CallSession> callSessions = [];
 
-  Participant get localParticipant => voip.localParticipant;
+  Participant? get localParticipant => voip.localParticipant;
 
   /// userId:deviceId
   List<Participant> participants = [];
@@ -131,9 +131,7 @@ class GroupCallSession {
   }
 
   bool hasLocalParticipant() {
-    return participants.indexWhere(
-            (member) => member.id == client.userID! + client.deviceID!) !=
-        -1;
+    return participants.contains(localParticipant);
   }
 
   Future<MediaStream> _getUserMedia(CallType type) async {
@@ -205,7 +203,7 @@ class GroupCallSession {
       localWrappedMediaStream = WrappedMediaStream(
         renderer: voip.delegate.createRenderer(),
         stream: stream,
-        participant: localParticipant,
+        participant: localParticipant!,
         room: room,
         client: client,
         purpose: SDPStreamMetadataPurpose.Usermedia,
@@ -252,7 +250,6 @@ class GroupCallSession {
     if (state == GroupCallState.LocalCallFeedUninitialized) {
       await initLocalStream(stream: stream);
     }
-    await _addParticipant(localParticipant);
 
     await sendMemberStateEvent();
 
@@ -262,26 +259,24 @@ class GroupCallSession {
 
     Logs().v('Entered group call $groupCallId');
 
-    _callSubscription = voip.onIncomingCall.stream.listen(onIncomingCall);
-
-    for (final call in callSessions) {
-      await onIncomingCall(call);
-    }
-
     // Set up participants for the members currently in the call.
     // Other members will be picked up by the RoomState.members event.
 
     final memberStateEvents = await room.getAllFamedlyCallMemberStateEvents();
-
     for (final memberState in memberStateEvents) {
       await onMemberStateChanged(memberState);
     }
 
-    if (isLivekitCall) {
-      await makeNewSenderKey(false);
-    } else {
+    if (!isLivekitCall) {
+      _callSubscription = voip.onIncomingCall.stream.listen(onIncomingCall);
+
+      for (final call in callSessions) {
+        await onIncomingCall(call);
+      }
+
       onActiveSpeakerLoop();
     }
+
     voip.currentGroupCID = groupCallId;
 
     await voip.delegate.handleNewGroupCall(this);
@@ -299,8 +294,6 @@ class GroupCallSession {
       localScreenshareStream = null;
       localDesktopCapturerSourceId = null;
     }
-
-    await _removeParticipant(localParticipant);
 
     await removeMemberStateEvent();
 
@@ -321,6 +314,7 @@ class GroupCallSession {
     setState(GroupCallState.LocalCallFeedUninitialized);
     voip.currentGroupCID = null;
     participants.clear();
+    encryptionKeysMap.clear();
     voip.groupCalls.remove(groupCallId);
     await voip.delegate.handleGroupCallEnded(this);
     resendMemberStateEventTimer?.cancel();
@@ -407,7 +401,7 @@ class GroupCallSession {
         localScreenshareStream = WrappedMediaStream(
           renderer: voip.delegate.createRenderer(),
           stream: stream,
-          participant: localParticipant,
+          participant: localParticipant!,
           room: room,
           client: client,
           purpose: SDPStreamMetadataPurpose.Screenshare,
@@ -544,34 +538,24 @@ class GroupCallSession {
     );
   }
 
-  Future<void> onMemberStateChanged(MatrixEvent event) async {
+  /// compltetely rebuilds the local participants list
+  Future<void> onMemberStateChanged(_) async {
     // The member events may be received for another room, which we will ignore.
-    final mems = room.getCallMembershipsFromEvent(event);
+    final mems =
+        room.getCallMembershipsFromRoom().values.expand((element) => element);
     final memsForCurrentGroupCall = mems.where((element) {
       return element.callId == groupCallId &&
+          !element.isExpired &&
+          element.application == application &&
+          element.scope == scope &&
           element.roomId == room.id; // sanity checks
     }).toList();
 
-    if (memsForCurrentGroupCall.isEmpty &&
-        participants
-            .where((element) => element.userId == event.senderId)
-            .isNotEmpty) {
-      // someone just made their mem list empty, remove them from participants list
-      // only place where we manually update participants
-      participants.removeWhere((element) => element.userId == event.senderId);
-    }
+    final List<Participant> newP = [];
 
     for (final mem in memsForCurrentGroupCall) {
-      Logs().e(
-          '[VOIP] onMemberStateChanged, handling mem ${mem.userId}:${mem.deviceId}');
       final rp = Participant(userId: mem.userId, deviceId: mem.deviceId);
-      // TODO: check why a member refresh won't send a new invite
-      if (mem.isExpired) {
-        await _removeParticipant(rp);
-        return;
-      } else {
-        await _addParticipant(rp);
-      }
+      newP.add(rp);
 
       if (isLivekitCall) {
         Logs().w(
@@ -585,15 +569,9 @@ class GroupCallSession {
         continue;
       }
 
-      if (mem.userId == client.userID! && mem.deviceId == client.deviceID!) {
-        Logs().e(
-            '[VOIP] onMemberStateChanged ${mem.userId}:${mem.deviceId} Not updating participants list, looks like our own user and device');
-        continue;
-      }
-
       // Only initiate a call with a participant who has a id that is lexicographically
       // less than your own. Otherwise, that user will call you.
-      if (localParticipant.id.compareTo(rp.id) > 0) {
+      if (localParticipant!.id.compareTo(rp.id) > 0) {
         Logs().e('[VOIP] Waiting for ${rp.id} to send call invite.');
         continue;
       }
@@ -626,6 +604,60 @@ class GroupCallSession {
       await newCall.placeCallWithStreams(getLocalStreams());
 
       await addCall(newCall);
+    }
+    final newPcopy = List<Participant>.from(newP);
+    final oldPcopy = List<Participant>.from(participants);
+    final anyJoined = newPcopy.where((element) => !oldPcopy.contains(element));
+    final anyLeft = oldPcopy.where((element) => !newPcopy.contains(element));
+
+    if (anyJoined.isNotEmpty || anyLeft.isNotEmpty) {
+      if (anyJoined.isNotEmpty) {
+        Logs().d('anyJoined: ${anyJoined.map((e) => e.id).toString()}');
+        participants.addAll(anyJoined);
+
+        if (isLivekitCall) {
+          // ratcheting does not work on web, we just create a whole new key everywhere
+          // await _ratchetLocalParticipantKey(anyJoined.toList());
+
+          // await makeNewSenderKey(true);
+
+          // TODO (td): fix rotating keys is broken atm
+          await _sendEncryptionKeysEvent();
+        }
+      }
+      if (anyLeft.isNotEmpty) {
+        Logs().d('anyLeft: ${anyLeft.map((e) => e.id).toString()}');
+
+        for (final leftp in anyLeft) {
+          participants.remove(leftp);
+        }
+
+        if (isLivekitCall) {
+          encryptionKeysMap.removeWhere((key, value) => anyLeft.contains(key));
+
+          // debounce it because people leave at the same time
+          if (memberLeaveEncKeyRotateDebounceTimer != null) {
+            memberLeaveEncKeyRotateDebounceTimer!.cancel();
+          }
+          memberLeaveEncKeyRotateDebounceTimer =
+              Timer(CallTimeouts.makeKeyDelay, () async {
+            // await makeNewSenderKey(true);
+
+            // TODO (td): fix rotating keys is broken atm
+            await _sendEncryptionKeysEvent();
+          });
+        }
+      }
+
+      if (!listEquals(participants.sorted((a, b) => a.id.compareTo(b.id)),
+          newP.sorted((a, b) => a.id.compareTo(b.id)))) {
+        Logs().e(
+            '[VOIP] updating participants list failed, old list: ${participants.map((e) => e.id).toString()}, new list: ${newP.map((e) => e.id).toString()}');
+      }
+
+      onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
+      Logs().d(
+          '[VOIP] onMemberStateChanged current list: ${participants.map((e) => e.id).toString()}');
     }
   }
 
@@ -892,9 +924,10 @@ class GroupCallSession {
               element.type == 'media-source' &&
               element.values['kind'] == 'audio')
           ?.values['audioLevel'];
-      if (ownAudioLevel != null &&
+      if (localParticipant != null &&
+          ownAudioLevel != null &&
           audioLevelsMap[localParticipant] != ownAudioLevel) {
-        audioLevelsMap[localParticipant] = ownAudioLevel;
+        audioLevelsMap[localParticipant!] = ownAudioLevel;
       }
     }
 
@@ -968,42 +1001,6 @@ class GroupCallSession {
     onGroupCallEvent.add(GroupCallEvent.ScreenshareStreamsChanged);
   }
 
-  Future<void> _addParticipant(Participant participant) async {
-    if (participants.contains(participant)) return;
-
-    participants.add(participant);
-
-    onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
-
-    Logs().d(
-        '[VOIP] participant added, current list: ${participants.map((e) => e.id).toString()}');
-    if (isLivekitCall) {
-      await _ratchetLocalParticipantKey([participant]);
-    }
-  }
-
-  Future<void> _removeParticipant(Participant participant) async {
-    if (!participants.contains(participant)) return;
-
-    participants.remove(participant);
-
-    onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
-
-    Logs().d(
-        '[VOIP] participant removed, current list: ${participants.map((e) => e.id).toString()}');
-
-    // debounce it because people leave at the same time
-    if (isLivekitCall) {
-      if (memberLeaveEncKeyRotateDebounceTimer != null) {
-        memberLeaveEncKeyRotateDebounceTimer!.cancel();
-      }
-      memberLeaveEncKeyRotateDebounceTimer =
-          Timer(CallTimeouts.makeKeyDelay, () async {
-        await makeNewSenderKey(true);
-      });
-    }
-  }
-
   /// participant:keyIndex:keyBin
   Map<Participant, Map<int, Uint8List>> encryptionKeysMap = {};
 
@@ -1015,28 +1012,35 @@ class GroupCallSession {
 
   /// always chooses the next possible index till 16, then start again
   int getNewEncryptionKeyIndex() {
-    return (getKeysForParticipant(localParticipant)?.length ?? 0) % 16;
+    return (getKeysForParticipant(localParticipant!)?.length ?? 0) % 16;
   }
 
   /// makes a new e2ee key for local user and sets it with a delay if specified
+  /// used on first join and when someone leaves
+  ///
+  /// TODO (td): confirm if new keys go to index 0 and only ratcheting ones are on
+  /// incremented index
+  ///
+  /// current status: frames are always decryptable with the key on index 0, possible
+  /// upstream bug.
   Future<void> makeNewSenderKey(bool delayBeforeUsingKeyOurself) async {
-    final encryptionKey = base64Encode(secureRandomBytes(16));
-    final encryptionKeyIndex = getNewEncryptionKeyIndex();
-    Logs().i('[VOIP E2EE] Generated new key at index $encryptionKeyIndex');
+    final key = base64Encode(secureRandomBytes(32));
+    final keyIndex = getNewEncryptionKeyIndex();
+    Logs().i('[VOIP E2EE] Generated new key $key at index ');
 
     await _setEncryptionKey(
-      localParticipant,
-      encryptionKeyIndex,
-      encryptionKey,
+      localParticipant!,
+      keyIndex,
+      key,
       delayBeforeUsingKeyOurself: delayBeforeUsingKeyOurself,
+      send: true,
     );
-
-    // we are about to set new keys for ourselves, time to update the users about it
-    await sendEncryptionKeysEvent();
   }
 
+  // ignore: unused_element
   Future<void> _ratchetLocalParticipantKey(List<Participant> sendTo) async {
     final keyProvider = voip.delegate.keyProvider;
+
     if (keyProvider == null) {
       throw Exception('[VOIP] _ratchetKey called but KeyProvider was null');
     }
@@ -1044,29 +1048,32 @@ class GroupCallSession {
     final myKeys = encryptionKeysMap[localParticipant];
 
     if (myKeys == null || myKeys.isEmpty) {
-      throw Exception(
-          '[VOIP] _ratchetKey called but no key for participant was found');
+      await makeNewSenderKey(false);
+      return;
     }
-
-    final ratchetedKey = base64Encode(await keyProvider.onRatchetKey(
-        voip.localParticipant, myKeys.length - 1));
-
-    Logs().i('[VOIP E2EE] Ratched latest key');
+    final ratchetedKey = base64Encode(
+        await keyProvider.onRatchetKey(localParticipant!, myKeys.length - 1));
+    final ratchetedKeyIndex = getNewEncryptionKeyIndex();
+    Logs().i(
+        '[VOIP E2EE] Ratched latest key to $ratchetedKey now at idx $ratchetedKeyIndex');
 
     await _setEncryptionKey(
-      localParticipant,
-      getNewEncryptionKeyIndex(),
+      localParticipant!,
+      ratchetedKeyIndex,
       ratchetedKey,
       delayBeforeUsingKeyOurself: false,
+      send: true,
     );
-
-    await sendEncryptionKeysEvent(remoteParticipants: sendTo);
   }
 
   /// sets incoming keys and also sends the key if it was for the local user
-  Future<void> _setEncryptionKey(Participant participant,
-      int encryptionKeyIndex, String encryptionKeyString,
-      {bool delayBeforeUsingKeyOurself = false}) async {
+  Future<void> _setEncryptionKey(
+    Participant participant,
+    int encryptionKeyIndex,
+    String encryptionKeyString, {
+    bool delayBeforeUsingKeyOurself = false,
+    bool send = false,
+  }) async {
     final keyBin = base64Decode(encryptionKeyString);
 
     final encryptionKeys = encryptionKeysMap[participant] ?? <int, Uint8List>{};
@@ -1081,17 +1088,21 @@ class GroupCallSession {
 
     encryptionKeysMap[participant] = encryptionKeys;
 
+    if (send) await _sendEncryptionKeysEvent();
+
     if (delayBeforeUsingKeyOurself) {
       // now wait for the key to propogate and then set it, hopefully users can
       // stil decrypt everything
       final useKeyTimeout = Future.delayed(CallTimeouts.useKeyDelay, () async {
         Logs().i(
-            '[VOIP E2EE] Delayed-emitting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyString');
+            '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyString');
         await voip.delegate.keyProvider?.onSetEncryptionKey(
             participant, encryptionKeyString, encryptionKeyIndex);
       });
       setNewKeyTimeouts.add(useKeyTimeout);
     } else {
+      Logs().i(
+          '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyString');
       await voip.delegate.keyProvider?.onSetEncryptionKey(
           participant, encryptionKeyString, encryptionKeyIndex);
     }
@@ -1099,17 +1110,21 @@ class GroupCallSession {
 
   /// sends the enc key to the devices using todevice, passing a list of
   /// remoteParticipants only sends events to them
-  Future<void> sendEncryptionKeysEvent(
+  Future<void> _sendEncryptionKeysEvent(
       {List<Participant>? remoteParticipants}) async {
     Logs().i('Sending encryption keys event');
 
-    final myLatestKey = getKeysForParticipant(localParticipant)?.entries.last;
+    final myKeys = getKeysForParticipant(localParticipant!);
+    final myLatestKey = myKeys?.entries.last;
+
     final sendKeysTo =
         remoteParticipants ?? participants.where((p) => p != localParticipant);
 
-    if (myLatestKey == null) {
+    if (myKeys == null || myLatestKey == null) {
       Logs().w(
-          '[VOIP E2EE] sendEncryptionKeysEvent Tried to send encryption keys event but no keys found!');
+          '[VOIP E2EE] _sendEncryptionKeysEvent Tried to send encryption keys event but no keys found!');
+      await makeNewSenderKey(false);
+      await _sendEncryptionKeysEvent(remoteParticipants: remoteParticipants);
       return;
     }
 
@@ -1132,7 +1147,7 @@ class GroupCallSession {
       );
     } catch (e, s) {
       Logs().e('Failed to send e2ee keys, retrying', e, s);
-      await sendEncryptionKeysEvent(remoteParticipants: remoteParticipants);
+      await _sendEncryptionKeysEvent(remoteParticipants: remoteParticipants);
     }
   }
 
@@ -1154,7 +1169,12 @@ class GroupCallSession {
       Logs().i(
           '[VOIP E2EE]: onCallEncryption, got key from ${remoteParticipant.id} encryptionKeyIndex=$encryptionKeyIndex key=$encryptionKey');
       await _setEncryptionKey(
-          remoteParticipant, encryptionKeyIndex, encryptionKey);
+        remoteParticipant,
+        encryptionKeyIndex,
+        encryptionKey,
+        delayBeforeUsingKeyOurself: false,
+        send: false,
+      );
     }
   }
 
@@ -1186,7 +1206,7 @@ class GroupCallSession {
             mem.roomId == room.id &&
             mem.application == application)
         .isNotEmpty) {
-      await sendEncryptionKeysEvent(remoteParticipants: [remoteParticipant]);
+      await _sendEncryptionKeysEvent(remoteParticipants: [remoteParticipant]);
     }
   }
 

@@ -32,8 +32,9 @@ class VoIP {
   final StreamController<GroupCallSession> onIncomingGroupCall =
       StreamController();
 
-  Participant get localParticipant =>
-      Participant(userId: client.userID!, deviceId: client.deviceID!);
+  Participant? get localParticipant => client.isLogged()
+      ? Participant(userId: client.userID!, deviceId: client.deviceID!)
+      : null;
 
   /// map of roomIds to the invites they are currently processing or in a call with
   /// used for handling glare in p2p calls
@@ -241,13 +242,13 @@ class VoIP {
     }
 
     if (content['invitee_user_id'] != null &&
-        content['invitee_user_id'] != localParticipant.userId) {
+        content['invitee_user_id'] != localParticipant?.userId) {
       Logs().w('[VOIP] Ignoring call, meant for ${content['invitee_user_id']}');
       return; // This invite was meant for another user in the room
     }
 
     if (content['invitee_device_id'] != null &&
-        content['invitee_device_id'] != localParticipant.deviceId) {
+        content['invitee_device_id'] != localParticipant?.deviceId) {
       Logs()
           .w('[VOIP] Ignoring call, meant for ${content['invitee_device_id']}');
       return; // This invite was meant for another device in the room
@@ -785,7 +786,7 @@ class VoIP {
     final roomId = event.roomId;
     if (eventType == VoIPEventTypes.FamedlyCallMemberEvent) {
       final groupCall = groupCalls[roomId];
-      if (groupCall == null) {
+      if (groupCall == null || groupCall.groupCallId != currentGroupCID) {
         return;
       }
       await groupCall.onMemberStateChanged(event);

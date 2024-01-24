@@ -79,7 +79,7 @@ class CallSession {
   String? opponentDeviceId;
 
   /// The local participant in the call, with id userId + deviceId
-  Participant get localParticipant => voip.localParticipant;
+  Participant? get localParticipant => voip.localParticipant;
 
   /// The remote participant in the call, with id userId + deviceId
   ///
@@ -576,7 +576,7 @@ class CallSession {
     } else {
       final newStream = WrappedMediaStream(
         renderer: voip.delegate.createRenderer(),
-        participant: localParticipant,
+        participant: localParticipant!,
         room: opts.room,
         stream: stream,
         purpose: purpose,
