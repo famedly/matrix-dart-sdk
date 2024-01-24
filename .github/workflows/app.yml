@@ -116,6 +116,22 @@ jobs:
           dart pub get
           dart run webdev build
 
+  database_web_tests:
+    runs-on: ubuntu-latest
+    env:
+      NO_OLM: 1
+    steps:
+      - uses: actions/checkout@v4
+      - run: cat .github/workflows/versions.env >> $GITHUB_ENV
+      - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
+        with:
+          sdk: ${{ env.dart_version }}
+      - uses: browser-actions/setup-chrome@v1
+      - name: Run tests
+        run: |
+          dart pub get
+          dart test test/box_test.dart --platform chrome
+
   pub-dev-dry-run:
     runs-on: ubuntu-latest
     steps:
