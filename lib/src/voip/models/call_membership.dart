@@ -55,7 +55,7 @@ class CallMembership {
       'foci_active': backends.map((e) => e.toJson()).toList(),
       'device_id': deviceId,
       'expires_ts': expiresTs,
-      'expires': 720000 // element compatibiltiy remove asap
+      'expires': 7200000 // element compatibiltiy remove asap
     };
   }
 
@@ -74,7 +74,7 @@ class CallMembership {
         expiresTs: json['expires_ts'],
       );
     } catch (e, s) {
-      Logs().e('[VOIP] call membership parsing failed', e, s);
+      Logs().e('[VOIP] call membership parsing failed. $json', e, s);
       return null;
     }
   }
