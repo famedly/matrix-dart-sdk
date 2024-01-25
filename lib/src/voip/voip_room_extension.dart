@@ -65,14 +65,17 @@ extension GroupCallUtils on Room {
     // whose state event we haven't recieved yet in sync.
     // (option 2 was local echo member state events, but reverting them if anything
     // fails sounds pain)
-
-    final expiredfr = groupCallMemberStateEvent.originServerTs
-            .add(staleCallCheckerDuration)
-            .millisecondsSinceEpoch <
-        DateTime.now().millisecondsSinceEpoch;
+    final groupCallEvent = states
+        .tryGetMap<String, Event>(EventTypes.GroupCallPrefix)
+        ?.tryGet<Event>(groupCallId);
+    // if the respective call event is not found (which shouldn't happen), we return true
+    if (groupCallEvent == null) return true;
+    final expiredfr = groupCallEvent.originServerTs
+        .add(staleCallCheckerDuration)
+        .isBefore(DateTime.now());
     if (!expiredfr) {
       Logs().d(
-          '[VOIP] Last 30 seconds for state event from ${groupCallMemberStateEvent.senderId}');
+          '[VOIP] The call was started in the last 30s from ${groupCallEvent.senderId}');
     }
     return expiredfr;
   }
@@ -100,6 +103,22 @@ extension GroupCallUtils on Room {
         bool callExpired = true; // assume call is expired
         final callMemberEvents =
             states.tryGetMap<String, Event>(EventTypes.GroupCallMemberPrefix);
+
+        if (callMemberEvents == null) {
+          var notTimedOut = true;
+          await Future.doWhile(() async {
+            await client.oneShotSync();
+            final newCallMemberEvents = states
+                .tryGetMap<String, Event>(EventTypes.GroupCallMemberPrefix);
+            return newCallMemberEvents == null && notTimedOut;
+          }).timeout(
+            CallTimeouts.callInviteLifetime,
+            onTimeout: () {
+              notTimedOut = false;
+            },
+          );
+        }
+
         if (callMemberEvents != null) {
           for (var i = 0; i < callMemberEvents.length; i++) {
             final groupCallMemberEventMap =
