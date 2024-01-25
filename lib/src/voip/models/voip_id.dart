@@ -2,6 +2,8 @@ class VoipId {
   final String roomId;
   final String callId;
 
+  String get id => '$roomId:$callId';
+
   factory VoipId.fromId(String id) {
     final int lastIndex = id.lastIndexOf(':');
     return VoipId(

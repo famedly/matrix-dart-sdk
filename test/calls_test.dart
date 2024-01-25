@@ -3,6 +3,7 @@ import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
+import 'package:matrix/src/voip/models/voip_id.dart';
 import 'fake_client.dart';
 import 'webrtc_stub.dart';
 
@@ -164,12 +165,14 @@ void main() {
               )
             ]))
           })));
-      while (voip.currentCID != 'originTsValidCall') {
+      while (voip.currentCID !=
+          VoipId(roomId: room.id, callId: 'originTsValidCall')) {
         // call invite looks valid, call should be created now :D
         await Future.delayed(Duration(milliseconds: 50));
         Logs().d('Waiting for currentCID to update');
       }
-      expect(voip.currentCID, 'originTsValidCall');
+      expect(voip.currentCID,
+          VoipId(roomId: room.id, callId: 'originTsValidCall'));
       final call = voip.calls[voip.currentCID]!;
       expect(call.state, CallState.kRinging);
       await call.answer(txid: '1234');
@@ -289,12 +292,14 @@ void main() {
               )
             ]))
           })));
-      while (voip.currentCID != 'answer_elseWhere') {
+      while (voip.currentCID !=
+          VoipId(roomId: room.id, callId: 'answer_elseWhere')) {
         // call invite looks valid, call should be created now :D
         await Future.delayed(Duration(milliseconds: 50));
         Logs().d('Waiting for currentCID to update');
       }
-      expect(voip.currentCID, 'answer_elseWhere');
+      expect(
+          voip.currentCID, VoipId(roomId: room.id, callId: 'answer_elseWhere'));
       final call = voip.calls[voip.currentCID]!;
       expect(call.state, CallState.kRinging);
 
@@ -380,12 +385,13 @@ void main() {
               )
             ]))
           })));
-      while (voip.currentCID != 'reject_call') {
+      while (
+          voip.currentCID != VoipId(roomId: room.id, callId: 'reject_call')) {
         // call invite looks valid, call should be created now :D
         await Future.delayed(Duration(milliseconds: 50));
         Logs().d('Waiting for currentCID to update');
       }
-      expect(voip.currentCID, 'reject_call');
+      expect(voip.currentCID, VoipId(roomId: room.id, callId: 'reject_call'));
       final call = voip.calls[voip.currentCID]!;
       expect(call.state, CallState.kRinging);
 
@@ -428,7 +434,8 @@ void main() {
             ]))
           })));
       await Future.delayed(Duration(seconds: 3));
-      expect(voip.currentCID, firstCall.callId);
+      expect(
+          voip.currentCID, VoipId(roomId: room.id, callId: firstCall.callId));
       await firstCall.hangup();
     });
     test('Glare before invite was sent', () async {
@@ -463,7 +470,8 @@ void main() {
             ]))
           })));
       await Future.delayed(Duration(seconds: 3));
-      expect(voip.currentCID, 'zzzz_glare_2nd_call');
+      expect(voip.currentCID,
+          VoipId(roomId: room.id, callId: 'zzzz_glare_2nd_call'));
     });
   });
 }
