@@ -111,18 +111,22 @@ class DeviceKeysList {
     outdated = dbEntry['outdated'];
     deviceKeys = {};
     for (final childEntry in childEntries) {
-      final entry = DeviceKeys.fromDb(childEntry, client);
-      if (entry.isValid) {
+      try {
+        final entry = DeviceKeys.fromDb(childEntry, client);
+        if (!entry.isValid) throw Exception('Invalid device keys');
         deviceKeys[childEntry['device_id']] = entry;
-      } else {
+      } catch (e, s) {
+        Logs().w('Skipping invalid user device key', e, s);
         outdated = true;
       }
     }
     for (final crossSigningEntry in crossSigningEntries) {
-      final entry = CrossSigningKey.fromDbJson(crossSigningEntry, client);
-      if (entry.isValid) {
+      try {
+        final entry = CrossSigningKey.fromDbJson(crossSigningEntry, client);
+        if (!entry.isValid) throw Exception('Invalid device keys');
         crossSigningKeys[crossSigningEntry['public_key']] = entry;
-      } else {
+      } catch (e, s) {
+        Logs().w('Skipping invalid cross siging key', e, s);
         outdated = true;
       }
     }
