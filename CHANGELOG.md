@@ -1,18 +1,22 @@
-## [0.25.6] - 22nd January 2023
+## [0.25.7] 29th January 2024
+- feat: add SQfLite encryption helper (The one with the braid)
+- fix: Skip invalid keys which got corrupted in database (Krille)
+
+## [0.25.6] - 22nd January 2024
 - feat: Add missing localizations for key verification messages (Krille)
 - fix: Correctly null cache in transactions for indexeddb (Krille)
 - fix: Transactions on web by doing them in the same way as on io (krille-chan)
 - refactor: Improve getTimeline senders (krille-chan)
 - refactor: Use maxnumberofotk from olm instead hardcode 100 (Krille)
 
-## [0.25.5] - 13th January 2023
+## [0.25.5] - 13th January 2024
 - fix: Another type error when combining lists (Krille)
 
-## [0.25.4] - 5th January 2023
+## [0.25.4] - 5th January 2024
 - fix: Type error when combining dynamic lists (Krille)
 - refactor: Throw client init exception on client init fail (krille-chan)
 
-## [0.25.3] - 2nd January 2023
+## [0.25.3] - 2nd January 2024
 - fix: Delete in transaction on new store does not clear cache correctly (Krille)
 
 ## [0.25.2] - 27th December 2023
