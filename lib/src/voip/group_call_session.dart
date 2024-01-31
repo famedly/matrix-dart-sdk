@@ -92,13 +92,14 @@ class GroupCallSession {
       CachedStreamController();
 
   bool get isLivekitCall => backends.first is LiveKitBackend;
-
+  final bool e2ee;
   GroupCallSession({
     String? groupCallId,
     required this.client,
     required this.room,
     required this.voip,
     required this.backends,
+    required this.e2ee,
     this.application = 'm.call',
     this.scope = 'm.room',
   }) {
@@ -615,7 +616,7 @@ class GroupCallSession {
         Logs().d('anyJoined: ${anyJoined.map((e) => e.id).toString()}');
         participants.addAll(anyJoined);
 
-        if (isLivekitCall) {
+        if (isLivekitCall && e2ee) {
           // ratcheting does not work on web, we just create a whole new key everywhere
           // await _ratchetLocalParticipantKey(anyJoined.toList());
 
@@ -632,7 +633,7 @@ class GroupCallSession {
           participants.remove(leftp);
         }
 
-        if (isLivekitCall) {
+        if (isLivekitCall && e2ee) {
           encryptionKeysMap.removeWhere((key, value) => anyLeft.contains(key));
 
           // debounce it because people leave at the same time
@@ -1166,6 +1167,10 @@ class GroupCallSession {
 
   Future<void> onCallEncryption(Room room, Participant remoteParticipant,
       Map<String, dynamic> content) async {
+    if (!e2ee) {
+      Logs().w('[VOIP] got sframe key but we do not support e2ee');
+      return;
+    }
     final keyContent = EncryptionKeysEventContent.fromJson(content);
 
     final callId = keyContent.callId;
@@ -1208,6 +1213,10 @@ class GroupCallSession {
   Future<void> onCallEncryptionKeyRequest(Room room,
       Participant remoteParticipant, Map<String, dynamic> content) async {
     if (room.id != room.id) return;
+    if (!e2ee) {
+      Logs().w('[VOIP] got sframe key request but we do not support e2ee');
+      return;
+    }
     final mems = room.getCallMembershipsForUser(remoteParticipant.userId);
     if (mems
         .where((mem) =>

@@ -702,8 +702,9 @@ class VoIP {
     Room room,
     List<CallBackend> backends,
     String? application,
-    String? scope,
-  ) async {
+    String? scope, {
+    bool e2ee = true,
+  }) async {
     if (getGroupCallById(room.id, groupCallId) != null) {
       Logs().e('[VOIP] [$groupCallId] already exists.');
       return getGroupCallById(room.id, groupCallId)!;
@@ -717,6 +718,7 @@ class VoIP {
       backends: backends,
       application: application,
       scope: scope,
+      e2ee: e2ee,
     );
 
     setGroupCallById(groupCall);
@@ -737,8 +739,9 @@ class VoIP {
     Room room,
     List<CallBackend> backends,
     String? application,
-    String? scope,
-  ) async {
+    String? scope, {
+    bool e2ee = true,
+  }) async {
     final groupCall = getGroupCallById(room.id, groupCallId);
 
     if (groupCall != null) {
@@ -786,8 +789,10 @@ class VoIP {
 
   /// Create a new group call from a room state event.
   Future<GroupCallSession?> createGroupCallFromRoomStateEvent(
-      CallMembership membership,
-      {bool emitHandleNewGroupCall = true}) async {
+    CallMembership membership, {
+    bool emitHandleNewGroupCall = true,
+    bool e2ee = true,
+  }) async {
     final room = client.getRoomById(membership.roomId);
 
     if (room == null) {
@@ -808,6 +813,7 @@ class VoIP {
       groupCallId: membership.roomId,
       application: membership.application,
       scope: membership.scope,
+      e2ee: e2ee,
     );
 
     if (groupCalls.containsKey(
