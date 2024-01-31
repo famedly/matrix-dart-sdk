@@ -475,14 +475,15 @@ class GroupCallSession {
       return;
     }
 
-    final existingCall = getCallForParticipant(newCall.remoteParticipant!);
+    final existingCall = getCallForParticipant(Participant(
+        userId: newCall.inviteeUserId!, deviceId: newCall.inviteeDeviceId!));
 
     if (existingCall != null && existingCall.callId == newCall.callId) {
       return;
     }
 
     Logs().v(
-        'GroupCallSession: incoming call from: ${newCall.remoteParticipant!.id}');
+        'GroupCallSession: incoming call from: ${newCall.inviteeUserId}:${newCall.inviteeDeviceId}');
 
     // Check if the user calling has an existing call and use this call instead.
     if (existingCall != null) {
@@ -594,8 +595,6 @@ class GroupCallSession {
         iceServers: await voip.getIceSevers(),
       );
       final newCall = voip.createNewCall(opts);
-      newCall.opponentDeviceId = mem.deviceId;
-      newCall.remoteParticipant = rp;
 
       /// both invitee userId and deviceId are set here because there can be
       /// multiple devices from same user in a call, so we specifiy who the
@@ -665,7 +664,9 @@ class GroupCallSession {
   CallSession? getCallForParticipant(Participant participant) {
     return callSessions.singleWhereOrNull((call) =>
         call.groupCallId == groupCallId &&
-        call.remoteParticipant == participant);
+        Participant(
+                userId: call.inviteeUserId!, deviceId: call.inviteeDeviceId!) ==
+            participant);
   }
 
   Future<void> addCall(CallSession call) async {
@@ -703,8 +704,9 @@ class GroupCallSession {
 
   /// init a peer call from group calls.
   Future<void> initCall(CallSession call) async {
-    if (call.remoteParticipant == null) {
-      throw Exception('Cannot init call without user id');
+    if (call.inviteeUserId == null || call.inviteeDeviceId == null) {
+      throw Exception(
+          'Cannot init call without proper invitee user and device Id');
     }
 
     call.onCallStateChanged.stream.listen(((event) async {
@@ -738,8 +740,9 @@ class GroupCallSession {
   }
 
   Future<void> disposeCall(CallSession call, String hangupReason) async {
-    if (call.remoteParticipant == null) {
-      throw Exception('Cannot dispose call without user id');
+    if (call.inviteeUserId == null || call.inviteeDeviceId == null) {
+      throw Exception(
+          'Cannot init call without proper invitee user and device Id');
     }
 
     // callHandlers.remove(opponentMemberId);
@@ -752,15 +755,17 @@ class GroupCallSession {
       await call.hangup(hangupReason, false);
     }
 
-    final usermediaStream =
-        getUserMediaStreamByParticipantId(call.remoteParticipant!.id);
+    final usermediaStream = getUserMediaStreamByParticipantId(Participant(
+            userId: call.inviteeUserId!, deviceId: call.inviteeDeviceId!)
+        .id);
 
     if (usermediaStream != null) {
       await removeUserMediaStream(usermediaStream);
     }
 
-    final screenshareStream =
-        getScreenshareStreamByParticipantId(call.remoteParticipant!.id);
+    final screenshareStream = getScreenshareStreamByParticipantId(Participant(
+            userId: call.inviteeUserId!, deviceId: call.inviteeDeviceId!)
+        .id);
 
     if (screenshareStream != null) {
       await removeScreenshareStream(screenshareStream);
@@ -768,12 +773,15 @@ class GroupCallSession {
   }
 
   Future<void> onStreamsChanged(CallSession call) async {
-    if (call.remoteParticipant == null) {
-      throw Exception('Cannot change call streams without user id');
+    if (call.inviteeUserId == null || call.inviteeDeviceId == null) {
+      throw Exception(
+          'Cannot init call without proper invitee user and device Id');
     }
 
-    final currentUserMediaStream =
-        getUserMediaStreamByParticipantId(call.remoteParticipant!.id);
+    final currentUserMediaStream = getUserMediaStreamByParticipantId(
+        Participant(
+                userId: call.inviteeUserId!, deviceId: call.inviteeDeviceId!)
+            .id);
     final remoteUsermediaStream = call.remoteUserMediaStream;
     final remoteStreamChanged = remoteUsermediaStream != currentUserMediaStream;
 
@@ -790,8 +798,10 @@ class GroupCallSession {
       }
     }
 
-    final currentScreenshareStream =
-        getScreenshareStreamByParticipantId(call.remoteParticipant!.id);
+    final currentScreenshareStream = getScreenshareStreamByParticipantId(
+        Participant(
+                userId: call.inviteeUserId!, deviceId: call.inviteeDeviceId!)
+            .id);
     final remoteScreensharingStream = call.remoteScreenSharingStream;
     final remoteScreenshareStreamChanged =
         remoteScreensharingStream != currentScreenshareStream;

@@ -172,6 +172,9 @@ class VoIP {
     }
 
     final senderId = event.senderId;
+    final deviceId = event.content['party_id'] ?? // 1:1 calls do this
+        event.content['sender_session_id']; // group calls do this
+
     final content = event.content;
 
     /// Calls HACK:
@@ -179,16 +182,14 @@ class VoIP {
     /// does calls between userIds, we use partyId as a deviceId here. It is very
     /// important that you partyId is set to the sender device id for this to work
     /// As of Jan 2024 both dart sdk and element do this so it's probably fine.
-    final remoteParticipant = Participant(
-      userId: senderId,
-      deviceId: event.content['party_id'].toString(),
-    );
+    final remoteParticipant =
+        Participant(userId: senderId, deviceId: deviceId.toString());
 
     if (remoteParticipant == localParticipant) {
-      Logs().d(
-          '[VOIP] Event ${event.type} seems to be for localParticipant, ignoring: ${remoteParticipant.id}');
       return;
     }
+
+    Logs().d('[VOIP] received ${event.type} from rp: ${remoteParticipant.id}');
 
     switch (event.type) {
       case EventTypes.CallInvite:
@@ -254,12 +255,8 @@ class VoIP {
         '[VOIP] onCallInvite ${remoteParticipant.userId} => ${client.userID}, \ncontent => ${content.toString()}');
 
     final String callId = content['call_id'];
-    final String partyId = content['party_id'];
     final int lifetime = content['lifetime'];
     final String? confId = content['conf_id'];
-
-    // msc3401 group call invites send deviceId todevice messagestodevicetype
-    final String? opponentDeviceId = content['sender_device_id'];
 
     final call = calls[VoipId(roomId: room.id, callId: callId)];
 
@@ -321,10 +318,12 @@ class VoIP {
     );
 
     final newCall = createNewCall(opts);
-    newCall.remotePartyId = partyId;
 
-    newCall.remoteParticipant = remoteParticipant;
-    newCall.opponentDeviceId = opponentDeviceId;
+    /// both invitee userId and deviceId are set here because there can be
+    /// multiple devices from same user in a call, so we specifiy who the
+    /// invite is for
+    newCall.inviteeUserId = remoteParticipant.userId;
+    newCall.inviteeDeviceId = remoteParticipant.deviceId;
 
     if (!delegate.canHandleNewCall &&
         (confId == null ||
@@ -376,7 +375,6 @@ class VoIP {
       Map<String, dynamic> content) async {
     Logs().v('[VOIP] onCallAnswer => ${content.toString()}');
     final String callId = content['call_id'];
-    final String partyId = content['party_id'];
 
     final call = calls[VoipId(roomId: room.id, callId: callId)];
     if (call != null) {
@@ -392,10 +390,9 @@ class VoIP {
             'Ignoring call answer for room ${room.id} claiming to be for call in room ${call.room.id}');
         return;
       }
-      call.remotePartyId = partyId;
-      call.remoteParticipant = Participant(
-          userId: remoteParticipant.userId,
-          deviceId: remoteParticipant.deviceId);
+
+      call.inviteeUserId = remoteParticipant.userId;
+      call.inviteeDeviceId = remoteParticipant.deviceId;
 
       final answer = RTCSessionDescription(
           content['answer']['sdp'], content['answer']['type']);
@@ -443,7 +440,7 @@ class VoIP {
             'Ignoring call hangup for room ${room.id} claiming to be for call in room ${call.room.id}');
         return;
       }
-      if (call.remotePartyId != null && call.remotePartyId != partyId) {
+      if (call.inviteeDeviceId != null && call.inviteeDeviceId != partyId) {
         Logs().w(
             'Ignoring call hangup from sender with a different party_id $partyId for call in room ${call.room.id}');
         return;
@@ -472,7 +469,7 @@ class VoIP {
             'Ignoring call reject for room ${room.id} claiming to be for call in room ${call.room.id}');
         return;
       }
-      if (call.remotePartyId != null && call.remotePartyId != partyId) {
+      if (call.inviteeDeviceId != null && call.inviteeDeviceId != partyId) {
         Logs().w(
             'Ignoring call reject from sender with a different party_id $partyId for call in room ${call.room.id}');
         return;
@@ -572,7 +569,7 @@ class VoIP {
             'Ignoring call negotiation for room ${room.id} claiming to be for call in room ${call.room.id}');
         return;
       }
-      if (content['party_id'] != call.remotePartyId) {
+      if (content['party_id'] != call.inviteeDeviceId) {
         Logs().w('Ignoring call negotiation, wrong partyId detected');
         return;
       }
@@ -613,10 +610,6 @@ class VoIP {
     return CallType.kVoice;
   }
 
-  Future<bool> requestTurnServerCredentials() async {
-    return true;
-  }
-
   Future<List<Map<String, dynamic>>> getIceSevers() async {
     if (_turnServerCredentials == null) {
       try {
@@ -650,16 +643,15 @@ class VoIP {
   /// having 2 devices from the same user in a group call
   ///
   /// For p2p call, you want to have all the devices of the specified `userId` ring
+  ///
+  /// yes I forced you to call a particular user in a room, letting anyone answer
+  /// doesn't make sense
   Future<CallSession> inviteToCall(
     String roomId,
     CallType type,
-    String? userId, {
+    String userId, {
     String? deviceId,
   }) async {
-    if (deviceId != null && userId == null) {
-      throw ArgumentError('Specify a userId to target a deviceId');
-    }
-
     final room = client.getRoomById(roomId);
     if (room == null) {
       Logs().v('[VOIP] Invalid room id [$roomId].');
@@ -679,8 +671,10 @@ class VoIP {
       iceServers: await getIceSevers(),
     );
     final newCall = createNewCall(opts);
+
     newCall.inviteeUserId = userId;
     newCall.inviteeDeviceId = deviceId;
+
     currentCID = VoipId(roomId: roomId, callId: callId);
     await newCall.initOutboundCall(type).then((_) {
       delegate.handleNewCall(newCall);
@@ -813,6 +807,11 @@ class VoIP {
       application: membership.application,
       scope: membership.scope,
     );
+
+    if (groupCalls.containsKey(
+        VoipId(roomId: membership.roomId, callId: membership.callId))) {
+      return null;
+    }
 
     setGroupCallById(groupCall);
 

@@ -18,7 +18,7 @@ Supports
 
 All communication for group calls happens over to-device events except the `com.famedly.call.member` event.
 
-**To-device events must have a `party_id` set to the device id of the sender, this is partly attributed to making it easy to maintain all the kinds of calls and supporting calling between 2 devices of the same user.**
+**To-device events must have a `party_id` or a `sender_session_id` set to the device id of the sender, this is partly attributed to making it easy to maintain all the kinds of calls and supporting calling between 2 devices of the same user.**
 
 Sends the `com.famedly.call.member` event to signal an active membership. The format has to be the following:
 
@@ -75,7 +75,7 @@ When in SFU/Livekit mode, the sdk can handle sending and requesting encryption k
 - sending: `com.famedly.call.encryption_keys`
 - requesting: `com.famedly.call.encryption_keys.request`
 
-As usual remember to send the `party_id` to map your keys to the right userId and deviceId
+As usual remember to send the `party_id`/`sender_session_id` to map your keys to the right userId and deviceId
 
 You need to implement `EncryptionKeyProvider` and set the override the methods to interact with your actual keyProvider. The main one as of now is `onSetEncryptionKey`.
 
@@ -152,11 +152,14 @@ We need to use the matrix roomId to initiate the call, the initial call can be
 
 After the call is sent, you can use `onCallStateChanged` to listen the call state events. These events are used to change the display of the call UI state, for example, change the control buttons, display `Hangup (cancel)` button before connecting, and display `mute mic, mute cam, hold/unhold, hangup` buttons after connected.
 
+You cannot call a whole room, please specify the userId you intend to call in `inviteToCall`
+
+
 ```dart
 final voip = VoIP(client, MyVoipApp());
 
 /// Create a new call
-final newCall = await voip.inviteToCall(roomId, CallType.kVideo);
+final newCall = await voip.inviteToCall(roomId, CallType.kVideo, userId);
 
 newCall.onCallStateChanged.stream.listen((state) {
   /// handle call state change event，

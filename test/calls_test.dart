@@ -34,8 +34,7 @@ void main() {
           iceServers: [],
         ),
       );
-      await call.sendInviteToCall(
-          room, '1234', 1234, '4567', 'inviteeUserId', 'inviteeDeviceId', 'sdp',
+      await call.sendInviteToCall(room, '1234', 1234, '4567', 'sdp',
           txid: '1234');
       await call.sendAnswerCall(room, '1234', 'sdp', '4567', txid: '1234');
       await call.sendCallCandidates(room, '1234', '4567', [], txid: '1234');

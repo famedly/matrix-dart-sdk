@@ -1877,8 +1877,8 @@ class Client extends MatrixApi {
         }
         await encryption?.handleToDeviceEvent(toDeviceEvent);
       }
-      if (toDeviceEvent.type
-          .startsWith(RegExp(r'm.call.|org.matrix.call.|com.famedly.call'))) {
+      if (toDeviceEvent.type.startsWith(
+          RegExp(r'm.call.|org.matrix.msc3401.call.|com.famedly.call.'))) {
         callToDeviceEvents.add(toDeviceEvent);
       }
       onToDeviceEvent.add(toDeviceEvent);
