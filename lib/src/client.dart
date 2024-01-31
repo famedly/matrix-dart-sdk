@@ -212,6 +212,12 @@ class Client extends MatrixApi {
       EventTypes.Message,
       EventTypes.Encrypted,
       EventTypes.Sticker,
+      EventTypes.CallInvite,
+      EventTypes.CallAnswer,
+      EventTypes.CallReject,
+      EventTypes.CallHangup,
+      EventTypes.GroupCallPrefix,
+      EventTypes.GroupCallMemberPrefix,
     ]);
 
     // register all the default commands
