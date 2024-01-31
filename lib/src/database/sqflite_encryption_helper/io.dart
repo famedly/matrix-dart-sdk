@@ -38,8 +38,7 @@ class SQfLiteEncryptionHelper {
   ///   );
   /// }
   /// ```
-  static void ffiInit() =>
-      () => open.overrideForAll(_loadSQLCipherDynamicLibrary);
+  static void ffiInit() => open.overrideForAll(_loadSQLCipherDynamicLibrary);
 
   static DynamicLibrary _loadSQLCipherDynamicLibrary() {
     // Taken from https://github.com/simolus3/sqlite3.dart/blob/e66702c5bec7faec2bf71d374c008d5273ef2b3b/sqlite3/lib/src/load_library.dart#L24
