@@ -1,3 +1,7 @@
+## [0.25.8] 31th January 2024
+- chore: Use some call events as last events (Krille)
+- fix: nested void function in encryption helper (The one with the braid)
+
 ## [0.25.7] 29th January 2024
 - feat: add SQfLite encryption helper (The one with the braid)
 - fix: Skip invalid keys which got corrupted in database (Krille)
