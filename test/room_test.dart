@@ -579,6 +579,7 @@ void main() {
     });
 
     test('Enabling group calls', () async {
+      await room.setPower('@test:fakeServer.notExisting', 0);
       expect(room.canJoinGroupCall, false);
 
       // users default is 0 and so group calls not enabled
@@ -599,7 +600,6 @@ void main() {
       );
       expect(room.canJoinGroupCall, false);
 
-      // one of the group call permissions is unspecified in events override
       room.setState(
         Event(
           senderId: '@test:example.com',
@@ -615,7 +615,8 @@ void main() {
           stateKey: '',
         ),
       );
-      expect(room.canJoinGroupCall, false);
+
+      expect(room.canJoinGroupCall, true);
 
       // state_default 50 and user_default 26, but override evnents present
       room.setState(
@@ -646,13 +647,18 @@ void main() {
             eventId: '123',
             content: {
               'state_default': 50,
-              'users': {'@test:fakeServer.notExisting': 100},
+              'users': {'@test:fakeServer.notExisting': 0},
               'users_default': 0
             },
             originServerTs: DateTime.now(),
             stateKey: ''),
       );
       expect(room.canJoinGroupCall, false);
+      // test when you can't change pls
+      await room.enableGroupCalls();
+      expect(room.canJoinGroupCall, false);
+      // make user admin to change pls
+      await room.setPower('@test:fakeServer.notExisting', 100);
       await room.enableGroupCalls();
       expect(room.canJoinGroupCall, true);
 
