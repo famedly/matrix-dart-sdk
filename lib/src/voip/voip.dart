@@ -322,8 +322,8 @@ class VoIP {
     /// both invitee userId and deviceId are set here because there can be
     /// multiple devices from same user in a call, so we specifiy who the
     /// invite is for
-    newCall.inviteeUserId = remoteParticipant.userId;
-    newCall.inviteeDeviceId = remoteParticipant.deviceId;
+    newCall.remoteUserId = remoteParticipant.userId;
+    newCall.remoteUserDeviceId = remoteParticipant.deviceId;
 
     if (!delegate.canHandleNewCall &&
         (confId == null ||
@@ -391,8 +391,8 @@ class VoIP {
         return;
       }
 
-      call.inviteeUserId = remoteParticipant.userId;
-      call.inviteeDeviceId = remoteParticipant.deviceId;
+      call.remoteUserId = remoteParticipant.userId;
+      call.remoteUserDeviceId = remoteParticipant.deviceId;
 
       final answer = RTCSessionDescription(
           content['answer']['sdp'], content['answer']['type']);
@@ -440,7 +440,8 @@ class VoIP {
             'Ignoring call hangup for room ${room.id} claiming to be for call in room ${call.room.id}');
         return;
       }
-      if (call.inviteeDeviceId != null && call.inviteeDeviceId != partyId) {
+      if (call.remoteUserDeviceId != null &&
+          call.remoteUserDeviceId != partyId) {
         Logs().w(
             'Ignoring call hangup from sender with a different party_id $partyId for call in room ${call.room.id}');
         return;
@@ -469,7 +470,8 @@ class VoIP {
             'Ignoring call reject for room ${room.id} claiming to be for call in room ${call.room.id}');
         return;
       }
-      if (call.inviteeDeviceId != null && call.inviteeDeviceId != partyId) {
+      if (call.remoteUserDeviceId != null &&
+          call.remoteUserDeviceId != partyId) {
         Logs().w(
             'Ignoring call reject from sender with a different party_id $partyId for call in room ${call.room.id}');
         return;
@@ -569,7 +571,7 @@ class VoIP {
             'Ignoring call negotiation for room ${room.id} claiming to be for call in room ${call.room.id}');
         return;
       }
-      if (content['party_id'] != call.inviteeDeviceId) {
+      if (content['party_id'] != call.remoteUserDeviceId) {
         Logs().w('Ignoring call negotiation, wrong partyId detected');
         return;
       }
@@ -672,8 +674,8 @@ class VoIP {
     );
     final newCall = createNewCall(opts);
 
-    newCall.inviteeUserId = userId;
-    newCall.inviteeDeviceId = deviceId;
+    newCall.remoteUserId = userId;
+    newCall.remoteUserDeviceId = deviceId;
 
     currentCID = VoipId(roomId: roomId, callId: callId);
     await newCall.initOutboundCall(type).then((_) {

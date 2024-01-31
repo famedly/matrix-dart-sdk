@@ -133,8 +133,8 @@ extension FamedlyCallMemberEventsExtension on Room {
         newContent,
       );
     } else {
-      throw Exception(
-          '[VOIP] cannot send $VoIPEventTypes.FamedlyCallMemberEvent events in room: $id, fix your PLs');
+      Logs().w(
+          '[VOIP] cannot send ${VoIPEventTypes.FamedlyCallMemberEvent} events in room: $id, fix your PLs');
     }
   }
 }

@@ -70,10 +70,14 @@ class CallSession {
   Participant? get localParticipant => voip.localParticipant;
 
   /// The ID of the user being called. If omitted, any user in the room can answer.
-  String? inviteeUserId;
+  String? remoteUserId;
 
-  /// The ID of the device being called. If omitted, any device for the inviteeUserId in the room can answer.
-  String? inviteeDeviceId;
+  User? get remoteUser => remoteUserId != null
+      ? room.unsafeGetUserFromMemoryOrFallback(remoteUserId!)
+      : null;
+
+  /// The ID of the device being called. If omitted, any device for the remoteUserId in the room can answer.
+  String? remoteUserDeviceId;
 
   late CallParty hangupParty;
   String? hangupReason;
@@ -348,7 +352,7 @@ class CallSession {
 
     /// Send select_answer event.
     await sendSelectCallAnswer(
-        opts.room, callId, localPartyId, inviteeDeviceId!);
+        opts.room, callId, localPartyId, remoteUserDeviceId!);
   }
 
   Future<void> onNegotiateReceived(
@@ -469,7 +473,7 @@ class CallSession {
         continue;
       }
 
-      if (pc != null && inviteOrAnswerSent && inviteeDeviceId != null) {
+      if (pc != null && inviteOrAnswerSent && remoteUserDeviceId != null) {
         try {
           await pc!.addCandidate(candidate);
         } catch (e, s) {
@@ -622,7 +626,7 @@ class CallSession {
       final newStream = WrappedMediaStream(
         renderer: voip.delegate.createRenderer(),
         participant:
-            Participant(userId: inviteeUserId!, deviceId: inviteeDeviceId!),
+            Participant(userId: remoteUserId!, deviceId: remoteUserDeviceId!),
         room: opts.room,
         stream: stream,
         purpose: purpose,
@@ -1422,8 +1426,8 @@ class CallSession {
       'version': version,
       'lifetime': lifetime,
       'offer': {'sdp': sdp, 'type': type},
-      if (inviteeUserId != null) 'invitee_user_id': inviteeUserId!,
-      if (inviteeDeviceId != null) 'invitee_device_id': inviteeDeviceId!,
+      if (remoteUserId != null) 'invitee_user_id': remoteUserId!,
+      if (remoteUserDeviceId != null) 'invitee_device_id': remoteUserDeviceId!,
       if (capabilities != null) 'capabilities': capabilities.toJson(),
       if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
     };
@@ -1703,32 +1707,32 @@ class CallSession {
 
     // opponentDeviceId is only set for a few events during group calls,
     // therefore only group calls use to-device messages for call events
-    if (isGroupCall && inviteeDeviceId != null) {
+    if (isGroupCall && remoteUserDeviceId != null) {
       final toDeviceSeq = this.toDeviceSeq++;
       final Map<String, Object> data = {
         ...content,
         'seq': toDeviceSeq,
-        'dest_session_id': inviteeDeviceId!,
+        'dest_session_id': remoteUserDeviceId!,
         'sender_session_id': client.deviceID!,
       };
 
       if (mustEncrypt) {
         await client.userDeviceKeysLoading;
-        if (client.userDeviceKeys[inviteeUserId]?.deviceKeys[inviteeDeviceId] !=
+        if (client
+                .userDeviceKeys[remoteUserId]?.deviceKeys[remoteUserDeviceId] !=
             null) {
           await client.sendToDeviceEncrypted([
-            client.userDeviceKeys[inviteeUserId]!.deviceKeys[inviteeDeviceId]!
+            client.userDeviceKeys[remoteUserId]!.deviceKeys[remoteUserDeviceId]!
           ], type, data);
         } else {
-          Logs()
-              .w('[VOIP] _sendContent missing device keys for $inviteeUserId');
+          Logs().w('[VOIP] _sendContent missing device keys for $remoteUserId');
         }
       } else {
         await client.sendToDevice(
           type,
           txid,
           {
-            inviteeUserId!: {inviteeDeviceId!: data}
+            remoteUserId!: {remoteUserDeviceId!: data}
           },
         );
       }
