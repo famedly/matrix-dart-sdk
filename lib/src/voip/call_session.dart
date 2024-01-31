@@ -186,7 +186,8 @@ class CallSession {
       final prevCallId = voip.incomingCallRoomId[room.id];
       if (prevCallId != null) {
         // This is probably an outbound call, but we already have a incoming invite, so let's terminate it.
-        final prevCall = voip.calls[VoipId(roomId: room.id, callId: callId)];
+        final prevCall =
+            voip.calls[VoipId(roomId: room.id, callId: prevCallId)];
         if (prevCall != null) {
           if (prevCall.inviteOrAnswerSent) {
             Logs().d('[glare] invite or answer sent, lex compare now');
@@ -194,8 +195,8 @@ class CallSession {
               Logs().d(
                   '[glare] new call $callId needs to be canceled because the older one ${prevCall.callId} has a smaller lex');
               await hangup();
-              voip.currentCID = VoipId(roomId: room.id, callId: callId);
-              return;
+              voip.currentCID =
+                  VoipId(roomId: room.id, callId: prevCall.callId);
             } else {
               Logs().d(
                   '[glare] nice, lex of newer call $callId is smaller auto accept this here');
@@ -252,7 +253,7 @@ class CallSession {
 
   Future<void> answerWithStreams(List<WrappedMediaStream> callFeeds) async {
     if (inviteOrAnswerSent) return;
-    Logs().d('nswering call $callId');
+    Logs().d('answering call $callId');
     await gotCallFeedsForAnswer(callFeeds);
   }
 

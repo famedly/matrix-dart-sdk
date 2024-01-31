@@ -22,6 +22,7 @@ import 'dart:typed_data';
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/voip/models/call_membership.dart';
 import 'fake_client.dart';
 import 'fake_matrix_api.dart';
 
@@ -1394,211 +1395,208 @@ void main() {
           'https://matrix.to/#/!localpart%3Aserver.abc?via=example.org&via=example.com&via=test.abc');
     });
 
-    // test('callMemberStateIsExpired', () {
-    //   expect(
-    //       room.callMemberStateIsExpired(
-    //           Event(
-    //               senderId: '@test:example.com',
-    //               type: EventTypes.GroupCallMemberPrefix,
-    //               room: room,
-    //               eventId: '1231234124',
-    //               content: {
-    //                 'm.calls': [
-    //                   {
-    //                     'm.call_id': '1674811248673789288k7d60n5976',
-    //                     'm.devices': [
-    //                       {
-    //                         'device_id': 'ZEEGCGPTGI',
-    //                         'session_id': 'cbAtVZdLBnJq',
-    //                         'm.expires_ts': 1674813039415,
-    //                         'feeds': [
-    //                           {'purpose': 'm.usermedia'}
-    //                         ]
-    //                       }
-    //                     ]
-    //                   },
-    //                 ],
-    //               },
-    //               originServerTs: DateTime.now(),
-    //               stateKey: ''),
-    //           '1674811248673789288k7d60n5976'),
-    //       true);
-    //   expect(
-    //       room.callMemberStateIsExpired(
-    //           Event(
-    //               senderId: '@test:example.com',
-    //               type: EventTypes.GroupCallMemberPrefix,
-    //               room: room,
-    //               eventId: '1231234124',
-    //               content: {
-    //                 'm.calls': [
-    //                   {
-    //                     'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-    //                     'm.devices': [
-    //                       {
-    //                         'device_id': 'ZEEGCGPTGI',
-    //                         'session_id': 'fhovqxwcasdfr',
-    //                         'expires_ts': DateTime.now()
-    //                             .add(Duration(minutes: 1))
-    //                             .millisecondsSinceEpoch,
-    //                         'feeds': [
-    //                           {'purpose': 'm.usermedia'}
-    //                         ]
-    //                       }
-    //                     ]
-    //                   }
-    //                 ],
-    //               },
-    //               originServerTs: DateTime.now(),
-    //               stateKey: ''),
-    //           '1674811256006mfqnmsAbzqxjYtWZ'),
-    //       false);
-    // });
+    test('callMemberStateIsExpired', () {
+      expect(
+          CallMembership(
+            userId: '@test:example.com',
+            callId: '1111',
+            backends: [MeshBackend()],
+            deviceId: '1111',
+            expiresTs: DateTime.now()
+                .subtract(Duration(hours: 1))
+                .millisecondsSinceEpoch,
+            roomId: room.id,
+          ).isExpired,
+          true);
+      expect(
+          CallMembership(
+            userId: '@test:example.com',
+            callId: '1111',
+            backends: [MeshBackend()],
+            deviceId: '1111',
+            expiresTs: DateTime.now().millisecondsSinceEpoch,
+            roomId: room.id,
+          ).isExpired,
+          false);
+      expect(
+          CallMembership(
+            userId: '@test:example.com',
+            callId: '1111',
+            backends: [MeshBackend()],
+            deviceId: '1111',
+            expiresTs:
+                DateTime.now().add(Duration(hours: 1)).millisecondsSinceEpoch,
+            roomId: room.id,
+          ).isExpired,
+          false);
+    });
 
-    // test('stale call checker and terminator', () async {
-    //   room.setState(Event(
-    //       content: {'m.intent': 'm.prompt', 'm.type': 'm.video'},
-    //       type: EventTypes.GroupCallPrefix,
-    //       eventId: 'asdfasdf',
-    //       senderId: '@test:example.com',
-    //       originServerTs: DateTime.now(),
-    //       room: room,
-    //       stateKey: '1675856324414gzczMtfzTk0DKgEw'));
-    //   expect(room.hasActiveGroupCall, true);
-    //   expect(room.activeGroupCallEvents.length, 1);
-    //   expect(
-    //       await room
-    //           .sendGroupCallTerminateEvent('1675856324414gzczMtfzTk0DKgEw'),
-    //       'groupCall');
-    //   room.setState(Event(
-    //       content: {
-    //         'm.intent': 'm.prompt',
-    //         'm.type': 'm.video',
-    //         'm.terminated': 'call_ended'
-    //       },
-    //       type: EventTypes.GroupCallPrefix,
-    //       eventId: 'asdfasdf',
-    //       senderId: '@test:example.com',
-    //       originServerTs: DateTime.now(),
-    //       room: room,
-    //       stateKey: '1675856324414gzczMtfzTk0DKgEw'));
-    //   expect(room.hasActiveGroupCall, false);
-    //   expect(room.activeGroupCallEvents.length, 0);
-    // });
+    test('stale call checker and terminator', () async {
+      room.setState(
+        Event(
+          content: {
+            'memberships': [
+              CallMembership(
+                userId: '@test:example.com',
+                callId: '1111',
+                backends: [MeshBackend()],
+                deviceId: '1111',
+                expiresTs: DateTime.now()
+                    .subtract(Duration(hours: 1))
+                    .millisecondsSinceEpoch,
+                roomId: room.id,
+              ).toJson()
+            ]
+          },
+          type: VoIPEventTypes.FamedlyCallMemberEvent,
+          eventId: 'asdfasdf',
+          senderId: '@test:example.com',
+          originServerTs: DateTime.now(),
+          room: room,
+          stateKey: '@test:example.com',
+        ),
+      );
+      expect(room.hasActiveGroupCall, false);
+      expect(room.activeGroupCallIds.length, 0);
+      await room.client.singleShotStaleCallChecker();
+      // need a better way to test this
+      room.setState(
+        Event(
+          content: {'memberships': []},
+          type: VoIPEventTypes.FamedlyCallMemberEvent,
+          eventId: 'asdfasdf',
+          senderId: '@test:example.com',
+          originServerTs: DateTime.now(),
+          room: room,
+          stateKey: '@test:example.com',
+        ),
+      );
+      expect(room.getCallMembershipsForUser('@test:example.com'), []);
+    });
 
-    // test('group call participants count', () {
-    //   room.setState(
-    //     Event(
-    //         senderId: '@test:example.com',
-    //         type: EventTypes.GroupCallMemberPrefix,
-    //         room: room,
-    //         eventId: '1234177',
-    //         content: {
-    //           'm.calls': [
-    //             {
-    //               'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-    //               'm.devices': [
-    //                 {
-    //                   'device_id': 'ZEEGCGPTGI',
-    //                   'session_id': 'fhovqxwcasdfr',
-    //                   'expires_ts': DateTime.now()
-    //                       .add(Duration(minutes: 1))
-    //                       .millisecondsSinceEpoch,
-    //                   'feeds': [
-    //                     {'purpose': 'm.usermedia'}
-    //                   ]
-    //                 },
-    //               ]
-    //             }
-    //           ],
-    //         },
-    //         originServerTs: DateTime.now(),
-    //         stateKey: '@test:example.com'),
-    //   );
-    //   room.setState(
-    //     Event(
-    //         senderId: '@test0:example.com',
-    //         type: EventTypes.GroupCallMemberPrefix,
-    //         room: room,
-    //         eventId: '1234177',
-    //         content: {
-    //           'm.calls': [
-    //             {
-    //               'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-    //               'm.devices': [
-    //                 {
-    //                   'device_id': 'ZEEGCGPTGI',
-    //                   'session_id': 'fhovqxwcasdfr',
-    //                   'expires_ts': DateTime.now()
-    //                       .add(Duration(minutes: 2))
-    //                       .millisecondsSinceEpoch,
-    //                   'feeds': [
-    //                     {'purpose': 'm.usermedia'}
-    //                   ]
-    //                 },
-    //               ]
-    //             }
-    //           ],
-    //         },
-    //         originServerTs: DateTime.now(),
-    //         stateKey: '@test0:example.com'),
-    //   );
-    //   room.setState(
-    //     Event(
-    //         senderId: '@test2:example.com',
-    //         type: EventTypes.GroupCallMemberPrefix,
-    //         room: room,
-    //         eventId: '1231234124123',
-    //         content: {
-    //           'm.calls': [
-    //             {
-    //               'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-    //               'm.devices': [
-    //                 {
-    //                   'device_id': 'ZEEGCGPTGI',
-    //                   'session_id': 'fhovqxwcasdfr',
-    //                   'feeds': [
-    //                     {'purpose': 'm.usermedia'}
-    //                   ]
-    //                 },
-    //               ]
-    //             }
-    //           ],
-    //         },
-    //         originServerTs: DateTime.now(),
-    //         stateKey: '@test2:example.com'),
-    //   );
-    //   room.setState(
-    //     Event(
-    //         senderId: '@test3:example.com',
-    //         type: EventTypes.GroupCallMemberPrefix,
-    //         room: room,
-    //         eventId: '123123412445',
-    //         content: {
-    //           'm.calls': [
-    //             {
-    //               'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-    //               'm.devices': [
-    //                 {
-    //                   'device_id': 'ZEEGCGPTGI',
-    //                   'session_id': 'fhovqxwcasdfr',
-    //                   'expires_ts': DateTime.now()
-    //                       .subtract(Duration(minutes: 1))
-    //                       .millisecondsSinceEpoch,
-    //                   'feeds': [
-    //                     {'purpose': 'm.usermedia'}
-    //                   ]
-    //                 },
-    //               ]
-    //             }
-    //           ],
-    //         },
-    //         originServerTs: DateTime.now(),
-    //         stateKey: '@test3:example.com'),
-    //   );
-    //   expect(
-    //       room.groupCallParticipantCount('1674811256006mfqnmsAbzqxjYtWZ'), 2);
-    // });
+    test('active group call test', () {
+      room.setState(
+        Event(
+          content: {
+            'memberships': [
+              CallMembership(
+                userId: '@test:example.com',
+                callId: '1111',
+                backends: [MeshBackend()],
+                deviceId: '1111',
+                expiresTs: DateTime.now()
+                    .add(Duration(hours: 1))
+                    .millisecondsSinceEpoch,
+                roomId: room.id,
+              ).toJson()
+            ]
+          },
+          type: VoIPEventTypes.FamedlyCallMemberEvent,
+          eventId: 'asdfasdf',
+          senderId: '@test:example.com',
+          originServerTs: DateTime.now(),
+          room: room,
+          stateKey: '@test:example.com',
+        ),
+      );
+      expect(room.hasActiveGroupCall, true);
+      expect(room.activeGroupCallIds.length, 1);
+      room.setState(
+        Event(
+          content: {
+            'memberships': [
+              CallMembership(
+                userId: '@test:example.com',
+                callId: '1111',
+                backends: [MeshBackend()],
+                deviceId: '1111',
+                expiresTs: DateTime.now()
+                    .subtract(Duration(hours: 1))
+                    .millisecondsSinceEpoch,
+                roomId: room.id,
+              ).toJson(),
+              CallMembership(
+                userId: '@test:example.com',
+                callId: '2222',
+                backends: [MeshBackend()],
+                deviceId: '2222',
+                expiresTs: DateTime.now().millisecondsSinceEpoch,
+                roomId: room.id,
+              ).toJson(),
+              CallMembership(
+                userId: '@test:example.com',
+                callId: '3333',
+                backends: [MeshBackend()],
+                deviceId: '3333',
+                expiresTs: DateTime.now()
+                    .add(Duration(hours: 1))
+                    .millisecondsSinceEpoch,
+                roomId: room.id,
+              ).toJson()
+            ]
+          },
+          type: VoIPEventTypes.FamedlyCallMemberEvent,
+          eventId: 'asdfasdf',
+          senderId: '@test:example.com',
+          originServerTs: DateTime.now(),
+          room: room,
+          stateKey: '@test:example.com',
+        ),
+      );
+      expect(room.hasActiveGroupCall, true);
+      expect(room.activeGroupCallIds.length, 2);
+    });
+    test('group call participants count', () {
+      room.setState(
+        Event(
+          content: {
+            'memberships': [
+              CallMembership(
+                userId: '@test:example.com',
+                callId: '1111',
+                backends: [MeshBackend()],
+                deviceId: '1111',
+                expiresTs: DateTime.now().millisecondsSinceEpoch,
+                roomId: room.id,
+              ).toJson(),
+              CallMembership(
+                userId: '@test:example.com',
+                callId: '1111',
+                backends: [MeshBackend()],
+                deviceId: '2222',
+                expiresTs: DateTime.now().millisecondsSinceEpoch,
+                roomId: room.id,
+              ).toJson(),
+              CallMembership(
+                userId: '@test:example.com',
+                callId: '1111',
+                backends: [MeshBackend()],
+                deviceId: '3333',
+                expiresTs: DateTime.now().millisecondsSinceEpoch,
+                roomId: room.id,
+              ).toJson(),
+              CallMembership(
+                userId: '@test:example.com',
+                callId: '1111',
+                backends: [MeshBackend()],
+                deviceId: '4444',
+                expiresTs: DateTime.now()
+                    .subtract(Duration(hours: 1))
+                    .millisecondsSinceEpoch,
+                roomId: room.id,
+              ).toJson()
+            ]
+          },
+          type: VoIPEventTypes.FamedlyCallMemberEvent,
+          eventId: 'asdfasdf',
+          senderId: '@test:example.com',
+          originServerTs: DateTime.now(),
+          room: room,
+          stateKey: '@test:example.com',
+        ),
+      );
+      expect(room.groupCallParticipantCount('1111'), 3);
+    });
     test('logout', () async {
       await matrix.logout();
     });

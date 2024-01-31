@@ -32,33 +32,6 @@ extension FamedlyCallMemberEventsExtension on Room {
     return mem ?? [];
   }
 
-  // /// returns a list of memberships from a famedly call matrix event
-  // List<CallMembership> getCallMembershipsFromEvent(MatrixEvent event) {
-  //   if (event.roomId != id) return [];
-  //   return getCallMembershipsFromEventContent(
-  //       event.content, event.senderId, event.roomId!);
-  // }
-
-  // /// returns a list of memberships from a famedly call matrix event
-  // List<CallMembership> getCallMembershipsFromEventContent(
-  //     Map<String, Object?> content, String senderId, String roomId) {
-  //   final mems = content.tryGetList('memberships');
-  //   return mems
-  //           ?.map((e) => CallMembership.fromJson(e, senderId, roomId))
-  //           .toList() ??
-  //       [];
-  // }
-
-  /// Gets the states from the server
-  Future<List<MatrixEvent>> getAllFamedlyCallMemberStateEvents() async {
-    final roomStates = await client.getRoomState(id);
-    roomStates.sort((a, b) => a.originServerTs.compareTo(b.originServerTs));
-    return roomStates
-        .where(
-            (element) => element.type == VoIPEventTypes.FamedlyCallMemberEvent)
-        .toList();
-  }
-
   /// returns the user count (not sessions, yet) for the group call with id: `groupCallId`.
   /// returns 0 if group call not found
   int groupCallParticipantCount(String groupCallId) {
@@ -86,7 +59,7 @@ extension FamedlyCallMemberEventsExtension on Room {
 
   /// list of active group call ids
   List<String> get activeGroupCallIds {
-    final List<String> ids = [];
+    final Set<String> ids = {};
     final memberships = getCallMembershipsFromRoom();
 
     memberships.forEach((key, value) {
@@ -96,7 +69,7 @@ extension FamedlyCallMemberEventsExtension on Room {
         }
       }
     });
-    return ids;
+    return ids.toList();
   }
 
   static const staleCallCheckerDuration = Duration(seconds: 30);
@@ -120,7 +93,7 @@ extension FamedlyCallMemberEventsExtension on Room {
   }
 
   Future<void> removeExpiredFamedlyCallMemberEvents() async {
-    if (partial) return;
+    await postLoad();
     final ownMemberships = getCallMembershipsForUser(client.userID!);
     ownMemberships.removeWhere((element) => element.isExpired);
 
