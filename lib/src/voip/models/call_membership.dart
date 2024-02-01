@@ -55,7 +55,9 @@ class CallMembership {
       'foci_active': backends.map((e) => e.toJson()).toList(),
       'device_id': deviceId,
       'expires_ts': expiresTs,
-      'expires': 7200000 // element compatibiltiy remove asap
+      'expires': 7200000, // element compatibiltiy remove asap
+      'membershipID':
+          'hey_you_found_an_easter_egg!' // element compatibiltiy remove asap
     };
   }
 
