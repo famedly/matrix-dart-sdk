@@ -92,17 +92,17 @@ extension FamedlyCallMemberEventsExtension on Room {
     await setFamedlyCallMemberEvent(newContent);
   }
 
-  Future<void> removeExpiredFamedlyCallMemberEvents() async {
-    await postLoad();
-    final ownMemberships = getCallMembershipsForUser(client.userID!);
-    ownMemberships.removeWhere((element) => element.isExpired);
+  // Future<void> removeExpiredFamedlyCallMemberEvents() async {
+  //   await postLoad();
+  //   final ownMemberships = getCallMembershipsForUser(client.userID!);
+  //   ownMemberships.removeWhere((element) => element.isExpired);
 
-    final newContent = {
-      'memberships': List.from(ownMemberships.map((e) => e.toJson()))
-    };
+  //   final newContent = {
+  //     'memberships': List.from(ownMemberships.map((e) => e.toJson()))
+  //   };
 
-    await setFamedlyCallMemberEvent(newContent);
-  }
+  //   await setFamedlyCallMemberEvent(newContent);
+  // }
 
   Future<void> removeFamedlyCallMemberEvent(
     String groupCallId,
@@ -142,16 +142,16 @@ extension FamedlyCallMemberEventsExtension on Room {
 extension GroupCallClientUtils on Client {
   /// checks for stale calls in a room and sends `m.terminated` if all the
   /// expires_ts are expired. Called regularly on sync.
-  Future<void> singleShotStaleCallChecker() async {
-    if (lastStaleCallRun
-        .add(FamedlyCallMemberEventsExtension.staleCallCheckerDuration)
-        .isBefore(DateTime.now())) {
-      lastStaleCallRun = DateTime.now();
-      await Future.wait(rooms
-          .where((r) => r.membership == Membership.join && r.canJoinGroupCall)
-          .map((r) => r.removeExpiredFamedlyCallMemberEvents()));
-    }
-  }
+  // Future<void> singleShotStaleCallChecker() async {
+  //   if (lastStaleCallRun
+  //       .add(FamedlyCallMemberEventsExtension.staleCallCheckerDuration)
+  //       .isBefore(DateTime.now())) {
+  //     lastStaleCallRun = DateTime.now();
+  //     await Future.wait(rooms
+  //         .where((r) => r.membership == Membership.join && r.canJoinGroupCall)
+  //         .map((r) => r.removeExpiredFamedlyCallMemberEvents()));
+  //   }
+  // }
 }
 
 bool isValidMemEvent(Map<String, Object?> event) {

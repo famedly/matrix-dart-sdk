@@ -1750,7 +1750,7 @@ class Client extends MatrixApi {
         await processToDeviceQueue();
       } catch (_) {} // we want to dispose any errors this throws
 
-      await singleShotStaleCallChecker();
+      // await singleShotStaleCallChecker();
 
       _retryDelay = Future.value();
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.finished));
@@ -2098,8 +2098,8 @@ class Client extends MatrixApi {
       if (prevBatch != null &&
           (type == EventUpdateType.timeline ||
               type == EventUpdateType.decryptedTimelineQueue)) {
-        if ((update.content.tryGet<String>('type')?.startsWith(
-                RegExp(r'm.call|org.matrix.call|com.famedly.call')) ??
+        if ((update.content.tryGet<String>('type')?.startsWith(RegExp(
+                r'm.call.|org.matrix.msc3401.call.|com.famedly.call.')) ??
             false)) {
           final callEvent = Event.fromJson(update.content, room);
           callEvents.add(callEvent);

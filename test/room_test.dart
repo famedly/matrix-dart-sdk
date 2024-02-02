@@ -1464,7 +1464,6 @@ void main() {
       );
       expect(room.hasActiveGroupCall, false);
       expect(room.activeGroupCallIds.length, 0);
-      await room.client.singleShotStaleCallChecker();
       // need a better way to test this
       room.setState(
         Event(
