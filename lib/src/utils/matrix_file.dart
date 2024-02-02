@@ -23,13 +23,14 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:blurhash_dart/blurhash_dart.dart';
+import 'package:equatable/equatable.dart';
 import 'package:image/image.dart';
 import 'package:mime/mime.dart';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/compute_callback.dart';
 
-class MatrixFile {
+class MatrixFile with EquatableMixin {
   final Uint8List? bytes;
   final String name;
   final String mimeType;
@@ -162,6 +163,9 @@ class MatrixFile {
     }
     return MessageTypes.File;
   }
+  
+  @override
+  List<Object?> get props => [bytes, name, mimeType, filePath, sizeInBytes, readStream];
 }
 
 class MatrixImageFile extends MatrixFile {
@@ -359,6 +363,14 @@ class MatrixImageFile extends MatrixFile {
           : null,
     );
   }
+
+  @override
+  List<Object?> get props => [
+    ...super.props,
+    _width,
+    _height,
+    blurhash,
+  ];
 }
 
 class MatrixImageFileResizedResponse {
@@ -457,6 +469,14 @@ class MatrixVideoFile extends MatrixFile {
         if (height != null) 'h': height,
         if (duration != null) 'duration': duration,
       });
+
+  @override
+  List<Object?> get props => [
+    ...super.props,
+    width,
+    height,
+    duration,
+  ];
 }
 
 class MatrixAudioFile extends MatrixFile {
@@ -479,6 +499,12 @@ class MatrixAudioFile extends MatrixFile {
         ...super.info,
         if (duration != null) 'duration': duration,
       });
+  
+  @override
+  List<Object?> get props => [
+    ...super.props,
+    duration,
+  ];
 }
 
 extension ToMatrixFile on EncryptedFile {
