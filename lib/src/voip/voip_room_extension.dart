@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:collection/collection.dart';
 
 import 'package:matrix/matrix.dart';
@@ -13,7 +11,7 @@ extension GroupCallUtils on Room {
         states.tryGetMap<String, Event>(EventTypes.GroupCallMemberPrefix);
     if (groupCallMemberStates != null) {
       groupCallMemberStates.forEach((userId, memberStateEvent) {
-        if (!callMemberStateIsExpired(memberStateEvent, groupCallId)) {
+        if (!callMemberStateForIdIsExpired(memberStateEvent, groupCallId)) {
           participantCount++;
         }
       });
@@ -37,7 +35,9 @@ extension GroupCallUtils on Room {
           .toList()
           .sort((a, b) => a.originServerTs.compareTo(b.originServerTs));
       return groupCallStates.values
-          .where((element) => !element.content.containsKey('m.terminated'))
+          .where((element) =>
+              !element.content.containsKey('m.terminated') &&
+              callMemberStateIsExpired(element))
           .toList();
     }
     return [];
@@ -45,7 +45,22 @@ extension GroupCallUtils on Room {
 
   static const staleCallCheckerDuration = Duration(seconds: 30);
 
-  bool callMemberStateIsExpired(
+  /// checks if a member event has any existing non-expired callId
+  bool callMemberStateIsExpired(MatrixEvent event) {
+    final callMemberState = IGroupCallRoomMemberState.fromJson(event);
+    final calls = callMemberState.calls;
+    return calls
+        .where((call) => call.devices.any((d) =>
+            (d.expires_ts ?? 0) +
+                staleCallCheckerDuration
+                    .inMilliseconds > // buffer for sync glare
+            DateTime.now().millisecondsSinceEpoch))
+        .isEmpty;
+  }
+
+  /// checks if the member event has `groupCallId` unexpired, if not it checks if
+  /// the whole event is expired or not
+  bool callMemberStateForIdIsExpired(
       MatrixEvent groupCallMemberStateEvent, String groupCallId) {
     final callMemberState =
         IGroupCallRoomMemberState.fromJson(groupCallMemberStateEvent);
@@ -71,7 +86,6 @@ extension GroupCallUtils on Room {
       // whose state event we haven't recieved yet in sync.
       // (option 2 was local echo member state events, but reverting them if anything
       // fails sounds pain)
-
       final expiredfr = groupCallMemberStateEvent.originServerTs
               .add(staleCallCheckerDuration)
               .millisecondsSinceEpoch <
@@ -82,90 +96,6 @@ extension GroupCallUtils on Room {
             '[VOIP] Last 30 seconds for state event from ${groupCallMemberStateEvent.senderId}');
       }
       return expiredfr;
-    }
-  }
-
-  /// checks for stale calls in a room and sends `m.terminated` if all the
-  /// expires_ts are expired. Called regularly on sync.
-  Future<void> singleShotStaleCallCheckerOnRoom() async {
-    if (partial) return;
-    await client.oneShotSync();
-
-    final copyGroupCallIds =
-        states.tryGetMap<String, Event>(EventTypes.GroupCallPrefix);
-    if (copyGroupCallIds == null) return;
-
-    Logs().d('[VOIP] checking for stale group calls in room $id');
-
-    for (final groupCall in copyGroupCallIds.entries) {
-      final groupCallId = groupCall.key;
-      final groupCallEvent = groupCall.value;
-
-      if (groupCallEvent.content.tryGet('m.intent') == 'm.room') return;
-      if (!groupCallEvent.content.containsKey('m.terminated')) {
-        Logs().i('[VOIP] found non terminated group call with id $groupCallId');
-        // call is not empty but check for stale participants (gone offline)
-        // with expire_ts
-        bool callExpired = true; // assume call is expired
-        final callMemberEvents =
-            states.tryGetMap<String, Event>(EventTypes.GroupCallMemberPrefix);
-        if (callMemberEvents != null) {
-          for (var i = 0; i < callMemberEvents.length; i++) {
-            final groupCallMemberEventMap =
-                callMemberEvents.entries.toList()[i];
-
-            final groupCallMemberEvent = groupCallMemberEventMap.value;
-            callExpired =
-                callMemberStateIsExpired(groupCallMemberEvent, groupCallId);
-            // no need to iterate further even if one participant says call isn't expired
-            if (!callExpired) break;
-          }
-        }
-
-        if (callExpired) {
-          Logs().i(
-              '[VOIP] Group call with only expired timestamps detected, terminating');
-          await sendGroupCallTerminateEvent(groupCallId);
-        }
-      }
-    }
-  }
-
-  /// returns the event_id if successful
-  Future<String?> sendGroupCallTerminateEvent(String groupCallId) async {
-    try {
-      Logs().d('[VOIP] running sendterminator');
-      final existingStateEvent =
-          getState(EventTypes.GroupCallPrefix, groupCallId);
-      if (existingStateEvent == null) {
-        Logs().e('[VOIP] could not find group call with id $groupCallId');
-        return null;
-      }
-
-      final req = await client
-          .setRoomStateWithKey(id, EventTypes.GroupCallPrefix, groupCallId, {
-        ...existingStateEvent.content,
-        'm.terminated': GroupCallTerminationReason.CallEnded,
-      });
-
-      Logs().i('[VOIP] Group call $groupCallId was killed uwu');
-      return req;
-    } catch (e, s) {
-      Logs().e('[VOIP] killing stale call $groupCallId failed', e, s);
-      return null;
-    }
-  }
-}
-
-extension GroupCallClientUtils on Client {
-  // call after sync
-  Future<void> singleShotStaleCallChecker() async {
-    if (lastStaleCallRun
-        .add(GroupCallUtils.staleCallCheckerDuration)
-        .isBefore(DateTime.now())) {
-      await Future.wait(rooms
-          .where((r) => r.membership == Membership.join)
-          .map((r) => r.singleShotStaleCallCheckerOnRoom()));
     }
   }
 }

@@ -1429,7 +1429,7 @@ void main() {
 
     test('callMemberStateIsExpired', () {
       expect(
-          room.callMemberStateIsExpired(
+          room.callMemberStateForIdIsExpired(
               Event(
                   senderId: '@test:example.com',
                   type: EventTypes.GroupCallMemberPrefix,
@@ -1457,7 +1457,7 @@ void main() {
               '1674811248673789288k7d60n5976'),
           true);
       expect(
-          room.callMemberStateIsExpired(
+          room.callMemberStateForIdIsExpired(
               Event(
                   senderId: '@test:example.com',
                   type: EventTypes.GroupCallMemberPrefix,
@@ -1486,37 +1486,6 @@ void main() {
                   stateKey: ''),
               '1674811256006mfqnmsAbzqxjYtWZ'),
           false);
-    });
-
-    test('stale call checker and terminator', () async {
-      room.setState(Event(
-          content: {'m.intent': 'm.prompt', 'm.type': 'm.video'},
-          type: EventTypes.GroupCallPrefix,
-          eventId: 'asdfasdf',
-          senderId: '@test:example.com',
-          originServerTs: DateTime.now(),
-          room: room,
-          stateKey: '1675856324414gzczMtfzTk0DKgEw'));
-      expect(room.hasActiveGroupCall, true);
-      expect(room.activeGroupCallEvents.length, 1);
-      expect(
-          await room
-              .sendGroupCallTerminateEvent('1675856324414gzczMtfzTk0DKgEw'),
-          'groupCall');
-      room.setState(Event(
-          content: {
-            'm.intent': 'm.prompt',
-            'm.type': 'm.video',
-            'm.terminated': 'call_ended'
-          },
-          type: EventTypes.GroupCallPrefix,
-          eventId: 'asdfasdf',
-          senderId: '@test:example.com',
-          originServerTs: DateTime.now(),
-          room: room,
-          stateKey: '1675856324414gzczMtfzTk0DKgEw'));
-      expect(room.hasActiveGroupCall, false);
-      expect(room.activeGroupCallEvents.length, 0);
     });
 
     test('group call participants count', () {

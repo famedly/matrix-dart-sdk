@@ -268,7 +268,9 @@ class GroupCall {
   Event? getMemberStateEvent(String userId) {
     final event = room.getState(EventTypes.GroupCallMemberPrefix, userId);
     if (event != null) {
-      return room.callMemberStateIsExpired(event, groupCallId) ? null : event;
+      return room.callMemberStateForIdIsExpired(event, groupCallId)
+          ? null
+          : event;
     }
     return null;
   }
@@ -279,7 +281,7 @@ class GroupCall {
     roomStates.sort((a, b) => a.originServerTs.compareTo(b.originServerTs));
     for (final value in roomStates) {
       if (value.type == EventTypes.GroupCallMemberPrefix &&
-          !room.callMemberStateIsExpired(value, groupCallId)) {
+          !room.callMemberStateForIdIsExpired(value, groupCallId)) {
         events.add(value);
       }
     }
