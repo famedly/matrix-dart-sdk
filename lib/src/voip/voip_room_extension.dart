@@ -56,31 +56,40 @@ extension GroupCallUtils on Room {
       if (call != null) {
         return call.devices.where((device) => device.expires_ts != null).every(
             (device) =>
-                device.expires_ts! < DateTime.now().millisecondsSinceEpoch);
+                (device.expires_ts ?? 0) +
+                    staleCallCheckerDuration
+                        .inMilliseconds < // buffer for sync glare
+                DateTime.now().millisecondsSinceEpoch);
+      } else {
+        Logs().d(
+            '[VOIP] Did not find $groupCallId in member events, probably sync glare');
+        return false;
       }
-    }
+    } else {
+      // Last 30 seconds to get yourself together.
+      // This saves us from accidentally killing calls which were just created and
+      // whose state event we haven't recieved yet in sync.
+      // (option 2 was local echo member state events, but reverting them if anything
+      // fails sounds pain)
 
-    // Last 30 seconds to get yourself together.
-    // This saves us from accidentally killing calls which were just created and
-    // whose state event we haven't recieved yet in sync.
-    // (option 2 was local echo member state events, but reverting them if anything
-    // fails sounds pain)
+      final expiredfr = groupCallMemberStateEvent.originServerTs
+              .add(staleCallCheckerDuration)
+              .millisecondsSinceEpoch <
+          DateTime.now().millisecondsSinceEpoch;
 
-    final expiredfr = groupCallMemberStateEvent.originServerTs
-            .add(staleCallCheckerDuration)
-            .millisecondsSinceEpoch <
-        DateTime.now().millisecondsSinceEpoch;
-    if (!expiredfr) {
-      Logs().d(
-          '[VOIP] Last 30 seconds for state event from ${groupCallMemberStateEvent.senderId}');
+      if (!expiredfr) {
+        Logs().d(
+            '[VOIP] Last 30 seconds for state event from ${groupCallMemberStateEvent.senderId}');
+      }
+      return expiredfr;
     }
-    return expiredfr;
   }
 
   /// checks for stale calls in a room and sends `m.terminated` if all the
   /// expires_ts are expired. Called regularly on sync.
   Future<void> singleShotStaleCallCheckerOnRoom() async {
     if (partial) return;
+    await client.oneShotSync();
 
     final copyGroupCallIds =
         states.tryGetMap<String, Event>(EventTypes.GroupCallPrefix);
