@@ -1,3 +1,7 @@
+## [0.25.9] 14th February 2024
+- fix: group calls terminator having sync glares (td)
+- fix: ignore expired calls rather than killing them (td)
+
 ## [0.25.8] 31th January 2024
 - chore: Use some call events as last events (Krille)
 - fix: nested void function in encryption helper (The one with the braid)
