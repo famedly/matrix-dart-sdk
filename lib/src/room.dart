@@ -290,6 +290,19 @@ class Room {
           .calcDisplayname(i18n: i18n);
       if (sender != null) return sender;
     }
+    if (isArchived) {
+      // In case of a direct chat, we need to get the room-members via the RoomMember event-type
+      // then we have to make sure to get the other room-member that is not us, to add them to the display name.
+      final roomMemberEvents = states.entries
+          .firstWhereOrNull((element) => element.key == EventTypes.RoomMember);
+      final otherRoomMember = roomMemberEvents?.value.entries
+          .firstWhereOrNull((entry) => entry.value.senderId != client.userID);
+
+      if (otherRoomMember?.value.prevContent?.tryGet('displayname') != null) {
+        return i18n.wasDirectChatDisplayName(
+            otherRoomMember!.value.prevContent!.tryGet('displayname')!);
+      }
+    }
     if (membership == Membership.leave) {
       final invitation = getState(EventTypes.RoomMember, client.userID!);
       if (invitation != null &&
