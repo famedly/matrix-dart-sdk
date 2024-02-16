@@ -133,6 +133,7 @@ void main() {
           'name',
           'homeserverUrl',
           'token',
+          'refresh_token',
           'userId',
           'deviceId',
           'deviceName',
@@ -147,6 +148,7 @@ void main() {
         await database.updateClient(
           'homeserverUrl',
           'token_different',
+          'refresh_token',
           'userId',
           'deviceId',
           'deviceName',

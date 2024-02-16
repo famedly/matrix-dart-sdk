@@ -39,6 +39,8 @@ Map<String, dynamic> decodeJson(dynamic data) {
 }
 
 class FakeMatrixApi extends BaseClient {
+  static String? expectedAccessToken;
+
   static Map<String, List<dynamic>> get calledEndpoints =>
       currentApi!._calledEndpoints;
   static int get eventCounter => currentApi!._eventCounter;
@@ -127,6 +129,23 @@ class FakeMatrixApi extends BaseClient {
     if (request.url.origin != 'https://fakeserver.notexisting') {
       return Response(
           '<html><head></head><body>Not found...</body></html>', 404);
+    }
+
+    if (!{
+          '/client/v3/refresh',
+          '/client/v3/login',
+          '/client/v3/register',
+        }.contains(action) &&
+        expectedAccessToken != null &&
+        request.headers['Authorization'] != 'Bearer $expectedAccessToken') {
+      return Response(
+        jsonEncode({
+          'errcode': 'M_UNKNOWN_TOKEN',
+          'error': 'Soft logged out',
+          'soft_logout': true,
+        }),
+        401,
+      );
     }
 
     // Call API
@@ -2013,6 +2032,11 @@ class FakeMatrixApi extends BaseClient {
           },
     },
     'POST': {
+      '/client/v3/refresh': (var req) => {
+            'access_token': 'a_new_token',
+            'expires_in_ms': 60000,
+            'refresh_token': 'another_new_token'
+          },
       '/client/v3/delete_devices': (var req) => {},
       '/client/v3/account/3pid/add': (var req) => {},
       '/client/v3/account/3pid/bind': (var req) => {},
@@ -2397,6 +2421,7 @@ class FakeMatrixApi extends BaseClient {
       '/client/v3/login': (var req) => {
             'user_id': '@test:fakeServer.notExisting',
             'access_token': 'abc123',
+            'refresh_token': 'refresh_abc123',
             'device_id': 'GHTYAJCE',
             'well_known': {
               'm.homeserver': {'base_url': 'https://example.org'},

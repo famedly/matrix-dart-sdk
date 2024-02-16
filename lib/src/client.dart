@@ -89,6 +89,8 @@ class Client extends MatrixApi {
 
   bool shareKeysWithUnverifiedDevices;
 
+  Future<void> Function(Client client)? onSoftLogout;
+
   // For CommandsClientExtension
   final Map<String, FutureOr<String?> Function(CommandArgs)> commands = {};
   final Filter syncFilter;
@@ -184,6 +186,13 @@ class Client extends MatrixApi {
     this.shareKeysWithUnverifiedDevices = true,
     this.enableDehydratedDevices = false,
     this.receiptsPublicByDefault = true,
+
+    /// Implement your https://spec.matrix.org/v1.9/client-server-api/#soft-logout
+    /// logic here.
+    /// Set this to `refreshAccessToken()` for the easiest way to handle the
+    /// most common reason for soft logouts.
+    /// You can also perform a new login here by passing the existing deviceId.
+    this.onSoftLogout,
   })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
@@ -232,6 +241,40 @@ class Client extends MatrixApi {
 
     // register all the default commands
     registerDefaultCommands();
+  }
+
+  /// Fetches the refreshToken from the database and tries to get a new
+  /// access token from the server and then stores it correctly. Unlike the
+  /// pure API call of `Client.refresh()` this handles the complete soft
+  /// logout case.
+  /// Throws an Exception if there is no refresh token available or the
+  /// client is not logged in.
+  Future<void> refreshAccessToken() async {
+    final storedClient = await database?.getClient(clientName);
+    final refreshToken = storedClient?.tryGet<String>('refresh_token');
+    if (refreshToken == null) {
+      throw Exception('No refresh token available');
+    }
+    final homeserverUrl = homeserver?.toString();
+    final userId = userID;
+    final deviceId = deviceID;
+    if (homeserverUrl == null || userId == null || deviceId == null) {
+      throw Exception('Cannot refresh access token when not logged in');
+    }
+
+    final tokenResponse = await refresh(refreshToken);
+
+    accessToken = tokenResponse.accessToken;
+    await database?.updateClient(
+      homeserverUrl,
+      tokenResponse.accessToken,
+      tokenResponse.refreshToken,
+      userId,
+      deviceId,
+      deviceName,
+      prevBatch,
+      encryption?.pickledOlmAccount,
+    );
   }
 
   /// The required name for this client.
@@ -485,6 +528,7 @@ class Client extends MatrixApi {
       deviceId: deviceId,
       initialDeviceDisplayName: initialDeviceDisplayName,
       inhibitLogin: inhibitLogin,
+      refreshToken: refreshToken ?? onSoftLogout != null,
     );
 
     // Connect if there is an access token in the response.
@@ -498,6 +542,7 @@ class Client extends MatrixApi {
     }
     await init(
         newToken: accessToken,
+        newRefreshToken: response.refreshToken,
         newUserID: userId,
         newHomeserver: homeserver,
         newDeviceName: initialDeviceDisplayName ?? '',
@@ -548,6 +593,7 @@ class Client extends MatrixApi {
       medium: medium,
       // ignore: deprecated_member_use
       address: address,
+      refreshToken: refreshToken ?? onSoftLogout != null,
     );
 
     // Connect if there is an access token in the response.
@@ -560,6 +606,7 @@ class Client extends MatrixApi {
     }
     await init(
       newToken: accessToken,
+      newRefreshToken: response.refreshToken,
       newUserID: userId,
       newHomeserver: homeserver_,
       newDeviceName: initialDeviceDisplayName ?? '',
@@ -1474,6 +1521,7 @@ class Client extends MatrixApi {
   /// `userDeviceKeysLoading` where it is necessary.
   Future<void> init({
     String? newToken,
+    String? newRefreshToken,
     Uri? newHomeserver,
     String? newUserID,
     String? newDeviceName,
@@ -1587,6 +1635,7 @@ class Client extends MatrixApi {
           await database.updateClient(
             homeserver.toString(),
             accessToken,
+            newRefreshToken,
             userID,
             _deviceID,
             _deviceName,
@@ -1598,6 +1647,7 @@ class Client extends MatrixApi {
             clientName,
             homeserver.toString(),
             accessToken,
+            newRefreshToken,
             userID,
             _deviceID,
             _deviceName,
@@ -1822,8 +1872,19 @@ class Client extends MatrixApi {
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.error,
           error: SdkError(exception: e, stackTrace: s)));
       if (e.error == MatrixError.M_UNKNOWN_TOKEN) {
-        Logs().w('The user has been logged out!');
-        await clear();
+        final onSoftLogout = this.onSoftLogout;
+        if (e.raw.tryGet<bool>('soft_logout') == true && onSoftLogout != null) {
+          Logs().w('The user has been soft logged out! Try to login again...');
+          try {
+            await onSoftLogout(this);
+          } catch (e, s) {
+            Logs().e('Unable to login again', e, s);
+            await clear();
+          }
+        } else {
+          Logs().w('The user has been logged out!');
+          await clear();
+        }
       }
     } on SyncConnectionException catch (e, s) {
       Logs().w('Syncloop failed: Client has not connection to the server');
@@ -3112,6 +3173,7 @@ class Client extends MatrixApi {
       clientName,
       migrateClient['homeserver_url'],
       migrateClient['token'],
+      migrateClient['refresh_token'],
       migrateClient['user_id'],
       migrateClient['device_id'],
       migrateClient['device_name'],
