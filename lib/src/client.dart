@@ -212,6 +212,12 @@ class Client extends MatrixApi {
       EventTypes.Message,
       EventTypes.Encrypted,
       EventTypes.Sticker,
+      EventTypes.CallInvite,
+      EventTypes.CallAnswer,
+      EventTypes.CallReject,
+      EventTypes.CallHangup,
+      EventTypes.GroupCallPrefix,
+      EventTypes.GroupCallMemberPrefix,
     ]);
 
     // register all the default commands
@@ -1749,8 +1755,6 @@ class Client extends MatrixApi {
       try {
         await processToDeviceQueue();
       } catch (_) {} // we want to dispose any errors this throws
-
-      // await singleShotStaleCallChecker();
 
       _retryDelay = Future.value();
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.finished));

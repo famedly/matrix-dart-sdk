@@ -160,7 +160,11 @@ class Room {
       return;
     }
 
-    final isMessageEvent = client.roomPreviewLastEvents.contains(state.type);
+    final isMessageEvent = {
+      EventTypes.Message,
+      EventTypes.Encrypted,
+      EventTypes.Sticker
+    }.contains(state.type);
 
     // We ignore events editing events older than the current-latest here so
     // i.e. newly sent edits for older events don't show up in room preview
@@ -177,7 +181,8 @@ class Room {
     }
 
     // Ignore other non-state events
-    final stateKey = isMessageEvent ? '' : state.stateKey;
+    final stateKey = state.stateKey ??
+        (client.roomPreviewLastEvents.contains(state.type) ? '' : null);
     final roomId = state.roomId;
     if (stateKey == null || roomId == null) {
       return;

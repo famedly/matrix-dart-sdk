@@ -1,6 +1,6 @@
 name: matrix
 description: Matrix Dart SDK
-version: 0.25.6
+version: 0.25.9
 homepage: https://famedly.com
 repository: https://github.com/famedly/matrix-dart-sdk.git
 issue_tracker: https://github.com/famedly/matrix-dart-sdk/issues
@@ -30,6 +30,7 @@ dependencies:
   sdp_transform: ^0.3.2
   slugify: ^2.0.0
   sqflite_common: ^2.4.5
+  sqlite3: ^2.1.0
   typed_data: ^1.3.2
   webrtc_interface: ^1.0.13
 
