@@ -64,9 +64,7 @@ extension FamedlyCallMemberEventsExtension on Room {
 
     memberships.forEach((key, value) {
       for (final mem in value) {
-        if (!ids.contains(mem.callId) && !mem.isExpired) {
-          ids.add(mem.callId);
-        }
+        if (!mem.isExpired) ids.add(mem.callId);
       }
     });
     return ids.toList();

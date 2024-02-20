@@ -216,8 +216,12 @@ class Client extends MatrixApi {
       EventTypes.CallAnswer,
       EventTypes.CallReject,
       EventTypes.CallHangup,
-      EventTypes.GroupCallPrefix,
-      EventTypes.GroupCallMemberPrefix,
+
+      /// hack because having them both in important events and roomPreivew
+      /// makes the statekey '' which means you can only have one event of that
+      /// type
+      // EventTypes.GroupCallPrefix,
+      // EventTypes.GroupCallMemberPrefix,
     ]);
 
     // register all the default commands

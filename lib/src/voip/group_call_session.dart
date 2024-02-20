@@ -554,6 +554,14 @@ class GroupCallSession {
           element.roomId == room.id; // sanity checks
     }).toList();
 
+    final ignoredMems =
+        mems.where((element) => !memsForCurrentGroupCall.contains(element));
+
+    for (final mem in ignoredMems) {
+      Logs().w(
+          '[VOIP] Ignored mem ${mem.toJson()} while updating participants list for callId: $groupCallId, expiry status: ${mem.isExpired}');
+    }
+
     final List<Participant> newP = [];
 
     for (final mem in memsForCurrentGroupCall) {
@@ -620,7 +628,7 @@ class GroupCallSession {
           // ratcheting does not work on web, we just create a whole new key everywhere
           // await _ratchetLocalParticipantKey(anyJoined.toList());
 
-          // await makeNewSenderKey(true);
+          await makeNewSenderKey(true);
 
           // TODO (td): fix rotating keys is broken atm
           await _sendEncryptionKeysEvent();
@@ -642,18 +650,12 @@ class GroupCallSession {
           }
           memberLeaveEncKeyRotateDebounceTimer =
               Timer(CallTimeouts.makeKeyDelay, () async {
-            // await makeNewSenderKey(true);
+            await makeNewSenderKey(true);
 
             // TODO (td): fix rotating keys is broken atm
             await _sendEncryptionKeysEvent();
           });
         }
-      }
-
-      if (!listEquals(participants.sorted((a, b) => a.id.compareTo(b.id)),
-          newP.sorted((a, b) => a.id.compareTo(b.id)))) {
-        Logs().e(
-            '[VOIP] updating participants list failed, old list: ${participants.map((e) => e.id).toString()}, new list: ${newP.map((e) => e.id).toString()}');
       }
 
       onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
@@ -1039,7 +1041,7 @@ class GroupCallSession {
   Future<void> makeNewSenderKey(bool delayBeforeUsingKeyOurself) async {
     final key = base64Encode(secureRandomBytes(32));
     final keyIndex = getNewEncryptionKeyIndex();
-    Logs().i('[VOIP E2EE] Generated new key $key at index ');
+    Logs().i('[VOIP E2EE] Generated new key $key at index $keyIndex');
 
     await _setEncryptionKey(
       localParticipant!,

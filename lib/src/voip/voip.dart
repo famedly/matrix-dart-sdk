@@ -810,7 +810,7 @@ class VoIP {
       voip: this,
       room: room,
       backends: membership.backends,
-      groupCallId: membership.roomId,
+      groupCallId: membership.callId,
       application: membership.application,
       scope: membership.scope,
       e2ee: e2ee,
