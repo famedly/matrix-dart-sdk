@@ -25,7 +25,7 @@ coverage:
     - sed -i 's/#\([^ ]\)/\1/g' pubspec.yaml
     - rm -r example
     - ./scripts/prepare.sh
-    - ./scripts/test.sh
+    - ./scripts/test.sh coverage
   coverage: /^\s*lines\.*:\s*\d+.\d+\%/
   artifacts:
     when: always
@@ -50,7 +50,7 @@ coverage_without_olm:
     - curl -o /bin/lcov_cobertura.py https://raw.githubusercontent.com/eriwen/lcov-to-cobertura-xml/master/lcov_cobertura/lcov_cobertura.py && sed 's/env python/env python3/' -i /bin/lcov_cobertura.py && chmod +x /bin/lcov_cobertura.py
   script:
     - dart pub get
-    - ./scripts/test.sh
+    - ./scripts/test.sh coverage_without_olm
   #coverage: /^\s*lines\.*:\s*\d+.\d+\%/ <- broken see https://github.com/dart-lang/test/issues/1698
   artifacts:
     when: always

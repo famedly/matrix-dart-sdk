@@ -42,22 +42,30 @@ jobs:
   # coverage_without_olm is done on dart images because why not :D
   coverage:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/famedly/container-image-flutter/flutter-linux:${{inputs.flutter_version}}
-      options: --user root
     steps:
       - uses: actions/checkout@v3
+      - name: Set up Flutter
+        uses: subosito/flutter-action@48cafc24713cca54bbe03cdc3a423187d413aafa
+        with:
+          flutter-version: ${{ inputs.flutter_version }}
+          cache: true
       - name: Run tests
         run: |
           sed -i 's/#flutter_test/flutter_test/g' pubspec.yaml
           rm -r example
-          ./scripts/prepare.sh
+          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y curl libolm3 lcov python3 python3-distutils libsqlite3-dev
+          flutter pub get
           ./scripts/test.sh
+      - uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 1
 
   coverage_without_olm:
     runs-on: ubuntu-latest
     container:
-      image: dart:${{inputs.dart_version}}
+      image: dart:${{ inputs.dart_version }}
     env:
       NO_OLM: 1
     steps:
@@ -65,9 +73,27 @@ jobs:
       - name: Run tests
         run: |
           apt-get update && apt-get install --no-install-recommends --no-install-suggests -y curl lcov python3 python3-distutils libsqlite3-dev
-          curl -o /bin/lcov_cobertura.py https://raw.githubusercontent.com/eriwen/lcov-to-cobertura-xml/master/lcov_cobertura/lcov_cobertura.py && sed 's/env python/env python3/' -i /bin/lcov_cobertura.py && chmod +x /bin/lcov_cobertura.py
           dart pub get
-          ./scripts/test.sh
+          ./scripts/test.sh coverage-without-olm
+      - uses: actions/upload-artifact@v3
+        with:
+          name: coverage-without-olm
+          path: coverage-without-olm/
+          retention-days: 1
+
+  review_app_coverage:
+    if: github.event_name == 'pull_request'
+    strategy:
+      matrix:
+        app: [coverage, coverage-without-olm]
+    needs: [coverage, coverage_without_olm]
+    secrets: inherit
+    uses: famedly/frontend-ci-templates/.github/workflows/review-app.yml@td/artifactName
+    with:
+      projectname: "dart-sdk-${{ matrix.app }}"
+      pr: ${{ github.event.pull_request.number }}
+      environment: "review"
+      artifact-name: ${{ matrix.app }}
 
   pub-dev-dry-run:
     runs-on: ubuntu-latest
