@@ -161,6 +161,12 @@ class Client extends MatrixApi {
     Set<KeyVerificationMethod>? verificationMethods,
     http.Client? httpClient,
     Set<String>? importantStateEvents,
+
+    /// You probably don't want to add state events which are also
+    /// in important state events to this list, or get ready to face
+    /// only having one event of that particular type in preLoad because
+    /// previewEvents are stored with stateKey '' not the actual state key
+    /// of your state event
     Set<String>? roomPreviewLastEvents,
     this.pinUnreadRooms = false,
     this.pinInvitedRooms = true,
@@ -216,8 +222,12 @@ class Client extends MatrixApi {
       EventTypes.CallAnswer,
       EventTypes.CallReject,
       EventTypes.CallHangup,
-      EventTypes.GroupCallPrefix,
-      EventTypes.GroupCallMemberPrefix,
+
+      /// hack because having them both in important events and roomPreivew
+      /// makes the statekey '' which means you can only have one event of that
+      /// type
+      // EventTypes.GroupCallPrefix,
+      // EventTypes.GroupCallMemberPrefix,
     ]);
 
     // register all the default commands
