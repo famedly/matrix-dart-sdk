@@ -1093,11 +1093,11 @@ class GroupCallSession {
 
     final encryptionKeys = encryptionKeysMap[participant] ?? <int, Uint8List>{};
 
-    if (encryptionKeys[encryptionKeyIndex] != null &&
-        listEquals(encryptionKeys[encryptionKeyIndex]!, keyBin)) {
-      Logs().i('[VOIP E2EE] Ignoring duplicate key');
-      return;
-    }
+    // if (encryptionKeys[encryptionKeyIndex] != null &&
+    //     listEquals(encryptionKeys[encryptionKeyIndex]!, keyBin)) {
+    //   Logs().i('[VOIP E2EE] Ignoring duplicate key');
+    //   return;
+    // }
 
     encryptionKeys[encryptionKeyIndex] = keyBin;
 
