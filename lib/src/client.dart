@@ -705,6 +705,7 @@ class Client extends MatrixApi {
     CreateRoomPreset preset = CreateRoomPreset.privateChat,
     List<StateEvent>? initialState,
     Visibility? visibility,
+    HistoryVisibility? historyVisibility,
     bool waitForSync = true,
     bool groupCall = false,
     Map<String, dynamic>? powerLevelContentOverride,
@@ -719,6 +720,17 @@ class Client extends MatrixApi {
             'algorithm': supportedGroupEncryptionAlgorithms.first,
           },
           type: EventTypes.Encryption,
+        ));
+      }
+    }
+    if (historyVisibility != null) {
+      initialState ??= [];
+      if (!initialState.any((s) => s.type == EventTypes.HistoryVisibility)) {
+        initialState.add(StateEvent(
+          content: {
+            'history_visibility': historyVisibility.text,
+          },
+          type: EventTypes.HistoryVisibility,
         ));
       }
     }
