@@ -33,6 +33,7 @@ abstract class DatabaseApi {
   Future updateClient(
     String homeserverUrl,
     String token,
+    DateTime? tokenExpiresAt,
     String? refreshToken,
     String userId,
     String? deviceId,
@@ -45,6 +46,7 @@ abstract class DatabaseApi {
     String name,
     String homeserverUrl,
     String token,
+    DateTime? tokenExpiresAt,
     String? refreshToken,
     String userId,
     String? deviceId,

@@ -750,6 +750,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
       String name,
       String homeserverUrl,
       String token,
+      DateTime? tokenExpiresAt,
       String? refreshToken,
       String userId,
       String? deviceId,
@@ -758,6 +759,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
       String? olmAccount) async {
     await _clientBox.put('homeserver_url', homeserverUrl);
     await _clientBox.put('token', token);
+    await _clientBox.put(
+        'token_expires_at', tokenExpiresAt?.millisecondsSinceEpoch.toString());
     await _clientBox.put('refresh_token', refreshToken);
     await _clientBox.put('user_id', userId);
     await _clientBox.put('device_id', deviceId);
@@ -1316,6 +1319,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   Future<void> updateClient(
     String homeserverUrl,
     String token,
+    DateTime? tokenExpiresAt,
     String? refreshToken,
     String userId,
     String? deviceId,
@@ -1325,6 +1329,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   ) async {
     await _clientBox.put('homeserver_url', homeserverUrl);
     await _clientBox.put('token', token);
+    await _clientBox.put(
+        'token_expires_at', tokenExpiresAt?.millisecondsSinceEpoch.toString());
     await _clientBox.put('refresh_token', refreshToken);
     await _clientBox.put('user_id', userId);
     await _clientBox.put('device_id', deviceId);
