@@ -1,3 +1,7 @@
+## [0.25.10] 23rd February 2024
+- chore: remove state events both in imp and preview events list (td)
+- feat: specify history_visibility when creating group chat (Karthikeyan S)
+
 ## [0.25.9] 14th February 2024
 - fix: group calls terminator having sync glares (td)
 - fix: ignore expired calls rather than killing them (td)
