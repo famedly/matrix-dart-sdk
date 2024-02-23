@@ -13,7 +13,7 @@ abstract class Hash {
   FutureOr<Uint8List> call(Uint8List data) {
     final outSize = EVP_MD_size(ptr);
     final mem = malloc.call<Uint8>(outSize + data.length);
-    final dataMem = mem.elementAt(outSize);
+    final dataMem = mem + outSize;
     try {
       dataMem.asTypedList(data.length).setAll(0, data);
       EVP_Digest(dataMem, data.length, mem, nullptr, ptr, nullptr);
@@ -48,9 +48,9 @@ abstract class Cipher {
     final mem = malloc
         .call<Uint8>(sizeOf<IntPtr>() + key.length + iv.length + input.length);
     final lenMem = mem.cast<IntPtr>();
-    final keyMem = mem.elementAt(sizeOf<IntPtr>());
-    final ivMem = keyMem.elementAt(key.length);
-    final dataMem = ivMem.elementAt(iv.length);
+    final keyMem = mem + sizeOf<IntPtr>();
+    final ivMem = keyMem + key.length;
+    final dataMem = ivMem + iv.length;
     try {
       keyMem.asTypedList(key.length).setAll(0, key);
       ivMem.asTypedList(iv.length).setAll(0, iv);
@@ -58,7 +58,7 @@ abstract class Cipher {
       final ctx = EVP_CIPHER_CTX_new();
       EVP_EncryptInit_ex(ctx, alg, nullptr, keyMem, ivMem);
       EVP_EncryptUpdate(ctx, dataMem, lenMem, dataMem, input.length);
-      EVP_EncryptFinal_ex(ctx, dataMem.elementAt(lenMem.value), lenMem);
+      EVP_EncryptFinal_ex(ctx, dataMem + lenMem.value, lenMem);
       EVP_CIPHER_CTX_free(ctx);
       return Uint8List.fromList(dataMem.asTypedList(input.length));
     } finally {
@@ -89,8 +89,8 @@ FutureOr<Uint8List> pbkdf2(
     Uint8List passphrase, Uint8List salt, Hash hash, int iterations, int bits) {
   final outLen = bits ~/ 8;
   final mem = malloc.call<Uint8>(passphrase.length + salt.length + outLen);
-  final saltMem = mem.elementAt(passphrase.length);
-  final outMem = saltMem.elementAt(salt.length);
+  final saltMem = mem + passphrase.length;
+  final outMem = saltMem + salt.length;
   try {
     mem.asTypedList(passphrase.length).setAll(0, passphrase);
     saltMem.asTypedList(salt.length).setAll(0, salt);

@@ -1647,7 +1647,7 @@ class TupleKey {
   String toString() => parts.join('|');
 
   @override
-  bool operator ==(other) => parts.toString() == other.toString();
+  bool operator ==(Object other) => parts.toString() == other.toString();
 
   @override
   int get hashCode => Object.hashAll(parts);
