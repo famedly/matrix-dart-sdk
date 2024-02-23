@@ -32,12 +32,14 @@ Future<Client> getClient() async {
     'testclient',
     httpClient: FakeMatrixApi(),
     databaseBuilder: getDatabase,
+    onSoftLogout: (client) => client.refreshAccessToken(),
   );
   FakeMatrixApi.client = client;
   await client.checkHomeserver(Uri.parse('https://fakeServer.notExisting'),
       checkWellKnown: false);
   await client.init(
     newToken: 'abcd',
+    newRefreshToken: 'refresh_abcd',
     newUserID: '@test:fakeServer.notExisting',
     newHomeserver: client.homeserver,
     newDeviceName: 'Text Matrix Client',

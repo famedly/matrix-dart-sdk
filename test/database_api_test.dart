@@ -129,10 +129,13 @@ void main() {
         await database.getClient('name');
       });
       test('insertClient', () async {
+        final now = DateTime.now();
         await database.insertClient(
           'name',
           'homeserverUrl',
           'token',
+          now,
+          'refresh_token',
           'userId',
           'deviceId',
           'deviceName',
@@ -142,11 +145,17 @@ void main() {
 
         final client = await database.getClient('name');
         expect(client?['token'], 'token');
+        expect(
+          client?['token_expires_at'],
+          now.millisecondsSinceEpoch.toString(),
+        );
       });
       test('updateClient', () async {
         await database.updateClient(
           'homeserverUrl',
           'token_different',
+          DateTime.now(),
+          'refresh_token',
           'userId',
           'deviceId',
           'deviceName',

@@ -964,6 +964,35 @@ void main() {
       await client.dispose(closeDatabase: true);
     });
 
+    test('refreshAccessToken', () async {
+      final client = await getClient();
+      expect(client.accessToken, 'abcd');
+      await client.refreshAccessToken();
+      expect(client.accessToken, 'a_new_token');
+    });
+
+    test('handleSoftLogout', () async {
+      final client = await getClient();
+      expect(client.accessToken, 'abcd');
+      var softLoggedOut = 0;
+      client.onSoftLogout = (client) {
+        softLoggedOut++;
+        return client.refreshAccessToken();
+      };
+      FakeMatrixApi.expectedAccessToken = 'a_new_token';
+      await client.oneShotSync();
+      await client.oneShotSync();
+      FakeMatrixApi.expectedAccessToken = null;
+      expect(client.accessToken, 'a_new_token');
+      expect(softLoggedOut, 1);
+      final storedClient = await client.database?.getClient(client.clientName);
+      expect(storedClient?.tryGet<String>('token'), 'a_new_token');
+      expect(
+        storedClient?.tryGet<String>('refresh_token'),
+        'another_new_token',
+      );
+    });
+
     test('object equality', () async {
       final time1 = DateTime.fromMillisecondsSinceEpoch(1);
       final time2 = DateTime.fromMillisecondsSinceEpoch(0);
