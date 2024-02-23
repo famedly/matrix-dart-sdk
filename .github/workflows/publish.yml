@@ -12,3 +12,5 @@ jobs:
       contents: read
       id-token: write
     uses: famedly/frontend-ci-templates/.github/workflows/publish-pub.yml@main
+    with:
+      env_file: ".github/workflows/versions.env"
