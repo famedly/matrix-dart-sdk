@@ -1181,13 +1181,14 @@ class GroupCallSession {
       Logs().w(
           '[VOIP E2EE] Received m.call.encryption_keys where keys is empty: callId=$callId');
       return;
+    } else {
+      Logs().i(
+          '[VOIP E2EE]: onCallEncryption, got keys from ${remoteParticipant.id} ${keyContent.toJson()}');
     }
 
     for (final key in keyContent.keys) {
       final encryptionKey = key.key;
       final encryptionKeyIndex = key.index;
-      Logs().i(
-          '[VOIP E2EE]: onCallEncryption, got key from ${remoteParticipant.id} encryptionKeyIndex=$encryptionKeyIndex key=$encryptionKey');
       await _setEncryptionKey(
         remoteParticipant,
         encryptionKeyIndex,
