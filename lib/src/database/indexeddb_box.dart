@@ -69,7 +69,7 @@ class BoxCollection with ZoneTransactionMixin {
       });
 
   Future<void> clear() async {
-    final txn = _db.transaction(boxNames, 'readwrite');
+    final txn = _db.transaction(boxNames.toList(), 'readwrite');
     for (final name in boxNames) {
       unawaited(txn.objectStore(name).clear());
     }

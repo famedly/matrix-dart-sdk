@@ -32,6 +32,8 @@ void main() {
         'testclient',
         'https://example.org',
         'blubb',
+        null,
+        null,
         '@test:example.org',
         null,
         null,
