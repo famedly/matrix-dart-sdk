@@ -43,7 +43,7 @@ import 'package:matrix/src/utils/try_get_push_rule.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
-enum LoginState { loggedIn, loggedOut }
+enum LoginState { loggedIn, loggedOut, softLoggedOut }
 
 extension TrailingSlash on Uri {
   Uri stripTrailingSlash() => path.endsWith('/')
@@ -267,10 +267,15 @@ class Client extends MatrixApi {
     final tokenResponse = await refresh(refreshToken);
 
     accessToken = tokenResponse.accessToken;
+    final expiresInMs = tokenResponse.expiresInMs;
+    final tokenExpiresAt = expiresInMs == null
+        ? null
+        : DateTime.now().add(Duration(milliseconds: expiresInMs));
+    accessTokenExpiresAt = tokenExpiresAt;
     await database?.updateClient(
       homeserverUrl,
       tokenResponse.accessToken,
-      accessTokenExpiresAt,
+      tokenExpiresAt,
       tokenResponse.refreshToken,
       userId,
       deviceId,
@@ -1574,7 +1579,7 @@ class Client extends MatrixApi {
     String? userID;
     try {
       Logs().i('Initialize client $clientName');
-      if (isLogged()) {
+      if (onLoginStateChanged.value == LoginState.loggedIn) {
         throw ClientInitPreconditionError(
           'User is already logged in! Call [logout()] first!',
         );
@@ -1592,6 +1597,7 @@ class Client extends MatrixApi {
       _serverConfigCache.invalidate();
 
       final account = await this.database?.getClient(clientName);
+      newRefreshToken ??= account?.tryGet<String>('refresh_token');
       if (account != null) {
         _id = account['client_id'];
         homeserver = Uri.parse(account['homeserver_url']);
@@ -1624,6 +1630,26 @@ class Client extends MatrixApi {
         _deviceID = newDeviceID ?? _deviceID;
         _deviceName = newDeviceName ?? _deviceName;
         olmAccount = newOlmAccount ?? olmAccount;
+      }
+
+      // If we are refreshing the session, we are done here:
+      if (onLoginStateChanged.value == LoginState.softLoggedOut) {
+        if (newRefreshToken != null && accessToken != null && userID != null) {
+          // Store the new tokens:
+          await _database?.updateClient(
+            homeserver.toString(),
+            accessToken,
+            accessTokenExpiresAt,
+            newRefreshToken,
+            userID,
+            _deviceID,
+            _deviceName,
+            prevBatch,
+            encryption?.pickledOlmAccount,
+          );
+        }
+        onLoginStateChanged.add(LoginState.loggedIn);
+        return;
       }
 
       if (accessToken == null || homeserver == null || userID == null) {
@@ -1806,6 +1832,21 @@ class Client extends MatrixApi {
     return;
   }
 
+  Future<void> _handleSoftLogout() async {
+    final onSoftLogout = this.onSoftLogout;
+    if (onSoftLogout == null) return;
+
+    onLoginStateChanged.add(LoginState.softLoggedOut);
+    try {
+      await onSoftLogout(this);
+      onLoginStateChanged.add(LoginState.loggedIn);
+    } catch (e, s) {
+      Logs().w('Unable to refresh session after soft logout', e, s);
+      await clear();
+      rethrow;
+    }
+  }
+
   /// Pass a timeout to set how long the server waits before sending an empty response.
   /// (Corresponds to the timeout param on the /sync request.)
   Future<void> _innerSync({Duration? timeout}) async {
@@ -1820,19 +1861,19 @@ class Client extends MatrixApi {
       Object? syncError;
       await _checkSyncFilter();
 
+      // The timeout we send to the server for the sync loop. It says to the
+      // server that we want to receive an empty sync response after this
+      // amount of time if nothing happens.
+      timeout ??= const Duration(seconds: 30);
+
       // Call onSoftLogout 5 minutes before access token expires to prevent
       // failing network requests.
       final tokenExpiresAt = accessTokenExpiresAt;
       if (onSoftLogout != null &&
           tokenExpiresAt != null &&
-          tokenExpiresAt.difference(DateTime.now()) <= Duration(minutes: 5)) {
-        await onSoftLogout?.call(this);
+          tokenExpiresAt.difference(DateTime.now()) <= timeout * 2) {
+        await _handleSoftLogout();
       }
-
-      // The timeout we send to the server for the sync loop. It says to the
-      // server that we want to receive an empty sync response after this
-      // amount of time if nothing happens.
-      timeout ??= const Duration(seconds: 30);
 
       final syncRequest = sync(
         filter: syncFilterId,
@@ -1910,12 +1951,8 @@ class Client extends MatrixApi {
         final onSoftLogout = this.onSoftLogout;
         if (e.raw.tryGet<bool>('soft_logout') == true && onSoftLogout != null) {
           Logs().w('The user has been soft logged out! Try to login again...');
-          try {
-            await onSoftLogout(this);
-          } catch (e, s) {
-            Logs().e('Unable to login again', e, s);
-            await clear();
-          }
+
+          await _handleSoftLogout();
         } else {
           Logs().w('The user has been logged out!');
           await clear();
