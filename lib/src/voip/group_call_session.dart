@@ -1032,9 +1032,14 @@ class GroupCallSession {
     return encryptionKeysMap[participant];
   }
 
-  /// always chooses the next possible index till 16, then start again
+  int indexCounter = 0;
+
+  /// always chooses the next possible index, we cycle after 16 because
+  /// no real adv with infinite list
   int getNewEncryptionKeyIndex() {
-    return (getKeysForParticipant(localParticipant!)?.length ?? 0) % 16;
+    final newIndex = indexCounter % 16;
+    indexCounter++;
+    return newIndex;
   }
 
   /// makes a new e2ee key for local user and sets it with a delay if specified
@@ -1124,7 +1129,9 @@ class GroupCallSession {
 
     encryptionKeys[encryptionKeyIndex] = keyBin;
     encryptionKeysMap[participant] = encryptionKeys;
-    _latestLocalKeyIndex = encryptionKeyIndex;
+    if (participant == localParticipant) {
+      _latestLocalKeyIndex = encryptionKeyIndex;
+    }
 
     if (send) {
       await _sendEncryptionKeysEvent(encryptionKeyIndex, sendTo: sendTo);
@@ -1138,7 +1145,9 @@ class GroupCallSession {
             '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyString');
         await voip.delegate.keyProvider?.onSetEncryptionKey(
             participant, encryptionKeyString, encryptionKeyIndex);
-        _currentLocalKeyIndex = encryptionKeyIndex;
+        if (participant == localParticipant) {
+          _currentLocalKeyIndex = encryptionKeyIndex;
+        }
       });
       setNewKeyTimeouts.add(useKeyTimeout);
     } else {
@@ -1146,7 +1155,9 @@ class GroupCallSession {
           '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyString');
       await voip.delegate.keyProvider?.onSetEncryptionKey(
           participant, encryptionKeyString, encryptionKeyIndex);
-      _currentLocalKeyIndex = encryptionKeyIndex;
+      if (participant == localParticipant) {
+        _currentLocalKeyIndex = encryptionKeyIndex;
+      }
     }
   }
 
@@ -1247,6 +1258,7 @@ class GroupCallSession {
     );
   }
 
+  /// TODO FIND OUT WHY INDEX 1 IS ShAREED EVERYTIME
   Future<void> onCallEncryptionKeyRequest(Room room,
       Participant remoteParticipant, Map<String, dynamic> content) async {
     if (room.id != room.id) return;
@@ -1266,6 +1278,8 @@ class GroupCallSession {
             mem.roomId == room.id &&
             mem.application == application)
         .isNotEmpty) {
+      Logs().d(
+          '[VOIP] onCallEncryptionKeyRequest: request checks out, sending key on index: $latestLocalKeyIndex to ${remoteParticipant.id}');
       await _sendEncryptionKeysEvent(
         latestLocalKeyIndex,
         sendTo: [remoteParticipant],
