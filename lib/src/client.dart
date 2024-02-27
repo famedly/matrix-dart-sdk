@@ -711,10 +711,10 @@ class Client extends MatrixApi {
     }
     if (groupCall) {
       powerLevelContentOverride ??= {};
-      powerLevelContentOverride['events'] = <String, dynamic>{
-        EventTypes.GroupCallMemberPrefix: 0,
-        EventTypes.GroupCallPrefix: 0,
-      };
+      if (powerLevelContentOverride['events'] is Map) {
+        powerLevelContentOverride['events'][EventTypes.GroupCallMemberPrefix] = 0;
+        powerLevelContentOverride['events'][EventTypes.GroupCallPrefix] = 0;
+      }
     }
     final roomId = await createRoom(
         invite: invite,
