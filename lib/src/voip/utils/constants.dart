@@ -52,4 +52,6 @@ class CallConstants {
     EventTypes.CallSDPStreamMetadataChanged,
     EventTypes.CallSDPStreamMetadataChangedPrefix,
   };
+
+  static const bool enableE2EEKeyRatcheting = false;
 }
