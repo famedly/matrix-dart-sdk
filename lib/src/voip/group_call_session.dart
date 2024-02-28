@@ -246,7 +246,7 @@ class GroupCallSession {
   void updateLocalUsermediaStream(WrappedMediaStream stream) {
     if (localUserMediaStream != null) {
       final oldStream = localUserMediaStream!.stream;
-      localUserMediaStream!.setNewStream(stream.stream!);
+      localUserMediaStream!.setNewStream(stream.stream);
       // ignore: discarded_futures
       stopMediaStream(oldStream);
     }
@@ -358,7 +358,7 @@ class GroupCallSession {
 
     if (localUserMediaStream != null) {
       localUserMediaStream!.setAudioMuted(muted);
-      setTracksEnabled(localUserMediaStream!.stream!.getAudioTracks(), !muted);
+      setTracksEnabled(localUserMediaStream!.stream.getAudioTracks(), !muted);
     }
 
     for (final call in callSessions) {
@@ -376,7 +376,7 @@ class GroupCallSession {
 
     if (localUserMediaStream != null) {
       localUserMediaStream!.setVideoMuted(muted);
-      setTracksEnabled(localUserMediaStream!.stream!.getVideoTracks(), !muted);
+      setTracksEnabled(localUserMediaStream!.stream.getVideoTracks(), !muted);
     }
 
     for (final call in callSessions) {
@@ -430,7 +430,7 @@ class GroupCallSession {
         onGroupCallEvent.add(GroupCallEvent.LocalScreenshareStateChanged);
         for (final call in callSessions) {
           await call.addLocalStream(
-              await localScreenshareStream!.stream!.clone(),
+              await localScreenshareStream!.stream.clone(),
               localScreenshareStream!.purpose);
         }
 

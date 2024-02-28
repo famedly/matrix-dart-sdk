@@ -159,7 +159,7 @@ class CallSession {
   Future<bool> hasVideoToSend() async {
     final transceivers = await pc!.getTransceivers();
     final localUserMediaVideoTrack = localUserMediaStream?.stream
-        ?.getTracks()
+        .getTracks()
         .singleWhereOrNull((track) => track.kind == 'video');
 
     // check if we have a video track locally and have transceivers setup correctly.
@@ -282,10 +282,10 @@ class CallSession {
       ..transferee = false;
 
     final metadata = SDPStreamMetadata({
-      localUserMediaStream!.stream!.id: SDPStreamPurpose(
+      localUserMediaStream!.stream.id: SDPStreamPurpose(
           purpose: SDPStreamMetadataPurpose.Usermedia,
-          audio_muted: localUserMediaStream!.stream!.getAudioTracks().isEmpty,
-          video_muted: localUserMediaStream!.stream!.getVideoTracks().isEmpty)
+          audio_muted: localUserMediaStream!.stream.getAudioTracks().isEmpty,
+          video_muted: localUserMediaStream!.stream.getVideoTracks().isEmpty)
     });
 
     final res = await sendAnswerCall(room, callId, answer.sdp!, localPartyId,
@@ -299,7 +299,7 @@ class CallSession {
     waitForLocalAVStream = false;
 
     for (final element in callFeeds) {
-      await addLocalStream(await element.stream!.clone(), element.purpose);
+      await addLocalStream(await element.stream.clone(), element.purpose);
     }
 
     await answer();
@@ -323,7 +323,7 @@ class CallSession {
     }
 
     for (final element in callFeeds) {
-      await addLocalStream(await element.stream!.clone(), element.purpose);
+      await addLocalStream(await element.stream.clone(), element.purpose);
     }
 
     await pc!.addTransceiver(
@@ -431,7 +431,7 @@ class CallSession {
           'Stream purpose update: \nid = "$streamId", \npurpose = "${sdpStreamMetadata.purpose}",  \naudio_muted = ${sdpStreamMetadata.audio_muted}, \nvideo_muted = ${sdpStreamMetadata.video_muted}');
     });
     for (final wpstream in getRemoteStreams) {
-      final streamId = wpstream.stream!.id;
+      final streamId = wpstream.stream.id;
       final purpose = metadata.sdpStreamMetadatas[streamId];
       if (purpose != null) {
         wpstream
@@ -539,11 +539,11 @@ class CallSession {
         for (final sender in screensharingSenders) {
           await pc!.removeTrack(sender);
         }
-        for (final track in localScreenSharingStream!.stream!.getTracks()) {
+        for (final track in localScreenSharingStream!.stream.getTracks()) {
           await track.stop();
         }
         localScreenSharingStream!.stopped = true;
-        await _removeStream(localScreenSharingStream!.stream!);
+        await _removeStream(localScreenSharingStream!.stream);
         fireCallEvent(CallEvent.kFeedsChanged);
         return false;
       } catch (e, s) {
@@ -657,7 +657,7 @@ class CallSession {
 
   Future<void> deleteFeedByStream(MediaStream stream) async {
     final index =
-        streams.indexWhere((element) => element.stream!.id == stream.id);
+        streams.indexWhere((element) => element.stream.id == stream.id);
     if (index == -1) {
       Logs().w('Didn\'t find the feed with stream id ${stream.id} to delete');
       return;
@@ -712,15 +712,15 @@ class CallSession {
 
   // used for upgrading 1:1 calls
   Future<void> insertVideoTrackToAudioOnlyStream() async {
-    if (localUserMediaStream != null && localUserMediaStream!.stream != null) {
+    if (localUserMediaStream != null) {
       final stream = await _getUserMedia(CallType.kVideo);
       if (stream != null) {
         Logs().d('[VOIP] running replaceTracks() on stream: ${stream.id}');
         _setTracksEnabled(stream.getVideoTracks(), true);
         // replace local tracks
-        for (final track in localUserMediaStream!.stream!.getTracks()) {
+        for (final track in localUserMediaStream!.stream.getTracks()) {
           try {
-            await localUserMediaStream!.stream!.removeTrack(track);
+            await localUserMediaStream!.stream.removeTrack(track);
             await track.stop();
           } catch (e) {
             Logs().w('failed to stop track');
@@ -728,7 +728,7 @@ class CallSession {
         }
         final streamTracks = stream.getTracks();
         for (final newTrack in streamTracks) {
-          await localUserMediaStream!.stream!.addTrack(newTrack);
+          await localUserMediaStream!.stream.addTrack(newTrack);
         }
 
         // remove any screen sharing or remote transceivers, these don't need
@@ -737,8 +737,7 @@ class CallSession {
         transceivers.removeWhere((transceiver) =>
             transceiver.sender.track == null ||
             (localScreenSharingStream != null &&
-                localScreenSharingStream!.stream != null &&
-                localScreenSharingStream!.stream!
+                localScreenSharingStream!.stream
                     .getTracks()
                     .map((e) => e.id)
                     .contains(transceiver.sender.track?.id)));
@@ -763,7 +762,7 @@ class CallSession {
           } else {
             // adding transceiver
             Logs().d('[VOIP] adding track $newTrack to pc');
-            await pc!.addTrack(newTrack, localUserMediaStream!.stream!);
+            await pc!.addTrack(newTrack, localUserMediaStream!.stream);
           }
         }
         // for renderer to be able to show new video track
@@ -836,12 +835,12 @@ class CallSession {
 
       final metadata = SDPStreamMetadata({
         if (localUserMediaStream != null)
-          localUserMediaStream!.stream!.id: SDPStreamPurpose(
+          localUserMediaStream!.stream.id: SDPStreamPurpose(
               purpose: SDPStreamMetadataPurpose.Usermedia,
               audio_muted: localUserMediaStream!.audioMuted,
               video_muted: localUserMediaStream!.videoMuted),
         if (localScreenSharingStream != null)
-          localScreenSharingStream!.stream!.id: SDPStreamPurpose(
+          localScreenSharingStream!.stream.id: SDPStreamPurpose(
               purpose: SDPStreamMetadataPurpose.Screenshare,
               audio_muted: localScreenSharingStream!.audioMuted,
               video_muted: localScreenSharingStream!.videoMuted),
@@ -1156,10 +1155,10 @@ class CallSession {
             localUserMediaStream!.isVideoMuted()) ||
         remoteOnHold;
 
-    _setTracksEnabled(localUserMediaStream?.stream?.getAudioTracks() ?? [],
-        !micShouldBeMuted);
-    _setTracksEnabled(localUserMediaStream?.stream?.getVideoTracks() ?? [],
-        !vidShouldBeMuted);
+    _setTracksEnabled(
+        localUserMediaStream?.stream.getAudioTracks() ?? [], !micShouldBeMuted);
+    _setTracksEnabled(
+        localUserMediaStream?.stream.getVideoTracks() ?? [], !vidShouldBeMuted);
 
     await sendSDPStreamMetadataChanged(
         room, callId, localPartyId, _getLocalSDPStreamMetadata());
@@ -1174,12 +1173,10 @@ class CallSession {
   SDPStreamMetadata _getLocalSDPStreamMetadata() {
     final sdpStreamMetadatas = <String, SDPStreamPurpose>{};
     for (final wpstream in getLocalStreams) {
-      if (wpstream.stream != null) {
-        sdpStreamMetadatas[wpstream.stream!.id] = SDPStreamPurpose(
-            purpose: wpstream.purpose,
-            audio_muted: wpstream.audioMuted,
-            video_muted: wpstream.videoMuted);
-      }
+      sdpStreamMetadatas[wpstream.stream.id] = SDPStreamPurpose(
+          purpose: wpstream.purpose,
+          audio_muted: wpstream.audioMuted,
+          video_muted: wpstream.videoMuted);
     }
     final metadata = SDPStreamMetadata(sdpStreamMetadatas);
     Logs().v('Got local SDPStreamMetadata ${metadata.toJson().toString()}');
@@ -1264,26 +1261,26 @@ class CallSession {
     final removedStreams = <String, WrappedMediaStream>{};
     for (final stream in streams) {
       if (stream.stopped) {
-        removedStreams[stream.stream!.id] = stream;
+        removedStreams[stream.stream.id] = stream;
       }
     }
     streams
-        .removeWhere((stream) => removedStreams.containsKey(stream.stream!.id));
+        .removeWhere((stream) => removedStreams.containsKey(stream.stream.id));
     for (final element in removedStreams.entries) {
-      await _removeStream(element.value.stream!);
+      await _removeStream(element.value.stream);
     }
   }
 
   Future<void> _removeStream(MediaStream stream) async {
     Logs().v('Removing feed with stream id ${stream.id}');
 
-    final it = streams.where((element) => element.stream!.id == stream.id);
+    final it = streams.where((element) => element.stream.id == stream.id);
     if (it.isEmpty) {
       Logs().v('Didn\'t find the feed with stream id ${stream.id} to delete');
       return;
     }
     final wpstream = it.first;
-    streams.removeWhere((element) => element.stream!.id == stream.id);
+    streams.removeWhere((element) => element.stream.id == stream.id);
     onStreamRemoved.add(wpstream);
     fireCallEvent(CallEvent.kFeedsChanged);
     await wpstream.dispose();
