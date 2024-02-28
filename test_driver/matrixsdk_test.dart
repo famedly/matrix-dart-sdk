@@ -132,7 +132,14 @@ void main() => group('Integration tests', () {
           Logs().i('++++ (Alice) Enable encryption ++++');
           expect(room.encrypted, false);
           await room.enableEncryption();
-          await Future.delayed(Duration(seconds: 5));
+          var waitSeconds = 0;
+          while (!room.encrypted) {
+            await Future.delayed(Duration(seconds: 1));
+            waitSeconds++;
+            if (waitSeconds >= 60) {
+              throw Exception('Unable to enable encryption');
+            }
+          }
           expect(room.encrypted, isTrue);
           expect(
               room.client.encryption!.keyManager

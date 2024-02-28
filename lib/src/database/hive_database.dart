@@ -1062,12 +1062,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
             ? ''
             : eventUpdate.content['state_key'];
     // Store a common state event
-    if ({
-          EventUpdateType.timeline,
-          EventUpdateType.state,
-          EventUpdateType.inviteState
-        }.contains(eventUpdate.type) &&
-        stateKey != null) {
+    if (stateKey != null) {
       if (eventUpdate.content['type'] == EventTypes.RoomMember) {
         await _roomMembersBox.put(
             MultiKey(
@@ -1082,45 +1077,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
         ).toString();
         final Map stateMap = await _roomStateBox.get(key) ?? {};
 
-        // store state events and new messages, that either are not an edit or an edit of the lastest message
-        // An edit is an event, that has an edit relation to the latest event. In some cases for the second edit, we need to compare if both have an edit relation to the same event instead.
-        if (eventUpdate.content
-                .tryGetMap<String, dynamic>('content')
-                ?.tryGetMap<String, dynamic>('m.relates_to') ==
-            null) {
-          stateMap[stateKey] = eventUpdate.content;
-          await _roomStateBox.put(key, stateMap);
-        } else {
-          final editedEventRelationshipEventId = eventUpdate.content
-              .tryGetMap<String, dynamic>('content')
-              ?.tryGetMap<String, dynamic>('m.relates_to')
-              ?.tryGet<String>('event_id');
-
-          final tmpRoom = client.getRoomById(eventUpdate.roomID) ??
-              Room(id: eventUpdate.roomID, client: client);
-
-          if (eventUpdate.content['type'] !=
-                      EventTypes
-                          .Message || // send anything other than a message
-                  eventUpdate.content
-                          .tryGetMap<String, dynamic>('content')
-                          ?.tryGetMap<String, dynamic>('m.relates_to')
-                          ?.tryGet<String>('rel_type') !=
-                      RelationshipTypes
-                          .edit || // replies are always latest anyway
-                  editedEventRelationshipEventId ==
-                      tmpRoom.lastEvent
-                          ?.eventId || // edit of latest (original event) event
-                  (tmpRoom.lastEvent?.relationshipType ==
-                          RelationshipTypes.edit &&
-                      editedEventRelationshipEventId ==
-                          tmpRoom.lastEvent
-                              ?.relationshipEventId) // edit of latest (edited event) event
-              ) {
-            stateMap[stateKey] = eventUpdate.content;
-            await _roomStateBox.put(key, stateMap);
-          }
-        }
+        stateMap[stateKey] = eventUpdate.content;
+        await _roomStateBox.put(key, stateMap);
       }
     }
 
@@ -1189,8 +1147,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   }
 
   @override
-  Future<void> storeRoomUpdate(
-      String roomId, SyncRoomUpdate roomUpdate, Client client) async {
+  Future<void> storeRoomUpdate(String roomId, SyncRoomUpdate roomUpdate,
+      Event? lastEvent, Client client) async {
     // Leave room if membership is leave
     if (roomUpdate is LeftRoomUpdate) {
       await forgetRoom(roomId);
@@ -1219,11 +1177,13 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
                       0,
                   prev_batch: roomUpdate.timeline?.prevBatch,
                   summary: roomUpdate.summary,
+                  lastEvent: lastEvent,
                 ).toJson()
               : Room(
                   client: client,
                   id: roomId,
                   membership: membership,
+                  lastEvent: lastEvent,
                 ).toJson());
     } else if (roomUpdate is JoinedRoomUpdate) {
       final currentRawRoom = await _roomsBox.get(roomId.toHiveKey);
@@ -1246,14 +1206,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
               ..addAll(roomUpdate.summary?.toJson() ?? {})),
           ).toJson());
     }
-
-    // Is the timeline limited? Then all previous messages should be
-    // removed from the database!
-    if (roomUpdate is JoinedRoomUpdate &&
-        roomUpdate.timeline?.limited == true) {
-      await _timelineFragmentsBox.delete(MultiKey(roomId, '').toString());
-    }
   }
+
+  @override
+  Future<void> deleteTimelineForRoom(String roomId) =>
+      _timelineFragmentsBox.delete(TupleKey(roomId, '').toString());
 
   @override
   Future<void> storeSSSSCache(

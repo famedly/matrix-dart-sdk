@@ -537,7 +537,7 @@ void main() {
           }
         }
       }));
-      expect(room.getState('m.room.message')!.content['body'], 'meow');
+      expect(room.lastEvent!.content['body'], 'meow');
 
       // ignore edits
       await matrix.handleSync(SyncUpdate.fromJson({
@@ -571,7 +571,7 @@ void main() {
           }
         }
       }));
-      expect(room.getState('m.room.message')!.content['body'], 'meow');
+      expect(room.lastEvent!.content['body'], 'meow');
 
       // accept edits to the last event
       await matrix.handleSync(SyncUpdate.fromJson({
@@ -605,7 +605,7 @@ void main() {
           }
         }
       }));
-      expect(room.getState('m.room.message')!.content['body'], '* floooof');
+      expect(room.lastEvent!.content['body'], '* floooof');
 
       // accepts a consecutive edit
       await matrix.handleSync(SyncUpdate.fromJson({
@@ -639,7 +639,7 @@ void main() {
           }
         }
       }));
-      expect(room.getState('m.room.message')!.content['body'], '* foxies');
+      expect(room.lastEvent!.content['body'], '* foxies');
     });
 
     test('getProfileFromUserId', () async {

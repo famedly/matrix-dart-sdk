@@ -16,6 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -24,6 +25,26 @@ import 'package:test/test.dart';
 import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
 import 'fake_matrix_api.dart';
+
+Future<void> updateLastEvent(Event event) {
+  if (event.room.client.getRoomById(event.room.id) == null) {
+    event.room.client.rooms.add(event.room);
+  }
+  return event.room.client.handleSync(
+    SyncUpdate(
+      rooms: RoomsUpdate(
+        join: {
+          event.room.id: JoinedRoomUpdate(
+            timeline: TimelineUpdate(
+              events: [event],
+            ),
+          ),
+        },
+      ),
+      nextBatch: '',
+    ),
+  );
+}
 
 void main() {
   late Client matrix;
@@ -193,18 +214,19 @@ void main() {
       expect(room.pinnedEventIds, <String>[]);
       room.setState(
         Event(
-            senderId: '@test:example.com',
-            type: 'm.room.pinned_events',
-            room: room,
-            eventId: '123',
-            content: {
-              'pinned': ['1234']
-            },
-            originServerTs: DateTime.now(),
-            stateKey: ''),
+          senderId: '@test:example.com',
+          type: 'm.room.pinned_events',
+          room: room,
+          eventId: '123',
+          content: {
+            'pinned': ['1234']
+          },
+          originServerTs: DateTime.now(),
+          stateKey: '',
+        ),
       );
       expect(room.pinnedEventIds.first, '1234');
-      room.setState(
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.message',
@@ -212,7 +234,6 @@ void main() {
           eventId: '12345',
           originServerTs: DateTime.now(),
           content: {'msgtype': 'm.text', 'body': 'abc'},
-          stateKey: '',
         ),
       );
       expect(room.lastEvent?.eventId, '12345');
@@ -220,8 +241,19 @@ void main() {
       expect(room.timeCreated, room.lastEvent?.originServerTs);
     });
 
-    test('lastEvent is set properly', () {
-      room.setState(
+    test('lastEvent is set properly', () async {
+      await updateLastEvent(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.message',
+          room: room,
+          eventId: '0',
+          originServerTs: DateTime.now(),
+          content: {'msgtype': 'm.text', 'body': 'meow'},
+        ),
+      );
+      expect(room.lastEvent?.body, 'meow');
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -229,13 +261,12 @@ void main() {
           eventId: '1',
           originServerTs: DateTime.now(),
           content: {'msgtype': 'm.text', 'body': 'cd'},
-          stateKey: '',
         ),
       );
-      expect(room.hasNewMessages, isTrue);
-      expect(room.isUnreadOrInvited, isTrue);
+      expect(room.hasNewMessages, true);
+      expect(room.isUnreadOrInvited, false);
       expect(room.lastEvent?.body, 'cd');
-      room.setState(
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -243,11 +274,10 @@ void main() {
           eventId: '2',
           originServerTs: DateTime.now(),
           content: {'msgtype': 'm.text', 'body': 'cdc'},
-          stateKey: '',
         ),
       );
       expect(room.lastEvent?.body, 'cdc');
-      room.setState(
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -260,11 +290,10 @@ void main() {
             'msgtype': 'm.text',
             'body': '* test ok',
           },
-          stateKey: '',
         ),
       );
       expect(room.lastEvent?.body, 'cdc'); // because we edited the "cd" message
-      room.setState(
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -277,7 +306,10 @@ void main() {
             'm.new_content': {'msgtype': 'm.text', 'body': 'edited cdc'},
             'm.relates_to': {'rel_type': 'm.replace', 'event_id': '2'},
           },
-          stateKey: '',
+          unsigned: {
+            messageSendingStatusKey: EventStatus.sending.intValue,
+            'transaction_id': 'messageID',
+          },
           status: EventStatus.sending,
         ),
       );
@@ -286,13 +318,16 @@ void main() {
       expect(room.lastEvent?.eventId, '4');
 
       // Status update on edits working?
-      room.setState(
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
           room: room,
           eventId: '5',
-          unsigned: {'transaction_id': '4'},
+          unsigned: {
+            'transaction_id': '4',
+            messageSendingStatusKey: EventStatus.sent.intValue,
+          },
           originServerTs: DateTime.now(),
           content: {
             'msgtype': 'm.text',
@@ -308,7 +343,7 @@ void main() {
       expect(room.lastEvent?.body, 'edited cdc');
       expect(room.lastEvent?.status, EventStatus.sent);
       // Are reactions coming through?
-      room.setState(
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: EventTypes.Reaction,
@@ -322,15 +357,15 @@ void main() {
               'key': ':-)',
             }
           },
-          stateKey: '',
         ),
       );
       expect(room.lastEvent?.eventId, '5');
       expect(room.lastEvent?.body, 'edited cdc');
       expect(room.lastEvent?.status, EventStatus.sent);
     });
+
     test('lastEvent when reply parent edited', () async {
-      room.setState(
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -338,12 +373,11 @@ void main() {
           eventId: '5',
           originServerTs: DateTime.now(),
           content: {'msgtype': 'm.text', 'body': 'A'},
-          stateKey: '',
         ),
       );
       expect(room.lastEvent?.body, 'A');
 
-      room.setState(
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -355,11 +389,10 @@ void main() {
             'body': 'B',
             'm.relates_to': {'rel_type': 'm.in_reply_to', 'event_id': '5'}
           },
-          stateKey: '',
         ),
       );
       expect(room.lastEvent?.body, 'B');
-      room.setState(
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -372,14 +405,13 @@ void main() {
             'm.new_content': {'msgtype': 'm.text', 'body': 'edited A'},
             'm.relates_to': {'rel_type': 'm.replace', 'event_id': '5'},
           },
-          stateKey: '',
         ),
       );
       expect(room.lastEvent?.body, 'B');
     });
 
     test('lastEvent with deleted message', () async {
-      room.setState(
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -392,7 +424,7 @@ void main() {
       );
       expect(room.lastEvent?.body, 'AA');
 
-      room.setState(
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -409,7 +441,7 @@ void main() {
       );
       expect(room.lastEvent?.body, 'B');
 
-      room.setState(
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -428,7 +460,7 @@ void main() {
         ),
       );
       expect(room.lastEvent?.eventId, '10');
-      room.setState(
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -440,7 +472,7 @@ void main() {
         ),
       );
       expect(room.lastEvent?.body, 'BB');
-      room.setState(
+      await updateLastEvent(
         Event(
           senderId: '@test:example.com',
           type: 'm.room.encrypted',
@@ -815,7 +847,7 @@ void main() {
 
     test('getTimeline', () async {
       final timeline = await room.getTimeline();
-      expect(timeline.events.length, 0);
+      expect(timeline.events.length, 14);
     });
 
     test('getUserByMXID', () async {
@@ -1260,7 +1292,7 @@ void main() {
         },
         room,
       ));
-      expect(room.getState('m.room.message') != null, true);
+      expect(room.getState('m.room.message') == null, false);
     });
 
     test('Widgets', () {
