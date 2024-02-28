@@ -1,3 +1,7 @@
+// ignore_for_file: deprecated_member_use
+// ignoring the elementAt deprecation because this would make the SDK
+// incompatible with older flutter versions than 3.19.0 or dart 3.3.0
+
 import 'dart:async';
 import 'dart:ffi';
 import 'dart:typed_data';
