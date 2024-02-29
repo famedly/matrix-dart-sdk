@@ -204,6 +204,29 @@ class MentionSyntax extends InlineSyntax {
   }
 }
 
+class PhoneNumberSyntax extends InlineSyntax {
+  PhoneNumberSyntax()
+      : super(
+          r'(?:([+]?\d{1,4})[-. ]?)?(?:[(](\d{1,3})[)][-. ]?)?(\d{1,4})[-. ]?(\d{1,4})[-. ]?(\d{1,9})',
+        );
+
+  @override
+  bool onMatch(InlineParser parser, Match match) {
+    final phoneNumberStr = match[0]!;
+    final phoneNumber = phoneNumberStr.replaceAll(RegExp(r'[^+^0-9]'), '');
+    if ((match.start > 0 &&
+            !RegExp(r'[\s.!?:;\(]').hasMatch(match.input[match.start - 1])) ||
+        phoneNumber.length < 8) {
+      parser.addNode(Text(match[0]!));
+      return true;
+    }
+    final element = Element.text('a', phoneNumberStr);
+    element.attributes['href'] = htmlAttrEscape.convert('tel:$phoneNumber');
+    parser.addNode(element);
+    return true;
+  }
+}
+
 String markdown(
   String text, {
   Map<String, Map<String, String>> Function()? getEmotePacks,
@@ -222,6 +245,7 @@ String markdown(
       EmoteSyntax(getEmotePacks),
       PillSyntax(),
       MentionSyntax(getMention),
+      PhoneNumberSyntax(),
       InlineLatexSyntax(),
     ],
   );
