@@ -296,14 +296,6 @@ class Room {
             unsafeGetUserFromMemoryOrFallback(directChatMatrixID)
                 .calcDisplayname(i18n: i18n));
       }
-      final invitation = getState(EventTypes.RoomMember, client.userID!);
-      if (invitation != null &&
-          invitation.unsigned?.tryGet<String>('prev_sender') != null) {
-        final name = unsafeGetUserFromMemoryOrFallback(
-                invitation.unsigned!.tryGet<String>('prev_sender')!)
-            .calcDisplayname(i18n: i18n);
-        return i18n.wasDirectChatDisplayName(name);
-      }
     }
     return i18n.emptyChat;
   }
