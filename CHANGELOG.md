@@ -1,3 +1,12 @@
+## [0.25.11] 26th Februray 2024
+- feat: Implement handling soft logout (Krille)
+- feat: Store accesstokenExpiresIn and call softlogout 5 minutes before (Krille)
+- fix: convert boxNames to List in clear function when creating transaction (Gabby Gurdin)
+
+## [0.25.10] 23rd February 2024
+- chore: remove state events both in imp and preview events list (td)
+- feat: specify history_visibility when creating group chat (Karthikeyan S)
+
 ## [0.25.9] 14th February 2024
 - fix: group calls terminator having sync glares (td)
 - fix: ignore expired calls rather than killing them (td)

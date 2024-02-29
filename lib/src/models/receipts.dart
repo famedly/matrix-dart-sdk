@@ -44,7 +44,7 @@ class Receipt {
   const Receipt(this.user, this.time);
 
   @override
-  bool operator ==(dynamic other) => (other is Receipt &&
+  bool operator ==(Object other) => (other is Receipt &&
       other.user == user &&
       other.time.millisecondsSinceEpoch == time.millisecondsSinceEpoch);
 

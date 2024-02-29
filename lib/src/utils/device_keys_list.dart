@@ -354,7 +354,7 @@ abstract class SignableKey extends MatrixSignableKey {
   String toString() => json.encode(toJson());
 
   @override
-  bool operator ==(dynamic other) => (other is SignableKey &&
+  bool operator ==(Object other) => (other is SignableKey &&
       other.userId == userId &&
       other.identifier == identifier);
 

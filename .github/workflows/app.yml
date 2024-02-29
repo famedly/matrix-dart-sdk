@@ -2,15 +2,6 @@ name: "All the sdk specific jobs"
 
 on:
   workflow_call:
-    inputs:
-      flutter_version:
-        description: "The flutter version used for tests and builds"
-        type: string
-        required: true
-      dart_version:
-        description: "The dart version used for tests and builds"
-        type: string
-        required: true
 
 jobs:
   e2ee_test:
@@ -22,13 +13,14 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
+      - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - name: Run tests
         run: |
           export NETWORK='--network mynet'
           docker network create mynet
           # deploy homeserver instance
           scripts/integration-server-${{matrix.homeserver}}.sh
-          docker run $NETWORK --env GITHUB_ACTIONS="${GITHUB_ACTIONS}" --env HOMESERVER_IMPLEMENTATION="${{matrix.homeserver}}" --env HOMESERVER="${{startsWith('dendrite', matrix.homeserver) && format('{0}:8008', matrix.homeserver) || matrix.homeserver }}" --volume="$(pwd):/workdir" --workdir /workdir ghcr.io/famedly/container-image-flutter/flutter:${{inputs.flutter_version}} /bin/bash -c "set -e
+          docker run $NETWORK --env GITHUB_ACTIONS="${GITHUB_ACTIONS}" --env HOMESERVER_IMPLEMENTATION="${{matrix.homeserver}}" --env HOMESERVER="${{startsWith('dendrite', matrix.homeserver) && format('{0}:8008', matrix.homeserver) || matrix.homeserver }}" --volume="$(pwd):/workdir" --workdir /workdir ghcr.io/famedly/container-image-flutter/flutter:${{env.flutter_version}} /bin/bash -c "set -e
           scripts/integration-prepare-alpine.sh
           # create test user environment variables
           source scripts/integration-create-environment-variables.sh
@@ -42,11 +34,13 @@ jobs:
   # coverage_without_olm is done on dart images because why not :D
   coverage:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/famedly/container-image-flutter/flutter-linux:${{inputs.flutter_version}}
-      options: --user root
     steps:
       - uses: actions/checkout@v3
+      - run: cat .github/workflows/versions.env >> $GITHUB_ENV
+      - uses: subosito/flutter-action@48cafc24713cca54bbe03cdc3a423187d413aafa
+        with:
+          flutter-version: ${{ env.flutter_version }}
+          cache: true
       - name: Run tests
         run: |
           sed -i 's/#flutter_test/flutter_test/g' pubspec.yaml
@@ -56,12 +50,14 @@ jobs:
 
   coverage_without_olm:
     runs-on: ubuntu-latest
-    container:
-      image: dart:${{inputs.dart_version}}
     env:
       NO_OLM: 1
     steps:
       - uses: actions/checkout@v3
+      - run: cat .github/workflows/versions.env >> $GITHUB_ENV
+      - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
+        with:
+          sdk: ${{ env.dart_version }}
       - name: Run tests
         run: |
           apt-get update && apt-get install --no-install-recommends --no-install-suggests -y curl lcov python3 python3-distutils libsqlite3-dev
@@ -71,10 +67,12 @@ jobs:
 
   pub-dev-dry-run:
     runs-on: ubuntu-latest
-    container:
-      image: dart:${{inputs.dart_version}}
     steps:
       - uses: actions/checkout@v3
+      - run: cat .github/workflows/versions.env >> $GITHUB_ENV
+      - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
+        with:
+          sdk: ${{ env.dart_version }}
       - name: pub.dev publish dry run
         run: |
           dart pub get

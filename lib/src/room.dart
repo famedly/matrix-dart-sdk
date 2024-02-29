@@ -45,12 +45,20 @@ const Map<GuestAccess, String> _guestAccessMap = {
   GuestAccess.forbidden: 'forbidden',
 };
 
+extension GuestAccessExtension on GuestAccess {
+  String get text => _guestAccessMap[this]!;
+}
+
 const Map<HistoryVisibility, String> _historyVisibilityMap = {
   HistoryVisibility.invited: 'invited',
   HistoryVisibility.joined: 'joined',
   HistoryVisibility.shared: 'shared',
   HistoryVisibility.worldReadable: 'world_readable',
 };
+
+extension HistoryVisibilityExtension on HistoryVisibility {
+  String get text => _historyVisibilityMap[this]!;
+}
 
 const String messageSendingStatusKey =
     'com.famedly.famedlysdk.message_sending_status';
@@ -2135,7 +2143,7 @@ class Room {
       EventTypes.GuestAccess,
       '',
       {
-        'guest_access': _guestAccessMap[guestAccess],
+        'guest_access': guestAccess.text,
       },
     );
     return;
@@ -2160,7 +2168,7 @@ class Room {
       EventTypes.HistoryVisibility,
       '',
       {
-        'history_visibility': _historyVisibilityMap[historyVisibility],
+        'history_visibility': historyVisibility.text,
       },
     );
     return;
@@ -2353,7 +2361,7 @@ class Room {
       : setSpaceChild(roomId, via: const []);
 
   @override
-  bool operator ==(dynamic other) => (other is Room && other.id == id);
+  bool operator ==(Object other) => (other is Room && other.id == id);
 
   @override
   int get hashCode => Object.hashAll([id]);
