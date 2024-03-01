@@ -1,3 +1,10 @@
+## [0.25.12] 1st March 2024
+- chore: pass refreshToken to uiaLogin (Krille)
+- fix: removed prev_sender for empty chats (Patrick Hettich)
+- fix: updated membership-leave for archived direct chats (Patrick Hettich)
+- fix: Use name of other participant on archived rooms (Patrick Hettich)
+- refactor: Deprecations after dart upgrade (Krille)
+
 ## [0.25.11] 26th Februray 2024
 - feat: Implement handling soft logout (Krille)
 - feat: Store accesstokenExpiresIn and call softlogout 5 minutes before (Krille)
