@@ -23,6 +23,7 @@ extension UiaLogin on Client {
     String? user,
     AuthenticationData? auth,
     String pathVersion = 'v3',
+    bool? refreshToken,
   }) async {
     final requestUri = Uri(path: '_matrix/client/$pathVersion/login');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
@@ -42,6 +43,7 @@ extension UiaLogin on Client {
       }[type]!,
       if (user != null) 'user': user,
       if (auth != null) 'auth': auth.toJson(),
+      if (refreshToken != null) 'refresh_token': refreshToken,
     }));
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
