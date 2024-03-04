@@ -196,15 +196,6 @@ class Room {
       return;
     }
 
-    // Do not set old events as state events
-    final prevEvent = getState(state.type, stateKey);
-    if (prevEvent != null &&
-        prevEvent.eventId != state.eventId &&
-        prevEvent.originServerTs.millisecondsSinceEpoch >
-            state.originServerTs.millisecondsSinceEpoch) {
-      return;
-    }
-
     (states[state.type] ??= {})[stateKey] = state;
 
     client.onRoomState.add(state);
