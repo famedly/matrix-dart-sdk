@@ -2463,6 +2463,10 @@ class Client extends MatrixApi {
           final importantOrRoomLoaded =
               eventUpdate.type == EventUpdateType.inviteState ||
                   !room.partial ||
+                  // make sure we do overwrite events we have already loaded.
+                  room.states[stateEvent.type]
+                          ?.containsKey(stateEvent.stateKey ?? '') ==
+                      true ||
                   importantStateEvents.contains(stateEvent.type);
           if ((noMessageOrNoEdit || editingLastEvent || consecutiveEdit) &&
               importantOrRoomLoaded) {
