@@ -210,10 +210,8 @@ class Event extends MatrixEvent {
         type: jsonPayload['type'],
         eventId: jsonPayload['event_id'] ?? '',
         senderId: jsonPayload['sender'],
-        originServerTs: jsonPayload['origin_server_ts'] != null
-            ? DateTime.fromMillisecondsSinceEpoch(
-                jsonPayload['origin_server_ts'])
-            : DateTime.now(),
+        originServerTs: DateTime.fromMillisecondsSinceEpoch(
+            jsonPayload['origin_server_ts'] ?? 0),
         unsigned: unsigned,
         room: room,
         originalSource: originalSource.isEmpty
