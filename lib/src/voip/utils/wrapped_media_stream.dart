@@ -6,7 +6,7 @@ import 'package:matrix/src/voip/utils/stream_helper.dart';
 
 /// Wrapped MediaStream, used to adapt Widget to display
 class WrappedMediaStream {
-  MediaStream stream;
+  MediaStream? stream;
   final Participant participant;
   final Room room;
 
@@ -30,19 +30,18 @@ class WrappedMediaStream {
 
   void Function(MediaStream stream)? onNewStream;
 
-  WrappedMediaStream({
-    this.pc,
-    required this.stream,
-    required this.renderer,
-    required this.room,
-    required this.participant,
-    required this.purpose,
-    required this.client,
-    required this.audioMuted,
-    required this.videoMuted,
-    required this.isWeb,
-    required this.isGroupCall,
-  });
+  WrappedMediaStream(
+      {this.stream,
+      this.pc,
+      required this.renderer,
+      required this.room,
+      required this.participant,
+      required this.purpose,
+      required this.client,
+      required this.audioMuted,
+      required this.videoMuted,
+      required this.isWeb,
+      required this.isGroupCall});
 
   /// Initialize the video renderer
   Future<void> initialize() async {
@@ -50,11 +49,11 @@ class WrappedMediaStream {
     renderer.srcObject = stream;
     renderer.onResize = () {
       Logs().i(
-          'onResize [${stream.id.substring(0, 8)}] ${renderer.videoWidth} x ${renderer.videoHeight}');
+          'onResize [${stream!.id.substring(0, 8)}] ${renderer.videoWidth} x ${renderer.videoHeight}');
     };
   }
 
-  String get id => '${stream.id}: $title';
+  String get id => '${stream?.id}: $title';
 
   Participant get localParticipant =>
       Participant(userId: client.userID!, deviceId: client.deviceID!);
@@ -70,7 +69,7 @@ class WrappedMediaStream {
       await stopMediaStream(stream);
     }
 
-    // stream = null;
+    stream = null;
     await renderer.dispose();
   }
 
@@ -95,18 +94,18 @@ class WrappedMediaStream {
   }
 
   bool isAudioMuted() {
-    return (stream.getAudioTracks().isEmpty) || audioMuted;
+    return (stream != null && stream!.getAudioTracks().isEmpty) || audioMuted;
   }
 
   bool isVideoMuted() {
-    return (stream.getVideoTracks().isEmpty) || videoMuted;
+    return (stream != null && stream!.getVideoTracks().isEmpty) || videoMuted;
   }
 
   void setNewStream(MediaStream newStream) {
     stream = newStream;
     renderer.srcObject = stream;
     if (onNewStream != null) {
-      onNewStream?.call(stream);
+      onNewStream?.call(stream!);
     }
   }
 
