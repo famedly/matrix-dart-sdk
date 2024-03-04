@@ -16,6 +16,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:equatable/equatable.dart';
 import 'package:matrix/matrix.dart';
 
 enum EventUpdateType {
@@ -43,7 +44,7 @@ enum EventUpdateType {
 
 /// Represents a new event (e.g. a message in a room) or an update for an
 /// already known event.
-class EventUpdate {
+class EventUpdate with EquatableMixin {
   /// Usually 'timeline', 'state' or whatever.
   final EventUpdateType type;
 
@@ -74,4 +75,11 @@ class EventUpdate {
       return this;
     }
   }
+
+  @override
+  List<Object?> get props => [
+        type,
+        roomID,
+        content,
+      ];
 }
