@@ -1071,19 +1071,19 @@ class Client extends MatrixApi {
                 []));
 
     archivedRoom.prev_batch = update.timeline?.prevBatch;
-    update.state?.forEach((event) {
-      archivedRoom.setState(Event.fromMatrixEvent(
-        event,
-        archivedRoom,
-      ));
-    });
 
-    update.timeline?.events?.forEach((event) {
-      archivedRoom.setState(Event.fromMatrixEvent(
-        event,
-        archivedRoom,
-      ));
-    });
+    final stateEvents = roomUpdate.state;
+    if (stateEvents != null) {
+      await _handleRoomEvents(archivedRoom, stateEvents, EventUpdateType.state,
+          store: false);
+    }
+
+    final timelineEvents = roomUpdate.timeline?.events;
+    if (timelineEvents != null) {
+      await _handleRoomEvents(archivedRoom, timelineEvents.reversed.toList(),
+          EventUpdateType.timeline,
+          store: false);
+    }
 
     for (var i = 0; i < timeline.events.length; i++) {
       // Try to decrypt encrypted events but don't update the database.
@@ -2463,6 +2463,10 @@ class Client extends MatrixApi {
           final importantOrRoomLoaded =
               eventUpdate.type == EventUpdateType.inviteState ||
                   !room.partial ||
+                  // make sure we do overwrite events we have already loaded.
+                  room.states[stateEvent.type]
+                          ?.containsKey(stateEvent.stateKey ?? '') ==
+                      true ||
                   importantStateEvents.contains(stateEvent.type);
           if ((noMessageOrNoEdit || editingLastEvent || consecutiveEdit) &&
               importantOrRoomLoaded) {

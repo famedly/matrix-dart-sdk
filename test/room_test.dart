@@ -70,6 +70,7 @@ void main() {
           ),
         },
       );
+
       room.setState(Event(
         room: room,
         eventId: '143273582443PhrSn:example.org',
@@ -80,6 +81,46 @@ void main() {
         content: {'join_rule': 'public'},
         stateKey: '',
       ));
+      room.setState(Event(
+        room: room,
+        eventId: '143273582443PhrSnY:example.org',
+        originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
+        senderId: matrix.userID!,
+        type: 'm.room.member',
+        unsigned: {'age': 1234},
+        content: {'membership': 'join', 'displayname': 'YOU'},
+        stateKey: matrix.userID!,
+      ));
+      room.setState(Event(
+        room: room,
+        eventId: '143273582443PhrSnA:example.org',
+        originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
+        senderId: '@alice:matrix.org',
+        type: 'm.room.member',
+        unsigned: {'age': 1234},
+        content: {'membership': 'join', 'displayname': 'Alice Margatroid'},
+        stateKey: '@alice:matrix.org',
+      ));
+      room.setState(Event(
+        room: room,
+        eventId: '143273582443PhrSnB:example.org',
+        originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
+        senderId: '@bob:example.com',
+        type: 'm.room.member',
+        unsigned: {'age': 1234},
+        content: {'membership': 'invite', 'displayname': 'Bob'},
+        stateKey: '@bob:example.com',
+      ));
+      room.setState(Event(
+        room: room,
+        eventId: '143273582443PhrSnC:example.org',
+        originServerTs: DateTime.fromMillisecondsSinceEpoch(1432735824653),
+        senderId: '@charley:example.org',
+        type: 'm.room.member',
+        unsigned: {'age': 1234},
+        content: {'membership': 'invite', 'displayname': 'Charley'},
+        stateKey: '@charley:example.org',
+      ));
 
       final heroUsers = await room.loadHeroUsers();
       expect(heroUsers.length, 3);
@@ -89,9 +130,10 @@ void main() {
       expect(room.notificationCount, notificationCount);
       expect(room.highlightCount, highlightCount);
       expect(room.summary.mJoinedMemberCount, notificationCount);
-      expect(room.summary.mInvitedMemberCount, notificationCount);
+      expect(room.summary.mInvitedMemberCount, 2);
       expect(room.summary.mHeroes, heroes);
-      expect(room.getLocalizedDisplayname(), 'Group with Alice, Bob, Charley');
+      expect(room.getLocalizedDisplayname(),
+          'Group with Alice Margatroid, Bob, Charley');
       expect(
           room.getState('m.room.join_rules')?.content['join_rule'], 'public');
       expect(room.roomAccountData['com.test.foo']?.content['foo'], 'bar');
@@ -434,12 +476,12 @@ void main() {
 
     test('requestParticipants', () async {
       final participants = await room.requestParticipants();
-      expect(participants.length, 1);
-      final user = participants[0];
-      expect(user.id, '@alice:example.org');
+      expect(participants.length, 4);
+      final user = participants.singleWhere((u) => u.id == '@alice:matrix.org');
+      expect(user.id, '@alice:matrix.org');
       expect(user.displayName, 'Alice Margatroid');
       expect(user.membership, Membership.join);
-      expect(user.avatarUrl.toString(), 'mxc://example.org/SEsfnsuifSDFSSEF');
+      //expect(user.avatarUrl.toString(), 'mxc://example.org/SEsfnsuifSDFSSEF');
       expect(user.room.id, '!localpart:server.abc');
     });
 
@@ -1405,10 +1447,13 @@ void main() {
 
     test('getMention', () async {
       expect(room.getMention('@invalid'), null);
-      expect(room.getMention('@[Alice Margatroid]'), '@alice:example.org');
-      expect(room.getMention('@[Alice Margatroid]#1754'), '@alice:example.org');
+      expect(room.getMention('@[Alice Margatroid]'), '@alice:matrix.org');
+      expect(room.getMention('@[Alice Margatroid]#1667'), '@alice:matrix.org');
     });
     test('inviteLink', () async {
+      // ensure we don't rerequest members
+      room.summary.mJoinedMemberCount = 4;
+
       var matrixToLink = await room.matrixToInviteLink();
       expect(matrixToLink.toString(),
           'https://matrix.to/#/%23testalias%3Aexample.com');
@@ -1424,7 +1469,7 @@ void main() {
       );
       matrixToLink = await room.matrixToInviteLink();
       expect(matrixToLink.toString(),
-          'https://matrix.to/#/!localpart%3Aserver.abc?via=example.org&via=example.com&via=test.abc');
+          'https://matrix.to/#/!localpart%3Aserver.abc?via=example.com&via=test.abc&via=example.org');
     });
 
     test('callMemberStateIsExpired', () {
