@@ -572,7 +572,7 @@ class Timeline {
           yield found..add(event);
         }
       }
-
+      sinceEventId = events.isNotEmpty ? events.last.eventId : null;
       // Search in database
       var start = events.length;
       while (true) {
@@ -584,6 +584,7 @@ class Timeline {
             [];
         if (eventsFromStore.isEmpty) break;
         start += eventsFromStore.length;
+        sinceEventId = eventsFromStore.last.eventId;
         for (final event in eventsFromStore) {
           if (searchFunc(event)) {
             yield found..add(event);
@@ -594,9 +595,15 @@ class Timeline {
 
     // Search on the server
     var prevBatch = room.prev_batch;
+    var ignoreEventIds = <String>[];
     if (sinceEventId != null) {
-      prevBatch =
-          (await room.client.getEventContext(room.id, sinceEventId)).end;
+      final eventContext =
+          await room.client.getEventContext(room.id, sinceEventId);
+      final eventIdsAfter =
+          eventContext.eventsAfter?.map((event) => event.eventId).toList() ??
+              [];
+      ignoreEventIds = eventIdsAfter..add(sinceEventId);
+      prevBatch = eventContext.end;
     }
     final encryption = room.client.encryption;
     for (var i = 0; i < maxHistoryRequests; i++) {
@@ -612,6 +619,9 @@ class Timeline {
         );
         for (final matrixEvent in resp.chunk) {
           var event = Event.fromMatrixEvent(matrixEvent, room);
+          if (ignoreEventIds.contains(event.eventId)) {
+            continue;
+          }
           if (event.type == EventTypes.Encrypted && encryption != null) {
             event = await encryption.decryptRoomEvent(room.id, event);
             if (event.type == EventTypes.Encrypted &&
@@ -637,7 +647,7 @@ class Timeline {
         rethrow;
       }
     }
-    return;
+    yield found;
   }
 }
 
