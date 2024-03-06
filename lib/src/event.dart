@@ -586,10 +586,13 @@ class Event extends MatrixEvent {
   /// Downloads (and decrypts if necessary) the attachment of this
   /// event and returns it as a [MatrixFile]. If this event doesn't
   /// contain an attachment, this throws an error. Set [getThumbnail] to
-  /// true to download the thumbnail instead.
+  /// true to download the thumbnail instead. Set [fromLocalStoreOnly] to true
+  /// if you want to retrieve the attachment from the local store only without
+  /// making http request.
   Future<MatrixFile> downloadAndDecryptAttachment(
       {bool getThumbnail = false,
-      Future<Uint8List> Function(Uri)? downloadCallback}) async {
+      Future<Uint8List> Function(Uri)? downloadCallback,
+      bool fromLocalStoreOnly = false}) async {
     if (![EventTypes.Message, EventTypes.Sticker].contains(type)) {
       throw ("This event has the type '$type' and so it can't contain an attachment.");
     }
@@ -621,7 +624,8 @@ class Event extends MatrixEvent {
     }
 
     // Download the file
-    if (uint8list == null) {
+    final canDownloadFileFromServer = uint8list == null && !fromLocalStoreOnly;
+    if (canDownloadFileFromServer) {
       final httpClient = room.client.httpClient;
       downloadCallback ??=
           (Uri url) async => (await httpClient.get(url)).bodyBytes;
@@ -633,6 +637,8 @@ class Event extends MatrixEvent {
         await database.storeFile(
             mxcUrl, uint8list, DateTime.now().millisecondsSinceEpoch);
       }
+    } else if (uint8list == null) {
+      throw ('Unable to download file from local store.');
     }
 
     // Decrypt the file
