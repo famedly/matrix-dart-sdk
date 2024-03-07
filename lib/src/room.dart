@@ -196,15 +196,6 @@ class Room {
       return;
     }
 
-    // Do not set old events as state events
-    final prevEvent = getState(state.type, stateKey);
-    if (prevEvent != null &&
-        prevEvent.eventId != state.eventId &&
-        prevEvent.originServerTs.millisecondsSinceEpoch >
-            state.originServerTs.millisecondsSinceEpoch) {
-      return;
-    }
-
     (states[state.type] ??= {})[stateKey] = state;
 
     client.onRoomState.add(state);
@@ -1574,8 +1565,6 @@ class Room {
     return <User>[];
   }
 
-  bool _requestedParticipants = false;
-
   /// Request the full list of participants from the server. The local list
   /// from the store is not complete if the client uses lazy loading.
   /// List `membershipFilter` defines with what membership do you want the
@@ -1591,17 +1580,20 @@ class Room {
       ],
       bool suppressWarning = false,
       bool cache = true]) async {
-    if (!participantListComplete && partial) {
+    if (!participantListComplete || partial) {
       // we aren't fully loaded, maybe the users are in the database
+      // We always need to check the database in the partial case, since state
+      // events won't get written to memory in this case and someone new could
+      // have joined, while someone else left, which might lead to the same
+      // count in the completeness check.
       final users = await client.database?.getUsers(this) ?? [];
       for (final user in users) {
         setState(user);
       }
     }
 
-    // Do not request users from the server if we have already done it
-    // in this session or have a complete list locally.
-    if (_requestedParticipants || participantListComplete) {
+    // Do not request users from the server if we have already have a complete list locally.
+    if (participantListComplete) {
       return getParticipants(membershipFilter);
     }
 
@@ -1626,7 +1618,6 @@ class Room {
       }
     }
 
-    _requestedParticipants = cache;
     users.removeWhere((u) => !membershipFilter.contains(u.membership));
     return users;
   }
@@ -1634,10 +1625,14 @@ class Room {
   /// Checks if the local participant list of joined and invited users is complete.
   bool get participantListComplete {
     final knownParticipants = getParticipants();
-    knownParticipants.removeWhere(
-        (u) => ![Membership.join, Membership.invite].contains(u.membership));
-    return knownParticipants.length ==
-        (summary.mJoinedMemberCount ?? 0) + (summary.mInvitedMemberCount ?? 0);
+    final joinedCount =
+        knownParticipants.where((u) => u.membership == Membership.join).length;
+    final invitedCount = knownParticipants
+        .where((u) => u.membership == Membership.invite)
+        .length;
+
+    return (summary.mJoinedMemberCount ?? 0) == joinedCount &&
+        (summary.mInvitedMemberCount ?? 0) == invitedCount;
   }
 
   @Deprecated(

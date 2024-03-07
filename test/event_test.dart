@@ -1549,6 +1549,93 @@ void main() {
 
       await room.client.dispose(closeDatabase: true);
     });
+
+    test('downloadAndDecryptAttachment store only', () async {
+      final FILE_BUFF = Uint8List.fromList([0]);
+      var serverHits = 0;
+      Future<Uint8List> downloadCallback(Uri uri) async {
+        serverHits++;
+        return {
+          '/_matrix/media/v3/download/example.org/newfile': FILE_BUFF,
+        }[uri.path]!;
+      }
+
+      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
+          checkWellKnown: false);
+      final room = Room(id: '!localpart:server.abc', client: await getClient());
+      final event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'body': 'image',
+          'msgtype': 'm.image',
+          'url': 'mxc://example.org/newfile',
+          'info': {
+            'size': 5,
+          },
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, room);
+
+      var buffer = await event.downloadAndDecryptAttachment(
+          downloadCallback: downloadCallback);
+      expect(await event.isAttachmentInLocalStore(),
+          event.room.client.database?.supportsFileStoring);
+      expect(buffer.bytes, FILE_BUFF);
+      expect(serverHits, 1);
+
+      if (event.room.client.database?.supportsFileStoring == true) {
+        buffer = await event.downloadAndDecryptAttachment(
+            downloadCallback: downloadCallback, fromLocalStoreOnly: true);
+        expect(buffer.bytes, FILE_BUFF);
+      } else {
+        expect(
+            () async => await event.downloadAndDecryptAttachment(
+                downloadCallback: downloadCallback, fromLocalStoreOnly: true),
+            throwsA(anything));
+      }
+      expect(serverHits, 1);
+
+      await room.client.dispose(closeDatabase: true);
+    });
+
+    test('downloadAndDecryptAttachment store only without file', () async {
+      final FILE_BUFF = Uint8List.fromList([0]);
+      var serverHits = 0;
+      Future<Uint8List> downloadCallback(Uri uri) async {
+        serverHits++;
+        return {
+          '/_matrix/media/v3/download/example.org/newfile': FILE_BUFF,
+        }[uri.path]!;
+      }
+
+      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
+          checkWellKnown: false);
+      final room = Room(id: '!localpart:server.abc', client: await getClient());
+      final event = Event.fromJson({
+        'type': EventTypes.Message,
+        'content': {
+          'body': 'image',
+          'msgtype': 'm.image',
+          'url': 'mxc://example.org/newfile',
+          'info': {
+            'size': 5,
+          },
+        },
+        'event_id': '\$edit2',
+        'sender': '@alice:example.org',
+      }, room);
+
+      expect(
+          () async => await event.downloadAndDecryptAttachment(
+              downloadCallback: downloadCallback, fromLocalStoreOnly: true),
+          throwsA(anything));
+
+      expect(serverHits, 0);
+
+      await room.client.dispose(closeDatabase: true);
+    });
+
     test('emote detection', () async {
       var event = Event.fromJson({
         'type': EventTypes.Message,
