@@ -1,3 +1,13 @@
+## [0.25.13] 7th March 2024
+- chore: Add regression test for invite->join state handling (Nicolas Werner)
+- feat: add fromLocalStoreOnly to Event.downloadAndDecryptAttachment (Romain GUILLOT)
+- fix: archived room state store logic (Nicolas Werner)
+- fix: Do not assume a missing timestamp means "now" (Nicolas Werner)
+- fix: Do not compare timestamps when setting roomstate (Nicolas Werner)
+- fix: properly fetch participants when transitioning from invite to join (Nicolas Werner)
+- fix: properly overwrite loaded state for partial loaded rooms (Nicolas Werner)
+- fix: some tests fail with the "fixed" membership fetch logic (Nicolas Werner)
+
 ## [0.25.12] 1st March 2024
 - chore: pass refreshToken to uiaLogin (Krille)
 - fix: removed prev_sender for empty chats (Patrick Hettich)
