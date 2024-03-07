@@ -19,6 +19,11 @@ abstract class CallBackend {
   }
 
   Map<String, Object?> toJson();
+
+  @override
+  bool operator ==(Object other);
+  @override
+  int get hashCode;
 }
 
 class MeshBackend extends CallBackend {
@@ -30,6 +35,12 @@ class MeshBackend extends CallBackend {
       'type': type,
     };
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is MeshBackend && type == other.type;
+  @override
+  int get hashCode => type.hashCode;
 }
 
 class LiveKitBackend extends CallBackend {
@@ -50,4 +61,15 @@ class LiveKitBackend extends CallBackend {
       'livekit_alias': livekitAlias,
     };
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LiveKitBackend &&
+          type == other.type &&
+          livekitServiceUrl == other.livekitServiceUrl &&
+          livekitAlias == other.livekitAlias;
+  @override
+  int get hashCode =>
+      type.hashCode ^ livekitServiceUrl.hashCode ^ livekitAlias.hashCode;
 }
