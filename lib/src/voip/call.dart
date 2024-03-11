@@ -44,6 +44,21 @@ class CallTimeouts {
   static const delayBeforeOffer = Duration(milliseconds: 100);
 }
 
+class UserMediaOptions {
+  static const optionalAudioConfig = {
+    'echoCancellation': true,
+    'googDAEchoCancellation': true,
+    'googEchoCancellation': true,
+    'googEchoCancellation2': true,
+    'noiseSuppression': true,
+    'googNoiseSuppression': true,
+    'googNoiseSuppression2': true,
+    'googAutoGainControl': true,
+    'googHighpassFilter': true,
+    'googTypingNoiseDetection': true,
+  };
+}
+
 extension RTCIceCandidateExt on RTCIceCandidate {
   bool get isValid =>
       sdpMLineIndex != null &&
@@ -1481,7 +1496,7 @@ class CallSession {
                 'minFrameRate': '30',
               },
               'facingMode': 'user',
-              'optional': [],
+              'optional': [UserMediaOptions.optionalAudioConfig],
             }
           : false,
     };
@@ -1566,7 +1581,7 @@ class CallSession {
   Map<String, dynamic> _getOfferAnswerConstraints({bool iceRestart = false}) {
     return {
       'mandatory': {if (iceRestart) 'IceRestart': true},
-      'optional': [],
+      'optional': [UserMediaOptions.optionalAudioConfig],
     };
   }
 

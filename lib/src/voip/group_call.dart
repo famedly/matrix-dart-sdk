@@ -324,7 +324,7 @@ class GroupCall {
                 'minFrameRate': '30',
               },
               'facingMode': 'user',
-              'optional': [],
+              'optional': [UserMediaOptions.optionalAudioConfig],
             }
           : false,
     };
