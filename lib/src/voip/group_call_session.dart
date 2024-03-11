@@ -96,9 +96,6 @@ class GroupCallSession {
   /// toggle e2ee setup and key sharing
   final bool enableE2EE;
 
-  /// set to true if you want to use the ratcheting mechanism with your keyprovider
-  /// remember to set the window size correctly on your keyprovider
-  final bool enableE2EEKeyRatcheting;
   GroupCallSession({
     String? groupCallId,
     required this.client,
@@ -106,7 +103,6 @@ class GroupCallSession {
     required this.voip,
     required this.backends,
     required this.enableE2EE,
-    this.enableE2EEKeyRatcheting = false,
     this.application = 'm.call',
     this.scope = 'm.room',
   }) {
@@ -637,7 +633,7 @@ class GroupCallSession {
 
         if (isLivekitCall && enableE2EE) {
           // ratcheting does not work on web, we just create a whole new key everywhere
-          if (enableE2EEKeyRatcheting) {
+          if (CallConstants.enableE2EEKeyRatcheting) {
             await _ratchetLocalParticipantKey(anyJoined.toList());
           } else {
             await makeNewSenderKey(true);
@@ -1053,7 +1049,7 @@ class GroupCallSession {
   ///
   /// also does the sending for you
   Future<void> makeNewSenderKey(bool delayBeforeUsingKeyOurself) async {
-    final key = base64Encode(secureRandomBytes(32));
+    final key = secureRandomBytes(32);
     final keyIndex = getNewEncryptionKeyIndex();
     Logs().i('[VOIP E2EE] Generated new key $key at index $keyIndex');
 
@@ -1081,8 +1077,8 @@ class GroupCallSession {
       return;
     }
 
-    final ratchetedKey = base64Encode(
-        await keyProvider.onRatchetKey(localParticipant!, latestLocalKeyIndex));
+    final ratchetedKey =
+        await keyProvider.onRatchetKey(localParticipant!, latestLocalKeyIndex);
     Logs().i(
         '[VOIP E2EE] Ratched latest key to $ratchetedKey at idx $latestLocalKeyIndex');
 
@@ -1112,13 +1108,11 @@ class GroupCallSession {
   Future<void> _setEncryptionKey(
     Participant participant,
     int encryptionKeyIndex,
-    String encryptionKeyString, {
+    Uint8List encryptionKeyBin, {
     bool delayBeforeUsingKeyOurself = false,
     bool send = false,
     List<Participant>? sendTo,
   }) async {
-    final keyBin = base64Decode(encryptionKeyString);
-
     final encryptionKeys = encryptionKeysMap[participant] ?? <int, Uint8List>{};
 
     // if (encryptionKeys[encryptionKeyIndex] != null &&
@@ -1127,7 +1121,7 @@ class GroupCallSession {
     //   return;
     // }
 
-    encryptionKeys[encryptionKeyIndex] = keyBin;
+    encryptionKeys[encryptionKeyIndex] = encryptionKeyBin;
     encryptionKeysMap[participant] = encryptionKeys;
     if (participant == localParticipant) {
       _latestLocalKeyIndex = encryptionKeyIndex;
@@ -1142,9 +1136,9 @@ class GroupCallSession {
       // stil decrypt everything
       final useKeyTimeout = Future.delayed(CallTimeouts.useKeyDelay, () async {
         Logs().i(
-            '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyString');
+            '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin');
         await voip.delegate.keyProvider?.onSetEncryptionKey(
-            participant, encryptionKeyString, encryptionKeyIndex);
+            participant, encryptionKeyBin, encryptionKeyIndex);
         if (participant == localParticipant) {
           _currentLocalKeyIndex = encryptionKeyIndex;
         }
@@ -1152,9 +1146,9 @@ class GroupCallSession {
       setNewKeyTimeouts.add(useKeyTimeout);
     } else {
       Logs().i(
-          '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyString');
+          '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin');
       await voip.delegate.keyProvider?.onSetEncryptionKey(
-          participant, encryptionKeyString, encryptionKeyIndex);
+          participant, encryptionKeyBin, encryptionKeyIndex);
       if (participant == localParticipant) {
         _currentLocalKeyIndex = encryptionKeyIndex;
       }
@@ -1237,7 +1231,8 @@ class GroupCallSession {
       await _setEncryptionKey(
         remoteParticipant,
         encryptionKeyIndex,
-        encryptionKey,
+        base64Decode(
+            encryptionKey), // base64Decode here because we receive base64Encoded version
         delayBeforeUsingKeyOurself: false,
         send: false,
       );

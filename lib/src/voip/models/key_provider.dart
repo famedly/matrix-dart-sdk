@@ -10,7 +10,7 @@ enum E2EEKeyMode {
 
 abstract class EncryptionKeyProvider {
   Future<void> onSetEncryptionKey(
-      Participant participant, String key, int index);
+      Participant participant, Uint8List key, int index);
 
   Future<Uint8List> onRatchetKey(Participant participant, int index);
 

@@ -704,7 +704,6 @@ class VoIP {
     String? application,
     String? scope, {
     bool enableE2EE = true,
-    bool enableE2EEKeyRatcheting = CallConstants.enableE2EEKeyRatcheting,
   }) async {
     if (getGroupCallById(room.id, groupCallId) != null) {
       Logs().e('[VOIP] [$groupCallId] already exists.');
@@ -720,7 +719,6 @@ class VoIP {
       application: application,
       scope: scope,
       enableE2EE: enableE2EE,
-      enableE2EEKeyRatcheting: enableE2EEKeyRatcheting,
     );
 
     setGroupCallById(groupCall);
@@ -743,7 +741,6 @@ class VoIP {
     String? application,
     String? scope, {
     bool enableE2EE = true,
-    bool enableE2EEKeyRatcheting = CallConstants.enableE2EEKeyRatcheting,
   }) async {
     final groupCall = getGroupCallById(room.id, groupCallId);
 
@@ -772,7 +769,6 @@ class VoIP {
         application,
         scope,
         enableE2EE: enableE2EE,
-        enableE2EEKeyRatcheting: enableE2EEKeyRatcheting,
       );
 
       return groupCall;
@@ -820,7 +816,6 @@ class VoIP {
       enableE2EE: membership.backends
           .map((element) => element.type)
           .contains('livekit'),
-      enableE2EEKeyRatcheting: CallConstants.enableE2EEKeyRatcheting,
     );
 
     if (groupCalls.containsKey(

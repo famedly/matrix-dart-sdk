@@ -69,7 +69,7 @@ class MockWebRTCDelegate implements WebRTCDelegate {
 class MockEncryptionKeyProvider implements EncryptionKeyProvider {
   @override
   Future<void> onSetEncryptionKey(
-      Participant participant, String key, int index) async {
+      Participant participant, Uint8List key, int index) async {
     Logs().i('Mock onSetEncryptionKey called for ${participant.id} ');
   }
 
