@@ -1207,7 +1207,7 @@ class CallSession {
                 'minFrameRate': '30',
               },
               'facingMode': 'user',
-              'optional': [],
+              'optional': [CallConstants.optionalAudioConfig],
             }
           : false,
     };
@@ -1290,12 +1290,10 @@ class CallSession {
   }
 
   Map<String, dynamic> _getOfferAnswerConstraints({bool iceRestart = false}) {
-    return iceRestart
-        ? {
-            'mandatory': {'iceRestart': true},
-            'optional': [],
-          }
-        : {};
+    return {
+      'mandatory': {if (iceRestart) 'IceRestart': true},
+      'optional': [CallConstants.optionalAudioConfig],
+    };
   }
 
   Future<void> _sendCandidateQueue() async {

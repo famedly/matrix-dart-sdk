@@ -153,7 +153,7 @@ class GroupCallSession {
                 'minFrameRate': '30',
               },
               'facingMode': 'user',
-              'optional': [],
+              'optional': [CallConstants.optionalAudioConfig],
             }
           : false,
     };

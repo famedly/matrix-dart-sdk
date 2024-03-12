@@ -52,4 +52,17 @@ class CallConstants {
     EventTypes.CallSDPStreamMetadataChanged,
     EventTypes.CallSDPStreamMetadataChangedPrefix,
   };
+
+  static const optionalAudioConfig = {
+    'echoCancellation': true,
+    'googDAEchoCancellation': true,
+    'googEchoCancellation': true,
+    'googEchoCancellation2': true,
+    'noiseSuppression': true,
+    'googNoiseSuppression': true,
+    'googNoiseSuppression2': true,
+    'googAutoGainControl': true,
+    'googHighpassFilter': true,
+    'googTypingNoiseDetection': true,
+  };
 }
