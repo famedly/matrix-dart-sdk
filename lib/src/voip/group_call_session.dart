@@ -633,7 +633,7 @@ class GroupCallSession {
 
         if (isLivekitCall && enableE2EE) {
           // ratcheting does not work on web, we just create a whole new key everywhere
-          if (CallConstants.enableE2EEKeyRatcheting) {
+          if (client.enableSFUE2EEKeyRatcheting) {
             await _ratchetLocalParticipantKey(anyJoined.toList());
           } else {
             await makeNewSenderKey(true);
@@ -1077,8 +1077,14 @@ class GroupCallSession {
       return;
     }
 
-    final ratchetedKey =
-        await keyProvider.onRatchetKey(localParticipant!, latestLocalKeyIndex);
+    Uint8List? ratchetedKey;
+
+    while (ratchetedKey == null || ratchetedKey.isEmpty) {
+      Logs().i('[VOIP E2EE] Ignoring empty ratcheted key');
+      ratchetedKey = await keyProvider.onRatchetKey(
+          localParticipant!, latestLocalKeyIndex);
+    }
+
     Logs().i(
         '[VOIP E2EE] Ratched latest key to $ratchetedKey at idx $latestLocalKeyIndex');
 

@@ -52,8 +52,4 @@ class CallConstants {
     EventTypes.CallSDPStreamMetadataChanged,
     EventTypes.CallSDPStreamMetadataChangedPrefix,
   };
-
-  /// set to true if you want to use the ratcheting mechanism with your keyprovider
-  /// remember to set the window size correctly on your keyprovider
-  static const bool enableE2EEKeyRatcheting = false;
 }
