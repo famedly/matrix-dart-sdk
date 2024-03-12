@@ -115,13 +115,6 @@ class Client extends MatrixApi {
 
   final Duration sendTimelineEventTimeout;
 
-  /// set to true if you want to use the ratcheting mechanism with your keyprovider
-  /// remember to set the window size correctly on your keyprovider
-  ///
-  /// at client level because reinitializing a `GroupCallSession` and its `KeyProvider`
-  /// everytime this changed would be a pain
-  final bool enableSFUE2EEKeyRatcheting;
-
   Future<MatrixImageFileResizedResponse?> Function(
       MatrixImageFileResizeArguments)? customImageResizer;
 
@@ -195,7 +188,6 @@ class Client extends MatrixApi {
     this.shareKeysWithUnverifiedDevices = true,
     this.enableDehydratedDevices = false,
     this.receiptsPublicByDefault = true,
-    this.enableSFUE2EEKeyRatcheting = false,
 
     /// Implement your https://spec.matrix.org/v1.9/client-server-api/#soft-logout
     /// logic here.

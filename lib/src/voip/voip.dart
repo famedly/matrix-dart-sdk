@@ -17,6 +17,13 @@ class VoIP {
   // used only for internal tests, all txids for call events will be overwritten to this
   static String? customTxid;
 
+  /// set to true if you want to use the ratcheting mechanism with your keyprovider
+  /// remember to set the window size correctly on your keyprovider
+  ///
+  /// at client level because reinitializing a `GroupCallSession` and its `KeyProvider`
+  /// everytime this changed would be a pain
+  final bool enableSFUE2EEKeyRatcheting;
+
   /// cached turn creds
   TurnServerCredentials? _turnServerCredentials;
 
@@ -43,7 +50,11 @@ class VoIP {
   /// used for handling glare in p2p calls
   Map<String, String> incomingCallRoomId = {};
 
-  VoIP(this.client, this.delegate) : super() {
+  VoIP(
+    this.client,
+    this.delegate, {
+    this.enableSFUE2EEKeyRatcheting = false,
+  }) : super() {
     // to populate groupCalls with already present calls
     for (final room in client.rooms) {
       final memsList = room.getCallMembershipsFromRoom();
