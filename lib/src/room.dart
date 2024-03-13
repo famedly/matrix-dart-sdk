@@ -32,6 +32,10 @@ import 'package:matrix/src/utils/markdown.dart';
 import 'package:matrix/src/utils/marked_unread.dart';
 import 'package:matrix/src/utils/space_child.dart';
 
+/// max PDU size for server to accept the event with some buffer incase the server adds unsigned data f.ex age
+/// https://spec.matrix.org/v1.9/client-server-api/#size-limits
+const int maxPDUSize = 60000;
+
 enum PushRuleState { notify, mentionsOnly, dontNotify }
 
 enum JoinRules { public, knock, invite, private }
@@ -963,6 +967,13 @@ class Room {
         ? await client.encryption!
             .encryptGroupMessagePayload(id, content, type: type)
         : content;
+
+    final utf8EncodedJsonLength =
+        utf8.encode(jsonEncode(sendMessageContent)).length;
+
+    if (utf8EncodedJsonLength > maxPDUSize) {
+      throw EventTooLarge(utf8EncodedJsonLength);
+    }
     return await client.sendMessage(
       id,
       sendMessageContent.containsKey('ciphertext')
@@ -1118,7 +1129,9 @@ class Room {
           txid: messageID,
         );
       } catch (e, s) {
-        if (e is MatrixException &&
+        if (e is EventTooLarge) {
+          rethrow;
+        } else if (e is MatrixException &&
             e.retryAfterMs != null &&
             !DateTime.now()
                 .add(Duration(milliseconds: e.retryAfterMs!))
@@ -2365,4 +2378,9 @@ class Room {
 enum EncryptionHealthState {
   allVerified,
   unverifiedDevices,
+}
+
+class EventTooLarge implements Exception {
+  int length;
+  EventTooLarge(this.length);
 }
