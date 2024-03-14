@@ -41,7 +41,7 @@ import 'package:matrix/src/utils/run_benchmarked.dart';
 @Deprecated(
     'Use [HiveCollectionsDatabase] instead. Don\'t forget to properly migrate!')
 class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
-  static const int version = 5;
+  static const int version = 6;
   final String name;
   late Box _clientBox;
   late Box _accountDataBox;
@@ -1057,10 +1057,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
       }
     }
 
-    final stateKey =
-        client.roomPreviewLastEvents.contains(eventUpdate.content['type'])
-            ? ''
-            : eventUpdate.content['state_key'];
+    final stateKey = eventUpdate.content['state_key'];
     // Store a common state event
     if (stateKey != null) {
       if (eventUpdate.content['type'] == EventTypes.RoomMember) {

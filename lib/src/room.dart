@@ -170,18 +170,14 @@ class Room {
       Logs().w('Tried to set state event for wrong room!');
       return;
     }
-    if (stateKey == null && !client.importantStateEvents.contains(state.type)) {
+    if (stateKey == null) {
       Logs().w(
         'Tried to set a non state event with type "${state.type}" as state event for a room',
       );
       return;
     }
 
-    // We still store events without a state key to load legacy lastEvent
-    // candidates from the database. This can be changed once we either
-    // implemented a database migration for legacy lastEvent candidates or
-    // we just waited some time (written at March 13th 2024).
-    (states[state.type] ??= {})[stateKey ?? ''] = state;
+    (states[state.type] ??= {})[stateKey] = state;
 
     client.onRoomState.add(state);
   }
@@ -374,43 +370,21 @@ class Room {
   Event? get lastEvent {
     if (_lastEvent != null) return _lastEvent;
 
-    // !Everything below is the deprecated way of fetching the last event!
-
-    // as lastEvent calculation is based on the state events we unfortunately cannot
-    // use sortOrder here: With many state events we just know which ones are the
-    // newest ones, without knowing in which order they actually happened. As such,
-    // using the origin_server_ts is the best guess for this algorithm. While not
-    // perfect, it is only used for the room preview in the room list and sorting
-    // said room list, so it should be good enough.
+    // Just pick the newest state event as an indicator for when the last
+    // activity was in this room. This is better than nothing:
     var lastTime = DateTime.fromMillisecondsSinceEpoch(0);
-    final lastEvents =
-        client.roomPreviewLastEvents.map(getState).whereType<Event>();
+    Event? lastEvent;
 
-    var lastEvent = lastEvents.isEmpty
-        ? null
-        : lastEvents.reduce((a, b) {
-            if (a.originServerTs == b.originServerTs) {
-              // if two events have the same sort order we want to give encrypted events a lower priority
-              // This is so that if the same event exists in the state both encrypted *and* unencrypted,
-              // the unencrypted one is picked
-              return a.type == EventTypes.Encrypted ? b : a;
-            }
-            return a.originServerTs.millisecondsSinceEpoch >
-                    b.originServerTs.millisecondsSinceEpoch
-                ? a
-                : b;
-          });
-    if (lastEvent == null) {
-      states.forEach((final String key, final entry) {
-        final state = entry[''];
-        if (state == null) return;
-        if (state.originServerTs.millisecondsSinceEpoch >
-            lastTime.millisecondsSinceEpoch) {
-          lastTime = state.originServerTs;
-          lastEvent = state;
-        }
-      });
-    }
+    states.forEach((final String key, final entry) {
+      final state = entry[''];
+      if (state == null) return;
+      if (state.originServerTs.millisecondsSinceEpoch >
+          lastTime.millisecondsSinceEpoch) {
+        lastTime = state.originServerTs;
+        lastEvent = state;
+      }
+    });
+
     return lastEvent;
   }
 

@@ -37,7 +37,7 @@ import 'package:matrix/src/database/indexeddb_box.dart'
     if (dart.library.io) 'package:matrix/src/database/sqflite_box.dart';
 
 class MatrixSdkDatabase extends DatabaseApi {
-  static const int version = 6;
+  static const int version = 7;
   final String name;
   late BoxCollection _collection;
   late Box<String> _clientBox;
@@ -1084,10 +1084,7 @@ class MatrixSdkDatabase extends DatabaseApi {
       }
     }
 
-    final stateKey =
-        client.roomPreviewLastEvents.contains(eventUpdate.content['type'])
-            ? ''
-            : eventUpdate.content['state_key'];
+    final stateKey = eventUpdate.content['state_key'];
     // Store a common state event
     if (stateKey != null) {
       if (eventUpdate.content['type'] == EventTypes.RoomMember) {

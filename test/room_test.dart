@@ -1292,7 +1292,7 @@ void main() {
         },
         room,
       ));
-      expect(room.getState('m.room.message') == null, false);
+      expect(room.getState('m.room.message') == null, true);
     });
 
     test('Widgets', () {

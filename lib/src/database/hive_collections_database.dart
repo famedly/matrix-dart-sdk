@@ -35,7 +35,7 @@ import 'package:matrix/src/utils/run_benchmarked.dart';
 
 /// This database does not support file caching!
 class HiveCollectionsDatabase extends DatabaseApi {
-  static const int version = 6;
+  static const int version = 7;
   final String name;
   final String? path;
   final HiveCipher? key;
@@ -1125,10 +1125,8 @@ class HiveCollectionsDatabase extends DatabaseApi {
         await removeEvent(transactionId, eventUpdate.roomID);
       }
     }
-    final stateKey =
-        client.roomPreviewLastEvents.contains(eventUpdate.content['type'])
-            ? ''
-            : eventUpdate.content['state_key'];
+
+    final stateKey = eventUpdate.content['state_key'];
     // Store a common state event
     if (stateKey != null) {
       if (eventUpdate.content['type'] == EventTypes.RoomMember) {

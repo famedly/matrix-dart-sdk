@@ -216,8 +216,6 @@ class Client extends MatrixApi {
     importantStateEvents.addAll([
       EventTypes.RoomName,
       EventTypes.RoomAvatar,
-      EventTypes.Message,
-      EventTypes.Encrypted,
       EventTypes.Encryption,
       EventTypes.RoomCanonicalAlias,
       EventTypes.RoomTombstone,
@@ -2507,7 +2505,8 @@ class Client extends MatrixApi {
 
         // Is this event redacting the last event?
         if (event.type == EventTypes.Redaction &&
-            event.redacts == room.lastEvent?.eventId) {
+            (event.content.tryGet<String>('redacts') ?? event.redacts) ==
+                room.lastEvent?.eventId) {
           room.lastEvent?.setRedactionEvent(event);
           break;
         }
