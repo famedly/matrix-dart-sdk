@@ -1382,6 +1382,8 @@ class Client extends MatrixApi {
       accessToken = token;
     }
 
+    await ensureNotSoftLoggedOut();
+
     // Check if the notification contains an event at all:
     final eventId = notification.eventId;
     final roomId = notification.roomId;
@@ -1793,6 +1795,10 @@ class Client extends MatrixApi {
   bool get syncPending => _currentSync != null;
 
   /// Controls the background sync (automatically looping forever if turned on).
+  /// If you use soft logout, you need to manually call
+  /// `ensureNotSoftLoggedOut()` before doing any API request after setting
+  /// the background sync to false, as the soft logout is handeld automatically
+  /// in the sync loop.
   set backgroundSync(bool enabled) {
     _backgroundSync = enabled;
     if (_backgroundSync) {
@@ -1847,6 +1853,19 @@ class Client extends MatrixApi {
     }
   }
 
+  /// Checks if the token expires in under [expiresIn] time and calls the
+  /// given `onSoftLogout()` if so. You have to provide `onSoftLogout` in the
+  /// Client constructor. Otherwise this will do nothing.
+  Future<void> ensureNotSoftLoggedOut(
+      [Duration expiresIn = const Duration(minutes: 1)]) async {
+    final tokenExpiresAt = accessTokenExpiresAt;
+    if (onSoftLogout != null &&
+        tokenExpiresAt != null &&
+        tokenExpiresAt.difference(DateTime.now()) <= expiresIn) {
+      await _handleSoftLogout();
+    }
+  }
+
   /// Pass a timeout to set how long the server waits before sending an empty response.
   /// (Corresponds to the timeout param on the /sync request.)
   Future<void> _innerSync({Duration? timeout}) async {
@@ -1866,14 +1885,7 @@ class Client extends MatrixApi {
       // amount of time if nothing happens.
       timeout ??= const Duration(seconds: 30);
 
-      // Call onSoftLogout 5 minutes before access token expires to prevent
-      // failing network requests.
-      final tokenExpiresAt = accessTokenExpiresAt;
-      if (onSoftLogout != null &&
-          tokenExpiresAt != null &&
-          tokenExpiresAt.difference(DateTime.now()) <= timeout * 2) {
-        await _handleSoftLogout();
-      }
+      await ensureNotSoftLoggedOut(timeout * 2);
 
       final syncRequest = sync(
         filter: syncFilterId,
