@@ -1,3 +1,9 @@
+## [0.26.1] 15th March 2024
+- chore: add noice/echo cancelling flags to getUserMedia (td)
+- feat: Add commands /ignore and /unignore (Krille)
+- feat: Offers client.ensureNotSoftLoggedOut() to fix using client with stopped sync loop (Krille)
+- fix: throw EventTooLarge on exceeding max fed PDU (td)
+
 ## [0.26.0] 8th March 2024
 This release adds a new state to the `LoginState` named `softLoggedOut`. Learn more about it here:
 https://spec.matrix.org/v1.9/client-server-api/#soft-logout
