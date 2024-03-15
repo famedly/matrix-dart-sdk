@@ -285,6 +285,22 @@ extension CommandsClientExtension on Client {
       );
       return null;
     });
+    addCommand('ignore', (args) async {
+      final mxid = args.msg;
+      if (mxid.isEmpty) {
+        throw 'Please provide a User ID';
+      }
+      await ignoreUser(mxid);
+      return null;
+    });
+    addCommand('unignore', (args) async {
+      final mxid = args.msg;
+      if (mxid.isEmpty) {
+        throw 'Please provide a User ID';
+      }
+      await unignoreUser(mxid);
+      return null;
+    });
   }
 }
 
