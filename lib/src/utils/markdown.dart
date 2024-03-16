@@ -210,6 +210,12 @@ String markdown(
   String? Function(String)? getMention,
   bool convertLinebreaks = true,
 }) {
+  // Pre-process the text to escape the '-' character at the start of a line
+  text = text.replaceAllMapped(
+    RegExp(r'^-', multiLine: true),
+    (match) => '\\-',
+  );
+
   var ret = markdownToHtml(
     text,
     extensionSet: ExtensionSet.commonMark,
