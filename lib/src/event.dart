@@ -678,7 +678,8 @@ class Event extends MatrixEvent {
       bool hideReply = false,
       bool hideEdit = false,
       bool plaintextBody = false,
-      bool removeMarkdown = false}) async {
+      bool removeMarkdown = false,
+      bool removeBreakLine = false}) async {
     if (redacted) {
       await redactedBecause?.fetchSenderUser();
     }
@@ -695,7 +696,8 @@ class Event extends MatrixEvent {
         hideReply: hideReply,
         hideEdit: hideEdit,
         plaintextBody: plaintextBody,
-        removeMarkdown: removeMarkdown);
+        removeMarkdown: removeMarkdown,
+        removeBreakLine: removeBreakLine);
   }
 
   @Deprecated('Use calcLocalizedBody or calcLocalizedBodyFallback')
@@ -704,13 +706,15 @@ class Event extends MatrixEvent {
           bool hideReply = false,
           bool hideEdit = false,
           bool plaintextBody = false,
-          bool removeMarkdown = false}) =>
+          bool removeMarkdown = false,
+          bool removeBreakLine = false}) =>
       calcLocalizedBodyFallback(i18n,
           withSenderNamePrefix: withSenderNamePrefix,
           hideReply: hideReply,
           hideEdit: hideEdit,
           plaintextBody: plaintextBody,
-          removeMarkdown: removeMarkdown);
+          removeMarkdown: removeMarkdown,
+          removeBreakLine: removeBreakLine);
 
   /// Works similar to `calcLocalizedBody()` but does not wait for the sender
   /// user to be fetched. If it is not in the cache it will just use the
@@ -722,7 +726,8 @@ class Event extends MatrixEvent {
       bool hideReply = false,
       bool hideEdit = false,
       bool plaintextBody = false,
-      bool removeMarkdown = false}) {
+      bool removeMarkdown = false,
+      bool removeBreakLine = false}) {
     if (redacted) {
       return i18n.removedBy(senderFromMemoryOrFallback.calcDisplayname());
     }
@@ -732,6 +737,7 @@ class Event extends MatrixEvent {
       hideEdit: hideEdit,
       plaintextBody: plaintextBody,
       removeMarkdown: removeMarkdown,
+      removeBreakLine: removeBreakLine,
     );
 
     final callback = EventLocalizations.localizationsMap[type];
@@ -758,7 +764,8 @@ class Event extends MatrixEvent {
       {bool hideReply = false,
       bool hideEdit = false,
       bool plaintextBody = false,
-      bool removeMarkdown = false}) {
+      bool removeMarkdown = false,
+      bool removeBreakLine = false}) {
     if (redacted) {
       return 'Removed by ${senderFromMemoryOrFallback.displayName ?? senderId}';
     }
@@ -797,6 +804,11 @@ class Event extends MatrixEvent {
       );
       body = document.documentElement?.text ?? body;
     }
+
+    if (removeBreakLine) {
+      body = body.replaceAll(RegExp(r'\n'), ' ');
+    }
+    
     return body;
   }
 
