@@ -111,21 +111,27 @@ class Room {
         'notification_count': notificationCount,
         'prev_batch': prev_batch,
         'summary': summary.toJson(),
+        'last_event': lastEvent?.toJson(),
       };
 
-  factory Room.fromJson(Map<String, dynamic> json, Client client) => Room(
-        client: client,
-        id: json['id'],
-        membership: Membership.values.singleWhere(
-          (m) => m.toString() == 'Membership.${json['membership']}',
-          orElse: () => Membership.join,
-        ),
-        notificationCount: json['notification_count'],
-        highlightCount: json['highlight_count'],
-        prev_batch: json['prev_batch'],
-        summary:
-            RoomSummary.fromJson(Map<String, dynamic>.from(json['summary'])),
-      );
+  factory Room.fromJson(Map<String, dynamic> json, Client client) {
+    final room = Room(
+      client: client,
+      id: json['id'],
+      membership: Membership.values.singleWhere(
+        (m) => m.toString() == 'Membership.${json['membership']}',
+        orElse: () => Membership.join,
+      ),
+      notificationCount: json['notification_count'],
+      highlightCount: json['highlight_count'],
+      prev_batch: json['prev_batch'],
+      summary: RoomSummary.fromJson(Map<String, dynamic>.from(json['summary'])),
+    );
+    if (json['last_event'] != null) {
+      room._lastEvent = Event.fromJson(json['last_event'], room);
+    }
+    return room;
+  }
 
   /// Flag if the room is partial, meaning not all state events have been loaded yet
   bool partial = true;
@@ -157,46 +163,17 @@ class Room {
   /// Adds the [state] to this room and overwrites a state with the same
   /// typeKey/stateKey key pair if there is one.
   void setState(Event state) {
-    // Decrypt if necessary
-    if (state.type == EventTypes.Encrypted && client.encryptionEnabled) {
-      try {
-        state = client.encryption?.decryptRoomEventSync(id, state) ?? state;
-      } catch (e, s) {
-        Logs().e('[LibOlm] Could not decrypt room state', e, s);
-      }
-    }
-
-    // We ignore room verification events for lastEvents
-    if (state.type == EventTypes.Message &&
-        state.messageType.startsWith('m.room.verification.')) {
-      return;
-    }
-
-    final isMessageEvent = {
-      EventTypes.Message,
-      EventTypes.Encrypted,
-      EventTypes.Sticker
-    }.contains(state.type);
-
-    // We ignore events editing events older than the current-latest here so
-    // i.e. newly sent edits for older events don't show up in room preview
-    final lastEvent = this.lastEvent;
-    if (isMessageEvent &&
-        state.relationshipEventId != null &&
-        state.relationshipType == RelationshipTypes.edit &&
-        lastEvent != null &&
-        !state.matchesEventOrTransactionId(lastEvent.eventId) &&
-        lastEvent.eventId != state.relationshipEventId &&
-        !(lastEvent.relationshipType == RelationshipTypes.edit &&
-            lastEvent.relationshipEventId == state.relationshipEventId)) {
-      return;
-    }
-
     // Ignore other non-state events
-    final stateKey = state.stateKey ??
-        (client.roomPreviewLastEvents.contains(state.type) ? '' : null);
+    final stateKey = state.stateKey;
     final roomId = state.roomId;
-    if (stateKey == null || roomId == null) {
+    if (roomId == null || roomId != id) {
+      Logs().w('Tried to set state event for wrong room!');
+      return;
+    }
+    if (stateKey == null) {
+      Logs().w(
+        'Tried to set a non state event with type "${state.type}" as state event for a room',
+      );
       return;
     }
 
@@ -384,42 +361,30 @@ class Room {
   /// Must be one of [all, mention]
   String? notificationSettings;
 
-  Event? get lastEvent {
-    // as lastEvent calculation is based on the state events we unfortunately cannot
-    // use sortOrder here: With many state events we just know which ones are the
-    // newest ones, without knowing in which order they actually happened. As such,
-    // using the origin_server_ts is the best guess for this algorithm. While not
-    // perfect, it is only used for the room preview in the room list and sorting
-    // said room list, so it should be good enough.
-    var lastTime = DateTime.fromMillisecondsSinceEpoch(0);
-    final lastEvents =
-        client.roomPreviewLastEvents.map(getState).whereType<Event>();
+  Event? _lastEvent;
 
-    var lastEvent = lastEvents.isEmpty
-        ? null
-        : lastEvents.reduce((a, b) {
-            if (a.originServerTs == b.originServerTs) {
-              // if two events have the same sort order we want to give encrypted events a lower priority
-              // This is so that if the same event exists in the state both encrypted *and* unencrypted,
-              // the unencrypted one is picked
-              return a.type == EventTypes.Encrypted ? b : a;
-            }
-            return a.originServerTs.millisecondsSinceEpoch >
-                    b.originServerTs.millisecondsSinceEpoch
-                ? a
-                : b;
-          });
-    if (lastEvent == null) {
-      states.forEach((final String key, final entry) {
-        final state = entry[''];
-        if (state == null) return;
-        if (state.originServerTs.millisecondsSinceEpoch >
-            lastTime.millisecondsSinceEpoch) {
-          lastTime = state.originServerTs;
-          lastEvent = state;
-        }
-      });
-    }
+  set lastEvent(Event? event) {
+    _lastEvent = event;
+  }
+
+  Event? get lastEvent {
+    if (_lastEvent != null) return _lastEvent;
+
+    // Just pick the newest state event as an indicator for when the last
+    // activity was in this room. This is better than nothing:
+    var lastTime = DateTime.fromMillisecondsSinceEpoch(0);
+    Event? lastEvent;
+
+    states.forEach((final String key, final entry) {
+      final state = entry[''];
+      if (state == null) return;
+      if (state.originServerTs.millisecondsSinceEpoch >
+          lastTime.millisecondsSinceEpoch) {
+        lastTime = state.originServerTs;
+        lastEvent = state;
+      }
+    });
+
     return lastEvent;
   }
 
@@ -447,7 +412,9 @@ class Room {
     this.notificationSettings,
     Map<String, BasicRoomEvent>? roomAccountData,
     RoomSummary? summary,
+    Event? lastEvent,
   })  : roomAccountData = roomAccountData ?? <String, BasicRoomEvent>{},
+        _lastEvent = lastEvent,
         summary = summary ??
             RoomSummary.fromJson({
               'm.joined_member_count': 0,

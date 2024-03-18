@@ -216,8 +216,6 @@ class Client extends MatrixApi {
     importantStateEvents.addAll([
       EventTypes.RoomName,
       EventTypes.RoomAvatar,
-      EventTypes.Message,
-      EventTypes.Encrypted,
       EventTypes.Encryption,
       EventTypes.RoomCanonicalAlias,
       EventTypes.RoomTombstone,
@@ -233,12 +231,8 @@ class Client extends MatrixApi {
       EventTypes.CallAnswer,
       EventTypes.CallReject,
       EventTypes.CallHangup,
-
-      /// hack because having them both in important events and roomPreivew
-      /// makes the statekey '' which means you can only have one event of that
-      /// type
-      // EventTypes.GroupCallPrefix,
-      // EventTypes.GroupCallMemberPrefix,
+      EventTypes.GroupCallPrefix,
+      EventTypes.GroupCallMemberPrefix,
     ]);
 
     // register all the default commands
@@ -2131,7 +2125,12 @@ class Client extends MatrixApi {
       final id = entry.key;
       final syncRoomUpdate = entry.value;
 
-      await database?.storeRoomUpdate(id, syncRoomUpdate, this);
+      // Is the timeline limited? Then all previous messages should be
+      // removed from the database!
+      if (syncRoomUpdate is JoinedRoomUpdate &&
+          syncRoomUpdate.timeline?.limited == true) {
+        await database?.deleteTimelineForRoom(id);
+      }
       final room = await _updateRoomsByRoomUpdate(id, syncRoomUpdate);
 
       final timelineUpdateType = direction != null
@@ -2202,6 +2201,7 @@ class Client extends MatrixApi {
           await _handleRoomEvents(room, state, EventUpdateType.inviteState);
         }
       }
+      await database?.storeRoomUpdate(id, syncRoomUpdate, room.lastEvent, this);
     }
   }
 
@@ -2478,50 +2478,56 @@ class Client extends MatrixApi {
     if (eventUpdate.type == EventUpdateType.history) return;
 
     switch (eventUpdate.type) {
-      case EventUpdateType.timeline:
-      case EventUpdateType.state:
       case EventUpdateType.inviteState:
-        final stateEvent = Event.fromJson(eventUpdate.content, room);
-        if (stateEvent.type == EventTypes.Redaction) {
-          final String? redacts = eventUpdate.content.tryGet<String>('redacts');
-          if (redacts != null) {
-            room.states.forEach(
-              (String key, Map<String, Event> states) => states.forEach(
-                (String key, Event state) {
-                  if (state.eventId == redacts) {
-                    state.setRedactionEvent(stateEvent);
-                  }
-                },
-              ),
-            );
-          }
-        } else {
-          // We want to set state the in-memory cache for the room with the new event.
-          // To do this, we have to respect to not save edits, unless they edit the
-          // current last event.
-          // Additionally, we only store the event in-memory if the room has either been
-          // post-loaded or the event is animportant state event.
-          final noMessageOrNoEdit = stateEvent.type != EventTypes.Message ||
-              stateEvent.relationshipType != RelationshipTypes.edit;
-          final editingLastEvent =
-              stateEvent.relationshipEventId == room.lastEvent?.eventId;
-          final consecutiveEdit =
-              room.lastEvent?.relationshipType == RelationshipTypes.edit &&
-                  stateEvent.relationshipEventId ==
-                      room.lastEvent?.relationshipEventId;
-          final importantOrRoomLoaded =
-              eventUpdate.type == EventUpdateType.inviteState ||
-                  !room.partial ||
-                  // make sure we do overwrite events we have already loaded.
-                  room.states[stateEvent.type]
-                          ?.containsKey(stateEvent.stateKey ?? '') ==
-                      true ||
-                  importantStateEvents.contains(stateEvent.type);
-          if ((noMessageOrNoEdit || editingLastEvent || consecutiveEdit) &&
-              importantOrRoomLoaded) {
-            room.setState(stateEvent);
-          }
+        room.setState(Event.fromJson(eventUpdate.content, room));
+        break;
+      case EventUpdateType.state:
+      case EventUpdateType.timeline:
+        final event = Event.fromJson(eventUpdate.content, room);
+
+        // Update the room state:
+        if (!room.partial ||
+            // make sure we do overwrite events we have already loaded.
+            room.states[event.type]?.containsKey(event.stateKey ?? '') ==
+                true ||
+            importantStateEvents.contains(event.type)) {
+          room.setState(event);
         }
+        if (eventUpdate.type != EventUpdateType.timeline) break;
+
+        // If last event is null or not a valid room preview event anyway,
+        // just use this:
+        if (room.lastEvent == null ||
+            !roomPreviewLastEvents.contains(room.lastEvent?.type)) {
+          room.lastEvent = event;
+          break;
+        }
+
+        // Is this event redacting the last event?
+        if (event.type == EventTypes.Redaction &&
+            (event.content.tryGet<String>('redacts') ?? event.redacts) ==
+                room.lastEvent?.eventId) {
+          room.lastEvent?.setRedactionEvent(event);
+          break;
+        }
+
+        // Is this event an edit of the last event? Otherwise ignore it.
+        if (event.relationshipType == RelationshipTypes.edit) {
+          if (event.relationshipEventId == room.lastEvent?.eventId ||
+              (room.lastEvent?.relationshipType == RelationshipTypes.edit &&
+                  event.relationshipEventId ==
+                      room.lastEvent?.relationshipEventId)) {
+            room.lastEvent = event;
+          }
+          break;
+        }
+
+        // Is this event of an important type for the last event?
+        if (!roomPreviewLastEvents.contains(event.type)) break;
+
+        // Event is a valid new lastEvent:
+        room.lastEvent = event;
+
         break;
       case EventUpdateType.accountData:
         room.roomAccountData[eventUpdate.content['type']] =
