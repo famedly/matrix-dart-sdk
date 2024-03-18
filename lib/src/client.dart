@@ -460,7 +460,12 @@ class Client extends MatrixApi {
   /// login types. Throws an exception if the server is not compatible with the
   /// client and sets [homeserver] to [homeserverUrl] if it is. Supports the
   /// types `Uri` and `String`.
-  Future<HomeserverSummary> checkHomeserver(
+  Future<
+      (
+        DiscoveryInformation?,
+        GetVersionsResponse versions,
+        List<LoginFlow>,
+      )> checkHomeserver(
     Uri homeserverUrl, {
     bool checkWellKnown = true,
     Set<String>? overrideSupportedVersions,
@@ -497,11 +502,7 @@ class Client extends MatrixApi {
             loginTypes.map((f) => f.type ?? '').toSet(), supportedLoginTypes);
       }
 
-      return HomeserverSummary(
-        discoveryInformation: wellKnown,
-        versions: versions,
-        loginFlows: loginTypes,
-      );
+      return (wellKnown, versions, loginTypes);
     } catch (_) {
       homeserver = null;
       rethrow;
@@ -3456,18 +3457,6 @@ class FileTooBigMatrixException extends MatrixException {
   @override
   String toString() =>
       'File size ${_formatFileSize(actualFileSize)} exceeds allowed maximum of ${_formatFileSize(maxFileSize)}';
-}
-
-class HomeserverSummary {
-  final DiscoveryInformation? discoveryInformation;
-  final GetVersionsResponse versions;
-  final List<LoginFlow> loginFlows;
-
-  HomeserverSummary({
-    required this.discoveryInformation,
-    required this.versions,
-    required this.loginFlows,
-  });
 }
 
 class ArchivedRoom {
