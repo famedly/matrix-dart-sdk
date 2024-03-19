@@ -1829,7 +1829,7 @@ class Room {
     return powerForChangingStateEvent(action) <= ownPowerLevel;
   }
 
-  /// returns the powerlevel required for chaning the `action` defaults to
+  /// returns the powerlevel required for changing the `action` defaults to
   /// state_default if `action` isn't specified in events override.
   /// If there is no state_default in the m.room.power_levels event, the
   /// state_default is 50. If the room contains no m.room.power_levels event,
@@ -1849,7 +1849,6 @@ class Room {
 
   /// if returned value is not null `org.matrix.msc3401.call.member` is present
   /// and group calls can be used
-  @Deprecated('User canJoinGroupCall')
   bool get groupCallsEnabled {
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
     if (powerLevelMap == null) return false;

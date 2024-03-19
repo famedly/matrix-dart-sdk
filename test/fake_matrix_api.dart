@@ -2581,6 +2581,10 @@ class FakeMatrixApi extends BaseClient {
           (var reqI) => {
                 'event_id': '42',
               },
+      '/client/v3/rooms/!calls%3Aexample.com/state/m.room.power_levels':
+          (var reqI) => {
+                'event_id': '42',
+              },
       '/client/v3/directory/list/room/!localpart%3Aexample.com': (var req) =>
           {},
       '/client/v3/room_keys/version/5': (var req) => {},

@@ -1,8 +1,8 @@
-import 'package:matrix/src/voip/models/call_membership.dart';
 import 'package:test/test.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/voip/models/call_membership.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
 import 'fake_client.dart';
@@ -16,10 +16,10 @@ void main() {
     Logs().level = Level.info;
     setUp(() async {
       matrix = await getClient();
+
       voip = VoIP(matrix, MockWebRTCDelegate());
       VoIP.customTxid = '1234';
       final id = '!calls:example.com';
-
       room = matrix.getRoomById(id)!;
     });
 
@@ -473,116 +473,216 @@ void main() {
       expect(voip.currentCID,
           VoipId(roomId: room.id, callId: 'zzzz_glare_2nd_call'));
     });
-  });
 
-  test('getFamedlyCallEvents sort order', () {
-    room.setState(
-      Event(
-        content: {
-          'memberships': [
-            CallMembership(
-              userId: '@test1:example.com',
-              callId: '1111',
-              backends: [MeshBackend()],
-              deviceId: '1111',
-              expiresTs: DateTime.now()
-                  .add(Duration(hours: 12))
-                  .millisecondsSinceEpoch,
-              roomId: room.id,
-            ).toJson(),
-          ]
-        },
-        type: VoIPEventTypes.FamedlyCallMemberEvent,
-        eventId: 'asdfasdf',
-        senderId: '@test1:example.com',
-        originServerTs: DateTime.now().add(Duration(hours: 12)),
-        room: room,
-        stateKey: '@test1:example.com',
-      ),
-    );
-    room.setState(
-      Event(
-        content: {
-          'memberships': [
-            CallMembership(
-              userId: '@test2:example.com',
-              callId: '1111',
-              backends: [MeshBackend()],
-              deviceId: '1111',
-              expiresTs: DateTime.now().millisecondsSinceEpoch,
-              roomId: room.id,
-            ).toJson(),
-          ]
-        },
-        type: VoIPEventTypes.FamedlyCallMemberEvent,
-        eventId: 'asdfasdf',
-        senderId: '@test2:example.com',
-        originServerTs: DateTime.now(),
-        room: room,
-        stateKey: '@test2:example.com',
-      ),
-    );
-    room.setState(
-      Event(
-        content: {
-          'memberships': [
-            CallMembership(
-              userId: '@test2.0:example.com',
-              callId: '1111',
-              backends: [MeshBackend()],
-              deviceId: '1111',
-              expiresTs: DateTime.now().millisecondsSinceEpoch,
-              roomId: room.id,
-            ).toJson(),
-          ]
-        },
-        type: VoIPEventTypes.FamedlyCallMemberEvent,
-        eventId: 'asdfasdf',
-        senderId: '@test2.0:example.com',
-        originServerTs: DateTime.now(),
-        room: room,
-        stateKey: '@test2.0:example.com',
-      ),
-    );
-    room.setState(
-      Event(
-        content: {
-          'memberships': [
-            CallMembership(
-              userId: '@test3:example.com',
-              callId: '1111',
-              backends: [MeshBackend()],
-              deviceId: '1111',
-              expiresTs: DateTime.now()
-                  .subtract(Duration(hours: 1))
-                  .millisecondsSinceEpoch,
-              roomId: room.id,
-            ).toJson(),
-          ]
-        },
-        type: VoIPEventTypes.FamedlyCallMemberEvent,
-        eventId: 'asdfasdf',
-        senderId: '@test3:example.com',
-        originServerTs: DateTime.now().subtract(Duration(hours: 1)),
-        room: room,
-        stateKey: '@test3:example.com',
-      ),
-    );
-    expect(room.getFamedlyCallEvents().entries.elementAt(0).key,
-        '@test3:example.com');
-    expect(room.getFamedlyCallEvents().entries.elementAt(1).key,
-        '@test2:example.com');
-    expect(room.getFamedlyCallEvents().entries.elementAt(2).key,
-        '@test2.0:example.com');
-    expect(room.getFamedlyCallEvents().entries.elementAt(3).key,
-        '@test1:example.com');
-    expect(room.getCallMembershipsFromRoom().entries.elementAt(0).key,
-        '@test3:example.com');
-    expect(room.getCallMembershipsFromRoom().entries.elementAt(1).key,
-        '@test2:example.com');
-    expect(room.getCallMembershipsFromRoom().entries.elementAt(2).key,
-        '@test2.0:example.com');
-    expect(room.getCallMembershipsFromRoom().entries.elementAt(3).key,
-        '@test1:example.com');
+    test('getFamedlyCallEvents sort order', () {
+      room.setState(
+        Event(
+          content: {
+            'memberships': [
+              CallMembership(
+                userId: '@test1:example.com',
+                callId: '1111',
+                backends: [MeshBackend()],
+                deviceId: '1111',
+                expiresTs: DateTime.now()
+                    .add(Duration(hours: 12))
+                    .millisecondsSinceEpoch,
+                roomId: room.id,
+              ).toJson(),
+            ]
+          },
+          type: VoIPEventTypes.FamedlyCallMemberEvent,
+          eventId: 'asdfasdf',
+          senderId: '@test1:example.com',
+          originServerTs: DateTime.now().add(Duration(hours: 12)),
+          room: room,
+          stateKey: '@test1:example.com',
+        ),
+      );
+      room.setState(
+        Event(
+          content: {
+            'memberships': [
+              CallMembership(
+                userId: '@test2:example.com',
+                callId: '1111',
+                backends: [MeshBackend()],
+                deviceId: '1111',
+                expiresTs: DateTime.now().millisecondsSinceEpoch,
+                roomId: room.id,
+              ).toJson(),
+            ]
+          },
+          type: VoIPEventTypes.FamedlyCallMemberEvent,
+          eventId: 'asdfasdf',
+          senderId: '@test2:example.com',
+          originServerTs: DateTime.now(),
+          room: room,
+          stateKey: '@test2:example.com',
+        ),
+      );
+      room.setState(
+        Event(
+          content: {
+            'memberships': [
+              CallMembership(
+                userId: '@test2.0:example.com',
+                callId: '1111',
+                backends: [MeshBackend()],
+                deviceId: '1111',
+                expiresTs: DateTime.now().millisecondsSinceEpoch,
+                roomId: room.id,
+              ).toJson(),
+            ]
+          },
+          type: VoIPEventTypes.FamedlyCallMemberEvent,
+          eventId: 'asdfasdf',
+          senderId: '@test2.0:example.com',
+          originServerTs: DateTime.now(),
+          room: room,
+          stateKey: '@test2.0:example.com',
+        ),
+      );
+      room.setState(
+        Event(
+          content: {
+            'memberships': [
+              CallMembership(
+                userId: '@test3:example.com',
+                callId: '1111',
+                backends: [MeshBackend()],
+                deviceId: '1111',
+                expiresTs: DateTime.now()
+                    .subtract(Duration(hours: 1))
+                    .millisecondsSinceEpoch,
+                roomId: room.id,
+              ).toJson(),
+            ]
+          },
+          type: VoIPEventTypes.FamedlyCallMemberEvent,
+          eventId: 'asdfasdf',
+          senderId: '@test3:example.com',
+          originServerTs: DateTime.now().subtract(Duration(hours: 1)),
+          room: room,
+          stateKey: '@test3:example.com',
+        ),
+      );
+      expect(room.getFamedlyCallEvents().entries.elementAt(0).key,
+          '@test3:example.com');
+      expect(room.getFamedlyCallEvents().entries.elementAt(1).key,
+          '@test2:example.com');
+      expect(room.getFamedlyCallEvents().entries.elementAt(2).key,
+          '@test2.0:example.com');
+      expect(room.getFamedlyCallEvents().entries.elementAt(3).key,
+          '@test1:example.com');
+      expect(room.getCallMembershipsFromRoom().entries.elementAt(0).key,
+          '@test3:example.com');
+      expect(room.getCallMembershipsFromRoom().entries.elementAt(1).key,
+          '@test2:example.com');
+      expect(room.getCallMembershipsFromRoom().entries.elementAt(2).key,
+          '@test2.0:example.com');
+      expect(room.getCallMembershipsFromRoom().entries.elementAt(3).key,
+          '@test1:example.com');
+    });
+
+    test('Enabling group calls', () async {
+      // users default is 0 and so group calls not enabled
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.power_levels',
+          room: room,
+          eventId: '123a',
+          content: {
+            'events': {VoIPEventTypes.FamedlyCallMemberEvent: 100},
+            'state_default': 50,
+            'users_default': 0
+          },
+          originServerTs: DateTime.now(),
+          stateKey: '',
+        ),
+      );
+      expect(room.canJoinGroupCall, false);
+      expect(room.groupCallsEnabled, false);
+
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.power_levels',
+          room: room,
+          eventId: '123a',
+          content: {
+            'events': {EventTypes.GroupCallMemberPrefix: 27},
+            'state_default': 50,
+            'users_default': 49
+          },
+          originServerTs: DateTime.now(),
+          stateKey: '',
+        ),
+      );
+      expect(room.canJoinGroupCall, true);
+      expect(room.groupCallsEnabled, true);
+
+      // state_default 50 and user_default 0, use enableGroupCall
+      room.setState(
+        Event(
+            senderId: '@test:example.com',
+            type: 'm.room.power_levels',
+            room: room,
+            eventId: '123',
+            content: {
+              'state_default': 50,
+              'users': {'@test:fakeServer.notExisting': 100},
+              'users_default': 0
+            },
+            originServerTs: DateTime.now(),
+            stateKey: ''),
+      );
+      expect(room.canJoinGroupCall, true); // because admin
+      expect(room.groupCallsEnabled, false);
+      await room.enableGroupCalls();
+      expect(room.canJoinGroupCall, true);
+      expect(room.groupCallsEnabled, true);
+
+      // state_default 50 and user_default unspecified, use enableGroupCall
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.power_levels',
+          room: room,
+          eventId: '123',
+          content: {
+            'state_default': 50,
+            'users': {'@test:fakeServer.notExisting': 100},
+          },
+          originServerTs: DateTime.now(),
+          stateKey: '',
+        ),
+      );
+
+      expect(room.canJoinGroupCall, true); // because admin
+      expect(room.groupCallsEnabled, false);
+      await room.enableGroupCalls();
+      expect(room.canJoinGroupCall, true);
+      expect(room.groupCallsEnabled, true);
+
+      // state_default is 0 so users should be able to send state events
+      room.setState(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.power_levels',
+          room: room,
+          eventId: '123',
+          content: {
+            'state_default': 0,
+            'users': {'@test:fakeServer.notExisting': 100},
+          },
+          originServerTs: DateTime.now(),
+          stateKey: '',
+        ),
+      );
+      expect(room.canJoinGroupCall, true);
+      expect(room.groupCallsEnabled, true);
+    });
   });
 }
