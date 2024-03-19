@@ -566,7 +566,7 @@ class GroupCallSession {
 
     for (final mem in ignoredMems) {
       Logs().w(
-          '[VOIP] Ignored mem ${mem.toJson()} while updating participants list for callId: $groupCallId, expiry status: ${mem.isExpired}');
+          '[VOIP] Ignored ${mem.userId}\'s mem event ${mem.toJson()} while updating participants list for callId: $groupCallId, expiry status: ${mem.isExpired}');
     }
 
     final List<Participant> newP = [];
@@ -1040,12 +1040,6 @@ class GroupCallSession {
 
   /// makes a new e2ee key for local user and sets it with a delay if specified
   /// used on first join and when someone leaves
-  ///
-  /// TODO (td): confirm if new keys go to index 0 and only ratcheting ones are on
-  /// incremented index
-  ///
-  /// current status: frames are always decryptable with the key on index 0, possible
-  /// upstream bug.
   ///
   /// also does the sending for you
   Future<void> makeNewSenderKey(bool delayBeforeUsingKeyOurself) async {
