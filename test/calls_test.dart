@@ -1,3 +1,4 @@
+import 'package:matrix/src/voip/models/call_membership.dart';
 import 'package:test/test.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
@@ -472,5 +473,116 @@ void main() {
       expect(voip.currentCID,
           VoipId(roomId: room.id, callId: 'zzzz_glare_2nd_call'));
     });
+  });
+
+  test('getFamedlyCallEvents sort order', () {
+    room.setState(
+      Event(
+        content: {
+          'memberships': [
+            CallMembership(
+              userId: '@test1:example.com',
+              callId: '1111',
+              backends: [MeshBackend()],
+              deviceId: '1111',
+              expiresTs: DateTime.now()
+                  .add(Duration(hours: 12))
+                  .millisecondsSinceEpoch,
+              roomId: room.id,
+            ).toJson(),
+          ]
+        },
+        type: VoIPEventTypes.FamedlyCallMemberEvent,
+        eventId: 'asdfasdf',
+        senderId: '@test1:example.com',
+        originServerTs: DateTime.now().add(Duration(hours: 12)),
+        room: room,
+        stateKey: '@test1:example.com',
+      ),
+    );
+    room.setState(
+      Event(
+        content: {
+          'memberships': [
+            CallMembership(
+              userId: '@test2:example.com',
+              callId: '1111',
+              backends: [MeshBackend()],
+              deviceId: '1111',
+              expiresTs: DateTime.now().millisecondsSinceEpoch,
+              roomId: room.id,
+            ).toJson(),
+          ]
+        },
+        type: VoIPEventTypes.FamedlyCallMemberEvent,
+        eventId: 'asdfasdf',
+        senderId: '@test2:example.com',
+        originServerTs: DateTime.now(),
+        room: room,
+        stateKey: '@test2:example.com',
+      ),
+    );
+    room.setState(
+      Event(
+        content: {
+          'memberships': [
+            CallMembership(
+              userId: '@test2.0:example.com',
+              callId: '1111',
+              backends: [MeshBackend()],
+              deviceId: '1111',
+              expiresTs: DateTime.now().millisecondsSinceEpoch,
+              roomId: room.id,
+            ).toJson(),
+          ]
+        },
+        type: VoIPEventTypes.FamedlyCallMemberEvent,
+        eventId: 'asdfasdf',
+        senderId: '@test2.0:example.com',
+        originServerTs: DateTime.now(),
+        room: room,
+        stateKey: '@test2.0:example.com',
+      ),
+    );
+    room.setState(
+      Event(
+        content: {
+          'memberships': [
+            CallMembership(
+              userId: '@test3:example.com',
+              callId: '1111',
+              backends: [MeshBackend()],
+              deviceId: '1111',
+              expiresTs: DateTime.now()
+                  .subtract(Duration(hours: 1))
+                  .millisecondsSinceEpoch,
+              roomId: room.id,
+            ).toJson(),
+          ]
+        },
+        type: VoIPEventTypes.FamedlyCallMemberEvent,
+        eventId: 'asdfasdf',
+        senderId: '@test3:example.com',
+        originServerTs: DateTime.now().subtract(Duration(hours: 1)),
+        room: room,
+        stateKey: '@test3:example.com',
+      ),
+    );
+    expect(room.getFamedlyCallEvents().entries.elementAt(0).key,
+        '@test3:example.com');
+    expect(room.getFamedlyCallEvents().entries.elementAt(1).key,
+        '@test2:example.com');
+    expect(room.getFamedlyCallEvents().entries.elementAt(2).key,
+        '@test2.0:example.com');
+    expect(room.getFamedlyCallEvents().entries.elementAt(3).key,
+        '@test1:example.com');
+    expect(room.getCallMembershipsFromRoom().entries.elementAt(0).key,
+        '@test3:example.com');
+    expect(room.getCallMembershipsFromRoom().entries.elementAt(1).key,
+        '@test2:example.com');
+    expect(room.getCallMembershipsFromRoom().entries.elementAt(2).key,
+        '@test2.0:example.com');
+    expect(room.getCallMembershipsFromRoom().entries.elementAt(3).key,
+        '@test1:example.com');
   });
 }

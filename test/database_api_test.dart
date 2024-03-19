@@ -101,7 +101,7 @@ void main() {
           'membership': Membership.join,
         });
         final client = Client('testclient');
-        await database.storeRoomUpdate('!testroom', roomUpdate, client);
+        await database.storeRoomUpdate('!testroom', roomUpdate, null, client);
         final rooms = await database.getRoomList(client);
         expect(rooms.single.id, '!testroom');
       });
