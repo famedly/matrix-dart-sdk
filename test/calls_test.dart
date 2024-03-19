@@ -684,5 +684,85 @@ void main() {
       expect(room.canJoinGroupCall, true);
       expect(room.groupCallsEnabled, true);
     });
+
+    test('group call participants count', () {
+      room.setState(
+        Event(
+            senderId: '@test1:example.com',
+            type: EventTypes.GroupCallMemberPrefix,
+            room: room,
+            eventId: '1234177',
+            content: {
+              'memberships': [
+                CallMembership(
+                  userId: '@test1:example.com',
+                  callId: 'participants_count',
+                  backends: [MeshBackend()],
+                  deviceId: '1111',
+                  expiresTs: DateTime.now()
+                      .subtract(Duration(hours: 1))
+                      .millisecondsSinceEpoch,
+                  roomId: room.id,
+                ).toJson(),
+              ]
+            },
+            originServerTs: DateTime.now(),
+            stateKey: '@test1:example.com'),
+      );
+
+      expect(room.groupCallParticipantCount('participants_count'), 0);
+      expect(room.hasActiveGroupCall, false);
+
+      room.setState(
+        Event(
+            senderId: '@test2:example.com',
+            type: EventTypes.GroupCallMemberPrefix,
+            room: room,
+            eventId: '1234177',
+            content: {
+              'memberships': [
+                CallMembership(
+                  userId: '@test2:example.com',
+                  callId: 'participants_count',
+                  backends: [MeshBackend()],
+                  deviceId: '1111',
+                  expiresTs: DateTime.now()
+                      .add(Duration(hours: 1))
+                      .millisecondsSinceEpoch,
+                  roomId: room.id,
+                ).toJson(),
+              ]
+            },
+            originServerTs: DateTime.now(),
+            stateKey: '@test2:example.com'),
+      );
+      expect(room.groupCallParticipantCount('participants_count'), 1);
+      expect(room.hasActiveGroupCall, true);
+
+      room.setState(
+        Event(
+            senderId: '@test3:example.com',
+            type: EventTypes.GroupCallMemberPrefix,
+            room: room,
+            eventId: '1231234124123',
+            content: {
+              'memberships': [
+                CallMembership(
+                  userId: '@test3:example.com',
+                  callId: 'participants_count',
+                  backends: [MeshBackend()],
+                  deviceId: '1111',
+                  expiresTs: DateTime.now().millisecondsSinceEpoch,
+                  roomId: room.id,
+                ).toJson(),
+              ]
+            },
+            originServerTs: DateTime.now(),
+            stateKey: '@test3:example.com'),
+      );
+
+      expect(room.groupCallParticipantCount('participants_count'), 2);
+      expect(room.hasActiveGroupCall, true);
+    });
   });
 }

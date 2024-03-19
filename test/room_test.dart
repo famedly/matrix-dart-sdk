@@ -647,7 +647,7 @@ void main() {
       expect(room.canChangeStateEvent('m.room.power_levels'), false);
       expect(room.canChangeStateEvent('m.room.member'), false);
       expect(room.canSendEvent('m.room.message'), true);
-      final resp = await room.setPower('@test:fakeServer.notExisting', 90);
+      final resp = await room.setPower('@test:fakeServer.notExisting', 0);
       expect(resp, '42');
     });
 
@@ -1316,7 +1316,6 @@ void main() {
     test('inviteLink', () async {
       // ensure we don't rerequest members
       room.summary.mJoinedMemberCount = 4;
-
       var matrixToLink = await room.matrixToInviteLink();
       expect(matrixToLink.toString(),
           'https://matrix.to/#/%23testalias%3Aexample.com');
@@ -1333,120 +1332,6 @@ void main() {
       matrixToLink = await room.matrixToInviteLink();
       expect(matrixToLink.toString(),
           'https://matrix.to/#/!localpart%3Aserver.abc?via=example.com&via=test.abc&via=example.org');
-    });
-
-    test('group call participants count', () {
-      room.setState(
-        Event(
-            senderId: '@test:example.com',
-            type: EventTypes.GroupCallMemberPrefix,
-            room: room,
-            eventId: '1234177',
-            content: {
-              'm.calls': [
-                {
-                  'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-                  'm.devices': [
-                    {
-                      'device_id': 'ZEEGCGPTGI',
-                      'session_id': 'fhovqxwcasdfr',
-                      'expires_ts': DateTime.now()
-                          .add(Duration(minutes: 1))
-                          .millisecondsSinceEpoch,
-                      'feeds': [
-                        {'purpose': 'm.usermedia'}
-                      ]
-                    },
-                  ]
-                }
-              ],
-            },
-            originServerTs: DateTime.now(),
-            stateKey: '@test:example.com'),
-      );
-      room.setState(
-        Event(
-            senderId: '@test0:example.com',
-            type: EventTypes.GroupCallMemberPrefix,
-            room: room,
-            eventId: '1234177',
-            content: {
-              'm.calls': [
-                {
-                  'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-                  'm.devices': [
-                    {
-                      'device_id': 'ZEEGCGPTGI',
-                      'session_id': 'fhovqxwcasdfr',
-                      'expires_ts': DateTime.now()
-                          .add(Duration(minutes: 2))
-                          .millisecondsSinceEpoch,
-                      'feeds': [
-                        {'purpose': 'm.usermedia'}
-                      ]
-                    },
-                  ]
-                }
-              ],
-            },
-            originServerTs: DateTime.now(),
-            stateKey: '@test0:example.com'),
-      );
-      room.setState(
-        Event(
-            senderId: '@test2:example.com',
-            type: EventTypes.GroupCallMemberPrefix,
-            room: room,
-            eventId: '1231234124123',
-            content: {
-              'm.calls': [
-                {
-                  'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-                  'm.devices': [
-                    {
-                      'device_id': 'ZEEGCGPTGI',
-                      'session_id': 'fhovqxwcasdfr',
-                      'feeds': [
-                        {'purpose': 'm.usermedia'}
-                      ]
-                    },
-                  ]
-                }
-              ],
-            },
-            originServerTs: DateTime.now(),
-            stateKey: '@test2:example.com'),
-      );
-      room.setState(
-        Event(
-            senderId: '@test3:example.com',
-            type: EventTypes.GroupCallMemberPrefix,
-            room: room,
-            eventId: '123123412445',
-            content: {
-              'm.calls': [
-                {
-                  'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-                  'm.devices': [
-                    {
-                      'device_id': 'ZEEGCGPTGI',
-                      'session_id': 'fhovqxwcasdfr',
-                      'expires_ts': DateTime.now()
-                          .subtract(Duration(minutes: 1))
-                          .millisecondsSinceEpoch,
-                      'feeds': [
-                        {'purpose': 'm.usermedia'}
-                      ]
-                    },
-                  ]
-                }
-              ],
-            },
-            originServerTs: DateTime.now(),
-            stateKey: '@test3:example.com'),
-      );
-      expect(
-          room.groupCallParticipantCount('1674811256006mfqnmsAbzqxjYtWZ'), 2);
     });
 
     test('EventTooLarge on exceeding max PDU size', () async {
