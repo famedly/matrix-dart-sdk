@@ -763,12 +763,8 @@ class VoIP {
       return groupCall;
     }
 
-    if (!room.canJoinGroupCall) {
+    if (!room.groupCallsEnabled) {
       await room.enableGroupCalls();
-      if (!room.canJoinGroupCall) {
-        throw Exception(
-            'User is not allowed to join famedly calls in the room');
-      }
     }
 
     if (room.canJoinGroupCall) {
