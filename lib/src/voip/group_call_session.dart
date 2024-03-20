@@ -209,7 +209,6 @@ class GroupCallSession {
       }
 
       localWrappedMediaStream = WrappedMediaStream(
-        renderer: voip.delegate.createRenderer(),
         stream: stream,
         participant: localParticipant!,
         room: room,
@@ -225,7 +224,6 @@ class GroupCallSession {
     }
 
     localUserMediaStream = localWrappedMediaStream;
-    await localUserMediaStream!.initialize();
     await addUserMediaStream(localWrappedMediaStream);
 
     setState(GroupCallState.LocalCallFeedInitialized);
@@ -408,7 +406,6 @@ class GroupCallSession {
             'Screensharing permissions granted. Setting screensharing enabled on all calls');
         localDesktopCapturerSourceId = desktopCapturerSourceId;
         localScreenshareStream = WrappedMediaStream(
-          renderer: voip.delegate.createRenderer(),
           stream: stream,
           participant: localParticipant!,
           room: room,
@@ -421,7 +418,6 @@ class GroupCallSession {
         );
 
         addScreenshareStream(localScreenshareStream!);
-        await localScreenshareStream!.initialize();
 
         onGroupCallEvent.add(GroupCallEvent.LocalScreenshareStateChanged);
         for (final call in callSessions) {
@@ -899,7 +895,6 @@ class GroupCallSession {
     onStreamRemoved.add(stream);
 
     if (stream.isLocal()) {
-      await stream.disposeRenderer();
       await stopMediaStream(stream.stream);
     }
 
@@ -1012,7 +1007,6 @@ class GroupCallSession {
     onStreamRemoved.add(stream);
 
     if (stream.isLocal()) {
-      await stream.disposeRenderer();
       await stopMediaStream(stream.stream);
     }
 

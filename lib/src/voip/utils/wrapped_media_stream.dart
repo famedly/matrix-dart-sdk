@@ -15,7 +15,6 @@ class WrappedMediaStream {
   bool audioMuted;
   bool videoMuted;
   final Client client;
-  VideoRenderer renderer;
   final bool isWeb;
   final bool isGroupCall;
   final RTCPeerConnection? pc;
@@ -28,12 +27,12 @@ class WrappedMediaStream {
   final CachedStreamController<WrappedMediaStream> onMuteStateChanged =
       CachedStreamController();
 
-  void Function(MediaStream stream)? onNewStream;
+  final CachedStreamController<MediaStream> onStreamChanged =
+      CachedStreamController();
 
   WrappedMediaStream(
       {this.stream,
       this.pc,
-      required this.renderer,
       required this.room,
       required this.participant,
       required this.purpose,
@@ -43,24 +42,12 @@ class WrappedMediaStream {
       required this.isWeb,
       required this.isGroupCall});
 
-  /// Initialize the video renderer
-  Future<void> initialize() async {
-    await renderer.initialize();
-    renderer.srcObject = stream;
-    renderer.onResize = () {
-      Logs().i(
-          'onResize [${stream!.id.substring(0, 8)}] ${renderer.videoWidth} x ${renderer.videoHeight}');
-    };
-  }
-
   String get id => '${stream?.id}: $title';
 
   Participant get localParticipant =>
       Participant(userId: client.userID!, deviceId: client.deviceID!);
 
   Future<void> dispose() async {
-    renderer.srcObject = null;
-
     /// libwebrtc does not provide a way to clone MediaStreams. So stopping the
     /// local stream here would break calls with all other participants if anyone
     /// leaves. The local stream is manually disposed when user leaves. On web
@@ -70,13 +57,8 @@ class WrappedMediaStream {
     }
 
     stream = null;
-    await renderer.dispose();
   }
 
-  Future<void> disposeRenderer() async {
-    renderer.srcObject = null;
-    await renderer.dispose();
-  }
 
   Uri? get avatarUrl => getUser().avatarUrl;
 
@@ -103,10 +85,7 @@ class WrappedMediaStream {
 
   void setNewStream(MediaStream newStream) {
     stream = newStream;
-    renderer.srcObject = stream;
-    if (onNewStream != null) {
-      onNewStream?.call(stream!);
-    }
+    onStreamChanged.add(stream!);
   }
 
   void setAudioMuted(bool muted) {

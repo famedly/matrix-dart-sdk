@@ -8,7 +8,6 @@ abstract class WebRTCDelegate {
   Future<RTCPeerConnection> createPeerConnection(
       Map<String, dynamic> configuration,
       [Map<String, dynamic> constraints = const {}]);
-  VideoRenderer createRenderer();
   Future<void> playRingtone();
   Future<void> stopRingtone();
   Future<void> handleNewCall(CallSession session);

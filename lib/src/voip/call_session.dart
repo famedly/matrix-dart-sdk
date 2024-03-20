@@ -561,7 +561,6 @@ class CallSession {
       existingStream.first.setNewStream(stream);
     } else {
       final newStream = WrappedMediaStream(
-        renderer: voip.delegate.createRenderer(),
         participant: localParticipant!,
         room: opts.room,
         stream: stream,
@@ -573,7 +572,6 @@ class CallSession {
         isGroupCall: groupCallId != null,
         pc: pc,
       );
-      await newStream.initialize();
       streams.add(newStream);
       onStreamAdd.add(newStream);
     }
@@ -624,7 +622,6 @@ class CallSession {
       existingStream.first.setNewStream(stream);
     } else {
       final newStream = WrappedMediaStream(
-        renderer: voip.delegate.createRenderer(),
         participant:
             Participant(userId: remoteUserId!, deviceId: remoteUserDeviceId!),
         room: opts.room,
@@ -637,7 +634,6 @@ class CallSession {
         isGroupCall: groupCallId != null,
         pc: pc,
       );
-      await newStream.initialize();
       streams.add(newStream);
       onStreamAdd.add(newStream);
     }
@@ -767,7 +763,7 @@ class CallSession {
           }
         }
         // for renderer to be able to show new video track
-        localUserMediaStream?.renderer.srcObject = stream;
+        localUserMediaStream?.setNewStream(stream);
       }
     }
   }
