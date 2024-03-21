@@ -1167,7 +1167,7 @@ RoomKeys generateUploadKeysImplementation(GenerateUploadKeysArgs args) {
         'algorithm': AlgorithmTypes.megolmV1AesSha2,
         'forwarding_curve25519_key_chain': sess.forwardingCurve25519KeyChain,
         'sender_key': sess.senderKey,
-        'sender_clencaimed_keys': sess.senderClaimedKeys,
+        'sender_claimed_keys': sess.senderClaimedKeys,
         'session_key': sess.inboundGroupSession!
             .export_session(sess.inboundGroupSession!.first_known_index()),
       };
