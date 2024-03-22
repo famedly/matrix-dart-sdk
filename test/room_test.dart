@@ -454,7 +454,7 @@ void main() {
             'sender': '@test:example.com',
             'redacts': '9',
             'event_id': '10',
-            'origin_server_ts': DateTime.now(),
+            'origin_server_ts': DateTime.now().millisecondsSinceEpoch,
           },
           stateKey: '',
         ),

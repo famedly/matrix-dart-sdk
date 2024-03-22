@@ -60,7 +60,7 @@ jobs:
           sdk: ${{ env.dart_version }}
       - name: Run tests
         run: |
-          apt-get update && apt-get install --no-install-recommends --no-install-suggests -y curl lcov python3 python3-distutils libsqlite3-dev
+          apt-get update && apt-get install --no-install-recommends --no-install-suggests -y curl lcov python3 python3-distutils libsqlite3-0 libsqlite3-dev
           curl -o /bin/lcov_cobertura.py https://raw.githubusercontent.com/eriwen/lcov-to-cobertura-xml/master/lcov_cobertura/lcov_cobertura.py && sed 's/env python/env python3/' -i /bin/lcov_cobertura.py && chmod +x /bin/lcov_cobertura.py
           dart pub get
           ./scripts/test.sh

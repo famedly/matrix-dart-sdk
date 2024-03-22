@@ -155,7 +155,11 @@ void main() {
       expect(presenceCounter, 1);
       expect(accountDataCounter, 10);
       await Future.delayed(Duration(milliseconds: 50));
-      expect(matrix.userDeviceKeys.length, 4);
+      expect(matrix.userDeviceKeys.keys.toSet(), {
+        '@alice:example.com',
+        '@othertest:fakeServer.notExisting',
+        '@test:fakeServer.notExisting',
+      });
       expect(matrix.userDeviceKeys['@alice:example.com']?.outdated, false);
       expect(matrix.userDeviceKeys['@alice:example.com']?.deviceKeys.length, 2);
       expect(
