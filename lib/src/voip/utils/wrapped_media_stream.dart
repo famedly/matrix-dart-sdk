@@ -59,7 +59,6 @@ class WrappedMediaStream {
     stream = null;
   }
 
-
   Uri? get avatarUrl => getUser().avatarUrl;
 
   String get avatarName =>

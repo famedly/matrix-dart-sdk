@@ -1249,9 +1249,12 @@ class Client extends MatrixApi {
   /// onRoomEvent( "m.room.message", "!chat_id:server.com", "timeline", {sender: "@bob:server.com", body: "Hello world"} )
   final CachedStreamController<EventUpdate> onEvent = CachedStreamController();
 
+  /// The onToDeviceEvent is called when there comes a new to device event. It is
+  /// already decrypted if necessary.
   final CachedStreamController<ToDeviceEvent> onToDeviceEvent =
       CachedStreamController();
 
+  /// Tells you about to-device and room call specific events in sync
   final CachedStreamController<List<BasicEventWithSender>> onCallEvents =
       CachedStreamController();
 
