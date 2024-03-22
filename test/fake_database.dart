@@ -22,10 +22,11 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:matrix/matrix.dart';
 
-Future<DatabaseApi> getDatabase(Client? _) => getHiveCollectionsDatabase(_);
+Future<DatabaseApi> getDatabase(Client? _) => getMatrixSdkDatabase(_);
 
 bool hiveInitialized = false;
 
+// ignore: deprecated_member_use_from_same_package
 Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
   final testHivePath = await LocalFileSystem()
       .systemTempDirectory
@@ -33,6 +34,7 @@ Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
   if (!hiveInitialized) {
     Hive.init(testHivePath.path);
   }
+  // ignore: deprecated_member_use_from_same_package
   final db = HiveCollectionsDatabase(
     'unit_test.${c?.hashCode}',
     testHivePath.path,
@@ -43,7 +45,10 @@ Future<HiveCollectionsDatabase> getHiveCollectionsDatabase(Client? c) async {
 
 // ignore: deprecated_member_use_from_same_package
 Future<MatrixSdkDatabase> getMatrixSdkDatabase(Client? c) async {
-  final database = await databaseFactoryFfi.openDatabase(':memory:');
+  final database = await databaseFactoryFfi.openDatabase(
+    ':memory:',
+    options: OpenDatabaseOptions(singleInstance: false),
+  );
   final db = MatrixSdkDatabase(
     'unit_test.${c?.hashCode}',
     database: database,

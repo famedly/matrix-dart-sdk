@@ -34,6 +34,8 @@ import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
 
 /// This database does not support file caching!
+@Deprecated(
+    'Use [MatrixSdkDatabase] instead. Don\'t forget to properly migrate!')
 class HiveCollectionsDatabase extends DatabaseApi {
   static const int version = 7;
   final String name;
