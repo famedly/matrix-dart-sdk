@@ -9,8 +9,9 @@ void main() {
     const Set<String> boxNames = {'cats', 'dogs'};
     const data = {'name': 'Fluffy', 'age': 2};
     const data2 = {'name': 'Loki', 'age': 4};
+    late Database db;
     setUp(() async {
-      final db = await databaseFactoryFfi.openDatabase(':memory:');
+      db = await databaseFactoryFfi.openDatabase(':memory:');
       collection = await BoxCollection.open(
         'testbox',
         boxNames,
@@ -91,7 +92,7 @@ void main() {
     });
 
     test('Box.delete', () async {
-      await collection.delete();
+      await BoxCollection.delete(db.path, databaseFactoryFfi);
     });
   });
 }

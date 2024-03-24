@@ -10,9 +10,9 @@ import 'package:matrix/src/database/zone_transaction_mixin.dart';
 class BoxCollection with ZoneTransactionMixin {
   final Database _db;
   final Set<String> boxNames;
-  final DatabaseFactory? _factory;
+  final String name;
 
-  BoxCollection(this._db, this.boxNames, this._factory);
+  BoxCollection(this._db, this.boxNames, this.name);
 
   static Future<BoxCollection> open(
     String name,
@@ -32,7 +32,7 @@ class BoxCollection with ZoneTransactionMixin {
       batch.execute('CREATE INDEX IF NOT EXISTS k_index ON $name (k)');
     }
     await batch.commit(noResult: true);
-    return BoxCollection(sqfliteDatabase, boxNames, sqfliteFactory);
+    return BoxCollection(sqfliteDatabase, boxNames, name);
   }
 
   Box<V> openBox<V>(String name) {
@@ -67,8 +67,8 @@ class BoxCollection with ZoneTransactionMixin {
 
   Future<void> close() => _db.close();
 
-  Future<void> delete() =>
-      (_factory ?? databaseFactory).deleteDatabase(_db.path);
+  static Future<void> delete(String path, [DatabaseFactory? factory]) =>
+      (factory ?? databaseFactory).deleteDatabase(path);
 }
 
 class Box<V> {
