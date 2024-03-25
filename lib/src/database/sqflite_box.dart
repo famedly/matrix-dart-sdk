@@ -12,6 +12,8 @@ class BoxCollection with ZoneTransactionMixin {
   final Set<String> boxNames;
   final DatabaseFactory? _factory;
 
+  static const bool isWeb = false;
+
   BoxCollection(this._db, this.boxNames, this._factory);
 
   static Future<BoxCollection> open(
