@@ -1,6 +1,6 @@
 /* MIT License
 * 
-* Copyright (C) 2019, 2020, 2021, 2022 Famedly GmbH
+* Copyright (C) 2019, 2020, 2021 Famedly GmbH
 * 
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -21,25 +21,29 @@
 * SOFTWARE.
 */
 
-import 'package:matrix/matrix_api_lite.dart';
+class RoomSummary {
+  List<String>? mHeroes;
+  int? mJoinedMemberCount;
+  int? mInvitedMemberCount;
 
-class DehydratedDevice {
-  String deviceId;
-  Map<String, dynamic>? deviceData;
+  RoomSummary.fromJson(Map<String, Object?> json)
+      : mHeroes = json['m.heroes'] != null
+            ? List<String>.from(json['m.heroes'] as List)
+            : null,
+        mJoinedMemberCount = json['m.joined_member_count'] as int?,
+        mInvitedMemberCount = json['m.invited_member_count'] as int?;
 
-  DehydratedDevice({
-    required this.deviceId,
-    this.deviceData,
-  });
-
-  DehydratedDevice.fromJson(Map<String, dynamic> json)
-      : deviceId = json['device_id'] as String,
-        deviceData = (json['device_data'] as Map<String, dynamic>?)?.copy();
-
-  Map<String, dynamic> toJson() {
-    return {
-      'device_id': deviceId,
-      if (deviceData != null) 'device_data': deviceData,
-    };
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
+    if (mHeroes != null) {
+      data['m.heroes'] = mHeroes;
+    }
+    if (mJoinedMemberCount != null) {
+      data['m.joined_member_count'] = mJoinedMemberCount;
+    }
+    if (mInvitedMemberCount != null) {
+      data['m.invited_member_count'] = mInvitedMemberCount;
+    }
+    return data;
   }
 }

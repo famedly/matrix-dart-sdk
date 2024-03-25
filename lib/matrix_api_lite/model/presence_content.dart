@@ -1,6 +1,6 @@
 /* MIT License
 * 
-* Copyright (C) 2019, 2020, 2021, 2022 Famedly GmbH
+* Copyright (C) 2019, 2020, 2021 Famedly GmbH
 * 
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -23,23 +23,31 @@
 
 import 'package:matrix/matrix_api_lite.dart';
 
-class DehydratedDevice {
-  String deviceId;
-  Map<String, dynamic>? deviceData;
+class PresenceContent {
+  PresenceType presence;
+  int? lastActiveAgo;
+  String? statusMsg;
+  bool? currentlyActive;
 
-  DehydratedDevice({
-    required this.deviceId,
-    this.deviceData,
-  });
+  PresenceContent.fromJson(Map<String, Object?> json)
+      : presence = PresenceType.values.firstWhere(
+            (p) => p.toString().split('.').last == json['presence']),
+        lastActiveAgo = json.tryGet<int>('last_active_ago'),
+        statusMsg = json.tryGet<String>('status_msg'),
+        currentlyActive = json.tryGet<bool>('currently_active');
 
-  DehydratedDevice.fromJson(Map<String, dynamic> json)
-      : deviceId = json['device_id'] as String,
-        deviceData = (json['device_data'] as Map<String, dynamic>?)?.copy();
-
-  Map<String, dynamic> toJson() {
-    return {
-      'device_id': deviceId,
-      if (deviceData != null) 'device_data': deviceData,
-    };
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
+    data['presence'] = presence.toString().split('.').last;
+    if (lastActiveAgo != null) {
+      data['last_active_ago'] = lastActiveAgo;
+    }
+    if (statusMsg != null) {
+      data['status_msg'] = statusMsg;
+    }
+    if (currentlyActive != null) {
+      data['currently_active'] = currentlyActive;
+    }
+    return data;
   }
 }

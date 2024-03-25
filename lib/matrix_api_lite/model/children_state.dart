@@ -1,6 +1,6 @@
 /* MIT License
 * 
-* Copyright (C) 2019, 2020, 2021, 2022 Famedly GmbH
+* Copyright (C) 2022 Famedly GmbH
 * 
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -21,25 +21,28 @@
 * SOFTWARE.
 */
 
-import 'package:matrix/matrix_api_lite.dart';
+import 'package:matrix/matrix_api_lite/model/stripped_state_event.dart';
 
-class DehydratedDevice {
-  String deviceId;
-  Map<String, dynamic>? deviceData;
+class ChildrenState extends StrippedStateEvent {
+  DateTime originServerTs;
 
-  DehydratedDevice({
-    required this.deviceId,
-    this.deviceData,
+  ChildrenState({
+    required super.type,
+    required super.content,
+    required super.senderId,
+    required String super.stateKey,
+    required this.originServerTs,
   });
 
-  DehydratedDevice.fromJson(Map<String, dynamic> json)
-      : deviceId = json['device_id'] as String,
-        deviceData = (json['device_data'] as Map<String, dynamic>?)?.copy();
+  ChildrenState.fromJson(super.json)
+      : originServerTs = DateTime.fromMillisecondsSinceEpoch(
+            json['origin_server_ts'] as int),
+        super.fromJson();
 
-  Map<String, dynamic> toJson() {
-    return {
-      'device_id': deviceId,
-      if (deviceData != null) 'device_data': deviceData,
-    };
+  @override
+  Map<String, Object?> toJson() {
+    final data = super.toJson();
+    data['origin_server_ts'] = originServerTs.millisecondsSinceEpoch;
+    return data;
   }
 }

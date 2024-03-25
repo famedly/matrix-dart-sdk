@@ -1,6 +1,6 @@
 /* MIT License
 * 
-* Copyright (C) 2019, 2020, 2021, 2022 Famedly GmbH
+* Copyright (C) 2019, 2020, 2021 Famedly GmbH
 * 
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -23,23 +23,23 @@
 
 import 'package:matrix/matrix_api_lite.dart';
 
-class DehydratedDevice {
-  String deviceId;
-  Map<String, dynamic>? deviceData;
+class StrippedStateEvent extends BasicEventWithSender {
+  String? stateKey;
 
-  DehydratedDevice({
-    required this.deviceId,
-    this.deviceData,
-  });
+  StrippedStateEvent(
+      {required super.type,
+      required super.content,
+      required super.senderId,
+      this.stateKey});
 
-  DehydratedDevice.fromJson(Map<String, dynamic> json)
-      : deviceId = json['device_id'] as String,
-        deviceData = (json['device_data'] as Map<String, dynamic>?)?.copy();
+  StrippedStateEvent.fromJson(super.json)
+      : stateKey = json.tryGet<String>('state_key'),
+        super.fromJson();
 
-  Map<String, dynamic> toJson() {
-    return {
-      'device_id': deviceId,
-      if (deviceData != null) 'device_data': deviceData,
-    };
+  @override
+  Map<String, Object?> toJson() {
+    final data = super.toJson();
+    data['state_key'] = stateKey;
+    return data;
   }
 }

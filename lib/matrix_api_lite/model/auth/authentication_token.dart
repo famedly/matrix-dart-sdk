@@ -1,6 +1,6 @@
 /* MIT License
 * 
-* Copyright (C) 2019, 2020, 2021, 2022 Famedly GmbH
+* Copyright (C) 2019, 2020, 2021 Famedly GmbH
 * 
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -21,25 +21,30 @@
 * SOFTWARE.
 */
 
-import 'package:matrix/matrix_api_lite.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_data.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_types.dart';
 
-class DehydratedDevice {
-  String deviceId;
-  Map<String, dynamic>? deviceData;
+class AuthenticationToken extends AuthenticationData {
+  String token;
 
-  DehydratedDevice({
-    required this.deviceId,
-    this.deviceData,
-  });
+  /// removed in the unstable version of the spec
+  String? txnId;
 
-  DehydratedDevice.fromJson(Map<String, dynamic> json)
-      : deviceId = json['device_id'] as String,
-        deviceData = (json['device_data'] as Map<String, dynamic>?)?.copy();
+  AuthenticationToken({super.session, required this.token, this.txnId})
+      : super(
+          type: AuthenticationTypes.token,
+        );
 
-  Map<String, dynamic> toJson() {
-    return {
-      'device_id': deviceId,
-      if (deviceData != null) 'device_data': deviceData,
-    };
+  AuthenticationToken.fromJson(super.json)
+      : token = json['token'] as String,
+        txnId = json['txn_id'] as String?,
+        super.fromJson();
+
+  @override
+  Map<String, Object?> toJson() {
+    final data = super.toJson();
+    data['token'] = token;
+    data['txn_id'] = txnId;
+    return data;
   }
 }

@@ -1,6 +1,6 @@
 /* MIT License
 * 
-* Copyright (C) 2019, 2020, 2021, 2022 Famedly GmbH
+* Copyright (C) 2019, 2020, 2021 Famedly GmbH
 * 
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -21,25 +21,33 @@
 * SOFTWARE.
 */
 
-import 'package:matrix/matrix_api_lite.dart';
+import 'package:matrix/matrix_api_lite/model/basic_event.dart';
+import 'package:matrix/matrix_api_lite/utils/try_get_map_extension.dart';
 
-class DehydratedDevice {
-  String deviceId;
-  Map<String, dynamic>? deviceData;
+extension RoomEncryptionContentBasicEventExtension on BasicEvent {
+  RoomEncryptionContent get parsedRoomEncryptionContent =>
+      RoomEncryptionContent.fromJson(content);
+}
 
-  DehydratedDevice({
-    required this.deviceId,
-    this.deviceData,
-  });
+class RoomEncryptionContent {
+  String algorithm;
+  int? rotationPeriodMs;
+  int? rotationPeriodMsgs;
 
-  DehydratedDevice.fromJson(Map<String, dynamic> json)
-      : deviceId = json['device_id'] as String,
-        deviceData = (json['device_data'] as Map<String, dynamic>?)?.copy();
+  RoomEncryptionContent.fromJson(Map<String, Object?> json)
+      : algorithm = json.tryGet('algorithm', TryGet.required) ?? '',
+        rotationPeriodMs = json.tryGet('rotation_period_ms'),
+        rotationPeriodMsgs = json.tryGet('rotation_period_msgs');
 
-  Map<String, dynamic> toJson() {
-    return {
-      'device_id': deviceId,
-      if (deviceData != null) 'device_data': deviceData,
-    };
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
+    data['algorithm'] = algorithm;
+    if (rotationPeriodMs != null) {
+      data['rotation_period_ms'] = rotationPeriodMs;
+    }
+    if (rotationPeriodMsgs != null) {
+      data['rotation_period_msgs'] = rotationPeriodMsgs;
+    }
+    return data;
   }
 }

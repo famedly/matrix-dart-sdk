@@ -1,6 +1,6 @@
 /* MIT License
 * 
-* Copyright (C) 2019, 2020, 2021, 2022 Famedly GmbH
+* Copyright (C) 2019, 2020, 2021 Famedly GmbH
 * 
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -21,25 +21,19 @@
 * SOFTWARE.
 */
 
-import 'package:matrix/matrix_api_lite.dart';
+abstract class AuthenticationTypes {
+  static const String password = 'm.login.password';
+  static const String recaptcha = 'm.login.recaptcha';
+  static const String token = 'm.login.token';
+  static const String oauth2 = 'm.login.oauth2';
+  static const String sso = 'm.login.sso';
+  static const String emailIdentity = 'm.login.email.identity';
+  static const String msisdn = 'm.login.msisdn';
+  static const String dummy = 'm.login.dummy';
+}
 
-class DehydratedDevice {
-  String deviceId;
-  Map<String, dynamic>? deviceData;
-
-  DehydratedDevice({
-    required this.deviceId,
-    this.deviceData,
-  });
-
-  DehydratedDevice.fromJson(Map<String, dynamic> json)
-      : deviceId = json['device_id'] as String,
-        deviceData = (json['device_data'] as Map<String, dynamic>?)?.copy();
-
-  Map<String, dynamic> toJson() {
-    return {
-      'device_id': deviceId,
-      if (deviceData != null) 'device_data': deviceData,
-    };
-  }
+abstract class AuthenticationIdentifierTypes {
+  static const String userId = 'm.id.user';
+  static const String thirdParty = 'm.id.thirdparty';
+  static const String phone = 'm.id.phone';
 }

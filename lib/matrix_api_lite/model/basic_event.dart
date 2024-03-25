@@ -1,6 +1,6 @@
 /* MIT License
 * 
-* Copyright (C) 2019, 2020, 2021, 2022 Famedly GmbH
+* Copyright (C) 2019, 2020, 2021 Famedly GmbH
 * 
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -21,25 +21,25 @@
 * SOFTWARE.
 */
 
-import 'package:matrix/matrix_api_lite.dart';
+import 'package:matrix/matrix_api_lite/utils/map_copy_extension.dart';
 
-class DehydratedDevice {
-  String deviceId;
-  Map<String, dynamic>? deviceData;
+class BasicEvent {
+  String type;
+  Map<String, Object?> content;
 
-  DehydratedDevice({
-    required this.deviceId,
-    this.deviceData,
+  BasicEvent({
+    required this.type,
+    required this.content,
   });
 
-  DehydratedDevice.fromJson(Map<String, dynamic> json)
-      : deviceId = json['device_id'] as String,
-        deviceData = (json['device_data'] as Map<String, dynamic>?)?.copy();
+  BasicEvent.fromJson(Map<String, Object?> json)
+      : type = json['type'] as String,
+        content = (json['content'] as Map<String, Object?>).copy();
 
-  Map<String, dynamic> toJson() {
-    return {
-      'device_id': deviceId,
-      if (deviceData != null) 'device_data': deviceData,
-    };
+  Map<String, Object?> toJson() {
+    final data = <String, Object?>{};
+    data['type'] = type;
+    data['content'] = content;
+    return data;
   }
 }

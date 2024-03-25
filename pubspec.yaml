@@ -15,6 +15,7 @@ dependencies:
   canonical_json: ^1.1.0
   collection: ^1.15.0
   crypto: ^3.0.0
+  enhanced_enum: ^0.2.4
   ffi: ^2.0.0
   hive: ^2.2.3
   html: ^0.15.0
@@ -23,7 +24,6 @@ dependencies:
   image: ^4.0.15
   js: ^0.6.3
   markdown: ^7.1.1
-  matrix_api_lite: ^1.7.0
   mime: ^1.0.0
   olm: ^2.0.2
   random_string: ^2.3.1
@@ -35,7 +35,9 @@ dependencies:
   webrtc_interface: ^1.0.13
 
 dev_dependencies:
+  build_runner: ^2.4.8
   coverage: ">=0.15.0 <2.0.0"
+  enhanced_enum_generator: ^0.2.4
   file: ">=6.1.1 <8.0.0"
   import_sorter: ^4.6.0
   lints: ^3.0.0

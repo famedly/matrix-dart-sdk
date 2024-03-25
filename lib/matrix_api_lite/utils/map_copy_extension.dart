@@ -1,17 +1,17 @@
 /* MIT License
-* 
-* Copyright (C) 2019, 2020, 2021, 2022 Famedly GmbH
-* 
+*
+* Copyright (C) 2019, 2020, 2021 Famedly GmbH
+*
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
 * in the Software without restriction, including without limitation the rights
 * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 * copies of the Software, and to permit persons to whom the Software is
 * furnished to do so, subject to the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included in all
 * copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,25 +21,23 @@
 * SOFTWARE.
 */
 
-import 'package:matrix/matrix_api_lite.dart';
+extension MapCopyExtension on Map<String, Object?> {
+  dynamic _copyValue(dynamic value) {
+    if (value is Map<String, Object?>) {
+      return value.copy();
+    }
+    if (value is List) {
+      return value.map(_copyValue).toList();
+    }
+    return value;
+  }
 
-class DehydratedDevice {
-  String deviceId;
-  Map<String, dynamic>? deviceData;
-
-  DehydratedDevice({
-    required this.deviceId,
-    this.deviceData,
-  });
-
-  DehydratedDevice.fromJson(Map<String, dynamic> json)
-      : deviceId = json['device_id'] as String,
-        deviceData = (json['device_data'] as Map<String, dynamic>?)?.copy();
-
-  Map<String, dynamic> toJson() {
-    return {
-      'device_id': deviceId,
-      if (deviceData != null) 'device_data': deviceData,
-    };
+  /// Deep-copies a given json map
+  Map<String, Object?> copy() {
+    final copy = Map<String, Object?>.from(this);
+    for (final entry in copy.entries) {
+      copy[entry.key] = _copyValue(entry.value);
+    }
+    return copy;
   }
 }
