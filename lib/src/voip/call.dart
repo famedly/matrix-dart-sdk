@@ -1718,7 +1718,7 @@ class CallSession {
       if (capabilities != null) 'capabilities': capabilities.toJson(),
       if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallInvite,
       content,
@@ -1746,7 +1746,7 @@ class CallSession {
       'selected_party_id': selected_party_id,
     };
 
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallSelectAnswer,
       content,
@@ -1769,7 +1769,7 @@ class CallSession {
       'version': version,
     };
 
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallReject,
       content,
@@ -1799,7 +1799,7 @@ class CallSession {
       if (capabilities != null) 'capabilities': capabilities.toJson(),
       if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallNegotiate,
       content,
@@ -1842,7 +1842,7 @@ class CallSession {
       'version': version,
       'candidates': candidates,
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallCandidates,
       content,
@@ -1872,7 +1872,7 @@ class CallSession {
       if (capabilities != null) 'capabilities': capabilities.toJson(),
       if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallAnswer,
       content,
@@ -1894,7 +1894,7 @@ class CallSession {
       'version': version,
       if (hangupCause != null) 'reason': hangupCause,
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallHangup,
       content,
@@ -1926,7 +1926,7 @@ class CallSession {
       'version': version,
       sdpStreamMetadataKey: metadata.toJson(),
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallSDPStreamMetadataChangedPrefix,
       content,
@@ -1950,7 +1950,7 @@ class CallSession {
       'version': version,
       ...callReplaces.toJson(),
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallReplaces,
       content,
@@ -1974,7 +1974,7 @@ class CallSession {
       'version': version,
       'asserted_identity': assertedIdentity.toJson(),
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallAssertedIdentity,
       content,
@@ -1982,7 +1982,7 @@ class CallSession {
     );
   }
 
-  Future<String?> _sendContent(
+  Future<String?> _sendCallContent(
     Room room,
     String type,
     Map<String, dynamic> content, {
