@@ -21,8 +21,8 @@
 * SOFTWARE.
 */
 
-import '../utils/map_copy_extension.dart';
-import 'stripped_state_event.dart';
+import 'package:matrix/matrix_api_lite/model/stripped_state_event.dart';
+import 'package:matrix/matrix_api_lite/utils/map_copy_extension.dart';
 
 class MatrixEvent extends StrippedStateEvent {
   String eventId;
@@ -33,23 +33,19 @@ class MatrixEvent extends StrippedStateEvent {
   String? redacts;
 
   MatrixEvent({
-    required String type,
-    required Map<String, Object?> content,
-    required String senderId,
-    String? stateKey,
+    required super.type,
+    required super.content,
+    required super.senderId,
+    super.stateKey,
     required this.eventId,
     this.roomId,
     required this.originServerTs,
     this.unsigned,
     this.prevContent,
     this.redacts,
-  }) : super(
-            type: type,
-            content: content,
-            senderId: senderId,
-            stateKey: stateKey);
+  });
 
-  MatrixEvent.fromJson(Map<String, Object?> json)
+  MatrixEvent.fromJson(super.json)
       : eventId = json['event_id'] as String,
         roomId = json['room_id'] as String?,
         originServerTs = DateTime.fromMillisecondsSinceEpoch(
@@ -57,7 +53,7 @@ class MatrixEvent extends StrippedStateEvent {
         unsigned = (json['unsigned'] as Map<String, Object?>?)?.copy(),
         prevContent = (json['prev_content'] as Map<String, Object?>?)?.copy(),
         redacts = json['redacts'] as String?,
-        super.fromJson(json);
+        super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names
+
 /* MIT License
 * 
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH

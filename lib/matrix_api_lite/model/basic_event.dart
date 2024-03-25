@@ -21,7 +21,7 @@
 * SOFTWARE.
 */
 
-import '../utils/map_copy_extension.dart';
+import 'package:matrix/matrix_api_lite/utils/map_copy_extension.dart';
 
 class BasicEvent {
   String type;

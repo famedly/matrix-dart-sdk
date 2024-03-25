@@ -1,13 +1,8 @@
 import 'package:enhanced_enum/enhanced_enum.dart';
 
-import '../model/auth/authentication_data.dart';
-import '../model/auth/authentication_identifier.dart';
-import '../model/auth/authentication_types.dart';
-import '../model/children_state.dart';
-import '../model/matrix_event.dart';
-import '../model/matrix_keys.dart';
-import '../model/sync_update.dart';
-import 'internal.dart';
+import 'package:matrix/matrix_api_lite/model/children_state.dart';
+import 'package:matrix/matrix_api_lite/model/matrix_event.dart';
+import 'package:matrix/matrix_api_lite/model/matrix_keys.dart';
 
 part 'model.g.dart';
 
@@ -237,6 +232,7 @@ class SpaceRoomsChunk implements PublicRoomsChunk, ChildRoomsChunk {
         childrenState = (json['children_state'] as List)
             .map((v) => ChildrenState.fromJson(v as Map<String, Object?>))
             .toList();
+  @override
   Map<String, Object?> toJson() {
     final avatarUrl = this.avatarUrl;
     final canonicalAlias = this.canonicalAlias;
@@ -260,42 +256,53 @@ class SpaceRoomsChunk implements PublicRoomsChunk, ChildRoomsChunk {
   }
 
   /// The URL for the room's avatar, if one is set.
+  @override
   Uri? avatarUrl;
 
   /// The canonical alias of the room, if any.
+  @override
   String? canonicalAlias;
 
   /// Whether guest users may join the room and participate in it.
   /// If they can, they will be subject to ordinary power level
   /// rules like any other user.
+  @override
   bool guestCanJoin;
 
   /// The room's join rule. When not present, the room is assumed to
   /// be `public`.
+  @override
   String? joinRule;
 
   /// The name of the room, if any.
+  @override
   String? name;
 
   /// The number of members joined to the room.
+  @override
   int numJoinedMembers;
 
   /// The ID of the room.
+  @override
   String roomId;
 
   /// The `type` of room (from [`m.room.create`](https://spec.matrix.org/unstable/client-server-api/#mroomcreate)), if any.
+  @override
   String? roomType;
 
   /// The topic of the room, if any.
+  @override
   String? topic;
 
   /// Whether the room may be viewed by guest users without joining.
+  @override
   bool worldReadable;
 
   /// The [`m.space.child`](#mspacechild) events of the space-room, represented
   /// as [Stripped State Events](#stripped-state) with an added `origin_server_ts` key.
   ///
   /// If the room is not a space-room, this should be empty.
+  @override
   List<ChildrenState> childrenState;
 }
 
@@ -1789,7 +1796,7 @@ class PusherData {
         url = ((v) => v != null ? Uri.parse(v as String) : null)(json['url']),
         additionalProperties = Map.fromEntries(json.entries
             .where((e) => !['format', 'url'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value as Object?)));
+            .map((e) => MapEntry(e.key, e.value)));
   Map<String, Object?> toJson() {
     final format = this.format;
     final url = this.url;
@@ -1861,6 +1868,7 @@ class Pusher implements PusherId {
         lang = json['lang'] as String,
         profileTag =
             ((v) => v != null ? v as String : null)(json['profile_tag']);
+  @override
   Map<String, Object?> toJson() {
     final profileTag = this.profileTag;
     return {
@@ -1877,11 +1885,13 @@ class Pusher implements PusherId {
 
   /// This is a reverse-DNS style identifier for the application.
   /// Max length, 64 chars.
+  @override
   String appId;
 
   /// This is a unique identifier for this pusher. See `/set` for
   /// more detail.
   /// Max length, 512 bytes.
+  @override
   String pushkey;
 
   /// A string that will allow the user to identify what application
@@ -2845,6 +2855,7 @@ class SearchFilter implements EventFilter, RoomEventFilter {
             : null)(json['rooms']),
         unreadThreadNotifications = ((v) =>
             v != null ? v as bool : null)(json['unread_thread_notifications']);
+  @override
   Map<String, Object?> toJson() {
     final limit = this.limit;
     final notSenders = this.notSenders;
@@ -2875,21 +2886,27 @@ class SearchFilter implements EventFilter, RoomEventFilter {
   }
 
   /// The maximum number of events to return.
+  @override
   int? limit;
 
   /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `'senders'` filter.
+  @override
   List<String>? notSenders;
 
   /// A list of event types to exclude. If this list is absent then no event types are excluded. A matching type will be excluded even if it is listed in the `'types'` filter. A '*' can be used as a wildcard to match any sequence of characters.
+  @override
   List<String>? notTypes;
 
   /// A list of senders IDs to include. If this list is absent then all senders are included.
+  @override
   List<String>? senders;
 
   /// A list of event types to include. If this list is absent then all event types are included. A `'*'` can be used as a wildcard to match any sequence of characters.
+  @override
   List<String>? types;
 
   /// If `true`, includes only events with a `url` key in their content. If `false`, excludes those events. If omitted, `url` key is not considered for filtering.
+  @override
   bool? containsUrl;
 
   /// If `true`, sends all membership events for all events, even if they have already
@@ -2897,21 +2914,26 @@ class SearchFilter implements EventFilter, RoomEventFilter {
   /// apply unless `lazy_load_members` is `true`. See
   /// [Lazy-loading room members](https://spec.matrix.org/unstable/client-server-api/#lazy-loading-room-members)
   /// for more information. Defaults to `false`.
+  @override
   bool? includeRedundantMembers;
 
   /// If `true`, enables lazy-loading of membership events. See
   /// [Lazy-loading room members](https://spec.matrix.org/unstable/client-server-api/#lazy-loading-room-members)
   /// for more information. Defaults to `false`.
+  @override
   bool? lazyLoadMembers;
 
   /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `'rooms'` filter.
+  @override
   List<String>? notRooms;
 
   /// A list of room IDs to include. If this list is absent then all rooms are included.
+  @override
   List<String>? rooms;
 
   /// If `true`, enables per-[thread](https://spec.matrix.org/unstable/client-server-api/#threading) notification
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
+  @override
   bool? unreadThreadNotifications;
 }
 
@@ -3630,6 +3652,7 @@ class StateFilter implements EventFilter, RoomEventFilter {
             : null)(json['rooms']),
         unreadThreadNotifications = ((v) =>
             v != null ? v as bool : null)(json['unread_thread_notifications']);
+  @override
   Map<String, Object?> toJson() {
     final limit = this.limit;
     final notSenders = this.notSenders;
@@ -3660,21 +3683,27 @@ class StateFilter implements EventFilter, RoomEventFilter {
   }
 
   /// The maximum number of events to return.
+  @override
   int? limit;
 
   /// A list of sender IDs to exclude. If this list is absent then no senders are excluded. A matching sender will be excluded even if it is listed in the `'senders'` filter.
+  @override
   List<String>? notSenders;
 
   /// A list of event types to exclude. If this list is absent then no event types are excluded. A matching type will be excluded even if it is listed in the `'types'` filter. A '*' can be used as a wildcard to match any sequence of characters.
+  @override
   List<String>? notTypes;
 
   /// A list of senders IDs to include. If this list is absent then all senders are included.
+  @override
   List<String>? senders;
 
   /// A list of event types to include. If this list is absent then all event types are included. A `'*'` can be used as a wildcard to match any sequence of characters.
+  @override
   List<String>? types;
 
   /// If `true`, includes only events with a `url` key in their content. If `false`, excludes those events. If omitted, `url` key is not considered for filtering.
+  @override
   bool? containsUrl;
 
   /// If `true`, sends all membership events for all events, even if they have already
@@ -3682,21 +3711,26 @@ class StateFilter implements EventFilter, RoomEventFilter {
   /// apply unless `lazy_load_members` is `true`. See
   /// [Lazy-loading room members](https://spec.matrix.org/unstable/client-server-api/#lazy-loading-room-members)
   /// for more information. Defaults to `false`.
+  @override
   bool? includeRedundantMembers;
 
   /// If `true`, enables lazy-loading of membership events. See
   /// [Lazy-loading room members](https://spec.matrix.org/unstable/client-server-api/#lazy-loading-room-members)
   /// for more information. Defaults to `false`.
+  @override
   bool? lazyLoadMembers;
 
   /// A list of room IDs to exclude. If this list is absent then no rooms are excluded. A matching room will be excluded even if it is listed in the `'rooms'` filter.
+  @override
   List<String>? notRooms;
 
   /// A list of room IDs to include. If this list is absent then all rooms are included.
+  @override
   List<String>? rooms;
 
   /// If `true`, enables per-[thread](https://spec.matrix.org/unstable/client-server-api/#threading) notification
   /// counts. Only applies to the `/sync` endpoint. Defaults to `false`.
+  @override
   bool? unreadThreadNotifications;
 }
 
@@ -3886,7 +3920,7 @@ class Tag {
             ((v) => v != null ? (v as num).toDouble() : null)(json['order']),
         additionalProperties = Map.fromEntries(json.entries
             .where((e) => !['order'].contains(e.key))
-            .map((e) => MapEntry(e.key, e.value as Object?)));
+            .map((e) => MapEntry(e.key, e.value)));
   Map<String, Object?> toJson() {
     final order = this.order;
     return {

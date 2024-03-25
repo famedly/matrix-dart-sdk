@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names
+
 /* MIT License
 *
 * Copyright (C) 2019, 2020, 2021 Famedly GmbH
@@ -25,7 +27,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import 'package:matrix_api_lite/matrix_api_lite.dart';
+import 'package:matrix/matrix_api_lite.dart';
 
 enum MatrixError {
   M_UNKNOWN,

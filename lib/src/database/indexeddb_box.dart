@@ -9,10 +9,9 @@ import 'package:matrix/src/database/zone_transaction_mixin.dart';
 class BoxCollection with ZoneTransactionMixin {
   final Database _db;
   final Set<String> boxNames;
-  final String _name;
-  final IdbFactory _idbFactory;
+  final String name;
 
-  BoxCollection(this._db, this.boxNames, this._name, this._idbFactory);
+  BoxCollection(this._db, this.boxNames, this.name);
 
   static Future<BoxCollection> open(
     String name,
@@ -29,7 +28,7 @@ class BoxCollection with ZoneTransactionMixin {
         db.createObjectStore(name, autoIncrement: true);
       }
     });
-    return BoxCollection(db, boxNames, name, idbFactory);
+    return BoxCollection(db, boxNames, name);
   }
 
   Box<V> openBox<V>(String name) {
@@ -81,7 +80,8 @@ class BoxCollection with ZoneTransactionMixin {
     return _db.close();
   }
 
-  Future<void> delete() => _idbFactory.deleteDatabase(_name);
+  static Future<void> delete(String path, [IdbFactory? factory]) =>
+      (factory ?? window.indexedDB!).deleteDatabase(path);
 }
 
 class Box<V> {

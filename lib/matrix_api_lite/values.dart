@@ -15,7 +15,7 @@ class TagType {
   static final lowPriority = 'm.lowpriority';
   static final serverNotice = 'm.server_notice';
 
-  static bool isValid(String tag) => tag.startsWith('m.')
-      ? [favourite, lowPriority, serverNotice].contains(tag)
-      : true;
+  static bool isValid(String tag) =>
+      !tag.startsWith('m.') ||
+      [favourite, lowPriority, serverNotice].contains(tag);
 }

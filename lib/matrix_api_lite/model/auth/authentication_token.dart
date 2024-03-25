@@ -21,8 +21,8 @@
 * SOFTWARE.
 */
 
-import 'authentication_data.dart';
-import 'authentication_types.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_data.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_types.dart';
 
 class AuthenticationToken extends AuthenticationData {
   String token;
@@ -30,16 +30,15 @@ class AuthenticationToken extends AuthenticationData {
   /// removed in the unstable version of the spec
   String? txnId;
 
-  AuthenticationToken({String? session, required this.token, this.txnId})
+  AuthenticationToken({super.session, required this.token, this.txnId})
       : super(
           type: AuthenticationTypes.token,
-          session: session,
         );
 
-  AuthenticationToken.fromJson(Map<String, Object?> json)
+  AuthenticationToken.fromJson(super.json)
       : token = json['token'] as String,
         txnId = json['txn_id'] as String?,
-        super.fromJson(json);
+        super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

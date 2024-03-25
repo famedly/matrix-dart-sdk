@@ -21,8 +21,8 @@
 * SOFTWARE.
 */
 
-import 'authentication_identifier.dart';
-import 'authentication_types.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_identifier.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_types.dart';
 
 class AuthenticationPhoneIdentifier extends AuthenticationIdentifier {
   String country;
@@ -31,10 +31,10 @@ class AuthenticationPhoneIdentifier extends AuthenticationIdentifier {
   AuthenticationPhoneIdentifier({required this.country, required this.phone})
       : super(type: AuthenticationIdentifierTypes.phone);
 
-  AuthenticationPhoneIdentifier.fromJson(Map<String, Object?> json)
+  AuthenticationPhoneIdentifier.fromJson(super.json)
       : country = json['country'] as String,
         phone = json['phone'] as String,
-        super.fromJson(json);
+        super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

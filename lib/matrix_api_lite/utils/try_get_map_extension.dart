@@ -23,7 +23,7 @@
 
 import 'dart:core';
 
-import 'logs.dart';
+import 'package:matrix/matrix_api_lite/utils/logs.dart';
 
 abstract class TryGet {
   void call(String key, Type expected, Type actual);

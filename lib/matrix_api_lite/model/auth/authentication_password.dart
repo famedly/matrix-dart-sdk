@@ -21,10 +21,10 @@
 * SOFTWARE.
 */
 
-import 'authentication_data.dart';
-import 'authentication_identifier.dart';
-import 'authentication_types.dart';
-import 'authentication_user_identifier.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_data.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_identifier.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_types.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_user_identifier.dart';
 
 class AuthenticationPassword extends AuthenticationData {
   String password;
@@ -34,17 +34,16 @@ class AuthenticationPassword extends AuthenticationData {
   AuthenticationIdentifier identifier;
 
   AuthenticationPassword(
-      {String? session, required this.password, required this.identifier})
+      {super.session, required this.password, required this.identifier})
       : super(
           type: AuthenticationTypes.password,
-          session: session,
         );
 
-  AuthenticationPassword.fromJson(Map<String, Object?> json)
+  AuthenticationPassword.fromJson(super.json)
       : password = json['password'] as String,
         identifier = AuthenticationIdentifier.subFromJson(
             json['identifier'] as Map<String, Object?>),
-        super.fromJson(json);
+        super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

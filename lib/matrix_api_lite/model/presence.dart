@@ -21,14 +21,14 @@
 * SOFTWARE.
 */
 
-import 'basic_event_with_sender.dart';
-import 'presence_content.dart';
+import 'package:matrix/matrix_api_lite/model/basic_event_with_sender.dart';
+import 'package:matrix/matrix_api_lite/model/presence_content.dart';
 
 class Presence extends BasicEventWithSender {
   PresenceContent presence;
 
-  Presence.fromJson(Map<String, Object?> json)
+  Presence.fromJson(super.json)
       : presence =
             PresenceContent.fromJson(json['content'] as Map<String, Object?>),
-        super.fromJson(json);
+        super.fromJson();
 }

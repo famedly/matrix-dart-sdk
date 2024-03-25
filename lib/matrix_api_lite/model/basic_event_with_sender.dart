@@ -21,20 +21,17 @@
 * SOFTWARE.
 */
 
-import 'basic_event.dart';
+import 'package:matrix/matrix_api_lite/model/basic_event.dart';
 
 class BasicEventWithSender extends BasicEvent {
   String senderId;
 
   BasicEventWithSender(
-      {required String type,
-      required Map<String, Object?> content,
-      required this.senderId})
-      : super(type: type, content: content);
+      {required super.type, required super.content, required this.senderId});
 
-  BasicEventWithSender.fromJson(Map<String, Object?> json)
+  BasicEventWithSender.fromJson(super.json)
       : senderId = json['sender'] as String,
-        super.fromJson(json);
+        super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

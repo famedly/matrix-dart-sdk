@@ -21,23 +21,20 @@
 * SOFTWARE.
 */
 
-import 'basic_event.dart';
+import 'package:matrix/matrix_api_lite/model/basic_event.dart';
 
 class BasicRoomEvent extends BasicEvent {
   String? roomId;
 
   BasicRoomEvent({
     this.roomId,
-    required Map<String, Object?> content,
-    required String type,
-  }) : super(
-          content: content,
-          type: type,
-        );
+    required super.content,
+    required super.type,
+  });
 
-  BasicRoomEvent.fromJson(Map<String, Object?> json)
+  BasicRoomEvent.fromJson(super.json)
       : roomId = json['room_id'] as String?,
-        super.fromJson(json);
+        super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

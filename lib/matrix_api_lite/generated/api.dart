@@ -3,16 +3,14 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart';
 
-import '../model/auth/authentication_data.dart';
-import '../model/auth/authentication_identifier.dart';
-import '../model/auth/authentication_types.dart';
-import '../model/children_state.dart';
-import '../model/matrix_event.dart';
-import '../model/matrix_keys.dart';
-import '../model/sync_update.dart';
-import 'fixed_model.dart';
-import 'internal.dart';
-import 'model.dart';
+import 'package:matrix/matrix_api_lite/generated/fixed_model.dart';
+import 'package:matrix/matrix_api_lite/generated/internal.dart';
+import 'package:matrix/matrix_api_lite/generated/model.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_data.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_identifier.dart';
+import 'package:matrix/matrix_api_lite/model/matrix_event.dart';
+import 'package:matrix/matrix_api_lite/model/matrix_keys.dart';
+import 'package:matrix/matrix_api_lite/model/sync_update.dart';
 
 class Api {
   Client httpClient;
@@ -446,7 +444,7 @@ class Api {
   /// verification will happen without the client's involvement
   /// provided the homeserver advertises this specification version
   /// in the `/versions` response (ie: r0.5.0).
-  @deprecated
+  @Deprecated('message')
   Future<Uri?> post3PIDs(ThreePidCredentials threePidCreds) async {
     final requestUri = Uri(path: '_matrix/client/v3/account/3pid');
     final request = Request('POST', baseUri!.resolveUri(requestUri));
@@ -1491,7 +1489,7 @@ class Api {
   /// request to this API or from the initial sync API.
   ///
   /// [timeout] The maximum time in milliseconds to wait for an event.
-  @deprecated
+  @Deprecated('message')
   Future<GetEventsResponse> getEvents({String? from, int? timeout}) async {
     final requestUri = Uri(path: '_matrix/client/v3/events', queryParameters: {
       if (from != null) 'from': from,
@@ -1550,7 +1548,7 @@ class Api {
   /// or the [/rooms/{roomId}/context/{eventId](https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3roomsroomidcontexteventid) API.
   ///
   /// [eventId] The event ID to get.
-  @deprecated
+  @Deprecated('message')
   Future<MatrixEvent> getOneEvent(String eventId) async {
     final requestUri =
         Uri(path: '_matrix/client/v3/events/${Uri.encodeComponent(eventId)}');

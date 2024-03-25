@@ -21,8 +21,8 @@
 * SOFTWARE.
 */
 
-import 'authentication_identifier.dart';
-import 'authentication_types.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_identifier.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_types.dart';
 
 class AuthenticationThirdPartyIdentifier extends AuthenticationIdentifier {
   String medium;
@@ -32,10 +32,10 @@ class AuthenticationThirdPartyIdentifier extends AuthenticationIdentifier {
       {required this.medium, required this.address})
       : super(type: AuthenticationIdentifierTypes.thirdParty);
 
-  AuthenticationThirdPartyIdentifier.fromJson(Map<String, Object?> json)
+  AuthenticationThirdPartyIdentifier.fromJson(super.json)
       : medium = json['medium'] as String,
         address = json['address'] as String,
-        super.fromJson(json);
+        super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

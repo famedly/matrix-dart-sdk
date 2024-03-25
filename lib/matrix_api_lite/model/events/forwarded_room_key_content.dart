@@ -21,9 +21,9 @@
 * SOFTWARE.
 */
 
-import '../../utils/try_get_map_extension.dart';
-import '../basic_event.dart';
-import 'room_key_content.dart';
+import 'package:matrix/matrix_api_lite/model/basic_event.dart';
+import 'package:matrix/matrix_api_lite/model/events/room_key_content.dart';
+import 'package:matrix/matrix_api_lite/utils/try_get_map_extension.dart';
 
 extension ForwardedRoomKeyContentBasicEventExtension on BasicEvent {
   ForwardedRoomKeyContent get parsedForwardedRoomKeyContent =>
@@ -35,14 +35,14 @@ class ForwardedRoomKeyContent extends RoomKeyContent {
   String senderClaimedEd25519Key;
   List<String> forwardingCurve25519KeyChain;
 
-  ForwardedRoomKeyContent.fromJson(Map<String, Object?> json)
+  ForwardedRoomKeyContent.fromJson(super.json)
       : senderKey = json.tryGet('sender_key', TryGet.required) ?? '',
         senderClaimedEd25519Key =
             json.tryGet('sender_claimed_ed25519_key', TryGet.required) ?? '',
         forwardingCurve25519KeyChain = json.tryGetList(
                 'forwarding_curve25519_key_chain', TryGet.required) ??
             [],
-        super.fromJson(json);
+        super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

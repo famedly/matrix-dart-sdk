@@ -27,9 +27,10 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
-import '../matrix_api_lite.dart';
-import 'generated/api.dart';
+import 'package:matrix/matrix_api_lite.dart';
+import 'package:matrix/matrix_api_lite/generated/api.dart';
 
+// ignore: constant_identifier_names
 enum RequestType { GET, POST, PUT, DELETE }
 
 class MatrixApi extends Api {
@@ -58,11 +59,8 @@ class MatrixApi extends Api {
   MatrixApi({
     Uri? homeserver,
     String? accessToken,
-    http.Client? httpClient,
-  }) : super(
-            httpClient: httpClient,
-            baseUri: homeserver,
-            bearerToken: accessToken);
+    super.httpClient,
+  }) : super(baseUri: homeserver, bearerToken: accessToken);
 
   /// Used for all Matrix json requests using the [c2s API](https://matrix.org/docs/spec/client_server/r0.6.0.html).
   ///

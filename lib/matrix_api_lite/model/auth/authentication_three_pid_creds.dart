@@ -21,7 +21,7 @@
 * SOFTWARE.
 */
 
-import 'authentication_data.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_data.dart';
 
 /// For email based identity:
 /// https://matrix.org/docs/spec/client_server/r0.6.1#email-based-identity-homeserver
@@ -31,11 +31,7 @@ class AuthenticationThreePidCreds extends AuthenticationData {
   late ThreepidCreds threepidCreds;
 
   AuthenticationThreePidCreds(
-      {String? session, required String type, required this.threepidCreds})
-      : super(
-          type: type,
-          session: session,
-        );
+      {super.session, required String super.type, required this.threepidCreds});
 
   AuthenticationThreePidCreds.fromJson(Map<String, Object?> json)
       : super.fromJson(json) {

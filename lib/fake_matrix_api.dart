@@ -28,7 +28,7 @@ import 'dart:math';
 import 'package:http/http.dart';
 import 'package:http/testing.dart';
 
-import 'package:matrix_api_lite/matrix_api_lite.dart';
+import 'package:matrix/matrix_api_lite.dart';
 
 Map<String, Object?> decodeJson(dynamic data) {
   if (data is String) {
@@ -1947,9 +1947,9 @@ class FakeMatrixApi extends MockClient {
             'total_room_count_estimate': 115
           },
       '/client/v3/keys/claim': (dynamic req) {
-        final request = decodeJson(req)["one_time_keys"];
+        final request = decodeJson(req)['one_time_keys'];
         final keys = (request is Map<String, Object?>)
-            ? request["one_time_keys"] as Map<String, Object?>?
+            ? request['one_time_keys'] as Map<String, Object?>?
             : null;
         return {
           'failures': <String, Object?>{},

@@ -21,9 +21,9 @@
 * SOFTWARE.
 */
 
-import '../../utils/filter_map_extension.dart';
-import '../../utils/try_get_map_extension.dart';
-import '../basic_event.dart';
+import 'package:matrix/matrix_api_lite/model/basic_event.dart';
+import 'package:matrix/matrix_api_lite/utils/filter_map_extension.dart';
+import 'package:matrix/matrix_api_lite/utils/try_get_map_extension.dart';
 
 extension ImagePackContentBasicEventExtension on BasicEvent {
   ImagePackContent get parsedImagePackContent =>

@@ -21,27 +21,23 @@
 * SOFTWARE.
 */
 
-import 'stripped_state_event.dart';
+import 'package:matrix/matrix_api_lite/model/stripped_state_event.dart';
 
 class ChildrenState extends StrippedStateEvent {
   DateTime originServerTs;
 
   ChildrenState({
-    required String type,
-    required Map<String, Object?> content,
-    required String senderId,
-    required String stateKey,
+    required super.type,
+    required super.content,
+    required super.senderId,
+    required String super.stateKey,
     required this.originServerTs,
-  }) : super(
-            type: type,
-            content: content,
-            senderId: senderId,
-            stateKey: stateKey);
+  });
 
-  ChildrenState.fromJson(Map<String, Object?> json)
+  ChildrenState.fromJson(super.json)
       : originServerTs = DateTime.fromMillisecondsSinceEpoch(
             json['origin_server_ts'] as int),
-        super.fromJson(json);
+        super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

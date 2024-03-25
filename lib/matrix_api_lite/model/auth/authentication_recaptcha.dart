@@ -21,8 +21,8 @@
 * SOFTWARE.
 */
 
-import 'authentication_data.dart';
-import 'authentication_types.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_data.dart';
+import 'package:matrix/matrix_api_lite/model/auth/authentication_types.dart';
 
 class AuthenticationRecaptcha extends AuthenticationData {
   String response;
@@ -33,9 +33,9 @@ class AuthenticationRecaptcha extends AuthenticationData {
           session: session,
         );
 
-  AuthenticationRecaptcha.fromJson(Map<String, Object?> json)
+  AuthenticationRecaptcha.fromJson(super.json)
       : response = json['response'] as String,
-        super.fromJson(json);
+        super.fromJson();
 
   @override
   Map<String, Object?> toJson() {

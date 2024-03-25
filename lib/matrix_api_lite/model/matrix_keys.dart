@@ -21,7 +21,7 @@
 * SOFTWARE.
 */
 
-import 'package:matrix_api_lite/matrix_api_lite.dart';
+import 'package:matrix/matrix_api_lite.dart';
 
 abstract class MatrixSignableKey {
   String userId;
@@ -94,9 +94,9 @@ class MatrixCrossSigningKey extends MatrixSignableKey {
   String? get identifier => keys.values.first;
 
   @override
-  MatrixCrossSigningKey.fromJson(Map<String, Object?> json)
+  MatrixCrossSigningKey.fromJson(super.json)
       : usage = json.tryGetList<String>('usage') ?? [],
-        super.fromJson(json);
+        super.fromJson();
 
   @override
   Map<String, Object?> toJson() {
@@ -126,10 +126,10 @@ class MatrixDeviceKeys extends MatrixSignableKey {
   String? get identifier => deviceId;
 
   @override
-  MatrixDeviceKeys.fromJson(Map<String, Object?> json)
+  MatrixDeviceKeys.fromJson(super.json)
       : algorithms = json.tryGetList<String>('algorithms') ?? [],
         deviceId = json['device_id'] as String,
-        super.fromJson(json);
+        super.fromJson();
 
   @override
   Map<String, Object?> toJson() {
