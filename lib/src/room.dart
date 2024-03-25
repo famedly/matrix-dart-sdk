@@ -923,24 +923,11 @@ class Room {
 
   Future<String?> _sendContent(
     String type,
-    Map<String, dynamic> content, {
+    Map<String, dynamic> sendMessageContent, {
     String? txid,
   }) async {
     txid ??= client.generateUniqueTransactionId();
 
-    final mustEncrypt = encrypted && client.encryptionEnabled;
-
-    final sendMessageContent = mustEncrypt
-        ? await client.encryption!
-            .encryptGroupMessagePayload(id, content, type: type)
-        : content;
-
-    final utf8EncodedJsonLength =
-        utf8.encode(jsonEncode(sendMessageContent)).length;
-
-    if (utf8EncodedJsonLength > maxPDUSize) {
-      throw EventTooLarge(utf8EncodedJsonLength);
-    }
     return await client.sendMessage(
       id,
       sendMessageContent.containsKey('ciphertext')
@@ -1053,6 +1040,21 @@ class Room {
       }
     }
     final sentDate = DateTime.now();
+
+    final mustEncrypt = encrypted && client.encryptionEnabled;
+
+    final sendMessageContent = mustEncrypt
+        ? await client.encryption!
+            .encryptGroupMessagePayload(id, content, type: type)
+        : content;
+
+    final utf8EncodedJsonLength =
+        utf8.encode(jsonEncode(sendMessageContent)).length;
+
+    if (utf8EncodedJsonLength > maxPDUSize) {
+      throw EventTooLarge(utf8EncodedJsonLength);
+    }
+
     final syncUpdate = SyncUpdate(
       nextBatch: '',
       rooms: RoomsUpdate(
@@ -1092,13 +1094,11 @@ class Room {
       try {
         res = await _sendContent(
           type,
-          content,
+          sendMessageContent,
           txid: messageID,
         );
       } catch (e, s) {
-        if (e is EventTooLarge) {
-          rethrow;
-        } else if (e is MatrixException &&
+        if (e is MatrixException &&
             e.retryAfterMs != null &&
             !DateTime.now()
                 .add(Duration(milliseconds: e.retryAfterMs!))
