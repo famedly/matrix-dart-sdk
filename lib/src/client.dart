@@ -1037,6 +1037,15 @@ class Client extends MatrixApi {
         await _storeArchivedRoom(entry.key, entry.value);
       }
     }
+
+    // Sort the archived rooms by last event originServerTs as this is the
+    // best indicator we have to sort them. For archived rooms where we don't
+    // have any, we move them to the bottom.
+    final beginningOfTime = DateTime.fromMillisecondsSinceEpoch(0);
+    _archivedRooms.sort((b, a) =>
+        (a.room.lastEvent?.originServerTs ?? beginningOfTime)
+            .compareTo(b.room.lastEvent?.originServerTs ?? beginningOfTime));
+
     return _archivedRooms;
   }
 
