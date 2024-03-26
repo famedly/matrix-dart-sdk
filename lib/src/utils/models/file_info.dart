@@ -1,4 +1,3 @@
-
 import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
@@ -14,7 +13,7 @@ class FileInfo with EquatableMixin {
   FileInfo(
     this.fileName,
     this.filePath,
-    this.fileSize,{
+    this.fileSize, {
     this.readStream,
   });
 
@@ -23,7 +22,7 @@ class FileInfo with EquatableMixin {
   }
 
   String get mimeType =>
-      lookupMimeType(filePath) ?? 
+      lookupMimeType(filePath) ??
       lookupMimeType(fileName) ??
       'application/octet-stream';
 
@@ -31,7 +30,6 @@ class FileInfo with EquatableMixin {
         'mimetype': mimeType,
         'size': fileSize,
       });
-  
 
   factory FileInfo.fromMatrixFile(MatrixFile file) {
     if (file.msgType == MessageTypes.Image) {
@@ -50,14 +48,12 @@ class FileInfo with EquatableMixin {
         imagePlaceholderBytes: file.bytes ?? Uint8List(0),
         width: file.info['w'],
         height: file.info['h'],
-        duration: Duration(milliseconds: file.info['duration']),
+        duration: file.info['duration'] != null && file.info['duration'] is int
+            ? Duration(milliseconds: file.info['duration'])
+            : null,
       );
     }
-    return FileInfo(
-      file.name,
-      file.filePath ?? '',
-      file.size
-    );
+    return FileInfo(file.name, file.filePath ?? '', file.size);
   }
 
   @override
