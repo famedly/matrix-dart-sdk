@@ -755,7 +755,9 @@ class GroupCallSession {
     }
 
     if (call.state != CallState.kEnded) {
-      await call.hangup(hangupReason, false);
+      // no need to emit individual handleCallEnded on group calls
+      // also prevents a loop of hangup and onCallHangupNotifierForGroupCalls
+      await call.hangup(reason: hangupReason, shouldEmit: false);
     }
 
     final usermediaStream = getUserMediaStreamByParticipantId(Participant(

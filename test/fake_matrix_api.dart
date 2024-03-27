@@ -1735,7 +1735,7 @@ class FakeMatrixApi extends BaseClient {
               }
             ]
           },
-      '/client/v3/rooms/!726s6s6q:example.com/members': (var req) => {
+      '/client/v3/rooms/!726s6s6q%3Aexample.com/members': (var req) => {
             'chunk': [
               {
                 'content': {

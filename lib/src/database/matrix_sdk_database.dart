@@ -1594,5 +1594,8 @@ class MatrixSdkDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> delete() => _collection.delete();
+  Future<void> delete() => BoxCollection.delete(
+        name,
+        sqfliteFactory ?? idbFactory,
+      );
 }

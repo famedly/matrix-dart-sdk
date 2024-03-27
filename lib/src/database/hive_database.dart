@@ -39,7 +39,7 @@ import 'package:matrix/src/utils/run_benchmarked.dart';
 ///
 /// This database does not support file caching!
 @Deprecated(
-    'Use [HiveCollectionsDatabase] instead. Don\'t forget to properly migrate!')
+    'Use [MatrixSdkDatabase] instead. Don\'t forget to properly migrate!')
 class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   static const int version = 6;
   final String name;

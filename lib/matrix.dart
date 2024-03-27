@@ -19,7 +19,7 @@
 /// Matrix SDK written in pure Dart.
 library matrix;
 
-export 'package:matrix_api_lite/matrix_api_lite.dart';
+export 'matrix_api_lite.dart';
 
 export 'src/client.dart';
 export 'src/database/database_api.dart';

@@ -341,6 +341,7 @@ class VoIP {
             currentGroupCID != VoipId(roomId: room.id, callId: confId))) {
       Logs().v(
           '[VOIP] onCallInvite: Unable to handle new calls, maybe user is busy.');
+      // no need to emit here because handleNewCall was never triggered yet
       await newCall.reject(reason: CallErrorCode.UserBusy, shouldEmit: false);
       await delegate.handleMissedCall(newCall);
       return;

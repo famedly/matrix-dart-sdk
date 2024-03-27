@@ -248,7 +248,7 @@ class CallSession {
         Logs().v('[VOIP] Call invite has expired. Hanging up.');
         hangupParty = CallParty.kRemote; // effectively
         fireCallEvent(CallEvent.kHangup);
-        hangup(CallErrorCode.InviteTimeout);
+        hangup(reason: CallErrorCode.InviteTimeout);
       }
       ringingTimer?.cancel();
       ringingTimer = null;
@@ -273,7 +273,7 @@ class CallSession {
     successor = newCall;
     onCallReplaced.add(newCall);
     // ignore: unawaited_futures
-    hangup(CallErrorCode.Replaced, true);
+    hangup(reason: CallErrorCode.Replaced);
   }
 
   Future<void> sendAnswer(RTCSessionDescription answer) async {
@@ -873,7 +873,7 @@ class CallSession {
     if (state != CallState.kRinging && state != CallState.kFledgling) {
       Logs().e(
           '[VOIP] Call must be in \'ringing|fledgling\' state to reject! (current state was: ${state.toString()}) Calling hangup instead');
-      await hangup(reason, shouldEmit);
+      await hangup(reason: reason, shouldEmit: shouldEmit);
       return;
     }
     Logs().d('[VOIP] Rejecting call: $callId');
@@ -883,7 +883,7 @@ class CallSession {
     }
   }
 
-  Future<void> hangup([String? reason, bool shouldEmit = true]) async {
+  Future<void> hangup({String? reason, bool shouldEmit = true}) async {
     await terminate(
         CallParty.kLocal, reason ?? CallErrorCode.UserHangup, shouldEmit);
 
@@ -1010,8 +1010,9 @@ class CallSession {
           capabilities: callCapabilities,
           metadata: metadata);
       // just incase we ended the call but already sent the invite
+      // raraley happens during glares
       if (state == CallState.kEnded) {
-        await hangup(CallErrorCode.Replaced, false);
+        await hangup(reason: CallErrorCode.Replaced);
         return;
       }
       inviteOrAnswerSent = true;
@@ -1025,7 +1026,7 @@ class CallSession {
 
       inviteTimer = Timer(CallTimeouts.callInviteLifetime, () {
         if (state == CallState.kInviteSent) {
-          hangup(CallErrorCode.InviteTimeout);
+          hangup(reason: CallErrorCode.InviteTimeout);
         }
         inviteTimer?.cancel();
         inviteTimer = null;
@@ -1111,7 +1112,7 @@ class CallSession {
           await updateMuteStatus();
           missedCall = false;
         } else if (state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
-          await hangup(CallErrorCode.IceFailed, false);
+          await hangup(reason: CallErrorCode.IceFailed);
         }
       };
     } catch (e) {
@@ -1321,7 +1322,7 @@ class CallSession {
             'Failed to send candidates on attempt $candidateSendTries Giving up on this call.');
         lastError =
             CallError(CallErrorCode.SignallingFailed, 'Signalling failed', e);
-        await hangup(CallErrorCode.SignallingFailed, true);
+        await hangup(reason: CallErrorCode.SignallingFailed);
         return;
       }
 
@@ -1362,7 +1363,7 @@ class CallSession {
     fireCallEvent(CallEvent.kError);
     lastError = CallError(
         CallErrorCode.LocalOfferFailed, 'Failed to get local offer!', err);
-    await terminate(CallParty.kLocal, CallErrorCode.LocalOfferFailed, false);
+    await terminate(CallParty.kLocal, CallErrorCode.LocalOfferFailed, true);
   }
 
   Future<void> _getUserMediaFailed(dynamic err) async {
@@ -1373,7 +1374,7 @@ class CallSession {
           CallErrorCode.NoUserMedia,
           'Couldn\'t start capturing media! Is your microphone set up and does this app have permission?',
           err);
-      await terminate(CallParty.kLocal, CallErrorCode.NoUserMedia, false);
+      await terminate(CallParty.kLocal, CallErrorCode.NoUserMedia, true);
     }
   }
 
@@ -1425,7 +1426,7 @@ class CallSession {
       if (capabilities != null) 'capabilities': capabilities.toJson(),
       if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallInvite,
       content,
@@ -1453,7 +1454,7 @@ class CallSession {
       'selected_party_id': selected_party_id,
     };
 
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallSelectAnswer,
       content,
@@ -1476,7 +1477,7 @@ class CallSession {
       'version': version,
     };
 
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallReject,
       content,
@@ -1506,7 +1507,7 @@ class CallSession {
       if (capabilities != null) 'capabilities': capabilities.toJson(),
       if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallNegotiate,
       content,
@@ -1549,7 +1550,7 @@ class CallSession {
       'version': version,
       'candidates': candidates,
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallCandidates,
       content,
@@ -1579,7 +1580,7 @@ class CallSession {
       if (capabilities != null) 'capabilities': capabilities.toJson(),
       if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallAnswer,
       content,
@@ -1601,7 +1602,7 @@ class CallSession {
       'version': version,
       if (hangupCause != null) 'reason': hangupCause,
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallHangup,
       content,
@@ -1633,7 +1634,7 @@ class CallSession {
       'version': version,
       sdpStreamMetadataKey: metadata.toJson(),
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallSDPStreamMetadataChangedPrefix,
       content,
@@ -1657,7 +1658,7 @@ class CallSession {
       'version': version,
       ...callReplaces.toJson(),
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallReplaces,
       content,
@@ -1681,7 +1682,7 @@ class CallSession {
       'version': version,
       'asserted_identity': assertedIdentity.toJson(),
     };
-    return await _sendContent(
+    return await _sendCallContent(
       room,
       EventTypes.CallAssertedIdentity,
       content,
@@ -1689,7 +1690,7 @@ class CallSession {
     );
   }
 
-  Future<String?> _sendContent(
+  Future<String?> _sendCallContent(
     Room room,
     String type,
     Map<String, Object> content, {
