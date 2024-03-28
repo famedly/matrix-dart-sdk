@@ -1,6 +1,10 @@
-# VOIP for Matrix SDK
+# Famedly Calls
 
-1:1 and group calls
+Supports
+- 1:1 webrtc calls
+- Group calls with:
+  - mesh webrtc calls
+  - just handling state of calls and signallnig for e2ee keys in sfu mode (check `isLivekitCall`)
 
 ## Overview
 
@@ -8,13 +12,82 @@
 
 `CallSession` objects are created by calling `inviteToCall` and `onCallInvite`.
 
-`GroupCall` objects are created by calling `createGroupCall`.
+`GroupCallSession` objects are created by calling `fetchOrCreateGroupCall`.
+
+## Group Calls
+
+All communication for group calls happens over to-device events except the `com.famedly.call.member` event.
+
+**To-device events must have a `party_id` or a `sender_session_id` set to the device id of the sender, this is partly attributed to making it easy to maintain all the kinds of calls and supporting calling between 2 devices of the same user.**
+
+Sends the `com.famedly.call.member` event to signal an active membership. The format has to be the following:
+
+### Events -
+
+```json5
+"content": {
+    "memberships": [
+        {
+            "application": "m.call",
+            "backend": {
+                "type": "mesh"
+            },
+            "call_id": "!qoQQTYnzXOHSdEgqQp:im.staging.famedly.de",
+            "device_id": "YVGPEWNLDD",
+            "expires_ts": 1705152401042,
+            "scope": "m.room"
+        }
+    ]
+}
+```
+
+- **application**: could be anything f.ex `m.call`, `m.game` or `m.board`
+- **backend**: see below
+- **call_id**: the call id, currently setting it to the roomId makes the call for the whole room, this is to avoid parallel calls starting up. For user scoped calls in a room you could set this to `AuserId:BuserId`. The sdk does not restrict setting roomId for user scoped calls atm.
+- **device_id**: The sdk supports calling between devices of same users, so this needs to be set to the sender device id.
+- **expires_ts**: ms since epoch when this membership event should be considered expired. Check `lib/src/voip/utils/constants.dart` for current values of how long the inital period is and how often this gets autoupdated.
+- **scope**: room scoped calls are `m.room`, user scoped can be `m.user`
+
+
+
+#### The backend can be either `mesh` or `livekit`
+
+##### Livekit - 
+```json5
+"backend": {
+    "livekit_alias": "!qoQQTYnzXOHSdEgqQp:im.staging.famedly.de",
+    "livekit_service_url": "https://famedly-livekit-server.teedee.dev/jwt",
+    "type": "livekit"
+},
+```
+
+##### Mesh -
+```json5
+"backend": {
+    "type": "mesh"
+},
+```
+
+#### E2EE Events -
+
+When in SFU/Livekit mode, the sdk can handle sending and requesting encryption keys. Currently it uses the following events: 
+
+- sending: `com.famedly.call.encryption_keys`
+- requesting: `com.famedly.call.encryption_keys.request`
+
+As usual remember to send the `party_id`/`sender_session_id` to map your keys to the right userId and deviceId
+
+You need to implement `EncryptionKeyProvider` and set the override the methods to interact with your actual keyProvider. The main one as of now is `onSetEncryptionKey`.
+
+You can request missing keys whenever needed using `groupCall.requestEncrytionKey(remoteParticipants)`.
+
 
 ## 1:1 calls
 
 ### 1. Basic call flow
 
 This flow explains the code flow for a 1v1 call.
+
 This code flow is still used in group call, the only difference is that group call uses `toDevice` message to send `m.call.*` events
 
 ![1v1 call](images/famedly-1v1-call.drawio.png)
@@ -79,11 +152,14 @@ We need to use the matrix roomId to initiate the call, the initial call can be
 
 After the call is sent, you can use `onCallStateChanged` to listen the call state events. These events are used to change the display of the call UI state, for example, change the control buttons, display `Hangup (cancel)` button before connecting, and display `mute mic, mute cam, hold/unhold, hangup` buttons after connected.
 
+You cannot call a whole room, please specify the userId you intend to call in `inviteToCall`
+
+
 ```dart
 final voip = VoIP(client, MyVoipApp());
 
 /// Create a new call
-final newCall = await voip.inviteToCall(roomId, CallType.kVideo);
+final newCall = await voip.inviteToCall(roomId, CallType.kVideo, userId);
 
 newCall.onCallStateChanged.stream.listen((state) {
   /// handle call state change event，

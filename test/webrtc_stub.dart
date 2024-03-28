@@ -17,17 +17,12 @@ class MockWebRTCDelegate implements WebRTCDelegate {
       MockRTCPeerConnection();
 
   @override
-  VideoRenderer createRenderer() {
-    return MockVideoRenderer();
-  }
-
-  @override
   Future<void> handleCallEnded(CallSession session) async {
     Logs().i('handleCallEnded called in MockWebRTCDelegate');
   }
 
   @override
-  Future<void> handleGroupCallEnded(GroupCall groupCall) async {
+  Future<void> handleGroupCallEnded(GroupCallSession groupCall) async {
     Logs().i('handleGroupCallEnded called in MockWebRTCDelegate');
   }
 
@@ -42,7 +37,7 @@ class MockWebRTCDelegate implements WebRTCDelegate {
   }
 
   @override
-  Future<void> handleNewGroupCall(GroupCall groupCall) async {
+  Future<void> handleNewGroupCall(GroupCallSession groupCall) async {
     Logs().i('handleNewGroupCall called in MockWebRTCDelegate');
   }
 
@@ -60,6 +55,29 @@ class MockWebRTCDelegate implements WebRTCDelegate {
   @override
   Future<void> stopRingtone() async {
     Logs().i('stopRingtone called in MockWebRTCDelegate');
+  }
+
+  @override
+  EncryptionKeyProvider? get keyProvider => MockEncryptionKeyProvider();
+}
+
+class MockEncryptionKeyProvider implements EncryptionKeyProvider {
+  @override
+  Future<void> onSetEncryptionKey(
+      Participant participant, Uint8List key, int index) async {
+    Logs().i('Mock onSetEncryptionKey called for ${participant.id} ');
+  }
+
+  @override
+  Future<Uint8List> onExportKey(Participant participant, int index) {
+    // TODO: implement onExportKey
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Uint8List> onRatchetKey(Participant participant, int index) {
+    // TODO: implement onRatchetKey
+    throw UnimplementedError();
   }
 }
 

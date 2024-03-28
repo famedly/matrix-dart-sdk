@@ -1829,7 +1829,7 @@ class Room {
     return powerForChangingStateEvent(action) <= ownPowerLevel;
   }
 
-  /// returns the powerlevel required for chaning the `action` defaults to
+  /// returns the powerlevel required for changing the `action` defaults to
   /// state_default if `action` isn't specified in events override.
   /// If there is no state_default in the m.room.power_levels event, the
   /// state_default is 50. If the room contains no m.room.power_levels event,
@@ -1844,22 +1844,16 @@ class Room {
         50;
   }
 
-  bool get canCreateGroupCall =>
-      canChangeStateEvent(EventTypes.GroupCallPrefix) && groupCallsEnabled;
-
   bool get canJoinGroupCall =>
-      canChangeStateEvent(EventTypes.GroupCallMemberPrefix) &&
-      groupCallsEnabled;
+      canChangeStateEvent(VoIPEventTypes.FamedlyCallMemberEvent);
 
   /// if returned value is not null `org.matrix.msc3401.call.member` is present
   /// and group calls can be used
   bool get groupCallsEnabled {
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
     if (powerLevelMap == null) return false;
-    return powerForChangingStateEvent(EventTypes.GroupCallMemberPrefix) <=
-            getDefaultPowerLevel(powerLevelMap) &&
-        powerForChangingStateEvent(EventTypes.GroupCallPrefix) <=
-            getDefaultPowerLevel(powerLevelMap);
+    return powerForChangingStateEvent(VoIPEventTypes.FamedlyCallMemberEvent) <=
+        getDefaultPowerLevel(powerLevelMap);
   }
 
   /// sets the `org.matrix.msc3401.call.member` power level to users default for
@@ -1872,8 +1866,7 @@ class Room {
       final eventsMap = newPowerLevelMap.tryGetMap<String, Object?>('events') ??
           <String, Object?>{};
       eventsMap.addAll({
-        EventTypes.GroupCallPrefix: getDefaultPowerLevel(currentPowerLevelsMap),
-        EventTypes.GroupCallMemberPrefix:
+        VoIPEventTypes.FamedlyCallMemberEvent:
             getDefaultPowerLevel(currentPowerLevelsMap)
       });
       newPowerLevelMap.addAll({'events': eventsMap});
