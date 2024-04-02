@@ -87,8 +87,8 @@ extension FamedlyCallMemberEventsExtension on Room {
 
     // do not bother removing other deviceId expired events because we have no
     // ownership over them
-    ownMemberships.removeWhere(
-        (element) => element.isExpired && client.deviceID! == element.deviceId);
+    ownMemberships
+        .removeWhere((element) => client.deviceID! == element.deviceId);
 
     ownMemberships.removeWhere((e) => e == callMembership);
 
@@ -133,6 +133,25 @@ extension FamedlyCallMemberEventsExtension on Room {
       Logs().w(
           '[VOIP] cannot send ${VoIPEventTypes.FamedlyCallMemberEvent} events in room: $id, fix your PLs');
     }
+  }
+
+  /// returns a list of memberships from a famedly call matrix event
+  List<CallMembership> getCallMembershipsFromEvent(MatrixEvent event) {
+    if (event.roomId != id) return [];
+    return getCallMembershipsFromEventContent(
+        event.content, event.senderId, event.roomId!);
+  }
+
+  /// returns a list of memberships from a famedly call matrix event
+  List<CallMembership> getCallMembershipsFromEventContent(
+      Map<String, Object?> content, String senderId, String roomId) {
+    final mems = content.tryGetList<Map>('memberships');
+    final callMems = <CallMembership>[];
+    for (final m in mems ?? []) {
+      final mem = CallMembership.fromJson(m, senderId, roomId);
+      if (mem != null) callMems.add(mem);
+    }
+    return callMems;
   }
 }
 

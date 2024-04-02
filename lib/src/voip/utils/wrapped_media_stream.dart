@@ -7,8 +7,9 @@ import 'package:matrix/src/voip/utils/stream_helper.dart';
 /// Wrapped MediaStream, used to adapt Widget to display
 class WrappedMediaStream {
   MediaStream? stream;
-  final Participant participant;
+  final CallParticipant participant;
   final Room room;
+  final VoIP voip;
 
   /// Current stream type, usermedia or screen-sharing
   String purpose;
@@ -30,22 +31,21 @@ class WrappedMediaStream {
   final CachedStreamController<MediaStream> onStreamChanged =
       CachedStreamController();
 
-  WrappedMediaStream(
-      {this.stream,
-      this.pc,
-      required this.room,
-      required this.participant,
-      required this.purpose,
-      required this.client,
-      required this.audioMuted,
-      required this.videoMuted,
-      required this.isWeb,
-      required this.isGroupCall});
+  WrappedMediaStream({
+    this.stream,
+    this.pc,
+    required this.room,
+    required this.participant,
+    required this.purpose,
+    required this.client,
+    required this.audioMuted,
+    required this.videoMuted,
+    required this.isWeb,
+    required this.isGroupCall,
+    required this.voip,
+  });
 
   String get id => '${stream?.id}: $title';
-
-  Participant get localParticipant =>
-      Participant(userId: client.userID!, deviceId: client.deviceID!);
 
   Future<void> dispose() async {
     /// libwebrtc does not provide a way to clone MediaStreams. So stopping the
@@ -71,7 +71,7 @@ class WrappedMediaStream {
   }
 
   bool isLocal() {
-    return participant == localParticipant;
+    return participant == voip.localParticipant;
   }
 
   bool isAudioMuted() {

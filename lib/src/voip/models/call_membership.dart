@@ -33,6 +33,7 @@ class CallMembership {
   final List<CallBackend> backends;
   final String deviceId;
   final int expiresTs;
+  final String membershipId;
 
   final String roomId;
 
@@ -43,6 +44,7 @@ class CallMembership {
     required this.deviceId,
     required this.expiresTs,
     required this.roomId,
+    required this.membershipId,
     this.application = 'm.call',
     this.scope = 'm.room',
   });
@@ -56,8 +58,7 @@ class CallMembership {
       'device_id': deviceId,
       'expires_ts': expiresTs,
       'expires': 7200000, // element compatibiltiy remove asap
-      'membershipID':
-          'hey_you_found_an_easter_egg!' // element compatibiltiy remove asap
+      'membershipID': membershipId // sessionId
     };
   }
 
@@ -74,6 +75,8 @@ class CallMembership {
             .toList(),
         deviceId: json['device_id'],
         expiresTs: json['expires_ts'],
+        membershipId:
+            json['membershipID'] ?? 'someone_forgot_to_set_the_membershipID',
       );
     } catch (e, s) {
       Logs().e('[VOIP] call membership parsing failed. $json', e, s);
@@ -92,7 +95,8 @@ class CallMembership {
           application == other.application &&
           scope == other.scope &&
           backends.first.type == other.backends.first.type &&
-          deviceId == other.deviceId;
+          deviceId == other.deviceId &&
+          membershipId == other.membershipId;
 
   @override
   int get hashCode =>
@@ -102,7 +106,8 @@ class CallMembership {
       application.hashCode ^
       scope.hashCode ^
       backends.first.type.hashCode ^
-      deviceId.hashCode;
+      deviceId.hashCode ^
+      membershipId.hashCode;
 
   // with a buffer of 1 minute just incase we were slow to process a
   // call event, if the device is actually dead it should

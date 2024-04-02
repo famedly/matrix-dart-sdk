@@ -6,7 +6,6 @@ import 'package:matrix/matrix.dart';
 
 class MockWebRTCDelegate implements WebRTCDelegate {
   @override
-  // TODO: implement canHandleNewCall
   bool get canHandleNewCall => true;
 
   @override
@@ -64,19 +63,17 @@ class MockWebRTCDelegate implements WebRTCDelegate {
 class MockEncryptionKeyProvider implements EncryptionKeyProvider {
   @override
   Future<void> onSetEncryptionKey(
-      Participant participant, Uint8List key, int index) async {
+      CallParticipant participant, Uint8List key, int index) async {
     Logs().i('Mock onSetEncryptionKey called for ${participant.id} ');
   }
 
   @override
-  Future<Uint8List> onExportKey(Participant participant, int index) {
-    // TODO: implement onExportKey
+  Future<Uint8List> onExportKey(CallParticipant participant, int index) {
     throw UnimplementedError();
   }
 
   @override
-  Future<Uint8List> onRatchetKey(Participant participant, int index) {
-    // TODO: implement onRatchetKey
+  Future<Uint8List> onRatchetKey(CallParticipant participant, int index) {
     throw UnimplementedError();
   }
 }
@@ -87,25 +84,21 @@ class MockMediaDevices implements MediaDevices {
 
   @override
   Future<List<MediaDeviceInfo>> enumerateDevices() {
-    // TODO: implement enumerateDevices
     throw UnimplementedError();
   }
 
   @override
   Future<MediaStream> getDisplayMedia(Map<String, dynamic> mediaConstraints) {
-    // TODO: implement getDisplayMedia
     throw UnimplementedError();
   }
 
   @override
   Future<List> getSources() {
-    // TODO: implement getSources
     throw UnimplementedError();
   }
 
   @override
   MediaTrackSupportedConstraints getSupportedConstraints() {
-    // TODO: implement getSupportedConstraints
     throw UnimplementedError();
   }
 
@@ -117,7 +110,6 @@ class MockMediaDevices implements MediaDevices {
 
   @override
   Future<MediaDeviceInfo> selectAudioOutput([AudioOutputOptions? options]) {
-    // TODO: implement selectAudioOutput
     throw UnimplementedError();
   }
 }
@@ -365,15 +357,12 @@ class MockRTCPeerConnection implements RTCPeerConnection {
   }
 
   @override
-  // TODO: implement receivers
   Future<List<RTCRtpReceiver>> get receivers => throw UnimplementedError();
 
   @override
-  // TODO: implement senders
   Future<List<RTCRtpSender>> get senders => throw UnimplementedError();
 
   @override
-  // TODO: implement transceivers
   Future<List<RTCRtpTransceiver>> get transceivers =>
       throw UnimplementedError();
 }
@@ -433,65 +422,53 @@ class MockRTCRtpTransceiver implements RTCRtpTransceiver {
   }
 
   @override
-  // TODO: implement stoped
   bool get stoped => throw UnimplementedError();
 }
 
 class MockRTCRtpSender implements RTCRtpSender {
   @override
   Future<void> dispose() {
-    // TODO: implement dispose
     throw UnimplementedError();
   }
 
   @override
-  // TODO: implement dtmfSender
   RTCDTMFSender get dtmfSender => throw UnimplementedError();
 
   @override
   Future<List<StatsReport>> getStats() {
-    // TODO: implement getStats
     throw UnimplementedError();
   }
 
   @override
-  // TODO: implement ownsTrack
   bool get ownsTrack => throw UnimplementedError();
 
   @override
-  // TODO: implement parameters
   RTCRtpParameters get parameters => throw UnimplementedError();
 
   @override
   Future<void> replaceTrack(MediaStreamTrack? track) {
-    // TODO: implement replaceTrack
     throw UnimplementedError();
   }
 
   @override
-  // TODO: implement senderId
   String get senderId => throw UnimplementedError();
 
   @override
   Future<bool> setParameters(RTCRtpParameters parameters) {
-    // TODO: implement setParameters
     throw UnimplementedError();
   }
 
   @override
   Future<void> setStreams(List<MediaStream> streams) {
-    // TODO: implement setStreams
     throw UnimplementedError();
   }
 
   @override
   Future<void> setTrack(MediaStreamTrack? track, {bool takeOwnership = true}) {
-    // TODO: implement setTrack
     throw UnimplementedError();
   }
 
   @override
-  // TODO: implement track
   MediaStreamTrack? get track => throw UnimplementedError();
   // Mock implementation for RTCRtpSender
 }
@@ -503,20 +480,16 @@ class MockRTCRtpReceiver implements RTCRtpReceiver {
 
   @override
   Future<List<StatsReport>> getStats() {
-    // TODO: implement getStats
     throw UnimplementedError();
   }
 
   @override
-  // TODO: implement parameters
   RTCRtpParameters get parameters => throw UnimplementedError();
 
   @override
-  // TODO: implement receiverId
   String get receiverId => throw UnimplementedError();
 
   @override
-  // TODO: implement track
   MediaStreamTrack? get track => throw UnimplementedError();
   // Mock implementation for RTCRtpReceiver
 }

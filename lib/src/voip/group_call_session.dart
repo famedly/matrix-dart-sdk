@@ -54,17 +54,17 @@ class GroupCallSession {
   StreamSubscription<CallSession>? _callSubscription;
 
   /// participant:volume
-  final Map<Participant, double> audioLevelsMap = {};
-  Participant? activeSpeaker;
+  final Map<CallParticipant, double> audioLevelsMap = {};
+  CallParticipant? activeSpeaker;
   WrappedMediaStream? localUserMediaStream;
   WrappedMediaStream? localScreenshareStream;
   String? localDesktopCapturerSourceId;
   List<CallSession> callSessions = [];
 
-  Participant? get localParticipant => voip.localParticipant;
+  CallParticipant? get localParticipant => voip.localParticipant;
 
   /// userId:deviceId
-  List<Participant> participants = [];
+  List<CallParticipant> participants = [];
   List<WrappedMediaStream> userMediaStreams = [];
   List<WrappedMediaStream> screenshareStreams = [];
   late String groupCallId;
@@ -161,8 +161,8 @@ class GroupCallSession {
       return await voip.delegate.mediaDevices.getUserMedia(mediaConstraints);
     } catch (e) {
       setState(GroupCallState.LocalCallFeedUninitialized);
+      rethrow;
     }
-    return Null as MediaStream;
   }
 
   Future<MediaStream> _getDisplayMedia() async {
@@ -218,6 +218,7 @@ class GroupCallSession {
         videoMuted: stream.getVideoTracks().isEmpty,
         isWeb: voip.delegate.isWeb,
         isGroupCall: true,
+        voip: voip,
       );
     } else {
       localWrappedMediaStream = stream;
@@ -271,11 +272,11 @@ class GroupCallSession {
     await onMemberStateChanged();
 
     if (!isLivekitCall) {
-      _callSubscription = voip.onIncomingCall.stream.listen(onIncomingCall);
-
       for (final call in callSessions) {
         await onIncomingCall(call);
       }
+
+      _callSubscription = voip.onIncomingCall.stream.listen(onIncomingCall);
 
       onActiveSpeakerLoop();
     }
@@ -415,6 +416,7 @@ class GroupCallSession {
           videoMuted: stream.getVideoTracks().isEmpty,
           isWeb: voip.delegate.isWeb,
           isGroupCall: true,
+          voip: voip,
         );
 
         addScreenshareStream(localScreenshareStream!);
@@ -479,15 +481,20 @@ class GroupCallSession {
       return;
     }
 
-    final existingCall = getCallForParticipant(Participant(
-        userId: newCall.remoteUserId!, deviceId: newCall.remoteUserDeviceId!));
+    final existingCall = getCallForParticipant(
+      CallParticipant(
+        userId: newCall.remoteUserId!,
+        deviceId: newCall.remoteDeviceId,
+        // sessionId: newCall.remoteSessionId,
+      ),
+    );
 
     if (existingCall != null && existingCall.callId == newCall.callId) {
       return;
     }
 
     Logs().v(
-        'GroupCallSession: incoming call from: ${newCall.remoteUserId}:${newCall.remoteUserDeviceId}');
+        'GroupCallSession: incoming call from: ${newCall.remoteUserId}${newCall.remoteDeviceId}${newCall.remotePartyId}');
 
     // Check if the user calling has an existing call and use this call instead.
     if (existingCall != null) {
@@ -512,6 +519,7 @@ class GroupCallSession {
         expiresTs: DateTime.now()
             .add(CallTimeouts.expireTsBumpDuration)
             .millisecondsSinceEpoch,
+        membershipId: voip.currentSessionId,
       ),
     );
 
@@ -546,6 +554,12 @@ class GroupCallSession {
 
   /// compltetely rebuilds the local participants list
   Future<void> onMemberStateChanged() async {
+    if (state != GroupCallState.Entered) {
+      Logs().d(
+          '[VOIP] early return onMemberStateChanged, group call state is not Entered. Actual state: ${state.toString()} ');
+      return;
+    }
+
     // The member events may be received for another room, which we will ignore.
     final mems =
         room.getCallMembershipsFromRoom().values.expand((element) => element);
@@ -565,11 +579,17 @@ class GroupCallSession {
           '[VOIP] Ignored ${mem.userId}\'s mem event ${mem.toJson()} while updating participants list for callId: $groupCallId, expiry status: ${mem.isExpired}');
     }
 
-    final List<Participant> newP = [];
+    final List<CallParticipant> newP = [];
 
     for (final mem in memsForCurrentGroupCall) {
-      final rp = Participant(userId: mem.userId, deviceId: mem.deviceId);
+      final rp = CallParticipant(
+        userId: mem.userId,
+        deviceId: mem.deviceId,
+      );
+
       newP.add(rp);
+
+      if (rp == localParticipant) continue;
 
       if (isLivekitCall) {
         Logs().w(
@@ -590,10 +610,17 @@ class GroupCallSession {
         continue;
       }
 
-      if (getCallForParticipant(rp) != null) {
-        Logs().e(
-            '[VOIP] onMemberStateChanged Not updating participants list, already have a ongoing call with ${rp.id}');
-        continue;
+      final existingCall = getCallForParticipant(rp);
+      if (existingCall != null) {
+        if (existingCall.remoteSessionId != mem.membershipId) {
+          await existingCall.hangup(
+              reason:
+                  '[VOIP] sessionId for member changed, terminating call ${existingCall.callId}');
+        } else {
+          Logs().e(
+              '[VOIP] onMemberStateChanged Not updating participants list, already have a ongoing call with ${rp.id}');
+          continue;
+        }
       }
 
       final opts = CallOptions(
@@ -601,7 +628,7 @@ class GroupCallSession {
         room: room,
         voip: voip,
         dir: CallDirection.kOutgoing,
-        localPartyId: client.deviceID!,
+        localPartyId: voip.currentSessionId,
         groupCallId: groupCallId,
         type: CallType.kVideo,
         iceServers: await voip.getIceSevers(),
@@ -611,14 +638,19 @@ class GroupCallSession {
       /// both invitee userId and deviceId are set here because there can be
       /// multiple devices from same user in a call, so we specifiy who the
       /// invite is for
+      ///
+      /// MOVE TO CREATENEWCALL?
       newCall.remoteUserId = mem.userId;
-      newCall.remoteUserDeviceId = mem.deviceId;
+      newCall.remoteDeviceId = mem.deviceId;
+      // party id set to when answered
+      newCall.remoteSessionId = mem.membershipId;
+
       await newCall.placeCallWithStreams(getLocalStreams());
 
       await addCall(newCall);
     }
-    final newPcopy = List<Participant>.from(newP);
-    final oldPcopy = List<Participant>.from(participants);
+    final newPcopy = List<CallParticipant>.from(newP);
+    final oldPcopy = List<CallParticipant>.from(participants);
     final anyJoined = newPcopy.where((element) => !oldPcopy.contains(element));
     final anyLeft = oldPcopy.where((element) => !newPcopy.contains(element));
 
@@ -663,12 +695,14 @@ class GroupCallSession {
     }
   }
 
-  CallSession? getCallForParticipant(Participant participant) {
+  CallSession? getCallForParticipant(CallParticipant participant) {
     return callSessions.singleWhereOrNull((call) =>
         call.groupCallId == groupCallId &&
-        Participant(
-                userId: call.remoteUserId!,
-                deviceId: call.remoteUserDeviceId!) ==
+        CallParticipant(
+              userId: call.remoteUserId!,
+              deviceId: call.remoteDeviceId,
+              //sessionId: call.remoteSessionId,
+            ) ==
             participant);
   }
 
@@ -707,7 +741,7 @@ class GroupCallSession {
 
   /// init a peer call from group calls.
   Future<void> initCall(CallSession call) async {
-    if (call.remoteUserId == null || call.remoteUserDeviceId == null) {
+    if (call.remoteUserId == null) {
       throw Exception(
           'Cannot init call without proper invitee user and device Id');
     }
@@ -743,12 +777,10 @@ class GroupCallSession {
   }
 
   Future<void> disposeCall(CallSession call, String hangupReason) async {
-    if (call.remoteUserId == null || call.remoteUserDeviceId == null) {
+    if (call.remoteUserId == null) {
       throw Exception(
           'Cannot init call without proper invitee user and device Id');
     }
-
-    // callHandlers.remove(opponentMemberId);
 
     if (call.hangupReason == CallErrorCode.Replaced) {
       return;
@@ -760,17 +792,22 @@ class GroupCallSession {
       await call.hangup(reason: hangupReason, shouldEmit: false);
     }
 
-    final usermediaStream = getUserMediaStreamByParticipantId(Participant(
-            userId: call.remoteUserId!, deviceId: call.remoteUserDeviceId!)
-        .id);
+    final usermediaStream = getUserMediaStreamByParticipantId(CallParticipant(
+      userId: call.remoteUserId!,
+      deviceId: call.remoteDeviceId,
+      // sessionId: call.remoteSessionId,
+    ).id);
 
     if (usermediaStream != null) {
       await removeUserMediaStream(usermediaStream);
     }
 
-    final screenshareStream = getScreenshareStreamByParticipantId(Participant(
-            userId: call.remoteUserId!, deviceId: call.remoteUserDeviceId!)
-        .id);
+    final screenshareStream =
+        getScreenshareStreamByParticipantId(CallParticipant(
+      userId: call.remoteUserId!,
+      deviceId: call.remoteDeviceId,
+      //  sessionId: call.remoteSessionId,
+    ).id);
 
     if (screenshareStream != null) {
       await removeScreenshareStream(screenshareStream);
@@ -778,15 +815,17 @@ class GroupCallSession {
   }
 
   Future<void> onStreamsChanged(CallSession call) async {
-    if (call.remoteUserId == null || call.remoteUserDeviceId == null) {
+    if (call.remoteUserId == null) {
       throw Exception(
           'Cannot init call without proper invitee user and device Id');
     }
 
-    final currentUserMediaStream = getUserMediaStreamByParticipantId(
-        Participant(
-                userId: call.remoteUserId!, deviceId: call.remoteUserDeviceId!)
-            .id);
+    final currentUserMediaStream =
+        getUserMediaStreamByParticipantId(CallParticipant(
+      userId: call.remoteUserId!,
+      deviceId: call.remoteDeviceId,
+      //sessionId: call.remoteSessionId,
+    ).id);
     final remoteUsermediaStream = call.remoteUserMediaStream;
     final remoteStreamChanged = remoteUsermediaStream != currentUserMediaStream;
 
@@ -803,10 +842,12 @@ class GroupCallSession {
       }
     }
 
-    final currentScreenshareStream = getScreenshareStreamByParticipantId(
-        Participant(
-                userId: call.remoteUserId!, deviceId: call.remoteUserDeviceId!)
-            .id);
+    final currentScreenshareStream =
+        getScreenshareStreamByParticipantId(CallParticipant(
+      userId: call.remoteUserId!,
+      deviceId: call.remoteDeviceId,
+      //  sessionId: call.remoteSessionId,
+    ).id);
     final remoteScreensharingStream = call.remoteScreenSharingStream;
     final remoteScreenshareStreamChanged =
         remoteScreensharingStream != currentScreenshareStream;
@@ -909,7 +950,7 @@ class GroupCallSession {
   }
 
   void onActiveSpeakerLoop() async {
-    Participant? nextActiveSpeaker;
+    CallParticipant? nextActiveSpeaker;
     // idc about screen sharing atm.
     final userMediaStreamsCopyList =
         List<WrappedMediaStream>.from(userMediaStreams);
@@ -1016,11 +1057,11 @@ class GroupCallSession {
   }
 
   /// participant:keyIndex:keyBin
-  Map<Participant, Map<int, Uint8List>> encryptionKeysMap = {};
+  Map<CallParticipant, Map<int, Uint8List>> encryptionKeysMap = {};
 
   List<Future> setNewKeyTimeouts = [];
 
-  Map<int, Uint8List>? getKeysForParticipant(Participant participant) {
+  Map<int, Uint8List>? getKeysForParticipant(CallParticipant participant) {
     return encryptionKeysMap[participant];
   }
 
@@ -1053,7 +1094,7 @@ class GroupCallSession {
   }
 
   /// also does the sending for you
-  Future<void> _ratchetLocalParticipantKey(List<Participant> sendTo) async {
+  Future<void> _ratchetLocalParticipantKey(List<CallParticipant> sendTo) async {
     final keyProvider = voip.delegate.keyProvider;
 
     if (keyProvider == null) {
@@ -1102,12 +1143,12 @@ class GroupCallSession {
   /// sets incoming keys and also sends the key if it was for the local user
   /// if sendTo is null, its sent to all participants, see `_sendEncryptionKeysEvent`
   Future<void> _setEncryptionKey(
-    Participant participant,
+    CallParticipant participant,
     int encryptionKeyIndex,
     Uint8List encryptionKeyBin, {
     bool delayBeforeUsingKeyOurself = false,
     bool send = false,
-    List<Participant>? sendTo,
+    List<CallParticipant>? sendTo,
   }) async {
     final encryptionKeys = encryptionKeysMap[participant] ?? <int, Uint8List>{};
 
@@ -1155,7 +1196,7 @@ class GroupCallSession {
   /// sendTo only sends events to them
   /// setting keyIndex to null will send the latestKey
   Future<void> _sendEncryptionKeysEvent(int keyIndex,
-      {List<Participant>? sendTo}) async {
+      {List<CallParticipant>? sendTo}) async {
     Logs().i('Sending encryption keys event');
 
     final myKeys = getKeysForParticipant(localParticipant!);
@@ -1185,7 +1226,7 @@ class GroupCallSession {
         // used to find group call in groupCalls when ToDeviceEvent happens,
         // plays nicely with backwards compatibility for mesh calls
         'conf_id': groupCallId,
-        'party_id': client.deviceID!,
+        'device_id': client.deviceID!,
         'room_id': room.id,
       };
       await _sendToDeviceEvent(
@@ -1202,7 +1243,7 @@ class GroupCallSession {
     }
   }
 
-  Future<void> onCallEncryption(Room room, Participant remoteParticipant,
+  Future<void> onCallEncryption(Room room, String userId, String deviceId,
       Map<String, dynamic> content) async {
     if (!enableE2EE) {
       Logs().w('[VOIP] got sframe key but we do not support e2ee');
@@ -1218,14 +1259,14 @@ class GroupCallSession {
       return;
     } else {
       Logs().i(
-          '[VOIP E2EE]: onCallEncryption, got keys from ${remoteParticipant.id} ${keyContent.toJson()}');
+          '[VOIP E2EE]: onCallEncryption, got keys from $userId:$deviceId ${keyContent.toJson()}');
     }
 
     for (final key in keyContent.keys) {
       final encryptionKey = key.key;
       final encryptionKeyIndex = key.index;
       await _setEncryptionKey(
-        remoteParticipant,
+        CallParticipant(userId: userId, deviceId: deviceId),
         encryptionKeyIndex,
         base64Decode(
             encryptionKey), // base64Decode here because we receive base64Encoded version
@@ -1235,10 +1276,11 @@ class GroupCallSession {
     }
   }
 
-  Future<void> requestEncrytionKey(List<Participant> remoteParticipants) async {
+  Future<void> requestEncrytionKey(
+      List<CallParticipant> remoteParticipants) async {
     final Map<String, Object> data = {
       'conf_id': groupCallId,
-      'party_id': client.deviceID!,
+      'device_id': client.deviceID!,
       'room_id': room.id,
     };
 
@@ -1249,20 +1291,19 @@ class GroupCallSession {
     );
   }
 
-  /// TODO FIND OUT WHY INDEX 1 IS ShAREED EVERYTIME
-  Future<void> onCallEncryptionKeyRequest(Room room,
-      Participant remoteParticipant, Map<String, dynamic> content) async {
+  Future<void> onCallEncryptionKeyRequest(Room room, String userId,
+      String deviceId, Map<String, dynamic> content) async {
     if (room.id != room.id) return;
     if (!enableE2EE) {
       Logs().w('[VOIP] got sframe key request but we do not support e2ee');
       return;
     }
-    final mems = room.getCallMembershipsForUser(remoteParticipant.userId);
+    final mems = room.getCallMembershipsForUser(userId);
     if (mems
         .where((mem) =>
             mem.callId == groupCallId &&
-            mem.userId == remoteParticipant.userId &&
-            mem.deviceId == remoteParticipant.deviceId &&
+            mem.userId == userId &&
+            mem.deviceId == deviceId &&
             !mem.isExpired &&
             // sanity checks
             mem.backends.first.type == backends.first.type &&
@@ -1270,15 +1311,15 @@ class GroupCallSession {
             mem.application == application)
         .isNotEmpty) {
       Logs().d(
-          '[VOIP] onCallEncryptionKeyRequest: request checks out, sending key on index: $latestLocalKeyIndex to ${remoteParticipant.id}');
+          '[VOIP] onCallEncryptionKeyRequest: request checks out, sending key on index: $latestLocalKeyIndex to $userId:$deviceId');
       await _sendEncryptionKeysEvent(
         latestLocalKeyIndex,
-        sendTo: [remoteParticipant],
+        sendTo: [CallParticipant(userId: userId, deviceId: deviceId)],
       );
     }
   }
 
-  Future<void> _sendToDeviceEvent(List<Participant> remoteParticipants,
+  Future<void> _sendToDeviceEvent(List<CallParticipant> remoteParticipants,
       Map<String, Object> data, String eventType) async {
     Logs().v(
         '[VOIP] _sendToDeviceEvent: sending ${data.toString()} to ${remoteParticipants.map((e) => e.id)} ');
@@ -1292,6 +1333,7 @@ class GroupCallSession {
         {};
 
     for (final participant in remoteParticipants) {
+      if (participant.deviceId == null) continue;
       if (mustEncrypt) {
         await client.userDeviceKeysLoading;
         final deviceKey = client.userDeviceKeys[participant.userId]
@@ -1301,7 +1343,7 @@ class GroupCallSession {
         }
       } else {
         unencryptedDataToSend.addAll({
-          participant.userId: {participant.deviceId: data}
+          participant.userId: {participant.deviceId!: data}
         });
       }
     }

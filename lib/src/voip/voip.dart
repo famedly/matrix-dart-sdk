@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:core';
 
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
@@ -6,6 +7,7 @@ import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
+import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/voip/models/call_membership.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
@@ -36,33 +38,40 @@ class VoIP {
   VoipId? currentCID;
   VoipId? currentGroupCID;
 
-  String? get localPartyId => client.deviceID;
+  String get localPartyId => currentSessionId;
+
   final Client client;
   final WebRTCDelegate delegate;
   final StreamController<GroupCallSession> onIncomingGroupCall =
       StreamController();
 
-  Participant? get localParticipant => client.isLogged()
-      ? Participant(userId: client.userID!, deviceId: client.deviceID!)
+  CallParticipant? get localParticipant => client.isLogged()
+      ? CallParticipant(
+          userId: client.userID!,
+          deviceId: client.deviceID,
+        )
       : null;
 
   /// map of roomIds to the invites they are currently processing or in a call with
   /// used for handling glare in p2p calls
   Map<String, String> incomingCallRoomId = {};
 
+  /// the current instance of voip, changing this will drop any ongoing mesh calls
+  /// with that sessionId
+  late String currentSessionId;
   VoIP(
     this.client,
     this.delegate, {
     this.enableSFUE2EEKeyRatcheting = false,
   }) : super() {
+    currentSessionId = base64Encode(secureRandomBytes(16));
+    Logs().e('set currentSessionId to $currentSessionId');
     // to populate groupCalls with already present calls
     for (final room in client.rooms) {
       final memsList = room.getCallMembershipsFromRoom();
       for (final mems in memsList.values) {
         for (final mem in mems) {
-          if (!mem.isExpired) {
-            unawaited(createGroupCallFromRoomStateEvent(mem));
-          }
+          unawaited(createGroupCallFromRoomStateEvent(mem));
         }
       }
     }
@@ -75,14 +84,16 @@ class VoIP {
     // handles the com.famedly.call events.
     client.onRoomState.stream.listen(
       (event) async {
-        if ([
-          VoIPEventTypes.FamedlyCallMemberEvent,
-        ].contains(event.type)) {
+        if (event.type == VoIPEventTypes.FamedlyCallMemberEvent) {
           Logs().v('[VOIP] onRoomState: type ${event.toJson()}');
+          final mems = event.room.getCallMembershipsFromEvent(event);
+          for (final mem in mems) {
+            unawaited(createGroupCallFromRoomStateEvent(mem));
+          }
           for (final map in groupCalls.entries) {
             if (map.key.roomId == event.room.id) {
               // because we don't know which call got updated, just update all
-              // group calls for that room
+              // group calls we have entered for that room
               await map.value.onMemberStateChanged();
             }
           }
@@ -140,27 +151,48 @@ class VoIP {
     }
   }
 
+  /// destsessionid - match these or state is broken and ignore those events.
+  /// sendersessionid - so that the reciever can decide which event from the sender to use depending on the member state event.
+  ///
+  ///
+  ///
   Future<void> _callStreamByCallEvent(BasicEventWithSender event) async {
     // member event updates handled in onRoomState for ease
     if (event.type == VoIPEventTypes.FamedlyCallMemberEvent) return;
-    Logs().v(
-        '[VOIP] Handling event of type: ${event.type}, content ${event.content} from sender ${event.senderId}');
 
     GroupCallSession? groupCallSession;
     Room? room;
+    final remoteUserId = event.senderId;
+    String? remoteDeviceId;
 
     if (event is Event) {
       room = event.room;
     } else if (event is ToDeviceEvent) {
       final roomId = event.content.tryGet<String>('room_id');
       final confId = event.content.tryGet<String>('conf_id');
+      remoteDeviceId = event.content.tryGet<String>(
+          'device_id'); // to-device events specifically, m.call.invite and encryption key sending and requesting
 
       if (roomId != null && confId != null) {
         room = client.getRoomById(roomId);
         groupCallSession = groupCalls[VoipId(roomId: roomId, callId: confId)];
       } else {
         Logs().e(
-            '[VOIP] to_device event of type ${event.type} but did not find group call for id: $confId');
+            '[VOIP] Ignoring to_device event of type ${event.type} but did not find group call for id: $confId');
+        return;
+      }
+
+      if (!event.type.startsWith(VoIPEventTypes.EncryptionKeysEvent)) {
+        // livekit calls have their own session deduplication logic so ignore sessionId deduplication for them
+        final destSessionId = event.content.tryGet<String>('dest_session_id');
+        if (destSessionId != currentSessionId) {
+          Logs().e(
+              '[VOIP] Ignoring to_device event of type ${event.type} did not match currentSessionId: $currentSessionId, dest_session_id was set to $destSessionId');
+          return;
+        }
+      } else if (groupCallSession == null || remoteDeviceId == null) {
+        Logs().e(
+            '[VOIP] _callStreamByCallEvent ${event.type} recieved but either groupCall ${groupCallSession?.groupCallId} or deviceId $remoteDeviceId was null, ignoring');
         return;
       }
     } else {
@@ -169,79 +201,95 @@ class VoIP {
       return;
     }
 
+    final content = event.content;
+
     if (room == null) {
       Logs().e(
           '[VOIP] _callStreamByCallEvent call event does not contain a room_id, ignoring');
       return;
+    } else {
+      final callId = content['call_id'] as String?;
+      final partyId = content['party_id'] as String?;
+      if (callId == null && event.type.startsWith('m.call')) {
+        Logs().w('Ignoring call event ${event.type} because call_id was null');
+        return;
+      }
+      if (callId != null) {
+        final call = calls[VoipId(roomId: room.id, callId: callId)];
+        if (call == null && event.type != EventTypes.CallInvite) {
+          Logs().w(
+              'Ignoring call event ${event.type} because we do not have the call');
+          return;
+        } else if (call != null) {
+          // multiple checks to make sure the events sent are from the the
+          // expected party
+          if (call.room.id != room.id) {
+            Logs().w(
+                'Ignoring call event ${event.type} for room ${room.id} claiming to be for call in room ${call.room.id}');
+            return;
+          }
+          if (call.remoteUserId != null && call.remoteUserId != remoteUserId) {
+            Logs().w(
+                'Ignoring call event ${event.type} from sender $remoteUserId, expected sender: ${call.remoteUserId}');
+            return;
+          }
+          if (call.remotePartyId != null && call.remotePartyId != partyId) {
+            Logs().w(
+                'Ignoring call event ${event.type} from sender with a different party_id $partyId, expected party_id: ${call.remotePartyId}');
+            return;
+          }
+          if ((call.remotePartyId != null &&
+                  call.remotePartyId == localPartyId) ||
+              (remoteUserId == client.userID &&
+                  remoteDeviceId == client.deviceID!)) {
+            Logs().w('Ignoring call event ${event.type} from ourself');
+            return;
+          }
+        }
+      }
     }
-
-    if (event.type.startsWith(VoIPEventTypes.EncryptionKeysEvent) &&
-        groupCallSession == null) {
-      Logs().e(
-          '[VOIP] _callStreamByCallEvent ${event.type} recieved but no groupCall found, ignoring');
-      return;
-    }
-
-    final senderId = event.senderId;
-    final deviceId = event.content['party_id'] ?? // 1:1 calls do this
-        event.content['sender_session_id']; // group calls do this
-
-    final content = event.content;
-
-    /// Calls HACK:
-    /// Because we want to allow calls between devices and the current spec only
-    /// does calls between userIds, we use partyId as a deviceId here. It is very
-    /// important that you partyId is set to the sender device id for this to work
-    /// As of Jan 2024 both dart sdk and element do this so it's probably fine.
-    final remoteParticipant =
-        Participant(userId: senderId, deviceId: deviceId.toString());
-
-    if (remoteParticipant == localParticipant) {
-      return;
-    }
-
-    Logs().d('[VOIP] received ${event.type} from rp: ${remoteParticipant.id}');
+    Logs().v(
+        '[VOIP] Handling event of type: ${event.type}, content ${event.content} from sender ${event.senderId} rp: $remoteUserId:$remoteDeviceId');
 
     switch (event.type) {
       case EventTypes.CallInvite:
-        await onCallInvite(room, remoteParticipant, content);
+        await onCallInvite(room, remoteUserId, remoteDeviceId, content);
         break;
       case EventTypes.CallAnswer:
-        await onCallAnswer(room, remoteParticipant, content);
+        await onCallAnswer(room, remoteUserId, remoteDeviceId, content);
         break;
       case EventTypes.CallCandidates:
-        await onCallCandidates(room, remoteParticipant, content);
+        await onCallCandidates(room, content);
         break;
       case EventTypes.CallHangup:
-        await onCallHangup(room, remoteParticipant, content);
+        await onCallHangup(room, content);
         break;
       case EventTypes.CallReject:
-        await onCallReject(room, remoteParticipant, content);
+        await onCallReject(room, content);
         break;
       case EventTypes.CallNegotiate:
-        await onCallNegotiate(room, remoteParticipant, content);
+        await onCallNegotiate(room, content);
         break;
-      case EventTypes.CallReplaces:
-        await onCallReplaces(room, remoteParticipant, content);
-        break;
+      // case EventTypes.CallReplaces:
+      //   await onCallReplaces(room, content);
+      //   break;
       case EventTypes.CallSelectAnswer:
-        await onCallSelectAnswer(room, remoteParticipant, content);
+        await onCallSelectAnswer(room, content);
         break;
       case EventTypes.CallSDPStreamMetadataChanged:
       case EventTypes.CallSDPStreamMetadataChangedPrefix:
-        await onSDPStreamMetadataChangedReceived(
-            room, remoteParticipant, content);
+        await onSDPStreamMetadataChangedReceived(room, content);
         break;
       case EventTypes.CallAssertedIdentity:
-        await onAssertedIdentityReceived(room, remoteParticipant, content);
+        await onAssertedIdentityReceived(room, content);
         break;
       case VoIPEventTypes.EncryptionKeysEvent:
         await groupCallSession!
-            .onCallEncryption(room, remoteParticipant, content);
+            .onCallEncryption(room, remoteUserId, remoteDeviceId!, content);
         break;
       case VoIPEventTypes.RequestEncryptionKeysEvent:
-        await groupCallSession!
-            .onCallEncryptionKeyRequest(room, remoteParticipant, content);
+        await groupCallSession!.onCallEncryptionKeyRequest(
+            room, remoteUserId, remoteDeviceId!, content);
         break;
     }
   }
@@ -260,10 +308,10 @@ class VoIP {
     }
   }
 
-  Future<void> onCallInvite(Room room, Participant remoteParticipant,
-      Map<String, dynamic> content) async {
+  Future<void> onCallInvite(Room room, String remoteUserId,
+      String? remoteDeviceId, Map<String, dynamic> content) async {
     Logs().v(
-        '[VOIP] onCallInvite ${remoteParticipant.userId} => ${client.userID}, \ncontent => ${content.toString()}');
+        '[VOIP] onCallInvite $remoteUserId:$remoteDeviceId => ${client.userID}:${client.deviceID}, \ncontent => ${content.toString()}');
 
     final String callId = content['call_id'];
     final int lifetime = content['lifetime'];
@@ -280,16 +328,15 @@ class VoIP {
       return;
     }
 
-    if (content['invitee_user_id'] != null &&
-        content['invitee_user_id'] != localParticipant?.userId) {
-      Logs().w('[VOIP] Ignoring call, meant for ${content['invitee_user_id']}');
+    final inviteeUserId = content['invitee'];
+    if (inviteeUserId != null && inviteeUserId != localParticipant?.userId) {
+      Logs().w('[VOIP] Ignoring call, meant for user $inviteeUserId');
       return; // This invite was meant for another user in the room
     }
-
-    if (content['invitee_device_id'] != null &&
-        content['invitee_device_id'] != localParticipant?.deviceId) {
-      Logs()
-          .w('[VOIP] Ignoring call, meant for ${content['invitee_device_id']}');
+    final inviteeDeviceId = content['invitee_device_id'];
+    if (inviteeDeviceId != null &&
+        inviteeDeviceId != localParticipant?.deviceId) {
+      Logs().w('[VOIP] Ignoring call, meant for device $inviteeDeviceId');
       return; // This invite was meant for another device in the room
     }
 
@@ -324,7 +371,7 @@ class VoIP {
       dir: CallDirection.kIncoming,
       type: callType,
       room: room,
-      localPartyId: localPartyId!,
+      localPartyId: localPartyId,
       iceServers: await getIceSevers(),
     );
 
@@ -333,8 +380,12 @@ class VoIP {
     /// both invitee userId and deviceId are set here because there can be
     /// multiple devices from same user in a call, so we specifiy who the
     /// invite is for
-    newCall.remoteUserId = remoteParticipant.userId;
-    newCall.remoteUserDeviceId = remoteParticipant.deviceId;
+    newCall.remoteUserId = remoteUserId;
+    newCall.remoteDeviceId = remoteDeviceId;
+    newCall.remotePartyId = content['party_id'];
+    newCall.remoteSessionId = content['sender_session_id'];
+
+    // newCall.remoteSessionId = remoteParticipant.sessionId;
 
     if (!delegate.canHandleNewCall &&
         (confId == null ||
@@ -383,8 +434,8 @@ class VoIP {
     }
   }
 
-  Future<void> onCallAnswer(Room room, Participant remoteParticipant,
-      Map<String, dynamic> content) async {
+  Future<void> onCallAnswer(Room room, String remoteUserId,
+      String? remoteDeviceId, Map<String, dynamic> content) async {
     Logs().v('[VOIP] onCallAnswer => ${content.toString()}');
     final String callId = content['call_id'];
 
@@ -403,8 +454,26 @@ class VoIP {
         return;
       }
 
-      call.remoteUserId = remoteParticipant.userId;
-      call.remoteUserDeviceId = remoteParticipant.deviceId;
+      if (call.remoteUserId == null) {
+        Logs().i(
+            '''[VOIP] you probably called the room without setting a userId in 
+            invite, setting the calls remote user id to what I get from m.call.answer now''');
+        call.remoteUserId = remoteUserId;
+      }
+
+      if (call.remoteDeviceId == null) {
+        Logs().i(
+            '''[VOIP] you probably called the room without setting a userId in 
+            invite, setting the calls remote user id to what I get from m.call.answer now''');
+        call.remoteDeviceId = remoteDeviceId;
+      }
+      if (call.remotePartyId != null) {
+        Logs().d(
+            'Ignoring call answer from party ${content['party_id']}, we are already with ${call.remotePartyId}');
+        return;
+      } else {
+        call.remotePartyId = content['party_id'];
+      }
 
       final answer = RTCSessionDescription(
           content['answer']['sdp'], content['answer']['type']);
@@ -419,45 +488,25 @@ class VoIP {
     }
   }
 
-  Future<void> onCallCandidates(Room room, Participant remoteParticipant,
-      Map<String, dynamic> content) async {
+  Future<void> onCallCandidates(Room room, Map<String, dynamic> content) async {
     Logs().v('[VOIP] onCallCandidates => ${content.toString()}');
     final String callId = content['call_id'];
-
     final call = calls[VoipId(roomId: room.id, callId: callId)];
     if (call != null) {
-      if (call.room.id != room.id) {
-        Logs().w(
-            'Ignoring call candidates for room ${room.id} claiming to be for call in room ${call.room.id}');
-        return;
-      }
       await call.onCandidatesReceived(content['candidates']);
     } else {
       Logs().v('[VOIP] onCallCandidates: Session [$callId] not found!');
     }
   }
 
-  Future<void> onCallHangup(Room room, Participant remoteParticipant,
-      Map<String, dynamic> content) async {
+  Future<void> onCallHangup(Room room, Map<String, dynamic> content) async {
     // stop play ringtone, if this is an incoming call
     await delegate.stopRingtone();
     Logs().v('[VOIP] onCallHangup => ${content.toString()}');
     final String callId = content['call_id'];
-    final String partyId = content['party_id'];
 
     final call = calls[VoipId(roomId: room.id, callId: callId)];
     if (call != null) {
-      if (call.room.id != room.id) {
-        Logs().w(
-            'Ignoring call hangup for room ${room.id} claiming to be for call in room ${call.room.id}');
-        return;
-      }
-      if (call.remoteUserDeviceId != null &&
-          call.remoteUserDeviceId != partyId) {
-        Logs().w(
-            'Ignoring call hangup from sender with a different party_id $partyId for call in room ${call.room.id}');
-        return;
-      }
       // hangup in any case, either if the other party hung up or we did on another device
       await call.terminate(CallParty.kRemote,
           content['reason'] ?? CallErrorCode.UserHangup, true);
@@ -469,49 +518,35 @@ class VoIP {
     }
   }
 
-  Future<void> onCallReject(Room room, Participant remoteParticipant,
-      Map<String, dynamic> content) async {
+  Future<void> onCallReject(Room room, Map<String, dynamic> content) async {
     final String callId = content['call_id'];
-    final String partyId = content['party_id'];
     Logs().d('Reject received for call ID $callId');
 
     final call = calls[VoipId(roomId: room.id, callId: callId)];
     if (call != null) {
-      if (call.room.id != room.id) {
-        Logs().w(
-            'Ignoring call reject for room ${room.id} claiming to be for call in room ${call.room.id}');
-        return;
-      }
-      if (call.remoteUserDeviceId != null &&
-          call.remoteUserDeviceId != partyId) {
-        Logs().w(
-            'Ignoring call reject from sender with a different party_id $partyId for call in room ${call.room.id}');
-        return;
-      }
       await call.onRejectReceived(content['reason']);
     } else {
       Logs().v('[VOIP] onCallReject: Session [$callId] not found!');
     }
   }
 
-  Future<void> onCallReplaces(Room room, Participant remoteParticipant,
-      Map<String, dynamic> content) async {
-    final String callId = content['call_id'];
-    Logs().d('onCallReplaces received for call ID $callId');
+  // Future<void> onCallReplaces(Room room, Map<String, dynamic> content) async {
+  //   final String callId = content['call_id'];
+  //   Logs().d('onCallReplaces received for call ID $callId');
 
-    final call = calls[VoipId(roomId: room.id, callId: callId)];
-    if (call != null) {
-      if (call.room.id != room.id) {
-        Logs().w(
-            'Ignoring call replace for room ${room.id} claiming to be for call in room ${call.room.id}');
-        return;
-      }
-      //TODO: handle replaces
-    }
-  }
+  //   final call = calls[VoipId(roomId: room.id, callId: callId)];
+  //   if (call != null) {
+  //     if (call.room.id != room.id) {
+  //       Logs().w(
+  //           'Ignoring call replace for room ${room.id} claiming to be for call in room ${call.room.id}');
+  //       return;
+  //     }
+  //     //TODO: handle replaces
+  //   }
+  // }
 
-  Future<void> onCallSelectAnswer(Room room, Participant remoteParticipant,
-      Map<String, dynamic> content) async {
+  Future<void> onCallSelectAnswer(
+      Room room, Map<String, dynamic> content) async {
     final String callId = content['call_id'];
     Logs().d('SelectAnswer received for call ID $callId');
     final String selectedPartyId = content['selected_party_id'];
@@ -527,19 +562,13 @@ class VoIP {
     }
   }
 
-  Future<void> onSDPStreamMetadataChangedReceived(Room room,
-      Participant remoteParticipant, Map<String, dynamic> content) async {
+  Future<void> onSDPStreamMetadataChangedReceived(
+      Room room, Map<String, dynamic> content) async {
     final String callId = content['call_id'];
     Logs().d('SDP Stream metadata received for call ID $callId');
 
     final call = calls[VoipId(roomId: room.id, callId: callId)];
     if (call != null) {
-      if (call.room.id != room.id) {
-        Logs().w(
-            'Ignoring call sdp metadata change for room ${room.id} claiming to be for call in room ${call.room.id}');
-        return;
-      }
-
       if (content[sdpStreamMetadataKey] == null) {
         Logs().d('SDP Stream metadata is null');
         return;
@@ -549,19 +578,13 @@ class VoIP {
     }
   }
 
-  Future<void> onAssertedIdentityReceived(Room room,
-      Participant remoteParticipant, Map<String, dynamic> content) async {
+  Future<void> onAssertedIdentityReceived(
+      Room room, Map<String, dynamic> content) async {
     final String callId = content['call_id'];
     Logs().d('Asserted identity received for call ID $callId');
 
     final call = calls[VoipId(roomId: room.id, callId: callId)];
     if (call != null) {
-      if (call.room.id != room.id) {
-        Logs().w(
-            'Ignoring call asserted identity for room ${room.id} claiming to be for call in room ${call.room.id}');
-        return;
-      }
-
       if (content['asserted_identity'] == null) {
         Logs().d('asserted_identity is null ');
         return;
@@ -571,27 +594,12 @@ class VoIP {
     }
   }
 
-  Future<void> onCallNegotiate(Room room, Participant remoteParticipant,
-      Map<String, dynamic> content) async {
+  Future<void> onCallNegotiate(Room room, Map<String, dynamic> content) async {
     final String callId = content['call_id'];
     Logs().d('Negotiate received for call ID $callId');
 
     final call = calls[VoipId(roomId: room.id, callId: callId)];
     if (call != null) {
-      if (call.room.id != room.id) {
-        Logs().w(
-            'Ignoring call negotiation for room ${room.id} claiming to be for call in room ${call.room.id}');
-        return;
-      }
-      if (content['party_id'] != call.remoteUserDeviceId) {
-        Logs().w('Ignoring call negotiation, wrong partyId detected');
-        return;
-      }
-      if (content['party_id'] == call.localPartyId) {
-        Logs().w('Ignoring call negotiation echo');
-        return;
-      }
-
       // ideally you also check the lifetime here and discard negotiation events
       // if age of the event was older than the lifetime but as to device events
       // do not have a unsigned age nor a origin_server_ts there's no easy way to
@@ -649,21 +657,17 @@ class VoIP {
   /// Make a P2P call to room
   ///
   /// Pretty important to set the userId, or all the users in the room get a call.
-  /// Including your own other devices
+  /// Including your own other devices, so just set it to directChatMatrixId
   ///
-  /// A userId is mandatory to if you want to set a deviceId
   /// Setting the deviceId would make all other devices for that userId ignore the call
   /// Ideally only group calls would need setting both userId and deviceId to allow
   /// having 2 devices from the same user in a group call
   ///
   /// For p2p call, you want to have all the devices of the specified `userId` ring
-  ///
-  /// yes I forced you to call a particular user in a room, letting anyone answer
-  /// doesn't make sense
   Future<CallSession> inviteToCall(
     String roomId,
-    CallType type,
-    String userId, {
+    CallType type, {
+    String? userId,
     String? deviceId,
   }) async {
     final room = client.getRoomById(roomId);
@@ -681,13 +685,13 @@ class VoIP {
       dir: CallDirection.kOutgoing,
       room: room,
       voip: this,
-      localPartyId: localPartyId!,
+      localPartyId: localPartyId,
       iceServers: await getIceSevers(),
     );
     final newCall = createNewCall(opts);
 
     newCall.remoteUserId = userId;
-    newCall.remoteUserDeviceId = deviceId;
+    newCall.remoteDeviceId = deviceId;
 
     currentCID = VoipId(roomId: roomId, callId: callId);
     await newCall.initOutboundCall(type).then((_) {
@@ -797,20 +801,26 @@ class VoIP {
   }
 
   /// Create a new group call from a room state event.
-  Future<GroupCallSession?> createGroupCallFromRoomStateEvent(
+  Future<void> createGroupCallFromRoomStateEvent(
     CallMembership membership, {
     bool emitHandleNewGroupCall = true,
   }) async {
+    if (membership.isExpired) {
+      Logs().d(
+          'Ignoring expired membership in passive groupCall creator. ${membership.toJson()}');
+      return;
+    }
+
     final room = client.getRoomById(membership.roomId);
 
     if (room == null) {
       Logs().w('Couldn\'t find room ${membership.roomId} for GroupCallSession');
-      return null;
+      return;
     }
 
     if (membership.application != 'm.call' && membership.scope != 'm.room') {
       Logs().w('Received invalid group call application or scope.');
-      return null;
+      return;
     }
 
     final groupCall = GroupCallSession(
@@ -821,14 +831,12 @@ class VoIP {
       groupCallId: membership.callId,
       application: membership.application,
       scope: membership.scope,
-      enableE2EE: membership.backends
-          .map((element) => element.type)
-          .contains('livekit'),
+      enableE2EE: membership.backends.first is LiveKitBackend,
     );
 
     if (groupCalls.containsKey(
         VoipId(roomId: membership.roomId, callId: membership.callId))) {
-      return null;
+      return;
     }
 
     setGroupCallById(groupCall);
@@ -837,7 +845,6 @@ class VoIP {
     if (emitHandleNewGroupCall) {
       await delegate.handleNewGroupCall(groupCall);
     }
-    return groupCall;
   }
 
   @Deprecated('Call `hasActiveGroupCall` on the room directly instead')

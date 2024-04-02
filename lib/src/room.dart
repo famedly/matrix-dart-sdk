@@ -2216,7 +2216,7 @@ class Room {
   /// `m.space`.
   bool get isSpace =>
       getState(EventTypes.RoomCreate)?.content.tryGet<String>('type') ==
-      RoomCreationTypes.mSpace; // TODO: Magic string!
+      RoomCreationTypes.mSpace;
 
   /// The parents of this room. Currently this SDK doesn't yet set the canonical
   /// flag and is not checking if this room is in fact a child of this space.

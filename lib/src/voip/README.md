@@ -6,6 +6,11 @@ Supports
   - mesh webrtc calls
   - just handling state of calls and signallnig for e2ee keys in sfu mode (check `isLivekitCall`)
 
+
+- added invitee_device_id
+- call backends just use the first one atm
+- 3401 to-device events MUST contain a room id
+
 ## Overview
 
 `VoIP` is a module that provides a simple API for making 1:1 and group calls.

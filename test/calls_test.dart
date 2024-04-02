@@ -407,7 +407,7 @@ void main() {
       final firstCall = await voip.inviteToCall(
         room.id,
         CallType.kVoice,
-        '@alice:testing.com',
+        userId: '@alice:testing.com',
       );
       await firstCall.pc!.onRenegotiationNeeded!.call();
       expect(firstCall.state, CallState.kInviteSent);
@@ -443,7 +443,7 @@ void main() {
       final firstCall = await voip.inviteToCall(
         room.id,
         CallType.kVoice,
-        '@alice:testing.com',
+        userId: '@alice:testing.com',
       );
       expect(firstCall.state, CallState.kCreateOffer);
       // KABOOM YOU JUST GLARED, but this tiem you were still preparing your call
@@ -488,6 +488,7 @@ void main() {
                     .add(Duration(hours: 12))
                     .millisecondsSinceEpoch,
                 roomId: room.id,
+                membershipId: voip.currentSessionId,
               ).toJson(),
             ]
           },
@@ -510,6 +511,7 @@ void main() {
                 deviceId: '1111',
                 expiresTs: DateTime.now().millisecondsSinceEpoch,
                 roomId: room.id,
+                membershipId: voip.currentSessionId,
               ).toJson(),
             ]
           },
@@ -532,6 +534,7 @@ void main() {
                 deviceId: '1111',
                 expiresTs: DateTime.now().millisecondsSinceEpoch,
                 roomId: room.id,
+                membershipId: voip.currentSessionId,
               ).toJson(),
             ]
           },
@@ -556,6 +559,7 @@ void main() {
                     .subtract(Duration(hours: 1))
                     .millisecondsSinceEpoch,
                 roomId: room.id,
+                membershipId: voip.currentSessionId,
               ).toJson(),
             ]
           },
@@ -703,6 +707,7 @@ void main() {
                       .subtract(Duration(hours: 1))
                       .millisecondsSinceEpoch,
                   roomId: room.id,
+                  membershipId: voip.currentSessionId,
                 ).toJson(),
               ]
             },
@@ -730,6 +735,7 @@ void main() {
                       .add(Duration(hours: 1))
                       .millisecondsSinceEpoch,
                   roomId: room.id,
+                  membershipId: voip.currentSessionId,
                 ).toJson(),
               ]
             },
@@ -754,6 +760,7 @@ void main() {
                   deviceId: '1111',
                   expiresTs: DateTime.now().millisecondsSinceEpoch,
                   roomId: room.id,
+                  membershipId: voip.currentSessionId,
                 ).toJson(),
               ]
             },

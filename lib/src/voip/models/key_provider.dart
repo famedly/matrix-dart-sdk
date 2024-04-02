@@ -10,11 +10,11 @@ enum E2EEKeyMode {
 
 abstract class EncryptionKeyProvider {
   Future<void> onSetEncryptionKey(
-      Participant participant, Uint8List key, int index);
+      CallParticipant participant, Uint8List key, int index);
 
-  Future<Uint8List> onRatchetKey(Participant participant, int index);
+  Future<Uint8List> onRatchetKey(CallParticipant participant, int index);
 
-  Future<Uint8List> onExportKey(Participant participant, int index);
+  Future<Uint8List> onExportKey(CallParticipant participant, int index);
 }
 
 class EncryptionKeyEntry {
