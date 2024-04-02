@@ -151,11 +151,6 @@ class VoIP {
     }
   }
 
-  /// destsessionid - match these or state is broken and ignore those events.
-  /// sendersessionid - so that the reciever can decide which event from the sender to use depending on the member state event.
-  ///
-  ///
-  ///
   Future<void> _callStreamByCallEvent(BasicEventWithSender event) async {
     // member event updates handled in onRoomState for ease
     if (event.type == VoIPEventTypes.FamedlyCallMemberEvent) return;
