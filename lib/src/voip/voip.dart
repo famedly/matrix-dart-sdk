@@ -202,7 +202,8 @@ class VoIP {
       Logs().e(
           '[VOIP] _callStreamByCallEvent call event does not contain a room_id, ignoring');
       return;
-    } else {
+    } else if (!event.type.startsWith(VoIPEventTypes.EncryptionKeysEvent)) {
+      // skip webrtc event checks on encryption_keys
       final callId = content['call_id'] as String?;
       final partyId = content['party_id'] as String?;
       if (callId == null && event.type.startsWith('m.call')) {
