@@ -50,7 +50,7 @@ class GroupCallSession {
   final String? application;
   final String? scope;
 
-  String state = GroupCallState.LocalCallFeedUninitialized;
+  GroupCallState state = GroupCallState.localCallFeedUninitialized;
   StreamSubscription<CallSession>? _callSubscription;
 
   /// participant:volume
@@ -79,10 +79,10 @@ class GroupCallSession {
   final CachedStreamController<GroupCallSession> onGroupCallFeedsChanged =
       CachedStreamController();
 
-  final CachedStreamController<String> onGroupCallState =
+  final CachedStreamController<GroupCallState> onGroupCallState =
       CachedStreamController();
 
-  final CachedStreamController<String> onGroupCallEvent =
+  final CachedStreamController<GroupCallEvent> onGroupCallEvent =
       CachedStreamController();
 
   final CachedStreamController<WrappedMediaStream> onStreamAdd =
@@ -118,10 +118,10 @@ class GroupCallSession {
     return room.unsafeGetUserFromMemoryOrFallback(client.userID!);
   }
 
-  void setState(String newState) {
+  void setState(GroupCallState newState) {
     state = newState;
     onGroupCallState.add(newState);
-    onGroupCallEvent.add(GroupCallEvent.GroupCallStateChanged);
+    onGroupCallEvent.add(GroupCallEvent.groupCallStateChanged);
   }
 
   List<WrappedMediaStream> getLocalStreams() {
@@ -160,7 +160,7 @@ class GroupCallSession {
     try {
       return await voip.delegate.mediaDevices.getUserMedia(mediaConstraints);
     } catch (e) {
-      setState(GroupCallState.LocalCallFeedUninitialized);
+      setState(GroupCallState.localCallFeedUninitialized);
       rethrow;
     }
   }
@@ -190,11 +190,11 @@ class GroupCallSession {
       Logs().i('Livekit group call: not starting local call feed.');
       return null;
     }
-    if (state != GroupCallState.LocalCallFeedUninitialized) {
+    if (state != GroupCallState.localCallFeedUninitialized) {
       throw Exception('Cannot initialize local call feed in the $state state.');
     }
 
-    setState(GroupCallState.InitializingLocalCallFeed);
+    setState(GroupCallState.initializingLocalCallFeed);
 
     WrappedMediaStream localWrappedMediaStream;
 
@@ -204,7 +204,7 @@ class GroupCallSession {
       try {
         stream = await _getUserMedia(CallType.kVideo);
       } catch (error) {
-        setState(GroupCallState.LocalCallFeedUninitialized);
+        setState(GroupCallState.localCallFeedUninitialized);
         rethrow;
       }
 
@@ -227,7 +227,7 @@ class GroupCallSession {
     localUserMediaStream = localWrappedMediaStream;
     await addUserMediaStream(localWrappedMediaStream);
 
-    setState(GroupCallState.LocalCallFeedInitialized);
+    setState(GroupCallState.localCallFeedInitialized);
 
     return localWrappedMediaStream;
   }
@@ -249,12 +249,12 @@ class GroupCallSession {
 
   /// enter the group call.
   Future<void> enter({WrappedMediaStream? stream}) async {
-    if (!(state == GroupCallState.LocalCallFeedUninitialized ||
-        state == GroupCallState.LocalCallFeedInitialized)) {
+    if (!(state == GroupCallState.localCallFeedUninitialized ||
+        state == GroupCallState.localCallFeedInitialized)) {
       throw Exception('Cannot enter call in the $state state');
     }
 
-    if (state == GroupCallState.LocalCallFeedUninitialized) {
+    if (state == GroupCallState.localCallFeedUninitialized) {
       await initLocalStream(stream: stream);
     }
 
@@ -262,7 +262,7 @@ class GroupCallSession {
 
     activeSpeaker = null;
 
-    setState(GroupCallState.Entered);
+    setState(GroupCallState.entered);
 
     Logs().v('Entered group call $groupCallId');
 
@@ -305,7 +305,7 @@ class GroupCallSession {
     final callsCopy = callSessions.toList();
 
     for (final call in callsCopy) {
-      await removeCall(call, CallErrorCode.UserHangup);
+      await removeCall(call, CallErrorCode.user_hangup);
     }
 
     activeSpeaker = null;
@@ -315,7 +315,7 @@ class GroupCallSession {
 
   Future<void> leave() async {
     await dispose();
-    setState(GroupCallState.LocalCallFeedUninitialized);
+    setState(GroupCallState.localCallFeedUninitialized);
     voip.currentGroupCID = null;
     participants.clear();
     // only remove our own, to save requesting if we join again, yes the other side
@@ -327,7 +327,7 @@ class GroupCallSession {
     await voip.delegate.handleGroupCallEnded(this);
     resendMemberStateEventTimer?.cancel();
     memberLeaveEncKeyRotateDebounceTimer?.cancel();
-    setState(GroupCallState.Ended);
+    setState(GroupCallState.ended);
   }
 
   bool get isLocalVideoMuted {
@@ -360,7 +360,7 @@ class GroupCallSession {
       await call.setMicrophoneMuted(muted);
     }
 
-    onGroupCallEvent.add(GroupCallEvent.LocalMuteStateChanged);
+    onGroupCallEvent.add(GroupCallEvent.localMuteStateChanged);
     return true;
   }
 
@@ -378,7 +378,7 @@ class GroupCallSession {
       await call.setLocalVideoMuted(muted);
     }
 
-    onGroupCallEvent.add(GroupCallEvent.LocalMuteStateChanged);
+    onGroupCallEvent.add(GroupCallEvent.localMuteStateChanged);
     return true;
   }
 
@@ -421,7 +421,7 @@ class GroupCallSession {
 
         addScreenshareStream(localScreenshareStream!);
 
-        onGroupCallEvent.add(GroupCallEvent.LocalScreenshareStateChanged);
+        onGroupCallEvent.add(GroupCallEvent.localScreenshareStateChanged);
         for (final call in callSessions) {
           await call.addLocalStream(
               await localScreenshareStream!.stream!.clone(),
@@ -433,9 +433,9 @@ class GroupCallSession {
         return true;
       } catch (e, s) {
         Logs().e('[VOIP] Enabling screensharing error', e, s);
-        lastError = GroupCallError(GroupCallErrorCode.NoUserMedia,
+        lastError = GroupCallError(GroupCallErrorCode.user_media_failed,
             'Failed to get screen-sharing stream: ', e);
-        onGroupCallEvent.add(GroupCallEvent.Error);
+        onGroupCallEvent.add(GroupCallEvent.error);
         return false;
       }
     } else {
@@ -448,7 +448,7 @@ class GroupCallSession {
       localScreenshareStream = null;
       localDesktopCapturerSourceId = null;
       //await sendMemberStateEvent();
-      onGroupCallEvent.add(GroupCallEvent.LocalMuteStateChanged);
+      onGroupCallEvent.add(GroupCallEvent.localMuteStateChanged);
       return false;
     }
   }
@@ -529,8 +529,8 @@ class GroupCallSession {
     resendMemberStateEventTimer = Timer.periodic(
         CallTimeouts.updateExpireTsTimerDuration, ((timer) async {
       Logs().d('sendMemberStateEvent updating member event with timer');
-      if (state != GroupCallState.Ended ||
-          state != GroupCallState.LocalCallFeedUninitialized) {
+      if (state != GroupCallState.ended ||
+          state != GroupCallState.localCallFeedUninitialized) {
         await sendMemberStateEvent();
       } else {
         await removeMemberStateEvent();
@@ -554,7 +554,7 @@ class GroupCallSession {
 
   /// compltetely rebuilds the local participants list
   Future<void> onMemberStateChanged() async {
-    if (state != GroupCallState.Entered) {
+    if (state != GroupCallState.entered) {
       Logs().d(
           '[VOIP] early return onMemberStateChanged, group call state is not Entered. Actual state: ${state.toString()} ');
       return;
@@ -597,7 +597,7 @@ class GroupCallSession {
         continue;
       }
 
-      if (state != GroupCallState.Entered) {
+      if (state != GroupCallState.entered) {
         Logs().w(
             '[VOIP] onMemberStateChanged groupCall state is currently $state, skipping member update');
         continue;
@@ -613,9 +613,7 @@ class GroupCallSession {
       final existingCall = getCallForParticipant(rp);
       if (existingCall != null) {
         if (existingCall.remoteSessionId != mem.membershipId) {
-          await existingCall.hangup(
-              reason:
-                  '[VOIP] sessionId for member changed, terminating call ${existingCall.callId}');
+          await existingCall.hangup(reason: CallErrorCode.unknown_error);
         } else {
           Logs().e(
               '[VOIP] onMemberStateChanged Not updating participants list, already have a ongoing call with ${rp.id}');
@@ -631,7 +629,7 @@ class GroupCallSession {
         localPartyId: voip.currentSessionId,
         groupCallId: groupCallId,
         type: CallType.kVideo,
-        iceServers: await voip.getIceSevers(),
+        iceServers: await voip.getIceServers(),
       );
       final newCall = voip.createNewCall(opts);
 
@@ -689,7 +687,7 @@ class GroupCallSession {
         }
       }
 
-      onGroupCallEvent.add(GroupCallEvent.ParticipantsChanged);
+      onGroupCallEvent.add(GroupCallEvent.participantsChanged);
       Logs().d(
           '[VOIP] onMemberStateChanged current list: ${participants.map((e) => e.id).toString()}');
     }
@@ -709,7 +707,7 @@ class GroupCallSession {
   Future<void> addCall(CallSession call) async {
     callSessions.add(call);
     await initCall(call);
-    onGroupCallEvent.add(GroupCallEvent.CallsChanged);
+    onGroupCallEvent.add(GroupCallEvent.callsChanged);
   }
 
   Future<void> replaceCall(
@@ -724,19 +722,19 @@ class GroupCallSession {
     callSessions.removeAt(existingCallIndex);
     callSessions.add(replacementCall);
 
-    await disposeCall(existingCall, CallErrorCode.Replaced);
+    await disposeCall(existingCall, CallErrorCode.replaced);
     await initCall(replacementCall);
 
-    onGroupCallEvent.add(GroupCallEvent.CallsChanged);
+    onGroupCallEvent.add(GroupCallEvent.callsChanged);
   }
 
   /// Removes a peer call from group calls.
-  Future<void> removeCall(CallSession call, String hangupReason) async {
+  Future<void> removeCall(CallSession call, CallErrorCode hangupReason) async {
     await disposeCall(call, hangupReason);
 
     callSessions.removeWhere((element) => call.callId == element.callId);
 
-    onGroupCallEvent.add(GroupCallEvent.CallsChanged);
+    onGroupCallEvent.add(GroupCallEvent.callsChanged);
   }
 
   /// init a peer call from group calls.
@@ -776,13 +774,13 @@ class GroupCallSession {
     });
   }
 
-  Future<void> disposeCall(CallSession call, String hangupReason) async {
+  Future<void> disposeCall(CallSession call, CallErrorCode hangupReason) async {
     if (call.remoteUserId == null) {
       throw Exception(
           'Cannot init call without proper invitee user and device Id');
     }
 
-    if (call.hangupReason == CallErrorCode.Replaced) {
+    if (call.hangupReason == CallErrorCode.replaced) {
       return;
     }
 
@@ -885,7 +883,7 @@ class GroupCallSession {
   }
 
   Future<void> onCallHangup(CallSession call) async {
-    if (call.hangupReason == CallErrorCode.Replaced) {
+    if (call.hangupReason == CallErrorCode.replaced) {
       return;
     }
     await onStreamsChanged(call);
@@ -905,7 +903,7 @@ class GroupCallSession {
     userMediaStreams.add(stream);
     //callFeed.measureVolumeActivity(true);
     onStreamAdd.add(stream);
-    onGroupCallEvent.add(GroupCallEvent.UserMediaStreamsChanged);
+    onGroupCallEvent.add(GroupCallEvent.userMediaStreamsChanged);
   }
 
   Future<void> replaceUserMediaStream(WrappedMediaStream existingStream,
@@ -921,7 +919,7 @@ class GroupCallSession {
 
     await existingStream.dispose();
     //replacementStream.measureVolumeActivity(true);
-    onGroupCallEvent.add(GroupCallEvent.UserMediaStreamsChanged);
+    onGroupCallEvent.add(GroupCallEvent.userMediaStreamsChanged);
   }
 
   Future<void> removeUserMediaStream(WrappedMediaStream stream) async {
@@ -941,11 +939,11 @@ class GroupCallSession {
       await stopMediaStream(stream.stream);
     }
 
-    onGroupCallEvent.add(GroupCallEvent.UserMediaStreamsChanged);
+    onGroupCallEvent.add(GroupCallEvent.userMediaStreamsChanged);
 
     if (activeSpeaker == stream.participant && userMediaStreams.isNotEmpty) {
       activeSpeaker = userMediaStreams[0].participant;
-      onGroupCallEvent.add(GroupCallEvent.ActiveSpeakerChanged);
+      onGroupCallEvent.add(GroupCallEvent.activeSpeakerChanged);
     }
   }
 
@@ -998,7 +996,7 @@ class GroupCallSession {
 
     if (nextActiveSpeaker != null && activeSpeaker != nextActiveSpeaker) {
       activeSpeaker = nextActiveSpeaker;
-      onGroupCallEvent.add(GroupCallEvent.ActiveSpeakerChanged);
+      onGroupCallEvent.add(GroupCallEvent.activeSpeakerChanged);
     }
     activeSpeakerLoopTimeout?.cancel();
     activeSpeakerLoopTimeout =
@@ -1018,7 +1016,7 @@ class GroupCallSession {
   void addScreenshareStream(WrappedMediaStream stream) {
     screenshareStreams.add(stream);
     onStreamAdd.add(stream);
-    onGroupCallEvent.add(GroupCallEvent.ScreenshareStreamsChanged);
+    onGroupCallEvent.add(GroupCallEvent.screenshareStreamsChanged);
   }
 
   Future<void> replaceScreenshareStream(WrappedMediaStream existingStream,
@@ -1033,7 +1031,7 @@ class GroupCallSession {
     screenshareStreams.replaceRange(streamIndex, 1, [replacementStream]);
 
     await existingStream.dispose();
-    onGroupCallEvent.add(GroupCallEvent.ScreenshareStreamsChanged);
+    onGroupCallEvent.add(GroupCallEvent.screenshareStreamsChanged);
   }
 
   Future<void> removeScreenshareStream(WrappedMediaStream stream) async {
@@ -1053,7 +1051,7 @@ class GroupCallSession {
       await stopMediaStream(stream.stream);
     }
 
-    onGroupCallEvent.add(GroupCallEvent.ScreenshareStreamsChanged);
+    onGroupCallEvent.add(GroupCallEvent.screenshareStreamsChanged);
   }
 
   /// participant:keyIndex:keyBin

@@ -12,7 +12,7 @@ class ConnectionTester {
   TurnServerCredentials? _turnServerCredentials;
 
   Future<bool> verifyTurnServer() async {
-    final iceServers = await getIceSevers();
+    final iceServers = await getIceServers();
     final configuration = <String, dynamic>{
       'iceServers': iceServers,
       'sdpSemantics': 'unified-plan',
@@ -95,7 +95,7 @@ class ConnectionTester {
     return iterations;
   }
 
-  Future<List<Map<String, dynamic>>> getIceSevers() async {
+  Future<List<Map<String, dynamic>>> getIceServers() async {
     if (_turnServerCredentials == null) {
       try {
         _turnServerCredentials = await client.getTurnServer();

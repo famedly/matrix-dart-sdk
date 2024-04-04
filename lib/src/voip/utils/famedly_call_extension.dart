@@ -78,8 +78,6 @@ extension FamedlyCallMemberEventsExtension on Room {
     return ids.toList();
   }
 
-  static const staleCallCheckerDuration = Duration(seconds: 30);
-
   /// passing no `CallMembership` removes it from the state event.
   Future<void> updateFamedlyCallMemberStateEvent(
       CallMembership callMembership) async {

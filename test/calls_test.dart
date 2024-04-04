@@ -41,7 +41,7 @@ void main() {
       await call.sendCallCandidates(room, '1234', '4567', [], txid: '1234');
       await call.sendSelectCallAnswer(room, '1234', '4567', '6789',
           txid: '1234');
-      await call.sendCallReject(room, '1234', '4567', 'busy', txid: '1234');
+      await call.sendCallReject(room, '1234', '4567', txid: '1234');
       await call.sendCallNegotiate(room, '1234', 1234, '4567', 'sdp',
           txid: '1234');
       await call.sendHangupCall(room, '1234', '4567', 'user_hangup',
@@ -234,7 +234,7 @@ void main() {
 
       expect(call.state, CallState.kConnected);
 
-      await call.hangup();
+      await call.hangup(reason: CallErrorCode.user_hangup);
       expect(call.state, CallState.kEnded);
       expect(voip.currentCID, null);
     });
@@ -436,7 +436,7 @@ void main() {
       await Future.delayed(Duration(seconds: 3));
       expect(
           voip.currentCID, VoipId(roomId: room.id, callId: firstCall.callId));
-      await firstCall.hangup();
+      await firstCall.hangup(reason: CallErrorCode.user_busy);
     });
     test('Glare before invite was sent', () async {
       expect(voip.currentCID, null);

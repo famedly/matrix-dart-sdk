@@ -42,64 +42,67 @@ enum CallState {
   kEnded,
 }
 
-class CallErrorCode {
+enum CallErrorCode {
   /// The user chose to end the call
-  static String UserHangup = 'user_hangup';
+  user_hangup,
 
   /// An error code when the local client failed to create an offer.
-  static String LocalOfferFailed = 'local_offer_failed';
+  local_offer_failed,
 
   /// An error code when there is no local mic/camera to use. This may be because
   /// the hardware isn't plugged in, or the user has explicitly denied access.
-  static String NoUserMedia = 'no_user_media';
+  user_media_failed,
 
   /// Error code used when a call event failed to send
   /// because unknown devices were present in the room
-  static String UnknownDevices = 'unknown_devices';
+  unknown_device,
 
   /// Error code used when we fail to send the invite
   /// for some reason other than there being unknown devices
-  static String SendInvite = 'send_invite';
+  send_invite,
 
   /// An answer could not be created
 
-  static String CreateAnswer = 'create_answer';
+  create_answer,
 
   /// Error code used when we fail to send the answer
   /// for some reason other than there being unknown devices
-
-  static String SendAnswer = 'send_answer';
+  send_answer,
 
   /// The session description from the other side could not be set
-  static String SetRemoteDescription = 'set_remote_description';
+  set_remote_description,
 
   /// The session description from this side could not be set
-  static String SetLocalDescription = 'set_local_description';
+  set_local_description,
 
   /// A different device answered the call
-  static String AnsweredElsewhere = 'answered_elsewhere';
+  answered_elsewhere,
 
   /// No media connection could be established to the other party
-  static String IceFailed = 'ice_failed';
+  ice_failed,
 
   /// The invite timed out whilst waiting for an answer
-  static String InviteTimeout = 'invite_timeout';
+  invite_timeout,
 
   /// The call was replaced by another call
-  static String Replaced = 'replaced';
+  replaced,
 
   /// Signalling for the call could not be sent (other than the initial invite)
-  static String SignallingFailed = 'signalling_timeout';
+  ice_timeout,
 
   /// The remote party is busy
-  static String UserBusy = 'user_busy';
+  user_busy,
 
   /// We transferred the call off to somewhere else
-  static String Transfered = 'transferred';
+  transferred,
+
+  /// Some other failure occurred that meant the client was unable to continue
+  /// the call rather than the user choosing to end it.
+  unknown_error,
 }
 
 class CallError extends Error {
-  final String code;
+  final CallErrorCode code;
   final String msg;
   final dynamic err;
   CallError(this.code, this.msg, this.err);
@@ -161,20 +164,40 @@ class GroupCallTerminationReason {
   static String CallEnded = 'call_ended';
 }
 
-class GroupCallEvent {
-  static String GroupCallStateChanged = 'group_call_state_changed';
-  static String ActiveSpeakerChanged = 'active_speaker_changed';
-  static String CallsChanged = 'calls_changed';
-  static String UserMediaStreamsChanged = 'user_media_feeds_changed';
-  static String ScreenshareStreamsChanged = 'screenshare_feeds_changed';
-  static String LocalScreenshareStateChanged =
-      'local_screenshare_state_changed';
-  static String LocalMuteStateChanged = 'local_mute_state_changed';
-  static String ParticipantsChanged = 'participants_changed';
-  static String Error = 'error';
+enum GroupCallErrorCode {
+  user_media_failed,
+  unknown_device,
 }
 
-class GroupCallErrorCode {
-  static String NoUserMedia = 'no_user_media';
-  static String UnknownDevice = 'unknown_device';
+class GroupCallError extends Error {
+  final GroupCallErrorCode code;
+  final String msg;
+  final dynamic err;
+  GroupCallError(this.code, this.msg, this.err);
+
+  @override
+  String toString() {
+    return 'Group Call Error: [$code] $msg, err: ${err.toString()}';
+  }
+}
+
+enum GroupCallEvent {
+  groupCallStateChanged,
+  activeSpeakerChanged,
+  callsChanged,
+  userMediaStreamsChanged,
+  screenshareStreamsChanged,
+  localScreenshareStateChanged,
+  localMuteStateChanged,
+  participantsChanged,
+  error
+}
+
+enum GroupCallState {
+  localCallFeedUninitialized,
+  initializingLocalCallFeed,
+  localCallFeedInitialized,
+  entering,
+  entered,
+  ended
 }

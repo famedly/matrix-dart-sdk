@@ -82,7 +82,7 @@ class CallSession {
   String? remotePartyId; // random string
 
   late CallParty hangupParty;
-  String? hangupReason;
+  CallErrorCode? hangupReason;
   late CallError lastError;
   CallSession? successor;
   bool waitForLocalAVStream = false;
@@ -200,7 +200,7 @@ class CallSession {
             if (callId.compareTo(prevCall.callId) > 0) {
               Logs().d(
                   '[glare] new call $callId needs to be canceled because the older one ${prevCall.callId} has a smaller lex');
-              await hangup();
+              await hangup(reason: CallErrorCode.unknown_error);
               voip.currentCID =
                   VoipId(roomId: room.id, callId: prevCall.callId);
             } else {
@@ -217,7 +217,7 @@ class CallSession {
           } else {
             Logs().d(
                 '[glare] ${prevCall.callId} was still preparing prev call, nvm now cancel it');
-            await prevCall.hangup();
+            await prevCall.hangup(reason: CallErrorCode.unknown_error);
           }
         }
       }
@@ -250,7 +250,7 @@ class CallSession {
         Logs().v('[VOIP] Call invite has expired. Hanging up.');
         hangupParty = CallParty.kRemote; // effectively
         fireCallEvent(CallEvent.kHangup);
-        hangup(reason: CallErrorCode.InviteTimeout);
+        hangup(reason: CallErrorCode.invite_timeout);
       }
       ringingTimer?.cancel();
       ringingTimer = null;
@@ -275,7 +275,7 @@ class CallSession {
     successor = newCall;
     onCallReplaced.add(newCall);
     // ignore: unawaited_futures
-    hangup(reason: CallErrorCode.Replaced);
+    hangup(reason: CallErrorCode.replaced);
   }
 
   Future<void> sendAnswer(RTCSessionDescription answer) async {
@@ -387,7 +387,7 @@ class CallSession {
         try {
           answer = await pc!.createAnswer({});
         } catch (e) {
-          await terminate(CallParty.kLocal, CallErrorCode.CreateAnswer, true);
+          await terminate(CallParty.kLocal, CallErrorCode.create_answer, true);
           return;
         }
 
@@ -533,7 +533,7 @@ class CallSession {
         return true;
       } catch (err) {
         fireCallEvent(CallEvent.kError);
-        lastError = CallError(CallErrorCode.NoUserMedia,
+        lastError = CallError(CallErrorCode.user_media_failed,
             'Failed to get screen-sharing stream: ', err);
         return false;
       }
@@ -876,23 +876,23 @@ class CallSession {
   /// Reject a call
   /// This used to be done by calling hangup, but is a separate method and protocol
   /// event as of MSC2746.
-  Future<void> reject({String? reason, bool shouldEmit = true}) async {
+  Future<void> reject({CallErrorCode? reason, bool shouldEmit = true}) async {
     if (state != CallState.kRinging && state != CallState.kFledgling) {
       Logs().e(
           '[VOIP] Call must be in \'ringing|fledgling\' state to reject! (current state was: ${state.toString()}) Calling hangup instead');
-      await hangup(reason: reason, shouldEmit: shouldEmit);
+      await hangup(reason: CallErrorCode.user_hangup, shouldEmit: shouldEmit);
       return;
     }
     Logs().d('[VOIP] Rejecting call: $callId');
-    await terminate(CallParty.kLocal, CallErrorCode.UserHangup, shouldEmit);
+    await terminate(CallParty.kLocal, CallErrorCode.user_hangup, shouldEmit);
     if (shouldEmit) {
-      await sendCallReject(room, callId, localPartyId, reason);
+      await sendCallReject(room, callId, localPartyId);
     }
   }
 
-  Future<void> hangup({String? reason, bool shouldEmit = true}) async {
-    await terminate(
-        CallParty.kLocal, reason ?? CallErrorCode.UserHangup, shouldEmit);
+  Future<void> hangup(
+      {required CallErrorCode reason, bool shouldEmit = true}) async {
+    await terminate(CallParty.kLocal, reason, shouldEmit);
 
     try {
       final res =
@@ -916,7 +916,7 @@ class CallSession {
 
   Future<void> terminate(
     CallParty party,
-    String reason,
+    CallErrorCode reason,
     bool shouldEmit,
   ) async {
     Logs().d('[VOIP] terminating call');
@@ -962,7 +962,7 @@ class CallSession {
     }
   }
 
-  Future<void> onRejectReceived(String? reason) async {
+  Future<void> onRejectReceived(CallErrorCode? reason) async {
     Logs().v('[VOIP] Reject received for call ID $callId');
     // No need to check party_id for reject because if we'd received either
     // an answer or reject, we wouldn't be in state InviteSent
@@ -973,7 +973,7 @@ class CallSession {
 
     if (shouldTerminate) {
       await terminate(
-          CallParty.kRemote, reason ?? CallErrorCode.UserHangup, true);
+          CallParty.kRemote, reason ?? CallErrorCode.user_hangup, true);
     } else {
       Logs().e('[VOIP] Call is in state: ${state.toString()}: ignoring reject');
     }
@@ -991,7 +991,7 @@ class CallSession {
     } catch (err) {
       Logs().d('Error setting local description! ${err.toString()}');
       await terminate(
-          CallParty.kLocal, CallErrorCode.SetLocalDescription, true);
+          CallParty.kLocal, CallErrorCode.set_local_description, true);
       return;
     }
 
@@ -1019,7 +1019,7 @@ class CallSession {
       // just incase we ended the call but already sent the invite
       // raraley happens during glares
       if (state == CallState.kEnded) {
-        await hangup(reason: CallErrorCode.Replaced);
+        await hangup(reason: CallErrorCode.replaced);
         return;
       }
       inviteOrAnswerSent = true;
@@ -1033,7 +1033,7 @@ class CallSession {
 
       inviteTimer = Timer(CallTimeouts.callInviteLifetime, () {
         if (state == CallState.kInviteSent) {
-          hangup(reason: CallErrorCode.InviteTimeout);
+          hangup(reason: CallErrorCode.invite_timeout);
         }
         inviteTimer?.cancel();
         inviteTimer = null;
@@ -1119,7 +1119,7 @@ class CallSession {
           await updateMuteStatus();
           missedCall = false;
         } else if (state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
-          await hangup(reason: CallErrorCode.IceFailed);
+          await hangup(reason: CallErrorCode.ice_failed);
         }
       };
     } catch (e) {
@@ -1129,7 +1129,7 @@ class CallSession {
 
   Future<void> onAnsweredElsewhere() async {
     Logs().d('Call ID $callId answered elsewhere');
-    await terminate(CallParty.kRemote, CallErrorCode.AnsweredElsewhere, true);
+    await terminate(CallParty.kRemote, CallErrorCode.answered_elsewhere, true);
   }
 
   Future<void> cleanUp() async {
@@ -1328,8 +1328,8 @@ class CallSession {
         Logs().d(
             'Failed to send candidates on attempt $candidateSendTries Giving up on this call.');
         lastError =
-            CallError(CallErrorCode.SignallingFailed, 'Signalling failed', e);
-        await hangup(reason: CallErrorCode.SignallingFailed);
+            CallError(CallErrorCode.ice_timeout, 'Signalling failed', e);
+        await hangup(reason: CallErrorCode.ice_timeout);
         return;
       }
 
@@ -1369,18 +1369,18 @@ class CallSession {
     Logs().e('Failed to get local offer ${err.toString()}');
     fireCallEvent(CallEvent.kError);
     lastError = CallError(
-        CallErrorCode.LocalOfferFailed, 'Failed to get local offer!', err);
-    await terminate(CallParty.kLocal, CallErrorCode.LocalOfferFailed, true);
+        CallErrorCode.local_offer_failed, 'Failed to get local offer!', err);
+    await terminate(CallParty.kLocal, CallErrorCode.local_offer_failed, true);
   }
 
   Future<void> _getUserMediaFailed(dynamic err) async {
     Logs().w('Failed to get user media - ending call ${err.toString()}');
     fireCallEvent(CallEvent.kError);
     lastError = CallError(
-        CallErrorCode.NoUserMedia,
+        CallErrorCode.user_media_failed,
         'Couldn\'t start capturing media! Is your microphone set up and does this app have permission?',
         err);
-    await terminate(CallParty.kLocal, CallErrorCode.NoUserMedia, true);
+    await terminate(CallParty.kLocal, CallErrorCode.user_media_failed, true);
   }
 
   Future<void> onSelectAnswerReceived(String? selectedPartyId) async {
@@ -1398,7 +1398,8 @@ class CallSession {
       Logs().w(
           'Got select_answer for party ID $selectedPartyId: we are party ID $localPartyId.');
       // The other party has picked somebody else's answer
-      await terminate(CallParty.kRemote, CallErrorCode.AnsweredElsewhere, true);
+      await terminate(
+          CallParty.kRemote, CallErrorCode.answered_elsewhere, true);
     }
   }
 
@@ -1476,14 +1477,12 @@ class CallSession {
   /// [callId] is a unique identifier for the call.
   /// [version] is the version of the VoIP specification this message adheres to. This specification is version 1.
   /// [party_id] The party ID for call, Can be set to client.deviceId.
-  Future<String?> sendCallReject(
-      Room room, String callId, String party_id, String? reason,
+  Future<String?> sendCallReject(Room room, String callId, String party_id,
       {String version = voipProtoVersion, String? txid}) async {
     final content = {
       'call_id': callId,
       'party_id': party_id,
       if (groupCallId != null) 'conf_id': groupCallId!,
-      if (reason != null) 'reason': reason,
       'version': version,
     };
 

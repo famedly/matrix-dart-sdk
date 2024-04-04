@@ -113,7 +113,7 @@ class VoIP {
 
       if (CallConstants.callEndedEventTypes.contains(callEvent.type)) {
         callEvents.removeWhere((event) {
-          if (CallConstants.ommitWhenCallEndedTypes.contains(event.type) &&
+          if (CallConstants.omitWhenCallEndedTypes.contains(event.type) &&
               event.content.tryGet<String>('call_id') == callId) {
             Logs().v(
                 'Ommit "${event.type}" event for an already terminated call');
@@ -147,11 +147,11 @@ class VoIP {
 
     // and finally call the respective methods on the clean callEvents list
     for (final callEvent in callEvents) {
-      await _callStreamByCallEvent(callEvent);
+      await _handleCallEvent(callEvent);
     }
   }
 
-  Future<void> _callStreamByCallEvent(BasicEventWithSender event) async {
+  Future<void> _handleCallEvent(BasicEventWithSender event) async {
     // member event updates handled in onRoomState for ease
     if (event.type == VoIPEventTypes.FamedlyCallMemberEvent) return;
 
@@ -187,12 +187,12 @@ class VoIP {
         }
       } else if (groupCallSession == null || remoteDeviceId == null) {
         Logs().e(
-            '[VOIP] _callStreamByCallEvent ${event.type} recieved but either groupCall ${groupCallSession?.groupCallId} or deviceId $remoteDeviceId was null, ignoring');
+            '[VOIP] _handleCallEvent ${event.type} recieved but either groupCall ${groupCallSession?.groupCallId} or deviceId $remoteDeviceId was null, ignoring');
         return;
       }
     } else {
       Logs().e(
-          '[VOIP] _callStreamByCallEvent can only handle Event or ToDeviceEvent, it got ${event.runtimeType}');
+          '[VOIP] _handleCallEvent can only handle Event or ToDeviceEvent, it got ${event.runtimeType}');
       return;
     }
 
@@ -200,7 +200,7 @@ class VoIP {
 
     if (room == null) {
       Logs().e(
-          '[VOIP] _callStreamByCallEvent call event does not contain a room_id, ignoring');
+          '[VOIP] _handleCallEvent call event does not contain a room_id, ignoring');
       return;
     } else if (!event.type.startsWith(VoIPEventTypes.EncryptionKeysEvent)) {
       // skip webrtc event checks on encryption_keys
@@ -298,7 +298,7 @@ class VoIP {
       }
     }
     for (final groupCall in groupCalls.values) {
-      if (groupCall.state == GroupCallState.Entered) {
+      if (groupCall.state == GroupCallState.entered) {
         await groupCall.updateMediaDeviceForCalls();
       }
     }
@@ -368,7 +368,7 @@ class VoIP {
       type: callType,
       room: room,
       localPartyId: localPartyId,
-      iceServers: await getIceSevers(),
+      iceServers: await getIceServers(),
     );
 
     final newCall = createNewCall(opts);
@@ -389,7 +389,7 @@ class VoIP {
       Logs().v(
           '[VOIP] onCallInvite: Unable to handle new calls, maybe user is busy.');
       // no need to emit here because handleNewCall was never triggered yet
-      await newCall.reject(reason: CallErrorCode.UserBusy, shouldEmit: false);
+      await newCall.reject(reason: CallErrorCode.user_busy, shouldEmit: false);
       await delegate.handleMissedCall(newCall);
       return;
     }
@@ -505,7 +505,7 @@ class VoIP {
     if (call != null) {
       // hangup in any case, either if the other party hung up or we did on another device
       await call.terminate(CallParty.kRemote,
-          content['reason'] ?? CallErrorCode.UserHangup, true);
+          content['reason'] ?? CallErrorCode.user_hangup, true);
     } else {
       Logs().v('[VOIP] onCallHangup: Session [$callId] not found!');
     }
@@ -628,7 +628,7 @@ class VoIP {
     return CallType.kVoice;
   }
 
-  Future<List<Map<String, dynamic>>> getIceSevers() async {
+  Future<List<Map<String, dynamic>>> getIceServers() async {
     if (_turnServerCredentials == null) {
       try {
         _turnServerCredentials = await client.getTurnServer();
@@ -682,7 +682,7 @@ class VoIP {
       room: room,
       voip: this,
       localPartyId: localPartyId,
-      iceServers: await getIceSevers(),
+      iceServers: await getIceServers(),
     );
     final newCall = createNewCall(opts);
 

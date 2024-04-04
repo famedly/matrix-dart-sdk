@@ -45,7 +45,7 @@ class CallConstants {
     EventTypes.CallReject,
     EventTypes.CallReplaces,
   };
-  static const ommitWhenCallEndedTypes = {
+  static const omitWhenCallEndedTypes = {
     EventTypes.CallInvite,
     EventTypes.CallCandidates,
     EventTypes.CallNegotiate,

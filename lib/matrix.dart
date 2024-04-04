@@ -34,7 +34,6 @@ export 'src/voip/call_session.dart';
 export 'src/voip/group_call_session.dart';
 export 'src/voip/voip.dart';
 export 'src/voip/models/call_events.dart';
-export 'src/voip/models/group_call_events.dart';
 export 'src/voip/models/webrtc_delegate.dart';
 export 'src/voip/models/call_participant.dart';
 export 'src/voip/models/call_backend.dart';
