@@ -18,7 +18,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -100,11 +99,28 @@ class MatrixSdkDatabase extends DatabaseApi {
   late Box<String> _seenDeviceIdsBox;
 
   late Box<String> _seenDeviceKeysBox;
+
   @override
-  bool get supportsFileStoring => fileStoragePath != null;
+  bool get supportsFileStoring => fileStorageLocation != null;
   @override
   final int maxFileSize;
-  final Directory? fileStoragePath;
+
+  // there was a field of type `dart:io:Directory` here. This one broke the
+  // dart js standalone compiler. Migration via URI as file system identifier.
+  @Deprecated(
+      'Breaks support for web standalone. Use [fileStorageLocation] instead.')
+  Object? get fileStoragePath => fileStorageLocation?.toFilePath();
+
+  /// A [Uri] defining the file storage location.
+  ///
+  /// Unless you support custom Uri schemes, this should usually be a
+  /// [Uri.directory] identifier.
+  ///
+  /// Using a [Uri] as type here enables users to technically extend the API to
+  /// support file storage on non-io platforms as well - or to use non-File
+  /// based storage mechanisms on io.
+  final Uri? fileStorageLocation;
+
   final Duration? deleteFilesAfterDuration;
 
   static const String _clientBoxName = 'box_client';
@@ -168,9 +184,11 @@ class MatrixSdkDatabase extends DatabaseApi {
     this.idbFactory,
     this.sqfliteFactory,
     this.maxFileSize = 0,
-    this.fileStoragePath,
+    // TODO : remove deprecated member migration on next major release
+    dynamic fileStoragePath,
+    Uri? fileStorageLocation,
     this.deleteFilesAfterDuration,
-  });
+  }) : fileStorageLocation = fileStorageLocation ?? fileStoragePath?.path;
 
   Future<void> open() async {
     _collection = await BoxCollection.open(
@@ -311,13 +329,15 @@ class MatrixSdkDatabase extends DatabaseApi {
 
   @override
   Future<void> deleteOldFiles(int savedAt) async {
-    final dir = fileStoragePath;
+    if (_kIsWeb) return;
+    final path = fileStorageLocation?.toFilePath();
     final deleteFilesAfterDuration = this.deleteFilesAfterDuration;
     if (!supportsFileStoring ||
-        dir == null ||
+        path == null ||
         deleteFilesAfterDuration == null) {
       return;
     }
+    final dir = Directory(path);
     final entities = await dir.list().toList();
     for (final file in entities) {
       if (file is! File) continue;
@@ -453,11 +473,11 @@ class MatrixSdkDatabase extends DatabaseApi {
 
   @override
   Future<Uint8List?> getFile(Uri mxcUri) async {
-    final fileStoragePath = this.fileStoragePath;
-    if (!supportsFileStoring || fileStoragePath == null) return null;
+    if (_kIsWeb) return null;
+    final path = fileStorageLocation?.toFilePath();
+    if (!supportsFileStoring || path == null) return null;
 
-    final file =
-        File('${fileStoragePath.path}/${mxcUri.toString().split('/').last}');
+    final file = File('$path/${mxcUri.toString().split('/').last}');
 
     if (await file.exists()) return await file.readAsBytes();
     return null;
@@ -1138,11 +1158,11 @@ class MatrixSdkDatabase extends DatabaseApi {
 
   @override
   Future<void> storeFile(Uri mxcUri, Uint8List bytes, int time) async {
-    final fileStoragePath = this.fileStoragePath;
-    if (!supportsFileStoring || fileStoragePath == null) return;
+    if (_kIsWeb) return;
+    final path = fileStorageLocation?.toFilePath();
+    if (!supportsFileStoring || path == null) return;
 
-    final file =
-        File('${fileStoragePath.path}/${mxcUri.toString().split('/').last}');
+    final file = File('$path/${mxcUri.toString().split('/').last}');
 
     if (await file.exists()) return;
     await file.writeAsBytes(bytes);
