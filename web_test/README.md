@@ -1,0 +1,1 @@
+This is a bare-bone sample project in order to ensure webdev can compile the SDK.
