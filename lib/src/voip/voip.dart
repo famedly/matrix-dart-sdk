@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 
+import 'package:cloudflare_calls_api/cloudflare_calls_api.dart';
 import 'package:sdp_transform/sdp_transform.dart' as sdp_transform;
 import 'package:webrtc_interface/webrtc_interface.dart';
 
@@ -59,11 +60,17 @@ class VoIP {
   /// the current instance of voip, changing this will drop any ongoing mesh calls
   /// with that sessionId
   late String currentSessionId;
+
+  CloudflareCallsApi? cloudflareCallsApi;
+
   VoIP(
     this.client,
     this.delegate, {
     this.enableSFUE2EEKeyRatcheting = false,
   }) : super() {
+    cloudflareCallsApi ??= CloudflareCallsApi();
+    cloudflareCallsApi!
+        .setBearerAuth('secret', CallConstants.cloudflareAppSecret);
     currentSessionId = base64Encode(secureRandomBytes(16));
     Logs().e('set currentSessionId to $currentSessionId');
     // to populate groupCalls with already present calls
@@ -819,6 +826,12 @@ class VoIP {
       return;
     }
 
+    for (final backend in membership.backends) {
+      if (backend is CloudflareBackend) {
+        backend.remoteTracks.clear();
+      }
+    }
+
     final groupCall = GroupCallSession(
       client: client,
       voip: this,
@@ -827,7 +840,7 @@ class VoIP {
       groupCallId: membership.callId,
       application: membership.application,
       scope: membership.scope,
-      enableE2EE: membership.backends.first is LiveKitBackend,
+      enableE2EE: membership.backends.first is LivekitBackend,
     );
 
     if (groupCalls.containsKey(

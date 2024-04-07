@@ -21,8 +21,7 @@ class WrappedMediaStream {
   final RTCPeerConnection? pc;
 
   /// for debug
-  String get title =>
-      '${client.userID!}:${client.deviceID!} $displayName:$purpose:a[$audioMuted]:v[$videoMuted]';
+  String get title => '$displayName:$purpose:a[$audioMuted]:v[$videoMuted]';
   bool stopped = false;
 
   final CachedStreamController<WrappedMediaStream> onMuteStateChanged =

@@ -26,6 +26,7 @@ import 'package:webrtc_interface/webrtc_interface.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/voip/models/call_options.dart';
+import 'package:matrix/src/voip/models/cloudflare_minisdp_mode.dart';
 import 'package:matrix/src/voip/models/voip_id.dart';
 import 'package:matrix/src/voip/utils/stream_helper.dart';
 
@@ -90,6 +91,7 @@ class CallSession {
   int candidateSendTries = 0;
   bool get isGroupCall => groupCallId != null;
   bool missedCall = true;
+  bool sendRelatedMatrixEvent = true;
 
   final CachedStreamController<CallSession> onCallStreamsChanged =
       CachedStreamController();
@@ -257,20 +259,23 @@ class CallSession {
     });
   }
 
-  Future<void> answerWithStreams(List<WrappedMediaStream> callFeeds) async {
+  Future<void> answerWithStreams(List<WrappedMediaStream> callFeeds,
+      bool cloneLocalFeedsBeforeAdding) async {
     if (inviteOrAnswerSent) return;
     Logs().d('answering call $callId');
-    await gotCallFeedsForAnswer(callFeeds);
+    await gotCallFeedsForAnswer(callFeeds, cloneLocalFeedsBeforeAdding);
   }
 
-  Future<void> replacedBy(CallSession newCall) async {
+  Future<void> replacedBy(
+      CallSession newCall, bool cloneLocalFeedsBeforeAdding) async {
     if (state == CallState.kWaitLocalMedia) {
       Logs().v('Telling new call to wait for local media');
       newCall.waitForLocalAVStream = true;
     } else if (state == CallState.kCreateOffer ||
         state == CallState.kInviteSent) {
       Logs().v('Handing local stream to new call');
-      await newCall.gotCallFeedsForAnswer(getLocalStreams);
+      await newCall.gotCallFeedsForAnswer(
+          getLocalStreams, cloneLocalFeedsBeforeAdding);
     }
     successor = newCall;
     onCallReplaced.add(newCall);
@@ -295,28 +300,36 @@ class CallSession {
     Logs().v('[VOIP] answer res => $res');
   }
 
-  Future<void> gotCallFeedsForAnswer(List<WrappedMediaStream> callFeeds) async {
+  Future<void> gotCallFeedsForAnswer(List<WrappedMediaStream> callFeeds,
+      bool cloneLocalFeedsBeforeAdding) async {
     if (state == CallState.kEnded) return;
 
     waitForLocalAVStream = false;
 
     for (final element in callFeeds) {
-      await addLocalStream(await element.stream!.clone(), element.purpose);
+      await addLocalStream(
+          cloneLocalFeedsBeforeAdding
+              ? await element.stream!.clone()
+              : element.stream!,
+          element.purpose);
     }
 
     await answer();
   }
 
-  Future<void> placeCallWithStreams(List<WrappedMediaStream> callFeeds) async {
+  Future<void> placeCallWithStreams(List<WrappedMediaStream> callFeeds,
+      bool cloneLocalFeedsBeforeAdding) async {
     // create the peer connection now so it can be gathering candidates while we get user
     // media (assuming a candidate pool size is configured)
     await _preparePeerConnection();
-    await gotCallFeedsForInvite(callFeeds);
+    await gotCallFeedsForInvite(callFeeds, cloneLocalFeedsBeforeAdding);
   }
 
-  Future<void> gotCallFeedsForInvite(List<WrappedMediaStream> callFeeds) async {
+  Future<void> gotCallFeedsForInvite(List<WrappedMediaStream> callFeeds,
+      bool cloneLocalFeedsBeforeAdding) async {
     if (successor != null) {
-      await successor!.gotCallFeedsForAnswer(callFeeds);
+      await successor!
+          .gotCallFeedsForAnswer(callFeeds, cloneLocalFeedsBeforeAdding);
       return;
     }
     if (state == CallState.kEnded) {
@@ -325,12 +338,16 @@ class CallSession {
     }
 
     for (final element in callFeeds) {
-      await addLocalStream(await element.stream!.clone(), element.purpose);
+      await addLocalStream(
+          cloneLocalFeedsBeforeAdding
+              ? await element.stream!.clone()
+              : element.stream!,
+          element.purpose);
     }
 
-    await pc!.addTransceiver(
-        kind: RTCRtpMediaType.RTCRtpMediaTypeVideo,
-        init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly));
+    // await pc!.addTransceiver(
+    //     kind: RTCRtpMediaType.RTCRtpMediaTypeVideo,
+    //     init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly));
 
     setCallState(CallState.kCreateOffer);
 
@@ -605,45 +622,107 @@ class CallSession {
     fireCallEvent(CallEvent.kFeedsChanged);
   }
 
-  Future<void> _addRemoteStream(MediaStream stream) async {
+  Map<CallParticipant, List<CloudflareMiniSdpMode>> remoteTrackUserIdMap = {};
+
+  Future<void> _addRemoteStream(
+    MediaStream stream,
+  ) async {
     //final userId = remoteUser.id;
-    final metadata = remoteSDPStreamMetadata!.sdpStreamMetadatas[stream.id];
-    if (metadata == null) {
-      Logs().i(
-          'Ignoring stream with id ${stream.id} because we didn\'t get any metadata about it');
-      return;
-    }
-
-    final purpose = metadata.purpose;
-    final audioMuted = metadata.audio_muted;
-    final videoMuted = metadata.video_muted;
-
+    final metadata = remoteSDPStreamMetadata?.sdpStreamMetadatas[stream.id];
+    final purpose = metadata?.purpose ?? SDPStreamMetadataPurpose.Usermedia;
     // Try to find a feed with the same purpose as the new stream,
     // if we find it replace the old stream with the new one
+
     final existingStream =
         getRemoteStreams.where((element) => element.purpose == purpose);
-    if (existingStream.isNotEmpty) {
+    // abusing sendRelatedMatrixEvent for isCloudflare call
+    if (sendRelatedMatrixEvent && existingStream.isNotEmpty) {
       existingStream.first.setNewStream(stream);
     } else {
-      final newStream = WrappedMediaStream(
-        participant: CallParticipant(
-          userId: remoteUserId!,
-          deviceId: remoteDeviceId,
-        ),
-        room: opts.room,
-        stream: stream,
-        purpose: purpose,
-        client: client,
-        audioMuted: audioMuted,
-        videoMuted: videoMuted,
-        isWeb: voip.delegate.isWeb,
-        isGroupCall: groupCallId != null,
-        pc: pc,
-        voip: voip,
-      );
-      streams.add(newStream);
-      onStreamAdd.add(newStream);
+      Logs().e('get');
+      for (final element in remoteTrackUserIdMap.entries) {
+        Logs().e(element.key.id.toString());
+        for (final trackIds in element.value) {
+          Logs().e(trackIds.toString());
+        }
+      }
+      Logs().e('a: ${stream.getAudioTracks().map((e) => e.id)}');
+      Logs().e('v: ${stream.getVideoTracks().map((e) => e.id)}');
+
+      // TODO (td): audio broken because cloudflare does one track per stream
+      if (stream.getVideoTracks().isNotEmpty &&
+          stream.getAudioTracks().isEmpty) {
+        // bool? videoFirst;
+        // if (stream.getVideoTracks().isNotEmpty) {
+        //   videoFirst = true;
+        // } else {
+        //   videoFirst = false;
+        // }
+
+        // Logs().e('videoFirst: $videoFirst');
+
+        // // should've just used mid
+        // final rp = remoteTrackUserIdMap.entries
+        //     .firstWhere((rpMapEntry) => rpMapEntry.value.any((cfsdp) =>
+        //         videoFirst!
+        //             ? stream
+        //                 .getVideoTracks()
+        //                 .every((element) => element.id == cfsdp.trackId)
+        //             : stream
+        //                 .getAudioTracks()
+        //                 .every((element) => element.id == cfsdp.trackId)))
+        //     .key;
+
+        final rp = remoteTrackUserIdMap.entries
+            .firstWhere((rpMapEntry) => rpMapEntry.value.any((cfsdp) => stream
+                .getVideoTracks()
+                .every((element) => element.id == cfsdp.trackId)))
+            .key;
+        Logs().e('deteceted: ${rp.toString()}');
+        if (getRemoteStreams
+            .where((element) => element.participant == rp)
+            .isNotEmpty) {
+          Logs().e('return early, already see a stream for p ${rp.id}');
+          return;
+        }
+        // final existingPStreams =
+        //     getRemoteStreams.where((element) => element.participant == rp);
+
+        // if (existingPStreams.isNotEmpty) {
+        // Logs().e('Found existing particiapnt stream');
+        // for (final s in existingPStreams) {
+        //   // deal with same p diff stream, we do video tracks first then audio track
+        //   if (videoFirst) {
+        //     s.videoMuted = stream.getVideoTracks().isEmpty;
+        //     Logs().e('set videoMuted to ${s.videoMuted}');
+        //   } else {
+        //     s.audioMuted = stream.getAudioTracks().isEmpty;
+        //     Logs().e('set audioMuted to ${s.audioMuted}');
+        //   }
+        // }
+        // } else {
+
+        final newStream = WrappedMediaStream(
+          participant: CallParticipant(
+            userId: sendRelatedMatrixEvent ? remoteUserId! : rp.userId,
+            deviceId: sendRelatedMatrixEvent ? remoteDeviceId : rp.deviceId,
+          ),
+          room: opts.room,
+          stream: stream,
+          purpose: purpose,
+          client: client,
+          audioMuted: stream.getAudioTracks().isEmpty,
+          videoMuted: stream.getVideoTracks().isEmpty,
+          isWeb: voip.delegate.isWeb,
+          isGroupCall: groupCallId != null,
+          pc: pc,
+          voip: voip,
+        );
+        streams.add(newStream);
+        onStreamAdd.add(newStream);
+      }
     }
+
     fireCallEvent(CallEvent.kFeedsChanged);
     Logs().i('Pushed remote stream (id="${stream.id}", purpose=$purpose)');
   }
@@ -1064,7 +1143,6 @@ class CallSession {
       await _gotLocalOffer(offer);
     } catch (e) {
       await _getLocalOfferFailed(e);
-      return;
     } finally {
       makingOffer = false;
     }
@@ -1150,6 +1228,7 @@ class CallSession {
     } catch (e, s) {
       Logs().e('[VOIP] removing pc failed', e, s);
     }
+    remoteTrackUserIdMap.clear();
   }
 
   Future<void> updateMuteStatus() async {
@@ -1243,8 +1322,7 @@ class CallSession {
     };
     final pc = await voip.delegate.createPeerConnection(configuration);
     pc.onTrack = (RTCTrackEvent event) async {
-      if (event.streams.isNotEmpty) {
-        final stream = event.streams[0];
+      for (final stream in event.streams) {
         await _addRemoteStream(stream);
         for (final track in stream.getTracks()) {
           track.onEnded = () async {
@@ -1705,6 +1783,7 @@ class CallSession {
     Map<String, Object> content, {
     String? txid,
   }) async {
+    if (!sendRelatedMatrixEvent) return null;
     Logs().d('[VOIP] sending content type $type, with conf: $content');
     txid ??= VoIP.customTxid ?? client.generateUniqueTransactionId();
     final mustEncrypt = room.encrypted && client.encryptionEnabled;

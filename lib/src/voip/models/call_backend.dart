@@ -1,3 +1,5 @@
+import 'package:matrix/src/voip/models/cloudflare_rt.dart';
+
 abstract class CallBackend {
   String type;
 
@@ -8,10 +10,17 @@ abstract class CallBackend {
     if (type == 'mesh') {
       return MeshBackend(type: type);
     } else if (type == 'livekit') {
-      return LiveKitBackend(
+      return LivekitBackend(
         livekitAlias: json['livekit_alias'] as String,
         livekitServiceUrl: json['livekit_service_url'] as String,
         type: type,
+      );
+    } else if (type == 'cloudflare') {
+      return CloudflareBackend(
+        type: type,
+        remoteTracks: (json['tracks'] as List)
+            .map((e) => CloudflareRemoteTrack.fromJson(e))
+            .toList(),
       );
     } else {
       throw ArgumentError('Invalid type: $type');
@@ -43,11 +52,11 @@ class MeshBackend extends CallBackend {
   int get hashCode => type.hashCode;
 }
 
-class LiveKitBackend extends CallBackend {
+class LivekitBackend extends CallBackend {
   final String livekitServiceUrl;
   final String livekitAlias;
 
-  LiveKitBackend({
+  LivekitBackend({
     required this.livekitServiceUrl,
     required this.livekitAlias,
     super.type = 'livekit',
@@ -65,11 +74,38 @@ class LiveKitBackend extends CallBackend {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is LiveKitBackend &&
+      other is LivekitBackend &&
           type == other.type &&
           livekitServiceUrl == other.livekitServiceUrl &&
           livekitAlias == other.livekitAlias;
   @override
   int get hashCode =>
       type.hashCode ^ livekitServiceUrl.hashCode ^ livekitAlias.hashCode;
+}
+
+class CloudflareBackend extends CallBackend {
+  List<CloudflareRemoteTrack> remoteTracks = [];
+
+  CloudflareBackend({
+    required this.remoteTracks,
+    super.type = 'cloudflare',
+  });
+
+  @override
+  Map<String, Object?> toJson() {
+    return {
+      'type': type,
+      'tracks': remoteTracks.map((e) => e.toJson()).toList(),
+    };
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CloudflareBackend &&
+          type == other.type &&
+          remoteTracks == other.remoteTracks;
+
+  @override
+  int get hashCode => type.hashCode ^ remoteTracks.hashCode;
 }

@@ -39,6 +39,8 @@ class CallTimeouts {
 }
 
 class CallConstants {
+  static const cloudflareAppId = 'meow';
+  static const cloudflareAppSecret = 'nyaa';
   static const callEndedEventTypes = {
     EventTypes.CallAnswer,
     EventTypes.CallHangup,

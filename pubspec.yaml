@@ -12,7 +12,12 @@ dependencies:
   async: ^2.8.0
   base58check: ^2.0.0
   blurhash_dart: ^1.1.0
+  built_collection: ^5.1.1
   canonical_json: ^1.1.0
+  cloudflare_calls_api:
+    git: 
+      url : git@github.com:famedly/cloudflare_calls.git
+      path: api/
   collection: ^1.15.0
   crypto: ^3.0.0
   enhanced_enum: ^0.2.4
@@ -41,9 +46,6 @@ dev_dependencies:
   file: ">=6.1.1 <8.0.0"
   import_sorter: ^4.6.0
   lints: ^3.0.0
-  sqflite_common_ffi: ^2.3.3
+  sqflite_common_ffi: ^2.3.2+1
   test: ^1.15.7
-  #flutter_test: {sdk: flutter}
 # dependency_overrides:
-#  matrix_api_lite:
-#    path: ../dart_matrix_api_lite
