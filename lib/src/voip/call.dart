@@ -25,6 +25,7 @@ import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
+import 'package:matrix/src/voip/utils/user_media_constraints.dart';
 
 /// https://github.com/matrix-org/matrix-doc/pull/2746
 /// version 1
@@ -42,21 +43,6 @@ class CallTimeouts {
 
   /// Delay before createOffer.
   static const delayBeforeOffer = Duration(milliseconds: 100);
-}
-
-class UserMediaOptions {
-  static const optionalAudioConfig = {
-    'echoCancellation': true,
-    'googDAEchoCancellation': true,
-    'googEchoCancellation': true,
-    'googEchoCancellation2': true,
-    'noiseSuppression': true,
-    'googNoiseSuppression': true,
-    'googNoiseSuppression2': true,
-    'googAutoGainControl': true,
-    'googHighpassFilter': true,
-    'googTypingNoiseDetection': true,
-  };
 }
 
 extension RTCIceCandidateExt on RTCIceCandidate {
@@ -773,8 +759,10 @@ class CallSession {
     }
 
     if (pc != null &&
-        pc!.iceConnectionState ==
-            RTCIceConnectionState.RTCIceConnectionStateDisconnected) {
+        {
+          RTCIceConnectionState.RTCIceConnectionStateDisconnected,
+          RTCIceConnectionState.RTCIceConnectionStateFailed
+        }.contains(pc!.iceConnectionState)) {
       await restartIce();
     }
   }
@@ -1488,17 +1476,9 @@ class CallSession {
 
   Future<MediaStream?> _getUserMedia(CallType type) async {
     final mediaConstraints = {
-      'audio': true,
+      'audio': UserMediaConstraints.micMediaConstraints,
       'video': type == CallType.kVideo
-          ? {
-              'mandatory': {
-                'minWidth': '640',
-                'minHeight': '480',
-                'minFrameRate': '30',
-              },
-              'facingMode': 'user',
-              'optional': [UserMediaOptions.optionalAudioConfig],
-            }
+          ? UserMediaConstraints.camMediaConstraints
           : false,
     };
     try {
@@ -1510,12 +1490,9 @@ class CallSession {
   }
 
   Future<MediaStream?> _getDisplayMedia() async {
-    final mediaConstraints = {
-      'audio': false,
-      'video': true,
-    };
     try {
-      return await voip.delegate.mediaDevices.getDisplayMedia(mediaConstraints);
+      return await voip.delegate.mediaDevices
+          .getDisplayMedia(UserMediaConstraints.screenMediaConstraints);
     } catch (e) {
       await _getUserMediaFailed(e);
     }
@@ -1582,7 +1559,7 @@ class CallSession {
   Map<String, dynamic> _getOfferAnswerConstraints({bool iceRestart = false}) {
     return {
       'mandatory': {if (iceRestart) 'IceRestart': true},
-      'optional': [UserMediaOptions.optionalAudioConfig],
+      'optional': [],
     };
   }
 

@@ -24,6 +24,7 @@ import 'package:webrtc_interface/webrtc_interface.dart';
 
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
+import 'package:matrix/src/voip/utils/user_media_constraints.dart';
 
 /// TODO(@duan): Need to add voice activity detection mechanism
 /// const int SPEAKING_THRESHOLD = -60; // dB
@@ -315,17 +316,9 @@ class GroupCall {
 
   Future<MediaStream> _getUserMedia(CallType type) async {
     final mediaConstraints = {
-      'audio': true,
+      'audio': UserMediaConstraints.micMediaConstraints,
       'video': type == CallType.kVideo
-          ? {
-              'mandatory': {
-                'minWidth': '640',
-                'minHeight': '480',
-                'minFrameRate': '30',
-              },
-              'facingMode': 'user',
-              'optional': [UserMediaOptions.optionalAudioConfig],
-            }
+          ? UserMediaConstraints.camMediaConstraints
           : false,
     };
     try {
@@ -337,12 +330,9 @@ class GroupCall {
   }
 
   Future<MediaStream> _getDisplayMedia() async {
-    final mediaConstraints = {
-      'audio': false,
-      'video': true,
-    };
     try {
-      return await voip.delegate.mediaDevices.getDisplayMedia(mediaConstraints);
+      return await voip.delegate.mediaDevices
+          .getDisplayMedia(UserMediaConstraints.screenMediaConstraints);
     } catch (e, s) {
       Logs().e('[VOIP] _getDisplayMedia failed because,', e, s);
     }
