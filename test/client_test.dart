@@ -1049,6 +1049,66 @@ void main() {
           reason: '!5345234235:example.com not found as archived room');
     });
 
+    test('onlatestPresenceChanged', () async {
+      final client = await getClient();
+      await Future.delayed(Duration(milliseconds: 50));
+
+      CachedPresence? latestPresence;
+
+      client.onlatestPresenceChanged.stream.listen((presence) {
+        latestPresence = presence;
+      });
+
+      var presenceCounter = 0;
+      client.onPresenceChanged.stream.listen((CachedPresence data) {
+        presenceCounter++;
+      });
+      
+      await client.handleSync(SyncUpdate.fromJson({
+        'next_batch': 'fake',
+        'presence': {
+          'events': [
+            {
+              'sender': '@alice:example.com',
+              'type': 'm.presence',
+              'content': {
+                'presence': 'online',
+                'last_active_ago': 1000,
+                'status_msg': 'Working on a project',
+                'currently_active': true
+              },
+            },
+            {
+              'sender': '@alice:example.com',
+              'type': 'm.presence',
+              'content': {
+                'presence': 'offline',
+                'last_active_ago': 5000,
+                'status_msg': 'Away from keyboard',
+                'currently_active': false
+              },
+            },
+            {
+              'sender': '@alice:example.com',
+              'type': 'm.presence',
+              'content': {
+                'presence': 'online',
+                'last_active_ago': 2000,
+                'status_msg': 'Reading documentation',
+                'currently_active': true
+              }
+            }
+          ]
+        }
+      }));
+
+      await Future.delayed(Duration(milliseconds: 50));
+
+      expect(presenceCounter, 3);
+
+      expect(latestPresence?.statusMsg, 'Working on a project');
+    });
+
     tearDown(() {
       matrix.dispose(closeDatabase: true);
     });
