@@ -98,7 +98,7 @@ abstract class DatabaseApi {
 
   Future<Uint8List?> getFile(Uri mxcUri);
 
-  Future<File?> getFileEntity(Uri mxcUri);
+  Future<File?> getFileEntity(String eventId, String fileName);
 
   Future storeFile(Uri mxcUri, Uint8List bytes, int time);
 

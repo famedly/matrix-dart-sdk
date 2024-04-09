@@ -474,7 +474,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
-  Future<File?> getFileEntity(Uri mxcUri) async {
+  Future<File?> getFileEntity(String eventId, String fileName) async {
     return null;
   }
 

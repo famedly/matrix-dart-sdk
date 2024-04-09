@@ -1469,7 +1469,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi {
   }
   
   @override
-  Future<File?> getFileEntity(Uri mxcUri) {
+  Future<File?> getFileEntity(String eventId, String fileName) {
     throw UnimplementedError();
   }
 }
