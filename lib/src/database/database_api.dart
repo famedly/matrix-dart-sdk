@@ -96,7 +96,7 @@ abstract class DatabaseApi {
     int? limit,
   });
 
-  Future<Uint8List?> getFile(Uri mxcUri);
+  Future<Uint8List?> getFile(String eventId, String fileName);
 
   Future<File?> getFileEntity(String eventId, String fileName);
 

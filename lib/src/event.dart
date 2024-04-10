@@ -580,7 +580,7 @@ class Event extends MatrixEvent {
 
     Uint8List? uint8list;
     if (storeable) {
-      uint8list = await database.getFile(mxcUrl);
+      uint8list = await database.getFile(eventId, getThumbnail ? thumbnailFilename : filename);
     }
     return uint8list != null;
   }
@@ -623,7 +623,7 @@ class Event extends MatrixEvent {
 
     Uint8List? uint8list;
     if (storeable) {
-      uint8list = await room.client.database?.getFile(mxcUrl);
+      uint8list = await room.client.database?.getFile(eventId, getThumbnail ? thumbnailFilename : filename);
     }
 
     // Download the file
@@ -661,6 +661,14 @@ class Event extends MatrixEvent {
       }
     }
     return MatrixFile(bytes: uint8list, name: body);
+  }
+
+  String get thumbnailFilename {
+    return 'thumbnail-$filename';
+  }
+
+  String get filename {
+    return (content.tryGet<String>('filename') ?? body);
   }
 
   /// Returns if this is a known event type.
