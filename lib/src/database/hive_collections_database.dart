@@ -479,6 +479,11 @@ class HiveCollectionsDatabase extends DatabaseApi {
   }
 
   @override
+  Future<void> storeEventFile(String eventId, String fileName, Uint8List bytes, int time) async {
+    return ;
+  }
+
+  @override
   Future<StoredInboundGroupSession?> getInboundGroupSession(
     String roomId,
     String sessionId,
