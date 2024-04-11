@@ -288,8 +288,9 @@ class Room {
 
   /// The avatar of the room if set by a participant.
   Uri? get avatar {
-    final avatarUrl = getState(EventTypes.RoomAvatar)?.content['url'];
-    if (avatarUrl is String) {
+    final avatarUrl =
+        getState(EventTypes.RoomAvatar)?.content.tryGet<String>('url');
+    if (avatarUrl != null) {
       return Uri.tryParse(avatarUrl);
     }
 
@@ -305,13 +306,6 @@ class Room {
       if (user != null) {
         return unsafeGetUserFromMemoryOrFallback(user).avatarUrl;
       }
-    }
-    if (membership == Membership.invite) {
-      final userID = client.userID;
-      if (userID == null) return null;
-      return getState(EventTypes.RoomMember, userID)
-          ?.senderFromMemoryOrFallback
-          .avatarUrl;
     }
     return null;
   }
