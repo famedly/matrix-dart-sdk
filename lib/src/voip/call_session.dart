@@ -339,10 +339,11 @@ class CallSession {
 
     for (final element in callFeeds) {
       await addLocalStream(
-          cloneLocalFeedsBeforeAdding
-              ? await element.stream!.clone()
-              : element.stream!,
-          element.purpose);
+        cloneLocalFeedsBeforeAdding
+            ? await element.stream!.clone()
+            : element.stream!,
+        element.purpose,
+      );
     }
 
     // await pc!.addTransceiver(
@@ -673,17 +674,27 @@ class CallSession {
         //                 .every((element) => element.id == cfsdp.trackId)))
         //     .key;
 
+        // smh nvm, FF does something completely different and gives you random stream ids
+        final removeBracesFF = RegExp(r'[{}]+', multiLine: true, dotAll: true);
         final rp = remoteTrackUserIdMap.entries
             .firstWhere((rpMapEntry) => rpMapEntry.value.any((cfsdp) => stream
                 .getVideoTracks()
-                .every((element) => element.id == cfsdp.trackId)))
+                .every((element) =>
+                    element.id?.replaceAll(removeBracesFF, '') ==
+                    cfsdp.trackId.replaceAll(removeBracesFF, ''))))
             .key;
         Logs().e('deteceted: ${rp.toString()}');
-        if (getRemoteStreams
-            .where((element) => element.participant == rp)
-            .isNotEmpty) {
-          Logs().e('return early, already see a stream for p ${rp.id}');
-          return;
+
+        final existingStream = getRemoteStreams
+            .singleWhereOrNull((element) => element.participant == rp);
+        if (existingStream != null) {
+          if (existingStream.stream!.getVideoTracks().isNotEmpty) {
+            existingStream.setNewStream(stream);
+            return;
+          } else {
+            Logs().e('return early, already see a stream for p ${rp.id}');
+            return;
+          }
         }
         // final existingPStreams =
         //     getRemoteStreams.where((element) => element.participant == rp);

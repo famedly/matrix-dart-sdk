@@ -299,7 +299,7 @@ class GroupCallSession {
     return offerSdpBuilder.build();
   }
 
-  TracksRequest createLocalTrackRequestPacket(
+  TracksRequest createTrackRequestPacket(
       BuiltList<TrackObject> tracks, SessionDescription? sdp) {
     final trackRequest = TracksRequestBuilder();
     trackRequest.sessionDescription = sdp?.toBuilder();
@@ -430,19 +430,14 @@ class GroupCallSession {
 
       await newCall.placeCallWithStreams(localUserMedia, false);
 
-      RTCSessionDescription? offer = await newCall.pc!.getLocalDescription();
-
       while (!newCall.iceGatheringFinished) {
         await Future.delayed(Duration(seconds: 1));
         Logs()
             .d('[VOIP] cloudflare call waiting for ice gathering to complete');
       }
 
-      while (offer == null) {
-        await Future.delayed(Duration(seconds: 1));
-        Logs().d('[VOIP] cloudflare call waiting for offer in local desc');
-        offer = await newCall.pc!.getLocalDescription();
-      }
+      final offer = await newCall.pc!.createOffer();
+      await newCall.pc!.setLocalDescription(offer);
 
       final cloudflareCallSession = (await voip.cloudflareCallsApi!
               .getNewSessionApi()
@@ -474,25 +469,29 @@ class GroupCallSession {
       final senderTracks = await createLocalTrackObjectPushPacket(
           newCall.pc!, localUserMediaStream?.stream?.getTracks() ?? []);
       if (senderTracks.isNotEmpty) {
-        await voip.cloudflareCallsApi!
-            .getAddATrackApi()
-            .appsAppIdSessionsSessionIdTracksNewPost(
-              appId: CallConstants.cloudflareAppId,
-              sessionId: cloudflareCallSession.sessionId!,
-              tracksRequest: createLocalTrackRequestPacket(
-                  senderTracks, createSdpPacket(offer)),
-            );
-      }
+        // again?
+        final lo = await newCall.pc!.createOffer();
+        await newCall.pc!.setLocalDescription(lo);
+        final trackResp = (await voip.cloudflareCallsApi!
+                .getAddATrackApi()
+                .appsAppIdSessionsSessionIdTracksNewPost(
+                  appId: CallConstants.cloudflareAppId,
+                  sessionId: cloudflareCallSession.sessionId!,
+                  tracksRequest: createTrackRequestPacket(
+                      senderTracks, createSdpPacket(lo)),
+                ))
+            .data;
 
-      // if (trackResp?.sessionDescription?.sdp != null &&
-      //     trackResp?.sessionDescription?.type != null) {
-      //   await newCall.pc!.setRemoteDescription(
-      //     RTCSessionDescription(
-      //       trackResp?.sessionDescription?.sdp,
-      //       getSDPTypeFromSDP(trackResp!.sessionDescription!.type!),
-      //     ),
-      //   );
-      // }
+        if (trackResp?.sessionDescription?.sdp != null &&
+            trackResp?.sessionDescription?.type != null) {
+          await newCall.pc!.setRemoteDescription(
+            RTCSessionDescription(
+              trackResp?.sessionDescription?.sdp,
+              getSDPTypeFromSDP(trackResp!.sessionDescription!.type!),
+            ),
+          );
+        }
+      }
     }
 
     // yes cloudflare calls send this twice at start because it's also called in
@@ -553,6 +552,9 @@ class GroupCallSession {
   }
 
   Future<void> leave() async {
+    if (isCloudflareCall && cloudflareCall != null) {
+      await cloudflareCall!.cleanUp();
+    }
     await dispose();
     setState(GroupCallState.localCallFeedUninitialized);
     voip.currentGroupCID = null;
@@ -927,33 +929,40 @@ class GroupCallSession {
     if (anyJoined.isNotEmpty || anyLeft.isNotEmpty) {
       if (anyJoined.isNotEmpty) {
         Logs().d('anyJoined: ${anyJoined.map((e) => e.id).toString()}');
+        Logs().e('newTracksToBeAddedLen: ${rtsreq.length}');
         participants.addAll(anyJoined);
         if (isCloudflareCall && cloudflareCall != null && rtsreq.isNotEmpty) {
           final existingCall = cloudflareCall;
           TracksResponse? rtresp;
-          // ehhhhh
           await Future.delayed(Duration(seconds: 5));
-          rtresp = (await voip.cloudflareCallsApi!
-                  .getAddATrackApi()
-                  .appsAppIdSessionsSessionIdTracksNewPost(
-                    appId: CallConstants.cloudflareAppId,
-                    sessionId: cloudflareSessionId!,
-                    tracksRequest: createLocalTrackRequestPacket(
-                        rtsreq.toBuiltList(), null),
-                  ))
-              .data;
+          final rtJson = await voip.cloudflareCallsApi!
+              .getAddATrackApi()
+              .appsAppIdSessionsSessionIdTracksNewPost(
+                appId: CallConstants.cloudflareAppId,
+                sessionId: cloudflareSessionId!,
+                tracksRequest:
+                    createTrackRequestPacket(rtsreq.toBuiltList(), null),
+              );
 
-          // while (rtresp == null ||
-          //     (rtresp.tracks?.any((p0) => p0.mid?.isEmpty ?? true) ?? true)) {
-          //   await Future.delayed(Duration(seconds: 5));
+          rtresp = rtJson.data;
+
+          // final startTime = DateTime.now();
+
+          // while (
+          //     (rtresp?.tracks?.any((p0) => p0.mid?.isEmpty ?? true) ?? true)) {
+          //   if (startTime.add(Duration(seconds: 10)).isBefore(DateTime.now())) {
+          //     Logs().e('remtoe tracks still broken');
+          //     break;
+          //   }
+          //   await Future.delayed(Duration(seconds: 2));
           //   Logs().e('repulling remote tracks');
           //   rtresp = (await voip.cloudflareCallsApi!
           //           .getAddATrackApi()
           //           .appsAppIdSessionsSessionIdTracksNewPost(
           //             appId: CallConstants.cloudflareAppId,
           //             sessionId: cloudflareSessionId!,
-          //             tracksRequest: createLocalTrackRequestPacket(
-          //                 rtsreq.toBuiltList(), null),
+          //             tracksRequest:
+          //                 createTrackRequestPacket(rtsreq.toBuiltList(), null),
           //           ))
           //       .data;
           // }
@@ -1010,18 +1019,17 @@ class GroupCallSession {
                   getSDPTypeFromSDP(rtresp.sessionDescription!.type!),
                 ),
               );
+              final answer = await existingCall.pc!.createAnswer();
+              await existingCall.pc!.setLocalDescription(answer);
+              await voip.cloudflareCallsApi!
+                  .getRenegotiateWebRTCSessionApi()
+                  .appsAppIdSessionsSessionIdRenegotiatePut(
+                    appId: CallConstants.cloudflareAppId,
+                    sessionId: cloudflareSessionId!,
+                    appsAppIdSessionsSessionIdRenegotiatePutRequest:
+                        createRenegotiationPushPacket(answer),
+                  );
             }
-
-            final answer = await existingCall!.pc!.createAnswer();
-            await existingCall.pc!.setLocalDescription(answer);
-            await voip.cloudflareCallsApi!
-                .getRenegotiateWebRTCSessionApi()
-                .appsAppIdSessionsSessionIdRenegotiatePut(
-                  appId: CallConstants.cloudflareAppId,
-                  sessionId: cloudflareSessionId!,
-                  appsAppIdSessionsSessionIdRenegotiatePutRequest:
-                      createRenegotiationPushPacket(answer),
-                );
           }
         }
 
@@ -1039,47 +1047,49 @@ class GroupCallSession {
         final List<String> toCloseMids = [];
         for (final leftp in anyLeft) {
           participants.remove(leftp);
-          if (isCloudflareCall && cloudflareCall != null) {
-            final existingCall = cloudflareCall;
-            final tss = await existingCall!.pc!.getTransceivers();
 
-            final sdps = existingCall.remoteTrackUserIdMap[leftp] ?? [];
+          // map trans to mid and then inactivate
+          // if (isCloudflareCall && cloudflareCall != null) {
+          //   final existingCall = cloudflareCall;
+          //   final tss = await existingCall!.pc!.getTransceivers();
 
-            final toCloseTss =
-                tss.where((ts) => sdps.any((sdp) => sdp.mid == ts.mid));
+          //   final sdps = existingCall.remoteTrackUserIdMap[leftp] ?? [];
 
-            for (final ts in toCloseTss) {
-              toCloseMids.add(ts.mid);
-              await ts.setDirection(TransceiverDirection.Inactive);
-            }
-            existingCall.remoteTrackUserIdMap.remove(leftp);
-          }
+          //   final toCloseTss =
+          //       tss.where((ts) => sdps.any((sdp) => sdp.mid == ts.mid));
+
+          //   for (final ts in toCloseTss) {
+          //     toCloseMids.add(ts.mid);
+          //     await ts.setDirection(TransceiverDirection.Inactive);
+          //   }
+          //   existingCall.remoteTrackUserIdMap.remove(leftp);
+          // }
         }
         if (isCloudflareCall && cloudflareCall != null) {
-          final existingCall = cloudflareCall;
-          final offer = await existingCall!.pc!.createOffer();
-          await existingCall.pc!.setLocalDescription(offer);
+          // final existingCall = cloudflareCall;
+          // final offer = await existingCall!.pc!.createOffer();
+          // await existingCall.pc!.setLocalDescription(offer);
 
-          final closeResp = (await voip.cloudflareCallsApi!
-                  .getCloseATrackApi()
-                  .appsAppIdSessionsSessionIdTracksClosePut(
-                    appId: CallConstants.cloudflareAppId,
-                    sessionId: cloudflareSessionId!,
-                    appsAppIdSessionsSessionIdTracksClosePutRequest:
-                        createClosePutPacket(
-                            createSdpPacket(offer),
-                            createCloseTrackObjectPushPacket(toCloseMids),
-                            false),
-                  ))
-              .data;
-          if (closeResp?.sessionDescription != null) {
-            await existingCall.pc!.setRemoteDescription(
-              RTCSessionDescription(
-                closeResp!.sessionDescription!.sdp,
-                getSDPTypeFromSDP(closeResp.sessionDescription!.type!),
-              ),
-            );
-          }
+          // final closeResp = (await voip.cloudflareCallsApi!
+          //         .getCloseATrackApi()
+          //         .appsAppIdSessionsSessionIdTracksClosePut(
+          //           appId: CallConstants.cloudflareAppId,
+          //           sessionId: cloudflareSessionId!,
+          //           appsAppIdSessionsSessionIdTracksClosePutRequest:
+          //               createClosePutPacket(
+          //                   createSdpPacket(offer),
+          //                   createCloseTrackObjectPushPacket(toCloseMids),
+          //                   true),
+          //         ))
+          //     .data;
+          // if (closeResp?.sessionDescription != null) {
+          //   await existingCall.pc!.setRemoteDescription(
+          //     RTCSessionDescription(
+          //       closeResp!.sessionDescription!.sdp,
+          //       getSDPTypeFromSDP(closeResp.sessionDescription!.type!),
+          //     ),
+          //   );
+          // }
         }
 
         if (isLivekitCall && enableE2EE) {
