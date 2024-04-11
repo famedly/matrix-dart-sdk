@@ -21,26 +21,26 @@ import 'package:matrix/src/event.dart';
 
 class SpaceChild {
   final String? roomId;
-  final List<String>? via;
+  final List<String> via;
   final String order;
   final bool? suggested;
 
   SpaceChild.fromState(Event state)
       : assert(state.type == EventTypes.spaceChild),
         roomId = state.stateKey,
-        via = state.content.tryGetList<String>('via'),
+        via = state.content.tryGetList<String>('via') ?? [],
         order = state.content.tryGet<String>('order') ?? '',
         suggested = state.content.tryGet<bool>('suggested');
 }
 
 class SpaceParent {
   final String? roomId;
-  final List<String>? via;
+  final List<String> via;
   final bool? canonical;
 
   SpaceParent.fromState(Event state)
       : assert(state.type == EventTypes.spaceParent),
         roomId = state.stateKey,
-        via = state.content.tryGetList<String>('via'),
+        via = state.content.tryGetList<String>('via') ?? [],
         canonical = state.content.tryGet<bool>('canonical');
 }

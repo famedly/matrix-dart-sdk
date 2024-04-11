@@ -2233,7 +2233,7 @@ class Room {
       states[EventTypes.spaceParent]
           ?.values
           .map((state) => SpaceParent.fromState(state))
-          .where((child) => child.via?.isNotEmpty ?? false)
+          .where((child) => child.via.isNotEmpty)
           .toList() ??
       [];
 
@@ -2246,7 +2246,7 @@ class Room {
       : (states[EventTypes.spaceChild]
               ?.values
               .map((state) => SpaceChild.fromState(state))
-              .where((child) => child.via?.isNotEmpty ?? false)
+              .where((child) => child.via.isNotEmpty)
               .toList() ??
           [])
     ..sort((a, b) => a.order.isEmpty || b.order.isEmpty

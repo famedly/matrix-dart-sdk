@@ -516,8 +516,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
   Future<List<OlmSession>> getOlmSessions(
       String identityKey, String userId) async {
     final rawSessions =
-        await _olmSessionsBox.get(identityKey.toHiveKey) as Map?;
-    if (rawSessions == null || rawSessions.isEmpty) return <OlmSession>[];
+        await _olmSessionsBox.get(identityKey.toHiveKey) as Map? ?? {};
+
     return rawSessions.values
         .map((json) => OlmSession.fromJson(convertToJson(json), userId))
         .toList();
