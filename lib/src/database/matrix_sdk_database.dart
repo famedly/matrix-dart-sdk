@@ -19,7 +19,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:sqflite_common/sqflite.dart';
 
@@ -35,6 +34,9 @@ import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/database/indexeddb_box.dart'
     if (dart.library.io) 'package:matrix/src/database/sqflite_box.dart';
 
+import 'package:matrix/src/database/database_file_storage_stub.dart'
+    if (dart.library.io) 'package:matrix/src/database/database_file_storage_io.dart';
+
 /// Database based on SQlite3 on native and IndexedDB on web. For native you
 /// have to pass a `Database` object, which can be created with the sqflite
 /// package like this:
@@ -49,7 +51,7 @@ import 'package:matrix/src/database/indexeddb_box.dart'
 /// [sqflite_common_ffi](https://pub.dev/packages/sqflite_common_ffi).
 /// Learn more at:
 /// https://github.com/famedly/matrix-dart-sdk/issues/1642#issuecomment-1865827227
-class MatrixSdkDatabase extends DatabaseApi {
+class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   static const int version = 7;
   final String name;
   late BoxCollection _collection;
@@ -101,8 +103,6 @@ class MatrixSdkDatabase extends DatabaseApi {
   late Box<String> _seenDeviceKeysBox;
 
   @override
-  bool get supportsFileStoring => fileStorageLocation != null;
-  @override
   final int maxFileSize;
 
   // there was a field of type `dart:io:Directory` here. This one broke the
@@ -110,18 +110,6 @@ class MatrixSdkDatabase extends DatabaseApi {
   @Deprecated(
       'Breaks support for web standalone. Use [fileStorageLocation] instead.')
   Object? get fileStoragePath => fileStorageLocation?.toFilePath();
-
-  /// A [Uri] defining the file storage location.
-  ///
-  /// Unless you support custom Uri schemes, this should usually be a
-  /// [Uri.directory] identifier.
-  ///
-  /// Using a [Uri] as type here enables users to technically extend the API to
-  /// support file storage on non-io platforms as well - or to use non-File
-  /// based storage mechanisms on io.
-  final Uri? fileStorageLocation;
-
-  final Duration? deleteFilesAfterDuration;
 
   static const String _clientBoxName = 'box_client';
 
@@ -185,10 +173,17 @@ class MatrixSdkDatabase extends DatabaseApi {
     this.sqfliteFactory,
     this.maxFileSize = 0,
     // TODO : remove deprecated member migration on next major release
+    @Deprecated(
+        'Breaks support for web standalone. Use [fileStorageLocation] instead.')
     dynamic fileStoragePath,
     Uri? fileStorageLocation,
-    this.deleteFilesAfterDuration,
-  }) : fileStorageLocation = fileStorageLocation ?? fileStoragePath?.path;
+    Duration? deleteFilesAfterDuration,
+  }) {
+    final legacyPath = fileStoragePath?.path;
+    this.fileStorageLocation = fileStorageLocation ??
+        (legacyPath is String ? Uri.tryParse(legacyPath) : null);
+    this.deleteFilesAfterDuration = deleteFilesAfterDuration;
+  }
 
   Future<void> open() async {
     _collection = await BoxCollection.open(
@@ -328,28 +323,6 @@ class MatrixSdkDatabase extends DatabaseApi {
   }
 
   @override
-  Future<void> deleteOldFiles(int savedAt) async {
-    if (_kIsWeb) return;
-    final path = fileStorageLocation?.toFilePath();
-    final deleteFilesAfterDuration = this.deleteFilesAfterDuration;
-    if (!supportsFileStoring ||
-        path == null ||
-        deleteFilesAfterDuration == null) {
-      return;
-    }
-    final dir = Directory(path);
-    final entities = await dir.list().toList();
-    for (final file in entities) {
-      if (file is! File) continue;
-      final stat = await file.stat();
-      if (DateTime.now().difference(stat.modified) > deleteFilesAfterDuration) {
-        Logs().v('Delete old file', file.path);
-        await file.delete();
-      }
-    }
-  }
-
-  @override
   Future<void> forgetRoom(String roomId) async {
     await _timelineFragmentsBox.delete(TupleKey(roomId, '').toString());
     final eventsBoxKeys = await _eventsBox.getAllKeys();
@@ -470,18 +443,6 @@ class MatrixSdkDatabase extends DatabaseApi {
 
         return await _getEventsByIds(eventIds.cast<String>(), room);
       });
-
-  @override
-  Future<Uint8List?> getFile(Uri mxcUri) async {
-    if (_kIsWeb) return null;
-    final path = fileStorageLocation?.toFilePath();
-    if (!supportsFileStoring || path == null) return null;
-
-    final file = File('$path/${mxcUri.toString().split('/').last}');
-
-    if (await file.exists()) return await file.readAsBytes();
-    return null;
-  }
 
   @override
   Future<StoredInboundGroupSession?> getInboundGroupSession(
@@ -1154,18 +1115,6 @@ class MatrixSdkDatabase extends DatabaseApi {
         eventUpdate.content,
       );
     }
-  }
-
-  @override
-  Future<void> storeFile(Uri mxcUri, Uint8List bytes, int time) async {
-    if (_kIsWeb) return;
-    final path = fileStorageLocation?.toFilePath();
-    if (!supportsFileStoring || path == null) return;
-
-    final file = File('$path/${mxcUri.toString().split('/').last}');
-
-    if (await file.exists()) return;
-    await file.writeAsBytes(bytes);
   }
 
   @override
