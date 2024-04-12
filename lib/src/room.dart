@@ -1216,7 +1216,15 @@ class Room {
   }
 
   /// Call the Matrix API to invite a user to this room.
-  Future<void> invite(String userID) => client.inviteUser(id, userID);
+  Future<void> invite(
+    String userID, {
+    String? reason,
+  }) =>
+      client.inviteUser(
+        id,
+        userID,
+        reason: reason,
+      );
 
   /// Request more previous events from the server. [historyCount] defines how much events should
   /// be received maximum. When the request is answered, [onHistoryReceived] will be triggered **before**
