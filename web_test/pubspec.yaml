@@ -1,0 +1,17 @@
+name: web_test
+description: A test project for the webdev compiler.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.2.0
+
+# Add regular dependencies here.
+dependencies:
+  matrix:
+    path: ..
+
+dev_dependencies:
+  build_runner: ^2.4.9
+  build_web_compilers: ^4.0.10
+  webdev: ^3.4.0

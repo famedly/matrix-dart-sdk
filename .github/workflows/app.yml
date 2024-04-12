@@ -47,6 +47,11 @@ jobs:
           rm -r example
           ./scripts/prepare.sh
           ./scripts/test.sh
+      - name: Ensure SDK compiles on web
+        run: |
+          pushd web_test
+          dart pub get
+          dart run webdev build
 
   coverage_without_olm:
     runs-on: ubuntu-latest
