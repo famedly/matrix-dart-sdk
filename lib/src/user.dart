@@ -169,10 +169,14 @@ class User extends Event {
       room.canKick &&
       powerLevel < room.ownPowerLevel;
 
+  @Deprecated('Use [canChangeUserPowerLevel] instead.')
+  bool get canChangePowerLevel => canChangeUserPowerLevel;
+
   /// Whether the client is allowed to change the power level of this user.
   /// Please be aware that you can only set the power level to at least your own!
-  bool get canChangePowerLevel =>
-      room.canChangePowerLevel && powerLevel < room.ownPowerLevel;
+  bool get canChangeUserPowerLevel =>
+      room.canChangePowerLevel &&
+      (powerLevel < room.ownPowerLevel || id == room.client.userID);
 
   @override
   bool operator ==(Object other) => (other is User &&

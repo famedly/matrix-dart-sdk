@@ -140,7 +140,7 @@ void main() {
       expect(user1.canKick, false);
     });
     test('canChangePowerLevel', () async {
-      expect(user1.canChangePowerLevel, false);
+      expect(user1.canChangeUserPowerLevel, false);
     });
     test('mention', () async {
       expect(user1.mention, '@[Alice M]');
