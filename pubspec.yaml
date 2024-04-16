@@ -41,7 +41,7 @@ dev_dependencies:
   file: ">=6.1.1 <8.0.0"
   import_sorter: ^4.6.0
   lints: ^3.0.0
-  sqflite_common_ffi: ^2.3.3
+  sqflite_common_ffi: 2.3.2+1 # v2.3.3 doesn't support dart v3.2.x
   test: ^1.15.7
   #flutter_test: {sdk: flutter}
 #dependency_overrides:
