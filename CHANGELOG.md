@@ -1,3 +1,28 @@
+## [0.27.0] 16th April 2024
+
+- chore: add api lite readme
+- chore: downgrade sqflite_common_ffi to support dart sdk v3.2.0
+- chore: check message size before fake sync
+- chore: emit handleCallEnded on ice fail
+- chore: merge api_lite and dart sdk
+- chore: Pass reason parameter when invite user to a room
+- chore: Sort archive by last activity
+- chore: update local v3 gh actions to v4
+- docs: Add documentation
+- feat: add sendAudioEvent and isVoiceMessage method to msc extensions
+- feat: add Web build test
+- fix: dart:io import in matrix_sdk_database
+- fix: Do not use invitor avatar_url for room
+- fix: Make database deleteable without the need to init the boxcollection
+- fix: Typo in upload key json object creates invalid objects
+- fix: userMediaConstraints
+- refactor: BREAKING Migrate database to new lastEvent storage method
+- refactor: Make via fields not nullable
+- refactor: Move file storage to mixin to not import dart:io
+- refactor: Store lastEvent in room object instead of room state
+- refactor: Switch to MatrixSdkDatabase as suggested database and deprecate other ones
+- refactor: Use dart records for checkHomeserver method
+
 ## [0.26.1] 15th March 2024
 - chore: add noice/echo cancelling flags to getUserMedia (td)
 - feat: Add commands /ignore and /unignore (Krille)
