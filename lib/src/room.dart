@@ -1201,11 +1201,15 @@ class Room {
   /// Returns the event ID of the new state event. If there is no known
   /// power level event, there might something broken and this returns null.
   Future<String> setPower(String userID, int power) async {
-    var powerMap = getState(EventTypes.RoomPowerLevels)?.content;
-    if (powerMap is! Map<String, dynamic>) {
-      powerMap = <String, dynamic>{};
-    }
-    (powerMap['users'] ??= {})[userID] = power;
+    final powerMap = Map<String, Object?>.from(
+      getState(EventTypes.RoomPowerLevels)?.content ?? {},
+    );
+
+    final usersPowerMap = powerMap['users'] is Map<String, Object?>
+        ? powerMap['users'] as Map<String, Object?>
+        : (powerMap['users'] = <String, Object?>{});
+
+    usersPowerMap[userID] = power;
 
     return await client.setRoomStateWithKey(
       id,
