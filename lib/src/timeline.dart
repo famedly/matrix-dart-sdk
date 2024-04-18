@@ -546,17 +546,39 @@ class Timeline {
     }
   }
 
+  @Deprecated('Use [startSearch] instead.')
+  Stream<List<Event>> searchEvent({
+    String? searchTerm,
+    int requestHistoryCount = 100,
+    int maxHistoryRequests = 10,
+    String? sinceEventId,
+    int? limit,
+    bool Function(Event)? searchFunc,
+  }) =>
+      startSearch(
+        searchTerm: searchTerm,
+        requestHistoryCount: requestHistoryCount,
+        maxHistoryRequests: maxHistoryRequests,
+        // ignore: deprecated_member_use_from_same_package
+        sinceEventId: sinceEventId,
+        limit: limit,
+        searchFunc: searchFunc,
+      ).map((result) => result.$1);
+
   /// Searches [searchTerm] in this timeline. It first searches in the
   /// cache, then in the database and then on the server. The search can
   /// take a while, which is why this returns a stream so the already found
   /// events can already be displayed.
   /// Override the [searchFunc] if you need another search. This will then
   /// ignore [searchTerm].
-  Stream<List<Event>> searchEvent({
+  /// Returns the List of Events and the next prevBatch at the end of the
+  /// search.
+  Stream<(List<Event>, String?)> startSearch({
     String? searchTerm,
     int requestHistoryCount = 100,
     int maxHistoryRequests = 10,
-    String? sinceEventId,
+    String? prevBatch,
+    @Deprecated('Use [prevBatch] instead.') String? sinceEventId,
     int? limit,
     bool Function(Event)? searchFunc,
   }) async* {
@@ -569,7 +591,7 @@ class Timeline {
       // Search locally
       for (final event in events) {
         if (searchFunc(event)) {
-          yield found..add(event);
+          yield (found..add(event), null);
         }
       }
 
@@ -586,14 +608,14 @@ class Timeline {
         start += eventsFromStore.length;
         for (final event in eventsFromStore) {
           if (searchFunc(event)) {
-            yield found..add(event);
+            yield (found..add(event), null);
           }
         }
       }
     }
 
     // Search on the server
-    var prevBatch = room.prev_batch;
+    prevBatch ??= room.prev_batch;
     if (sinceEventId != null) {
       prevBatch =
           (await room.client.getEventContext(room.id, sinceEventId)).end;
@@ -622,7 +644,7 @@ class Timeline {
             }
           }
           if (searchFunc(event)) {
-            yield found..add(event);
+            yield (found..add(event), resp.end);
             if (limit != null && found.length >= limit) break;
           }
         }
