@@ -308,6 +308,7 @@ extension LoginTypeFromStringExtension on Iterable<LoginType> {
     final override = {
       'm.login.password': LoginType.mLoginPassword,
       'm.login.token': LoginType.mLoginToken,
+      'org.matrix.login.jwt': LoginType.mLoginJWT,
     }[val];
 // ignore: unnecessary_this
     return this.contains(override) ? override : null;
@@ -320,6 +321,7 @@ extension LoginTypeEnhancedEnum on LoginType {
   String get name => {
         LoginType.mLoginPassword: 'm.login.password',
         LoginType.mLoginToken: 'm.login.token',
+        LoginType.mLoginJWT:'org.matrix.login.jwt',
       }[this]!;
   bool get isMLoginPassword => this == LoginType.mLoginPassword;
   bool get isMLoginToken => this == LoginType.mLoginToken;
