@@ -26,33 +26,22 @@ import '../fake_client.dart';
 import '../fake_matrix_api.dart';
 
 void main() {
-  group('Cross Signing', () {
+  group('Cross Signing', tags: 'olm', () {
     Logs().level = Level.error;
-    var olmEnabled = true;
 
     late Client client;
 
-    test('setupClient', () async {
-      try {
-        await olm.init();
-        olm.get_library_version();
-      } catch (e) {
-        olmEnabled = false;
-        Logs().w('[LibOlm] Failed to load LibOlm', e);
-      }
-      Logs().i('[LibOlm] Enabled: $olmEnabled');
-      if (!olmEnabled) return;
-
+    setUpAll(() async {
+      await olm.init();
+      olm.get_library_version();
       client = await getClient();
     });
 
     test('basic things', () async {
-      if (!olmEnabled) return;
       expect(client.encryption?.crossSigning.enabled, true);
     });
 
     test('selfSign', () async {
-      if (!olmEnabled) return;
       final key = client.userDeviceKeys[client.userID]!.masterKey!;
       key.setDirectVerified(false);
       FakeMatrixApi.calledEndpoints.clear();
@@ -66,7 +55,6 @@ void main() {
     });
 
     test('signable', () async {
-      if (!olmEnabled) return;
       expect(
           client.encryption!.crossSigning
               .signable([client.userDeviceKeys[client.userID!]!.masterKey!]),
@@ -90,7 +78,6 @@ void main() {
     });
 
     test('sign', () async {
-      if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption!.crossSigning.sign([
         client.userDeviceKeys[client.userID!]!.masterKey!,
@@ -114,7 +101,6 @@ void main() {
     });
 
     test('dispose client', () async {
-      if (!olmEnabled) return;
       await client.dispose(closeDatabase: true);
     });
   });

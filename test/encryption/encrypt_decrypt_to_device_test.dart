@@ -29,9 +29,8 @@ void main() {
   const otherPickledOlmAccount =
       'VWhVApbkcilKAEGppsPDf9nNVjaK8/IxT3asSR0sYg0S5KgbfE8vXEPwoiKBX2cEvwX3OessOBOkk+ZE7TTbjlrh/KEd31p8Wo+47qj0AP+Ky+pabnhi+/rTBvZy+gfzTqUfCxZrkzfXI9Op4JnP6gYmy7dVX2lMYIIs9WCO1jcmIXiXum5jnfXu1WLfc7PZtO2hH+k9CDKosOFaXRBmsu8k/BGXPSoWqUpvu6WpEG9t5STk4FeAzA';
 
-  group('Encrypt/Decrypt to-device messages', () {
+  group('Encrypt/Decrypt to-device messages', tags: 'olm', () {
     Logs().level = Level.error;
-    var olmEnabled = true;
 
     late Client client;
     final otherClient = Client('othertestclient',
@@ -39,17 +38,13 @@ void main() {
     late DeviceKeys device;
     late Map<String, dynamic> payload;
 
-    test('setupClient', () async {
-      try {
-        await olm.init();
-        olm.get_library_version();
-      } catch (e) {
-        olmEnabled = false;
-        Logs().w('[LibOlm] Failed to load LibOlm', e);
-      }
-      Logs().i('[LibOlm] Enabled: $olmEnabled');
-      if (!olmEnabled) return;
+    setUpAll(() async {
+      await olm.init();
+      olm.get_library_version();
+      client = await getClient();
+    });
 
+    test('setupClient', () async {
       client = await getClient();
       await client.abortSync();
       await otherClient.checkHomeserver(
@@ -81,13 +76,11 @@ void main() {
     });
 
     test('encryptToDeviceMessage', () async {
-      if (!olmEnabled) return;
       payload = await otherClient.encryption!
           .encryptToDeviceMessage([device], 'm.to_device', {'hello': 'foxies'});
     });
 
     test('decryptToDeviceEvent', () async {
-      if (!olmEnabled) return;
       final encryptedEvent = ToDeviceEvent(
         sender: '@othertest:fakeServer.notExisting',
         type: EventTypes.Encrypted,
@@ -100,7 +93,6 @@ void main() {
     });
 
     test('decryptToDeviceEvent nocache', () async {
-      if (!olmEnabled) return;
       client.encryption!.olmManager.olmSessions.clear();
       payload = await otherClient.encryption!.encryptToDeviceMessage(
           [device], 'm.to_device', {'hello': 'superfoxies'});
@@ -116,7 +108,6 @@ void main() {
     });
 
     test('dispose client', () async {
-      if (!olmEnabled) return;
       await client.dispose(closeDatabase: true);
       await otherClient.dispose(closeDatabase: true);
     });

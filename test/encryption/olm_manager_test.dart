@@ -27,29 +27,18 @@ import '../fake_client.dart';
 import '../fake_matrix_api.dart';
 
 void main() {
-  group('Olm Manager', () {
+  group('Olm Manager', tags: 'olm', () {
     Logs().level = Level.error;
-    var olmEnabled = true;
 
     late Client client;
 
-    setUp(() async {
-      try {
-        await olm.init();
-        olm.get_library_version();
-      } catch (e) {
-        olmEnabled = false;
-        Logs().w('[LibOlm] Failed to load LibOlm', e);
-      }
-      Logs().i('[LibOlm] Enabled: $olmEnabled');
-      if (!olmEnabled) return Future.value();
-
+    setUpAll(() async {
+      await olm.init();
+      olm.get_library_version();
       client = await getClient();
-      return Future.value();
     });
 
     test('signatures', () async {
-      if (!olmEnabled) return;
       final payload = <String, dynamic>{
         'fox': 'floof',
       };
@@ -61,7 +50,6 @@ void main() {
     });
 
     test('uploadKeys', () async {
-      if (!olmEnabled) return;
       FakeMatrixApi.calledEndpoints.clear();
       final res = await client.encryption!.olmManager
           .uploadKeys(uploadDeviceKeys: true);
@@ -89,8 +77,6 @@ void main() {
     });
 
     test('handleDeviceOneTimeKeysCount', () async {
-      if (!olmEnabled) return;
-
       FakeMatrixApi.calledEndpoints.clear();
       await client.encryption!.olmManager
           .handleDeviceOneTimeKeysCount({'signed_curve25519': 20}, null);
@@ -127,7 +113,6 @@ void main() {
     });
 
     test('restoreOlmSession', () async {
-      if (!olmEnabled) return;
       client.encryption!.olmManager.olmSessions.clear();
       await client.encryption!.olmManager
           .restoreOlmSession(client.userID!, client.identityKey);
@@ -145,7 +130,6 @@ void main() {
     });
 
     test('startOutgoingOlmSessions', () async {
-      if (!olmEnabled) return;
       // start an olm session.....with ourself!
       client.encryption!.olmManager.olmSessions.clear();
       await client.encryption!.olmManager.startOutgoingOlmSessions([
@@ -158,7 +142,6 @@ void main() {
     });
 
     test('replay to_device events', () async {
-      if (!olmEnabled) return;
       final userId = '@alice:example.com';
       final deviceId = 'JLAFKJWSCS';
       final senderKey = 'L+4+JCl8MD63dgo8z5Ta+9QAHXiANyOVSfgbHA5d3H8';
@@ -261,7 +244,6 @@ void main() {
     });
 
     test('dispose client', () async {
-      if (!olmEnabled) return;
       await client.dispose(closeDatabase: true);
     });
   });

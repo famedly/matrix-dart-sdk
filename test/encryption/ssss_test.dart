@@ -49,34 +49,23 @@ class MockSSSS extends SSSS {
 }
 
 void main() {
-  group('SSSS', () {
+  group('SSSS', tags: 'olm', () {
     Logs().level = Level.error;
-    var olmEnabled = true;
 
     late Client client;
 
-    test('setupClient', () async {
-      try {
-        await olm.init();
-        olm.get_library_version();
-      } catch (e) {
-        olmEnabled = false;
-        Logs().w('[LibOlm] Failed to load LibOlm', e);
-      }
-      Logs().i('[LibOlm] Enabled: $olmEnabled');
-      if (!olmEnabled) return;
-
+    setUpAll(() async {
+      await olm.init();
+      olm.get_library_version();
       client = await getClient();
     });
 
     test('basic things', () async {
-      if (!olmEnabled) return;
       expect(client.encryption!.ssss.defaultKeyId,
           '0FajDWYaM6wQ4O60OZnLvwZfsBNu4Bu3');
     });
 
     test('encrypt / decrypt', () async {
-      if (!olmEnabled) return;
       final key = Uint8List.fromList(secureRandomBytes(32));
 
       final enc = await SSSS.encryptAes('secret foxies', key, 'name');
@@ -85,7 +74,6 @@ void main() {
     });
 
     test('store', () async {
-      if (!olmEnabled) return;
       final handle = client.encryption!.ssss.open();
       var failed = false;
       try {
@@ -125,7 +113,6 @@ void main() {
     });
 
     test('encode / decode recovery key', () async {
-      if (!olmEnabled) return;
       final key = Uint8List.fromList(secureRandomBytes(32));
       final encoded = SSSS.encodeRecoveryKey(key);
       var decoded = SSSS.decodeRecoveryKey(encoded);
@@ -140,7 +127,6 @@ void main() {
     });
 
     test('cache', () async {
-      if (!olmEnabled) return;
       await client.encryption!.ssss.clearCache();
       final handle =
           client.encryption!.ssss.open(EventTypes.CrossSigningSelfSigning);
@@ -174,7 +160,6 @@ void main() {
     });
 
     test('postUnlock', () async {
-      if (!olmEnabled) return;
       await client.encryption!.ssss.clearCache();
       client.userDeviceKeys[client.userID!]!.masterKey!
           .setDirectVerified(false);
@@ -200,7 +185,6 @@ void main() {
     });
 
     test('make share requests', () async {
-      if (!olmEnabled) return;
       final key =
           client.userDeviceKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
       key.setDirectVerified(true);
@@ -213,7 +197,6 @@ void main() {
     });
 
     test('answer to share requests', () async {
-      if (!olmEnabled) return;
       var event = ToDeviceEvent(
         sender: client.userID!,
         type: 'm.secret.request',
@@ -313,7 +296,6 @@ void main() {
     });
 
     test('receive share requests', () async {
-      if (!olmEnabled) return;
       final key =
           client.userDeviceKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
       key.setDirectVerified(true);
@@ -456,7 +438,6 @@ void main() {
     });
 
     test('request all', () async {
-      if (!olmEnabled) return;
       final key =
           client.userDeviceKeys[client.userID!]!.deviceKeys['OTHERDEVICE']!;
       key.setDirectVerified(true);
@@ -467,7 +448,6 @@ void main() {
     });
 
     test('periodicallyRequestMissingCache', () async {
-      if (!olmEnabled) return;
       client.userDeviceKeys[client.userID!]!.masterKey!.setDirectVerified(true);
       client.encryption!.ssss = MockSSSS(client.encryption!);
       (client.encryption!.ssss as MockSSSS).requestedSecrets = false;
@@ -480,7 +460,6 @@ void main() {
     });
 
     test('createKey', () async {
-      if (!olmEnabled) return;
       // with passphrase
       var newKey = await client.encryption!.ssss.createKey('test');
       expect(client.encryption!.ssss.isKeyValid(newKey.keyId), true);
@@ -496,7 +475,6 @@ void main() {
     });
 
     test('dispose client', () async {
-      if (!olmEnabled) return;
       await client.dispose(closeDatabase: true);
     });
   });

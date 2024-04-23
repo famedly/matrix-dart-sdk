@@ -19,7 +19,6 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
 import 'package:matrix/encryption.dart';
@@ -62,20 +61,8 @@ void main() async {
     );
   }
 
-  var olmEnabled = true;
-  try {
-    await olm.init();
-    olm.get_library_version();
-  } catch (e) {
-    olmEnabled = false;
-    Logs().w('[LibOlm] Failed to load LibOlm', e);
-  }
-  Logs().i('[LibOlm] Enabled: $olmEnabled');
-
-  final dynamic skip = olmEnabled ? false : 'olm library not available';
-
   /// All Tests related to the ChatTime
-  group('Key Verification', () {
+  group('Key Verification', tags: 'olm', () {
     Logs().level = Level.error;
 
     late Client client1;
@@ -532,5 +519,5 @@ void main() async {
       await client1.encryption!.keyVerificationManager.cleanup();
       await client2.encryption!.keyVerificationManager.cleanup();
     });
-  }, skip: skip);
+  });
 }

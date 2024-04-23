@@ -41,7 +41,7 @@ void main() {
   const fingerprintKey = 'gjL//fyaFHADt9KBADGag8g7F8Up78B/K1zXeiEPLJo';
 
   /// All Tests related to the Login
-  group('Client', () {
+  group('Client', tags: 'olm', () {
     Logs().level = Level.error;
 
     /// Check if all Elements get created
@@ -49,8 +49,6 @@ void main() {
     setUp(() async {
       matrix = await getClient();
     });
-
-    var olmEnabled = true;
 
     test('Login', () async {
       matrix = Client(
@@ -60,15 +58,6 @@ void main() {
       );
       final eventUpdateListFuture = matrix.onEvent.stream.toList();
       final toDeviceUpdateListFuture = matrix.onToDeviceEvent.stream.toList();
-      try {
-        await olm.init();
-        olm.get_library_version();
-      } catch (e) {
-        olmEnabled = false;
-        Logs().w('[LibOlm] Failed to load LibOlm', e);
-      }
-      Logs().w('[LibOlm] Enabled: $olmEnabled');
-
       var presenceCounter = 0;
       var accountDataCounter = 0;
       matrix.onPresenceChanged.stream.listen((CachedPresence data) {
@@ -112,11 +101,10 @@ void main() {
 
       expect(loginState, LoginState.loggedIn);
       expect(matrix.onSync.value != null, true);
-      expect(matrix.encryptionEnabled, olmEnabled);
-      if (olmEnabled) {
-        expect(matrix.identityKey, identityKey);
-        expect(matrix.fingerprintKey, fingerprintKey);
-      }
+      expect(matrix.encryptionEnabled, true);
+      expect(matrix.identityKey, identityKey);
+      expect(matrix.fingerprintKey, fingerprintKey);
+
       expect(sync.nextBatch == matrix.prevBatch, true);
 
       expect(matrix.accountData.length, 10);
@@ -276,11 +264,8 @@ void main() {
       expect(deviceeventUpdateList.length, 2);
 
       expect(deviceeventUpdateList[0].type, 'm.new_device');
-      if (olmEnabled) {
-        expect(deviceeventUpdateList[1].type, 'm.room_key');
-      } else {
-        expect(deviceeventUpdateList[1].type, 'm.room.encrypted');
-      }
+
+      expect(deviceeventUpdateList[1].type, 'm.room_key');
     });
 
     test('recentEmoji', () async {
@@ -349,15 +334,6 @@ void main() {
         databaseBuilder: getDatabase,
       );
 
-      try {
-        await olm.init();
-        olm.get_library_version();
-      } catch (e) {
-        olmEnabled = false;
-        Logs().w('[LibOlm] Failed to load LibOlm', e);
-      }
-      Logs().w('[LibOlm] Enabled: $olmEnabled');
-
       expect(matrix.homeserver, null);
 
       try {
@@ -392,11 +368,11 @@ void main() {
 
       expect(loginState, LoginState.loggedIn);
       expect(matrix.onSync.value != null, true);
-      expect(matrix.encryptionEnabled, olmEnabled);
-      if (olmEnabled) {
-        expect(matrix.identityKey, identityKey);
-        expect(matrix.fingerprintKey, fingerprintKey);
-      }
+      expect(matrix.encryptionEnabled, true);
+
+      expect(matrix.identityKey, identityKey);
+      expect(matrix.fingerprintKey, fingerprintKey);
+
       expect(sync.nextBatch == matrix.prevBatch, true);
     });
 
@@ -695,9 +671,6 @@ void main() {
       await client.dispose(closeDatabase: true);
     });
     test('sendToDeviceEncrypted', () async {
-      if (!olmEnabled) {
-        return;
-      }
       FakeMatrixApi.calledEndpoints.clear();
 
       await matrix.sendToDeviceEncrypted(
@@ -714,9 +687,6 @@ void main() {
           true);
     });
     test('sendToDeviceEncryptedChunked', () async {
-      if (!olmEnabled) {
-        return;
-      }
       FakeMatrixApi.calledEndpoints.clear();
       await matrix.sendToDeviceEncryptedChunked(
           matrix.userDeviceKeys['@alice:example.com']!.deviceKeys.values
@@ -1199,40 +1169,34 @@ void main() {
           reason: '!5345234235:example.com not found as archived room');
     });
 
-    test('Client Init Exception', () async {
-      try {
-        await olm.init();
-        olm.get_library_version();
-      } catch (e) {
-        olmEnabled = false;
-        Logs().w('[LibOlm] Failed to load LibOlm', e);
-      }
-      Logs().w('[LibOlm] Enabled: $olmEnabled');
-      if (!olmEnabled) return;
-      final customClient = Client(
-        'failclient',
-        databaseBuilder: getMatrixSdkDatabase,
-      );
-      try {
-        await customClient.init(
-          newToken: 'testtoken',
-          newDeviceID: 'testdeviceid',
-          newDeviceName: 'testdevicename',
-          newHomeserver: Uri.parse('https://test.server'),
-          newOlmAccount: 'abcd',
-          newUserID: '@user:server',
+    test(
+      'Client Init Exception',
+      () async {
+        final customClient = Client(
+          'failclient',
+          databaseBuilder: getMatrixSdkDatabase,
         );
-        throw Exception('No exception?');
-      } on ClientInitException catch (error) {
-        expect(error.accessToken, 'testtoken');
-        expect(error.deviceId, 'testdeviceid');
-        expect(error.deviceName, 'testdevicename');
-        expect(error.homeserver, Uri.parse('https://test.server'));
-        expect(error.olmAccount, 'abcd');
-        expect(error.userId, '@user:server');
-        expect(error.toString(), 'Exception: BAD_ACCOUNT_KEY');
-      }
-    });
+        try {
+          await customClient.init(
+            newToken: 'testtoken',
+            newDeviceID: 'testdeviceid',
+            newDeviceName: 'testdevicename',
+            newHomeserver: Uri.parse('https://test.server'),
+            newOlmAccount: 'abcd',
+            newUserID: '@user:server',
+          );
+          throw Exception('No exception?');
+        } on ClientInitException catch (error) {
+          expect(error.accessToken, 'testtoken');
+          expect(error.deviceId, 'testdeviceid');
+          expect(error.deviceName, 'testdevicename');
+          expect(error.homeserver, Uri.parse('https://test.server'));
+          expect(error.olmAccount, 'abcd');
+          expect(error.userId, '@user:server');
+          expect(error.toString(), 'Exception: BAD_ACCOUNT_KEY');
+        }
+      },
+    );
 
     tearDown(() async {
       await matrix.dispose(closeDatabase: true);

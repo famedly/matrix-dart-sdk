@@ -18,7 +18,6 @@
 
 import 'dart:convert';
 
-import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
@@ -28,7 +27,6 @@ void main() {
   /// All Tests related to the Event
   group('Event', () {
     Logs().level = Level.error;
-    var olmEnabled = true;
 
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final id = '!4fsdfjisjf:server.abc';
@@ -54,14 +52,6 @@ void main() {
     late Room room;
 
     setUpAll(() async {
-      try {
-        await olm.init();
-        olm.get_library_version();
-      } catch (e) {
-        olmEnabled = false;
-        Logs().w('[LibOlm] Failed to load LibOlm', e);
-      }
-      Logs().i('[LibOlm] Enabled: $olmEnabled');
       client = await getClient();
       room = Room(id: '!testroom:example.abc', client: client);
     });

@@ -18,7 +18,6 @@
 
 import 'dart:async';
 
-import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
@@ -27,7 +26,7 @@ import 'fake_client.dart';
 import 'fake_matrix_api.dart';
 
 void main() {
-  group('Timeline context', () {
+  group('Timeline context', tags: 'olm', () {
     Logs().level = Level.error;
     final roomID = '!1234:example.com';
     var testTimeStamp = 0;
@@ -35,7 +34,6 @@ void main() {
     final insertList = <int>[];
     final changeList = <int>[];
     final removeList = <int>[];
-    var olmEnabled = true;
 
     final countStream = StreamController<int>.broadcast();
     Future<int> waitForCount(int count) async {
@@ -65,14 +63,6 @@ void main() {
     late Room room;
     late Timeline timeline;
     setUp(() async {
-      try {
-        await olm.init();
-        olm.get_library_version();
-      } catch (e) {
-        olmEnabled = false;
-        Logs().w('[LibOlm] Failed to load LibOlm', e);
-      }
-      Logs().i('[LibOlm] Enabled: $olmEnabled');
       client = await getClient();
       client.sendMessageTimeoutSeconds = 5;
 
@@ -318,11 +308,9 @@ void main() {
       event = await timeline.getEventById('unencrypted_event');
       expect(event?.body, 'This is an example text message');
 
-      if (olmEnabled) {
-        event = await timeline.getEventById('encrypted_event');
-        // the event is invalid but should have traces of attempting to decrypt
-        expect(event?.messageType, MessageTypes.BadEncrypted);
-      }
+      event = await timeline.getEventById('encrypted_event');
+      // the event is invalid but should have traces of attempting to decrypt
+      expect(event?.messageType, MessageTypes.BadEncrypted);
     });
 
     test('Resend message', () async {

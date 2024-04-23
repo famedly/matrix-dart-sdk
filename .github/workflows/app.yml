@@ -30,29 +30,6 @@ jobs:
           scripts/prepare.sh
           scripts/test_driver.sh"
 
-  # coverage is done on the flutter-linux image because we setup olm there
-  # coverage_without_olm is done on dart images because why not :D
-  coverage:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: cat .github/workflows/versions.env >> $GITHUB_ENV
-      - uses: subosito/flutter-action@48cafc24713cca54bbe03cdc3a423187d413aafa
-        with:
-          flutter-version: ${{ env.flutter_version }}
-          cache: true
-      - name: Run tests
-        run: |
-          sed -i 's/#flutter_test/flutter_test/g' pubspec.yaml
-          rm -r example
-          ./scripts/prepare.sh
-          ./scripts/test.sh
-      - name: Ensure SDK compiles on web
-        run: |
-          pushd web_test
-          dart pub get
-          dart run webdev build
-
   coverage_without_olm:
     runs-on: ubuntu-latest
     env:
@@ -65,10 +42,79 @@ jobs:
           sdk: ${{ env.dart_version }}
       - name: Run tests
         run: |
-          apt-get update && apt-get install --no-install-recommends --no-install-suggests -y curl lcov python3 python3-distutils libsqlite3-0 libsqlite3-dev
-          curl -o /bin/lcov_cobertura.py https://raw.githubusercontent.com/eriwen/lcov-to-cobertura-xml/master/lcov_cobertura/lcov_cobertura.py && sed 's/env python/env python3/' -i /bin/lcov_cobertura.py && chmod +x /bin/lcov_cobertura.py
-          dart pub get
+          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y curl lcov python3 python3-distutils libsqlite3-0 libsqlite3-dev
           ./scripts/test.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage_without_olm
+          path: coverage_dir/
+          retention-days: 1
+
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cat .github/workflows/versions.env >> $GITHUB_ENV
+      - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
+        with:
+          sdk: ${{ env.dart_version }}
+      - name: Run tests
+        run: |
+          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y curl lcov python3 python3-distutils libsqlite3-0 libsqlite3-dev libolm3 libssl3
+          ./scripts/test.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage_dir/
+          retention-days: 1
+
+
+  merge_converage:
+    if: always()
+    runs-on: ubuntu-latest
+    needs: [coverage, coverage_without_olm]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+      - name: Merge lcov files
+        run: |
+          sudo apt-get -y install lcov
+          lcov -a coverage/lcov.info -a coverage_without_olm/lcov.info -o merged.info
+          genhtml merged.info -o merged
+          echo $(lcov --summary merged.info | grep 'lines......:') >> $GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: merged
+          path: merged/
+          retention-days: 1
+
+  review_app_coverage:
+    if: github.event_name == 'pull_request'
+    needs: [merge_converage]
+    secrets: inherit
+    uses: famedly/frontend-ci-templates/.github/workflows/review-app.yml@main
+    with:
+      projectname: "matrix-dart-sdk-coverage"
+      pr: ${{ github.event.pull_request.number }}
+      environment: "review"
+      artifact-name: "merged"
+
+  dart_web_compatible:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cat .github/workflows/versions.env >> $GITHUB_ENV
+      - uses: subosito/flutter-action@48cafc24713cca54bbe03cdc3a423187d413aafa
+        with:
+          flutter-version: ${{ env.flutter_version }}
+      - name: Ensure SDK compiles on web
+        run: |
+          pushd web_test
+          dart pub get
+          dart run webdev build
 
   pub-dev-dry-run:
     runs-on: ubuntu-latest

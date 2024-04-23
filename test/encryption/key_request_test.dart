@@ -39,23 +39,17 @@ Map<String, dynamic> jsonDecode(dynamic payload) {
 
 void main() {
   /// All Tests related to device keys
-  group('Key Request', () {
+  group('Key Request', tags: 'olm', () {
     Logs().level = Level.error;
-    var olmEnabled = true;
+
+    setUpAll(() async {
+      await olm.init();
+      olm.get_library_version();
+    });
 
     final validSessionId = 'ciM/JWTPrmiWPPZNkRLDPQYf9AW/I46bxyLSr+Bx5oU';
     final validSenderKey = 'JBG7ZaPn54OBC7TuIEiylW3BZ+7WcGQhFBPB9pogbAg';
     test('Create Request', () async {
-      try {
-        await olm.init();
-        olm.get_library_version();
-      } catch (e) {
-        olmEnabled = false;
-        Logs().w('[LibOlm] Failed to load LibOlm', e);
-      }
-      Logs().i('[LibOlm] Enabled: $olmEnabled');
-      if (!olmEnabled) return;
-
       final matrix = await getClient();
       final requestRoom = matrix.getRoomById('!726s6s6q:example.com')!;
       await matrix.encryption!.keyManager.request(
@@ -82,7 +76,6 @@ void main() {
       await matrix.dispose(closeDatabase: true);
     });
     test('Reply To Request', () async {
-      if (!olmEnabled) return;
       final matrix = await getClient();
       matrix.setUserId('@alice:example.com'); // we need to pretend to be alice
       FakeMatrixApi.calledEndpoints.clear();
@@ -277,7 +270,6 @@ void main() {
       await matrix.dispose(closeDatabase: true);
     });
     test('Receive shared keys', () async {
-      if (!olmEnabled) return;
       final matrix = await getClient();
       final requestRoom = matrix.getRoomById('!726s6s6q:example.com')!;
       await matrix.encryption!.keyManager.request(

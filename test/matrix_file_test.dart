@@ -19,14 +19,13 @@
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
-import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
 
 void main() {
   /// All Tests related to device keys
-  group('Matrix File', () {
+  group('Matrix File', tags: 'olm', () {
     Logs().level = Level.error;
     test('Decrypt', () async {
       final text = 'hello world';
@@ -34,17 +33,9 @@ void main() {
         name: 'file.txt',
         bytes: Uint8List.fromList(text.codeUnits),
       );
-      var olmEnabled = true;
-      try {
-        await olm.init();
-        olm.Account();
-      } catch (_) {
-        olmEnabled = false;
-      }
-      if (olmEnabled) {
-        final encryptedFile = await file.encrypt();
-        expect(encryptedFile.data.isNotEmpty, true);
-      }
+
+      final encryptedFile = await file.encrypt();
+      expect(encryptedFile.data.isNotEmpty, true);
     });
 
     test('Shrink', () async {
