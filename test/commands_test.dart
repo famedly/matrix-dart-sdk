@@ -19,7 +19,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
@@ -27,10 +26,9 @@ import 'fake_client.dart';
 import 'fake_matrix_api.dart';
 
 void main() {
-  group('Commands', () {
+  group('Commands', tags: 'olm', () {
     late Client client;
     late Room room;
-    var olmEnabled = true;
 
     Map<String, dynamic> getLastMessagePayload(
         [String type = 'm.room.message', String? stateKey]) {
@@ -43,12 +41,6 @@ void main() {
     }
 
     test('setupClient', () async {
-      try {
-        await olm.init();
-        olm.get_library_version();
-      } catch (e) {
-        olmEnabled = false;
-      }
       client = await getClient();
       room = Room(id: '!1234:fakeServer.notExisting', client: client);
       room.setState(Event(
@@ -398,18 +390,16 @@ void main() {
     });
 
     test('discardsession', () async {
-      if (olmEnabled) {
-        await client.encryption?.keyManager.createOutboundGroupSession(room.id);
-        expect(
-            client.encryption?.keyManager.getOutboundGroupSession(room.id) !=
-                null,
-            true);
-        await room.sendTextEvent('/discardsession');
-        expect(
-            client.encryption?.keyManager.getOutboundGroupSession(room.id) !=
-                null,
-            false);
-      }
+      await client.encryption?.keyManager.createOutboundGroupSession(room.id);
+      expect(
+          client.encryption?.keyManager.getOutboundGroupSession(room.id) !=
+              null,
+          true);
+      await room.sendTextEvent('/discardsession');
+      expect(
+          client.encryption?.keyManager.getOutboundGroupSession(room.id) !=
+              null,
+          false);
     });
 
     test('markasdm', () async {

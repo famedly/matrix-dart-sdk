@@ -477,8 +477,8 @@ class FakeMatrixApi extends BaseClient {
       'join': {
         '!726s6s6q:example.com': {
           'summary': {
-            'm.heroes': ['@alice:example.com', '@bob:example.com'],
-            'm.joined_member_count': 2,
+            'm.heroes': ['@alice:example.com'],
+            'm.joined_member_count': 1,
             'm.invited_member_count': 0
           },
           'unread_notifications': {

@@ -20,7 +20,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
@@ -44,7 +43,7 @@ void main() {
   };
 
   for (final databaseBuilder in databaseBuilders.entries) {
-    group('Test ${databaseBuilder.key}', () {
+    group('Test ${databaseBuilder.key}', tags: 'olm', () {
       late DatabaseApi database;
       late int toDeviceQueueIndex;
 
@@ -372,7 +371,6 @@ void main() {
         expect(olm.isEmpty, true);
       });
       test('storeOlmSession', () async {
-        if (!(await olmEnabled())) return;
         await database.storeOlmSession(
           'identityKey',
           'sessionId',
@@ -393,7 +391,6 @@ void main() {
         expect(session, null);
       });
       test('storeOutboundGroupSession', () async {
-        if (!(await olmEnabled())) return;
         await database.storeOutboundGroupSession(
           '!testroom:example.com',
           'pickle',
@@ -530,15 +527,4 @@ void main() {
       });
     });
   }
-}
-
-Future<bool> olmEnabled() async {
-  var olmEnabled = true;
-  try {
-    await olm.init();
-    olm.get_library_version();
-  } catch (e) {
-    olmEnabled = false;
-  }
-  return olmEnabled;
 }

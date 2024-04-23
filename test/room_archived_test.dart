@@ -18,7 +18,6 @@
 
 import 'dart:async';
 
-import 'package:olm/olm.dart' as olm;
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
@@ -27,22 +26,12 @@ import 'fake_client.dart';
 void main() {
   group('Timeline', () {
     Logs().level = Level.error;
-    var olmEnabled = true;
 
     final insertList = <int>[];
 
     late Client client;
 
     setUp(() async {
-      try {
-        await olm.init();
-        olm.get_library_version();
-      } catch (e) {
-        olmEnabled = false;
-        Logs().w('[LibOlm] Failed to load LibOlm', e);
-      }
-      Logs().i('[LibOlm] Enabled: $olmEnabled');
-
       client = await getClient();
       client.sendMessageTimeoutSeconds = 5;
 
