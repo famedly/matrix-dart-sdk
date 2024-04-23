@@ -1835,7 +1835,7 @@ class Room {
     return powerForChangingStateEvent(action) <= ownPowerLevel;
   }
 
-  /// returns the powerlevel required for chaning the `action` defaults to
+  /// returns the powerlevel required for changing the `action` defaults to
   /// state_default if `action` isn't specified in events override.
   /// If there is no state_default in the m.room.power_levels event, the
   /// state_default is 50. If the room contains no m.room.power_levels event,
@@ -1850,25 +1850,18 @@ class Room {
         50;
   }
 
-  bool get canCreateGroupCall =>
-      canChangeStateEvent(EventTypes.GroupCallPrefix) && groupCallsEnabled;
-
-  bool get canJoinGroupCall =>
-      canChangeStateEvent(EventTypes.GroupCallMemberPrefix) &&
-      groupCallsEnabled;
-
-  /// if returned value is not null `org.matrix.msc3401.call.member` is present
+  /// if returned value is not null `EventTypes.GroupCallMember` is present
   /// and group calls can be used
-  bool get groupCallsEnabled {
+  bool get groupCallsEnabledForEveryone {
     final powerLevelMap = getState(EventTypes.RoomPowerLevels)?.content;
     if (powerLevelMap == null) return false;
-    return powerForChangingStateEvent(EventTypes.GroupCallMemberPrefix) <=
-            getDefaultPowerLevel(powerLevelMap) &&
-        powerForChangingStateEvent(EventTypes.GroupCallPrefix) <=
-            getDefaultPowerLevel(powerLevelMap);
+    return powerForChangingStateEvent(EventTypes.GroupCallMember) <=
+        getDefaultPowerLevel(powerLevelMap);
   }
 
-  /// sets the `org.matrix.msc3401.call.member` power level to users default for
+  bool get canJoinGroupCall => canChangeStateEvent(EventTypes.GroupCallMember);
+
+  /// sets the `EventTypes.GroupCallMember` power level to users default for
   /// group calls, needs permissions to change power levels
   Future<void> enableGroupCalls() async {
     if (!canChangePowerLevel) return;
@@ -1878,9 +1871,7 @@ class Room {
       final eventsMap = newPowerLevelMap.tryGetMap<String, Object?>('events') ??
           <String, Object?>{};
       eventsMap.addAll({
-        EventTypes.GroupCallPrefix: getDefaultPowerLevel(currentPowerLevelsMap),
-        EventTypes.GroupCallMemberPrefix:
-            getDefaultPowerLevel(currentPowerLevelsMap)
+        EventTypes.GroupCallMember: getDefaultPowerLevel(currentPowerLevelsMap)
       });
       newPowerLevelMap.addAll({'events': eventsMap});
       await client.setRoomStateWithKey(
@@ -2229,14 +2220,14 @@ class Room {
   /// `m.space`.
   bool get isSpace =>
       getState(EventTypes.RoomCreate)?.content.tryGet<String>('type') ==
-      RoomCreationTypes.mSpace; // TODO: Magic string!
+      RoomCreationTypes.mSpace;
 
   /// The parents of this room. Currently this SDK doesn't yet set the canonical
   /// flag and is not checking if this room is in fact a child of this space.
   /// You should therefore not rely on this and always check the children of
   /// the space.
   List<SpaceParent> get spaceParents =>
-      states[EventTypes.spaceParent]
+      states[EventTypes.SpaceParent]
           ?.values
           .map((state) => SpaceParent.fromState(state))
           .where((child) => child.via.isNotEmpty)
@@ -2249,7 +2240,7 @@ class Room {
   /// sorted at the end of the list.
   List<SpaceChild> get spaceChildren => !isSpace
       ? throw Exception('Room is not a space!')
-      : (states[EventTypes.spaceChild]
+      : (states[EventTypes.SpaceChild]
               ?.values
               .map((state) => SpaceChild.fromState(state))
               .where((child) => child.via.isNotEmpty)
@@ -2268,12 +2259,12 @@ class Room {
   }) async {
     if (!isSpace) throw Exception('Room is not a space!');
     via ??= [client.userID!.domain!];
-    await client.setRoomStateWithKey(id, EventTypes.spaceChild, roomId, {
+    await client.setRoomStateWithKey(id, EventTypes.SpaceChild, roomId, {
       'via': via,
       if (order != null) 'order': order,
       if (suggested != null) 'suggested': suggested,
     });
-    await client.setRoomStateWithKey(roomId, EventTypes.spaceParent, id, {
+    await client.setRoomStateWithKey(roomId, EventTypes.SpaceParent, id, {
       'via': via,
     });
     return;

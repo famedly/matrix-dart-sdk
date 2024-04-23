@@ -235,7 +235,6 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
   }
 
   @override
-  // TODO: implement youAcceptedTheInvitation
   String get youAcceptedTheInvitation => 'You accepted the invitation';
 
   @override

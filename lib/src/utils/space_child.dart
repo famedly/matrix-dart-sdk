@@ -26,7 +26,7 @@ class SpaceChild {
   final bool? suggested;
 
   SpaceChild.fromState(Event state)
-      : assert(state.type == EventTypes.spaceChild),
+      : assert(state.type == EventTypes.SpaceChild),
         roomId = state.stateKey,
         via = state.content.tryGetList<String>('via') ?? [],
         order = state.content.tryGet<String>('order') ?? '',
@@ -39,7 +39,7 @@ class SpaceParent {
   final bool? canonical;
 
   SpaceParent.fromState(Event state)
-      : assert(state.type == EventTypes.spaceParent),
+      : assert(state.type == EventTypes.SpaceParent),
         roomId = state.stateKey,
         via = state.content.tryGetList<String>('via') ?? [],
         canonical = state.content.tryGet<bool>('canonical');
