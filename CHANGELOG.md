@@ -303,7 +303,7 @@ or before logout), excessive linebreaks in markdown messages and a few edge case
 - fix: Check the max server file size after shrinking not before (Krille)
 - fix: casting of a List<dynamic> to List<String> in getEventList and getEventIdList (td)
 - fix: Skip rules with unknown conditions (Nicolas Werner)
-- fix: allow passing a WrappedMediaStream to GroupCall.enter() to use as the local user media stream (td)
+- fix: allow passing a WrappedMediaStream to GroupCallSession.enter() to use as the local user media stream (td)
 
 ## [0.19.0] - 21st April 2023
 

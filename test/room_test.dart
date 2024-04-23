@@ -647,177 +647,8 @@ void main() {
       expect(room.canChangeStateEvent('m.room.power_levels'), false);
       expect(room.canChangeStateEvent('m.room.member'), false);
       expect(room.canSendEvent('m.room.message'), true);
-      final resp = await room.setPower('@test:fakeServer.notExisting', 90);
+      final resp = await room.setPower('@test:fakeServer.notExisting', 0);
       expect(resp, '42');
-    });
-
-    test('Enabling group calls', () async {
-      expect(room.groupCallsEnabled, false);
-
-      // users default is 0 and so group calls not enabled
-      room.setState(
-        Event(
-          senderId: '@test:example.com',
-          type: 'm.room.power_levels',
-          room: room,
-          eventId: '123a',
-          content: {
-            'events': {EventTypes.GroupCallMemberPrefix: 100},
-            'state_default': 50,
-            'users_default': 0
-          },
-          originServerTs: DateTime.now(),
-          stateKey: '',
-        ),
-      );
-      expect(room.groupCallsEnabled, false);
-
-      // one of the group call permissions is unspecified in events override
-      room.setState(
-        Event(
-          senderId: '@test:example.com',
-          type: 'm.room.power_levels',
-          room: room,
-          eventId: '123a',
-          content: {
-            'events': {EventTypes.GroupCallMemberPrefix: 27},
-            'state_default': 50,
-            'users_default': 49
-          },
-          originServerTs: DateTime.now(),
-          stateKey: '',
-        ),
-      );
-      expect(room.groupCallsEnabled, false);
-
-      // only override one of the group calls permission, other one still less
-      // than users_default and state_default
-      room.setState(
-        Event(
-          senderId: '@test:example.com',
-          type: 'm.room.power_levels',
-          room: room,
-          eventId: '123a',
-          content: {
-            'events': {
-              EventTypes.GroupCallMemberPrefix: 27,
-              EventTypes.GroupCallPrefix: 0
-            },
-            'state_default': 50,
-            'users_default': 2
-          },
-          originServerTs: DateTime.now(),
-          stateKey: '',
-        ),
-      );
-      expect(room.groupCallsEnabled, false);
-      expect(room.canJoinGroupCall, false);
-      expect(room.canCreateGroupCall, false);
-
-      // state_default 50 and user_default 26, but override evnents present
-      room.setState(
-        Event(
-          senderId: '@test:example.com',
-          type: 'm.room.power_levels',
-          room: room,
-          eventId: '123a',
-          content: {
-            'events': {
-              EventTypes.GroupCallMemberPrefix: 25,
-              EventTypes.GroupCallPrefix: 25
-            },
-            'state_default': 50,
-            'users_default': 26
-          },
-          originServerTs: DateTime.now(),
-          stateKey: '',
-        ),
-      );
-      expect(room.groupCallsEnabled, true);
-      expect(room.canJoinGroupCall, true);
-      expect(room.canCreateGroupCall, true);
-
-      // state_default 50 and user_default 0, use enableGroupCall
-      room.setState(
-        Event(
-            senderId: '@test:example.com',
-            type: 'm.room.power_levels',
-            room: room,
-            eventId: '123',
-            content: {
-              'state_default': 50,
-              'users': {'@test:fakeServer.notExisting': 100},
-              'users_default': 0
-            },
-            originServerTs: DateTime.now(),
-            stateKey: ''),
-      );
-      expect(room.groupCallsEnabled, false);
-      expect(room.canJoinGroupCall, false);
-      expect(room.canCreateGroupCall, false);
-      await room.enableGroupCalls();
-      expect(room.groupCallsEnabled, true);
-
-      // state_default 50 and user_default unspecified, use enableGroupCall
-      room.setState(
-        Event(
-          senderId: '@test:example.com',
-          type: 'm.room.power_levels',
-          room: room,
-          eventId: '123',
-          content: {
-            'state_default': 50,
-            'users': {'@test:fakeServer.notExisting': 100},
-          },
-          originServerTs: DateTime.now(),
-          stateKey: '',
-        ),
-      );
-      await room.enableGroupCalls();
-      expect(room.groupCallsEnabled, true);
-      expect(room.canJoinGroupCall, true);
-      expect(room.canCreateGroupCall, true);
-
-      // state_default is 0 so users should be able to send state events
-      room.setState(
-        Event(
-          senderId: '@test:example.com',
-          type: 'm.room.power_levels',
-          room: room,
-          eventId: '123',
-          content: {
-            'state_default': 0,
-            'users': {'@test:fakeServer.notExisting': 100},
-          },
-          originServerTs: DateTime.now(),
-          stateKey: '',
-        ),
-      );
-      expect(room.groupCallsEnabled, true);
-      expect(room.canJoinGroupCall, true);
-      expect(room.canCreateGroupCall, true);
-      room.setState(
-        Event(
-          senderId: '@test:example.com',
-          type: 'm.room.power_levels',
-          room: room,
-          eventId: '123abc',
-          content: {
-            'ban': 50,
-            'events': {'m.room.name': 0, 'm.room.power_levels': 100},
-            'events_default': 0,
-            'invite': 50,
-            'kick': 50,
-            'notifications': {'room': 20},
-            'redact': 50,
-            'state_default': 50,
-            'users': {},
-            'users_default': 0
-          },
-          originServerTs: DateTime.now(),
-          stateKey: '',
-        ),
-      );
     });
 
     test('invite', () async {
@@ -1375,7 +1206,7 @@ void main() {
       expect(room.isSpace, true);
 
       expect(room.spaceParents.isEmpty, true);
-      room.states[EventTypes.spaceParent] = {
+      room.states[EventTypes.SpaceParent] = {
         '!1234:example.invalid': Event.fromJson(
           {
             'content': {
@@ -1385,7 +1216,7 @@ void main() {
             'origin_server_ts': 1432735824653,
             'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
             'sender': '@example:example.org',
-            'type': EventTypes.spaceParent,
+            'type': EventTypes.SpaceParent,
             'unsigned': {'age': 1234},
             'state_key': '!1234:example.invalid',
           },
@@ -1395,7 +1226,7 @@ void main() {
       expect(room.spaceParents.length, 1);
 
       expect(room.spaceChildren.isEmpty, true);
-      room.states[EventTypes.spaceChild] = {
+      room.states[EventTypes.SpaceChild] = {
         '!b:example.invalid': Event.fromJson(
           {
             'content': {
@@ -1406,7 +1237,7 @@ void main() {
             'origin_server_ts': 1432735824653,
             'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
             'sender': '@example:example.org',
-            'type': EventTypes.spaceChild,
+            'type': EventTypes.SpaceChild,
             'unsigned': {'age': 1234},
             'state_key': '!b:example.invalid',
           },
@@ -1422,7 +1253,7 @@ void main() {
             'origin_server_ts': 1432735824653,
             'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
             'sender': '@example:example.org',
-            'type': EventTypes.spaceChild,
+            'type': EventTypes.SpaceChild,
             'unsigned': {'age': 1234},
             'state_key': '!c:example.invalid',
           },
@@ -1437,7 +1268,7 @@ void main() {
             'origin_server_ts': 1432735824653,
             'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
             'sender': '@example:example.org',
-            'type': EventTypes.spaceChild,
+            'type': EventTypes.SpaceChild,
             'unsigned': {'age': 1234},
             'state_key': '!noorder:example.invalid',
           },
@@ -1453,7 +1284,7 @@ void main() {
             'origin_server_ts': 1432735824653,
             'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
             'sender': '@example:example.org',
-            'type': EventTypes.spaceChild,
+            'type': EventTypes.SpaceChild,
             'unsigned': {'age': 1234},
             'state_key': '!a:example.invalid',
           },
@@ -1485,7 +1316,6 @@ void main() {
     test('inviteLink', () async {
       // ensure we don't rerequest members
       room.summary.mJoinedMemberCount = 4;
-
       var matrixToLink = await room.matrixToInviteLink();
       expect(matrixToLink.toString(),
           'https://matrix.to/#/%23testalias%3Aexample.com');
@@ -1502,181 +1332,6 @@ void main() {
       matrixToLink = await room.matrixToInviteLink();
       expect(matrixToLink.toString(),
           'https://matrix.to/#/!localpart%3Aserver.abc?via=example.com&via=test.abc&via=example.org');
-    });
-
-    test('callMemberStateIsExpired', () {
-      expect(
-          room.callMemberStateForIdIsExpired(
-              Event(
-                  senderId: '@test:example.com',
-                  type: EventTypes.GroupCallMemberPrefix,
-                  room: room,
-                  eventId: '1231234124',
-                  content: {
-                    'm.calls': [
-                      {
-                        'm.call_id': '1674811248673789288k7d60n5976',
-                        'm.devices': [
-                          {
-                            'device_id': 'ZEEGCGPTGI',
-                            'session_id': 'cbAtVZdLBnJq',
-                            'm.expires_ts': 1674813039415,
-                            'feeds': [
-                              {'purpose': 'm.usermedia'}
-                            ]
-                          }
-                        ]
-                      },
-                    ],
-                  },
-                  originServerTs: DateTime.now(),
-                  stateKey: ''),
-              '1674811248673789288k7d60n5976'),
-          true);
-      expect(
-          room.callMemberStateForIdIsExpired(
-              Event(
-                  senderId: '@test:example.com',
-                  type: EventTypes.GroupCallMemberPrefix,
-                  room: room,
-                  eventId: '1231234124',
-                  content: {
-                    'm.calls': [
-                      {
-                        'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-                        'm.devices': [
-                          {
-                            'device_id': 'ZEEGCGPTGI',
-                            'session_id': 'fhovqxwcasdfr',
-                            'expires_ts': DateTime.now()
-                                .add(Duration(minutes: 1))
-                                .millisecondsSinceEpoch,
-                            'feeds': [
-                              {'purpose': 'm.usermedia'}
-                            ]
-                          }
-                        ]
-                      }
-                    ],
-                  },
-                  originServerTs: DateTime.now(),
-                  stateKey: ''),
-              '1674811256006mfqnmsAbzqxjYtWZ'),
-          false);
-    });
-
-    test('group call participants count', () {
-      room.setState(
-        Event(
-            senderId: '@test:example.com',
-            type: EventTypes.GroupCallMemberPrefix,
-            room: room,
-            eventId: '1234177',
-            content: {
-              'm.calls': [
-                {
-                  'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-                  'm.devices': [
-                    {
-                      'device_id': 'ZEEGCGPTGI',
-                      'session_id': 'fhovqxwcasdfr',
-                      'expires_ts': DateTime.now()
-                          .add(Duration(minutes: 1))
-                          .millisecondsSinceEpoch,
-                      'feeds': [
-                        {'purpose': 'm.usermedia'}
-                      ]
-                    },
-                  ]
-                }
-              ],
-            },
-            originServerTs: DateTime.now(),
-            stateKey: '@test:example.com'),
-      );
-      room.setState(
-        Event(
-            senderId: '@test0:example.com',
-            type: EventTypes.GroupCallMemberPrefix,
-            room: room,
-            eventId: '1234177',
-            content: {
-              'm.calls': [
-                {
-                  'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-                  'm.devices': [
-                    {
-                      'device_id': 'ZEEGCGPTGI',
-                      'session_id': 'fhovqxwcasdfr',
-                      'expires_ts': DateTime.now()
-                          .add(Duration(minutes: 2))
-                          .millisecondsSinceEpoch,
-                      'feeds': [
-                        {'purpose': 'm.usermedia'}
-                      ]
-                    },
-                  ]
-                }
-              ],
-            },
-            originServerTs: DateTime.now(),
-            stateKey: '@test0:example.com'),
-      );
-      room.setState(
-        Event(
-            senderId: '@test2:example.com',
-            type: EventTypes.GroupCallMemberPrefix,
-            room: room,
-            eventId: '1231234124123',
-            content: {
-              'm.calls': [
-                {
-                  'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-                  'm.devices': [
-                    {
-                      'device_id': 'ZEEGCGPTGI',
-                      'session_id': 'fhovqxwcasdfr',
-                      'feeds': [
-                        {'purpose': 'm.usermedia'}
-                      ]
-                    },
-                  ]
-                }
-              ],
-            },
-            originServerTs: DateTime.now(),
-            stateKey: '@test2:example.com'),
-      );
-      room.setState(
-        Event(
-            senderId: '@test3:example.com',
-            type: EventTypes.GroupCallMemberPrefix,
-            room: room,
-            eventId: '123123412445',
-            content: {
-              'm.calls': [
-                {
-                  'm.call_id': '1674811256006mfqnmsAbzqxjYtWZ',
-                  'm.devices': [
-                    {
-                      'device_id': 'ZEEGCGPTGI',
-                      'session_id': 'fhovqxwcasdfr',
-                      'expires_ts': DateTime.now()
-                          .subtract(Duration(minutes: 1))
-                          .millisecondsSinceEpoch,
-                      'feeds': [
-                        {'purpose': 'm.usermedia'}
-                      ]
-                    },
-                  ]
-                }
-              ],
-            },
-            originServerTs: DateTime.now(),
-            stateKey: '@test3:example.com'),
-      );
-      expect(
-          room.groupCallParticipantCount('1674811256006mfqnmsAbzqxjYtWZ'), 2);
     });
 
     test('EventTooLarge on exceeding max PDU size', () async {

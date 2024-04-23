@@ -2581,6 +2581,10 @@ class FakeMatrixApi extends BaseClient {
           (var reqI) => {
                 'event_id': '42',
               },
+      '/client/v3/rooms/!calls%3Aexample.com/state/m.room.power_levels':
+          (var reqI) => {
+                'event_id': '42',
+              },
       '/client/v3/directory/list/room/!localpart%3Aexample.com': (var req) =>
           {},
       '/client/v3/room_keys/version/5': (var req) => {},
@@ -2600,11 +2604,7 @@ class FakeMatrixApi extends BaseClient {
           },
       '/client/unstable/org.matrix.msc3814.v1/dehydrated_device': (var _) => {
             'device_id': 'DEHYDDEV',
-          },
-      '/client/v3/rooms/${Uri.encodeComponent("!localpart:server.abc")}/state/${Uri.encodeComponent("org.matrix.msc3401.call")}/${Uri.encodeComponent("1675856324414gzczMtfzTk0DKgEw")}':
-          (var req) => {
-                'event_id': 'groupCall',
-              },
+          }
     },
     'DELETE': {
       '/unknown/token': (var req) => {'errcode': 'M_UNKNOWN_TOKEN'},
