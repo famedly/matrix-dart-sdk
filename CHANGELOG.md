@@ -1,3 +1,15 @@
+## [0.28.0] 23rd April 2024
+This release introduces the new famedly calls, it brings 1:1, mesh and livekit calls support to the matrix dart sdk, read more at: [voip docs](lib/src/voip/README.md)
+
+
+- feat: famedly calls (td)
+- chore: create_gh_release job (td)
+- feat: lcov and tag olm tests (td)
+- fix: Make room.setPower more type safe and avoid change powerlevel in RAM before sending request to server (krille-chan)
+- refactor: Use prevBatch from server for pagination in event search (krille-chan)
+- fix: canChangePowerLevel should return true for own user (krille-chan)
+
+
 ## [0.27.0] 16th April 2024
 
 - chore: add api lite readme
