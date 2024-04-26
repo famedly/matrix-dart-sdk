@@ -3,12 +3,12 @@
 Supports
 - 1:1 webrtc calls
 - Group calls with:
-  - mesh webrtc calls
-  - just handling state of calls and signallnig for e2ee keys in sfu mode (check `isLivekitCall`)
+  - Mesh webrtc calls
+  - just handling state of calls and signallnig for e2ee keys in sfu mode f.ex (Livekit calls)
 
 Places where we diverted from spec afaik:
 - To enable p2p calls between devices of the same user, pass a `invitee_device_id` to the `m.call.invite` method
-- **to-device call events such as in msc3401 MUST `room_id` to map the event to a room**
+- **to-device call events such as in msc3401 MUST have a `room_id` to map the event to a room**
 
 ## Overview
 
@@ -22,8 +22,6 @@ Places where we diverted from spec afaik:
 
 All communication for group calls happens over to-device events except the `com.famedly.call.member` event.
 
-
-
 Sends the `com.famedly.call.member` event to signal an active membership. The format has to be the following:
 
 ### Events -
@@ -36,10 +34,11 @@ Sends the `com.famedly.call.member` event to signal an active membership. The fo
             "backend": {
                 "type": "mesh"
             },
-            "call_id": "!qoQQTYnzXOHSdEgqQp:im.staging.famedly.de",
+            "call_id": "",
             "device_id": "YVGPEWNLDD",
             "expires_ts": 1705152401042,
-            "scope": "m.room"
+            "scope": "m.room",
+            "membershipID": "gor1Gt5BCIlyrxjyHnaEJQ==",
         }
     ]
 }
@@ -50,8 +49,8 @@ Sends the `com.famedly.call.member` event to signal an active membership. The fo
 - **call_id**: the call id, currently setting it to the roomId makes the call for the whole room, this is to avoid parallel calls starting up. For user scoped calls in a room you could set this to `AuserId:BuserId`. The sdk does not restrict setting roomId for user scoped calls atm.
 - **device_id**: The sdk supports calling between devices of same users, so this needs to be set to the sender device id.
 - **expires_ts**: ms since epoch when this membership event should be considered expired. Check `lib/src/voip/utils/constants.dart` for current values of how long the inital period is and how often this gets autoupdated.
-- **scope**: room scoped calls are `m.room`, user scoped can be `m.user`
-
+- **scope**: room scoped calls are `m.room`, user scoped can be `m.user`.
+- **membershipID**: used by mesh group calls to terminate stale calls. to-device events where sender_session_id do not match the membershipID from the state event should be ignored. Similarly existing calls with a mismatched session id should be terminated.
 
 
 #### The backend can be either `mesh` or `livekit`
@@ -79,12 +78,9 @@ When in SFU/Livekit mode, the sdk can handle sending and requesting encryption k
 - sending: `com.famedly.call.encryption_keys`
 - requesting: `com.famedly.call.encryption_keys.request`
 
-As usual remember to send the `party_id`/`sender_session_id` to map your keys to the right userId and deviceId
-
 You need to implement `EncryptionKeyProvider` and set the override the methods to interact with your actual keyProvider. The main one as of now is `onSetEncryptionKey`.
 
 You can request missing keys whenever needed using `groupCall.requestEncrytionKey(remoteParticipants)`.
-
 
 ## 1:1 calls
 
