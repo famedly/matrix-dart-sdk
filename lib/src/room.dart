@@ -213,6 +213,12 @@ class Room {
   /// from the database, that you need to correctly calculate the displayname
   /// and the avatar of the room.
   Future<List<User>> loadHeroUsers() async {
+    // For invite rooms request own user and invitor.
+    if (membership == Membership.invite) {
+      final ownUser = await requestUser(client.userID!, requestProfile: false);
+      if (ownUser != null) await requestUser(ownUser.senderId);
+    }
+
     var heroes = summary.mHeroes;
     if (heroes == null) {
       final directChatMatrixID = this.directChatMatrixID;
@@ -235,6 +241,9 @@ class Room {
   /// without a name, then it will return the localized version of 'Group with Alice' instead
   /// of just 'Alice' to make it different to a direct chat.
   /// Empty chats will become the localized version of 'Empty Chat'.
+  /// Please note, that necessary room members are lazy loaded. To be sure
+  /// that you have the room members, call and await `Room.loadHeroUsers()`
+  /// before.
   /// This method requires a localization class which implements [MatrixLocalizations]
   String getLocalizedDisplayname([
     MatrixLocalizations i18n = const MatrixDefaultLocalizations(),
@@ -265,10 +274,12 @@ class Room {
       return isDirectChat ? result : i18n.groupWith(result);
     }
     if (membership == Membership.invite) {
-      final sender = getState(EventTypes.RoomMember, client.userID!)
-          ?.senderFromMemoryOrFallback
-          .calcDisplayname(i18n: i18n);
-      if (sender != null) return sender;
+      final ownMember = unsafeGetUserFromMemoryOrFallback(client.userID!);
+
+      ownMember.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n);
+      if (ownMember.senderId != ownMember.stateKey) {
+        return ownMember.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n);
+      }
     }
     if (membership == Membership.leave) {
       if (directChatMatrixID != null) {
@@ -287,6 +298,9 @@ class Room {
   }
 
   /// The avatar of the room if set by a participant.
+  /// Please note, that necessary room members are lazy loaded. To be sure
+  /// that you have the room members, call and await `Room.loadHeroUsers()`
+  /// before.
   Uri? get avatar {
     final avatarUrl =
         getState(EventTypes.RoomAvatar)?.content.tryGet<String>('url');
