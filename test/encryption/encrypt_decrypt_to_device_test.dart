@@ -22,7 +22,6 @@ import 'package:test/test.dart';
 import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
 import '../fake_database.dart';
-import '../fake_matrix_api.dart';
 
 void main() {
   // key @othertest:fakeServer.notExisting

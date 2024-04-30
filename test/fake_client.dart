@@ -18,7 +18,6 @@
 
 import 'package:matrix/matrix.dart';
 import 'fake_database.dart';
-import 'fake_matrix_api.dart';
 
 const ssssPassphrase = 'nae7ahDiequ7ohniufah3ieS2je1thohX4xeeka7aixohsho9O';
 const ssssKey = 'EsT9 RzbW VhPW yqNp cC7j ViiW 5TZB LuY4 ryyv 9guN Ysmr WDPH';

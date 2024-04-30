@@ -240,26 +240,28 @@ class FakeMatrixApi extends BaseClient {
   }
 
   @override
-  Future<StreamedResponse> send(BaseRequest baseRequest) async {
-    final bodyStream = baseRequest.finalize();
+  Future<StreamedResponse> send(BaseRequest request) async {
+    final bodyStream = request.finalize();
     final bodyBytes = await bodyStream.toBytes();
-    final request = Request(baseRequest.method, baseRequest.url)
-      ..persistentConnection = baseRequest.persistentConnection
-      ..followRedirects = baseRequest.followRedirects
-      ..maxRedirects = baseRequest.maxRedirects
-      ..headers.addAll(baseRequest.headers)
+    final r = Request(request.method, request.url)
+      ..persistentConnection = request.persistentConnection
+      ..followRedirects = request.followRedirects
+      ..maxRedirects = request.maxRedirects
+      ..headers.addAll(request.headers)
       ..bodyBytes = bodyBytes
       ..finalize();
 
-    final response = await mockIntercept(request);
+    final response = await mockIntercept(r);
     return StreamedResponse(
-        ByteStream.fromBytes(response.bodyBytes), response.statusCode,
-        contentLength: response.contentLength,
-        request: baseRequest,
-        headers: response.headers,
-        isRedirect: response.isRedirect,
-        persistentConnection: response.persistentConnection,
-        reasonPhrase: response.reasonPhrase);
+      ByteStream.fromBytes(response.bodyBytes),
+      response.statusCode,
+      contentLength: response.contentLength,
+      request: request,
+      headers: response.headers,
+      isRedirect: response.isRedirect,
+      persistentConnection: response.persistentConnection,
+      reasonPhrase: response.reasonPhrase,
+    );
   }
 
   FakeMatrixApi() {

@@ -24,7 +24,6 @@ import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
 import 'fake_client.dart';
-import 'fake_matrix_api.dart';
 
 Future<void> updateLastEvent(Event event) {
   if (event.room.client.getRoomById(event.room.id) == null) {

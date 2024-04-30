@@ -24,7 +24,6 @@ import 'package:test/test.dart';
 import 'package:matrix/encryption/utils/json_signature_check_extension.dart';
 import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
-import '../fake_matrix_api.dart';
 
 void main() {
   group('Olm Manager', tags: 'olm', () {
