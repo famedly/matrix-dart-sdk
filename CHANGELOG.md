@@ -1,3 +1,13 @@
+## [0.28.1] 30th April 2024
+- chore: expose fake matrix api (td)
+- chore: update voip readme (td)
+- fix: allow mesh group call invite (td)
+- fix: checkout repo for gh_release job (td)
+- fix: conduit container (td)
+- fix: Don't fail sync if a presence event has an empty presence field (morguldir)
+- fix: Fetch invite state after restart app (krille-chan)
+- refactor: Remove unused variable (Krille)
+
 ## [0.28.0] 23rd April 2024
 This release introduces the new famedly calls, it brings 1:1, mesh and livekit calls support to the matrix dart sdk, read more at: [voip docs](lib/src/voip/README.md)
 
