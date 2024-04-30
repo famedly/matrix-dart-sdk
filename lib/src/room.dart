@@ -366,9 +366,6 @@ class Room {
   /// Wheither this is a direct chat or not
   bool get isDirectChat => directChatMatrixID != null;
 
-  /// Must be one of [all, mention]
-  String? notificationSettings;
-
   Event? _lastEvent;
 
   set lastEvent(Event? event) {
@@ -417,7 +414,6 @@ class Room {
     this.highlightCount = 0,
     this.prev_batch,
     required this.client,
-    this.notificationSettings,
     Map<String, BasicRoomEvent>? roomAccountData,
     RoomSummary? summary,
     Event? lastEvent,
