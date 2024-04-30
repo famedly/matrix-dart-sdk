@@ -27,7 +27,6 @@ import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 import '../fake_client.dart';
 import '../fake_database.dart';
-import '../fake_matrix_api.dart';
 
 EventUpdate getLastSentEvent(KeyVerification req) {
   final entry = FakeMatrixApi.calledEndpoints.entries

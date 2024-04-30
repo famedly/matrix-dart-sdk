@@ -21,6 +21,8 @@ library matrix;
 
 export 'matrix_api_lite.dart';
 
+export 'fake_matrix_api.dart' show FakeMatrixApi;
+
 export 'src/client.dart';
 export 'src/database/database_api.dart';
 export 'src/database/hive_database.dart';

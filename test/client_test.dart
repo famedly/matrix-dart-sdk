@@ -29,7 +29,6 @@ import 'package:matrix/matrix.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
 import 'fake_client.dart';
 import 'fake_database.dart';
-import 'fake_matrix_api.dart';
 
 void main() {
   late Client matrix;

@@ -23,9 +23,9 @@
 
 import 'package:test/test.dart';
 
+import 'package:matrix/fake_matrix_api.dart';
 import 'package:matrix/msc_extensions/msc_3814_dehydrated_devices/api.dart';
 import '../fake_client.dart';
-import '../fake_matrix_api.dart';
 
 void main() {
   /// All Tests related to device keys
