@@ -223,7 +223,9 @@ class VoIP {
       }
       if (callId != null) {
         final call = calls[VoipId(roomId: room.id, callId: callId)];
-        if (call == null && event.type != EventTypes.CallInvite) {
+        if (call == null &&
+            !{EventTypes.CallInvite, EventTypes.GroupCallMemberInvite}
+                .contains(event.type)) {
           Logs().w(
               'Ignoring call event ${event.type} because we do not have the call');
           return;
