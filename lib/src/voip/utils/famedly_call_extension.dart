@@ -161,7 +161,7 @@ bool isValidMemEvent(Map<String, Object?> event) {
     return true;
   } else {
     Logs()
-        .w('[VOIP] FamedlyCallMemberEvent ignoring unclean membership $event');
+        .v('[VOIP] FamedlyCallMemberEvent ignoring unclean membership $event');
     return false;
   }
 }
