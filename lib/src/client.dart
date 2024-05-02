@@ -1823,19 +1823,25 @@ class Client extends MatrixApi {
     return;
   }
 
+  Future<void>? _handleSoftLogoutFuture;
+
   Future<void> _handleSoftLogout() async {
     final onSoftLogout = this.onSoftLogout;
     if (onSoftLogout == null) return;
 
-    onLoginStateChanged.add(LoginState.softLoggedOut);
-    try {
-      await onSoftLogout(this);
-      onLoginStateChanged.add(LoginState.loggedIn);
-    } catch (e, s) {
-      Logs().w('Unable to refresh session after soft logout', e, s);
-      await clear();
-      rethrow;
-    }
+    _handleSoftLogoutFuture ??= () async {
+      onLoginStateChanged.add(LoginState.softLoggedOut);
+      try {
+        await onSoftLogout(this);
+        onLoginStateChanged.add(LoginState.loggedIn);
+      } catch (e, s) {
+        Logs().w('Unable to refresh session after soft logout', e, s);
+        await clear();
+        rethrow;
+      }
+    }();
+    await _handleSoftLogoutFuture;
+    _handleSoftLogoutFuture = null;
   }
 
   /// Checks if the token expires in under [expiresIn] time and calls the
