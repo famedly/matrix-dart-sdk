@@ -1,7 +1,8 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:test/test.dart';
 
-import 'package:matrix/src/database/sqflite_box.dart';
+import 'package:matrix/src/database/indexeddb_box.dart'
+    if (dart.library.io) 'package:matrix/src/database/sqflite_box.dart';
 
 void main() {
   group('Box tests', () {
@@ -9,14 +10,17 @@ void main() {
     const Set<String> boxNames = {'cats', 'dogs'};
     const data = {'name': 'Fluffy', 'age': 2};
     const data2 = {'name': 'Loki', 'age': 4};
-    late Database db;
+    Database? db;
+    const isWeb = bool.fromEnvironment('dart.library.js_util');
     setUp(() async {
-      db = await databaseFactoryFfi.openDatabase(':memory:');
+      if (!isWeb) {
+        db = await databaseFactoryFfi.openDatabase(':memory:');
+      }
       collection = await BoxCollection.open(
         'testbox',
         boxNames,
         sqfliteDatabase: db,
-        sqfliteFactory: databaseFactoryFfi,
+        sqfliteFactory: isWeb ? null : databaseFactoryFfi,
       );
     });
 
@@ -91,8 +95,18 @@ void main() {
       expect(await box.get('loki'), null);
     });
 
-    test('Box.delete', () async {
-      await BoxCollection.delete(db.path, databaseFactoryFfi);
+    test('Box.close', () async {
+      await collection.close();
     });
+
+    test(
+      'Box.delete',
+      () async {
+        await BoxCollection.delete(
+          db?.path ?? '',
+          isWeb ? null : databaseFactoryFfi,
+        );
+      },
+    );
   });
 }

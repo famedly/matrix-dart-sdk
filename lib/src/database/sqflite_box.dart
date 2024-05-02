@@ -67,7 +67,7 @@ class BoxCollection with ZoneTransactionMixin {
 
   Future<void> close() => _db.close();
 
-  static Future<void> delete(String path, [DatabaseFactory? factory]) =>
+  static Future<void> delete(String path, [dynamic factory]) =>
       (factory ?? databaseFactory).deleteDatabase(path);
 }
 
