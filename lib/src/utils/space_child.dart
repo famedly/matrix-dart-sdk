@@ -17,7 +17,6 @@
  */
 
 import 'package:matrix/matrix_api_lite.dart';
-import 'package:matrix/src/event.dart';
 
 class SpaceChild {
   final String? roomId;
@@ -25,7 +24,7 @@ class SpaceChild {
   final String order;
   final bool? suggested;
 
-  SpaceChild.fromState(Event state)
+  SpaceChild.fromState(StrippedStateEvent state)
       : assert(state.type == EventTypes.SpaceChild),
         roomId = state.stateKey,
         via = state.content.tryGetList<String>('via') ?? [],
@@ -38,7 +37,7 @@ class SpaceParent {
   final List<String> via;
   final bool? canonical;
 
-  SpaceParent.fromState(Event state)
+  SpaceParent.fromState(StrippedStateEvent state)
       : assert(state.type == EventTypes.SpaceParent),
         roomId = state.stateKey,
         via = state.content.tryGetList<String>('via') ?? [],

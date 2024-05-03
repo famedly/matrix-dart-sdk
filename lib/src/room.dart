@@ -94,7 +94,7 @@ class Room {
   /// The room states are a key value store of the key (`type`,`state_key`) => State(event).
   /// In a lot of cases the `state_key` might be an empty string. You **should** use the
   /// methods `getState()` and `setState()` to interact with the room states.
-  Map<String, Map<String, Event>> states = {};
+  Map<String, Map<String, StrippedStateEvent>> states = {};
 
   /// Key-Value store for ephemerals.
   Map<String, BasicRoomEvent> ephemerals = {};
@@ -157,19 +157,31 @@ class Room {
 
   /// Returns the [Event] for the given [typeKey] and optional [stateKey].
   /// If no [stateKey] is provided, it defaults to an empty string.
-  Event? getState(String typeKey, [String stateKey = '']) =>
+  /// This returns either a `StrippedStateEvent` for rooms with membership
+  /// "invite" or a `User`/`Event`. If you need additional information like
+  /// the Event ID or originServerTs you need to do a type check like:
+  /// ```dart
+  /// if (state is Event) { /*...*/ }
+  /// ```
+  StrippedStateEvent? getState(String typeKey, [String stateKey = '']) =>
       states[typeKey]?[stateKey];
 
   /// Adds the [state] to this room and overwrites a state with the same
   /// typeKey/stateKey key pair if there is one.
-  void setState(Event state) {
+  void setState(StrippedStateEvent state) {
     // Ignore other non-state events
     final stateKey = state.stateKey;
-    final roomId = state.roomId;
-    if (roomId == null || roomId != id) {
-      Logs().w('Tried to set state event for wrong room!');
-      return;
+
+    // For non invite rooms this is usually an Event and we should validate
+    // the room ID:
+    if (state is Event) {
+      final roomId = state.roomId;
+      if (roomId == null || roomId != id) {
+        Logs().wtf('Tried to set state event for wrong room!');
+        return;
+      }
     }
+
     if (stateKey == null) {
       Logs().w(
         'Tried to set a non state event with type "${state.type}" as state event for a room',
@@ -179,7 +191,7 @@ class Room {
 
     (states[state.type] ??= {})[stateKey] = state;
 
-    client.onRoomState.add(state);
+    client.onRoomState.add((roomId: id, state: state));
   }
 
   /// ID of the fully read marker event.
@@ -276,9 +288,11 @@ class Room {
     if (membership == Membership.invite) {
       final ownMember = unsafeGetUserFromMemoryOrFallback(client.userID!);
 
-      ownMember.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n);
+      unsafeGetUserFromMemoryOrFallback(ownMember.senderId)
+          .calcDisplayname(i18n: i18n);
       if (ownMember.senderId != ownMember.stateKey) {
-        return ownMember.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n);
+        return unsafeGetUserFromMemoryOrFallback(ownMember.senderId)
+            .calcDisplayname(i18n: i18n);
       }
     }
     if (membership == Membership.leave) {
@@ -312,7 +326,7 @@ class Room {
     if (heroes != null && heroes.length == 1) {
       final hero = getState(EventTypes.RoomMember, heroes.first);
       if (hero != null) {
-        return hero.asUser.avatarUrl;
+        return hero.asUser(this).avatarUrl;
       }
     }
     if (isDirectChat) {
@@ -383,6 +397,7 @@ class Room {
     states.forEach((final String key, final entry) {
       final state = entry[''];
       if (state == null) return;
+      if (state is! Event) return;
       if (state.originServerTs.millisecondsSinceEpoch >
           lastTime.millisecondsSinceEpoch) {
         lastTime = state.originServerTs;
@@ -1554,7 +1569,7 @@ class Room {
     if (members != null) {
       return members.entries
           .where((entry) => entry.value.type == EventTypes.RoomMember)
-          .map((entry) => entry.value.asUser)
+          .map((entry) => entry.value.asUser(this))
           .where((user) => membershipFilter.contains(user.membership))
           .toList();
     }
@@ -1643,7 +1658,7 @@ class Room {
   User unsafeGetUserFromMemoryOrFallback(String mxID) {
     final user = getState(EventTypes.RoomMember, mxID);
     if (user != null) {
-      return user.asUser;
+      return user.asUser(this);
     } else {
       if (mxID.isValidMatrixId) {
         // ignore: discarded_futures
@@ -1672,7 +1687,7 @@ class Room {
     // Checks if the user is really missing
     final stateUser = getState(EventTypes.RoomMember, mxID);
     if (stateUser != null) {
-      return stateUser.asUser;
+      return stateUser.asUser(this);
     }
 
     // it may be in the database

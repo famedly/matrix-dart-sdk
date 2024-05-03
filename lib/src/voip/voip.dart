@@ -89,19 +89,22 @@ class VoIP {
 
     // handles the com.famedly.call events.
     client.onRoomState.stream.listen(
-      (event) async {
-        if (event.type == EventTypes.GroupCallMember) {
-          Logs().v('[VOIP] onRoomState: type ${event.toJson()}');
-          final mems = event.room.getCallMembershipsFromEvent(event);
-          for (final mem in mems) {
-            unawaited(createGroupCallFromRoomStateEvent(mem));
-          }
-          for (final map in groupCalls.entries) {
-            if (map.key.roomId == event.room.id) {
-              // because we don't know which call got updated, just update all
-              // group calls we have entered for that room
-              await map.value.onMemberStateChanged();
-            }
+      (update) async {
+        final event = update.state;
+        if (event is! Event) return;
+        if (event.room.membership != Membership.join) return;
+        if (event.type != EventTypes.GroupCallMember) return;
+
+        Logs().v('[VOIP] onRoomState: type ${event.toJson()}');
+        final mems = event.room.getCallMembershipsFromEvent(event);
+        for (final mem in mems) {
+          unawaited(createGroupCallFromRoomStateEvent(mem));
+        }
+        for (final map in groupCalls.entries) {
+          if (map.key.roomId == event.room.id) {
+            // because we don't know which call got updated, just update all
+            // group calls we have entered for that room
+            await map.value.onMemberStateChanged();
           }
         }
       },

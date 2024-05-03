@@ -1312,7 +1312,10 @@ class Client extends MatrixApi {
 
   final CachedStreamController<Event> onGroupMember = CachedStreamController();
 
-  final CachedStreamController<Event> onRoomState = CachedStreamController();
+  /// When a state in a room has been updated this will return the room ID
+  /// and the state event.
+  final CachedStreamController<({String roomId, StrippedStateEvent state})>
+      onRoomState = CachedStreamController();
 
   /// How long should the app wait until it retrys the synchronisation after
   /// an error?
@@ -2385,7 +2388,7 @@ class Client extends MatrixApi {
 
     switch (eventUpdate.type) {
       case EventUpdateType.inviteState:
-        room.setState(Event.fromJson(eventUpdate.content, room));
+        room.setState(StrippedStateEvent.fromJson(eventUpdate.content));
         break;
       case EventUpdateType.state:
       case EventUpdateType.timeline:
