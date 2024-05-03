@@ -19,7 +19,10 @@
 import 'package:matrix/matrix.dart';
 
 /// Represents a Matrix User which may be a participant in a Matrix Room.
-class User extends Event {
+class User extends StrippedStateEvent {
+  final Room room;
+  final Map<String, Object?>? prevContent;
+
   factory User(
     String id, {
     String? membership,
@@ -30,7 +33,6 @@ class User extends Event {
     return User.fromState(
       stateKey: id,
       senderId: id,
-      eventId: 'fake_event',
       content: {
         if (membership != null) 'membership': membership,
         if (displayName != null) 'displayname': displayName,
@@ -38,20 +40,16 @@ class User extends Event {
       },
       typeKey: EventTypes.RoomMember,
       room: room,
-      originServerTs: DateTime.now(),
     );
   }
 
   User.fromState({
-    super.prevContent,
     required String super.stateKey,
     super.content = const {},
     required String typeKey,
-    required super.eventId,
     required super.senderId,
-    required super.originServerTs,
-    super.unsigned,
-    required super.room,
+    required this.room,
+    this.prevContent,
   }) : super(
           type: typeKey,
         );
@@ -241,3 +239,14 @@ class User extends Event {
 const _maximumHashLength = 10000;
 String _hash(String s) =>
     (s.codeUnits.fold<int>(0, (a, b) => a + b) % _maximumHashLength).toString();
+
+extension FromStrippedStateEventExtension on StrippedStateEvent {
+  User asUser(Room room) => User.fromState(
+        // state key should always be set for member events
+        stateKey: stateKey!,
+        content: content,
+        typeKey: type,
+        senderId: senderId,
+        room: room,
+      );
+}

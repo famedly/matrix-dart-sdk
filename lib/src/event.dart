@@ -247,10 +247,7 @@ class Event extends MatrixEvent {
         prevContent: prevContent,
         content: content,
         typeKey: type,
-        eventId: eventId,
         senderId: senderId,
-        originServerTs: originServerTs,
-        unsigned: unsigned,
         room: room,
       );
 
