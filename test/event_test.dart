@@ -242,12 +242,12 @@ void main() {
 
     test('remove', () async {
       final event = Event.fromJson(
-          jsonObj, Room(id: '1234', client: Client('testclient')));
-      final removed1 = await event.remove();
+        jsonObj,
+        Room(id: '1234', client: Client('testclient')),
+      );
+      expect(() async => await event.cancelSend(), throwsException);
       event.status = EventStatus.sending;
-      final removed2 = await event.remove();
-      expect(removed1, false);
-      expect(removed2, true);
+      await event.cancelSend();
     });
 
     test('sendAgain', () async {

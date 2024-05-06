@@ -322,27 +322,26 @@ class Event extends MatrixEvent {
     return receiptsList;
   }
 
-  /// Removes this event if the status is [sending], [error] or [removed].
-  /// This event will just be removed from the database and the timelines.
-  /// Returns [false] if not removed.
+  @Deprecated('Use [cancelSend()] instead.')
   Future<bool> remove() async {
-    final room = this.room;
-
-    if (!status.isSent) {
-      await room.client.database?.removeEvent(eventId, room.id);
-
-      room.client.onEvent.add(EventUpdate(
-        roomID: room.id,
-        type: EventUpdateType.timeline,
-        content: {
-          'event_id': eventId,
-          'status': EventStatus.removed.intValue,
-          'content': {'body': 'Removed...'}
-        },
-      ));
+    try {
+      await cancelSend();
       return true;
+    } catch (_) {
+      return false;
     }
-    return false;
+  }
+
+  /// Removes an unsent or yet-to-send event from the database and timeline.
+  /// These are events marked with the status `SENDING` or `ERROR`.
+  /// Throws an exception if used for an already sent event!
+  Future<void> cancelSend() async {
+    if (status.isSent) {
+      throw Exception('Can only delete events which are not sent yet!');
+    }
+
+    await room.client.database?.removeEvent(eventId, room.id);
+    room.client.onCancelSendEvent.add(eventId);
   }
 
   /// Try to send this event again. Only works with events of status -1.
@@ -358,7 +357,7 @@ class Event extends MatrixEvent {
     }.contains(messageType)) {
       final file = room.sendingFilePlaceholders[eventId];
       if (file == null) {
-        await remove();
+        await cancelSend();
         throw Exception('Can not try to send again. File is no longer cached.');
       }
       final thumbnail = room.sendingFileThumbnails[eventId];

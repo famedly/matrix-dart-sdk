@@ -270,7 +270,7 @@ void main() {
       ));
       await waitForCount(7);
 
-      await timeline.events[0].remove();
+      await timeline.events[0].cancelSend();
 
       await waitForCount(8);
       expect(updateCount, 8);

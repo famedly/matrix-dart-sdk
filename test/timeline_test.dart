@@ -507,7 +507,7 @@ void main() {
       ));
       await waitForCount(1);
 
-      await timeline.events[0].remove();
+      await timeline.events[0].cancelSend();
 
       await waitForCount(2);
 
