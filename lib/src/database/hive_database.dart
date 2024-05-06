@@ -618,7 +618,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
               Logs().w('Unable to post load member $userId');
               continue;
             }
-            room.setState(Event.fromJson(convertToJson(state), room));
+            room.setState(room.membership == Membership.invite
+                ? StrippedStateEvent.fromJson(copyMap(raw))
+                : Event.fromJson(convertToJson(state), room));
           }
 
           // Get the "important" room states. All other states will be loaded once
@@ -628,7 +630,9 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
                 .get(MultiKey(room.id, type).toString()) as Map?;
             if (states == null) continue;
             final stateEvents = states.values
-                .map((raw) => Event.fromJson(convertToJson(raw), room))
+                .map((raw) => room.membership == Membership.invite
+                    ? StrippedStateEvent.fromJson(copyMap(raw))
+                    : Event.fromJson(convertToJson(raw), room))
                 .toList();
             for (final state in stateEvents) {
               room.setState(state);

@@ -572,7 +572,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
           }
           final states = entry.value;
           final stateEvents = states.values
-              .map((raw) => Event.fromJson(copyMap(raw), room))
+              .map((raw) => room.membership == Membership.invite
+                  ? StrippedStateEvent.fromJson(copyMap(raw))
+                  : Event.fromJson(copyMap(raw), room))
               .toList();
           for (final state in stateEvents) {
             room.setState(state);
