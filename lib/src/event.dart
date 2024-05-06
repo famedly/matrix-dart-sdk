@@ -145,19 +145,6 @@ class Event extends MatrixEvent {
         );
       }
     }
-
-    // If this is failed to send and the file is no longer cached, it should be removed!
-    if (!status.isSent &&
-        {
-          MessageTypes.Image,
-          MessageTypes.Video,
-          MessageTypes.Audio,
-          MessageTypes.File,
-        }.contains(messageType) &&
-        !room.sendingFilePlaceholders.containsKey(eventId)) {
-      // ignore: discarded_futures
-      remove();
-    }
   }
 
   static Map<String, dynamic> getMapFromPayload(Object? payload) {
