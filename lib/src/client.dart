@@ -1312,6 +1312,9 @@ class Client extends MatrixApi {
 
   final CachedStreamController<Event> onGroupMember = CachedStreamController();
 
+  final CachedStreamController<String> onCancelSendEvent =
+      CachedStreamController();
+
   /// When a state in a room has been updated this will return the room ID
   /// and the state event.
   final CachedStreamController<({String roomId, StrippedStateEvent state})>

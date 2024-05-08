@@ -6,7 +6,6 @@
 /// - synced: (event came from sync loop)
 /// - roomState
 enum EventStatus {
-  removed,
   error,
   sending,
   sent,
@@ -33,16 +32,12 @@ EventStatus latestEventStatus(EventStatus status1, EventStatus status2) =>
 extension EventStatusExtension on EventStatus {
   /// Returns int value of the event status.
   ///
-  /// - -2 == removed;
   /// - -1 == error;
   /// -  0 == sending;
   /// -  1 == sent;
   /// -  2 == synced;
   /// -  3 == roomState;
   int get intValue => (index - 2);
-
-  /// Return `true` if the `EventStatus` equals `removed`.
-  bool get isRemoved => this == EventStatus.removed;
 
   /// Return `true` if the `EventStatus` equals `error`.
   bool get isError => this == EventStatus.error;
