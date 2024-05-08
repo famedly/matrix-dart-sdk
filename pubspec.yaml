@@ -1,6 +1,6 @@
 name: matrix
 description: Matrix Dart SDK
-version: 0.28.1
+version: 0.29.0
 homepage: https://famedly.com
 repository: https://github.com/famedly/matrix-dart-sdk.git
 issue_tracker: https://github.com/famedly/matrix-dart-sdk/issues
@@ -43,4 +43,3 @@ dev_dependencies:
   lints: ^3.0.0
   sqflite_common_ffi: 2.3.2+1 # v2.3.3 doesn't support dart v3.2.x
   test: ^1.15.7
-
