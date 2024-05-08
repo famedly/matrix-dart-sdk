@@ -1,3 +1,31 @@
+## [0.29.0] 08th May 2024
+Refactoring release which fixes a flickering of sent file events in the timeline. The
+State events in a room are no longer instances of `Event` but `StrippedStateEvent` by
+default, which is a base class of `Event`. Usually in join rooms the state events are
+actually `Event` and can be used as those after a type check if needed.
+
+**Example:**
+```dart
+// Before:
+final event = room.getState(EventTypes.RoomCreate);
+
+// After:
+final strippedStateEvent = room.getState(EventTypes.RoomCreate);
+final event = strippedStateEvent is Event ? strippedStateEvent : null;
+```
+
+Also be aware that `Event.remove()` has been renamed to `Event.cancelSend()` to make
+more clear that this is only to delete events from database and cache which have not
+been synced yet. They no longer appear in the `Client.onEventUpdate` stream but on the new
+`Client.onCancelSendEvent` stream.
+
+- chore: more gh_release fixes (td)
+- chore: reduce isValidMemEvent log level (td)
+- ci: Add tests for database on web (Krille)
+- refactor: delete not sent events without eventupdate stream workaround (Krille)
+- refactor: Removes the behavior of deleting an event if the file is no longer cached (Krille)
+- refactor: Use strippedstatevent as base for room state and user class (Krille)
+
 ## [0.28.1] 30th April 2024
 - chore: expose fake matrix api (td)
 - chore: update voip readme (td)
