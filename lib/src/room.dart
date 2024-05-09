@@ -356,15 +356,27 @@ class Room {
     });
   }
 
+  String? _cachedDirectChatMatrixId;
+
   /// If this room is a direct chat, this is the matrix ID of the user.
   /// Returns null otherwise.
   String? get directChatMatrixID {
+    // Calculating the directChatMatrixId can be expensive. We cache it and
+    // validate the cache instead every time.
+    final cache = _cachedDirectChatMatrixId;
+    if (cache != null) {
+      final roomIds = client.directChats[cache];
+      if (roomIds is List && roomIds.contains(id)) {
+        return cache;
+      }
+    }
+
     if (membership == Membership.invite) {
       final userID = client.userID;
       if (userID == null) return null;
       final invitation = getState(EventTypes.RoomMember, userID);
       if (invitation != null && invitation.content['is_direct'] == true) {
-        return invitation.senderId;
+        return _cachedDirectChatMatrixId = invitation.senderId;
       }
     }
 
@@ -373,8 +385,8 @@ class Room {
       final roomIds = e.value;
       return roomIds is List<dynamic> && roomIds.contains(id);
     })?.key;
-    if (mxId?.isValidMatrixId == true) return mxId;
-    return null;
+    if (mxId?.isValidMatrixId == true) return _cachedDirectChatMatrixId = mxId;
+    return _cachedDirectChatMatrixId = null;
   }
 
   /// Wheither this is a direct chat or not
