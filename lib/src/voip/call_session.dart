@@ -1459,7 +1459,7 @@ class CallSession {
       if (capabilities != null) 'capabilities': capabilities.toJson(),
       if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
     };
-    return await _sendCallContent(
+    return await _sendContent(
       room,
       isGroupCall ? EventTypes.GroupCallMemberInvite : EventTypes.CallInvite,
       content,
@@ -1487,7 +1487,7 @@ class CallSession {
       'selected_party_id': selected_party_id,
     };
 
-    return await _sendCallContent(
+    return await _sendContent(
       room,
       isGroupCall
           ? EventTypes.GroupCallMemberSelectAnswer
@@ -1510,7 +1510,7 @@ class CallSession {
       'version': version,
     };
 
-    return await _sendCallContent(
+    return await _sendContent(
       room,
       isGroupCall ? EventTypes.GroupCallMemberReject : EventTypes.CallReject,
       content,
@@ -1540,7 +1540,7 @@ class CallSession {
       if (capabilities != null) 'capabilities': capabilities.toJson(),
       if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
     };
-    return await _sendCallContent(
+    return await _sendContent(
       room,
       isGroupCall
           ? EventTypes.GroupCallMemberNegotiate
@@ -1585,7 +1585,7 @@ class CallSession {
       'version': version,
       'candidates': candidates,
     };
-    return await _sendCallContent(
+    return await _sendContent(
       room,
       isGroupCall
           ? EventTypes.GroupCallMemberCandidates
@@ -1617,7 +1617,7 @@ class CallSession {
       if (capabilities != null) 'capabilities': capabilities.toJson(),
       if (metadata != null) sdpStreamMetadataKey: metadata.toJson(),
     };
-    return await _sendCallContent(
+    return await _sendContent(
       room,
       isGroupCall ? EventTypes.GroupCallMemberAnswer : EventTypes.CallAnswer,
       content,
@@ -1639,7 +1639,7 @@ class CallSession {
       'version': version,
       if (hangupCause != null) 'reason': hangupCause,
     };
-    return await _sendCallContent(
+    return await _sendContent(
       room,
       isGroupCall ? EventTypes.GroupCallMemberHangup : EventTypes.CallHangup,
       content,
@@ -1671,7 +1671,7 @@ class CallSession {
       'version': version,
       sdpStreamMetadataKey: metadata.toJson(),
     };
-    return await _sendCallContent(
+    return await _sendContent(
       room,
       isGroupCall
           ? EventTypes.GroupCallMemberSDPStreamMetadataChanged
@@ -1697,7 +1697,7 @@ class CallSession {
       'version': version,
       ...callReplaces.toJson(),
     };
-    return await _sendCallContent(
+    return await _sendContent(
       room,
       isGroupCall
           ? EventTypes.GroupCallMemberReplaces
@@ -1723,7 +1723,7 @@ class CallSession {
       'version': version,
       'asserted_identity': assertedIdentity.toJson(),
     };
-    return await _sendCallContent(
+    return await _sendContent(
       room,
       isGroupCall
           ? EventTypes.GroupCallMemberAssertedIdentity
@@ -1733,7 +1733,7 @@ class CallSession {
     );
   }
 
-  Future<String?> _sendCallContent(
+  Future<String?> _sendContent(
     Room room,
     String type,
     Map<String, Object> content, {
