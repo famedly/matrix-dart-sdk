@@ -1,3 +1,6 @@
+## [0.29.1] 10th May 2024
+- chore: Revert check message size before fake sync (Krille)
+
 ## [0.29.0] 08th May 2024
 Refactoring release which fixes a flickering of sent file events in the timeline. The
 State events in a room are no longer instances of `Event` but `StrippedStateEvent` by
