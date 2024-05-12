@@ -8,7 +8,8 @@ mixin ZoneTransactionMixin {
   Completer<void>? _transactionLock;
   final _transactionZones = <Zone>{};
 
-  Future<void> zoneTransaction(Future<void> Function() action) async {
+  Future<void> zoneTransaction(
+      Future<void> Function(bool isInTransaction) action) async {
     // first we try to determine if we are inside of a transaction currently
     var isInTransaction = false;
     Zone? zone = Zone.current;
@@ -23,7 +24,7 @@ mixin ZoneTransactionMixin {
     }
     // if we are inside a transaction....just run the action
     if (isInTransaction) {
-      return await action();
+      return await action(isInTransaction);
     }
     // if we are *not* in a transaction, time to wait for the lock!
     while (_transactionLock != null) {
@@ -39,7 +40,7 @@ mixin ZoneTransactionMixin {
           // don't forget to add the new zone to _transactionZones!
           _transactionZones.add(Zone.current);
 
-          await action();
+          await action(isInTransaction);
           return;
         } finally {
           // aaaand remove the zone from _transactionZones again

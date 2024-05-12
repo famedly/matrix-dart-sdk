@@ -45,7 +45,7 @@ class BoxCollection with ZoneTransactionMixin {
     List<String>? boxNames,
     bool readOnly = false,
   }) =>
-      zoneTransaction(() async {
+      zoneTransaction((_) async {
         boxNames ??= _db.objectStoreNames!.toList();
         final txnCache = _txnCache = [];
         await action();

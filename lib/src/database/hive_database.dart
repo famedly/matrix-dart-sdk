@@ -1271,7 +1271,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> transaction(Future<void> Function() action) =>
-      zoneTransaction(action);
+      zoneTransaction((_) => action());
 
   @override
   Future<void> updateClient(

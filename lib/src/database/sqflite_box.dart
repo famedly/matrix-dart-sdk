@@ -49,13 +49,21 @@ class BoxCollection with ZoneTransactionMixin {
     List<String>? boxNames,
     bool readOnly = false,
   }) =>
-      zoneTransaction(() async {
-        final batch = _db.batch();
-        _activeBatch = batch;
-        await action();
-        _activeBatch = null;
-        await batch.commit(noResult: true);
-      });
+      zoneTransaction(
+        (isInTransaction) async {
+          if (isInTransaction) {
+            await action();
+            return;
+          }
+          return _db.transaction((txn) async {
+            final batch = txn.batch();
+            _activeBatch = batch;
+            await action();
+            _activeBatch = null;
+            await batch.commit(noResult: true);
+          });
+        },
+      );
 
   Future<void> clear() => transaction(
         () async {
