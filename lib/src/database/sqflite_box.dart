@@ -74,15 +74,6 @@ class BoxCollection with ZoneTransactionMixin {
 class Box<V> {
   final String name;
   final BoxCollection boxCollection;
-  final Map<String, V?> _cache = {};
-
-  /// _cachedKeys is only used to make sure that if you fetch all keys from a
-  /// box, you do not need to have an expensive read operation twice. There is
-  /// no other usage for this at the moment. So the cache is never partial.
-  /// Once the keys are cached, they need to be updated when changed in put and
-  /// delete* so that the cache does not become outdated.
-  Set<String>? _cachedKeys;
-  bool get _keysCached => _cachedKeys != null;
 
   static const Set<Type> allowedValueTypes = {
     List<dynamic>,
@@ -140,14 +131,11 @@ class Box<V> {
   }
 
   Future<List<String>> getAllKeys([Transaction? txn]) async {
-    if (_keysCached) return _cachedKeys!.toList();
-
     final executor = txn ?? boxCollection._db;
 
     final result = await executor.query(name, columns: ['k']);
     final keys = result.map((row) => row['k'] as String).toList();
 
-    _cachedKeys = keys.toSet();
     return keys;
   }
 
@@ -166,8 +154,6 @@ class Box<V> {
   }
 
   Future<V?> get(String key, [Transaction? txn]) async {
-    if (_cache.containsKey(key)) return _cache[key];
-
     final executor = txn ?? boxCollection._db;
 
     final result = await executor.query(
@@ -178,15 +164,10 @@ class Box<V> {
     );
 
     final value = result.isEmpty ? null : _fromString(result.single['v']);
-    _cache[key] = value;
     return value;
   }
 
   Future<List<V?>> getAll(List<String> keys, [Transaction? txn]) async {
-    if (!keys.any((key) => !_cache.containsKey(key))) {
-      return keys.map((key) => _cache[key]).toList();
-    }
-
     // The SQL operation might fail with more than 1000 keys. We define some
     // buffer here and half the amount of keys recursively for this situation.
     const getAllMax = 800;
@@ -216,8 +197,6 @@ class Box<V> {
     // `resultMap.values`.
     list.addAll(keys.map((key) => resultMap[key]));
 
-    _cache.addAll(resultMap);
-
     return list;
   }
 
@@ -241,9 +220,6 @@ class Box<V> {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     }
-
-    _cache[key] = val;
-    _cachedKeys?.add(key);
     return;
   }
 
@@ -255,11 +231,6 @@ class Box<V> {
     } else {
       txn.delete(name, where: 'k = ?', whereArgs: [key]);
     }
-
-    // Set to null instead remove() so that inside of transactions null is
-    // returned.
-    _cache[key] = null;
-    _cachedKeys?.remove(key);
     return;
   }
 
@@ -280,11 +251,6 @@ class Box<V> {
         whereArgs: keys,
       );
     }
-
-    for (final key in keys) {
-      _cache[key] = null;
-      _cachedKeys?.removeAll(keys);
-    }
     return;
   }
 
@@ -296,9 +262,6 @@ class Box<V> {
     } else {
       txn.delete(name);
     }
-
-    _cache.clear();
-    _cachedKeys = null;
     return;
   }
 }
