@@ -519,14 +519,6 @@ class CallSession {
         _remoteCandidates.add(candidate);
       }
     }
-
-    if (pc != null &&
-        {
-          RTCIceConnectionState.RTCIceConnectionStateDisconnected,
-          RTCIceConnectionState.RTCIceConnectionStateFailed
-        }.contains(pc!.iceConnectionState)) {
-      await restartIce();
-    }
   }
 
   void onAssertedIdentityReceived(AssertedIdentity identity) {
@@ -566,7 +558,6 @@ class CallSession {
         return true;
       } catch (err) {
         fireCallEvent(CallStateChange.kError);
-
         return false;
       }
     } else {
@@ -1087,7 +1078,7 @@ class CallSession {
   }
 
   Future<void> onNegotiationNeeded() async {
-    Logs().i('Negotiation is needed!');
+    Logs().d('Negotiation is needed!');
     _makingOffer = true;
     try {
       // The first addTrack(audio track) on iOS will trigger
@@ -1106,13 +1097,14 @@ class CallSession {
   }
 
   Future<void> _preparePeerConnection() async {
+    int iceRestartedCount = 0;
+
     try {
       pc = await _createPeerConnection();
       pc!.onRenegotiationNeeded = onNegotiationNeeded;
 
       pc!.onIceCandidate = (RTCIceCandidate candidate) async {
         if (callHasEnded) return;
-        //Logs().v('[VOIP] onIceCandidate => ${candidate.toMap().toString()}');
         _localCandidates.add(candidate);
 
         if (state == CallState.kRinging || !_inviteOrAnswerSent) return;
@@ -1149,12 +1141,21 @@ class CallSession {
         if (state == RTCIceConnectionState.RTCIceConnectionStateConnected) {
           _localCandidates.clear();
           _remoteCandidates.clear();
+          iceRestartedCount = 0;
           setCallState(CallState.kConnected);
           // fix any state/race issues we had with sdp packets and cloned streams
           await updateMuteStatus();
           _missedCall = false;
-        } else if (state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
-          await hangup(reason: CallErrorCode.iceFailed);
+        } else if ({
+          RTCIceConnectionState.RTCIceConnectionStateFailed,
+          RTCIceConnectionState.RTCIceConnectionStateDisconnected
+        }.contains(state)) {
+          if (iceRestartedCount < 3) {
+            await restartIce();
+            iceRestartedCount++;
+          } else {
+            await hangup(reason: CallErrorCode.iceFailed);
+          }
         }
       };
     } catch (e) {
@@ -1234,10 +1235,8 @@ class CallSession {
     Logs().v('[VOIP] iceRestart.');
     // Needs restart ice on session.pc and renegotiation.
     _iceGatheringFinished = false;
-    final desc =
-        await pc!.createOffer(_getOfferAnswerConstraints(iceRestart: true));
-    await pc!.setLocalDescription(desc);
     _localCandidates.clear();
+    await pc!.restartIce();
   }
 
   Future<MediaStream?> _getUserMedia(CallType type) async {
@@ -1272,8 +1271,7 @@ class CallSession {
     };
     final pc = await voip.delegate.createPeerConnection(configuration);
     pc.onTrack = (RTCTrackEvent event) async {
-      if (event.streams.isNotEmpty) {
-        final stream = event.streams[0];
+      for (final stream in event.streams) {
         await _addRemoteStream(stream);
         for (final track in stream.getTracks()) {
           track.onEnded = () async {
@@ -1320,13 +1318,6 @@ class CallSession {
     onStreamRemoved.add(wpstream);
     fireCallEvent(CallStateChange.kFeedsChanged);
     await wpstream.dispose();
-  }
-
-  Map<String, dynamic> _getOfferAnswerConstraints({bool iceRestart = false}) {
-    return {
-      'mandatory': {if (iceRestart) 'IceRestart': true},
-      'optional': [],
-    };
   }
 
   Future<void> _sendCandidateQueue() async {
