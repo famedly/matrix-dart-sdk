@@ -953,21 +953,43 @@ class Client extends MatrixApi {
     }
 
     if (getFromRooms) {
-      final room = rooms.firstWhereOrNull((Room room) =>
-          room.getParticipants().indexWhere((User user) => user.id == userId) !=
-          -1);
-      if (room != null) {
-        final user =
-            room.getParticipants().firstWhere((User user) => user.id == userId);
+      final rooms = this.rooms;
+
+      User? foundUser;
+      // check in memory first
+      for (final room in rooms) {
+        if (!room.partial) {
+          foundUser = await room.requestUser(userId,
+              ignoreErrors: true, requestProfile: false, requestState: false);
+          if (foundUser != null) break;
+        }
+      }
+
+      // If no hit, check the database
+      if (foundUser == null) {
+        for (final room in rooms) {
+          if (room.partial) {
+            foundUser = await room.requestUser(userId,
+                ignoreErrors: true, requestProfile: false, requestState: false);
+            if (foundUser != null) break;
+          }
+        }
+      }
+
+      if (foundUser != null) {
         final profileFromRooms = Profile(
           userId: userId,
-          displayName: user.displayName,
-          avatarUrl: user.avatarUrl,
+          displayName: foundUser.displayName,
+          avatarUrl: foundUser.avatarUrl,
         );
-        _profileRoomsCache[userId] = ProfileInformation(
-          avatarUrl: profileFromRooms.avatarUrl,
-          displayname: profileFromRooms.displayName,
-        );
+
+        if (cache || _profileServerCache.containsKey(userId)) {
+          _profileRoomsCache[userId] = ProfileInformation(
+            avatarUrl: profileFromRooms.avatarUrl,
+            displayname: profileFromRooms.displayName,
+          );
+        }
+
         return profileFromRooms;
       }
     }
