@@ -4,7 +4,6 @@ import 'dart:async';
 import 'dart:html';
 import 'dart:indexed_db';
 import 'dart:js';
-import 'dart:typed_data';
 
 import 'package:js/js.dart';
 import 'package:js/js_util.dart';
@@ -52,8 +51,8 @@ Future<void> startWebWorker() async {
               break;
             case WebWorkerOperations.calcImageMetadata:
               final result = MatrixImageFile.calcMetadataImplementation(
-                  Uint8List.fromList(
-                      (operation.data as JsArray).whereType<int>().toList()));
+                  MatrixImageFileCalcMetadataArguments.fromJson(
+                      Map.from(operation.data as Map)));
               sendResponse(operation.label as double, result?.toJson());
               break;
             default:

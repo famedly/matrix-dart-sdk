@@ -113,7 +113,8 @@ class MatrixImageFile extends MatrixFile {
       nativeImplementations =
           NativeImplementationsIsolate.fromRunInBackground(compute);
     }
-    final metaData = await nativeImplementations.calcImageMetadata(bytes);
+    final metaData = await nativeImplementations.calcImageMetadata(
+        MatrixImageFileCalcMetadataArguments(fileName: name, bytes: bytes));
 
     return MatrixImageFile(
       bytes: metaData?.bytes ?? bytes,
@@ -233,12 +234,19 @@ class MatrixImageFile extends MatrixFile {
   /// you would likely want to use [NativeImplementations] and
   /// [Client.nativeImplementations] instead
   static MatrixImageFileResizedResponse? calcMetadataImplementation(
-      Uint8List bytes) {
-    final image = decodeImage(bytes);
+      MatrixImageFileCalcMetadataArguments arguments) {
+    Image? image;
+    try {
+      image = decodeNamedImage(arguments.fileName, arguments.bytes);
+    } catch (e) {
+      Logs().w(
+          'Decoding image failed, wrong file extension? Now attempting again.');
+    }
+    image ??= decodeImage(arguments.bytes);
     if (image == null) return null;
 
     return MatrixImageFileResizedResponse(
-      bytes: bytes,
+      bytes: arguments.bytes,
       width: image.width,
       height: image.height,
       blurhash: BlurHash.encode(
@@ -253,14 +261,23 @@ class MatrixImageFile extends MatrixFile {
   /// [Client.nativeImplementations] instead
   static MatrixImageFileResizedResponse? resizeImplementation(
       MatrixImageFileResizeArguments arguments) {
-    final image = decodeImage(arguments.bytes);
+    Image? image;
+    try {
+      image = decodeNamedImage(arguments.fileName, arguments.bytes);
+    } catch (e) {
+      Logs().w(
+          'Decoding image failed, wrong file extension? Now attempting again.');
+    }
+    image ??= decodeImage(arguments.bytes);
+    if (image == null) return null;
 
-    final resized = copyResize(image!,
+    final resized = copyResize(image,
         height: image.height > image.width ? arguments.maxDimension : null,
         width: image.width >= image.height ? arguments.maxDimension : null);
 
     final encoded = encodeNamedImage(arguments.fileName, resized);
     if (encoded == null) return null;
+
     final bytes = Uint8List.fromList(encoded);
     return MatrixImageFileResizedResponse(
       bytes: bytes,
@@ -277,6 +294,28 @@ class MatrixImageFile extends MatrixFile {
           : null,
     );
   }
+}
+
+class MatrixImageFileCalcMetadataArguments {
+  final Uint8List bytes;
+  final String fileName;
+
+  const MatrixImageFileCalcMetadataArguments({
+    required this.bytes,
+    required this.fileName,
+  });
+
+  factory MatrixImageFileCalcMetadataArguments.fromJson(
+          Map<String, dynamic> json) =>
+      MatrixImageFileCalcMetadataArguments(
+        bytes: json['bytes'],
+        fileName: json['fileName'],
+      );
+
+  Map<String, Object> toJson() => {
+        'bytes': bytes,
+        'fileName': fileName,
+      };
 }
 
 class MatrixImageFileResizedResponse {
