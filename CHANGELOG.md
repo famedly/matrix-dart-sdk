@@ -1,3 +1,11 @@
+## [0.29.2] 14th May 2024
+- feat: Implement unpublished MSC custom refresh token lifetime (Krille)
+- feat: support for JWT authentication (Ray Wang)
+- fix: ensureNotSoftLoggedOut must be called before network reqeust in syncFilter check (Krille)
+- fix: ice restart mechanism (td)
+- refactor: Cache direct chat matrix ID (krille-chan)
+- refactor: make sure ensureNotSoftLoggedOut does not run multiple times (Krille)
+
 ## [0.29.1] 10th May 2024
 - chore: Revert check message size before fake sync (Krille)
 
