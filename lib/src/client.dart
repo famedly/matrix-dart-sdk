@@ -1852,7 +1852,6 @@ class Client extends MatrixApi {
         return;
       }
       Object? syncError;
-      await _checkSyncFilter();
 
       // The timeout we send to the server for the sync loop. It says to the
       // server that we want to receive an empty sync response after this
@@ -1860,6 +1859,8 @@ class Client extends MatrixApi {
       timeout ??= const Duration(seconds: 30);
 
       await ensureNotSoftLoggedOut(timeout * 2);
+
+      await _checkSyncFilter();
 
       final syncRequest = sync(
         filter: syncFilterId,
