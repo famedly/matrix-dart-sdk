@@ -31,6 +31,7 @@ import 'package:random_string/random_string.dart';
 
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/msc_extensions/msc_unpublished_custom_refresh_token_lifetime/msc_unpublished_custom_refresh_token_lifetime.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
 import 'package:matrix/src/utils/client_init_exception.dart';
@@ -195,6 +196,11 @@ class Client extends MatrixApi {
     /// most common reason for soft logouts.
     /// You can also perform a new login here by passing the existing deviceId.
     this.onSoftLogout,
+
+    /// Experimental feature which allows to send a custom refresh token
+    /// lifetime to the server which overrides the default one. Needs server
+    /// support.
+    this.customRefreshTokenLifetime,
   })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
@@ -238,6 +244,8 @@ class Client extends MatrixApi {
     registerDefaultCommands();
   }
 
+  Duration? customRefreshTokenLifetime;
+
   /// Fetches the refreshToken from the database and tries to get a new
   /// access token from the server and then stores it correctly. Unlike the
   /// pure API call of `Client.refresh()` this handles the complete soft
@@ -257,7 +265,10 @@ class Client extends MatrixApi {
       throw Exception('Cannot refresh access token when not logged in');
     }
 
-    final tokenResponse = await refresh(refreshToken);
+    final tokenResponse = await refreshWithCustomRefreshTokenLifetime(
+      refreshToken,
+      refreshTokenLifetimeMs: customRefreshTokenLifetime?.inMilliseconds,
+    );
 
     accessToken = tokenResponse.accessToken;
     final expiresInMs = tokenResponse.expiresInMs;
@@ -1812,19 +1823,25 @@ class Client extends MatrixApi {
     return;
   }
 
+  Future<void>? _handleSoftLogoutFuture;
+
   Future<void> _handleSoftLogout() async {
     final onSoftLogout = this.onSoftLogout;
     if (onSoftLogout == null) return;
 
-    onLoginStateChanged.add(LoginState.softLoggedOut);
-    try {
-      await onSoftLogout(this);
-      onLoginStateChanged.add(LoginState.loggedIn);
-    } catch (e, s) {
-      Logs().w('Unable to refresh session after soft logout', e, s);
-      await clear();
-      rethrow;
-    }
+    _handleSoftLogoutFuture ??= () async {
+      onLoginStateChanged.add(LoginState.softLoggedOut);
+      try {
+        await onSoftLogout(this);
+        onLoginStateChanged.add(LoginState.loggedIn);
+      } catch (e, s) {
+        Logs().w('Unable to refresh session after soft logout', e, s);
+        await clear();
+        rethrow;
+      }
+    }();
+    await _handleSoftLogoutFuture;
+    _handleSoftLogoutFuture = null;
   }
 
   /// Checks if the token expires in under [expiresIn] time and calls the
