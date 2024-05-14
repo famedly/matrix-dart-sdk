@@ -1688,11 +1688,14 @@ class Room {
 
   /// Requests a missing [User] for this room. Important for clients using
   /// lazy loading. If the user can't be found this method tries to fetch
-  /// the displayname and avatar from the profile if [requestProfile] is true.
+  /// the displayname and avatar from the server if [requestState] is true.
+  /// If that fails, it falls back to requesting the global profile if
+  /// [requestProfile] is true.
   Future<User?> requestUser(
     String mxID, {
     bool ignoreErrors = false,
     bool requestProfile = true,
+    bool requestState = true,
   }) async {
     assert(mxID.isValidMatrixId);
 
@@ -1703,12 +1706,16 @@ class Room {
     }
 
     // it may be in the database
-    final dbuser = await client.database?.getUser(mxID, this);
-    if (dbuser != null) {
-      setState(dbuser);
-      onUpdate.add(id);
-      return dbuser;
+    if (partial) {
+      final dbuser = await client.database?.getUser(mxID, this);
+      if (dbuser != null) {
+        setState(dbuser);
+        onUpdate.add(id);
+        return dbuser;
+      }
     }
+
+    if (!requestState) return null;
 
     if (!_requestingMatrixIds.add(mxID)) return null;
     Map<String, dynamic>? resp;
