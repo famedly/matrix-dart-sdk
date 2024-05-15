@@ -22,6 +22,10 @@ class Api {
     throw Exception('http error response');
   }
 
+  Never bodySizeExceeded(int expected, int actual) {
+    throw Exception('body size $actual exceeded $expected');
+  }
+
   /// Gets discovery information about the domain. The file may include
   /// additional keys, which MUST follow the Java package naming convention,
   /// e.g. `com.example.myapp.property`. This ensures property names are
@@ -3798,6 +3802,10 @@ class Api {
     request.headers['authorization'] = 'Bearer ${bearerToken!}';
     request.headers['content-type'] = 'application/json';
     request.bodyBytes = utf8.encode(jsonEncode(body));
+    const maxBodySize = 60000;
+    if (request.bodyBytes.length > maxBodySize) {
+      bodySizeExceeded(maxBodySize, request.bodyBytes.length);
+    }
     final response = await httpClient.send(request);
     final responseBody = await response.stream.toBytes();
     if (response.statusCode != 200) unexpectedResponse(response, responseBody);
