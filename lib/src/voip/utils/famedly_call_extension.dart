@@ -40,6 +40,17 @@ extension FamedlyCallMemberEventsExtension on Room {
     return mem ?? [];
   }
 
+  /// returns a list of memberships in the room for `callParticipant`
+  List<CallMembership> getCallMembershipsForUserWithDeviceId(
+    CallParticipant callParticipant,
+  ) {
+    final userMems = getCallMembershipsForUser(callParticipant.userId);
+    final mem = userMems
+        .where((element) => element.deviceId == callParticipant.deviceId)
+        .toList();
+    return mem;
+  }
+
   /// returns the user count (not sessions, yet) for the group call with id: `groupCallId`.
   /// returns 0 if group call not found
   int groupCallParticipantCount(String groupCallId) {

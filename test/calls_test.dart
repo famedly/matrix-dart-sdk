@@ -173,7 +173,8 @@ void main() {
       }
       expect(voip.currentCID,
           VoipId(roomId: room.id, callId: 'originTsValidCall'));
-      final call = voip.calls[voip.currentCID]!;
+      final call = voip.calls
+          .singleWhere((element) => element.voipId == voip.currentCID);
       expect(call.state, CallState.kRinging);
       await call.answer(txid: '1234');
 
@@ -300,7 +301,8 @@ void main() {
       }
       expect(
           voip.currentCID, VoipId(roomId: room.id, callId: 'answer_elseWhere'));
-      final call = voip.calls[voip.currentCID]!;
+      final call = voip.calls
+          .singleWhere((element) => element.voipId == voip.currentCID);
       expect(call.state, CallState.kRinging);
 
       // caller sends select answer
@@ -392,7 +394,8 @@ void main() {
         Logs().d('Waiting for currentCID to update');
       }
       expect(voip.currentCID, VoipId(roomId: room.id, callId: 'reject_call'));
-      final call = voip.calls[voip.currentCID]!;
+      final call = voip.calls
+          .singleWhere((element) => element.voipId == voip.currentCID);
       expect(call.state, CallState.kRinging);
 
       await call.reject();
