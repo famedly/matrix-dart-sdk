@@ -1127,9 +1127,7 @@ class Room {
           txid: messageID,
         );
       } catch (e, s) {
-        if (e is EventTooLarge) {
-          rethrow;
-        } else if (e is MatrixException &&
+        if (e is MatrixException &&
             e.retryAfterMs != null &&
             !DateTime.now()
                 .add(Duration(milliseconds: e.retryAfterMs!))
@@ -1138,6 +1136,7 @@ class Room {
               'Ratelimited while sending message, waiting for ${e.retryAfterMs}ms');
           await Future.delayed(Duration(milliseconds: e.retryAfterMs!));
         } else if (e is MatrixException ||
+            e is EventTooLarge ||
             DateTime.now().isAfter(timeoutDate)) {
           Logs().w('Problem while sending message', e, s);
           syncUpdate.rooms!.join!.values.first.timeline!.events!.first
@@ -1145,6 +1144,7 @@ class Room {
           await _handleFakeSync(syncUpdate);
           completer.complete();
           _sendingQueue.remove(completer);
+          if (e is EventTooLarge) rethrow;
           return null;
         } else {
           Logs()
