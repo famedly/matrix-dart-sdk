@@ -75,9 +75,13 @@ class Timeline {
   // even if /sync's complete while history is being proccessed.
   bool _collectHistoryUpdates = false;
 
+  // We confirmed, that there are no more events to load from the database.
+  bool _fetchedAllDatabaseEvents = false;
+
   bool get canRequestHistory {
     if (events.isEmpty) return true;
-    return room.prev_batch != null && events.last.type != EventTypes.RoomCreate;
+    return !_fetchedAllDatabaseEvents ||
+        (room.prev_batch != null && events.last.type != EventTypes.RoomCreate);
   }
 
   Future<void> requestHistory(
@@ -147,20 +151,26 @@ class Timeline {
           }
         }
       } else {
+        _fetchedAllDatabaseEvents = true;
         Logs().i('No more events found in the store. Request from server...');
+
         if (isFragmentedTimeline) {
           await getRoomEvents(
             historyCount: historyCount,
             direction: direction,
           );
         } else {
-          await room.requestHistory(
-            historyCount: historyCount,
-            direction: direction,
-            onHistoryReceived: () {
-              _collectHistoryUpdates = true;
-            },
-          );
+          if (room.prev_batch == null) {
+            Logs().i('No more events to request from server...');
+          } else {
+            await room.requestHistory(
+              historyCount: historyCount,
+              direction: direction,
+              onHistoryReceived: () {
+                _collectHistoryUpdates = true;
+              },
+            );
+          }
         }
       }
     } finally {
@@ -291,6 +301,8 @@ class Timeline {
     if (chunk.nextBatch != '') {
       allowNewEvent = false;
       isFragmentedTimeline = true;
+      // fragmented timelines never read from the database.
+      _fetchedAllDatabaseEvents = true;
     }
   }
 
