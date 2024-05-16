@@ -70,7 +70,8 @@ class Client extends MatrixApi {
 
   DatabaseApi? get database => _database;
 
-  Encryption? encryption;
+  Encryption? get encryption => _encryption;
+  Encryption? _encryption;
 
   Set<KeyVerificationMethod> verificationMethods;
 
@@ -92,7 +93,8 @@ class Client extends MatrixApi {
 
   Future<void> Function(Client client)? onSoftLogout;
 
-  DateTime? accessTokenExpiresAt;
+  DateTime? get accessTokenExpiresAt => _accessTokenExpiresAt;
+  DateTime? _accessTokenExpiresAt;
 
   // For CommandsClientExtension
   final Map<String, FutureOr<String?> Function(CommandArgs)> commands = {};
@@ -100,7 +102,9 @@ class Client extends MatrixApi {
 
   final NativeImplementations nativeImplementations;
 
-  String? syncFilterId;
+  String? _syncFilterId;
+
+  String? get syncFilterId => _syncFilterId;
 
   final ComputeCallback? compute;
 
@@ -275,7 +279,7 @@ class Client extends MatrixApi {
     final tokenExpiresAt = expiresInMs == null
         ? null
         : DateTime.now().add(Duration(milliseconds: expiresInMs));
-    accessTokenExpiresAt = tokenExpiresAt;
+    _accessTokenExpiresAt = tokenExpiresAt;
     await database?.updateClient(
       homeserverUrl,
       tokenResponse.accessToken,
@@ -297,7 +301,8 @@ class Client extends MatrixApi {
   String? _userID;
 
   /// This points to the position in the synchronization history.
-  String? prevBatch;
+  String? get prevBatch => _prevBatch;
+  String? _prevBatch;
 
   /// The device ID is an unique identifier for this device.
   String? get deviceID => _deviceID;
@@ -1591,19 +1596,19 @@ class Client extends MatrixApi {
         accessToken = this.accessToken = account['token'];
         final tokenExpiresAtMs =
             int.tryParse(account.tryGet<String>('token_expires_at') ?? '');
-        accessTokenExpiresAt = tokenExpiresAtMs == null
+        _accessTokenExpiresAt = tokenExpiresAtMs == null
             ? null
             : DateTime.fromMillisecondsSinceEpoch(tokenExpiresAtMs);
         userID = _userID = account['user_id'];
         _deviceID = account['device_id'];
         _deviceName = account['device_name'];
-        syncFilterId = account['sync_filter_id'];
-        prevBatch = account['prev_batch'];
+        _syncFilterId = account['sync_filter_id'];
+        _prevBatch = account['prev_batch'];
         olmAccount = account['olm_account'];
       }
       if (newToken != null) {
         accessToken = this.accessToken = newToken;
-        accessTokenExpiresAt = newTokenExpiresAt;
+        _accessTokenExpiresAt = newTokenExpiresAt;
         homeserver = newHomeserver;
         userID = _userID = newUserID;
         _deviceID = newDeviceID;
@@ -1611,7 +1616,7 @@ class Client extends MatrixApi {
         olmAccount = newOlmAccount;
       } else {
         accessToken = this.accessToken = newToken ?? accessToken;
-        accessTokenExpiresAt = newTokenExpiresAt ?? accessTokenExpiresAt;
+        _accessTokenExpiresAt = newTokenExpiresAt ?? accessTokenExpiresAt;
         homeserver = newHomeserver ?? homeserver;
         userID = _userID = newUserID ?? userID;
         _deviceID = newDeviceID ?? _deviceID;
@@ -1646,7 +1651,7 @@ class Client extends MatrixApi {
         }
         // we aren't logged in
         await encryption?.dispose();
-        encryption = null;
+        _encryption = null;
         onLoginStateChanged.add(LoginState.loggedOut);
         Logs().i('User is not logged in.');
         _initLock = false;
@@ -1658,11 +1663,11 @@ class Client extends MatrixApi {
         // make sure to throw an exception if libolm doesn't exist
         await olm.init();
         olm.get_library_version();
-        encryption = Encryption(client: this);
+        _encryption = Encryption(client: this);
       } catch (e) {
         Logs().e('Error initializing encryption $e');
         await encryption?.dispose();
-        encryption = null;
+        _encryption = null;
       }
       await encryption?.init(olmAccount);
 
@@ -1764,12 +1769,12 @@ class Client extends MatrixApi {
       _database = null;
     }
 
-    _id = accessToken = syncFilterId =
-        homeserver = _userID = _deviceID = _deviceName = prevBatch = null;
+    _id = accessToken = _syncFilterId =
+        homeserver = _userID = _deviceID = _deviceName = _prevBatch = null;
     _rooms = [];
     _eventsPendingDecryption.clear();
     await encryption?.dispose();
-    encryption = null;
+    _encryption = null;
     onLoginStateChanged.add(LoginState.loggedOut);
   }
 
@@ -1817,7 +1822,7 @@ class Client extends MatrixApi {
     final userID = this.userID;
     if (syncFilterId == null && userID != null) {
       final syncFilterId =
-          this.syncFilterId = await defineFilter(userID, syncFilter);
+          _syncFilterId = await defineFilter(userID, syncFilter);
       await database?.storeSyncFilterId(syncFilterId);
     }
     return;
@@ -1931,7 +1936,7 @@ class Client extends MatrixApi {
         await _handleSync(syncResp, direction: Direction.f);
       }
       if (_disposed || _aborted) return;
-      prevBatch = syncResp.nextBatch;
+      _prevBatch = syncResp.nextBatch;
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.cleaningUp));
       // ignore: unawaited_futures
       database?.deleteOldFiles(
@@ -3055,7 +3060,7 @@ class Client extends MatrixApi {
   /// sessions and perform a new clean sync.
   Future<void> clearCache() async {
     await abortSync();
-    prevBatch = null;
+    _prevBatch = null;
     rooms.clear();
     await database?.clearCache();
     encryption?.keyManager.clearOutboundGroupSessions();
@@ -3162,7 +3167,7 @@ class Client extends MatrixApi {
     _disposed = true;
     await abortSync();
     await encryption?.dispose();
-    encryption = null;
+    _encryption = null;
     try {
       if (closeDatabase) {
         final database = _database;
