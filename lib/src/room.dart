@@ -36,41 +36,11 @@ import 'package:matrix/src/utils/space_child.dart';
 /// https://spec.matrix.org/v1.9/client-server-api/#size-limits
 const int maxPDUSize = 60000;
 
-enum PushRuleState { notify, mentionsOnly, dontNotify }
-
-enum JoinRules { public, knock, invite, private }
-
-enum GuestAccess { canJoin, forbidden }
-
-enum HistoryVisibility { invited, joined, shared, worldReadable }
-
-const Map<GuestAccess, String> _guestAccessMap = {
-  GuestAccess.canJoin: 'can_join',
-  GuestAccess.forbidden: 'forbidden',
-};
-
-extension GuestAccessExtension on GuestAccess {
-  String get text => _guestAccessMap[this]!;
-}
-
-const Map<HistoryVisibility, String> _historyVisibilityMap = {
-  HistoryVisibility.invited: 'invited',
-  HistoryVisibility.joined: 'joined',
-  HistoryVisibility.shared: 'shared',
-  HistoryVisibility.worldReadable: 'world_readable',
-};
-
-extension HistoryVisibilityExtension on HistoryVisibility {
-  String get text => _historyVisibilityMap[this]!;
-}
-
 const String messageSendingStatusKey =
     'com.famedly.famedlysdk.message_sending_status';
 
 const String fileSendingStatusKey =
     'com.famedly.famedlysdk.file_sending_status';
-
-const String emptyRoomName = 'Empty chat';
 
 /// Represents a Matrix room.
 class Room {
@@ -2111,11 +2081,10 @@ class Room {
   /// to the room from someone already inside of the room. Currently, knock and private are reserved
   /// keywords which are not implemented.
   JoinRules? get joinRules {
-    final joinRule = getState(EventTypes.RoomJoinRules)?.content['join_rule'];
-    return joinRule != null
-        ? JoinRules.values.firstWhereOrNull(
-            (r) => r.toString().replaceAll('JoinRules.', '') == joinRule)
-        : null;
+    final joinRulesString =
+        getState(EventTypes.RoomJoinRules)?.content.tryGet<String>('join_rule');
+    return JoinRules.values
+        .singleWhereOrNull((element) => element.text == joinRulesString);
   }
 
   /// Changes the join rules. You should check first if the user is able to change it.
@@ -2137,11 +2106,12 @@ class Room {
   /// This event controls whether guest users are allowed to join rooms. If this event
   /// is absent, servers should act as if it is present and has the guest_access value "forbidden".
   GuestAccess get guestAccess {
-    final ga = getState(EventTypes.GuestAccess)?.content['guest_access'];
-    return ga != null
-        ? (_guestAccessMap.map((k, v) => MapEntry(v, k))[ga] ??
-            GuestAccess.forbidden)
-        : GuestAccess.forbidden;
+    final guestAccessString = getState(EventTypes.GuestAccess)
+        ?.content
+        .tryGet<String>('guest_access');
+    return GuestAccess.values.singleWhereOrNull(
+            (element) => element.text == guestAccessString) ??
+        GuestAccess.forbidden;
   }
 
   /// Changes the guest access. You should check first if the user is able to change it.
@@ -2162,11 +2132,11 @@ class Room {
 
   /// This event controls whether a user can see the events that happened in a room from before they joined.
   HistoryVisibility? get historyVisibility {
-    final hv =
-        getState(EventTypes.HistoryVisibility)?.content['history_visibility'];
-    return hv != null
-        ? _historyVisibilityMap.map((k, v) => MapEntry(v, k))[hv]
-        : null;
+    final historyVisibilityString = getState(EventTypes.HistoryVisibility)
+        ?.content
+        .tryGet<String>('history_visibility');
+    return HistoryVisibility.values.singleWhereOrNull(
+        (element) => element.text == historyVisibilityString);
   }
 
   /// Changes the history visibility. You should check first if the user is able to change it.
