@@ -2652,10 +2652,9 @@ class Client extends MatrixApi {
 
         final accountData = syncRoomUpdate.accountData;
         if (accountData != null && accountData.isNotEmpty) {
-          await _handleRoomEvents(
+          await _handleRoomAccountData(
             room,
             accountData,
-            EventUpdateType.accountData,
           );
         }
       }
@@ -2672,10 +2671,9 @@ class Client extends MatrixApi {
         }
         final accountData = syncRoomUpdate.accountData;
         if (accountData != null && accountData.isNotEmpty) {
-          await _handleRoomEvents(
+          await _handleRoomAccountData(
             room,
             accountData,
-            EventUpdateType.accountData,
             store: false,
           );
         }
@@ -2721,22 +2719,29 @@ class Client extends MatrixApi {
         await receiptStateContent.update(e, room);
       }
 
-      await _handleRoomEvents(
+      await _handleRoomAccountData(
         room,
         [
           BasicRoomEvent(
             type: LatestReceiptState.eventType,
             roomId: room.id,
             content: receiptStateContent.toJson(),
-          ),
+          )
         ],
-        EventUpdateType.accountData,
       );
     }
   }
 
   /// Stores event that came down /sync but didn't get decrypted because of missing keys yet.
   final List<_EventPendingDecryption> _eventsPendingDecryption = [];
+
+  Future<void> _handleRoomAccountData(Room room, List<BasicRoomEvent> events,
+      {bool store = true}) async {
+    for (final event in events) {
+      room.roomAccountData[event.type] = event;
+      if (store) await database?.storeRoomAccountData(event);
+    }
+  }
 
   Future<void> _handleRoomEvents(
     Room room,
@@ -2973,10 +2978,6 @@ class Client extends MatrixApi {
         // Event is a valid new lastEvent:
         room.lastEvent = event;
 
-        break;
-      case EventUpdateType.accountData:
-        room.roomAccountData[eventUpdate.content['type']] =
-            BasicRoomEvent.fromJson(eventUpdate.content);
         break;
       case EventUpdateType.history:
       case EventUpdateType.decryptedTimelineQueue:

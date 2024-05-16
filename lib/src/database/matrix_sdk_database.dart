@@ -1197,18 +1197,17 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         await roomStateBox.put(key, eventUpdate.content);
       }
     }
-
-    // Store a room account data event
-    if (eventUpdate.type == EventUpdateType.accountData) {
-      await _roomAccountDataBox.put(
-        TupleKey(
-          eventUpdate.roomID,
-          eventUpdate.content['type'],
-        ).toString(),
-        eventUpdate.content,
-      );
-    }
   }
+
+  @override
+  Future<void> storeRoomAccountData(BasicRoomEvent event) =>
+      _roomAccountDataBox.put(
+        TupleKey(
+          event.roomId.toString(),
+          event.type,
+        ).toString(),
+        event.content,
+      );
 
   @override
   Future<void> storeInboundGroupSession(

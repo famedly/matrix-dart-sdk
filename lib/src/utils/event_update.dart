@@ -28,9 +28,6 @@ enum EventUpdateType {
   /// Messages that have been fetched when requesting past history
   history,
 
-  /// Updates to account data
-  accountData,
-
   /// The state of an invite
   inviteState,
 

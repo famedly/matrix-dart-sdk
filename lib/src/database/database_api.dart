@@ -82,6 +82,8 @@ abstract class DatabaseApi {
   /// [transaction].
   Future<void> storeEventUpdate(EventUpdate eventUpdate, Client client);
 
+  Future<void> storeRoomAccountData(BasicRoomEvent event);
+
   Future<Event?> getEventById(String eventId, Room room);
 
   Future<void> forgetRoom(String roomId);

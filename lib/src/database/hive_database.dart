@@ -1187,18 +1187,17 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
         await _roomStateBox.put(key, stateMap);
       }
     }
-
-    // Store a room account data event
-    if (eventUpdate.type == EventUpdateType.accountData) {
-      await _roomAccountDataBox.put(
-        MultiKey(
-          eventUpdate.roomID,
-          eventUpdate.content['type'],
-        ).toString(),
-        eventUpdate.content,
-      );
-    }
   }
+
+  @override
+  Future<void> storeRoomAccountData(BasicRoomEvent event) =>
+      _roomAccountDataBox.put(
+        TupleKey(
+          event.roomId.toString(),
+          event.type,
+        ).toString(),
+        event.content,
+      );
 
   @override
   Future<void> storeFile(Uri mxcUri, Uint8List bytes, int time) async {

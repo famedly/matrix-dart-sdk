@@ -308,9 +308,9 @@ void main() {
       expect(eventUpdateList[5].roomID, '!726s6s6q:example.com');
       expect(eventUpdateList[5].type, EventUpdateType.timeline);
 
-      expect(eventUpdateList[6].content['type'], LatestReceiptState.eventType);
-      expect(eventUpdateList[6].roomID, '!726s6s6q:example.com');
-      expect(eventUpdateList[6].type, EventUpdateType.accountData);
+      expect(eventUpdateList[6].content['type'], 'm.room.member');
+      expect(eventUpdateList[6].roomID, '!calls:example.com');
+      expect(eventUpdateList[6].type, EventUpdateType.state);
 
       expect(eventUpdateList[7].content['type'], 'm.tag');
       expect(eventUpdateList[7].roomID, '!726s6s6q:example.com');
