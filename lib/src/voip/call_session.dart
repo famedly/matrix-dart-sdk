@@ -44,6 +44,7 @@ class CallSession {
   String? get groupCallId => opts.groupCallId;
   String get callId => opts.callId;
   String get localPartyId => opts.localPartyId;
+  VoipId get voipId => VoipId(roomId: room.id, callId: callId);
 
   CallDirection get direction => opts.dir;
 
@@ -216,8 +217,9 @@ class CallSession {
       final prevCallId = voip.incomingCallRoomId[room.id];
       if (prevCallId != null) {
         // This is probably an outbound call, but we already have a incoming invite, so let's terminate it.
-        final prevCall =
-            voip.calls[VoipId(roomId: room.id, callId: prevCallId)];
+        final prevCall = voip.calls.singleWhereOrNull((element) =>
+            element.room.id == room.id && element.callId == prevCallId);
+
         if (prevCall != null) {
           if (prevCall._inviteOrAnswerSent) {
             Logs().d('[glare] invite or answer sent, lex compare now');
@@ -975,7 +977,7 @@ class CallSession {
       voip.incomingCallRoomId.removeWhere((key, value) => value == callId);
     }
 
-    voip.calls.removeWhere((key, value) => key.callId == callId);
+    voip.calls.remove(this);
 
     await cleanUp();
     if (shouldEmit) {

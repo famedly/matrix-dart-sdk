@@ -32,6 +32,13 @@ class GroupCallSession {
   final Client client;
   final VoIP voip;
   final Room room;
+  VoipId get voipId => VoipId(
+        roomId: room.id,
+        callId: groupCallId,
+        callBackendType: backend.type,
+        application: application,
+        scope: scope,
+      );
 
   /// is a list of backend to allow passing multiple backend in the future
   /// we use the first backend everywhere as of now
@@ -131,7 +138,13 @@ class GroupCallSession {
 
     await backend.setupP2PCallsWithExistingMembers(this);
 
-    voip.currentGroupCID = VoipId(roomId: room.id, callId: groupCallId);
+    voip.currentGroupCID = VoipId(
+      roomId: room.id,
+      callId: groupCallId,
+      callBackendType: backend.type,
+      application: application,
+      scope: scope,
+    );
 
     await voip.delegate.handleNewGroupCall(this);
   }
@@ -142,7 +155,7 @@ class GroupCallSession {
     setState(GroupCallState.localCallFeedUninitialized);
     voip.currentGroupCID = null;
     _participants.clear();
-    voip.groupCalls.remove(VoipId(roomId: room.id, callId: groupCallId));
+    voip.groupCalls.remove(this);
     await voip.delegate.handleGroupCallEnded(this);
     _resendMemberStateEventTimer?.cancel();
     setState(GroupCallState.ended);
