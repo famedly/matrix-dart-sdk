@@ -23,6 +23,7 @@ mixin ZoneTransactionMixin {
     }
     // if we are inside a transaction....just run the action
     if (isInTransaction) {
+      throw 'WE ARE ALREADY IN TRANSACTION!';
       return await action();
     }
     // if we are *not* in a transaction, time to wait for the lock!
