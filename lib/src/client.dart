@@ -1310,6 +1310,7 @@ class Client extends MatrixApi {
       CachedStreamController();
 
   /// Callback will be called on account data updates.
+  @Deprecated('Use `client.onSync` instead')
   final CachedStreamController<BasicEvent> onAccountData =
       CachedStreamController();
 
@@ -1326,6 +1327,7 @@ class Client extends MatrixApi {
   final CachedStreamController<UiaRequest> onUiaRequest =
       CachedStreamController();
 
+  @Deprecated('This is not in use anywhere anymore')
   final CachedStreamController<Event> onGroupMember = CachedStreamController();
 
   final CachedStreamController<String> onCancelSendEvent =
@@ -2024,6 +2026,7 @@ class Client extends MatrixApi {
         jsonEncode(newAccountData.content),
       );
       accountData[newAccountData.type] = newAccountData;
+      // ignore: deprecated_member_use_from_same_package
       onAccountData.add(newAccountData);
 
       if (newAccountData.type == EventTypes.PushRules) {
@@ -2398,6 +2401,7 @@ class Client extends MatrixApi {
           ..addAll(summary.toJson());
         rooms[roomIndex].summary = RoomSummary.fromJson(roomSummaryJson);
       }
+      // ignore: deprecated_member_use_from_same_package
       rooms[roomIndex].onUpdate.add(rooms[roomIndex].id);
       if ((chatUpdate.timeline?.limited ?? false) &&
           requestHistoryOnLimitedTimeline) {
@@ -2473,6 +2477,7 @@ class Client extends MatrixApi {
       case EventUpdateType.decryptedTimelineQueue:
         break;
     }
+    // ignore: deprecated_member_use_from_same_package
     room.onUpdate.add(room.id);
   }
 

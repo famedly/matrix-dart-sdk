@@ -202,6 +202,7 @@ class Room {
 
   /// If something changes, this callback will be triggered. Will return the
   /// room id.
+  @Deprecated('Use `client.onSync` instead and filter for this room ID')
   final CachedStreamController<String> onUpdate = CachedStreamController();
 
   /// If there is a new session key received, this will be triggered with
@@ -1702,6 +1703,7 @@ class Room {
     final dbuser = await client.database?.getUser(mxID, this);
     if (dbuser != null) {
       setState(dbuser);
+      // ignore: deprecated_member_use_from_same_package
       onUpdate.add(id);
       return dbuser;
     }
@@ -1777,6 +1779,7 @@ class Room {
         client,
       );
     });
+    // ignore: deprecated_member_use_from_same_package
     onUpdate.add(id);
     _requestingMatrixIds.remove(mxID);
     return user;
