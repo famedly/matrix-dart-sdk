@@ -966,12 +966,6 @@ class Room {
             .encryptGroupMessagePayload(id, content, type: type)
         : content;
 
-    final utf8EncodedJsonLength =
-        utf8.encode(jsonEncode(sendMessageContent)).length;
-
-    if (utf8EncodedJsonLength > maxPDUSize) {
-      throw EventTooLarge(utf8EncodedJsonLength);
-    }
     return await client.sendMessage(
       id,
       sendMessageContent.containsKey('ciphertext')
@@ -2379,9 +2373,4 @@ class Room {
 enum EncryptionHealthState {
   allVerified,
   unverifiedDevices,
-}
-
-class EventTooLarge implements Exception {
-  int length;
-  EventTooLarge(this.length);
 }

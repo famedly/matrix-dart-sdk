@@ -56,6 +56,11 @@ class MatrixApi extends Api {
     super.unexpectedResponse(response, body);
   }
 
+  @override
+  Never bodySizeExceeded(int expected, int actual) {
+    throw EventTooLarge(expected, actual);
+  }
+
   MatrixApi({
     Uri? homeserver,
     String? accessToken,
@@ -235,4 +240,9 @@ class MatrixApi extends Api {
       String roomId, String sessionId, String version) async {
     return getRoomKeyBySessionId(roomId, sessionId, version);
   }
+}
+
+class EventTooLarge implements Exception {
+  int maxSize, actualSize;
+  EventTooLarge(this.maxSize, this.actualSize);
 }
