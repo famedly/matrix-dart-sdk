@@ -23,7 +23,8 @@ class StoredInboundGroupSession {
   final String content;
   final String indexes;
   final String allowedAtIndex;
-  final bool uploaded;
+  @Deprecated('Only in use in legacy databases!')
+  final bool? uploaded;
   final String senderKey;
   final String senderClaimedKeys;
 
@@ -34,7 +35,7 @@ class StoredInboundGroupSession {
     required this.content,
     required this.indexes,
     required this.allowedAtIndex,
-    required this.uploaded,
+    @Deprecated('Only in use in legacy databases!') this.uploaded,
     required this.senderKey,
     required this.senderClaimedKeys,
   });
@@ -47,6 +48,7 @@ class StoredInboundGroupSession {
         content: json['content'],
         indexes: json['indexes'],
         allowedAtIndex: json['allowed_at_index'],
+        // ignore: deprecated_member_use_from_same_package
         uploaded: json['uploaded'],
         senderKey: json['sender_key'],
         senderClaimedKeys: json['sender_claimed_keys'],
@@ -59,7 +61,8 @@ class StoredInboundGroupSession {
         'content': content,
         'indexes': indexes,
         'allowed_at_index': allowedAtIndex,
-        'uploaded': uploaded,
+        // ignore: deprecated_member_use_from_same_package
+        if (uploaded != null) 'uploaded': uploaded,
         'sender_key': senderKey,
         'sender_claimed_keys': senderClaimedKeys,
       };
