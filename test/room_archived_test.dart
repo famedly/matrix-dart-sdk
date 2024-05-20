@@ -32,8 +32,9 @@ void main() {
     late Client client;
 
     setUp(() async {
-      client = await getClient();
-      client.sendMessageTimeoutSeconds = 5;
+      client = await getClient(
+        sendTimelineEventTimeout: const Duration(seconds: 5),
+      );
 
       await client.abortSync();
       insertList.clear();

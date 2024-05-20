@@ -64,8 +64,9 @@ void main() {
     late Room room;
     late Timeline timeline;
     setUp(() async {
-      client = await getClient();
-      client.sendMessageTimeoutSeconds = 5;
+      client = await getClient(
+        sendTimelineEventTimeout: const Duration(seconds: 5),
+      );
 
       final poison = Random().nextInt(2 ^ 32);
       currentPoison = poison;

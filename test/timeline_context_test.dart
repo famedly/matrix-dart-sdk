@@ -62,8 +62,9 @@ void main() {
     late Room room;
     late Timeline timeline;
     setUp(() async {
-      client = await getClient();
-      client.sendMessageTimeoutSeconds = 5;
+      client = await getClient(
+        sendTimelineEventTimeout: const Duration(seconds: 5),
+      );
 
       room = Room(
           id: roomID, client: client, prev_batch: 't123', roomAccountData: {});

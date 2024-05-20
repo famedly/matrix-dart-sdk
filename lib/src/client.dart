@@ -81,8 +81,6 @@ class Client extends MatrixApi {
 
   Set<String> supportedLoginTypes;
 
-  int sendMessageTimeoutSeconds;
-
   bool requestHistoryOnLimitedTimeline;
 
   final bool formatLocalpart;
@@ -179,7 +177,6 @@ class Client extends MatrixApi {
     Set<String>? roomPreviewLastEvents,
     this.pinUnreadRooms = false,
     this.pinInvitedRooms = true,
-    this.sendMessageTimeoutSeconds = 60,
     this.requestHistoryOnLimitedTimeline = false,
     Set<String>? supportedLoginTypes,
     this.mxidLocalPartFallback = true,

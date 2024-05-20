@@ -123,7 +123,7 @@ class Event extends MatrixEvent {
           originServerTs.millisecondsSinceEpoch;
 
       final room = this.room;
-      if (age > room.client.sendMessageTimeoutSeconds * 1000) {
+      if (age > room.client.sendTimelineEventTimeout.inMilliseconds) {
         // Update this event in database and open timelines
         final json = toJson();
         json['unsigned'] ??= <String, dynamic>{};
