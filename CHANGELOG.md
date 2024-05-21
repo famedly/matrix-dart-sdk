@@ -1,3 +1,15 @@
+## [0.29.3] 21st May 2024
+- chore: add MatrixSDKVoipException and some more logging (td)
+- chore: throw exception if you cannot send famedly call member event (td)
+- fix: allow famedly calls for everyone before choosing an existing one (td)
+- fix: minor perm issue typo while setting famedly call member event (td)
+- fix: update event status to error on EventTooLarge (Karthikeyan S)
+- perf: check event size in bytes without encoding twice (Karthikeyan S)
+- refactor: Combine sendMessageTimeoutSeconds and sendTimelineEventTimeout (krille-chan)
+- refactor: Make client members read only (Krille)
+- refactor: Make network request timeout configurable (Krille)
+- refactor: Store not uploaded group sessions in its own database queue (krille-chan)
+
 ## [0.29.2] 14th May 2024
 - feat: Implement unpublished MSC custom refresh token lifetime (Krille)
 - feat: support for JWT authentication (Ray Wang)
