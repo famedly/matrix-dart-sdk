@@ -928,9 +928,10 @@ class CallSession {
       if (sender.track != null && sender.track!.kind == 'audio') {
         await sender.dtmfSender.insertDTMF(tones);
         return;
+      } else {
+        Logs().w('[VOIP] Unable to find a track to send DTMF on');
       }
     }
-    Logs().e('[VOIP] Unable to find a track to send DTMF on');
   }
 
   Future<void> terminate(

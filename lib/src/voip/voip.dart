@@ -772,8 +772,9 @@ class VoIP {
 
     if (groupCall != null) {
       if (!room.canJoinGroupCall) {
-        throw Exception(
-            '[VOIP] User is not allowed to join famedly calls in the room');
+        throw MatrixSDKVoipException(
+          'User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room ${room.id}, canJoinGroupCall: ${room.canJoinGroupCall}, room.canJoinGroupCall: ${room.groupCallsEnabledForEveryone}',
+        );
       }
       return groupCall;
     }

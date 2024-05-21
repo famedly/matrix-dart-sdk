@@ -80,7 +80,8 @@ class LiveKitBackend extends CallBackend {
     final keyProvider = groupCall.voip.delegate.keyProvider;
 
     if (keyProvider == null) {
-      throw Exception('[VOIP] _ratchetKey called but KeyProvider was null');
+      throw MatrixSDKVoipException(
+          '_ratchetKey called but KeyProvider was null');
     }
 
     final myKeys = _encryptionKeysMap[groupCall.localParticipant];

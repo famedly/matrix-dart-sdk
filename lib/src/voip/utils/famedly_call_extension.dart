@@ -128,8 +128,9 @@ extension FamedlyCallMemberEventsExtension on Room {
         newContent,
       );
     } else {
-      throw Exception(
-          '[VOIP] User is not allowed to send famedly call member events in room');
+      throw MatrixSDKVoipException(
+        'User ${client.userID}:${client.deviceID} is not allowed to send famedly call member events in room $id, canJoinGroupCall: $canJoinGroupCall, room.canJoinGroupCall: $groupCallsEnabledForEveryone',
+      );
     }
   }
 
@@ -164,4 +165,14 @@ bool isValidMemEvent(Map<String, Object?> event) {
         .v('[VOIP] FamedlyCallMemberEvent ignoring unclean membership $event');
     return false;
   }
+}
+
+class MatrixSDKVoipException implements Exception {
+  final String cause;
+  final StackTrace? stackTrace;
+
+  MatrixSDKVoipException(this.cause, {this.stackTrace});
+
+  @override
+  String toString() => '[VOIP] $cause, ${super.toString()}, $stackTrace';
 }
