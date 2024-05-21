@@ -1,3 +1,6 @@
+## [0.29.4] 21st May 2024
+- fix: Hotfix create missing objectbox (Krille)
+
 ## [0.29.3] 21st May 2024
 - chore: add MatrixSDKVoipException and some more logging (td)
 - chore: throw exception if you cannot send famedly call member event (td)
