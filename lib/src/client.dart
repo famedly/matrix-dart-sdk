@@ -81,8 +81,6 @@ class Client extends MatrixApi {
 
   Set<String> supportedLoginTypes;
 
-  int sendMessageTimeoutSeconds;
-
   bool requestHistoryOnLimitedTimeline;
 
   final bool formatLocalpart;
@@ -179,7 +177,8 @@ class Client extends MatrixApi {
     Set<String>? roomPreviewLastEvents,
     this.pinUnreadRooms = false,
     this.pinInvitedRooms = true,
-    this.sendMessageTimeoutSeconds = 60,
+    @Deprecated('Use [sendTimelineEventTimeout] instead.')
+    int? sendMessageTimeoutSeconds,
     this.requestHistoryOnLimitedTimeline = false,
     Set<String>? supportedLoginTypes,
     this.mxidLocalPartFallback = true,
@@ -188,6 +187,7 @@ class Client extends MatrixApi {
     NativeImplementations nativeImplementations = NativeImplementations.dummy,
     Level? logLevel,
     Filter? syncFilter,
+    Duration defaultNetworkRequestTimeout = const Duration(seconds: 35),
     this.sendTimelineEventTimeout = const Duration(minutes: 1),
     this.customImageResizer,
     this.shareKeysWithUnverifiedDevices = true,
@@ -221,7 +221,7 @@ class Client extends MatrixApi {
             : nativeImplementations,
         super(
             httpClient: FixedTimeoutHttpClient(
-                httpClient ?? http.Client(), Duration(seconds: 35))) {
+                httpClient ?? http.Client(), defaultNetworkRequestTimeout)) {
     if (logLevel != null) Logs().level = logLevel;
     importantStateEvents.addAll([
       EventTypes.RoomName,
