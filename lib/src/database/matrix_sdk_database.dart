@@ -218,6 +218,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       sqfliteDatabase: database,
       sqfliteFactory: sqfliteFactory,
       idbFactory: idbFactory,
+      version: version,
     );
     _clientBox = _collection.openBox<String>(
       _clientBoxName,
