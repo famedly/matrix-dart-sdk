@@ -33,7 +33,9 @@ void main() {
       expect('\$testevent'.isValidMatrixId, true);
       expect('test:example.com'.isValidMatrixId, false);
       expect('@testexample.com'.isValidMatrixId, false);
-      expect('@:example.com'.isValidMatrixId, true);
+      expect('@:example.com'.isValidMatrixId, false);
+      expect('@@test:example.com'.isValidMatrixId, false);
+      expect('#:example.com'.isValidMatrixId, true);
       expect('@test:'.isValidMatrixId, false);
       expect(mxId.sigil, '@');
       expect('#test:example.com'.sigil, '#');
@@ -44,6 +46,7 @@ void main() {
       expect(mxId.domain, 'example.com');
       expect(mxId.equals('@Test:example.com'), true);
       expect(mxId.equals('@test:example.org'), false);
+      expect('@user:127.0.0.1:8448'.localpart, 'user');
       expect('@user:domain:8448'.localpart, 'user');
       expect('@user:domain:8448'.domain, 'domain:8448');
     });
