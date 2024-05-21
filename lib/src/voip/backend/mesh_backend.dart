@@ -87,8 +87,7 @@ class MeshBackend extends CallBackend {
       return await groupCall.voip.delegate.mediaDevices
           .getDisplayMedia(mediaConstraints);
     } catch (e, s) {
-      Logs().e('[VOIP] _getDisplayMedia failed because,', e, s);
-      rethrow;
+      throw MatrixSDKVoipException('_getDisplayMedia failed', stackTrace: s);
     }
   }
 
@@ -113,7 +112,7 @@ class MeshBackend extends CallBackend {
   /// init a peer call from group calls.
   Future<void> _initCall(GroupCallSession groupCall, CallSession call) async {
     if (call.remoteUserId == null) {
-      throw Exception(
+      throw MatrixSDKVoipException(
           'Cannot init call without proper invitee user and device Id');
     }
 
@@ -156,7 +155,7 @@ class MeshBackend extends CallBackend {
         .indexWhere((element) => element.callId == existingCall.callId);
 
     if (existingCallIndex == -1) {
-      throw Exception('Couldn\'t find call to replace');
+      throw MatrixSDKVoipException('Couldn\'t find call to replace');
     }
 
     _callSessions.removeAt(existingCallIndex);
@@ -181,7 +180,7 @@ class MeshBackend extends CallBackend {
   Future<void> _disposeCall(GroupCallSession groupCall, CallSession call,
       CallErrorCode hangupReason) async {
     if (call.remoteUserId == null) {
-      throw Exception(
+      throw MatrixSDKVoipException(
           'Cannot init call without proper invitee user and device Id');
     }
 
@@ -223,7 +222,7 @@ class MeshBackend extends CallBackend {
   Future<void> _onStreamsChanged(
       GroupCallSession groupCall, CallSession call) async {
     if (call.remoteUserId == null) {
-      throw Exception(
+      throw MatrixSDKVoipException(
           'Cannot init call without proper invitee user and device Id');
     }
 
@@ -372,7 +371,8 @@ class MeshBackend extends CallBackend {
         (stream) => stream.participant.id == existingStream.participant.id);
 
     if (streamIndex == -1) {
-      throw Exception('Couldn\'t find screenshare stream to replace');
+      throw MatrixSDKVoipException(
+          'Couldn\'t find screenshare stream to replace');
     }
 
     _screenshareStreams.replaceRange(streamIndex, 1, [replacementStream]);
@@ -390,7 +390,8 @@ class MeshBackend extends CallBackend {
         .indexWhere((stream) => stream.participant.id == stream.participant.id);
 
     if (streamIndex == -1) {
-      throw Exception('Couldn\'t find screenshare stream to remove');
+      throw MatrixSDKVoipException(
+          'Couldn\'t find screenshare stream to remove');
     }
 
     _screenshareStreams.removeWhere(
@@ -451,7 +452,8 @@ class MeshBackend extends CallBackend {
         (stream) => stream.participant.id == existingStream.participant.id);
 
     if (streamIndex == -1) {
-      throw Exception('Couldn\'t find user media stream to replace');
+      throw MatrixSDKVoipException(
+          'Couldn\'t find user media stream to replace');
     }
 
     _userMediaStreams.replaceRange(streamIndex, 1, [replacementStream]);
@@ -469,7 +471,8 @@ class MeshBackend extends CallBackend {
         (element) => element.participant.id == stream.participant.id);
 
     if (streamIndex == -1) {
-      throw Exception('Couldn\'t find user media stream to remove');
+      throw MatrixSDKVoipException(
+          'Couldn\'t find user media stream to remove');
     }
 
     _userMediaStreams.removeWhere(
@@ -527,7 +530,7 @@ class MeshBackend extends CallBackend {
   Future<WrappedMediaStream?> initLocalStream(GroupCallSession groupCall,
       {WrappedMediaStream? stream}) async {
     if (groupCall.state != GroupCallState.localCallFeedUninitialized) {
-      throw Exception(
+      throw MatrixSDKVoipException(
           'Cannot initialize local call feed in the ${groupCall.state} state.');
     }
 

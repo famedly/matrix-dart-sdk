@@ -764,18 +764,19 @@ class VoIP {
     String? application,
     String? scope,
   ) async {
+    if (!room.groupCallsEnabledForEveryone) {
+      await room.enableGroupCalls();
+    }
+
     final groupCall = getGroupCallById(room.id, groupCallId);
 
     if (groupCall != null) {
       if (!room.canJoinGroupCall) {
-        throw Exception(
-            'User is not allowed to join famedly calls in the room');
+        throw MatrixSDKVoipException(
+          'User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room ${room.id}, canJoinGroupCall: ${room.canJoinGroupCall}, room.canJoinGroupCall: ${room.groupCallsEnabledForEveryone}',
+        );
       }
       return groupCall;
-    }
-
-    if (!room.groupCallsEnabledForEveryone) {
-      await room.enableGroupCalls();
     }
 
     // The call doesn't exist, but we can create it

@@ -112,7 +112,7 @@ class GroupCallSession {
   Future<void> enter({WrappedMediaStream? stream}) async {
     if (!(state == GroupCallState.localCallFeedUninitialized ||
         state == GroupCallState.localCallFeedInitialized)) {
-      throw Exception('Cannot enter call in the $state state');
+      throw MatrixSDKVoipException('Cannot enter call in the $state state');
     }
 
     if (state == GroupCallState.localCallFeedUninitialized) {
