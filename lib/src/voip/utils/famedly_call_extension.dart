@@ -120,7 +120,7 @@ extension FamedlyCallMemberEventsExtension on Room {
   }
 
   Future<void> setFamedlyCallMemberEvent(Map<String, List> newContent) async {
-    if (groupCallsEnabledForEveryone) {
+    if (canJoinGroupCall) {
       await client.setRoomStateWithKey(
         id,
         EventTypes.GroupCallMember,
