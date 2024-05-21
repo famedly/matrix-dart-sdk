@@ -1644,7 +1644,6 @@ class Room {
         requestUser(
           mxID,
           ignoreErrors: true,
-          requestProfile: false,
         );
       }
       return User(mxID, room: this);
@@ -1702,13 +1701,17 @@ class Room {
       try {
         final profile = await client.getUserProfile(mxID);
         _requestingMatrixIds.remove(mxID);
-        return User(
+        final user = User(
           mxID,
           displayName: profile.displayname,
           avatarUrl: profile.avatarUrl?.toString(),
           membership: Membership.leave.name,
           room: this,
         );
+        // Set it as temporary state but do not store in database:
+        setState(user);
+        onUpdate.add(id);
+        return user;
       } catch (e, s) {
         _requestingMatrixIds.remove(mxID);
         if (!ignoreErrors) {
