@@ -764,6 +764,10 @@ class VoIP {
     String? application,
     String? scope,
   ) async {
+    if (!room.groupCallsEnabledForEveryone) {
+      await room.enableGroupCalls();
+    }
+
     final groupCall = getGroupCallById(room.id, groupCallId);
 
     if (groupCall != null) {
@@ -772,10 +776,6 @@ class VoIP {
             'User is not allowed to join famedly calls in the room');
       }
       return groupCall;
-    }
-
-    if (!room.groupCallsEnabledForEveryone) {
-      await room.enableGroupCalls();
     }
 
     // The call doesn't exist, but we can create it
