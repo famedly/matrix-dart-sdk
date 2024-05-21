@@ -128,8 +128,8 @@ extension FamedlyCallMemberEventsExtension on Room {
         newContent,
       );
     } else {
-      Logs().w(
-          '[VOIP] cannot send ${EventTypes.GroupCallMember} events in room: $id, fix your PLs');
+      throw Exception(
+          '[VOIP] User is not allowed to send famedly call member events in room');
     }
   }
 

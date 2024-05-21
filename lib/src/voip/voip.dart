@@ -773,7 +773,7 @@ class VoIP {
     if (groupCall != null) {
       if (!room.canJoinGroupCall) {
         throw Exception(
-            'User is not allowed to join famedly calls in the room');
+            '[VOIP] User is not allowed to join famedly calls in the room');
       }
       return groupCall;
     }
