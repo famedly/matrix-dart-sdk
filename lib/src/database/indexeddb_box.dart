@@ -19,12 +19,15 @@ class BoxCollection with ZoneTransactionMixin {
     Object? sqfliteDatabase,
     Object? sqfliteFactory,
     IdbFactory? idbFactory,
+    int version = 1,
   }) async {
     idbFactory ??= window.indexedDB!;
-    final db = await idbFactory.open(name, version: 1,
+    final db = await idbFactory.open(name, version: version,
         onUpgradeNeeded: (VersionChangeEvent event) {
       final db = event.target.result;
       for (final name in boxNames) {
+        if (db.objectStoreNames.contains(name)) continue;
+
         db.createObjectStore(name, autoIncrement: true);
       }
     });

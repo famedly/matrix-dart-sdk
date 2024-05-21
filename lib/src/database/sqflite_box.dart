@@ -20,6 +20,7 @@ class BoxCollection with ZoneTransactionMixin {
     Object? sqfliteDatabase,
     DatabaseFactory? sqfliteFactory,
     dynamic idbFactory,
+    int version = 1,
   }) async {
     if (sqfliteDatabase is! Database) {
       throw ('You must provide a Database `sqfliteDatabase` for use on native.');
