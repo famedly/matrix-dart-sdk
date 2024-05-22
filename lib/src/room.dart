@@ -176,8 +176,9 @@ class Room {
     // the room ID:
     if (state is Event) {
       final roomId = state.roomId;
-      if (roomId == null || roomId != id) {
+      if (roomId != id) {
         Logs().wtf('Tried to set state event for wrong room!');
+        assert(roomId == id);
         return;
       }
     }
@@ -186,6 +187,7 @@ class Room {
       Logs().w(
         'Tried to set a non state event with type "${state.type}" as state event for a room',
       );
+      assert(stateKey != null);
       return;
     }
 

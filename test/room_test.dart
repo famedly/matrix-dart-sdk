@@ -496,6 +496,7 @@ void main() {
           eventId: '12',
           originServerTs: DateTime.now(),
           content: {'body': 'brainfarts'},
+          stateKey: '',
         ),
       );
       expect(room.lastEvent?.body, '* BBB');
@@ -1079,18 +1080,20 @@ void main() {
 
     test('setState', () async {
       // not set non-state-events
-      room.setState(Event.fromJson(
-        {
-          'content': {'history_visibility': 'shared'},
-          'event_id': '\$143273582443PhrSn:example.org',
-          'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-          'sender': '@example:example.org',
-          'type': 'm.custom',
-          'unsigned': {'age': 1234}
-        },
-        room,
-      ));
+      try {
+        room.setState(Event.fromJson(
+          {
+            'content': {'history_visibility': 'shared'},
+            'event_id': '\$143273582443PhrSn:example.org',
+            'origin_server_ts': 1432735824653,
+            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+            'sender': '@example:example.org',
+            'type': 'm.custom',
+            'unsigned': {'age': 1234},
+          },
+          room,
+        ));
+      } catch (_) {}
       expect(room.getState('m.custom') != null, false);
 
       // set state events
@@ -1110,18 +1113,20 @@ void main() {
       expect(room.getState('m.custom') != null, true);
 
       // sets messages as state events
-      room.setState(Event.fromJson(
-        {
-          'content': {'history_visibility': 'shared'},
-          'event_id': '\$143273582443PhrSn:example.org',
-          'origin_server_ts': 1432735824653,
-          'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
-          'sender': '@example:example.org',
-          'type': 'm.room.message',
-          'unsigned': {'age': 1234}
-        },
-        room,
-      ));
+      try {
+        room.setState(Event.fromJson(
+          {
+            'content': {'history_visibility': 'shared'},
+            'event_id': '\$143273582443PhrSn:example.org',
+            'origin_server_ts': 1432735824653,
+            'room_id': '!jEsUZKDJdhlrceRyVU:example.org',
+            'sender': '@example:example.org',
+            'type': 'm.room.message',
+            'unsigned': {'age': 1234}
+          },
+          room,
+        ));
+      } catch (_) {}
       expect(room.getState('m.room.message') == null, true);
     });
 
