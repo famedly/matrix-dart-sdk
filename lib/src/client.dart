@@ -2421,11 +2421,8 @@ class Client extends MatrixApi {
         final event = Event.fromJson(eventUpdate.content, room);
 
         // Update the room state:
-        if (!room.partial ||
-            // make sure we do overwrite events we have already loaded.
-            room.states[event.type]?.containsKey(event.stateKey ?? '') ==
-                true ||
-            importantStateEvents.contains(event.type)) {
+        if (event.stateKey != null &&
+            (!room.partial || importantStateEvents.contains(event.type))) {
           room.setState(event);
         }
         if (eventUpdate.type != EventUpdateType.timeline) break;

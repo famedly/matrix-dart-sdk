@@ -52,7 +52,7 @@ void main() {
       room2.setState(Event(
         type: 'm.room.power_levels',
         content: {},
-        room: room,
+        room: room2,
         stateKey: '',
         senderId: client.userID!,
         eventId: '\$fakeid3:fakeServer.notExisting',
@@ -61,7 +61,7 @@ void main() {
       room2.setState(Event(
         type: 'm.room.member',
         content: {'membership': 'join'},
-        room: room,
+        room: room2,
         stateKey: client.userID,
         senderId: '@fakeuser:fakeServer.notExisting',
         eventId: '\$fakeid4:fakeServer.notExisting',
