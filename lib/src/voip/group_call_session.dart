@@ -246,7 +246,8 @@ class GroupCallSession {
 
     if (anyJoined.isNotEmpty || anyLeft.isNotEmpty) {
       if (anyJoined.isNotEmpty) {
-        final nonLocalAnyJoined = anyJoined..remove(localParticipant);
+        final nonLocalAnyJoined = Set<CallParticipant>.from(anyJoined)
+          ..remove(localParticipant);
         if (nonLocalAnyJoined.isNotEmpty && state == GroupCallState.entered) {
           Logs().v(
               'nonLocalAnyJoined: ${nonLocalAnyJoined.map((e) => e.id).toString()} roomId: ${room.id} groupCallId: $groupCallId');
@@ -255,7 +256,8 @@ class GroupCallSession {
         _participants.addAll(anyJoined);
       }
       if (anyLeft.isNotEmpty) {
-        final nonLocalAnyLeft = anyLeft..remove(localParticipant);
+        final nonLocalAnyLeft = Set<CallParticipant>.from(anyLeft)
+          ..remove(localParticipant);
         if (nonLocalAnyLeft.isNotEmpty && state == GroupCallState.entered) {
           Logs().v(
               'nonLocalAnyLeft: ${nonLocalAnyLeft.map((e) => e.id).toString()} roomId: ${room.id} groupCallId: $groupCallId');
