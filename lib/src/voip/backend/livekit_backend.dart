@@ -52,9 +52,10 @@ class LiveKitBackend extends CallBackend {
     return newIndex;
   }
 
+  @override
   Future<void> preShareKey(GroupCallSession groupCall) async {
     await groupCall.onMemberStateChanged();
-    await _makeNewSenderKey(groupCall, false);
+    await _changeEncryptionKey(groupCall, groupCall.participants, false);
   }
 
   /// makes a new e2ee key for local user and sets it with a delay if specified
@@ -120,6 +121,19 @@ class LiveKitBackend extends CallBackend {
     );
   }
 
+  Future<void> _changeEncryptionKey(
+    GroupCallSession groupCall,
+    List<CallParticipant> anyJoined,
+    bool delayBeforeUsingKeyOurself,
+  ) async {
+    if (!e2eeEnabled) return;
+    if (groupCall.voip.enableSFUE2EEKeyRatcheting) {
+      await _ratchetLocalParticipantKey(groupCall, anyJoined);
+    } else {
+      await _makeNewSenderKey(groupCall, delayBeforeUsingKeyOurself);
+    }
+  }
+
   /// sets incoming keys and also sends the key if it was for the local user
   /// if sendTo is null, its sent to all _participants, see `_sendEncryptionKeysEvent`
   Future<void> _setEncryptionKey(
@@ -180,8 +194,6 @@ class LiveKitBackend extends CallBackend {
     int keyIndex, {
     List<CallParticipant>? sendTo,
   }) async {
-    Logs().i('Sending encryption keys event');
-
     final myKeys = _getKeysForParticipant(groupCall.localParticipant!);
     final myLatestKey = myKeys?[keyIndex];
 
@@ -235,6 +247,7 @@ class LiveKitBackend extends CallBackend {
     Map<String, Object> data,
     String eventType,
   ) async {
+    if (remoteParticipants.isEmpty) return;
     Logs().v(
         '[VOIP] _sendToDeviceEvent: sending ${data.toString()} to ${remoteParticipants.map((e) => e.id)} ');
     final txid =
@@ -392,14 +405,8 @@ class LiveKitBackend extends CallBackend {
   Future<void> onNewParticipant(
     GroupCallSession groupCall,
     List<CallParticipant> anyJoined,
-  ) async {
-    if (!e2eeEnabled) return;
-    if (groupCall.voip.enableSFUE2EEKeyRatcheting) {
-      await _ratchetLocalParticipantKey(groupCall, anyJoined);
-    } else {
-      await _makeNewSenderKey(groupCall, true);
-    }
-  }
+  ) =>
+      _changeEncryptionKey(groupCall, anyJoined, true);
 
   @override
   Future<void> onLeftParticipant(

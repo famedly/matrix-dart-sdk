@@ -756,37 +756,44 @@ class VoIP {
   /// [application] normal group call, thrirdroom, etc
   ///
   /// [scope] room, between specifc users, etc.
+  ///
+  /// [preShareKey] for livekit calls it creates and shares a key with other
+  /// participants in the call without entering, useful on onboarding screens.
+  /// does not do anything in mesh calls
 
   Future<GroupCallSession> fetchOrCreateGroupCall(
     String groupCallId,
     Room room,
     CallBackend backend,
     String? application,
-    String? scope,
-  ) async {
+    String? scope, {
+    bool preShareKey = true,
+  }) async {
     if (!room.groupCallsEnabledForEveryone) {
       await room.enableGroupCalls();
     }
 
-    final groupCall = getGroupCallById(room.id, groupCallId);
-
-    if (groupCall != null) {
-      if (!room.canJoinGroupCall) {
-        throw MatrixSDKVoipException(
-          'User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room ${room.id}, canJoinGroupCall: ${room.canJoinGroupCall}, room.canJoinGroupCall: ${room.groupCallsEnabledForEveryone}',
-        );
-      }
-      return groupCall;
+    if (!room.canJoinGroupCall) {
+      throw MatrixSDKVoipException(
+        'User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room ${room.id}, canJoinGroupCall: ${room.canJoinGroupCall}, room.canJoinGroupCall: ${room.groupCallsEnabledForEveryone}',
+      );
     }
 
-    // The call doesn't exist, but we can create it
-    return await _newGroupCall(
+    GroupCallSession? groupCall = getGroupCallById(room.id, groupCallId);
+
+    groupCall ??= await _newGroupCall(
       groupCallId,
       room,
       backend,
       application,
       scope,
     );
+
+    if (preShareKey) {
+      await groupCall.backend.preShareKey(groupCall);
+    }
+
+    return groupCall;
   }
 
   GroupCallSession? getGroupCallById(String roomId, String groupCallId) {
