@@ -56,7 +56,7 @@ class LiveKitBackend extends CallBackend {
   /// used on first join and when someone leaves
   ///
   /// also does the sending for you
-  Future<void> _makeNewSenderKey(
+  Future<void> makeNewSenderKey(
       GroupCallSession groupCall, bool delayBeforeUsingKeyOurself) async {
     final key = secureRandomBytes(32);
     final keyIndex = _getNewEncryptionKeyIndex();
@@ -87,7 +87,7 @@ class LiveKitBackend extends CallBackend {
     final myKeys = _encryptionKeysMap[groupCall.localParticipant];
 
     if (myKeys == null || myKeys.isEmpty) {
-      await _makeNewSenderKey(groupCall, false);
+      await makeNewSenderKey(groupCall, false);
       return;
     }
 
@@ -186,7 +186,7 @@ class LiveKitBackend extends CallBackend {
     if (myKeys == null || myLatestKey == null) {
       Logs().w(
           '[VOIP E2EE] _sendEncryptionKeysEvent Tried to send encryption keys event but no keys found!');
-      await _makeNewSenderKey(groupCall, false);
+      await makeNewSenderKey(groupCall, false);
       await _sendEncryptionKeysEvent(
         groupCall,
         keyIndex,
@@ -392,7 +392,7 @@ class LiveKitBackend extends CallBackend {
     if (groupCall.voip.enableSFUE2EEKeyRatcheting) {
       await _ratchetLocalParticipantKey(groupCall, anyJoined);
     } else {
-      await _makeNewSenderKey(groupCall, true);
+      await makeNewSenderKey(groupCall, true);
     }
   }
 
@@ -409,7 +409,7 @@ class LiveKitBackend extends CallBackend {
     }
     _memberLeaveEncKeyRotateDebounceTimer =
         Timer(CallTimeouts.makeKeyDelay, () async {
-      await _makeNewSenderKey(groupCall, true);
+      await makeNewSenderKey(groupCall, true);
     });
   }
 
