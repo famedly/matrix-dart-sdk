@@ -199,12 +199,6 @@ class GroupCallSession {
 
   /// compltetely rebuilds the local _participants list
   Future<void> onMemberStateChanged() async {
-    if (state != GroupCallState.entered) {
-      Logs().d(
-          '[VOIP] early return onMemberStateChanged, group call state is not Entered. Actual state: ${state.toString()} ');
-      return;
-    }
-
     // The member events may be received for another room, which we will ignore.
     final mems =
         room.getCallMembershipsFromRoom().values.expand((element) => element);
