@@ -42,11 +42,22 @@ extension MatrixIdExtension on String {
     }
     // all other matrix IDs have to have a domain
     final parts = _getParts();
+    // if the localpart starts with an @, checks if the user id is valid
+    if (substring(0, 1) == '@') {
+      return _matchesUserIdRegExp(this);
+    }
     // the localpart can be an empty string, e.g. for aliases
     if (parts.length != 2 || parts[1].isEmpty) {
       return false;
     }
     return true;
+  }
+
+  bool _matchesUserIdRegExp(String text) {
+    final globalRegExp = RegExp(
+        r'^@([a-z0-9.=_\-\+]+):((?:[a-zA-Z0-9\-]+\.)*[a-zA-Z]{2,}|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|\[(?:[0-9a-fA-F:.]+)\])(?::\d{1,5})?$');
+
+    return globalRegExp.hasMatch(text);
   }
 
   String? get sigil => isValidMatrixId ? substring(0, 1) : null;
