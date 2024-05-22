@@ -1,3 +1,6 @@
+## [0.29.5] 22nd May 2024
+- feat: make voip key generator public (td)
+
 ## [0.29.4] 21st May 2024
 - fix: Hotfix create missing objectbox (Krille)
 
