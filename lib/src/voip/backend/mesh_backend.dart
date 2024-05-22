@@ -877,4 +877,9 @@ class MeshBackend extends CallBackend {
       List<CallParticipant> remoteParticipants) async {
     return;
   }
+
+  @override
+  Future<void> preShareKey(GroupCallSession groupCall) async {
+    return;
+  }
 }

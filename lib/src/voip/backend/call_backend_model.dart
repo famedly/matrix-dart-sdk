@@ -73,6 +73,8 @@ abstract class CallBackend {
     List<CallParticipant> anyLeft,
   );
 
+  Future<void> preShareKey(GroupCallSession groupCall);
+
   Future<void> requestEncrytionKey(
     GroupCallSession groupCall,
     List<CallParticipant> remoteParticipants,
