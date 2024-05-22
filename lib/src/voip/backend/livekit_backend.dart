@@ -52,11 +52,16 @@ class LiveKitBackend extends CallBackend {
     return newIndex;
   }
 
+  Future<void> preShareKey(GroupCallSession groupCall) async {
+    await groupCall.onMemberStateChanged();
+    await _makeNewSenderKey(groupCall, false);
+  }
+
   /// makes a new e2ee key for local user and sets it with a delay if specified
   /// used on first join and when someone leaves
   ///
   /// also does the sending for you
-  Future<void> makeNewSenderKey(
+  Future<void> _makeNewSenderKey(
       GroupCallSession groupCall, bool delayBeforeUsingKeyOurself) async {
     final key = secureRandomBytes(32);
     final keyIndex = _getNewEncryptionKeyIndex();
@@ -87,7 +92,7 @@ class LiveKitBackend extends CallBackend {
     final myKeys = _encryptionKeysMap[groupCall.localParticipant];
 
     if (myKeys == null || myKeys.isEmpty) {
-      await makeNewSenderKey(groupCall, false);
+      await _makeNewSenderKey(groupCall, false);
       return;
     }
 
@@ -186,7 +191,7 @@ class LiveKitBackend extends CallBackend {
     if (myKeys == null || myLatestKey == null) {
       Logs().w(
           '[VOIP E2EE] _sendEncryptionKeysEvent Tried to send encryption keys event but no keys found!');
-      await makeNewSenderKey(groupCall, false);
+      await _makeNewSenderKey(groupCall, false);
       await _sendEncryptionKeysEvent(
         groupCall,
         keyIndex,
@@ -392,7 +397,7 @@ class LiveKitBackend extends CallBackend {
     if (groupCall.voip.enableSFUE2EEKeyRatcheting) {
       await _ratchetLocalParticipantKey(groupCall, anyJoined);
     } else {
-      await makeNewSenderKey(groupCall, true);
+      await _makeNewSenderKey(groupCall, true);
     }
   }
 
@@ -409,7 +414,7 @@ class LiveKitBackend extends CallBackend {
     }
     _memberLeaveEncKeyRotateDebounceTimer =
         Timer(CallTimeouts.makeKeyDelay, () async {
-      await makeNewSenderKey(groupCall, true);
+      await _makeNewSenderKey(groupCall, true);
     });
   }
 

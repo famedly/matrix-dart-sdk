@@ -1,3 +1,6 @@
+## [0.29.6] 22nd May 2024
+- feat: hide _makeNewSenderKey and expose a new preShareKey function (td)
+
 ## [0.29.5] 22nd May 2024
 - feat: make voip key generator public (td)
 
