@@ -1,3 +1,8 @@
+## [0.29.7] 22nd May 2024
+- fix: nonLocal join/left values (td)
+- fix: Do not set messages as state events anymore (Krille)
+- feat: preShareKey using fetchOrCreateGroupCall (td)
+
 ## [0.29.6] 22nd May 2024
 - feat: hide _makeNewSenderKey and expose a new preShareKey function (td)
 
