@@ -1,3 +1,7 @@
+## [0.29.8] 23rd May 2024
+
+- fix: make sure room is postLoaded before starting calls (td)
+
 ## [0.29.7] 22nd May 2024
 - fix: nonLocal join/left values (td)
 - fix: Do not set messages as state events anymore (Krille)
