@@ -129,7 +129,14 @@ extension FamedlyCallMemberEventsExtension on Room {
       );
     } else {
       throw MatrixSDKVoipException(
-        'User ${client.userID}:${client.deviceID} is not allowed to send famedly call member events in room $id, canJoinGroupCall: $canJoinGroupCall, room.canJoinGroupCall: $groupCallsEnabledForEveryone',
+        '''
+        User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room $id, 
+        canJoinGroupCall: $canJoinGroupCall, 
+        groupCallsEnabledForEveryone: $groupCallsEnabledForEveryone, 
+        needed: ${powerForChangingStateEvent(EventTypes.GroupCallMember)}, 
+        own: $ownPowerLevel}
+        plMap: ${getState(EventTypes.RoomPowerLevels)?.content}
+        ''',
       );
     }
   }
