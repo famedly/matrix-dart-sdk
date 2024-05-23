@@ -769,13 +769,25 @@ class VoIP {
     String? scope, {
     bool preShareKey = true,
   }) async {
+    // somehow user were mising their powerlevels events and got stuck
+    // with the exception below, this part just makes sure importantStateEvents
+    // does not cause it.
+    await room.postLoad();
+
     if (!room.groupCallsEnabledForEveryone) {
       await room.enableGroupCalls();
     }
 
     if (!room.canJoinGroupCall) {
       throw MatrixSDKVoipException(
-        'User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room ${room.id}, canJoinGroupCall: ${room.canJoinGroupCall}, room.canJoinGroupCall: ${room.groupCallsEnabledForEveryone}',
+        '''
+        User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room ${room.id}, 
+        canJoinGroupCall: ${room.canJoinGroupCall}, 
+        groupCallsEnabledForEveryone: ${room.groupCallsEnabledForEveryone}, 
+        needed: ${room.powerForChangingStateEvent(EventTypes.GroupCallMember)}, 
+        own: ${room.ownPowerLevel}}
+        plMap: ${room.getState(EventTypes.RoomPowerLevels)?.content}
+        ''',
       );
     }
 
