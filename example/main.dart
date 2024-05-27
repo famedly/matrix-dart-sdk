@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:matrix/matrix.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:sqflite/sqflite.dart' as sqlite;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,7 +11,10 @@ void main() async {
     'Matrix Example Chat',
     databaseBuilder: (_) async {
       final dir = await getApplicationSupportDirectory();
-      final db = HiveCollectionsDatabase('matrix_example_chat', dir.path);
+      final db = MatrixSdkDatabase(
+        c.name,
+        await sqlite.openDatabase(dir.toString() + '/database.sqlite'),
+      );
       await db.open();
       return db;
     },
