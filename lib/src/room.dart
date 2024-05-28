@@ -222,33 +222,25 @@ class Room {
     return pinned is Iterable ? pinned.map((e) => e.toString()).toList() : [];
   }
 
-  /// Returns the heroes as `User` objects.
+  /// Returns the heroes + the sender of the lastEvent as `User` objects.
   /// This is very useful if you want to make sure that all users are loaded
   /// from the database, that you need to correctly calculate the displayname
   /// and the avatar of the room.
   Future<List<User>> loadHeroUsers() async {
-    // For invite rooms request own user and invitor.
-    if (membership == Membership.invite) {
-      final ownUser = await requestUser(client.userID!, requestProfile: false);
-      if (ownUser != null) await requestUser(ownUser.senderId);
-    }
+    final preloadUsers = <String?>{
+      if (membership == Membership.invite) ...{
+        client.userID!,
+        getState(EventTypes.RoomCreate)?.senderId,
+      },
+      ...summary.mHeroes ?? [],
+      lastEvent?.senderId,
+    }.whereType<String>().toSet();
 
-    var heroes = summary.mHeroes;
-    if (heroes == null) {
-      final directChatMatrixID = this.directChatMatrixID;
-      if (directChatMatrixID != null) {
-        heroes = [directChatMatrixID];
-      }
-    }
+    final users = await Future.wait(
+      preloadUsers.map((userId) => requestUser(userId, ignoreErrors: true)),
+    );
 
-    if (heroes == null) return [];
-
-    return await Future.wait(heroes.map((hero) async =>
-        (await requestUser(
-          hero,
-          ignoreErrors: true,
-        )) ??
-        User(hero, room: this)));
+    return users.whereType<User>().toList();
   }
 
   /// Returns a localized displayname for this server. If the room is a groupchat
