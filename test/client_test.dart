@@ -62,6 +62,7 @@ void main() {
       matrix.onPresenceChanged.stream.listen((CachedPresence data) {
         presenceCounter++;
       });
+      // ignore: deprecated_member_use_from_same_package
       matrix.onAccountData.stream.listen((BasicEvent data) {
         accountDataCounter++;
       });
