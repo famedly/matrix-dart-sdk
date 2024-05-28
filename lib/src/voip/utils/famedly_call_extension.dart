@@ -120,6 +120,7 @@ extension FamedlyCallMemberEventsExtension on Room {
   }
 
   Future<void> setFamedlyCallMemberEvent(Map<String, List> newContent) async {
+    await postLoad();
     if (canJoinGroupCall) {
       await client.setRoomStateWithKey(
         id,
@@ -130,7 +131,7 @@ extension FamedlyCallMemberEventsExtension on Room {
     } else {
       throw MatrixSDKVoipException(
         '''
-        User ${client.userID}:${client.deviceID} is not allowed to join famedly calls in room $id, 
+        User ${client.userID}:${client.deviceID} is not allowed to send com.famedly.call.member events in room $id, 
         canJoinGroupCall: $canJoinGroupCall, 
         groupCallsEnabledForEveryone: $groupCallsEnabledForEveryone, 
         needed: ${powerForChangingStateEvent(EventTypes.GroupCallMember)}, 
