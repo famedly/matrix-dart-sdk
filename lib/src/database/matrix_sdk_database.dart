@@ -666,7 +666,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       unimportantEvents.addAll(
           states.values.map((raw) => Event.fromJson(copyMap(raw), room)));
     }
-    return unimportantEvents;
+
+    return unimportantEvents.where((event) => event.stateKey != null).toList();
   }
 
   @override
