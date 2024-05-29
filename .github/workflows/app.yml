@@ -95,7 +95,7 @@ jobs:
     if: github.event_name == 'pull_request'
     needs: [merge_converage]
     secrets: inherit
-    uses: famedly/frontend-ci-templates/.github/workflows/review-app.yml@main
+    uses: famedly/frontend-ci-templates/.github/workflows/review-app.yml@aa793b1fe31af74beb3f2a8e450a0da7dccde65c
     with:
       projectname: "matrix-dart-sdk-coverage"
       pr: ${{ github.event.pull_request.number }}

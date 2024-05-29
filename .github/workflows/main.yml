@@ -17,7 +17,7 @@ jobs:
   dart:
     permissions:
       contents: read
-    uses: famedly/frontend-ci-templates/.github/workflows/dart.yml@main
+    uses: famedly/frontend-ci-templates/.github/workflows/dart.yml@aa793b1fe31af74beb3f2a8e450a0da7dccde65c
     with:
       env_file: ".github/workflows/versions.env"
     secrets:
@@ -26,7 +26,7 @@ jobs:
   general:
     permissions:
       contents: read
-    uses: famedly/frontend-ci-templates/.github/workflows/general.yml@main
+    uses: famedly/frontend-ci-templates/.github/workflows/general.yml@aa793b1fe31af74beb3f2a8e450a0da7dccde65c
 
   app_jobs:
     secrets: inherit
