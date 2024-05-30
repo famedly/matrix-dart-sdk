@@ -58,6 +58,9 @@ class GroupCallSession {
   final CachedStreamController<GroupCallStateChange> onGroupCallEvent =
       CachedStreamController();
 
+  final CachedStreamController<MatrixRTCCallEvent> matrixRTCEventStream =
+      CachedStreamController();
+
   Timer? _resendMemberStateEventTimer;
 
   factory GroupCallSession.withAutoGenId(
@@ -254,6 +257,8 @@ class GroupCallSession {
           await backend.onNewParticipant(this, nonLocalAnyJoined.toList());
         }
         _participants.addAll(anyJoined);
+        matrixRTCEventStream
+            .add(ParticipantsJoinEvent(participants: anyJoined.toList()));
       }
       if (anyLeft.isNotEmpty) {
         final nonLocalAnyLeft = Set<CallParticipant>.from(anyLeft)
@@ -264,6 +269,8 @@ class GroupCallSession {
           await backend.onLeftParticipant(this, nonLocalAnyLeft.toList());
         }
         _participants.removeAll(anyLeft);
+        matrixRTCEventStream
+            .add(ParticipantsLeftEvent(participants: anyLeft.toList()));
       }
 
       onGroupCallEvent.add(GroupCallStateChange.participantsChanged);

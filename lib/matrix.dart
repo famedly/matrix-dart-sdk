@@ -42,6 +42,7 @@ export 'src/voip/models/call_events.dart';
 export 'src/voip/models/webrtc_delegate.dart';
 export 'src/voip/models/call_participant.dart';
 export 'src/voip/models/key_provider.dart';
+export 'src/voip/models/matrixrtc_call_event.dart';
 export 'src/voip/utils/conn_tester.dart';
 export 'src/voip/utils/voip_constants.dart';
 export 'src/voip/utils/rtc_candidate_extension.dart';
