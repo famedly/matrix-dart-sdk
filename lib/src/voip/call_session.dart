@@ -983,7 +983,9 @@ class CallSession {
       onCallHangupNotifierForGroupCalls.add(this);
       await voip.delegate.handleCallEnded(this);
       fireCallEvent(CallStateChange.kHangup);
-      if ((party == CallParty.kRemote && _missedCall)) {
+      if ((party == CallParty.kRemote &&
+          _missedCall &&
+          reason != CallErrorCode.answeredElsewhere)) {
         await voip.delegate.handleMissedCall(this);
       }
     }
