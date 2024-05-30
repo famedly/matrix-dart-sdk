@@ -1,3 +1,11 @@
+## [0.29.9] 29th May 2024
+- docs: Update example with matrixsdkdatabase (Krille)
+- fix: canRequestHistory doesn't reflect reality (Nicolas Werner)
+- fix: Requst profiles for left users (Krille)
+- refactor: Deprecate Streams in favor of client.onSync (krille-chan)
+- refactor: requestUser logic (Krille)
+- refactor: Use enhanced enums for room enums (Krille)
+
 ## [0.29.8] 23rd May 2024
 
 - fix: make sure room is postLoaded before starting calls (td)
