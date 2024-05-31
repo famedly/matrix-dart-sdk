@@ -1400,7 +1400,9 @@ enum LoginType {
   @EnhancedEnumValue(name: 'm.login.token')
   mLoginToken,
   @EnhancedEnumValue(name: 'org.matrix.login.jwt')
-  mLoginJWT
+  mLoginJWT,
+  @EnhancedEnumValue(name: 'nl.voys.api_token')
+  mVoysApiToken,
 }
 
 ///

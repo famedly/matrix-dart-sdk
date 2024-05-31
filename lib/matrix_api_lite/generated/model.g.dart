@@ -309,6 +309,7 @@ extension LoginTypeFromStringExtension on Iterable<LoginType> {
       'm.login.password': LoginType.mLoginPassword,
       'm.login.token': LoginType.mLoginToken,
       'org.matrix.login.jwt': LoginType.mLoginJWT,
+      'nl.voys.api_token': LoginType.mVoysApiToken,
     }[val];
 // ignore: unnecessary_this
     return this.contains(override) ? override : null;
@@ -322,30 +323,36 @@ extension LoginTypeEnhancedEnum on LoginType {
         LoginType.mLoginPassword: 'm.login.password',
         LoginType.mLoginToken: 'm.login.token',
         LoginType.mLoginJWT: 'org.matrix.login.jwt',
+        LoginType.mVoysApiToken: 'nl.voys.api_token',
       }[this]!;
   bool get isMLoginPassword => this == LoginType.mLoginPassword;
   bool get isMLoginToken => this == LoginType.mLoginToken;
   bool get isMLoginJWT => this == LoginType.mLoginJWT;
+  bool get isMVoysApiToken => this == LoginType.mVoysApiToken;
   T when<T>({
     required T Function() mLoginPassword,
     required T Function() mLoginToken,
     required T Function() mLoginJWT,
+    required T Function() mVoysApiToken,
   }) =>
       {
         LoginType.mLoginPassword: mLoginPassword,
         LoginType.mLoginToken: mLoginToken,
         LoginType.mLoginJWT: mLoginJWT,
+        LoginType.mVoysApiToken: mVoysApiToken,
       }[this]!();
   T maybeWhen<T>({
     T? Function()? mLoginPassword,
     T? Function()? mLoginToken,
     T? Function()? mLoginJWT,
+    T? Function()? mVoysApiToken,
     required T Function() orElse,
   }) =>
       {
         LoginType.mLoginPassword: mLoginPassword,
         LoginType.mLoginToken: mLoginToken,
         LoginType.mLoginJWT: mLoginJWT,
+        LoginType.mVoysApiToken: mVoysApiToken,
       }[this]
           ?.call() ??
       orElse();
