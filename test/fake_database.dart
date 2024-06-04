@@ -22,7 +22,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:matrix/matrix.dart';
 
-Future<DatabaseApi> getDatabase(Client? _) => getMatrixSdkDatabase(_);
+Future<DatabaseApi> getDatabase(Client? c) => getMatrixSdkDatabase(c);
 
 bool hiveInitialized = false;
 
