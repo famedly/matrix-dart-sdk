@@ -80,8 +80,8 @@ class Timeline {
 
   bool get canRequestHistory {
     if (events.isEmpty) return true;
-    return !_fetchedAllDatabaseEvents ||
-        (room.prev_batch != null && events.last.type != EventTypes.RoomCreate);
+    return (!_fetchedAllDatabaseEvents || room.prev_batch != null) &&
+        events.last.type != EventTypes.RoomCreate;
   }
 
   Future<void> requestHistory(
