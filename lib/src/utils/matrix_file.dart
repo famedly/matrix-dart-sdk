@@ -68,17 +68,20 @@ class MatrixFile with EquatableMixin {
       String? filePath,
       Stream<List<int>>? readStream,
       int? sizeInBytes,
+      bool optionalConditionForImageType = true,
+      bool optionalConditionForVideoType = true,
+      bool optionalConditionForAudioType = true,
     }) {
     final msgType = msgTypeFromMime(mimeType ??
         lookupMimeType(name, headerBytes: bytes) ??
         'application/octet-stream');
-    if (msgType == MessageTypes.Image) {
+    if (msgType == MessageTypes.Image && optionalConditionForImageType) {
       return MatrixImageFile(name: name, mimeType: mimeType, filePath: filePath, bytes: bytes, readStream: readStream,sizeInBytes: sizeInBytes);
     }
-    if (msgType == MessageTypes.Video) {
+    if (msgType == MessageTypes.Video && optionalConditionForVideoType) {
       return MatrixVideoFile(bytes: bytes, name: name, mimeType: mimeType, filePath: filePath, readStream: readStream, sizeInBytes: sizeInBytes);
     }
-    if (msgType == MessageTypes.Audio && bytes != null) {
+    if (msgType == MessageTypes.Audio && bytes != null && optionalConditionForAudioType) {
       return MatrixAudioFile(bytes: bytes, name: name, mimeType: mimeType, filePath: filePath, readStream: readStream, sizeInBytes: sizeInBytes);
     }
     return MatrixFile(bytes: bytes, name: name, mimeType: mimeType, filePath: filePath, readStream: readStream, sizeInBytes: sizeInBytes);
