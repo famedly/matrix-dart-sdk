@@ -29,13 +29,13 @@ class CallTimeouts {
   // source: element call?
   /// A delay after a member leaves before we create and publish a new key, because people
   /// tend to leave calls at the same time
-  static const makeKeyDelay = Duration(seconds: 2);
+  static const makeKeyDelay = Duration(seconds: 4);
 
   /// The delay between creating and sending a new key and starting to encrypt with it. This gives others
   /// a chance to receive the new key to minimise the chance they don't get media they can't decrypt.
   /// The total time between a member leaving and the call switching to new keys is therefore
   /// makeKeyDelay + useKeyDelay
-  static const useKeyDelay = Duration(seconds: 4);
+  static const useKeyDelay = Duration(seconds: 6);
 }
 
 class CallConstants {
