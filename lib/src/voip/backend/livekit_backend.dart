@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/models/retry_event_model.dart';
 import 'package:matrix/src/utils/crypto/crypto.dart';
 import 'package:matrix/src/voip/models/call_membership.dart';
 
@@ -302,11 +303,16 @@ class LiveKitBackend extends CallBackend {
     };
   }
 
+  Map<CallParticipant, RetryEventModel> requestEncrytionKeyPending = {};
+
   @override
   Future<void> requestEncrytionKey(
     GroupCallSession groupCall,
     List<CallParticipant> remoteParticipants,
   ) async {
+    Logs().v(
+        '[VOIP E2EE] requesting stream encryption keys from ${remoteParticipants.map((e) => e.id)}');
+
     final Map<String, Object> data = {
       'conf_id': groupCall.groupCallId,
       'device_id': groupCall.client.deviceID!,
@@ -319,6 +325,14 @@ class LiveKitBackend extends CallBackend {
       data,
       EventTypes.GroupCallMemberEncryptionKeysRequest,
     );
+
+    for (final rp in remoteParticipants) {
+      requestEncrytionKeyPending.remove(rp)?.dispose();
+      requestEncrytionKeyPending[rp] = RetryEventModel(
+        timeInterval: Duration(seconds: 2),
+        retryFunction: (_) => requestEncrytionKey(groupCall, [rp]),
+      );
+    }
   }
 
   @override
@@ -336,21 +350,34 @@ class LiveKitBackend extends CallBackend {
 
     final callId = keyContent.callId;
 
+    final p =
+        CallParticipant(groupCall.voip, userId: userId, deviceId: deviceId);
+
     if (keyContent.keys.isEmpty) {
       Logs().w(
           '[VOIP E2EE] Received m.call.encryption_keys where keys is empty: callId=$callId');
       return;
     } else {
       Logs().i(
-          '[VOIP E2EE]: onCallEncryption, got keys from $userId:$deviceId ${keyContent.toJson()}');
+          '[VOIP E2EE]: onCallEncryption, got keys from ${p.id} ${keyContent.toJson()}');
     }
+
+    // TODO (td): this could potentially cancel a retry request for a different keyId
+    // something like
+    // 1. undecryptable frame
+    // 2. request keys
+    // 3. stream change
+    // 4. request keys
+    // 5. answer for 2.
+    // 6. cancel request for 4.
+    requestEncrytionKeyPending.remove(p)?.dispose();
 
     for (final key in keyContent.keys) {
       final encryptionKey = key.key;
       final encryptionKeyIndex = key.index;
       await _setEncryptionKey(
         groupCall,
-        CallParticipant(groupCall.voip, userId: userId, deviceId: deviceId),
+        p,
         encryptionKeyIndex,
         // base64Decode here because we receive base64Encoded version
         base64Decode(encryptionKey),
