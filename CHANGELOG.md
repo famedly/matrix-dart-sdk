@@ -1,4 +1,15 @@
+## [0.29.10] 10th June 2024
+
+- chore: bump make and use key delays to have more buffer (td)
+- chore: Upgrade lints to 4.0.0 (Nicolas Werner)
+- feat: expose matrixRTCEventStream (td)
+- feat: retry call encryption key request logic (td)
+- fix: do not fire missedCall on answeredElseWhere (td)
+- fix: Do not return invalid state events from database (Krille)
+- fix: state updates being also applied when fetching history (Nicolas Werner)
+
 ## [0.29.9] 29th May 2024
+
 - docs: Update example with matrixsdkdatabase (Krille)
 - fix: canRequestHistory doesn't reflect reality (Nicolas Werner)
 - fix: Requst profiles for left users (Krille)
@@ -11,20 +22,25 @@
 - fix: make sure room is postLoaded before starting calls (td)
 
 ## [0.29.7] 22nd May 2024
+
 - fix: nonLocal join/left values (td)
 - fix: Do not set messages as state events anymore (Krille)
 - feat: preShareKey using fetchOrCreateGroupCall (td)
 
 ## [0.29.6] 22nd May 2024
-- feat: hide _makeNewSenderKey and expose a new preShareKey function (td)
+
+- feat: hide \_makeNewSenderKey and expose a new preShareKey function (td)
 
 ## [0.29.5] 22nd May 2024
+
 - feat: make voip key generator public (td)
 
 ## [0.29.4] 21st May 2024
+
 - fix: Hotfix create missing objectbox (Krille)
 
 ## [0.29.3] 21st May 2024
+
 - chore: add MatrixSDKVoipException and some more logging (td)
 - chore: throw exception if you cannot send famedly call member event (td)
 - fix: allow famedly calls for everyone before choosing an existing one (td)
@@ -37,6 +53,7 @@
 - refactor: Store not uploaded group sessions in its own database queue (krille-chan)
 
 ## [0.29.2] 14th May 2024
+
 - feat: Implement unpublished MSC custom refresh token lifetime (Krille)
 - feat: support for JWT authentication (Ray Wang)
 - fix: ensureNotSoftLoggedOut must be called before network reqeust in syncFilter check (Krille)
@@ -45,15 +62,18 @@
 - refactor: make sure ensureNotSoftLoggedOut does not run multiple times (Krille)
 
 ## [0.29.1] 10th May 2024
+
 - chore: Revert check message size before fake sync (Krille)
 
 ## [0.29.0] 08th May 2024
+
 Refactoring release which fixes a flickering of sent file events in the timeline. The
 State events in a room are no longer instances of `Event` but `StrippedStateEvent` by
 default, which is a base class of `Event`. Usually in join rooms the state events are
 actually `Event` and can be used as those after a type check if needed.
 
 **Example:**
+
 ```dart
 // Before:
 final event = room.getState(EventTypes.RoomCreate);
@@ -76,6 +96,7 @@ been synced yet. They no longer appear in the `Client.onEventUpdate` stream but 
 - refactor: Use strippedstatevent as base for room state and user class (Krille)
 
 ## [0.28.1] 30th April 2024
+
 - chore: expose fake matrix api (td)
 - chore: update voip readme (td)
 - fix: allow mesh group call invite (td)
@@ -86,8 +107,8 @@ been synced yet. They no longer appear in the `Client.onEventUpdate` stream but 
 - refactor: Remove unused variable (Krille)
 
 ## [0.28.0] 23rd April 2024
-This release introduces the new famedly calls, it brings 1:1, mesh and livekit calls support to the matrix dart sdk, read more at: [voip docs](lib/src/voip/README.md)
 
+This release introduces the new famedly calls, it brings 1:1, mesh and livekit calls support to the matrix dart sdk, read more at: [voip docs](lib/src/voip/README.md)
 
 - feat: famedly calls (td)
 - chore: create_gh_release job (td)
@@ -95,7 +116,6 @@ This release introduces the new famedly calls, it brings 1:1, mesh and livekit c
 - fix: Make room.setPower more type safe and avoid change powerlevel in RAM before sending request to server (krille-chan)
 - refactor: Use prevBatch from server for pagination in event search (krille-chan)
 - fix: canChangePowerLevel should return true for own user (krille-chan)
-
 
 ## [0.27.0] 16th April 2024
 
@@ -123,12 +143,14 @@ This release introduces the new famedly calls, it brings 1:1, mesh and livekit c
 - refactor: Use dart records for checkHomeserver method
 
 ## [0.26.1] 15th March 2024
+
 - chore: add noice/echo cancelling flags to getUserMedia (td)
 - feat: Add commands /ignore and /unignore (Krille)
 - feat: Offers client.ensureNotSoftLoggedOut() to fix using client with stopped sync loop (Krille)
 - fix: throw EventTooLarge on exceeding max fed PDU (td)
 
 ## [0.26.0] 8th March 2024
+
 This release adds a new state to the `LoginState` named `softLoggedOut`. Learn more about it here:
 https://spec.matrix.org/v1.9/client-server-api/#soft-logout
 
@@ -138,6 +160,7 @@ to perform a token refresh or a new login while providing the old device ID.
 - refactor: BREAKING Allow calling init when in soft logout state and fix some bugs (Krille)
 
 ## [0.25.13] 7th March 2024
+
 - chore: Add regression test for invite->join state handling (Nicolas Werner)
 - feat: add fromLocalStoreOnly to Event.downloadAndDecryptAttachment (Romain GUILLOT)
 - fix: archived room state store logic (Nicolas Werner)
@@ -148,6 +171,7 @@ to perform a token refresh or a new login while providing the old device ID.
 - fix: some tests fail with the "fixed" membership fetch logic (Nicolas Werner)
 
 ## [0.25.12] 1st March 2024
+
 - chore: pass refreshToken to uiaLogin (Krille)
 - fix: removed prev_sender for empty chats (Patrick Hettich)
 - fix: updated membership-leave for archived direct chats (Patrick Hettich)
@@ -155,27 +179,33 @@ to perform a token refresh or a new login while providing the old device ID.
 - refactor: Deprecations after dart upgrade (Krille)
 
 ## [0.25.11] 26th Februray 2024
+
 - feat: Implement handling soft logout (Krille)
 - feat: Store accesstokenExpiresIn and call softlogout 5 minutes before (Krille)
 - fix: convert boxNames to List in clear function when creating transaction (Gabby Gurdin)
 
 ## [0.25.10] 23rd February 2024
+
 - chore: remove state events both in imp and preview events list (td)
 - feat: specify history_visibility when creating group chat (Karthikeyan S)
 
 ## [0.25.9] 14th February 2024
+
 - fix: group calls terminator having sync glares (td)
 - fix: ignore expired calls rather than killing them (td)
 
 ## [0.25.8] 31th January 2024
+
 - chore: Use some call events as last events (Krille)
 - fix: nested void function in encryption helper (The one with the braid)
 
 ## [0.25.7] 29th January 2024
+
 - feat: add SQfLite encryption helper (The one with the braid)
 - fix: Skip invalid keys which got corrupted in database (Krille)
 
 ## [0.25.6] - 22nd January 2024
+
 - feat: Add missing localizations for key verification messages (Krille)
 - fix: Correctly null cache in transactions for indexeddb (Krille)
 - fix: Transactions on web by doing them in the same way as on io (krille-chan)
@@ -183,25 +213,31 @@ to perform a token refresh or a new login while providing the old device ID.
 - refactor: Use maxnumberofotk from olm instead hardcode 100 (Krille)
 
 ## [0.25.5] - 13th January 2024
+
 - fix: Another type error when combining lists (Krille)
 
 ## [0.25.4] - 5th January 2024
+
 - fix: Type error when combining dynamic lists (Krille)
 - refactor: Throw client init exception on client init fail (krille-chan)
 
 ## [0.25.3] - 2nd January 2024
+
 - fix: Delete in transaction on new store does not clear cache correctly (Krille)
 
 ## [0.25.2] - 27th December 2023
+
 - fix: Add missing copy map in matrix sdk database (Krille)
 
 ## [0.25.1] - 27th December 2023
+
 - ci: Test that database can write and read at least 5mb of data (Krille)
 - feat: Make possible to fetch presence from database only (krille-chan)
 - fix: clearCache does not clear room account data (Krille)
 - fix: typerror in removeEvent method from new database (Krille)
 
 ## [0.25.0] - 21st December 2023
+
 - feat: add tests for calls (td)
 - feat: cache getConfig request (Karthikeyan S)
 - fix: canSendDefaultMessage ignores overwritten events (Krille)
@@ -216,16 +252,19 @@ to perform a token refresh or a new login while providing the old device ID.
 - ci: Test all databases in unit tests (Krille)
 
 ## [0.24.3] - 11th December 2023
+
 Small hotfix for the new database.
+
 - refactor: Remove duplicated copyMap method and fix type error (Krille)
 
 ## [0.24.2] - 11th December 2023
+
 - docs: Add issue tracker to pub.dev (Krille)
 - fix: Copy all maps got from database (Krille)
 
 ## [0.24.1] - 7th December 2023
 
-This release brings a new **experimental** database based on SQFlite and IndexedDB as a *Drop-In-Replacement* for Hive and HiveCollections. You can already test it out (on your own risk) by using it as the new databaseBuilder and migrate your current users by using the legacyDatabaseBuilder with your current Database:
+This release brings a new **experimental** database based on SQFlite and IndexedDB as a _Drop-In-Replacement_ for Hive and HiveCollections. You can already test it out (on your own risk) by using it as the new databaseBuilder and migrate your current users by using the legacyDatabaseBuilder with your current Database:
 
 ```dart
 final client = Client('Client Name',
