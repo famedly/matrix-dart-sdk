@@ -1063,7 +1063,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
     final stateKey = eventUpdate.content['state_key'];
     // Store a common state event
-    if (stateKey != null) {
+    if (stateKey != null &&
+        // Don't store events as state updates when paginating backwards.
+        (eventUpdate.type == EventUpdateType.timeline ||
+            eventUpdate.type == EventUpdateType.state ||
+            eventUpdate.type == EventUpdateType.inviteState)) {
       if (eventUpdate.content['type'] == EventTypes.RoomMember) {
         await _roomMembersBox.put(
             MultiKey(

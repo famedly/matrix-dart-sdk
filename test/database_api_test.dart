@@ -231,6 +231,124 @@ void main() {
             ),
             Client('testclient'));
       });
+      test('storeEventUpdate (state)', () async {
+        final roomid = '!testrooma:example.com';
+        final client = Client('testclient');
+
+        await database.storeRoomUpdate(
+          roomid,
+          JoinedRoomUpdate(),
+          null,
+          client,
+        );
+
+        await database.storeEventUpdate(
+          EventUpdate(
+            roomID: roomid,
+            type: EventUpdateType.timeline,
+            content: {
+              'type': EventTypes.RoomName,
+              'content': {
+                'name': 'start',
+              },
+              'event_id': '\$eventstart:example.com',
+              'sender': '@bob:example.org',
+              'state_key': '',
+            },
+          ),
+          client,
+        );
+
+        var room = await database.getSingleRoom(client, roomid);
+
+        expect(room, isNotNull);
+
+        expect(room?.name, 'start');
+
+        await database.storeEventUpdate(
+          EventUpdate(
+            roomID: roomid,
+            type: EventUpdateType.timeline,
+            content: {
+              'type': EventTypes.RoomName,
+              'content': {
+                'name': 'update',
+              },
+              'event_id': '\$eventupdate:example.com',
+              'sender': '@bob:example.org',
+              'state_key': '',
+            },
+          ),
+          client,
+        );
+
+        room = await database.getSingleRoom(client, roomid);
+
+        expect(room?.name, 'update');
+
+        await database.storeEventUpdate(
+          EventUpdate(
+            roomID: roomid,
+            type: EventUpdateType.state,
+            content: {
+              'type': EventTypes.RoomName,
+              'content': {
+                'name': 'update2',
+              },
+              'event_id': '\$eventupdate2:example.com',
+              'sender': '@bob:example.org',
+              'state_key': '',
+            },
+          ),
+          client,
+        );
+
+        room = await database.getSingleRoom(client, roomid);
+
+        expect(room?.name, 'update2');
+
+        await database.storeEventUpdate(
+          EventUpdate(
+            roomID: roomid,
+            type: EventUpdateType.inviteState,
+            content: {
+              'type': EventTypes.RoomName,
+              'content': {
+                'name': 'update3',
+              },
+              'event_id': '\$eventupdate3:example.com',
+              'sender': '@bob:example.org',
+              'state_key': '',
+            },
+          ),
+          client,
+        );
+
+        room = await database.getSingleRoom(client, roomid);
+
+        expect(room?.name, 'update3');
+
+        await database.storeEventUpdate(
+          EventUpdate(
+            roomID: roomid,
+            type: EventUpdateType.history,
+            content: {
+              'type': EventTypes.RoomName,
+              'content': {
+                'name': 'notupdate',
+              },
+              'event_id': '\$eventnotupdate:example.com',
+              'sender': '@bob:example.org',
+              'state_key': '',
+            },
+          ),
+          client,
+        );
+
+        room = await database.getSingleRoom(client, roomid);
+
+        expect(room?.name, 'update3');
+      });
       test('getEventById', () async {
         final event = await database.getEventById('\$event:example.com',
             Room(id: '!testroom:example.com', client: Client('testclient')));
