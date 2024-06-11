@@ -215,6 +215,13 @@ class VoIP {
       Logs().w(
           '[VOIP] _handleCallEvent call event does not contain a room_id, ignoring');
       return;
+    } else if (client.userID != null &&
+        client.deviceID != null &&
+        remoteUserId == client.userID &&
+        remoteDeviceId == client.deviceID) {
+      Logs().v(
+          'Ignoring call event ${event.type} for room ${room.id} from our own device');
+      return;
     } else if (!event.type
         .startsWith(EventTypes.GroupCallMemberEncryptionKeys)) {
       // skip webrtc event checks on encryption_keys
@@ -230,7 +237,7 @@ class VoIP {
             !{EventTypes.CallInvite, EventTypes.GroupCallMemberInvite}
                 .contains(event.type)) {
           Logs().w(
-              'Ignoring call event ${event.type} because we do not have the call');
+              'Ignoring call event ${event.type} for room ${room.id} because we do not have the call');
           return;
         } else if (call != null) {
           // multiple checks to make sure the events sent are from the the
@@ -242,19 +249,18 @@ class VoIP {
           }
           if (call.remoteUserId != null && call.remoteUserId != remoteUserId) {
             Logs().w(
-                'Ignoring call event ${event.type} from sender $remoteUserId, expected sender: ${call.remoteUserId}');
+                'Ignoring call event ${event.type} for room ${room.id} from sender $remoteUserId, expected sender: ${call.remoteUserId}');
             return;
           }
           if (call.remotePartyId != null && call.remotePartyId != partyId) {
             Logs().w(
-                'Ignoring call event ${event.type} from sender with a different party_id $partyId, expected party_id: ${call.remotePartyId}');
+                'Ignoring call event ${event.type} for room ${room.id} from sender with a different party_id $partyId, expected party_id: ${call.remotePartyId}');
             return;
           }
           if ((call.remotePartyId != null &&
-                  call.remotePartyId == localPartyId) ||
-              (remoteUserId == client.userID &&
-                  remoteDeviceId == client.deviceID!)) {
-            Logs().w('Ignoring call event ${event.type} from ourself');
+              call.remotePartyId == localPartyId)) {
+            Logs().v(
+                'Ignoring call event ${event.type} for room ${room.id} from our own partyId');
             return;
           }
         }
