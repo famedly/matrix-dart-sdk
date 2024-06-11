@@ -1,3 +1,12 @@
+## [0.29.11] 11th June 2024
+
+- chore: make ignored call mem logging verbose (td)
+- fix: dont override passed powerlevels with groupcall powerlevels (td)
+- fix: ignore call events from own user even if todevice (td)
+- chore: do not create participant object on every key (td)
+- revert: "feat: retry call encryption key request logic" (td)
+- fix: Do not return invalid state events from database (HuangRed)
+
 ## [0.29.10] 10th June 2024
 
 - chore: bump make and use key delays to have more buffer (td)
