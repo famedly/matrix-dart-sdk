@@ -814,17 +814,19 @@ class Client extends MatrixApi {
     }
     if (groupCall) {
       powerLevelContentOverride ??= {};
-      powerLevelContentOverride['events'] = <String, dynamic>{
-        EventTypes.GroupCallMember: 0,
-      };
+      powerLevelContentOverride['events'] ??= {};
+      powerLevelContentOverride['events'][EventTypes.GroupCallMember] ??=
+          powerLevelContentOverride['events_default'] ?? 0;
     }
+
     final roomId = await createRoom(
-        invite: invite,
-        preset: preset,
-        name: groupName,
-        initialState: initialState,
-        visibility: visibility,
-        powerLevelContentOverride: powerLevelContentOverride);
+      invite: invite,
+      preset: preset,
+      name: groupName,
+      initialState: initialState,
+      visibility: visibility,
+      powerLevelContentOverride: powerLevelContentOverride,
+    );
 
     if (waitForSync) {
       if (getRoomById(roomId) == null) {

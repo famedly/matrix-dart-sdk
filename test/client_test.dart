@@ -887,8 +887,101 @@ void main() {
     test('startDirectChat', () async {
       await matrix.startDirectChat('@alice:example.com', waitForSync: false);
     });
+
     test('createGroupChat', () async {
       await matrix.createGroupChat(groupName: 'Testgroup', waitForSync: false);
+
+      expect(
+        json.decode(
+            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.last),
+        {
+          'initial_state': [
+            {
+              'content': {'algorithm': 'm.megolm.v1.aes-sha2'},
+              'type': 'm.room.encryption'
+            }
+          ],
+          'name': 'Testgroup',
+          'preset': 'private_chat'
+        },
+      );
+
+      await matrix.createGroupChat(
+          groupName: 'Testgroup',
+          waitForSync: false,
+          groupCall: true,
+          powerLevelContentOverride: {'events_default': 12});
+
+      expect(
+        json.decode(
+            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.last),
+        {
+          'initial_state': [
+            {
+              'content': {'algorithm': 'm.megolm.v1.aes-sha2'},
+              'type': 'm.room.encryption'
+            }
+          ],
+          'name': 'Testgroup',
+          'power_level_content_override': {
+            'events_default': 12,
+            'events': {'com.famedly.call.member': 12}
+          },
+          'preset': 'private_chat'
+        },
+      );
+
+      await matrix.createGroupChat(
+          groupName: 'Testgroup',
+          waitForSync: false,
+          groupCall: true,
+          powerLevelContentOverride: {
+            'events_default': 12,
+            'events': {'com.famedly.call.member': 14}
+          });
+
+      expect(
+        json.decode(
+            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.last),
+        {
+          'initial_state': [
+            {
+              'content': {'algorithm': 'm.megolm.v1.aes-sha2'},
+              'type': 'm.room.encryption'
+            }
+          ],
+          'name': 'Testgroup',
+          'power_level_content_override': {
+            'events_default': 12,
+            'events': {'com.famedly.call.member': 14}
+          },
+          'preset': 'private_chat'
+        },
+      );
+
+      await matrix.createGroupChat(
+        groupName: 'Testgroup',
+        waitForSync: false,
+        groupCall: true,
+      );
+
+      expect(
+        json.decode(
+            FakeMatrixApi.calledEndpoints['/client/v3/createRoom']?.last),
+        {
+          'initial_state': [
+            {
+              'content': {'algorithm': 'm.megolm.v1.aes-sha2'},
+              'type': 'm.room.encryption'
+            }
+          ],
+          'name': 'Testgroup',
+          'power_level_content_override': {
+            'events': {'com.famedly.call.member': 0}
+          },
+          'preset': 'private_chat'
+        },
+      );
     });
     test('Test the fake store api', () async {
       final database = await getDatabase(null);
