@@ -335,6 +335,8 @@ class LiveKitBackend extends CallBackend {
     final keyContent = EncryptionKeysEventContent.fromJson(content);
 
     final callId = keyContent.callId;
+    final p =
+        CallParticipant(groupCall.voip, userId: userId, deviceId: deviceId);
 
     if (keyContent.keys.isEmpty) {
       Logs().w(
@@ -342,7 +344,7 @@ class LiveKitBackend extends CallBackend {
       return;
     } else {
       Logs().i(
-          '[VOIP E2EE]: onCallEncryption, got keys from $userId:$deviceId ${keyContent.toJson()}');
+          '[VOIP E2EE]: onCallEncryption, got keys from ${p.id} ${keyContent.toJson()}');
     }
 
     for (final key in keyContent.keys) {
@@ -350,7 +352,7 @@ class LiveKitBackend extends CallBackend {
       final encryptionKeyIndex = key.index;
       await _setEncryptionKey(
         groupCall,
-        CallParticipant(groupCall.voip, userId: userId, deviceId: deviceId),
+        p,
         encryptionKeyIndex,
         // base64Decode here because we receive base64Encoded version
         base64Decode(encryptionKey),
