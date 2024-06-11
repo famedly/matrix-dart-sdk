@@ -692,7 +692,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
       unimportantEvents.addAll(
           states.values.map((raw) => Event.fromJson(convertToJson(raw), room)));
     }
-    return unimportantEvents;
+    return unimportantEvents.where((event) => event.stateKey != null).toList();
   }
 
   @override
