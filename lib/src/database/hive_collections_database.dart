@@ -700,7 +700,7 @@ class HiveCollectionsDatabase extends DatabaseApi {
       unimportantEvents.addAll(
           states.values.map((raw) => Event.fromJson(copyMap(raw), room)));
     }
-    return unimportantEvents;
+    return unimportantEvents.where((event) => event.stateKey != null).toList();
   }
 
   @override
