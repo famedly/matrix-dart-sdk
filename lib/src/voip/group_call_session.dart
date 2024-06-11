@@ -217,7 +217,7 @@ class GroupCallSession {
         mems.where((element) => !memsForCurrentGroupCall.contains(element));
 
     for (final mem in ignoredMems) {
-      Logs().w(
+      Logs().v(
           '[VOIP] Ignored ${mem.userId}\'s mem event ${mem.toJson()} while updating _participants list for callId: $groupCallId, expiry status: ${mem.isExpired}');
     }
 
