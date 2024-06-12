@@ -18,7 +18,9 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:async/async.dart';
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
 
@@ -1648,100 +1650,169 @@ class Room {
     }
   }
 
-  final Set<String> _requestingMatrixIds = {};
+  // Internal helper to implement requestUser
+  Future<User?> _requestSingleParticipantViaState(
+    String mxID, {
+    required bool ignoreErrors,
+  }) async {
+    try {
+      Logs().v(
+        'Request missing user $mxID in room ${getLocalizedDisplayname()} from the server...',
+      );
+      final resp = await client.getRoomStateWithKey(
+        id,
+        EventTypes.RoomMember,
+        mxID,
+      );
+
+      // valid member events require a valid membership key
+      final membership = resp.tryGet<String>('membership', TryGet.required);
+      assert(membership != null);
+
+      final foundUser = User(
+        mxID,
+        room: this,
+        displayName: resp.tryGet<String>('displayname', TryGet.silent),
+        avatarUrl: resp.tryGet<String>('avatar_url', TryGet.silent),
+        membership: membership,
+      );
+
+      // Store user in database:
+      await client.database?.transaction(() async {
+        await client.database?.storeEventUpdate(
+          EventUpdate(
+            content: foundUser.toJson(),
+            roomID: id,
+            type: EventUpdateType.state,
+          ),
+          client,
+        );
+      });
+
+      return foundUser;
+    } on MatrixException catch (_) {
+      // Ignore if we have no permission
+      return null;
+    } catch (e, s) {
+      if (!ignoreErrors) {
+        rethrow;
+      } else {
+        Logs().w('Unable to request the user $mxID from the server', e, s);
+        return null;
+      }
+    }
+  }
+
+  // Internal helper to implement requestUser
+  Future<User?> _requestUser(
+    String mxID, {
+    required bool ignoreErrors,
+    required bool requestState,
+    required bool requestProfile,
+  }) async {
+    // Is user already in cache?
+    final userFromState = getState(EventTypes.RoomMember, mxID)?.asUser(this);
+
+    // If not in cache, try the database
+    var foundUser = userFromState;
+
+    // If the room is not postloaded, check the database
+    if (partial && foundUser == null) {
+      foundUser = await client.database?.getUser(mxID, this);
+    }
+
+    // If not in the database, try fetching the member from the server
+    if (requestState && foundUser == null) {
+      foundUser = await _requestSingleParticipantViaState(mxID,
+          ignoreErrors: ignoreErrors);
+    }
+
+    // If the user isn't found or they have left and no displayname set anymore, request their profile from the server
+    if (requestProfile) {
+      if (foundUser
+          case null ||
+              User(
+                membership: Membership.ban || Membership.leave,
+                displayName: null
+              )) {
+        try {
+          final profile = await client.getProfileFromUserId(mxID);
+          foundUser = User(
+            mxID,
+            displayName: profile.displayName,
+            avatarUrl: profile.avatarUrl?.toString(),
+            membership: foundUser?.membership.name ?? Membership.leave.name,
+            room: this,
+          );
+        } catch (e, s) {
+          if (!ignoreErrors) {
+            rethrow;
+          } else {
+            Logs()
+                .w('Unable to request the profile $mxID from the server', e, s);
+          }
+        }
+      }
+    }
+
+    if (foundUser == null) return null;
+
+    // Set user in the local state if the state changed.
+    // If we set the state unconditionally, we might end up with a client calling this over and over thinking the user changed.
+    if (userFromState == null ||
+        userFromState.displayName != foundUser.displayName) {
+      setState(foundUser);
+      // ignore: deprecated_member_use_from_same_package
+      onUpdate.add(id);
+    }
+
+    return foundUser;
+  }
+
+  final Map<
+      ({
+        String mxID,
+        bool ignoreErrors,
+        bool requestState,
+        bool requestProfile,
+      }),
+      AsyncCache<User?>> _inflightUserRequests = {};
 
   /// Requests a missing [User] for this room. Important for clients using
   /// lazy loading. If the user can't be found this method tries to fetch
-  /// the displayname and avatar from the profile if [requestProfile] is true.
+  /// the displayname and avatar from the server if [requestState] is true.
+  /// If that fails, it falls back to requesting the global profile if
+  /// [requestProfile] is true.
   Future<User?> requestUser(
     String mxID, {
     bool ignoreErrors = false,
+    bool requestState = true,
     bool requestProfile = true,
   }) async {
     assert(mxID.isValidMatrixId);
 
-    // Is user already in cache?
-    var foundUser = getState(EventTypes.RoomMember, mxID)?.asUser(this);
+    final parameters = (
+      mxID: mxID,
+      ignoreErrors: ignoreErrors,
+      requestState: requestState,
+      requestProfile: requestProfile,
+    );
 
-    // If not, is it in the database?
-    foundUser ??= await client.database?.getUser(mxID, this);
+    final cache = _inflightUserRequests[parameters] ??= AsyncCache.ephemeral();
 
-    // If not, can we request it from the server?
-    if (foundUser == null) {
-      if (!_requestingMatrixIds.add(mxID)) return null;
-      Map<String, dynamic>? resp;
-      try {
-        Logs().v(
-            'Request missing user $mxID in room ${getLocalizedDisplayname()} from the server...');
-        resp = await client.getRoomStateWithKey(
-          id,
-          EventTypes.RoomMember,
-          mxID,
-        );
-        foundUser = User(
-          mxID,
-          room: this,
-          displayName: resp['displayname'],
-          avatarUrl: resp['avatar_url'],
-          membership: resp['membership'],
-        );
-        _requestingMatrixIds.remove(mxID);
-
-        // Store user in database:
-        await client.database?.transaction(() async {
-          await client.database?.storeEventUpdate(
-            EventUpdate(
-              content: foundUser!.toJson(),
-              roomID: id,
-              type: EventUpdateType.state,
-            ),
-            client,
-          );
-        });
-      } on MatrixException catch (_) {
-        // Ignore if we have no permission
-      } catch (e, s) {
-        if (!ignoreErrors) {
-          _requestingMatrixIds.remove(mxID);
-          rethrow;
-        } else {
-          Logs().w('Unable to request the user $mxID from the server', e, s);
-        }
-      }
+    try {
+      final user = await cache.fetch(() => _requestUser(
+            mxID,
+            ignoreErrors: ignoreErrors,
+            requestState: requestState,
+            requestProfile: requestProfile,
+          ));
+      _inflightUserRequests.remove(parameters);
+      return user;
+    } catch (_) {
+      _inflightUserRequests.remove(parameters);
+      rethrow;
     }
-
-    // User not found anywhere? Set a blank one:
-    foundUser ??= User(mxID, room: this, membership: 'leave');
-
-    // Is it a left user without any displayname/avatar info? Try fetch profile:
-    if (requestProfile &&
-        {Membership.ban, Membership.leave}.contains(foundUser.membership) &&
-        foundUser.displayName == null &&
-        foundUser.avatarUrl == null) {
-      try {
-        final profile = await client.getProfileFromUserId(mxID);
-        foundUser = User(
-          mxID,
-          displayName: profile.displayName,
-          avatarUrl: profile.avatarUrl?.toString(),
-          membership: Membership.leave.name,
-          room: this,
-        );
-      } catch (e, s) {
-        if (!ignoreErrors) {
-          rethrow;
-        } else {
-          Logs().w('Unable to request the profile $mxID from the server', e, s);
-        }
-      }
-    }
-
-    // Set user in the local state
-    setState(foundUser!);
-    // ignore: deprecated_member_use_from_same_package
-    onUpdate.add(id);
-
-    return foundUser;
   }
 
   /// Searches for the event in the local cache and then on the server if not
@@ -2272,7 +2343,7 @@ class Room {
           'https://matrix.to/#/${Uri.encodeComponent(canonicalAlias)}');
     }
     final List queryParameters = [];
-    final users = await requestParticipants();
+    final users = await requestParticipants([Membership.join]);
     final currentPowerLevelsMap = getState(EventTypes.RoomPowerLevels)?.content;
 
     final temp = List<User>.from(users);
@@ -2301,18 +2372,17 @@ class Room {
       }
     }
     final sortedServers = Map.fromEntries(servers.entries.toList()
-      ..sort((e1, e2) => e1.value.compareTo(e2.value)));
-    for (var i = 0; i <= 2; i++) {
-      if (!queryParameters.contains(sortedServers.keys.last)) {
-        queryParameters.add(sortedServers.keys.last);
+          ..sort((e1, e2) => e2.value.compareTo(e1.value)))
+        .keys
+        .take(3);
+    for (final server in sortedServers) {
+      if (!queryParameters.contains(server)) {
+        queryParameters.add(server);
       }
-      sortedServers.remove(sortedServers.keys.last);
     }
 
     var queryString = '?';
-    for (var i = 0;
-        i <= (queryParameters.length > 2 ? 2 : queryParameters.length);
-        i++) {
+    for (var i = 0; i < min(queryParameters.length, 3); i++) {
       if (i != 0) {
         queryString += '&';
       }
