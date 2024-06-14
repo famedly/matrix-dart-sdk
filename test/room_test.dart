@@ -682,12 +682,83 @@ void main() {
     });
 
     test('getUserByMXID', () async {
-      User? user;
-      try {
-        user = await room.requestUser('@getme:example.com');
-      } catch (_) {}
+      final List<String> called = [];
+      final List<String> called2 = [];
+      // ignore: deprecated_member_use_from_same_package
+      final subscription = room.onUpdate.stream.listen((i) {
+        called.add(i);
+      });
+      final subscription2 = room.client.onRoomState.stream.listen((i) {
+        called2.add(i.roomId);
+      });
+
+      FakeMatrixApi.calledEndpoints.clear();
+      final user = await room.requestUser('@getme:example.com');
+      expect(FakeMatrixApi.calledEndpoints.keys, [
+        '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.member/%40getme%3Aexample.com'
+      ]);
       expect(user?.stateKey, '@getme:example.com');
-      expect(user?.calcDisplayname(), 'Getme');
+      expect(user?.calcDisplayname(), 'You got me');
+      expect(user?.membership, Membership.knock);
+
+      // Yield for the onUpdate
+      await Future.delayed(Duration(
+        milliseconds: 1,
+      ));
+      expect(called.length, 1);
+      expect(called2.length, 1);
+
+      FakeMatrixApi.calledEndpoints.clear();
+      final user2 = await room.requestUser('@getmeprofile:example.com');
+      expect(FakeMatrixApi.calledEndpoints.keys, [
+        '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.member/%40getmeprofile%3Aexample.com',
+        '/client/v3/profile/%40getmeprofile%3Aexample.com'
+      ]);
+      expect(user2?.stateKey, '@getmeprofile:example.com');
+      expect(user2?.calcDisplayname(), 'You got me (profile)');
+      expect(user2?.membership, Membership.leave);
+
+      // Yield for the onUpdate
+      await Future.delayed(Duration(
+        milliseconds: 1,
+      ));
+      expect(called.length, 2);
+      expect(called2.length, 2);
+
+      FakeMatrixApi.calledEndpoints.clear();
+      final userAgain = await room.requestUser('@getme:example.com');
+      expect(FakeMatrixApi.calledEndpoints.keys, []);
+      expect(userAgain?.stateKey, '@getme:example.com');
+      expect(userAgain?.calcDisplayname(), 'You got me');
+      expect(userAgain?.membership, Membership.knock);
+
+      // Yield for the onUpdate
+      await Future.delayed(Duration(
+        milliseconds: 1,
+      ));
+      expect(called.length, 2, reason: 'onUpdate should not have been called.');
+      expect(called2.length, 2,
+          reason: 'onRoomState should not have been called.');
+
+      FakeMatrixApi.calledEndpoints.clear();
+      final user3 = await room.requestUser('@getmeempty:example.com');
+      expect(FakeMatrixApi.calledEndpoints.keys, [
+        '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.member/%40getmeempty%3Aexample.com',
+        '/client/v3/profile/%40getmeempty%3Aexample.com'
+      ]);
+      expect(user3?.stateKey, '@getmeempty:example.com');
+      expect(user3?.calcDisplayname(), 'You got me (empty)');
+      expect(user3?.membership, Membership.leave);
+
+      // Yield for the onUpdate
+      await Future.delayed(Duration(
+        milliseconds: 1,
+      ));
+      expect(called.length, 3);
+      expect(called2.length, 3);
+
+      await subscription.cancel();
+      await subscription2.cancel();
     });
 
     test('setAvatar', () async {
@@ -1319,10 +1390,12 @@ void main() {
     });
     test('inviteLink', () async {
       // ensure we don't rerequest members
-      room.summary.mJoinedMemberCount = 4;
+      room.summary.mJoinedMemberCount = 3;
+
       var matrixToLink = await room.matrixToInviteLink();
       expect(matrixToLink.toString(),
           'https://matrix.to/#/%23testalias%3Aexample.com');
+
       room.setState(
         Event(
             senderId: '@test:example.com',
@@ -1333,9 +1406,10 @@ void main() {
             originServerTs: DateTime.now(),
             stateKey: ''),
       );
+
       matrixToLink = await room.matrixToInviteLink();
       expect(matrixToLink.toString(),
-          'https://matrix.to/#/!localpart%3Aserver.abc?via=example.com&via=test.abc&via=example.org');
+          'https://matrix.to/#/!localpart%3Aserver.abc?via=fakeServer.notExisting&via=matrix.org&via=test.abc');
     });
 
     test('EventTooLarge on exceeding max PDU size', () async {

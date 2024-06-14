@@ -168,8 +168,9 @@ class FakeMatrixApi extends BaseClient {
     } else if (method == 'GET' &&
         action.contains('/client/v3/rooms/') &&
         action.contains('/state/m.room.member/') &&
-        !action.endsWith('%40alicyy%3Aexample.com')) {
-      res = {'displayname': ''};
+        !action.endsWith('%40alicyy%3Aexample.com') &&
+        !action.contains('%40getme')) {
+      res = {'displayname': '', 'membership': 'ban'};
     } else if (method == 'PUT' &&
         action.contains(
             '/client/v3/rooms/!1234%3AfakeServer.notExisting/send/')) {
@@ -1522,15 +1523,28 @@ class FakeMatrixApi extends BaseClient {
           {'visibility': 'public'},
       '/client/v3/rooms/1/state/m.room.member/@alice:example.com': (var req) =>
           {'displayname': 'Alice'},
+      '/client/v3/profile/%40getmeprofile%3Aexample.com': (var req) => {
+            'avatar_url': 'mxc://test',
+            'displayname': 'You got me (profile)',
+          },
       '/client/v3/profile/%40getme%3Aexample.com': (var req) => {
             'avatar_url': 'mxc://test',
             'displayname': 'You got me',
           },
-      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.member/@getme%3Aexample.com':
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.member/%40getme%3Aexample.com':
           (var req) => {
                 'avatar_url': 'mxc://test',
                 'displayname': 'You got me',
+                'membership': 'knock',
               },
+      '/client/v3/rooms/!localpart%3Aserver.abc/state/m.room.member/%40getmeempty%3Aexample.com':
+          (var req) => {
+                'membership': 'leave',
+              },
+      '/client/v3/profile/%40getmeempty%3Aexample.com': (var req) => {
+            'avatar_url': 'mxc://test',
+            'displayname': 'You got me (empty)',
+          },
       '/client/v3/rooms/!localpart%3Aserver.abc/state': (var req) => [
             {
               'content': {'join_rule': 'public'},
@@ -1596,11 +1610,6 @@ class FakeMatrixApi extends BaseClient {
               'state_key': ''
             }
           ],
-      '/client/v3/rooms/!localpart:server.abc/state/m.room.member/@getme:example.com':
-          (var req) => {
-                'avatar_url': 'mxc://test',
-                'displayname': 'You got me',
-              },
       '/client/v3/rooms/!localpart:server.abc/event/1234': (var req) => {
             'content': {
               'body': 'This is an example text message',
