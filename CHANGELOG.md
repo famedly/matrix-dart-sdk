@@ -1,3 +1,7 @@
+## [0.29.12] 17th June 2024
+
+- fix: Request user causing state update loops for apps (Nicolas Werner)
+
 ## [0.29.11] 11th June 2024
 
 - chore: make ignored call mem logging verbose (td)
