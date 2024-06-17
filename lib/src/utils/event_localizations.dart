@@ -240,6 +240,17 @@ abstract class EventLocalizations {
         event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
     EventTypes.CallCandidates: (event, i18n, body) => i18n.sentCallInformations(
         event.senderFromMemoryOrFallback.calcDisplayname(i18n: i18n)),
+    EventTypes.GroupCallMember: (event, i18n, body) {
+      final memberships = event.room.getCallMembershipsFromEvent(event);
+      if (memberships
+          .takeWhile((membership) => !membership.isExpired)
+          .isEmpty) {
+        // if all the memberships have expired (regardless of call_id)
+        // it means that no call is currently active
+        return i18n.groupCallEnded;
+      }
+      return i18n.groupCallStarted;
+    },
     EventTypes.Encrypted: (event, i18n, body) =>
         _localizedBodyNormalMessage(event, i18n, body),
     EventTypes.Message: (event, i18n, body) =>

@@ -230,6 +230,12 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
   }
 
   @override
+  String get groupCallStarted => 'Group call started';
+
+  @override
+  String get groupCallEnded => 'Group call ended';
+
+  @override
   String sentReaction(String senderName, String reactionKey) {
     return '$senderName reacted with $reactionKey';
   }
