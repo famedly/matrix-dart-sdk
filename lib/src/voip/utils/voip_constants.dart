@@ -35,7 +35,7 @@ class CallTimeouts {
   /// a chance to receive the new key to minimise the chance they don't get media they can't decrypt.
   /// The total time between a member leaving and the call switching to new keys is therefore
   /// makeKeyDelay + useKeyDelay
-  static const useKeyDelay = Duration(seconds: 6);
+  static const useKeyDelay = Duration(seconds: 4);
 }
 
 class CallConstants {
