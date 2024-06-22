@@ -2225,7 +2225,7 @@ class Client extends MatrixApi {
     final List<ReceiptEventContent> receipts = [];
 
     for (final event in events) {
-      await _handleRoomEvents(room, [event], EventUpdateType.ephemeral);
+      room.ephemerals[event.type] = event;
 
       // Receipt events are deltas between two states. We will create a
       // fake room account data event for this and store the difference
@@ -2303,7 +2303,7 @@ class Client extends MatrixApi {
         }
       }
       _updateRoomsByEventUpdate(room, update);
-      if (type != EventUpdateType.ephemeral && store) {
+      if (store) {
         await database?.storeEventUpdate(update, this);
       }
       if (encryptionEnabled) {
@@ -2469,10 +2469,6 @@ class Client extends MatrixApi {
         break;
       case EventUpdateType.accountData:
         room.roomAccountData[eventUpdate.content['type']] =
-            BasicRoomEvent.fromJson(eventUpdate.content);
-        break;
-      case EventUpdateType.ephemeral:
-        room.ephemerals[eventUpdate.content['type']] =
             BasicRoomEvent.fromJson(eventUpdate.content);
         break;
       case EventUpdateType.history:
