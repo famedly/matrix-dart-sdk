@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:html';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:matrix/matrix.dart';
 
@@ -59,13 +58,14 @@ class NativeImplementationsWebWorker extends NativeImplementations {
 
   @override
   Future<MatrixImageFileResizedResponse?> calcImageMetadata(
-    Uint8List bytes, {
+    MatrixImageFileCalcMetadataArguments args, {
     bool retryInDummy = false,
   }) async {
     try {
-      final result = await operation<Map<dynamic, dynamic>, Uint8List>(
+      final result =
+          await operation<Map<dynamic, dynamic>, Map<String, dynamic>>(
         WebWorkerOperations.calcImageMetadata,
-        bytes,
+        args.toJson(),
       );
       return MatrixImageFileResizedResponse.fromJson(Map.from(result));
     } catch (e, s) {
@@ -75,7 +75,7 @@ class NativeImplementationsWebWorker extends NativeImplementations {
         return null;
       }
       Logs().e('Web worker computation error. Fallback to main thread', e, s);
-      return NativeImplementations.dummy.calcImageMetadata(bytes);
+      return NativeImplementations.dummy.calcImageMetadata(args);
     }
   }
 

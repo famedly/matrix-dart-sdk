@@ -46,7 +46,7 @@ abstract class NativeImplementations {
   });
 
   FutureOr<MatrixImageFileResizedResponse?> calcImageMetadata(
-    Uint8List bytes, {
+    MatrixImageFileCalcMetadataArguments args, {
     bool retryInDummy = false,
   });
 
@@ -119,10 +119,10 @@ class NativeImplementationsDummy extends NativeImplementations {
 
   @override
   MatrixImageFileResizedResponse? calcImageMetadata(
-    Uint8List bytes, {
+    MatrixImageFileCalcMetadataArguments args, {
     bool retryInDummy = false,
   }) {
-    return MatrixImageFile.calcMetadataImplementation(bytes);
+    return MatrixImageFile.calcMetadataImplementation(args);
   }
 }
 
@@ -199,12 +199,13 @@ class NativeImplementationsIsolate extends NativeImplementations {
 
   @override
   FutureOr<MatrixImageFileResizedResponse?> calcImageMetadata(
-    Uint8List bytes, {
+    MatrixImageFileCalcMetadataArguments args, {
     bool retryInDummy = false,
   }) {
-    return runInBackground<MatrixImageFileResizedResponse?, Uint8List>(
+    return runInBackground<MatrixImageFileResizedResponse?,
+        MatrixImageFileCalcMetadataArguments>(
       NativeImplementations.dummy.calcImageMetadata,
-      bytes,
+      args,
     );
   }
 }
