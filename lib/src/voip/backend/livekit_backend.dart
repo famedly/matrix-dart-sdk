@@ -10,6 +10,16 @@ class LiveKitBackend extends CallBackend {
   final String livekitServiceUrl;
   final String livekitAlias;
 
+  /// A delay after a member leaves before we create and publish a new key, because people
+  /// tend to leave calls at the same time
+  final Duration makeKeyDelay;
+
+  /// The delay between creating and sending a new key and starting to encrypt with it. This gives others
+  /// a chance to receive the new key to minimise the chance they don't get media they can't decrypt.
+  /// The total time between a member leaving and the call switching to new keys is therefore
+  /// makeKeyDelay + useKeyDelay
+  final Duration useKeyDelay;
+
   @override
   final bool e2eeEnabled;
 
@@ -18,6 +28,8 @@ class LiveKitBackend extends CallBackend {
     required this.livekitAlias,
     super.type = 'livekit',
     this.e2eeEnabled = true,
+    this.makeKeyDelay = CallTimeouts.makeKeyDelay,
+    this.useKeyDelay = CallTimeouts.useKeyDelay,
   });
 
   Timer? _memberLeaveEncKeyRotateDebounceTimer;
@@ -165,7 +177,7 @@ class LiveKitBackend extends CallBackend {
     if (delayBeforeUsingKeyOurself) {
       // now wait for the key to propogate and then set it, hopefully users can
       // stil decrypt everything
-      final useKeyTimeout = Future.delayed(CallTimeouts.useKeyDelay, () async {
+      final useKeyTimeout = Future.delayed(useKeyDelay, () async {
         Logs().i(
             '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin');
         await groupCall.voip.delegate.keyProvider?.onSetEncryptionKey(
@@ -421,8 +433,7 @@ class LiveKitBackend extends CallBackend {
     if (_memberLeaveEncKeyRotateDebounceTimer != null) {
       _memberLeaveEncKeyRotateDebounceTimer!.cancel();
     }
-    _memberLeaveEncKeyRotateDebounceTimer =
-        Timer(CallTimeouts.makeKeyDelay, () async {
+    _memberLeaveEncKeyRotateDebounceTimer = Timer(makeKeyDelay, () async {
       await _makeNewSenderKey(groupCall, true);
     });
   }
