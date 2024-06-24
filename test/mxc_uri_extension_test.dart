@@ -82,5 +82,13 @@ void main() {
       expect(content.getThumbnail(client, width: 50, height: 50).toString(),
           '${client.homeserver.toString()}/_matrix/media/v3/thumbnail/exampleserver.abc:1234/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
     });
+    test('Wrong scheme returns empty object', () async {
+      final client = Client('testclient', httpClient: FakeMatrixApi());
+      await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
+          checkWellKnown: false);
+      final mxc = Uri.parse('https://wrong-scheme.com');
+      expect(mxc.getDownloadLink(client).toString(), '');
+      expect(mxc.getThumbnail(client).toString(), '');
+    });
   });
 }

@@ -28,7 +28,7 @@ extension MxcUriExtension on Uri {
                   '_matrix/media/v3/download/$host${hasPort ? ':$port' : ''}$path') ??
               Uri()
           : Uri()
-      : this;
+      : Uri();
 
   /// Returns a scaled thumbnail link to this content with the given `width` and
   /// `height`. `method` can be `ThumbnailMethod.crop` or
@@ -40,7 +40,7 @@ extension MxcUriExtension on Uri {
       num? height,
       ThumbnailMethod? method = ThumbnailMethod.crop,
       bool? animated = false}) {
-    if (!isScheme('mxc')) return this;
+    if (!isScheme('mxc')) return Uri();
     final homeserver = matrix.homeserver;
     if (homeserver == null) {
       return Uri();
