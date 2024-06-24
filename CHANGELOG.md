@@ -1,3 +1,8 @@
+## [0.29.13] 24th June 2024
+- chore: allow clients to set their own voip key delays (td)
+- chore: use not cancelled in actions instead of always (td)
+- fix: Return empty uri instead of original uri if uri is not mxc (Krille)
+
 ## [0.29.12] 17th June 2024
 
 - fix: Request user causing state update loops for apps (Nicolas Werner)
