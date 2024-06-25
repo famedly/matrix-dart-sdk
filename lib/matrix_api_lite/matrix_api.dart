@@ -112,39 +112,37 @@ class MatrixApi extends Api {
 
     late http.Response resp;
     Map<String, Object?>? jsonResp = <String, Object?>{};
-    try {
-      switch (type) {
-        case RequestType.GET:
-          resp = await httpClient.get(url, headers: headers);
-          break;
-        case RequestType.POST:
-          resp = await httpClient.post(url, body: json, headers: headers);
-          break;
-        case RequestType.PUT:
-          resp = await httpClient.put(url, body: json, headers: headers);
-          break;
-        case RequestType.DELETE:
-          resp = await httpClient.delete(url, headers: headers);
-          break;
-      }
-      var respBody = resp.body;
-      try {
-        respBody = utf8.decode(resp.bodyBytes);
-      } catch (_) {
-        // No-OP
-      }
-      if (resp.statusCode >= 500 && resp.statusCode < 600) {
-        throw Exception(respBody);
-      }
-      var jsonString = String.fromCharCodes(respBody.runes);
-      if (jsonString.startsWith('[') && jsonString.endsWith(']')) {
-        jsonString = '{"chunk":$jsonString}';
-      }
-      jsonResp = jsonDecode(jsonString)
-          as Map<String, Object?>?; // May throw FormatException
-    } catch (e, s) {
-      throw MatrixConnectionException(e, s);
+
+    switch (type) {
+      case RequestType.GET:
+        resp = await httpClient.get(url, headers: headers);
+        break;
+      case RequestType.POST:
+        resp = await httpClient.post(url, body: json, headers: headers);
+        break;
+      case RequestType.PUT:
+        resp = await httpClient.put(url, body: json, headers: headers);
+        break;
+      case RequestType.DELETE:
+        resp = await httpClient.delete(url, headers: headers);
+        break;
     }
+    var respBody = resp.body;
+    try {
+      respBody = utf8.decode(resp.bodyBytes);
+    } catch (_) {
+      // No-OP
+    }
+    if (resp.statusCode >= 500 && resp.statusCode < 600) {
+      throw Exception(respBody);
+    }
+    var jsonString = String.fromCharCodes(respBody.runes);
+    if (jsonString.startsWith('[') && jsonString.endsWith(']')) {
+      jsonString = '{"chunk":$jsonString}';
+    }
+    jsonResp = jsonDecode(jsonString)
+        as Map<String, Object?>?; // May throw FormatException
+
     if (resp.statusCode >= 400 && resp.statusCode < 500) {
       throw MatrixException(resp);
     }
