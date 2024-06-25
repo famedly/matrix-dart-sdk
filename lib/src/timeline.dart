@@ -591,6 +591,7 @@ class Timeline {
   /// ignore [searchTerm].
   /// Returns the List of Events and the next prevBatch at the end of the
   /// search.
+  @Deprecated('Use [searchEvents] instead.')
   Stream<(List<Event>, String?)> startSearch({
     String? searchTerm,
     int requestHistoryCount = 100,
@@ -678,6 +679,104 @@ class Timeline {
       }
     }
     return;
+  }
+
+  /// Searches for events in this timeline. It first searches in the
+  /// cache, then in the database and then on the server. The search can
+  /// take a while, depending on [requestHistoryCount] and [maxHistoryRequests].
+  /// Returns the List of Events and the next prevBatch at the end of the
+  /// search.
+  Future<(List<Event>, String?)> searchEvents({
+    /// Searches for this term in the text representation of the event.
+    String? searchTerm,
+
+    /// Alternatively to `searchTerm` you can define your custom search function
+    /// here.
+    bool Function(Event)? searchFunc,
+
+    /// To continue a previous search, pass the returned `prevBatch` value here.
+    String? prevBatch,
+
+    /// Requests this amount of events per history request.
+    int requestHistoryCount = 100,
+
+    /// Stops after this amount of history requests.
+    int maxHistoryRequests = 10,
+
+    /// Stops the search after at least this amount of found events.
+    int limit = 10,
+  }) async {
+    assert(searchTerm != null || searchFunc != null);
+    searchFunc ??= (event) =>
+        event.body.toLowerCase().contains(searchTerm?.toLowerCase() ?? '');
+    final found = <Event>[];
+
+    if (prevBatch == null) {
+      // Search locally
+      for (final event in events) {
+        if (searchFunc(event)) found.add(event);
+      }
+
+      // Search in database
+      var start = events.length;
+      while (true) {
+        final eventsFromStore = await room.client.database?.getEventList(
+              room,
+              start: start,
+              limit: requestHistoryCount,
+            ) ??
+            [];
+        if (eventsFromStore.isEmpty) break;
+        start += eventsFromStore.length;
+        for (final event in eventsFromStore) {
+          if (searchFunc(event)) found.add(event);
+        }
+      }
+    }
+
+    // Search on the server
+    prevBatch ??= room.prev_batch;
+
+    final encryption = room.client.encryption;
+    for (var i = 0; i < maxHistoryRequests; i++) {
+      if (prevBatch == null) break;
+      if (found.length >= limit) break;
+      try {
+        final resp = await room.client.getRoomEvents(
+          room.id,
+          Direction.b,
+          from: prevBatch,
+          limit: requestHistoryCount,
+          filter: jsonEncode(StateFilter(lazyLoadMembers: true).toJson()),
+        );
+        for (final matrixEvent in resp.chunk) {
+          var event = Event.fromMatrixEvent(matrixEvent, room);
+          if (event.type == EventTypes.Encrypted && encryption != null) {
+            event = await encryption.decryptRoomEvent(room.id, event);
+            if (event.type == EventTypes.Encrypted &&
+                event.messageType == MessageTypes.BadEncrypted &&
+                event.content['can_request_session'] == true) {
+              // Await requestKey() here to ensure decrypted message bodies
+              await event.requestKey();
+            }
+          }
+          if (searchFunc(event)) {
+            found.add(event);
+            if (found.length >= limit) break;
+          }
+        }
+        prevBatch = resp.end;
+        // We are at the beginning of the room
+        if (resp.chunk.length < requestHistoryCount) break;
+      } on MatrixException catch (e) {
+        // We have no permission anymore to request the history
+        if (e.error == MatrixError.M_FORBIDDEN) {
+          break;
+        }
+        rethrow;
+      }
+    }
+    return (found, prevBatch);
   }
 }
 
