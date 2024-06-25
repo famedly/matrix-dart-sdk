@@ -89,10 +89,10 @@ class SessionKey {
     // we need to try...catch as the map used to be <String, int> and that will throw an error.
     senderClaimedKeys = (parsedSenderClaimedKeys.isNotEmpty)
         ? parsedSenderClaimedKeys
-        : (content['sender_claimed_keys'] is Map
-            ? content['sender_claimed_keys']
-                .catchMap((k, v) => MapEntry<String, String>(k, v))
-            : (content['sender_claimed_ed25519_key'] is String
+        : (content
+                .tryGetMap<String, dynamic>('sender_claimed_keys')
+                ?.catchMap((k, v) => MapEntry<String, String>(k, v)) ??
+            (content['sender_claimed_ed25519_key'] is String
                 ? <String, String>{
                     'ed25519': content['sender_claimed_ed25519_key']
                   }
