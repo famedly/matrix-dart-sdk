@@ -193,9 +193,17 @@ class KeyManager {
           event.content['session_id'] == sessionId) {
         final decrypted = encryption.decryptRoomEventSync(roomId, event);
         if (decrypted.type != EventTypes.Encrypted) {
-          // No need to persist it as the lastEvent is persisted in the sync
-          // right after processing to-device messages:
+          // Update the last event in memory first
           room.lastEvent = decrypted;
+
+          // To persist it in database and trigger UI updates:
+          await client.database?.transaction(() async {
+            await client.handleSync(
+              SyncUpdate(
+                  nextBatch: '',
+                  rooms: RoomsUpdate(join: {room.id: JoinedRoomUpdate()})),
+            );
+          });
         }
       }
       // and finally broadcast the new session
