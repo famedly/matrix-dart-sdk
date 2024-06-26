@@ -74,6 +74,8 @@ class Room {
 
   final _sendingQueue = <Completer>[];
 
+  Timer? _clearTypingIndicatorTimer;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'membership': membership.toString().split('.').last,
@@ -366,6 +368,16 @@ class Room {
   bool get isDirectChat => directChatMatrixID != null;
 
   Event? lastEvent;
+
+  void setEphemeral(BasicRoomEvent ephemeral) {
+    ephemerals[ephemeral.type] = ephemeral;
+    if (ephemeral.type == 'm.typing') {
+      _clearTypingIndicatorTimer?.cancel();
+      _clearTypingIndicatorTimer = Timer(client.typingIndicatorTimeout, () {
+        ephemerals.remove('m.typing');
+      });
+    }
+  }
 
   /// Returns a list of all current typing users.
   List<User> get typingUsers {
