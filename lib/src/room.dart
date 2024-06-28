@@ -98,7 +98,7 @@ class Room {
       summary: RoomSummary.fromJson(Map<String, dynamic>.from(json['summary'])),
     );
     if (json['last_event'] != null) {
-      room._lastEvent = Event.fromJson(json['last_event'], room);
+      room.lastEvent = Event.fromJson(json['last_event'], room);
     }
     return room;
   }
@@ -365,33 +365,7 @@ class Room {
   /// Wheither this is a direct chat or not
   bool get isDirectChat => directChatMatrixID != null;
 
-  Event? _lastEvent;
-
-  set lastEvent(Event? event) {
-    _lastEvent = event;
-  }
-
-  Event? get lastEvent {
-    if (_lastEvent != null) return _lastEvent;
-
-    // Just pick the newest state event as an indicator for when the last
-    // activity was in this room. This is better than nothing:
-    var lastTime = DateTime.fromMillisecondsSinceEpoch(0);
-    Event? lastEvent;
-
-    states.forEach((final String key, final entry) {
-      final state = entry[''];
-      if (state == null) return;
-      if (state is! Event) return;
-      if (state.originServerTs.millisecondsSinceEpoch >
-          lastTime.millisecondsSinceEpoch) {
-        lastTime = state.originServerTs;
-        lastEvent = state;
-      }
-    });
-
-    return lastEvent;
-  }
+  Event? lastEvent;
 
   /// Returns a list of all current typing users.
   List<User> get typingUsers {
@@ -416,9 +390,8 @@ class Room {
     required this.client,
     Map<String, BasicRoomEvent>? roomAccountData,
     RoomSummary? summary,
-    Event? lastEvent,
+    this.lastEvent,
   })  : roomAccountData = roomAccountData ?? <String, BasicRoomEvent>{},
-        _lastEvent = lastEvent,
         summary = summary ??
             RoomSummary.fromJson({
               'm.joined_member_count': 0,
