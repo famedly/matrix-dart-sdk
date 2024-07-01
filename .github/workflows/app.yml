@@ -14,21 +14,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
+      - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
+        with:
+          sdk: ${{ env.dart_version }}
       - name: Run tests
         run: |
-          export NETWORK='--network mynet'
-          docker network create mynet
-          # deploy homeserver instance
-          scripts/integration-server-${{matrix.homeserver}}.sh
-          docker run $NETWORK --env GITHUB_ACTIONS="${GITHUB_ACTIONS}" --env HOMESERVER_IMPLEMENTATION="${{matrix.homeserver}}" --env HOMESERVER="${{startsWith('dendrite', matrix.homeserver) && format('{0}:8008', matrix.homeserver) || matrix.homeserver }}" --volume="$(pwd):/workdir" --workdir /workdir ghcr.io/famedly/container-image-flutter/flutter:${{env.flutter_version}} /bin/bash -c "set -e
-          scripts/integration-prepare-alpine.sh
-          # create test user environment variables
+          export HOMESERVER_IMPLEMENTATION=${{matrix.homeserver}}
+          export HOMESERVER="localhost:80"
+          scripts/integration-server-${{matrix.homeserver}}.sh 2>&1 > /dev/null &
+          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y libolm3 libssl3 
           source scripts/integration-create-environment-variables.sh
-          # properly set the homeserver IP and create test users
-          scripts/integration-prepare-homeserver.sh 
-          # setup OLM
+          scripts/integration-prepare-homeserver.sh
           scripts/prepare.sh
-          scripts/test_driver.sh"
+          scripts/test_driver.sh
 
   coverage_without_olm:
     runs-on: ubuntu-latest
@@ -42,7 +40,7 @@ jobs:
           sdk: ${{ env.dart_version }}
       - name: Run tests
         run: |
-          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y curl lcov python3 python3-distutils libsqlite3-0 libsqlite3-dev
+          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y lcov libsqlite3-0 libsqlite3-dev
           ./scripts/test.sh
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
@@ -53,16 +51,17 @@ jobs:
 
 
   coverage:
-    runs-on: ubuntu-latest
+    runs-on: arm-ubuntu-latest-16core
     steps:
       - uses: actions/checkout@v4
       - run: cat .github/workflows/versions.env >> $GITHUB_ENV
       - uses: dart-lang/setup-dart@a57a6c04cf7d4840e88432aad6281d1e125f0d46
         with:
           sdk: ${{ env.dart_version }}
+          architecture: "arm64"
       - name: Run tests
         run: |
-          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y curl lcov python3 python3-distutils libsqlite3-0 libsqlite3-dev libolm3 libssl3
+          sudo apt-get update && sudo apt-get install --no-install-recommends --no-install-suggests -y lcov libsqlite3-0 libsqlite3-dev libolm3 libssl3
           ./scripts/test.sh
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
@@ -110,6 +109,7 @@ jobs:
       - uses: subosito/flutter-action@48cafc24713cca54bbe03cdc3a423187d413aafa
         with:
           flutter-version: ${{ env.flutter_version }}
+          cache: true
       - name: Ensure SDK compiles on web
         run: |
           pushd web_test

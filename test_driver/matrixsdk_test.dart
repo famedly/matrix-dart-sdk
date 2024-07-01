@@ -486,9 +486,8 @@ void main() => group('Integration tests', () {
 
           Logs().i('++++ (Alice) Create DM ++++');
           final dmRoom = await testClientA.startDirectChat(testClientB.userID!);
-          // conduit returns the room on sync first, so we check if it has already been returned first.
-          if (testClientB.getRoomById(dmRoom)?.membership !=
-              Membership.invite) {
+
+          if (testClientB.getRoomById(dmRoom) == null) {
             await testClientB.waitForRoomInSync(dmRoom, invite: true);
           }
 

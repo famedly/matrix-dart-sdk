@@ -34,6 +34,7 @@ echo "Waiting for homeserver to be available... (GET http://$HOMESERVER/_matrix/
 sleep 5
 
 while ! curl -XGET "http://$HOMESERVER/_matrix/client/v3/login" >/dev/null; do
+  docker ps -a
   docker logs "$HOMESERVER_IMPLEMENTATION"
   sleep 5
 done
