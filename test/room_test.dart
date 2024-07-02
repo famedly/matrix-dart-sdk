@@ -292,6 +292,8 @@ void main() {
         ),
       );
       expect(room.lastEvent?.body, 'cdc'); // because we edited the "cd" message
+
+      // no change because sending
       await updateLastEvent(
         Event(
           senderId: '@test:example.com',
@@ -312,8 +314,31 @@ void main() {
           status: EventStatus.sending,
         ),
       );
+      expect(room.lastEvent?.body, 'cdc');
+
+      // change because sent
+      await updateLastEvent(
+        Event(
+          senderId: '@test:example.com',
+          type: 'm.room.encrypted',
+          room: room,
+          eventId: '4',
+          originServerTs: DateTime.now(),
+          content: {
+            'msgtype': 'm.text',
+            'body': 'edited cdc',
+            'm.new_content': {'msgtype': 'm.text', 'body': 'edited cdc'},
+            'm.relates_to': {'rel_type': 'm.replace', 'event_id': '2'},
+          },
+          unsigned: {
+            messageSendingStatusKey: EventStatus.sent.intValue,
+            'transaction_id': 'messageID',
+          },
+          status: EventStatus.sent,
+        ),
+      );
       expect(room.lastEvent?.body, 'edited cdc');
-      expect(room.lastEvent?.status, EventStatus.sending);
+      expect(room.lastEvent?.status, EventStatus.sent);
       expect(room.lastEvent?.eventId, '4');
 
       // Status update on edits working?
@@ -1511,6 +1536,25 @@ void main() {
 
     test('EventTooLarge on exceeding max PDU size', () async {
       try {
+        await updateLastEvent(
+          Event(
+            senderId: '@test:example.com',
+            type: 'm.room.encrypted',
+            room: room,
+            eventId: 'olderEvent',
+            originServerTs: DateTime.now(),
+            content: {
+              'msgtype': 'm.text',
+              'body': 'olderEvent',
+            },
+            unsigned: {
+              messageSendingStatusKey: EventStatus.sent.intValue,
+              'transaction_id': 'messageID',
+            },
+            status: EventStatus.sent,
+          ),
+        );
+
         await room.sendTextEvent('''
 
 Հայերեն Shqip  Български Català 中文简体 Hrvatski Česky Dansk Nederlands English Eesti Filipino Suomi Français ქართული Deutsch हिन्दी Magyar Indonesia Italiano Latviski Lietuviškai македонски Melayu Norsk Polski Português Româna Pyccкий Српски Slovenčina Slovenščina Español Svenska ไทย Türkçe Українська Tiếng Việt
@@ -1624,6 +1668,10 @@ Privacy Policy ·
       } catch (e) {
         expect(e.runtimeType, EventTooLarge);
       }
+
+      expect(room.lastEvent?.body, 'olderEvent');
+      expect(room.lastEvent?.status, EventStatus.sent);
+      expect(room.lastEvent?.eventId, 'olderEvent');
     });
 
     test('logout', () async {

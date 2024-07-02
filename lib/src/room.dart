@@ -368,7 +368,7 @@ class Room {
   Event? _lastEvent;
 
   set lastEvent(Event? event) {
-    _lastEvent = event;
+    if (event?.status.isSent ?? true) _lastEvent = event;
   }
 
   Event? get lastEvent {
