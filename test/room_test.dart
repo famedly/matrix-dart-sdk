@@ -363,6 +363,103 @@ void main() {
       expect(room.lastEvent?.status, EventStatus.sent);
     });
 
+    test('lastEvent when edited and deleted', () async {
+      await room.client.handleSync(
+        SyncUpdate(
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    Event(
+                      content: {
+                        'body': 'A',
+                        'm.mentions': {},
+                        'msgtype': 'm.text'
+                      },
+                      type: 'm.room.message',
+                      eventId: 'testLastEventBeforeEdit',
+                      senderId: '@test:example.com',
+                      originServerTs: DateTime.now(),
+                      room: room,
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+          nextBatch: '',
+        ),
+      );
+      expect(room.lastEvent?.eventId, 'testLastEventBeforeEdit');
+      expect(room.lastEvent?.body, 'A');
+
+      await room.client.handleSync(
+        SyncUpdate(
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    Event(
+                      content: {
+                        'body': ' * A-edited',
+                        'm.mentions': {},
+                        'm.new_content': {
+                          'body': 'A-edited',
+                          'm.mentions': {},
+                          'msgtype': 'm.text'
+                        },
+                        'm.relates_to': {
+                          'event_id': 'testLastEventBeforeEdit',
+                          'rel_type': 'm.replace'
+                        },
+                        'msgtype': 'm.text'
+                      },
+                      type: 'm.room.message',
+                      eventId: 'testLastEventAfterEdit',
+                      senderId: '@test:example.com',
+                      originServerTs: DateTime.now(),
+                      room: room,
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+          nextBatch: '',
+        ),
+      );
+      expect(room.lastEvent?.eventId, 'testLastEventAfterEdit');
+      expect(room.lastEvent?.body, ' * A-edited');
+
+      await room.client.handleSync(
+        SyncUpdate(
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [
+                    Event(
+                      content: {'redacts': 'testLastEventBeforeEdit'},
+                      type: 'm.room.redaction',
+                      eventId: 'testLastEventAfterEditAndDelete',
+                      senderId: '@test:example.com',
+                      originServerTs: DateTime.now(),
+                      room: room,
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ),
+          nextBatch: '',
+        ),
+      );
+      expect(room.lastEvent?.eventId, 'testLastEventAfterEdit');
+      expect(room.lastEvent?.body, 'Redacted');
+    });
+
     test('lastEvent when reply parent edited', () async {
       await updateLastEvent(
         Event(
@@ -678,7 +775,7 @@ void main() {
 
     test('getTimeline', () async {
       final timeline = await room.getTimeline();
-      expect(timeline.events.length, 14);
+      expect(timeline.events.length, 17);
     });
 
     test('getUserByMXID', () async {

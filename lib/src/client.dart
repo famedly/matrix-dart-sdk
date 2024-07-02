@@ -2443,8 +2443,11 @@ class Client extends MatrixApi {
 
         // Is this event redacting the last event?
         if (event.type == EventTypes.Redaction &&
-            (event.content.tryGet<String>('redacts') ?? event.redacts) ==
-                room.lastEvent?.eventId) {
+            ({
+              room.lastEvent?.eventId,
+              room.lastEvent?.relationshipEventId
+            }.contains(
+                event.redacts ?? event.content.tryGet<String>('redacts')))) {
           room.lastEvent?.setRedactionEvent(event);
           break;
         }
