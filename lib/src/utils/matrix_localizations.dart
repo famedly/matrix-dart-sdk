@@ -60,6 +60,10 @@ abstract class MatrixLocalizations {
 
   String get unknownUser;
 
+  String get groupCallStarted;
+
+  String get groupCallEnded;
+
   String youInvitedBy(String senderName);
 
   String youInvitedUser(String targetName);
