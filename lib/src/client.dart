@@ -2435,8 +2435,7 @@ class Client extends MatrixApi {
 
         // If last event is null or not a valid room preview event anyway,
         // just use this:
-        if (room.lastEvent == null ||
-            !roomPreviewLastEvents.contains(room.lastEvent?.type)) {
+        if (room.lastEvent == null) {
           room.lastEvent = event;
           break;
         }
