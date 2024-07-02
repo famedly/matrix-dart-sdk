@@ -312,12 +312,26 @@ class Event extends MatrixEvent {
             entry.value.timestamp))
         .toList();
 
-    final own = receipts.global.latestOwnReceipt;
+    // add your own only once
+    final own = receipts.global.latestOwnReceipt ??
+        receipts.mainThread?.latestOwnReceipt;
     if (own != null && own.eventId == eventId) {
-      receiptsList.add(Receipt(
-          room.unsafeGetUserFromMemoryOrFallback(room.client.userID!),
-          own.timestamp));
+      receiptsList.add(
+        Receipt(room.unsafeGetUserFromMemoryOrFallback(room.client.userID!),
+            own.timestamp),
+      );
     }
+
+    // also add main thread. https://github.com/famedly/product-management/issues/1020
+    // also deduplicate.
+    receiptsList.addAll(receipts.mainThread?.otherUsers.entries
+            .where((entry) =>
+                entry.value.eventId == eventId &&
+                receiptsList.every((element) => element.user.id != entry.key))
+            .map((entry) => Receipt(
+                room.unsafeGetUserFromMemoryOrFallback(entry.key),
+                entry.value.timestamp)) ??
+        []);
 
     return receiptsList;
   }
