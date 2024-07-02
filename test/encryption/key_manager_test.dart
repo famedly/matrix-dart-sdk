@@ -318,6 +318,9 @@ void main() {
       final roomId = '!someroom:example.org';
       final sessionId = inbound.session_id();
       final room = Room(id: roomId, client: client);
+      final nextSyncUpdateFuture = client.onSync.stream
+          .firstWhere((update) => update.rooms != null)
+          .timeout(const Duration(seconds: 5));
       client.rooms.add(room);
       // we build up an encrypted message so that we can test if it successfully decrypted afterwards
       room.setState(
@@ -474,6 +477,11 @@ void main() {
       // test that it decrypted the last event
       expect(room.lastEvent?.type, 'm.room.message');
       expect(room.lastEvent?.content['body'], 'foxies');
+
+      // test if a fake sync has been performed to update the GUI and store the
+      // decrypted last event
+      final syncUpdate = await nextSyncUpdateFuture;
+      expect(syncUpdate.rooms?.join?.containsKey(room.id), true);
 
       inbound.free();
       session.free();
