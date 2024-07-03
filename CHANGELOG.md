@@ -1,3 +1,13 @@
+## [0.30.0] 3rd July 2024
+
+- feat: Automatically cancel typing indicators after 30 seconds (Krille)
+- feat: move e2e test dind structure to use executor (td)
+- fix: Correctly store lastEvent in database after decryption (Krille)
+- fix: Do not update lastEvent with state events (Krille)
+- fix: lastEvent after edit and redact (td)
+- fix: Type error when uploading room keys (Krille)
+- refactor: Remove Matrix Connection Exception (Krille)
+
 ## [0.29.13] 24th June 2024
 - chore: allow clients to set their own voip key delays (td)
 - chore: use not cancelled in actions instead of always (td)
