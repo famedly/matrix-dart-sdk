@@ -323,26 +323,31 @@ void main() {
           .timeout(const Duration(seconds: 5));
       client.rooms.add(room);
       // we build up an encrypted message so that we can test if it successfully decrypted afterwards
-      room.setState(
-        Event(
-          senderId: '@test:example.com',
-          type: 'm.room.encrypted',
-          room: room,
-          eventId: '12345',
-          originServerTs: DateTime.now(),
-          content: {
-            'algorithm': AlgorithmTypes.megolmV1AesSha2,
-            'ciphertext': session.encrypt(json.encode({
-              'type': 'm.room.message',
-              'content': {'msgtype': 'm.text', 'body': 'foxies'},
-            })),
-            'device_id': client.deviceID,
-            'sender_key': client.identityKey,
-            'session_id': sessionId,
-          },
-          stateKey: '',
-        ),
-      );
+      await client.handleSync(SyncUpdate(
+          nextBatch: '',
+          rooms: RoomsUpdate(join: {
+            room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(events: [
+              Event(
+                senderId: '@test:example.com',
+                type: 'm.room.encrypted',
+                room: room,
+                eventId: '12345',
+                originServerTs: DateTime.now(),
+                content: {
+                  'algorithm': AlgorithmTypes.megolmV1AesSha2,
+                  'ciphertext': session.encrypt(json.encode({
+                    'type': 'm.room.message',
+                    'content': {'msgtype': 'm.text', 'body': 'foxies'},
+                  })),
+                  'device_id': client.deviceID,
+                  'sender_key': client.identityKey,
+                  'session_id': sessionId,
+                },
+                stateKey: '',
+              )
+            ]))
+          })));
       expect(room.lastEvent?.type, 'm.room.encrypted');
       // set a payload...
       var sessionPayload = <String, dynamic>{
