@@ -118,6 +118,9 @@ class Client extends MatrixApi {
 
   final Duration sendTimelineEventTimeout;
 
+  /// The timeout until a typing indicator gets removed automatically.
+  final Duration typingIndicatorTimeout;
+
   Future<MatrixImageFileResizedResponse?> Function(
       MatrixImageFileResizeArguments)? customImageResizer;
 
@@ -205,6 +208,7 @@ class Client extends MatrixApi {
     /// lifetime to the server which overrides the default one. Needs server
     /// support.
     this.customRefreshTokenLifetime,
+    this.typingIndicatorTimeout = const Duration(seconds: 30),
   })  : syncFilter = syncFilter ??
             Filter(
               room: RoomFilter(
@@ -2474,8 +2478,7 @@ class Client extends MatrixApi {
             BasicRoomEvent.fromJson(eventUpdate.content);
         break;
       case EventUpdateType.ephemeral:
-        room.ephemerals[eventUpdate.content['type']] =
-            BasicRoomEvent.fromJson(eventUpdate.content);
+        room.setEphemeral(BasicRoomEvent.fromJson(eventUpdate.content));
         break;
       case EventUpdateType.history:
       case EventUpdateType.decryptedTimelineQueue:
