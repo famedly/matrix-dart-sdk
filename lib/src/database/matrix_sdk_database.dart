@@ -1614,6 +1614,25 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
+  Future<void> storeWellKnown(DiscoveryInformation? discoveryInformation) {
+    if (discoveryInformation == null) {
+      return _clientBox.delete('discovery_information');
+    }
+    return _clientBox.put(
+      'discovery_information',
+      jsonEncode(discoveryInformation.toJson()),
+    );
+  }
+
+  @override
+  Future<DiscoveryInformation?> getWellKnown() async {
+    final rawDiscoveryInformation =
+        await _clientBox.get('discovery_information');
+    if (rawDiscoveryInformation == null) return null;
+    return DiscoveryInformation.fromJson(jsonDecode(rawDiscoveryInformation));
+  }
+
+  @override
   Future<void> delete() => BoxCollection.delete(
         name,
         sqfliteFactory ?? idbFactory,
