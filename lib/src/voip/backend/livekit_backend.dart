@@ -37,7 +37,7 @@ class LiveKitBackend extends CallBackend {
   /// participant:keyIndex:keyBin
   final Map<CallParticipant, Map<int, Uint8List>> _encryptionKeysMap = {};
 
-  final List<Future> _setNewKeyTimeouts = [];
+  final List<Future<void>> _setNewKeyTimeouts = [];
 
   int _indexCounter = 0;
 
@@ -90,6 +90,8 @@ class LiveKitBackend extends CallBackend {
     );
   }
 
+  DateTime lastRatchetAt = DateTime(1980);
+
   /// also does the sending for you
   Future<void> _ratchetLocalParticipantKey(
     GroupCallSession groupCall,
@@ -109,28 +111,49 @@ class LiveKitBackend extends CallBackend {
       return;
     }
 
-    Uint8List? ratchetedKey;
-
-    while (ratchetedKey == null || ratchetedKey.isEmpty) {
-      Logs().i('[VOIP E2EE] Ignoring empty ratcheted key');
-      ratchetedKey = await keyProvider.onRatchetKey(
-        groupCall.localParticipant!,
-        latestLocalKeyIndex,
-      );
+    if (_currentLocalKeyIndex != _latestLocalKeyIndex) {
+      /// Leave causes rotate, new user joins after making new key but
+      /// before using new key, this then causes a ratchet of the latestLocalKey
+      /// returns null until that key is set when useKeyDelay is done.
+      ///
+      /// You will see some onRatchetKey sending empty responses here
+      /// therefore the below while loop.
+      Logs().w(
+          '[VOIP E2EE] Leave and join / rotate and ratchet scenario detected, expect ${useKeyDelay.inSeconds} seconds disruption. latest: $latestLocalKeyIndex, current: $currentLocalKeyIndex');
     }
 
-    Logs().i(
-        '[VOIP E2EE] Ratched latest key to $ratchetedKey at idx $latestLocalKeyIndex');
-
-    await _setEncryptionKey(
-      groupCall,
-      groupCall.localParticipant!,
-      latestLocalKeyIndex,
-      ratchetedKey,
-      delayBeforeUsingKeyOurself: false,
-      send: true,
-      sendTo: sendTo,
-    );
+    if (lastRatchetAt.isBefore(DateTime.now().subtract(makeKeyDelay))) {
+      Uint8List? ratchedKey;
+      while (ratchedKey == null || ratchedKey.isEmpty) {
+        Logs().d(
+            '[VOIP E2EE] Ignoring empty ratcheted key, probably waiting for useKeyDelay to finish, expect around ${useKeyDelay.inSeconds} seconds of disruption. latest: $latestLocalKeyIndex, current: $currentLocalKeyIndex');
+        ratchedKey = await keyProvider.onRatchetKey(
+          groupCall.localParticipant!,
+          latestLocalKeyIndex,
+        );
+      }
+      lastRatchetAt = DateTime.now();
+      Logs().i(
+          '[VOIP E2EE] Ratched latest key to $ratchedKey at idx $latestLocalKeyIndex');
+      await _setEncryptionKey(
+        groupCall,
+        groupCall.localParticipant!,
+        latestLocalKeyIndex,
+        ratchedKey,
+        delayBeforeUsingKeyOurself: false,
+        send: true,
+        sendTo: sendTo,
+      );
+    } else {
+      Logs().d(
+          '[VOIP E2EE] Skipped ratcheting because lastRatchet run was at ${lastRatchetAt.millisecondsSinceEpoch}');
+      // send without setting because it is already set
+      await _sendEncryptionKeysEvent(
+        groupCall,
+        latestLocalKeyIndex,
+        sendTo: sendTo,
+      );
+    }
   }
 
   Future<void> _changeEncryptionKey(
@@ -177,7 +200,7 @@ class LiveKitBackend extends CallBackend {
     if (delayBeforeUsingKeyOurself) {
       // now wait for the key to propogate and then set it, hopefully users can
       // stil decrypt everything
-      final useKeyTimeout = Future.delayed(useKeyDelay, () async {
+      final useKeyTimeout = Future<void>.delayed(useKeyDelay, () async {
         Logs().i(
             '[VOIP E2EE] setting key changed event for ${participant.id} idx $encryptionKeyIndex key $encryptionKeyBin');
         await groupCall.voip.delegate.keyProvider?.onSetEncryptionKey(
@@ -260,7 +283,7 @@ class LiveKitBackend extends CallBackend {
     String eventType,
   ) async {
     if (remoteParticipants.isEmpty) return;
-    Logs().v(
+    Logs().d(
         '[VOIP] _sendToDeviceEvent: sending ${data.toString()} to ${remoteParticipants.map((e) => e.id)} ');
     final txid =
         VoIP.customTxid ?? groupCall.client.generateUniqueTransactionId();
