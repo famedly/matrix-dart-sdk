@@ -263,11 +263,11 @@ class Room {
     if (membership == Membership.invite) {
       final ownMember = unsafeGetUserFromMemoryOrFallback(client.userID!);
 
-      unsafeGetUserFromMemoryOrFallback(ownMember.senderId)
-          .calcDisplayname(i18n: i18n);
       if (ownMember.senderId != ownMember.stateKey) {
-        return unsafeGetUserFromMemoryOrFallback(ownMember.senderId)
-            .calcDisplayname(i18n: i18n);
+        return i18n.invitedBy(
+          unsafeGetUserFromMemoryOrFallback(ownMember.senderId)
+              .calcDisplayname(i18n: i18n),
+        );
       }
     }
     if (membership == Membership.leave) {
@@ -291,25 +291,19 @@ class Room {
   /// that you have the room members, call and await `Room.loadHeroUsers()`
   /// before.
   Uri? get avatar {
+    // Check content of `m.room.avatar`
     final avatarUrl =
         getState(EventTypes.RoomAvatar)?.content.tryGet<String>('url');
     if (avatarUrl != null) {
       return Uri.tryParse(avatarUrl);
     }
 
-    final heroes = summary.mHeroes;
-    if (heroes != null && heroes.length == 1) {
-      final hero = getState(EventTypes.RoomMember, heroes.first);
-      if (hero != null) {
-        return hero.asUser(this).avatarUrl;
-      }
+    // Room has no avatar and is not a direct chat
+    final directChatMatrixID = this.directChatMatrixID;
+    if (directChatMatrixID != null) {
+      return unsafeGetUserFromMemoryOrFallback(directChatMatrixID).avatarUrl;
     }
-    if (isDirectChat) {
-      final user = directChatMatrixID;
-      if (user != null) {
-        return unsafeGetUserFromMemoryOrFallback(user).avatarUrl;
-      }
-    }
+
     return null;
   }
 
