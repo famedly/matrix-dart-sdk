@@ -84,6 +84,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   late LazyBox _seenDeviceKeysBox;
 
+  late LazyBox<GetSpaceHierarchyResponse> _spacesHierarchyBox;
+
   String get _clientBoxName => '$name.box.client';
 
   String get _accountDataBoxName => '$name.box.account_data';
@@ -124,6 +126,8 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   String get _seenDeviceKeysBoxName => '$name.box.seen_device_keys';
 
+  static const String _spacesHierarchyBoxName = 'box_spaces_hierarchy';
+
   final HiveCipher? encryptionCipher;
 
   FamedlySdkHiveDatabase(this.name, {this.encryptionCipher});
@@ -152,6 +156,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
         action(_eventsBox),
         action(_seenDeviceIdsBox),
         action(_seenDeviceKeysBox),
+        action(_spacesHierarchyBox)
       ]);
 
   Future<void> open() async {
@@ -232,6 +237,11 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
       encryptionCipher: encryptionCipher,
     );
 
+    _spacesHierarchyBox = await Hive.openLazyBox(
+      _spacesHierarchyBoxName,
+      encryptionCipher: encryptionCipher,
+    );
+
     // Check version and check if we need a migration
     final currentVersion = (await _clientBox.get('version') as int?);
     if (currentVersion == null) {
@@ -295,6 +305,7 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
     await _outboundGroupSessionsBox.deleteAll(_outboundGroupSessionsBox.keys);
     await _presencesBox.deleteAll(_presencesBox.keys);
     await _clientBox.delete('prev_batch');
+    await _spacesHierarchyBox.clear();
   }
 
   @override
@@ -338,6 +349,10 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
       final multiKey = MultiKey.fromString(key);
       if (multiKey.parts.first != roomId) continue;
       await _roomAccountDataBox.delete(key);
+    }
+    for (final key in _spacesHierarchyBox.keys) {
+      if (key != roomId) continue;
+      await _spacesHierarchyBox.delete(key);
     }
     await _roomsBox.delete(roomId.toHiveKey);
   }
@@ -1400,6 +1415,20 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
     // see no need to implement this in a deprecated part
     throw UnimplementedError();
   }
+
+  @override
+  Future<GetSpaceHierarchyResponse?> getSpaceHierarchy(String spaceId) async {
+    return await _spacesHierarchyBox.get(spaceId);
+  }
+
+  @override
+  Future<void> storeSpaceHierarchy(
+          String spaceId, GetSpaceHierarchyResponse hierarchy) =>
+      _spacesHierarchyBox.put(spaceId, hierarchy);
+
+  @override
+  Future<void> removeSpaceHierarchy(String spaceId) =>
+      _spacesHierarchyBox.delete(spaceId);
 
   @override
   Future<void> delete() => Hive.deleteFromDisk();
