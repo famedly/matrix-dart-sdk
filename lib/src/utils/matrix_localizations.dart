@@ -62,6 +62,8 @@ abstract class MatrixLocalizations {
 
   String youInvitedBy(String senderName);
 
+  String invitedBy(String senderName);
+
   String youInvitedUser(String targetName);
 
   String youUnbannedUser(String targetName);
