@@ -249,6 +249,9 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
       'You have been invited by $senderName';
 
   @override
+  String invitedBy(String senderName) => 'Invited by $senderName';
+
+  @override
   String youInvitedUser(String targetName) => 'You invited $targetName';
 
   @override
