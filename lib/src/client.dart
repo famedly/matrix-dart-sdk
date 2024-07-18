@@ -3355,6 +3355,33 @@ class Client extends MatrixApi {
       await database?.storeSpaceHierarchy(roomId, response);
       return response;
     }
+    if (cachedResponse.nextBatch != null &&
+        from != null &&
+        cachedResponse.nextBatch == from) {
+      final response = await super.getSpaceHierarchy(
+        roomId,
+        suggestedOnly: suggestedOnly,
+        limit: limit,
+        maxDepth: maxDepth,
+        from: from,
+      );
+      // extend existing response, ensure no duplicates. Unique by roomId
+      final existingRoomIds =
+          cachedResponse.rooms.map((room) => room.roomId).toSet();
+      final newRooms = cachedResponse.rooms;
+      for (final room in response.rooms) {
+        if (!existingRoomIds.contains(room.roomId)) {
+          newRooms.add(room);
+        }
+      }
+      final newResponse = GetSpaceHierarchyResponse(
+        rooms: newRooms,
+        nextBatch: response.nextBatch,
+      );
+      // store new response
+      await database?.storeSpaceHierarchy(roomId, newResponse);
+      return newResponse;
+    }
     return cachedResponse;
   }
 }
