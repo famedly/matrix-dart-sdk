@@ -52,7 +52,7 @@ import 'package:matrix/src/database/database_file_storage_stub.dart'
 /// Learn more at:
 /// https://github.com/famedly/matrix-dart-sdk/issues/1642#issuecomment-1865827227
 class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
-  static const int version = 8;
+  static const int version = 9;
   final String name;
   late BoxCollection _collection;
   late Box<String> _clientBox;
