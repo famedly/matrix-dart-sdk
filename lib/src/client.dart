@@ -975,12 +975,22 @@ class Client extends MatrixApi {
     }
 
     if (getFromRooms) {
-      final room = rooms.firstWhereOrNull((Room room) =>
-          room.getParticipants().indexWhere((User user) => user.id == userId) !=
-          -1);
-      if (room != null) {
-        final user =
-            room.getParticipants().firstWhere((User user) => user.id == userId);
+      await roomsLoading;
+      Room? roomWithUser;
+      for (final room in rooms) {
+        await room.postLoad();
+        if (room
+                .getParticipants()
+                .indexWhere((User user) => user.id == userId) !=
+            -1) {
+          roomWithUser = room;
+          break;
+        }
+      }
+      if (roomWithUser != null) {
+        final user = roomWithUser
+            .getParticipants()
+            .firstWhere((User user) => user.id == userId);
         final profileFromRooms = Profile(
           userId: userId,
           displayName: user.displayName,
