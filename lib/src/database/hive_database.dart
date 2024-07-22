@@ -1403,6 +1403,22 @@ class FamedlySdkHiveDatabase extends DatabaseApi with ZoneTransactionMixin {
 
   @override
   Future<void> delete() => Hive.deleteFromDisk();
+
+  @override
+  Future<void> markUserProfileAsOutdated(userId) async {
+    return;
+  }
+
+  @override
+  Future<CachedProfileInformation?> getUserProfile(String userId) async {
+    return null;
+  }
+
+  @override
+  Future<void> storeUserProfile(
+      String userId, CachedProfileInformation profile) async {
+    return;
+  }
 }
 
 dynamic _castValue(dynamic value) {
