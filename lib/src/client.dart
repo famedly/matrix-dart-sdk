@@ -79,6 +79,9 @@ class Client extends MatrixApi {
 
   Set<String> roomPreviewLastEvents;
 
+  bool Function(Event? currentLastEvent, Event newLastEvent)?
+      shouldReplaceLastEvent;
+
   Set<String> supportedLoginTypes;
 
   bool requestHistoryOnLimitedTimeline;
@@ -2483,7 +2486,12 @@ class Client extends MatrixApi {
         }
 
         // Is this event of an important type for the last event?
-        if (!roomPreviewLastEvents.contains(event.type)) break;
+        // check if shouldReplaceLastEvent is set then use it instead of the below
+        if (shouldReplaceLastEvent != null) {
+          if (!shouldReplaceLastEvent!(room.lastEvent, event)) break;
+        } else {
+          if (!roomPreviewLastEvents.contains(event.type)) break;
+        }
 
         // Event is a valid new lastEvent:
         room.lastEvent = event;
