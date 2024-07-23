@@ -919,7 +919,7 @@ class Client extends MatrixApi {
   /// Tries to get the profile from homeserver first, if failed, falls back to a profile
   /// from a room where the user exists. Set `useServerCache` to true to get any
   /// prior value from this function
-  @Deprecated('Use getUserProfile() instead')
+  @Deprecated('Use fetchOwnProfile() instead')
   Future<Profile> fetchOwnProfileFromServer(
       {bool useServerCache = false}) async {
     try {
@@ -943,19 +943,11 @@ class Client extends MatrixApi {
   /// one user can have different displaynames and avatar urls in different rooms.
   /// This returns the profile from the first room by default, override `getFromRooms`
   /// to false to fetch from homeserver.
-  @Deprecated('User `getUserProfile(userID)` instead')
   Future<Profile> fetchOwnProfile({
-    bool getFromRooms = true,
-    bool cache = true,
+    @Deprecated('No longer supported') bool getFromRooms = true,
+    @Deprecated('No longer supported') bool cache = true,
   }) =>
-      getProfileFromUserId(
-        userID!,
-        getFromRooms: getFromRooms,
-        cache: cache,
-      );
-
-  final Map<String, ProfileInformation> _profileRoomsCache = {};
-  final Map<String, ProfileInformation> _profileServerCache = {};
+      getProfileFromUserId(userID!);
 
   /// Get the combined profile information for this user. First checks for a
   /// non outdated cached profile before requesting from the server. Cached
@@ -1006,53 +998,32 @@ class Client extends MatrixApi {
   final CachedStreamController<String> onUserProfileUpdate =
       CachedStreamController<String>();
 
-  /// Get the combined profile information for this user.
-  /// If [getFromRooms] is true then the profile will first be searched from the
-  /// room memberships. This is unstable if the given user makes use of different displaynames
-  /// and avatars per room, which is common for some bots and bridges.
-  /// If [cache] is true then
-  /// the profile get cached for this session. Please note that then the profile may
-  /// become outdated if the user changes the displayname or avatar in this session.
-  @Deprecated('User `getUserProfile(userID)` instead')
-  Future<Profile> getProfileFromUserId(String userId,
-      {bool cache = true, bool getFromRooms = true}) async {
-    var profile =
-        getFromRooms ? _profileRoomsCache[userId] : _profileServerCache[userId];
-    if (cache && profile != null) {
-      return Profile(
-        userId: userId,
-        displayName: profile.displayname,
-        avatarUrl: profile.avatarUrl,
+  /// Get the combined profile information for this user from the server or
+  /// from the cache depending on the cache value. Returns a `Profile` object
+  /// including the given userId but without information about how outdated
+  /// the profile is. If you need those, try using `getUserProfile()` instead.
+  Future<Profile> getProfileFromUserId(
+    String userId, {
+    @Deprecated('No longer supported') bool? getFromRooms,
+    @Deprecated('No longer supported') bool? cache,
+    Duration timeout = const Duration(seconds: 30),
+    Duration maxCacheAge = const Duration(days: 1),
+  }) async {
+    CachedProfileInformation? cachedProfileInformation;
+    try {
+      cachedProfileInformation = await getUserProfile(
+        userId,
+        timeout: timeout,
+        maxCacheAge: maxCacheAge,
       );
+    } catch (e) {
+      Logs().d('Unable to fetch profile for $userId', e);
     }
 
-    if (getFromRooms) {
-      final room = rooms.firstWhereOrNull((Room room) =>
-          room.getParticipants().indexWhere((User user) => user.id == userId) !=
-          -1);
-      if (room != null) {
-        final user =
-            room.getParticipants().firstWhere((User user) => user.id == userId);
-        final profileFromRooms = Profile(
-          userId: userId,
-          displayName: user.displayName,
-          avatarUrl: user.avatarUrl,
-        );
-        _profileRoomsCache[userId] = ProfileInformation(
-          avatarUrl: profileFromRooms.avatarUrl,
-          displayname: profileFromRooms.displayName,
-        );
-        return profileFromRooms;
-      }
-    }
-    profile = await super.getUserProfile(userId);
-    if (cache || _profileServerCache.containsKey(userId)) {
-      _profileServerCache[userId] = profile;
-    }
     return Profile(
       userId: userId,
-      displayName: profile.displayname,
-      avatarUrl: profile.avatarUrl,
+      displayName: cachedProfileInformation?.displayname,
+      avatarUrl: cachedProfileInformation?.avatarUrl,
     );
   }
 

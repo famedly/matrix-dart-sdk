@@ -623,12 +623,17 @@ void main() {
     });
 
     test('getProfileFromUserId', () async {
-      final profile = await matrix.getUserProfile('@getme:example.com');
-      expect(profile.outdated, false);
+      final cachedProfile = await matrix.getUserProfile('@getme:example.com');
+      expect(cachedProfile.outdated, false);
+      expect(cachedProfile.avatarUrl.toString(), 'mxc://test');
+      expect(cachedProfile.displayname, 'You got me');
+
+      final profile = await matrix.getProfileFromUserId('@getme:example.com');
       expect(profile.avatarUrl.toString(), 'mxc://test');
-      expect(profile.displayname, 'You got me');
+      expect(profile.displayName, 'You got me');
+
       final aliceProfile = await matrix.getUserProfile('@alice:example.com');
-      expect(profile.outdated, false);
+      expect(aliceProfile.outdated, false);
       expect(aliceProfile.avatarUrl.toString(), 'mxc://test');
       expect(aliceProfile.displayname, 'Alice M');
       await matrix.handleSync(
