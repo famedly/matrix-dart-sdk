@@ -490,6 +490,9 @@ void main() => group('Integration tests', () {
           if (testClientB.getRoomById(dmRoom) == null) {
             await testClientB.waitForRoomInSync(dmRoom, invite: true);
           }
+          // Wait at least for one additional sync to make sure the invite landed
+          // correctly. Workaround for synapse CI job failing.
+          await testClientB.onSync.stream.first;
 
           Logs().i('++++ (Bob) Create DM ++++');
           final dmRoomFromB =

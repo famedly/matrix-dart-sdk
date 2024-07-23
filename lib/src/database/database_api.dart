@@ -81,6 +81,13 @@ abstract class DatabaseApi {
 
   Future<void> forgetRoom(String roomId);
 
+  Future<CachedProfileInformation?> getUserProfile(String userId);
+
+  Future<void> storeUserProfile(
+      String userId, CachedProfileInformation profile);
+
+  Future<void> markUserProfileAsOutdated(String userId);
+
   Future<void> clearCache();
 
   Future<void> clear();

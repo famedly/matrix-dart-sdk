@@ -103,6 +103,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   late Box<String> _seenDeviceKeysBox;
 
+  late Box<Map> _userProfilesBox;
+
   @override
   final int maxFileSize;
 
@@ -159,6 +161,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
 
   static const String _seenDeviceKeysBoxName = 'box_seen_device_keys';
 
+  static const String _userProfilesBoxName = 'box_user_profiles';
+
   Database? database;
 
   /// Custom IdbFactory used to create the indexedDB. On IO platforms it would
@@ -214,6 +218,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         _eventsBoxName,
         _seenDeviceIdsBoxName,
         _seenDeviceKeysBoxName,
+        _userProfilesBoxName,
       },
       sqfliteDatabase: database,
       sqfliteFactory: sqfliteFactory,
@@ -283,6 +288,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _seenDeviceKeysBox = _collection.openBox(
       _seenDeviceKeysBoxName,
     );
+    _userProfilesBox = _collection.openBox(
+      _userProfilesBoxName,
+    );
 
     // Check version and check if we need a migration
     final currentVersion = int.tryParse(await _clientBox.get('version') ?? '');
@@ -340,6 +348,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         await _timelineFragmentsBox.clear();
         await _outboundGroupSessionsBox.clear();
         await _presencesBox.clear();
+        await _userProfilesBox.clear();
         await _clientBox.delete('prev_batch');
       });
 
@@ -1617,5 +1626,33 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   Future<void> delete() => BoxCollection.delete(
         name,
         sqfliteFactory ?? idbFactory,
+      );
+
+  @override
+  Future<void> markUserProfileAsOutdated(userId) async {
+    final profile = await getUserProfile(userId);
+    if (profile == null) return;
+    await _userProfilesBox.put(
+      userId,
+      CachedProfileInformation.fromProfile(
+        profile as ProfileInformation,
+        outdated: true,
+        updated: profile.updated,
+      ).toJson(),
+    );
+  }
+
+  @override
+  Future<CachedProfileInformation?> getUserProfile(String userId) =>
+      _userProfilesBox.get(userId).then((json) => json == null
+          ? null
+          : CachedProfileInformation.fromJson(copyMap(json)));
+
+  @override
+  Future<void> storeUserProfile(
+          String userId, CachedProfileInformation profile) =>
+      _userProfilesBox.put(
+        userId,
+        profile.toJson(),
       );
 }
