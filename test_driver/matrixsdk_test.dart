@@ -490,6 +490,7 @@ void main() => group('Integration tests', () {
           if (testClientB.getRoomById(dmRoom) == null) {
             await testClientB.waitForRoomInSync(dmRoom, invite: true);
           }
+          await testClientB.onSync.stream.first;
 
           Logs().i('++++ (Bob) Create DM ++++');
           final dmRoomFromB =
