@@ -375,6 +375,68 @@ void main() {
       expect(room.receiptState.byThread.length, 1);
       expect(timeline.events[1].receipts.length, 2);
       expect(timeline.events[1].receipts[0].user.id, '@bob:example.com');
+
+      // test receipt only on main thread
+      expect(timeline.events[2].receipts.length, 1);
+      await client.handleSync(SyncUpdate(
+          nextBatch: 'something5',
+          rooms: RoomsUpdate(join: {
+            timeline.room.id: JoinedRoomUpdate(ephemeral: [
+              BasicRoomEvent.fromJson({
+                'type': 'm.receipt',
+                'content': {
+                  '\$2': {
+                    'm.read': {
+                      '@eve:example.com': {
+                        'ts': 1436451550453,
+                        'thread_id': 'main'
+                      },
+                      '@john:example.com': {
+                        'ts': 1436451550453,
+                        'thread_id': 'main'
+                      },
+                    },
+                  },
+                },
+              })
+            ])
+          })));
+
+      expect(room.receiptState.global.otherUsers['@eve:example.com']?.eventId,
+          null);
+      expect(
+          room.receiptState.mainThread?.otherUsers['@eve:example.com']?.eventId,
+          '\$2');
+      expect(timeline.events[1].receipts.length, 2);
+      expect(timeline.events[2].receipts.length, 3);
+
+      // test own receipt on main thread
+
+      await client.handleSync(SyncUpdate(
+          nextBatch: 'something6',
+          rooms: RoomsUpdate(join: {
+            timeline.room.id: JoinedRoomUpdate(ephemeral: [
+              BasicRoomEvent.fromJson({
+                'type': 'm.receipt',
+                'content': {
+                  '\$2': {
+                    'm.read': {
+                      client.userID: {
+                        'ts': 1436451550453,
+                        'thread_id': 'main',
+                      },
+                    },
+                  },
+                },
+              })
+            ])
+          })));
+      expect(room.receiptState.global.latestOwnReceipt?.eventId, '\$1');
+      expect(room.receiptState.mainThread?.latestOwnReceipt?.eventId, '\$2');
+      expect(room.receiptState.global.ownPublic?.eventId, '\$2');
+      expect(room.receiptState.mainThread?.ownPublic?.eventId, '\$2');
+      expect(room.receiptState.global.ownPrivate?.eventId, '\$1');
+      expect(timeline.events[2].receipts.length, 3);
     });
 
     test('Sending both receipts at the same time sets the latest receipt',
