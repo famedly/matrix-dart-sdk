@@ -245,9 +245,10 @@ void main() {
         jsonObj,
         Room(id: '1234', client: Client('testclient')),
       );
-      expect(() async => await event.cancelSend(), throwsException);
+      expect(() async => await room.client.database?.cancelSend(event),
+          throwsException);
       event.status = EventStatus.sending;
-      await event.cancelSend();
+      await room.client.database?.cancelSend(event);
     });
 
     test('sendAgain', () async {

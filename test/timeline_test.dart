@@ -570,7 +570,7 @@ void main() {
       ));
       await waitForCount(1);
 
-      await timeline.events[0].cancelSend();
+      await room.client.database?.cancelSend(timeline.events[0]);
 
       await waitForCount(2);
 

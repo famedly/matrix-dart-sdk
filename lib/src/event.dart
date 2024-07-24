@@ -370,7 +370,7 @@ class Event extends MatrixEvent {
     }.contains(messageType)) {
       final file = room.sendingFilePlaceholders[eventId];
       if (file == null) {
-        await cancelSend();
+        await room.client.database?.cancelSend(this);
         throw Exception('Can not try to send again. File is no longer cached.');
       }
       final thumbnail = room.sendingFileThumbnails[eventId];

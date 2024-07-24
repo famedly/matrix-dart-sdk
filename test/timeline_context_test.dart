@@ -271,7 +271,7 @@ void main() {
       ));
       await waitForCount(7);
 
-      await timeline.events[0].cancelSend();
+      await room.client.database?.cancelSend(timeline.events[0]);
 
       await waitForCount(8);
       expect(updateCount, 8);
