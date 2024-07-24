@@ -334,6 +334,16 @@ abstract class DatabaseApi {
 
   Future<CachedPresence?> getPresence(String userId);
 
+  /// Removes an unsent or yet-to-send event from the database and timeline.
+  /// These are events marked with the status `SENDING` or `ERROR`.
+  /// Throws an exception if used for an already sent event!
+  ///
+  /// If lastEvent and room is postLoaded, will try to automatically fallback to
+  /// the last displayable preview event according to `client.roomPreviewLastEvents`
+  ///
+  /// If lastEvent and room is not postloaded, will fallback to a `Redacted` message.
+  Future<void> cancelSend(Event event);
+
   /// Deletes the whole database. The database needs to be created again after
   /// this. Used for migration only.
   Future<void> delete();

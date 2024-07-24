@@ -349,13 +349,12 @@ class Event extends MatrixEvent {
   /// Removes an unsent or yet-to-send event from the database and timeline.
   /// These are events marked with the status `SENDING` or `ERROR`.
   /// Throws an exception if used for an already sent event!
+  ///
+  @Deprecated('use `client.database?.cancelSend(event)` now')
   Future<void> cancelSend() async {
-    if (status.isSent) {
-      throw Exception('Can only delete events which are not sent yet!');
+    if (room.client.database != null) {
+      await room.client.database!.cancelSend(this);
     }
-
-    await room.client.database?.removeEvent(eventId, room.id);
-    room.client.onCancelSendEvent.add(eventId);
   }
 
   /// Try to send this event again. Only works with events of status -1.

@@ -1613,6 +1613,78 @@ class HiveCollectionsDatabase extends DatabaseApi {
       String userId, CachedProfileInformation profile) async {
     return;
   }
+
+  @override
+  Future<void> cancelSend(Event event) async {
+    if (event.status.isSent) {
+      throw Exception('Can only delete events which are not sent yet!');
+    }
+    final room = event.room;
+    final redactedBecause = Event(
+      content: {
+        'string': 'Cancelled send',
+        'redacts': event.eventId,
+      },
+      type: EventTypes.Redaction,
+      eventId: '${event.eventId}_lastItem_local_redaction',
+      senderId: event.senderId,
+      originServerTs: event.originServerTs,
+      room: room,
+    );
+
+    Future<void> updateRoomBox() async {
+      if (room.lastEvent == null) {
+        throw Exception(
+            'tried to set room last event to null, while this is possbile it will move your room to the bottom');
+      }
+      final currentRawRoom = await _roomsBox.get(room.id);
+      if (currentRawRoom != null) {
+        final currentRoom = Room.fromJson(copyMap(currentRawRoom), room.client);
+        currentRoom.lastEvent = room.lastEvent;
+        await _roomsBox.put(
+          room.id,
+          currentRoom.toJson(),
+        );
+      }
+    }
+
+    // redact and store the event itself.
+    event.setRedactionEvent(redactedBecause);
+    await _eventsBox.put(
+      TupleKey(room.id, event.eventId).toString(),
+      event.toJson(),
+    );
+
+    if (room.lastEvent != null && room.lastEvent!.eventId == event.eventId) {
+      Logs().v('cancel send called on lastEvent, setting to redacted');
+
+      // now redact the last event
+      room.lastEvent!.setRedactionEvent(redactedBecause);
+      // and then store it in the db
+      await updateRoomBox();
+
+      // check if room was postLoaded
+      if (!room.partial) {
+        final newLastEvent =
+            (await room.getTimeline()).events.skip(1).firstWhereOrNull(
+                  (event) =>
+                      room.client.roomPreviewLastEvents.contains(event.type),
+                );
+
+        if (newLastEvent != null) {
+          // remove the stale redacted event to cleanup timeline.
+          await removeEvent(event.eventId, room.id);
+          // update it again with the last possible good event
+          room.lastEvent = newLastEvent;
+          await updateRoomBox();
+          Logs().v(
+              'postLoaded room detected, setting lastEvent to ${newLastEvent.eventId}');
+        }
+      }
+
+      room.client.onCancelSendEvent.add(event.eventId);
+    }
+  }
 }
 
 class TupleKey {
