@@ -29,6 +29,7 @@ const pickledOlmAccount =
 Future<Client> getClient(
     {Duration sendTimelineEventTimeout = const Duration(minutes: 1)}) async {
   final client = Client(
+    logLevel: Level.verbose,
     'testclient',
     httpClient: FakeMatrixApi(),
     databaseBuilder: getDatabase,
