@@ -1461,13 +1461,8 @@ class Room {
             await getEventContext(eventContextId) ?? TimelineChunk(events: []);
       }
     }
-
-    Timeline timeline;
-    if (_timeline != null && _timeline!.chunk == chunk) {
-      timeline = _timeline!;
-      chunk = _timeline!.chunk;
-    } else {
-      timeline = Timeline(
+    if (this._timeline == null) {
+      this._timeline = Timeline(
           room: this,
           chunk: chunk,
           onChange: onChange,
@@ -1475,7 +1470,8 @@ class Room {
           onInsert: onInsert,
           onNewEvent: onNewEvent,
           onUpdate: onUpdate);
-      _timeline = timeline;
+    } else {
+      this._timeline!.chunk = chunk;
     }
 
     // Fetch all users from database we have got here.
@@ -1519,7 +1515,7 @@ class Room {
       }
     }
 
-    return timeline;
+    return this._timeline!;
   }
 
   /// Returns all participants for this room. With lazy loading this
