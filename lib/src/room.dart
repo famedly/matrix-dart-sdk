@@ -1461,18 +1461,15 @@ class Room {
             await getEventContext(eventContextId) ?? TimelineChunk(events: []);
       }
     }
-    if (this._timeline == null) {
-      this._timeline = Timeline(
-          room: this,
-          chunk: chunk,
-          onChange: onChange,
-          onRemove: onRemove,
-          onInsert: onInsert,
-          onNewEvent: onNewEvent,
-          onUpdate: onUpdate);
-    } else {
-      this._timeline!.chunk = chunk;
-    }
+
+    this._timeline = Timeline(
+        room: this,
+        chunk: chunk,
+        onChange: onChange,
+        onRemove: onRemove,
+        onInsert: onInsert,
+        onNewEvent: onNewEvent,
+        onUpdate: onUpdate);
 
     // Fetch all users from database we have got here.
     if (eventContextId == null) {
