@@ -1412,7 +1412,7 @@ class Room {
   /// Is the room archived
   bool get isArchived => membership == Membership.leave;
 
-  Timeline? _timeline;
+  Timeline? timeline;
 
   /// Creates a timeline from the store. Returns a [Timeline] object. If you
   /// just want to update the whole timeline on every change, use the [onUpdate]
@@ -1462,7 +1462,7 @@ class Room {
       }
     }
 
-    this._timeline = Timeline(
+    this.timeline = Timeline(
         room: this,
         chunk: chunk,
         onChange: onChange,
@@ -1512,7 +1512,7 @@ class Room {
       }
     }
 
-    return this._timeline!;
+    return this.timeline!;
   }
 
   /// Returns all participants for this room. With lazy loading this
