@@ -5,6 +5,12 @@ class TimelineChunk {
   String nextBatch;
 
   List<Event> events;
+  final Map<String, Event> eventsMap = {};
+
   TimelineChunk(
-      {required this.events, this.prevBatch = '', this.nextBatch = ''});
+      {required this.events, this.prevBatch = '', this.nextBatch = ''}) {
+    for (final event in events) {
+      this.eventsMap[event.eventId] = event;
+    }
+  }
 }
