@@ -100,9 +100,9 @@ void main() {
     });
 
     test(
-      'Box.delete',
+      'Collection.deleteDatabase',
       () async {
-        await BoxCollection.delete(
+        await collection.deleteDatabase(
           db?.path ?? '',
           isWeb ? null : databaseFactoryFfi,
         );

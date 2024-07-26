@@ -54,6 +54,7 @@ import 'package:matrix/src/database/database_file_storage_stub.dart'
 class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   static const int version = 9;
   final String name;
+
   late BoxCollection _collection;
   late Box<String> _clientBox;
   late Box<Map> _accountDataBox;
@@ -1623,10 +1624,13 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   }
 
   @override
-  Future<void> delete() => BoxCollection.delete(
-        name,
-        sqfliteFactory ?? idbFactory,
-      );
+  Future<void> delete() async {
+    // database?.path is null on web
+    await _collection.deleteDatabase(
+      database?.path ?? name,
+      sqfliteFactory ?? idbFactory,
+    );
+  }
 
   @override
   Future<void> markUserProfileAsOutdated(userId) async {
