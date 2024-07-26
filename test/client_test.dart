@@ -18,11 +18,13 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:canonical_json/canonical_json.dart';
 import 'package:collection/collection.dart';
 import 'package:olm/olm.dart' as olm;
+import 'package:path/path.dart' show join;
 import 'package:test/test.dart';
 
 import 'package:matrix/matrix.dart';
@@ -31,16 +33,35 @@ import 'fake_client.dart';
 import 'fake_database.dart';
 
 void main() {
-  late Client matrix;
-
   // key @test:fakeServer.notExisting
   const pickledOlmAccount =
       'N2v1MkIFGcl0mQpo2OCwSopxPQJ0wnl7oe7PKiT4141AijfdTIhRu+ceXzXKy3Kr00nLqXtRv7kid6hU4a+V0rfJWLL0Y51+3Rp/ORDVnQy+SSeo6Fn4FHcXrxifJEJ0djla5u98fBcJ8BSkhIDmtXRPi5/oJAvpiYn+8zMjFHobOeZUAxYR0VfQ9JzSYBsSovoQ7uFkNks1M4EDUvHtuyg3RxViwdNxs3718fyAqQ/VSwbXsY0Nl+qQbF+nlVGHenGqk5SuNl1P6e1PzZxcR0IfXA94Xij1Ob5gDv5YH4UCn9wRMG0abZsQP0YzpDM0FLaHSCyo9i5JD/vMlhH+nZWrgAzPPCTNGYewNV8/h3c+VyJh8ZTx/fVi6Yq46Fv+27Ga2ETRZ3Qn+Oyx6dLBjnBZ9iUvIhqpe2XqaGA1PopOz8iDnaZitw';
   const identityKey = '7rvl3jORJkBiK4XX1e5TnGnqz068XfYJ0W++Ml63rgk';
   const fingerprintKey = 'gjL//fyaFHADt9KBADGag8g7F8Up78B/K1zXeiEPLJo';
 
+  group('client path', () {
+    late Client clientOnPath;
+
+    final dbPath = join(Directory.current.path, 'test.sqlite');
+
+    setUp(() async {
+      expect(await File(dbPath).exists(), false);
+      clientOnPath = await getClient(
+        databasePath: dbPath,
+      );
+      expect(await File(dbPath).exists(), true);
+    });
+    test('logout', () async {
+      expect(await File(dbPath).exists(), true);
+      await clientOnPath.logout();
+      expect(await File(dbPath).exists(), false);
+    });
+  });
+
   /// All Tests related to the Login
-  group('Client', tags: 'olm', () {
+  group('client mem', tags: 'olm', () {
+    late Client matrix;
+
     Logs().level = Level.error;
 
     /// Check if all Elements get created

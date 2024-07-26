@@ -68,8 +68,14 @@ class BoxCollection with ZoneTransactionMixin {
 
   Future<void> close() => _db.close();
 
+  @Deprecated('use collection.deleteDatabase now')
   static Future<void> delete(String path, [dynamic factory]) =>
       (factory ?? databaseFactory).deleteDatabase(path);
+
+  Future<void> deleteDatabase(String path, [dynamic factory]) async {
+    await close();
+    await (factory ?? databaseFactory).deleteDatabase(path);
+  }
 }
 
 class Box<V> {

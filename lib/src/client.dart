@@ -1799,6 +1799,7 @@ class Client extends MatrixApi {
     } catch (e, s) {
       Logs().e('Unable to clear database', e, s);
     } finally {
+      await database?.delete();
       _database = null;
     }
 
