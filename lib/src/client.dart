@@ -25,10 +25,6 @@ import 'dart:typed_data';
 import 'package:async/async.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:http/http.dart' as http;
-import 'package:mime/mime.dart';
-import 'package:olm/olm.dart' as olm;
-import 'package:random_string/random_string.dart';
-
 import 'package:matrix/encryption.dart';
 import 'package:matrix/matrix.dart';
 import 'package:matrix/msc_extensions/msc_unpublished_custom_refresh_token_lifetime/msc_unpublished_custom_refresh_token_lifetime.dart';
@@ -41,6 +37,9 @@ import 'package:matrix/src/utils/run_benchmarked.dart';
 import 'package:matrix/src/utils/run_in_root.dart';
 import 'package:matrix/src/utils/sync_update_item_count.dart';
 import 'package:matrix/src/utils/try_get_push_rule.dart';
+import 'package:mime/mime.dart';
+import 'package:olm/olm.dart' as olm;
+import 'package:random_string/random_string.dart';
 
 typedef RoomSorter = int Function(Room a, Room b);
 
@@ -120,6 +119,24 @@ class Client extends MatrixApi {
 
   /// The timeout until a typing indicator gets removed automatically.
   final Duration typingIndicatorTimeout;
+
+  DiscoveryInformation? _wellKnown;
+
+  /// the cached .well-known file updated using [getWellknown]
+  DiscoveryInformation? get wellKnown => _wellKnown;
+
+  /// The homeserver this client is communicating with.
+  ///
+  /// In case the [homeserver]'s host differs from the previous value, the
+  /// [wellKnown] cache will be invalidated.
+  @override
+  set homeserver(Uri? homeserver) {
+    if (homeserver?.host != this.homeserver?.host) {
+      _wellKnown = null;
+      unawaited(database?.storeWellKnown(null));
+    }
+    super.homeserver = homeserver;
+  }
 
   Future<MatrixImageFileResizedResponse?> Function(
       MatrixImageFileResizeArguments)? customImageResizer;
@@ -481,7 +498,6 @@ class Client extends MatrixApi {
   /// types `Uri` and `String`.
   Future<
       (
-        DiscoveryInformation?,
         GetVersionsResponse versions,
         List<LoginFlow>,
       )> checkHomeserver(
@@ -495,10 +511,9 @@ class Client extends MatrixApi {
       homeserver = homeserverUrl.stripTrailingSlash();
 
       // Look up well known
-      DiscoveryInformation? wellKnown;
       if (checkWellKnown) {
         try {
-          wellKnown = await getWellknown();
+          final wellKnown = await getWellknown();
           homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
         } catch (e) {
           Logs().v('Found no well known information', e);
@@ -521,11 +536,38 @@ class Client extends MatrixApi {
             loginTypes.map((f) => f.type ?? '').toSet(), supportedLoginTypes);
       }
 
-      return (wellKnown, versions, loginTypes);
+      return (versions, loginTypes);
     } catch (_) {
       homeserver = null;
       rethrow;
     }
+  }
+
+  /// Gets discovery information about the domain. The file may include
+  /// additional keys, which MUST follow the Java package naming convention,
+  /// e.g. `com.example.myapp.property`. This ensures property names are
+  /// suitably namespaced for each application and reduces the risk of
+  /// clashes.
+  ///
+  /// Note that this endpoint is not necessarily handled by the homeserver,
+  /// but by another webserver, to be used for discovering the homeserver URL.
+  ///
+  /// In case is provided, [hostname] will be used in place of [homeserver] for
+  /// the HTTPS lookup. This is useful since the matrix homeserver does not
+  /// necessarily also host a copy of the `.well-known`.
+  ///
+  /// The result of this call is stored in [wellKnown] for later use at runtime.
+  @override
+  Future<DiscoveryInformation> getWellknown([String? hostname]) async {
+    final wellKnown = await getDiscoveryInformationsByUserId(
+      hostname ?? baseUri!.host,
+    );
+
+    // do not reset the well known here, so super call
+    super.homeserver = wellKnown.mHomeserver.baseUrl.stripTrailingSlash();
+    _wellKnown = wellKnown;
+    await database?.storeWellKnown(wellKnown);
+    return wellKnown;
   }
 
   /// Checks to see if a username is available, and valid, for the server.
@@ -1743,12 +1785,16 @@ class Client extends MatrixApi {
           _accountData = data;
           _updatePushrules();
         });
+        _discoveryDataLoading = database.getWellKnown().then((data) {
+          _wellKnown = data;
+        });
         // ignore: deprecated_member_use_from_same_package
         presences.clear();
         if (waitUntilLoadCompletedLoaded) {
           await userDeviceKeysLoading;
           await roomsLoading;
           await _accountDataLoading;
+          await _discoveryDataLoading;
         }
       }
       _initLock = false;
@@ -2563,9 +2609,12 @@ class Client extends MatrixApi {
   Future? userDeviceKeysLoading;
   Future? roomsLoading;
   Future? _accountDataLoading;
+  Future? _discoveryDataLoading;
   Future? firstSyncReceived;
 
   Future? get accountDataLoading => _accountDataLoading;
+
+  Future? get wellKnownLoading => _discoveryDataLoading;
 
   /// A map of known device keys per user.
   Map<String, DeviceKeysList> get userDeviceKeys => _userDeviceKeys;
@@ -3372,6 +3421,7 @@ class SdkError {
 
 class SyncConnectionException implements Exception {
   final Object originalException;
+
   SyncConnectionException(this.originalException);
 }
 
