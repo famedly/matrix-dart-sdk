@@ -790,6 +790,7 @@ class Client extends MatrixApi {
     HistoryVisibility? historyVisibility,
     bool waitForSync = true,
     bool groupCall = false,
+    bool federated = true,
     Map<String, dynamic>? powerLevelContentOverride,
   }) async {
     enableEncryption ??=
@@ -824,6 +825,7 @@ class Client extends MatrixApi {
     }
 
     final roomId = await createRoom(
+      creationContent: federated ? null : {'m.federate': false},
       invite: invite,
       preset: preset,
       name: groupName,

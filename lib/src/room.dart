@@ -1347,6 +1347,10 @@ class Room {
   @Deprecated('Use fullyRead marker')
   String? get userFullyReadMarker => fullyRead;
 
+  bool get isFederated =>
+      getState(EventTypes.RoomCreate)?.content.tryGet<bool>('m.federate') ??
+      true;
+
   /// Sets the position of the read marker for a given room, and optionally the
   /// read receipt's location.
   /// If you set `public` to false, only a private receipt will be sent. A private receipt is always sent if `mRead` is set. If no value is provided, the default from the `client` is used.

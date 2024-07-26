@@ -778,6 +778,19 @@ void main() {
       expect(timeline.events.length, 17);
     });
 
+    test('isFederated', () {
+      expect(room.isFederated, true);
+      room.setState(
+        StrippedStateEvent(
+          type: EventTypes.RoomCreate,
+          content: {'m.federate': false},
+          senderId: room.client.userID!,
+          stateKey: '',
+        ),
+      );
+      expect(room.isFederated, false);
+    });
+
     test('getUserByMXID', () async {
       final List<String> called = [];
       final List<String> called2 = [];
