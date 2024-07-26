@@ -21,7 +21,64 @@ import 'dart:core';
 import 'package:matrix/src/client.dart';
 
 extension MxcUriExtension on Uri {
-  /// Returns a download Link to this content.
+  /// Transforms this `mxc://` Uri into a `http` resource, which can be used
+  /// to download the content.
+  ///
+  /// Throws an exception if the scheme is not `mxc` or the homeserver is not
+  /// set.
+  ///
+  /// Important! To use this link you have to set a http header like this:
+  /// `headers: {"authentication": "Bearer ${client.accessToken}"}`
+  Uri getAuthenticatedDownloadLink(Client client) {
+    if (!isScheme('mxc')) throw Exception('Uri has unknown scheme "mxc"');
+    final homeserver = client.homeserver;
+    if (homeserver == null) {
+      throw Exception(
+          'Homeserver must be specified to generate link from mxc uri');
+    }
+    return homeserver.resolve(
+        '_matrix/client/v1/media/download/$host${hasPort ? ':$port' : ''}$path');
+  }
+
+  /// Transforms this `mxc://` Uri into a `http` resource, which can be used
+  /// to download the content with the given `width` and
+  /// `height`. `method` can be `ThumbnailMethod.crop` or
+  /// `ThumbnailMethod.scale` and defaults to `ThumbnailMethod.scale`.
+  /// If `animated` (default false) is set to true, an animated thumbnail is requested
+  /// as per MSC2705. Thumbnails only animate if the media repository supports that.
+  ///
+  /// Throws an exception if the scheme is not `mxc` or the homeserver is not
+  /// set.
+  ///
+  /// Important! To use this link you have to set a http header like this:
+  /// `headers: {"authentication": "Bearer ${client.accessToken}"}`
+  Uri getAuthenticatedThumbnailLink(Client client,
+      {num? width,
+      num? height,
+      ThumbnailMethod? method = ThumbnailMethod.crop,
+      bool? animated = false}) {
+    if (!isScheme('mxc')) throw Exception('Uri has unknown scheme "mxc"');
+    final homeserver = client.homeserver;
+    if (homeserver == null) {
+      throw Exception(
+          'Homeserver must be specified to generate link from mxc uri');
+    }
+    return Uri(
+      scheme: homeserver.scheme,
+      host: homeserver.host,
+      path:
+          '/_matrix/client/v1/media/thumbnail/$host${hasPort ? ':$port' : ''}$path',
+      port: homeserver.port,
+      queryParameters: {
+        if (width != null) 'width': width.round().toString(),
+        if (height != null) 'height': height.round().toString(),
+        if (method != null) 'method': method.toString().split('.').last,
+        if (animated != null) 'animated': animated.toString(),
+      },
+    );
+  }
+
+  @Deprecated('Use `getAuthenticatedDownloadLink()` instead')
   Uri getDownloadLink(Client matrix) => isScheme('mxc')
       ? matrix.homeserver != null
           ? matrix.homeserver?.resolve(
@@ -35,6 +92,7 @@ extension MxcUriExtension on Uri {
   /// `ThumbnailMethod.scale` and defaults to `ThumbnailMethod.scale`.
   /// If `animated` (default false) is set to true, an animated thumbnail is requested
   /// as per MSC2705. Thumbnails only animate if the media repository supports that.
+  @Deprecated('Use `getAuthenticatedThumbnailLink()` instead')
   Uri getThumbnail(Client matrix,
       {num? width,
       num? height,

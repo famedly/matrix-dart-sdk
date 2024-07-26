@@ -32,19 +32,22 @@ void main() {
       final content = Uri.parse(mxc);
       expect(content.isScheme('mxc'), true);
 
-      expect(content.getDownloadLink(client).toString(),
-          '${client.homeserver.toString()}/_matrix/media/v3/download/exampleserver.abc/abcdefghijklmn');
-      expect(content.getThumbnail(client, width: 50, height: 50).toString(),
-          '${client.homeserver.toString()}/_matrix/media/v3/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
+      expect(content.getAuthenticatedDownloadLink(client).toString(),
+          '${client.homeserver.toString()}/_matrix/client/v1/media/download/exampleserver.abc/abcdefghijklmn');
       expect(
           content
-              .getThumbnail(client,
+              .getAuthenticatedThumbnailLink(client, width: 50, height: 50)
+              .toString(),
+          '${client.homeserver.toString()}/_matrix/client/v1/media/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
+      expect(
+          content
+              .getAuthenticatedThumbnailLink(client,
                   width: 50,
                   height: 50,
                   method: ThumbnailMethod.scale,
                   animated: true)
               .toString(),
-          '${client.homeserver.toString()}/_matrix/media/v3/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale&animated=true');
+          '${client.homeserver.toString()}/_matrix/client/v1/media/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale&animated=true');
     });
     test('other port', () async {
       final client = Client('testclient', httpClient: FakeMatrixApi());
@@ -55,19 +58,22 @@ void main() {
       final content = Uri.parse(mxc);
       expect(content.isScheme('mxc'), true);
 
-      expect(content.getDownloadLink(client).toString(),
-          '${client.homeserver.toString()}/_matrix/media/v3/download/exampleserver.abc/abcdefghijklmn');
-      expect(content.getThumbnail(client, width: 50, height: 50).toString(),
-          '${client.homeserver.toString()}/_matrix/media/v3/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
+      expect(content.getAuthenticatedDownloadLink(client).toString(),
+          '${client.homeserver.toString()}/_matrix/client/v1/media/download/exampleserver.abc/abcdefghijklmn');
       expect(
           content
-              .getThumbnail(client,
+              .getAuthenticatedThumbnailLink(client, width: 50, height: 50)
+              .toString(),
+          '${client.homeserver.toString()}/_matrix/client/v1/media/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
+      expect(
+          content
+              .getAuthenticatedThumbnailLink(client,
                   width: 50,
                   height: 50,
                   method: ThumbnailMethod.scale,
                   animated: true)
               .toString(),
-          'https://fakeserver.notexisting:1337/_matrix/media/v3/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale&animated=true');
+          'https://fakeserver.notexisting:1337/_matrix/client/v1/media/thumbnail/exampleserver.abc/abcdefghijklmn?width=50&height=50&method=scale&animated=true');
     });
     test('other remote port', () async {
       final client = Client('testclient', httpClient: FakeMatrixApi());
@@ -77,18 +83,23 @@ void main() {
       final content = Uri.parse(mxc);
       expect(content.isScheme('mxc'), true);
 
-      expect(content.getDownloadLink(client).toString(),
-          '${client.homeserver.toString()}/_matrix/media/v3/download/exampleserver.abc:1234/abcdefghijklmn');
-      expect(content.getThumbnail(client, width: 50, height: 50).toString(),
-          '${client.homeserver.toString()}/_matrix/media/v3/thumbnail/exampleserver.abc:1234/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
+      expect(content.getAuthenticatedDownloadLink(client).toString(),
+          '${client.homeserver.toString()}/_matrix/client/v1/media/download/exampleserver.abc:1234/abcdefghijklmn');
+      expect(
+          content
+              .getAuthenticatedThumbnailLink(client, width: 50, height: 50)
+              .toString(),
+          '${client.homeserver.toString()}/_matrix/client/v1/media/thumbnail/exampleserver.abc:1234/abcdefghijklmn?width=50&height=50&method=crop&animated=false');
     });
-    test('Wrong scheme returns empty object', () async {
+    test('Wrong scheme throw exception', () async {
       final client = Client('testclient', httpClient: FakeMatrixApi());
       await client.checkHomeserver(Uri.parse('https://fakeserver.notexisting'),
           checkWellKnown: false);
       final mxc = Uri.parse('https://wrong-scheme.com');
-      expect(mxc.getDownloadLink(client).toString(), '');
-      expect(mxc.getThumbnail(client).toString(), '');
+      expect(() => mxc.getAuthenticatedDownloadLink(client),
+          throwsA(isA<Exception>()));
+      expect(() => mxc.getAuthenticatedThumbnailLink(client),
+          throwsA(isA<Exception>()));
     });
   });
 }

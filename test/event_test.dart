@@ -1310,8 +1310,8 @@ void main() {
       final THUMBNAIL_BUFF = Uint8List.fromList([2]);
       Future<Uint8List> downloadCallback(Uri uri) async {
         return {
-          '/_matrix/media/v3/download/example.org/file': FILE_BUFF,
-          '/_matrix/media/v3/download/example.org/thumb': THUMBNAIL_BUFF,
+          '/_matrix/client/v1/media/download/example.org/file': FILE_BUFF,
+          '/_matrix/client/v1/media/download/example.org/thumb': THUMBNAIL_BUFF,
         }[uri.path]!;
       }
 
@@ -1367,21 +1367,21 @@ void main() {
       expect(event.attachmentOrThumbnailMxcUrl(getThumbnail: true).toString(),
           'mxc://example.org/thumb');
       expect(event.getAttachmentUrl().toString(),
-          'https://fakeserver.notexisting/_matrix/media/v3/download/example.org/file');
+          'https://fakeserver.notexisting/_matrix/client/v1/media/download/example.org/file');
       expect(event.getAttachmentUrl(getThumbnail: true).toString(),
-          'https://fakeserver.notexisting/_matrix/media/v3/thumbnail/example.org/file?width=800&height=800&method=scale&animated=false');
+          'https://fakeserver.notexisting/_matrix/client/v1/media/thumbnail/example.org/file?width=800&height=800&method=scale&animated=false');
       expect(event.getAttachmentUrl(useThumbnailMxcUrl: true).toString(),
-          'https://fakeserver.notexisting/_matrix/media/v3/download/example.org/thumb');
+          'https://fakeserver.notexisting/_matrix/client/v1/media/download/example.org/thumb');
       expect(
           event
               .getAttachmentUrl(getThumbnail: true, useThumbnailMxcUrl: true)
               .toString(),
-          'https://fakeserver.notexisting/_matrix/media/v3/thumbnail/example.org/thumb?width=800&height=800&method=scale&animated=false');
+          'https://fakeserver.notexisting/_matrix/client/v1/media/thumbnail/example.org/thumb?width=800&height=800&method=scale&animated=false');
       expect(
           event
               .getAttachmentUrl(getThumbnail: true, minNoThumbSize: 9000000)
               .toString(),
-          'https://fakeserver.notexisting/_matrix/media/v3/download/example.org/file');
+          'https://fakeserver.notexisting/_matrix/client/v1/media/download/example.org/file');
 
       buffer = await event.downloadAndDecryptAttachment(
           downloadCallback: downloadCallback);
@@ -1404,8 +1404,9 @@ void main() {
             Uint8List.fromList([0x74, 0x68, 0x75, 0x6D, 0x62, 0x0A]);
         Future<Uint8List> downloadCallback(Uri uri) async {
           return {
-            '/_matrix/media/v3/download/example.com/file': FILE_BUFF_ENC,
-            '/_matrix/media/v3/download/example.com/thumb': THUMB_BUFF_ENC,
+            '/_matrix/client/v1/media/download/example.com/file': FILE_BUFF_ENC,
+            '/_matrix/client/v1/media/download/example.com/thumb':
+                THUMB_BUFF_ENC,
           }[uri.path]!;
         }
 
@@ -1508,7 +1509,7 @@ void main() {
       Future<Uint8List> downloadCallback(Uri uri) async {
         serverHits++;
         return {
-          '/_matrix/media/v3/download/example.org/newfile': FILE_BUFF,
+          '/_matrix/client/v1/media/download/example.org/newfile': FILE_BUFF,
         }[uri.path]!;
       }
 
@@ -1550,7 +1551,7 @@ void main() {
       Future<Uint8List> downloadCallback(Uri uri) async {
         serverHits++;
         return {
-          '/_matrix/media/v3/download/example.org/newfile': FILE_BUFF,
+          '/_matrix/client/v1/media/download/example.org/newfile': FILE_BUFF,
         }[uri.path]!;
       }
 
@@ -1599,7 +1600,7 @@ void main() {
       Future<Uint8List> downloadCallback(Uri uri) async {
         serverHits++;
         return {
-          '/_matrix/media/v3/download/example.org/newfile': FILE_BUFF,
+          '/_matrix/client/v1/media/download/example.org/newfile': FILE_BUFF,
         }[uri.path]!;
       }
 

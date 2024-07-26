@@ -513,6 +513,12 @@ class Event extends MatrixEvent {
   /// [minNoThumbSize] is the minimum size that an original image may be to not fetch its thumbnail, defaults to 80k
   /// [useThumbnailMxcUrl] says weather to use the mxc url of the thumbnail, rather than the original attachment.
   ///  [animated] says weather the thumbnail is animated
+  ///
+  /// Throws an exception if the scheme is not `mxc` or the homeserver is not
+  /// set.
+  ///
+  /// Important! To use this link you have to set a http header like this:
+  /// `headers: {"authentication": "Bearer ${client.accessToken}"}`
   Uri? getAttachmentUrl(
       {bool getThumbnail = false,
       bool useThumbnailMxcUrl = false,
@@ -541,7 +547,7 @@ class Event extends MatrixEvent {
     }
     // now generate the actual URLs
     if (getThumbnail) {
-      return Uri.parse(thisMxcUrl).getThumbnail(
+      return Uri.parse(thisMxcUrl).getAuthenticatedThumbnailLink(
         room.client,
         width: width,
         height: height,
@@ -549,7 +555,7 @@ class Event extends MatrixEvent {
         animated: animated,
       );
     } else {
-      return Uri.parse(thisMxcUrl).getDownloadLink(room.client);
+      return Uri.parse(thisMxcUrl).getAuthenticatedDownloadLink(room.client);
     }
   }
 
@@ -624,9 +630,13 @@ class Event extends MatrixEvent {
     final canDownloadFileFromServer = uint8list == null && !fromLocalStoreOnly;
     if (canDownloadFileFromServer) {
       final httpClient = room.client.httpClient;
-      downloadCallback ??=
-          (Uri url) async => (await httpClient.get(url)).bodyBytes;
-      uint8list = await downloadCallback(mxcUrl.getDownloadLink(room.client));
+      downloadCallback ??= (Uri url) async => (await httpClient.get(
+            url,
+            headers: {'authorization': 'Bearer ${room.client.accessToken}'},
+          ))
+              .bodyBytes;
+      uint8list = await downloadCallback(
+          mxcUrl.getAuthenticatedDownloadLink(room.client));
       storeable = database != null &&
           storeable &&
           uint8list.lengthInBytes < database.maxFileSize;
