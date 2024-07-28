@@ -1,3 +1,14 @@
+## [0.31.0] 28th July 2024
+
+- ci: create release job fix (Karthikeyan S)
+- feat: Add support for isFederate option for rooms (Krille)
+- fix: add main thread receipts to event.receipts getter (td)
+- fix: also delete db on logout (td)
+- fix: bump database version to v9 (td)
+- fix: Synapse CI job failing because invite state not completely synced (Krille)
+- refactor: Better avatar and names for invites (Krille)
+- refactor: Cache profiles in database and refactor API (Krille)
+
 ## [0.30.0] 3rd July 2024
 
 - feat: Automatically cancel typing indicators after 30 seconds (Krille)
