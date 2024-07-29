@@ -156,6 +156,25 @@ extension CommandsClientExtension on Client {
       if (inReplyTo == null) {
         return null;
       }
+      final match = RegExp(r':(?:([-\w]+)~)?([-\w]+):').firstMatch(args.msg);
+      if (match != null) {
+        final emotePacks = args.room.getImagePacksFlat(ImagePackUsage.emoticon);
+        final pack = match[1];
+        final emote = match[2];
+        String? mxc;
+        if (pack != null) {
+          mxc = emotePacks[pack]?[emote];
+        } else {
+          for (final emotePack in emotePacks.values) {
+            mxc = emotePack[emote];
+            break;
+          }
+        }
+        if (mxc != null) {
+          args.msg = mxc;
+        }
+      }
+
       return await args.room.sendReaction(inReplyTo.eventId, args.msg);
     });
     addCommand('join', (CommandArgs args) async {
