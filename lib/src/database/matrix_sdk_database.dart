@@ -54,6 +54,7 @@ import 'package:matrix/src/database/database_file_storage_stub.dart'
 class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   static const int version = 9;
   final String name;
+
   late BoxCollection _collection;
   late Box<String> _clientBox;
   late Box<Map> _accountDataBox;
@@ -104,6 +105,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   late Box<String> _seenDeviceKeysBox;
 
   late Box<Map> _spacesHierarchyBox;
+  
+  late Box<Map> _userProfilesBox;
 
   @override
   final int maxFileSize;
@@ -162,6 +165,8 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   static const String _seenDeviceKeysBoxName = 'box_seen_device_keys';
 
   static const String _spacesHierarchyBoxName = 'box_spaces_hierarchy';
+  
+  static const String _userProfilesBoxName = 'box_user_profiles';
 
   Database? database;
 
@@ -219,6 +224,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         _seenDeviceIdsBoxName,
         _seenDeviceKeysBoxName,
         _spacesHierarchyBoxName,
+        _userProfilesBoxName,
       },
       sqfliteDatabase: database,
       sqfliteFactory: sqfliteFactory,
@@ -291,6 +297,9 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
     _spacesHierarchyBox = _collection.openBox(
       _spacesHierarchyBoxName,
     );
+    _userProfilesBox = _collection.openBox(
+      _userProfilesBoxName,
+    );
 
     // Check version and check if we need a migration
     final currentVersion = int.tryParse(await _clientBox.get('version') ?? '');
@@ -348,6 +357,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
         await _timelineFragmentsBox.clear();
         await _outboundGroupSessionsBox.clear();
         await _presencesBox.clear();
+        await _userProfilesBox.clear();
         await _clientBox.delete('prev_batch');
         await _spacesHierarchyBox.clear();
       });
@@ -1648,8 +1658,39 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
       _spacesHierarchyBox.delete(spaceId);
 
   @override
-  Future<void> delete() => BoxCollection.delete(
-        name,
-        sqfliteFactory ?? idbFactory,
+  Future<void> delete() async {
+    // database?.path is null on web
+    await _collection.deleteDatabase(
+      database?.path ?? name,
+      sqfliteFactory ?? idbFactory,
+    );
+  }
+
+  @override
+  Future<void> markUserProfileAsOutdated(userId) async {
+    final profile = await getUserProfile(userId);
+    if (profile == null) return;
+    await _userProfilesBox.put(
+      userId,
+      CachedProfileInformation.fromProfile(
+        profile as ProfileInformation,
+        outdated: true,
+        updated: profile.updated,
+      ).toJson(),
+    );
+  }
+
+  @override
+  Future<CachedProfileInformation?> getUserProfile(String userId) =>
+      _userProfilesBox.get(userId).then((json) => json == null
+          ? null
+          : CachedProfileInformation.fromJson(copyMap(json)));
+
+  @override
+  Future<void> storeUserProfile(
+          String userId, CachedProfileInformation profile) =>
+      _userProfilesBox.put(
+        userId,
+        profile.toJson(),
       );
 }

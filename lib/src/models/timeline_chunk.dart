@@ -10,7 +10,7 @@ class TimelineChunk {
   TimelineChunk(
       {required this.events, this.prevBatch = '', this.nextBatch = ''}) {
     for (final event in events) {
-      this.eventsMap[event.eventId] = event;
+      eventsMap[event.eventId] = event;
     }
   }
 }

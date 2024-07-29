@@ -1347,6 +1347,10 @@ class Room {
   @Deprecated('Use fullyRead marker')
   String? get userFullyReadMarker => fullyRead;
 
+  bool get isFederated =>
+      getState(EventTypes.RoomCreate)?.content.tryGet<bool>('m.federate') ??
+      true;
+
   /// Sets the position of the read marker for a given room, and optionally the
   /// read receipt's location.
   /// If you set `public` to false, only a private receipt will be sent. A private receipt is always sent if `mRead` is set. If no value is provided, the default from the `client` is used.
@@ -1462,7 +1466,7 @@ class Room {
       }
     }
 
-    this.timeline = Timeline(
+    timeline = Timeline(
         room: this,
         chunk: chunk,
         onChange: onChange,
@@ -1512,7 +1516,7 @@ class Room {
       }
     }
 
-    return this.timeline!;
+    return timeline!;
   }
 
   /// Returns all participants for this room. With lazy loading this
@@ -1719,10 +1723,10 @@ class Room {
                 displayName: null
               )) {
         try {
-          final profile = await client.getProfileFromUserId(mxID);
+          final profile = await client.getUserProfile(mxID);
           foundUser = User(
             mxID,
-            displayName: profile.displayName,
+            displayName: profile.displayname,
             avatarUrl: profile.avatarUrl?.toString(),
             membership: foundUser?.membership.name ?? Membership.leave.name,
             room: this,
