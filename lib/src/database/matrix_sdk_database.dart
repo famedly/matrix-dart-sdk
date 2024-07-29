@@ -105,7 +105,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   late Box<String> _seenDeviceKeysBox;
 
   late Box<Map> _spacesHierarchyBox;
-  
+
   late Box<Map> _userProfilesBox;
 
   @override
@@ -165,7 +165,7 @@ class MatrixSdkDatabase extends DatabaseApi with DatabaseFileStorage {
   static const String _seenDeviceKeysBoxName = 'box_seen_device_keys';
 
   static const String _spacesHierarchyBoxName = 'box_spaces_hierarchy';
-  
+
   static const String _userProfilesBoxName = 'box_user_profiles';
 
   Database? database;
