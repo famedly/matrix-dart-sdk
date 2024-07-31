@@ -23,7 +23,6 @@ import 'dart:math';
 import 'package:async/async.dart';
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape.dart';
-
 import 'package:matrix/matrix.dart';
 import 'package:matrix/src/models/timeline_chunk.dart';
 import 'package:matrix/src/utils/cached_stream_controller.dart';
@@ -1644,7 +1643,7 @@ class Room {
   }) async {
     try {
       Logs().v(
-        'Request missing user $mxID in room ${getLocalizedDisplayname()} from the server...',
+        'Request missing user $mxID in room $name from the server...',
       );
       final resp = await client.getRoomStateWithKey(
         id,
