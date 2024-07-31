@@ -2037,13 +2037,17 @@ class Client extends MatrixApi {
       if (join != null) {
         await _handleRooms(join, direction: direction);
       }
-      final invite = sync.rooms?.invite;
-      if (invite != null) {
-        await _handleRooms(invite, direction: direction);
-      }
+      // We need to handle leave before invite. If you decline an invite and
+      // then get another invite to the same room, Synapse will include the
+      // room both in invite and leave. If you get an invite and then leave, it
+      // will only be included in leave.
       final leave = sync.rooms?.leave;
       if (leave != null) {
         await _handleRooms(leave, direction: direction);
+      }
+      final invite = sync.rooms?.invite;
+      if (invite != null) {
+        await _handleRooms(invite, direction: direction);
       }
     }
     for (final newPresence in sync.presence ?? <Presence>[]) {
