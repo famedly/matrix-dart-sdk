@@ -709,6 +709,66 @@ void main() {
       await client.database?.clearCache();
       await client.dispose(closeDatabase: true);
     });
+    test('leaveThenInvite should be invited', () async {
+      // Synapse includes a room in both invite and leave if you leave and get
+      // reinvited while you are offline. The other direction only contains the
+      // room in leave. Verify that we actually store the invite in the first
+      // case. See also
+      // https://github.com/famedly/product-management/issues/2283
+      final client = await getClient();
+      await client.abortSync();
+      client.rooms.clear();
+      await client.database?.clearCache();
+
+      final roomId = '!inviteLeaveRoom:example.com';
+      await client.handleSync(
+        SyncUpdate(
+          nextBatch: 'ABCDEF',
+          rooms: RoomsUpdate(
+            invite: {
+              roomId: InvitedRoomUpdate(
+                inviteState: [
+                  StrippedStateEvent(
+                    type: EventTypes.RoomMember,
+                    senderId: '@bob:example.com',
+                    stateKey: client.userID,
+                    content: {
+                      'membership': 'invite',
+                    },
+                  ),
+                ],
+              ),
+            },
+            leave: {
+              roomId: LeftRoomUpdate(
+                state: [
+                  MatrixEvent(
+                    type: EventTypes.RoomMember,
+                    senderId: client.userID!,
+                    stateKey: client.userID,
+                    originServerTs: DateTime.now(),
+                    eventId:
+                        '\$abcdefwsjaskdfabsjfhabfsjgbahsjfkgbasjffsajfgsfd',
+                    content: {
+                      'membership': 'leave',
+                    },
+                  ),
+                ],
+              ),
+            },
+          ),
+        ),
+      );
+
+      final room = client.getRoomById(roomId);
+
+      expect(room?.membership, Membership.invite);
+
+      await client.abortSync();
+      client.rooms.clear();
+      await client.database?.clearCache();
+      await client.dispose(closeDatabase: true);
+    });
     test('ownProfile', () async {
       final client = await getClient();
       await client.abortSync();
