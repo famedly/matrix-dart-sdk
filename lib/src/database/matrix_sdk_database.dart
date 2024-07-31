@@ -20,22 +20,19 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:sqflite_common/sqflite.dart';
-
 import 'package:matrix/encryption/utils/olm_session.dart';
 import 'package:matrix/encryption/utils/outbound_group_session.dart';
 import 'package:matrix/encryption/utils/ssss_cache.dart';
 import 'package:matrix/encryption/utils/stored_inbound_group_session.dart';
 import 'package:matrix/matrix.dart';
+import 'package:matrix/src/database/database_file_storage_stub.dart'
+    if (dart.library.io) 'package:matrix/src/database/database_file_storage_io.dart';
+import 'package:matrix/src/database/indexeddb_box.dart'
+    if (dart.library.io) 'package:matrix/src/database/sqflite_box.dart';
 import 'package:matrix/src/utils/copy_map.dart';
 import 'package:matrix/src/utils/queued_to_device_event.dart';
 import 'package:matrix/src/utils/run_benchmarked.dart';
-
-import 'package:matrix/src/database/indexeddb_box.dart'
-    if (dart.library.io) 'package:matrix/src/database/sqflite_box.dart';
-
-import 'package:matrix/src/database/database_file_storage_stub.dart'
-    if (dart.library.io) 'package:matrix/src/database/database_file_storage_io.dart';
+import 'package:sqflite_common/sqflite.dart';
 
 /// Database based on SQlite3 on native and IndexedDB on web. For native you
 /// have to pass a `Database` object, which can be created with the sqflite

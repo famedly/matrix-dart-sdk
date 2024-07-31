@@ -15,12 +15,11 @@ enum EventStatus {
 
 /// Returns `EventStatusEnum` value from `intValue`.
 ///
-/// - -2 == removed;
-/// - -1 == error;
-/// -  0 == sending;
-/// -  1 == sent;
-/// -  2 == synced;
-/// -  3 == roomState;
+/// - -2 == error;
+/// - -1 == sending;
+/// -  0 == sent;
+/// -  1 == synced;
+/// -  2 == roomState;
 EventStatus eventStatusFromInt(int intValue) =>
     EventStatus.values[intValue + 2];
 
@@ -32,11 +31,11 @@ EventStatus latestEventStatus(EventStatus status1, EventStatus status2) =>
 extension EventStatusExtension on EventStatus {
   /// Returns int value of the event status.
   ///
-  /// - -1 == error;
-  /// -  0 == sending;
-  /// -  1 == sent;
-  /// -  2 == synced;
-  /// -  3 == roomState;
+  /// - -2 == error;
+  /// - -1 == sending;
+  /// -  0 == sent;
+  /// -  1 == synced;
+  /// -  2 == roomState;
   int get intValue => (index - 2);
 
   /// Return `true` if the `EventStatus` equals `error`.
