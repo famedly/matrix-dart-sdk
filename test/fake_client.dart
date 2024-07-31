@@ -32,6 +32,7 @@ Future<Client> getClient({
   String? databasePath,
 }) async {
   final client = Client(
+    logLevel: Level.verbose,
     'testclient',
     httpClient: FakeMatrixApi(),
     databaseBuilder: (client) =>
