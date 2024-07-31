@@ -1866,7 +1866,10 @@ class Client extends MatrixApi {
 
   Future<void> _handleSoftLogout() async {
     final onSoftLogout = this.onSoftLogout;
-    if (onSoftLogout == null) return;
+    if (onSoftLogout == null) {
+      await logout();
+      return;
+    }
 
     _handleSoftLogoutFuture ??= () async {
       onLoginStateChanged.add(LoginState.softLoggedOut);
@@ -1875,7 +1878,7 @@ class Client extends MatrixApi {
         onLoginStateChanged.add(LoginState.loggedIn);
       } catch (e, s) {
         Logs().w('Unable to refresh session after soft logout', e, s);
-        await clear();
+        await logout();
         rethrow;
       }
     }();
@@ -1991,10 +1994,10 @@ class Client extends MatrixApi {
       onSyncStatus.add(SyncStatusUpdate(SyncStatus.error,
           error: SdkError(exception: e, stackTrace: s)));
       if (e.error == MatrixError.M_UNKNOWN_TOKEN) {
-        final onSoftLogout = this.onSoftLogout;
-        if (e.raw.tryGet<bool>('soft_logout') == true && onSoftLogout != null) {
-          Logs().w('The user has been soft logged out! Try to login again...');
-
+        if (e.raw.tryGet<bool>('soft_logout') == true) {
+          Logs().w(
+            'The user has been soft logged out! Calling client.onSoftLogout() if present.',
+          );
           await _handleSoftLogout();
         } else {
           Logs().w('The user has been logged out!');
