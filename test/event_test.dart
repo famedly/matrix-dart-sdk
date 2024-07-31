@@ -57,7 +57,6 @@ void main() {
         jsonObj, Room(id: '!testroom:example.abc', client: client));
 
     test('Create from json', () async {
-      jsonObj.remove('status');
       jsonObj['content'] = json.decode(contentJson);
       expect(event.toJson(), jsonObj);
       jsonObj['content'] = contentJson;
@@ -227,7 +226,8 @@ void main() {
           'room_id': '1234',
           'sender': '@example:example.org',
           'type': 'm.room.redaction',
-          'unsigned': {'age': 1234}
+          'unsigned': {'age': 1234},
+          'status': 1,
         };
         final redactedBecause = Event.fromJson(redactionEventJson, room);
         final event = Event.fromJson(redactJsonObj, room);

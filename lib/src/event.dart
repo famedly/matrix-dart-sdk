@@ -225,6 +225,7 @@ class Event extends MatrixEvent {
     if (originalSource != null) {
       data['original_source'] = originalSource?.toJson();
     }
+    data['status'] = status.intValue;
     return data;
   }
 
@@ -349,12 +350,42 @@ class Event extends MatrixEvent {
   /// Removes an unsent or yet-to-send event from the database and timeline.
   /// These are events marked with the status `SENDING` or `ERROR`.
   /// Throws an exception if used for an already sent event!
+  ///
   Future<void> cancelSend() async {
     if (status.isSent) {
       throw Exception('Can only delete events which are not sent yet!');
     }
 
     await room.client.database?.removeEvent(eventId, room.id);
+
+    if (room.lastEvent != null && room.lastEvent!.eventId == eventId) {
+      final redactedBecause = Event.fromMatrixEvent(
+        MatrixEvent(
+          type: EventTypes.Redaction,
+          content: {'redacts': eventId},
+          redacts: eventId,
+          senderId: senderId,
+          eventId: '${eventId}_cancel_send',
+          originServerTs: DateTime.now(),
+        ),
+        room,
+      );
+
+      await room.client.handleSync(
+        SyncUpdate(
+          nextBatch: '',
+          rooms: RoomsUpdate(
+            join: {
+              room.id: JoinedRoomUpdate(
+                timeline: TimelineUpdate(
+                  events: [redactedBecause],
+                ),
+              )
+            },
+          ),
+        ),
+      );
+    }
     room.client.onCancelSendEvent.add(eventId);
   }
 
@@ -687,12 +718,14 @@ class Event extends MatrixEvent {
       await fetchSenderUser();
     }
 
-    return calcLocalizedBodyFallback(i18n,
-        withSenderNamePrefix: withSenderNamePrefix,
-        hideReply: hideReply,
-        hideEdit: hideEdit,
-        plaintextBody: plaintextBody,
-        removeMarkdown: removeMarkdown);
+    return calcLocalizedBodyFallback(
+      i18n,
+      withSenderNamePrefix: withSenderNamePrefix,
+      hideReply: hideReply,
+      hideEdit: hideEdit,
+      plaintextBody: plaintextBody,
+      removeMarkdown: removeMarkdown,
+    );
   }
 
   @Deprecated('Use calcLocalizedBody or calcLocalizedBodyFallback')
@@ -721,6 +754,9 @@ class Event extends MatrixEvent {
       bool plaintextBody = false,
       bool removeMarkdown = false}) {
     if (redacted) {
+      if (status.intValue < EventStatus.synced.intValue) {
+        return i18n.cancelledSend;
+      }
       return i18n.removedBy(this);
     }
 

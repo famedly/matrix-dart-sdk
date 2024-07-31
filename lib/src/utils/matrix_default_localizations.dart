@@ -126,6 +126,9 @@ class MatrixDefaultLocalizations extends MatrixLocalizations {
   String get guestsCanJoin => 'Guests can join';
 
   @override
+  String get cancelledSend => 'Cancelled sending message';
+
+  @override
   String hasWithdrawnTheInvitationFor(String senderName, String targetName) =>
       '$senderName has withdrawn the invitation for $targetName';
 
